@@ -94,6 +94,44 @@ describe("model checks service", () => {
     expect(readChecks(db)).toHaveLength(3);
   });
 
+  it("runs one check of a provider when two starts arrive together", async () => {
+    upsertKey(db, "openrouter", "placeholder", "2026-10-18");
+    const { checks, asked } = setup();
+    const refused = await checks.start({ trigger: "manual", provider: "openrouter" });
+    const dollars =
+      refused.ok === false && refused.reason === "estimate" ? refused.plan.totalDollars : 0;
+    expect(checks.running()).toEqual([]);
+    const both = await Promise.all([
+      checks.start({ trigger: "manual", provider: "openrouter" }, dollars),
+      checks.start({ trigger: "manual", provider: "openrouter" }, dollars),
+      checks.automatic("key-added", "openrouter"),
+    ]);
+    expect(both.slice(0, 2).map((answer) => answer?.ok)).toEqual([true, false]);
+    expect(both[1]).toMatchObject({ reason: "running", providers: ["openrouter"] });
+    const [first] = both;
+    if (first?.ok) await first.done;
+    expect(asked).toHaveLength(3);
+    expect(checks.running()).toEqual([]);
+  });
+
+  it("frees a provider when its start stops at the estimate or fails to plan", async () => {
+    upsertKey(db, "openrouter", "placeholder", "2026-10-18");
+    let fail = false;
+    const { checks } = setup({
+      catalogue: () => {
+        if (fail) throw new Error("catalogue unreadable");
+        return catalogue;
+      },
+    });
+    expect(await checks.start({ trigger: "manual", provider: "openrouter" })).toMatchObject({
+      reason: "estimate",
+    });
+    expect(checks.running()).toEqual([]);
+    fail = true;
+    await expect(checks.start({ trigger: "manual", provider: "openrouter" })).rejects.toThrow();
+    expect(checks.running()).toEqual([]);
+  });
+
   it("runs one check of a provider at a time", async () => {
     const { checks, release } = setup();
     const first = await checks.start({ trigger: "manual", provider: "codex" });

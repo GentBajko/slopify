@@ -155,12 +155,25 @@ export function createModelChecks(deps: ModelChecksDeps): ModelChecks {
       scope,
     );
   };
-  const launch = (checks: CheckPlan): Promise<RunSummary> => {
-    const owned = [...new Set(checks.targets.map((t) => t.provider))].filter(
-      (id): id is ProviderId => (providerIds as readonly string[]).includes(id),
-    );
-    for (const id of owned) running.add(id);
-    return runChecks(
+  // A provider is taken before the first await, so two starts that arrive together can't both
+  // pass the running check and pay for the same checks twice.
+  const reserve = (ids: readonly ProviderId[]) => {
+    let held = [...ids];
+    for (const id of held) running.add(id);
+    const release = (): void => {
+      for (const id of held) running.delete(id);
+      held = [];
+    };
+    // Once planned, only the providers it checks stay taken.
+    const keepFor = (checks: CheckPlan): void => {
+      const owned = held.filter((id) => checks.targets.some((t) => t.provider === id));
+      for (const id of held) if (!owned.includes(id)) running.delete(id);
+      held = owned;
+    };
+    return { release, keepFor };
+  };
+  const launch = (checks: CheckPlan, release: () => void): Promise<RunSummary> =>
+    runChecks(
       { db: deps.db, clock: deps.clock, log: deps.log, check: deps.check },
       checks,
       // A manual plan's estimate was confirmed in `start`; an automatic one is free or cheap.
@@ -171,18 +184,25 @@ export function createModelChecks(deps: ModelChecksDeps): ModelChecks {
           ? answer.summary
           : { checked: 0, works: 0, noAccess: 0, failed: 0, skipped: 0, spent: 0 },
       )
-      .finally(() => {
-        for (const id of owned) running.delete(id);
-      });
-  };
+      .finally(release);
   const start: ModelChecks["start"] = async (scope, confirmedDollars) => {
     const scoped = scope.provider === undefined ? withAccount() : [scope.provider];
     const busy = scoped.filter((id) => running.has(id));
     if (busy.length > 0) return { ok: false, reason: "running", providers: busy };
-    const checks = await plan(scope);
-    if (scope.trigger === "manual" && needsConfirmation(checks, confirmedDollars))
+    const { release, keepFor } = reserve(scoped);
+    let checks: CheckPlan;
+    try {
+      checks = await plan(scope);
+    } catch (error) {
+      release();
+      throw error;
+    }
+    keepFor(checks);
+    if (scope.trigger === "manual" && needsConfirmation(checks, confirmedDollars)) {
+      release();
       return { ok: false, reason: "estimate", plan: checks };
-    return { ok: true, plan: checks, done: launch(checks) };
+    }
+    return { ok: true, plan: checks, done: launch(checks, release) };
   };
   const automatic: ModelChecks["automatic"] = async (trigger, provider) => {
     const scoped = provider === undefined ? withAccount() : [provider];
@@ -195,13 +215,22 @@ export function createModelChecks(deps: ModelChecksDeps): ModelChecks {
     if (readAuto(deps.db) === "off") return;
     const free = scoped.filter((id) => !running.has(id));
     if (free.length === 0) return;
-    const checks = await plan(provider === undefined ? { trigger } : { trigger, provider });
-    const kept = {
-      ...checks,
-      targets: checks.targets.filter((t) => free.some((id) => id === t.provider)),
-    };
-    if (trigger === "weekly") writeSetting(deps.db, weeklyAtKey, deps.clock.now().toISOString());
-    if (kept.targets.length > 0) await launch(kept);
+    const { release, keepFor } = reserve(free);
+    let kept: CheckPlan;
+    try {
+      const checks = await plan(provider === undefined ? { trigger } : { trigger, provider });
+      kept = {
+        ...checks,
+        targets: checks.targets.filter((t) => free.some((id) => id === t.provider)),
+      };
+      keepFor(kept);
+      if (trigger === "weekly") writeSetting(deps.db, weeklyAtKey, deps.clock.now().toISOString());
+    } catch (error) {
+      release();
+      throw error;
+    }
+    if (kept.targets.length > 0) await launch(kept, release);
+    else release();
   };
   return {
     offered,
