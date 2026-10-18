@@ -67,6 +67,7 @@ import { studioRoutes } from "./studio.js";
 import { stylePreviewRoutes } from "./style-preview.js";
 import { subtitleRoutes } from "./subtitles.js";
 import { telemetryRoutes } from "./telemetry.js";
+import { templateStudioRoutes } from "./template-studio.js";
 import { trashRoutes } from "./trash.js";
 import { tutorialRoutes } from "./tutorial.js";
 import { tutorialPagesRoutes } from "./tutorials.js";
@@ -192,6 +193,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/drafts", draftRoutes(deps.drafts))
       .route("/diagnostics", diagnosticsRoutes(deps))
       .route("/project-templates", projectTemplateRoutes(deps.drafts))
+      .route("/template-studio", templateStudioRoutes(deps))
       .route("/schedules", scheduleRoutes(deps.schedules))
       .route("/channels", channelRoutes(deps))
       .route("/channels", channelMemoryRoutes(deps))

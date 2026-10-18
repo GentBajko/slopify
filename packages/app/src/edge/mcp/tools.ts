@@ -8,6 +8,7 @@ import { runTools } from "./tools-runs.js";
 import { scheduleTools } from "./tools-schedules.js";
 import { setupTools } from "./tools-setup.js";
 import { storageTools } from "./tools-storage.js";
+import { templateStudioTools } from "./tools-template-studio.js";
 
 // Every API route an agent may call, as a tool; `excluded-routes.ts` names the rest and why.
 export const routeTools: readonly RouteTool[] = [
@@ -20,4 +21,5 @@ export const routeTools: readonly RouteTool[] = [
   ...libraryTools,
   ...setupTools,
   ...storageTools,
+  ...templateStudioTools,
 ];
