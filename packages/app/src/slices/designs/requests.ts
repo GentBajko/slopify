@@ -4,7 +4,12 @@ import { designDocumentSchema } from "./schema.js";
 
 // What the design routes and tools take. Browser-safe, like schema.ts.
 
-const id = z.string().min(1).max(64);
+// Letters, digits, dashes and underscores: a design id names its folder of drawn files.
+const id = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(/^[A-Za-z0-9_-]+$/);
 const mutationId = z.string().min(8).max(128);
 const sha256 = z.string().regex(/^[a-f0-9]{64}$/);
 export const designValuesSchema = z
