@@ -354,7 +354,11 @@ export function textRecipes(context: RecipeContext): TextRecipes {
       const described = describedText(context, endMatter.body, [article.key]);
       descriptions.push(...described.recipes);
       cards.push(...described.cards);
-      narrationText = described.spoken;
+      // A sample says only the opening of the described narration too.
+      narrationText =
+        config.sample === undefined || described.spoken === null
+          ? described.spoken
+          : sampleNarrationText(described.spoken);
     }
   }
   const glossary = glossaryOf(context, endMatter);

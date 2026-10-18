@@ -87,6 +87,20 @@ describe("a template studio sample", () => {
     expect(text).not.toContain(sentence(13));
   });
 
+  // Figure descriptions on (the starter packs' default) narrate the article as described; the
+  // sample still says only the opening, not the whole article its quote never priced.
+  it("narrates only the opening when figures are described too", () => {
+    const described: RunConfig = {
+      ...spoken,
+      audio: { ...spoken.audio, describeFigures: true } as RunConfig["audio"],
+      sample: { fullScript: false },
+    };
+    const text = narrated(described);
+    expect(text).toContain(sentence(1));
+    expect(text).not.toContain(sentence(13));
+    expect(text).not.toContain(sentence(40));
+  });
+
   it("switching the full script on makes only the article and what follows it again", () => {
     const research: RunConfig = {
       ...written,
