@@ -113,4 +113,12 @@ export const excludedRoutes: Readonly<Record<string, string>> = {
   "PUT /api/designs/:id/head": designsPending,
   "GET /api/designs/:id/steps/:stepId/picture": designsPending,
   "GET /api/designs/:id/files/:file": designsPending,
+  "GET /api/design-templates": designsPending,
+  "POST /api/design-templates": designsPending,
+  "GET /api/design-templates/:id": designsPending,
+  "PUT /api/design-templates/:id": designsPending,
+  "DELETE /api/design-templates/:id": designsPending,
+  "POST /api/design-templates/:id/quote": designsPending,
+  "POST /api/design-templates/:id/ready": designsPending,
+  "POST /api/design-templates/:id/make": designsPending,
 };

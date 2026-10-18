@@ -32,6 +32,7 @@ import { backupRoutes } from "./backups.js";
 import { channelMemoryRoutes } from "./channel-memory.js";
 import { channelRoutes } from "./channels.js";
 import { checkpointRoutes } from "./checkpoints.js";
+import { type DesignTemplateRoutesDeps, designTemplateRoutes } from "./design-templates.js";
 import { type DesignRoutesDeps, designRoutes } from "./designs.js";
 import { diagnosticsRoutes } from "./diagnostics.js";
 import { documentThemeRoutes } from "./document-themes.js";
@@ -90,6 +91,7 @@ export interface AppDeps {
   readonly schedules?: ScheduleDeps;
   // Library → Designs; absent answers that designs aren't available.
   readonly designs?: DesignRoutesDeps | undefined;
+  readonly designTemplates?: DesignTemplateRoutesDeps | undefined;
   readonly backups?: BackupService;
   // Settings → Backup & storage's files folder: where it is, Open folder, and moving it.
   readonly files?: import("../../slices/storage/files-location.js").FilesService;
@@ -199,6 +201,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/channels", channelRoutes(deps))
       .route("/channels", channelMemoryRoutes(deps))
       .route("/designs", designRoutes(deps.designs))
+      .route("/design-templates", designTemplateRoutes(deps.designTemplates))
       .route("/calendar", calendarRoutes(deps.schedules))
       .route("/projects", planningRoutes(deps))
       .route("/projects", projectRoutes(deps))

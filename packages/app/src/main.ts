@@ -664,6 +664,11 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     designRunner.recover();
     const app = createApp({
       designs: { service: designService, runner: designRunner, renderer: designRenderer },
+      designTemplates: {
+        service: designService,
+        runner: designRunner,
+        catalogue: () => catalogue.read(),
+      },
       autostart,
       rebuild,
       drafts: draftDeps,
