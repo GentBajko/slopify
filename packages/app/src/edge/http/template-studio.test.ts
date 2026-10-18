@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { unzipSync } from "fflate";
 import { afterEach, expect, it } from "vitest";
+import { dailySampleBudget } from "../../slices/designs/budget.js";
 import { defaultLoudness } from "../../slices/loudness/model.js";
 import { draftFixture } from "../../slices/play-drafts/draft.fake.js";
 import { createTemplate } from "../../slices/project-templates/service.js";
@@ -256,7 +257,9 @@ it("reads and sets the studio's daily budget, refusing one out of range", async 
   expect(await read.json()).toEqual({
     dailyBudget: 2,
     samplesUsePlans: false,
+    designDailyBudget: 1,
     today: { budget: 2, spent: 0, unpriced: 0, left: 2, plans: false },
+    designToday: { budget: 1, spent: 0, left: 1 },
   });
   const put = (body: unknown) =>
     h.app.request("/api/template-studio/settings", {
@@ -272,6 +275,24 @@ it("reads and sets the studio's daily budget, refusing one out of range", async 
   });
   expect((await put({ dailyBudget: -1 })).status).toBe(400);
   expect((await put({ dailyBudget: 5000 })).status).toBe(400);
+});
+
+it("sets the designed pieces' daily sample budget on its own, keeping the studio's", async () => {
+  const h = studio();
+  const put = (body: unknown) =>
+    h.app.request("/api/template-studio/settings", {
+      method: "PUT",
+      headers: { "x-slopify-client": "test", "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  expect(await (await put({ designDailyBudget: 3.456 })).json()).toMatchObject({
+    dailyBudget: 2,
+    designDailyBudget: 3.46,
+    designToday: { budget: 3.46, spent: 0, left: 3.46 },
+  });
+  expect(dailySampleBudget(h.deps.db)).toBe(3.46);
+  expect((await put({ designDailyBudget: -1 })).status).toBe(400);
+  expect((await put({ designDailyBudget: 5000 })).status).toBe(400);
 });
 
 it("queues the free samples of the current version and wakes the sample loop", async () => {

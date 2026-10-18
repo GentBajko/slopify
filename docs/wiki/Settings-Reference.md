@@ -13,7 +13,7 @@ Every section of Settings, what each control does and its default. Sections with
 | Connections | [Models](#models) | Model catalogue, retired models, models that work for you | [Models](Models) |
 | Connections | [Agents (MCP)](#agents-mcp) | The MCP address and setup lines for Claude Code and Codex, the last connection, what agents did | [Agents-MCP](Agents-MCP) |
 | Production defaults | [Production defaults](#production-defaults) | Silence gap, volume levelling for new runs | This page |
-| Production defaults | [Template studio](#template-studio) | The most a template's samples may spend in a day, and whether they may use CLI plans | This page |
+| Production defaults | [Template studio](#template-studio) | The most a template's samples, and a designed piece template's, may spend in a day, and whether they may use CLI plans | This page |
 | Notifications | [Notifications](#notifications) | Browser and phone notifications | [Notifications](Notifications) |
 | Publishing | [Channel links](#channel-links) | A pointer to each channel's own links | [Channels](Channels#channel-links) |
 | Publishing | [YouTube Studio](#youtube-studio) | Playlists per channel, the Studio extension's download and pairing | [Studio-Extension](Studio-Extension) |
@@ -165,9 +165,10 @@ The chosen model downloads once, the first time captions are timed (or when Slop
 | Control | What it does | Default / range |
 |---|---|---|
 | **Daily sample budget** | The most a template's samples, **Compare models** and **Make samples for all** may spend in one day, in US dollars, counted from midnight on this computer. At $0.00 no sample spends money. Below it: what the samples spent today and what is left. Type an amount and choose **Save**. | $2.00, $0 to $1,000 |
-| **Samples may use my CLI plans** | Whether those samples may run steps on your Claude Code or Codex plan. Plan usage has no dollar price, so the budget can't limit it: off, a sample with such a step waits; on, it runs on your plan whatever the budget. | Off |
+| **Designed pieces: daily sample budget** | The most the samples of designed-piece templates (Library → Designs) may spend in one day, in US dollars, counted from midnight on this computer. It is separate from the budget above. Below it: what those samples spent today and what is left. Type an amount and choose **Save designed pieces' budget**. | $1.00, $0 to $1,000 |
+| **Samples may use my CLI plans** | Whether those samples, designed pieces' included, may run steps on your Claude Code or Codex plan. Plan usage has no dollar price, so the budgets can't limit it: off, a sample with such a step waits; on, it runs on your plan whatever the budget. | Off |
 
-A sample that would go over the budget is not made: the template's studio shows it **Waiting** with "this sample costs about $0.40 and $0.10 of today's $2.00 sample budget is left", and **Make sample** makes it once there is room again. A sample with a step on a CLI plan waits the same way while **Samples may use my CLI plans** is off. Only the studio's samples count; your projects never do.
+A sample that would go over the budget is not made: the template's studio shows it **Waiting** with "this sample costs about $0.40 and $0.10 of today's $2.00 sample budget is left", and **Make sample** makes it once there is room again. A sample with a step on a CLI plan waits the same way while **Samples may use my CLI plans** is off. A designed piece template's sample over its own budget waits in the template's editor the same way, and **Make sample** makes it anyway. Only samples count; your projects and designed pieces never do.
 
 ## Notifications
 

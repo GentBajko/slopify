@@ -2,6 +2,7 @@ import { statSync } from "node:fs";
 import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
 import { z } from "zod";
+import { designBudgetRoom } from "../../slices/designs/budget.js";
 import type { DraftReviewDeps } from "../../slices/play-drafts/model.js";
 import { playDraftDocumentSchema } from "../../slices/play-drafts/schema.js";
 import { templateById } from "../../slices/project-templates/repo.js";
@@ -20,6 +21,7 @@ import {
   budgetRoom,
   readStudioSettings,
   studioSettingsSchema,
+  systemTimeZone,
   writeStudioSettings,
 } from "../../slices/template-studio/budget.js";
 import {
@@ -192,6 +194,14 @@ export function templateStudioRoutes(deps: AppDeps) {
   const acks = studio.acks ?? createUnknownAcks();
   const sayDeps = { db: deps.db, paths: deps.paths, ids: deps.ids, clock: deps.clock };
   const gone = (c: Context, detail: string) => problem(c, { status: 404, detail });
+  const settingsView = () => {
+    const now = deps.clock.now();
+    return {
+      ...readStudioSettings(deps.db),
+      today: budgetRoom(deps.db, now),
+      designToday: designBudgetRoom(deps.db, now, systemTimeZone()),
+    };
+  };
   const media = (
     c: Context,
     file: { readonly path: string; readonly bytes: number } | undefined,
@@ -207,19 +217,11 @@ export function templateStudioRoutes(deps: AppDeps) {
         });
   return (
     new Hono()
-      // Settings → Template studio: the samples' daily budget, and what was spent today.
-      .get("/settings", (c) =>
-        c.json({
-          ...readStudioSettings(deps.db),
-          today: budgetRoom(deps.db, deps.clock.now()),
-        }),
-      )
+      // Settings → Template studio: the samples' daily budgets, and what was spent today.
+      .get("/settings", (c) => c.json(settingsView()))
       .put("/settings", zValidator("json", studioSettingsSchema, onInvalid), (c) => {
         writeStudioSettings(deps.db, c.req.valid("json"));
-        return c.json({
-          ...readStudioSettings(deps.db),
-          today: budgetRoom(deps.db, deps.clock.now()),
-        });
+        return c.json(settingsView());
       })
       // Settings → Template studio → Make samples for all: the total first, then each sample
       // that fits today's budget queued at its price, the rest waiting on the budget.

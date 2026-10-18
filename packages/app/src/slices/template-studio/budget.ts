@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
+import { dailySampleBudget, dailySampleBudgetKey } from "../designs/budget.js";
 import { readJsonSetting, writeSetting } from "../settings/repo.js";
 
 // Settings → Template studio: the most the studio's samples may spend in one day, in dollars,
@@ -7,18 +8,20 @@ import { readJsonSetting, writeSetting } from "../settings/repo.js";
 // can't hold it back: samples that run on a CLI plan wait until the person turns that on. By
 // default ($2 a day, plans off) samples spend at most $2 a day and never a plan; at $0 nothing
 // spends money. A sample that would go over either waits, saying so, until the next day, a
-// higher budget or plans allowed.
+// higher budget or plans allowed. The designed pieces' samples have their own daily budget
+// (`designs/budget.ts`), set here too, and follow the same plan switch.
 
 export const dailyBudgetKey = "templateStudio.dailyBudget";
 export const samplesUsePlansKey = "templateStudio.samplesUsePlans";
 export const defaultDailyBudget = 2;
 export const dailyBudgetMax = 1000;
 
+// Each field left out keeps what is stored.
 export const studioSettingsSchema = z
   .object({
-    dailyBudget: z.number().finite().min(0).max(dailyBudgetMax),
-    // Left out, the stored choice stays.
+    dailyBudget: z.number().finite().min(0).max(dailyBudgetMax).optional(),
     samplesUsePlans: z.boolean().optional(),
+    designDailyBudget: z.number().finite().min(0).max(dailyBudgetMax).optional(),
   })
   .strict()
   .readonly();
@@ -26,6 +29,7 @@ export const studioSettingsSchema = z
 export interface StudioSettings {
   readonly dailyBudget: number;
   readonly samplesUsePlans: boolean;
+  readonly designDailyBudget: number;
 }
 
 export function readStudioSettings(db: DatabaseSync): StudioSettings {
@@ -37,6 +41,7 @@ export function readStudioSettings(db: DatabaseSync): StudioSettings {
       defaultDailyBudget,
     ),
     samplesUsePlans: readJsonSetting(db, samplesUsePlansKey, z.boolean(), false),
+    designDailyBudget: dailySampleBudget(db),
   };
 }
 
@@ -44,8 +49,11 @@ export function writeStudioSettings(
   db: DatabaseSync,
   settings: z.infer<typeof studioSettingsSchema>,
 ): StudioSettings {
-  const rounded = Math.round(settings.dailyBudget * 100) / 100;
-  writeSetting(db, dailyBudgetKey, JSON.stringify(rounded));
+  const cents = (dollars: number) => JSON.stringify(Math.round(dollars * 100) / 100);
+  if (settings.dailyBudget !== undefined)
+    writeSetting(db, dailyBudgetKey, cents(settings.dailyBudget));
+  if (settings.designDailyBudget !== undefined)
+    writeSetting(db, dailySampleBudgetKey, cents(settings.designDailyBudget));
   if (settings.samplesUsePlans !== undefined)
     writeSetting(db, samplesUsePlansKey, JSON.stringify(settings.samplesUsePlans));
   return readStudioSettings(db);

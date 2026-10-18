@@ -95,14 +95,14 @@ export const templateStudioTools: readonly RouteTool[] = [
     route: "GET /api/template-studio/settings",
     title: "Read the template studio's settings",
     description:
-      "The most the studio's samples may spend in one day (dailyBudget, US dollars), whether they may run steps on a CLI plan (samplesUsePlans; off by default, such a sample waits), and what they spent today and have left.",
+      "The most the studio's samples may spend in one day (dailyBudget, US dollars), whether they may run steps on a CLI plan (samplesUsePlans; off by default, such a sample waits; it applies to designed pieces' samples too), the most designed pieces' template samples may spend in one day (designDailyBudget, $1 by default), and what each spent today and has left (today, designToday).",
   },
   {
     name: "update_template_studio_settings",
     route: "PUT /api/template-studio/settings",
-    title: "Change the template studio's daily budget",
+    title: "Change the template studio's daily budgets",
     description:
-      "Sets the most the studio's samples may spend in one day, in US dollars (0 to 1000), and optionally samplesUsePlans: whether they may run steps on a Claude Code or Codex plan, which the dollar budget can't limit. A sample that would go over the budget, or needs a plan while plans are off, waits.",
+      "Sets any of: dailyBudget, the most the studio's samples may spend in one day, in US dollars (0 to 1000); designDailyBudget, the same for designed pieces' template samples (0 to 1000); samplesUsePlans, whether either may run steps on a Claude Code or Codex plan, which the dollar budgets can't limit. A field left out keeps what it was. A sample that would go over its budget, or needs a plan while plans are off, waits.",
   },
   {
     name: "quote_samples_for_all",

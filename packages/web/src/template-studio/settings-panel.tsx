@@ -4,6 +4,7 @@ import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Field, Input } from "@/components/kit/field";
 import { Switch } from "@/components/kit/switch";
+import type { HelpId } from "@/help/catalog";
 import { usd } from "@/lib/format";
 import {
   about,
@@ -11,12 +12,13 @@ import {
   makeSamplesForAll,
   quoteSamplesForAll,
   readStudioSettings,
+  type StudioSettingsChange,
   studioSettingsKey,
   writeStudioSettings,
 } from "./api";
 
-// Settings → Template studio: the most the studio's samples may spend in one day, in dollars,
-// and whether they may run on a CLI plan at all. A sample that would go over either waits,
+// Settings → Template studio: the most the studio's samples, and designed pieces' template
+// samples, may spend in one day, in dollars, and whether they may run on a CLI plan at all. A sample that would go over either waits,
 // saying so, until the next day, a higher budget or plans allowed.
 export function TemplateStudioSettings(): ReactElement {
   return (
@@ -34,14 +36,9 @@ function BudgetField(): ReactElement {
     queryKey: studioSettingsKey,
     queryFn: () => readStudioSettings(api),
   });
-  const [typed, setTyped] = useState<string | undefined>();
   const save = useMutation({
-    mutationFn: (settings: { readonly dailyBudget: number; readonly samplesUsePlans?: boolean }) =>
-      writeStudioSettings(api, settings),
-    onSuccess: (next) => {
-      client.setQueryData(studioSettingsKey, next);
-      setTyped(undefined);
-    },
+    mutationFn: (settings: StudioSettingsChange) => writeStudioSettings(api, settings),
+    onSuccess: (next) => client.setQueryData(studioSettingsKey, next),
   });
   if (settings.error)
     return (
@@ -52,47 +49,43 @@ function BudgetField(): ReactElement {
   const data = settings.data;
   if (data === undefined)
     return <div role="status" aria-busy="true" className="h-20 rounded-control bg-raised" />;
-  const value = typed ?? data.dailyBudget.toFixed(2);
-  const amount = Number(value.trim());
-  const problem =
-    value.trim() === "" || !Number.isFinite(amount) || amount < 0 || amount > 1000
-      ? "Enter an amount between $0.00 and $1,000.00."
-      : undefined;
+  const unpriced =
+    data.today.unpriced > 0
+      ? ` plus ${String(data.today.unpriced)} ${data.today.unpriced === 1 ? "call" : "calls"} with no known price`
+      : "";
+  const saved = save.variables;
   return (
     <>
-      <Field
+      <DailyBudget
         label="Daily sample budget"
         tip="settings.template-studio.budget"
-        help={`The most the studio's samples may spend in one day, in US dollars; at $0.00 no sample spends money. Spent today: ${usd(data.today.spent)}${data.today.unpriced > 0 ? ` plus ${String(data.today.unpriced)} ${data.today.unpriced === 1 ? "call" : "calls"} with no known price` : ""}; left: ${usd(data.today.left)}.`}
+        saveLabel="Save"
+        help={`The most the studio's samples may spend in one day, in US dollars; at $0.00 no sample spends money. Spent today: ${usd(data.today.spent)}${unpriced}; left: ${usd(data.today.left)}.`}
+        stored={data.dailyBudget}
+        pending={save.isPending}
         error={
-          problem ?? (save.error ? `The budget wasn't saved: ${save.error.message}` : undefined)
+          save.error && saved?.dailyBudget !== undefined
+            ? `The budget wasn't saved: ${save.error.message}`
+            : undefined
         }
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-small text-ink-2">$</span>
-          <Input
-            type="number"
-            inputMode="decimal"
-            min={0}
-            max={1000}
-            step={0.5}
-            className="w-[112px] tabular-nums"
-            value={value}
-            aria-invalid={problem !== undefined}
-            onChange={(event) => setTyped(event.target.value)}
-          />
-          <Button
-            variant="primary"
-            disabled={problem !== undefined || save.isPending || typed === undefined}
-            disabledReason={
-              save.isPending ? "Saving" : typed === undefined ? "Nothing changed" : (problem ?? "")
-            }
-            onClick={() => save.mutate({ dailyBudget: amount })}
-          >
-            Save
-          </Button>
-        </div>
-      </Field>
+        onSave={(dailyBudget, done) => save.mutate({ dailyBudget }, { onSuccess: done })}
+      />
+      <DailyBudget
+        label="Designed pieces: daily sample budget"
+        tip="settings.template-studio.design-budget"
+        saveLabel="Save designed pieces' budget"
+        help={`The most the samples of designed-piece templates (Library → Designs) may spend in one day, in US dollars; at $0.00 no sample spends money.${data.designToday === undefined ? "" : ` Spent today: ${usd(data.designToday.spent)}; left: ${usd(data.designToday.left)}.`}`}
+        stored={data.designDailyBudget}
+        pending={save.isPending}
+        error={
+          save.error && saved?.designDailyBudget !== undefined
+            ? `The designed pieces' budget wasn't saved: ${save.error.message}`
+            : undefined
+        }
+        onSave={(designDailyBudget, done) =>
+          save.mutate({ designDailyBudget }, { onSuccess: done })
+        }
+      />
       <div className="flex flex-col gap-1">
         <Switch
           label="Samples may use my CLI plans"
@@ -105,11 +98,59 @@ function BudgetField(): ReactElement {
         />
         <p className="m-0 text-small text-ink-2">
           {data.samplesUsePlans
-            ? "On: samples may run steps on your Claude Code or Codex plan. That usage has no dollar price, so the budget above doesn't limit it."
-            : "Off: no sample runs a step on your Claude Code or Codex plan; such a sample waits until you turn this on."}
+            ? "On: samples, designed pieces' too, may run steps on your Claude Code or Codex plan. That usage has no dollar price, so the budgets above don't limit it."
+            : "Off: no sample, designed pieces' included, runs a step on your Claude Code or Codex plan; such a sample waits until you turn this on."}
         </p>
       </div>
     </>
+  );
+}
+
+// A dollar amount from $0 to $1,000 with its own Save, kept as typed until saved.
+function DailyBudget(props: {
+  readonly label: string;
+  readonly tip: HelpId;
+  readonly saveLabel: string;
+  readonly help: string;
+  readonly stored: number;
+  readonly pending: boolean;
+  readonly error: string | undefined;
+  readonly onSave: (amount: number, done: () => void) => void;
+}): ReactElement {
+  const [typed, setTyped] = useState<string | undefined>();
+  const value = typed ?? props.stored.toFixed(2);
+  const amount = Number(value.trim());
+  const problem =
+    value.trim() === "" || !Number.isFinite(amount) || amount < 0 || amount > 1000
+      ? "Enter an amount between $0.00 and $1,000.00."
+      : undefined;
+  return (
+    <Field label={props.label} tip={props.tip} help={props.help} error={problem ?? props.error}>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-small text-ink-2">$</span>
+        <Input
+          type="number"
+          inputMode="decimal"
+          min={0}
+          max={1000}
+          step={0.5}
+          className="w-[112px] tabular-nums"
+          value={value}
+          aria-invalid={problem !== undefined}
+          onChange={(event) => setTyped(event.target.value)}
+        />
+        <Button
+          variant="primary"
+          disabled={problem !== undefined || props.pending || typed === undefined}
+          disabledReason={
+            props.pending ? "Saving" : typed === undefined ? "Nothing changed" : (problem ?? "")
+          }
+          onClick={() => props.onSave(amount, () => setTyped(undefined))}
+        >
+          {props.saveLabel}
+        </Button>
+      </div>
+    </Field>
   );
 }
 

@@ -212,7 +212,7 @@ export function anatomyQuery(
   };
 }
 
-// Settings → Template studio: the samples' daily budget and what they spent today.
+// Settings → Template studio: the samples' daily budgets and what they spent today.
 export const studioSettingsSchema = z
   .object({
     dailyBudget: z.number(),
@@ -225,6 +225,9 @@ export const studioSettingsSchema = z
       left: z.number(),
       plans: z.boolean(),
     }),
+    // Designed pieces' template samples (Library → Designs): their own budget and spend.
+    designDailyBudget: z.number().default(1),
+    designToday: z.object({ budget: z.number(), spent: z.number(), left: z.number() }).optional(),
   })
   .loose();
 export type StudioSettingsView = z.infer<typeof studioSettingsSchema>;
@@ -236,9 +239,16 @@ export async function readStudioSettings(api: Api): Promise<StudioSettingsView> 
   return understood(studioSettingsSchema, await response.json());
 }
 
+// Each field left out keeps what is stored.
+export interface StudioSettingsChange {
+  readonly dailyBudget?: number;
+  readonly samplesUsePlans?: boolean;
+  readonly designDailyBudget?: number;
+}
+
 export async function writeStudioSettings(
   api: Api,
-  settings: { readonly dailyBudget: number; readonly samplesUsePlans?: boolean },
+  settings: StudioSettingsChange,
 ): Promise<StudioSettingsView> {
   const response = await api.fetch(
     `${api.origin}/api/template-studio/settings`,

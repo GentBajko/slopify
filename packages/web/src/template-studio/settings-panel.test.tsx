@@ -127,12 +127,14 @@ it("lets samples use CLI plans only once switched on, saying what each state lim
   const toggle = await screen.findByRole("switch", { name: "Samples may use my CLI plans" });
   expect(toggle.getAttribute("aria-checked")).toBe("false");
   expect(
-    screen.getByText(/Off: no sample runs a step on your Claude Code or Codex plan/),
+    screen.getByText(
+      /Off: no sample, designed pieces' included, runs a step on your Claude Code or Codex plan/,
+    ),
   ).toBeTruthy();
   await user.click(toggle);
   await waitFor(() => expect(put).toHaveBeenCalledOnce());
   expect(sent).toEqual({ dailyBudget: 2, samplesUsePlans: true });
-  expect(await screen.findByText(/the budget above doesn't limit it/)).toBeTruthy();
+  expect(await screen.findByText(/the budgets above don't limit it/)).toBeTruthy();
 });
 
 it("says today's sample calls with no known price beside what was spent", async () => {
@@ -157,4 +159,51 @@ it("says today's sample calls with no known price beside what was spent", async 
       /Spent today: \$0\.50 plus 3 calls with no known price; left: \$1\.50\./,
     ),
   ).toBeTruthy();
+});
+
+it("sets the designed pieces' daily sample budget on its own", async () => {
+  let sent: unknown;
+  const put = vi.fn(async (request: Request) => {
+    sent = await request.json();
+    return jsonAnswer({
+      dailyBudget: 2,
+      samplesUsePlans: false,
+      designDailyBudget: 3,
+      today: { budget: 2, spent: 0, left: 2, plans: false },
+      designToday: { budget: 3, spent: 0.25, left: 2.75 },
+    })(request);
+  });
+  const user = userEvent.setup();
+  renderRouted(
+    <TemplateStudioSettings />,
+    testDeps({
+      "GET /api/template-studio/settings": jsonAnswer({
+        dailyBudget: 2,
+        samplesUsePlans: false,
+        designDailyBudget: 1,
+        today: { budget: 2, spent: 0, left: 2, plans: false },
+        designToday: { budget: 1, spent: 0.25, left: 0.75 },
+      }),
+      "PUT /api/template-studio/settings": put,
+      "POST /api/template-studio/samples-for-all/quote": jsonAnswer({
+        items: [],
+        total: 0,
+        fitting: 0,
+        sentence: "Every template's sample is made for its newest version. Nothing to make.",
+      }),
+    }),
+  );
+  const field = await screen.findByRole("spinbutton", {
+    name: "Designed pieces: daily sample budget",
+  });
+  expect(screen.getByText(/Spent today: \$0\.25; left: \$0\.75\./)).toBeTruthy();
+  await user.clear(field);
+  await user.type(field, "5000");
+  expect(screen.getByText("Enter an amount between $0.00 and $1,000.00.")).toBeTruthy();
+  await user.clear(field);
+  await user.type(field, "3");
+  await user.click(screen.getByRole("button", { name: "Save designed pieces' budget" }));
+  await waitFor(() => expect(put).toHaveBeenCalledOnce());
+  expect(sent).toEqual({ designDailyBudget: 3 });
+  expect(await screen.findByText(/Spent today: \$0\.25; left: \$2\.75\./)).toBeTruthy();
 });

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 import { insertProject } from "../admission/repo.js";
+import { dailySampleBudget } from "../designs/budget.js";
 import { draftFixture } from "../play-drafts/draft.fake.js";
 import { createTemplate } from "../project-templates/service.js";
 import { writeSetting } from "../settings/repo.js";
@@ -137,16 +138,48 @@ describe("spentToday with bake-off copies and removed projects", () => {
 describe("the daily budget", () => {
   it("is $2.00 until the person sets another, and survives a bad stored value", () => {
     const { db } = harness();
-    expect(readStudioSettings(db)).toEqual({ dailyBudget: 2, samplesUsePlans: false });
+    expect(readStudioSettings(db)).toEqual({
+      dailyBudget: 2,
+      samplesUsePlans: false,
+      designDailyBudget: 1,
+    });
     expect(writeStudioSettings(db, { dailyBudget: 0.555 })).toEqual({
       dailyBudget: 0.56,
       samplesUsePlans: false,
+      designDailyBudget: 1,
     });
-    expect(readStudioSettings(db)).toEqual({ dailyBudget: 0.56, samplesUsePlans: false });
+    expect(readStudioSettings(db)).toEqual({
+      dailyBudget: 0.56,
+      samplesUsePlans: false,
+      designDailyBudget: 1,
+    });
     writeSetting(db, "templateStudio.dailyBudget", "{oops");
-    expect(readStudioSettings(db)).toEqual({ dailyBudget: 2, samplesUsePlans: false });
+    expect(readStudioSettings(db)).toEqual({
+      dailyBudget: 2,
+      samplesUsePlans: false,
+      designDailyBudget: 1,
+    });
     writeSetting(db, "templateStudio.dailyBudget", "-4");
-    expect(readStudioSettings(db)).toEqual({ dailyBudget: 2, samplesUsePlans: false });
+    expect(readStudioSettings(db)).toEqual({
+      dailyBudget: 2,
+      samplesUsePlans: false,
+      designDailyBudget: 1,
+    });
+  });
+
+  it("sets the designed pieces' budget apart from the studio's, each kept when left out", () => {
+    const { db } = harness();
+    writeStudioSettings(db, { dailyBudget: 3 });
+    expect(writeStudioSettings(db, { designDailyBudget: 0.125 })).toEqual({
+      dailyBudget: 3,
+      samplesUsePlans: false,
+      designDailyBudget: 0.13,
+    });
+    expect(dailySampleBudget(db)).toBe(0.13);
+    expect(writeStudioSettings(db, { samplesUsePlans: true })).toMatchObject({
+      dailyBudget: 3,
+      designDailyBudget: 0.13,
+    });
   });
 
   it("says what is left today, and whether a sample fits it", () => {
@@ -183,10 +216,12 @@ describe("the daily budget", () => {
     expect(writeStudioSettings(db, { dailyBudget: 0, samplesUsePlans: true })).toEqual({
       dailyBudget: 0,
       samplesUsePlans: true,
+      designDailyBudget: 1,
     });
     expect(writeStudioSettings(db, { dailyBudget: 0 })).toEqual({
       dailyBudget: 0,
       samplesUsePlans: true,
+      designDailyBudget: 1,
     });
     const on = budgetRoom(db, now, "UTC");
     expect(fitsBudget(on, 0, true)).toBe(true);
