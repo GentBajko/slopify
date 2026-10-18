@@ -31,6 +31,7 @@ A page opened through the remote address shows the switch but can't change it: r
 
 - **Tailnet only, never the public internet.** Slopify uses Tailscale *Serve*, never *Funnel*. Slopify has no login and holds your provider keys, so a public address is never an option: Slopify never runs `tailscale funnel`, and it refuses every request that Tailscale marks as coming through Funnel, even if someone turns Funnel on by hand.
 - **Agents stay on this computer.** `/mcp` (agents) and `/mcp/assistant` (the in-app assistant) answer only requests made on the computer Slopify runs on. Remote access is for the Slopify page alone. Agents can read the setting (`get_remote_access`) but can't turn it on or off, and neither can the assistant.
+- **The page does everything it does at home.** A device on your tailnet is you, so the remote page can do what the page on the computer does, paid work included: starting runs, Template studio samples, Compare models and Make samples for all spend from the same daily studio budget and plans as at home. Only the assistant and agents stay on the computer itself (above).
 - **Only Slopify's own address.** The checks that protect actions such as updating, opening folders and the Studio settings accept the page at exactly the address Slopify set up, nothing broader. **Open folder** on a remote device opens the folder on the computer Slopify runs on.
 
 ## When Slopify stops and starts
