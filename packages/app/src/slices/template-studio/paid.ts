@@ -319,10 +319,10 @@ export async function makePaidSample(
 }
 
 // A step the rebuild can only price once the step before it has answered (the narration of an
-// article still to be written) has no price in its preview. The Save's quote priced the same
-// steps with Play's estimate, and the person saw and accepted it (with any step it couldn't
-// price), so the larger of the two is held against what they saw. A version with no quote on
-// record is held on the preview alone.
+// article still to be written) has no price in its preview. The larger of the preview and the
+// price on record is held against what the person saw. The unpriced steps stay unpriced: they
+// start only once the version is covered (`UnknownAcks`), by the person's acceptance or by a
+// quote of theirs that priced them all, never by a price on record alone.
 function covered(
   db: DatabaseSync,
   job: SampleJob,
@@ -332,9 +332,11 @@ function covered(
   const quoted = sampleVersions(db, job.templateId).find(
     (version) => version.templateVersion === job.templateVersion,
   )?.quotedHigh;
-  return quoted === null || quoted === undefined
-    ? { high: costs.high, unknown: costs.unknown, usesPlan }
-    : { high: Math.max(costs.high, quoted), unknown: 0, usesPlan };
+  return {
+    high: quoted === null || quoted === undefined ? costs.high : Math.max(costs.high, quoted),
+    unknown: costs.unknown,
+    usesPlan,
+  };
 }
 
 async function finish(

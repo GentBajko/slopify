@@ -136,7 +136,8 @@ async function change(
       quotedHigh: quote.high,
       heldReason: null,
     });
-    if (ack.acknowledgedUnknown === true) deps.acks.accept(id, template.version);
+    if (ack.acknowledgedUnknown === true || quote.unknown === 0)
+      deps.acks.accept(id, template.version);
     enqueueJob(deps.db, {
       templateId: id,
       templateVersion: template.version,

@@ -16,6 +16,7 @@ import { writeStudioSettings } from "./budget.js";
 import type { SampleJob } from "./jobs.js";
 import { makePaidSample, sampleBusy } from "./paid.js";
 import { sampleOf, sampleProjects, sampleVersions, setSampleVersion } from "./repo.js";
+import { requestSample, storedUnknownAcks } from "./save.js";
 import { paidDocument, paidSampleDeps } from "./studio.fake.js";
 
 const open: (() => void)[] = [];
@@ -166,12 +167,13 @@ describe("a later paid sample", () => {
       },
       1,
     );
-    // As Save records it: the quote the person saw.
+    // As Save records it: the quote the person saw, which priced every step.
     setSampleVersion(h.deps.db, id, version, {
       state: "queued",
       quotedHigh: 0.3,
       at: "2026-09-12T00:00:00.000Z",
     });
+    deps.acks.accept(id, version);
     await makePaidSample(deps, job({ templateVersion: version }), signal);
     const after = currentRevisionId(h.deps.db, sample.projectId);
     expect(after).not.toBe(before);
@@ -245,6 +247,61 @@ describe("a later paid sample's preview", () => {
     });
     await makePaidSample(deps, job({ templateVersion: version, ackHigh: 1 }), signal);
     expect(sampleVersions(h.deps.db, id)[0]).toMatchObject({ state: "held" });
+  });
+});
+
+describe("unknown prices", () => {
+  const voiced = (document: PlayDraftDocument): PlayDraftDocument => ({
+    ...document,
+    form: { ...document.form, audio: { ...document.form.audio, voice: "other" } },
+  });
+
+  it("waits on Make sample without the unknown prices accepted, whatever price it was pressed at", async () => {
+    const { h, deps, id, job, document, save, ticks } = harness();
+    await makePaidSample(deps, job(), signal);
+    const version = save(voiced(document), 1);
+    const before = ticks.length;
+    const asked = requestSample({ db: h.deps.db, clock: h.deps.clock, acks: deps.acks }, id, {
+      version,
+      acknowledgedHigh: 5,
+    });
+    expect(asked.ok).toBe(true);
+    await makePaidSample(deps, job({ templateVersion: version }), signal);
+    expect(sampleVersions(h.deps.db, id)[0]).toMatchObject({
+      templateVersion: version,
+      state: "held",
+      heldReason: expect.stringContaining("no known price"),
+    });
+    expect(ticks.length).toBe(before);
+    // Accepted on Make sample, it is made.
+    requestSample({ db: h.deps.db, clock: h.deps.clock, acks: deps.acks }, id, {
+      version,
+      acknowledgedHigh: 0.3,
+      acknowledgedUnknown: true,
+    });
+    await makePaidSample(deps, job({ templateVersion: version }), signal);
+    expect(sampleVersions(h.deps.db, id)[0]?.heldReason ?? "").toBe("");
+  });
+
+  it("never reads its own held price as the person's acceptance", async () => {
+    const { h, deps, id, job, document, save, ticks } = harness();
+    await makePaidSample(deps, job(), signal);
+    const version = save(voiced(document), 1);
+    await makePaidSample(deps, job({ templateVersion: version }), signal);
+    expect(sampleVersions(h.deps.db, id)[0]?.state).toBe("held");
+    const before = ticks.length;
+    // Looked at again (a wake, a restart): still nothing accepted.
+    await makePaidSample(deps, job({ templateVersion: version }), signal);
+    expect(sampleVersions(h.deps.db, id)[0]?.state).toBe("held");
+    expect(ticks.length).toBe(before);
+  });
+
+  it("keeps what the person accepted across a restart", () => {
+    const { h, id } = harness();
+    storedUnknownAcks(h.deps.db).accept(id, 2);
+    const after = storedUnknownAcks(h.deps.db);
+    expect(after.accepted(id, 2)).toBe(true);
+    expect(after.accepted(id, 3)).toBe(false);
   });
 });
 

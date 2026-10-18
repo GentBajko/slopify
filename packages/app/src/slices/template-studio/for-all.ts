@@ -187,7 +187,8 @@ export async function makeSamplesForAll(deps: SaveDeps, raw: unknown): Promise<F
         held.push(item.templateId);
         continue;
       }
-      if (item.unknown > 0) deps.acks.accept(item.templateId, item.version);
+      // Its unknown prices were accepted above, or its quote priced every step.
+      deps.acks.accept(item.templateId, item.version);
       setSampleVersion(deps.db, item.templateId, item.version, {
         state: "queued",
         at,

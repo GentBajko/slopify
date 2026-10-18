@@ -174,7 +174,7 @@ import { sampleMaker } from "./slices/template-studio/make.js";
 import { makePaidSample } from "./slices/template-studio/paid.js";
 import { sampleProjects, templateSampleCheck } from "./slices/template-studio/repo.js";
 import { createSampleRunner } from "./slices/template-studio/runner.js";
-import { createUnknownAcks } from "./slices/template-studio/save.js";
+import { storedUnknownAcks } from "./slices/template-studio/save.js";
 import {
   notReadySentence,
   runnableTemplate,
@@ -669,8 +669,9 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       loudnessDefault: () => readSettings({ db: runtimeDb, log }).loudness,
     });
     const studioPrices = createPriceCache();
-    // The unknown prices accepted on Save, shared by the studio's routes and its sample loop.
-    const studioAcks = createUnknownAcks();
+    // The unknown prices accepted on Save, shared by the studio's routes and its sample loop,
+    // and kept across restarts.
+    const studioAcks = storedUnknownAcks(db);
     const sampleChanged = (templateId: string): void =>
       hub.emitGlobal({ type: "template.sample", templateId });
     const sampleRunner = createSampleRunner({

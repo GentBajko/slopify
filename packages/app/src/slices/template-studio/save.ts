@@ -6,6 +6,7 @@ import { playDraftDocumentSchema } from "../play-drafts/schema.js";
 import type { ProjectTemplate } from "../project-templates/model.js";
 import { templateById } from "../project-templates/repo.js";
 import { updateTemplate } from "../project-templates/service.js";
+import { readJsonSetting, writeSetting } from "../settings/repo.js";
 import { budgetWords } from "./budget.js";
 import { enqueueJob } from "./jobs.js";
 import type { StudioRefusal } from "./model.js";
@@ -38,13 +39,37 @@ export function exceedsAcknowledged(high: number, acknowledged: number): boolean
   return high > acknowledged * 1.25 + 0.05;
 }
 
-// Which template versions' unknown prices the person accepted on Save. In memory: after a
-// restart a sample with unknown prices waits to be asked again, never the other way round.
+// Which template versions' unpriced steps are covered: the person accepted their unknown
+// prices, or the server's quote they accepted priced every step (a step the sample's rebuild
+// can price only once the step before it answered). Nothing else covers them: not a price
+// recorded on the version, which Make sample and a held sample write too.
 export interface UnknownAcks {
   readonly accept: (templateId: string, version: number) => void;
   readonly accepted: (templateId: string, version: number) => boolean;
 }
 
+// Kept in the database, so a sample a restart stopped continues on what the person accepted.
+const acceptedKey = "templateStudio.unknownAccepted";
+// ceiling: the newest versions of each template; an older one's sample is never made again.
+const keptVersions = 20;
+const acceptedSchema = z.record(z.string(), z.array(z.number().int().positive()));
+
+export function storedUnknownAcks(db: DatabaseSync): UnknownAcks {
+  const read = (): Readonly<Record<string, readonly number[]>> =>
+    readJsonSetting(db, acceptedKey, acceptedSchema, {});
+  return {
+    accept: (id, version) => {
+      const all = read();
+      const versions = [...new Set([...(all[id] ?? []), version])]
+        .toSorted((a, b) => b - a)
+        .slice(0, keptVersions);
+      writeSetting(db, acceptedKey, JSON.stringify({ ...all, [id]: versions }));
+    },
+    accepted: (id, version) => (read()[id] ?? []).includes(version),
+  };
+}
+
+// In memory, for tests and a studio with no database of its own.
 export function createUnknownAcks(): UnknownAcks {
   // ceiling: one entry per template version saved with unknown prices since boot.
   const accepted = new Set<string>();
@@ -187,7 +212,9 @@ export async function saveStudio(deps: SaveDeps, id: string, raw: unknown): Prom
   const template = saved.value;
   const at = deps.clock.now().toISOString();
   if (quote !== null) {
-    if (input.acknowledgedUnknown === true) deps.acks.accept(id, template.version);
+    // Accepted on this Save: unknown prices the person ticked, or a quote that priced them all.
+    if (input.acknowledgedUnknown === true || quote.unknown === 0)
+      deps.acks.accept(id, template.version);
     setSampleVersion(deps.db, id, template.version, {
       state: "queued",
       at,

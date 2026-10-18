@@ -345,7 +345,8 @@ export async function sayItAs(
     if (quote.lines === 0) return { ok: true, value: { alias, queued: false, quote } };
     // The sample's next revision copies Library → Narration aliases as they are now, so its
     // rebuild voices again only the chunks whose spoken words changed.
-    if (quote.unknown > 0) deps.acks.accept(templateId, head.version);
+    // Its unknown prices were accepted above, or it priced every line.
+    deps.acks.accept(templateId, head.version);
     setSampleVersion(deps.db, templateId, head.version, {
       state: "queued",
       at,
