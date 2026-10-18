@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { resolveFont } from "../fonts/index.js";
 import type { RenderRun } from "../video/ffmpeg.js";
 import { designHarness, type Harness, pngOf } from "./designs.fake.js";
@@ -136,8 +136,13 @@ describe("drawing a designed piece", () => {
     holdNext();
     const slow = renderer.render("d1", "a4", "png", signal);
     const queued = renderer.render("d1", "square", "png", signal);
-    await new Promise((resolve) => setTimeout(resolve, 5));
-    expect(seen).toHaveLength(2);
+    await vi.waitFor(() => expect(seen).toHaveLength(2));
+    let queuedDone = false;
+    void queued.then(() => {
+      queuedDone = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(queuedDone).toBe(false);
     release();
     await slow;
     await queued;

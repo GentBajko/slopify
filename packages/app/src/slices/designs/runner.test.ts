@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { GeneratedImage } from "../../kernel/ports/image.js";
 import { designCatalogue, designHarness, type Harness, pngOf } from "./designs.fake.js";
 import { poster } from "./document.fake.js";
@@ -139,7 +139,8 @@ describe("editing a picture", () => {
     });
     for (const n of [1, 2, 3])
       runner.edit("d1", edit(first, { instruction: `Change ${String(n)}` }));
-    await new Promise((resolve) => setTimeout(resolve, 5));
+    await vi.waitFor(() => expect(running).toBe(2));
+    await new Promise((resolve) => setTimeout(resolve, 10));
     expect(running).toBe(2);
     for (const wait of waits) wait.resolve({ bytes: pngOf(5, 5), mime: "image/png" });
     await runner.idle();
