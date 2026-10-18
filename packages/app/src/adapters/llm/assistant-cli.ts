@@ -118,6 +118,61 @@ export function codexAssistantArgs(options: {
   ];
 }
 
+// What the CLI is started with: enough to find itself, its sign-in and the network, and
+// nothing else of Slopify's environment. A provider key there would make the CLI bill that key
+// instead of the person's plan, and hand it a secret it never needs.
+const passedNames = new Set([
+  "PATH",
+  "HOME",
+  "USER",
+  "LOGNAME",
+  "SHELL",
+  "LANG",
+  "LANGUAGE",
+  "TZ",
+  "TMPDIR",
+  "TEMP",
+  "TMP",
+  "TERM",
+  // Where each CLI keeps its sign-in and settings, when moved from the default.
+  "CLAUDE_CONFIG_DIR",
+  "CODEX_HOME",
+  // A network that needs a proxy or its own certificates.
+  "HTTP_PROXY",
+  "HTTPS_PROXY",
+  "NO_PROXY",
+  "http_proxy",
+  "https_proxy",
+  "no_proxy",
+  "NODE_EXTRA_CA_CERTS",
+  "SSL_CERT_FILE",
+  "SSL_CERT_DIR",
+  // Windows: the CLI can't start, or find its folders, without these.
+  "SYSTEMROOT",
+  "SystemRoot",
+  "WINDIR",
+  "COMSPEC",
+  "PATHEXT",
+  "USERPROFILE",
+  "APPDATA",
+  "LOCALAPPDATA",
+  "HOMEDRIVE",
+  "HOMEPATH",
+  "PROGRAMDATA",
+  "ProgramData",
+  "PROGRAMFILES",
+  "ProgramFiles",
+  "Path",
+]);
+
+export function assistantEnv(sourceEnv: Readonly<NodeJS.ProcessEnv>): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {};
+  for (const [name, value] of Object.entries(sourceEnv))
+    if (value !== undefined && (passedNames.has(name) || /^(LC|XDG)_[A-Z_]+$/.test(name)))
+      env[name] = value;
+  return env;
+}
+
 export interface AssistantWorkspace {
   readonly directory: string;
   // Claude Code's --mcp-config file; Codex takes its server as -c values.
@@ -139,12 +194,7 @@ export function assistantWorkspace(
   try {
     const config = join(directory, "mcp.json");
     writeFileSync(config, claudeAssistantConfig(url), { mode: 0o600, flag: "wx" });
-    const env: NodeJS.ProcessEnv = { ...sourceEnv };
-    delete env.INIT_CWD;
-    delete env.OLDPWD;
-    delete env.GIT_DIR;
-    delete env.GIT_WORK_TREE;
-    delete env.CLAUDE_CODE_SAFE_MODE;
+    const env = assistantEnv(sourceEnv);
     env.PWD = directory;
     env[assistantTokenVariable] = token;
     return { directory, config, env, remove };
