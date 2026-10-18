@@ -52,6 +52,8 @@ export const excludedRoutes: Readonly<Record<string, string>> = {
   "DELETE /api/projects/:id/images/:outputId": retired,
   "POST /api/projects/:id/images/:outputId/regenerate": retired,
   "PATCH /api/projects/:id/subtitles": retired,
+  "PUT /api/model-checks/auto":
+    "whether checks may run by themselves, and spend, is the person's: Settings → Models → Automatic checks",
   "GET /api/telemetry/notice": personal,
   "POST /api/telemetry/notice": personal,
   "GET /api/tutorial": personal,
