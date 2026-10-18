@@ -175,7 +175,7 @@ function Studio({
           aria-label={`${current.label} settings`}
           className={cn("flex flex-col gap-4", hidden("settings"))}
         >
-          <SectionHead title={current.label} as="h2" meta={current.sentence} />
+          <SectionHead title={current.label} as="h2" />
           <VisibleControls section={current.id} document={document} onEdit={edit} />
           <MadeWith
             section={current.id}

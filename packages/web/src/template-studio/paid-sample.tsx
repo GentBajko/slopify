@@ -5,6 +5,7 @@ import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
 import { AudioPlayer } from "@/components/kit/audio-player";
 import { Button } from "@/components/kit/button";
+import { Drawer } from "@/components/kit/drawer";
 import { Fold } from "@/components/kit/fold";
 import { FileLink } from "@/components/kit/link";
 import { MediaFrame, MediaGrid } from "@/components/kit/media";
@@ -45,11 +46,7 @@ export function PaidBody({
   const of = (...roles: readonly string[]) => outputs.filter((one) => roles.includes(one.role));
   switch (section) {
     case "script":
-      return view.paid.article === null ? null : (
-        <div className="flex max-h-[520px] flex-col overflow-auto rounded-media border border-line p-3">
-          <ReadingView markdown={view.paid.article} label="Sample script" copyAll={false} />
-        </div>
-      );
+      return view.paid.article === null ? null : <ScriptSample markdown={view.paid.article} />;
     case "voice": {
       const audio = audioRoles.map((role) => of(role)[0]).find((one) => one !== undefined);
       return audio === undefined ? null : (
@@ -115,6 +112,40 @@ export function PaidBody({
     default:
       return null;
   }
+}
+
+// The first lines of the script, plain, for the narrow sample column.
+export function excerptOf(markdown: string, limit = 480): string {
+  const plain = markdown
+    .split("\n")
+    .map((line) =>
+      line
+        .replace(/^#+\s*/u, "")
+        .replace(/[*_`>]/gu, "")
+        .trim(),
+    )
+    .filter((line) => line !== "")
+    .join(" ");
+  if (plain.length <= limit) return plain;
+  const cut = plain.slice(0, limit);
+  return `${cut.slice(0, Math.max(cut.lastIndexOf(" "), limit - 40))}…`;
+}
+
+// A script is long text: the narrow column shows its opening, and the whole of it reads in a
+// wide drawer at a comfortable measure.
+function ScriptSample({ markdown }: { readonly markdown: string }): ReactElement {
+  const [reading, setReading] = useState(false);
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="m-0 text-small text-ink-2">{excerptOf(markdown)}</p>
+      <Button size="small" className="self-start" onClick={() => setReading(true)}>
+        Read the whole script
+      </Button>
+      <Drawer open={reading} title="Sample script" onClose={() => setReading(false)}>
+        <ReadingView markdown={markdown} label="Sample script" copyAll={false} />
+      </Drawer>
+    </div>
+  );
 }
 
 // The sample's title as its runs fill it: the title's keywords, the topic in each empty one.

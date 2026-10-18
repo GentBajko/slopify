@@ -581,3 +581,44 @@ it("says when the samples couldn't be asked for", async () => {
     ),
   ).not.toBeNull();
 });
+
+it("says a section's sample sentence once, beside the sample", async () => {
+  open("script");
+  await screen.findByRole("region", { name: "Script sample" });
+  expect(
+    screen.getAllByText("No sample yet. Press Save to make one, or Make sample."),
+  ).toHaveLength(1);
+});
+
+it("opens the sample's script in a wide reading drawer instead of the narrow column", async () => {
+  const user = userEvent.setup();
+  const article = `# The lighthouse\n\n${"The keeper climbed the stairs at dusk. ".repeat(40)}\n\n## Chapter 1\n\nThe lamp was lit.`;
+  open("script", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({
+      ...view,
+      paid: { ...view.paid, projectId: "P1", revisionId: "R1", state: "done", article },
+    }),
+  });
+  const sample = await screen.findByRole("region", { name: "Script sample" });
+  expect(within(sample).queryByText("The lamp was lit.")).toBeNull();
+  await user.click(within(sample).getByRole("button", { name: "Read the whole script" }));
+  const drawer = await screen.findByRole("dialog", { name: "Sample script" });
+  expect(within(drawer).getByText("The lamp was lit.")).not.toBeNull();
+});
+
+it("lists the names to check in the voice's sample", async () => {
+  open("voice", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({
+      ...view,
+      paid: { ...view.paid, projectId: "P1", revisionId: "R1", state: "done" },
+    }),
+    [`GET /api/template-studio/${templateId}/pronunciations`]: jsonAnswer({
+      names: [{ term: "Kish", ipa: ["kiːʃ"], line: "Kish was old.", spokenAs: null }],
+      aliasesOn: true,
+      voice: null,
+      problem: null,
+    }),
+  });
+  const sample = await screen.findByRole("region", { name: "Voice sample" });
+  expect(await within(sample).findByRole("listitem", { name: "Kish" })).not.toBeNull();
+});
