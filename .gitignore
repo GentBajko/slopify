@@ -12,8 +12,14 @@ packages/app/dist/web/
 # A local data directory for `npm run start:fresh`
 .slopify-local/
 
+# Serena (code-intelligence MCP) local state and config
+.serena/
+
 # Local planning notes, not published
 docs/roadmap-3.0.md
 docs/roadmap-3.1.md
+docs/roadmap-4.0.md
 docs/roadmap-3.0-audit.md
+docs/ux-audit-2026-10.md
+docs/code-health-*.md
 docs/blog-drafts/
