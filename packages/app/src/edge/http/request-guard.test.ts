@@ -11,10 +11,11 @@ afterEach(() => {
   for (const fixture of open.splice(0)) fixture.close();
 });
 
-function fixture() {
+function fixture(allowedHosts: readonly string[] = []) {
   const fake = fakeTailscale();
   let at = 0;
   const h = mcpFixture({
+    allowedHosts,
     remoteAccess: (db: DatabaseSync) =>
       createRemoteAccessService({
         db,
@@ -121,5 +122,121 @@ describe("requests from other web pages", () => {
     });
     expect(made.isError).toBeFalsy();
     await agent.close();
+  });
+});
+
+// The owner's own `tailscale serve` (set up by hand, not through Settings → Remote access): the
+// page is https://<computer>.ts.net[:port], Tailscale forwards plain http to 127.0.0.1 with the
+// browser's Host and its own identity headers.
+describe("a page served through the person's own proxy", () => {
+  const served = "box.tail1234.ts.net";
+  const throughServe = (host: string) => ({
+    host,
+    origin: `https://${host}`,
+    "x-forwarded-for": "100.101.102.103",
+    "x-forwarded-proto": "https",
+    "tailscale-user-login": "person@example.com",
+    "tailscale-user-name": "Person",
+  });
+  const loopbackPeer = { incoming: { socket: { remoteAddress: "127.0.0.1" } } };
+
+  it.each([served, `${served}:8443`])(
+    "saves a setting and starts ordinary actions from %s",
+    async (host) => {
+      const h = fixture();
+      const settings = await (await h.app.request("/api/settings", { headers: local })).json();
+      const saved = await h.app.request("/api/settings", {
+        method: "PUT",
+        headers: { ...throughServe(host), "content-type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+      expect(saved.status, await saved.text()).toBe(200);
+      const channel = await h.app.request("/api/channels", {
+        method: "POST",
+        headers: { ...throughServe(host), "content-type": "application/json" },
+        body: JSON.stringify({ id: "00000000-0000-4000-8000-00000000000a", name: "Served" }),
+      });
+      expect(channel.status, await channel.text()).toBe(201);
+    },
+  );
+
+  it("still refuses a cross-site page, and a page at the same name on another port", async () => {
+    const h = fixture();
+    for (const origin of ["https://evil.example", `https://${served}:8443`, "null"]) {
+      const response = await h.app.request("/api/storage/cleanup", {
+        method: "POST",
+        headers: { ...throughServe(served), origin },
+      });
+      expect(response.status, origin).toBe(403);
+      expect(await response.text()).toContain("another address");
+    }
+  });
+
+  it("keeps host setup on the computer itself, and agents off the proxy", async () => {
+    const h = fixture();
+    const key = await h.app.request("/api/providers/openai/key", {
+      method: "PUT",
+      headers: { ...throughServe(served), "content-type": "application/json" },
+      body: JSON.stringify({ key: "sk-test" }),
+    });
+    expect(key.status).toBe(403);
+    expect(await key.text()).toContain("only on the computer Slopify runs on");
+    const mcp = await h.app.request("/mcp", {
+      method: "POST",
+      headers: {
+        ...throughServe(served),
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: {} }),
+    });
+    expect(mcp.status).toBe(403);
+    expect(await mcp.text()).toContain("Agents connect only on the computer Slopify runs on");
+  });
+
+  it("takes the name the browser used from X-Forwarded-Host only from a proxy on this computer", async () => {
+    const h = fixture(["slopify.example"]);
+    const behindProxy = (forwarded: string, origin: string) => ({
+      host: "127.0.0.1:6969",
+      origin,
+      "x-forwarded-host": forwarded,
+      "x-forwarded-for": "192.168.1.20",
+      "content-type": "application/json",
+    });
+    const create = (headers: Record<string, string>, peer: unknown, n: number) =>
+      h.app.request(
+        "/api/channels",
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            id: `00000000-0000-4000-8000-00000000001${String(n)}`,
+            name: `Proxied ${String(n)}`,
+          }),
+        },
+        peer,
+      );
+    const ok = await create(
+      behindProxy("slopify.example", "https://slopify.example"),
+      loopbackPeer,
+      1,
+    );
+    expect(ok.status, await ok.text()).toBe(201);
+    const remotePeer = { incoming: { socket: { remoteAddress: "192.168.1.20" } } };
+    expect(
+      (await create(behindProxy("slopify.example", "https://slopify.example"), remotePeer, 2))
+        .status,
+    ).toBe(403);
+    expect(
+      (await create(behindProxy("slopify.example", "https://evil.example"), loopbackPeer, 3))
+        .status,
+    ).toBe(403);
+    const rebound = await create(
+      behindProxy("evil.example", "https://evil.example"),
+      loopbackPeer,
+      4,
+    );
+    expect(rebound.status).toBe(403);
+    expect(await rebound.text()).toContain("SLOPIFY_ALLOWED_HOSTS");
   });
 });

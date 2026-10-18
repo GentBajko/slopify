@@ -31,8 +31,9 @@ A page opened through the remote address shows the switch but can't change it: r
 
 - **Tailnet only, never the public internet.** Slopify uses Tailscale *Serve*, never *Funnel*. Slopify has no login and holds your provider keys, so a public address is never an option: Slopify never runs `tailscale funnel`, and it refuses every request that Tailscale marks as coming through Funnel, even if someone turns Funnel on by hand.
 - **Agents stay on this computer.** `/mcp` (agents) and `/mcp/assistant` (the in-app assistant) answer only requests made on the computer Slopify runs on. Remote access is for the Slopify page alone. Agents can read the setting (`get_remote_access`) but can't turn it on or off, and neither can the assistant.
-- **The page does everything it does at home.** A device on your tailnet is you, so the remote page can do what the page on the computer does, paid work included: starting runs, Template studio samples, Compare models and Make samples for all spend from the same daily studio budget and plans as at home. Only the assistant and agents stay on the computer itself (above).
-- **Only Slopify's own address.** The checks that protect actions such as updating, opening folders and the Studio settings accept the page at exactly the address Slopify set up, nothing broader. **Open folder** on a remote device opens the folder on the computer Slopify runs on.
+- **The page does almost everything it does at home.** A device on your tailnet is you, so the remote page can do what the page on the computer does, paid work included: starting runs, Template studio samples, Compare models and Make samples for all spend from the same daily studio budget and plans as at home. What sets up the computer itself stays there: saving or removing provider keys, a CLI's path, importing a backup, installing updates, Start with this computer, moving the Files or backup folder, clean-ups that delete files and the assistant's **Allow**. Each is refused over the tailnet with where to do it instead.
+- **Only your account.** While remote access is on, a request through Tailscale from any account other than the one that turned it on is refused.
+- **Only the page at the address you opened.** A change is accepted only from the Slopify page at the very address the browser opened for that request, so a web page at any other address can't make one through your browser. **Open folder** on a remote device opens the folder on the computer Slopify runs on.
 
 ## When Slopify stops and starts
 
@@ -41,6 +42,8 @@ The address works while Slopify runs. When Slopify stops, it removes its serve s
 ## Your own serve settings
 
 Slopify changes only the one serve setting it added, and only while it is still exactly what Slopify set. If you already serve something on HTTPS port 443 (even Slopify itself, set up by hand), Slopify leaves it alone and offers **Use port 8443**, which gives Slopify its own address such as `https://mypc.tail1234.ts.net:8443`. Or remove yours with `tailscale serve --https=443 off` and press **Check again**.
+
+Slopify served by your own `tailscale serve`, or behind a reverse proxy such as Caddy or nginx, keeps working without the switch: the page saves settings and starts work as it does through Slopify's own address. The same things stay on the computer itself (keys, updates and the rest above), agents still connect only at `http://127.0.0.1:<port>/mcp`, and a proxy on a name other than a `ts.net` address needs that name in `SLOPIFY_ALLOWED_HOSTS` (see [Install](Install)).
 
 ## What the notices mean
 

@@ -31,6 +31,8 @@ export function mcpFixture(
     readonly remoteAccess?: (
       db: DatabaseSync,
     ) => import("../remote-access/service.js").RemoteAccessService;
+    // SLOPIFY_ALLOWED_HOSTS.
+    readonly allowedHosts?: readonly string[];
   } = {},
 ): {
   readonly app: Hono;
@@ -72,6 +74,7 @@ export function mcpFixture(
     ...(options.remoteAccess === undefined
       ? {}
       : { remoteAccess: options.remoteAccess(h.deps.db) }),
+    ...(options.allowedHosts === undefined ? {} : { allowedHosts: options.allowedHosts }),
   });
   return { app, deps: h.deps, projectId: h.projectId, ticks, close: h.close };
 }

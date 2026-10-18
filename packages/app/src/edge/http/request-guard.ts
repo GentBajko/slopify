@@ -3,7 +3,7 @@ import { hostname } from "node:os";
 import type { MiddlewareHandler } from "hono";
 import { actorOf } from "./actor.js";
 import { problem } from "./problem.js";
-import { fromSlopifyPage, type RemoteHost } from "./same-page.js";
+import { forwardedHost, fromSlopifyPage, type RemoteHost } from "./same-page.js";
 
 // Slopify has no login, so what a request may do rests on where it came from. A web page the
 // person happens to have open must not reach it:
@@ -11,9 +11,13 @@ import { fromSlopifyPage, type RemoteHost } from "./same-page.js";
 //   Slopify as that page's own site. Every request must be addressed to a name Slopify
 //   answers to: loopback, an IP address, the address it listens on, a Tailscale address,
 //   this computer's own name, or a name the person lists in SLOPIFY_ALLOWED_HOSTS.
+//   Behind a proxy on this computer the name the browser used is its X-Forwarded-Host, which
+//   must pass the same check.
 // - by a cross-site request: a form or no-cors fetch a browser sends without asking. A change
-//   that carries an Origin must come from Slopify's own page, and a body a form could send
-//   (text, url-encoded, multipart) without an Origin needs X-Slopify-Client.
+//   that carries an Origin must come from Slopify's own page, at the very host:port the
+//   browser addressed (`same-page.ts`), so any proxy the person put in front keeps working;
+//   a body a form could send (text, url-encoded, multipart) without an Origin needs
+//   X-Slopify-Client.
 // Not checked here: agents' and the assistant's in-process calls (no network request can make
 // one), and the paired Studio extension's routes, which carry its token and answer its origin.
 
@@ -66,15 +70,20 @@ export function requestGuard(deps: {
 }): MiddlewareHandler {
   return async (c, next) => {
     if (actorOf(c) !== "person") return next();
+    const rules: HostRules = {
+      listenHost: deps.listenHost,
+      remoteHost: deps.remoteHost?.(),
+      extraHosts: deps.extraHosts,
+    };
     const host = c.req.header("host");
-    if (
-      !hostAllowed(host, {
-        listenHost: deps.listenHost,
-        remoteHost: deps.remoteHost?.(),
-        extraHosts: deps.extraHosts,
-      })
-    ) {
-      const shown = (host ?? "").replace(/[^\w.:[\]-]/g, "").slice(0, 100);
+    const forwarded = forwardedHost(c);
+    const refused = !hostAllowed(host, rules)
+      ? (host ?? "")
+      : forwarded !== undefined && !hostAllowed(forwarded, rules)
+        ? forwarded
+        : undefined;
+    if (refused !== undefined) {
+      const shown = refused.replace(/[^\w.:[\]-]/g, "").slice(0, 100);
       return problem(c, {
         status: 403,
         detail: `Slopify refused this request: it was addressed to ${shown}, a name this Slopify doesn't answer to, which is how a web page could reach it through your browser. Open Slopify at http://127.0.0.1 and its port. If you reach it by this name on purpose, start Slopify with SLOPIFY_ALLOWED_HOSTS=${nameOf(shown)}.`,

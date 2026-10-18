@@ -121,14 +121,14 @@ describe("/api/settings/remote-access", () => {
 });
 
 describe("requests through Tailscale", () => {
-  it("accepts the Slopify page at the exact address Slopify set up, and no other", async () => {
+  it("accepts the Slopify page at the address the browser used, on or off, and no other", async () => {
     const { h, put } = fixture();
     const settings = (headers: Record<string, string>) =>
       h.app.request("/api/studio/settings", { headers });
-    // Off: the ts.net page is not Slopify's own.
+    // Off: the same page served by the person's own `tailscale serve` is still Slopify's.
     expect(
       (await settings({ ...viaTailscale(8443), origin: `https://${fakeDns}:8443` })).status,
-    ).toBe(403);
+    ).toBe(200);
     await put({ enabled: true, httpsPort: 8443 });
     expect(
       (await settings({ ...viaTailscale(8443), origin: `https://${fakeDns}:8443` })).status,
