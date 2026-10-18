@@ -7,6 +7,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { liveProject } from "../admission/repo.js";
+import { notTemplateSample } from "../template-studio/repo.js";
 import type { EntryCategory, PromptKind } from "./model.js";
 
 export type LibraryRef =
@@ -196,7 +197,7 @@ export function usedBy(
         (SELECT count(*) FROM project_revisions x WHERE x.project_id=r.project_id) AS total
        FROM project_revisions r JOIN projects p ON p.id=r.project_id
        LEFT JOIN project_heads h ON h.project_id=r.project_id
-       WHERE ${liveProject("p")} AND ${mentions("r.config")}
+       WHERE ${liveProject("p")} AND ${notTemplateSample("p")} AND ${mentions("r.config")}
        ORDER BY p.created_at DESC,p.id,r.created_at`,
     )
     .all(...plain)
@@ -217,7 +218,7 @@ export function usedBy(
   for (const row of db
     .prepare(
       `SELECT p.id,p.title,p.config FROM projects p
-       WHERE ${liveProject("p")}
+       WHERE ${liveProject("p")} AND ${notTemplateSample("p")}
        AND NOT EXISTS (SELECT 1 FROM project_revisions r WHERE r.project_id=p.id)
        AND ${mentions("p.config")} ORDER BY p.created_at DESC,p.id`,
     )

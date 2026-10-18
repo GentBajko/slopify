@@ -164,6 +164,29 @@ describe("usedBy", () => {
     expect(found.projects).toHaveLength(2);
   });
 
+  it("leaves out a template studio sample and its bake-off copies", () => {
+    const db = database();
+    template(db, "t1", "Weekly essay", [{ articlePrompt: "Essay" }]);
+    project(db, "p1", "Cats", [{ articlePrompt: "Essay" }], 0);
+    project(db, "sample", "Studio sample", [{ articlePrompt: "Essay" }], 0);
+    project(db, "copy", "Bake-off copy", [{ articlePrompt: "Essay" }], 0);
+    // One from before revisions existed is read from its own config.
+    db.prepare(
+      `INSERT INTO projects (id,title,format,config,created_at,updated_at) VALUES ('old','Old sample','16:9','{"articlePrompt":"Essay"}',?,?)`,
+    ).run(at, at);
+    db.prepare(
+      "INSERT INTO template_samples (template_id,project_id,topic,topic_source,full_script,created_at) VALUES ('t1','sample','Topic','fixed',0,?)",
+    ).run(at);
+    db.prepare(
+      "INSERT INTO template_bakeoffs (id,template_id,template_version,section,ack_high,state,created_at,updated_at) VALUES ('b1','t1',1,'script',1,'done',?,?)",
+    ).run(at, at);
+    db.prepare(
+      "INSERT INTO template_bakeoff_clones (bakeoff_id,slot,provider,model,project_id,state) VALUES ('b1',0,'openrouter','m','copy','done'),('b1',1,'openrouter','n','old','done')",
+    ).run();
+    const found = usedBy(db, { item: "prompt", kind: "article", name: "Essay" });
+    expect(found.projects.map((one) => one.id)).toEqual(["p1"]);
+  });
+
   it("matches a name that is not plain ASCII, and nothing for an unused one", () => {
     const db = database();
     template(db, "t1", "Café", [{ intro: "Grüß Gott" }]);
