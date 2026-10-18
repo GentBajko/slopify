@@ -91,7 +91,9 @@
     left: 50%;
     bottom: calc(100% + 6px);
     transform: translateX(-50%);
-    z-index: 5;
+    /* Above the sticky action bar and the columns beside the button. */
+    z-index: 30;
+    white-space: normal;
     padding: 4px 8px;
     border-radius: 6px;
     background: var(--color-ink);
@@ -113,10 +115,11 @@
   /* A disabled button that explains itself is drawn dim by colour, not by opacity: opacity
      would fade its reason's tooltip too, leaving it see-through over the text it covers. */
   .sl-btn[aria-disabled="true"] {
+    opacity: 1;
     cursor: not-allowed;
     border-color: var(--color-line);
-    background: var(--color-raised);
-    color: var(--color-ink-3);
+    background: transparent;
+    color: color-mix(in srgb, var(--color-ink) 42%, transparent);
     box-shadow: none;
   }
   /* In a page's title row the button sits at the top of the window: its tip opens below. */

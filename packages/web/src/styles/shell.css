@@ -670,6 +670,16 @@
       padding-right: min(440px, 100vw);
     }
   }
+  /* With the Assistant beside it, a studio has the room of a narrower window: its sample and
+     checks go under the settings, as they do below 1180px. */
+  @media (min-width: 1024px) and (max-width: 1720px) {
+    .sl-app--side-panel .sl-workspace.sl-workspace--studio {
+      grid-template-columns: 180px minmax(0, 1fr);
+    }
+    .sl-app--side-panel .sl-workspace--studio .sl-workspace__aside {
+      order: 1;
+    }
+  }
   .sl-crumb {
     display: flex;
     align-items: center;
@@ -806,11 +816,6 @@
       height: auto;
       min-height: 40px;
       padding-block: 6px;
-    }
-    .sl-workspace--studio .sl-workspace__sections .sl-rail__item > .truncate {
-      white-space: normal;
-      overflow: visible;
-      text-overflow: clip;
     }
   }
   @media (max-width: 1180px) {
@@ -1169,6 +1174,18 @@
        bottom padding with the safe area) and a gap, never over it. */
     .sl-toasts {
       bottom: calc(56px + max(12px, env(safe-area-inset-bottom)));
+    }
+  }
+}
+
+/* The studio rail's names wrap (above): Tailwind's truncate is a utility, so only a utility
+   undoes it. */
+@layer utilities {
+  @media (min-width: 768px) {
+    .sl-workspace--studio .sl-workspace__sections .sl-rail__item > .truncate {
+      white-space: normal;
+      overflow: visible;
+      text-overflow: clip;
     }
   }
 }

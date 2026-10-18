@@ -74,7 +74,7 @@ export function ActionBar({
     >
       {/* On a phone an empty status line takes no row of its own: the bar is one row of
           buttons until there is something to say. */}
-      <div className="flex w-full min-w-0 sm:w-auto sm:flex-1 max-sm:has-[[data-slot=status-slot]:empty]:hidden">
+      <div className="flex w-full min-w-0 sm:w-auto sm:flex-[1_1_18rem] max-sm:has-[[data-slot=status-slot]:empty]:hidden">
         {status ?? <StatusSlot />}
       </div>
       <div className="ml-auto flex flex-wrap items-center gap-2">{children}</div>
