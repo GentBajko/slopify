@@ -101,15 +101,17 @@ export function previewDetails(
             ? "Intro text"
             : row.key.startsWith("entry:outro")
               ? "Outro text"
-              : row.stage === "article"
-                ? "Article"
-                : row.stage === "research"
-                  ? "Research"
-                  : row.key.startsWith("shorts:")
-                    ? "Short image prompts"
-                    : row.key === "images:scenes"
-                      ? "Image scenes"
-                      : "Thumbnail prompt";
+              : row.key === "article:digest"
+                ? "Keyword digest"
+                : row.stage === "article"
+                  ? "Article"
+                  : row.stage === "research"
+                    ? "Research"
+                    : row.key.startsWith("shorts:")
+                      ? "Short image prompts"
+                      : row.key === "images:scenes"
+                        ? "Image scenes"
+                        : "Thumbnail prompt";
       return [
         {
           key: row.key,

@@ -27,6 +27,7 @@ import { attributionMessages } from "../voices/attribution.js";
 import { usesVoices } from "../voices/model.js";
 import { scriptMessages } from "../voices/script.js";
 import { describedText, describeFuture, describing } from "./recipe-describe.js";
+import { keywordDigest } from "./recipe-digest.js";
 import {
   articleMarkdownOf,
   chaptersProducer,
@@ -256,9 +257,6 @@ export function textRecipes(context: RecipeContext): TextRecipes {
           research === undefined ? [] : [research.key],
         );
   recipes.push(article);
-  // What the keywords in the later prompts are filled from.
-  const keywords: KeywordState = { producers: [chaptersProducer(articleMarkdown, article)] };
-  const keyed: RecipeContext = { ...context, keywords };
   if (
     resolved.articleContinuation !== undefined &&
     config.sources.article === "generate" &&
@@ -286,6 +284,17 @@ export function textRecipes(context: RecipeContext): TextRecipes {
     content.picturesArticle === undefined
       ? articleText
       : plainText(splitEndMatter(content.picturesArticle).body);
+  // What the keywords in the later prompts are filled from: the article's chapters and, when a
+  // prompt uses one, the keyword digest written from it.
+  const digest = keywordDigest(context, { pictureText, article });
+  if (digest !== undefined) recipes.push(digest.recipe);
+  const keywords: KeywordState = {
+    producers: [
+      chaptersProducer(articleMarkdown, article),
+      ...(digest === undefined ? [] : [digest.producer]),
+    ],
+  };
+  const keyed: RecipeContext = { ...context, keywords };
   let script: ScriptText | undefined;
   if (voices !== undefined && scriptCheck !== undefined) {
     if (writesScript) script = { text: endMatter?.body ?? null, dependsOn: [article.key] };

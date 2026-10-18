@@ -9,6 +9,7 @@ import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
 import { checkAppearance } from "../images/appearance.js";
 import { checkScenes, sceneCountOf } from "../images/scenes.js";
+import { checkDigest } from "../keywords/digest.js";
 import { spokenPassage } from "../narration/describe.js";
 import { observeNarration } from "../narration/live.js";
 import { validatePreparation } from "../narration/preparation.js";
@@ -24,6 +25,7 @@ import { probeDurationMs } from "../video/ffmpeg.js";
 import { parseAttribution } from "../voices/attribution.js";
 import { parseScript } from "../voices/script.js";
 import { imageAppearanceKey } from "./recipe-appearance.js";
+import { digestKey } from "./recipe-digest.js";
 import { imageScenesKey, thumbnailScenesKey } from "./recipe-scenes.js";
 import { executeArticleRequests } from "./runtime-article.js";
 import { imageCall } from "./runtime-image.js";
@@ -281,6 +283,11 @@ function checkAnswer(piece: WorkPiece, answer: LlmAnswer): string | undefined {
     const checked = checkAppearance(answer.text);
     return checked.ok ? undefined : checked.reason;
   }
+  // The keyword digest: every part written.
+  if (piece.key === digestKey && piece.input.kind === "llm") {
+    const checked = checkDigest(answer.text);
+    return checked.ok ? undefined : checked.reason;
+  }
   if (piece.key === "research:planner")
     return chaptersFrom(answer.text).length === 0
       ? "The AI model's research plan listed no chapters, so research could not go on. Use Try again; if it keeps happening, choose another model in the Providers section of Edit project."
@@ -346,6 +353,20 @@ async function publishText(
         ["instructions", "instructions.md", frozenInstructions(deps, context, piece)],
       ]),
       { appearance: checked.appearance, text: answer.text },
+    );
+    return;
+  }
+  if (piece.key === digestKey && piece.input.kind === "llm") {
+    const checked = checkDigest(answer.text);
+    if (!checked.ok) throw new Error(checked.reason);
+    await publishResult(
+      deps,
+      context,
+      piece,
+      preparedTexts(deps, context, piece, [
+        ["instructions", "instructions.md", frozenInstructions(deps, context, piece)],
+      ]),
+      { digest: checked.digest, text: answer.text },
     );
     return;
   }

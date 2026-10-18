@@ -89,10 +89,12 @@ export function normalizeArticleIntent(base: RevisionView, edit: RevisionEdit): 
 }
 
 // The steps that are made from the article: each image's scene, the looks, the thumbnails'
-// scenes, the thumbnail prompt and an intro or outro the AI model writes from it.
+// scenes, the keyword digest, the thumbnail prompt and an intro or outro the AI model writes
+// from it.
 export const pictureWorkKeys = [
   "images:scenes",
   "thumbnail:scenes",
+  "article:digest",
   "images:appearance",
   "thumbnail:prompt",
   "entry:intro:text",

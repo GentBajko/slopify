@@ -58,5 +58,6 @@ function label(key: string): string {
     return `Article continuation ${key.split(":").at(-1)}`;
   if (key === "entry:intro:text") return "Intro";
   if (key === "entry:outro:text") return "Outro";
+  if (key === "article:digest") return "Keyword digest";
   return "Thumbnail instructions";
 }

@@ -41,6 +41,7 @@ export function pieceLabel(
   if (key === "shorts:pick" || key === "shorts:future") return "Shorts";
   if (key === "animate:future") return "Animated images";
   if (key === "images:scenes") return "Image scenes";
+  if (key === "article:digest") return "Keyword digest";
   const short = /^shorts:(\d+):(prompts|image:(\d+)|render)$/.exec(key);
   if (short !== null)
     return short[2] === "prompts"

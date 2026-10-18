@@ -340,3 +340,24 @@ describe("the keywords Slopify fills", () => {
     );
   });
 });
+
+describe("the keyword digest", () => {
+  const thumbnail: RunDraft = {
+    ...draft,
+    llm: { provider: "codex", model: "test" },
+    sources: { ...draft.sources, thumbnail: "from_prompt" },
+    images: { provider: "fal", model: "image" },
+    thumbnailPrompt: "Thumb",
+  };
+  it("prices one call when a prompt uses a digest keyword where it works", () => {
+    const rows = (rendered: Readonly<Record<string, string>>) =>
+      estimateRun(thumbnail, rendered, 1500, catalogue).rows.filter(
+        (one) => one.stage === "Keyword digest",
+      );
+    expect(rows({ thumbnailPrompt: "{{Slopify_Hook}} {{Slopify_Thumbnail_Text}}" })).toHaveLength(
+      1,
+    );
+    expect(rows({ thumbnailPrompt: "plain" })).toEqual([]);
+    expect(rows({ article: "{{Slopify_Hook}}" })).toEqual([]);
+  });
+});

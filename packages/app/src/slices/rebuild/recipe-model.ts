@@ -74,6 +74,8 @@ export const deferredOperations = [
   "thumbnail-scenes",
   // How the subject and characters look (`recipe-appearance.ts`), looked up on the web.
   "image-appearance",
+  // The keyword digest (`recipe-digest.ts`), written once the article is.
+  "keyword-digest",
 ] as const;
 export interface DialogueLine {
   readonly speaker: string;

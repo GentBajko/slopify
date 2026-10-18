@@ -15,6 +15,7 @@ import { splitEndMatter } from "../article/split.js";
 import { usesAppearance } from "../images/appearance.js";
 import { narrationMinutes, plannedImageCount, scalesImages } from "../images/scale.js";
 import { usesSlopifyScene } from "../images/scenes.js";
+import { keywordUsesOf, placeOfKey } from "../keywords/rules.js";
 import { describedBlocks, narrationBlocks } from "../narration/blocks.js";
 import { chunkNarration, defaultChunking } from "../narration/chunk.js";
 import { describeMessages } from "../narration/describe.js";
@@ -40,7 +41,7 @@ import {
   usesAnimation,
   videoEditProblems,
 } from "../video/edit-settings.js";
-import { usesVoices } from "../voices/model.js";
+import { usesScriptPrompt, usesVoices } from "../voices/model.js";
 import { defaultDescriptionPrompt } from "../youtube/model.js";
 
 // ceiling: the most chapters "Chapter openers" is charged for before the article exists, the
@@ -308,6 +309,18 @@ export function estimateRun(
     text("Image scenes", articleChars + 1500, 120 * images);
   if (draft.sources.thumbnail === "from_prompt" && usesSlopifyScene(rendered.thumbnailPrompt))
     text("Thumbnail scenes", articleChars + 1500, 120 * thumbnailCountOf(draft));
+  // The keyword digest: one call reads the article and writes every digest keyword.
+  const placed = Object.entries(rendered).flatMap(([key, body]) => {
+    const place = placeOfKey(key, { script: usesScriptPrompt(draft) });
+    return place === undefined ? [] : [{ field: key, place, body }];
+  });
+  if (keywordUsesOf(placed).digest !== undefined)
+    text(
+      "Keyword digest",
+      articleChars + 1500,
+      600,
+      "One call reads the article and writes every digest keyword the run uses.",
+    );
   // `{{Appearance}}` (or `{{Slopify_Appearance}}`): one call with web search looks up the looks.
   if (
     [
