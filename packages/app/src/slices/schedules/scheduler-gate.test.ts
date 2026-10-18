@@ -71,9 +71,7 @@ function setup() {
       .prepare("SELECT status,error FROM schedule_runs WHERE schedule_id=? ORDER BY scheduled_for")
       .all(scheduleId);
   const titles = () =>
-    h.events.map(
-      (id) => (h.deps.db.prepare("SELECT title FROM projects WHERE id=?").get(id) ?? {}).title,
-    );
+    h.events.map((id) => h.deps.db.prepare("SELECT title FROM projects WHERE id=?").get(id)?.title);
   const queue = () =>
     JSON.parse(
       String(
