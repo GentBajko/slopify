@@ -14,7 +14,7 @@ export function scheduleGateWords(gate: TemplateGate): {
 } {
   if (gate.runs === null)
     return {
-      text: "Waits: no version of its template is marked ready. Open the template's studio and press Mark ready.",
+      text: "Runs nothing yet: no version is marked ready",
       tone: "waiting",
     };
   const newer = gate.head > gate.runs ? ` · version ${String(gate.head)} not ready yet` : "";
