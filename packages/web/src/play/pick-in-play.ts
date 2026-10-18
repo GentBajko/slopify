@@ -74,6 +74,31 @@ export function pickInPlay(document: PlayDraftDocument, item: Prompt | Entry): U
         "content",
         "articlePrompt",
       );
+    // A Post prompt writes every site's post that is on; with none on, it turns X's on.
+    case "post": {
+      const social = form.social ?? {};
+      const on = socialPlatforms.filter((platform) => social[platform] !== undefined);
+      const sites = on.length === 0 ? (["x"] as const) : on;
+      return next(
+        {
+          social: {
+            ...social,
+            ...Object.fromEntries(
+              sites.map((platform) => [
+                platform,
+                {
+                  ...(social[platform] ?? defaultChoices[platform]),
+                  text: "prompt",
+                  prompt: item.name,
+                },
+              ]),
+            ),
+          },
+        },
+        "outputs",
+        "social",
+      );
+    }
     // A Review prompt goes to every review that is on; with none on, it turns the article's on.
     case "review": {
       const reviews = form.reviews ?? emptyReviews;
@@ -88,27 +113,6 @@ export function pickInPlay(document: PlayDraftDocument, item: Prompt | Entry): U
               ),
             };
       return next({ reviews: { ...reviews, stages } }, "review", "reviews");
-    }
-    // A Post prompt writes every site's post that a post prompt writes; with none, X's.
-    case "post": {
-      const social = form.social ?? {};
-      const prompted = socialPlatforms.filter((one) => social[one]?.text === "prompt");
-      const sites = prompted.length === 0 ? (["x"] as const) : prompted;
-      return next(
-        {
-          social: {
-            ...social,
-            ...Object.fromEntries(
-              sites.map((one) => [
-                one,
-                { ...(social[one] ?? defaultChoices[one]), text: "prompt", prompt: item.name },
-              ]),
-            ),
-          },
-        },
-        "outputs",
-        "social",
-      );
     }
   }
 }

@@ -108,8 +108,8 @@ export function ExtensionInstall(): ReactElement {
           </>
         )}
         <li>
-          Pair it: press Copy beside the pairing token in Settings → YouTube Studio, click the
-          Slopify extension's toolbar button, paste the token and press Pair.
+          Pair it: press Copy beside the pairing token in Settings → YouTube Studio and posting,
+          click the Slopify extension's toolbar button, paste the token and press Pair.
         </li>
       </ol>
     </div>

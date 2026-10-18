@@ -18,7 +18,7 @@ The kind decides where Play offers the prompt.
 | **Shorts** | Tells the text model which moments to cut into vertical shorts (3 of 60 to 120 s by default). A project that picks none uses the built-in wording. | One call to pick them, one per short for its picture prompts, one image call per picture |
 | **Review** | Tells the reviewer what to check in a finished article, set of images, narration, thumbnail or shorts, and when to flag or redo it. Pictures can only be judged by the Claude Code and Codex reviewers. A stage with none picked uses its own built-in wording. | One reviewer call per item checked |
 | **Script (speakers)** | Used instead of an Article prompt when a run has several voices. The text model answers with `#` section headings and `Name: words` turns, one speaker per paragraph. Text in `[square brackets]` is not spoken. | One call on the project's LLM |
-| **Post** | Writes a project's post for X, LinkedIn, Instagram, TikTok, Reddit or Bluesky from the article, when that site's text source is a post prompt. Slopify adds the hashtags and the link itself and holds the answer to the site's limit; an answer over it is asked for again. A site set to a post prompt with none picked uses the built-in wording. | One call per site on the project's LLM |
+| **Post** | Writes a project's post for X, LinkedIn, Instagram, TikTok, Reddit or Bluesky from the article. Slopify gives it the site's length limit and asks again when the answer is over it, then adds the hashtags and the link itself. Picked per site in a template's Upload pack (text **Written by a post prompt**); a site set to a post prompt with none picked uses the built-in wording. See [Posting to social sites](Posting-to-Social-Sites#post-prompts). | One call per site that uses it, on the project's LLM |
 
 See [Title and article](Play-Title-and-Article), [Images](Play-Images), [Narration](Play-Narration), [YouTube description](YouTube-Description), [Shorts](Shorts), [Reviews and checkpoints](Reviews-and-Checkpoints), [Multiple voices](Multiple-Voices) and [Posting to social sites](Posting-to-Social-Sites) for how each is used.
 
@@ -45,7 +45,7 @@ If **Save** won't go, the sentence beside it names the first problem, such as "E
 Some kinds have a starter button above the body:
 
 - **Narration Preparation:** **Use Documentary Starter** fills in documentary delivery cues.
-- **YouTube Description** and **Shorts:** **Use Built-in Starter** fills in the wording Slopify uses when no prompt is picked.
+- **YouTube Description**, **Shorts** and **Post:** **Use Built-in Starter** fills in the wording Slopify uses when no prompt is picked.
 
 When the body already has text, Slopify asks "Replace this prompt body?" first. Nothing is saved until you press **Save**.
 
@@ -107,7 +107,7 @@ Each prompt's row has, in order:
 |---|---|
 | **Edit** | Opens the editor. Change the text and press **Save**. |
 | **Duplicate** | Opens the editor with a copy. Give it a new name and save. |
-| **Use in Play** | Picks the prompt in your open Play draft and opens Play on its field. An article prompt switches the article to Generate, an image prompt is ticked with one image, a thumbnail prompt switches the thumbnail to From prompt, and a Description or Shorts prompt turns that step on. |
+| **Use in Play** | Picks the prompt in your open Play draft and opens Play on its field. An article prompt switches the article to Generate, an image prompt is ticked with one image, a thumbnail prompt switches the thumbnail to From prompt, a Description or Shorts prompt turns that step on, and a Post prompt writes every site's post that is on (X's, when none is). |
 | **History** | Opens the prompt's history (below). |
 | **Delete** | Asks first, then moves the prompt to **Settings → Backup & storage → Trash** for 30 days, where **Restore** brings it back. |
 

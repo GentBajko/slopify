@@ -49,24 +49,24 @@ describe("pickInPlay", () => {
     ).toMatchObject({ enabled: true, prompt: "Reels" });
   });
 
-  it("gives a post prompt to every site a post prompt writes, else to X", () => {
-    const fresh = pickInPlay(freshDraftDocument, prompt("post", "Teaser"));
-    expect(fresh.document.form.social?.x).toMatchObject({ text: "prompt", prompt: "Teaser" });
-    expect(fresh.field).toBe("social");
-    const summary = { text: "summary" as const, media: {}, hashtags: 2, link: false };
-    const picked = pickInPlay(
+  it("puts a post prompt on every site that posts, or on X when none does", () => {
+    const none = pickInPlay(freshDraftDocument, prompt("post", "Hooky"));
+    expect(none.document.form.social).toEqual({
+      x: { text: "prompt", prompt: "Hooky", media: { video: "long" }, hashtags: 2, link: false },
+    });
+    expect(none).toMatchObject({ section: "outputs", field: "social" });
+    const some = pickInPlay(
       {
         ...freshDraftDocument,
         form: {
           ...freshDraftDocument.form,
-          social: { bluesky: summary, linkedin: { ...summary, text: "prompt", prompt: "Old" } },
+          social: { bluesky: { text: "title", media: {}, hashtags: 1, link: true } },
         },
       },
-      prompt("post", "Teaser"),
+      prompt("post", "Hooky"),
     );
-    expect(picked.document.form.social).toEqual({
-      bluesky: summary,
-      linkedin: { ...summary, text: "prompt", prompt: "Teaser" },
+    expect(some.document.form.social).toEqual({
+      bluesky: { text: "prompt", prompt: "Hooky", media: {}, hashtags: 1, link: true },
     });
   });
 

@@ -556,6 +556,9 @@
   .sl-media__frame--square {
     aspect-ratio: 1 / 1;
   }
+  .sl-media__frame--tall {
+    aspect-ratio: 4 / 5;
+  }
   .sl-media__frame img,
   .sl-media__frame video {
     position: absolute;

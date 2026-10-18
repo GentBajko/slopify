@@ -1,5 +1,6 @@
 import type { PromptDraft, PromptKind } from "@app/slices/library/model.js";
 import { defaultShortsPrompt } from "@app/slices/shorts/model.js";
+import { defaultPostPrompt } from "@app/slices/social/post-prompt.js";
 import { defaultDescriptionPrompt } from "@app/slices/youtube/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
@@ -389,7 +390,7 @@ const bodyTips = {
 } as const satisfies Record<PromptKind, HelpId>;
 
 // The kinds with a starting text: the documentary delivery cues, and the wording the YouTube
-// description and the shorts use when a project picks no prompt.
+// description, the shorts and the posts use when a project picks no prompt.
 function starterOf(
   kind: PromptKind,
 ): { readonly label: string; readonly body: string } | undefined {
@@ -397,6 +398,7 @@ function starterOf(
   if (kind === "description")
     return { label: "Use Built-in Starter", body: defaultDescriptionPrompt };
   if (kind === "shorts") return { label: "Use Built-in Starter", body: defaultShortsPrompt };
+  if (kind === "post") return { label: "Use Built-in Starter", body: defaultPostPrompt };
   return undefined;
 }
 

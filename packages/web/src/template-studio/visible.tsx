@@ -5,6 +5,7 @@ import { Field, Input } from "@/components/kit/field";
 import { Segmented, type SegmentedOption, Switch } from "@/components/kit/switch";
 import type { HelpId } from "@/help/catalog";
 import { freshShorts } from "@/play/shorts";
+import { StudioPostSettings } from "@/social/studio-post-settings";
 import { TitlePattern } from "./fine-tune";
 
 type Form = PlayDraftDocument["form"];
@@ -257,6 +258,7 @@ export function VisibleControls({
             checked={form.youtubeDescription === true}
             onChange={(youtubeDescription) => edit({ ...form, youtubeDescription })}
           />
+          <StudioPostSettings form={form} onChange={(social) => edit({ ...form, social })} />
         </Controls>
       );
     case "schedule":

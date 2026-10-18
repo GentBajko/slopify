@@ -63,7 +63,7 @@ export function ReleasesView(): ReactElement {
         Every video and short is due {String(data.leadHours)} hours before its release, so YouTube's
         copyright and ad checks finish while it is private. Change that, or the weekly times, in{" "}
         <Link to="/settings" search={{ section: "studio" }}>
-          Settings → YouTube Studio
+          Settings → YouTube Studio and posting
         </Link>
         .
       </p>
@@ -98,9 +98,9 @@ export function ReleasesView(): ReactElement {
       {entries.length === 0 ? (
         page === 0 ? (
           <EmptyState title="No releases in the next two weeks">
-            Add your week in Settings → YouTube Studio → Posting plan: each finished project then
-            takes its next free time, and its shorts the times after it. Or open a finished
-            project's Prepare upload, or press Later to look further ahead.
+            Add your week in Settings → YouTube Studio and posting → Posting plan: each finished
+            project then takes its next free time, and its shorts the times after it. Or open a
+            finished project's Prepare upload, or press Later to look further ahead.
           </EmptyState>
         ) : (
           <EmptyState title={`No releases from ${range}`}>

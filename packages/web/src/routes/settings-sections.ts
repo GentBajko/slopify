@@ -44,8 +44,8 @@ export const settingsSections = [
   },
   {
     id: "studio",
-    label: "YouTube Studio",
-    meta: "The playlist upload packs name, and the Studio extension's pairing.",
+    label: "YouTube Studio and posting",
+    meta: "The playlist upload packs name, and the Studio extension's pairing for YouTube Studio and other sites.",
   },
   {
     id: "storage",

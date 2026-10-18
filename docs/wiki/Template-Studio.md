@@ -19,7 +19,7 @@ The rail on the left lists the template's sections in the order a run makes them
 | **Shorts** | Shorts from the video, how many |
 | **Document (PDF)** | A PDF made from the script, and its theme |
 | **Reviews & checkpoints** | Automatic reviews and where a run waits for you |
-| **Upload pack** | The YouTube description, chapters and tags |
+| **Upload pack** | The YouTube description, chapters and tags, and the other sites the projects post to (**Post to**), each with its text and main media; hashtags, the thumbnail and the YouTube link are under Fine-tune. The sample shows each site's post as the site shows it. See [Posting to social sites](Posting-to-Social-Sites). |
 | **Schedule** | The next five runs of each schedule that uses the template, and what they cost a month |
 
 Each section shows two to four settings. Everything else is under **Fine-tune**, which holds Play's own editor for that section, so no setting is lost. **Made with OpenRouter · model · Change** says which provider makes the section; **Change** opens Fine-tune.

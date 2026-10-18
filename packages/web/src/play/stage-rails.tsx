@@ -14,6 +14,8 @@ import { promptNames, railBeneath, railControls, SourceSwitch, StageRail } from 
 import { freshShorts, Shorts, shortsPreviewOf } from "@/play/shorts";
 import { shortsOn } from "@/play/state";
 import { YoutubeDescription } from "@/play/youtube-description";
+import { PostSettings } from "@/social/post-settings";
+import { formSocial, shortsOf } from "@/social/studio-post-settings";
 import { useVideoEditControls } from "@/video/edit-controls";
 import { StylePreview } from "@/video/style-preview";
 import { PlayAmbientBed } from "./ambient-bed";
@@ -407,6 +409,16 @@ export function VideoExtras({
               />
             }
             onChange={(shorts) => update({ shorts })}
+          />
+        </div>
+      )}
+      {form.sources.article === "off" ? null : (
+        <div data-play-field="social">
+          <PostSettings
+            value={form.social}
+            prompts={prompts}
+            shorts={shortsOf(form.shorts)}
+            onChange={(social) => update({ social: formSocial(social) })}
           />
         </div>
       )}
