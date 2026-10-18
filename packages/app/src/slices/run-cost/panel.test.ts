@@ -77,6 +77,44 @@ function database(): DatabaseSync {
 }
 
 describe("the Run cost tab", () => {
+  // The bundled samples were made by free local stand-ins, recorded with no price.
+  it("counts a sample stand-in's calls as free, never unknown", () => {
+    const db = database();
+    const meter = createUsageMeter({
+      db,
+      ids: ulidIds,
+      clock: fixedClock("2026-09-27T10:03:30.000Z"),
+      catalogue: () => catalogue,
+    });
+    meter.record({
+      projectId: "p1",
+      stage: "images",
+      kind: "image",
+      provider: "sample-artist",
+      model: "codex-painted",
+      images: 4,
+      wallMs: 1_000,
+    });
+    meter.record({
+      projectId: "p1",
+      stage: "article",
+      kind: "llm",
+      provider: "sample-writer",
+      model: "scripted",
+      wallMs: 1_000,
+    });
+    expect(db.prepare("SELECT cost FROM provider_usage").all()).toEqual([{ cost: 0 }, { cost: 0 }]);
+    // A sample archived before stand-ins were priced.
+    db.exec("UPDATE provider_usage SET cost = NULL");
+    const cost = runCostOf(db, "p1", Date.parse("2026-09-27T11:00:00.000Z"));
+    expect(cost.unpriced).toBe(0);
+    expect(cost.cost).toBe(0);
+    expect(cost.byModel.map((row) => [row.provider, row.unpriced])).toEqual([
+      ["sample-artist", 0],
+      ["sample-writer", 0],
+    ]);
+  });
+
   it("adds up cost, API equivalent, usage and time per stage and per model", () => {
     const db = database();
     const meter = createUsageMeter({

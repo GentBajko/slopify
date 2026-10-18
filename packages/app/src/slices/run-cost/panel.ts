@@ -7,6 +7,7 @@ import {
   planAccounts,
 } from "../../kernel/ports/plan-limits.js";
 import type { ListingLimitWait } from "../admission/model.js";
+import { isSampleStandIn } from "../settings/model.js";
 import { type PlanUse, planUses } from "./plan-readings.js";
 import { projectTiming, type RunTiming } from "./timing.js";
 
@@ -108,11 +109,13 @@ const emptyLine: CostLine = {
 
 function add<T extends CostLine & UsageTotals>(into: T, row: UsageRow): T {
   const onPlan = row.on_plan === 1;
+  // The bundled samples' calls were stored with no price; their stand-ins are free.
+  const cost = row.cost ?? (isSampleStandIn(row.provider) ? 0 : null);
   return {
     ...into,
     calls: into.calls + 1,
-    cost: into.cost + (row.cost ?? 0),
-    unpriced: into.unpriced + (row.cost === null ? 1 : 0),
+    cost: into.cost + (cost ?? 0),
+    unpriced: into.unpriced + (cost === null ? 1 : 0),
     apiEquivalent: onPlan ? (into.apiEquivalent ?? 0) + (row.api_cost ?? 0) : into.apiEquivalent,
     apiUnpriced: into.apiUnpriced + (onPlan && row.api_cost === null ? 1 : 0),
     tokensIn: into.tokensIn + (row.tokens_in ?? 0),

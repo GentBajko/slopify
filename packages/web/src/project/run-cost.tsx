@@ -7,6 +7,7 @@ import type {
   StageCost,
   UsageTotals,
 } from "@app/slices/run-cost/panel.js";
+import { isSampleStandIn } from "@app/slices/settings/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { ReceiptIcon, TimerIcon } from "lucide-react";
 import { type ReactElement, useEffect, useState } from "react";
@@ -275,6 +276,7 @@ export function planUse(plan: PlanUse): string {
 function lineCost(row: StageCost | ModelCost): string {
   if (row.calls === 0) return "—";
   if ("onPlan" in row && row.onPlan) return "$0 on plan";
+  if ("provider" in row && isSampleStandIn(row.provider)) return "$0 · sample, free";
   return row.unpriced > 0
     ? row.unpriced === row.calls
       ? "Unknown"
