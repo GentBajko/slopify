@@ -207,6 +207,33 @@ describe("prompts and intro/outro entries in the trash", () => {
 });
 
 describe("templates in the trash", () => {
+  it("take their bake-off copies with them when removed for good, so none shows up as a project", () => {
+    const h = harness();
+    template(h, T1, "Weekly show");
+    insertProject(h.db, {
+      id: "copy1",
+      title: "Bake-off: m",
+      format: "16:9",
+      config,
+      createdAt: now(h),
+      updatedAt: now(h),
+    });
+    h.db
+      .prepare(
+        "INSERT INTO template_bakeoffs (id,template_id,template_version,section,ack_high,state,created_at,updated_at) VALUES ('b1',?,1,'script',1,'done','t','t')",
+      )
+      .run(T1);
+    h.db
+      .prepare(
+        "INSERT INTO template_bakeoff_clones (bakeoff_id,slot,provider,model,project_id,state) VALUES ('b1',0,'openrouter','m','copy1','done')",
+      )
+      .run();
+    h.db.prepare("UPDATE project_templates SET deleted_at=? WHERE id=?").run(now(h), T1);
+    expect(deleteNow(h, "template", T1)).toEqual({ ok: true, value: null });
+    expect(projectExists(h.db, "copy1")).toBe(false);
+    expect(listProjects(h.db).map((one) => one.id)).toEqual([]);
+  });
+
   it("take the samples an imported pack came with when removed for good", () => {
     const h = harness();
     template(h, T1, "Weekly show");

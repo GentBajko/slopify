@@ -76,8 +76,9 @@ export function sampleBusy(db: DatabaseSync, projectId: string): boolean {
   );
 }
 
-async function settled(
-  deps: PaidSampleDeps,
+// Resolves once the project has no work going (`sampleBusy`) and no call in flight.
+export async function settled(
+  deps: Pick<PaidSampleDeps, "start" | "pollMs">,
   projectId: string,
   signal: AbortSignal,
 ): Promise<void> {
@@ -116,7 +117,7 @@ const refusedSentence: Readonly<Record<string, string>> = {
     "Some steps of this sample have no known price. Press Make sample to accept that and make it.",
 };
 
-function refused(reason: string, fields?: readonly { readonly message: string }[]): string {
+export function refused(reason: string, fields?: readonly { readonly message: string }[]): string {
   const detail = [...new Set((fields ?? []).map((field) => field.message))].join(" ");
   return (
     refusedSentence[reason] ??

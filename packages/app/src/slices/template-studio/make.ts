@@ -16,6 +16,8 @@ export interface SampleMakerDeps {
   // The paid sample of a Save, a topic or the full script; without it only the free ones are
   // made.
   readonly paid?: ((job: SampleJob, signal: AbortSignal) => Promise<void>) | undefined;
+  // A model bake-off (`bakeoff-make.ts`); without it a bake-off job makes nothing.
+  readonly bakeoff?: ((job: SampleJob, signal: AbortSignal) => Promise<void>) | undefined;
 }
 
 // What one sample job makes: the free samples of its version, its paid sample unless it asked
@@ -27,6 +29,12 @@ export function sampleMaker(
   return async (job, signal) => {
     const template = templateById(deps.db, job.templateId, job.templateVersion);
     if (template === undefined) return;
+    // A bake-off makes only its copies: the template's own samples are current already.
+    if (job.kind === "bakeoff") {
+      await deps.bakeoff?.(job, signal);
+      deps.changed(template.id);
+      return;
+    }
     await deps.free.make(template.document, signal);
     deps.changed(template.id);
     if (job.kind !== "free" && deps.paid !== undefined && !signal.aborted) {

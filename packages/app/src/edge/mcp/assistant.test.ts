@@ -243,6 +243,8 @@ describe("/mcp/assistant", () => {
       "mark_template_ready",
       // The most the samples may spend in a day.
       "update_template_studio_settings",
+      "start_bakeoff",
+      "discard_bakeoff",
     ];
     const free = [
       "get_template_studio",
@@ -256,6 +258,8 @@ describe("/mcp/assistant", () => {
       // Made on this computer at no cost.
       "make_template_free_samples",
       "get_template_pack_samples",
+      "quote_bakeoff",
+      "get_bakeoff",
     ];
     // Every template studio tool is classified here, so a new one has to be decided on.
     expect(

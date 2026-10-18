@@ -40,7 +40,7 @@ export type SwitchResult =
   | { readonly ok: true; readonly changed: boolean }
   | { readonly ok: false; readonly message: string };
 
-function keepThinking(
+export function keepThinking(
   catalogue: Catalogue,
   provider: string,
   model: string,

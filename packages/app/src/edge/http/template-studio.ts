@@ -9,6 +9,14 @@ import { readSettings } from "../../slices/settings/playback.js";
 import { providerStatuses } from "../../slices/settings/readiness.js";
 import { getAnatomy } from "../../slices/template-studio/anatomy-view.js";
 import {
+  bakeoffQuoteSchema,
+  bakeoffStartSchema,
+  bakeoffView,
+  discardBakeoff,
+  quoteBakeoff,
+  startBakeoff,
+} from "../../slices/template-studio/bakeoff.js";
+import {
   budgetRoom,
   readStudioSettings,
   studioSettingsSchema,
@@ -511,6 +519,60 @@ export function templateStudioRoutes(deps: AppDeps) {
           );
         },
       )
+      // Compare models: one section's sample on one or two other models, priced first.
+      .post(
+        "/:id/bakeoff/quote",
+        zValidator("param", param, onInvalid),
+        zValidator("json", bakeoffQuoteSchema, onInvalid),
+        async (c) => {
+          if (review === undefined) return problem(c, { status: 503, detail: unpriced });
+          const result = await quoteBakeoff(
+            { db: deps.db, clock: deps.clock, review, paths: deps.paths, log: deps.log },
+            c.req.valid("param").id,
+            c.req.valid("json"),
+          );
+          return result.ok ? c.json(result.value) : refusedStudio(c, result);
+        },
+      )
+      .post(
+        "/:id/bakeoff",
+        zValidator("param", param, onInvalid),
+        zValidator("json", bakeoffStartSchema, onInvalid),
+        async (c) => {
+          if (review === undefined) return problem(c, { status: 503, detail: unpriced });
+          const id = c.req.valid("param").id;
+          const result = await startBakeoff(
+            {
+              db: deps.db,
+              clock: deps.clock,
+              review,
+              paths: deps.paths,
+              log: deps.log,
+              uuid: review.uuid,
+            },
+            id,
+            c.req.valid("json"),
+          );
+          if (!result.ok) return refusedWithQuote(c, result);
+          studio.wake();
+          deps.hub.emitGlobal({ type: "template.sample", templateId: id });
+          return c.json(result.value, 202);
+        },
+      )
+      .get("/:id/bakeoff", zValidator("param", param, onInvalid), (c) => {
+        const id = c.req.valid("param").id;
+        if (templateById(deps.db, id) === undefined) return gone(c, missingTemplate);
+        return c.json({ bakeoff: bakeoffView(deps, id) });
+      })
+      // Discard: the copies and what they made go; today's spend on them still counts.
+      .delete("/:id/bakeoff", zValidator("param", param, onInvalid), (c) => {
+        const id = c.req.valid("param").id;
+        if (templateById(deps.db, id) === undefined) return gone(c, missingTemplate);
+        const result = discardBakeoff(deps, id);
+        if (!result.ok) return refusedStudio(c, result);
+        deps.hub.emitGlobal({ type: "template.sample", templateId: id });
+        return c.json(result.value);
+      })
       // Export pack: the version marked ready as a zip to share. A file download, like the
       // project's files: agents read templates with get_template_studio instead.
       .get("/:id/pack", zValidator("param", param, onInvalid), async (c) => {

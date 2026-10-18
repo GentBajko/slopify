@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
+import { supersedeQueuedBakeoff } from "./bakeoff-repo.js";
 import { type SampleJobKind, sampleJobKinds } from "./model.js";
 
 export interface SampleJob {
@@ -24,7 +25,8 @@ const columns =
 
 // Queues a template's sample job. A newer request takes the place of the one still queued; the
 // running one is left to finish and this one waits behind it. A free-only request never takes
-// the place of a queued paid one for the same version, which already makes the free samples.
+// the place of a queued paid one for the same version, which already makes the free samples,
+// nor of a queued bake-off.
 export function enqueueJob(db: DatabaseSync, job: SampleJob): void {
   transact(db, () => {
     const queued = queuedJob(db, job.templateId);
@@ -32,9 +34,13 @@ export function enqueueJob(db: DatabaseSync, job: SampleJob): void {
       queued !== undefined &&
       job.kind === "free" &&
       queued.kind !== "free" &&
-      queued.templateVersion === job.templateVersion
+      (queued.templateVersion === job.templateVersion || queued.kind === "bakeoff")
     )
       return;
+    // A bake-off still waiting was priced on the version a paid change replaces: it is
+    // dropped, saying so, and nothing was spent on it.
+    if (queued?.kind === "bakeoff" && job.kind !== "bakeoff")
+      supersedeQueuedBakeoff(db, job.templateId, job.requestedAt);
     db.prepare(
       `INSERT INTO template_sample_jobs (template_id,template_version,ack_high,kind,requested_at,state)
        VALUES (?,?,?,?,?,'queued')

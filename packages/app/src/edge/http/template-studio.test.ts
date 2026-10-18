@@ -507,3 +507,30 @@ it("refuses an import that isn't a pack, and one with no file, saying what to ch
   });
   expect(h.deps.db.prepare("SELECT count(*) AS n FROM project_templates").get()).toEqual({ n: 1 });
 });
+
+it("answers no bake-off, refuses one before the template has a sample, and discards nothing", async () => {
+  const h = paidStudio();
+  const none = await h.app.request(`/api/template-studio/${h.id}/bakeoff`);
+  expect(await none.json()).toEqual({ bakeoff: null });
+  const quote = await h.post("/bakeoff/quote", {
+    section: "script",
+    models: [{ provider: "openrouter", model: "another" }],
+  });
+  expect(quote.status).toBe(409);
+  expect(await quote.json()).toMatchObject({
+    reason: "not-ready",
+    detail: expect.stringContaining("Press Save (or Make sample) in the studio"),
+  });
+  const start = await h.post("/bakeoff", {
+    section: "script",
+    models: [{ provider: "openrouter", model: "another" }],
+    acknowledgedHigh: 1,
+  });
+  expect(start.status).toBe(409);
+  const bad = await h.post("/bakeoff/quote", { section: "shorts", models: [] });
+  expect(bad.status).toBe(400);
+  const discard = await h.app.request(`/api/template-studio/${h.id}/bakeoff`, { method: "DELETE" });
+  expect(await discard.json()).toEqual({ removed: 0 });
+  const gone = await h.app.request(`/api/template-studio/${randomUUID()}/bakeoff`);
+  expect(gone.status).toBe(404);
+});

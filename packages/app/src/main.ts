@@ -163,6 +163,7 @@ import { createFlusher } from "./slices/telemetry/flush.js";
 import type { RecordEvent } from "./slices/telemetry/model.js";
 import type { TelemetryDeps } from "./slices/telemetry/record.js";
 import { record } from "./slices/telemetry/record.js";
+import { makeBakeoff } from "./slices/template-studio/bakeoff-make.js";
 import { createDocumentSamples } from "./slices/template-studio/document-sample.js";
 import { createFreeSamples } from "./slices/template-studio/free.js";
 import { createLoudnessSamples } from "./slices/template-studio/loudness.js";
@@ -669,6 +670,8 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         // Paid samples run on their hidden project through the same engine as every project.
         paid: (job, signal) =>
           makePaidSample({ start: draftDeps, rebuild, acks: studioAcks }, job, signal),
+        // Compare models: copies of the sample, made one bake-off at a time on the same loop.
+        bakeoff: (job, signal) => makeBakeoff({ start: draftDeps, rebuild }, job, signal),
       }),
     });
     sampleRunner.start();

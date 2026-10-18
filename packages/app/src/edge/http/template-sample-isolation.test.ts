@@ -12,6 +12,9 @@ import { createTemplate } from "../../slices/project-templates/service.js";
 import { weekSummary } from "../../slices/run-cost/week.js";
 import { calendarRange } from "../../slices/schedules/agenda.js";
 import { knownTitles } from "../../slices/schedules/topics.js";
+import { startBakeoff } from "../../slices/template-studio/bakeoff.js";
+import { makeBakeoff } from "../../slices/template-studio/bakeoff-make.js";
+import { clonesOf } from "../../slices/template-studio/bakeoff-repo.js";
 import { makePaidSample } from "../../slices/template-studio/paid.js";
 import { sampleOf, sampleProjects } from "../../slices/template-studio/repo.js";
 import { paidDocument, paidSampleDeps } from "../../slices/template-studio/studio.fake.js";
@@ -244,6 +247,62 @@ describe("the template studio's sample project", () => {
     const agent = await connectAgent(h.app);
     const attention = await agent.callTool({ name: "needs_attention", arguments: {} });
     expect(JSON.stringify(attention.content)).not.toContain(sample.projectId);
+  });
+
+  it("keeps a model bake-off's real copies out of every GET route and the Projects folder", async () => {
+    const h = mcpFixture();
+    open.push(h);
+    attachSamples(h.deps.paths, sampleProjects(h.deps.db, h.deps.paths.dataDir));
+    const { review, paid } = paidSampleDeps({ ...h.deps, ids: ulidIds });
+    const templateId = randomUUID();
+    const document = paidDocument(review);
+    const created = createTemplate(
+      { ...h.deps, uuid: randomUUID },
+      { id: templateId, name: "Show", document },
+    );
+    if (!created.ok) throw new Error(created.reason);
+    const before = readdirSync(h.deps.paths.projects).sort();
+    const job = { templateId, templateVersion: 1, ackHigh: 5, requestedAt: "a" };
+    await makePaidSample(paid, { ...job, kind: "save" }, new AbortController().signal);
+    const other =
+      review.catalogue
+        .read()
+        .llm.find(
+          (row) =>
+            row.provider === "openrouter" && row.enabled && row.id !== document.form.llm.model,
+        )?.id ?? "";
+    const started = await startBakeoff(
+      {
+        db: h.deps.db,
+        clock: h.deps.clock,
+        review,
+        paths: h.deps.paths,
+        log: h.deps.log,
+        uuid: randomUUID,
+      },
+      templateId,
+      {
+        section: "script",
+        models: [{ provider: "openrouter", model: other }],
+        acknowledgedHigh: 5,
+        acknowledgedUnknown: true,
+      },
+    );
+    if (!started.ok) throw new Error(started.message);
+    await makeBakeoff(paid, { ...job, kind: "bakeoff" }, new AbortController().signal);
+    const copy = clonesOf(h.deps.db, started.value.id)[0]?.projectId ?? "";
+    expect(copy).not.toBe("");
+    const title = `Bake-off: ${other}`;
+    const leaks: string[] = [];
+    for (const route of getRoutes(h.app)) {
+      const body = await (await h.app.request(route)).text();
+      if (body.includes(copy) || body.includes(title)) leaks.push(route);
+    }
+    expect(leaks).toEqual([]);
+    expect(readdirSync(h.deps.paths.projects).sort()).toEqual(before);
+    const agent = await connectAgent(h.app);
+    const attention = await agent.callTool({ name: "needs_attention", arguments: {} });
+    expect(JSON.stringify(attention.content)).not.toContain(copy);
   });
 
   it("refuses every change through the project routes, naming the studio to use instead", async () => {

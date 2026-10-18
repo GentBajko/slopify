@@ -5,6 +5,7 @@ import { deleteVersions, recordVersion } from "../library/history.js";
 import { nameMax } from "../library/model.js";
 import { entryById, promptById } from "../library/repo.js";
 import { deleteProject, projectBusy } from "../storage/delete-project.js";
+import { bakeoffOf, clonesOf } from "../template-studio/bakeoff-repo.js";
 import { removeHiddenProject } from "../template-studio/hidden.js";
 import { removePackSamples } from "../template-studio/pack-samples.js";
 import { carryGateOnto, notTemplateSample, sampleOf } from "../template-studio/repo.js";
@@ -286,6 +287,19 @@ export function deleteNow(deps: TrashDeps, kind: TrashKind, id: string): TrashRe
       const sample = sampleOf(deps.db, id);
       if (sample !== undefined) {
         const removed = removeHiddenProject(deps, sample.projectId);
+        if (!removed.ok && removed.reason !== "no-project")
+          return {
+            ok: false,
+            reason: removed.reason,
+            ...(removed.detail === undefined ? {} : { detail: removed.detail }),
+          };
+      }
+      // Its bake-off copies go the same way: their rows go with the template, and a copy
+      // left behind would show up as an ordinary project.
+      const bakeoff = bakeoffOf(deps.db, id);
+      for (const clone of bakeoff === undefined ? [] : clonesOf(deps.db, bakeoff.id)) {
+        if (clone.projectId === null) continue;
+        const removed = removeHiddenProject(deps, clone.projectId);
         if (!removed.ok && removed.reason !== "no-project")
           return {
             ok: false,

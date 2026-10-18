@@ -141,4 +141,35 @@ export const templateStudioTools: readonly RouteTool[] = [
     description:
       "The samples an imported pack came with (role: thumbnail, picture or narration; name; url), shown in the studio until the template makes its own. Empty for a template that didn't come from a pack.",
   },
+  {
+    name: "quote_bakeoff",
+    route: "POST /api/template-studio/:id/bakeoff/quote",
+    title: "Price comparing models on a template's sample",
+    description:
+      "Prices making one section's sample again on one or two other models (section: script, voice or pictures; models: [{provider, model}], not the model the section uses now, which is compared from the current sample; voice models only of the template's voice provider). Needs a current sample of the newest version. Answers each model's high estimate, steps with no price, the total, today's sample budget and whether it fits. Changes nothing. Pass its high as acknowledgedHigh to start_bakeoff.",
+    unrecorded: true,
+  },
+  {
+    name: "start_bakeoff",
+    route: "POST /api/template-studio/:id/bakeoff",
+    title: "Compare models on a template's sample",
+    description:
+      "Makes the section's sample again on each model, each on a hidden copy of the template's sample with only that section's work started, which spends money: price it first with quote_bakeoff and pass its high as acknowledgedHigh (and acknowledgedUnknown: true to accept steps with no price). A higher total, an unaccepted unknown price or a total past today's budget is refused with the new quote, starting nothing. The template doesn't change: read the results with get_bakeoff, then switch the model with save_template_studio and discard the copies with discard_bakeoff.",
+    confirm: "This spends money making the section's sample again on each model.",
+  },
+  {
+    name: "get_bakeoff",
+    route: "GET /api/template-studio/:id/bakeoff",
+    title: "Read a template's model bake-off",
+    description:
+      "The template's bake-off, or null: its section, the version it was made for (stale when the template was saved since), its state (queued, making, done, held with why, failed with why) and one entry per model, the one in use first (state current), each with what it was charged (cost, US dollars), how long its section took (seconds), its failure, and what it made (outputs; article: the script's opening).",
+  },
+  {
+    name: "discard_bakeoff",
+    route: "DELETE /api/template-studio/:id/bakeoff",
+    title: "Discard a template's model bake-off",
+    description:
+      "Removes the bake-off's copies and what they made. What they were charged today still counts against the sample budget. Refused while a copy still has work going.",
+    confirm: "The bake-off's copies and what they made are removed.",
+  },
 ];
