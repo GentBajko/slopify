@@ -19,6 +19,7 @@ import { chaptersFrom } from "../research/planner.js";
 import { sourcedAnswer } from "../research/synthesis.js";
 import { imageReviewers } from "../reviews/model.js";
 import type { RevisionDeps } from "../revisions/model.js";
+import { checkPost, postText } from "../social/post-prompt.js";
 import { discardPreparedAssets, writeAsset } from "../storage/assets.js";
 import { outputPath } from "../storage/layout.js";
 import type { RecordEvent } from "../telemetry/model.js";
@@ -299,6 +300,9 @@ function checkAnswer(piece: WorkPiece, answer: LlmAnswer): string | undefined {
     const checked = checkDigest(answer.text);
     return checked.ok ? undefined : checked.reason;
   }
+  // A post for another site: within its limit.
+  if (piece.input.kind === "llm" && piece.input.social !== undefined)
+    return checkPost(answer.text, piece.input.social);
   if (piece.key === "research:planner")
     return chaptersFrom(answer.text).length === 0
       ? "The AI model's research plan listed no chapters, so research could not go on. Use Try again; if it keeps happening, choose another model in the Providers section of Edit project."
@@ -365,6 +369,31 @@ async function publishText(
       ]),
       { appearance: checked.appearance, text: answer.text },
     );
+    return;
+  }
+  if (piece.input.kind === "llm" && piece.input.social !== undefined) {
+    const target = piece.input.social;
+    const problem = checkPost(answer.text, target);
+    if (problem !== undefined) throw new Error(problem);
+    const text = postText(answer.text);
+    const asset = writeAsset(
+      deps,
+      context.work.projectId,
+      `post-${target.platform}.txt`,
+      Buffer.from(text),
+    );
+    let outputs: ReturnType<typeof preparedResult>[];
+    try {
+      outputs = [
+        preparedResult(deps, context, piece, "social_post", asset, null, {
+          platform: target.platform,
+        }),
+      ];
+    } catch (error) {
+      discardPreparedAssets(deps, [asset]);
+      throw error;
+    }
+    await publishResult(deps, context, piece, outputs, { text });
     return;
   }
   if (piece.key === digestKey && piece.input.kind === "llm") {

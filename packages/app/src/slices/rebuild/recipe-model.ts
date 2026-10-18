@@ -76,6 +76,8 @@ export const deferredOperations = [
   "image-appearance",
   // The keyword digest (`recipe-digest.ts`), written once the article is.
   "keyword-digest",
+  // A post for another site written by a post prompt (`recipe-social.ts`), once the article is.
+  "social-post",
 ] as const;
 export interface DialogueLine {
   readonly speaker: string;
@@ -105,6 +107,8 @@ export type RecipeInput =
       // A table, figure, equation or code block described for the narration
       // (`narration:describe:<n>`): the answer is the spoken passage.
       readonly describe?: import("../narration/describe.js").DescribeSource | undefined;
+      // A post for another site (`social:post:<platform>`): the answer must fit its limit.
+      readonly social?: import("../social/post-prompt.js").PostTarget | undefined;
     }
   | {
       readonly kind: "tts";

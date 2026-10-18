@@ -12,6 +12,7 @@ import { imageReference, referenceRecipe } from "./recipe-reference.js";
 import { withReviews } from "./recipe-reviews.js";
 import { imageScenes, thumbnailScenes } from "./recipe-scenes.js";
 import { shortsRecipes } from "./recipe-shorts.js";
+import { socialRecipes } from "./recipe-social.js";
 import { unsoftenedTimelines } from "./recipe-softening.js";
 import { textRecipes } from "./recipe-text.js";
 import { thumbnailRecipes, visualAssets, visualRecipes } from "./recipe-visual.js";
@@ -92,6 +93,7 @@ function buildEach(plain: RecipeContext): readonly ResolvedWorkRecipe[] {
     ...audio.recipes,
     ...exports,
     ...youtube,
+    ...socialRecipes(context, text),
     ...(reference === undefined ? [] : [reference]),
     ...shortsRecipes(
       context,

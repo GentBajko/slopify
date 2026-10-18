@@ -411,7 +411,8 @@ export function priceRecipe(
       input.operation === "image-scenes" ||
       input.operation === "thumbnail-scenes" ||
       input.operation === "image-appearance" ||
-      input.operation === "keyword-digest")
+      input.operation === "keyword-digest" ||
+      input.operation === "social-post")
   ) {
     const choice = config === undefined ? undefined : recipeProviderChoice(value, config);
     if (choice !== undefined && input.operation === "image-scene")
@@ -428,7 +429,9 @@ export function priceRecipe(
             ? 6000
             : input.operation === "keyword-digest"
               ? 2000
-              : 4000,
+              : input.operation === "social-post"
+                ? 600
+                : 4000,
         detail:
           "The article is read when the step runs; its length is estimated. Retries are excluded.",
       };
@@ -457,7 +460,11 @@ export function priceRecipe(
         input.messages.reduce((sum, message) => sum + message.content.length, 0) +
         (input.documents ?? []).reduce((sum, document) => sum + document.content.length, 0),
       outputCharacters:
-        work.key === "article:body" ? 9000 : input.describe !== undefined ? 600 : 2400,
+        work.key === "article:body"
+          ? 9000
+          : input.describe !== undefined || input.social !== undefined
+            ? 600
+            : 2400,
       detail:
         "Actual saved request input; output length is estimated. Retries and tools are excluded.",
     };

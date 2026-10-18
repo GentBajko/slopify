@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { stringify } from "yaml";
 import { createCatalogueStore } from "../../catalog/store.js";
 import type { RunDraft } from "../admission/model.js";
+import { defaultChoices } from "../social/defaults.js";
 import { legacyVideoEdit } from "../video/edit-settings.js";
 import { estimateRun } from "./index.js";
 
@@ -135,6 +136,30 @@ describe("cost planning", () => {
         (one) => one.stage === "YouTube description",
       ),
     ).toBe(false);
+  });
+  it("prices one LLM call per prompt-written post, and nothing for the free text sources", () => {
+    const selected: RunDraft = {
+      ...draft,
+      llm: { provider: "codex", model: "test" },
+      social: {
+        x: { ...defaultChoices.x, text: "prompt" },
+        linkedin: { ...defaultChoices.linkedin, text: "prompt", prompt: "Mine" },
+        bluesky: defaultChoices.bluesky,
+      },
+    };
+    const rows = estimateRun(selected, { "social.linkedin": "Short." }, 1500, catalogue).rows;
+    const posts = rows.filter((one) => one.stage === "Posts");
+    expect(posts).toHaveLength(1);
+    expect(posts[0]?.detail).toContain("One LLM call per site whose post a post prompt writes");
+    const without = estimateRun({ ...draft, llm: selected.llm }, {}, 1500, catalogue).rows;
+    expect(without.some((one) => one.stage === "Posts")).toBe(false);
+    const free = estimateRun(
+      { ...draft, llm: selected.llm, social: { bluesky: defaultChoices.bluesky } },
+      {},
+      1500,
+      catalogue,
+    ).rows;
+    expect(free).toEqual(without);
   });
   it("prices the shorts as the pick, one prompt call per short and every image they may need", () => {
     const selected: RunDraft = {

@@ -33,6 +33,8 @@ export function preparedResult(
       role === "animated_image" ||
       // Level the volume: one levelled narration per segment.
       role === "audio_levelled" ||
+      // A post per site.
+      role === "social_post" ||
       // The second and third thumbnails; the first keeps the slot it always had.
       (role === "thumbnail" && piece.key !== "thumbnail:image")
         ? piece.key

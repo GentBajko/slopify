@@ -134,6 +134,7 @@ export function placeOfKey(
     return "image";
   if (key === "thumbnailPrompt") return "thumbnail";
   if (key.startsWith("review.")) return "review";
+  if (key.startsWith("social.")) return "post";
   return undefined;
 }
 

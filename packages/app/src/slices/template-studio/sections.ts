@@ -134,6 +134,7 @@ const workPrefixes: Readonly<Record<string, TemplateSection>> = {
   animate: "video",
   shorts: "shorts",
   youtube: "upload",
+  social: "upload",
   document: "document",
 };
 
