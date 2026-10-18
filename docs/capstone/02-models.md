@@ -26,7 +26,7 @@ paths_covered:
 
 # Models
 
-One SQLite database (`slopify.db`, `packages/app/src/kernel/paths.ts:36`) opened with foreign keys on, WAL journaling and 0600 file modes (`packages/app/src/kernel/db/index.ts:8`), migrated by 66 SQL files numbered up to 0074 (`packages/app/src/kernel/db/migrations/`). Domain types live beside the slice that owns them (`packages/app/src/slices/*/model.ts`, `schema.ts`, `repo.ts`), provider contracts in `packages/app/src/kernel/ports/`, and the browser imports the app's own declarations through the `@app/*` path alias (`packages/web/tsconfig.json`, `packages/web/src/api.ts:1`). The Cloudflare collector has its own two-table D1 schema (`packages/collector/schema.sql:3`).
+One SQLite database (`slopify.db`, `packages/app/src/kernel/paths.ts:61`) opened with foreign keys on, WAL journaling and 0600 file modes (`packages/app/src/kernel/db/index.ts:8`), migrated by 66 SQL files numbered up to 0074 (`packages/app/src/kernel/db/migrations/`). Domain types live beside the slice that owns them (`packages/app/src/slices/*/model.ts`, `schema.ts`, `repo.ts`), provider contracts in `packages/app/src/kernel/ports/`, and the browser imports the app's own declarations through the `@app/*` path alias (`packages/web/tsconfig.json`, `packages/web/src/api.ts:1`). The Cloudflare collector has its own two-table D1 schema (`packages/collector/schema.sql:3`).
 
 Companion chapters own three areas in depth and are not repeated here: narration text preparation, glossary and pronunciation types in `02-models-narration.md`; research documents and the reader model in `02-models-research.md`; the Docker host, container and project-folder types in `02-models-docker.md`. `slices/narration/` and `slices/research/` types are listed there only.
 
@@ -36,43 +36,43 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 
 | Entity | Definition site | Storage | Purpose |
 |---|---|---|---|
-| StageSources | `packages/app/src/slices/admission/model.ts:19` | `RunConfig` JSON | Source per stage kind: generate, provide, off, from_prompt, prompt_by_llm |
-| ProviderChoice | `packages/app/src/slices/admission/model.ts:35` | `RunConfig` JSON | Provider, model and thinking chosen for a stage |
-| VoiceChoice | `packages/app/src/slices/admission/model.ts:41` | `RunConfig` JSON | Narration provider, model, voice and narration options |
-| SharedPronunciation | `packages/app/src/slices/admission/model.ts:60` | `RunConfig` JSON | One shared pronunciation, copied into a project from another project's glossary |
-| ImagePromptChoice | `packages/app/src/slices/admission/model.ts:65` | `RunConfig` JSON | Library image prompt and how many images it makes |
-| EntryChoice | `packages/app/src/slices/admission/model.ts:71` | `RunConfig` JSON | Library intro/outro choice and its mode |
-| ProvidedText | `packages/app/src/slices/admission/model.ts:80` | `RunConfig` JSON | Text a stage set to Provide carries instead of a file |
-| ProvidedFiles | `packages/app/src/slices/admission/model.ts:86` | `RunConfig` JSON | Ids of files already in staging, in slideshow order for images |
-| ReferenceSettings | `packages/app/src/slices/admission/model.ts:135` | `RunConfig` JSON | Establishing reference image source for the Images stage |
-| RunDraft | `packages/app/src/slices/admission/model.ts:150` | Play POST body; `play_drafts` review JSON | Everything a run is configured with, as Play posts it |
-| TitleStyle | `packages/app/src/slices/admission/model.ts:265` | `RunConfig` JSON | Font and colour of on-screen titles |
-| RunConfig | `packages/app/src/slices/admission/model.ts:273` | `projects.config`; `project_revisions.config` | RunDraft as accepted, with rendered prompt text |
-| Project | `packages/app/src/slices/admission/model.ts:292` | `projects` + `project_controls` | A project row with its accepted RunConfig and pause state |
-| StageActivity | `packages/app/src/slices/admission/model.ts:305` | In-memory | A running step in words, with its own progress: a percentage, or how many of its things are done |
-| Stage | `packages/app/src/slices/admission/model.ts:312` | `stages` | One stage of a project with state, progress, failure and ETA |
-| ProjectSummary | `packages/app/src/slices/admission/model.ts:344` | In-memory | Project plus derived status, the Keep as is mark (`project_set_aside`), the holds that name its held state word (prepared, waiting for the agent, stopped) and whether a step failed beside a wait |
-| ProjectHead | `packages/app/src/slices/admission/model.ts:370` | `projects` + `project_controls` | A live project with only its list settings, and how many times it was paused and stopped by a restart |
-| ProjectListing | `packages/app/src/slices/admission/model.ts:382` | `projects` + `stages` + `project_controls` + `project_channels` + `project_uploads` + `project_set_aside` + `review_checkpoints` + `external_reviews` | Projects list row with progress, channel, upload mark, Keep as is mark, holds, failed steps beside a wait, and limit waits |
-| ListingLimitWait | `packages/app/src/slices/admission/model.ts:366` | In-memory | A plan-limit wait shown on a project listing row |
-| FieldError | `packages/app/src/slices/admission/rules.ts:17` | In-memory | Field-level validation message |
-| AdmissionInput | `packages/app/src/slices/admission/rules.ts:27` | HTTP request/response | Input to admission rules: draft, staged files, required slots |
-| LlmUse | `packages/app/src/slices/admission/rules.ts:402` | In-memory | An LLM use in a run and the Play section holding it |
-| SlotLintError | `packages/app/src/slices/admission/substitute.ts:9` | In-memory | A malformed keyword slot in a prompt body |
-| DetectedSlots | `packages/app/src/slices/admission/substitute.ts:15` | In-memory | Keyword slots found in prompt bodies |
-| Field | `packages/app/src/slices/admission/substitute.ts:23` | In-memory | A Play keyword field and its group |
+| StageSources | `packages/app/src/slices/admission/model.ts:20` | `RunConfig` JSON | Source per stage kind: generate, provide, off, from_prompt, prompt_by_llm |
+| ProviderChoice | `packages/app/src/slices/admission/model.ts:36` | `RunConfig` JSON | Provider, model and thinking chosen for a stage |
+| VoiceChoice | `packages/app/src/slices/admission/model.ts:42` | `RunConfig` JSON | Narration provider, model, voice and narration options |
+| SharedPronunciation | `packages/app/src/slices/admission/model.ts:61` | `RunConfig` JSON | One shared pronunciation, copied into a project from another project's glossary |
+| ImagePromptChoice | `packages/app/src/slices/admission/model.ts:66` | `RunConfig` JSON | Library image prompt and how many images it makes |
+| EntryChoice | `packages/app/src/slices/admission/model.ts:72` | `RunConfig` JSON | Library intro/outro choice and its mode |
+| ProvidedText | `packages/app/src/slices/admission/model.ts:81` | `RunConfig` JSON | Text a stage set to Provide carries instead of a file |
+| ProvidedFiles | `packages/app/src/slices/admission/model.ts:87` | `RunConfig` JSON | Ids of files already in staging, in slideshow order for images |
+| ReferenceSettings | `packages/app/src/slices/admission/model.ts:136` | `RunConfig` JSON | Establishing reference image source for the Images stage |
+| RunDraft | `packages/app/src/slices/admission/model.ts:151` | Play POST body; `play_drafts` review JSON | Everything a run is configured with, as Play posts it |
+| TitleStyle | `packages/app/src/slices/admission/model.ts:291` | `RunConfig` JSON | Font and colour of on-screen titles |
+| RunConfig | `packages/app/src/slices/admission/model.ts:299` | `projects.config`; `project_revisions.config` | RunDraft as accepted, with rendered prompt text |
+| Project | `packages/app/src/slices/admission/model.ts:318` | `projects` + `project_controls` | A project row with its accepted RunConfig and pause state |
+| StageActivity | `packages/app/src/slices/admission/model.ts:331` | In-memory | A running step in words, with its own progress: a percentage, or how many of its things are done |
+| Stage | `packages/app/src/slices/admission/model.ts:338` | `stages` | One stage of a project with state, progress, failure and ETA |
+| ProjectSummary | `packages/app/src/slices/admission/model.ts:369` | In-memory | Project plus derived status, the Keep as is mark (`project_set_aside`), the holds that name its held state word (prepared, waiting for the agent, stopped) and whether a step failed beside a wait |
+| ProjectHead | `packages/app/src/slices/admission/model.ts:395` | `projects` + `project_controls` | A live project with only its list settings, and how many times it was paused and stopped by a restart |
+| ProjectListing | `packages/app/src/slices/admission/model.ts:407` | `projects` + `stages` + `project_controls` + `project_channels` + `project_uploads` + `project_set_aside` + `review_checkpoints` + `external_reviews` | Projects list row with progress, channel, upload mark, Keep as is mark, holds, failed steps beside a wait, and limit waits |
+| ListingLimitWait | `packages/app/src/slices/admission/model.ts:433` | In-memory | A plan-limit wait shown on a project listing row |
+| FieldError | `packages/app/src/slices/admission/rules.ts:18` | In-memory | Field-level validation message |
+| AdmissionInput | `packages/app/src/slices/admission/rules.ts:28` | HTTP request/response | Input to admission rules: draft, staged files, required slots |
+| LlmUse | `packages/app/src/slices/admission/rules.ts:418` | In-memory | An LLM use in a run and the Play section holding it |
+| SlotLintError | `packages/app/src/slices/admission/substitute.ts:11` | In-memory | A malformed keyword slot in a prompt body |
+| DetectedSlots | `packages/app/src/slices/admission/substitute.ts:17` | In-memory | Keyword slots found in prompt bodies |
+| Field | `packages/app/src/slices/admission/substitute.ts:25` | In-memory | A Play keyword field and its group |
 | AttemptStart | `packages/app/src/kernel/runner/attempt-repo.ts:16` | In-memory | Fields written when an attempt starts |
 | AttemptEnd | `packages/app/src/kernel/runner/attempt-repo.ts:28` | In-memory | Fields written when an attempt ends |
 | Attempt | `packages/app/src/kernel/runner/attempt-repo.ts:34` | `attempts` | One provider attempt with revision/work/piece provenance |
-| StageProgress | `packages/app/src/kernel/runner/graph.ts:101` | In-memory | Progress of a stage row |
+| StageProgress | `packages/app/src/kernel/runner/graph.ts:154` | In-memory | Progress of a stage row |
 | RunnerStage | `packages/app/src/kernel/runner/index.ts:11` | In-memory | Stage view the runner executes |
 | StageContext | `packages/app/src/kernel/runner/index.ts:44` | In-memory | Per-stage execution context handed to a stage function |
 | MeteredCall | `packages/app/src/kernel/runner/meter.ts:8` | `provider_usage` | One successful project provider call's usage |
 | ProviderUse | `packages/app/src/kernel/runner/meter.ts:14` | In-memory | Usage of one provider call |
 | StandaloneOwner | `packages/app/src/kernel/runner/meter.ts:39` | In-memory | Schedule or channel a standalone call belongs to |
-| StandaloneUse | `packages/app/src/kernel/runner/meter.ts:44` | In-memory | Owner and purpose of a call made outside a project |
-| StandaloneMeteredCall | `packages/app/src/kernel/runner/meter.ts:49` | `standalone_usage` | Metered provider call made outside a project |
-| LimitWaiter | `packages/app/src/kernel/runner/meter.ts:55` | `plan_limit_waiters` | Project stage waiting on a plan-limit reset |
+| StandaloneUse | `packages/app/src/kernel/runner/meter.ts:50` | In-memory | Owner and purpose of a call made outside a project |
+| StandaloneMeteredCall | `packages/app/src/kernel/runner/meter.ts:55` | `standalone_usage` | Metered provider call made outside a project |
+| LimitWaiter | `packages/app/src/kernel/runner/meter.ts:61` | `plan_limit_waiters` | Project stage waiting on a plan-limit reset |
 | StagePiece | `packages/app/src/kernel/runner/piece-repo.ts:22` | `stage_pieces` | One chunk/image/segment piece of a stage, projected from the current revision's selected manifest pieces (`packages/app/src/slices/revisions/projection.ts:110`) |
 | WorkRef | `packages/app/src/kernel/runner/work.ts:15` | In-memory | Identity of one revision_work row a provider call runs under |
 | PublicationRef | `packages/app/src/kernel/runner/work.ts:24` | In-memory | Work plus piece/publication identity an output is published under |
@@ -86,10 +86,10 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | ProjectStateEvent | `packages/app/src/kernel/events.ts:65` | SSE stream | Project state change pushed to open pages |
 | ReviewFlaggedEvent | `packages/app/src/kernel/events.ts:74` | SSE stream | Review flagged and kept an item, pushed to open pages; says when the verdict was an agent's |
 | ReviewAutoPassedEvent | `packages/app/src/kernel/events.ts:89` | SSE stream | An External agent review got no verdict in its two hours and passed without review |
-| ProjectUpdatedEvent | `packages/app/src/kernel/events.ts:85` | SSE stream | Project changed; pages refetch |
-| RunningCountEvent | `packages/app/src/kernel/events.ts:90` | SSE stream | Number of running projects |
-| ScheduleTopicsEvent | `packages/app/src/kernel/events.ts:98` | SSE stream | Schedule held new topics for approval |
-| ProjectEvent | `packages/app/src/kernel/events.ts:122` | SSE stream (`kernel/events.ts`) | Union of every project event on the event stream |
+| ProjectUpdatedEvent | `packages/app/src/kernel/events.ts:100` | SSE stream | Project changed; pages refetch |
+| RunningCountEvent | `packages/app/src/kernel/events.ts:105` | SSE stream | Number of running projects |
+| ScheduleTopicsEvent | `packages/app/src/kernel/events.ts:120` | SSE stream | Schedule held new topics for approval |
+| ProjectEvent | `packages/app/src/kernel/events.ts:129` | SSE stream (`kernel/events.ts`) | Union of every project event on the event stream |
 | OutputMeta | `packages/app/src/slices/storage/model.ts:66` | `outputs.meta` JSON | Metadata JSON kept on an output row |
 | Output | `packages/app/src/slices/storage/model.ts:97` | `outputs` | A file a stage produced for a project |
 | StagedFile | `packages/app/src/slices/storage/model.ts:111` | `staged_files` + staging file | An uploaded file waiting in staging before a project owns it |
@@ -102,22 +102,22 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | ModelChoices | `packages/app/src/slices/eta/model.ts:69` | In-memory | Provider and model per stage, for ETA history |
 | ManualCue | `packages/app/src/slices/revisions/model.ts:19` | `RevisionContent.subtitleCues` | A caption cue edited by hand |
 | NarrationOverride | `packages/app/src/slices/revisions/model.ts:28` | `RevisionContent.narrationOverrides` | Uploaded or edited narration replacing a generated piece |
-| RevisionContent | `packages/app/src/slices/revisions/model.ts:37` | `project_revisions.content` | Edited article, image order, overrides, cues and prompt snapshots of a revision |
-| RevisionUpload | `packages/app/src/slices/revisions/model.ts:75` | In-memory | Staged file attached by a Save to a slot |
-| RevisionEdit | `packages/app/src/slices/revisions/model.ts:83` | In-memory | Proposed config/content plus regeneration and uploads of a Save |
-| ProjectRevision | `packages/app/src/slices/revisions/model.ts:89` | `project_revisions` | One retained revision: config, content, ancestry, fingerprints |
-| ProjectAsset | `packages/app/src/slices/revisions/model.ts:99` | `project_assets` + file | Registered immutable file of a project |
-| ManifestOutput | `packages/app/src/slices/revisions/model.ts:106` | `revision_outputs` | One output slot of a revision manifest |
-| ManifestPiece | `packages/app/src/slices/revisions/model.ts:114` | `revision_pieces` | One piece of a revision manifest |
-| RevisionManifest | `packages/app/src/slices/revisions/model.ts:121` | In-memory | Outputs and pieces a revision selects |
-| RevisionOutputView | `packages/app/src/slices/revisions/model.ts:125` | In-memory | Revision output with selection and file availability |
-| RevisionPieceView | `packages/app/src/slices/revisions/model.ts:131` | In-memory | Revision piece with selection and file availability |
-| RevisionView | `packages/app/src/slices/revisions/model.ts:137` | In-memory | Saved revision with its outputs, pieces and article |
-| RevisionSummary | `packages/app/src/slices/revisions/model.ts:177` | In-memory | History row of a revision, marked when an agent saved it |
-| RevisionMutationResult | `packages/app/src/slices/revisions/model.ts:152` | In-memory | Save/Restore result or refusal |
-| BaselineResult | `packages/app/src/slices/revisions/model.ts:165` | In-memory | Lazy adoption of a legacy project into a first revision |
-| RevisionOutputRecord | `packages/app/src/slices/revisions/model.ts:178` | `revision_outputs` | Parsed revision_outputs row |
-| RevisionPieceRecord | `packages/app/src/slices/revisions/model.ts:179` | `revision_pieces` | Parsed revision_pieces row |
+| RevisionContent | `packages/app/src/slices/revisions/model.ts:58` | `project_revisions.content` | Edited article, image order, overrides, cues and prompt snapshots of a revision |
+| RevisionUpload | `packages/app/src/slices/revisions/model.ts:107` | In-memory | Staged file attached by a Save to a slot |
+| RevisionEdit | `packages/app/src/slices/revisions/model.ts:116` | In-memory | Proposed config/content plus regeneration and uploads of a Save |
+| ProjectRevision | `packages/app/src/slices/revisions/model.ts:122` | `project_revisions` | One retained revision: config, content, ancestry, fingerprints |
+| ProjectAsset | `packages/app/src/slices/revisions/model.ts:132` | `project_assets` + file | Registered immutable file of a project |
+| ManifestOutput | `packages/app/src/slices/revisions/model.ts:139` | `revision_outputs` | One output slot of a revision manifest |
+| ManifestPiece | `packages/app/src/slices/revisions/model.ts:147` | `revision_pieces` | One piece of a revision manifest |
+| RevisionManifest | `packages/app/src/slices/revisions/model.ts:154` | In-memory | Outputs and pieces a revision selects |
+| RevisionOutputView | `packages/app/src/slices/revisions/model.ts:163` | In-memory | Revision output with selection and file availability |
+| RevisionPieceView | `packages/app/src/slices/revisions/model.ts:169` | In-memory | Revision piece with selection and file availability |
+| RevisionView | `packages/app/src/slices/revisions/model.ts:175` | In-memory | Saved revision with its outputs, pieces and article |
+| RevisionSummary | `packages/app/src/slices/revisions/model.ts:184` | In-memory | History row of a revision, marked when an agent saved it |
+| RevisionMutationResult | `packages/app/src/slices/revisions/model.ts:196` | In-memory | Save/Restore result or refusal |
+| BaselineResult | `packages/app/src/slices/revisions/model.ts:209` | In-memory | Lazy adoption of a legacy project into a first revision |
+| RevisionOutputRecord | `packages/app/src/slices/revisions/model.ts:222` | `revision_outputs` | Parsed revision_outputs row |
+| RevisionPieceRecord | `packages/app/src/slices/revisions/model.ts:223` | `revision_pieces` | Parsed revision_pieces row |
 | MutationIdentity | `packages/app/src/slices/revisions/mutation-request.ts:8` | `revision_mutations` | Canonical identity of a Save/Restore for idempotent replay |
 | SaveRevisionInput | `packages/app/src/slices/revisions/mutations.ts:51` | HTTP request/response | Save request |
 | PreparedOutput | `packages/app/src/slices/revisions/publication-model.ts:6` | In-memory | Output ready to publish to a revision |
@@ -132,20 +132,20 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | RebuildResult | `packages/app/src/slices/rebuild/model.ts:69` | In-memory | Rebuild preview/start result or refusal |
 | ExecutionSnapshot | `packages/app/src/slices/rebuild/preview-plan.ts:49` | `rebuild_previews.execution_json` | Frozen execution plan stored with a rebuild preview |
 | PreviewPlan | `packages/app/src/slices/rebuild/preview-plan.ts:50` | In-memory | Rebuild preview plus its execution snapshot |
-| AudioRecipes | `packages/app/src/slices/rebuild/recipe-audio.ts:28` | In-memory | Compiled narration recipes with timeline and levels |
+| AudioRecipes | `packages/app/src/slices/rebuild/recipe-audio.ts:30` | In-memory | Compiled narration recipes with timeline and levels |
 | ResolvedRevisionInputs | `packages/app/src/slices/rebuild/recipe-model.ts:19` | In-memory | Article and research text a recipe resolves from a revision |
-| ScriptCheck | `packages/app/src/slices/rebuild/recipe-model.ts:83` | In-memory | Speakers a script must attribute |
-| RecipeInput | `packages/app/src/slices/rebuild/recipe-model.ts:87` | `revision_work_pieces.input_json` | Frozen provider input of one work piece |
-| ResolvedWorkRecipe | `packages/app/src/slices/rebuild/recipe-model.ts:168` | In-memory | WorkRecipe plus resolved input and logical fingerprint |
-| RecipeContext | `packages/app/src/slices/rebuild/recipe-model.ts:179` | In-memory | Inputs every recipe is compiled from |
+| ScriptCheck | `packages/app/src/slices/rebuild/recipe-model.ts:86` | In-memory | Speakers a script must attribute |
+| RecipeInput | `packages/app/src/slices/rebuild/recipe-model.ts:90` | `revision_work_pieces.input_json` | Frozen provider input of one work piece |
+| ResolvedWorkRecipe | `packages/app/src/slices/rebuild/recipe-model.ts:171` | In-memory | WorkRecipe plus resolved input and logical fingerprint |
+| RecipeContext | `packages/app/src/slices/rebuild/recipe-model.ts:182` | In-memory | Inputs every recipe is compiled from |
 | RecipeProviderChoice | `packages/app/src/slices/rebuild/recipe-provider-choice.ts:5` | In-memory | Provider, model, family and voice a recipe resolves to |
 | RecoveryRequest | `packages/app/src/slices/rebuild/recovery-model.ts:19` | HTTP request/response | Recovery action request |
 | RecoveryResult | `packages/app/src/slices/rebuild/recovery-model.ts:50` | In-memory | Recovery action result or refusal |
-| RecoveryRecord | `packages/app/src/slices/rebuild/recovery-repo.ts:20` | `project_recovery_requests` | Parsed project_recovery_requests row |
-| PublicationTarget | `packages/app/src/slices/rebuild/repo.ts:11` | In-memory | Revision an output is published to |
-| WorkTransition | `packages/app/src/slices/rebuild/transition-repo.ts:17` | In-memory | Work carried from a base revision to a new one on Save |
+| RecoveryRecord | `packages/app/src/slices/rebuild/recovery-repo.ts:19` | `project_recovery_requests` | Parsed project_recovery_requests row |
+| PublicationTarget | `packages/app/src/slices/rebuild/repo.ts:12` | In-memory | Revision an output is published to |
+| WorkTransition | `packages/app/src/slices/rebuild/transition-repo.ts:18` | In-memory | Work carried from a base revision to a new one on Save |
 | WorkPiece | `packages/app/src/slices/rebuild/work-records.ts:5` | `revision_work_pieces` | Durable input, continuation and dispatch state of one work piece |
-| ProviderChanges | `packages/app/src/slices/control/providers.ts:40` | In-memory | Legacy provider-change input |
+| ProviderChanges | `packages/app/src/slices/control/providers.ts:12` | In-memory | Legacy provider-change input |
 | RevisionControlInput | `packages/app/src/slices/control/revision-control-schema.ts:9` | `project_control_receipts` identity | Pause/cancel/rerun request identity |
 | CheckpointStatus | `packages/app/src/slices/checkpoints/change.ts:31` | In-memory | Checkpoints of a revision with recalculated closure |
 | CheckpointRow | `packages/app/src/slices/checkpoints/model.ts:12` | `review_checkpoints` | One review checkpoint gate on a revision |
@@ -169,8 +169,8 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | DraftRow | `packages/app/src/slices/play-drafts/repo.ts:24` | `play_drafts` | Parsed play_drafts row |
 | AttachmentRow | `packages/app/src/slices/play-drafts/repo.ts:34` | `play_draft_attachments` | Parsed play_draft_attachments row |
 | AttachmentRef | `packages/app/src/slices/play-drafts/repo.ts:35` | In-memory | File reference found in a draft document |
-| PlayDraftForm | `packages/app/src/slices/play-drafts/schema.ts:247` | `play_drafts.document_json` (form) | Raw Play editor form, all fields tolerant |
-| PlayDraftDocument | `packages/app/src/slices/play-drafts/schema.ts:248` | `play_drafts.document_json` | Versioned envelope stored in play_drafts.document_json |
+| PlayDraftForm | `packages/app/src/slices/play-drafts/schema.ts:254` | `play_drafts.document_json` (form) | Raw Play editor form, all fields tolerant |
+| PlayDraftDocument | `packages/app/src/slices/play-drafts/schema.ts:255` | `play_drafts.document_json` | Versioned envelope stored in play_drafts.document_json |
 | StoredStartReceipt | `packages/app/src/slices/play-drafts/start-repo.ts:23` | `play_start_receipts` | Parsed play_start_receipts row |
 | ProjectTemplate | `packages/app/src/slices/project-templates/model.ts:6` | `project_templates` + `project_template_revisions` | Named reusable Play setup at a version |
 | TemplateSummary | `packages/app/src/slices/project-templates/model.ts:7` | `project_templates` + `project_template_revisions` | Template list row |
@@ -180,11 +180,11 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | PromptDraft | `packages/app/src/slices/library/model.ts:46` | HTTP request/response | Prompt create/update body |
 | Entry | `packages/app/src/slices/library/model.ts:52` | `entries` | A Library intro or outro |
 | EntryDraft | `packages/app/src/slices/library/model.ts:62` | HTTP request/response | Entry create/update body |
-| LibraryRef | `packages/app/src/slices/library/used-by.ts:12` | In-memory | A Library item a used-by lookup names |
-| UsedByTemplate | `packages/app/src/slices/library/used-by.ts:16` | In-memory | Template using a Library item |
-| UsedBySchedule | `packages/app/src/slices/library/used-by.ts:21` | In-memory | Schedule using a Library item |
-| UsedByProject | `packages/app/src/slices/library/used-by.ts:27` | In-memory | Project using a Library item |
-| UsedBy | `packages/app/src/slices/library/used-by.ts:37` | In-memory | Everything using a Library item |
+| LibraryRef | `packages/app/src/slices/library/used-by.ts:14` | In-memory | A Library item a used-by lookup names |
+| UsedByTemplate | `packages/app/src/slices/library/used-by.ts:18` | In-memory | Template using a Library item |
+| UsedBySchedule | `packages/app/src/slices/library/used-by.ts:23` | In-memory | Schedule using a Library item |
+| UsedByProject | `packages/app/src/slices/library/used-by.ts:29` | In-memory | Project using a Library item |
+| UsedBy | `packages/app/src/slices/library/used-by.ts:39` | In-memory | Everything using a Library item |
 | NarrationAlias | `packages/app/src/kernel/ports/narration-aliases.ts:8` | `narration_aliases`; copied into `RunConfig` | A written word and how the narrator says it |
 | AliasMatch | `packages/app/src/kernel/ports/narration-aliases.ts:16` | In-memory | One narration-alias match inside a text |
 | CustomDocumentTheme | `packages/app/src/slices/document/model.ts:29` | `document_themes` | A theme saved in Library → PDF themes |
@@ -194,32 +194,32 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | FontFace | `packages/app/src/slices/document/theme.ts:32` | In-memory | Font family, style and letter spacing inside DocumentTheme |
 | DocumentTheme | `packages/app/src/slices/document/theme.ts:39` | `document_themes.values_json`; `RunConfig.document` | Complete PDF look: page, fonts, sizes, spacing, title page, contents, header/footer, brand |
 | DocumentThemeOverrides | `packages/app/src/slices/document/theme.ts:283` | In-memory | Per-section overrides merged onto a base DocumentTheme |
-| BrandKit | `packages/app/src/slices/channels/model.ts:14` | `channels.brand_json` | Channel brand kit: caption/title fonts and colours, intro/outro, end screen text, document theme, ambient bed, language, links |
-| Channel | `packages/app/src/slices/channels/model.ts:41` | `channels` | A channel: brand kit, series brief, AI disclosure, version |
-| ChannelSummary | `packages/app/src/slices/channels/model.ts:57` | `channels` + counts | Channel plus template and cast counts, as lists show it |
-| CastImage | `packages/app/src/slices/channels/model.ts:62` | `cast_images` + `image_blobs` | One reference picture of a cast member |
-| CastVoice | `packages/app/src/slices/channels/model.ts:74` | `cast_members.voice_json` | A cast member's voice: provider, model, voice, pace, pronunciations |
-| CastMember | `packages/app/src/slices/channels/model.ts:83` | `cast_members` | A recurring character, creature, place or object of a channel |
-| CastSnapshot | `packages/app/src/slices/channels/model.ts:103` | `RunConfig` cast copy | A cast member as a run is started with it: only what the images need, the pictures named by content hash |
-| ChannelResult | `packages/app/src/slices/channels/model.ts:116` | In-memory | Typed success/refusal of a channel operation |
+| BrandKit | `packages/app/src/slices/channels/model.ts:13` | `channels.brand_json` | Channel brand kit: caption/title fonts and colours, intro/outro, end screen text, document theme, ambient bed, language, links |
+| Channel | `packages/app/src/slices/channels/model.ts:40` | `channels` | A channel: brand kit, series brief, AI disclosure, version |
+| ChannelSummary | `packages/app/src/slices/channels/model.ts:56` | `channels` + counts | Channel plus template and cast counts, as lists show it |
+| CastImage | `packages/app/src/slices/channels/model.ts:61` | `cast_images` + `image_blobs` | One reference picture of a cast member |
+| CastVoice | `packages/app/src/slices/channels/model.ts:73` | `cast_members.voice_json` | A cast member's voice: provider, model, voice, pace, pronunciations |
+| CastMember | `packages/app/src/slices/channels/model.ts:82` | `cast_members` | A recurring character, creature, place or object of a channel |
+| CastSnapshot | `packages/app/src/slices/channels/model.ts:102` | `RunConfig` cast copy | A cast member as a run is started with it: only what the images need, the pictures named by content hash |
+| ChannelResult | `packages/app/src/slices/channels/model.ts:115` | In-memory | Typed success/refusal of a channel operation |
 | ChannelVideo | `packages/app/src/slices/channels/videos.ts:15` | `channel_videos` | Title of a video the channel made outside Slopify |
 | VideoResult | `packages/app/src/slices/channels/videos.ts:27` | In-memory | Channel video operation result or refusal |
 | EpisodeMemory | `packages/app/src/slices/episodes/repo.ts:8` | `episode_memories` | Summary a finished project leaves on its channel |
 | EarlierEpisode | `packages/app/src/slices/episodes/repo.ts:23` | `RunDraft.earlierEpisodes` | What a new run carries of an earlier episode (`RunDraft.earlierEpisodes`) |
 | EpisodeResult | `packages/app/src/slices/episodes/service.ts:16` | In-memory | Episode memory operation result or refusal |
 | ChannelEpisodes | `packages/app/src/slices/episodes/service.ts:24` | In-memory | Channel episode memory setting and summaries |
-| Cadence | `packages/app/src/slices/schedules/calendar.ts:18` | `schedules.cadence_json` | One-off, daily or weekly schedule recurrence |
-| ScheduleResult | `packages/app/src/slices/schedules/model.ts:26` | In-memory | Schedule operation result or refusal |
-| ClaimedScheduleRun | `packages/app/src/slices/schedules/model.ts:49` | In-memory | A due run claimed with its schedule |
+| Cadence | `packages/app/src/slices/schedules/calendar.ts:23` | `schedules.cadence_json` | One-off, daily or weekly schedule recurrence |
+| ScheduleResult | `packages/app/src/slices/schedules/model.ts:42` | In-memory | Schedule operation result or refusal |
+| ClaimedScheduleRun | `packages/app/src/slices/schedules/model.ts:66` | In-memory | A due run claimed with its schedule |
 | TopicGeneration | `packages/app/src/slices/schedules/schema.ts:52` | `schedules.topic_*` columns | Schedule topic generation mode, queue minimum and LLM |
-| ScheduleCreate | `packages/app/src/slices/schedules/schema.ts:160` | HTTP request/response | Schedule create body |
-| ScheduleUpdate | `packages/app/src/slices/schedules/schema.ts:161` | HTTP request/response | Versioned schedule update body |
-| ScheduleSummary | `packages/app/src/slices/schedules/schema.ts:162` | `schedules` | A schedule with next run and topics |
-| ScheduleRun | `packages/app/src/slices/schedules/schema.ts:163` | `schedule_runs` | One schedule run with status, projects and estimate |
-| HeldTopic | `packages/app/src/slices/schedules/schema.ts:180` | `schedule_topics` | Generated topic waiting for approval |
-| CalendarRun | `packages/app/src/slices/schedules/schema.ts:278` | In-memory | A future schedule run on the calendar |
-| Calendar | `packages/app/src/slices/schedules/schema.ts:279` | In-memory | Calendar window: future runs, projects, queued projects |
-| CliPathStatus | `packages/app/src/slices/settings/cli-paths.ts:24` | In-memory | Configured and resolved command of a CLI |
+| ScheduleCreate | `packages/app/src/slices/schedules/schema.ts:220` | HTTP request/response | Schedule create body |
+| ScheduleUpdate | `packages/app/src/slices/schedules/schema.ts:221` | HTTP request/response | Versioned schedule update body |
+| ScheduleSummary | `packages/app/src/slices/schedules/schema.ts:222` | `schedules` | A schedule with next run and topics |
+| ScheduleRun | `packages/app/src/slices/schedules/schema.ts:223` | `schedule_runs` | One schedule run with status, projects and estimate |
+| HeldTopic | `packages/app/src/slices/schedules/schema.ts:240` | `schedule_topics` | Generated topic waiting for approval |
+| CalendarRun | `packages/app/src/slices/schedules/schema.ts:359` | In-memory | A future schedule run on the calendar |
+| Calendar | `packages/app/src/slices/schedules/schema.ts:360` | In-memory | Calendar window: future runs, projects, queued projects |
+| CliPathStatus | `packages/app/src/slices/settings/cli-paths.ts:25` | In-memory | Configured and resolved command of a CLI |
 | ProviderDefaults | `packages/app/src/slices/settings/first-run.ts:14` | `settings` key `provider.defaults` | First-run default LLM and image providers |
 | DetectedCli | `packages/app/src/slices/settings/first-run.ts:19` | In-memory | A CLI detected during first run |
 | FirstRunStatus | `packages/app/src/slices/settings/first-run.ts:28` | In-memory | First-run detection result |
@@ -228,32 +228,32 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | HealthReport | `packages/app/src/slices/settings/health.ts:33` | In-memory | Provider health check report |
 | KeyStatus | `packages/app/src/slices/settings/keys.ts:18` | In-memory | Whether a provider key is stored, and its mask |
 | KeyLookup | `packages/app/src/slices/settings/keys.ts:39` | In-memory | Key lookup result for a provider call |
-| KeyedProvider | `packages/app/src/slices/settings/model.ts:49` | In-memory | Provider authenticated by an API key |
-| CliProvider | `packages/app/src/slices/settings/model.ts:55` | In-memory | Provider backed by a local agent CLI login |
-| LocalProvider | `packages/app/src/slices/settings/model.ts:63` | In-memory | The computer's own speech engine as a provider |
-| Provider | `packages/app/src/slices/settings/model.ts:67` | In-memory | Union of KeyedProvider, CliProvider and LocalProvider |
-| ProviderStatus | `packages/app/src/slices/settings/model.ts:177` | In-memory | Provider identity plus readiness and CLI path, as Settings lists it |
-| Voice | `packages/app/src/slices/settings/model.ts:189` | `voices` | A saved TTS voice |
-| AppSettings | `packages/app/src/slices/settings/model.ts:211` | `settings` keys `silenceGapSeconds`, `appearance`, `loudness`, `subtitleModel` | App-wide settings: silence gap, appearance, loudness, English subtitle timing model |
+| KeyedProvider | `packages/app/src/slices/settings/model.ts:53` | In-memory | Provider authenticated by an API key |
+| CliProvider | `packages/app/src/slices/settings/model.ts:59` | In-memory | Provider backed by a local agent CLI login |
+| LocalProvider | `packages/app/src/slices/settings/model.ts:67` | In-memory | The computer's own speech engine as a provider |
+| Provider | `packages/app/src/slices/settings/model.ts:71` | In-memory | Union of KeyedProvider, CliProvider and LocalProvider |
+| ProviderStatus | `packages/app/src/slices/settings/model.ts:189` | In-memory | Provider identity plus readiness and CLI path, as Settings lists it |
+| Voice | `packages/app/src/slices/settings/model.ts:201` | `voices` | A saved TTS voice |
+| AppSettings | `packages/app/src/slices/settings/model.ts:219` | `settings` keys `silenceGapSeconds`, `appearance`, `loudness`, `subtitleModel` | App-wide settings: silence gap, appearance, loudness, English subtitle timing model |
 | TutorialSession | `packages/app/src/slices/settings/tutorial-schema.ts:46` | `settings` key `tutorial.session` | Persisted in-app tutorial cursor |
 | TutorialWrite | `packages/app/src/slices/settings/tutorial-schema.ts:47` | In-memory | Compare-and-set tutorial save |
 | TutorialView | `packages/app/src/slices/settings/tutorial-schema.ts:48` | In-memory | Versioned tutorial progress |
 | TutorialSaveResult | `packages/app/src/slices/settings/tutorial.ts:21` | In-memory | Tutorial save result or refusal |
-| VoiceDraft | `packages/app/src/slices/settings/voices.ts:20` | HTTP request/response | Voice create body |
-| AddVoiceResult | `packages/app/src/slices/settings/voices.ts:40` | In-memory | Voice add result or refusal |
+| VoiceDraft | `packages/app/src/slices/settings/voices.ts:22` | HTTP request/response | Voice create body |
+| AddVoiceResult | `packages/app/src/slices/settings/voices.ts:42` | In-memory | Voice add result or refusal |
 | Catalogue | `packages/app/src/catalog/schema.ts:101` | Catalogue YAML file; snapshot in `rebuild_previews.execution_json` | Model catalogue: providers, LLM, image and TTS models with prices |
-| CatalogueModel | `packages/app/src/catalog/schema.ts:129` | In-memory | One catalogue model with pricing and capabilities |
-| CatalogueSyncStatus | `packages/app/src/catalog/store.ts:24` | In-memory | Result of the last catalogue sync check |
+| CatalogueModel | `packages/app/src/catalog/schema.ts:132` | In-memory | One catalogue model with pricing and capabilities |
+| CatalogueSyncStatus | `packages/app/src/catalog/store.ts:25` | In-memory | Result of the last catalogue sync check |
 | HostCliStatus | `packages/app/src/kernel/ports/host-cli.ts:40` | In-memory | Host-side CLI readiness reported over the host CLI bridge |
-| HostLlmBody | `packages/app/src/kernel/ports/host-cli.ts:134` | HTTP request/response | Host CLI bridge LLM request body |
-| HostImageBody | `packages/app/src/kernel/ports/host-cli.ts:135` | HTTP request/response | Host CLI bridge image request body |
-| HostFrame | `packages/app/src/kernel/ports/host-cli.ts:208` | In-memory | One NDJSON frame of a host CLI bridge stream |
+| HostLlmBody | `packages/app/src/kernel/ports/host-cli.ts:137` | HTTP request/response | Host CLI bridge LLM request body |
+| HostImageBody | `packages/app/src/kernel/ports/host-cli.ts:138` | HTTP request/response | Host CLI bridge image request body |
+| HostFrame | `packages/app/src/kernel/ports/host-cli.ts:211` | In-memory | One NDJSON frame of a host CLI bridge stream |
 | Host CLI protocol | `packages/app/src/kernel/ports/host-cli.ts:15` | HTTP wire between app and host helper | Health body, open-folder body, negotiation headers and byte limits of protocol 1 |
 | ImageRequest | `packages/app/src/kernel/ports/image.ts:4` | HTTP request/response | One image-generation request |
-| CastReference | `packages/app/src/kernel/ports/image.ts:25` | In-memory | A cast member's reference pictures sent with an image request |
-| GeneratedImage | `packages/app/src/kernel/ports/image.ts:31` | In-memory | Image bytes returned by an image adapter with usage |
-| AnimateRequest | `packages/app/src/kernel/ports/image.ts:43` | HTTP request/response | Image-to-video request animating one still |
-| GeneratedVideo | `packages/app/src/kernel/ports/image.ts:52` | In-memory | Video bytes returned by an animate call |
+| CastReference | `packages/app/src/kernel/ports/image.ts:33` | In-memory | A cast member's reference pictures sent with an image request |
+| GeneratedImage | `packages/app/src/kernel/ports/image.ts:39` | In-memory | Image bytes returned by an image adapter with usage |
+| AnimateRequest | `packages/app/src/kernel/ports/image.ts:51` | HTTP request/response | Image-to-video request animating one still |
+| GeneratedVideo | `packages/app/src/kernel/ports/image.ts:60` | In-memory | Video bytes returned by an animate call |
 | LanguageInfo | `packages/app/src/kernel/ports/languages.ts:29` | In-memory | A supported narration/caption language with its script and timing engine |
 | LlmDocument | `packages/app/src/kernel/ports/llm-documents.ts:24` | In-memory; research documents in `project_assets` | A source document handed to an LLM call beside its messages |
 | Message | `packages/app/src/kernel/ports/llm.ts:8` | In-memory | One chat message sent to an LLM |
@@ -268,16 +268,16 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | ThinkingConfig | `packages/app/src/kernel/ports/llm.ts:72` | In-memory | Provider-specific reasoning budget, level or effort |
 | LlmCompletion | `packages/app/src/kernel/ports/llm.ts:86` | In-memory | One LLM request: model, messages, documents, thinking, web search, images |
 | ModelInfo | `packages/app/src/kernel/ports/model.ts:8` | In-memory | What Play's model dropdown is filled from, fetched per load |
-| Readiness | `packages/app/src/kernel/ports/model.ts:19` | In-memory | What Settings and Play both read per provider |
-| ProviderFault | `packages/app/src/kernel/ports/model.ts:59` | In-memory | Classified provider failure carried by ProviderError |
-| ProviderError | `packages/app/src/kernel/ports/model.ts:70` | In-memory | Error subclass carrying a ProviderFault |
-| ProviderErrorInit | `packages/app/src/kernel/ports/model.ts:72` | In-memory | Constructor input for ProviderError |
+| Readiness | `packages/app/src/kernel/ports/model.ts:31` | In-memory | What Settings and Play both read per provider |
+| ProviderFault | `packages/app/src/kernel/ports/model.ts:71` | In-memory | Classified provider failure carried by ProviderError |
+| ProviderError | `packages/app/src/kernel/ports/model.ts:89` | In-memory | Error subclass carrying a ProviderFault |
+| ProviderErrorInit | `packages/app/src/kernel/ports/model.ts:91` | In-memory | Constructor input for ProviderError |
 | LimitWindow | `packages/app/src/kernel/ports/plan-limits.ts:25` | In-memory | One CLI plan-limit window (five-hour or weekly) with percent used and reset time |
 | PlanLimitReading | `packages/app/src/kernel/ports/plan-limits.ts:33` | `plan_limit_readings.reading_json`; `standalone_usage.reading_json` | Plan windows a CLI reported before and after one call |
 | PlanLimitHit | `packages/app/src/kernel/ports/plan-limits.ts:40` | `plan_limit_waits` | A CLI reporting its plan allowance is used up, with the reset time |
-| SubtitleOmission | `packages/app/src/kernel/ports/subtitles.ts:3` | In-memory | Narration text the aligner could not time |
-| TimedWord | `packages/app/src/kernel/ports/subtitles.ts:7` | In-memory | One aligned word with start/end seconds |
-| AlignmentRequest | `packages/app/src/kernel/ports/subtitles.ts:13` | HTTP request/response | Input to the forced aligner |
+| SubtitleOmission | `packages/app/src/kernel/ports/subtitles.ts:11` | In-memory | Narration text the aligner could not time |
+| TimedWord | `packages/app/src/kernel/ports/subtitles.ts:15` | In-memory | One aligned word with start/end seconds |
+| AlignmentRequest | `packages/app/src/kernel/ports/subtitles.ts:21` | HTTP request/response | Input to the forced aligner |
 | SpeechVoice | `packages/app/src/kernel/ports/system-speech.ts:25` | In-memory | A voice of the computer's speech engine |
 | DetectedSpeech | `packages/app/src/kernel/ports/system-speech.ts:40` | In-memory | Speech engines found on this computer |
 | TtsCapabilities | `packages/app/src/kernel/ports/tts.ts:3` | In-memory | What a TTS adapter supports: streaming, native dialogue |
@@ -390,7 +390,7 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | SaveStudioInput | `packages/app/src/slices/template-studio/save.ts:34` | HTTP request | A studio Save: mutation id, base version, name, document, sample make or skip, and the high estimate the person accepted |
 | SavedStudio | `packages/app/src/slices/template-studio/save.ts:91` | HTTP response | The saved template, whether its sample was queued or skipped, and the quote |
 | ReadyProblem | `packages/app/src/slices/template-studio/ready.ts:20` | In-memory | Why a version cannot be marked ready |
-| StudioSettings | `packages/app/src/slices/template-studio/budget.ts:26` | Settings `templateStudio.dailyBudget`, `templateStudio.samplesUsePlans` | Daily sample budget (default $2) and whether samples may use CLI plans |
+| StudioSettings | `packages/app/src/slices/template-studio/budget.ts:29` | Settings `templateStudio.dailyBudget`, `templateStudio.samplesUsePlans` | Daily sample budget (default $2) and whether samples may use CLI plans |
 | BakeoffSection | `packages/app/src/slices/template-studio/bakeoff-repo.ts:7` | `template_bakeoffs.section` | script, voice or pictures |
 | BakeoffState | `packages/app/src/slices/template-studio/bakeoff-repo.ts:10` | `template_bakeoffs.state` | queued, making, done, held or failed |
 | CloneState | `packages/app/src/slices/template-studio/bakeoff-repo.ts:12` | `template_bakeoff_clones.state` | queued, making, done or failed |
@@ -443,13 +443,13 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | ClipLimits | `packages/app/src/slices/shorts/clips.ts:55` | In-memory | Min/max seconds of a short clip |
 | ShortsSettings | `packages/app/src/slices/shorts/model.ts:6` | `RunConfig` (Video stage) | Video stage Shorts step settings |
 | ShortsExtrasForm | `packages/app/src/slices/shorts/model.ts:155` | `play_drafts.document_json` | Shorts settings as typed in Play |
-| PickBrief | `packages/app/src/slices/shorts/pick.ts:11` | In-memory | Brief the text model picks shorts from |
-| ShortPick | `packages/app/src/slices/shorts/pick.ts:23` | In-memory | One picked short: sentence range, times, title, description, hashtags |
-| CheckedPicks | `packages/app/src/slices/shorts/pick.ts:191` | In-memory | Validated short picks or refusal |
-| PickLimits | `packages/app/src/slices/shorts/pick.ts:202` | In-memory | Count and duration limits a short pick is checked against |
-| StylePreviewImage | `packages/app/src/slices/style-preview/schema.ts:28` | In-memory | Picture a style preview is drawn on |
-| StylePreviewRequest | `packages/app/src/slices/style-preview/schema.ts:58` | HTTP request/response | Style preview request |
-| StylePreviewSettings | `packages/app/src/slices/style-preview/settings.ts:18` | In-memory | Settings a style preview renders from |
+| PickBrief | `packages/app/src/slices/shorts/pick.ts:12` | In-memory | Brief the text model picks shorts from |
+| ShortPick | `packages/app/src/slices/shorts/pick.ts:26` | In-memory | One picked short: sentence range, times, title, description, hashtags |
+| CheckedPicks | `packages/app/src/slices/shorts/pick.ts:199` | In-memory | Validated short picks or refusal |
+| PickLimits | `packages/app/src/slices/shorts/pick.ts:210` | In-memory | Count and duration limits a short pick is checked against |
+| StylePreviewImage | `packages/app/src/slices/style-preview/schema.ts:31` | In-memory | Picture a style preview is drawn on |
+| StylePreviewRequest | `packages/app/src/slices/style-preview/schema.ts:71` | HTTP request/response | Style preview request |
+| StylePreviewSettings | `packages/app/src/slices/style-preview/settings.ts:19` | In-memory | Settings a style preview renders from |
 | CaptionCue | `packages/app/src/slices/subtitles/captions.ts:5` | In-memory | One caption cue with optional speaker |
 | SubtitleConfig | `packages/app/src/slices/subtitles/model.ts:33` | `RunConfig.subtitles` | Caption settings of a run: mode, language, font, position, colours |
 | AmbientBedSettings | `packages/app/src/slices/video/ambient-bed.ts:17` | `RunConfig` | Ambient sound bed under a video: source, level, fades |
@@ -468,10 +468,10 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | AmbientBed | `packages/app/src/slices/video/edit-list.ts:117` | In-memory | Ambient bed in an EditList |
 | EditList | `packages/app/src/slices/video/edit-list.ts:128` | Video `render.json` record | Complete video edit: audio, shots, look, cards, bed |
 | VideoEditSettings | `packages/app/src/slices/video/edit-settings.ts:34` | `RunConfig.videoEdit` | Video stage edit options: cuts, transitions, look, chapter cards, animation |
-| Speaker | `packages/app/src/slices/voices/model.ts:60` | `RunConfig` JSON | One speaker of a multi-voice run with voice, pace and pronunciations |
-| Book | `packages/app/src/slices/voices/model.ts:72` | `RunConfig` JSON | Audiobook title and chapter numbering |
-| VoicesSettings | `packages/app/src/slices/voices/model.ts:92` | `RunConfig.voices` | Multi-voice settings of a run: format, script source, speakers |
-| VoiceProblem | `packages/app/src/slices/voices/model.ts:165` | In-memory | A field-level problem in VoicesSettings |
+| Speaker | `packages/app/src/slices/voices/model.ts:61` | `RunConfig` JSON | One speaker of a multi-voice run with voice, pace and pronunciations |
+| Book | `packages/app/src/slices/voices/model.ts:73` | `RunConfig` JSON | Audiobook title and chapter numbering |
+| VoicesSettings | `packages/app/src/slices/voices/model.ts:93` | `RunConfig.voices` | Multi-voice settings of a run: format, script source, speakers |
+| VoiceProblem | `packages/app/src/slices/voices/model.ts:166` | In-memory | A field-level problem in VoicesSettings |
 | ScriptTurn | `packages/app/src/slices/voices/script.ts:14` | In-memory | One speaker turn of a multi-voice script |
 | ScriptSection | `packages/app/src/slices/voices/script.ts:25` | In-memory | A script section title and its first turn |
 | Script | `packages/app/src/slices/voices/script.ts:30` | In-memory | Parsed multi-voice script |
@@ -479,31 +479,30 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | AiDisclosure | `packages/app/src/slices/studio/disclosure.ts:45` | In-memory | YouTube altered/synthetic content answer with its reason |
 | DisclosureInput | `packages/app/src/slices/studio/disclosure.ts:54` | HTTP request/response | Inputs the AI disclosure answer is worked out from |
 | PackFile | `packages/app/src/slices/studio/model.ts:20` | In-memory | One file of a Studio upload pack |
-| StudioPlaylist | `packages/app/src/slices/studio/model.ts:32` | `settings` keys `studio.playlist[.<channelId>]` | A playlist of a channel's list (Settings → YouTube Studio), ticked by default or not |
-| PackItem | `packages/app/src/slices/studio/model.ts:37` | In-memory | One video or short of an upload pack with its metadata |
-| UploadPack | `packages/app/src/slices/studio/model.ts:85` | In-memory | Everything the Studio extension fills for a project |
-| ActivePack | `packages/app/src/slices/studio/model.ts:105` | In-memory | Pack item the extension fills |
-| FillQueueItem | `packages/app/src/slices/studio/model.ts:131` | `settings` key `studio.fillQueue.<hash>` | Item waiting for the Studio extension |
-| StudioPairingView | `packages/app/src/slices/studio/model.ts:145` | `settings` key `studio.pairing` | Extension pairing token, origin and time |
+| StudioPlaylist | `packages/app/src/slices/studio/model.ts:37` | `settings` keys `studio.playlist[.<channelId>]` | A playlist of a channel's list (Settings → YouTube Studio), ticked by default or not |
+| PackItem | `packages/app/src/slices/studio/model.ts:43` | In-memory | One video or short of an upload pack with its metadata |
+| UploadPack | `packages/app/src/slices/studio/model.ts:91` | In-memory | Everything the Studio extension fills for a project |
+| ActivePack | `packages/app/src/slices/studio/model.ts:111` | In-memory | Pack item the extension fills |
+| FillQueueItem | `packages/app/src/slices/studio/model.ts:137` | `settings` key `studio.fillQueue.<hash>` | Item waiting for the Studio extension |
+| StudioPairingView | `packages/app/src/slices/studio/model.ts:151` | `settings` key `studio.pairing` | Extension pairing token, origin and time |
 | UploadPick | `packages/app/src/slices/studio/pick.ts:11` | `settings` key `studio.uploadPick.<projectId>` | Which title and thumbnail (indexes 0-9) the upload carries |
-| PostingPlan | `packages/app/src/slices/studio/plan-model.ts:23` | `settings` key `studio.postingPlan` | A week of posting-plan lines, each a long-video time with its series and its shorts' times, in one time zone |
-| PlanLine | `packages/app/src/slices/studio/plan-model.ts:24` | `settings` JSON (`PostingPlan.rows`) | One line of the posting plan |
-| PlanSlot | `packages/app/src/slices/studio/plan-model.ts:25` | `settings` JSON (`PostingPlan`) | A weekday and HH:MM time of the plan |
+| PostingPlan | `packages/app/src/slices/studio/plan-model.ts:31` | `settings` key `studio.postingPlan` | A week of posting-plan lines, each a long-video time with its series and its shorts' times, in one time zone |
+| PlanLine | `packages/app/src/slices/studio/plan-model.ts:32` | `settings` JSON (`PostingPlan.rows`) | One line of the posting plan |
+| PlanSlot | `packages/app/src/slices/studio/plan-model.ts:33` | `settings` JSON (`PostingPlan`) | A weekday and HH:MM time of the plan |
 | Release | `packages/app/src/slices/studio/releases.ts:12` | `releases` | One release time of a project's long video (short 0) or one short, with its plan line and who set it |
 | Slot | `packages/app/src/slices/studio/releases.ts:20` | In-memory; taken as a `releases` short-0 row (`line`, `release_at`) | A posting-plan line's long-video time |
 | Schedule | `packages/app/src/slices/studio/releases.ts:27` | In-memory, read from `releases` | A project's long-video release plus each short's release |
-| ReleaseCalendar | `packages/app/src/slices/studio/calendar.ts:43` | HTTP response (`GET /api/studio/releases`) | Calendar → Releases: the coming long videos with their shorts, the plan's free times, and finished projects that could fill them |
-| CalendarEntry | `packages/app/src/slices/studio/calendar.ts:34` | HTTP response (`ReleaseCalendar.entries`) | One long-video release of a project, or one free plan time |
-| CalendarItem | `packages/app/src/slices/studio/calendar.ts:24` | HTTP response (`CalendarEntry.items`) | One video or short of an entry with its release, upload-by time, state and Studio's checks |
+| ReleaseCalendar | `packages/app/src/slices/studio/calendar.ts:55` | HTTP response (`GET /api/studio/releases`) | Calendar → Releases: the coming long videos with their shorts, the plan's free times, and finished projects that could fill them |
+| CalendarEntry | `packages/app/src/slices/studio/calendar.ts:41` | HTTP response (`ReleaseCalendar.entries`) | One long-video release of a project, or one free plan time |
+| CalendarItem | `packages/app/src/slices/studio/calendar.ts:31` | HTTP response (`CalendarEntry.items`) | One video or short of an entry with its release, upload-by time, state and Studio's checks |
 | YoutubeVideo | `packages/app/src/slices/studio/videos.ts:11` | `youtube_videos` | The YouTube video an upload became, its upload state, its A/B, finish and comment task states and Studio's checks |
-| VideoStats | `packages/app/src/slices/studio/stats.ts:8` | `video_stats` | Studio's numbers for one video as the extension last read them |
-| AbVariant | `packages/app/src/slices/studio/stats.ts:29` | `ab_results.variants` JSON | One variant of a finished A/B test |
-| AbResult | `packages/app/src/slices/studio/stats.ts:31` | `ab_results` | A finished A/B test as Studio shows it |
+| AbVariant | `packages/app/src/slices/studio/stats.ts:15` | `ab_results.variants` JSON | One variant of a finished A/B test |
+| AbResult | `packages/app/src/slices/studio/stats.ts:17` | `ab_results` | A finished A/B test as Studio shows it |
 | StudioRow | `packages/app/src/slices/studio/backfill.ts:10` | In-memory | One row of Studio's Content list sent by the extension |
 | FillEntry | `packages/app/src/slices/studio/queue.ts:18` | `settings` key `studio.fillQueue.<hash>` | One stored fill-queue entry |
 | TitleShape | `packages/app/src/slices/youtube/titles.ts:8` | In-memory | A title pattern with keywords and what each holds in the video's title |
-| DescriptionBrief | `packages/app/src/slices/youtube/answer.ts:21` | In-memory | Brief the text model writes the YouTube description from |
-| DescriptionAnswer | `packages/app/src/slices/youtube/answer.ts:37` | In-memory | Parsed LLM answer for the YouTube description |
+| DescriptionBrief | `packages/app/src/slices/youtube/answer.ts:22` | In-memory | Brief the text model writes the YouTube description from |
+| DescriptionAnswer | `packages/app/src/slices/youtube/answer.ts:38` | In-memory | Parsed LLM answer for the YouTube description |
 | ProjectDescriptionEdits | `packages/app/src/slices/youtube/edits-repo.ts:30` | `youtube_description_edits` | A project's description edits and own links |
 | DescriptionFields | `packages/app/src/slices/youtube/edits.ts:22` | In-memory | YouTube description fields as editable text |
 | FieldEdit | `packages/app/src/slices/youtube/edits.ts:24` | In-memory | User text of a description field and the generated text it was edited from |
@@ -512,114 +511,114 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | ChannelLink | `packages/app/src/slices/youtube/placeholders.ts:8` | `settings` key `channel_links`; `channels.brand_json`; `youtube_description_edits.links_json` | A named link (for example Previous video) filled into description placeholders |
 | PlaceholderPart | `packages/app/src/slices/youtube/placeholders.ts:21` | In-memory | Parsed text or placeholder part of a description |
 | FilledText | `packages/app/src/slices/youtube/placeholders.ts:74` | In-memory | Description text with placeholders filled and unknown names listed |
-| CostRow | `packages/app/src/slices/estimate/index.ts:47` | In-memory | One stage row of a cost estimate |
-| CostEstimate | `packages/app/src/slices/estimate/index.ts:58` | In-memory | Estimated low/high run cost with assumptions |
+| CostRow | `packages/app/src/slices/estimate/index.ts:56` | In-memory | One stage row of a cost estimate |
+| CostEstimate | `packages/app/src/slices/estimate/index.ts:67` | In-memory | Estimated low/high run cost with assumptions |
 | Fix | `packages/app/src/slices/fixes/rules.ts:10` | In-memory | Fix-it action a failed step offers |
 | FailedStep | `packages/app/src/slices/fixes/rules.ts:28` | In-memory | Failure facts a Fix is chosen from |
-| NoticeText | `packages/app/src/slices/notifications/rules.ts:32` | In-memory | Rendered notification text |
-| ReviewNoticeSubject | `packages/app/src/slices/notifications/rules.ts:41` | In-memory | Flagged-review facts a notification is written from |
-| NoticeSubject | `packages/app/src/slices/notifications/rules.ts:67` | In-memory | Project facts a finished/failed notification is written from |
-| TopicsNoticeSubject | `packages/app/src/slices/notifications/rules.ts:120` | In-memory | Held-topics facts a notification is written from |
-| ReviewStageSettings | `packages/app/src/slices/reviews/model.ts:16` | `RunConfig` JSON | Automatic review mode and prompt for one stage |
-| ReviewSettings | `packages/app/src/slices/reviews/model.ts:37` | `RunConfig.reviews` | Automatic review settings of a run: reviewer (a model, or External agent (MCP)), retries, per-stage modes |
-| ReviewSettingsForm | `packages/app/src/slices/reviews/model.ts:90` | `play_drafts.document_json` | Review settings as Play and templates keep them |
-| ReviewVerdict | `packages/app/src/slices/reviews/model.ts:154` | In-memory | A reviewer's pass/fail answer with reasons |
-| ReviewRecord | `packages/app/src/slices/reviews/model.ts:185` | `review_verdicts` | One saved verdict, as the project page shows it, with who gave it and who acted on it |
-| ReviewView | `packages/app/src/slices/reviews/view.ts:11` | In-memory | Review verdict with current output, as the project page lists it |
-| ExternalMaterial | `packages/app/src/slices/reviews/external-model.ts:21` | `external_reviews.material` JSON | What the built-in reviewer would be sent: the prompt's parts and the pictures by stored path |
-| ExternalReview | `packages/app/src/slices/reviews/external-model.ts:26` | `external_reviews` | A review an External agent answers through MCP: material, state, deadline, verdict and who answered |
-| ReviewStanding | `packages/app/src/slices/reviews/external-model.ts:49` | In-memory | Where an external review stands: waiting, or why it takes no verdict |
+| NoticeText | `packages/app/src/slices/notifications/rules.ts:44` | In-memory | Rendered notification text |
+| ReviewNoticeSubject | `packages/app/src/slices/notifications/rules.ts:53` | In-memory | Flagged-review facts a notification is written from |
+| NoticeSubject | `packages/app/src/slices/notifications/rules.ts:113` | In-memory | Project facts a finished/failed notification is written from |
+| TopicsNoticeSubject | `packages/app/src/slices/notifications/rules.ts:298` | In-memory | Held-topics facts a notification is written from |
+| ReviewStageSettings | `packages/app/src/slices/reviews/model.ts:50` | `RunConfig` JSON | Automatic review mode and prompt for one stage |
+| ReviewSettings | `packages/app/src/slices/reviews/model.ts:56` | `RunConfig.reviews` | Automatic review settings of a run: reviewer (a model, or External agent (MCP)), retries, per-stage modes |
+| ReviewSettingsForm | `packages/app/src/slices/reviews/model.ts:128` | `play_drafts.document_json` | Review settings as Play and templates keep them |
+| ReviewVerdict | `packages/app/src/slices/reviews/model.ts:195` | In-memory | A reviewer's pass/fail answer with reasons |
+| ReviewRecord | `packages/app/src/slices/reviews/model.ts:201` | `review_verdicts` | One saved verdict, as the project page shows it, with who gave it and who acted on it |
+| ReviewView | `packages/app/src/slices/reviews/view.ts:13` | In-memory | Review verdict with current output, as the project page lists it |
+| ExternalMaterial | `packages/app/src/slices/reviews/external-model.ts:25` | `external_reviews.material` JSON | What the built-in reviewer would be sent: the prompt's parts and the pictures by stored path |
+| ExternalReview | `packages/app/src/slices/reviews/external-model.ts:30` | `external_reviews` | A review an External agent answers through MCP: material, state, deadline, verdict and who answered |
+| ReviewStanding | `packages/app/src/slices/reviews/external-model.ts:53` | In-memory | Where an external review stands: waiting, or why it takes no verdict |
 | ProjectHolds | `packages/app/src/slices/reviews/holds.ts:20` | In-memory (`review_checkpoints` + `external_reviews` + `revision_work` + `prepared_videos`) | What each held run waits for when it isn't the person: prepared, waiting for the agent, stopped, and the checkpoints holding it now |
 | CheckpointHold | `packages/app/src/slices/reviews/holds.ts:39` | In-memory | One checkpoint holding a run now, and whether it waits for the person or the run's day |
 | HeldStateWord | `packages/app/src/slices/admission/state-words.ts:45` | In-memory | The word a held run reads by: Kept as is, Waiting for the agent, Stopped, Prepared, Waiting for your review |
-| Actor | `packages/app/src/slices/agents/model.ts:7` | `project_starts.actor`, `review_verdicts.action_by`, `external_reviews.answered_by` | Who asked for a change: the person or an agent |
+| Actor | `packages/app/src/slices/agents/model.ts:8` | `project_starts.actor`, `review_verdicts.action_by`, `external_reviews.answered_by` | Who asked for a change: the person or an agent |
 | AgentAction | `packages/app/src/slices/agents/repo.ts:5` | `agent_actions` | One change an agent made through MCP |
-| AgentActionView | `packages/app/src/slices/agents/repo.ts:18` | In-memory | An agent action with the name of the project or schedule it changed |
-| AttentionEntry | `packages/app/src/slices/agents/attention.ts:36` | In-memory | One thing waiting for someone, as `needs_attention` lists it |
+| AgentActionView | `packages/app/src/slices/agents/repo.ts:20` | In-memory | An agent action with the name of the project or schedule it changed |
+| AttentionEntry | `packages/app/src/slices/agents/attention.ts:39` | In-memory | One thing waiting for someone, as `needs_attention` lists it |
 | ToldFailures | `packages/app/src/slices/notifications/told.ts:6` | `told_failures` | The failed steps a project's notices already named |
-| UsageTotals | `packages/app/src/slices/run-cost/panel.ts:18` | In-memory | Token, character, image and second totals of a run |
-| CostLine | `packages/app/src/slices/run-cost/panel.ts:27` | In-memory | Calls and cost totals |
-| StageCost | `packages/app/src/slices/run-cost/panel.ts:37` | In-memory | Run cost of one stage |
-| ModelCost | `packages/app/src/slices/run-cost/panel.ts:43` | In-memory | Run cost of one provider/model |
-| PlanWindowUse | `packages/app/src/slices/run-cost/panel.ts:51` | In-memory | Share of a plan window a run took |
-| PlanUse | `packages/app/src/slices/run-cost/panel.ts:60` | In-memory | Plan windows of one CLI account |
-| LimitWait | `packages/app/src/slices/run-cost/panel.ts:70` | In-memory | A stage waiting on a plan limit |
-| RunCost | `packages/app/src/slices/run-cost/panel.ts:78` | In-memory | Project Run cost tab data |
+| UsageTotals | `packages/app/src/slices/run-cost/panel.ts:21` | In-memory | Token, character, image and second totals of a run |
+| CostLine | `packages/app/src/slices/run-cost/panel.ts:30` | In-memory | Calls and cost totals |
+| StageCost | `packages/app/src/slices/run-cost/panel.ts:40` | In-memory | Run cost of one stage |
+| ModelCost | `packages/app/src/slices/run-cost/panel.ts:46` | In-memory | Run cost of one provider/model |
+| PlanWindowUse | `packages/app/src/slices/run-cost/plan-use.ts:14` | In-memory | Share of a plan window a run took |
+| PlanUse | `packages/app/src/slices/run-cost/panel.ts:11` | In-memory | Plan windows of one CLI account |
+| LimitWait | `packages/app/src/slices/run-cost/panel.ts:54` | In-memory | A stage waiting on a plan limit |
+| RunCost | `packages/app/src/slices/run-cost/panel.ts:62` | In-memory | Project Run cost tab data |
 | CallPrice | `packages/app/src/slices/run-cost/pricing.ts:12` | `provider_usage.price_json`, `standalone_usage.price_json` | Priced provider call: cost, API equivalent, rates used |
 | RunTiming | `packages/app/src/slices/run-cost/timing.ts:12` | In-memory | Working time of a project's steps from attempts |
 | ProjectTiming | `packages/app/src/slices/run-cost/timing.ts:19` | In-memory | Working time of a project per stage |
-| PlanStanding | `packages/app/src/slices/run-cost/week.ts:18` | In-memory | Latest plan window standing of a CLI account |
-| WeekSummary | `packages/app/src/slices/run-cost/week.ts:28` | In-memory | Home's this-week summary |
+| PlanStanding | `packages/app/src/slices/run-cost/week.ts:20` | In-memory | Latest plan window standing of a CLI account |
+| WeekSummary | `packages/app/src/slices/run-cost/week.ts:30` | In-memory | Home's this-week summary |
 | BackupConfigInput | `packages/app/src/slices/backups/model.ts:35` | HTTP request/response | Automatic backup settings as submitted |
 | BackupConfig | `packages/app/src/slices/backups/model.ts:42` | `settings` key `backups.config` | Saved automatic backup settings |
 | BackupStatus | `packages/app/src/slices/backups/model.ts:66` | `settings` key `backups.status` | Last automatic backup attempt and success |
 | BackupFile | `packages/app/src/slices/backups/model.ts:80` | Archive file in the backup folder | A backup archive in the backup folder |
 | BackupView | `packages/app/src/slices/backups/model.ts:86` | In-memory | Settings view of automatic backups |
-| BackupManifest | `packages/app/src/slices/storage/backup-format.ts:181` | Backup tar `manifest.json` | Manifest of a backup archive |
-| LibraryPart | `packages/app/src/slices/storage/backup-format.ts:215` | Backup tar `data/library.json` | Library tables and files inside a backup |
-| UsagePart | `packages/app/src/slices/storage/backup-format.ts:218` | Backup tar `data/usage.json` | Usage tables inside a backup |
-| ProjectPart | `packages/app/src/slices/storage/backup-format.ts:231` | Backup tar `data/projects/<id>.json` | One project's tables and files inside a backup |
-| ItemCounts | `packages/app/src/slices/storage/backup-import.ts:103` | In-memory | Added/renamed/skipped counts of one kind in a backup import |
-| BackupImportSummary | `packages/app/src/slices/storage/backup-import.ts:109` | In-memory | What a backup import added, renamed and skipped |
-| FilesLocation | `packages/app/src/slices/storage/files-location.ts:40` | `settings` key `files.location` | Where project files live |
-| SettleFilesInput | `packages/app/src/slices/storage/files-location.ts:67` | HTTP request/response | Boot input that settles the files location |
-| MoveProgress | `packages/app/src/slices/storage/files-location.ts:118` | `settings` key `files.move` | Progress of a files-location move |
-| FilesView | `packages/app/src/slices/storage/files-location.ts:130` | In-memory | Settings view of file locations |
-| PortableImportResult | `packages/app/src/slices/storage/portable.ts:153` | In-memory | Counts imported from an older .zip portable backup |
-| StorageUsage | `packages/app/src/slices/storage/portable.ts:164` | In-memory | Byte totals: data, projects, staging, trash, per project |
-| ProjectStorage | `packages/app/src/slices/storage/trim.ts:37` | In-memory | Bytes a project uses and how much Trim frees |
-| TrashItem | `packages/app/src/slices/trash/model.ts:27` | `project_trash`; `deleted_at` columns | One trashed item with purge date |
-| Restored | `packages/app/src/slices/trash/model.ts:36` | In-memory | What a restore brought back |
-| TrashResult | `packages/app/src/slices/trash/model.ts:57` | In-memory | Trash operation result or refusal |
-| UploadMarkResult | `packages/app/src/slices/uploads/repo.ts:6` | In-memory | Mark uploaded result or refusal |
-| PrepareResult | `packages/app/src/slices/schedules/prepare.ts:61` | In-memory | A schedule topic prepared ahead, or the refusal reason |
+| BackupManifest | `packages/app/src/slices/storage/backup-format.ts:192` | Backup tar `manifest.json` | Manifest of a backup archive |
+| LibraryPart | `packages/app/src/slices/storage/backup-format.ts:226` | Backup tar `data/library.json` | Library tables and files inside a backup |
+| UsagePart | `packages/app/src/slices/storage/backup-format.ts:229` | Backup tar `data/usage.json` | Usage tables inside a backup |
+| ProjectPart | `packages/app/src/slices/storage/backup-format.ts:274` | Backup tar `data/projects/<id>.json` | One project's tables and files inside a backup |
+| ItemCounts | `packages/app/src/slices/storage/backup-import.ts:104` | In-memory | Added/renamed/skipped counts of one kind in a backup import |
+| BackupImportSummary | `packages/app/src/slices/storage/backup-import.ts:110` | In-memory | What a backup import added, renamed and skipped |
+| FilesLocation | `packages/app/src/slices/storage/files-location.ts:41` | `settings` key `files.location` | Where project files live |
+| SettleFilesInput | `packages/app/src/slices/storage/files-location.ts:68` | HTTP request/response | Boot input that settles the files location |
+| MoveProgress | `packages/app/src/slices/storage/files-location.ts:119` | `settings` key `files.move` | Progress of a files-location move |
+| FilesView | `packages/app/src/slices/storage/files-location.ts:131` | In-memory | Settings view of file locations |
+| PortableImportResult | `packages/app/src/slices/storage/portable.ts:160` | In-memory | Counts imported from an older .zip portable backup |
+| StorageUsage | `packages/app/src/slices/storage/portable.ts:171` | In-memory | Byte totals: data, projects, staging, trash, per project |
+| ProjectStorage | `packages/app/src/slices/storage/trim.ts:44` | In-memory | Bytes a project uses and how much Trim frees |
+| TrashItem | `packages/app/src/slices/trash/model.ts:36` | `project_trash`; `deleted_at` columns | One trashed item with purge date |
+| Restored | `packages/app/src/slices/trash/model.ts:45` | In-memory | What a restore brought back |
+| TrashResult | `packages/app/src/slices/trash/model.ts:66` | In-memory | Trash operation result or refusal |
+| UploadMarkResult | `packages/app/src/slices/uploads/repo.ts:8` | In-memory | Mark uploaded result or refusal |
+| PrepareResult | `packages/app/src/slices/schedules/prepare.ts:62` | In-memory | A schedule topic prepared ahead, or the refusal reason |
 | AutostartView | `packages/app/src/edge/autostart/model.ts:3` | `settings` key `autostart.answered` + OS launcher | Start-at-login switch state |
-| AutostartBody | `packages/app/src/edge/autostart/model.ts:24` | HTTP request/response | Autostart toggle body |
+| AutostartBody | `packages/app/src/edge/http/autostart.ts:7` | HTTP request/response | Autostart toggle body |
 | SampleProjects | `packages/app/src/slices/onboarding/model.ts:17` | In-memory | Seeded sample project ids |
 | FirstRunView | `packages/app/src/slices/onboarding/model.ts:64` | In-memory | Onboarding first-run view |
-| QuickShortInput | `packages/app/src/slices/onboarding/model.ts:73` | HTTP request/response | Quick short onboarding request |
-| PackPrompt | `packages/app/src/slices/onboarding/packs.ts:11` | In-memory | Starter pack Library prompt |
-| PackVoice | `packages/app/src/slices/onboarding/packs.ts:27` | In-memory | Starter pack's suggested voice |
-| PackStyle | `packages/app/src/slices/onboarding/packs.ts:35` | In-memory | Starter pack video style |
-| StarterPack | `packages/app/src/slices/onboarding/packs.ts:49` | In-memory | Starter pack: prompts, voice and style |
+| QuickShortInput | `packages/app/src/slices/onboarding/model.ts:66` | HTTP request/response | Quick short onboarding request |
+| PackPrompt | `packages/app/src/slices/onboarding/packs.ts:12` | In-memory | Starter pack Library prompt |
+| PackVoice | `packages/app/src/slices/onboarding/packs.ts:28` | In-memory | Starter pack's suggested voice |
+| PackStyle | `packages/app/src/slices/onboarding/packs.ts:36` | In-memory | Starter pack video style |
+| StarterPack | `packages/app/src/slices/onboarding/packs.ts:50` | In-memory | Starter pack: prompts, voice and style |
 | SampleRecord | `packages/app/src/slices/onboarding/state.ts:20` | `settings` key `onboarding.sample[.<id>]` | Seeded sample project record |
 | PackRecord | `packages/app/src/slices/onboarding/state.ts:28` | `settings` key `onboarding.packs` | Installed starter pack record |
-| PatchNoteSummary | `packages/app/src/slices/patch-notes/library.ts:26` | In-memory | One patch note in the What's new list |
+| PatchNoteSummary | `packages/app/src/slices/patch-notes/library.ts:27` | In-memory | One patch note in the What's new list |
 | PatchNotesView | `packages/app/src/slices/patch-notes/seen.ts:13` | `settings` key `patchNotes.seenVersion` | Patch notes due to be shown |
-| CollectorEvent | `packages/app/src/slices/telemetry/collector-client.ts:6` | HTTP POST to the collector | Telemetry event as posted to the collector |
-| Tokens | `packages/app/src/slices/telemetry/model.ts:25` | In-memory | Tokens in and out as the provider reports them, 0 when unreported |
-| TelemetryCounters | `packages/app/src/slices/telemetry/model.ts:66` | In-memory | Counters one telemetry event carries |
-| TelemetryPayload | `packages/app/src/slices/telemetry/model.ts:81` | `telemetry_events.payload` | Telemetry counters plus app version |
-| TelemetryEvent | `packages/app/src/slices/telemetry/model.ts:85` | `telemetry_events` | One queued telemetry event |
-| Machine | `packages/app/src/slices/telemetry/model.ts:95` | `machine` | Single `machine` row: random machine id |
+| CollectorEvent | `packages/app/src/slices/telemetry/collector-client.ts:7` | HTTP POST to the collector | Telemetry event as posted to the collector |
+| Tokens | `packages/app/src/slices/telemetry/model.ts:29` | In-memory | Tokens in and out as the provider reports them, 0 when unreported |
+| TelemetryCounters | `packages/app/src/slices/telemetry/model.ts:61` | In-memory | Counters one telemetry event carries |
+| TelemetryPayload | `packages/app/src/slices/telemetry/model.ts:76` | `telemetry_events.payload` | Telemetry counters plus app version |
+| TelemetryEvent | `packages/app/src/slices/telemetry/model.ts:80` | `telemetry_events` | One queued telemetry event |
+| Machine | `packages/app/src/slices/telemetry/model.ts:90` | `machine` | Single `machine` row: random machine id |
 | UsageCounters | `packages/app/src/slices/telemetry/usage.ts:13` | In-memory | All-time Usage screen totals |
 | StageTokens | `packages/app/src/slices/telemetry/usage.ts:22` | In-memory | Tokens by stage row |
 | UsageInput | `packages/app/src/slices/telemetry/usage.ts:39` | HTTP request/response | Events and machine id the Usage view is computed from |
-| TutorialPageSummary | `packages/app/src/slices/tutorials/library.ts:12` | In-memory | Tutorial page id and title |
-| TutorialGroup | `packages/app/src/slices/tutorials/library.ts:17` | In-memory | Group of tutorial pages |
-| TutorialsIndex | `packages/app/src/slices/tutorials/library.ts:22` | In-memory | Tutorials sidebar index |
-| TutorialHit | `packages/app/src/slices/tutorials/library.ts:31` | In-memory | Tutorial search hit |
-| TutorialBook | `packages/app/src/slices/tutorials/library.ts:40` | In-memory | All tutorial pages |
+| TutorialPageSummary | `packages/app/src/slices/tutorials/library.ts:13` | In-memory | Tutorial page id and title |
+| TutorialGroup | `packages/app/src/slices/tutorials/library.ts:18` | In-memory | Group of tutorial pages |
+| TutorialsIndex | `packages/app/src/slices/tutorials/library.ts:23` | In-memory | Tutorials sidebar index |
+| TutorialHit | `packages/app/src/slices/tutorials/library.ts:32` | In-memory | Tutorial search hit |
+| TutorialBook | `packages/app/src/slices/tutorials/library.ts:41` | In-memory | All tutorial pages |
 | UpdateInfo | `packages/app/src/updater/model.ts:5` | In-memory | Update check state |
 | RouteTool | `packages/app/src/edge/mcp/route-tool.ts:8` | In-memory (the `routeTools` table) | One `/api` route offered to agents as an MCP tool |
-| ProjectListBody | `packages/web/src/api.ts:98` | Browser HTTP DTO | GET projects body |
-| ProjectBody | `packages/web/src/api.ts:104` | Browser HTTP DTO | GET project body: head revision, project, stages, outputs |
-| CreatedProjectBody | `packages/web/src/api.ts:113` | Browser HTTP DTO | Project create body |
-| StagingListBody | `packages/web/src/api.ts:117` | Browser HTTP DTO | Staging list body |
-| NoticeBody | `packages/web/src/api.ts:139` | Browser HTTP DTO | Telemetry notice body |
-| ProviderListBody | `packages/web/src/api.ts:145` | Browser HTTP DTO | Provider list body |
-| VoiceListBody | `packages/web/src/api.ts:148` | Browser HTTP DTO | Voice list body |
-| PromptListBody | `packages/web/src/api.ts:154` | Browser HTTP DTO | All prompts list body |
-| EntryListBody | `packages/web/src/api.ts:159` | Browser HTTP DTO | All entries list body |
-| DocumentThemeListBody | `packages/web/src/api.ts:164` | Browser HTTP DTO | Built-in and saved document themes list body |
-| KeyStatusBody | `packages/web/src/api.ts:174` | Browser HTTP DTO | Key save response: presence and mask |
-| BackupExportSummary | `packages/web/src/api.ts:256` | Browser HTTP DTO | Backup export response |
-| NotificationUrlBody | `packages/web/src/api.ts:447` | Browser HTTP DTO | Notification URL body |
-| StudioSettingsBody | `packages/web/src/api.ts:477` | Browser HTTP DTO | Settings → YouTube Studio body: playlists, pairing and the auto-comment switch |
-| PlanBody | `packages/web/src/api.ts:531` | Browser HTTP DTO | Posting plan, lead hours and the projects' series |
-| VoiceRefusal | `packages/web/src/api.ts:711` | Browser HTTP DTO | Voice add refusal |
-| LibraryHistoryBody | `packages/web/src/api.ts:916` | Browser HTTP DTO | Library history body |
-| AuditionLine | `packages/web/src/api.ts:1062` | Browser HTTP DTO | One speaker line of a voice audition request |
+| ProjectListBody | `packages/web/src/api.ts:100` | Browser HTTP DTO | GET projects body |
+| ProjectBody | `packages/web/src/api.ts:106` | Browser HTTP DTO | GET project body: head revision, project, stages, outputs |
+| CreatedProjectBody | `packages/web/src/api.ts:120` | Browser HTTP DTO | Project create body |
+| StagingListBody | `packages/web/src/api.ts:124` | Browser HTTP DTO | Staging list body |
+| NoticeBody | `packages/web/src/api.ts:149` | Browser HTTP DTO | Telemetry notice body |
+| ProviderListBody | `packages/web/src/api.ts:155` | Browser HTTP DTO | Provider list body |
+| VoiceListBody | `packages/web/src/api.ts:158` | Browser HTTP DTO | Voice list body |
+| PromptListBody | `packages/web/src/api.ts:164` | Browser HTTP DTO | All prompts list body |
+| EntryListBody | `packages/web/src/api.ts:169` | Browser HTTP DTO | All entries list body |
+| DocumentThemeListBody | `packages/web/src/api.ts:174` | Browser HTTP DTO | Built-in and saved document themes list body |
+| KeyStatusBody | `packages/web/src/api.ts:184` | Browser HTTP DTO | Key save response: presence and mask |
+| BackupExportSummary | `packages/web/src/api.ts:266` | Browser HTTP DTO | Backup export response |
+| NotificationUrlBody | `packages/web/src/api.ts:499` | Browser HTTP DTO | Notification URL body |
+| StudioSettingsBody | `packages/web/src/api.ts:529` | Browser HTTP DTO | Settings → YouTube Studio body: playlists, pairing and the auto-comment switch |
+| PlanBody | `packages/web/src/api.ts:585` | Browser HTTP DTO | Posting plan, lead hours and the projects' series |
+| VoiceRefusal | `packages/web/src/api.ts:787` | Browser HTTP DTO | Voice add refusal |
+| LibraryHistoryBody | `packages/web/src/api.ts:996` | Browser HTTP DTO | Library history body |
+| AuditionLine | `packages/web/src/api.ts:1155` | Browser HTTP DTO | One speaker line of a voice audition request |
 | CastMemberInput | `packages/web/src/channels/api.ts:82` | Browser HTTP DTO | Cast member create/update body |
 | CatalogueStatus | `packages/web/src/components/provider-upkeep-api.ts:18` | Browser HTTP DTO | Catalogue file status body |
 | SampleState | `packages/web/src/onboarding/api.ts:58` | Browser HTTP DTO | Sample project state body |
@@ -632,18 +631,18 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | CheckpointChange | `packages/web/src/project/checkpoint-api.ts:39` | Browser HTTP DTO | Browser-side checkpoint configuration change |
 | ApprovalIdentity | `packages/web/src/project/checkpoint-api.ts:40` | Browser HTTP DTO | Browser-side checkpoint approval identity |
 | CheckpointReply | `packages/web/src/project/checkpoint-api.ts:45` | Browser HTTP DTO | Browser-side checkpoint response or refusal |
-| Review | `packages/web/src/project/review-api.ts:28` | Browser mirror of ReviewView | Browser-side review verdict row |
-| ReviewReply | `packages/web/src/project/review-api.ts:32` | Browser HTTP DTO | Browser-side review action reply |
+| Review | `packages/web/src/project/review-api.ts:30` | Browser mirror of ReviewView | Browser-side review verdict row |
+| ReviewReply | `packages/web/src/project/review-api.ts:34` | Browser HTTP DTO | Browser-side review action reply |
 | RevisionRefusal | `packages/web/src/project/revision-api.ts:31` | Browser HTTP DTO | Parsed revision refusal |
 | RevisionReply | `packages/web/src/project/revision-api.ts:38` | Browser HTTP DTO | Parsed revision response or refusal |
-| NarrationChunkOrder | `packages/web/src/project/revision-api.ts:158` | Browser HTTP DTO | Narration chunk keys per segment |
-| ScheduleReply | `packages/web/src/schedules/api.ts:29` | Browser HTTP DTO | Browser-side schedule response or refusal |
-| TemplateReply | `packages/web/src/templates/api.ts:29` | Browser HTTP DTO | Browser-side template response or refusal |
+| NarrationChunkOrder | `packages/web/src/project/revision-api.ts:152` | Browser HTTP DTO | Narration chunk keys per segment |
+| ScheduleReply | `packages/web/src/schedules/api.ts:34` | Browser HTTP DTO | Browser-side schedule response or refusal |
+| TemplateReply | `packages/web/src/templates/api.ts:33` | Browser HTTP DTO | Browser-side template response or refusal |
 | Aggregates | `packages/collector/src/model.ts:34` | Collector D1 `aggregates` | Collector totals the marketing page reads |
 | FillPayload | `packages/extension/src/pack.ts:56` | Extension message | Item, thumbnail bytes and captions bytes handed to a Studio page |
 | WorkerRequest | `packages/extension/src/pack.ts:71` | Extension message | Message to the extension's background worker |
-| ReadyProject | `packages/extension/src/pack.ts:140` | Extension HTTP DTO (`GET /api/studio/ext/ready`) | A finished project not marked uploaded, as the popup lists it |
-| WaitingTask | `packages/extension/src/pack.ts:162` | Extension HTTP DTO (`GET /api/studio/ext/tasks`) | An upload with a Details touch or pinned comment waiting on YouTube's side |
+| ReadyProject | `packages/extension/src/pack.ts:158` | Extension HTTP DTO (`GET /api/studio/ext/ready`) | A finished project not marked uploaded, as the popup lists it |
+| WaitingTask | `packages/extension/src/pack.ts:180` | Extension HTTP DTO (`GET /api/studio/ext/tasks`) | An upload with a Details touch or pinned comment waiting on YouTube's side |
 
 ## Fields and types
 
@@ -795,8 +794,8 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | rendered | `Record<string, string>` | yes |  |
-| titlePattern | `string` | no | The title as written with its keywords, kept when `title` was filled from it; YouTube's other titles change only the keywords (`packages/app/src/slices/admission/model.ts:277`) |
-| subjectTitle | `string` | no | The title the project was made about, kept on the first rename by `keptSubject`; `subjectOf(config)` returns it before `title` (`packages/app/src/slices/admission/model.ts:281`, `:285`, `packages/app/src/slices/revisions/subject.ts:7`) |
+| titlePattern | `string` | no | The title as written with its keywords, kept when `title` was filled from it; YouTube's other titles change only the keywords (`packages/app/src/slices/admission/model.ts:303`) |
+| subjectTitle | `string` | no | The title the project was made about, kept on the first rename by `keptSubject`; `subjectOf(config)` returns it before `title` (`packages/app/src/slices/admission/model.ts:307`, `:311`, `packages/app/src/slices/revisions/subject.ts:7`) |
 | mode | `RunMode` | no | accepted: video, short |
 | sharedGlossary | `readonly SharedPronunciation[]` | no |  |
 | narrationAliases | `readonly NarrationAlias[]` | no |  |
@@ -1504,7 +1503,7 @@ Union of 2 object variants; a field present in only some variants is `Required: 
 | articleEdited | `boolean` | no |  |
 | provided | `Partial<Record<ProvidedKind, string \| undefined>>` | yes |  |
 | imageOrder | `readonly string[]` | yes |  |
-| imageDefinitions | `object (inline)` | yes | inline shape at `packages/app/src/slices/revisions/model.ts:42` |
+| imageDefinitions | `object (inline)` | yes | inline shape at `packages/app/src/slices/revisions/model.ts:65` |
 | narrationOverrides | `Record<string, NarrationOverride>` | yes |  |
 | narrationSources | `Record<string, NarrationSource>` | no |  |
 | subtitleCues | `\| { readonly audioFingerprint: string; readonly cues: readonly ManualCue[]; }` | no |  |
@@ -1519,7 +1518,7 @@ Union of 2 object variants; a field present in only some variants is `Required: 
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | stagedFileId | `string` | yes |  |
-| destination | `object union (inline)` | yes | inline shape at `packages/app/src/slices/revisions/model.ts:77` |
+| destination | `object union (inline)` | yes | inline shape at `packages/app/src/slices/revisions/model.ts:109` |
 
 ### RevisionEdit
 
@@ -2279,13 +2278,13 @@ Union of 2 object variants; a field present in only some variants is `Required: 
 | intro | `string` | yes |  |
 | outro | `string` | yes |  |
 | chunking | `{ mode: "characters" \| "paragraph" \| "words" \| "whole"; words: string; characters: string; }` | yes |  |
-| subtitles | `object (inline)` | yes | inline shape at `packages/app/src/slices/play-drafts/schema.ts:162` |
+| subtitles | `object (inline)` | yes | inline shape at `packages/app/src/slices/play-drafts/schema.ts:169` |
 | imageSeconds | `string` | yes |  |
 | edgeSilenceSeconds | `string` | yes |  |
 | zoomPercent | `string` | yes |  |
 | motionStyle | `"zoom" \| "pan" \| "mixed" \| "still"` | yes | accepted: zoom, pan, mixed, still |
 | values | `Record<string, string>` | yes |  |
-| provided | `object (inline)` | yes | inline shape at `packages/app/src/slices/play-drafts/schema.ts:203` |
+| provided | `object (inline)` | yes | inline shape at `packages/app/src/slices/play-drafts/schema.ts:210` |
 | checkpoints | `readonly ("audio" \| "images" \| "video")[]` | no |  |
 | document | `object union (inline)` | no | inline shape at `packages/app/src/slices/play-drafts/schema.ts:50` |
 | reference | `{ source: "off" \| "prompt" \| "provide"; prompt: string; thumbnail: boolean; }` | no |  |
@@ -2300,14 +2299,14 @@ Union of 2 object variants; a field present in only some variants is `Required: 
 | showFigures | `boolean` | no |  |
 | descriptionPrompt | `string` | no |  |
 | language | `string` | no | accepted: id, en, es, de, fr, it, pt, nl, ca, pl, cs, ro, sv, da, nb, fi, hu, tr, vi, el, ru, uk, ar, he, hi, th, ja, zh, ko |
-| shorts | `object union (inline)` | no | inline shape at `packages/app/src/slices/play-drafts/schema.ts:105` |
-| reviews | `object union (inline)` | no | inline shape at `packages/app/src/slices/play-drafts/schema.ts:126` |
+| shorts | `object union (inline)` | no | inline shape at `packages/app/src/slices/play-drafts/schema.ts:111` |
+| reviews | `object union (inline)` | no | inline shape at `packages/app/src/slices/play-drafts/schema.ts:132` |
 | imageScale | `{ every: "minutes" \| "hour"; value: string; }` | no |  |
 | imageScenes | `boolean` | no |  |
 | silenceGapSeconds | `string` | no |  |
-| videoEdit | `object union (inline)` | no | inline shape at `packages/app/src/slices/play-drafts/schema.ts:183` |
+| videoEdit | `object union (inline)` | no | inline shape at `packages/app/src/slices/play-drafts/schema.ts:190` |
 | useBrandKit | `boolean` | no |  |
-| voices | `object union (inline)` | no | inline shape at `packages/app/src/slices/play-drafts/schema.ts:189` |
+| voices | `object union (inline)` | no | inline shape at `packages/app/src/slices/play-drafts/schema.ts:196` |
 | ambientBed | `{ source: "none" \| "rain" \| "fire" \| "wind" \| "upload"; level: string; fadeIn: string; tail: string; }` | no |  |
 
 ### PlayDraftDocument
@@ -2321,7 +2320,7 @@ Union of 2 object variants; a field present in only some variants is `Required: 
 | expectedWords | `string` | yes |  |
 | previewText | `string` | yes |  |
 | fontUpload | `Readonly<{ operationId: string; name: string; }> \| null` | yes |  |
-| librarySnapshot | `object union (inline)` | no | inline shape at `packages/app/src/slices/play-drafts/schema.ts:227` |
+| librarySnapshot | `object union (inline)` | no | inline shape at `packages/app/src/slices/play-drafts/schema.ts:234` |
 | templateSource | `{ id: string; version: number; }` | no |  |
 | channelId | `string` | no |  |
 | queue | `boolean` | no | Several videos from one Start: absent or `true` queues them one after another, `false` starts them together (`packages/app/src/slices/play-drafts/schema.ts:240`) |
@@ -2878,7 +2877,7 @@ Union of 2 object variants; a field present in only some variants is `Required: 
 | from | `string` | yes |  |
 | to | `string` | yes |  |
 | runs | `readonly CalendarRun[]` | yes |  |
-| projects | `object[] (inline)` | yes | inline shape at `packages/app/src/slices/schedules/schema.ts:273` |
+| projects | `object[] (inline)` | yes | inline shape at `packages/app/src/slices/schedules/schema.ts:296` |
 | queued | `readonly Readonly<{ projectId: string; title: string; batchId: string; position: number; state: "queued" \| "active"; queuedAt: string; }>[]` | yes |  |
 
 ### CliPathStatus
@@ -3187,7 +3186,7 @@ Wire contract between the app and the host CLI helper, protocol 1 (`hostCliProto
 
 Byte limits (`bridgeLimits`): request 16 MiB, status 64 KiB, models 1 MiB, frame 4 MiB, stream 64 MiB, image 32 MiB, reference image 10 MiB, text 2 MiB; at most 5 concurrent generations and 8 metadata requests. `unavailable` is a terminal fault kind in the attempt wrapper (`packages/app/src/kernel/runner/attempt.ts:28`). No command, environment or path field other than the open-folder `path` crosses the wire.
 
-Source: `packages/app/src/kernel/ports/host-cli.ts:26`, `packages/app/src/kernel/ports/host-cli.ts:124`, `packages/app/src/kernel/ports/host-cli.ts:163`.
+Source: `packages/app/src/kernel/ports/host-cli.ts:26`, `packages/app/src/kernel/ports/host-cli.ts:127`, `packages/app/src/kernel/ports/host-cli.ts:166`.
 
 ### ImageRequest
 
@@ -4022,7 +4021,7 @@ Union of 3 object variants; a field present in only some variants is `Required: 
 | playlists | `readonly string[]` | yes |  |
 | playlist | `string \| null` | yes |  |
 | pickable | `{ readonly titles: readonly string[]; readonly thumbnails: readonly PackFile[]; readonly title: number; readonly thumbnail: number }` | no | Long video only: all titles and thumbnails in the project's order and the UploadPick indexes; `title` and `thumbnails[0]` are the picked ones (`packages/app/src/slices/studio/model.ts:61`, `packages/app/src/slices/studio/pick.ts:41`) |
-| scheduleAt | `string` | no | ISO time from the project's `releases` rows through `scheduleOf`: `Schedule.longAt` for the long video, `Schedule.shortsAt[n-1]` for short n when not null (`packages/app/src/slices/studio/pack.ts:176`, `:205`, `:255`) |
+| scheduleAt | `string` | no | ISO time from the project's `releases` rows through `scheduleOf`: `Schedule.longAt` for the long video, `Schedule.shortsAt[n-1]` for short n when not null (`packages/app/src/slices/studio/pack.ts:183`, `:212`, `:262`) |
 | captions | `PackFile` | no | Long video's `subtitles_srt` output (`packages/app/src/slices/studio/pack.ts:180`) |
 | endScreenVideoId | `string` | no | The project's Previous video, else `previousLongVideo` (`packages/app/src/slices/studio/pack.ts:182`, `packages/app/src/slices/studio/videos.ts:169`) |
 | relatedVideoId | `string` | no | A short's: the long video's id once its `upload_state` is `done` (`packages/app/src/slices/studio/pack.ts:256`) |
@@ -4080,7 +4079,7 @@ Read with default `{title:0, thumbnail:0}` when the setting is missing or invali
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | timeZone | `string` | yes | 1-100 characters |
-| rows | `PlanLine[]` | yes | ≤ 14 rows (`packages/app/src/slices/studio/plan-model.ts:19-22`) |
+| rows | `PlanLine[]` | yes | ≤ 14 rows (`packages/app/src/slices/studio/plan-model.ts:29`) |
 
 Missing or invalid setting reads as `emptyPlan(localTimeZone())`: no rows, so nothing is scheduled (`packages/app/src/slices/studio/plan.ts:24-26`, `:32-42`).
 
@@ -4160,7 +4159,7 @@ Absent (`scheduleOf` answers undefined) when the project has no short-0 row or i
 | short | `number` | yes | 0 is the long video |
 | title | `string` | yes |  |
 | at | `string \| null` | yes | Its release; null when none or not scheduled |
-| uploadBy | `string \| null` | yes | `at` minus `leadHours` (`packages/app/src/slices/studio/calendar.ts:93`) |
+| uploadBy | `string \| null` | yes | `at` minus `leadHours` (`packages/app/src/slices/studio/calendar.ts:77`, `:109`) |
 | state | `ItemState` | yes | accepted: not-ready, ready, late, filled, scheduled. `scheduled` when the video's `upload_state` is `done`, `filled` when `filled`, `not-ready` without a video file, `late` once now is past `uploadBy`, else `ready` (`packages/app/src/slices/studio/calendar.ts:12-22`, `:95-104`) |
 | checks | `string \| null` | yes | `YoutubeVideo.checks` |
 | videoId | `string \| null` | yes |  |
@@ -4183,20 +4182,6 @@ Absent (`scheduleOf` answers undefined) when the project has no short-0 row or i
 | abAt | `string \| null` | yes |  |
 | checks | `string \| null` | yes | Studio's Content-list Restrictions as the extension last read them: `ok` for None, else Studio's words (≤ 100); null until read. Written by `setChecks` from `/ext/backfill` (`packages/app/src/slices/studio/videos.ts:29-31`, `:183`) |
 
-### VideoStats
-
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| projectId | `string` | yes |  |
-| short | `number \| null` | yes |  |
-| videoId | `string` | yes |  |
-| readAt | `string` | yes |  |
-| impressions | `number \| null` | yes |  |
-| ctr | `number \| null` | yes | Percent as Studio shows it |
-| views | `number \| null` | yes |  |
-| averageViewSeconds | `number \| null` | yes |  |
-| watchHours | `number \| null` | yes |  |
-
 ### AbVariant
 
 | Field | Type | Required | Notes |
@@ -4206,7 +4191,7 @@ Absent (`scheduleOf` answers undefined) when the project has no short-0 row or i
 | share | `number \| null` | yes | Share of watch time, 0-100 |
 | winner | `boolean` | yes |  |
 
-Zod `abVariantSchema` (`packages/app/src/slices/studio/stats.ts:21`).
+Zod `abVariantSchema` (`packages/app/src/slices/studio/stats.ts:7`).
 
 ### AbResult
 
@@ -4216,7 +4201,7 @@ Zod `abVariantSchema` (`packages/app/src/slices/studio/stats.ts:21`).
 | short | `number \| null` | yes |  |
 | videoId | `string` | yes |  |
 | readAt | `string` | yes |  |
-| variants | `readonly AbVariant[]` | yes | `abResults` re-parses the stored JSON and drops rows that fail, and adds `projectTitle` from `projects` (`packages/app/src/slices/studio/stats.ts:107`) |
+| variants | `readonly AbVariant[]` | yes | `abResults` re-parses the stored JSON and drops rows that fail, and adds `projectTitle` from `projects` (`packages/app/src/slices/studio/stats.ts:41-65`) |
 
 ### StudioRow
 
@@ -4440,7 +4425,7 @@ Union of 5 object variants; a field present in only some variants is `Required: 
 | provider | `string` | yes |  |
 | model | `string` | yes |  |
 | thinking | `ThinkingMode` | no | accepted: off, low, medium, high, xhigh, max, ultra |
-| reviewer | `Reviewer` | no | accepted: model, agent; labels Model / External agent (MCP) (`reviewerLabels`, `packages/app/src/slices/reviews/model.ts:26`) |
+| reviewer | `Reviewer` | no | accepted: model, agent; labels Model / External agent (MCP) (`reviewerLabels`, `packages/app/src/slices/reviews/model.ts:45`) |
 | retries | `string` | yes |  |
 | stages | ` Partial<Record<ReviewStage, { readonly mode: ReviewMode; readonly prompt: string }>> ` | yes |  |
 
@@ -4643,7 +4628,7 @@ Helpers over the same facts: `parkedOnAgent` and `runningNow` (running, or parke
 | upload | `"multipart" \| "raw"` | no | A route that takes a file |
 | shape | `(value) => unknown` | no | What the agent is shown instead of the route's answer: state words added, or a credential left out |
 
-`routeTools` is the union of the nine `tools-*.ts` tables (`packages/app/src/edge/mcp/tools.ts:13`); `callRoute` calls the route in-process (`packages/app/src/edge/mcp/call-route.ts:44`). MCP annotations follow the method: `readOnlyHint` for GET or an unrecorded non-sending POST, `destructiveHint` for DELETE or `confirm`, `openWorldHint` when `reachesOut`. `/api` routes offered as no tool are listed with a reason in `excludedRoutes` (`packages/app/src/edge/mcp/excluded-routes.ts:20`).
+`routeTools` is the union of the nine `tools-*.ts` tables (`packages/app/src/edge/mcp/tools.ts:13`); `callRoute` calls the route in-process (`packages/app/src/edge/mcp/call-route.ts:55`). MCP annotations follow the method: `readOnlyHint` for GET or an unrecorded non-sending POST, `destructiveHint` for DELETE or `confirm`, `openWorldHint` when `reachesOut`. `/api` routes offered as no tool are listed with a reason in `excludedRoutes` (`packages/app/src/edge/mcp/excluded-routes.ts:24`).
 
 ### UsageTotals
 
@@ -4877,7 +4862,7 @@ Helpers over the same facts: `parkedOnAgent` and `runningNow` (running, or parke
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| tables | `object (inline)` | yes | inline shape at `packages/app/src/slices/storage/backup-format.ts:197` |
+| tables | `object (inline)` | yes | inline shape at `packages/app/src/slices/storage/backup-format.ts:208` |
 | fonts | `{ name: string; bytes: number; }[]` | yes |  |
 | staged | `{ id: string; bytes: number; }[]` | yes |  |
 | images | `{ sha256: string; mime: "image/png" \| "image/jpeg"; bytes: number; }[]` | no |  |
@@ -4893,7 +4878,7 @@ Helpers over the same facts: `parkedOnAgent` and `runningNow` (running, or parke
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | id | `string` | yes |  |
-| tables | `object (inline)` | yes | inline shape at `packages/app/src/slices/storage/backup-format.ts:223` |
+| tables | `object (inline)` | yes | inline shape at `packages/app/src/slices/storage/backup-format.ts:265` |
 | files | `{ path: string; bytes: number; }[]` | yes |  |
 
 ### ItemCounts
@@ -5044,7 +5029,7 @@ Union of 2 object variants; a field present in only some variants is `Required: 
 | ok | `true \| false` | yes |  |
 | projectId | `string` | no | ok variant |
 | title | `string` | no | ok variant |
-| reason | `string` | no | refusal variant; the route names `not-found`, `already-prepared`, `missing-template`, `spend-limit` (`packages/app/src/edge/http/schedules.ts:225`) |
+| reason | `string` | no | refusal variant; the route names `not-found`, `already-prepared`, `missing-template`, `spend-limit` (`packages/app/src/edge/http/schedules.ts:263-283`) |
 | detail | `string` | no | refusal variant |
 
 Union of 2 object variants; a field present in only some variants is `Required: no`.
@@ -5709,22 +5694,20 @@ The extension's `PackItem` copy (`packages/extension/src/pack.ts:13`) marks `tit
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| type | `"pair" \| "status" \| "payload" \| "pack" \| "filled" \| "video" \| "backfill" \| "ready" \| "stats-now" \| "upload" \| "video-done" \| "item" \| "upload-all" \| "task-result" \| "stats"` | yes | accepted: pair, status, payload, pack, filled, video, backfill, ready, stats-now, upload, video-done, item, upload-all, task-result, stats |
+| type | `"pair" \| "status" \| "payload" \| "pack" \| "filled" \| "video" \| "backfill" \| "ready" \| "upload" \| "gone-list" \| "gone-now" \| "gone" \| "video-done" \| "item" \| "upload-all" \| "task-result" \| "ab-result"` | yes | accepted: pair, status, payload, pack, filled, video, backfill, ready, upload, gone-list, gone-now, gone, video-done, item, upload-all, task-result, ab-result |
 | base | `string` | no | only when type is pair |
 | token | `string` | no | only when type is pair |
-| projectId | `string` | no | filled, video, upload, video-done, item, upload-all, task-result, stats |
-| short | `number \| null` | no | filled, video, upload, video-done, item, task-result, stats |
-| videoId | `string` | no | video, video-done, stats |
+| projectId | `string` | no | filled, video, upload, video-done, item, upload-all, task-result, ab-result |
+| short | `number \| null` | no | filled, video, upload, video-done, item, task-result, ab-result |
+| videoId | `string` | no | video, video-done, ab-result |
 | videos | `readonly { readonly title: string; readonly videoId: string; readonly checks?: string }[]` | no | only when type is backfill |
-| close | `boolean` | no | only when type is backfill; the worker closes the sending tab (`packages/extension/src/background.ts:422`) |
+| close | `boolean` | no | only when type is backfill; the worker closes the sending tab (`packages/extension/src/background.ts:475`) |
 | task | `"finish" \| "comment"` | no | only when type is task-result |
 | ok | `boolean` | no | only when type is task-result |
 | message | `string` | no | only when type is task-result |
-| metrics | `Readonly<Record<string, number>>` | no | only when type is stats; Studio metric ids such as `VIDEO_THUMBNAIL_IMPRESSIONS`, mapped to the `/ext/stats` body by the worker (`packages/extension/src/background.ts:360`) |
-| abVariants | `readonly { title: string \| null; thumbnail: number \| null; share: number \| null; winner: boolean }[]` | no | only when type is stats |
-| last | `boolean` | no | only when type is stats |
+| abVariants | `readonly { title: string \| null; thumbnail: number \| null; share: number \| null; winner: boolean }[]` | no | only when type is ab-result; absent when Studio has no result yet |
 
-Union of 15 object variants; a field present in only some variants is `Required: no`.
+Union of 17 object variants; a field present in only some variants is `Required: no`.
 
 ### ReadyProject
 
@@ -5755,7 +5738,7 @@ Projects and runs:
 Revisions and rebuilds:
 
 - `project_revisions.parent_id` and `restored_from_id` are project-scoped self references; `project_heads` selects one revision per project (`packages/app/src/kernel/db/migrations/0004-project-revisions.sql:1`). ProjectRevision embeds RunConfig, RevisionContent and fingerprints (`packages/app/src/slices/revisions/model.ts:89`).
-- `revision_outputs` and `revision_pieces` reference a revision and a `project_assets` row; partial unique indexes allow one selected row per revision slot/piece key and one row per publication id, so deselected publications stay retained (`packages/app/src/kernel/db/migrations/0004-project-revisions.sql:50`). ManifestOutput embeds an Output descriptor; ManifestPiece embeds a StagePiece descriptor (`packages/app/src/slices/revisions/model.ts:106`).
+- `revision_outputs` and `revision_pieces` reference a revision and a `project_assets` row; partial unique indexes allow one selected row per revision slot/piece key and one row per publication id, so deselected publications stay retained (`packages/app/src/kernel/db/migrations/0004-project-revisions.sql:50`). ManifestOutput embeds an Output descriptor; ManifestPiece embeds a StagePiece descriptor (`packages/app/src/slices/revisions/model.ts:139-153`).
 - `revision_work` belongs to a revision and to a `(project_id, stage_id, kind)` stage identity; `revision_work_pieces` belong to one work row; `revision_work_reservations` grant one work key per revision to a work row and optional piece, with `logical_key`/`desired_fingerprint` set together (`packages/app/src/kernel/db/migrations/0005-revision-work.sql:2`). Submission requires the current head to still own the reservation (`packages/app/src/kernel/runner/work-authority.ts:31`).
 - `rebuild_previews` belong to a revision; `rebuild_admissions` reference one preview; `revision_work.admission_id` is plain text; `revision_provided_reviews` ties a work key's dependency fingerprint to an admission (`packages/app/src/kernel/db/migrations/0005-revision-work.sql:56`).
 - `revision_mutations`, `project_control_receipts`, `rebuild_admissions` and `project_recovery_requests` are keyed by `(project_id, idempotency_key)`; `checkMutation` treats the four as one idempotency namespace (`packages/app/src/slices/revisions/mutation-request.ts:37`, `packages/app/src/kernel/db/migrations/0012-project-recovery.sql:3`).
@@ -5768,7 +5751,7 @@ Play drafts, templates and schedules:
 - `play_draft_attachments.draft_id` cascades from `play_drafts`; `staged_file_id` is `ON DELETE SET NULL` (`packages/app/src/kernel/db/migrations/0024-reference-attachments.sql:4`). `play_start_receipts.draft_id` has no foreign key, so a discarded draft keeps its Start receipt (`packages/app/src/kernel/db/migrations/0006-play-drafts.sql:29`). PlayStartResult lists the created project ids (`packages/app/src/slices/play-drafts/model.ts:53`).
 - `project_templates` selects `head_version` in `project_template_revisions` (cascade); `project_template_instantiations` is owned by a draft and names template id/version by value (`packages/app/src/kernel/db/migrations/0008-project-templates.sql:1`).
 - `schedules.template_id`/`template_version` pin a template revision by value; migration 0010 rebuilt `schedules` without its template foreign key and `schedule_runs` without its schedule foreign key, so run history outlives both (`packages/app/src/kernel/db/migrations/0010-retain-schedule-history.sql:1`). `schedule_runs.project_ids_json` lists admitted projects. `schedule_topics` cascades from `schedules` (`packages/app/src/kernel/db/migrations/0026-schedule-topic-generation.sql:14`).
-- `prepared_videos` ties a project to a schedule id and the run title by value (no schedule foreign key); the scheduler's run of that title continues the project instead of starting one, and `CalendarRun.prepared` names it (`packages/app/src/slices/schedules/prepare.ts:135`, `:170`, `packages/app/src/slices/schedules/schema.ts:223`).
+- `prepared_videos` ties a project to a schedule id and the run title by value (no schedule foreign key); the scheduler's run of that title continues the project instead of starting one, and `CalendarRun.prepared` names it (`packages/app/src/slices/schedules/prepare.ts:143`, `:183`, `packages/app/src/slices/schedules/schema.ts:283`).
 - `project_set_aside.revision_id` is compared with `project_heads.revision_id` by value; an edit that moves the head ends the mark (`packages/app/src/slices/uploads/repo.ts:61`).
 
 Studio uploads (3.2-3.4):
@@ -5776,7 +5759,7 @@ Studio uploads (3.2-3.4):
 - `youtube_videos`, `video_stats` and `ab_results` are keyed `(project_id, short)` with `short` 0 for the long video; `video_stats.video_id` and `ab_results.video_id` repeat the id by value (`packages/app/src/kernel/db/migrations/0045-youtube-videos.sql:14`, `packages/app/src/kernel/db/migrations/0047-studio-autopilot.sql:29`, `:38`).
 - `releases` is keyed `(project_id, short)` with `short` 0 for the long video and cascades with its project; `line` names a posting-plan line by value (`PlanLine.name`), and the plan itself is the `settings` key `studio.postingPlan` (`packages/app/src/kernel/db/migrations/0048-releases.sql:6-14`, `packages/app/src/slices/studio/plan.ts:20`, `packages/app/src/slices/studio/releases.ts:156`). `youtube_videos` and `releases` are joined by `(project_id, short)` in code (`packages/app/src/slices/studio/calendar.ts:91-94`).
 - A PackItem names its end-screen video and a short's related video by YouTube id from `youtube_videos` (`previousLongVideo`, `packages/app/src/slices/studio/videos.ts:169`; `packages/app/src/slices/studio/pack.ts:256`).
-- `settings` keys added for Studio: `studio.autoComment` (`on`/`off`, `packages/app/src/edge/http/studio.ts:274`), `studio.postingPlan`, `studio.leadHours` (integer 1-168, default 24, `packages/app/src/slices/studio/releases.ts:33-44`), `studio.uploadPick.<projectId>` (`packages/app/src/slices/studio/pick.ts:21`).
+- `settings` keys added for Studio: `studio.autoComment` (`on`/`off`, `packages/app/src/edge/http/studio.ts:297`), `studio.postingPlan`, `studio.leadHours` (integer 1-168, default 24, `packages/app/src/slices/studio/releases.ts:33-44`), `studio.uploadPick.<projectId>` (`packages/app/src/slices/studio/pick.ts:21`).
 
 Channels (3.0):
 
@@ -5790,8 +5773,8 @@ Library and settings:
 - `library_versions` keys `(item_kind, item_id, version)` over `prompts` or `entries` without a foreign key; the save path deletes versions with their item (`packages/app/src/kernel/db/migrations/0031-prompt-history-and-description-edits.sql:6`, `packages/app/src/slices/library/history.ts:101`).
 - `document_themes` and `narration_aliases` are referenced by nothing; projects copy their values (`packages/app/src/kernel/db/migrations/0016-document-themes.sql:1`, `packages/app/src/kernel/db/migrations/0035-narration-aliases.sql:1`).
 - Trash: `project_trash` stamps a project; `deleted_at` columns stamp prompts, entries, templates and schedules; `schedules.purged_at` marks a schedule that left the trash (`packages/app/src/kernel/db/migrations/0039-channel-essentials.sql:11`). Lists skip stamped projects through `liveProject` (`packages/app/src/slices/admission/repo.ts:68`); `purgeExpired` removes rows older than `trashDays` = 30 (`packages/app/src/slices/trash/service.ts:288`, `packages/app/src/slices/trash/model.ts:10`).
-- `settings` rows are key/value strings. Keys in use: `silenceGapSeconds`, `appearance`, `loudness` (`packages/app/src/slices/settings/playback.ts:24`); `tutorial.session` (`packages/app/src/slices/settings/tutorial.ts:35`); `provider.defaults`, `first-run.done` (`packages/app/src/slices/settings/first-run.ts:15`); `cli.path.<installation>` (`packages/app/src/slices/settings/cli-paths.ts:40`); `voices.realPerson` (`packages/app/src/slices/settings/voices.ts:132`); `whats-new.seen-major` (`packages/app/src/slices/settings/whats-new.ts:9`); `patchNotes.seenVersion` (`packages/app/src/slices/patch-notes/seen.ts:11`); `notificationUrl` (`packages/app/src/slices/notifications/settings.ts:7`); `backups.config`, `backups.status` (`packages/app/src/slices/backups/model.ts:8`); `files.location`, `files.move` (`packages/app/src/slices/storage/files-location.ts:27`); `library.photorealisticPrompts` (`packages/app/src/slices/library/photorealistic.ts:14`); `channel_links` (`packages/app/src/slices/youtube/edits-repo.ts:22`); `channels.importFilter.<channelId>` (`packages/app/src/slices/channels/videos.ts:40`); `schedules.held-topic-values` (`packages/app/src/slices/schedules/topics.ts:368`); `studio.playlist[.<channelId>]`, `studio.pairing`, `studio.projectPlaylists`, `studio.realFootage`, `studio.fillQueue.<hash>` (`packages/app/src/slices/studio/settings.ts:10`, `packages/app/src/slices/studio/settings.ts:117`, `packages/app/src/slices/studio/settings.ts:167`, `packages/app/src/slices/studio/settings.ts:212`); `onboarding.dismissed`, `onboarding.sample[.<id>]`, `onboarding.packs`, `onboarding.short-requests` (`packages/app/src/slices/onboarding/state.ts:11`); `autostart.answered` (`packages/app/src/edge/autostart/model.ts:30`); `agents.lastConnectedAt` (`packages/app/src/slices/agents/connection.ts:7`).
-- `provider_keys` is keyed by provider; `credential_generation` is a fresh UUID on every save (`packages/app/src/slices/settings/repo.ts:21`).
+- `settings` rows are key/value strings. Keys in use: `silenceGapSeconds`, `appearance`, `loudness` (`packages/app/src/slices/settings/playback.ts:24`); `tutorial.session` (`packages/app/src/slices/settings/tutorial.ts:35`); `provider.defaults`, `first-run.done` (`packages/app/src/slices/settings/first-run.ts:15`); `cli.path.<installation>` (`packages/app/src/slices/settings/cli-paths.ts:40`); `voices.realPerson` (`packages/app/src/slices/settings/voices.ts:132`); `whats-new.seen-major` (`packages/app/src/slices/settings/whats-new.ts:9`); `patchNotes.seenVersion` (`packages/app/src/slices/patch-notes/seen.ts:11`); `notificationUrl` (`packages/app/src/slices/notifications/settings.ts:7`); `backups.config`, `backups.status` (`packages/app/src/slices/backups/model.ts:8`); `files.location`, `files.move` (`packages/app/src/slices/storage/files-location.ts:27`); `library.photorealisticPrompts` (`packages/app/src/slices/library/photorealistic.ts:14`); `channel_links` (`packages/app/src/slices/youtube/edits-repo.ts:22`); `channels.importFilter.<channelId>` (`packages/app/src/slices/channels/videos.ts:40`); `schedules.held-topic-values` (`packages/app/src/slices/schedules/topics.ts:408`); `studio.playlist[.<channelId>]`, `studio.pairing`, `studio.projectPlaylists`, `studio.realFootage`, `studio.fillQueue.<hash>` (`packages/app/src/slices/studio/settings.ts:10`, `packages/app/src/slices/studio/settings.ts:117`, `packages/app/src/slices/studio/settings.ts:167`, `packages/app/src/slices/studio/settings.ts:212`); `onboarding.dismissed`, `onboarding.sample[.<id>]`, `onboarding.packs`, `onboarding.short-requests` (`packages/app/src/slices/onboarding/state.ts:11`); `autostart.answered` (`packages/app/src/edge/autostart/model.ts:27`); `agents.lastConnectedAt` (`packages/app/src/slices/agents/connection.ts:7`).
+- `provider_keys` is keyed by provider; `credential_generation` is a fresh UUID on every save (`packages/app/src/slices/settings/repo.ts:29`).
 
 Agents (MCP):
 
@@ -5808,7 +5791,7 @@ Collector: `events` are deduplicated by id with `INSERT OR IGNORE`; `aggregates`
 | Boundary | Conversion | Site |
 |---|---|---|
 | SQLite row ↔ domain | Every repository parses rows with a zod row schema (snake_case) and maps to camelCase domain objects; JSON columns are `JSON.parse`d and re-validated by the domain schema | `packages/app/src/slices/admission/repo.ts:183`, `packages/app/src/slices/admission/repo.ts:235`, `packages/app/src/slices/revisions/repo.ts:108`, `packages/app/src/slices/revisions/manifest-repo.ts:191`, `packages/app/src/slices/play-drafts/repo.ts:7`, `packages/app/src/slices/schedules/repo.ts:461`, `packages/app/src/slices/channels/repo.ts:31` |
-| Booleans | `0/1` INTEGER columns become booleans in row schemas | `packages/app/src/slices/revisions/manifest-repo.ts:16`, `packages/app/src/slices/channels/repo.ts:78` |
+| Booleans | `0/1` INTEGER columns become booleans in row schemas | `packages/app/src/slices/revisions/manifest-repo.ts:16`, `packages/app/src/slices/channels/repo.ts:79` |
 | Provider keys | Only `keyOf` reads the `key` column, per provider call; routes read presence and a mask (KeyStatus) | `packages/app/src/slices/settings/repo.ts:42`, `packages/app/src/slices/settings/keys.ts:18` |
 | Play POST → Project | `runDraftSchema` parses RunDraft; `castVoicedRun` copies cast voices; `pickTemplates` resolves Library rows; `admit` validates and normalizes; `modelFields` checks the catalogue; `startRun` writes Project, Stage rows and RunConfig with rendered prompts | `packages/app/src/edge/http/projects.ts:57`, `packages/app/src/edge/http/project-create.ts:29`, `packages/app/src/edge/http/project-create.ts:60`, `packages/app/src/edge/http/project-create.ts:61`, `packages/app/src/edge/http/project-create.ts:66`, `packages/app/src/slices/admission/start.ts:47` |
 | Draft document → RunDraft | `toAdmissionDraft` turns the string-typed PlayDraftForm into RunDraft or FieldError[] | `packages/app/src/slices/play-drafts/convert.ts:65` |
@@ -5821,10 +5804,10 @@ Collector: `events` are deduplicated by id with `INSERT OR IGNORE`; `aggregates`
 | HTTP responses → browser | Route handlers `c.json` domain objects; `packages/web/src/api.ts` names the bodies from the app's declarations (`*Body` interfaces) and casts; drafts, revisions, checkpoints and the tutorial session parse request bodies (and draft/revision responses) with the app's zod schemas; problems are RFC 9457 `application/problem+json` with `fields`/`errors` members | `packages/web/src/api.ts:94`, `packages/web/src/http.ts:24`, `packages/web/src/play/draft-api.ts:94`, `packages/web/src/project/revision-api.ts:114`, `packages/web/src/tutorial/session-api.ts:28`, `packages/app/src/edge/http/problem.ts:29` |
 | Upload pack → extension | UploadPack/PackItem are copied, not imported, into the extension; the copy's PackItem makes the fields an older app omits optional and has no `pickable`; the worker base64-encodes thumbnails and captions into FillPayload, and the hidden video frame hands the video `File` to the Studio page by `postMessage` | `packages/app/src/slices/studio/model.ts:37`, `packages/extension/src/pack.ts:1`, `packages/extension/src/background.ts:96`, `packages/extension/src/video-frame.ts:28` |
 | Database → backup tar | Rows travel table by table as stored (`BackupRow` cells: string, finite number, null) with the schema version they fit; project tables per project, library and usage tables once; `image_blobs` travel as files; provider keys, the machine id and `project_queue` never leave; `external_reviews`, `agent_actions`, `project_starts` and `told_failures` and the setting `agents.lastConnectedAt` are left out (a restored project asks its waiting reviews again and tells its run's end again) (`packages/app/src/slices/storage/backup-new-tables.test.ts:54`-`:59`, `packages/app/src/slices/storage/portable.ts:493`) | `packages/app/src/slices/storage/backup-format.ts:38`, `packages/app/src/slices/storage/backup-format.ts:83`, `packages/app/src/slices/storage/backup-export.ts:270` |
-| Backup tar → database | Import loads rows into a scratch database migrated `through` the backup's `databaseVersion`, then migrates it forward with the same files and copies rows in, renaming or skipping clashes (BackupImportSummary); `backup_imports` records the backup id once | `packages/app/src/slices/storage/backup-import.ts:159`, `packages/app/src/kernel/db/migrate.ts:10`, `packages/app/src/slices/storage/backup-import.ts:914` |
+| Backup tar → database | Import loads rows into a scratch database migrated `through` the backup's `databaseVersion`, then migrates it forward with the same files and copies rows in, renaming or skipping clashes (BackupImportSummary); `backup_imports` records the backup id once | `packages/app/src/slices/storage/backup-import.ts:433`, `packages/app/src/kernel/db/migrate.ts:10`, `packages/app/src/slices/storage/backup-import.ts:1006` |
 | Older .zip backup | `importPortable` reads the version-1 portable manifest (settings, library, voices, templates, fonts, staged files) and returns PortableImportResult | `packages/app/src/slices/storage/portable.ts:276`, `packages/app/src/edge/http/storage.ts:139` |
 | Telemetry → collector | `telemetry_events.payload` JSON is re-read, stamped with the machine id (CollectorEvent) and posted; the collector validates with `ingestSchema` and adds `deltasFor` to `aggregates` | `packages/app/src/slices/telemetry/repo.ts:22`, `packages/app/src/slices/telemetry/collector-client.ts:6`, `packages/collector/src/index.ts:51`, `packages/collector/src/model.ts:90` |
-| MCP tool call → API route | A route tool's arguments become one in-process `app.request` with the bindings `{actor: "agent"}`: path parameters checked (no dots or slashes; the resolved path must equal the template), `body` sent as JSON or a file as multipart/raw, `query` as search params; a JSON answer is returned as text (through `shape` when set), an image as MCP image content, a refusal as `isError` text with the route's sentence | `packages/app/src/edge/http/app.ts:340`, `packages/app/src/edge/mcp/call-route.ts:44`, `packages/app/src/edge/mcp/call-route.ts:155` |
+| MCP tool call → API route | A route tool's arguments become one in-process `app.request` with the bindings `{actor: "agent"}`: path parameters checked (no dots or slashes; the resolved path must equal the template), `body` sent as JSON or a file as multipart/raw, `query` as search params; a JSON answer is returned as text (through `shape` when set), an image as MCP image content, a refusal as `isError` text with the route's sentence | `packages/app/src/edge/http/app.ts:439`, `packages/app/src/edge/mcp/call-route.ts:55`, `packages/app/src/edge/mcp/call-route.ts:150` |
 | Catalogue YAML ↔ Catalogue | YAML parsed with `maxAliasCount: 20`, `uniqueKeys: true`, then `catalogueSchema` | `packages/app/src/catalog/store.ts:50` |
 | Host CLI bridge | App ↔ host helper speaks JSON bodies (HostLlmBody, HostImageBody) and NDJSON HostFrame streams, all zod-checked on both sides | `packages/app/src/kernel/ports/host-cli.ts:72`, `packages/app/src/kernel/ports/host-cli.ts:196` |
 
@@ -5838,14 +5821,14 @@ Collector: `events` are deduplicated by id with `INSERT OR IGNORE`; `aggregates`
 - Templates: names 1–120 characters on create and 1–200 on update (older names), UUID ids, strict PlayDraftDocument (`packages/app/src/slices/project-templates/schema.ts:6`).
 - Schedules: Cadence is a discriminated union of `once` (offset datetime), `daily` and `weekly` (`HH:MM`, weekdays 0–6) (`packages/app/src/slices/schedules/calendar.ts:5`); timezone must be a valid IANA zone, the topic queue holds at most 500 items, the brief up to 4,000 characters (`packages/app/src/slices/schedules/schema.ts:33`, `packages/app/src/slices/schedules/schema.ts:76`).
 - Channels: brand kit colours `#RRGGBB` (upper-cased), font ids `[A-Za-z0-9_-]{1,160}`, blank fields dropped; series brief up to 10,000 characters; cast names/aliases 1–200 characters, at most 20 aliases, descriptions up to 2,000 (`packages/app/src/slices/channels/schema.ts:16`, `packages/app/src/slices/channels/schema.ts:28`, `packages/app/src/slices/channels/schema.ts:87`, `packages/app/src/slices/channels/schema.ts:124`).
-- Backups: automatic backup time `HH:MM`, keep 1–30, folder up to 1,024 characters (`packages/app/src/slices/backups/model.ts:11`); backup JSON parts are capped (256 MiB JSON, 2,000,000 rows, 50,000 projects), column names match `^[a-z][a-z0-9_]{0,63}$`, file paths must stay inside their folder (`packages/app/src/slices/storage/backup-format.ts:117`, `packages/app/src/slices/storage/backup-format.ts:127`).
+- Backups: automatic backup time `HH:MM`, keep 1–30, folder up to 1,024 characters (`packages/app/src/slices/backups/model.ts:11`); backup JSON parts are capped (256 MiB JSON, 2,000,000 rows, 50,000 projects), column names match `^[a-z][a-z0-9_]{0,63}$`, file paths must stay inside their folder (`packages/app/src/slices/storage/backup-format.ts:128`, `packages/app/src/slices/storage/backup-format.ts:143`).
 - Library: `lintPrompt`/`lintEntry` check bodies and keyword slots (`packages/app/src/slices/library/lint.ts:11`); name uniqueness per kind/category is the case-insensitive partial unique index over rows not in the trash (`packages/app/src/kernel/db/migrations/0039-channel-essentials.sql:19`).
 - Catalogue: unknown provider/family pairs, duplicate models and providers without concurrency limits are refused (`packages/app/src/catalog/schema.ts:85`).
-- Host CLI bridge: strict schemas with 1–128 messages, text up to 2 MiB, ids up to 256 characters without control characters; frames and faults are read leniently (unknown fields dropped) (`packages/app/src/kernel/ports/host-cli.ts:64`, `packages/app/src/kernel/ports/host-cli.ts:171`).
-- Studio: `postingPlanSchema` (≤ 14 rows, `name` 1-20, `series` ≤ 100 defaulting to `""`, ≤ 10 shorts each, `HH:MM` times, weekday 0-6) is parsed on write and on read, falling back to the empty plan (`packages/app/src/slices/studio/plan-model.ts:7-22`, `packages/app/src/slices/studio/plan.ts:32-46`); `studio.leadHours` is an integer 1-168 on write and reads as 24 otherwise (`packages/app/src/edge/http/studio.ts:286-300`, `packages/app/src/slices/studio/releases.ts:35-40`); `PUT /releases/:projectId` takes a strict `{short 0-99, at: ISO datetime or null, line? 1-20}` and `GET /releases` a `weeks` 1-8 (`packages/app/src/edge/http/studio.ts:302-306`, `:327-340`); `/ext/*` bodies are route-local zod schemas: video ids `^[A-Za-z0-9_-]{11}$`, `short` 1-99 or null, stats `ctr` 0-100, at most 3 `abVariantSchema` variants, backfill ≤ 200 rows of titles ≤ 200 with optional `checks` ≤ 100 and an optional `close`, task messages ≤ 2,000, upload pick indexes 0-9 (`packages/app/src/edge/http/studio.ts:115`-`:158`). `ab_results.variants` is re-parsed with `abVariantSchema` on read (`packages/app/src/slices/studio/stats.ts:117`).
+- Host CLI bridge: strict schemas with 1–128 messages, text up to 2 MiB, ids up to 256 characters without control characters; frames and faults are read leniently (unknown fields dropped) (`packages/app/src/kernel/ports/host-cli.ts:64`, `packages/app/src/kernel/ports/host-cli.ts:177`).
+- Studio: `postingPlanSchema` (≤ 14 rows, `name` 1-20, `series` ≤ 100 defaulting to `""`, ≤ 10 shorts each, `HH:MM` times, weekday 0-6) is parsed on write and on read, falling back to the empty plan (`packages/app/src/slices/studio/plan-model.ts:7-22`, `packages/app/src/slices/studio/plan.ts:32-46`); `studio.leadHours` is an integer 1-168 on write and reads as 24 otherwise (`packages/app/src/edge/http/studio.ts:286-300`, `packages/app/src/slices/studio/releases.ts:35-40`); `PUT /releases/:projectId` takes a strict `{short 0-99, at: ISO datetime or null, line? 1-20}` and `GET /releases` a `weeks` 1-8 (`packages/app/src/edge/http/studio.ts:302-306`, `:327-340`); `/ext/*` bodies are route-local zod schemas: video ids `^[A-Za-z0-9_-]{11}$`, `short` 1-99 or null, stats `ctr` 0-100, at most 3 `abVariantSchema` variants, backfill ≤ 200 rows of titles ≤ 200 with optional `checks` ≤ 100 and an optional `close`, task messages ≤ 2,000, upload pick indexes 0-9 (`packages/app/src/edge/http/studio.ts:115`-`:158`). `ab_results.variants` is re-parsed with `abVariantSchema` on read (`packages/app/src/slices/studio/stats.ts:53`).
 - External review verdicts: `{verdict: "pass" | "fail", reasons}` strict, each reason trimmed 1–500 characters, at most 10, a fail needs one (`verdictAnswerSchema`, `packages/app/src/slices/reviews/verdict.ts:9`); a refused shape answers 400 `invalid-verdict` with the body to send, a review that takes no verdict 409 with its `closedReviewSentences` sentence (`packages/app/src/edge/http/external-reviews.ts:77`). MCP requests: body at most 48 MB (413), JSON only (400), Origin loopback or the configured host (403) (`packages/app/src/edge/mcp/http.ts:18`, `:23`).
 - Collector: at most 500 events and 256 KiB per request, one machine per request, flat payloads of at most 20 keys (`packages/collector/src/model.ts:39`, `packages/collector/src/model.ts:75`).
-- Database: CHECK constraints below enforce enums, JSON validity (`json_valid`, text only, not shape), non-negative sizes and trimmed name lengths. Some older columns carry no SQL enum (`stages.source`, `stage_pieces.kind`/`state`, `attempts.outcome`, `outputs.role`); their row schemas check them (`packages/app/src/slices/admission/repo.ts:29`, `packages/app/src/kernel/runner/piece-repo.ts:32`). Writes that span tables run inside `transact` (a SAVEPOINT) (`packages/app/src/kernel/db/tx.ts:9`).
+- Database: CHECK constraints below enforce enums, JSON validity (`json_valid`, text only, not shape), non-negative sizes and trimmed name lengths. Some older columns carry no SQL enum (`stages.source`, `stage_pieces.kind`/`state`, `attempts.outcome`, `outputs.role`); their row schemas check them (`packages/app/src/slices/admission/repo.ts:38`, `packages/app/src/kernel/runner/piece-repo.ts:32`). Writes that span tables run inside `transact` (a SAVEPOINT) (`packages/app/src/kernel/db/tx.ts:9`).
 
 ## Schema
 
@@ -5888,7 +5871,7 @@ CREATE TABLE "stages" (id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES 
 CREATE UNIQUE INDEX stages_project_identity ON stages(project_id,id,kind);
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0001-init.sql:2`, `packages/app/src/kernel/db/migrations/0005-revision-work.sql:1`, `packages/app/src/kernel/db/migrations/0014-document-stage.sql:9`, `packages/app/src/kernel/db/migrations/0030-automatic-retries.sql:9`. Code model: Stage via `stageRow` (`packages/app/src/slices/admission/repo.ts:29`).
+Migrations: `packages/app/src/kernel/db/migrations/0001-init.sql:2`, `packages/app/src/kernel/db/migrations/0005-revision-work.sql:1`, `packages/app/src/kernel/db/migrations/0014-document-stage.sql:9`, `packages/app/src/kernel/db/migrations/0030-automatic-retries.sql:9`. Code model: Stage via `stageRow` (`packages/app/src/slices/admission/repo.ts:34`).
 
 ### attempts
 
@@ -6242,7 +6225,7 @@ CREATE TABLE revision_work_reservations (
 CREATE INDEX revision_work_reservations_work ON revision_work_reservations(work_id);
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0005-revision-work.sql:41`, `packages/app/src/kernel/db/migrations/0022-drop-duplicate-held-work.sql:43`, `packages/app/src/kernel/db/migrations/0060-reservation-work.sql:4`. Code model: none; read ad hoc (`packages/app/src/slices/rebuild/transition-repo.ts:53`).
+Migrations: `packages/app/src/kernel/db/migrations/0005-revision-work.sql:41`, `packages/app/src/kernel/db/migrations/0022-drop-duplicate-held-work.sql:43`, `packages/app/src/kernel/db/migrations/0060-reservation-work.sql:4`. Code model: none; read ad hoc (`packages/app/src/slices/rebuild/transition-repo.ts:50`).
 
 ### rebuild_previews
 
@@ -6559,7 +6542,7 @@ CREATE TABLE backup_imports (
 );
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0018-backup-imports.sql:3`. Code model: none; written and checked in `packages/app/src/slices/storage/backup-import.ts:914`.
+Migrations: `packages/app/src/kernel/db/migrations/0018-backup-imports.sql:3`. Code model: none; written and checked in `packages/app/src/slices/storage/backup-import.ts:1006`, `:933`.
 
 ### review_verdicts
 
@@ -6652,7 +6635,7 @@ CREATE TABLE plan_limit_readings (
 CREATE INDEX plan_limit_readings_project ON plan_limit_readings(project_id, created_at);
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0027-run-cost.sql:32`. Code model: PlanLimitReading in `reading_json` (`packages/app/src/slices/run-cost/panel.ts:275`).
+Migrations: `packages/app/src/kernel/db/migrations/0027-run-cost.sql:32`. Code model: PlanLimitReading in `reading_json` (`packages/app/src/kernel/ports/plan-limits.ts:33`).
 
 ### plan_limit_waits
 
@@ -6928,7 +6911,7 @@ CREATE TABLE narration_retries (
 CREATE INDEX narration_retries_pending ON narration_retries(state) WHERE state = 'pending';
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0042-narration-retries.sql:4`. Code model: none; `row` (`packages/app/src/slices/rebuild/narration-retry.ts:15`).
+Migrations: `packages/app/src/kernel/db/migrations/0042-narration-retries.sql:4`. Code model: none; `row` (`packages/app/src/slices/rebuild/narration-retry.ts:16`).
 
 ### prepared_videos
 
@@ -6943,7 +6926,7 @@ CREATE TABLE prepared_videos (
 CREATE INDEX prepared_videos_title ON prepared_videos(schedule_id, title);
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0043-prepared-videos.sql:6`. `schedule_id` has no foreign key. Code model: none; written by `prepareTopic`, read by `preparedProject`, deleted by `continuePrepared` (`packages/app/src/slices/schedules/prepare.ts:108`, `:144`, `:184`). Not in backups (`packages/app/src/slices/storage/backup-format.ts:72`).
+Migrations: `packages/app/src/kernel/db/migrations/0043-prepared-videos.sql:6`. `schedule_id` has no foreign key. Code model: none; written by `prepareTopic`, read by `preparedProject`, deleted by `continuePrepared` (`packages/app/src/slices/schedules/prepare.ts:66`, `:143`, `:183`). Not in backups (`packages/app/src/slices/storage/backup-format.ts:75`).
 
 ### project_set_aside
 
@@ -7013,7 +6996,7 @@ CREATE TABLE video_stats (
 );
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0047-studio-autopilot.sql:19`. Code model: VideoStats (`saveStats`, `projectStats`, `longVideoStats`, `packages/app/src/slices/studio/stats.ts:42`, `:76`, `:84`). In backups since 3.3.0.
+Migrations: `packages/app/src/kernel/db/migrations/0047-studio-autopilot.sql:19`. Code model: none; since 3.17.0 the app no longer reads or writes this table, which stays in the schema and in backups (`packages/app/src/slices/storage/backup-format.ts:70`). In backups since 3.3.0.
 
 ### ab_results
 
@@ -7028,7 +7011,7 @@ CREATE TABLE ab_results (
 );
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0047-studio-autopilot.sql:32`. Code model: AbResult; `variants` is `AbVariant[]` JSON (`saveAbResult`, `abResults`, `packages/app/src/slices/studio/stats.ts:93`, `:107`). In backups since 3.3.0.
+Migrations: `packages/app/src/kernel/db/migrations/0047-studio-autopilot.sql:32`. Code model: AbResult; `variants` is `AbVariant[]` JSON (`saveAbResult`, `abResults`, `packages/app/src/slices/studio/stats.ts:27`, `:41`). In backups since 3.3.0.
 
 ### external_reviews
 
@@ -7251,7 +7234,7 @@ CREATE TABLE template_studio_spend (
 CREATE INDEX template_studio_spend_at ON template_studio_spend(created_at);
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0074-template-bakeoffs.sql:39`. What a hidden project spent, kept when the project is removed (a bake-off discarded, a sample made again on a new topic), so today's sample budget still counts it. Written by `packages/app/src/slices/template-studio/hidden.ts:12`, summed by `packages/app/src/slices/template-studio/budget.ts:77`. Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:89`).
+Migrations: `packages/app/src/kernel/db/migrations/0074-template-bakeoffs.sql:39`. What a hidden project spent, kept when the project is removed (a bake-off discarded, a sample made again on a new topic), so today's sample budget still counts it. Written by `packages/app/src/slices/template-studio/hidden.ts:12`, summed by `packages/app/src/slices/template-studio/budget.ts:78`. Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:89`).
 
 ### assistant_sessions
 

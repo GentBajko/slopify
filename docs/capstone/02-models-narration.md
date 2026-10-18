@@ -40,9 +40,9 @@ Scope: spoken (clean) text versus request (sent-to-voice) text, the Pronunciatio
 | GlossaryEntry | `packages/app/src/slices/narration/pronunciation.ts:4` | In memory | Written term paired with one IPA word per written word. |
 | SkippedGlossaryRow | `packages/app/src/slices/narration/pronunciation.ts:10` | In memory | 1-based row number and reason for a glossary row left out; never the row's text. |
 | GlossaryResult | `packages/app/src/slices/narration/pronunciation.ts:14` | In memory | Parsed glossary: usable entries plus optional skipped rows, or a refusal. |
-| SkippedSpeakerPronunciations | `packages/app/src/slices/narration/pronunciation.ts:153` | In memory | Skipped rows of one speaker's own pronunciations. |
-| PronunciationSpan | `packages/app/src/slices/narration/pronunciation.ts:182` | In memory | Source range and the replacement text sent to the voice. |
-| PronunciationMatch | `packages/app/src/slices/narration/pronunciation.ts:187` | In memory | Source range matched to a glossary entry. |
+| SkippedSpeakerPronunciations | `packages/app/src/slices/narration/pronunciation.ts:232` | In memory | Skipped rows of one speaker's own pronunciations. |
+| PronunciationSpan | `packages/app/src/slices/narration/pronunciation.ts:262` | In memory | Source range and the replacement text sent to the voice. |
+| PronunciationMatch | `packages/app/src/slices/narration/pronunciation.ts:267` | In memory | Source range matched to a glossary entry. |
 | SharedPronunciation | `packages/app/src/slices/admission/model.ts:60` | Run config JSON (`project_revisions.config`) | One pronunciation copied from another project's glossary. |
 | SharedGlossary | `packages/app/src/slices/narration/shared-glossary.ts:12` | In memory; HTTP JSON | Merged glossary of every other project plus contributor count. |
 | NarrationAlias | `packages/app/src/kernel/ports/narration-aliases.ts:8` | `narration_aliases` table; run config JSON | Written word/phrase and how the narrator says it. |
@@ -57,12 +57,12 @@ Scope: spoken (clean) text versus request (sent-to-voice) text, the Pronunciatio
 | SourceSentence | `packages/app/src/slices/narration/preparation.ts:20` | In memory | Numbered sentence of the clean narration text. |
 | Cue | `packages/app/src/slices/narration/preparation.ts:42` | In memory (parsed from an LLM answer) | Delivery cue anchored to a sentence. |
 | NarrationRequest | `packages/app/src/slices/narration/plan.ts:4` | In memory | One planned TTS request of the plain splitter. |
-| TextRecipes | `packages/app/src/slices/rebuild/recipe-text.ts:94` | In memory | Text-stage recipes plus article text, narration text, glossary and entry texts. |
+| TextRecipes | `packages/app/src/slices/rebuild/recipe-text.ts:113` | In memory | Text-stage recipes plus article text, narration text, glossary and entry texts. |
 | NarrationTextPart | `packages/app/src/slices/rebuild/runtime-narration-text.ts:10` | In memory → text outputs | Spoken and request text of one retained narration piece. |
 | VoiceChoice | `packages/app/src/slices/admission/model.ts:41` | Run config JSON (`audio`) | Narration provider/model/voice plus narration switches. |
 | Speaker | `packages/app/src/slices/voices/model.ts:60` | Run config JSON (`voices.speakers`) | One multi-voice speaker with voice, pace and own pronunciations. |
 | VoicesSettings | `packages/app/src/slices/voices/model.ts:92` | Run config JSON (`voices`) | Multi-voice format, script source, speakers and output switches. |
-| DialogueLine | `packages/app/src/slices/rebuild/recipe-model.ts:77` | `input_json` (`tts` RecipeInput `dialogue`) | One speaker turn of a native multi-speaker request. |
+| DialogueLine | `packages/app/src/slices/rebuild/recipe-model.ts:80` | `input_json` (`tts` RecipeInput `dialogue`) | One speaker turn of a native multi-speaker request. |
 | TtsRequest | `packages/app/src/kernel/ports/tts.ts:15` | In memory | What a TTS adapter is asked to synthesize. |
 
 ## Fields and types
@@ -81,7 +81,7 @@ Both fields `readonly`.
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | row | number | yes | 1-based entry number among the parsed rows. |
-| reason | string | yes | Fixed explanatory text (`packages/app/src/slices/narration/pronunciation.ts:103`). |
+| reason | string | yes | Fixed explanatory text (`packages/app/src/slices/narration/pronunciation.ts:142-144`). |
 
 ### GlossaryResult
 
@@ -94,7 +94,7 @@ Discriminated union on `ok`; every property `readonly`.
 | skipped | SkippedGlossaryRow[] | no | `ok: true` only; absent when every row was used. |
 | reason | string | no | Required when `ok: false`. |
 
-`parsePronunciationGlossary` returns only `ok: true` results (`packages/app/src/slices/narration/pronunciation.ts:134`); bad rows become `skipped`. `narrationParts` turns an `ok: false` value into a deferred refusal (`packages/app/src/slices/rebuild/recipe-audio-parts.ts:46`); `speakerGlossary` builds one from a failed own-glossary result (`packages/app/src/slices/rebuild/recipe-voices.ts:381`).
+`parsePronunciationGlossary` returns only `ok: true` results (`packages/app/src/slices/narration/pronunciation.ts:105-110`); bad rows become `skipped`. `narrationParts` turns an `ok: false` value into a deferred refusal (`packages/app/src/slices/rebuild/recipe-audio-parts.ts:31`); `speakerGlossary` builds one from a failed own-glossary result (`packages/app/src/slices/rebuild/recipe-voices.ts:385`).
 
 ### SkippedSpeakerPronunciations
 
@@ -182,7 +182,7 @@ All fields `readonly`.
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| key | string | yes | `audio:body:<first 20 fingerprint chars>-<occurrence>` (`packages/app/src/slices/narration/pronunciation-chunks.ts:30`). |
+| key | string | yes | `audio:body:<first 20 fingerprint chars>-<occurrence>` (`packages/app/src/slices/narration/pronunciation-chunks.ts:62-68`). |
 | text | string | yes | Group source text. |
 | source | NarrationSource | no | Present for merged groups and retained pinned bindings; absent for single base chunks. |
 
@@ -195,7 +195,7 @@ Discriminated union on `kind`; all fields `readonly`.
 | kind | "asset" \| "text" | yes | accepted: asset, text |
 | assetId | string | no | Required when `kind` is `asset`. |
 | text | string | no | Required when `kind` is `text`; schema trims, 1–500,000 characters. |
-| direction | string | no | Only with `kind` `text`; schema trims, 1–20,000 characters (`packages/app/src/slices/revisions/schema.ts:68`). A delivery note appended to this chunk's narration preparation prompt (`packages/app/src/slices/revisions/model.ts:35`, `packages/app/src/slices/rebuild/recipe-preparation.ts:77`). |
+| direction | string | no | Only with `kind` `text`; schema trims, 1–20,000 characters (`packages/app/src/slices/revisions/schema.ts:84`). A delivery note appended to this chunk's narration preparation prompt (`packages/app/src/slices/revisions/model.ts:35`, `packages/app/src/slices/rebuild/recipe-preparation.ts:77`). |
 
 ### PreparedRequest
 
@@ -272,7 +272,7 @@ All fields `readonly`.
 | cards | ResolvedWorkRecipe[] | yes | `figure:card:<n>` steps. |
 | glossary | GlossaryResult \| null | yes | See Relationships. |
 | article | ResolvedWorkRecipe | yes | `article:body` recipe. |
-| entries | Readonly<Partial<Record<"intro" \| "outro", TextRecipe>>> | yes | accepted keys: intro, outro. `TextRecipe` is a private alias `{ recipe: ResolvedWorkRecipe; text: string \| null }` (`packages/app/src/slices/rebuild/recipe-text.ts:93`). |
+| entries | Readonly<Partial<Record<"intro" \| "outro", TextRecipe>>> | yes | accepted keys: intro, outro. `TextRecipe` is a private alias `{ recipe: ResolvedWorkRecipe; text: string \| null }` (`packages/app/src/slices/rebuild/recipe-text.ts:112`). |
 | script | ScriptText | no | Multi-voice script text, dependencies and fingerprint. |
 
 ### NarrationTextPart
@@ -333,7 +333,7 @@ Inferred from `voicesSettingsSchema` (`packages/app/src/slices/voices/model.ts:7
 
 ### DialogueLine
 
-Recipe-side turn (`packages/app/src/slices/rebuild/recipe-model.ts:77`). The TTS port declares a separate `DialogueLine` `{ voiceId: string; text: string }` for the provider call (`packages/app/src/kernel/ports/tts.ts:10`).
+Recipe-side turn (`packages/app/src/slices/rebuild/recipe-model.ts:80`). The TTS port declares a separate `DialogueLine` `{ voiceId: string; text: string }` for the provider call (`packages/app/src/kernel/ports/tts.ts:10`).
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
@@ -356,13 +356,13 @@ Recipe-side turn (`packages/app/src/slices/rebuild/recipe-model.ts:77`). The TTS
 
 ## Relationships
 
-- Glossary source: `glossaryOf` returns `{ ok: true, entries: [] }` when `usesPronunciationGlossary` is false, `null` while the article is unwritten, otherwise `parsePronunciationGlossary(endMatter.glossary, config.language)` merged with shared entries by `withShared` (`packages/app/src/slices/rebuild/recipe-text.ts:425`, `packages/app/src/slices/rebuild/recipe-text.ts:444`). `withSharedGlossary` keeps the project's own entries first and drops shared terms it already defines, keyed by NFC + `toLocaleLowerCase("en")` + collapsed whitespace (`packages/app/src/slices/narration/shared-glossary.ts:60`).
-- Shared pronunciations: `collectSharedGlossary` reads each other project's selected, ready `article:glossary` output at its head revision, newest first; the first project to define a key wins (`packages/app/src/slices/narration/shared-glossary.ts:18`). The result is copied into `RunDraft.sharedGlossary` and used only while `audio.shareGlossary` is on (`packages/app/src/slices/admission/model.ts:154`).
-- Aliases: Library rows (`narration_aliases`) are copied into `RunDraft.narrationAliases` (`packages/app/src/slices/admission/model.ts:157`); `narrationAliasesOf` returns them only for generated audio with `useNarrationAliases === true`, for any provider (`packages/app/src/slices/admission/rules.ts:601`). The same matcher (`aliasMatches`) feeds request text, Narration Preparation sentences (`aliasedSentences`) and caption alignment (`packages/app/src/slices/rebuild/runtime-subtitles.ts:120`).
+- Glossary source: `glossaryOf` returns `{ ok: true, entries: [] }` when `usesPronunciationGlossary` is false, `null` while the article is unwritten, otherwise `parsePronunciationGlossary(endMatter.glossary, config.language)` merged with shared entries by `withShared` (`packages/app/src/slices/rebuild/recipe-text.ts:486`, `packages/app/src/slices/rebuild/recipe-text.ts:509`). `withSharedGlossary` keeps the project's own entries first and drops shared terms it already defines, keyed by NFC + `toLocaleLowerCase("en")` + collapsed whitespace (`packages/app/src/slices/narration/shared-glossary.ts:60`).
+- Shared pronunciations: `collectSharedGlossary` reads each other project's selected, ready `article:glossary` output at its head revision, newest first; the first project to define a key wins (`packages/app/src/slices/narration/shared-glossary.ts:18`). The result is copied into `RunDraft.sharedGlossary` and used only while `audio.shareGlossary` is on (`packages/app/src/slices/admission/model.ts:159`).
+- Aliases: Library rows (`narration_aliases`) are copied into `RunDraft.narrationAliases` (`packages/app/src/slices/admission/model.ts:162`); `narrationAliasesOf` returns them only for generated audio with `useNarrationAliases === true`, for any provider (`packages/app/src/slices/admission/rules.ts:623`). The same matcher (`aliasMatches`) feeds request text, Narration Preparation sentences (`aliasedSentences`) and caption alignment (`packages/app/src/adapters/alignment/text.ts:28`).
 - Spans per group: `narrationParts` computes glossary spans and alias spans on the normalized group text, then `withAliasSpans` drops any glossary span overlapping an alias span (`packages/app/src/slices/rebuild/recipe-audio-parts.ts:51`, `packages/app/src/slices/narration/aliases.ts:30`).
 - Grouping: `bodyNarrationGroups` passes normalized `TextRecipes.narrationText`, effective chunking, glossary entries (only when the glossary is in use and `ok`), overridden keys and saved `narrationSources` to `pronunciationChunks` (`packages/app/src/slices/rebuild/recipe-audio.ts:41`). A glossary match crossing adjacent base chunks merges them into one group with a new key and `NarrationSource`; matches intersecting overridden chunks or pinned groups do not merge (`packages/app/src/slices/narration/pronunciation-chunks.ts:83`). Aliases do not affect grouping.
 - Request construction in `narrationParts` (`packages/app/src/slices/rebuild/recipe-audio-parts.ts:19`): an `asset` override yields a `provided` recipe carrying `semantic: [normalizedText, voiceValues]`; a `text` override replaces the group text; `glossary === null` yields no parts; `ok: false` yields a deferred refusal; with Narration Preparation on, cues and spans produce `PreparedRequest[]` via `preparationForGroup`; with spans only, `prepareRequests(text, [], maxCharacters, spans)`; with neither, `planNarration` (plain splitter, no `spokenText`).
-- Multi-voice: each speaker's glossary is their own `pronunciations` plus the run glossary (when `usePronunciationGlossary` is on and ok), only for `readsIpa` speakers (Inworld `inworld-tts-2` or `inworld-tts-2-flash`) (`packages/app/src/slices/rebuild/recipe-voices.ts:381`, `packages/app/src/slices/rebuild/recipe-voices.ts:415`).
+- Multi-voice: each speaker's glossary is their own `pronunciations` plus the run glossary (when `usePronunciationGlossary` is on and ok), only for `readsIpa` speakers (Inworld `inworld-tts-2` or `inworld-tts-2-flash`) (`packages/app/src/slices/rebuild/recipe-voices.ts:385`, `packages/app/src/slices/rebuild/recipe-voices.ts:415`).
 - `TextRecipes.article`, `recipes` and entry recipes reference `ResolvedWorkRecipe` (`02-models.md`).
 
 ## Boundaries
@@ -372,8 +372,8 @@ Recipe-side turn (`packages/app/src/slices/rebuild/recipe-model.ts:77`). The TTS
 | Article → narration text | `splitEndMatter` separates body, sources and glossary (`packages/app/src/slices/article/split.ts:40`); `plainText` strips Markdown from the body (`packages/app/src/slices/article/plain.ts:11`); only the glossary part feeds the parser. `normalizeNarrationText` converts `\r\n?` to `\n` and trims (`packages/app/src/slices/narration/plan.ts:33`). |
 | Run config | `VoiceChoice` under `RunDraft.audio`; schema extends `providerChoice` with `voice` and the five optional booleans (`packages/app/src/slices/admission/schema.ts:83`). `narrationAliases: narrationAliasesSchema.optional()` and `sharedGlossary` (≤ 20,000 rows) sit at run-config top level (`packages/app/src/slices/admission/schema.ts:93`). Glossary use activates only for generated audio, explicit `usePronunciationGlossary: true`, provider `inworld`, model `inworld-tts-2` or `inworld-tts-2-flash` (`packages/app/src/slices/admission/rules.ts:631`). |
 | Library aliases ↔ DB | `listNarrationAliases` selects ordered rows and drops any row failing `narrationAliasSchema` (`packages/app/src/slices/narration/aliases-library.ts:18`); `saveNarrationAliases` validates, deletes all rows and reinserts in order in one transaction (`packages/app/src/slices/narration/aliases-library.ts:40`). HTTP: `GET /aliases`, `PUT /aliases` (body `{ aliases: unknown[] }`, ≤ 2000), `GET /shared?except=<projectId>` returning SharedGlossary (`packages/app/src/edge/http/pronunciations.ts:21`). |
-| Revision content | `RevisionContent.narrationOverrides: Record<string, NarrationOverride>` (required) and `narrationSources?: Record<string, NarrationSource>` (`packages/app/src/slices/revisions/model.ts:53`). `insertRevision` stores config/content/fingerprints via `JSON.stringify`; reads parse and validate with `projectRevisionSchema` (`packages/app/src/slices/revisions/repo.ts:33`, `packages/app/src/slices/revisions/repo.ts:110`). |
-| Prepared text → TTS payload | TTS `RecipeInput` (`packages/app/src/slices/rebuild/recipe-model.ts:106`): `kind: "tts"`, `version: 1`, `provider`, `model`, `voice`, `text`, optional `spokenText`, `logicalKey`, `logicalText`, `segment` (body/intro/outro), `pronunciation: null`, optional `wholeRequest`, and multi-voice `speaker`, `turn`, `dialogue: DialogueLine[]`. IPA and alias forms are embedded in `text`; `pronunciation` stays null. |
+| Revision content | `RevisionContent.narrationOverrides: Record<string, NarrationOverride>` (required) and `narrationSources?: Record<string, NarrationSource>` (`packages/app/src/slices/revisions/model.ts:76-77`). `insertRevision` stores config/content/fingerprints via `JSON.stringify`; reads parse and validate with `projectRevisionSchema` (`packages/app/src/slices/revisions/repo.ts:34`, `packages/app/src/slices/revisions/repo.ts:115`). |
+| Prepared text → TTS payload | TTS `RecipeInput` (`packages/app/src/slices/rebuild/recipe-model.ts:90`): `kind: "tts"`, `version: 1`, `provider`, `model`, `voice`, `text`, optional `spokenText`, `logicalKey`, `logicalText`, `segment` (body/intro/outro), `pronunciation: null`, optional `wholeRequest`, and multi-voice `speaker`, `turn`, `dialogue: DialogueLine[]`. IPA and alias forms are embedded in `text`; `pronunciation` stays null. |
 | TTS payload ↔ work JSON | `insertWorkPiece` validates with `recipeInputSchema` before writing `input_json`; `workPieces` parses and re-validates (`packages/app/src/slices/rebuild/work-records.ts:57`, `packages/app/src/slices/rebuild/work-records.ts:33`). |
 | Fingerprints | `narrationRequestFingerprint` covers `narration-request-v1`, provider, model, voice, request text, `null`, segment and optional whole-text fingerprint; `spokenText` is not a separate component (`packages/app/src/slices/narration/plan.ts:36`). Work fingerprints add the regeneration token (`packages/app/src/slices/narration/plan.ts:65`). |
 | Retained pieces → text files | `narrationTextParts` requires every dependency of `audio:body:concat` / `audio:<segment>` to be selected, available, done and fingerprint-matching; a `provided` part contributes `semantic[0]` and no request text; a TTS part whose input has `spokenText` must have payload `text` and `spokenText` equal to the input (`packages/app/src/slices/rebuild/runtime-narration-text.ts:25`). Outputs: `narration_txt` → `<segment>-narration.txt` (spoken text, newline between groups) and `tts_script` → `<segment>-tts-script.txt` (request texts joined by blank lines) (`packages/app/src/slices/rebuild/runtime-narration-text.ts:116`). |
@@ -383,14 +383,14 @@ Recipe-side turn (`packages/app/src/slices/rebuild/recipe-model.ts:77`). The TTS
 ### Glossary syntax and IPA
 
 - Parsing uses remark + GFM; headings other than `Pronunciation Glossary`, paragraph lines, list items and table rows (first two cells after the header) become rows; other blocks become the row `(unsupported glossary block)`, which is skipped (`packages/app/src/slices/narration/pronunciation.ts:45`). A table IPA cell without `/` is wrapped as `/cell/`.
-- Row rules, each failure producing a `SkippedGlossaryRow` (never a refusal): `Term: pronunciation` shape; term has a letter or number and no `/`, `[`, `]`, `<`, `>` or control character; pronunciation is one or more `/…/` groups optionally followed by a non-slash annotation; every IPA word matches the symbol set; IPA word count equals term word count; a term whose identity already maps to a different IPA is skipped (`packages/app/src/slices/narration/pronunciation.ts:88`).
+- Row rules, each failure producing a `SkippedGlossaryRow` (never a refusal): `Term: pronunciation` shape; term has a letter or number and no `/`, `[`, `]`, `<`, `>` or control character; pronunciation is one or more `/…/` groups optionally followed by a non-slash annotation; every IPA word matches the symbol set; IPA word count equals term word count; a term whose identity already maps to a different IPA is skipped (`packages/app/src/slices/narration/pronunciation.ts:192-197`).
 - Symbol set depends on `config.language`: absent or `en` uses the standard-English atom (base `abdefghijklmnoprstuvwxzæðŋθɑɒɔəɚɛɜɝɡɪɹʃʊʌʒʔɫɾ`, optional leading `ˈ`/`ˌ`, modifiers U+0303, U+031A, U+0325, U+0329, U+032A, U+032C, U+032F, U+035C, U+0361, `ʰʲʷ`, trailing `ː`/`ˑ`); any other language uses the full IPA chart atom with combining marks U+0300–U+036F (`packages/app/src/slices/narration/pronunciation.ts:32`, `packages/app/src/slices/narration/pronunciation.ts:37`). Periods separate atom sequences.
-- Term identity folds case character by character only where an anchored `/iu` match accepts the folded form (`packages/app/src/slices/narration/pronunciation.ts:66`).
+- Term identity folds case character by character only where an anchored `/iu` match accepts the folded form (`packages/app/src/slices/narration/pronunciation.ts:93-101`).
 - User-facing notices name entries by number and reason only (`packages/app/src/slices/narration/pronunciation.ts:140`, `packages/app/src/slices/narration/pronunciation.ts:168`).
 
 ### Matching boundaries
 
-- Glossary matching sorts terms longest first, escapes regex punctuation, allows `\s+` between words, uses flags `giu`, and rejects matches adjacent (optionally through `'`/`’`) to letters, marks, numbers, `_`, `-`, U+00AD, U+2010, U+2011, U+FE63, U+FF0D; an unpaired trailing apostrophe also rejects the match (`packages/app/src/slices/narration/pronunciation.ts:192`).
+- Glossary matching sorts terms longest first, escapes regex punctuation, allows `\s+` between words, uses flags `giu`, and rejects matches adjacent (optionally through `'`/`’`) to letters, marks, numbers, `_`, `-`, U+00AD, U+2010, U+2011, U+FE63, U+FF0D; an unpaired trailing apostrophe also rejects the match (`packages/app/src/slices/narration/pronunciation.ts:275-327`).
 - Alias matching: leftmost first, longest at equal start, non-overlapping; `wholeWord` checks only the characters adjacent to a written form whose first/last character is a word character `[\p{L}\p{M}\p{N}_]` (`packages/app/src/kernel/ports/narration-aliases.ts:30`).
 
 ### Aliases
@@ -400,7 +400,7 @@ Recipe-side turn (`packages/app/src/slices/rebuild/recipe-model.ts:77`). The TTS
 ### Request spans and limits
 
 - `checkedSpans` requires integer, non-overlapping, positive-length spans inside the source whose covered text has no whitespace and no surrogate code unit; violations throw (`packages/app/src/slices/narration/steering.ts:59`). The replacement text itself is not validated there.
-- `prepareRequests` requires an integer limit ≥ 2, returns no requests for blank source, consumes ordinary characters by code point and each span as one atom, and counts the limit in UTF-16 length including cue tags; content that cannot fit returns the `cannotFit` refusal (`packages/app/src/slices/narration/steering.ts:101`, `packages/app/src/slices/narration/steering.ts:11`). Whitespace before an empty alias span is omitted from request text but kept in `spokenText` (`packages/app/src/slices/narration/steering.ts:43`). Sentence anchors inside a span move to the span start (`packages/app/src/slices/narration/steering.ts:89`).
+- `prepareRequests` requires an integer limit ≥ 2, returns no requests for blank source, consumes ordinary characters by code point and each span as one atom, and counts the limit in UTF-16 length including cue tags; content that cannot fit returns the `cannotFit` refusal (`packages/app/src/slices/narration/steering.ts:96`, `packages/app/src/slices/narration/steering.ts:12`). Whitespace before an empty alias span is omitted from request text but kept in `spokenText` (`packages/app/src/slices/narration/steering.ts:38-40`). Sentence anchors inside a span move to the span start (`packages/app/src/slices/narration/steering.ts:90`).
 - `maxCharacters` is the catalogue model's `tts.maxCharacters` (enabled, deprecated allowed), else the group's substituted length (min 2) (`packages/app/src/slices/rebuild/recipe-audio-parts.ts:61`).
 
 ### Binding authority
@@ -408,7 +408,7 @@ Recipe-side turn (`packages/app/src/slices/rebuild/recipe-model.ts:77`). The TTS
 - Schema: `narrationSources` optional; keys 1–256 characters; `text` 1–500,000; `start` integer 0–500,000; both fingerprints `^[0-9a-f]{64}$`; each object strict; ≤ 10,000 entries and ≤ 500,000 total text characters. `narrationOverrides` text is trimmed, 1–500,000 characters; asset ids match `^[0-9A-Za-z_-]+$`, 1–64 (`packages/app/src/slices/revisions/schema.ts:60`, `packages/app/src/slices/revisions/schema.ts:73`).
 - `saveRevision` discards submitted `narrationSources` before the idempotency hash, calls `bindNarrationSources` against the base, and again against the fresh revision inside the transaction (`packages/app/src/slices/revisions/mutations.ts:73`, `packages/app/src/slices/revisions/mutations.ts:91`, `packages/app/src/slices/revisions/mutations.ts:125`).
 - `bindNarrationSources` keeps only keys tied to overrides, base regeneration tokens, requested regenerations or narration uploads, recomputes groups under the proposed config/content, and omits the property when no binding survives (`packages/app/src/slices/revisions/rules.ts:10`).
-- A saved binding is honoured only if its body and chunking fingerprints match, the source substring matches, the key matches `^audio:body:<fp20>-[1-9][0-9]*$`, both ends align with base chunk boundaries, it spans more than one chunk, does not overlap an earlier pinned group, and contains no overridden chunk (`packages/app/src/slices/narration/pronunciation-chunks.ts:62`). Tests: `packages/app/src/slices/revisions/mutations-narration-source-trust.test.ts:53`.
+- A saved binding is honoured only if its body and chunking fingerprints match, the source substring matches, the key matches `^audio:body:<fp20>-[1-9][0-9]*$`, both ends align with base chunk boundaries, it spans more than one chunk, does not overlap an earlier pinned group, and contains no overridden chunk (`packages/app/src/slices/narration/pronunciation-chunks.ts:81-100`). Tests: `packages/app/src/slices/revisions/mutations-narration-source-trust.test.ts:53`.
 
 ## Schema
 
