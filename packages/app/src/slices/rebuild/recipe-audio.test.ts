@@ -319,3 +319,31 @@ it("writes an outro from the article it was written from, after a hand edit of t
   });
   expect(after?.fingerprint).toBe(before?.fingerprint);
 });
+
+it.each(["intro", "outro"] as const)("refuses to save a picked %s with no text", (category) => {
+  const c = {
+    ...narrated,
+    [category]: { name: "Entry", mode: "text" as const },
+    rendered: { ...narrated.rendered, [category]: "   " },
+  };
+  const result = planRevision(readyView(), { config: c, content });
+  expect(result.ok ? [] : result.fields).toContainEqual({
+    field: `rendered.${category}`,
+    message: "Enter a prompt or text.",
+  });
+});
+
+it("cuts every-N-words narration at the sentence boundaries", () => {
+  const c = { ...narrated, chunking: { mode: "words" as const, words: 6 } };
+  const base = readyView(c, {
+    ...content,
+    articleMarkdown: "Rope is older than writing. It is stronger than it looks. Braid it well.",
+  });
+  const plan = planRevisionWork(base.revision, base, catalogue, new Set(), {
+    articleMarkdown: base.articleMarkdown,
+    researchNotes: null,
+  });
+  expect(
+    plan.recipes.flatMap((r) => (r.input.kind === "tts" ? [r.input.text.trim()] : [])),
+  ).toEqual(["Rope is older than writing.", "It is stronger than it looks.", "Braid it well."]);
+});
