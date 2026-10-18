@@ -192,6 +192,24 @@ describe("the episode summary", () => {
     expect(h.calls).toHaveLength(1);
   });
 
+  it("is never written for a template studio's hidden sample project", async () => {
+    const h = harness();
+    const run = startRun(h.storage, draft(), {});
+    h.db
+      .prepare(
+        "INSERT INTO project_templates (id,head_version,creation_hash,created_at) VALUES ('t1',1,'h','a')",
+      )
+      .run();
+    h.db
+      .prepare(
+        "INSERT INTO template_samples (template_id,project_id,topic,topic_source,full_script,created_at) VALUES ('t1',?,'Salt','fixed',0,'a')",
+      )
+      .run(run.project.id);
+    expect(await summarizeEpisode(h.summary, run.project.id)).toBe("sample");
+    expect(h.calls).toHaveLength(0);
+    expect(memoriesOfChannel(h.db, defaultChannelId)).toEqual([]);
+  });
+
   it("is skipped while the channel's setting is off, and a failure never throws", async () => {
     const h = harness();
     const run = startRun(h.storage, draft(), {});

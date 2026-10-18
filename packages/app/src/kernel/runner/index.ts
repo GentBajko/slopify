@@ -58,6 +58,9 @@ export interface RunnerDeps {
   readonly runs: Readonly<Partial<Record<StageKind, StageRun>>>;
   readonly emit: (projectId: string, event: ProjectEvent) => void;
   readonly emitRunningCount: (count: number) => void;
+  // Whether a project counts towards the running tally; absent counts every one. A template
+  // studio's hidden sample project runs without the shell saying so.
+  readonly counted?: (projectId: string) => boolean;
   readonly log: Log;
 }
 
@@ -121,7 +124,7 @@ export function createRunner(deps: RunnerDeps): Runner {
   const retally = (): void => {
     const projects = new Set<string>();
     for (const entry of inflight.values()) {
-      projects.add(entry.projectId);
+      if (deps.counted?.(entry.projectId) !== false) projects.add(entry.projectId);
     }
     if (projects.size !== count) {
       count = projects.size;

@@ -15,6 +15,7 @@ import { castOfChannel, projectChannelId } from "../channels/repo.js";
 import { reviewedByAgent } from "../reviews/model.js";
 import { outputPath } from "../storage/layout.js";
 import { outputsOf } from "../storage/repo.js";
+import { isTemplateSample } from "../template-studio/repo.js";
 import { episodeMemoryOn, memoryOfProject, saveGeneratedMemory } from "./repo.js";
 
 // When a project finishes, a small LLM call writes what the episode covered (at most
@@ -49,6 +50,8 @@ export type SummaryOutcome =
   | "no-article"
   | "no-llm"
   | "gone"
+  // A template studio's hidden sample: no episode of any channel.
+  | "sample"
   | "failed";
 
 export function summaryMessages(title: string, article: string): readonly Message[] {
@@ -103,6 +106,7 @@ async function summarize(
 ): Promise<SummaryOutcome> {
   const project = projectById(deps.db, projectId);
   if (project === undefined) return "gone";
+  if (isTemplateSample(deps.db, projectId)) return "sample";
   const channelId = projectChannelId(deps.db, projectId);
   if (!episodeMemoryOn(deps.db, channelId)) return "off";
   const existing = memoryOfProject(deps.db, projectId);

@@ -112,6 +112,28 @@ describe("createHub", () => {
     expect(global.written.map((frame) => frame.event)).toEqual(["running.count", "stage.state"]);
   });
 
+  it("keeps a quiet project's events (a template's hidden sample) off the global stream", async () => {
+    const { log } = recorder();
+    const h = createHub({ ids: counter(), log, quiet: (projectId) => projectId === "sample" });
+    const own = fakeStream();
+    const global = fakeStream();
+    void h.subscribe("sample", own.stream, new AbortController().signal);
+    void h.subscribeGlobal(global.stream, new AbortController().signal);
+    h.emit("sample", {
+      type: "stage.state",
+      projectId: "sample",
+      stage: "article",
+      state: "running",
+    });
+    h.emit("p1", { type: "stage.state", projectId: "p1", stage: "article", state: "running" });
+    await Promise.resolve();
+    expect(own.written.map((frame) => frame.event)).toEqual(["stage.state"]);
+    expect(global.written.map((frame) => JSON.parse(frame.data).projectId)).toEqual([
+      undefined,
+      "p1",
+    ]);
+  });
+
   it("emits to a project with no subscribers without failing", () => {
     const { hub: h } = hub();
 

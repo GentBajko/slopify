@@ -67,6 +67,9 @@ export interface HubDeps {
   readonly heartbeatMs?: number;
   readonly ids: Ids;
   readonly log: Log;
+  // A project whose events go to its own page only, never the global stream: a template
+  // studio's hidden sample (its studio is told through `template.sample`).
+  readonly quiet?: (projectId: string) => boolean;
 }
 
 export interface Hub {
@@ -176,7 +179,8 @@ export function createHub(deps: HubDeps): Hub {
         // What the AI models are writing right now, so a page opened mid-call shows it.
         for (const event of previews.snapshotAll()) {
           const shown = present(event);
-          if (shown !== undefined) send(subscriber, shown);
+          if (shown !== undefined && deps.quiet?.(shown.projectId) !== true)
+            send(subscriber, shown);
         }
       }
       return subscriber.done;
@@ -188,6 +192,7 @@ export function createHub(deps: HubDeps): Hub {
       else if (event.type === "stage.state") previews.observe(event);
       if (shown === undefined) return;
       for (const subscriber of projects.get(projectId) ?? []) send(subscriber, shown);
+      if (deps.quiet?.(projectId) === true) return;
       for (const subscriber of globals) send(subscriber, shown);
     },
 

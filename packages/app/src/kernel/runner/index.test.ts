@@ -412,6 +412,24 @@ describe("project.state", () => {
 });
 
 describe("running.count", () => {
+  it("leaves out a project that isn't counted, such as a template's hidden sample", async () => {
+    const stages = store({ research: "skipped", article: "provided" });
+    const counts: number[] = [];
+    const runner = createRunner({
+      stages,
+      runs: { audio: ok, images: ok, thumbnail: ok, video: ok },
+      emit: () => undefined,
+      emitRunningCount: (count) => {
+        counts.push(count);
+      },
+      counted: (projectId) => projectId !== "p1",
+      log,
+    });
+    runner.tick("p1");
+    await runner.settled();
+    expect(counts).toEqual([]);
+  });
+
   it("reports the tally only when it changes", async () => {
     const slow: StageRun = async (): Promise<StageRunResult> => {
       await new Promise((resolve) => setTimeout(resolve, 5));
