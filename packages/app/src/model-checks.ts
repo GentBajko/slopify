@@ -218,3 +218,13 @@ export function cliWatcher(
     }
   };
 }
+
+// The hourly look. The weekly look goes first: it lists and checks every provider, a CLI
+// among them, so a CLI it has just checked is known and isn't checked again as newly added.
+export async function lookAtModels(
+  checks: Pick<ModelChecks, "automatic" | "weeklyDue">,
+  lookForClis: () => Promise<void>,
+): Promise<void> {
+  if (checks.weeklyDue()) await checks.automatic("weekly");
+  await lookForClis();
+}

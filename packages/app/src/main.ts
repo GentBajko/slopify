@@ -76,7 +76,7 @@ import { type StandaloneDeps, standaloneImage, standaloneLlm } from "./kernel/ru
 import type { WorkRef } from "./kernel/runner/work.js";
 import { readVersion } from "./kernel/version.js";
 import { modelSources } from "./model-catalog.js";
-import { cliWatcher, wireModelChecks } from "./model-checks.js";
+import { cliWatcher, lookAtModels, wireModelChecks } from "./model-checks.js";
 import { projectPaused, projectTrashed } from "./slices/admission/repo.js";
 import { createBackupService } from "./slices/backups/service.js";
 import { pumpQueue, queueWaiting } from "./slices/batch/index.js";
@@ -1049,23 +1049,23 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       );
     };
     syncModels();
-    // Model checks look hourly too: a CLI that became usable, and the weekly look. Both run in
+    // Model checks look hourly too: the weekly look, and a CLI that became usable. Both run in
     // the background and never hold a request or a run.
     const lookForClis = cliWatcher(
       modelChecks,
       rebuild.providers,
       (provider) => readChecks(updateDb, provider).length > 0,
     );
-    const lookAtModels = (): void => {
+    const lookForModels = (): void => {
       if (!autoModelChecks) return;
-      lookForClis()
-        .then(() => (modelChecks.weeklyDue() ? modelChecks.automatic("weekly") : undefined))
-        .catch((error: unknown) => log.write("warn", "model-checks", { detail: causedBy(error) }));
+      lookAtModels(modelChecks, lookForClis).catch((error: unknown) =>
+        log.write("warn", "model-checks", { detail: causedBy(error) }),
+      );
     };
-    lookAtModels();
+    lookForModels();
     const modelTimer = setInterval(() => {
       if (catalogue.syncDue?.(Date.now()) === true) syncModels();
-      lookAtModels();
+      lookForModels();
     }, 60 * 60_000);
     const backupTimer = setInterval(() => {
       backups.tick().catch((error: unknown) => {

@@ -159,6 +159,8 @@ async function generate(input) {
       cwd: process.cwd(),
       home,
       held,
+      // A model check (`model-checks.ts`), which Slopify makes on its own for a CLI it finds.
+      ...(prompt.includes("Reply with OK.") ? { check: true } : {}),
       documents,
     })}\n`,
   );

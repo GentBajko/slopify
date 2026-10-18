@@ -4,9 +4,16 @@ import { manualClock } from "./kernel/clock.fake.js";
 import type { LlmCompletion } from "./kernel/ports/llm.js";
 import { providerError } from "./kernel/ports/model.js";
 import type { Registry } from "./kernel/ports/registry.js";
-import { cliWatcher, modelChecker, type RecipeDeps, recipeFor } from "./model-checks.js";
+import {
+  cliWatcher,
+  lookAtModels,
+  modelChecker,
+  type RecipeDeps,
+  recipeFor,
+} from "./model-checks.js";
 import { catalogue as fixture } from "./slices/model-checks/catalogue.fake.js";
 import { costOf } from "./slices/model-checks/cost.js";
+import type { ModelChecks } from "./slices/model-checks/service.js";
 import type { ProviderStatus } from "./slices/settings/model.js";
 
 const catalogue: Catalogue = {
@@ -249,5 +256,38 @@ describe("cliWatcher", () => {
     );
     await look();
     expect(started).toEqual([]);
+  });
+});
+
+describe("lookAtModels", () => {
+  it("checks a CLI once on the first start, when the weekly look is due as well", async () => {
+    const started: string[] = [];
+    let weeklyAt: string | undefined;
+    const known = new Set<string>();
+    const checks: Pick<ModelChecks, "automatic" | "weeklyDue"> = {
+      weeklyDue: () => weeklyAt === undefined,
+      // Like the service: a look lists the provider, so its models are known from then on.
+      automatic: async (trigger, provider) => {
+        started.push(`${trigger}:${provider ?? ""}`);
+        known.add(provider ?? "codex");
+        if (trigger === "weekly") weeklyAt = "now";
+      },
+    };
+    const lookForClis = cliWatcher(
+      checks,
+      async () => [
+        {
+          id: "codex",
+          family: "llm",
+          displayName: "Codex CLI",
+          readiness: { kind: "cli", installed: true },
+        },
+      ],
+      (provider) => known.has(provider),
+    );
+    await lookAtModels(checks, lookForClis);
+    expect(started).toEqual(["weekly:"]);
+    await lookAtModels(checks, lookForClis);
+    expect(started).toEqual(["weekly:"]);
   });
 });

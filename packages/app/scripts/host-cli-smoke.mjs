@@ -287,10 +287,20 @@ try {
        assert.equal(text,"Host fixture answer.");
      }`,
   ]);
-  const calls = (await readFile(join(home, "calls.jsonl"), "utf8"))
-    .trim()
-    .split("\n")
-    .map(JSON.parse);
+  // Slopify checks each text model a CLI lists once, on its own, when it first finds the CLI.
+  const rows = await until(
+    async () =>
+      (await readFile(join(home, "calls.jsonl"), "utf8")).trim().split("\n").map(JSON.parse),
+    (rows) => rows.filter((row) => row.check).length >= 3,
+  );
+  assert.deepEqual(
+    rows
+      .filter((row) => row.check)
+      .map((row) => row.provider)
+      .sort(),
+    ["agy", "claude", "codex"],
+  );
+  const calls = rows.filter((row) => !row.check);
   assert.equal(calls.length, 5);
   for (const call of calls.slice(2))
     assert.deepEqual(call.documents, [
