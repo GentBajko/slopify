@@ -18,6 +18,7 @@ import { fontsKey, listFonts } from "@/subtitles/api";
 import { ChannelLinksEditor } from "@/youtube/channel-links";
 import { ChannelAmbientBed, channelBedForm, channelBedOf } from "./ambient-bed-kit";
 import { type BrandKit, type Channel, channelKey, channelsKey, saveChannel } from "./api";
+import { PostingBlock, type PostingDraft, postingBlocked } from "./posting-block";
 
 // The ambient sound and the links are not text; `ambient-bed-kit.tsx` and
 // `youtube/channel-links.tsx` keep them.
@@ -57,6 +58,11 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
   const [brief, setBrief] = useState(channel.seriesBrief);
   const [kit, setKit] = useState<Draft>(draftOf(channel.brand));
   const [bed, setBed] = useState(channelBedForm(channel.brand));
+  const [posting, setPosting] = useState<PostingDraft>({
+    xTier: channel.xTier ?? "free",
+    accounts: channel.socialAccounts ?? {},
+  });
+  const badAccount = postingBlocked(posting);
   const bedSave = channelBedOf(bed);
   // The default channel shows the older Settings list until it saves a list of its own.
   const legacyLinks = useQuery({
@@ -86,6 +92,11 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
           ...(sendLinks ? { links } : {}),
         },
         baseVersion: channel.version,
+        // Left out while untouched, so a channel saves as it did before posting.
+        ...(posting.xTier === (channel.xTier ?? "free") ? {} : { xTier: posting.xTier }),
+        ...(JSON.stringify(posting.accounts) === JSON.stringify(channel.socialAccounts ?? {})
+          ? {}
+          : { socialAccounts: posting.accounts }),
       }),
     onSuccess: async (saved) => {
       notify("Channel saved.", "success");
@@ -245,6 +256,7 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
         <div className="border-t border-line pt-6">
           <ChannelLinksEditor rows={links} onChange={setLinksDraft} />
         </div>
+        <PostingBlock value={posting} onChange={setPosting} />
       </div>
       <ActionBar
         status={
@@ -256,13 +268,17 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
         <Button
           type="submit"
           variant="primary"
-          disabled={save.isPending || name.trim() === "" || bedSave.blocked || badColour}
+          disabled={
+            save.isPending || name.trim() === "" || bedSave.blocked || badColour || badAccount
+          }
           disabledReason={
             name.trim() === ""
               ? "Give the channel a name"
               : badColour
                 ? "Fix the colour marked above"
-                : "Fix the ambient sound settings above"
+                : badAccount
+                  ? "Fix the account name marked under Posting"
+                  : "Fix the ambient sound settings above"
           }
         >
           Save channel

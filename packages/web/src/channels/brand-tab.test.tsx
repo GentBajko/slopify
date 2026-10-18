@@ -1,5 +1,5 @@
 import type { Channel } from "@app/slices/channels/model.js";
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
@@ -63,6 +63,36 @@ describe("Brand tab", () => {
     });
     expect(saved[0]).toMatchObject({
       brand: { captionColor: "#FFFF00", captionOutlineColor: "#000000" },
+    });
+  });
+
+  it("saves the X subscription and account names with the channel", async () => {
+    const user = userEvent.setup();
+    const saved: unknown[] = [];
+    renderRouted(
+      <BrandTab channel={{ ...channel, xTier: "free", socialAccounts: { x: "@fox" } }} />,
+      routes(saved),
+    );
+    const posting = await screen.findByRole("region", { name: "Posting" });
+    expect((within(posting).getByLabelText("X account") as HTMLInputElement).value).toBe("@fox");
+    await user.click(within(posting).getByRole("button", { name: "Premium" }));
+    await user.type(
+      within(posting).getByLabelText("Instagram account"),
+      "https://instagram.com/fox",
+    );
+    expect(within(posting).getByText(/Type it the way Instagram shows it/)).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Save channel" }).hasAttribute("disabled")).toBe(
+      true,
+    );
+    await user.clear(within(posting).getByLabelText("Instagram account"));
+    await user.type(within(posting).getByLabelText("Instagram account"), "fox.tales");
+    await user.click(screen.getByRole("button", { name: "Save channel" }));
+    await waitFor(() => {
+      expect(saved).toHaveLength(1);
+    });
+    expect(saved[0]).toMatchObject({
+      xTier: "premium",
+      socialAccounts: { x: "@fox", instagram: "fox.tales" },
     });
   });
 });

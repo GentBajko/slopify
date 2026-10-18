@@ -101,4 +101,14 @@ export const socialHelp = {
     body: "Link posts the YouTube link with the title, Text posts the post's words, Media uploads the pictures or video. Link is the default.",
     tutorial: posting("reddit"),
   },
+  "planning.channel.x-tier": {
+    title: "X subscription",
+    body: "The X plan of this channel's account. Free posts take 280 characters and 2 min 20 s of video; Premium and Premium+ take far longer ones. It only changes which warnings a post gets, never what is filled.",
+    tutorial: posting("your-accounts-and-x-subscription"),
+  },
+  "planning.channel.accounts": {
+    title: "Account names",
+    body: "This channel's account on each site, typed the way the site shows it. The extension opens that profile to find a published post's link. It is never used to sign in, and a blank one only means the link is pasted by hand.",
+    tutorial: posting("your-accounts-and-x-subscription"),
+  },
 } as const satisfies Readonly<Record<string, HelpEntry>>;

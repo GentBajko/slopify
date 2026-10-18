@@ -7,6 +7,7 @@ import type {
   Channel,
   ChannelSummary,
 } from "@app/slices/channels/model.js";
+import type { SocialAccounts, XTier } from "@app/slices/social/model.js";
 import { queryOptions } from "@tanstack/react-query";
 import type { Api } from "@/api";
 import { read } from "@/http";
@@ -69,6 +70,9 @@ export async function saveChannel(
     readonly brand: BrandKit;
     readonly seriesBrief: string;
     readonly baseVersion: number;
+    // Brand → Posting; left out, they stay as they are.
+    readonly xTier?: XTier;
+    readonly socialAccounts?: SocialAccounts;
   },
 ): Promise<Channel> {
   return read(await api.fetch(`${root(api)}/${id}`, json("PUT", body)));

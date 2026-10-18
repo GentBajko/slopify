@@ -67,6 +67,8 @@ Mark voices in **Settings → Voices** and Image prompts in **Library → Prompt
 
 **Channel links.** This channel's named links, such as `Patreon` or `Discord`, that a YouTube description fills when it names them in braces (`{{Patreon}}`). See [Channel links](#channel-links).
 
+**Posting.** For posts on other sites (see [Posting to social sites](Posting-to-Social-Sites#your-accounts-and-x-subscription)): the **X subscription** (Free, Premium or Premium+), which only changes which warnings a post gets, and an **account** name per site (like `@yourname` on X or `in/your-name` on LinkedIn), which the extension uses to find a published post's link. They are never used to sign in.
+
 Press **Save channel** when you are done.
 
 To keep one video exactly as its template was saved, untick **Use the channel's brand kit** on Play or in Edit project. The cast and language still apply. Nothing in the kit reaches a project that already started; a project keeps what it was started with.
