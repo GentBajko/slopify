@@ -1,8 +1,8 @@
 ---
-generated_at_commit: d447a799ebc5
-generated_date: 2026-10-11
+generated_at_commit: d6a72d6428ff
+generated_date: 2026-10-18
 capstone_version: 7.0.1
-content_hash: 0eeddfc5290f
+content_hash: 7c3e19ab40d2
 paths_covered:
   - ":(top)package.json"
   - ":(top)package-lock.json"
@@ -38,10 +38,10 @@ Versions below are the ones resolved in `package-lock.json` (lockfile v3, 637 en
 | @hono/zod-validator | 0.9.1 | MIT | request validation at the edge | `packages/app/package.json:34` |
 | zod | 4.5.4 | MIT | schemas at every boundary (also used by `packages/collector`) | `packages/app/package.json:48` |
 | @fastify/busboy | 3.2.2 | MIT | streaming `multipart/form-data` for uploads and font uploads | `packages/app/src/edge/http/multipart.ts:2`, `packages/app/src/edge/http/fonts.ts:3` |
-| @modelcontextprotocol/sdk | 1.32.1 (^1.32.1) | MIT | two uses: the stdio MCP server that exposes project documents to agent CLIs; and Slopify's own `/mcp` endpoint, stateless Streamable HTTP through `WebStandardStreamableHTTPServerTransport` with one `McpServer` per request, where agents call its tools (tests connect with the SDK's `Client` and `StreamableHTTPClientTransport`, `packages/app/src/edge/mcp/mcp.fake.ts:2`-`:3`) | `packages/app/src/adapters/llm/document-reader.ts:6`, `packages/app/src/edge/mcp/http.ts:1`, `packages/app/src/edge/mcp/server.ts:1` |
+| @modelcontextprotocol/sdk | 1.32.1 (^1.32.1) | MIT | two uses: the stdio MCP server that exposes project documents to agent CLIs; and Slopify's own `/mcp` endpoint, stateless Streamable HTTP through `WebStandardStreamableHTTPServerTransport` with one `McpServer` per request, where agents call its tools, and a second endpoint, `/mcp/assistant`, built the same way for the in-app assistant (`packages/app/src/edge/mcp/assistant.ts:302`; tests connect with the SDK's `Client` and `StreamableHTTPClientTransport`, `packages/app/src/edge/mcp/mcp.fake.ts:2`-`:3`) | `packages/app/src/adapters/llm/document-reader.ts:6`, `packages/app/src/edge/mcp/http.ts:1`, `packages/app/src/edge/mcp/server.ts:1` |
 | fflate | 0.8.3 | MIT | ZIP downloads and portable backup export/import | `packages/app/src/slices/storage/portable.ts:19`, `packages/app/src/slices/revisions/downloads.ts:3` |
-| ffmpeg-static | 5.3.0 | GPL-3.0-or-later (binary shipped unlinked, notice in `README.md:107`) | bundled ffmpeg per platform; `SLOPIFY_FFMPEG` / `FFMPEG_BIN` override; missing binary re-fetched with the package's own `install.js` into `<data-dir>/bin/`. The package's release tag reads `b6.1.1`; the linux-x64 asset it fetches reports `ffmpeg version 7.0.2-static` (measured) | `packages/app/src/main.ts:7`, `packages/app/src/adapters/ffmpeg.ts:21` |
-| jspdf | 4.2.1 exact | MIT | writes the Document stage's PDF in-process (picked 2026-09-25) | `packages/app/src/slices/document/render.ts:1` |
+| ffmpeg-static | 5.3.0 | GPL-3.0-or-later (binary shipped unlinked, notice in `README.md:107`) | bundled ffmpeg per platform; `SLOPIFY_FFMPEG` / `FFMPEG_BIN` override; missing binary re-fetched with the package's own `install.js` into `<data-dir>/bin/`. The package's release tag reads `b6.1.1`; the linux-x64 asset it fetches reports `ffmpeg version 7.0.2-static` (measured) | `packages/app/src/main.ts:8`, `packages/app/src/adapters/ffmpeg.ts:21` |
+| jspdf | 4.2.1 exact | MIT | writes the Document stage's PDF in-process (picked 2026-09-25); a design's PDF is drawn by the same library inside a forked worker (`packages/app/src/slices/designs/pdf-worker.ts`) | `packages/app/src/slices/document/render.ts:1` |
 | onnxruntime-node | 1.30.0 exact | MIT | native CPU acoustic inference for subtitle alignment in a child process (picked 2026-09-25, replacing onnxruntime-web as the primary runtime) | `packages/app/src/adapters/alignment/worker.ts:189` |
 | onnxruntime-web | 1.30.0 exact | MIT | single-threaded WASM fallback where no native build loads (Intel macOS) | `packages/app/src/adapters/alignment/worker.ts:192` |
 | remark, strip-markdown | 15.0.1 / 6.0.0 | MIT | markdown → plain-text narration source | `packages/app/package.json:42` |
@@ -58,10 +58,12 @@ Versions below are the ones resolved in `package-lock.json` (lockfile v3, 637 en
 | @tanstack/react-query | 5.102.8 | MIT | server state, invalidated from SSE | `packages/web/package.json:16` |
 | hono | 4.13.7 | MIT | typed API client `hc` | `packages/web/src/api.ts:55` |
 | @js-temporal/polyfill | 0.5.1 | ISC | IANA-zone conversion for schedule inputs | `packages/web/src/schedules/time.ts:3` |
-| radix-ui, class-variance-authority, clsx, tailwind-merge | 1.6.7 / 0.7.1 / 2.1.1 / 3.6.0 | MIT / Apache-2.0 / MIT / MIT | primitives and class/variant composition for `components/kit` | `packages/web/package.json:18` |
+| radix-ui, clsx, tailwind-merge | 1.6.7 / 2.1.1 / 3.6.0 | MIT | primitives and class composition for `components/kit` (`class-variance-authority` was dropped in 4.0) | `packages/web/package.json:18` |
 | lucide-react | 1.39.0 | ISC | icon family | `packages/web/package.json:21` |
 | @fontsource/barlow, @fontsource/barlow-condensed, @fontsource/jetbrains-mono | 5.3.0 | OFL-1.1 | self-hosted typefaces | `packages/web/src/main.tsx:8` |
 | react-markdown, remark-gfm | 10.1.0 / 4.0.1 | MIT | article display | `packages/web/package.json:26` |
+| uqr | 0.1.3 | MIT | draws the QR code Settings → General → Remote access shows for the Tailscale address (picked 2026-10-18; a QR encoder is more than a few lines) | `packages/web/src/remote-access/qr-code.tsx:2` |
+| zod | 4.5.4 | MIT | the web package validates its own API answers (declared in 4.0; it was already imported) | `packages/web/package.json`, `packages/web/src/http.ts` |
 | pdfjs-dist | 6.3.289 | Apache-2.0 | renders PDF pages in the browser, loaded lazily with its worker | `packages/web/src/components/pdf-pages.tsx:60` |
 
 ### packages/collector (`@slopify/collector`)
@@ -89,6 +91,7 @@ Versions below are the ones resolved in `package-lock.json` (lockfile v3, 637 en
 | System/custom font catalog | `node:fs` directory scan plus SFNT metadata parsing; uploads reuse Busboy | `packages/app/src/slices/fonts/` |
 | Uploads | `@fastify/busboy`: Hono `c.req.formData()` was measured on Node 24 at +1586 MiB RSS for a 512 MiB part (undici buffers every part), so the no-dependency rung failed | `packages/app/src/edge/http/multipart.ts:2` |
 | Marketing page | plain HTML, CSS, one module, served as static assets | `packages/site/wrangler.jsonc` |
+| QR code |  `uqr` is taken for the remote-access page: an encoder with error correction is not a few lines | `packages/web/src/remote-access/qr-code.tsx:2` |
 | Mounting MCP on Hono | `@hono/mcp` not taken: the SDK's web-standard transport answers `c.req.raw` in one line (`transport.handleRequest(c.req.raw, { parsedBody })`) | `packages/app/src/edge/mcp/http.ts:96` |
 
 ## Picked but not yet installed
@@ -113,14 +116,14 @@ Versions below are the ones resolved in `package-lock.json` (lockfile v3, 637 en
 | @tailwindcss/vite, tailwindcss | 4.3.3 | MIT | web | Tailwind pipeline |
 | @vitejs/plugin-react | 6.1.1 | MIT | web | React transform |
 | @testing-library/dom, @testing-library/react, @testing-library/user-event | 10.4.1 / 16.3.3 / 14.6.7 | MIT | web | component tests |
-| happy-dom | 20.13.2 | MIT | web | DOM for component tests |
+| happy-dom | 20.13.2 | MIT | web, extension | DOM for component tests (the extension declared it in 4.0) |
 | @types/react, @types/react-dom | 19.2.18 / 19.2.7 | MIT | web | React declarations |
 | wrangler | 4.144.0 (^4.143.0) | MIT OR Apache-2.0 | collector, site | local dev, D1 schema, deploys to Cloudflare |
-| esbuild | 0.28.1 | MIT | extension | bundles the browser extension's six entry points (`background`, `comment`, `content`, `options`, `popup`, `video-frame`) (`packages/extension/scripts/build.mjs:21`, `:46-48`); also imported by `packages/app/scripts/ts-resolve.mjs:4`, which reaches it through hoisting (not declared in `packages/app/package.json`) |
+| esbuild | 0.28.1 | MIT | extension | bundles the browser extension's six entry points (`background`, `comment`, `content`, `options`, `popup`, `video-frame`) (`packages/extension/scripts/build.mjs:21`, `:46-48`); also imported by `packages/app/scripts/ts-resolve.mjs:4`; since 4.0 it is declared in `packages/app/package.json` devDependencies, beside `@types/mdast` |
 | fflate | 0.8.3 | MIT | extension | zips the extension builds (`packages/extension/scripts/build.mjs:22`) |
 | playwright | 1.63.0 | Apache-2.0 | site | records the walkthrough video (`packages/site/scripts/record-walkthrough.mjs:36`) |
 | ffmpeg-static | 5.3.0 | GPL-3.0-or-later | site | encodes the walkthrough (`packages/site/scripts/record-walkthrough.mjs:35`) |
-| GitHub Actions | hosted | n/a | repo | CI on Node 26 with `npm audit --audit-level=high` (`.github/workflows/ci.yml:25`); tag release runs `npm publish --provenance` via OIDC (`.github/workflows/release.yml:61`) and uploads the extension to the Chrome Web Store (`.github/workflows/release.yml:66-83`) |
+| GitHub Actions | hosted | n/a | repo | the daily Catalogue workflow (`.github/workflows/catalogue.yml`, cron `17 5 * * *`) runs `packages/app/scripts/catalogue-build.ts`, which proposes `packages/app/src/assets/models.yaml` and `models-lifecycle.yaml` from OpenRouter's public metadata, runs `vitest run packages/app/src/catalog`, and opens or updates one pull request on `chore/catalogue-daily` titled like "Models: 3 new, 1 retired, 2 price changes" (it merges nothing and starts CI on that branch with `workflow_dispatch`); CI on Node 26 with `npm audit --audit-level=high` (`.github/workflows/ci.yml:25`); tag release runs `npm publish --provenance` via OIDC (`.github/workflows/release.yml:61`) and uploads the extension to the Chrome Web Store (`.github/workflows/release.yml:66-83`) |
 | Dependabot | hosted | n/a | repo | weekly npm (root only, one lockfile) and github-actions updates (`.github/dependabot.yml`) |
 
 Root `overrides` pins `sharp` 0.35.4 inside `miniflare` (`package.json:25`).
@@ -137,7 +140,7 @@ Every keyed adapter receives only its own key reader, `keyOf(provider)`, read pe
 | Claude Code CLI | `claude -p --output-format stream-json [--allowedTools …] [--model m]`; the CLI's own login | `packages/app/src/adapters/llm/claude-code.ts:75`; `adapter-registry.ts:80` | user's Anthropic subscription or key | "not installed" when absent; a failing call ends the attempt |
 | Codex CLI | `codex exec --json --skip-git-repo-check --sandbox …` in a private temporary workspace; minimum version 0.149.1 | `packages/app/src/adapters/llm/codex.ts:102`; floor `packages/app/src/slices/settings/cli-status.ts:25` | user's OpenAI subscription or key | missing, old or unverifiable versions disable selection |
 | Antigravity CLI (`agy`, provider id `gemini`) | `--input-format stream-json --output-format stream-json --disable-slash-commands [--model m] [--effort e]` (no `--print-timeout`, agy 1.3.6 has none by default; never `--dangerously-skip-permissions`), prompt as one stdin event; web search through `search_web` only, pictures through `view_file` in the run's private folder (not over the Docker bridge); models from `agy models`; install `curl -fsSL https://antigravity.google/cli/install.sh \| bash`, docs `antigravity.google/docs/cli/headless.md` | `packages/app/src/adapters/llm/antigravity.ts:42`, `packages/app/src/adapters/llm/antigravity-models.ts:36` | user's Google login, kept by `agy` itself (it can reuse the Antigravity desktop app's); Slopify checks it with `agy models`; no Slopify price assertion | missing/unusable executable disables selection; replaced the retired Gemini CLI |
-| Host helper | local HTTP to the host-side helper that runs the three CLIs when Slopify runs in Docker; 64-hex token file in `SLOPIFY_HOST_CLI_DIR`; 16 MB request cap | `packages/app/src/adapters/host-cli/index.ts:36`, `packages/app/src/adapters/host-cli/transport.ts:25`; wired `packages/app/src/main.ts:332` | n/a | "cannot reach its host helper" error with the `--docker` remedy |
+| Host helper | local HTTP to the host-side helper that runs the three CLIs when Slopify runs in Docker; 64-hex token file in `SLOPIFY_HOST_CLI_DIR`; 16 MB request cap | `packages/app/src/adapters/host-cli/index.ts:36`, `packages/app/src/adapters/host-cli/transport.ts:25`; wired `packages/app/src/main.ts:407` | n/a | "cannot reach its host helper" error with the `--docker` remedy |
 
 ### Speech (TTS)
 
@@ -167,8 +170,11 @@ Image-to-video clips from fal.ai and Replicate share `downloadVideo`, which reje
 | Service | Role | Connection setup | Outage behaviour |
 |---|---|---|---|
 | Hugging Face | subtitle alignment weights, fetched on first use and SHA256-checked: English `Xenova/wav2vec2-base-960h` rev `a19f851b…`, the precision chosen in Settings: fp32 377,887,594 bytes (default), fp16 189,192,204 bytes or int8 95,286,046 bytes (Apache-2.0); multilingual `NewComer00/wav2vec2-xlsr-multilingual-56-ONNX` rev `2d48b01b…`, q4, 247,576,761 bytes (Apache-2.0) | `packages/app/src/adapters/alignment/cache.ts:41`, `packages/app/src/adapters/alignment/multilingual.ts:9` | subtitles unavailable until the download succeeds; audio and text never leave the computer |
-| GitHub raw | published `models.yaml` catalogue refresh, 1 MiB cap, 15 s timeout, no redirects | `packages/app/src/catalog/store.ts:19`, `:98` | last working catalogue kept, warning shown |
-| OpenRouter public models list | live ids and per-token prices, no key, 16 MiB cap | `packages/app/src/catalog/store.ts:21`, `:150` | same |
+| GitHub raw | published `models.yaml` catalogue refresh, 1 MiB cap, 15 s timeout, no redirects | `packages/app/src/catalog/store.ts:19`, `:136` | last working catalogue kept, warning shown |
+| GitHub raw (lifecycle) | published `models-lifecycle.yaml` (retirement dates and replacements), downloaded with the catalogue, 256 KiB cap; optional: a failed download keeps the last copy or the shipped one | `packages/app/src/catalog/store.ts:110`, `packages/app/src/catalog/lifecycle.ts:25` | same |
+| Public search interest | Google search suggestions (DuckDuckGo's when Google does not answer) and Wikipedia article views of the last month, no key, 4 s per request; asked only for schedules set to rank topics by interest. Google Trends is not asked: it answers 429/404 to keyless calls | `packages/app/src/adapters/interest/search-interest.ts:37` (`interestRequestMs` `:9`) | the topic is ranked without interest and the schedule says so |
+| Tailscale (the computer's own CLI) | not a dependency: Settings → General → Remote access runs the person's installed `tailscale` for `status --json` and `serve` only; the command list refuses anything else, and `funnel` is never run | `packages/app/src/edge/remote-access/cli.ts:17`, `:33`, `:83` | the page names the fix (install, sign in, HTTPS certificates, operator, port in use) |
+| OpenRouter public models list | live ids and per-token prices, no key, 16 MiB cap | `packages/app/src/catalog/store.ts:22`, `:189` | same |
 | npm registry | update check of `@gentbajko/slopify` `latest` and update installs | `packages/app/src/updater/registry.ts:10`, `packages/app/src/updater/model.ts:40`, `packages/app/src/updater/worker.ts:34` | "The npm release could not be checked." |
 | Notification URL (user-supplied, e.g. ntfy) | plain-text POST per notice, 5 s timeout, `redirect: "manual"` | `packages/app/src/slices/notifications/send.ts:19` | failure text recorded; URL never repeated |
 | Cloudflare Workers + D1 | telemetry collector at `https://collector.slopify.stream`, D1 binding `DB` | `packages/app/src/slices/telemetry/collector-client.ts:26`; `packages/collector/wrangler.jsonc`; `packages/collector/src/index.ts:26` | events queue locally; site shows dashes |

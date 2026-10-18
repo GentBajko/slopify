@@ -1,17 +1,20 @@
 ---
 absorbed_from: features/2026-09-10-project-templates@2026-09-13
-generated_at_commit: e9226a34aa8a
-generated_date: 2026-10-02
+generated_at_commit: d6a72d6428ff
+generated_date: 2026-10-18
 capstone_version: 7.0.1
 content_hash: 67d99c3c8e93
 paths_covered:
   - ":(top)packages/app/src/slices/project-templates/**"
   - ":(top)packages/app/src/edge/http/project-templates.ts"
   - ":(top)packages/app/src/kernel/db/migrations/0008-project-templates.sql"
+  - ":(top)packages/app/src/slices/project-templates/stand-ins.ts"
+  - ":(top)packages/app/src/slices/template-studio/schedule-gate.ts"
   - ":(top)packages/app/src/slices/voices/model.ts"
   - ":(top)packages/app/src/slices/voices/audio-files.ts"
   - ":(top)packages/web/src/templates/**"
   - ":(top)packages/web/src/routes/templates.tsx"
+  - ":(top)packages/web/src/template-studio/gate-words.ts"
   - ":(top)packages/web/src/project/save-template.tsx"
   - ":(top)packages/web/src/project/header.tsx"
   - ":(top)packages/web/src/play/save-template-dialog.tsx"
@@ -29,21 +32,25 @@ pauses, image scaling, chunking, subtitles and checkpoint stages. It never keeps
 typed for one video, queued variants, a font upload, credentials, run state, outputs or media
 bytes.
 
+Since 4.0 a template is also set up once in its studio, section by section, with live samples, and its schedules run only a version marked ready once the person has first marked one (46-template-studio.md); that chapter owns the studio's Save, samples, Mark ready and template packs. This chapter covers the template itself: its versions, Save, Apply and the next chapter. Hidden sample projects of a template are made through the studio and appear in no list.
+
 The same slice also makes "Make the next chapter": an audiobook written as a book, one project
 per chapter (`packages/app/src/slices/project-templates/next-chapter.ts:13-17`).
 
 ## Trigger & preconditions
 
-| Trigger | Where | Endpoint (mounted at `/api/project-templates`, `packages/app/src/edge/http/app.ts:182`) |
+| Trigger | Where | Endpoint (mounted at `/api/project-templates`, `packages/app/src/edge/http/app.ts:236`) |
 |---|---|---|
-| Save template (from a Play draft) | Play's Save as template dialog (`packages/web/src/play/save-template-dialog.tsx:62-95`); Library → Templates "Save a setup" (`packages/web/src/routes/templates.tsx:111-135`) | `POST /` (`packages/app/src/edge/http/project-templates.ts:100`) |
-| Save as template (from a project) | project page dialog (`packages/web/src/project/save-template.tsx:43-60`) | `POST /from-project/:projectId` (`project-templates.ts:63-78`) |
-| Make the next chapter | project header button, shown only on an audiobook whose status is `done` or `partial` (`packages/web/src/project/header.tsx:82-90,118-123`) | `POST /next-chapter/:projectId` (`project-templates.ts:80-99`) |
-| Edit, rename, restore an older version | Library → Templates row actions and History drawer (`packages/web/src/templates/api.ts:93-136`, `packages/web/src/templates/row-parts.tsx:21-40,64-100`) | `PUT /:id` (`project-templates.ts:121-132`) |
+| Save template (from a Play draft) | Play's Save as template dialog (`packages/web/src/play/save-template-dialog.tsx:62-95`); Library → Templates "Save a setup" (`packages/web/src/routes/templates.tsx:111-135`) | `POST /` (`packages/app/src/edge/http/project-templates.ts:103`) |
+| Save as template (from a project) | project page dialog (`packages/web/src/project/save-template.tsx:43-60`) | `POST /from-project/:projectId` (`project-templates.ts:67-83`) |
+| Make the next chapter | project header button, shown only on an audiobook whose status is `done` or `partial` (`packages/web/src/project/header.tsx:82-90,118-123`) | `POST /next-chapter/:projectId` (`project-templates.ts:84-102`) |
+| Edit, rename, restore an older version | Library → Templates: **Open studio** on the row (settings are changed in the studio, whose Save is `POST /api/template-studio/:id/save`, 46), the pencil to rename in place, and the History drawer under More (`packages/web/src/routes/templates.tsx`, `packages/web/src/templates/api.ts:93-136`, `packages/web/src/templates/row-parts.tsx`) | `PUT /:id` (`project-templates.ts:124-135`) |
 | Duplicate | Library → Templates, saved as "`<name>` copy" (`routes/templates.tsx:177-196`) | `POST /` |
-| Delete (to trash) | Library → Templates (`routes/templates.tsx:197-210`) | `DELETE /:id` (`project-templates.ts:133-144`) |
-| Use in Play (apply) | Library → Templates (`routes/templates.tsx:136-175`) | `POST /:id/instantiate` (`project-templates.ts:145-160`) |
-| List / read a version | Library → Templates, Play template picker, History | `GET /`, `GET /:id?version=` (`project-templates.ts:62,104-120`) |
+| Delete (to trash) | Library → Templates, under More (`routes/templates.tsx`) | `DELETE /:id` (`project-templates.ts:136-147`) |
+| Use in Play (apply) | Library → Templates (`routes/templates.tsx`) | `POST /:id/instantiate` (`project-templates.ts:148-163`) |
+| List / read a version | Library → Templates, Play template picker, History; each listed template also carries `gate` (`{ head, runs, gated, gate }`: which version its schedules run, `slices/template-studio/schedule-gate.ts:22`) | `GET /`, `GET /:id?version=` (`project-templates.ts:58-66`, `:107-123`) |
+| Import a template pack | Library → Templates **Import template pack** (46) | `POST /api/template-studio/packs/import` |
+| Design templates | Listed under **Design templates** on the same screen, each opened in its own studio (46) | `/api/design-templates` |
 
 Preconditions:
 
@@ -55,10 +62,10 @@ Preconditions:
   server refuses 121-200 there as invalid input (`packages/app/src/slices/project-templates/from-project.ts:27`).
 - From a project: the caller names the project's current revision id (`from-project.ts:52-54`).
 - Next chapter: the project's current revision has `voices.format === "audiobook"` (`next-chapter.ts:68-75`).
-- The routes return 404 when the app was started without draft services (`project-templates.ts:56-59`).
+- The routes return 404 when the app was started without draft services (`project-templates.ts:51-56`).
 - The bundled-sample read-only guard covers `/api/projects/:id/*` only
   (`packages/app/src/edge/http/app.ts:277-293`); template routes are outside it, so Save as
-  template and Make the next chapter work on a sample project.
+  template and Make the next chapter work on a sample project. A template's own hidden studio sample is protected the other way round: a write to `/api/projects/:id/*` on it is refused with 409 `template-sample` (`edge/http/app.ts:390-401`, 46).
 
 ## Steps
 
@@ -101,7 +108,7 @@ Preconditions:
 2. Unknown project → `not-found`; revision id not current → `conflict` (`from-project.ts:50-56`).
 3. A project whose images are `generate` but has any image definition with `source: "provide"`
    returns `invalid-input` (`from-project.ts:57-63`).
-4. `documentFromProject` (`from-project.ts:81-297`) rebuilds a Play document from the revision:
+4. `documentFromProject` (`from-project.ts:82`) rebuilds a Play document from the revision:
    - Prompt bodies come from the revision's `promptTemplates`, else `config.rendered`
      (`from-project.ts:88-100`), stamped with the revision's `createdAt`.
    - Image prompts: a project generating images without `imageScale` gets one prompt per
@@ -122,6 +129,7 @@ Preconditions:
      with the project's targets), sentence/paragraph pauses, `imageScenes`, `thumbnailCount: 3`,
      `youtubeDescription` are copied only when the project has them (`from-project.ts:214-265`).
    - Voices are copied without `book` (`from-project.ts:239-241,299-302`).
+   - The form passes through `withoutSampleStandIns` (`from-project.ts:189`, `packages/app/src/slices/project-templates/stand-ins.ts:9-28`): a text, voice or picture provider that is a bundled sample's stand-in is left blank, and so is a speaker's, so a template made from a sample asks for the person's own providers. `templateById` applies the same function to every template it reads (`packages/app/src/slices/project-templates/repo.ts:31-35`), so a template saved from a sample before this reads the same way.
    - Subtitle `language` is always `"en"`; chunking defaults are `whole`/500 words/3000
      characters; subtitle defaults `off`/`default`/48/`bottom` (`from-project.ts:269-282`).
    - `expectedWords` is the project's `imageScale.words`, else 1500 (`from-project.ts:293`).
@@ -136,7 +144,7 @@ current head; with another hash, `conflict` (`service.ts:89-92`). `baseVersion` 
 head → `conflict` (`service.ts:93`). `templateSetup` runs again, revision `baseVersion + 1` is
 inserted, and the head moves with `WHERE head_version=baseVersion` (`service.ts:94-108`).
 Rename re-saves the head document under the new name as a new version
-(`packages/web/src/templates/api.ts:116-136`). History reads every version 1..head and Restore
+(`packages/web/src/templates/api.ts:116-136`). The studio's Save calls the same `updateTemplate` through `saveStudio` (`packages/app/src/slices/template-studio/save.ts:109-236`, 46), and a version written by Slopify itself (a retired-model switch, a restore under a new name) is given the gate of the version it came from, so schedules never stop over a change their user did not make (`carryGateOnto`, `slices/template-studio/repo.ts:232`). History reads every version 1..head and Restore
 saves an older version's document as a new head version (`row-parts.tsx:64-100`).
 
 ### Apply (Use in Play)
@@ -184,6 +192,8 @@ no template row, no instantiation receipt and no `templateSource` are written
 |---|---|---|
 | Article prompt kind | `script` when `voices.source === "script"` and audio is generated, else `article` | `setup.ts:16-19`; `from-project.ts:101` |
 | Library body | live row by name wins; snapshot row is the fallback | `library/snapshot.ts:40-65` |
+| Version a schedule runs | until a version is first marked ready in the studio, the newest; after that, the newest version that is marked ready, carried from one, or saved before the studio | `packages/app/src/slices/template-studio/gate.ts:19-36`, `schedule-gate.ts:22-48` |
+| Sample stand-in providers | blanked in a template made from, or read as, a bundled sample's setup | `stand-ins.ts:9-28`, `repo.ts:31-35` |
 | Template language | a language picked on Play (English included) is stored; a project made in English has no `language` (English is never stored on a run, `packages/app/src/slices/play-drafts/convert.ts:255-256`), so its template has none | `from-project.ts:218` |
 | Language at Review/Start | a draft without `language` takes its channel's `brand.language`, with the brand kit on or off; the channel is the draft's, else its `templateSource` template's, else the default | `packages/app/src/slices/channels/runs.ts:19-31,43-49`; `packages/app/src/slices/play-drafts/review-inputs.ts:84-89`. Channel language settings: `30-channels-and-cast.md` |
 | Book on a template | removed; only Make the next chapter sets it | `from-project.ts:239-241` |
@@ -197,24 +207,24 @@ no template row, no instantiation receipt and no `templateSource` are written
 
 HTTP mapping for template routes: `not-found` 404; `conflict` and `referenced-by-schedule` 409;
 `invalid-input` and `missing-prompt` 400; bodies are problem details with `extensions.reason`
-(`project-templates.ts:29-51`).
+(`refusal` with the status table, `project-templates.ts:31-46`).
 
 | Case | Result | Pointer |
 |---|---|---|
-| Invalid body/params | `onInvalid` problem, 400 | `project-templates.ts:65-70` |
+| Invalid body/params | `onInvalid` problem, 400 | `project-templates.ts:69-76` |
 | Create replay, same body | returns version 1 | `service.ts:49-52` |
 | Create with a used id, different body | 409 | `service.ts:52` |
-| Update stale `baseVersion` | 409 "This template or its project changed…" | `service.ts:93`; `project-templates.ts:47` |
-| A chosen prompt/entry deleted and absent from the snapshot | 400 `missing-prompt` | `setup.ts:40,47`; `project-templates.ts:43` |
+| Update stale `baseVersion` | 409 "This template or its project changed…" | `service.ts:93`; `project-templates.ts:42-43` |
+| A chosen prompt/entry deleted and absent from the snapshot | 400 `missing-prompt` | `setup.ts:40,47`; `project-templates.ts:38-39` |
 | From project, revision no longer current | 409 | `from-project.ts:53-54` |
 | From project with provided images in a generated set | 400 | `from-project.ts:57-63` |
-| Delete while a schedule uses it | 409 "…cancel and delete them first…" | `service.ts:122-127`; `project-templates.ts:41` |
+| Delete while a schedule uses it | 409 "…cancel and delete them first…" | `service.ts:122-127`; `project-templates.ts:36-37` |
 | Apply, same draft id for another template/version | 409 | `service.ts:147-148` |
 | Apply, draft create fails | 409 | `service.ts:158` |
 | Apply while Play is starting a run or holds an unsaved draft | client refusal, no request | `routes/templates.tsx:137-141` |
 | Apply, draft made but Play did not open it | "Press Use in Play again", same draft id reused | `routes/templates.tsx:167-174` |
 | Next chapter, bad id / missing project | 404 with message | `next-chapter.ts:42-47,61-67` |
-| Next chapter on a non-audiobook | 400 `not-an-audiobook` | `next-chapter.ts:69-75`; `project-templates.ts:90-91` |
+| Next chapter on a non-audiobook | 400 `not-an-audiobook` | `next-chapter.ts:69-75`; `project-templates.ts:94-96` |
 | Next chapter draft create fails | 409 "Press Make the next chapter again…" | `next-chapter.ts:97-103` |
 | Next chapter made but Play's open draft unsaved | client message; draft id kept for the retry | `routes/project.tsx:848-853` |
 | Next chapter pressed twice | second press returns the first draft | `next-chapter.ts:50-54` |
@@ -266,15 +276,15 @@ renames a clashing template with `freeName` and saves that as a new version
   subtitle shows the book label for projects in a book (`header.tsx:164-166`).
 - Other writers of templates: schedules run a template version (`25-scheduled-jobs.md`); the
   retired-model switch saves templates through `updateTemplate`
-  (`packages/app/src/slices/model-upkeep/switch.ts:168`, `19-catalogue-thinking.md`); starter packs
+  (`packages/app/src/slices/model-upkeep/switch.ts:191-239`, `19-catalogue-thinking.md`), carrying the gate of the version it switched; the template studio's Save and its imported packs (`46-template-studio.md`); starter packs
   install templates (`41-onboarding-and-sample.md`); backups export and import both tables
-  (`packages/app/src/slices/storage/backup-export.ts:351`, `packages/app/src/slices/storage/backup-import.ts:793-815`).
+  (`packages/app/src/slices/storage/backup-export.ts:351`, `packages/app/src/slices/storage/backup-import.ts:793-815`); the gates travel with them in `template_gates` (`backup-export.ts:366`, `backup-import.ts:836`).
 
 ## Dimensions not in play
 
-- Money: no provider call or cost in any template or next-chapter operation.
+- Money: no provider call or cost in any template or next-chapter operation of this chapter; the studio's samples spend, under a daily budget (46-template-studio.md).
 - Sharing / multi-user: templates are local to one installation; no permissions model.
-- Scheduling: templates carry no schedule of their own; schedules reference them (`25-scheduled-jobs.md`).
+- Scheduling: templates carry no schedule of their own; schedules reference them and run the version the template's gate allows (`25-scheduled-jobs.md`, `46-template-studio.md`).
 - Credentials and media bytes: never stored in a template document.
 - Book entity: no `books` table; a book is `voices.book` on each chapter project's revision
   (`voices/model.ts:62-72,89-90`), and no list or ordering of a book's chapters exists outside

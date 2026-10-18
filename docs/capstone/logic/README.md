@@ -12,7 +12,7 @@ paths_covered:
 
 # Business logic index
 
-One scenario file per externally triggerable capability. Runs flow from setup (Play drafts, templates, schedules, onboarding) through admission, the revision runner and its stages, to downloads, upload preparation, the Studio extension's work in YouTube Studio, and Home; an external agent drives the same routes through MCP (45). Each file carries the eight scenario sections; this index carries the map and the rules every scenario shares.
+One scenario file per externally triggerable capability. Runs flow from setup (Play drafts, templates, schedules, onboarding) through admission, the revision runner and its stages, to downloads, upload preparation, the Studio extension's work in YouTube Studio, and Home; an external agent drives the same routes through MCP (45) and the in-app assistant (50); Template Studio (46), designs (52) and model checks (48) sit beside them. Each file carries the eight scenario sections; this index carries the map and the rules every scenario shares.
 
 ## Trigger & preconditions
 
@@ -67,6 +67,14 @@ Open the scenario whose capability a change touches; `depends_on` in each file's
 | 43 Start at login | [43-autostart.md](43-autostart.md) |
 | 44 Studio autopilot: posting plan and release calendar, Studio checks, Details touches, pinned comment, A/B tests on request, Studio numbers | [44-studio-autopilot.md](44-studio-autopilot.md) |
 | 45 MCP agent access: endpoint and Origin rule, tool parity and exclusions, needs_attention, attend routine, "by agent" attribution | [45-mcp-agent-access.md](45-mcp-agent-access.md) |
+| 46 Template studio: sections, samples, budget, Mark ready, bake-off, packs | [46-template-studio.md](46-template-studio.md) |
+| 47 Built-in Slopify_ keywords and the digest | [47-builtin-keywords.md](47-builtin-keywords.md) |
+| 48 Model lists and model checks | [48-model-lists-and-checks.md](48-model-lists-and-checks.md) |
+| 49 The promise check review | [49-promise-check.md](49-promise-check.md) |
+| 50 The in-app assistant | [50-in-app-assistant.md](50-in-app-assistant.md) |
+| 51 Autopilot health, weekly report and topic scoring | [51-autopilot-health-and-topic-scoring.md](51-autopilot-health-and-topic-scoring.md) |
+| 52 Designs: picture editing, layout, render and PDF, by-date schedules | [52-designs.md](52-designs.md) |
+| 53 Remote access, the /api request guard and the same-origin rule | [53-remote-access-and-request-guard.md](53-remote-access-and-request-guard.md) |
 
 ## Branches
 

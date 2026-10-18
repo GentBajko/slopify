@@ -1,6 +1,6 @@
 ---
-generated_at_commit: d83482c1175e
-generated_date: 2026-10-02
+generated_at_commit: d6a72d6428ff
+generated_date: 2026-10-18
 capstone_version: 7.0.1
 content_hash: 97820a328e81
 paths_covered:
@@ -62,7 +62,7 @@ Dependency direction: slices build `LlmDocument[]` values and hand them to the w
 
 | Entry | Site |
 |---|---|
-| Rebuild research/article execution | `executeProviderRecipe` (`packages/app/src/slices/rebuild/runtime-provider.ts:43`) |
+| Rebuild research/article execution | `executeProviderRecipe` (`packages/app/src/slices/rebuild/runtime-provider.ts:46`) |
 | Per-provider workspace creation | `documentWorkspace` calls in `packages/app/src/adapters/llm/claude-code.ts:189`, `codex.ts:202` (Antigravity CLI inlines documents into the prompt instead, `antigravity.ts:105-107`) |
 | Document reader process | `packages/app/src/adapters/llm/document-reader.ts:10` (spawned with `process.execPath <reader> <dir>`, `packages/app/src/adapters/llm/document-workspace.ts:50`-`:55`) |
 | Host helper process | `packages/app/src/edge/host-cli.ts:50` (`startHostServer` with `createHostRuntime`) |
@@ -87,7 +87,7 @@ Read verification: every adapter calls `documents?.verifyRead()` before acceptin
 
 ## Composition
 
-- Container app: `createHostCliClient` is built when `SLOPIFY_CONTAINER=1` or `SLOPIFY_HOST_CLI_DIR` is set (`packages/app/src/main.ts:331`); `buildRegistry` registers `hostCli.llm(id)` for each of `claude-code`, `codex`, `gemini` (`packages/app/src/adapter-registry.ts:157`).
+- Container app: `createHostCliClient` is built when `SLOPIFY_CONTAINER=1` or `SLOPIFY_HOST_CLI_DIR` is set (`packages/app/src/main.ts:407`); `buildRegistry` registers `hostCli.llm(id)` for each of `claude-code`, `codex`, `gemini` (`packages/app/src/adapter-registry.ts:157`).
 - Host helper: `packages/app/src/edge/host-cli.ts:50` wires `startHostServer` + `createHostRuntime({ run: nodeRunCli, ... })`; `createHostRuntime` maps IDs to `claudeCodeLlm`, `codexLlm`, `antigravityLlm` (`packages/app/src/host-cli/runtime.ts:38`).
 - Slices receive only the wrapped provider calls, never adapters (`biome.json:83`-`:89`).
 

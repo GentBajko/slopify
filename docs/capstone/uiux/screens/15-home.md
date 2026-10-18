@@ -1,6 +1,6 @@
 ---
-generated_at_commit: e9226a34aa8a
-generated_date: 2026-10-02
+generated_at_commit: d6a72d6428ff
+generated_date: '2026-10-18'
 capstone_version: 7.0.1
 content_hash: d0fc34307339
 absorbed_from:
@@ -8,6 +8,8 @@ absorbed_from:
 paths_covered:
   - ":(top)packages/web/src/routes/home.tsx"
   - ":(top)packages/web/src/home/**"
+  - ":(top)packages/web/src/components/model-checks.tsx"
+  - ":(top)packages/web/src/lib/zoned.ts"
 ---
 
 # Home
@@ -20,13 +22,14 @@ Home is also the first-run gate: when the onboarding view reports `show: true` i
 ## Composition
 | Region | What renders | Kit / tokens |
 |---|---|---|
-| Page header | `display`-size title: the current channel's name, else "Home"; crumb is today's date (`weekday long, day, month long`); meta "Every channel" when no channel is picked; actions: secondary ButtonLink "New project" (plus icon) to `/play`, quiet ButtonLink "Open calendar" (calendar icon) to `/calendar` (`packages/web/src/routes/home.tsx:25-29`, `packages/web/src/routes/home.tsx:119-136`) | `PageHeader display` renders `sl-display` (`packages/web/src/components/kit/layout.tsx:22-23`, `packages/web/src/components/kit/layout.tsx:52`, `packages/web/src/styles/kit.css:375`), `ButtonLink` |
+| Page header | `display`-size title: the current channel's name, else "Home"; crumb is today's date (`weekday long, day, month long`); meta "Every channel" when no channel is picked; actions: secondary ButtonLink "Create" (plus icon) to `/play`, quiet ButtonLink "Open calendar" (calendar icon) to `/calendar` (`packages/web/src/routes/home.tsx:142-159`) | `PageHeader display` renders `sl-display` (`packages/web/src/components/kit/layout.tsx:22-23`, `packages/web/src/components/kit/layout.tsx:52`, `packages/web/src/styles/kit.css:375`), `ButtonLink` |
 | Phone channel picker | Below 768px only: `ChannelPicker` plus InfoTip `home.channel` (`packages/web/src/routes/home.tsx:137-140`, `packages/web/src/channels/current.tsx:91`, `packages/web/src/help/entries/settings.ts:293-297`) | `md:hidden`, `helpScope` |
 | Board | `Board split="main-side"`: main column and side column at 1.35 : 1, stacked below 1024px (`packages/web/src/routes/home.tsx:146`, `packages/web/src/styles/shell.css:866-868`, `packages/web/src/styles/shell.css:883-891`) | `Board`, `BoardColumn` (`packages/web/src/components/kit/board.tsx:15-33`) |
 | Main: Needs you | One work list (`WorkList`, `packages/web/src/home/work-list.tsx`): `SectionHead` "Needs you" (InfoTip `home.needs-you`, meta "N decisions waiting · N ready to upload") over the waiting and stopped, paused, held-topics and failed items, in that order, then up to four `ReadyItem`s; only the first row's action is primary; "See all N ready to upload" (Projects `?show=ready`) when there are more | `sl-home-list` |
 | Main: Running now | `section#running`, `SectionHead` "Running now" (InfoTip `home.running`), up to three `RunningProject` cards, then `RunningMore` (`packages/web/src/routes/home.tsx:192-216`) | `sl-home-run` |
-| Side: Coming up | `SectionHead` "Coming up" (InfoTip `home.coming-up`, meta "Next 7 days") with TextLink "Calendar" to `/calendar`; `ComingUp` list of up to six scheduled runs (`packages/web/src/routes/home.tsx:219-236`) | `List`, `ListRow`, `Badge` |
-| Side: This week | `SectionHead` "This week" (InfoTip `home.this-week`, meta "Since Monday"), `ThisWeek` stats (`packages/web/src/routes/home.tsx:255-258`) | `Stats`, `Stat`, `Meter` (`packages/web/src/components/kit/stats.tsx:5-36`) |
+| Side: Coming up | `SectionHead` "Coming up" (InfoTip `home.coming-up`, meta "Next 7 days"), then `Autopilot` (forecast line, warnings, last seven days), then `ComingUp` list of up to six scheduled runs; shown only when a schedule exists (`packages/web/src/routes/home.tsx:136`, `:225-257`) | `List`, `ListRow`, `Badge` |
+| Side: new models | `NewModelsSlot`, a reserved `StatusSlot` line under Coming up; "N new model(s) work(s) for you" as a TextLink to Settings → Models when models started working after a check, else empty (`packages/web/src/routes/home.tsx:258`, `packages/web/src/components/model-checks.tsx:207`) | `StatusSlot` |
+| Side: This week | `WeekTotals`: `SectionHead` "This week" (InfoTip `home.this-week`, meta "Since Monday · every channel" or "Since Monday · <channel> only") with a quiet "Show totals" / "Hide totals" toggle remembered in this browser; folded by default, and nothing is fetched while folded; open it shows `ThisWeek` stats (`packages/web/src/routes/home.tsx:259`, `packages/web/src/home/week.tsx:86`) | `Stats`, `Stat`, `Meter` (`packages/web/src/components/kit/stats.tsx:5-36`) |
 
 Every list is first narrowed to the rail's current channel: projects by `channelId`, schedules and calendar runs by their template's channel (`packages/web/src/routes/home.tsx:82-108`). Section item cap `shownPerSection = 4` (`packages/web/src/routes/home.tsx:31`).
 
@@ -57,13 +60,16 @@ Titles of project items are router Links to `/projects/$projectId` (`packages/we
 `RunningMore` renders under the cards when more than three run ("See all `N` running" → `/projects?show=running`) or runs are queued (`queuedRun`: pending, none of its run done, not stopped and not parked on an agent): "Queued, waiting to start (`N`): " followed by up to two titles ("Untitled project" for blank ones) and " and `N` more", then TextLink "See queued" → `/projects?show=queued` (`packages/web/src/home/running-more.tsx:8-52`).
 
 ### Coming up rows
-`ComingUp` renders one `ListRow` per calendar run: title "`<short weekday, day, short month>` · `<short time>` · `<runTitle>`", meta "`<schedule name>` · `<template name>`", and a `Badge`: "Paused" (waiting) when the run is paused, "Needs a topic" (info) when its topic source is held, else "Queued" (`packages/web/src/home/coming-up.tsx:10-38`). The query window runs from now to local midnight plus eight days, fixed for the page's life (`packages/web/src/routes/home.tsx:46-55`).
+`ComingUp` renders one `ListRow` per calendar run: title "`<short weekday, day, short month>` · `<short time>` · `<runTitle>`" read on the schedule's own clock, with the zone named when it is not this browser's (`zonedFormat`, `zonedTime`, `packages/web/src/lib/zoned.ts`), meta "`<schedule name>` · `<template name>`", and a `Badge`: "Paused" (waiting) when the run is paused, "Waits for Mark ready" (waiting; its title says no version of the template is marked ready so the run is skipped, and to open the template's studio and press Mark ready) when `notReady`, "Needs a topic" (info) when its topic source is held, else "Queued" (`packages/web/src/home/coming-up.tsx:14-42`). The query window runs from now to local midnight plus eight days, fixed for the page's life (`packages/web/src/routes/home.tsx:46-55`).
 
 ### Ready to upload rows (inside Needs you)
 `ReadyItem` shows projects that are done or partial, or pending but set aside with Keep as is, make a video, have no `uploadedAt`, and are not one of the bundled samples (`packages/web/src/home/ready.tsx:18-27`, `packages/web/src/routes/home.tsx:94-98`). Each row: 132px `ProjectThumb` (96px on phones), title link, meta "`<format>` · finished `<time>`" plus " · a step failed" for partial, then a `ButtonRow` with `PrepareUpload` (small, see 23-studio-upload) and quiet small "Mark uploaded" (`packages/web/src/home/ready.tsx:61-87`, `packages/web/src/styles/shell.css:752-760`, `packages/web/src/styles/shell.css:778-781`). Mark uploaded sends `PUT /api/projects/:id/uploaded` (`packages/web/src/home/api.ts:46-59`).
 
+### Autopilot (inside Coming up)
+`Autopilot` (`packages/web/src/home/autopilot.tsx`) reads `GET /api/home/autopilot` (optionally `?channelId=`; stale after 60 s) through `QueryState` (loading "Checking how far ahead you are…"; error for "The autopilot check"). It shows: a bold forecast line from `forecastLine`, "`<n>` day(s) of content ready" with "+" when covered beyond the window and " · the queue runs dry on `<date>`" when known, nothing when no run is ahead; a `List` of warnings ("Autopilot warnings" / "Autopilot warnings for this channel"), each with a `Lamp` (failed for a problem, waiting for a warning), the text, a small `ButtonLink` fix (to a Settings section, a schedule, or Templates) and a quiet "Hide" that hides it for a week or until it changes (`POST /api/home/autopilot/snooze`; failure toast "Couldn't hide the warning: … Try Hide again; the warning stays until then."); and a `Fold` "Last 7 days · `<n>` made · `<n>` failed · `<cost>` [+ `<n>` unpriced]" listing failed steps as project link · stage: reason, or "No step failed." (`packages/web/src/home/autopilot.tsx:23`, `:60`, `:109`, `:139`). The weekly report that mirrors it is Settings → Notifications → Weekly report (`08-settings.md`).
+
 ### This week stats
-`ThisWeek` reads `GET /api/home/week?since=<Monday 00:00 local>&channelId=` (stale after 30 s) and renders: "videos made"; the week's cost in USD with label "spent", plus " · ~$x via API" when an API-equivalent is known and " · `N` call(s) without a price" for unpriced calls; then one `Stat` per CLI plan with a known weekly percent, label "weekly `<plan>` limit", with a `Meter` whose tone turns `waiting` at 80% or more (`packages/web/src/home/api.ts:10-29`, `packages/web/src/home/week.tsx:7-65`). The block carries `sl-home-stats` (`packages/web/src/home/week.tsx:38`).
+`ThisWeek` reads `GET /api/home/week?since=<Monday 00:00 local>&channelId=` (stale after 30 s) and renders: "videos made"; the week's cost in USD with label "spent", plus " · ~$x via API" when an API-equivalent is known and " · `N` call(s) without a price" for unpriced calls and " · $x of it on template studio samples" when template studio samples were part of the spend (`packages/web/src/home/week.tsx:12-21`); then one `Stat` per CLI plan with a known weekly percent, label "weekly `<plan>` limit", with a `Meter` whose tone turns `waiting` at 80% or more (`packages/web/src/home/api.ts:10-29`, `packages/web/src/home/week.tsx:7-65`). The block carries `sl-home-stats` (`packages/web/src/home/week.tsx:38`).
 
 ### Commands
 While Home is open, each waiting item registers a Ctrl+K command in group "Needs you" titled with its approve label or "Open the held run", context the project title; each ready item registers "Mark uploaded" in group "Ready to upload" (`packages/web/src/home/needs-you.tsx:178-188`, `packages/web/src/home/ready.tsx:53-60`).
@@ -73,11 +79,12 @@ While Home is open, each waiting item registers a Ctrl+K command in group "Needs
 |---|---|---|
 | Loading | `projects.isPending` | Needs you meta "Loading…"; Running now shows no empty state; This week shows "—" values; Coming up shows "Loading…" while the calendar is pending (`packages/web/src/routes/home.tsx:115`, `packages/web/src/routes/home.tsx:153-154`, `packages/web/src/routes/home.tsx:202-207`, `packages/web/src/routes/home.tsx:229-231`, `packages/web/src/home/week.tsx:39-43`) |
 | Projects load error | `projects.error` | `role="alert"` `text-danger` paragraph above the board: "Your projects didn't load: `<message>` Check that Slopify is still running, then reload the page." (`packages/web/src/routes/home.tsx:141-145`) |
-| Calendar error | `calendar.error` | Small `text-danger`: "The calendar didn't load: `<message>` Reload the page to try again." (`packages/web/src/routes/home.tsx:223-226`) |
+| Calendar error | `calendar.error` | `QueryState` for "The calendar" with its retry; schedules failing shows `LoadFailed` "Your schedules" (`packages/web/src/routes/home.tsx:229-243`) |
+| Autopilot loading / error | autopilot query | `LoadingBlock` "Checking how far ahead you are…"; `QueryState` error for "The autopilot check" (`packages/web/src/home/autopilot.tsx:147`) |
 | Week error | week query error | Small `text-danger`: "This week's numbers didn't load: `<message>` Reload the page to try again." (`packages/web/src/home/week.tsx:30-35`) |
 | Nothing waiting | `needs` empty | Meta "Nothing is waiting for a decision", no list (`packages/web/src/routes/home.tsx:155-160`) |
 | Nothing running | no running, none queued, loaded | `EmptyState` "Start the next video", "Pick a template and a topic on Play, or let a schedule start one." with no button (`packages/web/src/routes/home.tsx:202-207`, `packages/web/src/components/kit/empty-state.tsx:6`) |
-| Nothing coming up | no calendar runs in range | "No scheduled runs this week. Plan some on the calendar." (`packages/web/src/routes/home.tsx:227-232`) |
+| Nothing coming up | no calendar runs in range | "No scheduled runs in the next 7 days." (`packages/web/src/routes/home.tsx:247-249`) |
 | Nothing ready | `ready` empty | Meta "Finished videos you haven't marked uploaded show here", no list (`packages/web/src/routes/home.tsx:241-247`) |
 | Approving | approve mutation pending | Button disabled, label "Approving…", disabled reason "Approving…" (`packages/web/src/home/needs-you.tsx:223-230`) |
 | Approve result | approve settles | Success toast "Approved: `<title>`. The run continues."; refused: "`<title>` wasn't approved: `<message>` Open the project to review it there."; network failure: "Slopify didn't confirm the approval of `<title>`: `<message>` Press the button again to check whether it went through."; checkpoint and projects queries invalidated (`packages/web/src/home/needs-you.tsx:135-154`) |
@@ -97,7 +104,7 @@ While Home is open, each waiting item registers a Ctrl+K command in group "Needs
 ## Copy
 - Section titles: "Needs you" (ready-to-upload videos are its last rows, status "Ready to upload"), "Running now", "Coming up", "This week" (`packages/web/src/routes/home.tsx:150-256`).
 - Section metas: "`N` thing(s) is/are waiting for you", "`N` video(s)", "Nothing is running", "Next 7 days", "`N` finished and not marked uploaded", "Since Monday" (`packages/web/src/routes/home.tsx:152-256`).
-- Action words: "New project", "Open calendar", "Calendar", "Open to continue", "Continue the run", "Keep as is", "Review topics", "Copy sign-in command", "Open to retry", "Mark uploaded", "See all `N` running", "See queued" (`packages/web/src/routes/home.tsx:126-221`, `packages/web/src/home/needs-you.tsx:203-347`, `packages/web/src/home/ready.tsx:82`, `packages/web/src/home/running-more.tsx:35-46`).
+- Action words: "Create", "Open calendar", "Calendar", "Open to continue", "Continue the run", "Keep as is", "Review topics", "Copy sign-in command", "Open to retry", "Mark uploaded", "See all `N` running", "See queued" (`packages/web/src/routes/home.tsx:126-221`, `packages/web/src/home/needs-you.tsx:203-347`, `packages/web/src/home/ready.tsx:82`, `packages/web/src/home/running-more.tsx:35-46`).
 - Help bodies for the six InfoTips live in `packages/web/src/help/entries/settings.ts:292-321`; the `home.running` body says paused videos show under Running now, while the code lists them under Needs you (`packages/web/src/help/entries/settings.ts:303-306`, `packages/web/src/routes/home.tsx:87`).
 - Errors name what failed and the next step ("Reload the page to try again.", "Press Mark uploaded again.") (`packages/web/src/routes/home.tsx:143`, `packages/web/src/home/ready.tsx:45`).
 

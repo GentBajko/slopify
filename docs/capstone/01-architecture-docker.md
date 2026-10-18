@@ -1,6 +1,6 @@
 ---
-generated_at_commit: d83482c1175e
-generated_date: 2026-10-02
+generated_at_commit: d6a72d6428ff
+generated_date: 2026-10-18
 capstone_version: 7.0.1
 content_hash: c72d8e3da8b9
 paths_covered:
@@ -55,7 +55,7 @@ Scope: the `--docker` installer (compose-based install/update transaction, priva
 | Install transaction | `packages/app/src/edge/docker-install/apply.ts` | Imports `Engine` (interface), `state.ts` and `tree.ts`; no subprocess code (`packages/app/src/edge/docker-install/apply.ts:19`, `:92`). |
 | State and filesystem checks | `docker-install/{state,tree}.ts` | Zod schemas, private reads/writes (via `host-cli/service.js`), path safety, digests (`packages/app/src/edge/docker-install/state.ts:32`, `packages/app/src/edge/docker-install/tree.ts:29`). |
 | Docker command adapter and image helper | `docker-install/{engine,volume}.ts` | `dockerEngine` runs `docker` through `HostSetupRunner.exec`; the fixed helper `volume.js` runs inside the image (`packages/app/src/edge/docker-install/engine.ts:138`, `packages/app/src/edge/docker-install/volume.ts:7`). |
-| Container runtime | `docker-install/activation.ts`, `packages/app/src/main.ts`, `packages/app/src/updater/candidate.ts` | Boot imports activation checks, the files layout and folder configuration (`packages/app/src/main.ts:20`). |
+| Container runtime | `docker-install/activation.ts`, `packages/app/src/main.ts`, `packages/app/src/updater/candidate.ts` | Boot imports activation checks, the files layout and folder configuration (`packages/app/src/main.ts:24`). |
 | HTTP | `packages/app/src/edge/http/` | Folder routes resolve registered files, then `replyForFolder`; autostart routes read the Docker record (`packages/app/src/edge/http/folder-location.ts:12`, `packages/app/src/edge/http/autostart.ts:12`). |
 | Browser | `packages/web/src/project/`, `packages/web/src/autostart/` | Imports the browser-safe `folderReplySchema` and `AutostartView` type only (`packages/web/src/project/open-folder.tsx:1`, `packages/web/src/autostart/api.ts:1`). |
 
@@ -84,7 +84,7 @@ Enforced import rules forbid kernel → edge/slices, slices → edge and adapter
 | Published `slopify` executable | `packages/app/package.json:17` → `dist/edge/cli.js`; parsing at `packages/app/src/edge/cli.ts:13`. |
 | `--docker`, `install --docker`, `update` on a Docker install | `packages/app/src/edge/cli.ts:34`–`:66` → `runDockerCommand` (`packages/app/src/edge/docker-install/run.ts:28`). `install` without `--docker` is rejected (`packages/app/src/edge/cli.ts:29`). |
 | Image volume helper | `packages/app/src/edge/docker-install/volume.ts:75` runs `volumeOperation(process.argv.slice(2))`, prints JSON. |
-| Container application | `Dockerfile:61` runs `node packages/app/dist/edge/cli.js --no-open`; `boot` at `packages/app/src/main.ts:225`. |
+| Container application | `Dockerfile:61` runs `node packages/app/dist/edge/cli.js --no-open`; `boot` at `packages/app/src/main.ts:298`. |
 | Compose service | `compose.yaml:10` (service `slopify`); the installer copies it to the installation folder and runs `docker compose up` (`packages/app/src/edge/docker-install/apply.ts:279`, `:304`). The package ships it as `dist/compose.yaml` (`packages/app/scripts/copy-assets.mjs:8`). |
 | Optional host helper | `packages/app/src/edge/host-cli.ts:17` parses `--state-dir`, wires the folder opener at `:62`, starts the server at `:50`. |
 | Browser | `packages/web/src/main.tsx:40` mounts the SPA. |
@@ -145,14 +145,14 @@ Unknown operations throw; the wrapper prints a generic failure and exits 1 (`pac
 | `GET /api/health` | — | `{status:"ok", version, uptimeMs}` (`packages/app/src/edge/http/app.ts:168`); probed by `ready` and the compose/Dockerfile healthchecks. |
 | `GET /api/update/ready` | `X-Slopify-Update-Token` | `{status:"ok", version}` or 403 (`packages/app/src/edge/http/update.ts:19`). |
 | `POST /api/update/activate` | `X-Slopify-Update-Token` | `{status:"ok", version}`, 403 or 409 (`packages/app/src/edge/http/update.ts:25`). The Docker installer does not call it; it flips `activation.json` and the in-process watcher activates. |
-| `GET /api/update` | — | `UpdateInfo` incl. `busy` (`packages/app/src/edge/http/update.ts:33`). In the container `unsupported()` returns the terminal-update sentence (`packages/app/src/main.ts:435`). |
+| `GET /api/update` | — | `UpdateInfo` incl. `busy` (`packages/app/src/edge/http/update.ts:12`). In the container `unsupported()` returns the terminal-update sentence (`packages/app/src/main.ts:519`). |
 | `POST /api/projects/:id/open-folder` | `{asset}` (`[a-z0-9-]+` or `images.zip`); optional `Origin` must match | `200 FolderReply`, `400/403/404/503` (`packages/app/src/edge/http/open-folder.ts:10`); client `packages/web/src/project/open-folder.tsx:28`. |
 | `POST /api/projects/:id/revisions/:revisionId/:recordId/open-folder` | path ids | `200 FolderReply` or problems (`packages/app/src/edge/http/revision-files.ts:60`); client `packages/web/src/project/revision-api.ts:234`. |
 | `GET/PUT /api/settings/autostart`, `POST /api/settings/autostart/answer` | PUT `{enabled:boolean}` | `AutostartView`; in Docker PUT always returns 409 with where Docker's own setting is (`packages/app/src/edge/http/autostart.ts:17`, `packages/app/src/edge/autostart/service.ts:82`). |
 
 `FolderReply` is `{opened:true}` | `{opened:true, location:"docker-host", path}` | `{opened:false, location:"docker-host", path}` (`packages/app/src/edge/http/folder-location-schema.ts:5`). In a container `replyForFolder` verifies the file lies under `/data/projects` through real directories, maps it to `hostProjects/<dir>`, asks the host helper to open it (10 s timeout), and returns the host path either way; no configured host folder → 503 (`packages/app/src/edge/http/folder-location.ts:19`–`:65`). The host helper call is `POST /v1/open-folder` over the bridge socket (`packages/app/src/adapters/host-cli/index.ts:88`). Backup folder paths map through `hostFolder` over both the projects and backups binds (`packages/app/src/slices/backups/folder.ts:45`).
 
-While `installationPending()` (the updater is locked) every non-GET `/api/*` request except `/api/update/activate` returns 503 (`packages/app/src/edge/http/app.ts:237`, `packages/app/src/main.ts:613`, `packages/app/src/updater/service.ts:53`).
+While `installationPending()` (the updater is locked) every non-GET `/api/*` request except `/api/update/activate` returns 503 (`packages/app/src/edge/http/app.ts:336`, `packages/app/src/main.ts:897`, `packages/app/src/updater/service.ts:53`).
 
 There is no Docker-specific websocket, SSE event, broker or queue.
 
@@ -179,9 +179,13 @@ Any failure runs `rollback`: stop the compose candidate (or remove a non-legacy 
 
 ### Container activation
 
-At boot the container requires `SLOPIFY_DOCKER_INSTALL_STATE` to be exactly `/opt/slopify-install/activation.json` inside a container (`packages/app/src/main.ts:229`). A pending candidate (`SLOPIFY_UPDATE_PENDING=1` and a valid token) defers storage reconciliation and sample seeding (`packages/app/src/main.ts:239`, `:282`, `:580`). `watchActivation` polls `updater.activate` every 250 ms; the committed check is `dockerActivationCommitted` (timing-safe token compare against the private marker); after 120 s uncommitted the candidate shuts itself down; on commit, deferred reconciliation runs (`packages/app/src/updater/candidate.ts:3`, `packages/app/src/main.ts:406`, `:411`, `:803`, `packages/app/src/edge/docker-install/activation.ts:17`).
+At boot the container requires `SLOPIFY_DOCKER_INSTALL_STATE` to be exactly `/opt/slopify-install/activation.json` inside a container (`packages/app/src/main.ts:302`). A pending candidate (`SLOPIFY_UPDATE_PENDING=1` and a valid token) defers storage reconciliation and sample seeding (`packages/app/src/main.ts:311`, `:363`, `:738`). `watchActivation` polls `updater.activate` every 250 ms; the committed check is `dockerActivationCommitted` (timing-safe token compare against the private marker); after 120 s uncommitted the candidate shuts itself down; on commit, deferred reconciliation runs (`packages/app/src/updater/candidate.ts:3`, `packages/app/src/main.ts:493`, `:494`, `:1180`, `packages/app/src/edge/docker-install/activation.ts:17`).
 
-Files layout in a container: projects `/data/projects`; backups `/data/backups` when `SLOPIFY_DOCKER_BACKUPS_DIR` is set, else `/data/projects/<backupsFolderName>`; no exports folder (`packages/app/src/edge/docker-install/activation.ts:27`, `packages/app/src/main.ts:257`). `dockerFolderConfiguration` returns host paths only when the projects bind is a real mount at `/data/projects` (per `/proc/self/mountinfo`) and the paths are absolute, normalized and comma-free (`packages/app/src/edge/docker-install/activation.ts:38`). The files service reports the host folder and refuses to move it from inside the container, pointing at `npx @gentbajko/slopify@latest update --docker --projects-dir documents` (`packages/app/src/slices/storage/files-location.ts:180`, `:332`). A files move leaves out the `.render-cache` folder (`renderCacheFolder`, the video clip caches) at the top of the projects folder (`packages/app/src/slices/storage/files-location.ts:418`, `packages/app/src/slices/storage/layout.ts:12`). The host projects folder is application-managed storage subject to reconciliation (`packages/app/src/slices/storage/reconcile.ts:14`).
+Files layout in a container: projects `/data/projects`; backups `/data/backups` when `SLOPIFY_DOCKER_BACKUPS_DIR` is set, else `/data/projects/<backupsFolderName>`; no exports folder (`packages/app/src/edge/docker-install/activation.ts:27`, `packages/app/src/main.ts:331`). `dockerFolderConfiguration` returns host paths only when the projects bind is a real mount at `/data/projects` (per `/proc/self/mountinfo`) and the paths are absolute, normalized and comma-free (`packages/app/src/edge/docker-install/activation.ts:38`). The files service reports the host folder and refuses to move it from inside the container, pointing at `npx @gentbajko/slopify@latest update --docker --projects-dir documents` (`packages/app/src/slices/storage/files-location.ts:180`, `:332`). A files move leaves out the `.render-cache` folder (`renderCacheFolder`, the video clip caches) at the top of the projects folder (`packages/app/src/slices/storage/files-location.ts:418`, `packages/app/src/slices/storage/layout.ts:12`). The host projects folder is application-managed storage subject to reconciliation (`packages/app/src/slices/storage/reconcile.ts:14`).
+
+### Model access and remote access in a container
+
+The host helper's bridge carries a fault's kind and words only, so the container reads whether a failure was about the model's access back out of those words (`bridgedFault`, `packages/app/src/adapters/host-cli/index.ts:258`, using `accessField` of `packages/app/src/adapters/model-access.ts:38`), as it does for plan limits; Settings → Models learns from a Docker run the same way. The in-app assistant is not offered in a container: its status says Claude Code and Codex run on the computer through the host helper, which cannot hand them Slopify's tools safely, and to install Slopify with npm to use it (`packages/app/src/slices/assistant/model.ts:145`-`:151`; `container: hostCli !== undefined`, `packages/app/src/main.ts:807`). Remote access in a container is not switched on by the page: `createRemoteAccessService` receives `container: true` (`packages/app/src/main.ts:759`) and its view tells the person to set Tailscale up by hand, or to run Slopify from the computer itself.
 
 ### Start at login
 

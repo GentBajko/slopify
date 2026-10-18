@@ -12,9 +12,9 @@ absorbed_from:
   - features/2026-09-10-play-redesign-drafts@2026-09-13
   - features/2026-09-10-project-templates@2026-09-13
   - features/2026-09-30-slopify-mcp@2026-10-11
-generated_date: '2026-09-25'
+generated_date: '2026-10-18'
 capstone_version: 5.2.0
-generated_at_commit: 7bdb84e3f57e
+generated_at_commit: d6a72d6428ff
 paths_covered:
   - :(top)packages/web/src/router.tsx
   - :(top)packages/web/src/components/shell.tsx
@@ -23,7 +23,7 @@ content_hash: ab4bdeb88cf7
 
 # Slopify UI/UX design
 
-The SPA has four top-level navigation destinations (Projects, Play, Library, Settings), three routed detail families, a first-run/tutorial overlay and an inline updater in the header. `packages/web/src/router.tsx` declares the routes; `packages/web/src/components/shell.tsx` declares the navigation order and the paths each destination stays lit for.
+The SPA has six top-level navigation destinations (Home, Projects, Calendar, Channels, Library, Settings), an Assistant side panel opened from the rail (a top-bar button on phones), a Create key that opens Play, routed detail families (a project, a channel, a prompt, an intro or outro, a PDF theme, a template's Template Studio, a design and a design template), a first-run/tutorial overlay and an updater. `packages/web/src/router.tsx` declares the routes (Play at `/play` is reached from the Create key, not from the destination list); `packages/web/src/components/shell.tsx:78-135` declares the destination order and the paths each stays lit for.
 
 ## Chapters
 
@@ -46,7 +46,22 @@ The SPA has four top-level navigation destinations (Projects, Play, Library, Set
 | [screens/12-updater.md](screens/12-updater.md) | App-wide updater | 21 |
 | [screens/13-schedules.md](screens/13-schedules.md) | 09 Schedules (Library tab) | 24, 25 |
 | [screens/14-templates.md](screens/14-templates.md) | Templates (Library tab) | 22, 24 |
+| [screens/15-home.md](screens/15-home.md) | Home week board | 38, 44 |
+| [screens/16-welcome.md](screens/16-welcome.md) | Welcome, starter packs, samples | 41 |
+| [screens/17-channels.md](screens/17-channels.md) | Channels list and tabs | 30, 31 |
+| [screens/18-document-themes.md](screens/18-document-themes.md) | PDF themes and editor | 26 |
+| [screens/19-narration-aliases.md](screens/19-narration-aliases.md) | Library → Narration aliases | 08 |
+| [screens/20-help-tutorials.md](screens/20-help-tutorials.md) | Tutorials reader, search, info tips | 42 |
+| [screens/21-command-palette.md](screens/21-command-palette.md) | Ctrl+K palette and shortcuts | 42 |
+| [screens/22-announcements.md](screens/22-announcements.md) | What's new tour, patch notes, reminders | 39, 42 |
+| [screens/23-studio-upload.md](screens/23-studio-upload.md) | Prepare upload drawer and extension UI | 32, 44 |
+| [screens/24-ab-results.md](screens/24-ab-results.md) | Library → A/B results | 27, 44 |
+| [screens/25-template-studio.md](screens/25-template-studio.md) | Template Studio | 46 |
+| [screens/26-designs.md](screens/26-designs.md) | Designs gallery, editor, design templates, project Designs drawer | 52 |
+| [screens/27-assistant.md](screens/27-assistant.md) | In-app Assistant panel | 50 |
+| [screens/28-remote-access.md](screens/28-remote-access.md) | Settings → Remote access | 53 |
+| [screens/29-settings-models.md](screens/29-settings-models.md) | Settings → Models: checks and model lists | 48 |
 
-Library is one destination holding its tabs in three groups: Setups (Templates), Building blocks (Prompts, Intros & outros, PDF themes, Narration aliases) and Results (A/B results); Schedules are the Calendar's Schedules tab. A pathless layout route (`_library`, `packages/web/src/routes/library.tsx`) draws the Library page bar and tab links, so each tab keeps its own URL; `/library` redirects to `/prompts`. Usage is the last Settings section; `/usage` redirects to `/settings?section=usage`.
+Library is one destination holding its tabs in three groups: Setups (Templates, Designs), Building blocks (Prompts, Intros & outros, PDF themes, Narration aliases) and Results (A/B results); Schedules are the Calendar's Schedules tab. A pathless layout route (`_library`, `packages/web/src/routes/library.tsx`) draws the Library `PageHeader` and tab links (`libraryGroups`, `packages/web/src/routes/library.tsx:14-33`), so each tab keeps its own URL; `/library` redirects to `/prompts`. A template opens a Template Studio at `/templates/$templateId`; the designs list is `/designs` and a design or a design template opens at `/designs/$designId` or `/design-templates/$templateId` (`packages/web/src/router.tsx:232-273`, `packages/web/src/router.tsx:380`). Usage is the last Settings section; `/usage` redirects to `/settings?section=usage`.
 
-`packages/web/src/components/shell.tsx` mounts the sticky header (with the updater and tutorial launcher), the routed screen centred at 1200 px, the footer, appearance controller, first-run notice and version prompt in one persistent shell. Screen chapters describe only behavior rendered by the cited source.
+`packages/web/src/components/shell.tsx` mounts the 232 px left rail (wordmark and version, search button, Assistant button, destinations, running tally, channel picker, Create key, support links, updater and tutorial launcher), a phone-only top bar, a bottom bar of the six destinations on phones, the routed screen, the Assistant panel, appearance controller, first-run notice and version prompt in one persistent shell. Screen chapters describe only behavior rendered by the cited source.

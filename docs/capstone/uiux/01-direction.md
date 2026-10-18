@@ -1,7 +1,7 @@
 ---
-generated_date: '2026-09-25'
+generated_date: '2026-10-18'
 capstone_version: 5.2.0
-generated_at_commit: 7bdb84e3f57e
+generated_at_commit: d6a72d6428ff
 paths_covered:
   - :(top)packages/web/src/styles/index.css
   - :(top)packages/web/src/components/shell.tsx
@@ -29,10 +29,10 @@ absorbed_from:
 | 06 play (flagship) | Operate | 4 / 3 / 6 |
 | 07 projects | Operate | 4 / 3 / 6 |
 | 08 project page | Operate | 4 / 3 / 6 |
-| Library: 04 prompts, 09 intros and outros, templates, schedules | Operate | 4 / 3 / 6 |
+| Library: 04 prompts, 09 intros and outros, templates and Template Studio, designs; Calendar schedules | Operate | 4 / 3 / 6 |
 | 05 prompt editor, intro/outro editor | Operate | 4 / 3 / 6 |
 
-The app renders its control-room direction through shared matte surfaces, rail borders, Barlow faces, tally lamps and the green accent, inside one fixed 48 px header and a content column centred at 1200 px on every route (`packages/web/src/styles/index.css:7-63`, `packages/web/src/components/shell.tsx`). The landing carries the same palette and faces in a wider persuasive composition (`packages/site/public/styles.css:57-105`, `packages/site/public/styles.css:340-413`). Play uses a separate 1100 px composition breakpoint (`packages/web/src/routes/play.tsx`).
+The app renders its control-room direction through shared matte surfaces, rail borders, Barlow faces, tally lamps and the green accent, inside one fixed 232 px left rail (a top bar and bottom bar on phones) and a page that fills the width up to a 1680 px content maximum on every route (`packages/web/src/styles/index.css:106-109`, `packages/web/src/components/shell.tsx`). The landing carries the same palette and faces in a wider persuasive composition (`packages/site/public/styles.css:57-105`, `packages/site/public/styles.css:340-413`). Play uses a separate 1100 px composition breakpoint (`packages/web/src/routes/play.tsx`).
 
 ## Brand facts
 
@@ -63,7 +63,7 @@ The edit bay (matte console hardware); the control room (tally lamps and engrave
 
 **STORY.** Configure Content, Outputs and Style, open Review, then explicitly Start. Saved drafts let the operator return without reconstructing the setup. The project page carries the running stages and their lamps in one rundown strip.
 
-**FIRST VIEWPORT (06 play, 1440 px).** The page bar reads New run with the draft title as meta and the drafts controls at its right. Under it the Run setup row holds three numbered editor tabs (Content, Outputs, Style) and a separate Review button. A flexible active editor sits beside a 300 px sticky readiness rail (Article, Narration, Images, Thumbnail, Export, Style, each a lamp and a state word), inside the shell's 1200 px column. Style alone adds the actual 16:9 or 9:16 frame preview above the rail. Below 1100 px the rail becomes a compact lamp row under the tabs and the Style preview sits above its controls. A sticky action bar keeps the blocker hint with Fix setup, Continue to the next tab and Review and start on screen; Review opens as a drawer and only its explicit Start run or Queue N videos admits work. See `screens/02-play.md` and `packages/web/src/routes/play.tsx`.
+**FIRST VIEWPORT (06 play, 1440 px).** The `PageHeader` reads New run with the draft title as meta and the drafts controls at its right. Under it the Run setup row holds three numbered editor tabs (Content, Outputs, Style) and a separate Review button. A flexible active editor sits beside a 300 px sticky readiness rail (Article, Narration, Images, Thumbnail, Export, Style, each a lamp and a state word), inside the page. Style alone adds the actual 16:9 or 9:16 frame preview above the rail. Below 1100 px the rail becomes a compact lamp row under the tabs and the Style preview sits above its controls. A sticky action bar keeps the blocker hint with Fix setup, Continue to the next tab and Review and start on screen; Review opens as a drawer and only its explicit Start run or Queue N videos admits work. See `screens/02-play.md` and `packages/web/src/routes/play.tsx`.
 
 **Signature interaction: going on air.** The Review drawer presents the resolved setup, checkpoints and costs. Explicit Start creates the project; the project page then exposes each stage's state and progress in its rundown strip. Autosave, section navigation, the readiness rail and preview never start work.
 

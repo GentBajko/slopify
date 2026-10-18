@@ -10,7 +10,6 @@ paths_covered:
   - ":(top)packages/app/src/slices/rebuild/admission-repo.ts"
   - ":(top)packages/app/src/slices/rebuild/transition-repo.ts"
   - ":(top)packages/app/src/slices/rebuild/runtime-materialize.ts"
-  - ":(top)packages/app/src/slices/rebuild/runtime-actions.ts"
   - ":(top)packages/app/src/slices/rebuild/recipe-save.ts"
   - ":(top)packages/app/src/slices/rebuild/recipe-validation.ts"
   - ":(top)packages/app/src/slices/rebuild/recipe-audio-parts.ts"
@@ -133,7 +132,7 @@ Editing does not require idle stages or current provider credentials; readiness 
 - **Through MCP**: `retry_stage` is Try again; `soften_stage` and `rerun_stage` state the page's confirm sentence and are refused until called again with `confirmed: true` (`packages/app/src/edge/mcp/tools-runs.ts:24-46`, `packages/app/src/edge/mcp/call-route.ts:57-60`); `redo_review` is Redo beside a verdict (33-automatic-reviews.md). A re-run that needs a review first (supplied content to replace, or costs to acknowledge) is refused with the route's sentence, and the agent uses `preview_rebuild` and `start_rebuild` instead (`packages/app/src/edge/http/actions.ts:178-181`).
 - **Continue the run** (`resume_project`, `POST /:id/resume`, `packages/app/src/edge/http/actions.ts:243-248`) starts held and unfinished work, including work a saved edit left waiting. After a Cancel it continues only what was taken up again (`readmitted`: Try again, or Continue on the canceled run), each as Try again would; canceled stages stay canceled (`resumeSelection`, `packages/app/src/slices/rebuild/recovery-selection.ts:99-109`, `packages/app/src/kernel/runner/graph.ts:92-100`).
 - **Stopped runs**: a run a restart stopped before it finished, with no checkpoint of the person's reached and not parked only on an agent's review, reads **Stopped**; only Continue the run moves it, and the project's page offers it for exactly these (`resumable`, `packages/app/src/edge/http/actions.ts:85`; `projectHolds().stopped`, `packages/app/src/slices/reviews/holds.ts:128-143`). An agent may continue it as it may a paused run, once nothing in the project still needs fixing (45-mcp-agent-access.md).
-- **Retry** is `rebuild-required` in the legacy action wrapper (`packages/app/src/slices/rebuild/runtime-actions.ts:26`); routed Retry is direct recovery (scenario 13).
+- **Retry** is direct recovery (scenario 13): no stage-level Retry wrapper remains.
 
 ### Edits and affected work
 

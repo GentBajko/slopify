@@ -94,12 +94,21 @@ Slopify: a self-hosted, single-user content pipeline for faceless YouTube channe
 | logic | [logic/42-in-app-help.md](logic/42-in-app-help.md) |
 | logic | [logic/43-autostart.md](logic/43-autostart.md) |
 | logic | [logic/44-studio-autopilot.md](logic/44-studio-autopilot.md) |
+| logic | [logic/45-mcp-agent-access.md](logic/45-mcp-agent-access.md) |
+| logic | [logic/46-template-studio.md](logic/46-template-studio.md) |
+| logic | [logic/47-builtin-keywords.md](logic/47-builtin-keywords.md) |
+| logic | [logic/48-model-lists-and-checks.md](logic/48-model-lists-and-checks.md) |
+| logic | [logic/49-promise-check.md](logic/49-promise-check.md) |
+| logic | [logic/50-in-app-assistant.md](logic/50-in-app-assistant.md) |
+| logic | [logic/51-autopilot-health-and-topic-scoring.md](logic/51-autopilot-health-and-topic-scoring.md) |
+| logic | [logic/52-designs.md](logic/52-designs.md) |
+| logic | [logic/53-remote-access-and-request-guard.md](logic/53-remote-access-and-request-guard.md) |
 
 ## Companion docs
 
 | File | What it is |
 |---|---|
-| [logic/README.md](logic/README.md) | Scenario map 01–43 and the rules every scenario shares |
+| [logic/README.md](logic/README.md) | Scenario map 01–53 and the rules every scenario shares |
 | [mockup/README.md](mockup/README.md) | Mockup index: screens, journeys, scenarios handed to `logic`, assumed items |
 | [mockup/01-marketing-page.md](mockup/01-marketing-page.md) | Screen: marketing page with native and Docker commands |
 | [mockup/02-first-run-notice.md](mockup/02-first-run-notice.md) | Screen: once-per-machine telemetry notice |
@@ -138,6 +147,11 @@ Slopify: a self-hosted, single-user content pipeline for faceless YouTube channe
 | [uiux/screens/22-announcements.md](uiux/screens/22-announcements.md) | Observed: What's new tour, patch notes, reminders, run notifications |
 | [uiux/screens/23-studio-upload.md](uiux/screens/23-studio-upload.md) | Observed: Prepare upload drawer and extension UI |
 | [uiux/screens/24-ab-results.md](uiux/screens/24-ab-results.md) | Observed: Library → A/B results |
+| [uiux/screens/25-template-studio.md](uiux/screens/25-template-studio.md) | Observed: Template Studio |
+| [uiux/screens/26-designs.md](uiux/screens/26-designs.md) | Observed: Designs gallery, editor, design templates, project Designs drawer |
+| [uiux/screens/27-assistant.md](uiux/screens/27-assistant.md) | Observed: in-app Assistant panel |
+| [uiux/screens/28-remote-access.md](uiux/screens/28-remote-access.md) | Observed: Settings → Remote access |
+| [uiux/screens/29-settings-models.md](uiux/screens/29-settings-models.md) | Observed: Settings → Models checks and model lists |
 | [standards.md](standards.md) | Binding code standards the user set; outranks generic best practice |
 | [changelog.md](changelog.md) | Append-only ledger of every stage run and its decisions (newest 100) |
 | [changelog-2026.md](changelog-2026.md) | Rotated 2026 ledger entries |

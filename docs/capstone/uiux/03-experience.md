@@ -5,9 +5,9 @@ absorbed_from:
   - features/2026-09-10-editable-projects@2026-09-12
   - features/2026-09-10-play-redesign-drafts@2026-09-13
   - features/2026-09-10-review-checkpoints@2026-09-13
-generated_date: '2026-09-25'
+generated_date: '2026-10-18'
 capstone_version: 5.2.0
-generated_at_commit: 7bdb84e3f57e
+generated_at_commit: d6a72d6428ff
 paths_covered:
   - :(top)packages/web/src/**
   - :(top)packages/site/public/index.html
@@ -23,17 +23,18 @@ Rules every screen applies rather than re-decides. `build` reads this beside `02
 
 1. **Nothing moves unless you moved it.** System-triggered content (acknowledgements, refusals, server notices, save states) goes into a reserved StatusSlot or a toast, never a paragraph inserted above the work. Controls that do not apply right now are disabled, not unmounted. Meters and slots keep their track when empty. Skeletons match the final layout.
 2. **The primary action is always on screen.** Editing surfaces end in a sticky ActionBar (or a drawer's pinned footer) that carries the primary action and its status line.
-3. **The frame is fixed and small.** One 48 px header row, one centred 1200 px column, one footer; no sidebars, no floating controls.
-4. **Summary before detail; one job per viewport.** The page bar and a summary (rundown strip, readiness rail, row list) come first. Secondary surfaces are tabs or drawers, never blocks inserted above the primary one.
+3. **The frame is fixed.** One 232 px left rail (a bottom bar and a thin top bar on phones) and one routed page below it, full width up to the content maximum; no floating controls. The Assistant is a side panel the person opens, never a block in a page.
+4. **Summary before detail; one job per viewport.** The `PageHeader` and a summary (rundown strip, readiness rail, row list) come first. Secondary surfaces are tabs or drawers, never blocks inserted above the primary one.
 5. **Help hides until asked.** At most one short line of visible help; anything longer sits behind an InfoTip.
 6. **New features land in an existing place.** A tab, a drawer, a rail row, a strip cell or a slot from the kit (`packages/web/src/components/kit/`), not a new region.
 
 ## Navigation and orientation
 
-- One sticky 48 px header on every app screen: mark and wordmark at left, then four destinations Projects, Play, Library, Settings. The active item carries a 2 px underline in the running-lamp colour. Library stays lit for `/prompts`, `/entries`, `/templates`, `/schedules` and their editors; Settings stays lit for `/settings` and `/usage` (`packages/web/src/components/shell.tsx`).
-- Right end of the header: a tally lamp with "N running" whenever any project is running (links to Projects), the three support links (GitHub, Patreon, Buy Me a Coffee; labels from 1100 px, icons below, hidden below 640 px), the update button and the Tutorial "?" button.
-- Library is one page bar with its route tabs in three groups (Setups: Templates; Building blocks: Prompts, Intros & outros, PDF themes, Narration aliases; Results: A/B results); each tab keeps its URL and opens with a LibraryToolbar row of filters and its one action (`packages/web/src/routes/library.tsx`). Settings shows one section at a time from a left section list addressed by `?section=` (`packages/web/src/routes/settings.tsx`).
-- Every route starts with a PageHeader. Back links ("< Projects", "< Prompts", "< Intros & outros") sit at the left of a detail page's bar, before its title.
+- One 232 px left rail on every app screen from 768 px up: wordmark with the version, a "Search or run a command" button (Ctrl+K), an Assistant button, then six destinations Home, Projects, Calendar, Channels, Library, Settings (`destinations`, `packages/web/src/components/shell.tsx:78-135`). The active item is marked `aria-current="page"`. Library stays lit for `/library`, `/prompts`, `/entries`, `/templates`, `/document-themes`, `/narration-aliases` and `/ab-results` and their editors; Settings stays lit for `/settings` and `/usage`. Schedules are the Calendar's Schedules tab; `/designs` sits in the Library group of tabs but is not in the Library `match` list. Under the destinations: a tally lamp with "N running" whenever any project is running (links to Home), the channel picker, the Create key (links to `/play`), the three support links (GitHub, Patreon, Buy Me a Coffee), the update widget, the Tutorials link and the Tutorial launcher.
+- Assistant: the rail button (a sparkles icon button in the top bar on phones) toggles a side panel (`packages/web/src/assistant/panel.tsx`); while open the shell takes the `sl-app--side-panel` class and the page narrows beside it (`packages/web/src/components/shell.tsx:245`, `packages/web/src/styles/shell.css:669`).
+- Below 768 px the rail is replaced by a top bar (wordmark, search, running tally, Assistant, a Support menu, updates, Tutorials, Tutorial) and a bottom bar with the six destinations.
+- Library is one `PageHeader` with its route tabs in three groups (Setups: Templates, Designs; Building blocks: Prompts, Intros & outros, PDF themes, Narration aliases; Results: A/B results); each tab keeps its URL and opens with a LibraryToolbar row of filters and its one action (`packages/web/src/routes/library.tsx`). Settings shows one section at a time from a left section list addressed by `?section=` (`packages/web/src/routes/settings.tsx`).
+- Every route starts with a `PageHeader` (`packages/web/src/components/kit/layout.tsx:10`): crumb, title, one meta line and the page's actions at the right; `row` puts the crumb, title and meta on one line for a working page such as a project. The old `PageBar` is gone. Back links ("< Projects", "< Prompts", "< Intros & outros") are the crumb, before the title. A template opens its Template Studio at `/templates/$templateId`, and a design or a design template opens at `/designs/$designId` or `/design-templates/$templateId`.
 - The marketing page has no app navigation; its header carries the wordmark, a GitHub link, and the donation links.
 
 ## Feedback thresholds
@@ -53,7 +54,7 @@ Posture: stop and confirm. A dialog precedes each of these, names the consequenc
 
 - Play keeps unsaved values visible after a failed write and exposes Retry beside the save state. Saved on this computer means server acknowledgement; only acknowledged content survives a process/browser loss. Conflicts offer explicit Reload saved draft or Save as a new draft.
 - Failed work shows one failure line in its stage block: message, attempt count, an Error details popover, the unready provider with an Open Settings link, the recovery explanation behind an InfoTip, and Retry stage (a SplitButton whose menu holds Re-run section). Retry/Resume opens a fresh dependency/cost review; completed matching work is retained. Unknown submitted outcomes warn that retry may incur another charge. Save alone does not start work (`project/stage-row.tsx`, `project/use-actions.ts`, `project/rebuild-review.tsx`, `logic/12`).
-- Project-level refusals appear in the reserved status line under the project page bar with Dismiss; stage refusals appear inside that stage's block.
+- Project-level refusals appear in the reserved status line under the project `PageHeader` with Dismiss; stage refusals appear inside that stage's block.
 - Local errors (disk, creation) show inline where the action was taken, with the OS message.
 - Subtitle alignment/render/save failure leaves the last finished export and caption downloads visible; saved output metadata decides whether the player adds native VTT captions. Font-preview failure labels the fallback. Revision edits require Save or Discard before rebuilding. Cue text/timing uses complete current narration even when export has not finished; retained cues from earlier narration remain visible for explicit correction once the new timeline is available (`packages/web/src/project/revision-content.tsx`, `project/revision-caption-duration.ts`, `project/body-video.tsx`, `subtitles/font-picker.tsx`).
 - A "Key missing" stage shows the disabled control with that label and a link to Settings (`logic/02`).
@@ -64,7 +65,7 @@ Posture: stop and confirm. A dialog precedes each of these, names the consequenc
 - Audio keeps TTS, model and voice visible; one "More audio settings · …" disclosure, whose summary lists non-default choices, holds chunking, intro/outro, Narration Preparation, Pronunciation Glossary, the Choose Text Generation link and Settings. Text generation, Narration Preparation and Pronunciation Glossary help sit behind InfoTips.
 - Review checkpoints (Before Audio, Images, Video / export) live in the Review drawer; the project page's Checkpoints tab shows dependents, revision identity, approval and cross-tab reload state.
 - Project page: the rundown strip is the summary; Output, Edit, History and Checkpoints are tabs; the batch queue is a Queue · N popover; rebuild review opens in a drawer. Edit uses a section sub-nav whose hidden sections stay mounted.
-- Templates and Schedules are Library tabs. Save a setup, New schedule and Edit schedule open drawers; a schedule's policy sits behind an InfoTip, its history stays collapsed until opened, and Pause/Resume, Cancel and Delete sit in its More menu (`packages/web/src/routes/templates.tsx`, `packages/web/src/routes/schedules.tsx`). Project page bars offer Save as template for the displayed current revision without rebuilding.
+- Templates is a Library tab and Schedules is a Calendar tab. A template's settings are set in its Template Studio (`/templates/$templateId`, `screens/25-template-studio.md`). Save a setup, New schedule and Edit schedule open drawers; a schedule's policy sits behind an InfoTip, its history stays collapsed until opened, and Pause/Resume, Cancel and Delete sit in its More menu (`packages/web/src/routes/templates.tsx`, `packages/web/src/routes/schedules.tsx`). The project page offers Save as template for the displayed current revision without rebuilding.
 - Research and thumbnail default to Off and read as one line until switched on.
 - Subtitles default Off; selecting files or burn-in reveals font, size, upload and a reduced-scale preview. Audio Off disables caption configuration, Video Off permits files only. An unfinished font upload remains recoverable outside inactive controls through Keep current font. The active controls explain local English timing and the first-use model download (`packages/web/src/subtitles/controls.tsx`).
 - On the project page, the instructions sent to the LLM sit behind a "Show instructions" toggle per stage; sources and glossary files are links beside the article, not inline. Image groups show 12 images and a "Show all N images" control.
@@ -103,11 +104,11 @@ Deadpan and literal, owning "slop" without winking twice: "New run", "Play", "Re
 
 ## Optional getting-started guide
 
-`packages/web/src/tutorial/model.ts` defines 20 steps over the real Settings, prompt editors, Play and project pages. Settings steps open the providers or voices section first. Step 17 spotlights the optional subtitle controls, including upload and preview; Audio Off still lets the guide continue after explaining why captions are unavailable. Step 18 spotlights Start run in the Review drawer. Step 19 spotlights the project page bar, status line and rundown strip, and its copy names the Edit and History tabs and Retry stage's menu. A versioned server tutorial session stores stable step IDs, readiness and saved resource IDs; resources are revalidated on restore. It stores no keys, font bytes or form text. Play reveals the required tab, drawer and disclosure before spotlight measurement; drawers are non-modal so the spotlight can point into them. The guide neither generates subtitles nor starts a project (`tutorial/runner.tsx`, `step-content.tsx`).
+`packages/web/src/tutorial/model.ts` defines 20 steps over the real Settings, prompt editors, Play and project pages. Settings steps open the providers or voices section first. Step 17 spotlights the optional subtitle controls, including upload and preview; Audio Off still lets the guide continue after explaining why captions are unavailable. Step 18 spotlights Start run in the Review drawer. Step 19 spotlights the project page header, status line and rundown strip, and its copy names the Edit and History tabs and Retry stage's menu. A versioned server tutorial session stores stable step IDs, readiness and saved resource IDs; resources are revalidated on restore. It stores no keys, font bytes or form text. Play reveals the required tab, drawer and disclosure before spotlight measurement; drawers are non-modal so the spotlight can point into them. The guide neither generates subtitles nor starts a project (`tutorial/runner.tsx`, `step-content.tsx`).
 
 ## Not in play
 
-Authentication, multi-user permissions and remote collaboration are absent from the local single-user shell (`packages/web/src/router.tsx`).
+Authentication, multi-user permissions and collaboration are absent from the local single-user shell (`packages/web/src/router.tsx`). The one way in from another device is Settings → General → Remote access (Tailscale Serve to the person's own tailnet, never Funnel; `screens/28-remote-access.md`).
 
 ## Editing an existing project
 

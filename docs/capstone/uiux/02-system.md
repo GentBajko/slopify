@@ -1,7 +1,7 @@
 ---
-generated_date: '2026-09-25'
+generated_date: '2026-10-18'
 capstone_version: 5.2.0
-generated_at_commit: 7bdb84e3f57e
+generated_at_commit: d6a72d6428ff
 paths_covered:
   - :(top)packages/web/src/styles/index.css
   - :(top)packages/web/src/components/ui/**
@@ -85,7 +85,7 @@ Theme switching: `prefers-color-scheme` by default, overridden by the Settings c
 ## Spacing and shape
 
 - 4 px base grid; rail padding 14 px 16 px; sheet padding 18 px; gap between rails 0 (they share borders), between sheet fields 14 px.
-- Frame: a sticky 48 px header, a content column centred at max 1200 px with 16 px (24 px from 640 px) side gutters, and the footer. Page bars are at least 48 px tall; status slots reserve 32 px; action bars are at least 56 px.
+- Frame: a 232 px left rail (`--rail-width`), a fluid page centred beyond `--content-max` (1680 px), and on phones a top bar and a bottom bar (`packages/web/src/styles/index.css:106-109`, `packages/web/src/styles/shell.css:512-589`). With the Assistant panel open the page narrows beside it. A `PageHeader` carries each page title; status slots reserve 32 px; action bars are at least 56 px.
 - Radius lock: 4 px on controls and inputs, 6 px on rails, sheets, dialogs, popovers, toasts and the Play key; nothing else. No pill shapes.
 - Lists are kit List/ListRow rows divided by hairlines, never a card inside a card. Elevation uses the one `--shadow-pop` token: dialogs, popovers, toasts and the drawer; sticky action bars sit on the page background without a shadow.
 - Sticky layers: header at the top (z 40), action bars at the viewport bottom (z 20, safe-area padded), the drawer fixed under the header on the right (z 30), toasts top-right under the header (z 60).
@@ -93,7 +93,7 @@ Theme switching: `prefers-color-scheme` by default, overridden by the Settings c
 
 ## Iconography
 
-Lucide, 24 px grid, 2 px stroke, round caps and joins, one weight everywhere. The six stage glyphs in `packages/web/src/assets/stage-*.svg` follow the same grid and stroke so they sit in Lucide rows unnoticed; they carry no drip. Brand assets: `packages/web/src/assets/logo-mark.svg` (evenodd, `currentColor`), `packages/web/public/favicon.svg`, `packages/web/public/app-icon.svg`. No emoji, no hand-rolled decorative SVG.
+Lucide, 24 px grid, 2 px stroke, round caps and joins, one weight everywhere. The six stage glyphs in `packages/web/src/assets/stage-*.svg` follow the same grid and stroke so they sit in Lucide rows unnoticed; they carry no drip. Brand assets: `packages/web/src/components/logo.tsx` (evenodd, `currentColor`; the former `assets/logo-mark.svg` is gone), `packages/web/public/favicon.svg`, `packages/web/public/app-icon.svg`. No emoji, no hand-rolled decorative SVG.
 
 ## Motion
 
@@ -105,14 +105,18 @@ Lucide, 24 px grid, 2 px stroke, round caps and joins, one weight everywhere. Th
 
 ## Component library
 
+Since 3.0 the token names, the `sl-*` component classes and the kit components are those of `docs/design-system.md`; the 2.x token names used in the sections above (`--panel`, `--lamp-run`, `--line2`, `--red`) are renamed there, and `ui/button.tsx` is gone in favour of `kit/button`. Read this chapter for the intent and that document for the current names.
+
 shadcn/ui restyled to the tokens above, never in default state, on Radix primitives (`packages/web/src/components/ui/`): Dialog for every confirmation, Select for pickers, Toggle Group for segmented switches and kind filters, Dropdown Menu for row and page overflow menus, Popover (`packages/web/src/components/ui/popover.tsx`, `--panel`, radius 6, portalled) for help text, located folder paths, error details, the drafts list and the batch queue. `stack` records the exact packages and versions. The control-room aesthetic has no official package; it is built with plain CSS on top of those primitives and labelled as such.
 
 The layout kit (`packages/web/src/components/kit/`) is what every screen composes from:
 
 | Component | File | Contract |
 |---|---|---|
-| StatusSlot | `kit/action-bar.tsx` | Always rendered, fixed 32 px line; `role="status"`, or `alert` when the tone is error; long text truncated with the full text in `title`. |
-| ActionBar | `kit/action-bar.tsx` | Sticky bar at the viewport bottom: a StatusSlot at left, the page's primary actions at right. |
+| PageHeader | `kit/layout.tsx:10` | Crumb, title, one meta line and the page's actions; `display` for the Home greeting, `row` for a one-line working header. Replaced the removed `PageBar`. |
+| Callout | `kit/callout.tsx` | A notice in the flow of a section (info, waiting, danger) with title, body and actions; named by its title through `aria-labelledby`. Replaced the removed `EditorNotice`. |
+| StatusSlot | `kit/action-bar.tsx` | Always rendered, fixed 32 px line; `role="status"`, or `alert` when the tone is error; long text truncated with the full text in `title`, unless `wrap` shows every word (a price or refusal to read in full). |
+| ActionBar | `kit/action-bar.tsx` | Sticky bar at the viewport bottom: a StatusSlot at left, the page's primary actions at right; placed straight in a short page it sits at the window's bottom edge. |
 | Drawer | `kit/drawer.tsx` | Non-modal right panel (560 px wide, 440 px narrow, full width on phones) under the header; `role="dialog"`, `aria-modal="false"`; Escape closes unless a modal dialog is open; focus goes to the title unless the caller already focused inside, and returns to the opener; optional pinned footer. Non-modal so the tutorial spotlight keeps working. |
 | Tabs, TabLinks, TabPanel | `kit/tabs.tsx` | Tab row with a 2 px running-lamp underline, arrow-key movement, badges ("· unsaved", "· 2 held") and a trailing slot; TabLinks is the same bar for route tabs; panels stay mounted while hidden. |
 | InfoTip | `kit/info-tip.tsx` | Info glyph button ("About {label}") opening a popover on press, never on hover. |
@@ -152,7 +156,7 @@ One amendment the user made at the same time and which still stands: the marketi
 
 | Asset | File | Source | Status |
 |---|---|---|---|
-| App logo mark | `packages/web/src/assets/logo-mark.svg` | repository | present |
+| App logo mark | `packages/web/src/components/logo.tsx` (inline SVG; `assets/logo-mark.svg` removed in 4.0) | repository | present |
 | App favicon | `packages/web/public/favicon.svg` | repository | present |
 | App icon | `packages/web/public/app-icon.svg` | repository | present |
 | Stage glyphs | `packages/web/src/assets/stage-*.svg` | repository | present |

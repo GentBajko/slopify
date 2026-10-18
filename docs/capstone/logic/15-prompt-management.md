@@ -1,11 +1,12 @@
 ---
-generated_at_commit: e9226a34aa8a
-generated_date: 2026-10-02
+generated_at_commit: d6a72d6428ff
+generated_date: 2026-10-18
 capstone_version: 7.0.1
 content_hash: 1f368e5afc66
 paths_covered:
   - ":(top)packages/app/src/slices/library/**"
   - ":(top)packages/app/src/edge/http/prompts.ts"
+  - ":(top)packages/app/src/slices/keywords/rules.ts"
   - ":(top)packages/app/src/edge/http/entries.ts"
   - ":(top)packages/app/src/slices/trash/service.ts"
   - ":(top)packages/app/src/slices/trash/model.ts"
@@ -50,7 +51,8 @@ Creating, editing, renaming, duplicating, versioning, restoring and deleting Lib
 1. **Save** (create or update), in `save.ts:42-91,111-159`:
    - `lint` requires a trimmed name of 1-200 characters (`nameMax`, `model.ts:29`).
    - It requires a non-blank body of at most 100 000 characters (`bodyMax`, `model.ts:33`).
-   - It requires no slot parse error: unclosed `{{`, empty keyword, or nested brace. Each error is reported with its line and column (`packages/app/src/slices/library/lint.ts:19-68`). The slot grammar is scenario 03's.
+   - It requires no slot parse error: unclosed `{{`, empty keyword, or nested brace. Each error is reported with its line and column (`packages/app/src/slices/library/lint.ts:49-84`). The slot grammar is scenario 03's.
+   - It also refuses a `Slopify_` name that is no keyword Slopify fills (any case), unless the stored prompt already had that slot (`grandfathered`: the stored item's own slots, plus a restored version's), so a prompt saved before the prefix was reserved still saves. A keyword outside the places it works in, and an old name (`{{Scene}}`, `{{Appearance}}`), are warnings that do not stop the save (`keywordWarnings`, `lint.ts:31-48`). Scenario 47 has the keywords, the Insert bar above the body and the hover cards.
    - The name is stored trimmed. `slots` is recomputed from the body on every save (`save.ts:185-206`).
    - The kind or category may change on edit; the editor offers a Kind switch (`packages/web/src/routes/prompt-editor.tsx:195-205`).
 2. **Uniqueness** is enforced by partial unique indexes: `prompts(kind, lower(name)) WHERE deleted_at IS NULL` and `entries(category, lower(name)) WHERE deleted_at IS NULL` (`packages/app/src/kernel/db/migrations/0039-channel-essentials.sql:15-21`). A collision becomes `duplicate-name` → HTTP 409, with the field error "Another prompt already has this name. Choose a different name." (`save.ts:208-223`, `prompts.ts:134-147`). There is no read-then-write check.
@@ -65,7 +67,7 @@ Creating, editing, renaming, duplicating, versioning, restoring and deleting Lib
    - A blank name is refused locally. An unchanged name closes the field without a request (`inline-name.tsx:49-60`).
    - Success shows a toast "Renamed “A” to “B”." with Undo, which renames back through the same call (`inline-name.tsx:72-80`).
    - Every name change, from the row, the editor or a Restore, carries into templates and Play drafts (step 8).
-6. **Duplicate** opens the editor on an unsaved copy named "<name> copy" with the same kind (or category and mode) and body (`prompt-editor.tsx:78`, `packages/web/src/routes/entry-editor.tsx:70-74`). A taken name is refused at Save by step 2.
+6. **Duplicate** opens the editor on an unsaved copy named "<name> copy" with the same kind (or category and mode) and body (`prompt-editor.tsx:78`, `packages/web/src/routes/entry-editor.tsx:70-74`). A taken name is refused at Save by step 2. The copy is created with `copyOf` naming the item it copies, so a prompt or entry that holds an unknown `Slopify_` name it already had can be duplicated (only names the copied item has get through), as an edit of it would (`packages/app/src/edge/http/prompts.ts`, `entries.ts`, `packages/app/src/slices/library/save.ts:42-52`, `:128-137`).
 7. **Delete** asks "Delete "<name>"?", explaining "Moves it to the trash for 30 days (Settings → Trash). Projects that used it keep their text." (`prompts.tsx:224-236`, `entries.tsx:222-234`). It sets `deleted_at` (`packages/app/src/slices/library/repo.ts:68-77`).
    - A trashed row is invisible to every Library read and write (`repo.ts:32-35`) and keeps its versions and photorealistic tick (`packages/app/src/slices/library/photorealistic.ts:11-12`).
    - Restore from Settings → Trash puts it back as "Name (restored)", "Name (restored 2)"… when a live row has taken the name (`packages/app/src/slices/trash/service.ts:89-90`).
@@ -73,13 +75,13 @@ Creating, editing, renaming, duplicating, versioning, restoring and deleting Lib
 8. **Rename propagation.** When a save changes the name, `renameReferences` runs inside the same transaction, so the rename and the rewritten references land together or not at all (`save.ts:74-82,142-150`, `packages/app/src/slices/library/rename.ts:65-93`):
    - It rewrites the old name to the new one in every live template's head revision, both in its `form` and in the `librarySnapshot` copy, and in every Play draft whose state is `active` (`rename.ts:67-92`). The rewrite is in place: no template version is added.
    - A form slot matches the old name trimmed and case-insensitively within the kind or category (`packages/app/src/slices/library/used-by.ts:116-129`). A `librarySnapshot` row matches by the same name rule or by the item's id (`rename.ts:51-58`).
-   - Schedules follow, since they run their template's current version (`rename.ts:4-5`).
+   - Schedules follow their template's head version, which they run until the template is first marked ready in its studio. From then on a schedule runs the newest ready version, which can be older than the head; an older version keeps the old name and reads the Library copy it saved when the name no longer resolves (`rename.ts:4-5`, `rename.ts:69-92`, `packages/app/src/slices/template-studio/gate.ts:19-36`, scenario 46).
    - Project revisions are not rewritten; they keep the name the run used (`rename.ts:4-5`).
    - An unchanged name returns without touching anything (`rename.ts:68`).
 9. **Used by** `GET /:id/used-by` lists what names the item, matching the trimmed name case-insensitively within the kind or category (`used-by.ts:131-138,150-236`, `prompts.ts:101-112`, `entries.ts:62-73`, `packages/web/src/library/item-detail.tsx:63-92`):
    - Live project templates, read at their head version.
    - Active and paused schedules, read at their template's head version (`used-by.ts:176-192`).
-   - Live projects, with how many of their revisions name it, the total, and whether the current revision does.
+   - Live projects (not a template's hidden studio sample or bake-off copy, `notTemplateSample`, `used-by.ts:200`), with how many of their revisions name it, the total, and whether the current revision does.
    - Legacy projects without revisions, read from their own config.
    - Former names count too: `formerNames` returns the item's earlier names from `library_versions` that no other live item of the same kind or category holds now, so projects that ran it before a rename are still listed (`rename.ts:95-115`).
    - A name set is pre-filtered in SQL with `instr(lower(...))` only when every name is plain printable ASCII without quotes or backslashes (`used-by.ts:155-163`).
@@ -123,7 +125,7 @@ Creating, editing, renaming, duplicating, versioning, restoring and deleting Lib
 
 ## Unhappy paths
 
-- **Empty body, over-long text or malformed slots** → 400 "This prompt cannot be saved yet. Fix the highlighted fields and try again." with per-field messages (`prompts.ts:124-132`, `lint.ts:19-46`).
+- **Empty body, over-long text or malformed slots** → 400 "This prompt cannot be saved yet. Fix the highlighted fields and try again." with per-field messages (`prompts.ts:124-132`, `lint.ts:15-47`).
 - **Edit, restore, history, used-by or delete of a missing or trashed id** → 404 "This prompt no longer exists; it may have been deleted. Go back to the Library to pick another." (`prompts.ts:148-153`).
 - **Inline rename that fails** → the field stays open with the server's sentence, or "The name wasn't saved: … Check that Slopify is running, then press Save name again." (`inline-name.tsx:42-48`).
 - **Delete that fails** → callout "The prompt wasn't deleted." with the error (`prompts.tsx:207-211`).

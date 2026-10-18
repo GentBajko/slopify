@@ -1,6 +1,6 @@
 ---
-generated_at_commit: e9226a34aa8a
-generated_date: 2026-10-02
+generated_at_commit: d6a72d6428ff
+generated_date: '2026-10-18'
 capstone_version: 7.0.1
 content_hash: 33049148a289
 paths_covered:
@@ -39,7 +39,7 @@ Kinds, in order: Article, Image, Thumbnail, Narration Preparation, YouTube Descr
 **Detail (`LibraryItemDetail`)** (`packages/web/src/library/item-detail.tsx:14-180`):
 - `SectionHead` with the prompt name, kicker `<Kind> prompt`, meta `Updated <date>`, and small ButtonLink "Edit prompt" (`packages/web/src/routes/prompts.tsx:183-200`).
 - Body text in a `bg-sunken rounded-media` mono block, max 420px tall, scrolling (`packages/web/src/library/item-detail.tsx:42-44`).
-- Keywords as `Code` chips `{{slot}}`, or "No keywords. It runs as written." (`packages/web/src/library/item-detail.tsx:45-55`).
+- Keywords as `Code` chips `{{slot}}`, or "No keywords. It runs as written." (`packages/web/src/library/item-detail.tsx:45-57`).
 - "Used by" (InfoTip `library.used-by`, meta counts `<n> templates, <n> schedules, <n> projects`): rows linking to Templates, to the schedule on `/calendar?tab=schedules`, and to each project with its revision count; or "Nothing uses it yet." (`packages/web/src/library/item-detail.tsx:63-130`).
 - "History" (InfoTip `library.history`, meta `<n> versions · latest <author> · <when>`) with small "Compare versions" opening the drawer, and a word diff of the last two versions, or "Only one version so far." (`packages/web/src/library/item-detail.tsx:132-180`).
 

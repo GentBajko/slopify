@@ -1,6 +1,6 @@
 ---
-generated_at_commit: d447a799ebc5
-generated_date: 2026-10-11
+generated_at_commit: d6a72d6428ff
+generated_date: 2026-10-18
 capstone_version: 7.0.1
 content_hash: a62fcdb644b0
 paths_covered:
@@ -26,7 +26,7 @@ paths_covered:
 
 # Models
 
-One SQLite database (`slopify.db`, `packages/app/src/kernel/paths.ts:36`) opened with foreign keys on, WAL journaling and 0600 file modes (`packages/app/src/kernel/db/index.ts:8`), migrated by 55 SQL files numbered up to 0062 (`packages/app/src/kernel/db/migrations/`). Domain types live beside the slice that owns them (`packages/app/src/slices/*/model.ts`, `schema.ts`, `repo.ts`), provider contracts in `packages/app/src/kernel/ports/`, and the browser imports the app's own declarations through the `@app/*` path alias (`packages/web/tsconfig.json`, `packages/web/src/api.ts:1`). The Cloudflare collector has its own two-table D1 schema (`packages/collector/schema.sql:3`).
+One SQLite database (`slopify.db`, `packages/app/src/kernel/paths.ts:36`) opened with foreign keys on, WAL journaling and 0600 file modes (`packages/app/src/kernel/db/index.ts:8`), migrated by 66 SQL files numbered up to 0074 (`packages/app/src/kernel/db/migrations/`). Domain types live beside the slice that owns them (`packages/app/src/slices/*/model.ts`, `schema.ts`, `repo.ts`), provider contracts in `packages/app/src/kernel/ports/`, and the browser imports the app's own declarations through the `@app/*` path alias (`packages/web/tsconfig.json`, `packages/web/src/api.ts:1`). The Cloudflare collector has its own two-table D1 schema (`packages/collector/schema.sql:3`).
 
 Companion chapters own three areas in depth and are not repeated here: narration text preparation, glossary and pronunciation types in `02-models-narration.md`; research documents and the reader model in `02-models-research.md`; the Docker host, container and project-folder types in `02-models-docker.md`. `slices/narration/` and `slices/research/` types are listed there only.
 
@@ -73,7 +73,7 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | StandaloneUse | `packages/app/src/kernel/runner/meter.ts:44` | In-memory | Owner and purpose of a call made outside a project |
 | StandaloneMeteredCall | `packages/app/src/kernel/runner/meter.ts:49` | `standalone_usage` | Metered provider call made outside a project |
 | LimitWaiter | `packages/app/src/kernel/runner/meter.ts:55` | `plan_limit_waiters` | Project stage waiting on a plan-limit reset |
-| StagePiece | `packages/app/src/kernel/runner/piece-repo.ts:22` | `stage_pieces` | One chunk/image/segment piece of a legacy stage |
+| StagePiece | `packages/app/src/kernel/runner/piece-repo.ts:22` | `stage_pieces` | One chunk/image/segment piece of a stage, projected from the current revision's selected manifest pieces (`packages/app/src/slices/revisions/projection.ts:110`) |
 | WorkRef | `packages/app/src/kernel/runner/work.ts:15` | In-memory | Identity of one revision_work row a provider call runs under |
 | PublicationRef | `packages/app/src/kernel/runner/work.ts:24` | In-memory | Work plus piece/publication identity an output is published under |
 | EventOrigin | `packages/app/src/kernel/events.ts:7` | In-memory | Revision/work identity every ProjectEvent carries |
@@ -289,6 +289,146 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | ModelCheckRow | `packages/app/src/slices/model-checks/model.ts` | `model_checks` | What one model does for the saved key or CLI: listed, last verdict and its source, cost of checks, first worked |
 | ModelStandingView | `packages/app/src/slices/model-checks/model.ts` | HTTP response (`standings` on `GET /api/providers/:id/models`) | works / listed / known / no-access, with the provider's sentence and a retirement |
 | Lifecycle | `packages/app/src/catalog/lifecycle.ts` | `models-lifecycle.yaml` | Retirement dates and replacements, kept out of `models.yaml` so older installs' strict v1 schema never meets a new field |
+| ModelStanding | `packages/app/src/slices/model-checks/model.ts:10` | In-memory | works, listed, known or no-access: how sure Slopify is the saved key or login can run a model |
+| CheckTrigger | `packages/app/src/slices/model-checks/model.ts:13` | In-memory | What started a check run: manual, key-added, cli-added, weekly or run |
+| CheckVerdict | `packages/app/src/slices/model-checks/model.ts:18` | `model_checks.verdict` | works, no-access or failed (the check could not tell) |
+| VerdictSource | `packages/app/src/slices/model-checks/model.ts:21` | `model_checks.verdict_source` | check (a check call) or run (a real run's call) |
+| AutoMode | `packages/app/src/slices/model-checks/model.ts:26` | Setting `model-checks.auto` | free (only checks costing nothing or under a tenth of a cent) or off |
+| ModelKey | `packages/app/src/slices/model-checks/model.ts:32` | In-memory | Provider, family (llm, tts, image) and model that identify one model |
+| Retiring | `packages/app/src/slices/model-checks/model.ts:55` | In-memory | A retirement date and the live replacement, read from the lifecycle list |
+| CheckCost | `packages/app/src/slices/model-checks/model.ts:70` | In-memory | What one check costs: dollars at list price (null when unpriced) or a CLI plan's allowance |
+| CheckPlan | `packages/app/src/slices/model-checks/run.ts:39` | HTTP response | The targets, list-price total and skipped models a check run would use, shown before it starts |
+| CheckOutcome | `packages/app/src/slices/model-checks/run.ts:20` | In-memory | One check's result: checked (verdict, sentence, spend) or skipped with a reason |
+| RunSummary | `packages/app/src/slices/model-checks/run.ts:134` | HTTP response | What a finished check run did |
+| ProviderCheckState | `packages/app/src/slices/model-checks/service.ts:58` | HTTP response | Per provider: running, last checked, spent, and counts of works, no-access and listed models |
+| ChecksOverview | `packages/app/src/slices/model-checks/service.ts:74` | HTTP response | Settings → Models: the auto mode, each provider's state and the models new for this key |
+| NewModel | `packages/app/src/slices/model-checks/service.ts:69` | HTTP response | A model that first worked for this key and has not been seen yet |
+| PickerEntry | `packages/app/src/slices/model-checks/rules.ts:69` | In-memory | One model in a picker with its standing view |
+| PickerList | `packages/app/src/slices/model-checks/rules.ts:74` | In-memory | A picker's entries, how many Show all adds, and whether it fell back to listed or known models |
+| AccessUse | `packages/app/src/kernel/runner/model-access.ts:8` | In-memory | The provider, family and model a real call used |
+| ModelAccessRecorder | `packages/app/src/kernel/runner/model-access.ts:14` | In-memory | Callbacks a real call reports to: worked, or denied with the provider's sentence |
+| CheckCall | `packages/app/src/kernel/runner/model-check.ts:16` | In-memory | The smallest request for an llm, tts or image model, made once through the attempt wrapper |
+| CheckAnswer | `packages/app/src/kernel/runner/model-check.ts:46` | In-memory | Verdict, provider sentence, stopProvider, usage and mayHaveBilled of one check call |
+| KeyProbe | `packages/app/src/kernel/ports/key-probe.ts:3` | In-memory | The cheapest authenticated call that checks a key, with optional model probe and live model list |
+| ModelList | `packages/app/src/kernel/ports/key-probe.ts:16` | In-memory | How to read a key's live model list page by page |
+| ModelProbe | `packages/app/src/kernel/ports/key-probe.ts:25` | In-memory | How to ask whether one model is reachable with a key |
+| LifecycleRow | `packages/app/src/catalog/lifecycle.ts:21` | `models-lifecycle.yaml` | One model's family, provider, id, retirement date and optional replacement |
+| Retirement | `packages/app/src/catalog/lifecycle.ts:33` | In-memory | A retirement date with its live replacement |
+| OpenRouterModel | `packages/app/src/catalog/propose.ts:11` | In-memory | One row of OpenRouter's public model list, read loosely |
+| ProposalSources | `packages/app/src/catalog/propose.ts:25` | In-memory | Input to the daily catalogue proposal: OpenRouter rows and today's date |
+| Proposal | `packages/app/src/catalog/propose.ts:31` | In-memory | What `models.yaml` and `models-lifecycle.yaml` should say, with the models added, retired and priced |
+| TopicInterest | `packages/app/src/kernel/ports/interest.ts:18` | In-memory | Port: public search suggestions and Wikipedia views for a topic title |
+| InterestResult | `packages/app/src/kernel/ports/interest.ts:5` | In-memory | Suggestions and monthly views, or a refusal (offline, refused, timeout) |
+| AssistantCliTurn | `packages/app/src/kernel/ports/assistant-cli.ts:8` | In-memory | One assistant turn handed to a CLI: binary, MCP url, turn token, system text, prompt and abort signal |
+| AssistantStreamEvent | `packages/app/src/kernel/ports/assistant-cli.ts:21` | In-memory | What a CLI turn streams back: partial, text, tool, foreign, done or failed |
+| RunAssistantCli | `packages/app/src/kernel/ports/assistant-cli.ts:34` | In-memory | Port that runs one turn on the person's CLI |
+| AssistantCli | `packages/app/src/slices/assistant/model.ts:8` | Setting | claude-code or codex |
+| AssistantScreen | `packages/app/src/slices/assistant/model.ts:40` | HTTP request | What the page shows the assistant: path, ids and up to 20 selected rows, kept as a hint |
+| AssistantMessage | `packages/app/src/slices/assistant/model.ts:47` | `assistant_messages` | One chat line with role person, assistant, tool, ask or error |
+| AssistantAsk | `packages/app/src/slices/assistant/model.ts:61` | `assistant_asks` | A call the assistant asked the person to allow first, with its state |
+| AskState | `packages/app/src/slices/assistant/model.ts:59` | `assistant_asks.state` | asked, allowed, denied, used or expired |
+| TurnState | `packages/app/src/slices/assistant/model.ts:72` | In-memory | running, done, failed or stopped |
+| AssistantEvent | `packages/app/src/slices/assistant/model.ts:74` | Event stream | assistant.delta, assistant.tool, assistant.ask and assistant.turn |
+| AssistantCliState | `packages/app/src/slices/assistant/model.ts:102` | HTTP response | Whether a CLI is installed and signed in, and any issue |
+| AssistantCliChoice | `packages/app/src/slices/assistant/model.ts:115` | In-memory | The CLI chosen for a turn, or why none can run with where to fix it |
+| AssistantTurnAccess | `packages/app/src/slices/assistant/access.ts:8` | In-memory | What one running turn's MCP calls may do: its session, screen, asks and remembered estimates |
+| AssistantTurnTokens | `packages/app/src/slices/assistant/access.ts:28` | In-memory | Resolves a turn token to its access; a finished turn's token answers nothing |
+| AllowedCall | `packages/app/src/slices/assistant/access.ts:35` | In-memory | The call an ask was for, run once after Allow |
+| GatedTool | `packages/app/src/slices/assistant/gate.ts:184` | In-memory | A tool the assistant may not run without an ask: deletes, confirmed, paid or sending |
+| AssistantMcpRouteDeps | `packages/app/src/edge/mcp/assistant.ts:290` | In-memory | Dependencies of the `/mcp/assistant` route |
+| TopicGenerationMode | `packages/app/src/slices/autopilot/model.ts:5` | `schedules.topic_mode` | off, queue or hold |
+| ScheduleForecast | `packages/app/src/slices/autopilot/model.ts:7` | In-memory | One schedule's queued topics and the first run that would have none |
+| BufferForecast | `packages/app/src/slices/autopilot/model.ts:20` | In-memory | How many days ahead finished and prepared videos cover the schedules |
+| WarningFix | `packages/app/src/slices/autopilot/model.ts:35` | In-memory | Where an autopilot warning is fixed: a Settings section, a schedule or the templates list |
+| AutopilotWarning | `packages/app/src/slices/autopilot/model.ts:44` | In-memory | A stable-keyed problem or warning that can be hidden for a week (`autopilot_snoozes`) |
+| FailedRun | `packages/app/src/slices/autopilot/model.ts:52` | In-memory | A failed step in the weekly report |
+| WeeklyReport | `packages/app/src/slices/autopilot/model.ts:59` | In-memory | The week's finished and failed videos, cost and plan percentages |
+| AutopilotView | `packages/app/src/slices/autopilot/model.ts:76` | HTTP response | Home's forecast, warnings, weekly report and Weekly report setting |
+| ForecastRun | `packages/app/src/slices/autopilot/buffer.ts:7` | In-memory | One run a schedule will make, with its topic source and any project made ahead |
+| ForecastSchedule | `packages/app/src/slices/autopilot/buffer.ts:16` | In-memory | A schedule as the forecast reads it |
+| CliLogin | `packages/app/src/slices/autopilot/warnings.ts:9` | In-memory | signed-in, signed-out or unknown |
+| AutopilotSignals | `packages/app/src/slices/autopilot/warnings.ts:13` | In-memory | What the warnings are read from: CLI sign-ins, plans, key, disk and retirements |
+| AutopilotDeps | `packages/app/src/slices/autopilot/signals.ts:38` | In-memory | Dependencies of the autopilot checks |
+| AutopilotProbes | `packages/app/src/slices/autopilot/signals.ts:60` | In-memory | What the hourly check found outside the database |
+| KeywordPlace | `packages/app/src/slices/keywords/model.ts:21` | In-memory | A place a Slopify-filled keyword works |
+| FillerKind | `packages/app/src/slices/keywords/model.ts:35` | In-memory | What fills a keyword: facts, release, chapters, duration, digest, scenes or appearance |
+| KeywordCost | `packages/app/src/slices/keywords/model.ts:39` | In-memory | free, or part of one shared AI call per run |
+| KeywordSpec | `packages/app/src/slices/keywords/model.ts:43` | In-memory | One `Slopify_` keyword: filler, what it fills, example, availability, places and cost |
+| KeywordFacts | `packages/app/src/slices/keywords/schema.ts:6` | `RunConfig` JSON | Facts copied into a saved config when a run starts: channel, series, links, neighbouring videos, cast, covered topics |
+| RemoteAccessState | `packages/app/src/edge/remote-access/model.ts:26` | In-memory | off, on, docker, not-installed, not-running, signed-out, https-off, denied, port-taken, funnel, not-applied or failed |
+| RemoteAccessView | `packages/app/src/edge/remote-access/model.ts:28` | HTTP response | Switch, address, port, one-sentence summary, fix and link for Settings |
+| Saved | `packages/app/src/edge/remote-access/store.ts:13` | Setting `remote-access` | Whether the switch is on and the HTTPS port |
+| Applied | `packages/app/src/edge/remote-access/store.ts:22` | Setting `remote-access.applied` | The DNS name, port, target and owner Slopify added to Tailscale |
+| RemoteAccessService | `packages/app/src/edge/remote-access/service.ts:35` | In-memory | Reads the view, sets the switch (adds or removes Slopify's Tailscale address), and starts and stops it with the app |
+| Machine | `packages/app/src/edge/remote-access/rules.ts:15` | In-memory | This computer as Tailscale reports it |
+| Problem | `packages/app/src/edge/remote-access/rules.ts:8` | In-memory | A remote-access problem as a sentence with its fix |
+| UsageSlot | `packages/app/src/slices/model-upkeep/model.ts:5` | In-memory | llm, audio, images or animate |
+| UsageKind | `packages/app/src/slices/model-upkeep/model.ts:7` | In-memory | template, schedule, draft or project |
+| jsonBetween | `packages/app/src/kernel/json-answer.ts:4` | In-memory | Reads the JSON an AI answer carries, bare, fenced or after a sentence |
+| TopicScoring | `packages/app/src/slices/schedules/schema.ts:99` | `schedules.topic_scoring` | off, library or search |
+| StoredScore | `packages/app/src/slices/schedules/topic-scores.ts:21` | `topic_scores` | A queued topic's score, reasons and pinned mark |
+| TemplateSection | `packages/app/src/slices/template-studio/model.ts:19` | In-memory | The eleven studio sections: subject, script, voice, pictures, video, thumbnail, shorts, document, reviews, upload, schedule |
+| SectionState | `packages/app/src/slices/template-studio/model.ts:46` | In-memory | current, making, waiting, needs-fix, stale, off or provided |
+| GateState | `packages/app/src/slices/template-studio/model.ts:50` | `template_gates.state` | legacy, ready or carried |
+| VersionGate | `packages/app/src/slices/template-studio/model.ts:52` | `template_gates` | A version's gate and the version a carried gate came from |
+| SampleVersionState | `packages/app/src/slices/template-studio/model.ts:67` | `template_sample_versions.state` | queued, making, done, failed, skipped or held |
+| SampleJobKind | `packages/app/src/slices/template-studio/model.ts:70` | `template_sample_jobs.kind` | save, topic, full-script, bakeoff or free |
+| StudioRefusal | `packages/app/src/slices/template-studio/model.ts:72` | In-memory | not-found, invalid-input, conflict, cost-changed, over-budget or not-ready |
+| StudioResult | `packages/app/src/slices/template-studio/model.ts:80` | In-memory | Value or refusal with a sentence |
+| SampleRecord | `packages/app/src/slices/template-studio/repo.ts:91` | `template_samples` | A template's hidden sample project, topic and topic source |
+| SampleVersion | `packages/app/src/slices/template-studio/repo.ts:116` | `template_sample_versions` | One version's paid sample state, quote and hold reason |
+| SampleJob | `packages/app/src/slices/template-studio/jobs.ts:7` | `template_sample_jobs` | A queued or running sample job with the high estimate the person accepted |
+| StudioView | `packages/app/src/slices/template-studio/schema.ts:166` | HTTP response | The studio page: gate, runnable version, sample, section statuses, free samples, schedule, reviews and paid view |
+| StudioChecks | `packages/app/src/slices/template-studio/schema.ts:174` | HTTP response | The providers' readiness checks, read apart from the studio |
+| SampleQuoteView | `packages/app/src/slices/template-studio/schema.ts:216` | HTTP response | What a Save's sample costs before anything is spent |
+| AnatomyViewData | `packages/app/src/slices/template-studio/schema.ts:242` | HTTP response | A section's prompt cut into who wrote each part |
+| Check | `packages/app/src/slices/template-studio/checks.ts:17` | In-memory | One free readiness check with its sentence and fix |
+| FreeCheckId | `packages/app/src/slices/template-studio/checks.ts:15` | In-memory | Id of a free check |
+| SectionStatus | `packages/app/src/slices/template-studio/status.ts:12` | In-memory | One section's state with a sentence |
+| SampleScope | `packages/app/src/slices/template-studio/scope.ts:19` | In-memory | The topic and full-script choice a sample is made with |
+| TopicChange | `packages/app/src/slices/template-studio/topic.ts:42` | In-memory | A new sample topic, its source and the quote to remake |
+| SaveStudioInput | `packages/app/src/slices/template-studio/save.ts:34` | HTTP request | A studio Save: mutation id, base version, name, document, sample make or skip, and the high estimate the person accepted |
+| SavedStudio | `packages/app/src/slices/template-studio/save.ts:91` | HTTP response | The saved template, whether its sample was queued or skipped, and the quote |
+| ReadyProblem | `packages/app/src/slices/template-studio/ready.ts:20` | In-memory | Why a version cannot be marked ready |
+| StudioSettings | `packages/app/src/slices/template-studio/budget.ts:26` | Settings `templateStudio.dailyBudget`, `templateStudio.samplesUsePlans` | Daily sample budget (default $2) and whether samples may use CLI plans |
+| BakeoffSection | `packages/app/src/slices/template-studio/bakeoff-repo.ts:7` | `template_bakeoffs.section` | script, voice or pictures |
+| BakeoffState | `packages/app/src/slices/template-studio/bakeoff-repo.ts:10` | `template_bakeoffs.state` | queued, making, done, held or failed |
+| CloneState | `packages/app/src/slices/template-studio/bakeoff-repo.ts:12` | `template_bakeoff_clones.state` | queued, making, done or failed |
+| BakeoffRow | `packages/app/src/slices/template-studio/bakeoff-repo.ts:14` | `template_bakeoffs` | One bake-off per template |
+| CloneRow | `packages/app/src/slices/template-studio/bakeoff-repo.ts:27` | `template_bakeoff_clones` | One model's copy in a bake-off |
+| BakeoffModel | `packages/app/src/slices/template-studio/bakeoff.ts:44` | HTTP request | A provider and model to compare |
+| BakeoffQuote | `packages/app/src/slices/template-studio/bakeoff.ts:122` | HTTP response | The high estimate per model before a bake-off starts |
+| BakeoffEntry | `packages/app/src/slices/template-studio/bakeoff.ts:390` | HTTP response | One model's result: cost, seconds, failure and outputs |
+| BakeoffView | `packages/app/src/slices/template-studio/bakeoff.ts:404` | HTTP response | A bake-off with its entries and whether it is stale |
+| PackManifest | `packages/app/src/slices/template-studio/pack.ts:94` | Pack file `manifest.json` | The template pack's manifest |
+| PackSampleFile | `packages/app/src/slices/template-studio/pack.ts:101` | Pack file | A sample file carried in a template pack |
+| DesignKind | `packages/app/src/slices/designs/model.ts:4` | `designs.kind` | edit or design |
+| StepKind | `packages/app/src/slices/designs/model.ts:7` | `design_steps.kind` | upload, edit or generate |
+| StepState | `packages/app/src/slices/designs/model.ts:10` | `design_steps.state` | making, ready or failed |
+| DesignFormat | `packages/app/src/slices/designs/model.ts:22` | `designs.document_json` | a4, a3, flyer, square, portrait, story, wide or brochure |
+| LayoutPreset | `packages/app/src/slices/designs/model.ts:36` | `designs.document_json` | top-title, bottom-band, centered or left-column |
+| Scrim | `packages/app/src/slices/designs/model.ts:39` | `designs.document_json` | none, soft or band |
+| BlockRole | `packages/app/src/slices/designs/model.ts:42` | `designs.document_json` | headline, subhead, details or small |
+| Design | `packages/app/src/slices/designs/model.ts:52` | `designs` | A picture edited step by step or a designed piece |
+| DesignStep | `packages/app/src/slices/designs/model.ts:71` | `design_steps` | One version of a design's picture |
+| StepInputs | `packages/app/src/slices/designs/model.ts:91` | `design_steps.inputs_json` | What a paid step was asked with, kept so Try again asks the same |
+| DesignRefusal | `packages/app/src/slices/designs/model.ts:97` | In-memory | Why a design call was refused |
+| DesignResult | `packages/app/src/slices/designs/model.ts:113` | In-memory | Value or refusal with a sentence |
+| DesignView | `packages/app/src/slices/designs/model.ts:122` | HTTP response | A design with its steps |
+| DesignEvent | `packages/app/src/slices/designs/model.ts:126` | Event stream | design.changed and design-template.sample |
+| DesignDocument | `packages/app/src/slices/designs/schema.ts:112` | `design_template_revisions.document_json`; `designs.document_json` | Picture, text blocks, formats, optional brochure and schedule, and sample values |
+| DesignPicture | `packages/app/src/slices/designs/schema.ts:113` | In-memory | The artwork source: AI-drawn from a prompt or the design's own picture |
+| DesignText | `packages/app/src/slices/designs/schema.ts:114` | In-memory | Layout preset, scrim and up to 8 text blocks |
+| TextBlock | `packages/app/src/slices/designs/schema.ts:115` | In-memory | One block of laid-out text |
+| DesignFormatEntry | `packages/app/src/slices/designs/schema.ts:116` | In-memory | A format with its focus point |
+| DesignSchedule | `packages/app/src/slices/designs/schema.ts:117` | In-memory | A design template's date field, days before and time |
+| DesignTemplate | `packages/app/src/slices/designs/templates.ts:50` | `design_templates` + `design_template_revisions` | A design template with its head document, gate and versions |
+| TemplateVersion | `packages/app/src/slices/designs/templates.ts:42` | `design_template_revisions` | One saved version with its gate |
+| SampleRow | `packages/app/src/slices/designs/sample-repo.ts:12` | `design_template_samples` | The one sample job a design template keeps |
+| SampleState | `packages/app/src/slices/designs/sample-repo.ts:10` | `design_template_samples.state` | queued, making, done, failed or held |
+| RunnableDesignVersion | `packages/app/src/slices/designs/gate.ts:20` | In-memory | The design template version a schedule makes from |
+| NewDesign | `packages/app/src/slices/designs/repo.ts:52` | `designs` | Input for a new design row |
+| NewStep | `packages/app/src/slices/designs/steps-repo.ts:57` | `design_steps` | Input for a new step row |
 | FontSummary | `packages/app/src/slices/fonts/model.ts:1` | In-memory | A caption font as pickers list it |
 | ResolvedFont | `packages/app/src/slices/fonts/model.ts:8` | In-memory | Font resolved to a file path for rendering |
 | LoudnessSettings | `packages/app/src/slices/loudness/model.ts:17` | `RunConfig` JSON | Per-run loudness targets for the video and the audio files |
@@ -5705,11 +5845,11 @@ Collector: `events` are deduplicated by id with `INSERT OR IGNORE`; `aggregates`
 - Studio: `postingPlanSchema` (≤ 14 rows, `name` 1-20, `series` ≤ 100 defaulting to `""`, ≤ 10 shorts each, `HH:MM` times, weekday 0-6) is parsed on write and on read, falling back to the empty plan (`packages/app/src/slices/studio/plan-model.ts:7-22`, `packages/app/src/slices/studio/plan.ts:32-46`); `studio.leadHours` is an integer 1-168 on write and reads as 24 otherwise (`packages/app/src/edge/http/studio.ts:286-300`, `packages/app/src/slices/studio/releases.ts:35-40`); `PUT /releases/:projectId` takes a strict `{short 0-99, at: ISO datetime or null, line? 1-20}` and `GET /releases` a `weeks` 1-8 (`packages/app/src/edge/http/studio.ts:302-306`, `:327-340`); `/ext/*` bodies are route-local zod schemas: video ids `^[A-Za-z0-9_-]{11}$`, `short` 1-99 or null, stats `ctr` 0-100, at most 3 `abVariantSchema` variants, backfill ≤ 200 rows of titles ≤ 200 with optional `checks` ≤ 100 and an optional `close`, task messages ≤ 2,000, upload pick indexes 0-9 (`packages/app/src/edge/http/studio.ts:115`-`:158`). `ab_results.variants` is re-parsed with `abVariantSchema` on read (`packages/app/src/slices/studio/stats.ts:117`).
 - External review verdicts: `{verdict: "pass" | "fail", reasons}` strict, each reason trimmed 1–500 characters, at most 10, a fail needs one (`verdictAnswerSchema`, `packages/app/src/slices/reviews/verdict.ts:9`); a refused shape answers 400 `invalid-verdict` with the body to send, a review that takes no verdict 409 with its `closedReviewSentences` sentence (`packages/app/src/edge/http/external-reviews.ts:77`). MCP requests: body at most 48 MB (413), JSON only (400), Origin loopback or the configured host (403) (`packages/app/src/edge/mcp/http.ts:18`, `:23`).
 - Collector: at most 500 events and 256 KiB per request, one machine per request, flat payloads of at most 20 keys (`packages/collector/src/model.ts:39`, `packages/collector/src/model.ts:75`).
-- Database: CHECK constraints below enforce enums, JSON validity (`json_valid`, text only, not shape), non-negative sizes and trimmed name lengths. Some legacy columns carry no SQL enum (`stages.source`, `stage_pieces.kind`/`state`, `attempts.outcome`, `outputs.role`); their row schemas check them (`packages/app/src/slices/admission/repo.ts:29`, `packages/app/src/kernel/runner/piece-repo.ts:32`). Writes that span tables run inside `transact` (a SAVEPOINT) (`packages/app/src/kernel/db/tx.ts:9`).
+- Database: CHECK constraints below enforce enums, JSON validity (`json_valid`, text only, not shape), non-negative sizes and trimmed name lengths. Some older columns carry no SQL enum (`stages.source`, `stage_pieces.kind`/`state`, `attempts.outcome`, `outputs.role`); their row schemas check them (`packages/app/src/slices/admission/repo.ts:29`, `packages/app/src/kernel/runner/piece-repo.ts:32`). Writes that span tables run inside `transact` (a SAVEPOINT) (`packages/app/src/kernel/db/tx.ts:9`).
 
 ## Schema
 
-DDL below is the text SQLite holds after every migration runs in filename order (`packages/app/src/kernel/db/migrate.ts:16`); a quoted table name marks a table a later migration rebuilt, and `ALTER TABLE ... ADD COLUMN` columns appear at the end of their row. Each migration runs in one transaction and records its version in `schema_migrations`; a database newer than the newest known file is refused (`packages/app/src/kernel/db/migrate.ts:24`). A migration whose first line is `-- foreign-keys: off` runs with enforcement off and must pass `PRAGMA foreign_key_check` before commit (`packages/app/src/kernel/db/migrate.ts:44`). Version numbers 0020, 0021, 0023, 0028, 0029, 0033 and 0036 have no file. The newest schema is 62; the MCP feature's migrations:
+DDL below is the text SQLite holds after every migration runs in filename order (`packages/app/src/kernel/db/migrate.ts:16`); a quoted table name marks a table a later migration rebuilt, and `ALTER TABLE ... ADD COLUMN` columns appear at the end of their row. Each migration runs in one transaction and records its version in `schema_migrations`; a database newer than the newest known file is refused (`packages/app/src/kernel/db/migrate.ts:24`). A migration whose first line is `-- foreign-keys: off` runs with enforcement off and must pass `PRAGMA foreign_key_check` before commit (`packages/app/src/kernel/db/migrate.ts:44`). Version numbers 0020, 0021, 0023, 0028, 0029, 0033, 0036 and 0069 have no file. The newest schema is 74; the MCP feature's migrations (0055-0062) and the 4.0 migrations (0063-0074) are:
 
 - 0055 `external_reviews`; `review_verdicts` copied with `answered_by`, `action_by` and outcome `auto-passed`.
 - 0056 `agent_actions` and `project_starts`.
@@ -5719,7 +5859,19 @@ DDL below is the text SQLite holds after every migration runs in filename order 
 - 0060 index `revision_work_reservations_work`.
 - 0061 `project_controls.pauses` and `stops`.
 - 0062 `told_failures`.
-- 0063 `model_checks`. Migration 0017 inserts a saved `DiceMaster` document theme only on installs that already used the Document stage; 0022 deletes duplicate held work rows (`packages/app/src/kernel/db/migrations/0017-legacy-dicemaster-theme.sql:7`, `packages/app/src/kernel/db/migrations/0022-drop-duplicate-held-work.sql:15`).
+- 0063 `model_checks`.
+- 0064 `template_gates` (every existing template version copied in as `legacy`), `template_samples`, `template_sample_versions`, `template_sample_jobs`.
+- 0065 `review_verdicts` and `external_reviews` copied to add the stage `promise` and the actor `assistant`.
+- 0066 `agent_actions.actor`; `project_starts` copied to add the actor `assistant`; `assistant_sessions`, `assistant_messages`, `assistant_asks`.
+- 0067 `autopilot_snoozes`.
+- 0068 `schedules.topic_scoring` and `topic_scores`.
+- 0070 `designs` and `design_steps`.
+- 0071 `standalone_usage` copied to add the owner kind `design`.
+- 0072 `design_templates`, `design_template_revisions`, `design_template_samples`.
+- 0073 `schedules.template_kind` and `schedule_runs.design_ids_json`.
+- 0074 `template_bakeoffs`, `template_bakeoff_clones`, the view `template_hidden_projects`, `template_studio_spend`.
+
+Migration 0017 inserts a saved `DiceMaster` document theme only on installs that already used the Document stage; 0022 deletes duplicate held work rows (`packages/app/src/kernel/db/migrations/0017-legacy-dicemaster-theme.sql:7`, `packages/app/src/kernel/db/migrations/0022-drop-duplicate-held-work.sql:15`).
 
 ### projects
 
@@ -6328,13 +6480,13 @@ CREATE TABLE "schedules" (
   updated_at TEXT NOT NULL,
   mutation_id TEXT,
   mutation_hash TEXT,
-  deleted_at TEXT, topic_keyword TEXT, values_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(values_json)), brief TEXT, topic_mode TEXT NOT NULL DEFAULT 'off' CHECK(topic_mode IN ('off','queue','hold')), topic_min INTEGER NOT NULL DEFAULT 10 CHECK(topic_min BETWEEN 1 AND 100), topic_llm_json TEXT CHECK(topic_llm_json IS NULL OR json_valid(topic_llm_json)), topics_generating_at TEXT, topics_generated_at TEXT, topics_failed_at TEXT, topics_error TEXT, purged_at TEXT,
+  deleted_at TEXT, topic_keyword TEXT, values_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(values_json)), brief TEXT, topic_mode TEXT NOT NULL DEFAULT 'off' CHECK(topic_mode IN ('off','queue','hold')), topic_min INTEGER NOT NULL DEFAULT 10 CHECK(topic_min BETWEEN 1 AND 100), topic_llm_json TEXT CHECK(topic_llm_json IS NULL OR json_valid(topic_llm_json)), topics_generating_at TEXT, topics_generated_at TEXT, topics_failed_at TEXT, topics_error TEXT, purged_at TEXT, topic_scoring TEXT NOT NULL DEFAULT 'off' CHECK(topic_scoring IN ('off','library','search')), template_kind TEXT NOT NULL DEFAULT 'project' CHECK(template_kind IN ('project','design')),
   CHECK(deleted_at IS NULL OR (status IN ('completed','canceled') AND next_run_at IS NULL))
 );
 CREATE INDEX schedules_due ON schedules(status, next_run_at) WHERE deleted_at IS NULL;
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0009-scheduled-jobs.sql:1`, `packages/app/src/kernel/db/migrations/0010-retain-schedule-history.sql:60`, `packages/app/src/kernel/db/migrations/0013-schedule-topic-queue.sql:3`, `packages/app/src/kernel/db/migrations/0026-schedule-topic-generation.sql:4`, `packages/app/src/kernel/db/migrations/0039-channel-essentials.sql:24`. Code model: ScheduleSummary via `rowSchema` (`packages/app/src/slices/schedules/repo.ts:15`).
+Migrations: `packages/app/src/kernel/db/migrations/0009-scheduled-jobs.sql:1`, `packages/app/src/kernel/db/migrations/0010-retain-schedule-history.sql:60`, `packages/app/src/kernel/db/migrations/0013-schedule-topic-queue.sql:3`, `packages/app/src/kernel/db/migrations/0026-schedule-topic-generation.sql:4`, `packages/app/src/kernel/db/migrations/0039-channel-essentials.sql:24`, `packages/app/src/kernel/db/migrations/0068-topic-scores.sql:5`, `packages/app/src/kernel/db/migrations/0073-schedule-design-kind.sql:4`. `topic_scoring` (0068) is off for every schedule saved before it; `template_kind` (0073) is `project` for every schedule so far, and `design` makes designed pieces from a design template (`design_templates`) instead of projects. Code model: ScheduleSummary via `rowSchema` (`packages/app/src/slices/schedules/repo.ts:15`); `templateKind` and `topicScoring` in `packages/app/src/slices/schedules/schema.ts:116`, `:185`.
 
 ### schedule_runs
 
@@ -6346,6 +6498,7 @@ CREATE TABLE "schedule_runs" (
   status TEXT NOT NULL CHECK(status IN ('running','succeeded','failed','skipped')),
   request_id TEXT,
   project_ids_json TEXT NOT NULL CHECK(json_valid(project_ids_json)),
+  design_ids_json TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(design_ids_json)),
   estimate_json TEXT CHECK(estimate_json IS NULL OR json_valid(estimate_json)),
   started_at TEXT NOT NULL,
   ended_at TEXT,
@@ -6357,7 +6510,7 @@ CREATE TABLE "schedule_runs" (
 CREATE INDEX schedule_runs_schedule ON schedule_runs(schedule_id, started_at DESC);
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0009-scheduled-jobs.sql:23`, `packages/app/src/kernel/db/migrations/0010-retain-schedule-history.sql:24`. Code model: ScheduleRun via `scheduleRunSchema` (`packages/app/src/slices/schedules/repo.ts:512`).
+Migrations: `packages/app/src/kernel/db/migrations/0009-scheduled-jobs.sql:23`, `packages/app/src/kernel/db/migrations/0010-retain-schedule-history.sql:24`, `packages/app/src/kernel/db/migrations/0073-schedule-design-kind.sql:5`. `design_ids_json` lists the designs a run made, as `project_ids_json` lists projects. Code model: ScheduleRun via `scheduleRunSchema` (`packages/app/src/slices/schedules/schema.ts:203`; `designIds` at `:212`).
 
 ### project_recovery_requests
 
@@ -6416,7 +6569,7 @@ CREATE TABLE "review_verdicts" (
  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
  revision_id TEXT NOT NULL,
  item_key TEXT NOT NULL,
- stage TEXT NOT NULL CHECK(stage IN ('article','images','narration','thumbnail','shorts')),
+ stage TEXT NOT NULL CHECK(stage IN ('article','images','narration','thumbnail','shorts','promise')),
  item_fingerprint TEXT NOT NULL,
  review_fingerprint TEXT NOT NULL,
  passed INTEGER NOT NULL CHECK(passed IN (0,1)),
@@ -6425,7 +6578,7 @@ CREATE TABLE "review_verdicts" (
  attempt INTEGER NOT NULL CHECK(attempt >= 1),
  action TEXT CHECK(action IN ('overruled','redone')),
  action_at TEXT,
- action_by TEXT CHECK(action_by IN ('person','agent')),
+ action_by TEXT CHECK(action_by IN ('person','agent','assistant')),
  redo_state TEXT CHECK(redo_state IN ('pending','started','failed')),
  redo_error TEXT,
  answered_by TEXT NOT NULL DEFAULT 'model' CHECK(answered_by IN ('model','agent','person','nobody')),
@@ -6436,7 +6589,7 @@ CREATE INDEX review_verdicts_item ON review_verdicts(project_id,item_key);
 CREATE INDEX review_verdicts_redo ON review_verdicts(redo_state);
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0025-automatic-reviews.sql:20`, `packages/app/src/kernel/db/migrations/0055-external-reviews.sql:28`, which copies the table to add `answered_by` (existing rows `model`), `action_by` (existing actions `person`) and the outcome `auto-passed`. Code model: ReviewRecord via `rowSchema` (`packages/app/src/slices/reviews/repo.ts:6`).
+Migrations: `packages/app/src/kernel/db/migrations/0025-automatic-reviews.sql:20`, `packages/app/src/kernel/db/migrations/0055-external-reviews.sql:28`, which copies the table to add `answered_by` (existing rows `model`), `action_by` (existing actions `person`) and the outcome `auto-passed`; `packages/app/src/kernel/db/migrations/0065-promise-and-assistant-reviews.sql:4` copies it again to add the stage `promise` (the promise check, a review stage of its own) and the actor `assistant`. Code model: ReviewRecord via `rowSchema` (`packages/app/src/slices/reviews/repo.ts:7`).
 
 ### schedule_topics
 
@@ -6730,7 +6883,7 @@ Migrations: `packages/app/src/kernel/db/migrations/0039-channel-essentials.sql:5
 ```sql
 CREATE TABLE standalone_usage (
  id TEXT PRIMARY KEY,
- owner_kind TEXT NOT NULL CHECK(owner_kind IN ('schedule','channel')),
+ owner_kind TEXT NOT NULL CHECK(owner_kind IN ('schedule','channel','design')),
  owner_id TEXT NOT NULL,
  channel_id TEXT NOT NULL,
  purpose TEXT NOT NULL,
@@ -6758,7 +6911,7 @@ CREATE TABLE standalone_usage (
 CREATE INDEX standalone_usage_created ON standalone_usage(created_at);
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0040-standalone-usage.sql:8`. Code model: StandaloneMeteredCall on write (`packages/app/src/slices/run-cost/meter.ts:84`); `standaloneRow` on read (`packages/app/src/slices/run-cost/week.ts:46`).
+Migrations: `packages/app/src/kernel/db/migrations/0040-standalone-usage.sql:8`, `packages/app/src/kernel/db/migrations/0071-design-usage.sql:3`, which copies the table to add the owner kind `design` (a design's picture edits and artwork are paid calls outside a project). Code model: StandaloneMeteredCall on write (`packages/app/src/kernel/runner/meter.ts:55`, owners at `:38`; `packages/app/src/slices/run-cost/meter.ts:83`); `standaloneRow` on read (`packages/app/src/slices/run-cost/week.ts:51`).
 
 ### narration_retries
 
@@ -6888,7 +7041,7 @@ CREATE TABLE "external_reviews" (
  piece_id TEXT NOT NULL,
  work_key TEXT NOT NULL,
  item_key TEXT NOT NULL,
- stage TEXT NOT NULL CHECK(stage IN ('article','images','narration','thumbnail','shorts')),
+ stage TEXT NOT NULL CHECK(stage IN ('article','images','narration','thumbnail','shorts','promise')),
  item_fingerprint TEXT NOT NULL,
  review_fingerprint TEXT NOT NULL,
  material TEXT NOT NULL CHECK(json_valid(material)),
@@ -6896,14 +7049,14 @@ CREATE TABLE "external_reviews" (
  waiting_since TEXT NOT NULL,
  deadline_at TEXT NOT NULL,
  verdict TEXT CHECK(verdict IS NULL OR json_valid(verdict)),
- answered_by TEXT CHECK(answered_by IN ('person','agent')),
+ answered_by TEXT CHECK(answered_by IN ('person','agent','assistant')),
  answered_at TEXT,
  UNIQUE(project_id,review_fingerprint)
 );
 CREATE INDEX external_reviews_waiting ON external_reviews(state, deadline_at);
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0055-external-reviews.sql:5`, `packages/app/src/kernel/db/migrations/0059-external-review-canceled.sql:4`, which copies the table to add the state `canceled`. `material` is ExternalMaterial JSON; `verdict` is ReviewVerdict JSON. Code model: ExternalReview via `externalReviewOf` (`packages/app/src/slices/reviews/external-rows.ts:38`). Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:54`).
+Migrations: `packages/app/src/kernel/db/migrations/0055-external-reviews.sql:5`, `packages/app/src/kernel/db/migrations/0059-external-review-canceled.sql:4`, which copies the table to add the state `canceled`, `packages/app/src/kernel/db/migrations/0065-promise-and-assistant-reviews.sql:33`, which copies it to add the stage `promise` and the answerer `assistant`. `material` is ExternalMaterial JSON; `verdict` is ReviewVerdict JSON. Code model: ExternalReview via `externalReviewOf` (`packages/app/src/slices/reviews/external-rows.ts:38`). Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:56`).
 
 ### agent_actions
 
@@ -6916,26 +7069,26 @@ CREATE TABLE agent_actions (
  title TEXT NOT NULL,
  revision_id TEXT,
  created_at TEXT NOT NULL
-, idempotency_key TEXT);
+, idempotency_key TEXT, actor TEXT NOT NULL DEFAULT 'agent' CHECK(actor IN ('agent','assistant')));
 CREATE INDEX agent_actions_project ON agent_actions(project_id, created_at);
 CREATE INDEX agent_actions_time ON agent_actions(created_at);
 CREATE UNIQUE INDEX agent_actions_once ON agent_actions(tool, COALESCE(project_id, ''), idempotency_key)
   WHERE idempotency_key IS NOT NULL;
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0056-agent-actions.sql:4`, `packages/app/src/kernel/db/migrations/0057-agent-action-once.sql:3`. Code model: AgentAction via `actionRow` (`packages/app/src/slices/agents/repo.ts:25`). Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:55`).
+Migrations: `packages/app/src/kernel/db/migrations/0056-agent-actions.sql:4`, `packages/app/src/kernel/db/migrations/0057-agent-action-once.sql:3`, `packages/app/src/kernel/db/migrations/0066-assistant.sql:6`. `actor` (0066) tells the in-app assistant's changes ("by assistant") from an agent's. Code model: AgentAction via `actionRow` (`packages/app/src/slices/agents/repo.ts:27`). Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:57`).
 
 ### project_starts
 
 ```sql
 CREATE TABLE project_starts (
  project_id TEXT PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
- actor TEXT NOT NULL CHECK(actor IN ('person','agent')),
+ actor TEXT NOT NULL CHECK(actor IN ('person','agent','assistant')),
  started_at TEXT NOT NULL
 );
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0056-agent-actions.sql:16`. Who last started a project's work; the run's notices add "· started by agent". Code model: Actor via `recordStart`, `lastStarter` (`packages/app/src/slices/agents/repo.ts:105`, `:116`). Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:56`).
+Migrations: `packages/app/src/kernel/db/migrations/0056-agent-actions.sql:16`, `packages/app/src/kernel/db/migrations/0066-assistant.sql:8`, which copies the table to add the actor `assistant`. Who last started a project's work; the run's notices add "· started by agent". Code model: Actor via `recordStart`, `lastStarter` (`packages/app/src/slices/agents/repo.ts:122`, `:133`; `actors` at `packages/app/src/slices/agents/model.ts:7`). Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:58`).
 
 ### told_failures
 
@@ -6947,7 +7100,7 @@ CREATE TABLE told_failures (
 );
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0062-told-failures.sql:4`. Each failed step the Notification URL was told of, by `failureId`, only while its project still has it; a project's rows are replaced together. Code model: ToldFailures via `toldFailures` (`packages/app/src/slices/notifications/told.ts:26`). Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:59`).
+Migrations: `packages/app/src/kernel/db/migrations/0062-told-failures.sql:4`. Each failed step the Notification URL was told of, by `failureId`, only while its project still has it; a project's rows are replaced together. Code model: ToldFailures via `toldFailures` (`packages/app/src/slices/notifications/told.ts:26`). Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:70`).
 
 ### model_checks
 
@@ -6970,7 +7123,322 @@ CREATE TABLE model_checks (
 );
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0063-model-checks.sql`. One row per model the saved key or CLI was asked about. `account` is the key's `credential_generation` (prefixed by provider; Gemini speech without its own key uses the Google images key's) or the CLI's id, so a new key starts every row over. A newer works or no-access verdict replaces an older one; `failed` never replaces a decisive one (`mergeVerdict`, `packages/app/src/slices/model-checks/rules.ts`). Read only by the pickers and Settings → Models; no run, admission or adapter reads it (`packages/app/src/catalog/registry.compat.test.ts`). Code model: ModelCheckRow via `readChecks`, `writeListed`, `writeVerdict` (`packages/app/src/slices/model-checks/repo.ts`). Settings keys `model-checks.auto` (free | off), `model-checks.weekly-at`, `model-checks.baseline-done`. Not in backups: tied to this install's keys and logins.
+Migrations: `packages/app/src/kernel/db/migrations/0063-model-checks.sql`. One row per model the saved key or CLI was asked about. `account` is the key's `credential_generation` (prefixed by provider; Gemini speech without its own key uses the Google images key's) or the CLI's id, so a new key starts every row over. A newer works or no-access verdict replaces an older one; `failed` never replaces a decisive one (`mergeVerdict`, `packages/app/src/slices/model-checks/rules.ts`). Read only by the pickers and Settings → Models; no run, admission or adapter reads it (`packages/app/src/catalog/registry.compat.test.ts`). Code model: ModelCheckRow via `readChecks`, `writeListed`, `writeVerdict` (`packages/app/src/slices/model-checks/repo.ts`). Settings keys `model-checks.auto` (free | off), `model-checks.weekly-at`, `model-checks.baseline-done`. Not in backups: tied to this install's keys and logins (`packages/app/src/slices/storage/backup-new-tables.test.ts:73`). Written by `packages/app/src/kernel/runner/model-access.ts:14` (`ModelAccessRecorder`, wired in `main.ts`) when a real call works or is denied, and by check calls (`packages/app/src/kernel/runner/model-check.ts:16`).
+
+### template_gates
+
+```sql
+CREATE TABLE template_gates (
+ template_id TEXT NOT NULL,
+ version INTEGER NOT NULL CHECK(version >= 1),
+ state TEXT NOT NULL CHECK(state IN ('legacy','ready','carried')),
+ carried_from INTEGER CHECK(carried_from IS NULL OR carried_from >= 1),
+ checks_json TEXT CHECK(checks_json IS NULL OR json_valid(checks_json)),
+ marked_at TEXT,
+ PRIMARY KEY(template_id, version),
+ FOREIGN KEY(template_id, version) REFERENCES project_template_revisions(template_id, version) ON DELETE CASCADE
+);
+```
+
+Migrations: `packages/app/src/kernel/db/migrations/0064-template-studio.sql:4`, which also inserts a `legacy` row for every existing `project_template_revisions` row. A version schedules may run has a gate that is `ready`, `carried` (a system writer copied a runnable gate) or `legacy` (saved before the studio); a version with no row was never checked. Code model: VersionGate via `gateRow` reads (`packages/app/src/slices/template-studio/repo.ts:85`) and the write (`packages/app/src/slices/template-studio/repo.ts:215`). Carried in backups (`packages/app/src/slices/storage/backup-format.ts:114`).
+
+### template_samples
+
+```sql
+CREATE TABLE template_samples (
+ template_id TEXT PRIMARY KEY REFERENCES project_templates(id) ON DELETE CASCADE,
+ project_id TEXT NOT NULL UNIQUE,
+ topic TEXT NOT NULL CHECK(length(trim(topic)) BETWEEN 1 AND 300),
+ topic_source TEXT NOT NULL CHECK(topic_source IN ('fixed','queued')),
+ full_script INTEGER NOT NULL DEFAULT 0 CHECK(full_script IN (0,1)),
+ created_at TEXT NOT NULL
+);
+```
+
+Migrations: `packages/app/src/kernel/db/migrations/0064-template-studio.sql:18`. The hidden project each template's samples are made on; its project may be gone and the next sample makes it again. Code model: SampleRecord via `sampleOf` (`packages/app/src/slices/template-studio/repo.ts:91`, `:101`), insert at `:193`. Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:82`).
+
+### template_sample_versions
+
+```sql
+CREATE TABLE template_sample_versions (
+ template_id TEXT NOT NULL REFERENCES project_templates(id) ON DELETE CASCADE,
+ template_version INTEGER NOT NULL CHECK(template_version >= 1),
+ revision_id TEXT,
+ state TEXT NOT NULL CHECK(state IN ('queued','making','done','failed','skipped','held')),
+ quoted_high REAL,
+ held_reason TEXT,
+ updated_at TEXT NOT NULL,
+ PRIMARY KEY(template_id, template_version)
+);
+```
+
+Migrations: `packages/app/src/kernel/db/migrations/0064-template-studio.sql:26`. Each version's paid sample, newest first on read. Code model: SampleVersion via `versionRow` (`packages/app/src/slices/template-studio/repo.ts:116`, `:140`), insert at `:160`. Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:83`).
+
+### template_sample_jobs
+
+```sql
+CREATE TABLE template_sample_jobs (
+ template_id TEXT NOT NULL REFERENCES project_templates(id) ON DELETE CASCADE,
+ template_version INTEGER NOT NULL CHECK(template_version >= 1),
+ ack_high REAL NOT NULL DEFAULT 0 CHECK(ack_high >= 0),
+ kind TEXT NOT NULL CHECK(kind IN ('save','topic','full-script','bakeoff','free')),
+ requested_at TEXT NOT NULL,
+ state TEXT NOT NULL CHECK(state IN ('queued','running')),
+ PRIMARY KEY(template_id, state)
+);
+```
+
+Migrations: `packages/app/src/kernel/db/migrations/0064-template-studio.sql:38`. At most one queued and one running sample job per template: a newer Save replaces the queued one and waits behind the running one, which is never stopped. Code model: SampleJob via `jobRow` (`packages/app/src/slices/template-studio/jobs.ts:7`, insert at `:45`). Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:84`).
+
+### template_bakeoffs
+
+```sql
+CREATE TABLE template_bakeoffs (
+ id TEXT PRIMARY KEY,
+ template_id TEXT NOT NULL UNIQUE REFERENCES project_templates(id) ON DELETE CASCADE,
+ template_version INTEGER NOT NULL CHECK(template_version >= 1),
+ section TEXT NOT NULL CHECK(section IN ('script','voice','pictures')),
+ ack_high REAL NOT NULL CHECK(ack_high >= 0),
+ ack_unknown INTEGER NOT NULL DEFAULT 0 CHECK(ack_unknown IN (0,1)),
+ state TEXT NOT NULL CHECK(state IN ('queued','making','done','held','failed')),
+ sentence TEXT,
+ created_at TEXT NOT NULL,
+ updated_at TEXT NOT NULL
+);
+```
+
+Migrations: `packages/app/src/kernel/db/migrations/0074-template-bakeoffs.sql:4`. One section's sample made again on two or three models, compared by cost and speed, then discarded; one bake-off per template at a time. Code model: BakeoffRow (`packages/app/src/slices/template-studio/bakeoff-repo.ts:14`, insert at `:97`). Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:87`).
+
+### template_bakeoff_clones
+
+```sql
+CREATE TABLE template_bakeoff_clones (
+ bakeoff_id TEXT NOT NULL REFERENCES template_bakeoffs(id) ON DELETE CASCADE,
+ slot INTEGER NOT NULL CHECK(slot BETWEEN 0 AND 2),
+ provider TEXT NOT NULL CHECK(length(provider) BETWEEN 1 AND 100),
+ model TEXT NOT NULL CHECK(length(model) BETWEEN 1 AND 200),
+ project_id TEXT UNIQUE,
+ state TEXT NOT NULL CHECK(state IN ('queued','making','done','failed')),
+ quoted_high REAL,
+ failure TEXT,
+ started_at TEXT,
+ finished_at TEXT,
+ PRIMARY KEY(bakeoff_id, slot)
+);
+```
+
+Migrations: `packages/app/src/kernel/db/migrations/0074-template-bakeoffs.sql:18`. Each model's copy; its project is hidden like the sample's and removed with the bake-off. Code model: CloneRow (`packages/app/src/slices/template-studio/bakeoff-repo.ts:27`, insert at `:110`). Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:88`).
+
+### template_hidden_projects
+
+```sql
+CREATE VIEW template_hidden_projects AS
+ SELECT project_id FROM template_samples
+ UNION ALL
+ SELECT project_id FROM template_bakeoff_clones WHERE project_id IS NOT NULL;
+```
+
+Migrations: `packages/app/src/kernel/db/migrations/0074-template-bakeoffs.sql:33`. Every project the studio keeps out of the lists the person sees: each template's sample and each bake-off copy. Code model: the `notTemplateSample` filter (`packages/app/src/slices/template-studio/repo.ts:13`).
+
+### template_studio_spend
+
+```sql
+CREATE TABLE template_studio_spend (
+ project_id TEXT NOT NULL,
+ cost REAL NOT NULL CHECK(cost >= 0),
+ created_at TEXT NOT NULL
+);
+CREATE INDEX template_studio_spend_at ON template_studio_spend(created_at);
+```
+
+Migrations: `packages/app/src/kernel/db/migrations/0074-template-bakeoffs.sql:39`. What a hidden project spent, kept when the project is removed (a bake-off discarded, a sample made again on a new topic), so today's sample budget still counts it. Written by `packages/app/src/slices/template-studio/hidden.ts:12`, summed by `packages/app/src/slices/template-studio/budget.ts:77`. Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:89`).
+
+### assistant_sessions
+
+```sql
+CREATE TABLE assistant_sessions (
+ id TEXT PRIMARY KEY,
+ cli TEXT NOT NULL,
+ created_at TEXT NOT NULL,
+ updated_at TEXT NOT NULL
+);
+```
+
+Migrations: `packages/app/src/kernel/db/migrations/0066-assistant.sql:18`. One chat of the in-app assistant; each turn is replayed to a fresh CLI. Code model: `createSession`, `sessionExists`, `latestSessionId` (`packages/app/src/slices/assistant/repo.ts:26`, `:33`, `:38`). Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:60`).
+
+### assistant_messages
+
+```sql
+CREATE TABLE assistant_messages (
+ id TEXT PRIMARY KEY,
+ session_id TEXT NOT NULL REFERENCES assistant_sessions(id) ON DELETE CASCADE,
+ turn_id TEXT NOT NULL,
+ role TEXT NOT NULL CHECK(role IN ('person','assistant','tool','ask','error')),
+ text TEXT NOT NULL,
+ meta TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(meta)),
+ created_at TEXT NOT NULL
+);
+CREATE INDEX assistant_messages_session ON assistant_messages(session_id, created_at);
+```
+
+Migrations: `packages/app/src/kernel/db/migrations/0066-assistant.sql:24`. Code model: AssistantMessage via `addMessage`, `messagesOf` (`packages/app/src/slices/assistant/repo.ts:70`, `:101`). `meta` holds a tool line's tool name, an ask's id or an error's kind. Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:61`).
+
+### assistant_asks
+
+```sql
+CREATE TABLE assistant_asks (
+ id TEXT PRIMARY KEY,
+ session_id TEXT NOT NULL REFERENCES assistant_sessions(id) ON DELETE CASCADE,
+ tool TEXT NOT NULL,
+ args_hash TEXT NOT NULL,
+ text TEXT NOT NULL,
+ state TEXT NOT NULL CHECK(state IN ('asked','allowed','denied','used','expired')),
+ created_at TEXT NOT NULL,
+ decided_at TEXT
+);
+CREATE INDEX assistant_asks_session ON assistant_asks(session_id, state);
+```
+
+Migrations: `packages/app/src/kernel/db/migrations/0066-assistant.sql:34`. What the assistant asked the person first ("Ask first") with the person's answer, which a later identical call may use once; `args_hash` ties an Allow to the exact call. Asks left unanswered or unused expire (`packages/app/src/slices/assistant/asks.ts:42`). Code model: AssistantAsk via `openAsk`, `decideAsk`, `consumeGrant`, `asksOf` (`packages/app/src/slices/assistant/asks.ts:47`, `:75`, `:99`, `:116`). Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:62`).
+
+### autopilot_snoozes
+
+```sql
+CREATE TABLE autopilot_snoozes (
+ warning_key TEXT PRIMARY KEY,
+ until TEXT NOT NULL
+);
+```
+
+Migrations: `packages/app/src/kernel/db/migrations/0067-autopilot.sql:3`. Autopilot warnings the person hid on Home, each until its week is up; a warning that changes has a new key and shows again. Code model: `readSnoozes`, `snoozeWarning` (`packages/app/src/slices/autopilot/repo.ts:9`, `:23`). Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:64`).
+
+### topic_scores
+
+```sql
+CREATE TABLE topic_scores (
+ schedule_id TEXT NOT NULL REFERENCES schedules(id) ON DELETE CASCADE,
+ topic_key TEXT NOT NULL,
+ title TEXT NOT NULL,
+ score INTEGER NOT NULL CHECK(score BETWEEN 0 AND 100),
+ interest REAL,
+ novelty REAL NOT NULL,
+ reasons TEXT NOT NULL CHECK(json_valid(reasons)),
+ pinned INTEGER NOT NULL DEFAULT 0 CHECK(pinned IN (0,1)),
+ scored_at TEXT NOT NULL,
+ PRIMARY KEY(schedule_id, topic_key)
+);
+```
+
+Migrations: `packages/app/src/kernel/db/migrations/0068-topic-scores.sql:6`. A topic's score kept beside the queue by its normalised title, so the queue's own rows keep their strict shape; `pinned` marks a topic the person moved, which scoring then leaves where it was put. Code model: StoredScore via `scoresOf`, `saveScores`, `pinTopic` (`packages/app/src/slices/schedules/topic-scores.ts:36`, `:58`, `:86`). Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:67`).
+
+### designs
+
+```sql
+CREATE TABLE designs (
+ id TEXT PRIMARY KEY,
+ kind TEXT NOT NULL CHECK(kind IN ('edit','design')),
+ name TEXT NOT NULL CHECK(length(trim(name)) BETWEEN 1 AND 200),
+ channel_id TEXT NOT NULL,
+ project_id TEXT REFERENCES projects(id) ON DELETE SET NULL,
+ template_id TEXT,
+ template_version INTEGER CHECK(template_version IS NULL OR template_version >= 1),
+ schedule_id TEXT,
+ schedule_run_id TEXT,
+ document_json TEXT CHECK(document_json IS NULL OR json_valid(document_json)),
+ values_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(values_json)),
+ head_step_id TEXT,
+ sample_of TEXT,
+ mutation_id TEXT UNIQUE,
+ mutation_hash TEXT,
+ created_at TEXT NOT NULL,
+ updated_at TEXT NOT NULL,
+ deleted_at TEXT
+);
+CREATE INDEX designs_project ON designs(project_id) WHERE project_id IS NOT NULL;
+CREATE INDEX designs_schedule ON designs(schedule_id) WHERE schedule_id IS NOT NULL;
+CREATE INDEX designs_sample_of ON designs(sample_of) WHERE sample_of IS NOT NULL;
+```
+
+Migrations: `packages/app/src/kernel/db/migrations/0070-designs.sql:9`. A design is its own record, not a project: an uploaded or generated picture edited step by step (`edit`) or a designed piece whose text Slopify lays out on the AI's artwork (`design`). `project_id` only links it to a project and is cleared when that project is deleted; `channel_id` is the channel its paid calls count under; `sample_of` marks the hidden sample a design template's editor redraws, which every list leaves out; `head_step_id` is the version the design shows and continues from. `document_json` is a DesignDocument and `values_json` the field values. Code model: Design via `designRow` (`packages/app/src/slices/designs/repo.ts:8`, insert at `:72`, `getDesign` at `:96`). Carried in backups (`packages/app/src/slices/storage/backup-format.ts:116`).
+
+### design_steps
+
+```sql
+CREATE TABLE design_steps (
+ id TEXT PRIMARY KEY,
+ design_id TEXT NOT NULL REFERENCES designs(id) ON DELETE CASCADE,
+ n INTEGER NOT NULL CHECK(n >= 1),
+ parent_id TEXT REFERENCES design_steps(id) ON DELETE CASCADE,
+ kind TEXT NOT NULL CHECK(kind IN ('upload','edit','generate')),
+ instruction TEXT CHECK(instruction IS NULL OR length(instruction) <= 4000),
+ provider TEXT,
+ model TEXT,
+ inputs_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(inputs_json)),
+ state TEXT NOT NULL CHECK(state IN ('making','ready','failed')),
+ error TEXT,
+ sha256 TEXT REFERENCES image_blobs(sha256),
+ width INTEGER CHECK(width IS NULL OR width > 0),
+ height INTEGER CHECK(height IS NULL OR height > 0),
+ mutation_id TEXT UNIQUE,
+ mutation_hash TEXT,
+ created_at TEXT NOT NULL,
+ settled_at TEXT,
+ UNIQUE(design_id, n),
+ CHECK(state <> 'ready' OR sha256 IS NOT NULL)
+);
+```
+
+Migrations: `packages/app/src/kernel/db/migrations/0070-designs.sql:32`. Each step is one version of the design's picture, kept in `image_blobs` (backed up) and chained by `parent_id`; a `ready` step always has a `sha256`. `inputs_json` is StepInputs. Code model: DesignStep via `stepRow` (`packages/app/src/slices/designs/steps-repo.ts:7`, insert at `:82`, list at `:125`, unsettled steps at `:132`). Carried in backups (`packages/app/src/slices/storage/backup-format.ts:117`).
+
+### design_templates
+
+```sql
+CREATE TABLE design_templates (
+ id TEXT PRIMARY KEY,
+ channel_id TEXT,
+ head_version INTEGER NOT NULL CHECK(head_version >= 1),
+ created_at TEXT NOT NULL,
+ deleted_at TEXT,
+ mutation_id TEXT UNIQUE,
+ mutation_hash TEXT
+);
+```
+
+Migrations: `packages/app/src/kernel/db/migrations/0072-design-templates.sql:5`. A designed piece saved with fields (`{{Event}}`, `{{Date}}`) to make again by hand or from a schedule whose `template_kind` is `design`. Code model: DesignTemplate (`packages/app/src/slices/designs/templates.ts:50`; read at `:113`, insert at `:189`). Carried in backups (`packages/app/src/slices/storage/backup-format.ts:118`).
+
+### design_template_revisions
+
+```sql
+CREATE TABLE design_template_revisions (
+ template_id TEXT NOT NULL REFERENCES design_templates(id) ON DELETE CASCADE,
+ version INTEGER NOT NULL CHECK(version >= 1),
+ name TEXT NOT NULL CHECK(length(trim(name)) BETWEEN 1 AND 200),
+ document_json TEXT NOT NULL CHECK(json_valid(document_json)),
+ gate TEXT NOT NULL DEFAULT 'unchecked' CHECK(gate IN ('unchecked','ready')),
+ checks_json TEXT CHECK(checks_json IS NULL OR json_valid(checks_json)),
+ marked_at TEXT,
+ created_at TEXT NOT NULL,
+ PRIMARY KEY(template_id, version)
+);
+```
+
+Migrations: `packages/app/src/kernel/db/migrations/0072-design-templates.sql:14`. Every Save is a new revision; schedules only make from a revision marked `ready`. `document_json` is a DesignDocument. Code model: TemplateVersion (`packages/app/src/slices/designs/templates.ts:42`; revisions read at `:118`, insert at `:194`) and RunnableDesignVersion (`packages/app/src/slices/designs/gate.ts:20`). Carried in backups (`packages/app/src/slices/storage/backup-format.ts:119`).
+
+### design_template_samples
+
+```sql
+CREATE TABLE design_template_samples (
+ template_id TEXT PRIMARY KEY REFERENCES design_templates(id) ON DELETE CASCADE,
+ design_id TEXT UNIQUE,
+ version INTEGER NOT NULL CHECK(version >= 1),
+ state TEXT NOT NULL CHECK(state IN ('queued','making','done','failed','held')),
+ held_reason TEXT,
+ quoted_high REAL,
+ updated_at TEXT NOT NULL
+);
+```
+
+Migrations: `packages/app/src/kernel/db/migrations/0072-design-templates.sql:25`. The one sample job per template its editor redraws after a Save; the sample itself is a hidden design (`designs.sample_of`). Code model: SampleRow via `rowSchema` (`packages/app/src/slices/designs/sample-repo.ts:12`, `:24`); today's sample spend is read from `standalone_usage` rows of owner kind `design` (`packages/app/src/slices/designs/sample-repo.ts:106`). Carried in backups (`packages/app/src/slices/storage/backup-format.ts:120`).
 
 ### collector.events
 

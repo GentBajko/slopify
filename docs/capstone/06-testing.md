@@ -1,8 +1,8 @@
 ---
-generated_at_commit: d447a799ebc5
-generated_date: 2026-10-11
+generated_at_commit: d6a72d6428ff
+generated_date: 2026-10-18
 capstone_version: 7.0.1
-content_hash: fb655ad71b76
+content_hash: 2fd8a41b7e09
 paths_covered:
   - ":(top)package.json"
   - ":(top)vitest.config.ts"
@@ -36,18 +36,18 @@ One runner: Vitest (`vitest` `^4.1.11`, `package.json:23`). `npm test` runs `vit
 
 | Project (`name`) | Config | Include | Environment | Test files |
 | --- | --- | --- | --- | ---: |
-| `app` | `packages/app/vitest.config.ts:5` | `src/**/*.test.ts`, `test/**/*.test.ts` | node | 574 (517 in `src`, 57 in `test`) |
-| `web` | `packages/web/vitest.config.ts:8` | `src/**/*.test.ts`, `src/**/*.test.tsx` | `happy-dom` | 200 |
-| `extension` | `packages/extension/vitest.config.ts:5` | `test/**/*.test.ts` | `happy-dom` | 3 |
+| `app` | `packages/app/vitest.config.ts:5` | `src/**/*.test.ts`, `test/**/*.test.ts` | node | 760 (703 in `src`, 57 in `test`) |
+| `web` | `packages/web/vitest.config.ts:8` | `src/**/*.test.ts`, `src/**/*.test.tsx` | `happy-dom` | 297 |
+| `extension` | `packages/extension/vitest.config.ts:5` | `test/**/*.test.ts` | `happy-dom` | 10 |
 | `collector` | `packages/collector/vitest.config.ts:5` | `src/**/*.test.ts` | node | 1 |
 | `site` | `packages/site/vitest.config.ts:5` | `*.test.js` (package root only) | node | 5 |
 
-Total: 783 tracked `*.test.*` files, every one matched by an include rule above; no `*.spec.*` files exist.
+Total: 1,073 tracked `*.test.*` files, every one matched by an include rule above; no `*.spec.*` files exist.
 
 - `vitest.tmpdir.ts:8-16`: global setup points `TMPDIR` at one `slopify-vitest-*` directory per run, inherited by workers, and removes it on teardown; fixtures create their data directories under `os.tmpdir()` and do not clean them individually.
-- `packages/app/vitest.config.ts:11`: on `win32` only, `testTimeout` and `hookTimeout` are 30 000 ms; Linux keeps Vitest's 5 s default. 48 test files pass their own timeout (an `{ timeout }` option or a trailing numeric argument) (for example `packages/app/src/slices/rebuild/runtime-bundle-recovery.test.ts`).
+- `packages/app/vitest.config.ts:11`: on `win32` only, `testTimeout` and `hookTimeout` are 30 000 ms; Linux keeps Vitest's 5 s default. many test files pass their own timeout (an `{ timeout }` option or a trailing numeric argument) (for example `packages/app/src/slices/rebuild/runtime-bundle-recovery.test.ts`).
 - `packages/web/vitest.config.ts:6` resolves the same aliases as the web build (`packages/web/aliases.ts:13-17`): `@/` to `packages/web/src`, and `@app/*.js` to the app package's TypeScript source.
-- Web test libraries: `@testing-library/dom`, `@testing-library/react`, `@testing-library/user-event`, `happy-dom` (`packages/web/package.json:32-38`). No other package declares test-only libraries.
+- Web test libraries: `@testing-library/dom`, `@testing-library/react`, `@testing-library/user-event`, `happy-dom` (`packages/web/package.json:32-38`); the extension declares `happy-dom` too since 4.0.
 - No coverage provider or threshold is configured in any Vitest config or `package.json`.
 - Platform skips: host-CLI socket tests use `it.skipIf(process.platform === "win32")` (`packages/app/src/adapters/host-cli/transport.test.ts:9`, `packages/app/test/host-cli-e2e.test.ts:140`); host folder-open tests run on Linux only (`packages/app/src/host-cli/open-folder.test.ts:47`). No `.only` or `.todo` markers exist.
 
@@ -56,7 +56,7 @@ Total: 783 tracked `*.test.*` files, every one matched by an include rule above;
 - Unit and slice tests sit beside the file they test, one test file per concern, often split by behavior with a suffix (`packages/app/src/slices/rebuild/runtime-export.test.ts`, `runtime-export-entries.test.ts`).
 - `packages/app/test/*.test.ts` (51 files): composed tests that wire several slices, the runner and real SQLite together (`revision-rebuild.test.ts`, `revision-shorts.test.ts`, `backup-round-trip.test.ts`, `host-cli-e2e.test.ts`, `docker-launcher.test.ts`).
 - `packages/app/test/e2e/*.test.ts` (6 files: `document`, `editable-projects`, `optional-outputs`, `play-drafts`, `review-checkpoints`, `skeleton`): boot the production app through `boot` from `packages/app/src/main.ts` on `127.0.0.1` port 0 and drive it over HTTP (`packages/app/test/e2e/skeleton.test.ts:9`, `packages/app/test/e2e/skeleton.test.ts:135`). Request helpers and zod response schemas live in sibling `*.http.ts` files (`packages/app/test/e2e/editable-projects.http.ts:15`).
-- Extension tests live in `packages/extension/test/`, not beside `packages/extension/src/` (`packages/extension/vitest.config.ts:7`): `fill.test.ts`, `studio-pages.test.ts`, `video-picker.test.ts`.
+- Extension tests live in `packages/extension/test/`, not beside `packages/extension/src/` (`packages/extension/vitest.config.ts:7`): ten files, among them `fill.test.ts`, `studio-pages.test.ts`, `video-picker.test.ts`, `schedule-fill.test.ts`, `upload-captions.test.ts`, `self-update.test.ts` and `pack-drift.test.ts` (the extension's copy of the upload pack keeps the app model's fields).
 - Site tests sit at the package root and read the static pages, tokens and walkthrough steps (`packages/site/pages.test.js:11`, `packages/site/walkthrough.test.js:7`).
 
 ### Running targeted tests
@@ -124,6 +124,7 @@ Provider ports are replaced by structural fakes that implement the real port int
 **Clock and runner seams:**
 
 - `fixedClock`, `manualClock` (`packages/app/src/kernel/clock.fake.ts:7`, `:28`).
+- `reapStandIns` and `exitsWith` (`packages/app/src/adapters/llm/stand-in-cli.fake.ts:15`, `:9`): the stand-in CLIs a test spawns (Claude Code, Codex, the assistant's CLI) end with the test worker that started them, and a test fails if one survives it.
 - `standaloneOver` builds a slice's deps around the real standalone call over a fake provider, because slices may not hold a `Registry` (`packages/app/src/kernel/runner/standalone.fake.ts:9-11`).
 
 **Database and storage fixtures** (real SQLite via `openDb` + `migrate`, temporary data directories, fixed clock, sequential IDs):
@@ -141,7 +142,12 @@ Provider ports are replaced by structural fakes that implement the real port int
 | `draftFixture`, `reviewFixture`, `startFixture` | `packages/app/src/slices/play-drafts/draft.fake.ts:20-141` | Play drafts through review and Start |
 | `composedFixture`, `deferred`, `tone`, `save`, `start` | `packages/app/test/revision-rebuild.fake.ts:22-113` | real `wireRunner` over fake `Registry` ports and real FFmpeg; held promises order edits, responses and publication |
 | `preparationFixture` | `packages/app/test/revision-preparation.fake.ts:6` | narration preparation composition |
-| `seedLegacy`, `verifyPcmWav` | `packages/app/test/e2e/editable-projects.fixture.ts:33`, `:174` | legacy project on disk for real-HTTP tests |
+| `seedLegacy`, `verifyPcmWav` | `packages/app/test/e2e/editable-projects.fixture.ts:33`, `:174` | an older-version project on disk for real-HTTP tests |
+| `reviewOver`, `paidDocument`, `paidSetup`, `paidSampleDeps` | `packages/app/src/slices/template-studio/studio.fake.ts:16`, `:45`, `:56`, `:104` | Play's review over a test database on the bundled model list; a paid template setup (an OpenRouter article, ElevenLabs narration); the paid-sample loop with test keys and a runner that finishes or fails at once. Nothing is sent |
+| `designHarness`, `pngOf`, `solidPng`, `designCatalogue`, `poster` | `packages/app/src/slices/designs/designs.fake.ts:38`, `:19`, `:111`, `:89`; `document.fake.ts:4` | designs over a test database with a fake picture generator, real decodable PNGs for jsPDF and ffmpeg, and a four-field gig poster |
+| `fakeTailscale`, `othersProxy`, `fakeDns` | `packages/app/src/edge/remote-access/tailscale.fake.ts:37`, `:105`, `:18` | a `tailscale` that keeps serve settings per host and port the way tailscaled does and refuses anything but `status` and `serve`; someone else's serve setting on a port |
+| `catalogue` | `packages/app/src/slices/model-checks/catalogue.fake.ts:5` | a small model list with every pricing shape a check meets |
+| `still`, `quiet`, `model` | `packages/app/test/revision-reviews-stages.fake.ts:41`, `:60`, `:78` | the automatic reviews of article, narration, thumbnail and shorts over the real runner with one scripted text model; no provider or CLI is called |
 | `mcpFixture`, `connectAgent`, `routeCallDeps` | `packages/app/src/edge/mcp/mcp.fake.ts:17`, `:53`, `:69` | the whole app (`createApp`) over a `revisionFixture` database with one project, optionally with the rebuild service; an SDK `Client` connected in-process through `StreamableHTTPClientTransport` whose `fetch` is `app.request`; `callRoute`'s deps over a fake `api` and an empty migrated database, for tests of one call |
 
 **Web** (`packages/web/src/test-app.tsx`): component tests never reach a server (`packages/web/src/test-app.tsx:19-20`).
@@ -158,8 +164,13 @@ Provider ports are replaced by structural fakes that implement the real port int
 - `call-route.test.ts`: path parameters, query and body reach the route; refusals pass through, a schema refusal names the wrong arguments; `confirmed: true` is asked before sending anything; agent changes are recorded once per `idempotencyKey` (`packages/app/src/edge/mcp/call-route.test.ts:30`-`:268`). Beside it, `file-tools`, `review-tools`, `library-tools`, `remake-tools`, `state-shapes`, `instructions`, `attribution`, `tools-projects` and `tools-setup` tests cover the bespoke tools and the answer shapes.
 - Slice side: `packages/app/src/slices/agents/attention.test.ts` checks `needs_attention` (every kind oldest first, in-flight retries, what is left out, one unreadable row skipped and logged); `packages/app/src/slices/reviews/external-repo.test.ts` checks the External agent review rules (first verdict wins, auto-pass at the deadline including paused projects, canceled runs never pass, Trash, superseded and replaced standings).
 - Composed: `packages/app/test/mcp-narration-fix.test.ts` and `packages/app/test/mcp-chunk-fix.test.ts` run the real runner (`composedFixture`) and fix a failed narration chunk through MCP the way the error says, voicing only that chunk again and continuing the run; `revision-agent-reviews.test.ts` and `revision-agent-reviews-shutdown.test.ts` run External agent reviews end to end (waiting, auto-pass after 2 h, restart, cancel, redo).
-- Backups: `packages/app/src/slices/storage/backup-new-tables.test.ts` lists every table as carried or in `leftOut` (`:33`); `external_reviews`, `agent_actions`, `project_starts`, `told_failures` and `model_checks` are left out.
+- Backups: `packages/app/src/slices/storage/backup-new-tables.test.ts` lists every table as carried or in `leftOut`; `external_reviews`, `agent_actions`, `project_starts`, `told_failures`, `model_checks`, the assistant's chats, `autopilot_snoozes`, `topic_scores` and the template studio's samples, jobs, bake-offs and spend are left out; designs and design templates are carried. A new table fails the test until it is put in one list or the other.
 - Model standings never gate a run: `packages/app/src/catalog/registry.compat.test.ts` checks that a model marked not on the plan still validates and reaches the provider, and that no file a run goes through imports `slices/model-checks`.
+- The assistant: `packages/app/src/edge/mcp/assistant.test.ts` drives `/mcp/assistant` with a turn token: only a running turn's token opens it, a page at another address is refused, a costly or outward tool answers "waiting" and records an ask, Allow makes the call once as the assistant (`runAllowedCall`), a card never shows a secret, and a tool that changes something and is in none of the ask-first lists or `assistantFreeTools` fails the test (`:325`). `packages/app/src/slices/assistant/turn.test.ts` runs turns over a fake CLI runner: one turn per chat and two at once, Stop, the time limit, shutdown, the ask-first card and the follow-up after Allow or Don't; `packages/app/src/adapters/llm/` tests parse captured streams (`fixtures/claude-code-assistant.jsonl`, `codex-assistant.jsonl`).
+- The request guard and remote access: `packages/app/src/edge/http/request-guard.test.ts` covers the names Slopify answers to, a request from another page, a sandboxed page or a form, and a page served through the person's own proxy (cross-site pages and other ports still refused, `X-Forwarded-Host` trusted only from this computer, host setup and agents kept off the proxy); `packages/app/src/edge/remote-access/service.test.ts` runs the service over `fakeTailscale` (turn on and off, the account kept as the only one let in, a taken port, a setting someone else made, Funnel never run, each problem with its fix, Docker, start and stop removing and restoring only Slopify's own handler).
+- Template studio and designs: `packages/app/src/slices/template-studio/` (23 test files) covers the sample loop (one job at a time across templates), quotes and the acknowledged high, the daily budget (a removed sample's spend still counts), Mark ready and the version schedules run, bake-offs and template packs; `packages/app/src/slices/designs/` (19) covers the renderer, the PDF worker, steps, budgets and design templates. Neither calls a provider: pictures come from a fake generator.
+- Keywords: `packages/app/src/slices/keywords/wiki.test.ts` reads `docs/wiki/Keywords-Slopify-Fills.md` and fails when the page does not explain every `Slopify_` keyword and the two old names (`{{Scene}}`, `{{Appearance}}`); `recipe-keywords-compat.test.ts` keeps a snapshot so existing prompts mean what they did.
+- Autopilot: `packages/app/src/slices/autopilot/` tests the hourly signals, the buffer forecast, the warnings, snoozes and the weekly report; `packages/app/src/autopilot-timers.test.ts` checks the timer wiring.
 - The daily catalogue script: `packages/app/src/catalog/catalogue-build.test.ts` runs `scripts/catalogue-build.ts` against a saved OpenRouter listing (`src/catalog/fixtures/openrouter-models.json`), checks the files parse with the v1 schema, and that a second run proposes nothing.
 
 **Other packages:**
@@ -176,16 +187,16 @@ File counts by directory (tracked `*.test.*` files, not instrumented coverage).
 
 | Area | Test files | Heaviest directories |
 | --- | ---: | --- |
-| `packages/app/src/slices` | 332 | `rebuild` 92, `revisions` 35, `storage` 17, `video` 17, `narration` 15, `play-drafts` 15, `settings` 11, `voices` 10, `schedules` 9 |
-| `packages/app/src/edge` | 91 | `http` 62, `mcp` 12, `edge` root 6, `docker-install` 4, `events` 4, `autostart` 3 |
-| `packages/app/src/adapters` | 50 | `llm` 15, `alignment` 13, `image` 9, `tts` 8, `host-cli` 2, root 3 |
-| `packages/app/src/kernel` | 32 | `runner` 14, `ports` 7, root 7, `db` 3, `config` 1 |
-| `packages/app/src` other | 30 | `host-cli` 9, `updater` 9, root 7, `catalog` 5 |
+| `packages/app/src/slices` | 469 | `rebuild` 116, `revisions` 37, `template-studio` 23, `storage` 23, `designs` 19, `video` 17, `narration` 17, `schedules` 16, `play-drafts` 16, `settings` 12, `voices` 10, `reviews` 9 |
+| `packages/app/src/edge` | 104 | `http` 72, `mcp` 14, `edge` root 6, `docker-install` 4, `events` 4, `autostart` 3, `remote-access` 1 |
+| `packages/app/src/adapters` | 56 | `llm` 16, `alignment` 14, `image` 9, `tts` 8, `host-cli` 2, `interest` 1, root 6 |
+| `packages/app/src/kernel` | 37 | `runner` 16, `ports` 7, root 9, `db` 4, `config` 1 |
+| `packages/app/src` other | 37 | `catalog` 10, `updater` 9, `host-cli` 8, root 10 |
 | `packages/app/test` | 57 | composed 51, `e2e` 6 |
-| `packages/web/src` | 200 | `project` 52, `play` 47, `routes` 28, `components` 10 (+ `kit` 4), `tutorial` 7, root 7, `help` 7 (`help/walk` 5), `schedules` 5 |
-| `packages/site`, `packages/collector`, `packages/extension` | 5 / 1 / 3 | — |
+| `packages/web/src` | 297 | `project` 69, `play` 55, `routes` 33, `components` 33, `schedules` 12, `lib` 11, `help` 10, `tutorial` 7, `notifications` 6, `channels` 6, `template-studio` 5, `home` 5, root 7 |
+| `packages/site`, `packages/collector`, `packages/extension` | 5 / 1 / 10 | — |
 
-Remaining app slices each carry 1–8 colocated test files: `admission`, `article`, `backups`, `batch`, `cancel`, `channels`, `checkpoints`, `control`, `document`, `episodes`, `estimate`, `eta`, `fixes`, `fonts`, `images`, `library`, `loudness`, `model-upkeep`, `notifications`, `onboarding`, `patch-notes`, `project-templates`, `reruns`, `research`, `reviews`, `run-cost`, `shorts`, `studio`, `style-preview`, `subtitles`, `telemetry`, `thumbnail`, `trash`, `tutorials`, `youtube`. Remaining web directories with tests: `autostart`, `calendar`, `channels`, `fixes`, `home`, `language`, `lib`, `library`, `notifications`, `patch-notes`, `studio`, `styles`, `subtitles`, `trash`, `tutorials`, `updates`, `video`, `voices`, `whats-new`, `youtube`.
+Remaining app slices each carry 1–8 colocated test files: `admission`, `article`, `assistant`, `autopilot`, `backups`, `batch`, `cancel`, `channels`, `checkpoints`, `control`, `document`, `episodes`, `estimate`, `eta`, `fixes`, `fonts`, `images`, `keywords`, `library`, `loudness`, `model-checks`, `model-upkeep`, `notifications`, `onboarding`, `patch-notes`, `project-templates`, `reruns`, `research`, `reviews`, `run-cost`, `shorts`, `studio`, `style-preview`, `subtitles`, `telemetry`, `thumbnail`, `trash`, `tutorials`, `youtube`. Remaining web directories with tests: `assistant`, `autostart`, `calendar`, `channels`, `designs`, `fixes`, `home`, `language`, `lib`, `library`, `notifications`, `patch-notes`, `remote-access`, `studio`, `styles`, `subtitles`, `trash`, `tutorials`, `updates`, `video`, `voices`, `whats-new`, `youtube`.
 
 Directories with no test file of their own:
 
@@ -195,7 +206,7 @@ Directories with no test file of their own:
 - `packages/web/src/onboarding`, `packages/web/src/templates` (3 files each); exercised through route tests such as `packages/web/src/routes/welcome.test.tsx`.
 - `packages/extension/src` (11 files); covered by the three suites in `packages/extension/test/`.
 
-Cross-cutting web suites: `packages/web/src/click-budget.test.tsx:15-20` fails when one of five common tasks exceeds its click budget; `packages/web/src/styles/grid.test.ts` and `tokens.test.ts` enforce the spacing scale and design tokens; `packages/web/src/components/kit/*.test.tsx` cover the shared kit.
+Cross-cutting web suites: `packages/web/src/kit-rules.test.ts` scans every non-test source outside `components/kit/` and fails on a hand-built button, a link that looks like a button, an `onClick` on a row or a raw checkbox (`docs/design-system.md`); `packages/web/src/click-budget.test.tsx:15-20` fails when one of five common tasks exceeds its click budget; `packages/web/src/styles/grid.test.ts` and `tokens.test.ts` enforce the spacing scale and design tokens; `packages/web/src/components/kit/*.test.tsx` cover the shared kit.
 
 Boundaries of the suite, as facts:
 

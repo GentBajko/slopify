@@ -1,6 +1,6 @@
 ---
-generated_at_commit: e9226a34aa8a
-generated_date: 2026-10-02
+generated_at_commit: d6a72d6428ff
+generated_date: '2026-10-18'
 capstone_version: 7.0.1
 content_hash: fc5be7bc4331
 paths_covered:
@@ -10,6 +10,9 @@ paths_covered:
   - ":(top)packages/web/src/components/editor-states.tsx"
   - ":(top)packages/web/src/components/slot-body.tsx"
   - ":(top)packages/web/src/components/detected-slots.tsx"
+  - ":(top)packages/web/src/components/keyword-insert-bar.tsx"
+  - ":(top)packages/web/src/components/keyword-card.tsx"
+  - ":(top)packages/web/src/components/old-keyword-names.tsx"
   - ":(top)packages/web/src/components/labelled-switch.tsx"
   - ":(top)packages/web/src/components/saved-tick.tsx"
   - ":(top)packages/web/src/lib/draft-lint.ts"
@@ -29,9 +32,9 @@ Operate surface for creating, duplicating, editing and deleting one intro/outro 
 - Body grid: one column; from `lg` a fluid form column plus a 360 px aside (`packages/web/src/routes/entry-editor.tsx:147`). The form sits on the page with no box (`editorSurface = "pt-1"`); the aside is sticky at `lg:top-16` (`packages/web/src/library/editor-frame.tsx:8`).
 - Form row: kit `Field` "Name" (InfoTip `library.entry.name`) growing from 200 px, then `LabelledSwitch` "Category" (Intro / Outro) and `LabelledSwitch` "Mode" (Text / LLM), each with an InfoTip (`packages/web/src/routes/entry-editor.tsx:151`, `:168`, `:177`).
 - Mode hint: one right-aligned small line under the row, "Text is narrated as written." or "LLM is an instruction whose answer is narrated.", linked to the Mode switch by `aria-describedby` (`packages/web/src/routes/entry-editor.tsx:191`, `packages/web/src/lib/entry-options.ts:35`).
-- Body: label "Body" with InfoTip `library.entry.body`, then `SlotBody`, a textarea over a mirror that marks malformed `{{` in place (`packages/web/src/routes/entry-editor.tsx:195`, `packages/web/src/components/slot-body.tsx:6`).
+- Body: label "Body" with InfoTip `library.entry.body`, then `KeywordInsertBar` (`packages/web/src/components/keyword-insert-bar.tsx:43`) above the text: a row labelled "Insert" (InfoTip per place, `library.keywords.<kind>`) with one quiet small chip for each keyword Slopify fills that this place can use (`keywordsFor(place)`), named without the `Slopify_` prefix ("Thumbnail Text"); a press inserts `{{Slopify_X}}` at the caret or over the selection and puts the caret back after it; the row is a toolbar "Insert a keyword Slopify fills" with one tab stop and Left, Right, Home and End moving along it; pointing at or focusing a chip opens a `KeywordCard` popover (`keyword-card.tsx:11`: the keyword, what it fills, Example, When, Works in, Cost) without taking focus. For an intro the chips are the keywords usable in an intro, for an outro those of an outro (`packages/web/src/routes/entry-editor.tsx:207`). Then `SlotBody`, a textarea over a mirror that marks malformed `{{` in place (`packages/web/src/routes/entry-editor.tsx:195`, `packages/web/src/components/slot-body.tsx:6`).
 - Save bar: `EditorActions`, sticky at the viewport bottom (raised above the phone bottom nav), `border-t`, ground background: destructive "Delete" at left (kept in place but hidden and unfocusable before the row exists), one `StatusSlot`, secondary `ButtonLink` "Cancel", primary "Save" (`packages/web/src/components/editor-actions.tsx:53`, `packages/web/src/routes/entry-editor.tsx:213`).
-- Aside: `DetectedSlots`: small `SectionHead` "Detected slots" (InfoTip `library.slots`), `SlotChip`s for each `{{name}}`, and the lint list below a hairline (`packages/web/src/components/detected-slots.tsx:8`).
+- Aside: `DetectedSlots`: small `SectionHead` "Detected slots" (InfoTip `library.slots`), `SlotChip`s for each `{{name}}`, your own fields and the keywords Slopify fills in two lists, `OldKeywordNames`, the keyword warnings (a Text intro or outro is narrated as written, so a keyword only an AI step fills is warned about; `keywordWarnings` in `packages/app/src/slices/library/lint.ts:31`) and the lint list below a hairline (`packages/web/src/components/detected-slots.tsx`, `packages/web/src/routes/entry-editor.tsx:255`).
 - Delete dialog: kit `ConfirmDialog` (`packages/web/src/routes/entry-editor.tsx:250`).
 
 Keyboard: Ctrl+S (Cmd+S) runs Save through the command palette's `editor.save` command, advertised by `aria-keyshortcuts` on Save (`packages/web/src/components/editor-actions.tsx:40`, `packages/web/src/lib/shortcuts.ts:21`).
@@ -40,7 +43,7 @@ Keyboard: Ctrl+S (Cmd+S) runs Save through the command palette's `editor.save` c
 
 | State | Trigger | Rendering | Source |
 |---|---|---|---|
-| Loading | editing or duplicating while the entries list is in flight | `EditorSkeleton`: a bordered sheet with a 64-wide bar and a 520 px block, plus an aside bar | `packages/web/src/routes/entry-editor.tsx:122`, `packages/web/src/components/editor-states.tsx:10` |
+| Loading | editing or duplicating while the entries list is in flight | `EditorSkeleton`: a bordered sheet with a 64-wide bar and a 520 px block, plus an aside bar | `packages/web/src/routes/entry-editor.tsx:122`, `packages/web/src/components/editor-states.tsx:6` |
 | List unreadable | entries query error | `EditorProblem`: danger `Callout` "This can't be opened." with the error, then the underlined link "Back to Intros & Outros" | `packages/web/src/routes/entry-editor.tsx:119`, `packages/web/src/library/editor-frame.tsx:24` |
 | Entry gone | id not in the list | same frame with "That entry is gone. It may have been deleted in another tab." | `packages/web/src/routes/entry-editor.tsx:125` |
 | New | no id, no `from` | blank name and body, mode Text, category from the URL | `packages/web/src/routes/entry-editor.tsx:68` |

@@ -176,7 +176,7 @@ The revision runtime is the only live path.
 - **Thumbnail source.** Off → no recipe. Provide → provided recipe (scenario 05). `from_prompt` → step 11. `prompt_by_llm` → the prompt comes from scenario 10's text recipe, then step 11 (`recipe-visual.ts:291-312`).
 - **Mixed generated and provided rows** are allowed under Images Generate. Choosing Provide while generated rows remain returns the field error "Replace or remove generated images before choosing Provide." (`packages/app/src/slices/rebuild/recipe-save.ts:249-256`).
 - **Changing prompts or Numbers in Edit project** re-plans definitions with `replanImagePrompts`. Every definition an unchanged prompt already has is kept, so its fingerprint and image stay (`packages/app/src/slices/revisions/image-plan.ts:1-10`, `mutations.ts:264-311`). Changing prompts while Images is not Generate is refused (`mutations.ts:288-298`).
-- **Deleting the last image** (legacy action path) sets Images and Video to Off and turns burn-in captions into files (`runtime-actions.ts:71-80`).
+- **Deleting an image** has no direct route: it is a saved edit (scenario 12).
 - **Old HTTP routes.** `DELETE /projects/:id/images/:outputId` and `POST /projects/:id/images/:outputId/regenerate` answer 409 `revision-required` (`packages/app/src/edge/http/actions.ts:305-322`).
 - **Estimate.** It shows planned images, "N images for about M minutes of narration" when scaled. It adds one "Image scenes" LLM request when scenes are on, and one image when the establishing image comes from a prompt (`packages/app/src/slices/estimate/index.ts:270-297`).
 

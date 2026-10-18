@@ -1,6 +1,6 @@
 ---
-generated_at_commit: d83482c1175e
-generated_date: 2026-10-02
+generated_at_commit: d6a72d6428ff
+generated_date: 2026-10-18
 capstone_version: 7.0.1
 content_hash: 90822441e2be
 paths_covered:
@@ -73,9 +73,9 @@ Dependency direction: edge → `recoverProject` / `previewRebuild` / `startRebui
 | `POST /api/projects/:id/stages/:kind/soften` (marks the stage's `softenableKeys` - refused Images/Thumbnail prompts, or refused short stills `shorts:N:image:M` of Video - then retry; 409 when none) | `packages/app/src/edge/http/actions.ts:271`, `:276`; `packages/app/src/slices/rebuild/soften.ts:32`, `:36` |
 | `POST /api/projects/:id/stages/:kind/rerun` | `packages/app/src/edge/http/actions.ts:295` |
 | `POST /api/projects/:id/reviews/:verdictId/redo` → `{ kind: "redo", item }` | `packages/app/src/edge/http/reviews.ts:88` |
-| In-process callers of `recoverProject` | restart resume (`packages/app/src/main.ts:492`), review redos (`packages/app/src/slices/rebuild/review-redo.ts:115`), narration retries (`packages/app/src/slices/rebuild/narration-retry.ts:126`; a `running` refusal leaves the retry pending until the project's running step finishes and `onFinished` kicks it again, `:143`) |
-| Subtitle alignment | `alignSubtitles` (`packages/app/src/adapters/alignment/index.ts:12`), called from `executeSubtitleRecipe` (`packages/app/src/slices/rebuild/runtime-subtitles.ts:74`, `:117`) |
-| Startup model prefetch | `packages/app/src/main.ts:736` |
+| In-process callers of `recoverProject` | restart resume (`packages/app/src/main.ts:594`), review redos (`packages/app/src/slices/rebuild/review-redo.ts:129`), narration retries (`packages/app/src/slices/rebuild/narration-retry.ts:139`; a `running` refusal leaves the retry pending until the project's running step finishes and `onFinished` kicks it again, `:161`) |
+| Subtitle alignment | `alignSubtitles` (`packages/app/src/adapters/alignment/index.ts:30`), called from `executeSubtitleRecipe` (`packages/app/src/slices/rebuild/runtime-subtitles.ts:74`, `:117`) |
+| Startup model prefetch | `packages/app/src/main.ts:1090` |
 
 ## Communication
 
@@ -89,13 +89,13 @@ Dependency direction: edge → `recoverProject` / `previewRebuild` / `startRebui
 
 Recovery flow in `recoverProject`: read or reserve the request row (`packages/app/src/slices/rebuild/recovery.ts:89`, `:121`); refuse `control-changed` when the authority stamp moved (`:132`); for rerun/redo save a regeneration revision through `saveRevision` with a `beforeCommit` conflict check (`:152`); build the selection (`:196`), plan (`:208`), refuse unreviewed provided content (`:213`), blocked work (`:220`) and video/document reruns whose provider inputs are unfinished (`:229`); store the preview (`:254`). Readiness runs outside the lock (`:272`). The admit section re-reads the receipt (`:289`), rechecks authority (`:301`), the provider credential-generation stamp (`:305`) and conflicts, then calls `admitCheckedPreview` with key `recovery:<key>:admit` (`:320`). Every outcome is written back via `rememberRecovery`, so a repeated request returns the stored result.
 
-Subtitle model: `prepareModel` returns the cached file when size and SHA-256 match (`packages/app/src/adapters/alignment/cache.ts:47`), else a verified seed copy (`:48`), else up to three download attempts (`:51`). Only `SubtitleModelDownloadInterrupted` errors retry, after `attempt × 1000` ms abortable waits (`:56`-`:61`); these come from fetch rejection (`:84`), HTTP 408/429/5xx (`:97`) and body read failure (`:112`). Other HTTP statuses, size/hash mismatch and filesystem errors throw at once. Each attempt stages into a private `.alignment-download-*` dir, verifies bytes and hash, then renames atomically (`:73`-`:151`). Per-attempt timeout is `model.timeoutMs ?? 300_000` (`:81`); the multilingual model sets 1 200 000 ms (`packages/app/src/adapters/alignment/multilingual.ts:15`). Exhaustion throws a three-attempt message with the last failure as `cause` (`:65`). A read error releases the reader without `cancel()` so the original error surfaces (`:105`-`:129`). `alignSubtitles` takes the worker lock before preparing the model, then decodes and aligns (`packages/app/src/adapters/alignment/index.ts:18`-`:47`); sentence-timed languages use no model (`:14`, `:58`). The cache directory is `subtitleModelDir(dataDir, language)` (`packages/app/src/kernel/paths.ts:78`). No paid provider is called.
+Subtitle model: `prepareModel` returns the cached file when size and SHA-256 match (`packages/app/src/adapters/alignment/cache.ts:47`), else a verified seed copy (`:48`), else up to three download attempts (`:51`). Only `SubtitleModelDownloadInterrupted` errors retry, after `attempt × 1000` ms abortable waits (`:56`-`:61`); these come from fetch rejection (`:84`), HTTP 408/429/5xx (`:97`) and body read failure (`:112`). Other HTTP statuses, size/hash mismatch and filesystem errors throw at once. Each attempt stages into a private `.alignment-download-*` dir, verifies bytes and hash, then renames atomically (`:73`-`:151`). Per-attempt timeout is `model.timeoutMs ?? 300_000` (`:81`); the multilingual model sets 1 200 000 ms (`packages/app/src/adapters/alignment/multilingual.ts:15`). Exhaustion throws a three-attempt message with the last failure as `cause` (`:65`). A read error releases the reader without `cancel()` so the original error surfaces (`:105`-`:129`). `alignSubtitles` takes the worker lock before preparing the model, then decodes and aligns (`packages/app/src/adapters/alignment/index.ts:18`-`:47`); sentence-timed languages use no model (`:14`, `:58`). The cache directory is `subtitleModelDir(dataDir, language)` (`packages/app/src/kernel/paths.ts:118`). No paid provider is called.
 
 ## Composition
 
-- `RebuildDeps` is assembled in `packages/app/src/main.ts:470` (db, paths, ids, clock, log, runner, catalogue, `measureAudio`, `providers`, `modelsFor`, `emit`).
-- The aligner is injected as `alignSubtitles: aligner = alignSubtitles` into the runner's execution deps (`packages/app/src/main.ts:850`, `:866`); `sample-build` substitutes its own.
-- Startup prefetch runs `prefetchModel({ cacheDir: subtitleModelDir(...), seed: options.subtitleModelSeed, choice: readSettings(...).subtitleModel })` when `prefetchSubtitleModel` is set; failure is logged and non-fatal (`packages/app/src/main.ts:735`-`:744`).
+- `RebuildDeps` is assembled in `packages/app/src/main.ts:560` (db, paths, ids, clock, log, runner, catalogue, `measureAudio`, `providers`, `modelsFor`, `emit`).
+- The aligner is injected as `alignSubtitles: aligner = alignSubtitles` into the runner's execution deps (`packages/app/src/main.ts:1227`, `:1243`); `sample-build` substitutes its own.
+- Startup prefetch runs `prefetchModel({ cacheDir: subtitleModelDir(...), seed: options.subtitleModelSeed, choice: readSettings(...).subtitleModel })` when `prefetchSubtitleModel` is set; failure is logged and non-fatal (`packages/app/src/main.ts:1090`-`:1103`).
 - Tests: admission/recovery in `packages/app/src/slices/rebuild/recovery.test.ts`, `service-reuse.test.ts`, `service-*.test.ts`; download retries in `packages/app/src/adapters/alignment/cache-retry.test.ts:25`; prefetch locking in `packages/app/src/adapters/alignment/prefetch.test.ts:26`.
 
 ## Frontend

@@ -16,6 +16,7 @@ content_hash: 3132b1c584b0
 paths_covered:
   - ":(top)packages/app/src/edge/autostart/**"
   - ":(top)packages/app/src/edge/http/autostart.ts"
+  - ":(top)packages/app/src/edge/http/remote-guard.ts"
   - ":(top)packages/app/src/edge/cli.ts"
   - ":(top)packages/app/src/edge/cli-args.ts"
   - ":(top)packages/app/src/edge/docker-install/run.ts"
@@ -100,6 +101,7 @@ paths_covered:
 
 ## Unhappy paths
 
+- Through a proxy (Slopify opened on another device by remote access, Tailscale serve or a reverse proxy), `PUT /api/settings/autostart` is refused 403 "Start with this computer is turned on or off only on the computer Slopify runs on, not over remote access: open Slopify there, at http://127.0.0.1 and Slopify's port, and do it there." (`packages/app/src/edge/http/remote-guard.ts:57-61`, `:67-68`; 53-remote-access-and-request-guard.md Step 13). The view stays readable.
 - Another data folder's entry exists → 409 "Another Slopify, with a different data folder, already starts when you log in (<where>). Slopify left it alone. Turn it off in that Slopify's Settings → General, or delete … then turn the switch on here again." (`packages/app/src/edge/autostart/native.ts:200-203`).
 - Foreign entry → 409 naming the file (or the `Slopify` Run value and Task Manager → Startup apps) and saying Slopify left it alone (`packages/app/src/edge/autostart/native.ts:204-209`).
 - Windows `%`-path → 409 suggesting `--data-dir C:\Slopify` (`packages/app/src/edge/autostart/launcher.ts:140-144`).

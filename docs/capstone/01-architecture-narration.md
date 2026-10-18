@@ -1,6 +1,6 @@
 ---
-generated_at_commit: d83482c1175e
-generated_date: 2026-10-02
+generated_at_commit: d6a72d6428ff
+generated_date: 2026-10-18
 capstone_version: 7.0.1
 content_hash: 2c8739b5a890
 paths_covered:
@@ -80,8 +80,8 @@ Scope: narration text shaping (pronunciation glossary, shared glossary, narratio
 | TTS adapters | `packages/app/src/adapters/tts/` | Implement `TtsPort`; registered by id in `packages/app/src/adapter-registry.ts:104`. Import ports only (`biome.json:99`). |
 | Text transforms | `packages/app/src/slices/narration/` | Pure text/IPA/alias/cue functions plus the ffmpeg join and pause helpers; import kernel and storage/video helpers (`packages/app/src/slices/narration/concat.ts:12`, `packages/app/src/slices/narration/pauses.ts:116`). |
 | Multi-voice and loudness models | `packages/app/src/slices/voices/`, `packages/app/src/slices/loudness/` | Speaker/script/grouping models and ffmpeg loudnorm helpers; browser-safe model files are imported by the web client (`packages/app/src/slices/loudness/model.ts:12`). |
-| Planning (recipes) | `packages/app/src/slices/rebuild/recipe-*.ts` | Import admission rules and the narration/voices/loudness transforms; produce `ResolvedWorkRecipe` rows (`packages/app/src/slices/rebuild/recipe-build.ts:28`). |
-| Execution (runtime) | `packages/app/src/slices/rebuild/runtime-*.ts` | Dispatch pieces to provider or local execution and publish assets (`packages/app/src/slices/rebuild/runtime-run.ts:17`). |
+| Planning (recipes) | `packages/app/src/slices/rebuild/recipe-*.ts` | Import admission rules and the narration/voices/loudness transforms; produce `ResolvedWorkRecipe` rows (`packages/app/src/slices/rebuild/recipe-build.ts:10`). |
+| Execution (runtime) | `packages/app/src/slices/rebuild/runtime-*.ts` | Dispatch pieces to provider or local execution and publish assets (`packages/app/src/slices/rebuild/runtime-run.ts:19`). |
 | HTTP edge | `packages/app/src/edge/http/{pronunciations,auditions,audio-preview,narration-peaks,revisions}.ts` | Call slice functions; mounted in `packages/app/src/edge/http/app.ts:194`, `:209`. |
 | Browser | `packages/web/src/{play,voices,video,project,routes}/` | Imports app types/models through `@app/...` and calls HTTP through `packages/web/src/api.ts`. |
 
@@ -93,12 +93,12 @@ Enforced import rules: kernel may not import slices/edge; slices may not import 
 
 | Feature | Predicate | Condition |
 | --- | --- | --- |
-| Pronunciation Glossary | `usesPronunciationGlossary` (`packages/app/src/slices/admission/rules.ts:631`) | Generated audio, `audio.usePronunciationGlossary === true`, provider `inworld`, model `inworld-tts-2` or `inworld-tts-2-flash`. |
-| Narration Preparation | `usesNarrationPreparation` (`packages/app/src/slices/admission/rules.ts:432`) | Generated audio and a nonblank `narrationPrompt`. Admission refuses it unless the voice is `inworld` / `inworld-tts-2` (`packages/app/src/slices/admission/rules.ts:438`). |
-| Narration aliases | `narrationAliasesOf` (`packages/app/src/slices/admission/rules.ts:601`) | Generated audio and `audio.useNarrationAliases === true`; returns the run's copied `narrationAliases`. |
-| Shared glossary | `withShared` (`packages/app/src/slices/rebuild/recipe-text.ts:444`) | `audio.shareGlossary === true`; merges the run's copied `sharedGlossary` after the project's own entries. |
+| Pronunciation Glossary | `usesPronunciationGlossary` (`packages/app/src/slices/admission/rules.ts:653`) | Generated audio, `audio.usePronunciationGlossary === true`, provider `inworld`, model `inworld-tts-2` or `inworld-tts-2-flash`. |
+| Narration Preparation | `usesNarrationPreparation` (`packages/app/src/slices/admission/rules.ts:454`) | Generated audio and a nonblank `narrationPrompt`. Admission refuses it unless the voice is `inworld` / `inworld-tts-2` (`packages/app/src/slices/admission/rules.ts:438`). |
+| Narration aliases | `narrationAliasesOf` (`packages/app/src/slices/admission/rules.ts:623`) | Generated audio and `audio.useNarrationAliases === true`; returns the run's copied `narrationAliases`. |
+| Shared glossary | `withShared` (`packages/app/src/slices/rebuild/recipe-text.ts:509`) | `audio.shareGlossary === true`; merges the run's copied `sharedGlossary` after the project's own entries. |
 | Level the volume | `usesLoudness` (`packages/app/src/slices/loudness/model.ts:146`) | `config.loudness` present and audio not Off. |
-| Multiple voices | `config.voices` plus a script (`packages/app/src/slices/rebuild/recipe-audio.ts:91`) | `VoicesSettings` (`packages/app/src/slices/voices/model.ts:78`). |
+| Multiple voices | `config.voices` plus a script (`packages/app/src/slices/rebuild/recipe-audio.ts:91`) | `VoicesSettings` (`packages/app/src/slices/voices/model.ts:93`). |
 
 The run config fields are `audio.{usePronunciationGlossary,shareGlossary,useNarrationAliases,describeFigures,skipCode}`, `narrationAliases`, `sharedGlossary`, `voices`, `loudness` (`packages/app/src/slices/admission/schema.ts:83`, `:93`, `:94`, `:206`, `:209`). New Play drafts set `usePronunciationGlossary`, `shareGlossary`, `useNarrationAliases` and `describeFigures` to `true` (`packages/web/src/play/draft-state.ts:36`). The loudness default for new runs is the app setting `loudness` (`packages/app/src/slices/settings/model.ts:213`), defaulting to enabled, −14 LUFS video, −18 LUFS audio files (`packages/app/src/slices/loudness/model.ts:34`).
 
@@ -116,7 +116,7 @@ Within a narration group, alias spans take precedence over glossary spans (`pack
 
 ### Request construction
 
-`narrationParts` (`packages/app/src/slices/rebuild/recipe-audio-parts.ts:19`) chooses, per logical group:
+`narrationParts` (`packages/app/src/slices/rebuild/recipe-audio-parts.ts:23`) chooses, per logical group:
 
 1. Asset override → one `provided` recipe; no glossary or preparation.
 2. Glossary unresolved (`null`) → no parts (a deferred `audio:<segment>:future` is planned by the caller).
@@ -153,18 +153,18 @@ With Level the volume on, each join gets a sibling `level:<segment>` recipe (`le
 | `system-voice` | `packages/app/src/adapters/tts/system.ts:84` (say, SAPI, Piper, Pico, eSpeak NG, eSpeak; no key) | none |
 | `google-tts` | `packages/app/src/adapters/tts/gemini.ts:81` | dialogue |
 
-The audio stage runs through `runRevisionInvocation` (`packages/app/src/main.ts:948`); there is no separate narration stage runner.
+The audio stage runs through `runRevisionInvocation` (`packages/app/src/main.ts:1327`); there is no separate narration runner (the earlier `slices/narration/run.ts` was deleted in 4.0).
 
 ## Entry points
 
 | Entry | Site |
 | --- | --- |
-| Stage runner for every stage kind (audio included) | `runRevisionInvocation` wired at `packages/app/src/main.ts:948`, defined at `packages/app/src/slices/rebuild/runtime-run.ts:17`. |
-| Provider pieces (`tts`, `llm` preparation/description) | `executeProviderRecipe` (`packages/app/src/slices/rebuild/runtime-provider.ts:43`). |
-| Local pieces (`concat-narration`, `concat-turns-v1`, `level-narration-v1`, `narration-files-v1`, `figure-card-v1`) | `executeLocalRecipe` (`packages/app/src/slices/rebuild/runtime-local.ts:38`, dispatch at `:94`–`:102`). |
-| Listening files (`voices:files`) | `executeVoicesRecipe` (`packages/app/src/slices/rebuild/runtime-voices.ts:25`). |
-| Caption-triggered narration retry | `requestNarrationRetry` from the subtitle step (`packages/app/src/slices/rebuild/runtime-subtitles.ts:390`); at most `narrationRetryLimit = 2` per chunk (`packages/app/src/slices/rebuild/narration-retry.ts:13`); coordinator created at `packages/app/src/main.ts:365`. A `running` refusal (another step of the project still going) leaves the retry pending; `onFinished` kicks it again (`packages/app/src/slices/rebuild/narration-retry.ts:143`). |
-| Voice audition | `auditionVoice` wired at `packages/app/src/main.ts:629`. |
+| Executor for every stage kind (audio included) | `runRevisionInvocation` wired in `wireRunner` at `packages/app/src/main.ts:1327`, defined at `packages/app/src/slices/rebuild/runtime-run.ts:19`. |
+| Provider pieces (`tts`, `llm` preparation/description) | `executeProviderRecipe` (`packages/app/src/slices/rebuild/runtime-provider.ts:46`). |
+| Local pieces (`concat-narration`, `concat-turns-v1`, `level-narration-v1`, `narration-files-v1`, `figure-card-v1`) | `executeLocalRecipe` (`packages/app/src/slices/rebuild/runtime-local.ts:42`, dispatch at `:94`–`:102`). |
+| Listening files (`voices:files`) | `executeVoicesRecipe` (`packages/app/src/slices/rebuild/runtime-voices.ts:26`). |
+| Caption-triggered narration retry | `requestNarrationRetry` from the subtitle step (`packages/app/src/slices/rebuild/runtime-subtitles.ts:390`); at most `narrationRetryLimit = 2` per chunk (`packages/app/src/slices/rebuild/narration-retry.ts:13`); coordinator created at `packages/app/src/main.ts:445`. A `running` refusal (another step of the project still going) leaves the retry pending; `onFinished` kicks it again (`packages/app/src/slices/rebuild/narration-retry.ts:143`). |
+| Voice audition | `auditionVoice` wired at `packages/app/src/main.ts:922`. |
 
 | Work keys | Operation |
 | --- | --- |
@@ -214,7 +214,7 @@ Narration downloads are ordinary file routes (`GET /files/:projectId/:asset`, `p
 
 Request identity includes exact sent text, voice/model selection, segment and whole-text identity; work identity adds the regeneration token (`packages/app/src/slices/narration/plan.ts:36`, `:65`). Reused audio is rebound by `bindNarrationReuse` and late publication by `rebindPublishedNarration` (`packages/app/src/slices/rebuild/runtime-narration-reuse.ts:13`, `packages/app/src/slices/rebuild/runtime-narration-publication.ts:10`).
 
-TTS adapters are constructed once in `buildRegistry` (`packages/app/src/adapter-registry.ts:104`) and reached through `registry.tts(id)`; the stage wrapper supplies retries and a per-call continuation token (`packages/app/src/kernel/runner/providers.ts:266`).
+TTS adapters are constructed once in `buildRegistry` (`packages/app/src/adapter-registry.ts:60`) and reached through `registry.tts(id)`; the stage wrapper supplies retries and a per-call continuation token (`packages/app/src/kernel/runner/providers.ts:266`).
 
 ## Frontend
 
@@ -222,9 +222,9 @@ Narration controls render inside the client-rendered React SPA (`createRoot` at 
 
 | Surface | Component |
 | --- | --- |
-| Play: glossary switch, aliases switch, preparation, loudness | `PronunciationGlossary` (`packages/web/src/play/pronunciation-glossary.tsx:4`), `NarrationAliasesToggle` (`packages/web/src/play/narration-aliases.tsx:6`), `PlayLoudness` (`packages/web/src/play/loudness.tsx:15`) |
-| Library → Narration aliases (`/narration-aliases` under the library layout) | `NarrationAliasesRoute` (`packages/web/src/routes/narration-aliases.tsx:28`, `packages/web/src/router.tsx:305`) |
-| Speakers, voices, per-speaker pronunciations, auditions | `SpeakersEditor` (`packages/web/src/voices/speakers-editor.tsx:46`) |
-| Volume control | `LoudnessControls` (`packages/web/src/video/loudness-controls.tsx:29`) |
-| Project narration editing and downloads | `NarrationEditor` (`packages/web/src/project/narration-editor.tsx:76`), `RevisionNarration` (`packages/web/src/project/revision-narration.tsx:7`), `narrationFiles` (`packages/web/src/project/narration-downloads.tsx:21`) |
+| Play: glossary switch, aliases switch, preparation, loudness | `PronunciationGlossary` (`packages/web/src/play/pronunciation-glossary.tsx:5`), `NarrationAliasesToggle` (`packages/web/src/play/narration-aliases.tsx:7`), `PlayLoudness` (`packages/web/src/play/loudness.tsx:20`) |
+| Library → Narration aliases (`/narration-aliases` under the library layout) | `NarrationAliasesRoute` (`packages/web/src/routes/narration-aliases.tsx:40`, `packages/web/src/router.tsx:305`) |
+| Speakers, voices, per-speaker pronunciations, auditions | `SpeakersEditor` (`packages/web/src/voices/speakers-editor.tsx:35`) |
+| Volume control | `LoudnessControls` (`packages/web/src/video/loudness-controls.tsx:31`) |
+| Project narration editing and downloads | `NarrationEditor` (`packages/web/src/project/narration-editor.tsx:77`), `RevisionNarration` (`packages/web/src/project/revision-narration.tsx:7`), `narrationFiles` (`packages/web/src/project/narration-downloads.tsx:21`) |
 | Live narration audio and waveform | `LiveAudio` (`packages/web/src/project/live-audio.tsx:10`), `useWaveform` (`packages/web/src/project/waveform.tsx:31`) |
