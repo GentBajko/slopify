@@ -1,4 +1,4 @@
-import { type ProviderErrorKind, providerError } from "../kernel/ports/model.js";
+import { type ModelAccess, type ProviderErrorKind, providerError } from "../kernel/ports/model.js";
 import { missingKey } from "./explain.js";
 import { retryAfter } from "./retry-after.js";
 
@@ -44,17 +44,20 @@ export function requireKey(key: string | undefined, provider: string): string {
 }
 
 // A 429's Retry-After replaces the fixed backoff; `fallbackRetryMs` is the provider's own
-// hint, used when the header is absent.
+// hint, used when the header is absent. `access` is what the failure says about the chosen
+// model (see model-access.ts); it never changes the kind.
 export function httpProviderError(
   response: Response,
   kind: ProviderErrorKind,
   message: string,
   fallbackRetryMs?: number | undefined,
+  access?: ModelAccess | undefined,
 ): Error {
   const retryAfterMs = retryAfter(response.headers.get("retry-after")) ?? fallbackRetryMs;
   return providerError({
     kind,
     message,
+    ...(access === undefined ? {} : { access }),
     ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
   });
 }

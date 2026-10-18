@@ -11,6 +11,7 @@ import {
   requireKey,
   safeJson,
 } from "../http-failure.js";
+import { modelAccessOf } from "../model-access.js";
 
 // The HTTP gateway adapter for OpenAI's speech endpoint. `fetch` and nothing else; the response
 // body is already the stream the port asks for.
@@ -129,5 +130,7 @@ async function failure(response: Response, voiceId?: string, next?: string): Pro
             fix: voiceFix(voiceId),
           }),
     }),
+    undefined,
+    modelAccessOf(response.status, text),
   );
 }

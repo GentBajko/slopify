@@ -19,6 +19,7 @@ import {
   requireKey,
   safeJson,
 } from "../http-failure.js";
+import { modelAccessOf } from "../model-access.js";
 import { downloadImage } from "./bytes.js";
 import { referencePictures, withReferences } from "./reference.js";
 import { dataUri, downloadVideo } from "./video.js";
@@ -171,7 +172,7 @@ export function falImage(deps: FalImageDeps): ImagePort {
         }),
       });
       if (!response.ok) {
-        throw await failure(response);
+        throw await failure(response, "image request", true);
       }
       const answer = parse(await response.text());
       refused(answer, req.prompt);
@@ -203,7 +204,7 @@ export function falImage(deps: FalImageDeps): ImagePort {
           ...(Object.hasOwn(videoInputs, req.model) ? videoInputs[req.model]?.(req.aspect) : {}),
         }),
       });
-      if (!submitted.ok) throw await failure(submitted, "video clip request");
+      if (!submitted.ok) throw await failure(submitted, "video clip request", true);
       const links = read(queued, await submitted.text());
       for (;;) {
         const status = await deps.fetch(links.status_url, { signal: req.signal, headers });
@@ -258,7 +259,12 @@ function refused(answer: z.infer<typeof generated>, prompt: string): void {
   }
 }
 
-async function failure(response: Response, subject = "image request"): Promise<Error> {
+// `atModel`: the request went to the model's own address, so a 404 or 403 is about the model.
+async function failure(
+  response: Response,
+  subject = "image request",
+  atModel = false,
+): Promise<Error> {
   const text = await failureText(response);
   // The provider's own words, through the redactor - an error body may quote the key back.
   const message = redact(detailOf(text) || response.statusText);
@@ -266,6 +272,8 @@ async function failure(response: Response, subject = "image request"): Promise<E
     response,
     kindOfStatus(response.status),
     httpFailure({ provider: "fal.ai", status: response.status, detail: message, subject }),
+    undefined,
+    modelAccessOf(response.status, text, atModel),
   );
 }
 

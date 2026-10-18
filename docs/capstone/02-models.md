@@ -286,6 +286,9 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | TtsAudio | `packages/app/src/kernel/ports/tts.ts:37` | In-memory | Audio bytes and container a TTS adapter returns |
 | ModelChoice | `packages/app/src/slices/model-upkeep/model.ts:15` | In-memory | Provider and model |
 | RetiredUsage | `packages/app/src/slices/model-upkeep/model.ts:20` | In-memory | A place a retired model is still chosen |
+| ModelCheckRow | `packages/app/src/slices/model-checks/model.ts` | `model_checks` | What one model does for the saved key or CLI: listed, last verdict and its source, cost of checks, first worked |
+| ModelStandingView | `packages/app/src/slices/model-checks/model.ts` | HTTP response (`standings` on `GET /api/providers/:id/models`) | works / listed / known / no-access, with the provider's sentence and a retirement |
+| Lifecycle | `packages/app/src/catalog/lifecycle.ts` | `models-lifecycle.yaml` | Retirement dates and replacements, kept out of `models.yaml` so older installs' strict v1 schema never meets a new field |
 | FontSummary | `packages/app/src/slices/fonts/model.ts:1` | In-memory | A caption font as pickers list it |
 | ResolvedFont | `packages/app/src/slices/fonts/model.ts:8` | In-memory | Font resolved to a file path for rendering |
 | LoudnessSettings | `packages/app/src/slices/loudness/model.ts:17` | `RunConfig` JSON | Per-run loudness targets for the video and the audio files |
@@ -5714,7 +5717,8 @@ DDL below is the text SQLite holds after every migration runs in filename order 
 - 0059 `external_reviews` copied with state `canceled`.
 - 0060 index `revision_work_reservations_work`.
 - 0061 `project_controls.pauses` and `stops`.
-- 0062 `told_failures`. Migration 0017 inserts a saved `DiceMaster` document theme only on installs that already used the Document stage; 0022 deletes duplicate held work rows (`packages/app/src/kernel/db/migrations/0017-legacy-dicemaster-theme.sql:7`, `packages/app/src/kernel/db/migrations/0022-drop-duplicate-held-work.sql:15`).
+- 0062 `told_failures`.
+- 0063 `model_checks`. Migration 0017 inserts a saved `DiceMaster` document theme only on installs that already used the Document stage; 0022 deletes duplicate held work rows (`packages/app/src/kernel/db/migrations/0017-legacy-dicemaster-theme.sql:7`, `packages/app/src/kernel/db/migrations/0022-drop-duplicate-held-work.sql:15`).
 
 ### projects
 
@@ -6943,6 +6947,29 @@ CREATE TABLE told_failures (
 ```
 
 Migrations: `packages/app/src/kernel/db/migrations/0062-told-failures.sql:4`. Each failed step the Notification URL was told of, by `failureId`, only while its project still has it; a project's rows are replaced together. Code model: ToldFailures via `toldFailures` (`packages/app/src/slices/notifications/told.ts:26`). Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:59`).
+
+### model_checks
+
+```sql
+CREATE TABLE model_checks (
+ provider TEXT NOT NULL,
+ family TEXT NOT NULL CHECK (family IN ('llm','tts','image')),
+ model TEXT NOT NULL,
+ account TEXT NOT NULL,
+ listed INTEGER CHECK (listed IN (0,1)),
+ listed_at TEXT,
+ verdict TEXT CHECK (verdict IN ('works','no-access','failed')),
+ verdict_source TEXT CHECK (verdict_source IN ('check','run')),
+ sentence TEXT,
+ checked_at TEXT,
+ cost REAL NOT NULL DEFAULT 0,
+ first_works_at TEXT,
+ notice_seen INTEGER NOT NULL DEFAULT 0 CHECK (notice_seen IN (0,1)),
+ PRIMARY KEY(provider, family, model)
+);
+```
+
+Migrations: `packages/app/src/kernel/db/migrations/0063-model-checks.sql`. One row per model the saved key or CLI was asked about. `account` is the key's `credential_generation` (prefixed by provider; Gemini speech without its own key uses the Google images key's) or the CLI's id, so a new key starts every row over. A newer works or no-access verdict replaces an older one; `failed` never replaces a decisive one (`mergeVerdict`, `packages/app/src/slices/model-checks/rules.ts`). Read only by the pickers and Settings → Models; no run, admission or adapter reads it (`packages/app/src/catalog/registry.compat.test.ts`). Code model: ModelCheckRow via `readChecks`, `writeListed`, `writeVerdict` (`packages/app/src/slices/model-checks/repo.ts`). Settings keys `model-checks.auto` (free | off), `model-checks.weekly-at`, `model-checks.baseline-done`. Not in backups: tied to this install's keys and logins.
 
 ### collector.events
 

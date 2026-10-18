@@ -11,6 +11,7 @@ import {
   requireKey,
   safeJson,
 } from "../http-failure.js";
+import { modelAccessOf } from "../model-access.js";
 import { describeBytes, sniffImage } from "./bytes.js";
 import { discoverOpenAiImages } from "./models.js";
 import { type ReferencePicture, referencePictures, withReferences } from "./reference.js";
@@ -184,6 +185,13 @@ async function failure(response: Response): Promise<Error> {
           detail: message,
           subject: "image request",
         }),
+    undefined,
+    kind === "refusal"
+      ? undefined
+      : modelAccessOf(
+          response.status,
+          `${parsed.success ? (parsed.data.error.code ?? "") : ""} ${message}`,
+        ),
   );
 }
 

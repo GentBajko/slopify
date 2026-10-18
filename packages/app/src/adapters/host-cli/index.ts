@@ -19,10 +19,16 @@ import {
 } from "../../kernel/ports/host-cli.js";
 import { agentImageTimeoutMs } from "../../kernel/ports/image.js";
 import type { LlmDone, LlmEvent } from "../../kernel/ports/llm.js";
-import { isProviderError, type ProviderError, providerError } from "../../kernel/ports/model.js";
+import {
+  isProviderError,
+  type ProviderError,
+  type ProviderErrorKind,
+  providerError,
+} from "../../kernel/ports/model.js";
 import { sniffImage } from "../image/bytes.js";
 import { claudePlanLimit } from "../llm/claude-code.js";
 import { codexPlanLimit } from "../llm/codex-limits.js";
+import { accessField } from "../model-access.js";
 import {
   type HostRequestOptions,
   hostRequest,
@@ -44,8 +50,7 @@ export function createHostCliClient(options: {
         const parsed = hostFaultSchema.safeParse(
           JSON.parse((await readHostBytes(response, bridgeLimits.status)).toString("utf8")),
         );
-        if (parsed.success)
-          throw providerError({ kind: parsed.data.kind, message: redact(parsed.data.message) });
+        if (parsed.success) throw bridgedFault(parsed.data.kind, parsed.data.message);
       } catch (error) {
         if (isProviderError(error)) throw error;
       }
@@ -238,6 +243,12 @@ export function createHostCliClient(options: {
     },
   };
 }
+// A fault from the host helper carries its kind and the host adapter's words only; whether it
+// was about the model's access is read again from those words, as the plan limit is below.
+export function bridgedFault(kind: ProviderErrorKind, message: string): ProviderError {
+  return providerError({ kind, message: redact(message), ...accessField(null, message) });
+}
+
 // A used-up plan crosses the bridge as a rate-limit fault carrying the CLI's own words, which
 // the host-side adapter already quoted; they are read again here so a Docker run waits for the
 // reset like a local one instead of failing.
@@ -274,8 +285,7 @@ async function* readEvents(response: IncomingMessage): AsyncGenerator<LlmEvent> 
       if (line.trim() !== "") {
         if (terminal) throw hostUnavailable(true);
         const event = hostFrameSchema.parse(JSON.parse(line));
-        if (event.type === "error")
-          throw providerError({ kind: event.kind, message: redact(event.message) });
+        if (event.type === "error") throw bridgedFault(event.kind, event.message);
         if (event.type === "done") terminal = event;
         else yield event;
       }

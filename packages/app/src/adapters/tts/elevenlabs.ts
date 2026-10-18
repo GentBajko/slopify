@@ -11,6 +11,7 @@ import {
   requireKey,
   safeJson,
 } from "../http-failure.js";
+import { modelAccessOf } from "../model-access.js";
 import { elevenLabsLanguages, lookUp } from "./voice-languages.js";
 
 // The HTTP gateway adapter for ElevenLabs: the platform's own `fetch` and nothing else. The
@@ -159,6 +160,8 @@ async function failure(response: Response, voiceId?: string, next?: string): Pro
             fix: voiceFix(voiceId),
           }),
     }),
+    undefined,
+    modelAccessOf(response.status, text),
   );
 }
 

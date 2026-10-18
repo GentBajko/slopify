@@ -225,6 +225,24 @@ describe("falImage.generate", () => {
     expect(String(thrown)).toContain("value is not a valid enumeration member");
   });
 
+  it("marks a model fal.ai doesn't have or won't run for the key, at its own address", async () => {
+    const missing = await failed(
+      replaying(
+        () => new Response(JSON.stringify({ detail: "Application not found" }), { status: 404 }),
+      ),
+    );
+    expect(isProviderError(missing) && missing.fault).toEqual({
+      kind: "other",
+      access: "not-found",
+    });
+    const denied = await failed(
+      replaying(() => new Response(JSON.stringify({ detail: "Forbidden" }), { status: 403 })),
+    );
+    expect(isProviderError(denied) && denied.fault.access).toBe("no-access");
+    const bad = await failed(replaying(answering("fal-422.json", 422)));
+    expect(isProviderError(bad) && bad.fault.access).toBeUndefined();
+  });
+
   // The safety checker's verdict is fal's final answer, so the wrapper must not
   // spend three more images finding that out.
   it("calls a flagged answer a refusal, which the wrapper never retries", async () => {

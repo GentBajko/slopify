@@ -180,6 +180,18 @@ describe("cartesiaTts.synthesize", () => {
     expect(String(error)).toContain("voice_not_found");
   });
 
+  it("marks a model Cartesia doesn't have, never a missing voice", async () => {
+    const voice = await failed(new Response(fixture("cartesia-404-voice.json"), { status: 404 }));
+    expect(isProviderError(voice) && voice.fault.access).toBeUndefined();
+    const model = await failed(
+      new Response(
+        JSON.stringify({ error_code: "model_not_found", message: "Model sonic-9 not found." }),
+        { status: 404 },
+      ),
+    );
+    expect(isProviderError(model) && model.fault.access).toBe("not-found");
+  });
+
   it("quotes a body that is not the documented envelope", async () => {
     const error = await failed(new Response("upstream is down", { status: 502 }));
 

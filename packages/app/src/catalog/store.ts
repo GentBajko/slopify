@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { parse, stringify } from "yaml";
 import type { ProviderFamily } from "../kernel/ports/model.js";
 import { isLocalCliProvider } from "../slices/settings/model.js";
+import { emptyLifecycle, type Lifecycle, lifecycleSource, parseLifecycle } from "./lifecycle.js";
 import {
   applyOpenRouterListing,
   type CatalogueChanges,
@@ -39,6 +40,9 @@ export interface CatalogueStore {
   readonly sync?: () => Promise<CatalogueSyncStatus>;
   // Whether a day has passed since the last check.
   readonly syncDue?: (now: number) => boolean;
+  // Retirement dates and replacements (models-lifecycle.yaml): the last downloaded copy, else
+  // the one shipped with this version.
+  readonly lifecycle?: () => Lifecycle;
   readonly status: () => {
     updatedAt: string;
     path: string;
@@ -64,6 +68,7 @@ export function createCatalogueStore(deps: {
   readonly dataDir: string;
   readonly fetch: typeof globalThis.fetch;
   readonly bundled?: string;
+  readonly bundledLifecycle?: string;
   readonly now?: () => Date;
 }): CatalogueStore {
   const path = join(deps.dataDir, "models.yaml");
@@ -77,6 +82,40 @@ export function createCatalogueStore(deps: {
   let refreshing: Promise<void> | undefined;
   let syncing: Promise<CatalogueSyncStatus> | undefined;
   const syncPath = join(deps.dataDir, "models-sync.json");
+  const lifecyclePath = join(deps.dataDir, "models-lifecycle.yaml");
+  const shippedLifecycle = (): Lifecycle => {
+    try {
+      return parseLifecycle(
+        deps.bundledLifecycle ??
+          readFileSync(new URL("../assets/models-lifecycle.yaml", import.meta.url), "utf8"),
+      );
+    } catch {
+      return emptyLifecycle;
+    }
+  };
+  let lifecycle: Lifecycle | undefined;
+  const readLifecycle = (): Lifecycle => {
+    if (lifecycle !== undefined) return lifecycle;
+    try {
+      lifecycle = parseLifecycle(readFileSync(lifecyclePath, "utf8"));
+    } catch {
+      // No downloaded copy yet, or a damaged one: the shipped list stands in.
+      lifecycle = shippedLifecycle();
+    }
+    return lifecycle;
+  };
+  // Optional: a failed download keeps the last copy, and nothing else of the check depends on it.
+  async function syncLifecycle(): Promise<void> {
+    try {
+      const text = await download(lifecycleSource, 256 * 1024);
+      const next = parseLifecycle(text);
+      writeFileSync(`${lifecyclePath}.next`, text, { mode: 0o600 });
+      renameSync(`${lifecyclePath}.next`, lifecyclePath);
+      lifecycle = next;
+    } catch {
+      // Kept as it was.
+    }
+  }
   const now = deps.now ?? (() => new Date());
   function read(): Catalogue {
     try {
@@ -176,6 +215,7 @@ export function createCatalogueStore(deps: {
     const known = new Set(saved.known ?? keysOf(parseCatalogue(bundled)));
     const merged = mergeCatalogue(local, published, known);
     const live = applyOpenRouterListing(merged.catalogue, await openRouterListing());
+    await syncLifecycle();
     const changes = combineChanges(merged.changes, live.changes);
     const text = `${syncedHeader}${stringify(live.catalogue, { aliasDuplicateObjects: false })}`;
     const next = parseCatalogue(text);
@@ -203,6 +243,7 @@ export function createCatalogueStore(deps: {
       return last === null || at - Date.parse(last) >= catalogueCheckIntervalMs;
     },
     read,
+    lifecycle: readLifecycle,
     models: (provider, family) =>
       read()[family].filter(
         (m) => m.provider === provider && m.enabled && !m.deprecated && !isVideoModel(m),

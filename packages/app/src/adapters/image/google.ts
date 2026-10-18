@@ -11,6 +11,7 @@ import {
   requireKey,
   safeJson,
 } from "../http-failure.js";
+import { modelAccessOf } from "../model-access.js";
 import { describeBytes, sniffImage } from "./bytes.js";
 import { discoverGoogleImages } from "./models.js";
 import { referencePictures, withReferences } from "./reference.js";
@@ -197,6 +198,7 @@ async function failure(response: Response): Promise<Error> {
       )?.retryDelay
     : undefined;
   const detail = message || response.statusText;
+  const refused = kind === "refusal" && refusalWords.test(message);
   return httpProviderError(
     response,
     kind,
@@ -204,7 +206,7 @@ async function failure(response: Response): Promise<Error> {
       ? `Google gives this API key no image quota for this model${quoted(`error ${String(response.status)}`, detail)}. Retrying will not help: turn on billing for the key's project in Google AI Studio, or choose another image provider in the Providers section of Edit project.`
       : // PERMISSION_DENIED and FAILED_PRECONDITION also cover keys without access, billing
         // and region limits, so they read as a content refusal only when Google says so.
-        kind === "refusal" && refusalWords.test(message)
+        refused
         ? refusedImage("Google", detail)
         : httpFailure({
             provider: "Google",
@@ -213,6 +215,9 @@ async function failure(response: Response): Promise<Error> {
             subject: "image request",
           }),
     googleRetryDelay(delay, message),
+    // A key that reads the model list but is denied or told "not found" here is denied the
+    // model the request names: Google answers a bad key with 400 API_KEY_INVALID.
+    refused ? undefined : modelAccessOf(response.status, `${named ?? ""} ${message}`, true),
   );
 }
 

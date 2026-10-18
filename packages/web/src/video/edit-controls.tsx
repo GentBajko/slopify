@@ -1,4 +1,6 @@
 import { wordTimingUnavailable } from "@app/kernel/ports/languages.js";
+import type { ModelStandingView } from "@app/slices/model-checks/model.js";
+import { badgeOf } from "@app/slices/model-checks/rules.js";
 import {
   type AnimateMode,
   type Atmosphere,
@@ -250,7 +252,7 @@ export function useVideoEditControls({
             ) : null}
             {offered.map((one) => (
               <option key={one.id} value={one.id}>
-                {one.name}
+                {videoBadge(one.name, models.data?.standings?.[one.id])}
               </option>
             ))}
           </Picker>
@@ -329,4 +331,10 @@ function Choice<T extends string>({
       ))}
     </Picker>
   );
+}
+
+// Image-to-video models are listed, never checked, so every one stays offered; the badge says
+// only what is known (listed for the key, not on the plan, retiring).
+export function videoBadge(name: string, view: ModelStandingView | undefined): string {
+  return view === undefined ? name : `${name} · ${badgeOf(view, new Date())}`;
 }

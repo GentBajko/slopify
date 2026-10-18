@@ -5,6 +5,7 @@ import { redact } from "../../kernel/log.js";
 import { providerError } from "../../kernel/ports/model.js";
 import type { TtsRequest } from "../../kernel/ports/tts.js";
 import { httpFailure, noAudio, providerSaid, unreadable, voiceFix } from "../explain.js";
+import { accessField } from "../model-access.js";
 import { retryAfter } from "../retry-after.js";
 
 interface AsyncDeps {
@@ -150,6 +151,7 @@ async function check(response: Response, key: string, voiceId: string): Promise<
   const detail = clean(await response.text().catch(() => ""), key);
   const retryAfterMs = retryAfter(response.headers.get("retry-after"));
   throw providerError({
+    ...accessField(response.status, detail),
     kind:
       response.status === 401 || response.status === 403
         ? "auth"

@@ -176,6 +176,21 @@ describe("Inworld narration", () => {
     await expect(second.speak()).rejects.toThrow("[redacted]");
   });
 
+  it("marks a model Inworld doesn't have, kind unchanged", async () => {
+    const h = setup([
+      new Response('{"code":5,"message":"Model inworld-tts-9 not found"}', { status: 404 }),
+    ]);
+    await expect(h.speak()).rejects.toMatchObject({
+      fault: { kind: "unsupported", access: "not-found" },
+    });
+    const voice = setup([
+      new Response('{"code":5,"message":"Voice Zed not found"}', { status: 404 }),
+    ]);
+    const error: unknown = await voice.speak().catch((thrown: unknown) => thrown);
+    expect(error).toMatchObject({ fault: { kind: "unsupported" } });
+    expect(error).not.toMatchObject({ fault: { access: expect.anything() } });
+  });
+
   it("rejects malformed operations without following their path", async () => {
     const h = setup([Response.json({ name: "https://evil.invalid/steal", done: false })]);
     await expect(h.speak({ text: "a".repeat(4001) })).rejects.toThrow("could not read");

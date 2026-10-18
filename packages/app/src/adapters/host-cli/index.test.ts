@@ -6,7 +6,7 @@ import { afterEach, expect, it } from "vitest";
 import { bridgeLimits } from "../../kernel/ports/host-cli.js";
 import type { LlmEvent } from "../../kernel/ports/llm.js";
 import { providerError } from "../../kernel/ports/model.js";
-import { createHostCliClient, withPlanLimit } from "./index.js";
+import { bridgedFault, createHostCliClient, withPlanLimit } from "./index.js";
 
 const cleanups: (() => Promise<void>)[] = [];
 afterEach(async () => {
@@ -170,6 +170,16 @@ it.skipIf(process.platform === "win32")(
     ).toBe(false);
   },
 );
+
+it("reads a model's access back out of a bridged fault's words, kind unchanged", () => {
+  expect(
+    bridgedFault(
+      "other",
+      "The Claude Code CLI said: There's an issue with the selected model (x). It may not exist or you may not have access to it.",
+    ).fault,
+  ).toEqual({ kind: "other", access: "not-found" });
+  expect(bridgedFault("other", "stream disconnected").fault).toEqual({ kind: "other" });
+});
 
 it("reads a used-up plan back out of a bridged rate-limit fault, so Docker runs wait too", () => {
   const codex = withPlanLimit(

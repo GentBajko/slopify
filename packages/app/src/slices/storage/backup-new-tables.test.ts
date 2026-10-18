@@ -57,6 +57,9 @@ const leftOut = new Set([
   // What the Notification URL of this install was told: a restored project tells its run's end
   // again.
   "told_failures",
+  // What each model does for this install's keys and logins: tied to this install's keys and
+  // logins, and checked again for the importing one.
+  "model_checks",
   // Carried as files (`files/images/<sha256>`), not rows.
   "image_blobs",
   // Where this install put each project's folder and files: a backup carries every file by

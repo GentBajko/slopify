@@ -10,7 +10,7 @@ Every section of Settings, what each control does and its default. Sections with
 |---|---|---|---|
 | Connections | [Providers](#providers) | API keys, command-line tools, the system voice, health check | [Providers-and-Keys](Providers-and-Keys), [AI-CLIs](AI-CLIs) |
 | Connections | [Voices](#voices) | Voice IDs for narration | [Providers-and-Keys](Providers-and-Keys#add-a-voice) |
-| Connections | [Models](#models) | Model catalogue, retired models | [Models](Models) |
+| Connections | [Models](#models) | Model catalogue, retired models, models that work for you | [Models](Models) |
 | Connections | [Agents (MCP)](#agents-mcp) | The MCP address and setup lines for Claude Code and Codex, the last connection, what agents did | [Agents-MCP](Agents-MCP) |
 | Production defaults | [Production defaults](#production-defaults) | Silence gap, volume levelling for new runs | This page |
 | Notifications | [Notifications](#notifications) | Browser and phone notifications | [Notifications](Notifications) |
@@ -97,6 +97,9 @@ See [Providers-and-Keys](Providers-and-Keys#add-a-voice).
 | **Catalogue file**, **Verified**, **Last checked** | Where the file is, when its prices were verified, and what the last check changed. |
 | **Switch to <model>** | Replaces one retired model choice with the suggestion shown. |
 | **Switch all** | Replaces every retired choice that has a suggestion. |
+| **Check models** (per provider) | Sends each of that provider's models one tiny request to learn whether it works for your key or CLI. When that costs money the price is shown first and nothing is sent until you confirm. See [Models](Models#models-that-work-for-you). |
+| **Automatic checks** | **Free and near-free checks only** (default): free and sub-cent checks run by themselves when a key or CLI is added and weekly. **Off**: only when you choose Check models. See [Models](Models#automatic-checks). |
+| **New for you**, **Dismiss** | Models that started working for you since the first check; Dismiss clears one, **Dismiss all** every one. |
 
 Templates and schedules that pick a retired model are also flagged on their own rows, with the same **Switch to <model>**. See [Models](Models).
 

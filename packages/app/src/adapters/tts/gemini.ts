@@ -19,6 +19,7 @@ import {
   requireKey,
   safeJson,
 } from "../http-failure.js";
+import { modelAccessOf } from "../model-access.js";
 
 // The HTTP gateway adapter for Gemini's speech generation (generateContent with an AUDIO
 // response, https://ai.google.dev/gemini-api/docs/speech-generation), billed to a Gemini API
@@ -236,5 +237,14 @@ async function failure(response: Response, voiceId?: string, next?: string): Pro
         ? {}
         : { subject: `narration request for voice "${voiceId}"`, fix: voiceFix(voiceId) }),
     }),
+    undefined,
+    // A narration request goes to the model's own address (models/<id>:generateContent).
+    badKey || voiceId === undefined
+      ? undefined
+      : modelAccessOf(
+          response.status,
+          `${parsed.success ? (parsed.data.error.status ?? "") : ""} ${detail}`,
+          true,
+        ),
   );
 }

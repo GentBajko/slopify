@@ -8,6 +8,18 @@ export interface KeyProbe {
   // Whether a chosen model is reachable with this key: a read of that model, or of the model
   // list, with the same headers. Absent for a provider with no such read.
   readonly model?: ModelProbe;
+  // The key's own live list of models, page by page, for "Listed for you". Absent for a
+  // provider with no such list.
+  readonly list?: ModelList;
+}
+
+export interface ModelList {
+  // `page` is the token the previous page named; undefined for the first.
+  readonly url: (page: string | undefined) => string;
+  // Undefined when the answer can't be read.
+  readonly read: (
+    body: string,
+  ) => { readonly ids: readonly string[]; readonly next?: string } | undefined;
 }
 
 export interface ModelProbe {

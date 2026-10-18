@@ -195,7 +195,50 @@ const providers: readonly RouteTool[] = [
     name: "list_models",
     route: "GET /api/providers/:id/models",
     title: "List a provider's models",
-    description: "The models Slopify offers for the provider, with prices where known.",
+    description:
+      "The models Slopify offers for the provider, with prices where known, and each model's standing for the saved key or CLI under standings: works (a check or a run succeeded), listed (the key's own model list names it), known (only Slopify's model list does), no-access (the provider said it is not on the plan, with its sentence), and retiring with its replacement when one is due. Standings never stop a run: a model chosen anywhere keeps working as before.",
+  },
+  {
+    name: "get_model_checks",
+    route: "GET /api/model-checks",
+    title: "Read Settings → Models' model checks",
+    description:
+      "Per provider: when its models were last checked, how many work, are listed or are not on the plan, whether a check is running and what checks have cost; the New for you list; and whether automatic checks are free-only or off.",
+  },
+  {
+    name: "estimate_model_checks",
+    route: "GET /api/providers/:id/models/check/estimate",
+    title: "Estimate checking a provider's models",
+    description:
+      "What Check models in Settings → Models would check for this provider and what it costs at list price, before anything is sent. Query: models (optional, comma-separated ids).",
+  },
+  {
+    name: "check_models",
+    route: "POST /api/providers/:id/models/check",
+    title: "Check a provider's models",
+    description:
+      "Settings → Models' Check models: sends each model the smallest request (one word, a spoken Hi, one small image) to learn whether it works for the saved key or CLI, in the background. A check that costs money is refused with its estimate until the body carries confirmedDollars of at least the estimate's totalDollars (read estimate_model_checks first). Body: {models?: [ids], confirmedDollars?: number}.",
+    confirm:
+      "Each model checked is sent one small paid request at list price (a CLI's checks use its plan's allowance instead).",
+    confirmFrom: {
+      route: "/api/providers/:id/models/check/estimate",
+      text: (value) => {
+        const estimate = z
+          .object({ count: z.number(), text: z.string(), planAccounts: z.array(z.string()) })
+          .safeParse(value);
+        if (!estimate.success) return undefined;
+        const { count, text, planAccounts } = estimate.data;
+        return `Checks ${String(count)} model${count === 1 ? "" : "s"}, one small request each: ${text} at list price${planAccounts.length > 0 ? ", using the CLI plan's allowance" : ""}.`;
+      },
+    },
+    reachesOut: "asks",
+  },
+  {
+    name: "dismiss_model_notices",
+    route: "POST /api/model-checks/notices/dismiss",
+    title: "Dismiss New for you models",
+    description:
+      "Settings → Models' Dismiss on New for you. Body: {keys: [{provider, family, model}]} as get_model_checks lists them.",
   },
   {
     name: "list_system_voices",

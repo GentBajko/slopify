@@ -10,6 +10,7 @@ import type { Registry } from "../ports/registry.js";
 import { type AttemptOptions, attempt, type ProviderCall } from "./attempt.js";
 import type { AttemptStore } from "./attempt-repo.js";
 import type { ProviderUse, StandaloneMeter, StandaloneUse } from "./meter.js";
+import { type ModelAccessRecorder, observed } from "./model-access.js";
 
 // Provider calls that belong to no project: a schedule's topic generation, a channel's episode
 // summary and cast pictures. They go through the same attempt wrapper and retry policy as a
@@ -22,6 +23,8 @@ export interface StandaloneDeps {
   readonly log: Log;
   // Absent in tests that don't look at run cost.
   readonly meter?: StandaloneMeter | undefined;
+  // Learns whether each call's model works for the key or login (`model-access.ts`).
+  readonly access?: ModelAccessRecorder | undefined;
 }
 
 export interface StandaloneLlmCall extends StandaloneUse {
@@ -47,31 +50,36 @@ export async function standaloneLlm(
 ): Promise<StandaloneLlmAnswer> {
   const port = deps.registry.llm(call.provider);
   const started = deps.clock.now().getTime();
-  const answer = await wrapped(
-    deps,
-    call,
-    async (signal, progress): Promise<StandaloneLlmAnswer> => {
-      let text = "";
-      let usage: Usage | null = null;
-      let limits: PlanLimitReading | undefined;
-      for await (const event of port.complete({
-        model: call.model,
-        ...(call.thinking === undefined ? {} : { thinking: call.thinking }),
-        messages: call.messages,
-        signal,
-      })) {
-        signal.throwIfAborted();
-        // Every event is a sign of life, so the idle clock restarts here.
-        progress();
-        if (event.type === "delta") text += event.text;
-        else if (event.type === "done") {
-          usage = event.usage;
-          limits = event.limits;
+  const answer = await observed(
+    deps.access,
+    deps.log,
+    { provider: call.provider, family: "llm", model: call.model },
+    wrapped(
+      deps,
+      call,
+      async (signal, progress): Promise<StandaloneLlmAnswer> => {
+        let text = "";
+        let usage: Usage | null = null;
+        let limits: PlanLimitReading | undefined;
+        for await (const event of port.complete({
+          model: call.model,
+          ...(call.thinking === undefined ? {} : { thinking: call.thinking }),
+          messages: call.messages,
+          signal,
+        })) {
+          signal.throwIfAborted();
+          // Every event is a sign of life, so the idle clock restarts here.
+          progress();
+          if (event.type === "delta") text += event.text;
+          else if (event.type === "done") {
+            usage = event.usage;
+            limits = event.limits;
+          }
         }
-      }
-      return { text, usage, ...(limits === undefined ? {} : { limits }) };
-    },
-    { kind: "llm", streaming: port.capabilities.streams },
+        return { text, usage, ...(limits === undefined ? {} : { limits }) };
+      },
+      { kind: "llm", streaming: port.capabilities.streams },
+    ),
   );
   meter(deps, call, {
     kind: "llm",
@@ -97,17 +105,22 @@ export async function standaloneImage(
 ): Promise<GeneratedImage> {
   const port = deps.registry.image(call.provider);
   const started = deps.clock.now().getTime();
-  const image = await wrapped(
-    deps,
-    call,
-    (signal) =>
-      port.generate({
-        model: call.model,
-        prompt: call.prompt,
-        aspect: call.aspect,
-        signal,
-      }),
-    { kind: "image", ...(port.timeoutMs === undefined ? {} : { timeoutMs: port.timeoutMs }) },
+  const image = await observed(
+    deps.access,
+    deps.log,
+    { provider: call.provider, family: "image", model: call.model },
+    wrapped(
+      deps,
+      call,
+      (signal) =>
+        port.generate({
+          model: call.model,
+          prompt: call.prompt,
+          aspect: call.aspect,
+          signal,
+        }),
+      { kind: "image", ...(port.timeoutMs === undefined ? {} : { timeoutMs: port.timeoutMs }) },
+    ),
   );
   meter(deps, call, {
     kind: "image",

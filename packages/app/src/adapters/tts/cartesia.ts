@@ -11,6 +11,7 @@ import {
   requireKey,
   safeJson,
 } from "../http-failure.js";
+import { modelAccessOf } from "../model-access.js";
 import { cartesiaLanguages, lookUp } from "./voice-languages.js";
 
 // The HTTP gateway adapter for Cartesia. `fetch` and
@@ -113,6 +114,8 @@ async function failure(response: Response, voiceId: string): Promise<Error> {
       subject: `narration request for voice "${voiceId}"`,
       fix: voiceFix(voiceId),
     }),
+    undefined,
+    modelAccessOf(response.status, text),
   );
 }
 

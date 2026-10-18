@@ -134,6 +134,21 @@ export const settingsHelp = {
     body: "Templates, schedules, drafts and projects with steps still to run that pick a model the provider no longer offers. A run that reaches one stops and says so. Switch replaces only that one model choice with the suggestion shown; Switch all does every one that has a suggestion.",
     tutorial: { page: "Models", anchor: "switch-away-from-a-retired-model" },
   },
+  "settings.models.checks": {
+    title: "Models that work for you",
+    body: "What each saved key or CLI can really use. Listed: the key's own model list names it. Works: a check or a real run succeeded. Not on your plan: the provider said so. Check models sends each model one tiny request and shows the price first when it costs anything. Pickers show working models first; nothing here stops a run.",
+    tutorial: { page: "Models", anchor: "models-that-work-for-you" },
+  },
+  "settings.models.auto-checks": {
+    title: "Automatic checks",
+    body: "When a key or CLI is added, and once a week, Slopify reads each key's model list and checks the models you use, ones that already worked and newly listed ones, if a check is free or costs well under a tenth of a cent. Images are never checked by themselves. Off leaves checks to Check models.",
+    tutorial: { page: "Models", anchor: "automatic-checks" },
+  },
+  "settings.models.new-for-you": {
+    title: "New for you",
+    body: "Models that started working for your key or CLI since the first check, newest first. Choose one in a picker to try it, or Dismiss it. Home shows a line while any are waiting here.",
+    tutorial: { page: "Models", anchor: "new-for-you" },
+  },
 
   // Playback & appearance
   "settings.playback.silence-gap": {

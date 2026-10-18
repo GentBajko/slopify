@@ -12,6 +12,7 @@ import {
   requireKey,
   safeJson,
 } from "../http-failure.js";
+import { accessField, modelAccessOf } from "../model-access.js";
 import { noImages } from "./image-workspace.js";
 import { sseData } from "./sse-lines.js";
 
@@ -114,6 +115,7 @@ export function openRouterLlm(deps: OpenRouterDeps): LlmPort {
         // frame; without this the stage would store half an article as a success.
         throw providerError({
           kind: kindOfStatus(statusOf(chunk.error.code)),
+          ...accessField(statusOf(chunk.error.code), chunk.error.message),
           message: streamFailure(statusOf(chunk.error.code), redact(chunk.error.message)),
         });
       }
@@ -192,6 +194,8 @@ async function failure(response: Response, next?: string): Promise<Error> {
     response,
     kindOfStatus(response.status),
     httpFailure({ provider: "OpenRouter", status: response.status, detail: message, next }),
+    undefined,
+    modelAccessOf(response.status, message),
   );
 }
 

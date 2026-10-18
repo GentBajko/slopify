@@ -18,6 +18,7 @@ import {
   requireKey,
   safeJson,
 } from "../http-failure.js";
+import { modelAccessOf } from "../model-access.js";
 import { downloadImage } from "./bytes.js";
 import { withReferences } from "./reference.js";
 import { dataUri, downloadVideo } from "./video.js";
@@ -104,7 +105,7 @@ export function replicateImage(deps: ReplicateImageDeps): ImagePort {
         }),
       });
       if (!response.ok) {
-        throw await failure(response);
+        throw await failure(response, "image request", true);
       }
       const url = await settle(deps, parse(await response.text()), req.signal);
       // The download rides inside the attempt: a link that 404s is a failed attempt.
@@ -133,7 +134,7 @@ export function replicateImage(deps: ReplicateImageDeps): ImagePort {
           },
         }),
       });
-      if (!response.ok) throw await failure(response, "video clip request");
+      if (!response.ok) throw await failure(response, "video clip request", true);
       const url = await settle(deps, parse(await response.text()), req.signal);
       return await downloadVideo({
         fetch: deps.fetch,
@@ -223,7 +224,12 @@ function auth(deps: ReplicateImageDeps): Record<string, string> {
   return { Authorization: `Bearer ${requireKey(deps.key(), "Replicate")}` };
 }
 
-async function failure(response: Response, subject = "image request"): Promise<Error> {
+// `atModel`: the request went to the model's own address, so a 404 or 403 is about the model.
+async function failure(
+  response: Response,
+  subject = "image request",
+  atModel = false,
+): Promise<Error> {
   const text = await failureText(response);
   const parsed = errorBody.safeParse(safeJson(text));
   // The provider's own words, through the redactor - an error body may quote the key back.
@@ -238,6 +244,8 @@ async function failure(response: Response, subject = "image request"): Promise<E
       detail: message || response.statusText,
       subject,
     }),
+    undefined,
+    modelAccessOf(response.status, text, atModel),
   );
 }
 
