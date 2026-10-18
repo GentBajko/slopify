@@ -38,6 +38,7 @@ Free: no AI call. Copied when the run starts, so later changes to the channel or
 - In a **Description** prompt, `{{Slopify_Links}}`, `{{Slopify_Previous_Video}}` and `{{Slopify_Next_Video}}` stay links the description fills when it is shown or copied (`{{Previous video}}`, `{{Next video}}`, `{{Patreon}}`…), so changing a link changes every description at once. See [YouTube description](YouTube-Description).
 - Moving the release date later never remakes anything, and neither does a new length.
 - A brand-kit font installed on the computer (not uploaded to Slopify) is left out of `{{Slopify_Brand}}`.
+- A **Text** intro or outro is narrated as written, so it can't say `{{Slopify_Release_Date}}`: set its Mode to **LLM**, which writes it as a request to the AI model.
 
 ## Written from the article
 

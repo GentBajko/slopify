@@ -120,6 +120,8 @@ Where the scene goes:
 - With the switch off, a line holding `{{Scene}}` is left out and the prompt is drawn as it always was.
 - A **thumbnail** prompt with `{{Scene}}` gets a scene from a call of its own (one more AI call, in the Thumbnail stage, so changing the thumbnail never remakes the images): the article's most striking moment, the one that would make someone click, taken from anywhere in the article. With **Thumbnails** set to 3, each thumbnail gets a different moment, so the A/B test compares ideas as well as compositions. A thumbnail prompt without `{{Scene}}` is drawn as it always was.
 
+A prompt using `{{Slopify_Scene}}`, `{{Slopify_Setting}}` or `{{Slopify_Mood}}` gets its scene even with the switch off, and the switch shows it as **On for** that prompt. `{{Slopify_Setting}}` adds the era and place of each moment, so the picture stays period-correct, and `{{Slopify_Mood}}` its feeling, for light and colour; both are written by the same call. See [Keywords Slopify fills](Keywords-Slopify-Fills#per-picture).
+
 The style, composition and everything else in the prompt stay as written; only the scene changes from image to image. The scenes are written once the article exists, and each image waits for them. Switching it on or off in **Edit project** remakes the images.
 
 ## Looks looked up: {{Appearance}}
@@ -130,6 +132,7 @@ An image model draws a named figure from whatever it half remembers, so the same
 - With **Scenes from the article** on, each picture gets the looks of the figures its scene names (up to three besides the subject), so a scene of a place or of someone else isn't redrawn with the subject in it; a scene that names no one leaves the looks line out. A thumbnail always gets the subject's look. Without scenes, every picture gets the subject's look.
 - There is no switch: a prompt with `{{Appearance}}` turns it on, and prompts without it are drawn as they always were. `{{Appearance}}` is never a field to fill in.
 - It costs one more AI call per run, with web search. The pictures that use it wait for it.
+- `{{Slopify_Appearance}}` is the new name of `{{Appearance}}` and means exactly the same.
 
 ## How long each image stays on screen
 
@@ -153,6 +156,7 @@ Folded, the Images row lists each ticked prompt with its Number, the provider an
 
 - [Play Overview](Play-Overview)
 - [Prompts](Prompts)
+- [Keywords Slopify fills](Keywords-Slopify-Fills)
 - [Cast Library](Cast-Library)
 - [Channels](Channels)
 - [Models](Models)
