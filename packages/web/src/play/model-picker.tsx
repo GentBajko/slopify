@@ -7,6 +7,7 @@ import { useId, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Input, Select } from "@/components/kit/field";
+import { estimateChecks } from "@/lib/model-checks";
 import { modelOptionLabel } from "@/lib/model-label";
 import { customModelFallback, listProviderModels, modelsKey, modelsQuery } from "@/lib/models";
 import { useCheckModels } from "@/lib/use-check-models";
@@ -63,6 +64,15 @@ function ProviderModelPicker({
     return standings === undefined ? label : `${label} · ${badgeOf(standings[model.id], now)}`;
   };
   const checks = useCheckModels(provider, "");
+  const checkOne = standings !== undefined && value !== "" && !shown.fallback;
+  // What checking the chosen model costs, said on its Check button before it is pressed.
+  const estimate = useQuery({
+    queryKey: ["model-check-estimate", provider, value],
+    queryFn: ({ signal }) => estimateChecks(api, provider, [value], signal),
+    enabled: checkOne,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
   // A live list can run to hundreds of models; past a short list a filter box narrows the
   // select to the names typed, keeping the picked model in it.
   const [filter, setFilter] = useState("");
@@ -225,9 +235,13 @@ function ProviderModelPicker({
             variant="quiet"
             className="px-2 text-label"
             disabled={checks.pending || (value === "" && every.length === 0)}
-            onClick={() => checks.check(shown.fallback || value === "" ? undefined : [value])}
+            onClick={() => checks.check(checkOne ? [value] : undefined)}
           >
-            {shown.fallback || value === "" ? "Check models" : "Check"}
+            {!checkOne
+              ? "Check models"
+              : estimate.data === undefined
+                ? "Check"
+                : `Check · ${estimate.data.text}`}
           </Button>
           {checks.message === undefined ? null : <span>{checks.message}</span>}
         </p>

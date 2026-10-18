@@ -35,9 +35,15 @@ export async function estimateChecks(
   api: Api,
   provider: string,
   models?: readonly string[],
+  signal?: AbortSignal,
 ): Promise<CheckEstimate> {
   const query = models === undefined ? "" : `?models=${encodeURIComponent(models.join(","))}`;
-  return read<CheckEstimate>(await api.fetch(`${checkPath(api, provider)}/estimate${query}`));
+  return read<CheckEstimate>(
+    await api.fetch(
+      `${checkPath(api, provider)}/estimate${query}`,
+      signal ? { signal } : undefined,
+    ),
+  );
 }
 
 export async function startChecks(

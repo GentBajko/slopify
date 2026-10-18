@@ -65,6 +65,19 @@ describe("model checks service", () => {
     expect((await checks.offered("codex")).map((m) => m.model)).toEqual(["gpt-5", "slow"]);
   });
 
+  it("estimates a CLI's named models without asking the CLI for its list", async () => {
+    let listed = 0;
+    const { checks } = setup({
+      providerModels: async () => {
+        listed += 1;
+        return [];
+      },
+    });
+    const plan = await checks.plan({ trigger: "manual", provider: "codex", models: ["gpt-5"] });
+    expect(plan.targets.map((t) => t.model)).toEqual(["gpt-5"]);
+    expect(listed).toBe(0);
+  });
+
   it("asks for the estimate before a paid manual run, then runs it in the background", async () => {
     upsertKey(db, "openrouter", "placeholder", "2026-10-18");
     const { checks, asked } = setup();

@@ -134,13 +134,20 @@ export function createModelChecks(deps: ModelChecksDeps): ModelChecks {
   };
   const withAccount = (): ProviderId[] =>
     providerIds.filter((id) => accountOf(deps.db, id) !== undefined);
+  // Named models of a CLI are taken as named: asking the CLI for its list would start it, and
+  // a picker asks this for its one chosen model whenever it opens.
+  const offeredFor = (provider: ProviderId, models: readonly string[] | undefined) => {
+    if (models === undefined || !isUncataloguedProvider(provider)) return offered(provider);
+    const { family } = providerById(provider);
+    return Promise.resolve(models.map((model) => ({ provider, family, model })));
+  };
   const plan: ModelChecks["plan"] = async (scope) => {
     const scoped = scope.provider === undefined ? withAccount() : [scope.provider];
     return planChecks(
       {
         catalogue: deps.catalogue(),
         rows: readChecks(deps.db),
-        offered: (await Promise.all(scoped.map(offered))).flat(),
+        offered: (await Promise.all(scoped.map((id) => offeredFor(id, scope.models)))).flat(),
         accounts: (id) => accountOf(deps.db, id),
         chosen: chosenModels(deps.db),
       },

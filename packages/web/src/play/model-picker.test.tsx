@@ -429,7 +429,7 @@ describe("model standings in the picker", () => {
       }),
     );
     await screen.findByText("✓ works · checked just now");
-    await userEvent.click(screen.getByRole("button", { name: "Check" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Check · less than a cent" }));
     await screen.findByText(
       "Each model gets one small request, so this costs less than a cent at list price.",
     );
