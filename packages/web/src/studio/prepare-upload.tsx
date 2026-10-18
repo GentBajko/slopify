@@ -27,7 +27,7 @@ import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { Drawer } from "@/components/kit/drawer";
-import { Select } from "@/components/kit/field";
+import { Checkbox, Select } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { FileLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
@@ -317,9 +317,7 @@ export function PrepareUploadDrawer({
                   <span className="flex flex-col gap-1">
                     {pack.data.playlistChoices.map((choice) => (
                       <label key={choice.name} className="flex min-h-8 items-center gap-2">
-                        <input
-                          type="checkbox"
-                          className="size-4 accent-[var(--color-accent)]"
+                        <Checkbox
                           checked={choice.chosen}
                           disabled={playlists.isPending}
                           onChange={(event) => {
@@ -663,14 +661,13 @@ function Steps({
           <InfoTip id="project.upload.steps" className="-my-1" />
           <span className="flex-1" />
           <label className="flex min-h-8 cursor-pointer items-center gap-2 text-small text-ink-2">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={ticked === steps.length}
               ref={(box) => {
                 if (box !== null) box.indeterminate = ticked > 0 && ticked < steps.length;
               }}
               onChange={(event) => remember(event.currentTarget.checked ? [...steps] : [])}
-              className="size-4 shrink-0 accent-[var(--color-accent)]"
+              className="shrink-0"
             />
             Select all
           </label>
@@ -683,11 +680,10 @@ function Steps({
                 key={step}
                 className="items-start"
                 lead={
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={done.includes(step)}
                     onChange={(event) => tick(step, event.currentTarget.checked)}
-                    className="mt-1 size-4 shrink-0 self-start accent-[var(--color-accent)]"
+                    className="mt-1 shrink-0 self-start"
                     aria-label={`${stepLabels[step]} done`}
                   />
                 }

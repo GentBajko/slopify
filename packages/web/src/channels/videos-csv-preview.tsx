@@ -1,6 +1,6 @@
 import { type ReactElement, useId, useRef } from "react";
 import { Button } from "@/components/kit/button";
-import { Field, Input } from "@/components/kit/field";
+import { Checkbox, Field, Input } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
@@ -96,12 +96,11 @@ export function CsvPreview({
             // biome-ignore lint/suspicious/noArrayIndexKey: a CSV may list one title twice; rows never reorder.
             key={index}
             lead={
-              <input
+              <Checkbox
                 id={`${id}-${index}`}
-                type="checkbox"
                 checked={preview.ticked[index] === true}
                 disabled={busy}
-                className="size-4 shrink-0 accent-accent"
+                className="shrink-0"
                 onClick={(event) => {
                   shift.current = event.shiftKey;
                 }}

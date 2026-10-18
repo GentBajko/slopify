@@ -27,6 +27,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { type ReactElement, type ReactNode, useId } from "react";
 import { useApp } from "@/app-context";
+import { Checkbox } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Picker } from "@/components/ui/picker";
 import type { HelpId } from "@/help/catalog";
@@ -193,11 +194,9 @@ export function useVideoEditControls({
           />
         </Row>
         <Row id={`${id}-cards`} label="Chapter cards" tip="project.video.chapter-cards">
-          <input
+          <Checkbox
             id={`${id}-cards`}
-            type="checkbox"
             data-play-field={`${fieldPrefix}.chapterCards`}
-            className="size-4 accent-accent"
             checked={edit.chapterCards}
             disabled={!narrated && !edit.chapterCards}
             onChange={(event) => set({ chapterCards: event.currentTarget.checked })}

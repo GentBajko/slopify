@@ -6,7 +6,7 @@ import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Button, IconButton } from "./button.js";
 import { ConfirmDialog } from "./dialog.js";
-import { Field, Input, Select, Textarea } from "./field.js";
+import { Checkbox, Field, Input, Select, Textarea } from "./field.js";
 import { hitArea, hitTarget, List, ListRow } from "./list-row.js";
 import { Lightbox, type LightboxItem, MediaFrame, MediaGrid } from "./media.js";
 import { foldPeaks } from "./media-controls.js";
@@ -100,6 +100,27 @@ describe("a field", () => {
     const select = screen.getByLabelText("Model");
     expect(select.id).toBe("model");
     expect(select.getAttribute("aria-describedby")).toBe("outside");
+  });
+});
+
+describe("a checkbox", () => {
+  it("is named by its label, toggles with a click and keeps the caller's props", async () => {
+    const onChange = vi.fn();
+    render(
+      <>
+        <label htmlFor="box">Leave code out</label>
+        <Checkbox id="box" checked={false} onChange={onChange} className="shrink-0" />
+        <label>
+          Locked
+          <Checkbox checked disabled onChange={() => undefined} />
+        </label>
+      </>,
+    );
+    const box = screen.getByRole("checkbox", { name: "Leave code out" });
+    expect(box.className).toBe("size-4 accent-accent shrink-0");
+    await userEvent.click(box);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole<HTMLInputElement>("checkbox", { name: "Locked" }).disabled).toBe(true);
   });
 });
 

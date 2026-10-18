@@ -1,4 +1,5 @@
 import { type ReactElement, useId } from "react";
+import { Checkbox } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import type { HelpId } from "@/help/catalog";
 
@@ -27,12 +28,10 @@ export function DescribeFiguresToggle({
           htmlFor={id}
           className="flex min-h-10 items-center gap-3 text-small font-semibold max-[1099px]:min-h-11"
         >
-          <input
+          <Checkbox
             id={id}
-            type="checkbox"
             data-play-field="audio.describeFigures"
             checked={on}
-            className="size-4 accent-accent"
             onChange={(event) =>
               onChange({
                 describeFigures: event.currentTarget.checked,
@@ -50,12 +49,10 @@ export function DescribeFiguresToggle({
             htmlFor={`${id}-code`}
             className="flex min-h-10 items-center gap-3 text-small max-[1099px]:min-h-11"
           >
-            <input
+            <Checkbox
               id={`${id}-code`}
-              type="checkbox"
               data-play-field="audio.skipCode"
               checked={skipCode === true}
-              className="size-4 accent-accent"
               onChange={(event) =>
                 onChange({ describeFigures: true, skipCode: event.currentTarget.checked })
               }
@@ -87,12 +84,10 @@ export function ShowFiguresToggle({
         htmlFor={id}
         className="flex min-h-10 items-center gap-3 text-small font-semibold max-[1099px]:min-h-11"
       >
-        <input
+        <Checkbox
           id={id}
-          type="checkbox"
           data-play-field="showFigures"
           checked={value === true}
-          className="size-4 accent-accent"
           onChange={(event) => onChange(event.currentTarget.checked)}
         />
         Show tables and figures on screen

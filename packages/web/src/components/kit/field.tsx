@@ -112,6 +112,15 @@ export function Input({ className, ...props }: ComponentProps<"input">): ReactEl
   return <input className={cn("sl-input", className)} {...wired(field, props)} />;
 }
 
+// A native checkbox in the app's accent; the label stays the caller's, so it keeps its own
+// `htmlFor`, `disabled` and focus ring.
+export function Checkbox({
+  className,
+  ...props
+}: Omit<ComponentProps<"input">, "type">): ReactElement {
+  return <input type="checkbox" className={cn("size-4 accent-accent", className)} {...props} />;
+}
+
 // Grows with its text (see `.sl-textarea`); `rows` stays the height it starts at.
 export function Textarea({ className, style, ...props }: ComponentProps<"textarea">): ReactElement {
   const field = useField();

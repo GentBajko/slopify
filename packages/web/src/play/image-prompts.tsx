@@ -2,7 +2,7 @@ import type { ImagePromptChoice } from "@app/slices/admission/model.js";
 import { imagesPerRunMax, numberPerPromptMax } from "@app/slices/admission/rules.js";
 import type { Prompt } from "@app/slices/library/model.js";
 import { useId } from "react";
-import { Input } from "@/components/kit/field";
+import { Checkbox, Input } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -140,12 +140,11 @@ function PromptTick({
 
   return (
     <span className="flex w-full min-w-0 items-center gap-2 text-small">
-      <input
+      <Checkbox
         id={tickId}
         data-play-field="imagePrompts"
-        type="checkbox"
         checked={number !== undefined}
-        className="size-[14px] shrink-0 accent-accent"
+        className="size-[14px] shrink-0"
         onChange={(event) => {
           onTick(event.target.checked);
         }}

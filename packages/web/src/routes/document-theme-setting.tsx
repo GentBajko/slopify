@@ -4,7 +4,7 @@ import { type ReactNode, useId } from "react";
 import type { FieldError } from "@/api";
 import { ColourInput } from "@/components/colour-input";
 import { IconButton } from "@/components/kit/button";
-import { Input, Select, Textarea } from "@/components/kit/field";
+import { Checkbox, Input, Select, Textarea } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import type { HelpId } from "@/help/catalog";
 import {
@@ -202,11 +202,9 @@ export function Setting({
               htmlFor={id}
               className="flex min-h-8 items-center gap-3 text-small font-semibold"
             >
-              <input
+              <Checkbox
                 {...common}
-                type="checkbox"
                 checked={value === true}
-                className="size-4 accent-accent"
                 onChange={(event) => {
                   set(event.currentTarget.checked);
                 }}
@@ -381,11 +379,9 @@ export function Setting({
               htmlFor={id}
               className="flex min-h-8 items-center gap-3 text-small font-semibold"
             >
-              <input
+              <Checkbox
                 id={id}
-                type="checkbox"
                 checked={link !== null}
-                className="size-4 accent-accent"
                 onChange={(event) => {
                   set(
                     event.currentTarget.checked ? { text: "Visit the website", url: null } : null,

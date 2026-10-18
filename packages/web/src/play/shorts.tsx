@@ -13,7 +13,7 @@ import {
   shortsSpeedStep,
 } from "@app/slices/shorts/model.js";
 import { type ReactElement, type ReactNode, useId, useState } from "react";
-import { Input } from "@/components/kit/field";
+import { Checkbox, Input } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Picker } from "@/components/ui/picker";
 import type { HelpId } from "@/help/catalog";
@@ -137,14 +137,12 @@ export function Shorts({
           htmlFor={`${id}-switch`}
           className="flex min-h-10 items-center gap-3 text-small font-semibold max-[1099px]:min-h-11"
         >
-          <input
+          <Checkbox
             id={`${id}-switch`}
-            type="checkbox"
             data-play-field="shorts.enabled"
             checked={on}
             disabled={!narrated && !on}
             aria-describedby={issue ? `${id}-error` : undefined}
-            className="size-4 accent-accent"
             onChange={(event) => onChange({ ...value, enabled: event.currentTarget.checked })}
           />
           Shorts
@@ -200,13 +198,11 @@ export function Shorts({
         <div className="sl-fields pt-2 pb-3">
           <span className="flex items-center gap-1" {...helpScope}>
             <label htmlFor={`${id}-title`} className="flex min-h-9 items-center gap-2 text-small">
-              <input
+              <Checkbox
                 id={`${id}-title`}
-                type="checkbox"
                 data-play-field="shorts.titleOnScreen"
                 checked={value.titleOnScreen === true}
                 disabled={!on}
-                className="size-4 accent-accent"
                 onChange={(event) =>
                   onChange({ ...value, titleOnScreen: event.currentTarget.checked })
                 }

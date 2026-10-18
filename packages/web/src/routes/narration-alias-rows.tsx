@@ -2,6 +2,7 @@ import type { NarrationAlias } from "@app/kernel/ports/narration-aliases.js";
 import { Trash2Icon } from "lucide-react";
 import type { ReactElement } from "react";
 import { IconButton } from "@/components/kit/button";
+import { Checkbox } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { RowCheck, type Selection } from "@/components/selection";
@@ -116,18 +117,14 @@ export function AliasRows({
                   />
                 </label>
                 <label className="flex min-h-8 items-center gap-2 text-small max-[1099px]:min-h-11">
-                  <input
-                    type="checkbox"
-                    className="size-4 accent-accent"
+                  <Checkbox
                     checked={row.wholeWord}
                     onChange={(event) => update(row.key, { wholeWord: event.target.checked })}
                   />
                   Whole word
                 </label>
                 <label className="flex min-h-8 items-center gap-2 text-small max-[1099px]:min-h-11">
-                  <input
-                    type="checkbox"
-                    className="size-4 accent-accent"
+                  <Checkbox
                     checked={row.caseSensitive}
                     onChange={(event) => update(row.key, { caseSensitive: event.target.checked })}
                   />
