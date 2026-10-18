@@ -156,6 +156,8 @@ export const warningCodes = [
   "text-missing",
   "full-video",
   "too-many-videos",
+  "text-too-long",
+  "link-missing",
 ] as const;
 export type WarningCode = (typeof warningCodes)[number];
 

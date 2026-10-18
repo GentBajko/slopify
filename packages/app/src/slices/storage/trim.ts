@@ -39,6 +39,7 @@ export const outputRoles: readonly OutputRole[] = [
   "image",
   "animated_image",
   "short_image",
+  "social_post",
 ];
 
 export interface ProjectStorage {

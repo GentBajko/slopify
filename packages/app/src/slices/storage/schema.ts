@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { socialPlatforms } from "../social/model.js";
 import { outputRoles, stagedFileStates, stageKinds } from "./model.js";
 
 export const metaSchema = z.object({
@@ -27,6 +28,7 @@ export const metaSchema = z.object({
     })
     .optional(),
   master: z.object({ target: z.number(), integrated: z.number(), truePeak: z.number() }).optional(),
+  platform: z.enum(socialPlatforms).optional(),
 });
 
 export const outputSchema = z.object({
