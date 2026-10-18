@@ -256,6 +256,9 @@ export const calendarRunSchema = z
     // The project prepared ahead for this run (Prepare), which its day continues. Older servers
     // leave it out.
     prepared: z.string().nullable().default(null),
+    // No version of its template is marked ready (or saved before the template studio), so
+    // this run is skipped unless one is by then. Older servers leave it out.
+    notReady: z.boolean().default(false),
   })
   .strict()
   .readonly();

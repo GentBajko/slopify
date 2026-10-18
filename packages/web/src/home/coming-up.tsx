@@ -25,6 +25,13 @@ export function ComingUp({ runs }: { readonly runs: readonly CalendarRun[] }): R
           actions={
             run.paused ? (
               <Badge tone="waiting">Paused</Badge>
+            ) : run.notReady ? (
+              <Badge
+                tone="waiting"
+                title="No version of its template is marked ready, so this run is skipped. Open the template's studio and press Mark ready."
+              >
+                Waits for Mark ready
+              </Badge>
             ) : run.topicSource === "held" ? (
               <Badge tone="info">Needs a topic</Badge>
             ) : (

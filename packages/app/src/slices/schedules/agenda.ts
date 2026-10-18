@@ -36,7 +36,7 @@ export type CalendarResult =
 // make, with the topic it will use; every project running in the range or finished in it; and
 // every batch item still waiting its turn.
 export function calendarRange(
-  deps: Pick<ScheduleDeps, "db" | "clock" | "template">,
+  deps: Pick<ScheduleDeps, "db" | "clock" | "template" | "notReady">,
   from: Date,
   to: Date,
 ): CalendarResult {
@@ -67,7 +67,7 @@ export function calendarRange(
 // completes when its queue empties, so its runs stop there; one with no queue at all runs the
 // template as saved every time.
 function upcomingRuns(
-  deps: Pick<ScheduleDeps, "template" | "db">,
+  deps: Pick<ScheduleDeps, "template" | "db" | "notReady">,
   schedule: ScheduleSummary,
   now: Date,
   from: Date,
@@ -85,6 +85,7 @@ function upcomingRuns(
         : new Date(schedule.nextRunAt);
   const template = deps.template(schedule.templateId);
   const templateName = template?.name ?? null;
+  const notReady = deps.notReady?.(schedule.templateId) !== undefined;
   const form = template?.document.form;
   const { items } = schedule;
   const generation = schedule.topicGeneration.mode;
@@ -123,6 +124,7 @@ function upcomingRuns(
           title === null || queuedTopic === undefined
             ? null
             : (preparedProject(deps.db, schedule.id, title)?.projectId ?? null),
+        notReady,
       });
     if (schedule.cadence.kind === "once") break;
     at = nextOccurrence(schedule.cadence, schedule.timezone, new Date(at.valueOf() + 1000));

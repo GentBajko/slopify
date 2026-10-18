@@ -9,6 +9,7 @@ import {
   runnableTemplate,
   templateGate,
 } from "../template-studio/schedule-gate.js";
+import { calendarRange } from "./agenda.js";
 import type { ScheduleDeps } from "./model.js";
 import { prepareTopic } from "./prepare.js";
 import { createScheduleRunner } from "./scheduler.js";
@@ -191,5 +192,20 @@ describe("a schedule's template version", () => {
       topicKeyword: "Colour",
     });
     expect(refused).toMatchObject({ ok: false, reason: "invalid-topics" });
+  });
+
+  it("marks a calendar run that waits for a ready version, and not one that has it", () => {
+    const { h, deps, templateId, schedule } = setup();
+    schedule();
+    const from = h.deps.clock.now();
+    const to = new Date(from.valueOf() + 2 * 24 * 60 * 60 * 1000);
+    const runs = () => {
+      const range = calendarRange(deps, from, to);
+      if (!range.ok) throw new Error(range.reason);
+      return range.value.runs;
+    };
+    expect(runs().map((run) => run.notReady)).toEqual([true, true]);
+    writeGate(h.deps.db, templateId, { version: 1, state: "ready", carriedFrom: null });
+    expect(runs().map((run) => run.notReady)).toEqual([false, false]);
   });
 });
