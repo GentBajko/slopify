@@ -196,3 +196,29 @@ export const sampleQuoteSchema = z
   .strict()
   .readonly();
 export type SampleQuoteView = z.infer<typeof sampleQuoteSchema>;
+
+// GET /api/template-studio/:id/anatomy: a section's prompt cut into who wrote each part.
+export const anatomyViewSchema = z
+  .object({
+    section: z.enum(templateSections),
+    items: z.array(z.object({ key: z.string(), label: z.string() }).strict().readonly()).readonly(),
+    item: z.string().nullable(),
+    segments: z
+      .array(
+        z
+          .object({
+            origin: z.enum(["yours", "keyword", "slopify", "setting"]),
+            text: z.string(),
+            name: z.string().optional(),
+            unfilled: z.literal(true).optional(),
+          })
+          .strict()
+          .readonly(),
+      )
+      .readonly(),
+    fromSample: z.boolean(),
+    problem: z.string().nullable(),
+  })
+  .strict()
+  .readonly();
+export type AnatomyViewData = z.infer<typeof anatomyViewSchema>;

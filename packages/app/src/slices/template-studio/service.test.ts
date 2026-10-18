@@ -6,6 +6,7 @@ import { draftFixture } from "../play-drafts/draft.fake.js";
 import { createTemplate, updateTemplate } from "../project-templates/service.js";
 import type { ProviderStatus } from "../settings/model.js";
 import { writeSetting } from "../settings/repo.js";
+import { getAnatomy } from "./anatomy-view.js";
 import { createFreeSamples } from "./free.js";
 import { makePaidSample } from "./paid.js";
 import { sampleOf, sampleProjects } from "./repo.js";
@@ -262,5 +263,13 @@ describe("getStudio with a paid sample", () => {
     });
     const script = result.value.sections.find((section) => section.id === "script");
     expect(script).toMatchObject({ state: "current", sentence: "Made for version 1." });
+    // The anatomy reads the prompt the sample actually sent.
+    const anatomy = await getAnatomy({ ...h.deps, review }, id, "script", undefined);
+    expect(anatomy.ok && anatomy.value.fromSample).toBe(true);
+    expect(anatomy.ok && anatomy.value.segments[1]).toEqual({
+      origin: "keyword",
+      name: "Topic",
+      text: "The history of the lighthouse",
+    });
   });
 });

@@ -9,6 +9,7 @@ import { createTemplate } from "../../slices/project-templates/service.js";
 import { createFreeSamples } from "../../slices/template-studio/free.js";
 import { queuedJob } from "../../slices/template-studio/jobs.js";
 import {
+  anatomyViewSchema,
   sampleQuoteSchema,
   studioChecksSchema,
   studioViewSchema,
@@ -190,6 +191,27 @@ it("asks for the current version's paid sample again at the price shown, and ref
       "This template is now version 1, not the version 7 you saw. Reload the studio, then press Make sample.",
   });
   expect((await h.post("/samples/make", { version: 1 })).status).toBe(400);
+});
+
+it("cuts a section's prompt into who wrote each part, and refuses an unknown section", async () => {
+  const h = paidStudio();
+  const reply = await h.app.request(`/api/template-studio/${h.id}/anatomy?section=script`);
+  expect(reply.status).toBe(200);
+  const anatomy = anatomyViewSchema.parse(await reply.json());
+  expect(anatomy.items).toEqual([{ key: "article", label: "Article prompt" }]);
+  expect(anatomy.segments).toEqual([
+    { origin: "yours", text: "Write a 1500-word documentary script about " },
+    { origin: "keyword", name: "Topic", text: "The history of the lighthouse" },
+    { origin: "yours", text: "." },
+    {
+      origin: "slopify",
+      text: "\n\nThis is a short sample of the script: write the outline and only chapter 1, then stop.",
+    },
+  ]);
+  expect(anatomy.fromSample).toBe(false);
+  expect((await h.app.request(`/api/template-studio/${h.id}/anatomy?section=nowhere`)).status).toBe(
+    400,
+  );
 });
 
 it("reads and sets the studio's daily budget, refusing one out of range", async () => {

@@ -7,6 +7,7 @@ import { playDraftDocumentSchema } from "../../slices/play-drafts/schema.js";
 import { templateById } from "../../slices/project-templates/repo.js";
 import { readSettings } from "../../slices/settings/playback.js";
 import { providerStatuses } from "../../slices/settings/readiness.js";
+import { getAnatomy } from "../../slices/template-studio/anatomy-view.js";
 import {
   budgetRoom,
   readStudioSettings,
@@ -15,7 +16,7 @@ import {
 } from "../../slices/template-studio/budget.js";
 import { createFreeSamples, type FreeSamples } from "../../slices/template-studio/free.js";
 import { enqueueJob } from "../../slices/template-studio/jobs.js";
-import type { StudioResult } from "../../slices/template-studio/model.js";
+import { type StudioResult, templateSections } from "../../slices/template-studio/model.js";
 import { quoteSave } from "../../slices/template-studio/quote.js";
 import {
   createUnknownAcks,
@@ -159,6 +160,28 @@ export function templateStudioRoutes(deps: AppDeps) {
         const result = await getStudio(read, c.req.valid("param").id);
         return result.ok ? c.json(result.value) : refusedStudio(c, result);
       })
+      // A section's prompts, each cut into your words, your keywords, Slopify's and settings'.
+      .get(
+        "/:id/anatomy",
+        zValidator("param", param, onInvalid),
+        zValidator(
+          "query",
+          z.object({ section: z.enum(templateSections), item: z.string().max(200).optional() }),
+          onInvalid,
+        ),
+        async (c) => {
+          if (review === undefined)
+            return problem(c, { status: 503, title: titleOf(503), detail: unpriced });
+          const { section, item } = c.req.valid("query");
+          const result = await getAnatomy(
+            { db: deps.db, paths: deps.paths, log: deps.log, review },
+            c.req.valid("param").id,
+            section,
+            item,
+          );
+          return result.ok ? c.json(result.value) : refusedStudio(c, result);
+        },
+      )
       // The free checks, apart from the studio: they wait on the providers' readiness.
       .get("/:id/checks", zValidator("param", param, onInvalid), async (c) => {
         const result = await getStudioChecks(read, c.req.valid("param").id);

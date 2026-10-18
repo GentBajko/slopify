@@ -17,6 +17,13 @@ export const templateStudioTools: readonly RouteTool[] = [
       "The free checks the template's current version passes before Mark ready, each failing one with what is wrong and where it is fixed: keywords filled, providers set up, release slots, a known monthly cost, someone to answer each checkpoint.",
   },
   {
+    name: "get_prompt_anatomy",
+    route: "GET /api/template-studio/:id/anatomy",
+    title: "Read a section's prompt anatomy",
+    description:
+      "One of the prompts a template section sends (section: subject, script, voice, pictures, thumbnail, shorts, upload, reviews; item: the prompt's key from items), cut into segments: the person's own words (yours), their keywords' values (keyword), what Slopify fills itself (slopify) and what settings add (setting). Read from the prompt the sample sent when it was made from this setup.",
+  },
+  {
     name: "quote_template_save",
     route: "POST /api/template-studio/:id/quote",
     title: "Price a template Save's sample",
