@@ -1,3 +1,4 @@
+import { errorText } from "../../kernel/errors.js";
 import type { LoudnessDefault } from "../loudness/model.js";
 import type { PlayDraftDocument } from "../play-drafts/schema.js";
 import { StylePreviewError } from "../style-preview/render.js";
@@ -140,7 +141,7 @@ export function createFreeSamples(deps: FreeSampleDeps): FreeSamples {
           documentHash(theme),
           () => documents.make(theme),
           (error) =>
-            `The PDF sample couldn't be made: ${error instanceof Error ? error.message : String(error)} Change the theme in Document (PDF) → Fine-tune, then ${press}.`,
+            `The PDF sample couldn't be made: ${errorText(error)} Change the theme in Document (PDF) → Fine-tune, then ${press}.`,
         );
       }
     },
@@ -239,7 +240,7 @@ function videoFailure(error: unknown): string {
 }
 
 function ffmpegFailure(what: string, error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = errorText(error);
   if (/\bENOENT\b/.test(message) || message.startsWith("Slopify could not start ffmpeg"))
     return `The ${what} couldn't be made because ffmpeg wasn't found. Install ffmpeg, or use the Docker image, then ${press}.`;
   return `The ${what} couldn't be made because ffmpeg stopped with an error. ${press[0]?.toUpperCase()}${press.slice(1)} again; if it fails again, use Download diagnostics in Settings and report it.`;

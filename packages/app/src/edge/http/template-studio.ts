@@ -60,7 +60,7 @@ import {
 } from "../../slices/template-studio/topic.js";
 import type { AppDeps } from "./app.js";
 import { fileResponse } from "./byte-range.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { onInvalid, problem } from "./problem.js";
 
 // Library → Templates → Open studio. Not `/api/studio`, which is the YouTube Studio pack.
 const param = z.object({ id: z.uuid() });
@@ -95,7 +95,6 @@ export function refusedStudio(
     result.reason === "not-found" ? 404 : result.reason === "invalid-input" ? 400 : 409;
   return problem(c, {
     status,
-    title: titleOf(status),
     detail: result.message,
     extensions: { reason: result.reason },
   });
@@ -128,7 +127,6 @@ function refusedWithQuote(
     result.reason === "not-found" ? 404 : result.reason === "invalid-input" ? 400 : 409;
   return problem(c, {
     status,
-    title: titleOf(status),
     detail: result.message,
     extensions: {
       reason: result.reason,
@@ -181,8 +179,7 @@ export function templateStudioRoutes(deps: AppDeps) {
   const review = studio.review ?? deps.drafts;
   const acks = studio.acks ?? createUnknownAcks();
   const sayDeps = { db: deps.db, paths: deps.paths, ids: deps.ids, clock: deps.clock };
-  const gone = (c: Context, detail: string) =>
-    problem(c, { status: 404, title: titleOf(404), detail });
+  const gone = (c: Context, detail: string) => problem(c, { status: 404, detail });
   const media = (
     c: Context,
     file: { readonly path: string; readonly bytes: number } | undefined,
@@ -215,13 +212,11 @@ export function templateStudioRoutes(deps: AppDeps) {
       // Settings → Template studio → Make samples for all: the total first, then each sample
       // that fits today's budget queued at its price, the rest waiting on the budget.
       .post("/samples-for-all/quote", async (c) => {
-        if (review === undefined)
-          return problem(c, { status: 503, title: titleOf(503), detail: unpriced });
+        if (review === undefined) return problem(c, { status: 503, detail: unpriced });
         return c.json(await quoteSamplesForAll({ db: deps.db, clock: deps.clock, review, acks }));
       })
       .post("/samples-for-all", zValidator("json", samplesForAllSchema, onInvalid), async (c) => {
-        if (review === undefined)
-          return problem(c, { status: 503, title: titleOf(503), detail: unpriced });
+        if (review === undefined) return problem(c, { status: 503, detail: unpriced });
         const result = await makeSamplesForAll(
           { db: deps.db, clock: deps.clock, review, acks },
           c.req.valid("json"),
@@ -246,8 +241,7 @@ export function templateStudioRoutes(deps: AppDeps) {
           onInvalid,
         ),
         async (c) => {
-          if (review === undefined)
-            return problem(c, { status: 503, title: titleOf(503), detail: unpriced });
+          if (review === undefined) return problem(c, { status: 503, detail: unpriced });
           const { section, item } = c.req.valid("query");
           const result = await getAnatomy(
             { db: deps.db, paths: deps.paths, log: deps.log, review },
@@ -272,7 +266,6 @@ export function templateStudioRoutes(deps: AppDeps) {
               result.reason === "not-found" ? 404 : result.reason === "invalid-input" ? 400 : 409;
             return problem(c, {
               status,
-              title: titleOf(status),
               detail: result.message,
               extensions: { reason: result.reason, problems: result.problems },
             });
@@ -294,8 +287,7 @@ export function templateStudioRoutes(deps: AppDeps) {
         zValidator("param", param, onInvalid),
         zValidator("json", sayItAsSchema.unwrap().pick({ written: true, spoken: true }), onInvalid),
         (c) => {
-          if (review === undefined)
-            return problem(c, { status: 503, title: titleOf(503), detail: unpriced });
+          if (review === undefined) return problem(c, { status: 503, detail: unpriced });
           const result = quoteSayItAs(
             { ...sayDeps, review },
             c.req.valid("param").id,
@@ -310,8 +302,7 @@ export function templateStudioRoutes(deps: AppDeps) {
         zValidator("param", param, onInvalid),
         zValidator("json", sayItAsSchema, onInvalid),
         async (c) => {
-          if (review === undefined)
-            return problem(c, { status: 503, title: titleOf(503), detail: unpriced });
+          if (review === undefined) return problem(c, { status: 503, detail: unpriced });
           const id = c.req.valid("param").id;
           const result = await sayItAs({ ...sayDeps, review, acks }, id, c.req.valid("json"));
           if (!result.ok) return refusedWithQuote(c, result);
@@ -331,8 +322,7 @@ export function templateStudioRoutes(deps: AppDeps) {
         zValidator("param", param, onInvalid),
         zValidator("json", quoteBody, onInvalid),
         async (c) => {
-          if (review === undefined)
-            return problem(c, { status: 503, title: titleOf(503), detail: unpriced });
+          if (review === undefined) return problem(c, { status: 503, detail: unpriced });
           const id = c.req.valid("param").id;
           const body = c.req.valid("json");
           const quoteDeps = { db: deps.db, clock: deps.clock, review };
@@ -343,7 +333,6 @@ export function templateStudioRoutes(deps: AppDeps) {
             if (!named.ok)
               return problem(c, {
                 status: 400,
-                title: titleOf(400),
                 detail: named.message,
                 extensions: { reason: "invalid-input" },
               });
@@ -364,8 +353,7 @@ export function templateStudioRoutes(deps: AppDeps) {
         zValidator("param", param, onInvalid),
         zValidator("json", saveStudioSchema, onInvalid),
         async (c) => {
-          if (review === undefined)
-            return problem(c, { status: 503, title: titleOf(503), detail: unpriced });
+          if (review === undefined) return problem(c, { status: 503, detail: unpriced });
           const id = c.req.valid("param").id;
           const result = await saveStudio(
             { db: deps.db, clock: deps.clock, review, acks },
@@ -386,8 +374,7 @@ export function templateStudioRoutes(deps: AppDeps) {
         zValidator("param", param, onInvalid),
         zValidator("json", topicSchema, onInvalid),
         async (c) => {
-          if (review === undefined)
-            return problem(c, { status: 503, title: titleOf(503), detail: unpriced });
+          if (review === undefined) return problem(c, { status: 503, detail: unpriced });
           const id = c.req.valid("param").id;
           const result = await setSampleTopic(
             { db: deps.db, clock: deps.clock, review, acks },
@@ -406,8 +393,7 @@ export function templateStudioRoutes(deps: AppDeps) {
         zValidator("param", param, onInvalid),
         zValidator("json", fullScriptSchema, onInvalid),
         async (c) => {
-          if (review === undefined)
-            return problem(c, { status: 503, title: titleOf(503), detail: unpriced });
+          if (review === undefined) return problem(c, { status: 503, detail: unpriced });
           const id = c.req.valid("param").id;
           const result = await setFullScript(
             { db: deps.db, clock: deps.clock, review, acks },

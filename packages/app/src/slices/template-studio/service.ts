@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { z } from "zod";
 import type { Clock } from "../../kernel/clock.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
@@ -10,7 +11,7 @@ import { templateById } from "../project-templates/repo.js";
 import { scheduleRows } from "../schedules/repo.js";
 import type { ScheduleSummary } from "../schedules/schema.js";
 import type { ProviderStatus } from "../settings/model.js";
-import { readSetting } from "../settings/repo.js";
+import { readJsonSetting } from "../settings/repo.js";
 import { type FreeCheckInput, freeChecks, type ScheduleFit } from "./checks.js";
 import type { FreeSamples } from "./free.js";
 import { gateOf, runnableVersion } from "./gate.js";
@@ -60,14 +61,8 @@ export function priceKey(
 export const sampleTopicKey = "templateStudio.sampleTopic.default";
 
 export function defaultSampleTopic(db: DatabaseSync): string {
-  const raw = readSetting(db, sampleTopicKey);
-  if (raw === undefined) return fallbackSampleTopic;
-  try {
-    const value: unknown = JSON.parse(raw);
-    return typeof value === "string" && value.trim() !== "" ? value.trim() : fallbackSampleTopic;
-  } catch {
-    return fallbackSampleTopic;
-  }
+  const topic = readJsonSetting(db, sampleTopicKey, z.string(), fallbackSampleTopic).trim();
+  return topic === "" ? fallbackSampleTopic : topic;
 }
 
 // The schedules that run a template now: not deleted, not finished.

@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { setTimeout as sleep } from "node:timers/promises";
 import { transact } from "../../kernel/db/tx.js";
+import { internalError } from "../../kernel/errors.js";
 import { derive } from "../../kernel/runner/graph.js";
 import { projectExists, projectPaused, stagesOf } from "../admission/repo.js";
 import { startRun } from "../admission/start.js";
@@ -298,7 +299,10 @@ export async function makePaidSample(
     const begun = startRun({ ...deps.start, ids }, run.draft, run.rendered, true, run.templates);
     if (begun.project.id !== reserved)
       throw new Error(
-        "Slopify hit an internal error (the sample's project got another id than its row). Press Make sample again; if it happens again, use Download diagnostics in Settings and report it.",
+        internalError(
+          "the sample's project got another id than its row",
+          "Press Make sample again",
+        ),
       );
     return begun;
   });

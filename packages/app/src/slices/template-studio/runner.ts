@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { setImmediate as yieldToLoop } from "node:timers/promises";
+import { errorText } from "../../kernel/errors.js";
 import type { Log } from "../../kernel/log.js";
 import { claimNextJob, finishJob, recoverJobs, type SampleJob } from "./jobs.js";
 
@@ -61,7 +62,7 @@ export function createSampleRunner(deps: SampleRunnerDeps): SampleRunner {
       } catch (error) {
         if (controller.signal.aborted) return;
         deps.log.write("error", "template-studio.sample", {
-          detail: `The sample job of template ${job.templateId} version ${String(job.templateVersion)} stopped: ${error instanceof Error ? error.message : String(error)}`,
+          detail: `The sample job of template ${job.templateId} version ${String(job.templateVersion)} stopped: ${errorText(error)}`,
         });
       }
       if (controller.signal.aborted) return;
@@ -76,7 +77,7 @@ export function createSampleRunner(deps: SampleRunnerDeps): SampleRunner {
       recoverJobs(deps.db);
       loop = run().catch((error: unknown) => {
         deps.log.write("error", "template-studio.runner", {
-          detail: `The template studio's sample loop stopped: ${error instanceof Error ? error.message : String(error)}. Restart Slopify to make samples again.`,
+          detail: `The template studio's sample loop stopped: ${errorText(error)}. Restart Slopify to make samples again.`,
         });
       });
     },

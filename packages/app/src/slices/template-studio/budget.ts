@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
-import { readSetting, writeSetting } from "../settings/repo.js";
+import { readJsonSetting, writeSetting } from "../settings/repo.js";
 
 // Settings → Template studio: the most the studio's samples may spend in one day. A sample that
 // would go over it waits, saying so, until the next day or a higher budget.
@@ -16,14 +16,14 @@ export const studioSettingsSchema = z
 export type StudioSettings = z.infer<typeof studioSettingsSchema>;
 
 export function readStudioSettings(db: DatabaseSync): StudioSettings {
-  const raw = readSetting(db, dailyBudgetKey);
-  if (raw === undefined) return { dailyBudget: defaultDailyBudget };
-  try {
-    const parsed = z.number().finite().min(0).max(dailyBudgetMax).safeParse(JSON.parse(raw));
-    return { dailyBudget: parsed.success ? parsed.data : defaultDailyBudget };
-  } catch {
-    return { dailyBudget: defaultDailyBudget };
-  }
+  return {
+    dailyBudget: readJsonSetting(
+      db,
+      dailyBudgetKey,
+      z.number().finite().min(0).max(dailyBudgetMax),
+      defaultDailyBudget,
+    ),
+  };
 }
 
 export function writeStudioSettings(db: DatabaseSync, settings: StudioSettings): StudioSettings {
