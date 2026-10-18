@@ -7,25 +7,25 @@ Slopify: a self-hosted, single-user content pipeline for faceless YouTube channe
 | Module | Entry point |
 |---|---|
 | CLI (install, update, flags) | `packages/app/src/edge/cli.ts:13` |
-| Composition root (boot) | `packages/app/src/main.ts:225` |
-| Runner wiring | `packages/app/src/main.ts:836` |
-| HTTP app and router registry | `packages/app/src/edge/http/app.ts:226`, `packages/app/src/edge/http/app.ts:165` |
-| SSE hub | `packages/app/src/edge/events/hub.ts:84` |
+| Composition root (boot) | `packages/app/src/main.ts:298` |
+| Runner wiring | `packages/app/src/main.ts:1212` |
+| HTTP app and router registry | `packages/app/src/edge/http/app.ts:290`, `packages/app/src/edge/http/app.ts:219` |
+| SSE hub | `packages/app/src/edge/events/hub.ts:99` |
 | Provider registry and adapters | `packages/app/src/adapter-registry.ts:60`, `packages/app/src/adapters/` |
-| Model catalogue | `packages/app/src/catalog/store.ts:63` |
-| Kernel: runner, providers, db, events, config | `packages/app/src/kernel/runner/index.ts:83`, `packages/app/src/kernel/runner/providers.ts:116`, `packages/app/src/kernel/db/index.ts:8`, `packages/app/src/kernel/events.ts:107`, `packages/app/src/kernel/config/index.ts:23` |
-| Revision stage dispatch and recovery | `packages/app/src/slices/rebuild/runtime-run.ts:17` |
-| Admission | `packages/app/src/slices/admission/start.ts:47` |
+| Model catalogue | `packages/app/src/catalog/store.ts:67` |
+| Kernel: runner, providers, db, events, config | `packages/app/src/kernel/runner/index.ts:89`, `packages/app/src/kernel/runner/providers.ts:121`, `packages/app/src/kernel/db/index.ts:8`, `packages/app/src/kernel/events.ts:129`, `packages/app/src/kernel/config/index.ts:23` |
+| Revision stage dispatch and recovery | `packages/app/src/slices/rebuild/runtime-run.ts:19` |
+| Admission | `packages/app/src/slices/admission/start.ts:51` |
 | Play drafts | `packages/app/src/slices/play-drafts/start.ts:24` |
-| Schedules | `packages/app/src/slices/schedules/scheduler.ts:36` |
-| Studio upload pack | `packages/app/src/slices/studio/pack.ts:61` |
+| Schedules | `packages/app/src/slices/schedules/scheduler.ts:35` |
+| Studio upload pack | `packages/app/src/slices/studio/pack.ts:62` |
 | Other slices (45 total) | `packages/app/src/slices/` (table in [01-architecture.md](01-architecture.md)) |
 | Docker install and host helper | `packages/app/src/edge/docker-install/`, `packages/app/src/edge/host-cli.ts:50` |
-| Updater | `packages/app/src/updater/install.ts:18`, `packages/app/src/edge/update-worker.ts:5` |
-| Alignment worker | `packages/app/src/adapters/alignment/worker.ts:17` |
+| Updater | `packages/app/src/updater/install.ts:8`, `packages/app/src/edge/update-worker.ts:5` |
+| Alignment worker | `packages/app/src/adapters/alignment/worker.ts:18` |
 | Sample build | `packages/app/src/sample-build/generate.ts:93` |
-| Web SPA, router, shell, API client | `packages/web/src/main.tsx:24`, `packages/web/src/router.tsx:603`, `packages/web/src/components/shell.tsx:166`, `packages/web/src/api.ts:197` |
-| Studio extension | `packages/extension/src/background.ts:393`, `packages/extension/src/content.ts:217`, `packages/extension/scripts/build.mjs:46` |
+| Web SPA, router, shell, API client | `packages/web/src/main.tsx:24`, `packages/web/src/router.tsx:830`, `packages/web/src/components/shell.tsx:206`, `packages/web/src/api.ts:212` |
+| Studio extension | `packages/extension/src/background.ts:465`, `packages/extension/src/content.ts:462`, `packages/extension/scripts/build.mjs:46` |
 | Telemetry collector | `packages/collector/src/index.ts:21` |
 | Marketing site | `packages/site/public/main.js:247` |
 

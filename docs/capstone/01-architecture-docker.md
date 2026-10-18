@@ -59,30 +59,30 @@ Scope: the `--docker` installer (compose-based install/update transaction, priva
 | HTTP | `packages/app/src/edge/http/` | Folder routes resolve registered files, then `replyForFolder`; autostart routes read the Docker record (`packages/app/src/edge/http/folder-location.ts:12`, `packages/app/src/edge/http/autostart.ts:12`). |
 | Browser | `packages/web/src/project/`, `packages/web/src/autostart/` | Imports the browser-safe `folderReplySchema` and `AutostartView` type only (`packages/web/src/project/open-folder.tsx:1`, `packages/web/src/autostart/api.ts:1`). |
 
-Enforced import rules forbid kernel → edge/slices, slices → edge and adapters → edge (`biome.json:44`, `biome.json:70`, `biome.json:99`); all installer modules live under `edge/`. `host-cli/open-folder.ts` imports `edge/docker-install/state.js` to read `install.json` (`packages/app/src/host-cli/open-folder.ts:4`); `host-cli/` has no enforced rule.
+Enforced import rules forbid kernel → edge/slices, slices → edge and adapters → edge (`biome.json:49-74`, `biome.json:75-103`, `biome.json:104-138`); all installer modules live under `edge/`. `host-cli/open-folder.ts` imports `edge/docker-install/state.js` to read `install.json` (`packages/app/src/host-cli/open-folder.ts:4`); `host-cli/` has no enforced rule.
 
 ## Module boundaries
 
 | Module | Public surface and boundary |
 | --- | --- |
-| `edge/docker.ts` | `assertManagedDockerHost` (Linux, non-root uid) and `planDockerHostCli` → `{enabled:false}` or `{enabled:true, ensure}`; consent stored in `<XDG_DATA_HOME>/slopify/host-cli/consent.json` as `{version:1, automaticStartup:true}` (`packages/app/src/edge/docker.ts:11`, `:46`, `:70`). The bridge is a systemd user service `slopify-cli-bridge.service`; no systemd user bus → error (`packages/app/src/edge/docker.ts:96`). |
-| `docker-install/run.ts` | `runDockerCommand(DockerCommand)`, `hasDockerInstall(env)` (checks `install.json` or legacy `receipt.json`), `documentsProjects` (`packages/app/src/edge/docker-install/run.ts:28`, `:175`, `:189`). Validates `--port`/`SLOPIFY_DOCKER_HOST_PORT`, `SLOPIFY_DOCKER_NAME`, `SLOPIFY_DOCKER_VOLUME`; `--projects-dir documents` resolves to `<Documents>/Slopify[/<name>]/Projects` (`packages/app/src/edge/docker-install/run.ts:35`, `:45`, `:54`). |
-| `docker-install/apply.ts` | `applyDocker(ApplyOptions, Engine) → ApplyResult {url, projects, backups, changed, recovery, removed, problems}` and `composeEnv` (`packages/app/src/edge/docker-install/apply.ts:69`, `:92`, `:567`). |
+| `edge/docker.ts` | `assertManagedDockerHost` (Linux, non-root uid) and `planDockerHostCli` → `{enabled:false}` or `{enabled:true, ensure}`; consent stored in `<XDG_DATA_HOME>/slopify/host-cli/consent.json` as `{version:1, automaticStartup:true}` (`packages/app/src/edge/docker.ts:12`, `:47`, `:71`). The bridge is a systemd user service `slopify-cli-bridge.service`; no systemd user bus → error (`packages/app/src/edge/docker.ts:97-105`). |
+| `docker-install/run.ts` | `runDockerCommand(DockerCommand)`, `hasDockerInstall(env)` (checks `install.json` or legacy `receipt.json`), `documentsProjects` (`packages/app/src/edge/docker-install/run.ts:190`, `:175`, `:189`). Validates `--port`/`SLOPIFY_DOCKER_HOST_PORT`, `SLOPIFY_DOCKER_NAME`, `SLOPIFY_DOCKER_VOLUME`; `--projects-dir documents` resolves to `<Documents>/Slopify[/<name>]/Projects` (`packages/app/src/edge/docker-install/run.ts:35`, `:45`, `:54`). |
+| `docker-install/apply.ts` | `applyDocker(ApplyOptions, Engine) → ApplyResult {url, projects, backups, changed, recovery, removed, problems}` and `composeEnv` (`packages/app/src/edge/docker-install/apply.ts:565`, `:92`, `:567`). |
 | `docker-install/state.ts` | `installSchema` (v2), `updateSchema` (v2), legacy 2.5.0 `legacyReceiptSchema`/`legacyJournalSchema`, `dockerRoot`, `privateDirectory`, `readState`, `writeState`, `writeText` (≤64 KiB, then directory fsync) (`packages/app/src/edge/docker-install/state.ts:32`, `:58`, `:88`, `:103`, `:135`, `:161`). |
-| `docker-install/tree.ts` | `identity`, `contains`, `safePath`, `treeDigest`, `privateTree`, `syncDirectory` (`packages/app/src/edge/docker-install/tree.ts:15`, `:29`, `:100`, `:173`). |
+| `docker-install/tree.ts` | `identity`, `contains`, `safePath`, `treeDigest`, `privateTree`, `syncDirectory` (`packages/app/src/edge/docker-install/tree.ts:90`, `:29`, `:100`, `:173`). |
 | `docker-install/engine.ts` | `Engine` interface, `dockerEngine`, `recoveryId`, `dockerFailure` (plain-language mapping of Docker stderr) (`packages/app/src/edge/docker-install/engine.ts:32`, `:73`, `:82`, `:138`). |
 | `docker-install/volume.ts` | `volumeOperation` with five fixed operations (below) (`packages/app/src/edge/docker-install/volume.ts:7`). |
-| `docker-install/activation.ts` | `dockerActivationCommitted`, `dockerFilesLayout`, `dockerFolderConfiguration` (`packages/app/src/edge/docker-install/activation.ts:17`, `:27`, `:38`). |
+| `docker-install/activation.ts` | `dockerActivationCommitted`, `dockerFilesLayout`, `dockerFolderConfiguration` (`packages/app/src/edge/docker-install/activation.ts:38`, `:27`, `:38`). |
 | `edge/autostart/{docker,docker-record}.ts` | `inspectDockerStart` (reads Docker Desktop settings files or `systemctl [--user] is-enabled docker.service`; never changes them), `recordLoginStart`, `loginStartSchema` (`packages/app/src/edge/autostart/docker.ts:13`, `:116`, `packages/app/src/edge/autostart/docker-record.ts:20`). |
-| Folder HTTP | `openFolderRoutes`, `revisionFolderRoutes`, `replyForFolder`, `folderReplySchema` (`packages/app/src/edge/http/open-folder.ts:10`, `packages/app/src/edge/http/revision-files.ts:60`, `packages/app/src/edge/http/folder-location-schema.ts:5`). |
+| Folder HTTP | `openFolderRoutes`, `revisionFolderRoutes`, `replyForFolder`, `folderReplySchema` (`packages/app/src/edge/http/open-folder.ts:10`, `packages/app/src/edge/http/revision-files.ts:87`, `packages/app/src/edge/http/folder-location-schema.ts:5`). |
 | Host folder opener | `createHostFolderOpener` opens only folders inside a recorded `install.json` `projects` whose dev/ino still match `projectsIdentity` (`packages/app/src/host-cli/open-folder.ts:42`). |
 
 ## Entry points
 
 | Entry | Dispatch |
 | --- | --- |
-| Published `slopify` executable | `packages/app/package.json:17` → `dist/edge/cli.js`; parsing at `packages/app/src/edge/cli.ts:13`. |
-| `--docker`, `install --docker`, `update` on a Docker install | `packages/app/src/edge/cli.ts:34`–`:66` → `runDockerCommand` (`packages/app/src/edge/docker-install/run.ts:28`). `install` without `--docker` is rejected (`packages/app/src/edge/cli.ts:29`). |
+| Published `slopify` executable | `packages/app/package.json:16-18` → `dist/edge/cli.js`; parsing at `packages/app/src/edge/cli.ts:14`. |
+| `--docker`, `install --docker`, `update` on a Docker install | `packages/app/src/edge/cli.ts:34`–`:66` → `runDockerCommand` (`packages/app/src/edge/docker-install/run.ts:29`). `install` without `--docker` is rejected (`packages/app/src/edge/cli.ts:29`). |
 | Image volume helper | `packages/app/src/edge/docker-install/volume.ts:75` runs `volumeOperation(process.argv.slice(2))`, prints JSON. |
 | Container application | `Dockerfile:61` runs `node packages/app/dist/edge/cli.js --no-open`; `boot` at `packages/app/src/main.ts:298`. |
 | Compose service | `compose.yaml:10` (service `slopify`); the installer copies it to the installation folder and runs `docker compose up` (`packages/app/src/edge/docker-install/apply.ts:279`, `:304`). The package ships it as `dist/compose.yaml` (`packages/app/scripts/copy-assets.mjs:8`). |
@@ -101,8 +101,8 @@ CLI flag rules: `--projects-dir`, `--host-cli`, `--accept-host-cli` require Dock
 | --- | --- |
 | `update.lock` | O_EXCL file holding the installer PID; a stale lock of a dead PID is removed (`packages/app/src/edge/docker-install/apply.ts:579`). |
 | `install.json` | `Install` v2: `name, volume, daemon, image, appVersion, user, port, projects, projectsIdentity{dev,ino}, backups?, hostCli, token, recovery` (`packages/app/src/edge/docker-install/state.ts:32`); written after the candidate is ready (`packages/app/src/edge/docker-install/apply.ts:326`). |
-| `update.json` | `Update` v2: `id, phase ("stopping"\|"snapshot"\|"starting"), image, previous (none \| compose{env,activation} \| legacy{id,name,renamed,running,restart}), backup, backupDigest, published` (`packages/app/src/edge/docker-install/state.ts:58`); exists only during a transaction (`packages/app/src/edge/docker-install/apply.ts:251`, `:332`). |
-| `compose.yaml`, `.env` | Copied compose file; `.env` of single-quoted `SLOPIFY_NAME, SLOPIFY_IMAGE, SLOPIFY_USER, SLOPIFY_PORT, SLOPIFY_VOLUME, SLOPIFY_PROJECTS_DIR, SLOPIFY_BACKUPS_DIR?, SLOPIFY_HOST_CLI_SHARE, SLOPIFY_ACTIVATION_DIR, SLOPIFY_UPDATE_TOKEN=<redacted>, SLOPIFY_UPDATE_PENDING=1` (`packages/app/src/edge/docker-install/apply.ts:287`, `:567`). |
+| `update.json` | `Update` v2: `id, phase ("stopping"\|"snapshot"\|"starting"), image, previous (none \| compose{env,activation} \| legacy{id,name,renamed,running,restart}), backup, backupDigest, published` (`packages/app/src/edge/docker-install/state.ts:58`); exists only during a transaction (`packages/app/src/edge/docker-install/apply.ts:249`, `:332`). |
+| `compose.yaml`, `.env` | Copied compose file; `.env` of single-quoted `SLOPIFY_NAME, SLOPIFY_IMAGE, SLOPIFY_USER, SLOPIFY_PORT, SLOPIFY_VOLUME, SLOPIFY_PROJECTS_DIR, SLOPIFY_BACKUPS_DIR?, SLOPIFY_HOST_CLI_SHARE, SLOPIFY_ACTIVATION_DIR, SLOPIFY_UPDATE_TOKEN=<redacted>, SLOPIFY_UPDATE_PENDING=1` (`packages/app/src/edge/docker-install/apply.ts:287-302`, `:565`). |
 | `activation/activation.json` | `{version:1, token, committed:boolean}`; mounted read-only at `/opt/slopify-install` (`packages/app/src/edge/docker-install/apply.ts:282`, `:327`, `compose.yaml:44`). |
 | `activation/login-start.json` | `LoginStart {version:1, checkedAt, docker:"yes"\|"no"\|"unknown", manager:"system"\|"rootless", wanted:boolean\|null, platform?, desktop?}` (`packages/app/src/edge/autostart/docker.ts:13`, `packages/app/src/edge/autostart/docker-record.ts:35`). |
 | `host-cli-off/` | Empty folder mounted as `/opt/slopify-host` when the bridge is off (`packages/app/src/edge/docker-install/apply.ts:280`). |
@@ -142,13 +142,13 @@ Unknown operations throw; the wrapper prints a generic failure and exits 1 (`pac
 
 | Route | Request | Response; sites |
 | --- | --- | --- |
-| `GET /api/health` | — | `{status:"ok", version, uptimeMs}` (`packages/app/src/edge/http/app.ts:168`); probed by `ready` and the compose/Dockerfile healthchecks. |
+| `GET /api/health` | — | `{status:"ok", version, uptimeMs}` (`packages/app/src/edge/http/app.ts:222-226`); probed by `ready` and the compose/Dockerfile healthchecks. |
 | `GET /api/update/ready` | `X-Slopify-Update-Token` | `{status:"ok", version}` or 403 (`packages/app/src/edge/http/update.ts:19`). |
 | `POST /api/update/activate` | `X-Slopify-Update-Token` | `{status:"ok", version}`, 403 or 409 (`packages/app/src/edge/http/update.ts:25`). The Docker installer does not call it; it flips `activation.json` and the in-process watcher activates. |
 | `GET /api/update` | — | `UpdateInfo` incl. `busy` (`packages/app/src/edge/http/update.ts:12`). In the container `unsupported()` returns the terminal-update sentence (`packages/app/src/main.ts:519`). |
 | `POST /api/projects/:id/open-folder` | `{asset}` (`[a-z0-9-]+` or `images.zip`); optional `Origin` must match | `200 FolderReply`, `400/403/404/503` (`packages/app/src/edge/http/open-folder.ts:10`); client `packages/web/src/project/open-folder.tsx:28`. |
-| `POST /api/projects/:id/revisions/:revisionId/:recordId/open-folder` | path ids | `200 FolderReply` or problems (`packages/app/src/edge/http/revision-files.ts:60`); client `packages/web/src/project/revision-api.ts:234`. |
-| `GET/PUT /api/settings/autostart`, `POST /api/settings/autostart/answer` | PUT `{enabled:boolean}` | `AutostartView`; in Docker PUT always returns 409 with where Docker's own setting is (`packages/app/src/edge/http/autostart.ts:17`, `packages/app/src/edge/autostart/service.ts:82`). |
+| `POST /api/projects/:id/revisions/:revisionId/:recordId/open-folder` | path ids | `200 FolderReply` or problems (`packages/app/src/edge/http/revision-files.ts:90`); client `packages/web/src/project/revision-api.ts:228`. |
+| `GET/PUT /api/settings/autostart`, `POST /api/settings/autostart/answer` | PUT `{enabled:boolean}` | `AutostartView`; in Docker PUT always returns 409 with where Docker's own setting is (`packages/app/src/edge/http/autostart.ts:22-29`, `packages/app/src/edge/autostart/service.ts:82`). |
 
 `FolderReply` is `{opened:true}` | `{opened:true, location:"docker-host", path}` | `{opened:false, location:"docker-host", path}` (`packages/app/src/edge/http/folder-location-schema.ts:5`). In a container `replyForFolder` verifies the file lies under `/data/projects` through real directories, maps it to `hostProjects/<dir>`, asks the host helper to open it (10 s timeout), and returns the host path either way; no configured host folder → 503 (`packages/app/src/edge/http/folder-location.ts:19`–`:65`). The host helper call is `POST /v1/open-folder` over the bridge socket (`packages/app/src/adapters/host-cli/index.ts:88`). Backup folder paths map through `hostFolder` over both the projects and backups binds (`packages/app/src/slices/backups/folder.ts:45`).
 
@@ -189,7 +189,7 @@ The host helper's bridge carries a fault's kind and words only, so the container
 
 ### Start at login
 
-After the transaction, `recordLoginStart` asks once (or takes `--autostart`/`--no-autostart`), inspects whether Docker starts by itself, and writes `login-start.json`; failures only warn (`packages/app/src/edge/docker-install/run.ts:129`). Inside the container `createAutostart` uses the `docker` source reading `/opt/slopify-install/login-start.json` (`packages/app/src/edge/autostart/index.ts:23`); the view is `available:false` with `howTo` text and `set` always throws `AutostartRefusal` (`packages/app/src/edge/autostart/service.ts:38`, `:82`).
+After the transaction, `recordLoginStart` asks once (or takes `--autostart`/`--no-autostart`), inspects whether Docker starts by itself, and writes `login-start.json`; failures only warn (`packages/app/src/edge/docker-install/run.ts:129`). Inside the container `createAutostart` uses the `docker` source reading `/opt/slopify-install/login-start.json` (`packages/app/src/edge/autostart/index.ts:23`); the view is `available:false` with `howTo` text and `set` always throws `AutostartRefusal` (`packages/app/src/edge/autostart/service.ts:30`, `:82`).
 
 ## Frontend
 

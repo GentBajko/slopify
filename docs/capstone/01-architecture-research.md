@@ -37,13 +37,13 @@ Scope: how research reports travel from the research recipes to an LLM provider 
 
 | Layer | Files in scope | Imports |
 |---|---|---|
-| kernel/ports | `packages/app/src/kernel/ports/llm-documents.ts`, `llm.ts`, `host-cli.ts` | Nothing above kernel (`biome.json:44`) |
+| kernel/ports | `packages/app/src/kernel/ports/llm-documents.ts`, `llm.ts`, `host-cli.ts` | Nothing above kernel (`biome.json:50-73`) |
 | kernel/runner | `packages/app/src/kernel/runner/providers.ts` | kernel/ports |
-| slices | `packages/app/src/slices/research/`, `packages/app/src/slices/rebuild/recipe-text.ts`, `runtime-provider.ts`, `runtime-article.ts`, `preview-details.ts` | kernel; never edge or adapters (`biome.json:70`) |
-| adapters | `packages/app/src/adapters/llm/document-workspace.ts`, `document-reader.ts`, `claude-code.ts`, `codex.ts`, `antigravity.ts`, `openrouter.ts`, `packages/app/src/adapters/host-cli/` | kernel/ports and kernel/{clock,log,cli-command,errors} only (`biome.json:99`) |
-| host helper | `packages/app/src/host-cli/runtime.ts`, `server.ts`, `packages/app/src/edge/host-cli.ts`, `packages/app/src/edge/http/host-cli.ts` | adapters/llm and kernel/ports (`packages/app/src/host-cli/runtime.ts:4`) |
+| slices | `packages/app/src/slices/research/`, `packages/app/src/slices/rebuild/recipe-text.ts`, `runtime-provider.ts`, `runtime-article.ts`, `preview-details.ts` | kernel; never edge or adapters (`biome.json:76-102`) |
+| adapters | `packages/app/src/adapters/llm/document-workspace.ts`, `document-reader.ts`, `claude-code.ts`, `codex.ts`, `antigravity.ts`, `openrouter.ts`, `packages/app/src/adapters/host-cli/` | kernel/ports and kernel/{clock,log,cli-command,errors} only (`biome.json:105-137`) |
+| host helper | `packages/app/src/host-cli/runtime.ts`, `server.ts`, `packages/app/src/edge/host-cli.ts`, `packages/app/src/edge/http/host-cli.ts` | adapters/llm and kernel/ports (`packages/app/src/host-cli/runtime.ts:4-22`) |
 
-Dependency direction: slices build `LlmDocument[]` values and hand them to the wrapped `providers.llm` call; the wrapper forwards them to an `LlmPort` adapter (`packages/app/src/kernel/runner/providers.ts:208`). No adapter imports a slice.
+Dependency direction: slices build `LlmDocument[]` values and hand them to the wrapped `providers.llm` call; the wrapper forwards them to an `LlmPort` adapter (`packages/app/src/kernel/runner/providers.ts:214-222`). No adapter imports a slice.
 
 ## Module boundaries
 
@@ -72,24 +72,24 @@ Dependency direction: slices build `LlmDocument[]` values and hand them to the w
 
 | Channel | Send site | Receive site | Payload out | Payload back |
 |---|---|---|---|---|
-| Slice → wrapped LLM call | `packages/app/src/slices/rebuild/runtime-provider.ts:70`, `runtime-article.ts:51` | `packages/app/src/kernel/runner/providers.ts:208` | `LlmCall` with `documents?: LlmDocument[]` (`packages/app/src/kernel/runner/providers.ts:30`) | `LlmAnswer` (text, usage, finishReason) |
-| Wrapper → `LlmPort.complete` | `packages/app/src/kernel/runner/providers.ts:203` | adapter `complete` | `LlmCompletion.documents` (`packages/app/src/kernel/ports/llm.ts:87`) | `LlmEvent` stream |
-| Claude Code CLI | `packages/app/src/adapters/llm/claude-code.ts:198` | `claude -p` | Prompt on stdin: document instructions + messages (`:210`); args add `--restricted`, empty `--setting-sources`, hooks/memory/plugins off, `--strict-mcp-config`, `--mcp-config <dir>/mcp.json`, `--allowedTools mcp__slopify_research__read_document` (`:82`-`:115`) | stream-json; with documents only the final `result` text is yielded (`:225`, `:248`, `:296`) |
+| Slice → wrapped LLM call | `packages/app/src/slices/rebuild/runtime-provider.ts:73`, `runtime-article.ts:48` | `packages/app/src/kernel/runner/providers.ts:214-222` | `LlmCall` with `documents?: LlmDocument[]` (`packages/app/src/kernel/runner/providers.ts:32`) | `LlmAnswer` (text, usage, finishReason) |
+| Wrapper → `LlmPort.complete` | `packages/app/src/kernel/runner/providers.ts:214` | adapter `complete` | `LlmCompletion.documents` (`packages/app/src/kernel/ports/llm.ts:87`) | `LlmEvent` stream |
+| Claude Code CLI | `packages/app/src/adapters/llm/claude-code.ts:184` | `claude -p` | Prompt on stdin: document instructions + messages (`:213`); args add `--restricted`, empty `--setting-sources`, hooks/memory/plugins off, `--strict-mcp-config`, `--mcp-config <dir>/mcp.json`, `--allowedTools mcp__slopify_research__read_document` (`:82`-`:115`) | stream-json; with documents only the final `result` text is yielded (`:229`, `:256`, `:305`) |
 | Codex CLI | `packages/app/src/adapters/llm/codex.ts:204` | `codex exec` | `--ignore-user-config`, read-only sandbox, `mcp_servers.slopify_research` with `enabled_tools=["read_document"]` and `required=true`; prompt via stdin `-` (`:95`-`:158`) | JSON events |
 | Antigravity CLI | `packages/app/src/adapters/llm/antigravity.ts:97` | `agy` | No MCP: documents are inlined into the prompt (`:105`-`:107`). Private temp folder holding an `AGENTS.md` (web only through `search_web`, no commands) plus, for picture runs, copies of the pictures that the model opens with `view_file` (`:114`-`:121`); one `{"event":"user"}` line on stdin (`:130`-`:137`); `AGY_CLI_DISABLE_AUTO_UPDATE=true`, `HOME` kept so `agy` finds its own Google sign-in (`:128`) | stream-json `init`, `step_update`, `result` (`:139`-`:172`) |
 | MCP `read_document` | CLI | `packages/app/src/adapters/llm/document-reader.ts:64` | `{ id: string, offset: int multiple of 16000 }` | JSON `{ id, title, offset, nextOffset: number \| null, totalCharacters, text }` (`:84`-`:91`) |
 | OpenRouter HTTP | `packages/app/src/adapters/llm/openrouter.ts:80` | OpenRouter API | `documentMessages(documents)` prepended as separate user messages labelled as reference material (`packages/app/src/kernel/ports/llm-documents.ts:36`) | SSE stream |
 | Container → host helper | `packages/app/src/adapters/host-cli/index.ts:154` over the Unix socket `<dir>/cli.sock` (`packages/app/src/adapters/host-cli/transport.ts:58`) | `packages/app/src/edge/http/host-cli.ts:232` | `hostLlmSchema`: `{ model, messages[≤128], documents?, thinking?, webSearch? }` (`packages/app/src/kernel/ports/host-cli.ts:72`); bearer token checked with `timingSafeEqual` (`packages/app/src/edge/http/host-cli.ts:113`) | NDJSON `hostFrameSchema` frames: `delta`, `activity`, `done`, `error` (`packages/app/src/kernel/ports/host-cli.ts:196`) |
 
-Document contents cross the bridge inside the JSON body; no container or host path is sent. The host runtime runs the same CLI adapters with the captured host environment (`packages/app/src/host-cli/runtime.ts:54`-`:84`), so the workspace is materialised on the host.
+Document contents cross the bridge inside the JSON body; no container or host path is sent. The host runtime runs the same CLI adapters with the captured host environment (`packages/app/src/host-cli/runtime.ts:54`-`:88`), so the workspace is materialised on the host.
 
-Read verification: every adapter calls `documents?.verifyRead()` before accepting a result (`packages/app/src/adapters/llm/claude-code.ts:294`, `codex.ts:253`; Antigravity CLI sends no document reader, so it has nothing to verify). It requires a receipt for every 16 000-character page of every document; a missing page throws `providerError({ kind: "unavailable" })` (`packages/app/src/adapters/llm/document-workspace.ts:69`-`:97`). Cleanup: `documents?.remove()` runs in each adapter's `finally` (`claude-code.ts:317`, `codex.ts:305`; Antigravity CLI removes its temp folder instead, `antigravity.ts:139`).
+Read verification: every adapter calls `documents?.verifyRead()` before accepting a result (`packages/app/src/adapters/llm/claude-code.ts:303`, `codex.ts:263`; Antigravity CLI sends no document reader, so it has nothing to verify). It requires a receipt for every 16 000-character page of every document; a missing page throws `providerError({ kind: "unavailable" })` (`packages/app/src/adapters/llm/document-workspace.ts:69`-`:97`). Cleanup: `documents?.remove()` runs in each adapter's `finally` (`claude-code.ts:330`, `codex.ts:317`; Antigravity CLI removes its temp folder instead, `antigravity.ts:182`).
 
 ## Composition
 
 - Container app: `createHostCliClient` is built when `SLOPIFY_CONTAINER=1` or `SLOPIFY_HOST_CLI_DIR` is set (`packages/app/src/main.ts:407`); `buildRegistry` registers `hostCli.llm(id)` for each of `claude-code`, `codex`, `gemini` (`packages/app/src/adapter-registry.ts:157`).
 - Host helper: `packages/app/src/edge/host-cli.ts:50` wires `startHostServer` + `createHostRuntime({ run: nodeRunCli, ... })`; `createHostRuntime` maps IDs to `claudeCodeLlm`, `codexLlm`, `antigravityLlm` (`packages/app/src/host-cli/runtime.ts:38`).
-- Slices receive only the wrapped provider calls, never adapters (`biome.json:83`-`:89`).
+- Slices receive only the wrapped provider calls, never adapters (`biome.json:88`-`:96`).
 
 ## Frontend
 

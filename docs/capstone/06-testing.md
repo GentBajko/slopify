@@ -44,7 +44,7 @@ One runner: Vitest (`vitest` `^4.1.11`, `package.json:23`). `npm test` runs `vit
 
 Total: 1,073 tracked `*.test.*` files, every one matched by an include rule above; no `*.spec.*` files exist.
 
-- `vitest.tmpdir.ts:8-16`: global setup points `TMPDIR` at one `slopify-vitest-*` directory per run, inherited by workers, and removes it on teardown; fixtures create their data directories under `os.tmpdir()` and do not clean them individually.
+- `vitest.tmpdir.ts:8-17`: global setup points `TMPDIR` at one `slopify-vitest-*` directory per run, inherited by workers, and removes it on teardown; fixtures create their data directories under `os.tmpdir()` and do not clean them individually.
 - `packages/app/vitest.config.ts:11`: on `win32` only, `testTimeout` and `hookTimeout` are 30 000 ms; Linux keeps Vitest's 5 s default. many test files pass their own timeout (an `{ timeout }` option or a trailing numeric argument) (for example `packages/app/src/slices/rebuild/runtime-bundle-recovery.test.ts`).
 - `packages/web/vitest.config.ts:6` resolves the same aliases as the web build (`packages/web/aliases.ts:13-17`): `@/` to `packages/web/src`, and `@app/*.js` to the app package's TypeScript source.
 - Web test libraries: `@testing-library/dom`, `@testing-library/react`, `@testing-library/user-event`, `happy-dom` (`packages/web/package.json:32-38`); the extension declares `happy-dom` too since 4.0.
@@ -57,7 +57,7 @@ Total: 1,073 tracked `*.test.*` files, every one matched by an include rule abov
 - `packages/app/test/*.test.ts` (51 files): composed tests that wire several slices, the runner and real SQLite together (`revision-rebuild.test.ts`, `revision-shorts.test.ts`, `backup-round-trip.test.ts`, `host-cli-e2e.test.ts`, `docker-launcher.test.ts`).
 - `packages/app/test/e2e/*.test.ts` (6 files: `document`, `editable-projects`, `optional-outputs`, `play-drafts`, `review-checkpoints`, `skeleton`): boot the production app through `boot` from `packages/app/src/main.ts` on `127.0.0.1` port 0 and drive it over HTTP (`packages/app/test/e2e/skeleton.test.ts:9`, `packages/app/test/e2e/skeleton.test.ts:135`). Request helpers and zod response schemas live in sibling `*.http.ts` files (`packages/app/test/e2e/editable-projects.http.ts:15`).
 - Extension tests live in `packages/extension/test/`, not beside `packages/extension/src/` (`packages/extension/vitest.config.ts:7`): ten files, among them `fill.test.ts`, `studio-pages.test.ts`, `video-picker.test.ts`, `schedule-fill.test.ts`, `upload-captions.test.ts`, `self-update.test.ts` and `pack-drift.test.ts` (the extension's copy of the upload pack keeps the app model's fields).
-- Site tests sit at the package root and read the static pages, tokens and walkthrough steps (`packages/site/pages.test.js:11`, `packages/site/walkthrough.test.js:7`).
+- Site tests sit at the package root and read the static pages, tokens and walkthrough steps (`packages/site/pages.test.js:4`, `packages/site/walkthrough.test.js:7`).
 
 ### Running targeted tests
 
@@ -131,7 +131,7 @@ Provider ports are replaced by structural fakes that implement the real port int
 
 | Fixture | Site | Builds |
 | --- | --- | --- |
-| `harness`, `deferred` | `packages/app/src/slices/control/control.fake.ts:62`, `:159` | project with chosen stage states on disk SQLite |
+| `harness`, `deferred` | `packages/app/src/slices/control/control.fake.ts:56`, `:153` | project with chosen stage states on disk SQLite |
 | `revisionFixture(upgradeFrom10)` | `packages/app/src/slices/revisions/revision.fake.ts:33` | `RevisionDeps` over in-memory SQLite; optional replay of migrations ≤ 0010 to test upgrades |
 | `mutationFixture`, `imageFixture`, `publicationFor`, `preparedOutput` | `packages/app/src/slices/revisions/mutation.fake.ts:12-81` | Save/publication inputs |
 | `retainedOutput`, `retainedPiece` | `packages/app/src/slices/revisions/downloads.fake.ts:11`, `:47` | retained historical outputs |
@@ -153,9 +153,9 @@ Provider ports are replaced by structural fakes that implement the real port int
 **Web** (`packages/web/src/test-app.tsx`): component tests never reach a server (`packages/web/src/test-app.tsx:19-20`).
 
 - `fakeFetch(routes)` answers a route table with `jsonAnswer`, `problemAnswer`, `emptyAnswer` (`packages/web/src/test-app.tsx:27-49`); `silentEvents` is an `EventSourceLike` that never opens (`:62`); `testDeps` combines them into `AppDeps` at origin `http://slopify.test` (`:24`, `:69`).
-- `renderApp` mounts under `QueryClientProvider` (retries off) and `AppProvider` (`packages/web/src/test-app.tsx:174`, `:188-194`); `renderRouted` adds a memory-history TanStack router whose routes mirror `router.tsx` so `Link`s resolve (`:80`, `:180`).
+- `renderApp` mounts under `QueryClientProvider` (retries off) and `AppProvider` (`packages/web/src/test-app.tsx:184`, `:197-208`); `renderRouted` adds a memory-history TanStack router whose routes mirror `router.tsx` so `Link`s resolve (`:81`, `:180`).
 - Navigation helpers: `openEditSection`, `openProjectSection`, `openProjectTab`, `openProjectEditor`, `downloadItem` (`packages/web/src/test-app.tsx:201-229`).
-- Feature fixtures beside their tests: `playRoutes`, `draftView` (`packages/web/src/play/play-test-fixture.tsx:93`, `:292`); `sqliteSessionFixture` routes fetch through real draft CRUD on temporary SQLite (`packages/web/src/play/draft-sqlite-fixture.ts:19`); `mountSupplied` (`packages/web/src/play/draft-upload-test-fixture.ts:8`); `reviewFixture` (`packages/web/src/play/review-test-fixture.ts:7`); `reviewHarness` (`packages/web/src/play/review-test-harness.tsx:27`); project-page `stage`/`output`/`body` rows (`packages/web/src/routes/project-fixtures.ts:10-51`); `revisionRouteFixture` (`packages/web/src/routes/project-revision.fake.ts:8`); `revisionView` (`packages/web/src/project/revision-fixture.ts:2`); editor fixtures (`packages/web/src/project/revision-editor-test-fixtures.ts:5-80`); tutorial `mount`/`start`/`skipTo`/`fill` (`packages/web/src/tutorial/test-fixture.tsx:79-311`).
+- Feature fixtures beside their tests: `playRoutes`, `draftView` (`packages/web/src/play/play-test-fixture.tsx:93`, `:292`); `sqliteSessionFixture` routes fetch through real draft CRUD on temporary SQLite (`packages/web/src/play/draft-sqlite-fixture.ts:19`); `mountSupplied` (`packages/web/src/play/draft-upload-test-fixture.ts:8`); `reviewFixture` (`packages/web/src/play/review-test-fixture.ts:7`); `reviewHarness` (`packages/web/src/play/review-test-harness.tsx:27`); project-page `stage`/`output`/`body` rows (`packages/web/src/routes/project-fixtures.ts:14-51`); `revisionRouteFixture` (`packages/web/src/routes/project-revision.fake.ts:11`); `revisionView` (`packages/web/src/project/revision-fixture.ts:2`); editor fixtures (`packages/web/src/project/revision-editor-test-fixtures.ts:5-80`); tutorial `mount`/`start`/`skipTo`/`fill` (`packages/web/src/tutorial/test-fixture.tsx:79-317`).
 
 **MCP tools** (`packages/app/src/edge/mcp/*.test.ts`, 12 files): tools are exercised as an agent sees them, through `connectAgent` over `mcpFixture`, or one call at a time with `routeCallDeps`.
 

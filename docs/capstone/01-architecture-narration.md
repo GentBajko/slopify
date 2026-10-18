@@ -76,16 +76,16 @@ Scope: narration text shaping (pronunciation glossary, shared glossary, narratio
 | Layer | Directories/files | Observed dependency direction |
 | --- | --- | --- |
 | Ports | `packages/app/src/kernel/ports/{tts,narration-aliases,system-speech}.ts` | Import nothing from slices/edge. `aliasMatches` lives in the kernel because the caption aligner (an adapter) also calls it (`packages/app/src/kernel/ports/narration-aliases.ts:1`, `packages/app/src/adapters/alignment/text.ts:1`). |
-| Provider wrapper | `packages/app/src/kernel/runner/{providers,audition}.ts` | Wraps `TtsPort.synthesize` with retry/continuation for every stage call (`packages/app/src/kernel/runner/providers.ts:266`). |
-| TTS adapters | `packages/app/src/adapters/tts/` | Implement `TtsPort`; registered by id in `packages/app/src/adapter-registry.ts:104`. Import ports only (`biome.json:99`). |
+| Provider wrapper | `packages/app/src/kernel/runner/{providers,audition}.ts` | Wraps `TtsPort.synthesize` with retry/continuation for every stage call (`packages/app/src/kernel/runner/providers.ts:280-375`). |
+| TTS adapters | `packages/app/src/adapters/tts/` | Implement `TtsPort`; registered by id in `packages/app/src/adapter-registry.ts:104`. Import ports only (`biome.json:104-138`). |
 | Text transforms | `packages/app/src/slices/narration/` | Pure text/IPA/alias/cue functions plus the ffmpeg join and pause helpers; import kernel and storage/video helpers (`packages/app/src/slices/narration/concat.ts:12`, `packages/app/src/slices/narration/pauses.ts:116`). |
 | Multi-voice and loudness models | `packages/app/src/slices/voices/`, `packages/app/src/slices/loudness/` | Speaker/script/grouping models and ffmpeg loudnorm helpers; browser-safe model files are imported by the web client (`packages/app/src/slices/loudness/model.ts:12`). |
 | Planning (recipes) | `packages/app/src/slices/rebuild/recipe-*.ts` | Import admission rules and the narration/voices/loudness transforms; produce `ResolvedWorkRecipe` rows (`packages/app/src/slices/rebuild/recipe-build.ts:10`). |
 | Execution (runtime) | `packages/app/src/slices/rebuild/runtime-*.ts` | Dispatch pieces to provider or local execution and publish assets (`packages/app/src/slices/rebuild/runtime-run.ts:19`). |
-| HTTP edge | `packages/app/src/edge/http/{pronunciations,auditions,audio-preview,narration-peaks,revisions}.ts` | Call slice functions; mounted in `packages/app/src/edge/http/app.ts:194`, `:209`. |
+| HTTP edge | `packages/app/src/edge/http/{pronunciations,auditions,audio-preview,narration-peaks,revisions}.ts` | Call slice functions; mounted in `packages/app/src/edge/http/app.ts:249`, `:253`, `:254`, `:269`, `:270`. |
 | Browser | `packages/web/src/{play,voices,video,project,routes}/` | Imports app types/models through `@app/...` and calls HTTP through `packages/web/src/api.ts`. |
 
-Enforced import rules: kernel may not import slices/edge; slices may not import edge; adapters may not import edge/slices (`biome.json:44`, `biome.json:70`, `biome.json:99`).
+Enforced import rules: kernel may not import slices/edge; slices may not import edge; adapters may not import edge/slices (`biome.json:49-74`, `biome.json:75-103`, `biome.json:104-138`).
 
 ## Module boundaries
 
@@ -100,13 +100,13 @@ Enforced import rules: kernel may not import slices/edge; slices may not import 
 | Level the volume | `usesLoudness` (`packages/app/src/slices/loudness/model.ts:146`) | `config.loudness` present and audio not Off. |
 | Multiple voices | `config.voices` plus a script (`packages/app/src/slices/rebuild/recipe-audio.ts:91`) | `VoicesSettings` (`packages/app/src/slices/voices/model.ts:93`). |
 
-The run config fields are `audio.{usePronunciationGlossary,shareGlossary,useNarrationAliases,describeFigures,skipCode}`, `narrationAliases`, `sharedGlossary`, `voices`, `loudness` (`packages/app/src/slices/admission/schema.ts:83`, `:93`, `:94`, `:206`, `:209`). New Play drafts set `usePronunciationGlossary`, `shareGlossary`, `useNarrationAliases` and `describeFigures` to `true` (`packages/web/src/play/draft-state.ts:36`). The loudness default for new runs is the app setting `loudness` (`packages/app/src/slices/settings/model.ts:213`), defaulting to enabled, −14 LUFS video, −18 LUFS audio files (`packages/app/src/slices/loudness/model.ts:34`).
+The run config fields are `audio.{usePronunciationGlossary,shareGlossary,useNarrationAliases,describeFigures,skipCode}`, `narrationAliases`, `sharedGlossary`, `voices`, `loudness` (`packages/app/src/slices/admission/schema.ts:84-92`, `:94`, `:96`, `:210`, `:213`). New Play drafts set `usePronunciationGlossary`, `shareGlossary`, `useNarrationAliases` and `describeFigures` to `true` (`packages/web/src/play/draft-state.ts:36-39`). The loudness default for new runs is the app setting `loudness` (`packages/app/src/slices/settings/model.ts:225`), defaulting to enabled, −14 LUFS video, −18 LUFS audio files (`packages/app/src/slices/loudness/model.ts:34`).
 
 ### Pronunciation glossary
 
-`parsePronunciationGlossary(markdown, language?)` reads `Term: /IPA/` lines and Markdown tables (a table IPA cell without slashes counts as one slash-delimited pronunciation). English (absent or `en`) accepts only the standard-English IPA subset Inworld documents; other languages accept full IPA. Malformed, non-IPA, word-count-mismatched and conflicting rows are skipped with 1-based row numbers and reasons, never their text; the result is always `ok: true` with optional `skipped` (`packages/app/src/slices/narration/pronunciation.ts:78`, `packages/app/src/slices/narration/pronunciation.ts:140`). Matching is literal, case-insensitive and boundary-aware; matches become slash-delimited IPA spans (`packages/app/src/slices/narration/pronunciation.ts:192`, `:230`).
+`parsePronunciationGlossary(markdown, language?)` reads `Term: /IPA/` lines and Markdown tables (a table IPA cell without slashes counts as one slash-delimited pronunciation). English (absent or `en`) accepts only the standard-English IPA subset Inworld documents; other languages accept full IPA. Malformed, non-IPA, word-count-mismatched and conflicting rows are skipped with 1-based row numbers and reasons, never their text; the result is always `ok: true` with optional `skipped` (`packages/app/src/slices/narration/pronunciation.ts:105`, `packages/app/src/slices/narration/pronunciation.ts:128`). Matching is literal, case-insensitive and boundary-aware; matches become slash-delimited IPA spans (`packages/app/src/slices/narration/pronunciation.ts:275`, `:335`).
 
-The glossary source is the article's end matter (`article:glossary` slot); `glossaryOf` returns an empty entry list when the feature is off and `null` while the article is unwritten (`packages/app/src/slices/rebuild/recipe-text.ts:425`). `collectSharedGlossary` merges the selected, ready `article:glossary` outputs of every other project's head revision, newest first (`packages/app/src/slices/narration/shared-glossary.ts:18`). Each speaker in a multi-voice run carries its own `pronunciations` text, used only when that speaker's voice reads IPA (`packages/app/src/slices/voices/model.ts:37`, `packages/app/src/slices/rebuild/recipe-voices.ts:415`).
+The glossary source is the article's end matter (`article:glossary` slot); `glossaryOf` returns an empty entry list when the feature is off and `null` while the article is unwritten (`packages/app/src/slices/rebuild/recipe-text.ts:486-500`). `collectSharedGlossary` merges the selected, ready `article:glossary` outputs of every other project's head revision, newest first (`packages/app/src/slices/narration/shared-glossary.ts:18`). Each speaker in a multi-voice run carries its own `pronunciations` text, used only when that speaker's voice reads IPA (`packages/app/src/slices/voices/model.ts:51`, `packages/app/src/slices/rebuild/recipe-voices.ts:423-428`).
 
 ### Narration aliases
 
@@ -122,7 +122,7 @@ Within a narration group, alias spans take precedence over glossary spans (`pack
 2. Glossary unresolved (`null`) → no parts (a deferred `audio:<segment>:future` is planned by the caller).
 3. Preparation on → `preparationForGroup` plus `tts` parts carrying `text` (tags + IPA/alias spans) and clean `spokenText` (`packages/app/src/slices/rebuild/recipe-audio-parts.ts:70`, `packages/app/src/slices/rebuild/recipe-preparation.ts:64`).
 4. Spans present → `prepareRequests(logicalText, [], maxCharacters, spans)` (`packages/app/src/slices/rebuild/recipe-audio-parts.ts:108`, `packages/app/src/slices/narration/steering.ts:101`).
-5. Otherwise → the original `planNarration` splitter and identities (`packages/app/src/slices/rebuild/recipe-audio-parts.ts:135`, `packages/app/src/slices/narration/plan.ts:55`).
+5. Otherwise → the original `planNarration` splitter and identities (`packages/app/src/slices/rebuild/recipe-audio-parts.ts:140`, `packages/app/src/slices/narration/plan.ts:55`).
 
 `maxCharacters` comes from the enabled catalogue model's `tts.maxCharacters`, else the logical length plus span growth (`packages/app/src/slices/rebuild/recipe-audio-parts.ts:61`). Persisted TTS `pronunciation` is always `null`; IPA travels inside `text`. A refusal becomes a deferred `resolve-revision-recipe` part with `unresolved: true` (`packages/app/src/slices/rebuild/recipe-audio-parts.ts:180`).
 
@@ -130,11 +130,11 @@ Within a narration group, alias spans take precedence over glossary spans (`pack
 
 ### Narration Preparation
 
-The preparation LLM receives numbered source sentences and returns `{cues: Cue[]}`; cue variants are `instruction` (≤240 chars, no markup), `reset`, and `sound` (`laugh`, `breathe`, `clear throat`, `sigh`, `cough`, `yawn`) (`packages/app/src/slices/narration/preparation.ts:30`, `:54`). A multi-voice turn is prepared only when its speaker uses `inworld` / `inworld-tts-2` (`packages/app/src/slices/rebuild/recipe-voices.ts:404`); the speaker name/role reach the prompt as `PreparationSpeaker` (`packages/app/src/slices/narration/preparation.ts:16`).
+The preparation LLM receives numbered source sentences and returns `{cues: Cue[]}`; cue variants are `instruction` (≤240 chars, no markup), `reset`, and `sound` (`laugh`, `breathe`, `clear throat`, `sigh`, `cough`, `yawn`) (`packages/app/src/slices/narration/preparation.ts:30`, `:54`). A multi-voice turn is prepared only when its speaker uses `inworld` / `inworld-tts-2` (`packages/app/src/slices/rebuild/recipe-voices.ts:412-421`); the speaker name/role reach the prompt as `PreparationSpeaker` (`packages/app/src/slices/narration/preparation.ts:16`).
 
 ### Multiple voices
 
-`VoicesSettings` holds up to 10 speakers (`speakersMax`) with roles `narrator|host|guest|character`, formats `audiobook|podcast|drama|interview`, per-speaker `pace` and turn gaps (`packages/app/src/slices/voices/model.ts:7`, `:16`, `:25`). The script is parsed by `parseScript` (`packages/app/src/slices/voices/script.ts:44`). `groupTurns` puts consecutive turns into one native dialogue request only for models in `dialogueCapabilities`: ElevenLabs `eleven_v3` (≤10 voices, 2,000 chars) and Google TTS Gemini preview models (≤2 voices, 3,000 chars); other turns are one request each (`packages/app/src/slices/voices/grouping.ts:21`, `:52`). Turn parts use keys `audio:body:turn:<n>`, join through `concat-turns-v1` into `audio:body:concat` (`packages/app/src/slices/rebuild/recipe-voices.ts:152`, `:195`). A multi-voice run also plans `voices:files` (`audio-files-v1`): MP3 and M4B with chapters at script sections (`packages/app/src/slices/rebuild/recipe-exports.ts:99`, `packages/app/src/slices/rebuild/runtime-voices.ts:25`).
+`VoicesSettings` holds up to 10 speakers (`speakersMax`) with roles `narrator|host|guest|character`, formats `audiobook|podcast|drama|interview`, per-speaker `pace` and turn gaps (`packages/app/src/slices/voices/model.ts:7`, `:16`, `:26-28`). The script is parsed by `parseScript` (`packages/app/src/slices/voices/script.ts:44`). `groupTurns` puts consecutive turns into one native dialogue request only for models in `dialogueCapabilities`: ElevenLabs `eleven_v3` (≤10 voices, 2,000 chars) and Google TTS Gemini preview models (≤2 voices, 3,000 chars); other turns are one request each (`packages/app/src/slices/voices/grouping.ts:21`, `:52`). Turn parts use keys `audio:body:turn:<n>`, join through `concat-turns-v1` into `audio:body:concat` (`packages/app/src/slices/rebuild/recipe-voices.ts:145`, `:193`). A multi-voice run also plans `voices:files` (`audio-files-v1`): MP3 and M4B with chapters at script sections (`packages/app/src/slices/rebuild/recipe-exports.ts:125-138`, `packages/app/src/slices/rebuild/runtime-voices.ts:25`).
 
 ### Loudness
 
@@ -146,12 +146,12 @@ With Level the volume on, each join gets a sibling `level:<segment>` recipe (`le
 
 | Registry id | Adapter | Capabilities |
 | --- | --- | --- |
-| `elevenlabs` | `packages/app/src/adapters/tts/elevenlabs.ts:59` | streams, dialogue |
-| `openai-tts` | `packages/app/src/adapters/tts/openai.ts:43` | streams |
-| `cartesia` | `packages/app/src/adapters/tts/cartesia.ts:45` | streams |
-| `inworld` | `packages/app/src/adapters/tts/inworld.ts:26` (async jobs: `inworld-async.ts`) | streams |
+| `elevenlabs` | `packages/app/src/adapters/tts/elevenlabs.ts:66` | streams, dialogue |
+| `openai-tts` | `packages/app/src/adapters/tts/openai.ts:50` | streams |
+| `cartesia` | `packages/app/src/adapters/tts/cartesia.ts:52` | streams |
+| `inworld` | `packages/app/src/adapters/tts/inworld.ts:27` (async jobs: `inworld-async.ts`) | streams |
 | `system-voice` | `packages/app/src/adapters/tts/system.ts:84` (say, SAPI, Piper, Pico, eSpeak NG, eSpeak; no key) | none |
-| `google-tts` | `packages/app/src/adapters/tts/gemini.ts:81` | dialogue |
+| `google-tts` | `packages/app/src/adapters/tts/gemini.ts:87` | dialogue |
 
 The audio stage runs through `runRevisionInvocation` (`packages/app/src/main.ts:1327`); there is no separate narration runner (the earlier `slices/narration/run.ts` was deleted in 4.0).
 
@@ -159,7 +159,7 @@ The audio stage runs through `runRevisionInvocation` (`packages/app/src/main.ts:
 
 | Entry | Site |
 | --- | --- |
-| Executor for every stage kind (audio included) | `runRevisionInvocation` wired in `wireRunner` at `packages/app/src/main.ts:1327`, defined at `packages/app/src/slices/rebuild/runtime-run.ts:19`. |
+| Executor for every stage kind (audio included) | `runRevisionInvocation` wired in `wireRunner` at `packages/app/src/main.ts:1212`, defined at `packages/app/src/slices/rebuild/runtime-run.ts:19`. |
 | Provider pieces (`tts`, `llm` preparation/description) | `executeProviderRecipe` (`packages/app/src/slices/rebuild/runtime-provider.ts:46`). |
 | Local pieces (`concat-narration`, `concat-turns-v1`, `level-narration-v1`, `narration-files-v1`, `figure-card-v1`) | `executeLocalRecipe` (`packages/app/src/slices/rebuild/runtime-local.ts:42`, dispatch at `:94`–`:102`). |
 | Listening files (`voices:files`) | `executeVoicesRecipe` (`packages/app/src/slices/rebuild/runtime-voices.ts:26`). |
@@ -168,7 +168,7 @@ The audio stage runs through `runRevisionInvocation` (`packages/app/src/main.ts:
 
 | Work keys | Operation |
 | --- | --- |
-| `narration:prepare:<segment>:<logicalKey>`, `narration:prepare:<segment>:future` | Preparation LLM call or deferred (`packages/app/src/slices/rebuild/recipe-preparation.ts:47`, `:81`). A `text` narration override's optional `direction` is appended to that chunk's preparation prompt only (`packages/app/src/slices/rebuild/recipe-preparation.ts:76`-`:87`; field `packages/app/src/slices/revisions/model.ts:35`, schema `packages/app/src/slices/revisions/schema.ts:68`). |
+| `narration:prepare:<segment>:<logicalKey>`, `narration:prepare:<segment>:future` | Preparation LLM call or deferred (`packages/app/src/slices/rebuild/recipe-preparation.ts:47`, `:81`). A `text` narration override's optional `direction` is appended to that chunk's preparation prompt only (`packages/app/src/slices/rebuild/recipe-preparation.ts:76`-`:87`; field `packages/app/src/slices/revisions/model.ts:35`, schema `packages/app/src/slices/revisions/schema.ts:84`). |
 | `narration:describe:<n>`, `narration:describe:future` | Spoken description of tables/figures/math/code (`packages/app/src/slices/rebuild/recipe-describe.ts:22`, `:94`). |
 | `<logicalKey>:<part>`, `audio:<segment>:future` | TTS parts or deferred narration (`packages/app/src/slices/rebuild/recipe-audio-parts.ts:19`, `packages/app/src/slices/rebuild/recipe-audio.ts:149`). |
 | `audio:body:turn:<n>` | Multi-voice turn group (`packages/app/src/slices/rebuild/recipe-voices.ts:233`). |
@@ -176,7 +176,7 @@ The audio stage runs through `runRevisionInvocation` (`packages/app/src/main.ts:
 | `audio:body:concat`, `audio:intro`, `audio:outro` | Joins (`packages/app/src/slices/rebuild/recipe-audio.ts:177`, `:279`). |
 | `level:intro`, `level:body`, `level:outro` | Levelled joins (`packages/app/src/slices/rebuild/recipe-loudness.ts:25`). |
 | `narration:files:<segment>` | `narration-files-v1` text downloads (`packages/app/src/slices/rebuild/recipe-narration-text.ts:14`). |
-| `voices:files` | `audio-files-v1` MP3/M4B (`packages/app/src/slices/rebuild/recipe-exports.ts:99`). |
+| `voices:files` | `audio-files-v1` MP3/M4B (`packages/app/src/slices/rebuild/recipe-exports.ts:125-138`). |
 
 ## Communication
 
@@ -186,8 +186,8 @@ The audio stage runs through `runRevisionInvocation` (`packages/app/src/main.ts:
 | --- | --- |
 | Preparation | `{direction, sentences:{sentence:number,text:string}[]}` (plus optional speaker) → JSON `{cues: Cue[]}`, validated by `validatePreparation` (`packages/app/src/slices/narration/preparation.ts:54`, `:102`). |
 | Request construction | clean `source`, `cues`, `maxCharacters`, optional spans → `{ok:true, requests: PreparedRequest[]}` (`{text, spokenText}`) or `{ok:false, reason}` (`packages/app/src/slices/narration/steering.ts:4`, `:101`). |
-| Synthesis | `TtsCall {provider, model?, voiceId, text, dialogue?: {voiceId,text}[]}` → `AttemptResult<NarratedAudio {bytes, container:"mp3"}>` (`packages/app/src/kernel/runner/providers.ts:45`, `:58`). Send: `packages/app/src/slices/rebuild/runtime-provider.ts:95`; the bytes are written as `narration.mp3` (`packages/app/src/slices/rebuild/runtime-provider.ts:116`). |
-| Live preview | `observeNarration` streams chunks into the `AudioPreviewStore` (`packages/app/src/slices/rebuild/runtime-provider.ts:107`, `packages/app/src/kernel/audio-preview.ts:19`). |
+| Synthesis | `TtsCall {provider, model?, voiceId, text, dialogue?: {voiceId,text}[]}` → `AttemptResult<NarratedAudio {bytes, container:"mp3"}>` (`packages/app/src/kernel/runner/providers.ts:45`, `:58`). Send: `packages/app/src/slices/rebuild/runtime-provider.ts:102`; the bytes are written as `narration.mp3` (`packages/app/src/slices/rebuild/runtime-provider.ts:123`). |
+| Live preview | `observeNarration` streams chunks into the `AudioPreviewStore` (`packages/app/src/slices/rebuild/runtime-provider.ts:114`, `packages/app/src/kernel/audio-preview.ts:19`). |
 | Transcript assembly | selected pieces + saved recipes → `NarrationTextPart[]`; published as `<segment>-narration.txt` (clean) and `<segment>-tts-script.txt` (exact requests, blank-line separated), roles `narration_txt` / `tts_script` (`packages/app/src/slices/rebuild/runtime-narration-text.ts:25`, `:85`). |
 
 `Cue`, `PreparedRequest`, `Speaker` and `VoicesSettings` fields are in [02-models-narration.md](02-models-narration.md).
@@ -196,21 +196,21 @@ The audio stage runs through `runRevisionInvocation` (`packages/app/src/main.ts:
 
 | Route | Request | Response; sites |
 | --- | --- | --- |
-| `GET /api/pronunciations/shared?except=<id>` | optional `except` (≤64, `[0-9A-Za-z_-]*`) | `SharedGlossary {entries: {term, ipa[]}[], projects:number}`. Route `packages/app/src/edge/http/pronunciations.ts:21`; client `packages/web/src/api.ts:1000`. |
+| `GET /api/pronunciations/shared?except=<id>` | optional `except` (≤64, `[0-9A-Za-z_-]*`) | `SharedGlossary {entries: {term, ipa[]}[], projects:number}`. Route `packages/app/src/edge/http/pronunciations.ts:21`; client `packages/web/src/api.ts:1113-1117`. |
 | `GET /api/pronunciations/aliases` | — | `{aliases: NarrationAlias[]}`. Route `packages/app/src/edge/http/pronunciations.ts:36`; client `packages/web/src/api.ts:1008`. |
 | `PUT /api/pronunciations/aliases` | `{aliases: unknown[]}` (≤2,000) | `{aliases}` or 400 problem with `fields: {field, message}[]`. Route `packages/app/src/edge/http/pronunciations.ts:39`; client `packages/web/src/api.ts:1013`. |
 | `POST /api/auditions/quote` | `{lines: {provider, model, text≤300, speaker}[]}` (1–10) | `{estimate}` (null without a catalogue). Route `packages/app/src/edge/http/auditions.ts:40`; client `packages/web/src/api.ts:1039`. |
-| `POST /api/auditions` | `{provider, model, text, voice, confirmed: true}` | `audio/mpeg` bytes, or 409 held / 502 provider error / 500 unavailable. Route `packages/app/src/edge/http/auditions.ts:55`; client `packages/web/src/api.ts:1045`. |
+| `POST /api/auditions` | `{provider, model, text, voice, confirmed: true}` | `audio/mpeg` bytes, or 409 held / 502 provider error / 500 unavailable. Route `packages/app/src/edge/http/auditions.ts:55`; client `packages/web/src/api.ts:1167-1171`. |
 | `GET /api/projects/:projectId/audio-preview`, `.../audio-preview/:previewId` | path ids | preview list JSON; growing MP3 stream without ranges (`packages/app/src/edge/http/audio-preview.ts:21`, `:32`); client `packages/web/src/project/live-audio.tsx:24`. |
 | `GET /api/projects/:projectId/narration/peaks` | path id | `NarrationPeaks` of finished pieces of the current revision (`packages/app/src/edge/http/narration-peaks.ts:36`). |
 | `GET /api/projects/:id/revisions/:revisionId/narration-chunks` | path ids | `{chunks: {key, spokenText}[] \| null}` in spoken order (`packages/app/src/edge/http/revisions.ts:110`, `packages/app/src/slices/rebuild/runtime-narration-text.ts:155`). |
 | `POST /api/projects/:id/revisions`, `.../revisions/restore` | `{baseRevisionId, idempotencyKey, edit}` / `{baseRevisionId, idempotencyKey, targetRevisionId}` | `RevisionMutationResult` or problem (`packages/app/src/edge/http/revisions.ts:124`, `:136`, `packages/app/src/slices/revisions/schema.ts:145`). |
 
-Narration downloads are ordinary file routes (`GET /files/:projectId/:asset`, `packages/app/src/edge/http/files.ts:45`).
+Narration downloads are ordinary file routes (`GET /files/:projectId/:asset`, `packages/app/src/edge/http/files.ts:51`).
 
 ## Composition
 
-`buildRecipes` composes text → audio → exports, then passes `audio.levels` into `masterPlan` for the video, shorts and audio files, adding line levelling for multi-voice runs (`packages/app/src/slices/rebuild/recipe-build.ts:28`, `:62`, `:77`). `audioRecipes` branches on provided audio, multi-voice script, or single-voice groups, then plans intro/outro joins, level recipes and narration text files when preparation or glossary is active (`packages/app/src/slices/rebuild/recipe-audio.ts:55`). Its `mediaFingerprint` covers the ordered join identities plus `silenceGapSeconds` and `edgeSilenceSeconds` (`packages/app/src/slices/rebuild/recipe-audio.ts:319`). Sentence/paragraph pauses are carried in join values by `pauseValues` (`packages/app/src/slices/rebuild/recipe-pauses.ts:11`) and inserted by `applyPauses` (`packages/app/src/slices/narration/pauses.ts:347`).
+`buildRecipes` composes text → audio → exports, then passes `audio.levels` into `masterPlan` for the video, shorts and audio files, adding line levelling for multi-voice runs (`packages/app/src/slices/rebuild/recipe-build.ts:28`, `:62`, `:77`). `audioRecipes` branches on provided audio, multi-voice script, or single-voice groups, then plans intro/outro joins, level recipes and narration text files when preparation or glossary is active (`packages/app/src/slices/rebuild/recipe-audio.ts:55`). Its `mediaFingerprint` covers the ordered join identities plus `silenceGapSeconds` and `edgeSilenceSeconds` (`packages/app/src/slices/rebuild/recipe-audio.ts:346-353`). Sentence/paragraph pauses are carried in join values by `pauseValues` (`packages/app/src/slices/rebuild/recipe-pauses.ts:11`) and inserted by `applyPauses` (`packages/app/src/slices/narration/pauses.ts:347`).
 
 Request identity includes exact sent text, voice/model selection, segment and whole-text identity; work identity adds the regeneration token (`packages/app/src/slices/narration/plan.ts:36`, `:65`). Reused audio is rebound by `bindNarrationReuse` and late publication by `rebindPublishedNarration` (`packages/app/src/slices/rebuild/runtime-narration-reuse.ts:13`, `packages/app/src/slices/rebuild/runtime-narration-publication.ts:10`).
 
