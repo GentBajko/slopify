@@ -9,14 +9,17 @@ import {
   type SocialPlatform,
   type XTier,
 } from "@app/slices/social/model.js";
-import { type ReactElement, useEffect, useState } from "react";
-import { Field, Select, Textarea } from "@/components/kit/field";
+import { designsMax } from "@app/slices/social/schema.js";
+import { type ReactElement, useEffect, useId, useState } from "react";
+import { Checkbox, Field, Select, Textarea } from "@/components/kit/field";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Switch } from "@/components/kit/switch";
 import { textSourceOptions } from "./words";
 
 // One site's post settings: where the words come from, what it carries, its hashtags and the
 // YouTube link. Prepare upload, Play and Template Studio use it with the same names; `compact`
 // shows only the text and the main media, for Template Studio's few visible controls.
+// `designs` (Prepare upload only: designs belong to a project) adds the designs picker.
 export function PostChoiceFields({
   platform,
   choice,
@@ -27,6 +30,7 @@ export function PostChoiceFields({
   tier = "free",
   compact = false,
   disabled = false,
+  designs,
 }: {
   readonly platform: SocialPlatform;
   readonly choice: PostChoice;
@@ -40,6 +44,8 @@ export function PostChoiceFields({
   readonly tier?: XTier;
   readonly compact?: boolean;
   readonly disabled?: boolean;
+  // Library → Designs made for this project, to pick from.
+  readonly designs?: readonly PostDesign[] | undefined;
 }): ReactElement {
   const site = platformLabels[platform];
   const limits = limitsFor(platform, tier);
@@ -138,6 +144,15 @@ export function PostChoiceFields({
           }))}
         />
       </Field>
+      {designs === undefined ? null : (
+        <DesignPicker
+          site={site}
+          designs={designs}
+          picked={choice.media.designs ?? []}
+          disabled={disabled}
+          onChange={(picked) => media({ designs: picked.length === 0 ? undefined : picked })}
+        />
+      )}
       {compact ? null : (
         <>
           <Field label={`${site} hashtags`} tip="social.hashtags">
@@ -173,6 +188,74 @@ export function PostChoiceFields({
             />
           </div>
         </>
+      )}
+    </div>
+  );
+}
+
+export interface PostDesign {
+  readonly id: string;
+  readonly name: string;
+}
+
+// The project's designs, each a chip to tick; the post carries them in the design's own format
+// for the site (Slopify renders it). A picked design that is gone stays listed so it can be
+// unticked.
+function DesignPicker({
+  site,
+  designs,
+  picked,
+  disabled,
+  onChange,
+}: {
+  readonly site: string;
+  readonly designs: readonly PostDesign[];
+  readonly picked: readonly string[];
+  readonly disabled: boolean;
+  readonly onChange: (picked: readonly string[]) => void;
+}): ReactElement {
+  const labelId = useId();
+  const gone = picked
+    .filter((id) => !designs.some((one) => one.id === id))
+    .map((id) => ({ id, name: "A design that is gone" }));
+  const listed = [...designs, ...gone];
+  const full = picked.length >= designsMax;
+  return (
+    <div className="sl-field min-[560px]:col-span-2" {...helpScope}>
+      <span className="flex min-w-0 items-center gap-1">
+        <span className="sl-field__label" id={labelId}>
+          {`${site} designs`}
+        </span>
+        <InfoTip id="social.designs" className="-my-1" />
+      </span>
+      {listed.length === 0 ? (
+        <p className="sl-field__help m-0">
+          No designs are made for this project yet. Make one in Library → Designs and set its Keep
+          in project to this project; it shows here.
+        </p>
+      ) : (
+        // biome-ignore lint/a11y/useSemanticElements: a row of chips; a fieldset's box and legend would break the row.
+        <div role="group" aria-labelledby={labelId} className="flex flex-wrap gap-2">
+          {listed.map((design) => {
+            const on = picked.includes(design.id);
+            return (
+              <label key={design.id} className="sl-chip min-h-8 cursor-pointer gap-2">
+                <Checkbox
+                  checked={on}
+                  disabled={disabled || (!on && full)}
+                  onChange={(event) =>
+                    onChange(
+                      event.currentTarget.checked
+                        ? [...picked, design.id]
+                        : picked.filter((id) => id !== design.id),
+                    )
+                  }
+                />
+                {design.name}
+              </label>
+            );
+          })}
+        </div>
       )}
     </div>
   );

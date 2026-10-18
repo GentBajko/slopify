@@ -7,7 +7,7 @@ import {
   platformLabels,
   type SocialPacksResponse,
 } from "@app/slices/social/model.js";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useEffect, useState } from "react";
 import { useApp } from "@/app-context";
 import type { StatusTone } from "@/components/kit/action-bar";
@@ -17,6 +17,7 @@ import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { FileLink } from "@/components/kit/link";
 import { SectionHead } from "@/components/kit/section-head";
 import { Status } from "@/components/kit/status";
+import { designsQuery } from "@/designs/api";
 import {
   fillPost,
   resetPostText,
@@ -74,6 +75,8 @@ export function PostPanel({
   const { api } = useApp();
   const { projectId, platform } = pack;
   const site = platformLabels[platform];
+  // Library → Designs made for this project, for the post's designs picker.
+  const designs = useQuery(designsQuery(api, projectId));
   const text = usePacksMutation(
     projectId,
     say,
@@ -209,6 +212,7 @@ export function PostPanel({
           choice={pack.choice}
           withPrompt={false}
           tier={pack.xTier ?? "free"}
+          designs={designs.data?.map((one) => ({ id: one.id, name: one.name }))}
           disabled={choice.isPending}
           onChange={(next) => choice.mutate(next)}
         />

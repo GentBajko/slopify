@@ -32,7 +32,7 @@ Choose a site under **Where**. Its panel shows, top to bottom:
 - **Things to check**: what doesn't fit the site, each with its fix (text too long, too many pictures, a video too long for X Free, no subreddit, a release time the site can't schedule). A warning never stops you from filling the post.
 - **The post** as the site will show it: its words in an editable box, counted live the way the site counts them, and its media in the shape it is sent in. Your changes save when you leave the box and stay this project's own; **Reset to the written text** drops them.
 - **When it goes out** (see below).
-- **Settings**: the text source, video, pictures, hashtags, thumbnail and YouTube link for this project. A change here is this project's own; **Use the template's settings** goes back.
+- **Settings**: the text source, video, pictures, designs, hashtags, thumbnail and YouTube link for this project. A change here is this project's own; **Use the template's settings** goes back.
 
 ## Where the words come from
 
@@ -51,7 +51,7 @@ Hashtags come from the video's YouTube tags, then the shorts' hashtags, up to ea
 
 ## Pictures and video
 
-A post can carry the long video, one of the shorts, the thumbnail, any number of the project's pictures in any mix. Instagram's pictures are cut to 4:5 the first time they are needed; shorts are already vertical; the long video is never re-encoded. Sites that don't mix a video with pictures (LinkedIn, TikTok, Reddit, Bluesky) get a warning rather than a refusal.
+A post can carry the long video, one of the shorts, the thumbnail, any number of the project's pictures, and designs from **Library → Designs** kept in the project (its **Keep in project**), in any mix. Instagram's pictures are cut to 4:5 the first time they are needed; a design goes in its own format closest to the site's shape (portrait on Instagram, a story on TikTok, square elsewhere), drawn when the post needs it; shorts are already vertical; the long video is never re-encoded. Sites that don't mix a video with pictures (LinkedIn, TikTok, Reddit, Bluesky) get a warning rather than a refusal.
 
 ## Each site's limits
 

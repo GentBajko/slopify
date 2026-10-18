@@ -41,6 +41,11 @@ export const socialHelp = {
     body: "How many of the project's pictures go with the post, in their order. Instagram gets them cut to 4:5; other sites take them as made. A site that takes fewer, or doesn't mix pictures with a video, gets a warning instead of a refusal.",
     tutorial: posting("pictures-and-video"),
   },
+  "social.designs": {
+    title: "Post designs",
+    body: "Designs from Library → Designs made for this project, sent with the post as pictures. Each goes in the design's own format closest to the site's shape: portrait on Instagram, a story on TikTok, square elsewhere; Slopify draws it in that format when the post needs it. Up to 10 per post.",
+    tutorial: posting("pictures-and-video"),
+  },
   "social.thumbnail": {
     title: "Post thumbnail",
     body: "Adds the video's thumbnail to the post's pictures, before the project's own pictures. Off by default.",

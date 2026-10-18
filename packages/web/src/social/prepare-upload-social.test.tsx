@@ -224,4 +224,53 @@ describe("Prepare upload's other sites", () => {
       ]),
     );
   });
+
+  it("picks the project's designs for a post", async () => {
+    const choices: unknown[] = [];
+    const design = (id: string, name: string) => ({ id, name, projectId: "p1", steps: [] });
+    renderApp(
+      <PrepareUpload projectId="p1" ready />,
+      routes({
+        "GET /api/social/packs/p1": jsonAnswer(packs([xPack])),
+        "GET /api/designs": (request) =>
+          jsonAnswer({
+            designs:
+              new URL(request.url).searchParams.get("projectId") === "p1"
+                ? [design("d1", "Launch poster"), design("d2", "Quote card")]
+                : [],
+          })(request),
+        "PUT /api/social/packs/p1/x/choice": async (request) => {
+          choices.push(await request.json());
+          return jsonAnswer(packs([xPack]))(request);
+        },
+      }),
+    );
+    const { user, drawer } = await openDrawer();
+    await user.click(await within(drawer).findByRole("button", { name: "X" }));
+    const settings = await within(drawer).findByRole("region", { name: "X post settings" });
+    const poster = await within(settings).findByRole("checkbox", { name: "Launch poster" });
+    expect((poster as HTMLInputElement).checked).toBe(false);
+    await user.click(poster);
+    await waitFor(() =>
+      expect(choices).toEqual([
+        { choice: { ...xPack.choice, media: { ...xPack.choice.media, designs: ["d1"] } } },
+      ]),
+    );
+  });
+
+  it("says where to make a design when the project has none", async () => {
+    renderApp(
+      <PrepareUpload projectId="p1" ready />,
+      routes({
+        "GET /api/social/packs/p1": jsonAnswer(packs([xPack])),
+        "GET /api/designs": jsonAnswer({ designs: [] }),
+      }),
+    );
+    const { user, drawer } = await openDrawer();
+    await user.click(await within(drawer).findByRole("button", { name: "X" }));
+    const settings = await within(drawer).findByRole("region", { name: "X post settings" });
+    expect(
+      await within(settings).findByText(/No designs are made for this project yet/),
+    ).not.toBeNull();
+  });
 });
