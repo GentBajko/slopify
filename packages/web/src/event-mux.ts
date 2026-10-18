@@ -32,6 +32,8 @@ const names = [
   "project.updated",
   "review.flagged",
   "review.auto-passed",
+  "design.changed",
+  "design-template.sample",
 ] as const;
 
 interface StandIn {

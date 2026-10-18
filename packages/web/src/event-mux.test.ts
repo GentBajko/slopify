@@ -129,3 +129,15 @@ it("tells every view the connection dropped, and opens a stream the browser gave
   fire(1, "open");
   expect(seen).toEqual(["open", "error", "error", "open"]);
 });
+
+it("hands the design events to the page's global view", () => {
+  const real = fakeSource();
+  const open = createEventMux(real.open);
+  const global = record(open("/api/events/global"), ["design.changed", "design-template.sample"]);
+  const p1 = record(open("/api/events/projects/p1"), ["design.changed"]);
+  real.fire("open");
+  real.fire("design.changed", { type: "design.changed", designId: "d1" });
+  real.fire("design-template.sample", { type: "design-template.sample", templateId: "t1" });
+  expect(global).toEqual(["open", "design.changed:", "design-template.sample:"]);
+  expect(p1).toEqual(["open"]);
+});

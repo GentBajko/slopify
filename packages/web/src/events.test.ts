@@ -162,6 +162,25 @@ describe("the global event stream", () => {
     expect(sink.refetch).toHaveBeenCalledWith("p1");
   });
 
+  it("tells the designs a picture or a template's sample changed, and nothing else", () => {
+    const source = fakeSource();
+    const sink = {
+      tally: vi.fn(),
+      stagingChanged: vi.fn(),
+      refetch: vi.fn(),
+      designChanged: vi.fn(),
+    };
+    subscribeGlobal(() => source, "/api/events/global", sink);
+    source.emit({ type: "design.changed", designId: "d1" });
+    source.emit({ type: "design-template.sample", templateId: "t1" });
+    expect(sink.designChanged.mock.calls).toEqual([
+      [{ type: "design.changed", designId: "d1" }],
+      [{ type: "design-template.sample", templateId: "t1" }],
+    ]);
+    expect(sink.stagingChanged).not.toHaveBeenCalled();
+    expect(sink.refetch).not.toHaveBeenCalled();
+  });
+
   it("takes the running tally off its own event and nothing else", () => {
     const source = fakeSource();
     const sink = { tally: vi.fn(), stagingChanged: vi.fn(), refetch: vi.fn() };
