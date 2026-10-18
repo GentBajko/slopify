@@ -159,6 +159,10 @@ describe("keywords in the prompt body", () => {
     fireEvent.select(box);
     const card = await screen.findByRole("tooltip");
     expect(card.textContent).toContain("{{Slopify_Appearance}}");
-    expect(card.textContent).toContain("{{Appearance}} is its old name, which keeps working.");
+    // Said once, in the lint's sentence that also says how to rename it.
+    expect(card.textContent).toContain(
+      "is the old name of {{Slopify_Appearance}}. It keeps working; use Update to new names",
+    );
+    expect(card.textContent?.match(/old name/g)).toHaveLength(1);
   });
 });
