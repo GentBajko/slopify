@@ -22,9 +22,10 @@ import type { CliProbe } from "../../slices/settings/cli-status.js";
 import type { UnpackedExtension } from "../../slices/studio/unpacked.js";
 import type { AppUpdater } from "../../updater/model.js";
 import type { Hub } from "../events/hub.js";
+import { assistantMcpPath, assistantMcpRoutes } from "../mcp/assistant.js";
 import { mcpRoutes } from "../mcp/http.js";
 import { actionRoutes } from "./actions.js";
-import { agentBindings } from "./actor.js";
+import { agentBindings, assistantBindings } from "./actor.js";
 import { audioPreviewRoutes } from "./audio-preview.js";
 import { type Audition, auditionRoutes } from "./auditions.js";
 import { autostartRoutes } from "./autostart.js";
@@ -149,6 +150,9 @@ export interface AppDeps {
   readonly ids: Ids;
   readonly log: Log;
   readonly version: string;
+  // The in-app assistant's running turns, by their tokens (`slices/assistant/tokens.ts`);
+  // absent, `/mcp/assistant` opens for nobody.
+  readonly assistantTurns?: import("../../slices/assistant/access.js").AssistantTurnTokens;
   // The address the server listens on (`--host`); `/mcp` accepts pages served from it.
   readonly host?: string | undefined;
   // Where the bundled patch notes are (index.json and <id>.md); the build's own copy when left out.
@@ -327,6 +331,26 @@ export function createApp(deps: AppDeps): Hono {
     // rather than the SPA's index.html with a 200.
     .all("/api/*", missing);
 
+  const mcpDeps = {
+    db: deps.db,
+    paths: deps.paths,
+    ids: deps.ids,
+    clock: deps.clock,
+    log: deps.log,
+    version: deps.version,
+    host: deps.host,
+    ...(deps.measureAudio === undefined ? {} : { measureAudio: deps.measureAudio }),
+  };
+  // The in-app assistant reaches it the same way, as the assistant, with its turn's token.
+  // Mounted first: `/mcp` must never answer for it.
+  app.route(
+    assistantMcpPath,
+    assistantMcpRoutes({
+      ...mcpDeps,
+      turns: deps.assistantTurns,
+      api: async (request) => app.request(request, undefined, assistantBindings),
+    }),
+  );
   // Agents reach the same API in-process, as the agent (`actor.ts`): every tool validates,
   // refuses and answers exactly like the page's own request.
   app.route(
