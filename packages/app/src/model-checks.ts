@@ -133,7 +133,13 @@ export function modelChecker(deps: RecipeDeps & CheckDeps): ModelChecker {
       verdict: answer.verdict,
       sentence: answer.sentence,
       stopProvider: answer.stopProvider,
-      spent: answer.verdict === "works" ? spentOn(deps.catalogue(), target, answer.use) : 0,
+      // A failure the provider may have billed is counted at the estimate the check showed.
+      spent:
+        answer.verdict === "works"
+          ? spentOn(deps.catalogue(), target, answer.use)
+          : answer.mayHaveBilled
+            ? spentOn(deps.catalogue(), target, null)
+            : 0,
     };
   };
 }

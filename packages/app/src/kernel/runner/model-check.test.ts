@@ -63,6 +63,7 @@ describe("checkModel", () => {
       verdict: "works",
       sentence: null,
       stopProvider: false,
+      mayHaveBilled: false,
       use: {
         kind: "llm",
         provider: "openrouter",
@@ -144,6 +145,18 @@ describe("checkModel", () => {
       signal,
     );
     expect(answer.sentence).not.toContain("0123456789abcdef");
+  });
+
+  it("says whether a failed check may have been billed: only once the provider took the request", async () => {
+    const billed = async (outcome: ProviderErrorInit | Error) =>
+      (await checkModel(deps(outcome), llm, signal)).mayHaveBilled;
+    for (const kind of ["timeout", "dropped", "refusal", "other"] as const)
+      expect(await billed({ kind, message: "x" }), kind).toBe(true);
+    expect(await billed(new Error("The model answered with no text."))).toBe(true);
+    for (const kind of ["auth", "missing_key", "rate_limit", "unavailable", "unsupported"] as const)
+      expect(await billed({ kind, message: "x" }), kind).toBe(false);
+    expect(await billed({ kind: "other", message: "x", access: "not-found" })).toBe(false);
+    expect((await checkModel(deps("ok"), llm, signal)).mayHaveBilled).toBe(false);
   });
 
   it("names an error that is not the provider's as failed", async () => {

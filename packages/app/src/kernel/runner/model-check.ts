@@ -51,10 +51,21 @@ export interface CheckAnswer {
   readonly stopProvider: boolean;
   // What the call used, for pricing; null when nothing was answered.
   readonly use: ProviderUse | null;
+  // A failure after the provider took the request (it timed out, the connection dropped, it
+  // refused the content or its answer was unusable): the provider may have billed it.
+  readonly mayHaveBilled: boolean;
 }
 
 // ceiling: a check that has not answered in a minute is called failed rather than waited for.
 export const checkTimeoutMs = 60_000;
+
+// The faults a provider reports after it took the request; the others refuse it up front.
+const afterSend: ReadonlySet<ProviderFault["kind"]> = new Set([
+  "timeout",
+  "dropped",
+  "refusal",
+  "other",
+]);
 
 const unrecorded: AttemptStore = { start: () => "model-check", end: () => {} };
 const stageOf = { llm: "article", tts: "audio", image: "images" } as const;
@@ -113,26 +124,46 @@ export async function checkModel(
       run,
       { kind, timeoutMs: checkTimeoutMs + 30_000 },
     );
-    if (!result.ok) return { verdict: "failed", sentence: null, stopProvider: false, use: null };
+    if (!result.ok)
+      return {
+        verdict: "failed",
+        sentence: null,
+        stopProvider: false,
+        use: null,
+        mayHaveBilled: false,
+      };
   } catch (error) {
     signal.throwIfAborted();
     const sentence = errorText(error);
     const named: ProviderFault =
       seen.fault ?? (isProviderError(error) ? error.fault : { kind: "other" });
     if (named.access !== undefined)
-      return { verdict: "no-access", sentence, stopProvider: false, use: null };
+      return {
+        verdict: "no-access",
+        sentence,
+        stopProvider: false,
+        use: null,
+        mayHaveBilled: false,
+      };
     const stopProvider =
       named.kind === "auth" ||
       named.kind === "missing_key" ||
       named.kind === "rate_limit" ||
       named.planLimit !== undefined;
-    return { verdict: "failed", sentence, stopProvider, use: null };
+    return {
+      verdict: "failed",
+      sentence,
+      stopProvider,
+      use: null,
+      mayHaveBilled: !stopProvider && afterSend.has(named.kind),
+    };
   }
   const answered = seen.use;
   return {
     verdict: "works",
     sentence: null,
     stopProvider: false,
+    mayHaveBilled: false,
     use:
       answered === null
         ? null

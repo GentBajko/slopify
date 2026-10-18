@@ -6,6 +6,7 @@ import { providerError } from "./kernel/ports/model.js";
 import type { Registry } from "./kernel/ports/registry.js";
 import { cliWatcher, modelChecker, type RecipeDeps, recipeFor } from "./model-checks.js";
 import { catalogue as fixture } from "./slices/model-checks/catalogue.fake.js";
+import { costOf } from "./slices/model-checks/cost.js";
 import type { ProviderStatus } from "./slices/settings/model.js";
 
 const catalogue: Catalogue = {
@@ -162,6 +163,28 @@ describe("modelChecker", () => {
         spent: 0,
       },
     );
+  });
+
+  it("counts a check that failed after the provider took it at its estimate", async () => {
+    const dropped: Registry = {
+      ...registry(false),
+      llm: () => ({
+        id: "openrouter",
+        capabilities: { streams: true, reportsUsage: true, webSearch: false },
+        models: async () => [],
+        // biome-ignore lint/correctness/useYield: fails before answering, as a dropped call does
+        complete: async function* () {
+          throw providerError({ kind: "dropped", message: "The connection closed." });
+        },
+      }),
+    };
+    const base = { ...deps(), clock: manualClock(), log: { write: () => {} } };
+    const answer = await modelChecker({ ...base, registry: dropped })(target, signal);
+    expect(answer).toMatchObject({ verdict: "failed", sentence: "The connection closed." });
+    expect(answer.kind === "checked" ? answer.spent : -1).toBe(
+      costOf(base.catalogue(), target).dollars,
+    );
+    expect(answer.kind === "checked" ? answer.spent : 0).toBeGreaterThan(0);
   });
 
   it("makes no call for a skipped recipe or the system voice", async () => {

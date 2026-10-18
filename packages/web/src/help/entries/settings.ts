@@ -141,7 +141,7 @@ export const settingsHelp = {
   },
   "settings.models.checks": {
     title: "Models that work for you",
-    body: "What each saved key or CLI can really use. Listed: the key's own model list names it. Works: a check or a real run succeeded. Not on your plan: the provider said so. Check models sends each model one tiny request and shows the price first when it costs anything. Pickers show working models first; nothing here stops a run.",
+    body: "What each saved key or CLI can really use. Listed: the key's own model list names it. Works: a check or a real run succeeded. Not on your plan: the provider said so. Check models sends each model one tiny request and shows the price first when it costs anything, and counts a check that failed mid-request at that price. Pickers show working models first; nothing here stops a run.",
     tutorial: { page: "Models", anchor: "models-that-work-for-you" },
   },
   "settings.models.auto-checks": {

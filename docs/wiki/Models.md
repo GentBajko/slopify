@@ -131,7 +131,7 @@ Where they come from:
 - **Check models** (one button per provider) sends each model the smallest request: a one-word reply at the lowest thinking setting, a voice saying "Hi", one small square image. When that costs money it first shows the price at list rates, such as "about $0.04", and nothing is sent until you confirm. A CLI's checks use its plan's allowance instead. Image-to-video models are listed, never checked.
 - **Real runs** teach it too: a model a run used is marked as working, and one the provider refuses as not on your plan or not found is marked at once, with the provider's sentence.
 
-Each row shows when that provider was last checked and what its checks have cost so far. A new key starts every row over.
+Each row shows when that provider was last checked and what its checks have cost so far. A check that works is counted at what it used; one that fails after the provider took the request (it timed out, the connection dropped, the content was refused or the answer was unusable) is counted at its estimate, since the provider may have billed it. One the provider turned down up front (a rejected key, a rate limit, a model not on your plan) costs nothing. A new key starts every row over.
 
 The standings only sort and filter the pickers. A run never asks for them: a model marked **not on your plan** still runs exactly as before if it is chosen.
 
