@@ -254,8 +254,13 @@ it.skipIf(bin === undefined)(
     const hash = loudnessHash(goal);
     expect(samples.file(hash)?.bytes).toBeGreaterThan(1000);
     const reading = samples.reading(hash);
-    expect(reading?.after).toBeGreaterThan(-15.5);
-    expect(reading?.after).toBeLessThan(-12.5);
+    // The level the video's master gets (its AAC keeps the levelled file's loudness), not the
+    // MP3 played here, which reads about half a LU lower. Within half a LU of the target, or
+    // the peak ceiling named as what held it back.
+    expect(reading?.target).toBe(-14);
+    expect(reading?.ceiling).toBe(-2.5);
+    expect(reading?.after).toBeGreaterThan(-15);
+    expect(reading?.after).toBeLessThan(-13.5);
     expect(typeof reading?.before).toBe("number");
     const free = createFreeSamples({
       loudness: samples,
@@ -267,6 +272,8 @@ it.skipIf(bin === undefined)(
       beforeUrl: "/api/template-studio/t1/loudness/before.mp3",
     });
     expect(view.afterLufs).toBe(reading?.after);
+    expect(view.targetLufs).toBe(-14);
+    expect(view.ceiling).toBe(-2.5);
   },
   90_000,
 );

@@ -60,6 +60,8 @@ export const view: StudioView = {
       beforeUrl: `/api/template-studio/${templateId}/loudness/before.mp3`,
       beforeLufs: -19.4,
       afterLufs: -14,
+      targetLufs: -14,
+      ceiling: -2.5,
     },
     document: { state: "off", sentence: "The PDF document is off.", url: null },
   },

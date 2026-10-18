@@ -1,4 +1,4 @@
-import { renameSync } from "node:fs";
+import { renameSync, rmSync } from "node:fs";
 import { z } from "zod";
 import type { Log } from "../../kernel/log.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
@@ -12,8 +12,8 @@ import type { LoudnessGoal, MasterReport } from "./model.js";
 // sees the peaks between the samples too) holds just those peaks. loudnorm's own second pass
 // falls back to riding the whole level down in that case, and on anything shorter than its 3 s
 // window, and lands a piece or a video 1 to 2 LU short; the gain lands on the level. A file that
-// the limiter trimmed more than a fifth of a LU is corrected once (`levelFile`). Hand-rolled
-// argument lists, like every ffmpeg call here.
+// the limiter trimmed more than a fifth of a LU is written again from its input with more gain,
+// up to twice (`levelFile`). Hand-rolled argument lists, like every ffmpeg call here.
 
 export type { LoudnessGoal } from "./model.js";
 
@@ -166,8 +166,24 @@ export async function normalizeFile(
   // The channels are set before anything is measured: a stereo file mixed down to mono is
   // louder per channel (the mix keeps its loudness, so each sample is about 3 dB higher), and
   // the gain and the peak ceiling have to hold for what is written.
-  const channels = `aformat=channel_layouts=${format.channels === 1 ? "mono" : "stereo"}`;
-  const measured = await measure(run, ["-i", input], goal, channels);
+  const measured = await measure(run, ["-i", input], goal, channelsOf(format));
+  await writeLevelled(run, input, output, goal, measured, format);
+  return measured;
+}
+
+function channelsOf(format: { readonly channels: number }): string {
+  return `aformat=channel_layouts=${format.channels === 1 ? "mono" : "stereo"}`;
+}
+
+// `input` written to `output` with the gain that takes `measured` to `goal` (`gainFilter`).
+async function writeLevelled(
+  run: FfmpegRun,
+  input: string,
+  output: string,
+  goal: LoudnessGoal,
+  measured: Measured,
+  format: { readonly sampleRate: number; readonly channels: number },
+): Promise<void> {
   await runFfmpeg({
     bin: run.bin,
     args: [
@@ -182,7 +198,7 @@ export async function normalizeFile(
       "-map",
       "0:a:0",
       "-af",
-      `${channels},${gainFilter(goal, measured, format.sampleRate)}`,
+      `${channelsOf(format)},${gainFilter(goal, measured, format.sampleRate)}`,
       "-c:a",
       "pcm_f32le",
       "-f",
@@ -193,15 +209,21 @@ export async function normalizeFile(
     log: run.log,
     onProgress: (): void => {},
   });
-  return measured;
 }
 
 // ceiling: within a fifth of a LU of the level no one hears the difference.
 const correctAbove = 0.2;
+// ceiling: two corrections land a voice whose peaks stand 17 dB over its loudness (raw TTS)
+// within a few tenths of a LU; a third would only chase the last tenth.
+const corrections = 2;
+// ceiling: the most gain a correction adds over the plain gain. Past it the limiter would
+// flatten the voice; the file lands short instead, and its report says how far.
+const extraGainMax = 6;
 
-// One file brought to `goal` (`normalizeFile`), measured again, and corrected once when the
-// limiter left it more than a fifth of a LU under the level. Returns the first measurement and
-// the last.
+// One file brought to `goal` (`normalizeFile`), measured again, and corrected when the limiter
+// left it more than a fifth of a LU under the level. Each correction writes the input again
+// with more gain (so the limiter holds the peaks once, never twice), the gain found from the
+// levels the earlier gains gave. Returns the first measurement and the last.
 export async function levelFile(
   run: FfmpegRun,
   input: string,
@@ -211,11 +233,43 @@ export async function levelFile(
 ): Promise<{ readonly before: Measured; readonly after: Measured }> {
   const before = await normalizeFile(run, input, output, goal, format);
   let after = await measureFile(run, output, goal);
-  if (measurable(after) && Math.abs(after.integrated - goal.lufs) > correctAbove) {
+  if (!measurable(before)) return { before, after };
+  const plain = goal.lufs - before.integrated;
+  const tried: { readonly gain: number; readonly lufs: number }[] = [
+    { gain: plain, lufs: after.integrated },
+  ];
+  for (let pass = 0; pass < corrections; pass += 1) {
+    if (!measurable(after) || Math.abs(after.integrated - goal.lufs) <= correctAbove) break;
+    const last = tried[tried.length - 1];
+    const prior = tried[tried.length - 2];
+    if (last === undefined) break;
+    const slope =
+      prior === undefined || last.lufs === prior.lufs
+        ? 1
+        : (last.lufs - prior.lufs) / (last.gain - prior.gain);
+    const gain = Math.min(
+      plain + extraGainMax,
+      last.gain + (goal.lufs - last.lufs) / (slope > 0.05 ? slope : 1),
+    );
+    if (Math.abs(gain - last.gain) < 0.05) break;
     const corrected = `${output}.corrected.wav`;
-    await normalizeFile(run, output, corrected, goal, format);
+    await writeLevelled(
+      run,
+      input,
+      corrected,
+      { ...goal, lufs: before.integrated + gain },
+      before,
+      format,
+    );
+    const next = await measureFile(run, corrected, goal);
+    // A correction that landed further off than the file it would replace is dropped.
+    if (Math.abs(next.integrated - goal.lufs) >= Math.abs(after.integrated - goal.lufs)) {
+      rmSync(corrected, { force: true });
+      break;
+    }
     renameSync(corrected, output);
-    after = await measureFile(run, output, goal);
+    after = next;
+    tried.push({ gain, lufs: next.integrated });
   }
   return { before, after };
 }

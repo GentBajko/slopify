@@ -6,6 +6,7 @@ import ffmpegStatic from "ffmpeg-static";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { joinNarration } from "../narration/concat.js";
 import { joinTurns } from "../rebuild/runtime-local.js";
+import { bundledSampleAssets } from "../style-preview/narration.js";
 import { resolveFfmpeg } from "../video/ffmpeg.js";
 import { levelPieces } from "./level-pieces.js";
 import {
@@ -199,6 +200,20 @@ describe.skipIf(!present)("levelling with the bundled ffmpeg", () => {
       expect(Math.abs(after.integrated - pieceLufs)).toBeLessThanOrEqual(0.5);
     }
     expect(levelled.report.spreadAfter).toBeLessThanOrEqual(0.5);
+  }, 60_000);
+
+  it("lands a voice whose peaks stand far above its loudness within half a LU of the video's level", async () => {
+    // Slopify's own sample narration: -20.5 LUFS with peaks at -3.2 dBTP, so levelled to -14 the
+    // limiter holds about 6 dB of peaks. One correction left it 0.85 LU short.
+    const master = join(scratch, "narration-master.wav");
+    const video = { lufs: -14, truePeak: -2.5 };
+    await masterFile(run, bundledSampleAssets().narration, master, video, {
+      sampleRate: 48000,
+      channels: 1,
+    });
+    const report = await masterReport(run, master, video);
+    expect(Math.abs(report.integrated - -14)).toBeLessThanOrEqual(0.5);
+    expect(report.truePeak).toBeLessThanOrEqual(-2.4);
   }, 60_000);
 
   it("holds the ceiling when a stereo file is mastered to mono", async () => {

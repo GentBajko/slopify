@@ -144,7 +144,7 @@ function SampleBody({
         <div className="flex flex-col gap-3">
           <p className="m-0 text-small font-semibold">{`Before${level(loudness.beforeLufs)}`}</p>
           <AudioPlayer src={at(loudness.beforeUrl)} label="Sample narration before levelling" />
-          <p className="m-0 text-small font-semibold">{`After${level(loudness.afterLufs)}`}</p>
+          <p className="m-0 text-small font-semibold">{`After${level(loudness.afterLufs)}${heldBack(loudness)}`}</p>
           <AudioPlayer src={at(loudness.url)} label="Sample narration after levelling" />
         </div>
       );
@@ -242,4 +242,15 @@ function Frame({
       {children}
     </div>
   );
+}
+
+// A level that lands more than half a LU off its target says why: the limiter held the peaks
+// under the ceiling (Slopify's levelling stops adding gain past 6 dB more than the plain one).
+function heldBack(loudness: StudioView["free"]["loudness"]): string {
+  const { afterLufs, targetLufs, ceiling } = loudness;
+  if (afterLufs === null || targetLufs === null || ceiling === null) return "";
+  const short = targetLufs - afterLufs;
+  if (Math.abs(short) <= 0.5) return "";
+  if (short < 0) return ` (target ${targetLufs.toFixed(1)} LUFS)`;
+  return `: held back ${short.toFixed(1)} LU from ${targetLufs.toFixed(1)} so peaks stay under ${ceiling.toFixed(1)} dBTP`;
 }

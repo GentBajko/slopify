@@ -25,6 +25,9 @@ export interface LoudnessSample extends FreeSample {
   readonly beforeUrl: string | null;
   readonly beforeLufs: number | null;
   readonly afterLufs: number | null;
+  // What it was levelled to: the template's target (LUFS) and the peak ceiling (dBTP).
+  readonly targetLufs: number | null;
+  readonly ceiling: number | null;
 }
 export interface FreeSamplesView {
   readonly video: FreeSample;
@@ -182,6 +185,8 @@ export function createFreeSamples(deps: FreeSampleDeps): FreeSamples {
           beforeUrl: null,
           beforeLufs: null,
           afterLufs: null,
+          targetLufs: null,
+          ceiling: null,
         };
       else if (deps.loudness === undefined)
         loudness = {
@@ -189,6 +194,8 @@ export function createFreeSamples(deps: FreeSampleDeps): FreeSamples {
           beforeUrl: null,
           beforeLufs: null,
           afterLufs: null,
+          targetLufs: null,
+          ceiling: null,
         };
       else {
         const reading = deps.loudness.reading(lHash);
@@ -206,6 +213,8 @@ export function createFreeSamples(deps: FreeSampleDeps): FreeSamples {
           beforeUrl: `${base}/loudness/before.mp3`,
           beforeLufs: reading?.before ?? null,
           afterLufs: reading?.after ?? null,
+          targetLufs: reading?.target ?? null,
+          ceiling: reading?.ceiling ?? null,
         };
       }
 

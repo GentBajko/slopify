@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } 
 import { join } from "node:path";
 import { z } from "zod";
 import type { Log } from "../../kernel/log.js";
-import { levelFile, measureFile } from "../loudness/loudnorm.js";
+import { levelFile } from "../loudness/loudnorm.js";
 import {
   encodeHeadroom,
   type LoudnessDefault,
@@ -32,13 +32,20 @@ export function loudnessGoalOf(
 
 export function loudnessHash(goal: LoudnessGoal): string {
   return createHash("sha256")
-    .update(JSON.stringify({ version: 1, lufs: goal.lufs, truePeak: goal.truePeak }))
+    .update(JSON.stringify({ version: 2, lufs: goal.lufs, truePeak: goal.truePeak }))
     .digest("hex");
 }
 
+// `after` is the levelled master's loudness: what the video's AAC carries. The MP3 played in
+// the studio measures about half a LU lower (its encoder cuts the highs the loudness weighting
+// counts), so it is never what is reported. `target` and `ceiling` (dBTP) say what it was
+// levelled to: a voice whose peaks stand far above its loudness lands under the target, the
+// limiter holding the peaks under the ceiling, and the studio says so.
 export interface LoudnessReading {
   readonly before: number;
   readonly after: number;
+  readonly target: number;
+  readonly ceiling: number;
 }
 
 export interface LoudnessSamples {
@@ -49,7 +56,12 @@ export interface LoudnessSamples {
   readonly reading: (hash: string) => LoudnessReading | undefined;
 }
 
-const readingSchema = z.object({ before: z.number(), after: z.number() });
+const readingSchema = z.object({
+  before: z.number(),
+  after: z.number(),
+  target: z.number(),
+  ceiling: z.number(),
+});
 const hashPattern = /^[a-f0-9]{64}$/;
 
 export function createLoudnessSamples(deps: {
@@ -115,12 +127,13 @@ export function createLoudnessSamples(deps: {
           log: deps.log,
           onProgress: () => undefined,
         });
-        const after = await measureFile(run, `${work}.mp3`, goal);
         writeFileSync(
           pathOf(hash, "json"),
           JSON.stringify({
             before: Math.round(levelled.before.integrated * 10) / 10,
-            after: Math.round(after.integrated * 10) / 10,
+            after: Math.round(levelled.after.integrated * 10) / 10,
+            target: goal.lufs,
+            ceiling: goal.truePeak,
           }),
           { mode: 0o600 },
         );

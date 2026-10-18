@@ -43,6 +43,8 @@ export const freeSamplesSchema = z
         beforeUrl: z.string().nullable(),
         beforeLufs: z.number().nullable(),
         afterLufs: z.number().nullable(),
+        targetLufs: z.number().nullable(),
+        ceiling: z.number().nullable(),
       })
       .strict()
       .readonly(),
