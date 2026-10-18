@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
+import { channelSocialOf } from "../social/channel.js";
 import { aiDisclosureSettings } from "../studio/disclosure.js";
 import { channelAmbientBedSchema } from "../video/ambient-bed-schema.js";
 import {
@@ -35,6 +36,8 @@ const channelRow = z.object({
   brand_json: z.string(),
   series_brief: z.string(),
   ai_disclosure: z.enum(aiDisclosureSettings),
+  x_tier: z.string().optional(),
+  social_accounts: z.string().optional(),
   version: z.number(),
   created_at: z.string(),
   updated_at: z.string(),
@@ -80,6 +83,9 @@ function channelOf(row: unknown): Channel {
     brand: brandSchema.parse(JSON.parse(value.brand_json)) as BrandKit,
     seriesBrief: value.series_brief,
     aiDisclosure: value.ai_disclosure,
+    ...((social) => ({ xTier: social.xTier, socialAccounts: social.accounts }))(
+      channelSocialOf(value.x_tier, value.social_accounts),
+    ),
     version: value.version,
     createdAt: value.created_at,
     updatedAt: value.updated_at,

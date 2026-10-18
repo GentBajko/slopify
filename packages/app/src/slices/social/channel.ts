@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
-import { accountPatterns } from "./limits.js";
+import { accountExamples, accountPatterns } from "./limits.js";
 import {
   platformLabels,
   type SocialAccounts,
@@ -21,15 +21,20 @@ const accountsSchema = z.partialRecord(z.enum(socialPlatforms), z.string().max(2
 
 export function channelSocial(db: DatabaseSync, channelId: string): ChannelSocial {
   const row = db.prepare("SELECT x_tier, social_accounts FROM channels WHERE id=?").get(channelId);
-  const xTier = xTiers.find((one) => one === row?.x_tier) ?? "free";
-  let accounts: SocialAccounts = {};
+  return channelSocialOf(row?.x_tier, row?.social_accounts);
+}
+
+// The two columns as a channel row holds them; anything unreadable is Free and no accounts.
+export function channelSocialOf(tier: unknown, accounts: unknown): ChannelSocial {
+  const xTier = xTiers.find((one) => one === tier) ?? "free";
   try {
-    const parsed = accountsSchema.safeParse(JSON.parse(String(row?.social_accounts ?? "{}")));
-    if (parsed.success) accounts = parsed.data;
+    const parsed = accountsSchema.safeParse(
+      JSON.parse(typeof accounts === "string" ? accounts : "{}"),
+    );
+    return { xTier, accounts: parsed.success ? parsed.data : {} };
   } catch {
-    accounts = {};
+    return { xTier, accounts: {} };
   }
-  return { xTier, accounts };
 }
 
 // An account name a site wouldn't take, as the sentence the Posting block shows; undefined
@@ -38,7 +43,7 @@ export function accountsProblem(accounts: SocialAccounts): string | undefined {
   for (const platform of socialPlatforms) {
     const name = accounts[platform]?.trim() ?? "";
     if (name !== "" && !accountPatterns[platform].test(name))
-      return `"${name}" isn't a ${platformLabels[platform]} account name. Type it the way ${platformLabels[platform]} shows it, without the site's address, then Save.`;
+      return `"${name}" isn't ${/^[AEIOU]/u.test(platformLabels[platform]) ? "an" : "a"} ${platformLabels[platform]} account name. Type it the way ${platformLabels[platform]} shows it (like ${accountExamples[platform]}), without the site's address, then Save.`;
   }
   return undefined;
 }

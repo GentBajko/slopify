@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { languageSchema } from "../../kernel/ports/languages.js";
+import { socialPlatforms, xTiers } from "../social/model.js";
 import { aiDisclosureSettings } from "../studio/disclosure.js";
 import { ambientBedProblems } from "../video/ambient-bed.js";
 import { channelAmbientBedSchema } from "../video/ambient-bed-schema.js";
@@ -89,6 +90,14 @@ export const channelUpdateSchema = z
     name,
     brand: brandKitSchema,
     seriesBrief: z.string().max(10000, "Keep the series brief to 10,000 characters or fewer."),
+    // Brand → Posting (`slices/social`): left out, they stay as they are.
+    xTier: z.enum(xTiers, "Choose Free, Premium or Premium+.").optional(),
+    socialAccounts: z
+      .partialRecord(
+        z.enum(socialPlatforms),
+        z.string().max(260, "Keep each account name to 260 characters or fewer."),
+      )
+      .optional(),
     baseVersion: z.number().int().positive(),
   })
   .strict()
