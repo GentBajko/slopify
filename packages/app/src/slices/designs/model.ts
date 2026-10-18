@@ -93,3 +93,34 @@ export interface StepInputs {
   readonly aspect?: "16:9" | "9:16" | "1:1" | undefined;
   readonly prompt?: string | undefined;
 }
+
+export type DesignRefusal =
+  | "not-found"
+  | "invalid"
+  | "changed"
+  | "mutation-reused"
+  | "not-an-image"
+  | "still-uploading"
+  | "upload-gone"
+  | "project-not-found"
+  | "channel-not-found"
+  | "busy"
+  | "no-image-provider"
+  | "cost-changed"
+  | "missing-values"
+  | "not-ready";
+
+export type DesignResult<T> =
+  | { readonly ok: true; readonly value: T }
+  | {
+      readonly ok: false;
+      readonly reason: DesignRefusal;
+      readonly message: string;
+      readonly current?: unknown;
+    };
+
+export interface DesignView extends Design {
+  readonly steps: readonly DesignStep[];
+}
+
+export type DesignEvent = { readonly kind: "design.changed"; readonly designId: string };
