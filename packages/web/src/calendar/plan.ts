@@ -1,4 +1,5 @@
 import type { Calendar, CalendarRun } from "@app/slices/schedules/schema.js";
+import { zonedDayKey } from "@/lib/zoned";
 
 // The calendar's pure half: which days it shows, what sits on each, and what a drop means.
 // Each scheduled run takes the first topic in its schedule's queue, so a topic's place in the
@@ -37,17 +38,17 @@ export interface Day {
   readonly projects: Calendar["projects"][number][];
 }
 
-// Groups by the viewer's own calendar day. A project still going sits on today; a finished
-// one on the day it finished. A batch item waiting its turn is listed under the batch queue.
+// Groups by the viewer's own calendar day, and a scheduled run by its schedule's own day, the
+// day its time reads on. A project still going sits on today; a finished one on the day it
+// finished. A batch item waiting its turn is listed under the batch queue.
 export function byDay(calendar: Calendar, now: Date = new Date()): ReadonlyMap<string, Day> {
   const days = new Map<string, Day>();
-  const dayOf = (iso: string): Day => {
-    const date = new Date(iso);
-    const key = dayKey(date);
+  const dayOf = (iso: string, zone?: string): Day => {
+    const key = zone === undefined ? dayKey(new Date(iso)) : zonedDayKey(iso, zone);
     let day = days.get(key);
     if (day === undefined) {
-      const start = new Date(date);
-      start.setHours(0, 0, 0, 0);
+      const [year, month, date] = key.split("-").map(Number);
+      const start = new Date(year ?? 1970, (month ?? 1) - 1, date ?? 1);
       day = { key, date: start, runs: [], projects: [] };
       days.set(key, day);
     }
@@ -57,7 +58,7 @@ export function byDay(calendar: Calendar, now: Date = new Date()): ReadonlyMap<s
   for (const project of calendar.projects)
     if (!queued.has(project.id))
       dayOf(project.finishedAt ?? now.toISOString()).projects.push(project);
-  for (const run of calendar.runs) dayOf(run.at).runs.push(run);
+  for (const run of calendar.runs) dayOf(run.at, run.timezone).runs.push(run);
   return days;
 }
 

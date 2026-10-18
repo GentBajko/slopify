@@ -6,6 +6,8 @@ import { emptyPlan, nextOccurrence, type PostingPlan, zonedInstant } from "./pla
 import { seriesOf } from "./plan-model.js";
 import {
   freeSlots,
+  lineShortTimes,
+  lineZone,
   planReleases,
   releasesOf,
   scheduleOf,
@@ -255,4 +257,31 @@ it("gives the shorts of a long video already on YouTube times from the upload le
   expect(placed?.longAt).toBe("2026-09-30T18:00:00.000Z");
   // None before Saturday noon (now plus the 24-hour lead), at the line's short times.
   expect(placed?.shortsAt).toEqual(["2026-10-04T22:00:00.000Z", "2026-10-05T15:00:00.000Z"]);
+});
+
+// Calendar → Releases lists a free time of the plan with the short times it would give.
+it("gives a free time's short times, each the line's next after the one before", () => {
+  // Line 1: the long video Sunday 20:00 Berlin, its shorts from Monday 00:00 on.
+  const times = lineShortTimes(plan, "1", "2026-10-04T18:00:00.000Z");
+  expect(times).toEqual([
+    "2026-10-04T22:00:00.000Z",
+    "2026-10-05T15:00:00.000Z",
+    "2026-10-05T22:00:00.000Z",
+    "2026-10-06T15:00:00.000Z",
+    "2026-10-07T15:00:00.000Z",
+  ]);
+  expect(lineShortTimes(plan, "1", "2026-10-04T18:00:00.000Z", 2)).toHaveLength(2);
+  expect(lineShortTimes(plan, "missing", "2026-10-04T18:00:00.000Z")).toEqual([]);
+  expect(lineZone(plan, "1")).toBe("Europe/Berlin");
+  expect(
+    lineZone(
+      {
+        ...plan,
+        rows: [
+          { name: "s", series: "", long: at(2, "20:00"), shorts: [], timeZone: "Europe/London" },
+        ],
+      },
+      "s",
+    ),
+  ).toBe("Europe/London");
 });

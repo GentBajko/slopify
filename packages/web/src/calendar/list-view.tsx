@@ -8,7 +8,8 @@ import { ButtonLink, TextLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { Status } from "@/components/kit/status";
-import { fullDay, shortTime } from "@/lib/format";
+import { fullDay } from "@/lib/format";
+import { zonedFormat, zonedTime } from "@/lib/zoned";
 import { PrepareUpload } from "@/studio/prepare-upload";
 import { type CalendarProject, projectLook } from "./attention";
 import { PrepareRun } from "./day-cell";
@@ -17,13 +18,13 @@ import { type Day, runTitle } from "./plan";
 // Calendar's list view: every planned day as a list, each topic with the same moves dragging
 // gives (earlier, later, another day, another schedule) as buttons.
 
-const when = new Intl.DateTimeFormat(undefined, {
+const when = {
   weekday: "short",
   day: "numeric",
   month: "short",
   hour: "2-digit",
   minute: "2-digit",
-});
+} as const;
 
 // A project as a list row: its state in words and, when it asks something of the person or
 // its video is ready, the button that acts on it.
@@ -119,7 +120,7 @@ export function ListView({
                   title={title}
                   meta={
                     <>
-                      {shortTime.format(new Date(run.at))} ·{" "}
+                      {zonedTime(run.at, run.timezone)} ·{" "}
                       <TextLink
                         to="/calendar"
                         search={{ tab: "schedules", schedule: run.scheduleId }}
@@ -231,7 +232,7 @@ function MoveTo({
           <optgroup label="Another day">
             {days.map((one) => (
               <option key={one.at} value={`day:${String(one.index)}`}>
-                {when.format(new Date(one.at))}
+                {zonedFormat(one.at, one.timezone, when)}
               </option>
             ))}
           </optgroup>

@@ -8,8 +8,9 @@ import { Button } from "@/components/kit/button";
 import { ButtonLink, TextLink } from "@/components/kit/link";
 import { hitArea, hitTarget } from "@/components/kit/list-row";
 import { Status } from "@/components/kit/status";
-import { fullDay, shortTime } from "@/lib/format";
+import { fullDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { zonedTime } from "@/lib/zoned";
 import { calendarKey, prepareTopic } from "@/schedules/api";
 import { projectLook } from "./attention";
 import { type Day, runTitle } from "./plan";
@@ -152,7 +153,7 @@ function RunChip({
     // the other way to do it without dragging.
     <article
       tabIndex={run.index === null ? undefined : 0}
-      aria-label={`${title}, ${shortTime.format(new Date(run.at))}, ${run.scheduleName}${run.index === null ? "" : ". Alt+arrow keys move it."}`}
+      aria-label={`${title}, ${zonedTime(run.at, run.timezone)}, ${run.scheduleName}${run.index === null ? "" : ". Alt+arrow keys move it."}`}
       draggable={movable}
       onDragStart={(event) => {
         event.dataTransfer.effectAllowed = "move";
@@ -175,7 +176,7 @@ function RunChip({
             className="size-3 shrink-0 text-ink-3"
           />
         )}
-        {shortTime.format(new Date(run.at))}
+        {zonedTime(run.at, run.timezone)}
       </span>
       <b className={cn("text-small", run.topic === null && "font-normal text-ink-2")}>{title}</b>
       <TextLink

@@ -285,6 +285,9 @@ export const calendarRunSchema = z
     // A design schedule's run makes a designed piece on its day, never a video: it has nothing
     // to prepare ahead and fills no video slot. Older servers leave it out.
     templateKind: z.enum(scheduleTemplateKinds).default("project"),
+    // The schedule's time zone: its runs are shown on that zone's clock. Older servers leave
+    // it out, and the browser's is used.
+    timezone: z.string().optional(),
   })
   .strict()
   .readonly();

@@ -11,7 +11,9 @@ it("resolves selected-zone time independently of the browser zone", () => {
   expect(localScheduleTime("2027-01-15T17:00:00.000Z", "America/New_York")).toBe(
     "2027-01-15T12:00",
   );
-  expect(formatScheduleDate("2027-01-15T17:00:00.000Z", "America/New_York")).toBe(
+  expect(
+    formatScheduleDate("2027-01-15T17:00:00.000Z", "America/New_York", "America/New_York"),
+  ).toBe(
     new Intl.DateTimeFormat(undefined, {
       timeZone: "America/New_York",
       dateStyle: "medium",
@@ -52,5 +54,19 @@ it("names the timezone on a zoned time", () => {
   expect(formatScheduleDateZoned("2026-09-12T07:00:00Z", "UTC")).toMatch(/07:00.*UTC/);
   expect(formatScheduleDateZoned("2026-09-12T07:00:00Z", "Europe/Tirane")).toMatch(
     /09:00.*GMT\+2|CEST/,
+  );
+});
+
+it("names the schedule's zone when it isn't the browser's, as Home and the Calendar do", () => {
+  const plain = new Intl.DateTimeFormat(undefined, {
+    timeZone: "Europe/London",
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date("2026-10-20T19:00:00.000Z"));
+  expect(formatScheduleDate("2026-10-20T19:00:00.000Z", "Europe/London", "Europe/Tirane")).toBe(
+    `${plain} London`,
+  );
+  expect(formatScheduleDate("2026-10-20T19:00:00.000Z", "Europe/London", "Europe/London")).toBe(
+    plain,
   );
 });

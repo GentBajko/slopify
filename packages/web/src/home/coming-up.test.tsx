@@ -29,3 +29,14 @@ it("says a run waits for Mark ready instead of calling it queued", () => {
     "Open the template's studio and press Mark ready.",
   );
 });
+
+// Home, Calendar and the schedule all read a run on its schedule's clock; a zone that isn't
+// this browser's is named. Kiritimati (UTC+14) is no browser's zone in a test run.
+it("reads a run's time on its schedule's clock and names that zone", () => {
+  render(<ComingUp runs={[{ ...run, timezone: "Pacific/Kiritimati" }]} />);
+  const time = new Intl.DateTimeFormat(undefined, {
+    timeZone: "Pacific/Kiritimati",
+    timeStyle: "short",
+  }).format(new Date(run.at));
+  expect(screen.getByText(new RegExp(`${time} Kiritimati · Crime$`))).toBeTruthy();
+});
