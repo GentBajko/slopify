@@ -188,3 +188,25 @@ export function upsertSample(
     sample.at,
   );
 }
+
+// Records a version's gate: marked ready (with the checks it passed), or carried from the
+// version a system writer made it from. Marking a carried or legacy version ready replaces it.
+export function writeGate(
+  db: DatabaseSync,
+  templateId: string,
+  gate: VersionGate & { readonly checksJson?: string | null; readonly markedAt?: string | null },
+): void {
+  db.prepare(
+    `INSERT INTO template_gates (template_id,version,state,carried_from,checks_json,marked_at)
+     VALUES (?,?,?,?,?,?)
+     ON CONFLICT(template_id,version) DO UPDATE SET state=excluded.state,
+       carried_from=excluded.carried_from,checks_json=excluded.checks_json,marked_at=excluded.marked_at`,
+  ).run(
+    templateId,
+    gate.version,
+    gate.state,
+    gate.carriedFrom,
+    gate.checksJson ?? null,
+    gate.markedAt ?? null,
+  );
+}

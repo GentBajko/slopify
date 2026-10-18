@@ -111,6 +111,7 @@ it("asks for confirmed: true on every tool whose page confirms first", () => {
     "delete_document_theme",
     "remove_voice",
     "move_files_folder",
+    "mark_template_ready",
   ])
     expect(confirmed.has(name), name).toBe(true);
   // The pages remove these in one press, so the tools don't ask either.

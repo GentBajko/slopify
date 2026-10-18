@@ -17,6 +17,14 @@ export const templateStudioTools: readonly RouteTool[] = [
       "The free checks the template's current version passes before Mark ready, each failing one with what is wrong and where it is fixed: keywords filled, providers set up, release slots, a known monthly cost, someone to answer each checkpoint.",
   },
   {
+    name: "mark_template_ready",
+    route: "POST /api/template-studio/:id/ready",
+    title: "Mark a template ready for its schedules",
+    description:
+      "Marks the template's newest version (pass it as version) ready, so its schedules run it from their next run on. Refused, marking nothing, while a check fails or a section's sample isn't current, with each thing to fix (problems). A version already ready is answered again. A schedule never runs a version that wasn't marked ready, saved before the studio, or carried over from one by Slopify.",
+    confirm: "Schedules start running this version.",
+  },
+  {
     name: "get_prompt_anatomy",
     route: "GET /api/template-studio/:id/anatomy",
     title: "Read a section's prompt anatomy",

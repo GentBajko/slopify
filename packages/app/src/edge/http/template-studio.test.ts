@@ -337,3 +337,50 @@ it("serves the PDF sample once it is made", async () => {
   expect(reply.headers.get("content-type")).toBe("application/pdf");
   expect(await reply.text()).toBe("%PDF-1.7");
 });
+
+it("refuses Mark ready with each thing to fix, and only for the newest version", async () => {
+  const h = studio();
+  const refused = await h.app.request(`/api/template-studio/${h.id}/ready`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ version: 1 }),
+  });
+  expect(refused.status).toBe(409);
+  const body = (await refused.json()) as {
+    reason: string;
+    detail: string;
+    problems: { label: string }[];
+  };
+  expect(body.reason).toBe("not-ready");
+  expect(body.detail).toMatch(/^Version 1 can't be marked ready yet\. /u);
+  expect(body.problems.length).toBeGreaterThan(0);
+
+  const older = await h.app.request(`/api/template-studio/${h.id}/ready`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ version: 4 }),
+  });
+  expect(older.status).toBe(409);
+  expect(await older.json()).toMatchObject({ reason: "conflict" });
+
+  const bad = await h.app.request(`/api/template-studio/${h.id}/ready`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  expect(bad.status).toBe(400);
+});
+
+it("answers Mark ready again for a version already ready", async () => {
+  const h = studio();
+  h.deps.db
+    .prepare("INSERT INTO template_gates (template_id,version,state) VALUES (?,1,'ready')")
+    .run(h.id);
+  const reply = await h.app.request(`/api/template-studio/${h.id}/ready`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ version: 1 }),
+  });
+  expect(reply.status).toBe(200);
+  expect(await reply.json()).toEqual({ version: 1, gate: "ready", replayed: true });
+});

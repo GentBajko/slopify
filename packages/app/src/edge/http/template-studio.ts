@@ -22,6 +22,7 @@ import {
   templateSections,
 } from "../../slices/template-studio/model.js";
 import { quoteSample, quoteSave } from "../../slices/template-studio/quote.js";
+import { markReady, markReadySchema } from "../../slices/template-studio/ready.js";
 import {
   createUnknownAcks,
   makeSampleSchema,
@@ -223,6 +224,30 @@ export function templateStudioRoutes(deps: AppDeps) {
             item,
           );
           return result.ok ? c.json(result.value) : refusedStudio(c, result);
+        },
+      )
+      // Mark ready: the newest version, once every check passes and every sample is current,
+      // becomes the one its schedules run. Refused with each thing still to fix.
+      .post(
+        "/:id/ready",
+        zValidator("param", param, onInvalid),
+        zValidator("json", markReadySchema, onInvalid),
+        async (c) => {
+          const id = c.req.valid("param").id;
+          const result = await markReady(read, id, c.req.valid("json"));
+          if (!result.ok) {
+            const status =
+              result.reason === "not-found" ? 404 : result.reason === "invalid-input" ? 400 : 409;
+            return problem(c, {
+              status,
+              title: titleOf(status),
+              detail: result.message,
+              extensions: { reason: result.reason, problems: result.problems },
+            });
+          }
+          if (!result.value.replayed)
+            deps.hub.emitGlobal({ type: "template.sample", templateId: id });
+          return c.json(result.value);
         },
       )
       // The free checks, apart from the studio: they wait on the providers' readiness.
