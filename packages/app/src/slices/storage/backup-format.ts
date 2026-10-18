@@ -80,6 +80,8 @@ export const projectTables = [
   "plan_limit_readings",
   "project_channels",
   "project_trash",
+  // Since 4.0.0: each project's posts to other sites, their hand edits and links.
+  "social_posts",
 ] as const;
 export type ProjectTable = (typeof projectTables)[number];
 

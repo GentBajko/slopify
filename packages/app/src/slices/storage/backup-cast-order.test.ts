@@ -93,13 +93,22 @@ it("gives a backup from before the order the alphabetical order it showed", asyn
     if (entry.name !== "manifest.json" && entry.name !== "data/library.json") return entry;
     const value = JSON.parse(Buffer.from(entry.content).toString()) as {
       databaseVersion?: number;
-      tables?: { cast_members?: Record<string, unknown>[] };
+      tables?: {
+        cast_members?: Record<string, unknown>[];
+        channels?: Record<string, unknown>[] | undefined;
+      };
     };
     if (entry.name === "manifest.json") value.databaseVersion = 51;
-    else if (value.tables?.cast_members !== undefined)
-      value.tables.cast_members = value.tables.cast_members.map(
-        ({ position: _position, ...row }) => row,
+    else if (value.tables !== undefined) {
+      if (value.tables.cast_members !== undefined)
+        value.tables.cast_members = value.tables.cast_members.map(
+          ({ position: _position, ...row }) => row,
+        );
+      // Channels had no accounts on other sites then (0076).
+      value.tables.channels = value.tables.channels?.map(
+        ({ x_tier: _tier, social_accounts: _accounts, ...row }) => row,
       );
+    }
     return { name: entry.name, content: Buffer.from(JSON.stringify(value)) };
   });
   const archive = Buffer.concat(
