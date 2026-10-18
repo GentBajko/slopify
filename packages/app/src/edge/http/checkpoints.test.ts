@@ -289,6 +289,18 @@ it("refuses to release a run held at a checkpoint by removing it, and says to ap
   expect(body.detail).toContain("Approve");
   expect(listCheckpoints(h.db, h.projectId, h.view.revision.id)).toHaveLength(1);
   expect(h.wake).not.toHaveBeenCalled();
+  // A paused run goes on only through Continue the run, so its checkpoint can be taken off.
+  h.db.prepare("INSERT INTO project_controls(project_id,paused) VALUES (?,1)").run(h.projectId);
+  expect((await h.send("", "PATCH", { revisionId: h.view.revision.id, stages: [] })).status).toBe(
+    200,
+  );
+  expect(
+    (await h.send("", "PATCH", { revisionId: h.view.revision.id, stages: ["audio"] })).status,
+  ).toBe(200);
+  h.db.prepare("DELETE FROM project_controls").run();
+  expect((await h.send("", "PATCH", { revisionId: h.view.revision.id, stages: [] })).status).toBe(
+    409,
+  );
   // A checkpoint the run hasn't reached yet can still be taken off.
   h.db
     .prepare(

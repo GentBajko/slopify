@@ -1,6 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
 import { errorText } from "../../kernel/errors.js";
+import { projectPaused } from "../../slices/admission/repo.js";
 import {
   changeCheckpoints,
   checkpointChangeSchema,
@@ -120,7 +121,11 @@ function buildCheckpointRoutes(deps: AppDeps) {
         const projectId = c.req.valid("param").id;
         const body = c.req.valid("json");
         return withProjectControl(deps.db, projectId, () => {
-          const holding = projectHolds(deps.db, { projectId }).holding.get(projectId) ?? [];
+          // A paused run goes on only through Continue the run, so taking a checkpoint off
+          // then releases nothing by itself.
+          const holding = projectPaused(deps.db, projectId)
+            ? []
+            : (projectHolds(deps.db, { projectId }).holding.get(projectId) ?? []);
           const removed = listCheckpoints(deps.db, projectId, body.revisionId).filter(
             (row) => !body.stages.includes(row.stage),
           );
