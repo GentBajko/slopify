@@ -36,6 +36,12 @@ import {
   saveStudioSchema,
   type UnknownAcks,
 } from "../../slices/template-studio/save.js";
+import {
+  pronunciationsOf,
+  quoteSayItAs,
+  sayItAs,
+  sayItAsSchema,
+} from "../../slices/template-studio/say-it-as.js";
 import { withDependents } from "../../slices/template-studio/sections.js";
 import {
   createPriceCache,
@@ -174,6 +180,7 @@ export function templateStudioRoutes(deps: AppDeps) {
   const read = studioDeps(deps, studio);
   const review = studio.review ?? deps.drafts;
   const acks = studio.acks ?? createUnknownAcks();
+  const sayDeps = { db: deps.db, paths: deps.paths, ids: deps.ids, clock: deps.clock };
   const gone = (c: Context, detail: string) =>
     problem(c, { status: 404, title: titleOf(404), detail });
   const media = (
@@ -272,6 +279,44 @@ export function templateStudioRoutes(deps: AppDeps) {
           }
           if (!result.value.replayed)
             deps.hub.emitGlobal({ type: "template.sample", templateId: id });
+          return c.json(result.value);
+        },
+      )
+      // Voice → Say it as: the names the sample's script says, each with its first line.
+      .get("/:id/pronunciations", zValidator("param", param, onInvalid), (c) => {
+        const id = c.req.valid("param").id;
+        if (templateById(deps.db, id) === undefined) return gone(c, missingTemplate);
+        return c.json(pronunciationsOf(sayDeps, id));
+      })
+      // What voicing the sample's lines that say a word again, the new way, costs.
+      .post(
+        "/:id/say-it-as/quote",
+        zValidator("param", param, onInvalid),
+        zValidator("json", sayItAsSchema.unwrap().pick({ written: true, spoken: true }), onInvalid),
+        (c) => {
+          if (review === undefined)
+            return problem(c, { status: 503, title: titleOf(503), detail: unpriced });
+          const result = quoteSayItAs(
+            { ...sayDeps, review },
+            c.req.valid("param").id,
+            c.req.valid("json"),
+          );
+          return result.ok ? c.json(result.value) : refusedStudio(c, result);
+        },
+      )
+      // Save a "Say it as": the Library alias, and the sample's lines that say it voiced again.
+      .post(
+        "/:id/say-it-as",
+        zValidator("param", param, onInvalid),
+        zValidator("json", sayItAsSchema, onInvalid),
+        async (c) => {
+          if (review === undefined)
+            return problem(c, { status: 503, title: titleOf(503), detail: unpriced });
+          const id = c.req.valid("param").id;
+          const result = await sayItAs({ ...sayDeps, review, acks }, id, c.req.valid("json"));
+          if (!result.ok) return refusedWithQuote(c, result);
+          if (result.value.queued) studio.wake();
+          deps.hub.emitGlobal({ type: "template.sample", templateId: id });
           return c.json(result.value);
         },
       )

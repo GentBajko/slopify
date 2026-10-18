@@ -414,3 +414,33 @@ it("prices the samples of every template, and queues them at the total shown", a
   expect(woken).toBe(1);
   expect((await post("/samples-for-all", { acknowledgedTotal: -1 })).status).toBe(400);
 });
+
+it("lists the names to check, prices a Say it as, and refuses one that would change nothing", async () => {
+  const h = paidStudio();
+  const names = await h.app.request(`/api/template-studio/${h.id}/pronunciations`);
+  expect(names.status).toBe(200);
+  expect(await names.json()).toMatchObject({
+    names: [],
+    problem:
+      "The names to check come from the sample's script. Press Save or Make sample to make one.",
+  });
+  expect((await h.app.request(`/api/template-studio/${randomUUID()}/pronunciations`)).status).toBe(
+    404,
+  );
+  const quote = await h.post("/say-it-as/quote", { written: "Kish", spoken: "Keesh" });
+  expect(quote.status).toBe(200);
+  expect(await quote.json()).toMatchObject({ lines: 0, high: 0 });
+  // The paid fixture's voice doesn't use Library → Narration aliases.
+  const refused = await h.post("/say-it-as", {
+    written: "Kish",
+    spoken: "Keesh",
+    acknowledgedHigh: 0,
+  });
+  expect(refused.status).toBe(400);
+  expect(await refused.json()).toMatchObject({
+    detail: expect.stringContaining("Turn on Use narration aliases in Voice → Fine-tune"),
+  });
+  expect(
+    (await h.post("/say-it-as", { written: "", spoken: "x", acknowledgedHigh: 0 })).status,
+  ).toBe(400);
+});

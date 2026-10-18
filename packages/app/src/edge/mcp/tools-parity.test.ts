@@ -137,6 +137,7 @@ it("leaves the POST tools that only look, price or test unrecorded as an agent's
       "preview_channel_videos",
       "preview_rebuild",
       "quote_samples_for_all",
+      "quote_say_it_as",
       "quote_template_save",
       "quote_voice_sample",
       "review_draft",
