@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { keywordProblems, placeOfKey, positionOf, upgradeLegacy, usesLegacy } from "./rules.js";
+import {
+  keywordProblems,
+  keywordUsesOf,
+  placedProblems,
+  placeOfKey,
+  positionOf,
+  upgradeLegacy,
+  usesLegacy,
+} from "./rules.js";
 
 describe("keywordProblems", () => {
   it("finds nothing in a body without keywords", () => {
@@ -133,5 +141,75 @@ describe("placeOfKey", () => {
 describe("positionOf", () => {
   it("counts lines and columns from one", () => {
     expect(positionOf("ab\ncd", 4)).toBe("line 2, column 2");
+  });
+});
+
+describe("keywordUsesOf", () => {
+  it("names the first field using each costly keyword", () => {
+    expect(
+      keywordUsesOf([
+        { field: "articlePrompt", place: "article", body: "{{Slopify_Title}}" },
+        { field: "imagePrompts.0.name", place: "image", body: "{{Slopify_Hook}} {{Slopify_Mood}}" },
+        { field: "thumbnailPrompt", place: "thumbnail", body: "{{Slopify_Summary}}" },
+        { field: "descriptionPrompt", place: "description", body: "{{Slopify_Chapters}}" },
+      ]),
+    ).toEqual({
+      digest: "imagePrompts.0.name",
+      scenes: "imagePrompts.0.name",
+      chapters: "descriptionPrompt",
+    });
+  });
+
+  it("counts neither the old Scene name nor a keyword where it can't be filled", () => {
+    expect(
+      keywordUsesOf([
+        { field: "imagePrompts.0.name", place: "image", body: "{{Scene}}" },
+        { field: "articlePrompt", place: "article", body: "{{Slopify_Summary}}" },
+      ]),
+    ).toEqual({});
+  });
+});
+
+describe("placedProblems", () => {
+  it("refuses a keyword where it can't be filled, on the field that picked the prompt", () => {
+    expect(
+      placedProblems([{ field: "articlePrompt", place: "article", body: "{{Slopify_Hook}}" }], {}),
+    ).toEqual([
+      {
+        field: "articlePrompt",
+        message:
+          "{{Slopify_Hook}} at line 1, column 1 can't be used in an Article prompt: it is written from the article, which doesn't exist yet when this prompt runs. Remove it; it works in Image, Thumbnail, Description, Shorts and Review. Change the prompt in Library, or pick another one.",
+      },
+    ]);
+  });
+
+  it("refuses a keyword in the title with the title's own sentence", () => {
+    expect(
+      placedProblems([{ field: "title", place: "title", body: "{{Slopify_Title}}" }], {})[0]
+        ?.message,
+    ).toContain("can't be used in the title");
+  });
+
+  it("lets a name the person gave a value of their own through", () => {
+    expect(
+      placedProblems([{ field: "title", place: "title", body: "{{Slopify_Title}}" }], {
+        Slopify_Title: "Mine",
+      }),
+    ).toEqual([]);
+  });
+
+  it("says each name once per field, and nothing about unknown or old names", () => {
+    expect(
+      placedProblems(
+        [
+          {
+            field: "articlePrompt",
+            place: "article",
+            body: "{{Slopify_Hook}} {{Slopify_Hook}} {{Slopify_Wish}} {{Scene}}",
+          },
+        ],
+        {},
+      ),
+    ).toHaveLength(1);
   });
 });

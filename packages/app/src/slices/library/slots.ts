@@ -14,6 +14,12 @@ import {
   usesYoutubeDescription,
 } from "../admission/rules.js";
 import { collectFields, render } from "../admission/substitute.js";
+import {
+  type KeywordUses,
+  keywordUsesOf,
+  type PlacedBody,
+  placedProblems,
+} from "../keywords/rules.js";
 import { reviewPromptKey } from "../reviews/model.js";
 import { activeReviewStages } from "../reviews/rules.js";
 import { usesScriptPrompt } from "../voices/model.js";
@@ -36,8 +42,11 @@ export interface PickedTemplates {
   // prompts in selection order, then the thumbnail prompt.
   readonly requiredSlots: readonly string[];
   readonly bodies: readonly PickedBody[];
-  // A template the draft names that the library no longer holds.
+  // What is wrong with the picked templates themselves: one the draft names that the library no
+  // longer holds, or one using a keyword Slopify fills where it can't be filled.
   readonly missing: readonly FieldError[];
+  // The costly keywords Slopify fills that the picked bodies use, for admission.
+  readonly keywordUses: KeywordUses;
 }
 
 export function pickTemplates(
@@ -52,119 +61,75 @@ export function pickTemplates(
   // entries. A prompt left selected on a stage set to Provide asks for no field.
   const text: PickedBody[] = [];
   const image: PickedBody[] = [];
+  // Each picked body with the field that picked it and where it runs, for the keyword checks.
+  const placed: PlacedBody[] = [];
+  const body = (
+    kind: PromptKind,
+    name: string | undefined,
+    field: string,
+    into: PickedBody[],
+    key: string,
+  ): void => {
+    const at = into.length;
+    pickBody(db, kind, name, field, missing, into, key, snapshot);
+    const picked = into[at];
+    if (picked !== undefined) placed.push({ field, place: kind, body: picked.body });
+  };
 
   if (sources.article === "generate") {
     body(
-      db,
       usesScriptPrompt(draft) ? "script" : "article",
       draft.articlePrompt,
       "articlePrompt",
-      missing,
       text,
       "article",
-      snapshot,
     );
   }
 
   const intro = pickEntry(db, "intro", draft.intro, missing, snapshot);
   if (usesNarrationPreparation(draft))
-    body(
-      db,
-      "narration",
-      draft.narrationPrompt,
-      "narrationPrompt",
-      missing,
-      text,
-      "narration",
-      snapshot,
-    );
+    body("narration", draft.narrationPrompt, "narrationPrompt", text, "narration");
   const outro = pickEntry(db, "outro", draft.outro, missing, snapshot);
   push(text, "intro", intro);
   push(text, "outro", outro);
+  if (intro !== undefined) placed.push({ field: "intro", place: "intro", body: intro.body });
+  if (outro !== undefined) placed.push({ field: "outro", place: "outro", body: outro.body });
   // None picked is the built-in prompt, which asks for no keyword.
   if (usesYoutubeDescription(draft))
-    body(
-      db,
-      "description",
-      draft.descriptionPrompt,
-      "descriptionPrompt",
-      missing,
-      text,
-      "description",
-      snapshot,
-    );
+    body("description", draft.descriptionPrompt, "descriptionPrompt", text, "description");
 
   // The Shorts step's two prompts; none picked is the built-in one, which asks for no keyword.
   if (usesShorts(draft)) {
-    body(db, "shorts", draft.shorts?.prompt, "shorts.prompt", missing, text, "shorts", snapshot);
-    body(
-      db,
-      "image",
-      draft.shorts?.imagePrompt,
-      "shorts.imagePrompt",
-      missing,
-      image,
-      "shortsImage",
-      snapshot,
-    );
+    body("shorts", draft.shorts?.prompt, "shorts.prompt", text, "shorts");
+    body("image", draft.shorts?.imagePrompt, "shorts.imagePrompt", image, "shortsImage");
   }
 
   // Each reviewed stage's Review prompt; none picked is the stage's built-in one.
   for (const stage of activeReviewStages(draft))
     body(
-      db,
       "review",
       draft.reviews?.stages[stage]?.prompt,
       `reviews.stages.${stage}.prompt`,
-      missing,
       text,
       reviewPromptKey(stage),
-      snapshot,
     );
 
   // The establishing image's prompt: an image prompt like the others, its keywords filled the
   // same way.
   if (usesReference(draft) && draft.reference?.source === "prompt")
-    body(
-      db,
-      "image",
-      draft.reference.prompt,
-      "reference.prompt",
-      missing,
-      image,
-      "referencePrompt",
-      snapshot,
-    );
+    body("image", draft.reference.prompt, "reference.prompt", image, "referencePrompt");
 
   if (sources.images === "generate") {
     for (const [index, picked] of draft.imagePrompts.entries()) {
       const field = `imagePrompts.${String(index)}.name`;
-      body(
-        db,
-        "image",
-        picked.name,
-        field,
-        missing,
-        image,
-        `imagePrompts.${String(index)}`,
-        snapshot,
-      );
+      body("image", picked.name, field, image, `imagePrompts.${String(index)}`);
     }
   }
 
   // Both Generate modes read the same thumbnail template; Prompt by LLM sends it as the
   // instruction rather than to the image provider.
   if (sources.thumbnail === "from_prompt" || sources.thumbnail === "prompt_by_llm") {
-    body(
-      db,
-      "thumbnail",
-      draft.thumbnailPrompt,
-      "thumbnailPrompt",
-      missing,
-      image,
-      "thumbnailPrompt",
-      snapshot,
-    );
+    body("thumbnail", draft.thumbnailPrompt, "thumbnailPrompt", image, "thumbnailPrompt");
   }
 
   const fields = collectFields(
@@ -176,7 +141,8 @@ export function pickTemplates(
     draft: withSavedModes(draft, intro, outro),
     requiredSlots: fields.map((field) => field.name),
     bodies: [...text, ...image],
-    missing,
+    missing: [...missing, ...placedProblems(placed, draft.values)],
+    keywordUses: keywordUsesOf(placed),
   };
 }
 
@@ -193,7 +159,7 @@ export function renderPicked(
   return rendered;
 }
 
-function body(
+function pickBody(
   db: DatabaseSync,
   kind: PromptKind,
   name: string | undefined,

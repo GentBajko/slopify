@@ -12,12 +12,15 @@ import {
 } from "../admission/rules.js";
 import { detectSlots, filledKeywords, render } from "../admission/substitute.js";
 import { imagesPerVideoMax } from "../images/scale.js";
-import { usesFacts } from "../keywords/rules.js";
+import type { KeywordPlace } from "../keywords/model.js";
+import { keywordUsesOf, type PlacedBody, placedProblems, usesFacts } from "../keywords/rules.js";
 import { loudnessFields } from "../loudness/model.js";
 import { pauseFields } from "../narration/pauses-model.js";
-import { reviewFields } from "../reviews/rules.js";
+import { reviewPromptKey } from "../reviews/model.js";
+import { activeReviewStages, reviewFields } from "../reviews/rules.js";
 import type { RevisionContent } from "../revisions/model.js";
 import { usesAnimation } from "../video/edit-settings.js";
+import { usesScriptPrompt } from "../voices/model.js";
 
 export function validateRecipeInputs(
   config: RunConfig,
@@ -40,7 +43,11 @@ export function validateRecipeInputs(
     usesYoutubeDescription(config) ||
     usesShorts(config) ||
     (config.sources.audio === "generate" &&
-      (config.intro?.mode === "llm" || config.outro?.mode === "llm"));
+      (config.intro?.mode === "llm" || config.outro?.mode === "llm")) ||
+    // The keyword digest and the scene keywords are written by the text model too.
+    Object.keys(keywordUsesOf(keywordBodies(config, content))).some(
+      (cost) => cost === "digest" || cost === "scenes",
+    );
   if (llm && (!config.llm?.provider.trim() || !config.llm.model.trim()))
     fields.push({ field: "llm", message: "Pick a text provider and model." });
   if (config.sources.audio === "generate") {
@@ -80,64 +87,6 @@ export function validateRecipeInputs(
       field: `chunking.${chunking?.mode}`,
       message: "Use a whole number from 1 to 1,000,000.",
     });
-  const prompts: { field: string; raw: string | null; literal: string | undefined }[] = [];
-  if (usesNarrationPreparation(config))
-    prompts.push({
-      field: "rendered.narration",
-      raw: content.promptTemplates.narration ?? null,
-      literal: config.rendered.narration,
-    });
-  // Only a picked Description prompt is checked: none picked uses the built-in one.
-  if (
-    usesYoutubeDescription(config) &&
-    config.descriptionPrompt?.trim() &&
-    content.promptTemplates.description != null
-  )
-    prompts.push({
-      field: "rendered.description",
-      raw: content.promptTemplates.description,
-      literal: config.rendered.description,
-    });
-  // Likewise the Shorts step's two prompts, each only when one is picked.
-  for (const [key, name] of [
-    ["shorts", config.shorts?.prompt],
-    ["shortsImage", config.shorts?.imagePrompt],
-  ] as const)
-    if (usesShorts(config) && name?.trim() && content.promptTemplates[key] != null)
-      prompts.push({
-        field: `rendered.${key}`,
-        raw: content.promptTemplates[key] ?? null,
-        literal: config.rendered[key],
-      });
-  if (
-    (config.sources.article === "generate" && !content.articleEdited) ||
-    (config.sources.research === "generate" && config.sources.article !== "provide")
-  )
-    prompts.push({
-      field: "rendered.article",
-      raw: content.promptTemplates.article ?? null,
-      literal: config.rendered.article,
-    });
-  for (const category of ["intro", "outro"] as const)
-    if (config.sources.audio === "generate" && config[category] !== undefined)
-      prompts.push({
-        field: `rendered.${category}`,
-        raw: content.promptTemplates[category] ?? null,
-        literal: config.rendered[category],
-      });
-  if (config.sources.thumbnail === "from_prompt" || config.sources.thumbnail === "prompt_by_llm")
-    prompts.push({
-      field: "rendered.thumbnailPrompt",
-      raw: content.promptTemplates.thumbnailPrompt ?? null,
-      literal: config.rendered.thumbnailPrompt,
-    });
-  // The establishing image: its prompt is checked like the thumbnail's, an upload must be there.
-  if (usesReference(config) && config.reference?.source === "prompt")
-    prompts.push({
-      field: "rendered.referencePrompt",
-      raw: content.promptTemplates.referencePrompt ?? null,
-      literal: config.rendered.referencePrompt,
-    });
   if (
     usesReference(config) &&
     config.reference?.source === "provide" &&
@@ -151,19 +100,13 @@ export function validateRecipeInputs(
   if (config.sources.images !== "off")
     for (const key of content.imageOrder) {
       const image = content.imageDefinitions[key];
-      if (image?.source === "generate")
-        prompts.push({
-          field: `content.imageDefinitions.${key}.prompt`,
-          raw:
-            image.templateKey == null ? null : (content.promptTemplates[image.templateKey] ?? null),
-          literal: image.prompt ?? undefined,
-        });
-      else if (image?.source === "provide" && image.assetId === null)
+      if (image?.source === "provide" && image.assetId === null)
         fields.push({
           field: `content.imageDefinitions.${key}.assetId`,
           message: "Choose an uploaded image.",
         });
     }
+  const prompts = checkedPrompts(config, content);
   for (const prompt of prompts) {
     if (!(prompt.raw === null ? prompt.literal : render(prompt.raw, config.values))?.trim())
       fields.push({ field: prompt.field, message: "Enter a prompt or text." });
@@ -185,5 +128,113 @@ export function validateRecipeInputs(
       )
         fields.push({ field: `values.${key}`, message: "Enter a value for this keyword." });
   }
+  fields.push(...placedProblems(keywordBodies(config, content), config.values));
   return fields;
+}
+
+interface CheckedPrompt {
+  readonly field: string;
+  readonly place: KeywordPlace;
+  readonly raw: string | null;
+  readonly literal: string | undefined;
+}
+
+// The prompts a version runs, each with the field a refusal marks and where it runs.
+function checkedPrompts(config: RunConfig, content: RevisionContent): readonly CheckedPrompt[] {
+  const prompts: CheckedPrompt[] = [];
+  if (usesNarrationPreparation(config))
+    prompts.push({
+      field: "rendered.narration",
+      place: "narration",
+      raw: content.promptTemplates.narration ?? null,
+      literal: config.rendered.narration,
+    });
+  // Only a picked Description prompt is checked: none picked uses the built-in one.
+  if (
+    usesYoutubeDescription(config) &&
+    config.descriptionPrompt?.trim() &&
+    content.promptTemplates.description != null
+  )
+    prompts.push({
+      field: "rendered.description",
+      place: "description",
+      raw: content.promptTemplates.description,
+      literal: config.rendered.description,
+    });
+  // Likewise the Shorts step's two prompts, each only when one is picked.
+  for (const [key, name] of [
+    ["shorts", config.shorts?.prompt],
+    ["shortsImage", config.shorts?.imagePrompt],
+  ] as const)
+    if (usesShorts(config) && name?.trim() && content.promptTemplates[key] != null)
+      prompts.push({
+        field: `rendered.${key}`,
+        place: key === "shorts" ? "shorts" : "image",
+        raw: content.promptTemplates[key] ?? null,
+        literal: config.rendered[key],
+      });
+  if (
+    (config.sources.article === "generate" && !content.articleEdited) ||
+    (config.sources.research === "generate" && config.sources.article !== "provide")
+  )
+    prompts.push({
+      field: "rendered.article",
+      place: usesScriptPrompt(config) ? "script" : "article",
+      raw: content.promptTemplates.article ?? null,
+      literal: config.rendered.article,
+    });
+  for (const category of ["intro", "outro"] as const)
+    if (config.sources.audio === "generate" && config[category] !== undefined)
+      prompts.push({
+        field: `rendered.${category}`,
+        place: category,
+        raw: content.promptTemplates[category] ?? null,
+        literal: config.rendered[category],
+      });
+  if (config.sources.thumbnail === "from_prompt" || config.sources.thumbnail === "prompt_by_llm")
+    prompts.push({
+      field: "rendered.thumbnailPrompt",
+      place: "thumbnail",
+      raw: content.promptTemplates.thumbnailPrompt ?? null,
+      literal: config.rendered.thumbnailPrompt,
+    });
+  // The establishing image: its prompt is checked like the thumbnail's, an upload must be there.
+  if (usesReference(config) && config.reference?.source === "prompt")
+    prompts.push({
+      field: "rendered.referencePrompt",
+      place: "image",
+      raw: content.promptTemplates.referencePrompt ?? null,
+      literal: config.rendered.referencePrompt,
+    });
+  if (config.sources.images !== "off")
+    for (const key of content.imageOrder) {
+      const image = content.imageDefinitions[key];
+      if (image?.source === "generate")
+        prompts.push({
+          field: `content.imageDefinitions.${key}.prompt`,
+          place: "image",
+          raw:
+            image.templateKey == null ? null : (content.promptTemplates[image.templateKey] ?? null),
+          literal: image.prompt ?? undefined,
+        });
+    }
+  return prompts;
+}
+
+// The bodies a version runs with their places, for the keyword checks: its prompts and its
+// reviews' prompts.
+export function keywordBodies(config: RunConfig, content: RevisionContent): readonly PlacedBody[] {
+  return [
+    ...checkedPrompts(config, content).map((prompt) => ({
+      field: prompt.field,
+      place: prompt.place,
+      body: prompt.raw ?? prompt.literal ?? "",
+    })),
+    ...activeReviewStages(config).flatMap((stage) => {
+      const raw = content.promptTemplates[reviewPromptKey(stage)];
+      return raw == null || !config.reviews?.stages[stage]?.prompt?.trim()
+        ? []
+        : [{ field: `rendered.${reviewPromptKey(stage)}`, place: "review" as const, body: raw }];
+    }),
+  ];
 }

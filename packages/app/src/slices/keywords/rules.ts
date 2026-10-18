@@ -155,3 +155,64 @@ const factNames: readonly string[] = keywordSpecs
 export function usesFacts(bodies: readonly string[]): boolean {
   return bodies.some((body) => detectSlots(body).names.some((name) => factNames.includes(name)));
 }
+
+// A picked body and where it is used: the field that picked it, so a refusal marks that field.
+export interface PlacedBody {
+  readonly field: string;
+  readonly place: KeywordPlace;
+  readonly body: string;
+}
+
+// Which costly keywords a run's bodies use, each with the field of the first body that does:
+// the digest, the chapters (both need the article), and the scene keywords Slopify fills per
+// picture. `{{Scene}}` is not one of them: it follows the Images switch as it always did.
+export interface KeywordUses {
+  readonly digest?: string | undefined;
+  readonly chapters?: string | undefined;
+  readonly scenes?: string | undefined;
+}
+
+export function keywordUsesOf(bodies: readonly PlacedBody[]): KeywordUses {
+  let digest: string | undefined;
+  let chapters: string | undefined;
+  let scenes: string | undefined;
+  for (const { field, place, body } of bodies)
+    for (const name of detectSlots(body).names) {
+      const spec = keywordOf(name);
+      if (spec === undefined || spec.name !== name || !spec.places.includes(place)) continue;
+      if (spec.filler === "digest") digest ??= field;
+      if (spec.filler === "chapters") chapters ??= field;
+      if (spec.filler === "scenes") scenes ??= field;
+    }
+  return {
+    ...(digest === undefined ? {} : { digest }),
+    ...(chapters === undefined ? {} : { chapters }),
+    ...(scenes === undefined ? {} : { scenes }),
+  };
+}
+
+// What stops a run: a keyword in a prompt that runs where it can't be filled. A name the person
+// gave a value of their own is theirs (a prompt saved before the prefix was reserved), and an
+// unknown `Slopify_` name stays an ordinary keyword to fill in.
+export function placedProblems(
+  bodies: readonly PlacedBody[],
+  values: Readonly<Record<string, string>>,
+): readonly { readonly field: string; readonly message: string }[] {
+  const problems: { field: string; message: string }[] = [];
+  const seen = new Set<string>();
+  for (const { field, place, body } of bodies)
+    for (const problem of keywordProblems(body, place)) {
+      if (problem.kind !== "wrong-place" || Object.hasOwn(values, problem.name)) continue;
+      const key = `${field}\0${problem.name}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      problems.push({
+        field,
+        message:
+          place === "title"
+            ? problem.message
+            : `${problem.message} Change the prompt in Library, or pick another one.`,
+      });
+    }
+  return problems;
+}

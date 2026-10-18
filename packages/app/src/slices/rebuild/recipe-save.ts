@@ -13,6 +13,7 @@ import {
 } from "../admission/rules.js";
 import { shortModeFields } from "../admission/short-mode.js";
 import { render } from "../admission/substitute.js";
+import { keywordUsesOf } from "../keywords/rules.js";
 import type {
   ManifestOutput,
   RevisionContent,
@@ -24,7 +25,7 @@ import { effectiveClips, pickedShortsOf, rangeProblem } from "../shorts/clips.js
 import { buildRecipes } from "./recipe-build.js";
 import { type RecipeContext, type ResolvedWorkRecipe, selectedReference } from "./recipe-model.js";
 import { shortsPickKey } from "./recipe-shorts.js";
-import { validateRecipeInputs } from "./recipe-validation.js";
+import { keywordBodies, validateRecipeInputs } from "./recipe-validation.js";
 import { finishedShorts, keepChosen, movedShorts, withKeep } from "./shorts-keep-save.js";
 
 export type RevisionPlanResult =
@@ -416,7 +417,7 @@ export function validateRevisionEdit(
     !(content.articleMarkdown ?? config.provided.article)?.trim()
   )
     fields.push({ field: "provided.article", message: "Paste the article." });
-  fields.push(...articleOffFields(config));
+  fields.push(...articleOffFields(config, keywordUsesOf(keywordBodies(config, content))));
   if (
     config.sources.audio === "off" &&
     config.subtitles !== undefined &&

@@ -373,3 +373,61 @@ describe("renderPicked", () => {
     expect(renderPicked(pickTemplates(library().db, draft()), {})).toEqual({});
   });
 });
+
+describe("pickTemplates and the keywords Slopify fills", () => {
+  it("refuses a keyword in a picked prompt where it can't be filled, on the picking field", () => {
+    const deps = library();
+    createPrompt(deps, { kind: "article", name: "Essay", body: "Recap {{Slopify_Chapters}}." });
+    const picked = pickTemplates(deps.db, draft({ articlePrompt: "Essay" }));
+    expect(picked.missing).toEqual([
+      {
+        field: "articlePrompt",
+        message:
+          "{{Slopify_Chapters}} at line 1, column 7 can't be used in an Article prompt: it exists once the article is written, so never in the Article or Script prompt. Remove it; it works in Narration, Intro, Outro, Image, Thumbnail, Description, Shorts and Review. Change the prompt in Library, or pick another one.",
+      },
+    ]);
+    expect(picked.requiredSlots).toEqual([]);
+  });
+
+  it("says which costly keywords the picked prompts use", () => {
+    const deps = library();
+    createPrompt(deps, { kind: "article", name: "Essay", body: "Write." });
+    createPrompt(deps, {
+      kind: "image",
+      name: "Poster",
+      body: "{{Slopify_Hook}} at {{Slopify_Setting}}",
+    });
+    const picked = pickTemplates(
+      deps.db,
+      draft({ articlePrompt: "Essay", imagePrompts: [{ name: "Poster", number: 1 }] }),
+    );
+    expect(picked.keywordUses).toEqual({
+      digest: "imagePrompts.0.name",
+      scenes: "imagePrompts.0.name",
+    });
+    expect(picked.missing).toEqual([]);
+  });
+
+  it("keeps an unknown Slopify_ name an ordinary keyword to fill in", () => {
+    const deps = library();
+    deps.db
+      .prepare(
+        "INSERT INTO prompts (id, kind, name, body, slots, updated_at) VALUES ('old', 'article', 'Old', '{{Slopify_Wish}}', '[\"Slopify_Wish\"]', '2026-09-01')",
+      )
+      .run();
+    const picked = pickTemplates(deps.db, draft({ articlePrompt: "Old" }));
+    expect(picked.requiredSlots).toEqual(["Slopify_Wish"]);
+    expect(picked.missing).toEqual([]);
+  });
+
+  it("checks an intro entry's keywords against the intro", () => {
+    const deps = library();
+    createPrompt(deps, { kind: "article", name: "Essay", body: "Write." });
+    createEntry(deps, { category: "intro", mode: "text", name: "Hi", body: "{{Slopify_Hook}}" });
+    const picked = pickTemplates(
+      deps.db,
+      draft({ articlePrompt: "Essay", intro: { name: "Hi", mode: "text" } }),
+    );
+    expect(picked.missing.map((one) => one.field)).toEqual(["intro"]);
+  });
+});
