@@ -5,6 +5,7 @@ import {
   parsePronunciationGlossary,
   pronunciationRulesOf,
 } from "@app/slices/narration/pronunciation.js";
+import { promiseItemKey } from "@app/slices/reviews/model.js";
 import { usesVoices } from "@app/slices/voices/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { CopyIcon } from "lucide-react";
@@ -163,6 +164,11 @@ export function ArticleBody({ stage, companion, project, outputs, busy }: BodyPr
     <StageBody>
       <ReviewVerdict
         review={reviewFor(reviews, { itemKey: "article:body" })}
+        projectId={project.id}
+        busy={busy}
+      />
+      <ReviewVerdict
+        review={reviewFor(reviews, { itemKey: promiseItemKey })}
         projectId={project.id}
         busy={busy}
       />

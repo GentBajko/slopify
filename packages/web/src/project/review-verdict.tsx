@@ -166,7 +166,8 @@ export function ReviewActions({
   );
 }
 
-// Beside a large item (the article, the narration, the thumbnail, a short): the status, the
+// Beside a large item (the article and its promise check, the narration, the thumbnail, a
+// short): the status, the
 // reasons and the two actions in one row.
 export function ReviewVerdict({
   review,
@@ -184,6 +185,8 @@ export function ReviewVerdict({
       className="flex min-w-0 flex-col gap-1 text-small"
     >
       <div className="flex flex-wrap items-center gap-2">
+        {/* It sits under the article's own review, so it says which one it is. */}
+        {review.stage === "promise" ? <span className="font-medium">Promise check</span> : null}
         <Chip review={review} />
         <ReviewActions review={review} projectId={projectId} busy={busy} />
       </div>

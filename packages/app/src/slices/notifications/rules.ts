@@ -64,6 +64,7 @@ const reviewItemNames: Readonly<Record<string, string>> = {
   narration: "the narration",
   thumbnail: "the thumbnail",
   shorts: "a short",
+  promise: "the article's opening (promise check)",
 };
 
 export function reviewNoticeText(subject: ReviewNoticeSubject): NoticeText {
@@ -83,6 +84,7 @@ export function reviewNoticeText(subject: ReviewNoticeSubject): NoticeText {
 export function reviewItemName(itemKey: string, imageOrder: readonly string[]): string | undefined {
   if (itemKey === "article:body") return "the article";
   if (itemKey === "narration") return "the narration";
+  if (itemKey === "promise") return "the article's opening (promise check)";
   if (itemKey === "thumbnail:image") return "the thumbnail";
   const variant = /^thumbnail:image:(\d+)$/.exec(itemKey);
   if (variant !== null) return `thumbnail ${variant[1] ?? ""}`;

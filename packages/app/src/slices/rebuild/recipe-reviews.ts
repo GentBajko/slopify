@@ -1,5 +1,6 @@
 import {
   narrationItemKey,
+  promiseItemKey,
   type ReviewStage,
   reviewedByAgent,
   reviewKey,
@@ -121,6 +122,17 @@ function reviewedItems(
         ? []
         : [one(article.key, [article], [article.key])];
     }
+    // The opening read against the title and thumbnail before the paid narration: everything
+    // that reads the article waits for it. A thumbnail brief a model writes is read too; the
+    // drawn thumbnail isn't, since it is made after the narration.
+    case "promise": {
+      const article = byKey.get("article:body");
+      if (article === undefined || article.kind !== "provider") return [];
+      const brief = byKey.get("thumbnail:prompt");
+      return [
+        one(promiseItemKey, brief === undefined ? [article] : [article, brief], [article.key]),
+      ];
+    }
     case "images": {
       const reference = byKey.get("reference:image");
       return recipes
@@ -156,6 +168,7 @@ function reviewedItems(
 function stageOf(stage: ReviewStage): ResolvedWorkRecipe["stage"] {
   switch (stage) {
     case "article":
+    case "promise":
       return "article";
     case "images":
       return "images";

@@ -24,6 +24,7 @@ export function stageMakesItems(draft: ReviewDraft, stage: ReviewStage): boolean
   const { sources } = draft;
   switch (stage) {
     case "article":
+    case "promise":
       return sources.article === "generate";
     case "images":
       return sources.images === "generate";

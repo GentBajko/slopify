@@ -129,3 +129,77 @@ describe("review recipes", () => {
     );
   });
 });
+
+describe("the promise check's recipe", () => {
+  const written: RunConfig = {
+    ...narrated,
+    sources: { ...narrated.sources, article: "generate", thumbnail: "prompt_by_llm" },
+    rendered: { ...narrated.rendered, thumbnailPrompt: "Draw the hook." },
+  };
+  const generatedRecipes = (c: RunConfig) =>
+    buildRecipes({
+      config: c,
+      content: { ...content, articleMarkdown: undefined },
+      manifest: { outputs: [], pieces: [] },
+      resolved: { articleMarkdown: null, researchNotes: null },
+    });
+
+  it("changes no step at all while it is off", () => {
+    const before = generatedRecipes(written);
+    expect(
+      generatedRecipes({
+        ...written,
+        reviews: { ...reviewer, stages: { promise: { mode: "off" } } },
+      }),
+    ).toEqual(before);
+    expect(generatedRecipes({ ...written, reviews: { ...reviewer, stages: {} } })).toEqual(before);
+  });
+
+  it("reads the article and the thumbnail brief, and holds the narration until it answers", () => {
+    const on: RunConfig = {
+      ...written,
+      reviews: { ...reviewer, stages: { promise: { mode: "redo" } } },
+    };
+    const before = generatedRecipes(written);
+    const recipes = generatedRecipes(on);
+    const review = recipes.find((row) => row.key === "review:promise");
+    expect(review).toMatchObject({
+      stage: "article",
+      kind: "provider",
+      dependsOn: ["article:body", "thumbnail:prompt"],
+      input: { kind: "local", operation: "review-v1" },
+    });
+    const values = review?.input.kind === "local" ? review.input.values : null;
+    expect(Array.isArray(values) ? values.slice(0, 2) : values).toEqual(["promise", "promise"]);
+    for (const row of recipes) {
+      const was = before.find((one) => one.key === row.key);
+      if (was === undefined || row.key === "thumbnail:prompt") continue;
+      if (was.dependsOn.includes("article:body")) expect(row.dependsOn).toContain("review:promise");
+    }
+    expect(recipes.find((row) => row.key === "thumbnail:prompt")?.dependsOn).not.toContain(
+      "review:promise",
+    );
+    const audio = recipes.filter((row) => row.stage === "audio");
+    expect(audio.length).toBeGreaterThan(0);
+    expect(audio.some((row) => row.dependsOn.includes("review:promise"))).toBe(true);
+  });
+
+  it("reads only the article when the thumbnail brief isn't written by a model", () => {
+    const on: RunConfig = {
+      ...written,
+      sources: { ...written.sources, thumbnail: "from_prompt" },
+      reviews: { ...reviewer, stages: { promise: { mode: "flag" } } },
+    };
+    expect(generatedRecipes(on).find((row) => row.key === "review:promise")?.dependsOn).toEqual([
+      "article:body",
+    ]);
+  });
+
+  it("adds no step for an article the person wrote", () => {
+    const provided: RunConfig = {
+      ...narrated,
+      reviews: { ...reviewer, stages: { promise: { mode: "redo" } } },
+    };
+    expect(recipesFor(provided)).toEqual(recipesFor(narrated));
+  });
+});

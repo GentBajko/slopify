@@ -491,6 +491,11 @@ export const playHelp = {
     body: "The model that judges each item. A stronger model catches more but costs more per review. It can differ from the model that wrote the text.",
     tutorial: { page: "Reviews-and-Checkpoints", anchor: "set-up-automatic-reviews" },
   },
+  "play.reviews.promise": {
+    title: "Promise check",
+    body: "One cheap call before the paid narration: the reviewer model reads the title, the thumbnail brief and the article's first 30 seconds as the voice will say them, and fails a slow, off-topic or greeting-first opening. Flag and redo writes the article again; the narration and pictures wait for the answer. Needs an article a model writes. Default: Off.",
+    tutorial: { page: "Reviews-and-Checkpoints", anchor: "the-promise-check" },
+  },
   "play.reviews.retries": {
     title: "Redos per item",
     body: "How many times Flag and redo makes a failed item again before it keeps the last one and flags it, 0 to 5. Each redo costs the item again plus one more review. Default: 2.",

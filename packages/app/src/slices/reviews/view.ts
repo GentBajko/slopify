@@ -1,9 +1,11 @@
-import { narrationItemKey, type ReviewRecord } from "./model.js";
+import { narrationItemKey, promiseItemKey, type ReviewRecord } from "./model.js";
 
 // The step whose output a verdict is about: the word timing for the narration (it is what
-// the reviewer heard), a short's render for the short, and the item's own step otherwise.
+// the reviewer heard), the article for the promise check, a short's render for the short, and
+// the item's own step otherwise.
 export function reviewedOutputKey(itemKey: string): string {
   if (itemKey === narrationItemKey) return "subtitles:timing";
+  if (itemKey === promiseItemKey) return "article:body";
   if (/^shorts:\d+$/.test(itemKey)) return `${itemKey}:render`;
   return itemKey;
 }
