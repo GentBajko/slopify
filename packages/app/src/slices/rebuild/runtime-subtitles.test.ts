@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, it, vi } from "vitest";
+import type { AlignmentRequest } from "../../kernel/ports/subtitles.js";
 import { resolveFont } from "../fonts/index.js";
 import { saveRevision } from "../revisions/mutations.js";
 import { outputPath } from "../storage/layout.js";
@@ -172,6 +173,55 @@ it("times captions after the silence that opens the export", async () => {
     ).toEqual([
       [2, 3],
       [3, 4],
+    ]);
+  } finally {
+    h.close();
+  }
+});
+it("keeps the passages the timing could not hear, offset by the silence before them", async () => {
+  const h = await exportFixture(false);
+  try {
+    const old = h.view();
+    const saved = await saveRevision(h.deps, {
+      projectId: h.projectId,
+      baseRevisionId: old.revision.id,
+      idempotencyKey: "edge",
+      edit: {
+        config: { ...old.revision.config, edgeSilenceSeconds: 2 },
+        content: old.revision.content,
+      },
+    });
+    if (!saved.ok) throw new Error(JSON.stringify(saved));
+    const alignSubtitles = vi.fn(async (request: AlignmentRequest) => {
+      request.onOmission?.({ start: 0.2, text: "Missing passage" });
+      return [
+        { text: "Saved", start: 0, end: 1 },
+        { text: "article.", start: 1, end: 2 },
+      ];
+    });
+    const timing = h.grant("subtitles:timing", saved.view.revision.id);
+    expect(
+      await executeSubtitleRecipe({ ...h.deps, alignSubtitles }, timing.context, timing.piece),
+    ).toBe("done");
+    const words = h
+      .view(saved.view.revision.id)
+      .outputs.find((row) => row.selected && row.output.role === "subtitle_words");
+    if (words === undefined) throw new Error("No timed words");
+    expect(
+      JSON.parse(readFileSync(outputPath(h.deps.paths, h.projectId, words.output.path), "utf8"))
+        .omissions,
+    ).toEqual([{ start: 2.2, text: "Missing passage" }]);
+    // The captions made from that timing carry the same notes, without timing again.
+    const cues = h.grant("subtitles:cues", saved.view.revision.id);
+    expect(
+      await executeSubtitleRecipe({ ...h.deps, alignSubtitles }, cues.context, cues.piece),
+    ).toBe("done");
+    expect(alignSubtitles).toHaveBeenCalledTimes(1);
+    const piece = h
+      .view(saved.view.revision.id)
+      .pieces.find((row) => row.selected && row.key === "subtitles:cues");
+    expect(JSON.parse(piece?.piece.payload ?? "{}").omissions).toEqual([
+      { start: 2.2, text: "Missing passage" },
     ]);
   } finally {
     h.close();
