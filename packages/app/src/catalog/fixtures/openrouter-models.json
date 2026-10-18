@@ -1,0 +1,143 @@
+{
+  "data": [
+    {
+      "id": "google/gemini-3.8-flash",
+      "name": "google/gemini-3.8-flash",
+      "created": 1766361600,
+      "context_length": 400000,
+      "pricing": {
+        "prompt": "0.0000008",
+        "completion": "0.00001"
+      },
+      "architecture": {
+        "input_modalities": ["text"],
+        "output_modalities": ["text"]
+      },
+      "top_provider": {
+        "max_completion_tokens": 64000
+      },
+      "supported_parameters": ["reasoning"]
+    },
+    {
+      "id": "openai/gpt-5.6-sol",
+      "name": "openai/gpt-5.6-sol",
+      "created": 1766361600,
+      "context_length": 400000,
+      "pricing": {
+        "prompt": "0.000002",
+        "completion": "0.00001"
+      },
+      "architecture": {
+        "input_modalities": ["text"],
+        "output_modalities": ["text"]
+      },
+      "top_provider": {
+        "max_completion_tokens": 64000
+      },
+      "supported_parameters": ["reasoning"]
+    },
+    {
+      "id": "openai/gpt-5.6-terra",
+      "name": "openai/gpt-5.6-terra",
+      "created": 1766361600,
+      "context_length": 400000,
+      "pricing": {
+        "prompt": "0.000002",
+        "completion": "0.00001"
+      },
+      "architecture": {
+        "input_modalities": ["text"],
+        "output_modalities": ["text"]
+      },
+      "top_provider": {
+        "max_completion_tokens": 64000
+      },
+      "supported_parameters": ["reasoning"]
+    },
+    {
+      "id": "openai/gpt-5.6-luna",
+      "name": "openai/gpt-5.6-luna",
+      "created": 1766361600,
+      "context_length": 400000,
+      "pricing": {
+        "prompt": "0.000002",
+        "completion": "0.00001"
+      },
+      "architecture": {
+        "input_modalities": ["text"],
+        "output_modalities": ["text"]
+      },
+      "top_provider": {
+        "max_completion_tokens": 64000
+      },
+      "supported_parameters": ["reasoning"]
+    },
+    {
+      "id": "anthropic/claude-sonnet-4.6",
+      "name": "anthropic/claude-sonnet-4.6",
+      "created": 1766361600,
+      "context_length": 400000,
+      "pricing": {
+        "prompt": "0.000002",
+        "completion": "0.00001"
+      },
+      "architecture": {
+        "input_modalities": ["text"],
+        "output_modalities": ["text"]
+      },
+      "top_provider": {
+        "max_completion_tokens": 64000
+      },
+      "supported_parameters": ["reasoning"]
+    },
+    {
+      "id": "anthropic/claude-opus-4.7",
+      "name": "anthropic/claude-opus-4.7",
+      "created": 1766361600,
+      "context_length": 400000,
+      "pricing": {
+        "prompt": "0.000002",
+        "completion": "0.00001"
+      },
+      "architecture": {
+        "input_modalities": ["text"],
+        "output_modalities": ["text"]
+      },
+      "top_provider": {
+        "max_completion_tokens": 64000
+      },
+      "supported_parameters": ["reasoning"]
+    },
+    {
+      "id": "google/gemini-3.9-flash",
+      "name": "Google: Gemini 3.9 Flash",
+      "created": 1792022400,
+      "context_length": 1048576,
+      "pricing": {
+        "prompt": "0.0000008",
+        "completion": "0.000004"
+      },
+      "architecture": {
+        "input_modalities": ["text", "image"],
+        "output_modalities": ["text"]
+      },
+      "top_provider": {
+        "max_completion_tokens": 65536
+      },
+      "supported_parameters": ["reasoning", "tools"]
+    },
+    {
+      "id": "someone/else",
+      "name": "Else",
+      "created": 1792281600,
+      "pricing": {
+        "prompt": "0.000001",
+        "completion": "0.000001"
+      },
+      "architecture": {
+        "input_modalities": ["text"],
+        "output_modalities": ["text"]
+      }
+    }
+  ]
+}
