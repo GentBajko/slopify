@@ -110,6 +110,13 @@ export interface RunningCountEvent extends EventOrigin {
 // A schedule's topic generation held new topics for approval. Not a project event: the
 // notifications slice turns it into "5 new topics are waiting for you" and open pages
 // refresh their schedules.
+// A template's studio samples changed: one was queued, started, finished or failed. The studio
+// page reads the template's studio again (`slices/template-studio`).
+export interface TemplateSampleEvent {
+  readonly type: "template.sample";
+  readonly templateId: string;
+}
+
 export interface ScheduleTopicsEvent {
   readonly type: "schedule.topics";
   readonly scheduleId: string;

@@ -33,13 +33,14 @@ CREATE TABLE template_sample_versions (
  updated_at TEXT NOT NULL,
  PRIMARY KEY(template_id, template_version)
 );
--- At most one sample job per template: a newer Save replaces a queued one and waits behind a
--- running one, which is never stopped.
+-- At most one queued and one running sample job per template: a newer Save replaces the queued
+-- one and waits behind the running one, which is never stopped.
 CREATE TABLE template_sample_jobs (
- template_id TEXT PRIMARY KEY REFERENCES project_templates(id) ON DELETE CASCADE,
+ template_id TEXT NOT NULL REFERENCES project_templates(id) ON DELETE CASCADE,
  template_version INTEGER NOT NULL CHECK(template_version >= 1),
  ack_high REAL NOT NULL DEFAULT 0 CHECK(ack_high >= 0),
  kind TEXT NOT NULL CHECK(kind IN ('save','topic','full-script','bakeoff','free')),
  requested_at TEXT NOT NULL,
- state TEXT NOT NULL CHECK(state IN ('queued','running'))
+ state TEXT NOT NULL CHECK(state IN ('queued','running')),
+ PRIMARY KEY(template_id, state)
 );

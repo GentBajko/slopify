@@ -10,6 +10,7 @@ import type {
   ScheduleTopicsEvent,
   StageProgressEvent,
   StageStateEvent,
+  TemplateSampleEvent,
 } from "../../kernel/events.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
@@ -37,6 +38,7 @@ export type {
 export type GlobalEvent =
   | RunningCountEvent
   | ScheduleTopicsEvent
+  | TemplateSampleEvent
   | StagingEvent
   | ProjectStateEvent
   | ProjectUpdatedEvent
