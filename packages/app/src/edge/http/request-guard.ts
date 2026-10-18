@@ -61,7 +61,7 @@ export function hostAllowed(host: string | undefined, rules: HostRules): boolean
 const formTypes = ["text/plain", "application/x-www-form-urlencoded", "multipart/form-data"];
 const safeMethods = ["GET", "HEAD", "OPTIONS"];
 // The paired extension's own routes: token-checked, with CORS for its origin alone.
-const extensionRoutes = /^\/api\/studio\/ext(?:\/|$)/;
+const extensionRoutes = /^\/api\/(?:studio|social)\/ext(?:\/|$)/;
 
 export function requestGuard(deps: {
   readonly listenHost: string | undefined;

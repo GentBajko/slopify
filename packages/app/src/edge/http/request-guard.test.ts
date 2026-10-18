@@ -110,6 +110,21 @@ describe("requests from other web pages", () => {
       headers: { ...local, origin: "chrome-extension://abcdefghijklmnopabcdefghijklmnop" },
     });
     expect(await pair.text()).not.toContain("another address");
+    const report = await h.app.request("/api/social/ext/result", {
+      method: "POST",
+      headers: {
+        ...local,
+        origin: "chrome-extension://abcdefghijklmnopabcdefghijklmnop",
+        "content-type": "application/json",
+      },
+      body: "{}",
+    });
+    expect(await report.text()).not.toContain("another address");
+    const page = await h.app.request("/api/social/packs/p1/x/fill", {
+      method: "POST",
+      headers: { ...local, origin: "https://evil.example" },
+    });
+    expect(await page.text()).toContain("another address");
     const activate = await h.app.request("/api/update/activate", {
       method: "POST",
       headers: { ...local, "x-slopify-update-token": "t" },

@@ -66,8 +66,16 @@ it("never offers keys, the pairing token, backups, the updater, host setup or Yo
     "POST /api/storage/cleanup",
   ])
     expect(offered.has(route)).toBe(false);
-  for (const route of Object.keys(excludedRoutes).filter((one) => one.includes("/api/studio/ext/")))
+  for (const route of Object.keys(excludedRoutes).filter(
+    (one) => one.includes("/api/studio/ext/") || one.includes("/api/social/ext/"),
+  ))
     expect(excludedRoutes[route]).toContain("extension");
+  // Filling a site's post form is the person's: no tool reaches it, and the reason says why.
+  expect(offered.has("POST /api/social/packs/:projectId/:platform/fill")).toBe(false);
+  expect(excludedRoutes["POST /api/social/packs/:projectId/:platform/fill"]).toContain(
+    "posting are the person's",
+  );
+  expect([...offered].filter((route) => /\/social\/(ext\/|.*\/fill$)/.test(route))).toEqual([]);
   expect(excludedRoutes["POST /api/storage/cleanup"]).toContain("Settings → Backup & storage");
   expect(excludedRoutes["POST /api/storage/old-versions/delete"]).toContain(
     "Settings → Backup & storage",
@@ -100,6 +108,7 @@ it("asks for confirmed: true on every tool whose page confirms first", () => {
     "trash_project",
     "keep_project_outputs",
     "reset_description_field",
+    "reset_post_text",
     "discard_draft",
     "delete_template",
     "cancel_schedule",
@@ -189,6 +198,7 @@ const gatedWithoutBody: ReadonlySet<string> = new Set([
   "keep_project_outputs",
   "delete_old_versions",
   "reset_description_field",
+  "reset_post_text",
   "delete_staged_file",
   "generate_topics",
   "score_topics",
