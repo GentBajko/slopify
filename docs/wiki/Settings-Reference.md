@@ -16,7 +16,7 @@ Every section of Settings, what each control does and its default. Sections with
 | Production defaults | [Template studio](#template-studio) | The most a template's samples, and a designed piece template's, may spend in a day, and whether they may use CLI plans | This page |
 | Notifications | [Notifications](#notifications) | Browser and phone notifications | [Notifications](Notifications) |
 | Publishing | [Channel links](#channel-links) | A pointer to each channel's own links | [Channels](Channels#channel-links) |
-| Publishing | [YouTube Studio](#youtube-studio) | Playlists per channel, the Studio extension's download and pairing | [Studio-Extension](Studio-Extension) |
+| Publishing | [YouTube Studio and posting](#youtube-studio-and-posting) | Playlists per channel, the Studio extension's download and pairing | [Studio-Extension](Studio-Extension), [Posting-to-Social-Sites](Posting-to-Social-Sites) |
 | Backup & storage | [Backup & storage](#backup--storage) | Your files folder, daily backups, export and import, disk space, samples | [Where-Your-Files-Live](Where-Your-Files-Live), [Backups](Backups) |
 | Backup & storage | [Trash](#trash) | Deleted items, kept 30 days | [Trash](Trash) |
 | General | [General](#general) | Light or dark, and starting Slopify when you log in | [Start-at-Login](Start-at-Login) |
@@ -188,9 +188,9 @@ Messages hold the project title and what happened, never your keys. See [Notific
 
 Each channel now keeps its own links, on its **Brand** tab under **Channel links**. This section only says so, with **Open the default channel's links**. Links saved here in an earlier version still fill the default channel's descriptions until you save its Brand tab. See [Channels](Channels#channel-links) and [YouTube-Description](YouTube-Description).
 
-## YouTube Studio
+## YouTube Studio and posting
 
-"The playlists upload packs offer, and the Studio extension's pairing."
+"The playlist upload packs name, and the Studio extension's pairing for YouTube Studio and other sites."
 
 | Control | What it does | Default / limit |
 |---|---|---|
@@ -198,9 +198,9 @@ Each channel now keeps its own links, on its **Brand** tab under **Channel links
 | **Playlists** | The YouTube playlists upload packs offer, each typed exactly as it is called in Studio. Pick **Every channel (default)** or one channel first: the default list is used by every channel without its own. **Add playlist** adds a row; **On by default** puts every project into it; **Remove** drops it; **Save playlists** stores the list. A project's **Prepare upload** changes which ones it goes into. | None; up to 20, each up to 150 characters |
 | **Extension pairing token** | A secret the Slopify Studio extension needs before it may read your upload packs. **Copy** it into the extension's options and press Pair there. | |
 | **New pairing token** | Makes a fresh token, unpairs the extension until you paste the new one, and clears the uploads waiting for Studio. | |
-| **Install the Studio extension** | **Chrome, Edge, Brave** or **Firefox**, then **Download for Chrome** or **Download for Firefox**, with the three install steps. | |
+| **Install the Studio extension** | **Chrome, Edge, Brave** or **Firefox**, then **Download for Chrome** or **Download for Firefox**, with the three install steps, and a line on allowing posting: to fill posts on X, LinkedIn, Instagram, TikTok, Reddit or Bluesky, press **Allow posting on** each site in the extension's options. | |
 
-See [Studio-Extension](Studio-Extension) and [Publishing-to-YouTube](Publishing-to-YouTube).
+See [Studio-Extension](Studio-Extension), [Publishing-to-YouTube](Publishing-to-YouTube) and [Posting-to-Social-Sites](Posting-to-Social-Sites).
 
 ## Backup & storage
 

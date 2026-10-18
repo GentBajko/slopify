@@ -13,6 +13,7 @@ import { ProjectRoute } from "@/routes/project";
 import { body, deps, finished, output, stage } from "@/routes/project-fixtures";
 import { revisionRouteFixture } from "@/routes/project-revision.fake";
 import { ProjectsRoute } from "@/routes/projects";
+import { packs, redditPack, xPack } from "@/social/post.fake";
 import { PrepareUpload } from "@/studio/prepare-upload";
 import {
   jsonAnswer,
@@ -390,11 +391,21 @@ describe("Prepare upload and the project list", () => {
     };
     renderApp(
       <PrepareUpload projectId="p1" ready />,
-      testDeps({ "GET /api/studio/packs/p1": jsonAnswer(pack) }),
+      testDeps({
+        "GET /api/studio/packs/p1": jsonAnswer(pack),
+        "GET /api/social/packs/p1": jsonAnswer(packs([xPack, redditPack])),
+      }),
     );
     await userEvent.click(screen.getByRole("button", { name: "Prepare upload" }));
     const drawer = await screen.findByRole("dialog", { name: "Prepare upload" });
     await within(drawer).findByText("fox.mp4");
+    expect(unexplained()).toEqual([]);
+    // Each other site's post: its words, settings, link and, for Reddit, its own fields.
+    await userEvent.click(within(drawer).getByRole("button", { name: "X" }));
+    await within(drawer).findByLabelText("X post");
+    expect(unexplained()).toEqual([]);
+    await userEvent.click(within(drawer).getByRole("button", { name: "Reddit" }));
+    await within(drawer).findByLabelText("Subreddit");
     expect(unexplained()).toEqual([]);
   });
 

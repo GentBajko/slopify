@@ -310,7 +310,7 @@ export const projectHelp = {
   },
   "project.upload.slot": {
     title: "Release time",
-    body: "When this video goes out. It takes the next free time of a posting-plan line for its series (Settings → YouTube Studio); each short follows at its own times. Pick another free time, or Not scheduled to set it in Studio yourself. Calendar → Releases shows and moves every time. Upload it before its upload-by time so YouTube's checks finish while it is private.",
+    body: "When this video goes out. It takes the next free time of a posting-plan line for its series (Settings → YouTube Studio and posting); each short follows at its own times. Pick another free time, or Not scheduled to set it in Studio yourself. Calendar → Releases shows and moves every time. Upload it before its upload-by time so YouTube's checks finish while it is private.",
     tutorial: { page: "Publishing-to-YouTube", anchor: "upload-a-video" },
   },
   "project.upload.steps": {

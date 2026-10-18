@@ -1,3 +1,4 @@
+import { platformLabels, type SocialPlatform } from "@app/slices/social/model.js";
 import {
   type FillQueueItem,
   type PackItem,
@@ -36,6 +37,8 @@ import { Lightbox, MediaFrame, MediaGrid } from "@/components/kit/media";
 import { SectionHead } from "@/components/kit/section-head";
 import { Segmented, Switch } from "@/components/kit/switch";
 import { OpenFolder } from "@/project/open-folder";
+import { readPostPacks, socialPacksKey } from "@/social/api";
+import { PostFillButton, PostPanel } from "@/social/post-panel";
 import { ExtensionInstall } from "./extension-install";
 import { studioSettingsKey } from "./settings-panel";
 
@@ -116,6 +119,17 @@ export function PrepareUploadDrawer({
   const pack = useQuery({ queryKey: packKey, queryFn: () => readUploadPack(api, projectId) });
   const [chosen, setChosen] = useState("video");
   const [status, setStatus] = useState<{ text: string; tone: StatusTone } | undefined>();
+  // The other sites this project posts to (`slices/social`). A project that posts nowhere, or a
+  // Slopify without posting, has none, and the drawer is YouTube's alone.
+  const social = useQuery({
+    queryKey: socialPacksKey(projectId),
+    queryFn: () => readPostPacks(api, projectId),
+    retry: false,
+  });
+  const posts = social.data?.packs ?? [];
+  const [where, setWhere] = useState<"youtube" | SocialPlatform>("youtube");
+  const post = posts.find((one) => one.platform === where);
+  const say = (text: string, tone: StatusTone) => setStatus({ text, tone });
   const items = pack.data?.items ?? [];
   const item = items.find((one) => itemKey(one) === chosen) ?? items[0];
   // Whether an extension is paired: without one, Fill in YouTube Studio would hand the item to
@@ -222,47 +236,78 @@ export function PrepareUploadDrawer({
       title="Prepare upload"
       onClose={onClose}
       footer={
-        <>
-          <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
-          {paired === false ? (
-            <FileLink
-              href={studioUploadUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              variant="primary"
+        post !== undefined && social.data !== undefined ? (
+          <>
+            <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
+            <PostFillButton pack={post} extension={social.data.extension} say={say} />
+          </>
+        ) : (
+          <>
+            <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
+            {paired === false ? (
+              <FileLink
+                href={studioUploadUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="primary"
+              >
+                Open YouTube Studio
+              </FileLink>
+            ) : null}
+            <Button
+              variant={paired === false ? "secondary" : "primary"}
+              disabled={item === undefined || fill.isPending || paired !== true}
+              disabledReason={
+                paired === false
+                  ? "Install and pair the Slopify Studio extension first (steps above)"
+                  : settings.error !== null
+                    ? `Couldn't check whether the extension is paired: ${settings.error.message} Close Prepare upload and open it again.`
+                    : "Wait for the upload pack to load"
+              }
+              onClick={() => {
+                if (item === undefined) return;
+                // Opened now, inside the click, so the browser doesn't block the new tab.
+                window.open(studioUploadUrl, "_blank", "noopener");
+                fill.mutate(item);
+              }}
             >
-              Open YouTube Studio
-            </FileLink>
-          ) : null}
-          <Button
-            variant={paired === false ? "secondary" : "primary"}
-            disabled={item === undefined || fill.isPending || paired !== true}
-            disabledReason={
-              paired === false
-                ? "Install and pair the Slopify Studio extension first (steps above)"
-                : settings.error !== null
-                  ? `Couldn't check whether the extension is paired: ${settings.error.message} Close Prepare upload and open it again.`
-                  : "Wait for the upload pack to load"
-            }
-            onClick={() => {
-              if (item === undefined) return;
-              // Opened now, inside the click, so the browser doesn't block the new tab.
-              window.open(studioUploadUrl, "_blank", "noopener");
-              fill.mutate(item);
-            }}
-          >
-            Fill in YouTube Studio
-          </Button>
-          <InfoTip id="project.upload.fill-studio" />
-        </>
+              Fill in YouTube Studio
+            </Button>
+            <InfoTip id="project.upload.fill-studio" />
+          </>
+        )
       }
     >
-      {pack.error === null ? null : (
+      {posts.length === 0 ? null : (
+        <Segmented
+          label="Where"
+          value={post === undefined ? "youtube" : post.platform}
+          onChange={(next) => {
+            setWhere(next);
+            setStatus(undefined);
+          }}
+          tip="social.where"
+          options={[
+            { value: "youtube" as const, label: "YouTube" },
+            ...posts.map((one) => ({ value: one.platform, label: platformLabels[one.platform] })),
+          ]}
+          className="mb-5 flex-wrap self-start"
+        />
+      )}
+      {post === undefined ? null : (
+        <div className="flex flex-col gap-5">
+          <PostPanel key={post.platform} pack={post} say={say} />
+          <Callout title="Slopify never posts.">
+            {`Fill in ${platformLabels[post.platform]} hands this post to the Slopify Studio extension, which fills ${platformLabels[post.platform]}'s own post form. You check it and press Post.`}
+          </Callout>
+        </div>
+      )}
+      {post !== undefined || pack.error === null ? null : (
         <Callout tone="danger" title="The upload pack couldn't be read.">
           {`${pack.error.message} Close Prepare upload and open it again.`}
         </Callout>
       )}
-      {pack.data === undefined ? null : (
+      {post !== undefined || pack.data === undefined ? null : (
         <div className="flex flex-col gap-5">
           {paired === false ? (
             <Callout tone="waiting" title="The Slopify Studio extension isn't paired.">
@@ -645,7 +690,7 @@ function Steps({
             (item.playlists.length > 0 ? (
               item.playlists.join(", ")
             ) : (
-              <span className="text-ink-3">None set (Settings → YouTube Studio).</span>
+              <span className="text-ink-3">None set (Settings → YouTube Studio and posting).</span>
             )),
           actions: copyAction(step),
         };

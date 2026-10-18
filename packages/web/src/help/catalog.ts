@@ -3,6 +3,7 @@ import { planningHelp } from "./entries/planning.js";
 import { playHelp } from "./entries/play.js";
 import { projectHelp } from "./entries/project.js";
 import { settingsHelp } from "./entries/settings.js";
+import { socialHelp } from "./entries/social.js";
 import { templateStudioHelp } from "./entries/template-studio.js";
 import type { HelpEntry } from "./entry.js";
 
@@ -18,6 +19,7 @@ export const catalog = {
   ...planningHelp,
   ...settingsHelp,
   ...templateStudioHelp,
+  ...socialHelp,
 } as const satisfies Readonly<Record<string, HelpEntry>>;
 
 export type HelpId = keyof typeof catalog;

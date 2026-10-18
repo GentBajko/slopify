@@ -1,0 +1,99 @@
+import type { HelpEntry } from "../entry.js";
+
+// Posting to X, LinkedIn, Instagram, TikTok, Reddit and Bluesky: Prepare upload's post panel,
+// the post settings on Play and in Template Studio, and the channel's accounts.
+
+const posting = (anchor: string) => ({ page: "Posting-to-Social-Sites", anchor });
+
+export const socialHelp = {
+  "social.where": {
+    title: "Where",
+    body: "Switches Prepare upload between YouTube and each other site this project posts to. Each site has its own post: its words, pictures or video, warnings and Fill button. The sites come from the template's Upload pack (Template Studio) or Play's Outputs.",
+    tutorial: posting("the-post-in-prepare-upload"),
+  },
+  "social.text": {
+    title: "Post text",
+    body: "Where the post's words come from: the article's summary, the YouTube description without its chapters, the title, a post prompt (a paid call to the project's text model, one per site), your own text, or none. Free sources cost nothing. Text longer than the site takes is cut at the last whole sentence that fits.",
+    tutorial: posting("where-the-words-come-from"),
+  },
+  "social.prompt": {
+    title: "Post prompt",
+    body: "The Library prompt (kind Post) that writes this site's post from the article. Built-in uses Slopify's own wording. It is one call to the project's text model per site, so Save in Template Studio and the run's estimate show its price. Write your own in Library → Prompts → Post.",
+    tutorial: posting("post-prompts"),
+  },
+  "social.custom": {
+    title: "Your text",
+    body: "The post's words, typed once for every project the template makes. Keywords Slopify fills, such as {{Slopify_Summary}}, and your template's own fields are filled for each project; a keyword with no value leaves its line out. Free.",
+    tutorial: posting("where-the-words-come-from"),
+  },
+  "social.video": {
+    title: "Post video",
+    body: "Which video the post carries: none, the long video, or one of its shorts (already vertical). TikTok and Instagram Reels want a short. The release time the post goes out at follows it: a short's own time, else the long video's. Videos are never re-encoded.",
+    tutorial: posting("pictures-and-video"),
+  },
+  "social.pictures": {
+    title: "Post pictures",
+    body: "How many of the project's pictures go with the post, in their order. Instagram gets them cut to 4:5; other sites take them as made. A site that takes fewer, or doesn't mix pictures with a video, gets a warning instead of a refusal.",
+    tutorial: posting("pictures-and-video"),
+  },
+  "social.thumbnail": {
+    title: "Post thumbnail",
+    body: "Adds the video's thumbnail to the post's pictures, before the project's own pictures. Off by default.",
+    tutorial: posting("pictures-and-video"),
+  },
+  "social.hashtags": {
+    title: "Hashtags",
+    body: "How many hashtags go at the end of the post, taken from the video's YouTube tags and the shorts' hashtags. Each site has its own most: Bluesky 3, LinkedIn 5, X and TikTok 10, Instagram 30, Reddit none.",
+    tutorial: posting("where-the-words-come-from"),
+  },
+  "social.link": {
+    title: "YouTube link",
+    body: "Adds the video's YouTube link at the end of the post. It is known once the video is on YouTube (Fill in YouTube Studio, or its link pasted). X counts any link as 23 characters.",
+    tutorial: posting("where-the-words-come-from"),
+  },
+  "social.post-text": {
+    title: "Post text",
+    body: "The words as they go into the site's form, hashtags and link included, counted the way the site counts them (X weighs links and emoji, Bluesky counts graphemes). Your changes save when you leave the box and stay this project's own; Reset to the written text drops them.",
+    tutorial: posting("the-post-in-prepare-upload"),
+  },
+  "social.release": {
+    title: "When it goes out",
+    body: "X, LinkedIn and TikTok have their own scheduler: the extension sets it to the video's release time and you press Schedule. Instagram, Bluesky and Reddit have none: about 2 minutes before the release time the extension opens the site in a background tab, fills the post and tells you to press Post.",
+    tutorial: posting("when-it-goes-out"),
+  },
+  "social.paste-link": {
+    title: "Paste link",
+    body: "When you posted it yourself, or the extension missed it, paste the post's link here. It marks the post as posted, so Fill isn't offered again until you remove the link. Only the site's own post links are taken.",
+    tutorial: posting("after-it-is-posted"),
+  },
+  "social.fill": {
+    title: "Fill in the site",
+    body: "Opens the site's post form and hands this post to the Slopify Studio extension, which fills the words, media, AI label and schedule. It never presses Post, Share or Publish: you check the post and press it. The site must be allowed in the extension's options (Allow posting on the site).",
+    tutorial: posting("fill-in-a-site"),
+  },
+  "social.reddit.live-check": {
+    title: "Reddit needs a live check",
+    body: "Reddit's post form hasn't been checked in a real browser yet, so the extension's part of it may miss a field. The title, subreddit and text go in through Reddit's own submit address, which works; check the media and flair before you press Post.",
+    tutorial: posting("reddit"),
+  },
+  "social.reddit.subreddit": {
+    title: "Subreddit",
+    body: "The community the post goes to, like r/history. Reddit refuses a post without one, so the post warns until it is set. Read the subreddit's rules on self-promotion first.",
+    tutorial: posting("reddit"),
+  },
+  "social.reddit.flair": {
+    title: "Flair",
+    body: "The tag some subreddits ask every post to carry, typed the way the subreddit names it. Leave it blank when the subreddit has none.",
+    tutorial: posting("reddit"),
+  },
+  "social.reddit.title": {
+    title: "Reddit title",
+    body: "The post's title, up to 300 characters. It starts as the video's title; change it to suit the subreddit.",
+    tutorial: posting("reddit"),
+  },
+  "social.reddit.kind": {
+    title: "Reddit post type",
+    body: "Link posts the YouTube link with the title, Text posts the post's words, Media uploads the pictures or video. Link is the default.",
+    tutorial: posting("reddit"),
+  },
+} as const satisfies Readonly<Record<string, HelpEntry>>;

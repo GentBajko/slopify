@@ -16,12 +16,14 @@ import { nextZoom, type Zoom, ZoomImage } from "./zoom-image.js";
 
 // Images and video live in a media frame: `screen` behind, a fixed aspect box so grids never
 // jump, a caption line under it, actions on hover and focus, a status badge in the corner.
-export type Aspect = "landscape" | "portrait" | "square";
+// "tall" is 4:5, Instagram's picture shape.
+export type Aspect = "landscape" | "portrait" | "square" | "tall";
 
 const aspectClass: Readonly<Record<Aspect, string | undefined>> = {
   landscape: undefined,
   portrait: "sl-media__frame--portrait",
   square: "sl-media__frame--square",
+  tall: "sl-media__frame--tall",
 };
 
 export function MediaFrame({

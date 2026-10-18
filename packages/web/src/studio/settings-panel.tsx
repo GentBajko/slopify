@@ -17,7 +17,7 @@ import { PostingPlanSettings } from "./posting-plan";
 
 export const studioSettingsKey = ["studio", "settings"] as const;
 
-// Settings → YouTube Studio: the playlists each channel's upload packs offer, the pairing token
+// Settings → YouTube Studio and posting: the playlists each channel's upload packs offer, the pairing token
 // the Slopify Studio browser extension needs before it may read a pack, and how to install it.
 export function StudioSettings() {
   const { api } = useApp();
@@ -35,6 +35,11 @@ export function StudioSettings() {
         <section aria-label="Install the Studio extension">
           <SectionHead as="h3" title="Install the Studio extension" className="mb-3" />
           <ExtensionInstall />
+          <p className="sl-field__help m-0 mt-3">
+            To fill posts on X, LinkedIn, Instagram, TikTok, Reddit or Bluesky too, open the
+            extension's options and press Allow posting on each site you use. It never posts: you
+            press Post on the site.
+          </p>
         </section>
       </div>
     </div>
