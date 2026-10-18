@@ -77,8 +77,8 @@ it("opens today's whole form with More settings, which still starts the run, and
   expect(createOpensSimple()).toBe(false);
 });
 
-it("opens the whole form by itself when a setting needs fixing before the run can start", async () => {
-  const h = await simpleCreate({
+it("says how many settings need fixing first, and More settings opens them", async () => {
+  await simpleCreate({
     ...suppliedDocument,
     form: {
       ...suppliedDocument.form,
