@@ -5,6 +5,7 @@ import type { PricedWork } from "../../slices/assistant/cost.js";
 import {
   assistantCostlyTools,
   assistantExcludedTools,
+  assistantFreeTools,
   assistantOutwardTools,
   isGated,
 } from "../../slices/assistant/gate.js";
@@ -272,6 +273,71 @@ describe("/mcp/assistant", () => {
     expect(assistantRouteTools.map((tool) => tool.name)).not.toContain("import_template_pack");
     for (const name of asks) expect([name, gated(name)]).toEqual([name, true]);
     for (const name of free) expect([name, gated(name)]).toEqual([name, false]);
+  });
+
+  it("has every tool that changes something either ask first or named free", async () => {
+    const gateOf = (tool: (typeof routeTools)[number]) => ({
+      name: tool.name,
+      method: routeOf(tool).method,
+      confirm: tool.confirm,
+      sends: tool.reachesOut === "sends",
+    });
+    const free = new Set<string>(assistantFreeTools);
+    const unclassified = assistantRouteTools
+      .filter((tool) => routeOf(tool).method !== "GET")
+      .filter((tool) => !isGated(gateOf(tool)) && !free.has(tool.name))
+      .map((tool) => tool.name);
+    expect(
+      unclassified,
+      "Put each in assistantCostlyTools (or another ask-first list) or assistantFreeTools in slices/assistant/gate.ts",
+    ).toEqual([]);
+    const both = routeTools.filter((tool) => free.has(tool.name) && isGated(gateOf(tool)));
+    expect(both.map((tool) => tool.name)).toEqual([]);
+    const reaching = assistantRouteTools.filter(
+      (tool) => tool.reachesOut !== undefined && routeOf(tool).method !== "GET",
+    );
+    for (const tool of reaching)
+      expect(
+        free.has(tool.name) ||
+          (assistantOutwardTools as readonly string[]).includes(tool.name) ||
+          (assistantCostlyTools as readonly string[]).includes(tool.name) ||
+          tool.reachesOut === "sends",
+      ).toBe(true);
+    // The assistant's own tools beside the route tools only read.
+    const { connect } = fixture();
+    const client = await connect();
+    const route = new Set(assistantRouteTools.map((tool) => tool.name));
+    const listed = (await client.listTools()).tools;
+    const others = listed.filter((tool) => !route.has(tool.name));
+    expect(
+      others
+        .filter((tool) => tool.annotations?.readOnlyHint !== true && !free.has(tool.name))
+        .map((t) => t.name),
+    ).toEqual([]);
+    const listedNames = new Set(listed.map((tool) => tool.name));
+    expect(assistantFreeTools.filter((name) => !listedNames.has(name))).toEqual([]);
+    await client.close();
+  });
+
+  it("asks before the steps that start paid work, release a run or send out", () => {
+    for (const name of [
+      "redo_review",
+      "change_checkpoints",
+      "create_schedule",
+      "update_schedule",
+      "resume_schedule",
+      "restore_from_trash",
+      "restore_from_trash_many",
+      "score_topics",
+      "check_providers",
+    ]) {
+      const tool = routeTools.find((one) => one.name === name);
+      expect(tool, name).toBeDefined();
+      if (tool !== undefined)
+        expect(isGated({ name, method: routeOf(tool).method, confirm: tool.confirm }), name).toBe(
+          true,
+        );
+    }
   });
 
   it("names only tools that exist", () => {
