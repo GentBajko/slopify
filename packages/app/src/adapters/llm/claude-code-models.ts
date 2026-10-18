@@ -1,12 +1,10 @@
-import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { z } from "zod";
 import { cliCommand } from "../../kernel/cli-command.js";
 import type { ThinkingMode } from "../../kernel/ports/llm.js";
 import type { ModelInfo } from "../../kernel/ports/model.js";
+import { cappedOutput, withChildSession } from "./child-session.js";
+import { lines } from "./sse-lines.js";
 
 const maxOutputBytes = 1024 * 1024;
 const modelId = z
@@ -129,73 +127,42 @@ export async function nodeClaudeCodeModels(
   binary: string,
   timeoutMs = 15_000,
 ): Promise<readonly ModelInfo[]> {
-  const directory = await mkdtemp(join(tmpdir(), "slopify-claude-models-"));
   const requestId = randomUUID();
   const command = cliCommand(binary);
-  const child = spawn(
-    command.file,
-    [
-      ...command.args,
-      "-p",
-      "--input-format",
-      "stream-json",
-      "--output-format",
-      "stream-json",
-      "--verbose",
-      "--safe-mode",
-      "--tools",
-      "",
-      "--strict-mcp-config",
-      "--no-session-persistence",
-    ],
+  return withChildSession(
     {
-      cwd: directory,
-      env: discoveryEnv(),
-      stdio: ["pipe", "pipe", "pipe"],
-      windowsHide: true,
-      detached: process.platform !== "win32",
+      file: command.file,
+      args: [
+        ...command.args,
+        "-p",
+        "--input-format",
+        "stream-json",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--safe-mode",
+        "--tools",
+        "",
+        "--strict-mcp-config",
+        "--no-session-persistence",
+      ],
+      env: () => discoveryEnv(),
+      directoryPrefix: "slopify-claude-models-",
+      timeoutMs,
+      killAfterTermMs: 500,
+      graceMs: 500,
+      settleMs: 500,
     },
-  );
-  child.on("error", () => {});
-  child.stdin.on("error", () => {});
-  child.stderr.resume();
-  const closed = new Promise<void>((resolve) => child.once("close", () => resolve()));
-  const terminate = (force: boolean): void => {
-    const signal = force ? "SIGKILL" : "SIGTERM";
-    if (process.platform !== "win32" && child.pid !== undefined) {
+    async ({ child, send }) => {
       try {
-        process.kill(-child.pid, signal);
-        return;
-      } catch {
-        // A child that already exited has no process group to signal.
-      }
-    }
-    child.kill(signal);
-  };
-  let forceTimer: ReturnType<typeof setTimeout> | undefined;
-  const timer = setTimeout(() => {
-    terminate(false);
-    forceTimer = setTimeout(() => terminate(true), 500);
-  }, timeoutMs);
-  try {
-    child.stdin.write(
-      `${JSON.stringify({
-        request_id: requestId,
-        type: "control_request",
-        request: { subtype: "initialize" },
-      })}\n`,
-    );
-    let output = "";
-    let bytes = 0;
-    for await (const piece of child.stdout) {
-      bytes += piece.length;
-      if (bytes > maxOutputBytes) throw unavailable();
-      output += piece.toString();
-      let newline = output.indexOf("\n");
-      while (newline >= 0) {
-        const line = output.slice(0, newline).trim();
-        output = output.slice(newline + 1);
-        if (line !== "") {
+        send({
+          request_id: requestId,
+          type: "control_request",
+          request: { subtype: "initialize" },
+        });
+        for await (const text of lines(cappedOutput(child.stdout, maxOutputBytes, unavailable))) {
+          const line = text.trim();
+          if (line === "") continue;
           let event: unknown;
           try {
             event = JSON.parse(line);
@@ -211,24 +178,10 @@ export async function nodeClaudeCodeModels(
             return choices(event, requestId);
           }
         }
-        newline = output.indexOf("\n");
+        throw unavailable();
+      } catch {
+        throw unavailable();
       }
-    }
-    throw unavailable();
-  } catch {
-    throw unavailable();
-  } finally {
-    clearTimeout(timer);
-    if (forceTimer !== undefined) clearTimeout(forceTimer);
-    terminate(false);
-    const grace = await Promise.race([
-      closed.then(() => true),
-      new Promise<false>((resolve) => setTimeout(() => resolve(false), 500)),
-    ]);
-    if (!grace) {
-      terminate(true);
-      await Promise.race([closed, new Promise<void>((resolve) => setTimeout(resolve, 500))]);
-    }
-    await rm(directory, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
-  }
+    },
+  );
 }

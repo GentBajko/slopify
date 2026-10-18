@@ -1,11 +1,9 @@
-import { spawn } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { z } from "zod";
 import { cliCommand } from "../../kernel/cli-command.js";
 import { thinkingModes as knownEfforts } from "../../kernel/ports/llm.js";
 import type { ModelInfo } from "../../kernel/ports/model.js";
+import { cappedOutput, withChildSession } from "./child-session.js";
+import { lines } from "./sse-lines.js";
 
 const text = z
   .string()
@@ -37,55 +35,30 @@ export async function nodeCodexServerModels(
   timeoutMs = 15_000,
 ): Promise<readonly ModelInfo[]> {
   const command = cliCommand(binary);
-  const directory = await mkdtemp(join(tmpdir(), "slopify-codex-models-"));
-  const child = spawn(command.file, [...command.args, "app-server", "--listen", "stdio://"], {
-    cwd: directory,
-    env: { ...env, PWD: directory },
-    stdio: ["pipe", "pipe", "pipe"],
-    windowsHide: true,
-    detached: process.platform !== "win32",
-  });
-  child.on("error", () => {});
-  child.stdin.on("error", () => {});
-  child.stderr.resume();
-  const closed = new Promise<void>((resolve) => child.once("close", () => resolve()));
-  function terminate(signal: NodeJS.Signals): void {
-    if (process.platform !== "win32" && child.pid !== undefined) {
-      try {
-        process.kill(-child.pid, signal);
-        return;
-      } catch {
-        /* The process may already have exited. */
-      }
-    }
-    child.kill(signal);
-  }
-  const timer = setTimeout(() => terminate("SIGKILL"), timeoutMs);
-  const send = (message: unknown) => child.stdin.write(`${JSON.stringify(message)}\n`);
-  let expectedId = 1;
-  let pages = 0;
-  let bytes = 0;
-  let buffer = "";
-  const models = new Map<string, ModelInfo>();
-  const cursors = new Set<string>();
-  try {
-    send({
-      id: expectedId,
-      method: "initialize",
-      params: {
-        clientInfo: { name: "slopify_model_discovery", version: "1.0" },
-      },
-    });
-    child.stdout.setEncoding("utf8");
-    for await (const piece of child.stdout) {
-      bytes += Buffer.byteLength(piece);
-      if (bytes > 4 * 1024 * 1024) throw new Error("Oversized metadata");
-      buffer += piece;
-      let newline = buffer.indexOf("\n");
-      while (newline >= 0) {
-        const line = buffer.slice(0, newline).trim();
-        buffer = buffer.slice(newline + 1);
-        newline = buffer.indexOf("\n");
+  return withChildSession(
+    {
+      file: command.file,
+      args: [...command.args, "app-server", "--listen", "stdio://"],
+      env: (directory) => ({ ...env, PWD: directory }),
+      directoryPrefix: "slopify-codex-models-",
+      timeoutMs,
+      graceMs: 500,
+    },
+    async ({ child, send }) => {
+      let expectedId = 1;
+      let pages = 0;
+      const models = new Map<string, ModelInfo>();
+      const cursors = new Set<string>();
+      send({
+        id: expectedId,
+        method: "initialize",
+        params: {
+          clientInfo: { name: "slopify_model_discovery", version: "1.0" },
+        },
+      });
+      const oversize = (): Error => new Error("Oversized metadata");
+      for await (const raw of lines(cappedOutput(child.stdout, 4 * 1024 * 1024, oversize))) {
+        const line = raw.trim();
         if (line === "") continue;
         const event = z
           .object({
@@ -128,24 +101,9 @@ export async function nodeCodexServerModels(
           params: { limit: 100, includeHidden: false, ...(cursor ? { cursor } : {}) },
         });
       }
-    }
-    throw new Error("Discovery ended before its reply");
-  } finally {
-    clearTimeout(timer);
-    terminate("SIGTERM");
-    let grace: ReturnType<typeof setTimeout> | undefined;
-    await Promise.race([
-      closed,
-      new Promise<void>((resolve) => {
-        grace = setTimeout(() => {
-          terminate("SIGKILL");
-          resolve();
-        }, 500);
-      }),
-    ]);
-    clearTimeout(grace);
-    await rm(directory, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
-  }
+      throw new Error("Discovery ended before its reply");
+    },
+  );
 }
 
 export function codexModelName(name: string): string {
