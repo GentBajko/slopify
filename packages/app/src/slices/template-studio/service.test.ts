@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
+import { defaultLoudness } from "../loudness/model.js";
 import { draftFixture } from "../play-drafts/draft.fake.js";
 import { createTemplate, updateTemplate } from "../project-templates/service.js";
 import type { ProviderStatus } from "../settings/model.js";
 import { writeSetting } from "../settings/repo.js";
-import { getStudio, type StudioDeps } from "./service.js";
+import { createFreeSamples } from "./free.js";
+import { createPriceCache, getStudio, type StudioDeps } from "./service.js";
 
 const open: (() => void)[] = [];
 afterEach(() => {
@@ -18,6 +20,8 @@ function studio(statuses: readonly ProviderStatus[] = []) {
     db: h.deps.db,
     clock: h.deps.clock,
     providerStatuses: async () => statuses,
+    free: createFreeSamples({ loudnessDefault: () => defaultLoudness }),
+    prices: createPriceCache(),
   };
   const id = randomUUID();
   const created = createTemplate(h.deps, { id, name: "Show", document: h.document });
@@ -50,16 +54,20 @@ describe("getStudio", () => {
     expect(result.value.sections.map((section) => [section.id, section.state])).toEqual([
       ["subject", "off"],
       ["script", "stale"],
-      ["voice", "stale"],
+      ["voice", "needs-fix"],
       ["pictures", "stale"],
-      ["video", "stale"],
+      ["video", "needs-fix"],
       ["thumbnail", "off"],
       ["shorts", "off"],
       ["document", "off"],
       ["reviews", "off"],
       ["upload", "stale"],
-      ["schedule", "stale"],
+      ["schedule", "off"],
     ]);
+    // This test's Slopify has no ffmpeg: the free samples say how to get it.
+    expect(result.value.free.video.sentence).toContain("started without ffmpeg");
+    expect(result.value.schedule).toEqual({ runs: [], cost: null });
+    expect(result.value.reviews).toEqual([]);
     expect(result.value.checks.find((check) => check.id === "providers")?.ok).toBe(false);
   });
 

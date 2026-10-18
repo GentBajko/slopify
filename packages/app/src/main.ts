@@ -137,6 +137,7 @@ import {
   unpackedExtensionDir,
 } from "./slices/studio/unpacked.js";
 import { previewPictures } from "./slices/style-preview/images.js";
+import { bundledSampleAssets } from "./slices/style-preview/narration.js";
 import { ffmpegStylePreview } from "./slices/style-preview/render.js";
 import { createStylePreviews, stylePreviewDir } from "./slices/style-preview/service.js";
 import { collectorEndpoint, httpPostEvents } from "./slices/telemetry/collector-client.js";
@@ -145,6 +146,12 @@ import { createFlusher } from "./slices/telemetry/flush.js";
 import type { RecordEvent } from "./slices/telemetry/model.js";
 import type { TelemetryDeps } from "./slices/telemetry/record.js";
 import { record } from "./slices/telemetry/record.js";
+import { createDocumentSamples } from "./slices/template-studio/document-sample.js";
+import { createFreeSamples } from "./slices/template-studio/free.js";
+import { createLoudnessSamples } from "./slices/template-studio/loudness.js";
+import { sampleMaker } from "./slices/template-studio/make.js";
+import { createSampleRunner } from "./slices/template-studio/runner.js";
+import { createPriceCache } from "./slices/template-studio/service.js";
 import { createTrashPurge } from "./slices/trash/service.js";
 import { probeDurationMs } from "./slices/video/ffmpeg.js";
 import { watchActivation } from "./updater/candidate.js";
@@ -564,6 +571,44 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
           detail: "Scheduled jobs could not be advanced.",
         }),
     });
+    // Library → Templates → Open studio: its free samples, made one job at a time in the
+    // background (`slices/template-studio/runner.ts`).
+    const stylePreviews = createStylePreviews({
+      dir: stylePreviewDir(paths.dataDir),
+      render: ffmpegStylePreview({ ffmpeg, paths, log, dir: stylePreviewDir(paths.dataDir) }),
+      pictures: previewPictures({ db, paths }),
+      log,
+    });
+    const studioCache = join(paths.dataDir, "cache", "template-studio");
+    const loudnessSamples = createLoudnessSamples({
+      ffmpeg,
+      dir: join(studioCache, "loudness"),
+      source: bundledSampleAssets().narration,
+      log,
+    });
+    const documentSamples = createDocumentSamples({ dir: join(studioCache, "document") });
+    const freeSamples = createFreeSamples({
+      stylePreviews,
+      loudness: loudnessSamples,
+      documents: documentSamples,
+      loudnessDefault: () => readSettings({ db: runtimeDb, log }).loudness,
+    });
+    const studioPrices = createPriceCache();
+    const sampleChanged = (templateId: string): void =>
+      hub.emitGlobal({ type: "template.sample", templateId });
+    const sampleRunner = createSampleRunner({
+      db,
+      log,
+      changed: sampleChanged,
+      make: sampleMaker({
+        db,
+        free: freeSamples,
+        prices: studioPrices,
+        review: draftDeps,
+        changed: sampleChanged,
+      }),
+    });
+    sampleRunner.start();
     const mutations = createMutationLifecycle();
     const folderConfiguration = await dockerFolderConfiguration(process.env, paths.projects);
     const filesService = createFilesService({
@@ -654,12 +699,15 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       mutations,
       sendNotification,
       audioPreviews,
-      stylePreviews: createStylePreviews({
-        dir: stylePreviewDir(paths.dataDir),
-        render: ffmpegStylePreview({ ffmpeg, paths, log, dir: stylePreviewDir(paths.dataDir) }),
-        pictures: previewPictures({ db, paths }),
-        log,
-      }),
+      stylePreviews,
+      templateStudio: {
+        free: freeSamples,
+        prices: studioPrices,
+        wake: sampleRunner.wake,
+        loudnessSource: loudnessSamples.source,
+        loudnessFile: loudnessSamples.file,
+        documentFile: documentSamples.file,
+      },
       ...modelSources(registry),
       audition: (call, signal) => auditionVoice({ registry, clock, log }, call, signal),
       voiceLanguages: async (provider, voiceId, signal) => {
@@ -833,6 +881,8 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         const mutationDrain = mutations.stop();
         const scheduleDrain = scheduleTicks.stop();
         const topicDrain = scheduleRunner.stop();
+        // A local sample render is stopped and its job queued again at the next start.
+        const sampleDrain = sampleRunner.stop();
         // A backup being written is stopped and its partial file removed, not waited for.
         const backupDrain = backups.stop();
         const serverClose = beginServerClose(server);
@@ -849,6 +899,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
           );
           await scheduleDrain;
           await topicDrain;
+          await sampleDrain;
           await backupDrain;
           await runner.abortAll();
           await episodes?.settled();

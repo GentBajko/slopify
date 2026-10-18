@@ -25,6 +25,73 @@ export const sectionStatusSchema = z
   .strict()
   .readonly();
 
+const freeSampleSchema = z
+  .object({
+    state: z.enum(["current", "making", "waiting", "needs-fix", "stale", "off"]),
+    sentence: z.string(),
+    url: z.string().nullable(),
+  })
+  .strict()
+  .readonly();
+
+export const freeSamplesSchema = z
+  .object({
+    video: freeSampleSchema,
+    loudness: freeSampleSchema
+      .unwrap()
+      .extend({
+        beforeUrl: z.string().nullable(),
+        beforeLufs: z.number().nullable(),
+        afterLufs: z.number().nullable(),
+      })
+      .strict()
+      .readonly(),
+    document: freeSampleSchema,
+  })
+  .strict()
+  .readonly();
+
+export const scheduleSampleSchema = z
+  .object({
+    runs: z
+      .array(
+        z
+          .object({
+            at: z.string(),
+            scheduleId: z.string(),
+            scheduleName: z.string(),
+            title: z.string(),
+            topic: z.boolean(),
+          })
+          .strict()
+          .readonly(),
+      )
+      .readonly(),
+    cost: z
+      .object({
+        runs: z.number(),
+        high: z.number(),
+        unknown: z.number(),
+        problem: z.string().nullable(),
+      })
+      .strict()
+      .readonly()
+      .nullable(),
+  })
+  .strict()
+  .readonly();
+
+export const pathStepSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    kind: z.enum(["checkpoint", "review"]),
+    by: z.enum(["you", "model", "agent"]),
+    detail: z.string(),
+  })
+  .strict()
+  .readonly();
+
 export const studioViewSchema = z
   .object({
     template: projectTemplateSchema,
@@ -41,6 +108,9 @@ export const studioViewSchema = z
       .readonly(),
     sections: z.array(sectionStatusSchema).readonly(),
     checks: z.array(checkSchema).readonly(),
+    free: freeSamplesSchema,
+    schedule: scheduleSampleSchema,
+    reviews: z.array(pathStepSchema).readonly(),
   })
   .strict()
   .readonly();

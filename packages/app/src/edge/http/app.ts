@@ -84,6 +84,9 @@ export interface AppDeps {
     | import("../../kernel/ports/host-cli.js").HostCliPorts["status"]
     | undefined;
   readonly drafts?: DraftStartDeps;
+  // Library → Templates → Open studio's samples and their loop; absent, the studio says how to
+  // get them.
+  readonly templateStudio?: import("./template-studio.js").TemplateStudioService | undefined;
   // Channels → Cast's Generate button; absent answers that no provider is set up.
   readonly generateCastImage?:
     | import("../../slices/channels/cast-images.js").CastImageGenerator

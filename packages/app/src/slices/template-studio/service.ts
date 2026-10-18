@@ -10,17 +10,45 @@ import type { ScheduleSummary } from "../schedules/schema.js";
 import type { ProviderStatus } from "../settings/model.js";
 import { readSetting } from "../settings/repo.js";
 import { type FreeCheckInput, freeChecks, type ScheduleFit } from "./checks.js";
+import type { FreeSamples } from "./free.js";
 import { gateOf, runnableVersion } from "./gate.js";
+import { queuedJob, runningJob } from "./jobs.js";
 import { fallbackSampleTopic, type StudioResult } from "./model.js";
 import { gatesOf, sampleOf } from "./repo.js";
+import { reviewsPath } from "./reviews-path.js";
+import { monthlyCost, type RunPrice, upcomingRuns } from "./schedule-sample.js";
 import type { StudioView } from "./schema.js";
-import { baseStatuses } from "./status.js";
+import { baseStatuses, madeStatuses } from "./status.js";
 
 export interface StudioDeps {
   readonly db: DatabaseSync;
   readonly clock: Clock;
   // Whether each provider is set up now (`settings/readiness.ts` providerStatuses).
   readonly providerStatuses: () => Promise<readonly ProviderStatus[]>;
+  // The samples made on this computer; without them every free sample says how to get them.
+  readonly free: FreeSamples;
+  // What each schedule's run costs, worked out by the sample job.
+  readonly prices: PriceCache;
+}
+
+// One scheduled run's price, by the schedule's and the template's versions, so an edit to
+// either is priced again. In memory: after a restart the next sample job prices it again.
+export interface PriceCache {
+  readonly get: (key: string) => RunPrice | undefined;
+  readonly set: (key: string, price: RunPrice) => void;
+}
+
+export function createPriceCache(): PriceCache {
+  // ceiling: one entry per schedule and template version seen since boot, a few bytes each.
+  const prices = new Map<string, RunPrice>();
+  return { get: (key) => prices.get(key), set: (key, price) => void prices.set(key, price) };
+}
+
+export function priceKey(
+  schedule: Pick<ScheduleSummary, "id" | "version">,
+  template: { readonly id: string; readonly version: number },
+): string {
+  return `${schedule.id}@${String(schedule.version)}:${template.id}@${String(template.version)}`;
 }
 
 export const sampleTopicKey = "templateStudio.sampleTopic.default";
@@ -94,6 +122,20 @@ export async function getStudio(deps: StudioDeps, id: string): Promise<StudioRes
   const gates = gatesOf(deps.db, id);
   const sample = sampleOf(deps.db, id);
   const schedules = templateSchedules(deps.db, id);
+  const now = deps.clock.now();
+  const prices = new Map(
+    schedules.flatMap((schedule) => {
+      const price = deps.prices.get(priceKey(schedule, template));
+      return price === undefined ? [] : [[schedule.id, price] as const];
+    }),
+  );
+  const cost = monthlyCost(schedules, prices, now);
+  const running = runningJob(deps.db);
+  const queued = queuedJob(deps.db, id);
+  const free = deps.free.view(id, template.document, {
+    running: running?.templateId === id && running.templateVersion === template.version,
+    queued: queued !== undefined,
+  });
   const checks = freeChecks({
     templateId: id,
     document: template.document,
@@ -105,10 +147,10 @@ export async function getStudio(deps: StudioDeps, id: string): Promise<StudioRes
       ]),
     ),
     schedules: schedules.map(fitOf),
-    monthlyCost: null,
+    monthlyCost: cost,
     notificationUrl: readNotificationUrl(deps.db) !== null,
     agentSeenAt: lastAgentConnection(deps.db),
-    now: deps.clock.now(),
+    now,
   });
   return {
     ok: true,
@@ -121,8 +163,11 @@ export async function getStudio(deps: StudioDeps, id: string): Promise<StudioRes
         topicSource: sample?.topicSource ?? "fixed",
         fullScript: sample?.fullScript ?? false,
       },
-      sections: baseStatuses(template.document),
+      sections: baseStatuses(template.document, madeStatuses(free, schedules.length, cost)),
       checks,
+      free,
+      schedule: { runs: upcomingRuns(schedules, template.document, now), cost },
+      reviews: reviewsPath(template.document),
     },
   };
 }

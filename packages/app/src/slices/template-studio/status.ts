@@ -1,10 +1,12 @@
 import type { PlayDraftDocument } from "../play-drafts/schema.js";
+import type { FreeSample, FreeSamplesView } from "./free.js";
 import {
   type SectionState,
   sectionLabel,
   type TemplateSection,
   templateSections,
 } from "./model.js";
+import type { MonthlyCost } from "./schedule-sample.js";
 
 export interface SectionStatus {
   readonly id: TemplateSection;
@@ -83,4 +85,47 @@ export function baseStatuses(
       made[id] ?? { id, label, state: "stale", sentence: "No sample yet. Press Save to make one." }
     );
   });
+}
+
+// What the free samples say of their sections. The voice's own sample is a paid one; until it
+// is made, Voice shows the loudness before and after.
+export function madeStatuses(
+  free: FreeSamplesView,
+  schedules: number,
+  cost: MonthlyCost | null,
+): Partial<Readonly<Record<TemplateSection, SectionStatus>>> {
+  const of = (id: TemplateSection, sample: FreeSample): SectionStatus | undefined =>
+    sample.state === "off"
+      ? undefined
+      : { id, label: sectionLabel[id], state: sample.state, sentence: sample.sentence };
+  const made: Partial<Record<TemplateSection, SectionStatus>> = {};
+  const video = of("video", free.video);
+  if (video !== undefined) made.video = video;
+  const voice = of("voice", free.loudness);
+  if (voice !== undefined) made.voice = voice;
+  const document = of("document", free.document);
+  if (document !== undefined) made.document = document;
+  made.reviews = {
+    id: "reviews",
+    label: sectionLabel.reviews,
+    state: "current",
+    sentence: "Where a run stops, and who answers each stop.",
+  };
+  made.schedule =
+    schedules === 0
+      ? {
+          id: "schedule",
+          label: sectionLabel.schedule,
+          state: "off",
+          sentence: "No schedule runs this template yet. Make one in Calendar → Schedules.",
+        }
+      : {
+          id: "schedule",
+          label: sectionLabel.schedule,
+          state: cost?.problem === null || cost === null ? "current" : "stale",
+          sentence:
+            cost?.problem ??
+            "The next runs with the titles their topics fill, and the cost a month.",
+        };
+  return made;
 }
