@@ -83,6 +83,14 @@ export function claimNextJob(db: DatabaseSync): SampleJob | undefined {
   });
 }
 
+// The running job of a template now continues the project its paid work started on: queued
+// again by a restart, it is a Save of the same version, never a new topic's fresh project.
+export function continueJobAsSave(db: DatabaseSync, templateId: string): void {
+  db.prepare(
+    "UPDATE template_sample_jobs SET kind='save' WHERE template_id=? AND state='running' AND kind IN ('topic','full-script')",
+  ).run(templateId);
+}
+
 export function finishJob(db: DatabaseSync, templateId: string): void {
   db.prepare("DELETE FROM template_sample_jobs WHERE template_id=? AND state='running'").run(
     templateId,

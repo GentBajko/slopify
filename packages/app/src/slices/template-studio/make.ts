@@ -2,7 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import type { DraftReviewDeps } from "../play-drafts/model.js";
 import { templateById } from "../project-templates/repo.js";
 import type { FreeSamples } from "./free.js";
-import type { SampleJob } from "./jobs.js";
+import { finishJob, type SampleJob } from "./jobs.js";
 import { priceScheduledRun } from "./schedule-price.js";
 import { type PriceCache, priceKey, templateSchedules } from "./service.js";
 
@@ -39,6 +39,8 @@ export function sampleMaker(
     deps.changed(template.id);
     if (job.kind !== "free" && deps.paid !== undefined && !signal.aborted) {
       await deps.paid(job, signal);
+      // Made: a quit while the schedules are priced below never queues it again.
+      finishJob(deps.db, job.templateId);
       deps.changed(template.id);
     }
     const head = templateById(deps.db, job.templateId);

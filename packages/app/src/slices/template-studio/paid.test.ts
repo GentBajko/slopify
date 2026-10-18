@@ -13,9 +13,15 @@ import { getRevisionView } from "../revisions/view.js";
 import type { ProviderStatus } from "../settings/model.js";
 import { projectDir } from "../storage/layout.js";
 import { writeStudioSettings } from "./budget.js";
-import type { SampleJob } from "./jobs.js";
+import { claimNextJob, enqueueJob, recoverJobs, type SampleJob } from "./jobs.js";
 import { makePaidSample, sampleBusy } from "./paid.js";
-import { sampleOf, sampleProjects, sampleVersions, setSampleVersion } from "./repo.js";
+import {
+  sampleOf,
+  sampleProjects,
+  sampleVersions,
+  setSampleVersion,
+  upsertSample,
+} from "./repo.js";
 import { requestSample, storedUnknownAcks } from "./save.js";
 import { paidDocument, paidSampleDeps } from "./studio.fake.js";
 
@@ -302,6 +308,96 @@ describe("unknown prices", () => {
     const after = storedUnknownAcks(h.deps.db);
     expect(after.accepted(id, 2)).toBe(true);
     expect(after.accepted(id, 3)).toBe(false);
+  });
+});
+
+describe("a sample a restart interrupted", () => {
+  // The run started and is under way; Slopify quits before it finishes.
+  async function interrupted(kind: SampleJob["kind"]) {
+    const t = harness();
+    const { h, deps, id, job } = t;
+    await makePaidSample(deps, job(), signal);
+    const first = sampleOf(h.deps.db, id)?.projectId ?? "";
+    if (kind === "topic")
+      upsertSample(h.deps.db, id, {
+        projectId: first,
+        topic: "The history of the compass",
+        topicSource: "fixed",
+        fullScript: false,
+        at: "2026-09-12T00:00:00.000Z",
+      });
+    setSampleVersion(h.deps.db, id, 1, {
+      state: "queued",
+      quotedHigh: 0.3,
+      at: "2026-09-12T00:00:00.000Z",
+    });
+    deps.acks.accept(id, 1);
+    enqueueJob(h.deps.db, job({ kind, requestedAt: "2026-09-12T00:00:01.000Z" }));
+    const claimed = claimNextJob(h.deps.db);
+    if (claimed === undefined) throw new Error("no job");
+    const started: string[] = [];
+    const hanging = {
+      ...deps.start.runner,
+      tick: (projectId: string) => void started.push(projectId),
+    };
+    const quitting = new AbortController();
+    const making = makePaidSample(
+      {
+        ...deps,
+        start: { ...deps.start, runner: hanging },
+        rebuild: { ...deps.rebuild, runner: hanging },
+      },
+      claimed,
+      quitting.signal,
+    );
+    while (started.length === 0) await new Promise((resolve) => setImmediate(resolve));
+    quitting.abort(new Error("quitting"));
+    await expect(making).rejects.toThrow();
+    // What the next start does: the step that was running failed as interrupted, the run's
+    // admitted work held, and the job queued again.
+    const projectId = started[0] ?? "";
+    h.deps.db
+      .prepare(
+        "UPDATE revision_work SET state='pending',dispatch_state='held' WHERE project_id=? AND state IN ('pending','running')",
+      )
+      .run(projectId);
+    h.deps.db
+      .prepare(
+        "UPDATE stages SET state='failed',failure_reason='interrupted' WHERE project_id=? AND kind='article'",
+      )
+      .run(projectId);
+    recoverJobs(h.deps.db);
+    return { ...t, first, projectId };
+  }
+
+  it("continues the new topic's project instead of starting a third one", async () => {
+    const { h, deps, id, projectId, first, ticks } = await interrupted("topic");
+    expect(projectId).not.toBe(first);
+    const again = claimNextJob(h.deps.db);
+    if (again === undefined) throw new Error("no job");
+    expect(again.kind).toBe("save");
+    const before = h.deps.db.prepare("SELECT count(*) AS n FROM projects").get();
+    await makePaidSample(deps, again, signal);
+    expect(sampleOf(h.deps.db, id)?.projectId).toBe(projectId);
+    expect(projectExists(h.deps.db, projectId)).toBe(true);
+    expect(h.deps.db.prepare("SELECT count(*) AS n FROM projects").get()).toEqual(before);
+    expect(ticks).toContain(projectId);
+    expect(sampleVersions(h.deps.db, id)[0]).toMatchObject({ state: "done", heldReason: null });
+  });
+
+  it("waits, spending nothing more, when today's budget no longer has room to continue", async () => {
+    const { h, deps, id, projectId, ticks } = await interrupted("topic");
+    writeStudioSettings(h.deps.db, { dailyBudget: 0 });
+    const again = claimNextJob(h.deps.db);
+    if (again === undefined) throw new Error("no job");
+    const before = ticks.length;
+    await makePaidSample(deps, again, signal);
+    expect(ticks.length).toBe(before);
+    expect(sampleOf(h.deps.db, id)?.projectId).toBe(projectId);
+    expect(sampleVersions(h.deps.db, id)[0]).toMatchObject({
+      state: "held",
+      heldReason: expect.stringContaining("sample budget"),
+    });
   });
 });
 

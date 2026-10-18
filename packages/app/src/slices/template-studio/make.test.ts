@@ -4,6 +4,7 @@ import { defaultLoudness } from "../loudness/model.js";
 import { reviewFixture } from "../play-drafts/draft.fake.js";
 import { createTemplate } from "../project-templates/service.js";
 import { createFreeSamples } from "./free.js";
+import { claimNextJob, enqueueJob, queuedJob, recoverJobs } from "./jobs.js";
 import { sampleMaker } from "./make.js";
 import { createPriceCache, priceKey } from "./service.js";
 
@@ -125,4 +126,27 @@ it("makes only the bake-off for a bake-off job: no free samples, no paid sample,
   );
   expect(made).toEqual(["bakeoff"]);
   expect(prices.get(`${id}`)).toBeUndefined();
+});
+
+// Quitting while the schedules' prices are worked out must not queue the paid sample again.
+it("finishes the job once its paid sample is made, before pricing the schedules", async () => {
+  const { h, id } = setup();
+  addSchedule(h, id);
+  const free = createFreeSamples({ loudnessDefault: () => defaultLoudness });
+  const job = { templateId: id, templateVersion: 1, ackHigh: 1, requestedAt: "a" } as const;
+  enqueueJob(h.deps.db, { ...job, kind: "save" });
+  const claimed = claimNextJob(h.deps.db);
+  if (claimed === undefined) throw new Error("no job");
+  const quitting = new AbortController();
+  const make = sampleMaker({
+    db: h.deps.db,
+    free: { ...free, make: async () => undefined },
+    prices: createPriceCache(),
+    review: h.deps,
+    changed: () => undefined,
+    paid: async () => quitting.abort(),
+  });
+  await make(claimed, quitting.signal);
+  recoverJobs(h.deps.db);
+  expect(queuedJob(h.deps.db, id)).toBeUndefined();
 });

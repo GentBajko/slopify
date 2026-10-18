@@ -3,12 +3,14 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { transact } from "../../kernel/db/tx.js";
 import { internalError } from "../../kernel/errors.js";
 import { derive } from "../../kernel/runner/graph.js";
+import { pendingAdmitted } from "../admission/admitted-work.js";
 import { projectExists, projectPaused, stagesOf } from "../admission/repo.js";
 import { startRun } from "../admission/start.js";
 import { type CostEstimate, estimateRun } from "../estimate/index.js";
 import type { DraftStartDeps } from "../play-drafts/model.js";
 import { checkDraftReadiness } from "../play-drafts/readiness.js";
 import { templateById } from "../project-templates/repo.js";
+import { recoverProject } from "../rebuild/recovery.js";
 import { previewRebuild, type RebuildDeps, startRebuild } from "../rebuild/service.js";
 import { saveRevision } from "../revisions/mutations.js";
 import { currentRevisionId } from "../revisions/repo.js";
@@ -16,7 +18,7 @@ import { getRevisionView } from "../revisions/view.js";
 import { budgetRoom, budgetWords, fitsBudget } from "./budget.js";
 import { sampleEdit } from "./edit.js";
 import { removeHiddenProject } from "./hidden.js";
-import type { SampleJob } from "./jobs.js";
+import { continueJobAsSave, type SampleJob } from "./jobs.js";
 import { resolveSampleRun, totals } from "./quote.js";
 import { sampleOf, sampleVersions, setSampleVersion, upsertSample } from "./repo.js";
 import { exceedsAcknowledged, type UnknownAcks } from "./save.js";
@@ -87,6 +89,36 @@ export async function settled(
     deps.start.runner.hasInflight?.(projectId) === true
   )
     await sleep(deps.pollMs ?? 2000, undefined, { signal });
+}
+
+// Whether a restart stopped the project's run short: a step that was running when Slopify quit
+// failed as interrupted, or its admitted work is held until the run is continued.
+function stoppedByRestart(db: DatabaseSync, projectId: string): boolean {
+  return (
+    stagesOf(db, projectId).some(
+      (stage) => stage.state === "failed" && stage.failureReason === "interrupted",
+    ) ||
+    db
+      .prepare(
+        `SELECT 1 FROM revision_work w WHERE w.project_id=? AND w.dispatch_state='held'
+           AND ${pendingAdmitted("w")} LIMIT 1`,
+      )
+      .get(projectId) !== undefined
+  );
+}
+
+// What the project's calls billed per use cost since this version's sample started on it.
+function spentSince(
+  db: DatabaseSync,
+  projectId: string,
+  version: { readonly updatedAt: string },
+): number {
+  const row = db
+    .prepare(
+      "SELECT COALESCE(SUM(cost),0) AS spent FROM provider_usage WHERE project_id=? AND on_plan=0 AND created_at>=?",
+    )
+    .get(projectId, version.updatedAt);
+  return typeof row?.spent === "number" ? row.spent : 0;
 }
 
 // What the finished sample says: done, or the failed step's own sentence.
@@ -171,6 +203,45 @@ export async function makePaidSample(
   if (projectId !== undefined) {
     // Work the last sample started finishes first: it is never stopped from here.
     await settled(deps, projectId, signal);
+    // This version's sample already started on that project (a restart queued its job again):
+    // it is continued there, never made again on a new one.
+    const head = currentRevisionId(db, projectId);
+    const version = sampleVersions(db, job.templateId).find(
+      (one) => one.templateVersion === job.templateVersion,
+    );
+    const stopped = stoppedByRestart(db, projectId);
+    if (
+      head !== undefined &&
+      version?.revisionId === head &&
+      (version.state === "making" || stopped)
+    ) {
+      if (stopped) {
+        const usesPlan = totals(
+          estimateRun(run.draft, run.rendered, words, deps.start.catalogue).rows,
+        ).usesPlan;
+        const left = Math.max(0, (version.quotedHigh ?? 0) - spentSince(db, projectId, version));
+        const waiting = hold({ high: left, unknown: 0, usesPlan });
+        if (waiting !== undefined) {
+          mark({ state: "held", heldReason: waiting });
+          return;
+        }
+        const resumed = await recoverProject(deps.rebuild, projectId, {
+          baseRevisionId: head,
+          idempotencyKey: deps.start.uuid(),
+          action: { kind: "resume" },
+        });
+        if (!resumed.ok) {
+          mark({
+            state: "failed",
+            heldReason: `The sample stopped when Slopify quit, and couldn't go on: ${refused(resumed.reason, resumed.fields)}`,
+          });
+          return;
+        }
+        mark({ state: "making", heldReason: null });
+      }
+      await finish(deps, job, projectId, head, signal);
+      return;
+    }
   }
   // The sample project a new one replaces. It is removed only once the new one actually
   // starts: a change that waits or can't start keeps the old sample as it was.
@@ -309,11 +380,19 @@ export async function makePaidSample(
           "Press Make sample again",
         ),
       );
+    // Paid work is under way on this project from here: a restart continues it as this
+    // version's sample (a topic job queued again must not replace it and pay twice).
+    continueJobAsSave(db, job.templateId);
+    mark({
+      state: "making",
+      revisionId: currentRevisionId(db, begun.project.id) ?? null,
+      quotedHigh: cost.high,
+      heldReason: null,
+    });
     return begun;
   });
   const newId = started.project.id;
   const revisionId = currentRevisionId(db, newId) ?? null;
-  mark({ state: "making", revisionId, quotedHigh: cost.high, heldReason: null });
   deps.start.runner.tick(newId);
   await finish(deps, job, newId, revisionId, signal);
 }
