@@ -64,6 +64,12 @@ export function withScene(
     : `${detailed.slice(0, at)}\n\nScene: ${scene}${detailed.slice(at)}`;
 }
 
+// A picture that is drawn without scenes (the establishing image): a line holding a `Slopify_`
+// scene keyword is left out, and `{{Scene}}` stays as it always did.
+export function withoutSlopifyScene(body: string): string {
+  return withoutLines(body, slopifySceneKeywords);
+}
+
 // The prompt with no scene: a line that holds a scene keyword is left out, so the image is drawn
 // from the rest of the prompt as it always was.
 export function withoutScene(body: string): string {

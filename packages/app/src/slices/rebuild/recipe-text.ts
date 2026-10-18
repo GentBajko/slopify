@@ -11,6 +11,7 @@ import { plainText } from "../article/plain.js";
 import { segmentMessages } from "../article/segments.js";
 import { splitEndMatter } from "../article/split.js";
 import { withEarlierEpisodes } from "../episodes/related.js";
+import { withoutSlopifyScene } from "../images/scenes.js";
 import {
   type GlossaryResult,
   parsePronunciationGlossary,
@@ -391,7 +392,8 @@ export function textRecipes(context: RecipeContext): TextRecipes {
   if (config.sources.thumbnail === "prompt_by_llm") {
     const filled = promptOf(keyed, "thumbnailPrompt");
     const messages = thumbnailMessages({
-      instruction: filled.text,
+      // The AI writes the picture itself, so a `Slopify_` scene keyword has nothing to fill.
+      instruction: withoutSlopifyScene(filled.text),
       title: subjectOf(config),
       values: config.values,
       format: config.format,

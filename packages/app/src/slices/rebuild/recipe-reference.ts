@@ -1,5 +1,6 @@
 import { type RunConfig, referenceKey, subjectOf } from "../admission/model.js";
 import { usesReference } from "../admission/rules.js";
+import { withoutSlopifyScene } from "../images/scenes.js";
 import { type ImageAppearance, lookWait, withLooks } from "./recipe-appearance.js";
 import { type CastInput, castFor } from "./recipe-cast.js";
 import {
@@ -57,7 +58,8 @@ export function referenceRecipe(
       { unresolved: content.provided.reference === undefined },
     );
   const filled = promptOf(context, referencePromptKey);
-  const written = filled.text;
+  // The establishing image has no scene of its own.
+  const written = withoutSlopifyScene(filled.text);
   const prompt = filled.waits.length > 0 ? null : withLooks(written, appearance);
   if (prompt === null) {
     const wait = lookWait(written, appearance);

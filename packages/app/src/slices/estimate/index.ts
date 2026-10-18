@@ -12,7 +12,9 @@ import {
 } from "../admission/rules.js";
 import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
+import { usesAppearance } from "../images/appearance.js";
 import { narrationMinutes, plannedImageCount, scalesImages } from "../images/scale.js";
+import { usesSlopifyScene } from "../images/scenes.js";
 import { describedBlocks, narrationBlocks } from "../narration/blocks.js";
 import { chunkNarration, defaultChunking } from "../narration/chunk.js";
 import { describeMessages } from "../narration/describe.js";
@@ -296,9 +298,31 @@ export function estimateRun(
         : `${images} images. ${imageNote}`,
     });
   if (images === 0) local("Images", "Provided or off.");
-  // Scenes from the article: one call reads the article and writes every image's scene.
-  if (images > 0 && draft.imageScenes === true)
+  // Scenes from the article: one call reads the article and writes every image's scene. A
+  // `Slopify_` scene keyword turns it on for the pictures that use it, switch or no switch.
+  const pictureKeys = Object.keys(rendered).filter((key) => /^imagePrompts\.\d+$/.test(key));
+  if (
+    images > 0 &&
+    (draft.imageScenes === true || pictureKeys.some((key) => usesSlopifyScene(rendered[key])))
+  )
     text("Image scenes", articleChars + 1500, 120 * images);
+  if (draft.sources.thumbnail === "from_prompt" && usesSlopifyScene(rendered.thumbnailPrompt))
+    text("Thumbnail scenes", articleChars + 1500, 120 * thumbnailCountOf(draft));
+  // `{{Appearance}}` (or `{{Slopify_Appearance}}`): one call with web search looks up the looks.
+  if (
+    [
+      ...(images > 0 ? pictureKeys : []),
+      ...(draft.sources.thumbnail === "from_prompt" ? ["thumbnailPrompt"] : []),
+      "referencePrompt",
+      "shortsImage",
+    ].some((key) => usesAppearance(rendered[key]))
+  )
+    text(
+      "Appearance lookup",
+      articleChars + 1500,
+      1500,
+      "One call with web search looks up how the subject and characters look.",
+    );
   // The establishing image is one more image when it is made from a prompt.
   if (usesReference(draft) && draft.reference?.source === "prompt")
     requests.push({

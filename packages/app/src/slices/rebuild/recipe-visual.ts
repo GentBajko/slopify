@@ -243,7 +243,11 @@ function sceneImage(
   const prompt =
     scene === undefined || keyed.waits.length > 0
       ? undefined
-      : (withLooks(withScene(keyed.text, scene), appearance, scene) ?? undefined);
+      : (withLooks(
+          withScene(keyed.text, scene, { legacy: scenes.legacy, ...scenes.details?.[at] }),
+          appearance,
+          scene,
+        ) ?? undefined);
   const wait = lookWait(body, appearance);
   return recipe(
     { content },
@@ -373,7 +377,10 @@ export function thumbnailRecipes(
         : withScenes
           ? scene === undefined
             ? null
-            : withScene(written, scene)
+            : withScene(written, scene, {
+                legacy: scenes.legacy,
+                ...scenes.details?.[variant - 1],
+              })
           : withoutScene(written);
     // A thumbnail stands for the subject, so it always has the subject's look.
     const prompt =

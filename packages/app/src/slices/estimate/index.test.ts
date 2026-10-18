@@ -307,3 +307,36 @@ describe("cost planning", () => {
     expect(rows[0]?.high ?? 0).toBe(0);
   });
 });
+
+describe("the keywords Slopify fills", () => {
+  const pictures: RunDraft = {
+    ...draft,
+    llm: { provider: "codex", model: "test" },
+    sources: { ...draft.sources, images: "generate", thumbnail: "from_prompt" },
+    images: { provider: "fal", model: "image" },
+    imagePrompts: [{ name: "Wide", number: 2 }],
+    thumbnailPrompt: "Thumb",
+  };
+  const stages = (rendered: Readonly<Record<string, string>>, over: Partial<RunDraft> = {}) =>
+    estimateRun({ ...pictures, ...over }, rendered, 1500, catalogue).rows.map((one) => one.stage);
+
+  it("prices the scenes call when a picture asks for a Slopify_ scene keyword", () => {
+    expect(stages({ "imagePrompts.0": "{{Slopify_Setting}}", thumbnailPrompt: "T" })).toContain(
+      "Image scenes",
+    );
+    expect(stages({ "imagePrompts.0": "{{Scene}}", thumbnailPrompt: "T" })).not.toContain(
+      "Image scenes",
+    );
+    expect(stages({ "imagePrompts.0": "x", thumbnailPrompt: "{{Slopify_Scene}}" })).toContain(
+      "Thumbnail scenes",
+    );
+  });
+
+  it("prices the appearance lookup under either name", () => {
+    expect(stages({ "imagePrompts.0": "{{Appearance}}" })).toContain("Appearance lookup");
+    expect(stages({ thumbnailPrompt: "{{Slopify_Appearance}}" })).toContain("Appearance lookup");
+    expect(stages({ "imagePrompts.0": "x", thumbnailPrompt: "y" })).not.toContain(
+      "Appearance lookup",
+    );
+  });
+});

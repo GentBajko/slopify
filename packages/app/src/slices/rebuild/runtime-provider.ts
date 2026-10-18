@@ -327,7 +327,11 @@ async function publishText(
       preparedTexts(deps, context, piece, [
         ["instructions", "instructions.md", frozenInstructions(deps, context, piece)],
       ]),
-      { scenes: checked.scenes, text: answer.text },
+      {
+        scenes: checked.scenes,
+        ...(checked.details === undefined ? {} : { details: checked.details }),
+        text: answer.text,
+      },
     );
     return;
   }
