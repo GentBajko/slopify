@@ -2,20 +2,23 @@ import type { DatabaseSync } from "node:sqlite";
 import { readinessIsUsable } from "../../kernel/ports/model.js";
 import { templateById } from "../project-templates/repo.js";
 import type { ProviderStatus } from "../settings/model.js";
+import { notTemplateSample } from "../template-studio/repo.js";
 import type { FirstRunView } from "./model.js";
 import { starterPacks } from "./packs.js";
 import { sampleProjectIds } from "./sample.js";
 import { firstRunDismissed, readPackRecords } from "./state.js";
 
 // The first-run screen shows on a fresh install and never again once it is skipped or a real
-// project (anything but the samples) exists. Reading it writes nothing: a real project that
+// project (anything but the samples and the template studio's hidden projects) exists. Reading it writes nothing: a real project that
 // exists before the screen was recorded as done is reported as `settle`, and the client
 // records it with POST /dismiss, so deleting every project later does not bring it back.
 export function firstRunView(db: DatabaseSync, statuses: readonly ProviderStatus[]): FirstRunView {
   const samples = sampleProjectIds(db);
   const real =
     db
-      .prepare("SELECT 1 FROM projects WHERE id IS NOT ? AND id IS NOT ? AND id IS NOT ? LIMIT 1")
+      .prepare(
+        `SELECT 1 FROM projects WHERE id IS NOT ? AND id IS NOT ? AND id IS NOT ? AND ${notTemplateSample()} LIMIT 1`,
+      )
       .get(samples.library, samples.audiobook, samples.podcast) !== undefined;
   const dismissed = firstRunDismissed(db);
   const packs = readPackRecords(db);
