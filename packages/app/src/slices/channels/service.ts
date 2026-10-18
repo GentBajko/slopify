@@ -1,4 +1,5 @@
 import { transact } from "../../kernel/db/tx.js";
+import { accountsProblem, writeChannelSocial } from "../social/channel.js";
 import type {
   BrandKit,
   CastMember,
@@ -74,6 +75,12 @@ export function updateChannel(
     if (previous === undefined) return { ok: false, reason: "not-found" };
     if (previous.version !== parsed.data.baseVersion) return { ok: false, reason: "conflict" };
     const brand: BrandKit = parsed.data.brand;
+    const accountsWrong =
+      parsed.data.socialAccounts === undefined
+        ? undefined
+        : accountsProblem(parsed.data.socialAccounts);
+    if (accountsWrong !== undefined)
+      return { ok: false, reason: "invalid-input", message: accountsWrong };
     deps.db
       .prepare(
         "UPDATE channels SET name=?,brand_json=?,series_brief=?,version=version+1,updated_at=? WHERE id=? AND version=?",
@@ -86,6 +93,10 @@ export function updateChannel(
         id,
         parsed.data.baseVersion,
       );
+    writeChannelSocial(deps.db, id, {
+      xTier: parsed.data.xTier,
+      accounts: parsed.data.socialAccounts,
+    });
     const saved = channelById(deps.db, id);
     if (saved === undefined) throw new Error("The saved channel could not be read back");
     return { ok: true, value: saved };

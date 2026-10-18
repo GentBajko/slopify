@@ -73,6 +73,61 @@ describe("migration 0032", () => {
 });
 
 describe("channels", () => {
+  it("saves the X subscription and account names of Brand → Posting, keeping them when left out", () => {
+    const deps = fixture();
+    const id = randomUUID();
+    createChannel(deps, { id, name: "Lore" });
+    expect(readChannel(deps, id)).toMatchObject({
+      ok: true,
+      value: { channel: { xTier: "free", socialAccounts: {} } },
+    });
+    const saved = updateChannel(deps, id, {
+      name: "Lore",
+      brand: {},
+      seriesBrief: "",
+      xTier: "premium",
+      socialAccounts: { x: " @lore ", bluesky: "", reddit: "u/lore" },
+      baseVersion: 1,
+    });
+    expect(saved).toMatchObject({
+      ok: true,
+      value: { xTier: "premium", socialAccounts: { x: "@lore", reddit: "u/lore" } },
+    });
+    const kept = updateChannel(deps, id, {
+      name: "Lore 2",
+      brand: {},
+      seriesBrief: "",
+      baseVersion: 2,
+    });
+    expect(kept).toMatchObject({
+      ok: true,
+      value: { xTier: "premium", socialAccounts: { x: "@lore" } },
+    });
+    expect(
+      updateChannel(deps, id, {
+        name: "Lore",
+        brand: {},
+        seriesBrief: "",
+        socialAccounts: { instagram: "https://instagram.com/lore" },
+        baseVersion: 3,
+      }),
+    ).toMatchObject({
+      reason: "invalid-input",
+      message: expect.stringMatching(
+        /isn't a Instagram account name|isn't an Instagram account name/,
+      ),
+    });
+    expect(
+      updateChannel(deps, id, {
+        name: "Lore",
+        brand: {},
+        seriesBrief: "",
+        xTier: "gold",
+        baseVersion: 3,
+      }),
+    ).toMatchObject({ reason: "invalid-input", message: "Choose Free, Premium or Premium+." });
+  });
+
   it("creates, renames and saves a brand kit, leaving blank fields out", () => {
     const deps = fixture();
     const id = randomUUID();

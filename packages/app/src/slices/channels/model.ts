@@ -48,6 +48,11 @@ export interface Channel {
   // YouTube's "Altered or synthetic content" answer for the channel's uploads: 'auto' follows
   // the rule in `slices/studio/disclosure.ts`, 'yes' and 'no' override it.
   readonly aiDisclosure: import("../studio/disclosure.js").AiDisclosureSetting;
+  // Brand → Posting (`slices/social/channel.ts`): the X subscription, which only changes a
+  // post's warnings, and the account names a published post's link is found with. Always read
+  // from the channel; absent only on a channel built by hand, which reads as Free and none.
+  readonly xTier?: import("../social/model.js").XTier | undefined;
+  readonly socialAccounts?: import("../social/model.js").SocialAccounts | undefined;
   readonly version: number;
   readonly createdAt: string;
   readonly updatedAt: string;
