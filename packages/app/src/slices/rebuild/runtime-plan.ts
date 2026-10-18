@@ -1,10 +1,13 @@
 import { readFileSync } from "node:fs";
+import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import type { Catalogue } from "../../catalog/schema.js";
 import { catalogueSchema } from "../../catalog/schema.js";
+import type { ThinkingMode } from "../../kernel/ports/llm.js";
+import type { LlmCall } from "../../kernel/runner/providers.js";
 import type { RunConfig } from "../admission/model.js";
 import type { ManifestPiece, RevisionDeps, RevisionView } from "../revisions/model.js";
-import { getRevisionView, withEarlierJoins } from "../revisions/view.js";
+import { getRevisionView, readyOutput, withEarlierJoins } from "../revisions/view.js";
 import { outputPath } from "../storage/layout.js";
 import { referencedAssetsAvailable, retainedNarrationPieces } from "./narration-history.js";
 import { applyProvidedReviews } from "./provided-review.js";
@@ -32,19 +35,59 @@ export function savedCatalogue(value: unknown): Catalogue {
   return catalogueSchema.parse(JSON.parse(z.string().parse(value)));
 }
 
+function savedContext(db: DatabaseSync, workId: string): unknown {
+  return db.prepare("SELECT recipe_context FROM revision_work WHERE id=?").get(workId)
+    ?.recipe_context;
+}
+
+// The catalogue a work was admitted with, saved beside it; a work without one is a bug.
+export function workCatalogue(db: DatabaseSync, workId: string): Catalogue {
+  return savedCatalogue(savedContext(db, workId));
+}
+
+// The same, or undefined for a work (or a missing one) that has no catalogue saved.
+export function workCatalogueIfSaved(db: DatabaseSync, workId: string): Catalogue | undefined {
+  const context = savedContext(db, workId);
+  return context === null || context === undefined ? undefined : savedCatalogue(context);
+}
+
+export interface WorkLlmChoice {
+  readonly provider: string;
+  readonly model: string;
+  readonly thinking?: ThinkingMode | undefined;
+}
+
+// A step's LLM call on its work's saved catalogue: the chosen model with the thinking settings
+// the catalogue holds for its level, no web search, labelled with the step. The catalogue is
+// read once, as the builder is made.
+export function workLlm(
+  db: DatabaseSync,
+  workId: string,
+  choice: WorkLlmChoice,
+  label: string,
+): (call: Omit<LlmCall, "provider" | "model" | "thinking" | "thinkingConfig">) => LlmCall {
+  const catalogued = workCatalogue(db, workId).llm.find(
+    (one) => one.provider === choice.provider && one.id === choice.model,
+  );
+  const { thinking } = choice;
+  return (call) => ({
+    provider: choice.provider,
+    model: choice.model,
+    ...(thinking === undefined ? {} : { thinking }),
+    thinkingConfig: thinking === undefined ? null : (catalogued?.llm.thinking?.[thinking] ?? null),
+    webSearch: false,
+    previewLabel: label,
+    ...call,
+  });
+}
+
 export function executionPlan(
   deps: RevisionDeps,
   view: RevisionView,
   catalogue: Catalogue,
 ): RevisionWorkPlan {
   const textOutput = (role: "article_md" | "notes"): string | null => {
-    const row = view.outputs.find(
-      (output) =>
-        output.selected &&
-        output.available &&
-        output.state === "ready" &&
-        output.output.role === role,
-    );
+    const row = readyOutput(view, { role });
     return row === undefined
       ? null
       : readFileSync(outputPath(deps.paths, view.revision.projectId, row.output.path), "utf8");

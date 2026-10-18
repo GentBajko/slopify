@@ -11,8 +11,10 @@ import type { RunConfig } from "../admission/model.js";
 import { narrationAliasesOf } from "../admission/rules.js";
 import { captionFont, captionFontDeps } from "../fonts/coverage.js";
 import { resolveFont } from "../fonts/index.js";
+import type { RevisionView } from "../revisions/model.js";
 import type { PreparedOutput } from "../revisions/publication-model.js";
 import { validateCues } from "../revisions/rules.js";
+import { donePiece, isReadyOutput, readyOutput } from "../revisions/view.js";
 import { discardPreparedAssets, writeAsset } from "../storage/assets.js";
 import { outputPath } from "../storage/layout.js";
 import { captionCues, serializeAss, serializeSrt, serializeVtt } from "../subtitles/captions.js";
@@ -71,6 +73,26 @@ const cuesSchema = z.object({
   ),
   omissions: wordsSchema.shape.omissions,
 });
+
+// The narration's word timing (`subtitles:timing`), read for a step that needs it. `purpose` says
+// what the step uses it for, in the sentence a missing timing fails with.
+export function readTimingWords(
+  deps: { readonly paths: ExportExecutionDeps["paths"] },
+  context: Pick<StageContext, "work">,
+  view: Pick<RevisionView, "outputs">,
+  purpose: string,
+): z.infer<typeof wordsSchema> {
+  const timing = readyOutput(view, { workKey: "subtitles:timing", role: "subtitle_words" });
+  if (timing === undefined)
+    throw new Error(
+      `The narration's word timing, which ${purpose}, is missing. Use More → Render the video again in the Video section, then Try again.`,
+    );
+  return wordsSchema.parse(
+    JSON.parse(
+      readFileSync(outputPath(deps.paths, context.work.projectId, timing.output.path), "utf8"),
+    ),
+  );
+}
 
 export async function executeSubtitleRecipe(
   deps: ExportExecutionDeps,
@@ -186,13 +208,7 @@ async function cues(
     if (errors.length > 0) throw new Error(errors.map((error) => error.message).join(" "));
     value = { cues: [...manual.cues], omissions: [] };
   } else {
-    const output = view.outputs.find(
-      (one) =>
-        one.selected &&
-        one.available &&
-        one.state === "ready" &&
-        one.workKey === "subtitles:timing",
-    );
+    const output = readyOutput(view, { workKey: "subtitles:timing" });
     if (output === undefined)
       throw new Error(
         "Caption timing is missing. Use More → Render the video again in the Video section, then Try again.",
@@ -224,10 +240,7 @@ async function files(
   const config = view.revision.config.subtitles;
   if (config === undefined || config.mode === "off")
     throw new Error(internalError("captions are off for this version of the project"));
-  const row = view.pieces.find(
-    (one) =>
-      one.key === "subtitles:cues" && one.selected && one.available && one.piece.state === "done",
-  );
+  const row = donePiece(view, "subtitles:cues");
   if (row?.piece.payload === null || row?.piece.payload === undefined)
     throw new Error(
       "The captions haven't been prepared yet. Use More → Render the video again in the Video section, then Try again.",
@@ -326,9 +339,7 @@ async function files(
     );
     const media = view.outputs.find(
       (one) =>
-        one.selected &&
-        one.available &&
-        one.state === "ready" &&
+        isReadyOutput(one) &&
         (one.output.role === "audio_export" ||
           (one.output.role === "video" && config.mode === "files")),
     );

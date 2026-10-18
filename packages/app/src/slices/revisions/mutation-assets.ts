@@ -248,14 +248,20 @@ export async function measureAudio(
     throw new Error("Audio inspection returned an invalid duration.");
   return duration;
 }
-export function assetPath(deps: RevisionDeps, projectId: string, id: string): string {
-  return z
-    .object({ path: z.string() })
-    .parse(
-      deps.db
-        .prepare("SELECT path FROM project_assets WHERE project_id=? AND id=?")
-        .get(projectId, id),
-    ).path;
+export function assetPath(deps: Pick<RevisionDeps, "db">, projectId: string, id: string): string {
+  return z.string().parse(assetPathOrUndefined(deps, projectId, id));
+}
+
+// The same, or undefined when the project has no such asset.
+export function assetPathOrUndefined(
+  deps: Pick<RevisionDeps, "db">,
+  projectId: string,
+  id: string,
+): string | undefined {
+  const path = deps.db
+    .prepare("SELECT path FROM project_assets WHERE project_id=? AND id=?")
+    .get(projectId, id)?.path;
+  return typeof path === "string" ? path : undefined;
 }
 
 // A thumbnail step that draws its thumbnails, so each can be replaced by a file of one's own.

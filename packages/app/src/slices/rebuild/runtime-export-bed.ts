@@ -1,7 +1,7 @@
-import { z } from "zod";
 import { errorText } from "../../kernel/errors.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { RevisionView } from "../revisions/model.js";
+import { assetPathOrUndefined } from "../revisions/mutation-assets.js";
 import { outputPath } from "../storage/layout.js";
 import { usesAmbientBed } from "../video/ambient-bed.js";
 import { probeDurationMs } from "../video/ffmpeg.js";
@@ -29,18 +29,11 @@ export async function exportBed(
   const fix =
     "Make the video again from Play with another file under Video and style → Ambient sound, or pick Rain, Fireplace or Wind there instead.";
   const assetId = view.revision.content.ambientBed;
-  const row = z
-    .object({ path: z.string() })
-    .safeParse(
-      assetId === undefined
-        ? undefined
-        : deps.db
-            .prepare("SELECT path FROM project_assets WHERE project_id=? AND id=?")
-            .get(context.work.projectId, assetId),
-    );
-  if (!row.success)
+  const saved =
+    assetId === undefined ? undefined : assetPathOrUndefined(deps, context.work.projectId, assetId);
+  if (saved === undefined)
     throw new Error(`The ambient sound's audio file is no longer in the project. ${fix}`);
-  const path = outputPath(deps.paths, context.work.projectId, row.data.path);
+  const path = outputPath(deps.paths, context.work.projectId, saved);
   let durationMs: number;
   try {
     durationMs = await probeDurationMs(deps.ffmpeg, path, context.signal, deps.log);

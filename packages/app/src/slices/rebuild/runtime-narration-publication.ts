@@ -4,7 +4,7 @@ import type { RevisionDeps } from "../revisions/model.js";
 import { projectSelected } from "../revisions/projection.js";
 import { getRevisionView } from "../revisions/view.js";
 import { bindNarrationReuse, narrationOrdinal } from "./runtime-narration-reuse.js";
-import { executionPlan, savedCatalogue } from "./runtime-plan.js";
+import { executionPlan, workCatalogue } from "./runtime-plan.js";
 import type { WorkPiece } from "./work-records.js";
 
 export function rebindPublishedNarration(
@@ -19,10 +19,7 @@ export function rebindPublishedNarration(
     )
     .all(work.projectId, piece.id, piece.key, work.revisionId);
   if (targets.length === 0) return;
-  const row = deps.db
-    .prepare("SELECT recipe_context FROM revision_work WHERE id=?")
-    .get(work.workId);
-  const catalogue = savedCatalogue(row?.recipe_context);
+  const catalogue = workCatalogue(deps.db, work.workId);
   for (const target of targets) {
     const view = getRevisionView(deps, work.projectId, z.string().parse(target.revision_id));
     if (view === undefined) continue;

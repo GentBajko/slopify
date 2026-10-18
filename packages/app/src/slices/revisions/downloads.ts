@@ -15,6 +15,7 @@ import {
 import { outputPath } from "../storage/layout.js";
 import { projectTitle } from "../storage/repo.js";
 import { outputSchema } from "../storage/schema.js";
+import { assetPathOrUndefined } from "./mutation-assets.js";
 import { positionedOutput } from "./projection.js";
 import { outputsForRevision, revisionById } from "./repo.js";
 import { stagePieceSchema } from "./schema.js";
@@ -114,11 +115,9 @@ export function revisionSetZip(
       (a, b) => setOrder(a.output.role, a.output.meta) - setOrder(b.output.role, b.output.meta),
     );
   for (const row of members) {
-    const asset = deps.db
-      .prepare("SELECT path FROM project_assets WHERE project_id=? AND id=?")
-      .get(projectId, row.assetId);
-    if (asset === undefined) throw new Error("Revision image asset is not registered.");
-    const path = outputPath(deps.paths, projectId, z.string().parse(asset.path));
+    const saved = assetPathOrUndefined(deps, projectId, row.assetId);
+    if (saved === undefined) throw new Error("Revision image asset is not registered.");
+    const path = outputPath(deps.paths, projectId, saved);
     if (statSync(path, { throwIfNoEntry: false })?.isFile() !== true) continue;
     // Images and video are already compressed, so they are stored rather than deflated.
     entries[

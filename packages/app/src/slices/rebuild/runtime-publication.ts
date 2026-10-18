@@ -12,7 +12,7 @@ import type { PreparedAsset } from "../storage/assets.js";
 import { discardPreparedAssets, writeAsset } from "../storage/assets.js";
 import type { OutputMeta, OutputRole } from "../storage/model.js";
 import { rebindPublishedNarration } from "./runtime-narration-publication.js";
-import { executionPlan, executionView, savedCatalogue } from "./runtime-plan.js";
+import { executionPlan, executionView, workCatalogueIfSaved } from "./runtime-plan.js";
 import type { WorkPiece } from "./work-records.js";
 
 export function preparedResult(
@@ -206,11 +206,9 @@ function pieceIndex(deps: RevisionDeps, context: StageContext, piece: WorkPiece)
   const localIndex = localOrder.indexOf(piece.key);
   if (localIndex >= 0) return localIndex + 1;
   const view = executionView(deps, context.work.projectId, context.work.revisionId);
-  const row = deps.db
-    .prepare("SELECT recipe_context FROM revision_work WHERE id=?")
-    .get(context.work.workId);
-  if (view !== undefined && row?.recipe_context !== null && row?.recipe_context !== undefined) {
-    const keys = executionPlan(deps, view, savedCatalogue(row.recipe_context)).recipes.filter(
+  const catalogue = workCatalogueIfSaved(deps.db, context.work.workId);
+  if (view !== undefined && catalogue !== undefined) {
+    const keys = executionPlan(deps, view, catalogue).recipes.filter(
       (recipe) =>
         recipe.stage === context.work.kind &&
         (piece.input.kind !== "llm" ||

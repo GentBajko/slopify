@@ -2,7 +2,7 @@ import { afterEach, expect, it } from "vitest";
 import type { RebuildPreview } from "./model.js";
 import { previewById, recoverWork, storePreview } from "./repo.js";
 import { workFixture } from "./work.fake.js";
-import { insertWorkPiece, workPieces } from "./work-records.js";
+import { insertWorkPiece, pieceAlreadyDone, workPieces } from "./work-records.js";
 
 const cleanups: (() => void)[] = [];
 afterEach(() => {
@@ -134,4 +134,14 @@ it("rejects a publication whose authority key or fingerprint differs from its du
   expect(() => publicationTargets(deps.db, publication, "image:i1", "foreign")).toThrow(
     "a finished result doesn't match its saved step",
   );
+});
+it("tells a step whose piece is already done, in its own work only", async () => {
+  const { deps, work } = await fixture();
+  const piece = workPieces(deps.db, work.workId)[0];
+  if (piece === undefined) throw new Error("Missing piece");
+  expect(pieceAlreadyDone(deps.db, work.workId, piece.id)).toBe(false);
+  deps.db.prepare("UPDATE revision_work_pieces SET state='done' WHERE id=?").run(piece.id);
+  expect(pieceAlreadyDone(deps.db, work.workId, piece.id)).toBe(true);
+  expect(pieceAlreadyDone(deps.db, "other-work", piece.id)).toBe(false);
+  expect(pieceAlreadyDone(deps.db, work.workId, "missing")).toBe(false);
 });

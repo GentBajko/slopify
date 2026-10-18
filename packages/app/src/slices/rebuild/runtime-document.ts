@@ -6,13 +6,14 @@ import { readDocumentAssets } from "../document/fonts.js";
 import { renderDocument } from "../document/render.js";
 import { resolvedDocumentTheme } from "../document/theme.js";
 import type { RevisionView } from "../revisions/model.js";
+import { readyOutput } from "../revisions/view.js";
 import { writeAsset } from "../storage/assets.js";
 import { outputPath } from "../storage/layout.js";
 import type { OutputRole } from "../storage/model.js";
 import type { LocalExecutionDeps } from "./runtime-local.js";
 import { executionPlan, executionView, savedCatalogue } from "./runtime-plan.js";
 import { preparedResult, publishResult } from "./runtime-publication.js";
-import type { WorkPiece } from "./work-records.js";
+import { pieceAlreadyDone, type WorkPiece } from "./work-records.js";
 
 // Lays the saved article out as a PDF. Local and quick: no provider, no charge.
 export async function executeDocumentRecipe(
@@ -20,12 +21,7 @@ export async function executeDocumentRecipe(
   context: StageContext,
   piece: WorkPiece,
 ): Promise<StageRunResult> {
-  if (
-    deps.db
-      .prepare("SELECT state FROM revision_work_pieces WHERE id=? AND work_id=?")
-      .get(piece.id, context.work.workId)?.state === "done"
-  )
-    return "done";
+  if (pieceAlreadyDone(deps.db, context.work.workId, piece.id)) return "done";
   if (!context.maySubmit(piece.id)) return "held";
   context.signal.throwIfAborted();
   const view = documentView(deps, context, piece);
@@ -120,12 +116,5 @@ function ready(
   role: OutputRole,
   workKey: string,
 ): RevisionView["outputs"][number] | undefined {
-  return view.outputs.find(
-    (row) =>
-      row.selected &&
-      row.available &&
-      row.state === "ready" &&
-      row.workKey === workKey &&
-      row.output.role === role,
-  );
+  return readyOutput(view, { workKey, role });
 }

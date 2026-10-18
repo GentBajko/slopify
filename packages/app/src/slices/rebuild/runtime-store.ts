@@ -11,7 +11,7 @@ import { usesShorts, usesYoutubeDescription } from "../admission/rules.js";
 import { reviewsNarration } from "../reviews/rules.js";
 import type { RevisionDeps } from "../revisions/model.js";
 import { currentRevisionId } from "../revisions/repo.js";
-import { getRevisionView } from "../revisions/view.js";
+import { getRevisionView, isDonePiece, isReadyOutput } from "../revisions/view.js";
 import { settleScheduleRunsForProject } from "../schedules/repo.js";
 import { editNeedsTiming } from "../video/edit-settings.js";
 import { executionPlan, executionView, savedCatalogue } from "./runtime-plan.js";
@@ -175,18 +175,12 @@ export function executionStandings(
           pieces.every(
             (piece) =>
               view.outputs.some(
-                (output) =>
-                  output.workKey === piece.key &&
-                  output.selected &&
-                  output.available &&
-                  output.state === "ready",
+                (output) => output.workKey === piece.key && isReadyOutput(output),
               ) ||
               view.pieces.some(
                 (output) =>
                   output.key === piece.key &&
-                  output.selected &&
-                  output.available &&
-                  output.piece.state === "done" &&
+                  isDonePiece(output) &&
                   (output.fingerprint === piece.fingerprint ||
                     madeFrom(deps, projectId, piece.key, output.fingerprint, piece.fingerprint)),
               ),

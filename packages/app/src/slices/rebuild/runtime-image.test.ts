@@ -18,7 +18,8 @@ function deps(rows: Record<string, string>) {
   const paths = layout(root);
   const db = {
     prepare: () => ({
-      get: (id: string) => (rows[id] === undefined ? undefined : { path: rows[id] }),
+      get: (_projectId: string, id: string) =>
+        rows[id] === undefined ? undefined : { path: rows[id] },
     }),
   } as unknown as DatabaseSync;
   return { db, paths };

@@ -73,3 +73,12 @@ export function insertWorkPiece(db: DatabaseSync, piece: WorkPiece): void {
     piece.logicalFingerprint ?? null,
   );
 }
+
+// A step run again after its piece finished (a restart, a second claim) has nothing to do.
+export function pieceAlreadyDone(db: DatabaseSync, workId: string, pieceId: string): boolean {
+  return (
+    db
+      .prepare("SELECT state FROM revision_work_pieces WHERE id=? AND work_id=?")
+      .get(pieceId, workId)?.state === "done"
+  );
+}

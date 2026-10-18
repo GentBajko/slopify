@@ -1,8 +1,5 @@
-import { readFileSync } from "node:fs";
-import { z } from "zod";
 import { errorText, internalError } from "../../kernel/errors.js";
 import { withLanguage, wordTimingUnavailable } from "../../kernel/ports/languages.js";
-import type { TimedWord } from "../../kernel/ports/subtitles.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { LlmCall, StageProviders } from "../../kernel/runner/providers.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
@@ -10,7 +7,9 @@ import { usesFigureCards, usesShorts } from "../admission/rules.js";
 import { captionBoldFont } from "../fonts/coverage.js";
 import { masterGoal } from "../loudness/model.js";
 import type { RevisionView } from "../revisions/model.js";
+import { assetPathOrUndefined } from "../revisions/mutation-assets.js";
 import type { PreparedOutput } from "../revisions/publication-model.js";
+import { readyOutput } from "../revisions/view.js";
 import { clipWords } from "../shorts/captions.js";
 import { effectiveClips, pickedShortsOf } from "../shorts/clips.js";
 import { anchorKept, lostMessage, withNewPicks } from "../shorts/keep.js";
@@ -42,12 +41,12 @@ import { type ExportExecutionDeps, exportMachine, warningsOf } from "./runtime-e
 import { figureShots } from "./runtime-export-edit.js";
 import { type ExportSnapshot, exportSnapshot, revisionAudio } from "./runtime-export-inputs.js";
 import { imageCall } from "./runtime-image.js";
-import { savedCatalogue } from "./runtime-plan.js";
+import { workLlm } from "./runtime-plan.js";
 import { softenIfAsked } from "./runtime-provider.js";
 import { preparedResult, preparedTexts, publishResult } from "./runtime-publication.js";
-import { wordsSchema } from "./runtime-subtitles.js";
+import { readTimingWords } from "./runtime-subtitles.js";
 import { clearSoftening } from "./soften.js";
-import type { WorkPiece } from "./work-records.js";
+import { pieceAlreadyDone, type WorkPiece } from "./work-records.js";
 
 // The Shorts step's four kinds of work (`recipe-shorts.ts`): the pick, each clip's image
 // prompts, each image, and each clip's render. Each is one piece of its own, so a failure
@@ -58,12 +57,7 @@ export async function executeShortsRecipe(
   providers: StageProviders,
   piece: WorkPiece,
 ): Promise<StageRunResult> {
-  if (
-    deps.db
-      .prepare("SELECT state FROM revision_work_pieces WHERE id=? AND work_id=?")
-      .get(piece.id, context.work.workId)?.state === "done"
-  )
-    return "done";
+  if (pieceAlreadyDone(deps.db, context.work.workId, piece.id)) return "done";
   if (!context.maySubmit(piece.id)) return "held";
   context.signal.throwIfAborted();
   const snapshot = exportSnapshot(deps, context, piece);
@@ -100,7 +94,9 @@ async function pick(
     throw new Error(
       "Shorts need an AI text model to pick the clips, and none is chosen. Choose one in Edit project → Providers, then Try again.",
     );
-  const sentences = transcriptSentences(timingWords(deps, context, view));
+  const sentences = transcriptSentences(
+    readTimingWords(deps, context, view, shortsTimingPurpose).words,
+  );
   if (sentences.length === 0)
     throw new Error(
       "The narration's word timing holds no words, so there is nothing to cut shorts from. Use More → Render the video again in the Video section, then Try again.",
@@ -329,17 +325,14 @@ async function render(
     .filter((recipe) => recipe.key.startsWith(prefix))
     .toSorted((left, right) => imageIndex(left.key) - imageIndex(right.key))
     .map((recipe) => {
-      const row = view.outputs.find(
-        (one) =>
-          one.workKey === recipe.key && one.selected && one.available && one.state === "ready",
-      );
+      const row = readyOutput(view, { workKey: recipe.key });
       if (row === undefined)
         throw new Error(
           `Short ${String(clip.number)} is missing one of its images. Try again to make it again; if it keeps happening, use Make this short again in Edit project → Shorts.`,
         );
       return outputPath(deps.paths, context.work.projectId, row.output.path);
     });
-  const allWords = timingWords(deps, context, view);
+  const allWords = readTimingWords(deps, context, view, shortsTimingPurpose).words;
   const words = clipWords(allWords, clip.start, clip.end);
   // The upright cards whose descriptions fall in the clip, on the clip's own timeline.
   const figures = usesFigureCards(config)
@@ -475,16 +468,10 @@ async function backgroundMusic(
   if (assetId === undefined || shorts === undefined) return undefined;
   const fix =
     "Choose another file under Background music in Edit project → Shorts, or remove the music, then Try again.";
-  const row = z
-    .object({ path: z.string() })
-    .safeParse(
-      deps.db
-        .prepare("SELECT path FROM project_assets WHERE project_id=? AND id=?")
-        .get(context.work.projectId, assetId),
-    );
-  if (!row.success)
+  const saved = assetPathOrUndefined(deps, context.work.projectId, assetId);
+  if (saved === undefined)
     throw new Error(`The shorts' background music file is no longer in the project. ${fix}`);
-  const path = outputPath(deps.paths, context.work.projectId, row.data.path);
+  const path = outputPath(deps.paths, context.work.projectId, saved);
   let durationMs: number;
   try {
     durationMs = await probeDurationMs(deps.ffmpeg, path, context.signal, deps.log);
@@ -498,29 +485,8 @@ async function backgroundMusic(
   return { path, volume: musicVolumeOf(shorts) };
 }
 
-export function timingWords(
-  deps: ExportExecutionDeps,
-  context: StageContext,
-  view: RevisionView,
-): readonly TimedWord[] {
-  const timing = view.outputs.find(
-    (row) =>
-      row.selected &&
-      row.available &&
-      row.state === "ready" &&
-      row.workKey === "subtitles:timing" &&
-      row.output.role === "subtitle_words",
-  );
-  if (timing === undefined)
-    throw new Error(
-      "The narration's word timing, which the shorts are cut and captioned from, is missing. Use More → Render the video again in the Video section, then Try again.",
-    );
-  return wordsSchema.parse(
-    JSON.parse(
-      readFileSync(outputPath(deps.paths, context.work.projectId, timing.output.path), "utf8"),
-    ),
-  ).words;
-}
+// What the shorts read the narration's word timing for, in the sentence a missing one fails with.
+const shortsTimingPurpose = "the shorts are cut and captioned from";
 
 // The project's text model, with the thinking settings saved for this step's catalogue.
 function llmCall(
@@ -531,23 +497,8 @@ function llmCall(
   check: (text: string) => string | undefined,
 ): (messages: LlmCall["messages"]) => LlmCall {
   const llm = view.revision.config.llm ?? { provider: "", model: "" };
-  const row = deps.db
-    .prepare("SELECT recipe_context FROM revision_work WHERE id=?")
-    .get(context.work.workId);
-  const model = savedCatalogue(row?.recipe_context).llm.find(
-    (one) => one.provider === llm.provider && one.id === llm.model,
-  );
-  return (messages) => ({
-    provider: llm.provider,
-    model: llm.model,
-    ...(llm.thinking === undefined ? {} : { thinking: llm.thinking }),
-    thinkingConfig:
-      llm.thinking === undefined ? null : (model?.llm.thinking?.[llm.thinking] ?? null),
-    messages,
-    webSearch: false,
-    previewLabel: piece.key,
-    check: (value) => check(value.text),
-  });
+  const call = workLlm(deps.db, context.work.workId, llm, piece.key);
+  return (messages) => call({ messages, check: (value) => check(value.text) });
 }
 
 function imageIndex(key: string): number {

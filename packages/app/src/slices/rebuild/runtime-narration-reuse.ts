@@ -6,6 +6,8 @@ import {
   selectPieceRecord,
 } from "../revisions/manifest-repo.js";
 import type { RevisionDeps, RevisionView } from "../revisions/model.js";
+import { assetPathOrUndefined } from "../revisions/mutation-assets.js";
+import { isDonePiece } from "../revisions/view.js";
 import { retainedNarrationPieces } from "./narration-history.js";
 import { matchingNarrationPiece } from "./narration-reuse.js";
 import type { ResolvedWorkRecipe } from "./recipe-model.js";
@@ -64,19 +66,17 @@ export function bindNarrationReuse(
     if (
       view.pieces.some(
         (one) =>
-          one.selected &&
-          one.available &&
-          one.key === recipe.key &&
+          isDonePiece(one, recipe.key) &&
           one.fingerprint === recipe.fingerprint &&
-          one.piece.state === "done" &&
           one.piece.idx === ordinal,
       )
     )
       return;
-    const asset = deps.db
-      .prepare("SELECT path FROM project_assets WHERE id=? AND project_id=?")
-      .get(recipe.input.assetId, view.revision.projectId);
-    if (asset === undefined) return;
+    const file =
+      recipe.input.assetId === null
+        ? undefined
+        : assetPathOrUndefined(deps, view.revision.projectId, recipe.input.assetId);
+    if (file === undefined) return;
     const semantic = z
       .tuple([z.string(), z.array(z.string().nullable())])
       .parse(recipe.input.semantic);
@@ -105,7 +105,7 @@ export function bindNarrationReuse(
           state: "done",
           payload: JSON.stringify({
             provided: true,
-            file: asset.path,
+            file,
             logicalKey: recipe.key.slice(0, recipe.key.lastIndexOf(":")),
             logicalText: semantic[0],
             text: semantic[0],
@@ -127,11 +127,8 @@ export function bindNarrationReuse(
   if (
     view.pieces.some(
       (one) =>
-        one.selected &&
-        one.available &&
-        one.key === recipe.key &&
+        isDonePiece(one, recipe.key) &&
         one.fingerprint === recipe.fingerprint &&
-        one.piece.state === "done" &&
         one.piece.idx === ordinal &&
         narrationMetadataMatches(one.piece.payload, input),
     )

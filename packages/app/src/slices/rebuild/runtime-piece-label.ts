@@ -1,7 +1,7 @@
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { RevisionDeps } from "../revisions/model.js";
 import { platformLabels, socialPlatforms } from "../social/model.js";
-import { executionPlan, executionView, savedCatalogue } from "./runtime-plan.js";
+import { executionPlan, executionView, workCatalogueIfSaved } from "./runtime-plan.js";
 import type { WorkPiece } from "./work-records.js";
 
 // What a failed step is called on screen, so its error says which image, chunk or topic to
@@ -86,12 +86,10 @@ function narrationChunk(
   key: string,
   prefix: string,
 ): string | undefined {
-  const row = deps.db
-    .prepare("SELECT recipe_context FROM revision_work WHERE id=?")
-    .get(context.work.workId);
+  const catalogue = workCatalogueIfSaved(deps.db, context.work.workId);
   const view = executionView(deps, context.work.projectId, context.work.revisionId);
-  if (row?.recipe_context === null || row === undefined || view === undefined) return undefined;
-  const plan = executionPlan(deps, view, savedCatalogue(row.recipe_context));
+  if (catalogue === undefined || view === undefined) return undefined;
+  const plan = executionPlan(deps, view, catalogue);
   const concat = plan.recipes.find(
     (recipe) => recipe.key === (segment === "body" ? "audio:body:concat" : `audio:${segment}`),
   );

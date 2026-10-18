@@ -16,6 +16,7 @@ import { nextAttempt, reviewOutcome } from "../reviews/outcome.js";
 import { latestVerdict, saveVerdict } from "../reviews/repo.js";
 import { parseVerdict, type ReviewMaterial, reviewMessages } from "../reviews/verdict.js";
 import type { RevisionOutputView } from "../revisions/model.js";
+import { isReadyOutput } from "../revisions/view.js";
 import { pickedShortsOf } from "../shorts/clips.js";
 import { outputPath } from "../storage/layout.js";
 import { openingOf, spokenArticle } from "./review-promise.js";
@@ -25,10 +26,10 @@ import {
   exportSnapshot,
   revisionTranscript,
 } from "./runtime-export-inputs.js";
-import { savedCatalogue } from "./runtime-plan.js";
+import { workLlm } from "./runtime-plan.js";
 import { publishResult } from "./runtime-publication.js";
 import { wordsSchema } from "./runtime-subtitles.js";
-import type { WorkPiece } from "./work-records.js";
+import { pieceAlreadyDone, type WorkPiece } from "./work-records.js";
 
 // What `recipe-reviews.ts` saves in the step's values, by position.
 const valuesSchema = z.tuple([
@@ -56,12 +57,7 @@ export async function executeReviewRecipe(
   providers: StageProviders,
   piece: WorkPiece,
 ): Promise<StageRunResult> {
-  if (
-    deps.db
-      .prepare("SELECT state FROM revision_work_pieces WHERE id=? AND work_id=?")
-      .get(piece.id, context.work.workId)?.state === "done"
-  )
-    return "done";
+  if (pieceAlreadyDone(deps.db, context.work.workId, piece.id)) return "done";
   if (!context.maySubmit(piece.id)) return "held";
   context.signal.throwIfAborted();
   const input = piece.input;
@@ -76,28 +72,24 @@ export async function executeReviewRecipe(
   const material = reviewMaterial(deps, context, snapshot, stage, itemKey, prompt);
   const previous = latestVerdict(deps.db, context.work.projectId, itemKey);
   const attempt = nextAttempt(previous, material.itemFingerprint);
-  const row = deps.db
-    .prepare("SELECT recipe_context FROM revision_work WHERE id=?")
-    .get(context.work.workId);
-  const catalogued = savedCatalogue(row?.recipe_context).llm.find(
-    (one) => one.provider === provider && one.id === model,
-  );
   const level = thinking === null ? undefined : z.enum(thinkingModes).parse(thinking);
+  const call = workLlm(
+    deps.db,
+    context.work.workId,
+    { provider, model, thinking: level },
+    piece.key,
+  );
   if (!context.maySubmit(piece.id)) return "held";
-  const answer = await providers.forPiece(piece.id).llm({
-    provider,
-    model,
-    ...(level === undefined ? {} : { thinking: level }),
-    thinkingConfig: level === undefined ? null : (catalogued?.llm.thinking?.[level] ?? null),
-    messages: reviewMessages(material.request),
-    webSearch: false,
-    ...(material.images.length === 0 ? {} : { images: material.images }),
-    previewLabel: piece.key,
-    check: (value) => {
-      const parsed = parseVerdict(value.text);
-      return parsed.ok ? undefined : parsed.reason;
-    },
-  });
+  const answer = await providers.forPiece(piece.id).llm(
+    call({
+      messages: reviewMessages(material.request),
+      ...(material.images.length === 0 ? {} : { images: material.images }),
+      check: (value) => {
+        const parsed = parseVerdict(value.text);
+        return parsed.ok ? undefined : parsed.reason;
+      },
+    }),
+  );
   if (!answer.ok) return "held";
   const verdict = parseVerdict(answer.value.text);
   if (!verdict.ok) throw new Error(verdict.reason);
@@ -153,13 +145,7 @@ export async function executeReviewRecipe(
 // Falls back to the article when those texts can't be read.
 function spokenText(deps: ExportExecutionDeps, snapshot: ExportSnapshot): string {
   const present = (["intro", "body", "outro"] as const).filter((kind) =>
-    snapshot.view.outputs.some(
-      (one) =>
-        one.selected &&
-        one.available &&
-        one.state === "ready" &&
-        one.output.role === `audio_${kind}`,
-    ),
+    snapshot.view.outputs.some((one) => isReadyOutput(one) && one.output.role === `audio_${kind}`),
   );
   try {
     const text = present.map((kind) => revisionTranscript(deps, snapshot, kind)).join("\n\n");
@@ -195,9 +181,7 @@ export function reviewMaterial(
     view.outputs.find(
       (row) =>
         row.workKey === workKey &&
-        row.selected &&
-        row.available &&
-        row.state === "ready" &&
+        isReadyOutput(row) &&
         (role === undefined || row.output.role === role),
     );
   const path = (row: RevisionOutputView) =>
@@ -346,13 +330,7 @@ export function reviewMaterial(
         pickedShortsOf(pick?.piece.payload)?.shorts.find((clip) => clip.number === number)?.title ??
         "";
       const stills = view.outputs
-        .filter(
-          (row) =>
-            row.workKey.startsWith(`${itemKey}:image:`) &&
-            row.selected &&
-            row.available &&
-            row.state === "ready",
-        )
+        .filter((row) => row.workKey.startsWith(`${itemKey}:image:`) && isReadyOutput(row))
         .slice(0, 6);
       if (stills.length === 0)
         throw missing("short's images", "Use Make this short again in Edit project → Shorts");

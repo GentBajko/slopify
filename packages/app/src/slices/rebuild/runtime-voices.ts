@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 import { internalError } from "../../kernel/errors.js";
@@ -8,7 +8,7 @@ import { masterFile, masterReport } from "../loudness/loudnorm.js";
 import { type MasterReport, masterGoal } from "../loudness/model.js";
 import type { PreparedOutput } from "../revisions/publication-model.js";
 import { allocateAsset, discardPreparedAssets, sealAsset } from "../storage/assets.js";
-import { outputPath, projectDir } from "../storage/layout.js";
+import { projectDir } from "../storage/layout.js";
 import { audioExportArgs } from "../video/audio-export-args.js";
 import type { AudioSegment } from "../video/edit-list.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
@@ -18,8 +18,8 @@ import type { ExportExecutionDeps } from "./runtime-export.js";
 import { exportSnapshot, revisionAudio } from "./runtime-export-inputs.js";
 import { lineLevelledAudio } from "./runtime-lines.js";
 import { preparedResult, publishResult } from "./runtime-publication.js";
-import { wordsSchema } from "./runtime-subtitles.js";
-import type { WorkPiece } from "./work-records.js";
+import { readTimingWords } from "./runtime-subtitles.js";
+import { pieceAlreadyDone, type WorkPiece } from "./work-records.js";
 
 // The listening files of a multi-voice run: the MP3 and the M4B of the narration timeline,
 // with a chapter at each section of the script where its first turn is heard.
@@ -28,12 +28,7 @@ export async function executeVoicesRecipe(
   context: StageContext,
   piece: WorkPiece,
 ): Promise<StageRunResult> {
-  if (
-    deps.db
-      .prepare("SELECT state FROM revision_work_pieces WHERE id=? AND work_id=?")
-      .get(piece.id, context.work.workId)?.state === "done"
-  )
-    return "done";
+  if (pieceAlreadyDone(deps.db, context.work.workId, piece.id)) return "done";
   if (!context.maySubmit(piece.id)) return "held";
   if (piece.key !== "voices:files" || piece.input.kind !== "local")
     throw new Error(internalError("unknown kind of listening-file step"));
@@ -45,23 +40,7 @@ export async function executeVoicesRecipe(
     .rest(z.unknown())
     .parse(piece.input.values)[2]
     .map(([title, firstTurn]) => ({ title, firstTurn }));
-  const timing = view.outputs.find(
-    (row) =>
-      row.selected &&
-      row.available &&
-      row.state === "ready" &&
-      row.workKey === "subtitles:timing" &&
-      row.output.role === "subtitle_words",
-  );
-  if (timing === undefined)
-    throw new Error(
-      "The narration's word timing, which the chapter markers come from, is missing. Use More → Render the video again in the Video section, then Try again.",
-    );
-  const { words } = wordsSchema.parse(
-    JSON.parse(
-      readFileSync(outputPath(deps.paths, context.work.projectId, timing.output.path), "utf8"),
-    ),
-  );
+  const { words } = readTimingWords(deps, context, view, "the chapter markers come from");
   const audio = await revisionAudio(deps, context, view, { levelled: true });
   if (audio.length === 0)
     throw new Error(

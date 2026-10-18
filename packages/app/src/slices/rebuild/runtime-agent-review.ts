@@ -15,7 +15,7 @@ import { exportSnapshot } from "./runtime-export-inputs.js";
 import { lateValuesOf } from "./runtime-keywords.js";
 import { publishResult } from "./runtime-publication.js";
 import { reviewMaterial } from "./runtime-review.js";
-import type { WorkPiece } from "./work-records.js";
+import { pieceAlreadyDone, type WorkPiece } from "./work-records.js";
 
 // What `recipe-reviews.ts` saves for a review an external agent answers, by position.
 const valuesSchema = z.tuple([
@@ -35,12 +35,7 @@ export async function executeAgentReviewRecipe(
   context: StageContext,
   piece: WorkPiece,
 ): Promise<"done" | "held" | "waiting"> {
-  if (
-    deps.db
-      .prepare("SELECT state FROM revision_work_pieces WHERE id=? AND work_id=?")
-      .get(piece.id, context.work.workId)?.state === "done"
-  )
-    return "done";
+  if (pieceAlreadyDone(deps.db, context.work.workId, piece.id)) return "done";
   if (!context.maySubmit(piece.id)) return "held";
   const values =
     piece.input.kind === "local" ? valuesSchema.safeParse(piece.input.values) : undefined;

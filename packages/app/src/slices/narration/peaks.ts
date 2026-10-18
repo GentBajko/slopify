@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import type { RevisionView } from "../revisions/model.js";
+import { isDonePiece, readyOutput } from "../revisions/view.js";
 import type { NarrationPeaks } from "./peaks-model.js";
 
 export type { NarrationPeaks };
@@ -27,10 +28,7 @@ export function narrationAudio(view: RevisionView): {
   readonly complete: boolean;
   readonly pieces: readonly NarrationAudioPiece[];
 } {
-  const joined = view.outputs.find(
-    (row) =>
-      row.selected && row.available && row.state === "ready" && row.output.role === "audio_body",
-  );
+  const joined = readyOutput(view, { role: "audio_body" });
   if (joined !== undefined)
     return {
       complete: true,
@@ -43,10 +41,8 @@ export function narrationAudio(view: RevisionView): {
     pieces: view.pieces
       .filter(
         (row) =>
-          row.selected &&
-          row.available &&
+          isDonePiece(row) &&
           row.stageKind === "audio" &&
-          row.piece.state === "done" &&
           row.assetId !== null &&
           row.piece.payload !== null &&
           spoken(row.piece.payload),

@@ -3,8 +3,9 @@ import { internalError } from "../../kernel/errors.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { NarrationSegment } from "../narration/preparation.js";
 import type { RevisionDeps, RevisionView } from "../revisions/model.js";
+import { isDonePiece } from "../revisions/view.js";
 import type { RevisionWorkPlan } from "./recipe-work.js";
-import { executionPlan, executionView, savedCatalogue } from "./runtime-plan.js";
+import { executionPlan, executionView, savedCatalogue, workCatalogue } from "./runtime-plan.js";
 import { preparedTexts, publishResult } from "./runtime-publication.js";
 import type { WorkPiece } from "./work-records.js";
 
@@ -36,12 +37,7 @@ export function narrationTextParts(
   return concat.dependsOn.map((key) => {
     const recipe = plan.recipes.find((row) => row.key === key);
     const selected = view.pieces.find(
-      (row) =>
-        row.key === key &&
-        row.selected &&
-        row.available &&
-        row.piece.state === "done" &&
-        row.fingerprint === recipe?.fingerprint,
+      (row) => row.key === key && isDonePiece(row) && row.fingerprint === recipe?.fingerprint,
     );
     if (selected === undefined || recipe === undefined)
       throw new Error(
@@ -90,12 +86,9 @@ export async function publishNarrationText(
     .object({ segment: z.enum(["body", "intro", "outro"]) })
     .parse(piece.input.values);
   const view = executionView(deps, context.work.projectId, context.work.revisionId);
-  const row = deps.db
-    .prepare("SELECT recipe_context FROM revision_work WHERE id=?")
-    .get(context.work.workId);
   if (view === undefined)
     throw new Error(internalError("the project version being narrated is missing"));
-  const plan = executionPlan(deps, view, savedCatalogue(row?.recipe_context));
+  const plan = executionPlan(deps, view, workCatalogue(deps.db, context.work.workId));
   if (
     !plan.recipes.some(
       (recipe) => recipe.key === piece.key && recipe.fingerprint === piece.fingerprint,

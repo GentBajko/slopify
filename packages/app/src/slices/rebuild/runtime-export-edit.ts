@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { extname } from "node:path";
 import { z } from "zod";
 import type { StageContext } from "../../kernel/runner/index.js";
@@ -7,6 +6,7 @@ import { usesFigureCards, usesYoutubeDescription } from "../admission/rules.js";
 import { captionFont, captionFontDeps } from "../fonts/coverage.js";
 import { resolveFont } from "../fonts/index.js";
 import type { RevisionView } from "../revisions/model.js";
+import { isReadyOutput, readyOutput } from "../revisions/view.js";
 import { outputPath } from "../storage/layout.js";
 import { headingChapters, type TimedChapter } from "../video/chapters.js";
 import { sentenceCutPoints } from "../video/cuts.js";
@@ -21,7 +21,7 @@ import { probeDurationMs } from "../video/ffmpeg.js";
 import { passageSpans } from "../video/figure-spans.js";
 import type { FigureShot, PlanEdit } from "../video/plan.js";
 import type { ExportExecutionDeps } from "./runtime-export.js";
-import { wordsSchema } from "./runtime-subtitles.js";
+import { readTimingWords } from "./runtime-subtitles.js";
 
 // What the render reads beyond the images and the sound, from the files the revision saved:
 // the word timing and chapters the cuts and cards follow, the clips that play in place of
@@ -51,10 +51,7 @@ export async function exportEdit(
 ): Promise<ExportEdit> {
   const config = view.revision.config;
   const order = view.revision.content.imageOrder;
-  const ready = (key: string) =>
-    view.outputs.find(
-      (row) => row.workKey === key && row.selected && row.available && row.state === "ready",
-    );
+  const ready = (key: string) => readyOutput(view, { workKey: key });
   // Clips: an animated image's clip first, then an uploaded clip in the image's own place.
   const clips: (VideoSource | undefined)[] = [];
   for (const [index, key] of order.entries()) {
@@ -156,24 +153,8 @@ async function titleFont(
   };
 }
 
-export function timingWords(deps: ExportExecutionDeps, context: StageContext, view: RevisionView) {
-  const timing = view.outputs.find(
-    (row) =>
-      row.selected &&
-      row.available &&
-      row.state === "ready" &&
-      row.workKey === "subtitles:timing" &&
-      row.output.role === "subtitle_words",
-  );
-  if (timing === undefined)
-    throw new Error(
-      "The narration's word timing, which the video's cuts and chapter cards follow, is missing. Use More → Render the video again in the Video section, then Try again.",
-    );
-  return wordsSchema.parse(
-    JSON.parse(
-      readFileSync(outputPath(deps.paths, context.work.projectId, timing.output.path), "utf8"),
-    ),
-  ).words;
+function timingWords(deps: ExportExecutionDeps, context: StageContext, view: RevisionView) {
+  return readTimingWords(deps, context, view, "the video's cuts and chapter cards follow").words;
 }
 
 // The YouTube description's chapters when that step runs, the article's headings otherwise.
@@ -227,9 +208,7 @@ export function figureShots(
   const cards = view.outputs
     .filter(
       (row) =>
-        row.selected &&
-        row.available &&
-        row.state === "ready" &&
+        isReadyOutput(row) &&
         row.output.role === "figure_card" &&
         row.workKey.startsWith("figure:card:") &&
         (row.output.meta.format ?? view.revision.config.format) === format,

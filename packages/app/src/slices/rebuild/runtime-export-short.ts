@@ -17,7 +17,7 @@ import {
 } from "./runtime-export.js";
 import type { ExportSnapshot } from "./runtime-export-inputs.js";
 import { preparedResult, preparedText, publishResult } from "./runtime-publication.js";
-import { timingWords } from "./runtime-shorts.js";
+import { readTimingWords } from "./runtime-subtitles.js";
 import type { WorkPiece } from "./work-records.js";
 
 // A short-mode project's video (`admission/short-mode.ts`): the whole narration timeline as
@@ -34,7 +34,7 @@ export async function executeShortExport(
   const { view } = snapshot;
   const config = view.revision.config;
   const images = slideshowImages(deps, context, view);
-  const words = timingWords(deps, context, view);
+  const words = readTimingWords(deps, context, view, "the shorts are cut and captioned from").words;
   const seconds = timeline.reduce((sum, segment) => sum + segment.seconds, 0);
   if (seconds <= 0)
     throw new Error(

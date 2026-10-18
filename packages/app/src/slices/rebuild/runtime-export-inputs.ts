@@ -13,6 +13,7 @@ import { splitEndMatter } from "../article/split.js";
 import { usesLoudness } from "../loudness/model.js";
 import type { RevisionDeps, RevisionView } from "../revisions/model.js";
 import type { PreparedOutput } from "../revisions/publication-model.js";
+import { donePiece, isReadyOutput, readyOutput } from "../revisions/view.js";
 import { outputPath } from "../storage/layout.js";
 import { probeDurationMs } from "../video/ffmpeg.js";
 import { type AudioSegment, audioTimeline } from "../video/plan.js";
@@ -92,9 +93,7 @@ export async function narrationAudio(
     const segment = role === "audio_body" ? "body" : role === "audio_intro" ? "intro" : "outro";
     const row = view.outputs.find(
       (one) =>
-        one.selected &&
-        one.available &&
-        one.state === "ready" &&
+        isReadyOutput(one) &&
         (levelled
           ? one.output.role === "audio_levelled" && one.workKey === levelKey(segment)
           : one.output.role === role),
@@ -174,9 +173,7 @@ export function revisionTranscript(
   );
   if (concat !== undefined) {
     const texts = concat.dependsOn.map((key) => {
-      const row = view.pieces.find(
-        (one) => one.key === key && one.selected && one.available && one.piece.state === "done",
-      );
+      const row = donePiece(view, key);
       const payload =
         row?.piece.payload === null || row?.piece.payload === undefined
           ? undefined
@@ -197,10 +194,7 @@ export function revisionTranscript(
     if (texts.length > 0) return texts.join("\n");
   }
   if (kind === "body") {
-    const row = view.outputs.find(
-      (one) =>
-        one.selected && one.available && one.state === "ready" && one.output.role === "article_txt",
-    );
+    const row = readyOutput(view, { role: "article_txt" });
     if (row !== undefined)
       return readFileSync(outputPath(deps.paths, view.revision.projectId, row.output.path), "utf8");
     if (view.articleMarkdown !== null) return plainText(splitEndMatter(view.articleMarkdown).body);

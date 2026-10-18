@@ -9,6 +9,7 @@ import { cueSpeaker } from "../voices/timing.js";
 import type { ManifestOutput, RevisionDeps, RevisionEdit, RevisionView } from "./model.js";
 import { assetPath, measureAudio, type PreparedEditAsset } from "./mutation-assets.js";
 import { validateCues } from "./rules.js";
+import { readyOutput } from "./view.js";
 
 // Edited captions of a multi-voice run keep their speakers. A cue that comes back without one
 // (the caption editor edits text and times only) takes the speaker it had before, found by the
@@ -35,14 +36,7 @@ export function withCueSpeakers(
   let words: readonly { start: number; end: number; speaker?: string | undefined }[] | undefined;
   const timing = (): typeof words => {
     if (words !== undefined) return words;
-    const row = base.outputs.find(
-      (one) =>
-        one.selected &&
-        one.available &&
-        one.state === "ready" &&
-        one.workKey === "subtitles:timing" &&
-        one.output.role === "subtitle_words",
-    );
+    const row = readyOutput(base, { workKey: "subtitles:timing", role: "subtitle_words" });
     try {
       words =
         row === undefined

@@ -3,6 +3,7 @@ import { type Catalogue, catalogueSchema } from "../../catalog/schema.js";
 import { stageKinds } from "../../kernel/pipeline.js";
 import { estimateRequests } from "../estimate/index.js";
 import type { RevisionDeps, RevisionView } from "../revisions/model.js";
+import { assetPathOrUndefined } from "../revisions/mutation-assets.js";
 import { requestHash } from "../revisions/mutation-request.js";
 import type { RebuildPreview, RebuildResult, RebuildSelection } from "./model.js";
 import { previewDetails } from "./preview-details.js";
@@ -120,23 +121,17 @@ export function planPreview(
       });
   for (const row of view.pieces)
     if (row.selected && selected.has(row.key) && row.assetId !== null) {
-      const asset = deps.db
-        .prepare("SELECT path FROM project_assets WHERE id=? AND project_id=?")
-        .get(row.assetId, view.revision.projectId);
       relevantAssets.set(row.assetId, {
         id: row.assetId,
-        path: String(asset?.path ?? ""),
+        path: assetPathOrUndefined(deps, view.revision.projectId, row.assetId) ?? "",
         available: row.available,
       });
     }
   for (const recipe of recipes)
     if (recipe.input.kind === "provided" && recipe.input.assetId !== null) {
-      const asset = deps.db
-        .prepare("SELECT path FROM project_assets WHERE id=? AND project_id=?")
-        .get(recipe.input.assetId, view.revision.projectId);
       relevantAssets.set(recipe.input.assetId, {
         id: recipe.input.assetId,
-        path: String(asset?.path ?? ""),
+        path: assetPathOrUndefined(deps, view.revision.projectId, recipe.input.assetId) ?? "",
         available: !recipe.unresolved,
       });
     }

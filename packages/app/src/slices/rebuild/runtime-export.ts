@@ -8,6 +8,7 @@ import { usesShortMode } from "../admission/short-mode.js";
 import { masterFile, masterReport } from "../loudness/loudnorm.js";
 import { type MasterReport, masterGoal } from "../loudness/model.js";
 import type { PreparedOutput } from "../revisions/publication-model.js";
+import { isReadyOutput, readyOutput } from "../revisions/view.js";
 import { allocateAsset, discardPreparedAssets, sealAsset } from "../storage/assets.js";
 import { outputPath, projectDir, renderCacheDir } from "../storage/layout.js";
 import { audioExportArgs } from "../video/audio-export.js";
@@ -30,7 +31,7 @@ import { executeShortExport } from "./runtime-export-short.js";
 import { lineLevelledAudio } from "./runtime-lines.js";
 import type { LocalExecutionDeps } from "./runtime-local.js";
 import { preparedResult, preparedText, publishResult } from "./runtime-publication.js";
-import type { WorkPiece } from "./work-records.js";
+import { pieceAlreadyDone, type WorkPiece } from "./work-records.js";
 
 export interface ExportExecutionDeps extends LocalExecutionDeps {
   readonly alignSubtitles?: SubtitleAligner | undefined;
@@ -67,12 +68,7 @@ export async function executeExportRecipe(
   context: StageContext,
   piece: WorkPiece,
 ): Promise<StageRunResult> {
-  if (
-    deps.db
-      .prepare("SELECT state FROM revision_work_pieces WHERE id=? AND work_id=?")
-      .get(piece.id, context.work.workId)?.state === "done"
-  )
-    return "done";
+  if (pieceAlreadyDone(deps.db, context.work.workId, piece.id)) return "done";
   if (!context.maySubmit(piece.id)) return "held";
   context.signal.throwIfAborted();
   const snapshot = exportSnapshot(deps, context, piece);
@@ -102,8 +98,7 @@ export async function executeExportRecipe(
         ? audio
         : await lineLevelledAudio(deps, context, view, audio, linesDirectory);
     const captions = snapshot.view.outputs.filter(
-      (row) =>
-        row.selected && row.available && row.state === "ready" && row.workKey === "subtitles:files",
+      (row) => isReadyOutput(row) && row.workKey === "subtitles:files",
     );
     const burn = !wav && view.revision.config.subtitles?.mode === "burn-in";
     if (burn) directory = captionDirectory(deps, context, snapshot);
@@ -293,10 +288,7 @@ export function slideshowImages(
   view: ExportSnapshot["view"],
 ): readonly string[] {
   return view.revision.content.imageOrder.map((key) => {
-    const row = view.outputs.find(
-      (one) =>
-        one.workKey === `image:${key}` && one.selected && one.available && one.state === "ready",
-    );
+    const row = readyOutput(view, { workKey: `image:${key}` });
     if (row === undefined)
       throw new Error(
         "The video export can't find one of the slideshow images. Use More → make it again in its section on Images (or regenerate that image in Edit project → Images), then Try again.",
@@ -309,10 +301,7 @@ function captionDirectory(
   context: StageContext,
   snapshot: ExportSnapshot,
 ): string {
-  const find = (role: "subtitle_ass" | "subtitle_font") =>
-    snapshot.view.outputs.find(
-      (row) => row.selected && row.available && row.state === "ready" && row.output.role === role,
-    );
+  const find = (role: "subtitle_ass" | "subtitle_font") => readyOutput(snapshot.view, { role });
   const ass = find("subtitle_ass");
   const font = find("subtitle_font");
   if (ass === undefined || font === undefined)

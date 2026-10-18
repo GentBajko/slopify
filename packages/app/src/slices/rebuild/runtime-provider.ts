@@ -33,10 +33,15 @@ import { executeArticleRequests } from "./runtime-article.js";
 import { imageCall } from "./runtime-image.js";
 import { frozenInstructions } from "./runtime-instructions.js";
 import { articlePicture } from "./runtime-pictures.js";
-import { executionPlan, executionView, savedCatalogue } from "./runtime-plan.js";
+import {
+  executionPlan,
+  executionView,
+  workCatalogue,
+  workCatalogueIfSaved,
+} from "./runtime-plan.js";
 import { preparedResult, preparedTexts, publishResult } from "./runtime-publication.js";
 import { clearSoftening, softenedPrompt, softeningRequested, softenMessages } from "./soften.js";
-import type { WorkPiece } from "./work-records.js";
+import { pieceAlreadyDone, type WorkPiece } from "./work-records.js";
 
 export interface ProviderExecutionDeps extends RevisionDeps {
   readonly ffmpeg?: string | undefined;
@@ -50,12 +55,7 @@ export async function executeProviderRecipe(
   providers: StageProviders,
   piece: WorkPiece,
 ): Promise<StageRunResult> {
-  if (
-    deps.db
-      .prepare("SELECT state FROM revision_work_pieces WHERE id=? AND work_id=?")
-      .get(piece.id, context.work.workId)?.state === "done"
-  )
-    return "done";
+  if (pieceAlreadyDone(deps.db, context.work.workId, piece.id)) return "done";
   const input = piece.input;
   const wrapped = providers.forPiece(piece.id);
   if (input.kind === "llm") {
@@ -518,13 +518,10 @@ function narrationLabel(deps: RevisionDeps, context: StageContext, piece: WorkPi
   const name =
     piece.input.segment === "body" ? "Body" : piece.input.segment === "intro" ? "Intro" : "Outro";
   const view = executionView(deps, context.work.projectId, context.work.revisionId);
-  const row = deps.db
-    .prepare("SELECT recipe_context FROM revision_work WHERE id=?")
-    .get(context.work.workId);
-  if (view === undefined || row?.recipe_context === undefined || row.recipe_context === null)
-    return name;
+  const catalogue = workCatalogueIfSaved(deps.db, context.work.workId);
+  if (view === undefined || catalogue === undefined) return name;
   const segment = piece.input.segment;
-  const parts = executionPlan(deps, view, savedCatalogue(row.recipe_context)).recipes.filter(
+  const parts = executionPlan(deps, view, catalogue).recipes.filter(
     (recipe) => recipe.input.kind === "tts" && recipe.input.segment === segment,
   );
   const index = parts.findIndex((recipe) => recipe.key === piece.key);
@@ -541,10 +538,7 @@ function checkPreparation(
   const source = piece.input.preparation.source;
   const checked = validatePreparation(answer.text, source);
   if (!checked.ok) return checked.reason;
-  const row = deps.db
-    .prepare("SELECT recipe_context FROM revision_work WHERE id=?")
-    .get(context.work.workId);
-  const model = savedCatalogue(row?.recipe_context).tts.find(
+  const model = workCatalogue(deps.db, context.work.workId).tts.find(
     (model) => model.provider === "inworld" && model.id === "inworld-tts-2",
   );
   const prepared = prepareRequests(source, checked.cues, model?.tts.maxCharacters ?? 4000);

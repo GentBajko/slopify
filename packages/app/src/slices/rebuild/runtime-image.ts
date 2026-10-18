@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
-import { z } from "zod";
 import type { CastReference, GeneratedImage } from "../../kernel/ports/image.js";
 import type { ImageCall } from "../../kernel/runner/providers.js";
 import { imageBlob } from "../channels/repo.js";
 import type { RevisionDeps } from "../revisions/model.js";
+import { assetPathOrUndefined } from "../revisions/mutation-assets.js";
 import { outputPath } from "../storage/layout.js";
 import type { RecipeInput } from "./recipe-model.js";
 
@@ -39,18 +39,11 @@ function referenceImage(
   const missing =
     "The establishing image this image is drawn from is missing. Use Regenerate on the establishing image in the Images section (or upload it again in Edit project → Images), then use Try again.";
   if (input.reference.assetId === null) throw new Error(missing);
-  const row = z
-    .object({ path: z.string() })
-    .optional()
-    .parse(
-      deps.db
-        .prepare("SELECT path FROM project_assets WHERE id=? AND project_id=?")
-        .get(input.reference.assetId, projectId),
-    );
-  if (row === undefined) throw new Error(missing);
+  const saved = assetPathOrUndefined(deps, projectId, input.reference.assetId);
+  if (saved === undefined) throw new Error(missing);
   let bytes: Uint8Array;
   try {
-    bytes = new Uint8Array(readFileSync(outputPath(deps.paths, projectId, row.path)));
+    bytes = new Uint8Array(readFileSync(outputPath(deps.paths, projectId, saved)));
   } catch {
     throw new Error(missing);
   }

@@ -9,7 +9,7 @@ import { keepThinking } from "../model-upkeep/switch.js";
 import type { PlayDraftDocument } from "../play-drafts/schema.js";
 import { templateById } from "../project-templates/repo.js";
 import { currentRevisionId } from "../revisions/repo.js";
-import { getRevisionView } from "../revisions/view.js";
+import { getRevisionView, isReadyOutput } from "../revisions/view.js";
 import { runCostOf } from "../run-cost/panel.js";
 import {
   type BakeoffRow,
@@ -428,7 +428,7 @@ function madeOn(
   );
   if (view === undefined) return { outputs: [], article: null };
   const outputs = view.outputs.flatMap((row): BakeoffOutput[] =>
-    row.selected && row.available && row.state === "ready" && sectionOfWork(row.workKey) === section
+    isReadyOutput(row) && sectionOfWork(row.workKey) === section
       ? [
           {
             role: row.output.role,

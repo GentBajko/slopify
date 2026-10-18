@@ -14,6 +14,8 @@ import { cleanPieces } from "../narration/clean-pieces.js";
 import { joinNarration } from "../narration/concat.js";
 import { applyPauses, type PiecePauses, planPieces } from "../narration/pauses.js";
 import type { PauseSettings } from "../narration/pauses-model.js";
+import { assetPath } from "../revisions/mutation-assets.js";
+import { isDonePiece } from "../revisions/view.js";
 import type { PreparedAsset } from "../storage/assets.js";
 import { allocateAsset, discardPreparedAssets, sealAsset } from "../storage/assets.js";
 import { outputPath } from "../storage/layout.js";
@@ -25,7 +27,7 @@ import { levelOperation, sentencesAsked } from "./recipe-loudness.js";
 import type { PieceNext } from "./recipe-pauses.js";
 import { executeFigureCard } from "./runtime-figure-card.js";
 import { publishNarrationText } from "./runtime-narration-text.js";
-import { executionPlan, executionView, savedCatalogue } from "./runtime-plan.js";
+import { executionPlan, executionView, workCatalogue } from "./runtime-plan.js";
 import type { ProviderExecutionDeps } from "./runtime-provider.js";
 import {
   preparedResult,
@@ -33,7 +35,7 @@ import {
   preparedTexts,
   publishResult,
 } from "./runtime-publication.js";
-import type { WorkPiece } from "./work-records.js";
+import { pieceAlreadyDone, type WorkPiece } from "./work-records.js";
 
 export interface LocalExecutionDeps extends ProviderExecutionDeps {
   readonly ffmpeg: string;
@@ -44,12 +46,7 @@ export async function executeLocalRecipe(
   context: StageContext,
   piece: WorkPiece,
 ): Promise<StageRunResult> {
-  if (
-    deps.db
-      .prepare("SELECT state FROM revision_work_pieces WHERE id=? AND work_id=?")
-      .get(piece.id, context.work.workId)?.state === "done"
-  )
-    return "done";
+  if (pieceAlreadyDone(deps.db, context.work.workId, piece.id)) return "done";
   if (!context.maySubmit(piece.id)) return "held";
   const input = piece.input;
   if (input.kind === "provided") {
@@ -165,10 +162,7 @@ async function concatenate(
   const view = executionView(deps, context.work.projectId, context.work.revisionId);
   if (view === undefined)
     throw new Error(internalError("the project version being built is missing"));
-  const row = deps.db
-    .prepare("SELECT recipe_context FROM revision_work WHERE id=?")
-    .get(context.work.workId);
-  const plan = executionPlan(deps, view, savedCatalogue(row?.recipe_context));
+  const plan = executionPlan(deps, view, workCatalogue(deps.db, context.work.workId));
   const recipe = plan.recipes.find(
     (candidate) => candidate.key === piece.key && candidate.fingerprint === piece.fingerprint,
   );
@@ -180,19 +174,18 @@ async function concatenate(
     const input = view.pieces.find(
       (candidate) =>
         candidate.key === key &&
-        candidate.selected &&
-        candidate.available &&
-        candidate.piece.state === "done" &&
+        isDonePiece(candidate) &&
         candidate.fingerprint === plan.recipes.find((value) => value.key === key)?.fingerprint,
     );
     if (input?.assetId === null || input === undefined)
       throw new Error(
         "One narration chunk has no saved audio, so the narration can't be joined together. Regenerate the missing chunk in Edit project → Narration, then Try again.",
       );
-    const asset = deps.db
-      .prepare("SELECT path FROM project_assets WHERE id=? AND project_id=?")
-      .get(input.assetId, context.work.projectId);
-    return outputPath(deps.paths, context.work.projectId, z.string().parse(asset?.path));
+    return outputPath(
+      deps.paths,
+      context.work.projectId,
+      assetPath(deps, context.work.projectId, input.assetId),
+    );
   });
   // Level the volume repeats the join its recipe names, from the same pieces, each levelled
   // first (`recipe-loudness.ts`).

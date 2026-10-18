@@ -1,8 +1,15 @@
 import { readFileSync, statSync } from "node:fs";
 import { z } from "zod";
 import { outputPath } from "../storage/layout.js";
+import type { OutputRole } from "../storage/model.js";
 import { narrationJoinPiecesOfProject, narrationJoinsOfProject } from "./manifest-repo.js";
-import type { ProjectRevision, RevisionDeps, RevisionOutputView, RevisionView } from "./model.js";
+import type {
+  ProjectRevision,
+  RevisionDeps,
+  RevisionOutputView,
+  RevisionPieceView,
+  RevisionView,
+} from "./model.js";
 import { currentRevisionId, outputsForRevision, piecesForRevision, revisionById } from "./repo.js";
 
 export function getRevisionView(
@@ -38,6 +45,47 @@ export function getRevisionView(
     current: currentRevisionId(deps.db, projectId) === revisionId,
     articleMarkdown: resolvedArticleMarkdown(deps, revision, outputs),
   };
+}
+
+// An output a step can read: selected, its file on disk and finished, narrowed to one role or
+// one step's outputs when given.
+export interface OutputMatch {
+  readonly role?: OutputRole | undefined;
+  readonly workKey?: string | undefined;
+}
+
+export function isReadyOutput(row: RevisionOutputView, match: OutputMatch = {}): boolean {
+  return (
+    row.selected &&
+    row.available &&
+    row.state === "ready" &&
+    (match.role === undefined || row.output.role === match.role) &&
+    (match.workKey === undefined || row.workKey === match.workKey)
+  );
+}
+
+export function readyOutput(
+  view: Pick<RevisionView, "outputs">,
+  match: OutputMatch = {},
+): RevisionOutputView | undefined {
+  return view.outputs.find((row) => isReadyOutput(row, match));
+}
+
+// A piece a step can read: selected, its file (if any) on disk and done, under `key` when given.
+export function isDonePiece(row: RevisionPieceView, key?: string): boolean {
+  return (
+    row.selected &&
+    row.available &&
+    row.piece.state === "done" &&
+    (key === undefined || row.key === key)
+  );
+}
+
+export function donePiece(
+  view: Pick<RevisionView, "pieces">,
+  key: string,
+): RevisionPieceView | undefined {
+  return view.pieces.find((row) => isDonePiece(row, key));
 }
 
 export function resolvedArticleMarkdown(

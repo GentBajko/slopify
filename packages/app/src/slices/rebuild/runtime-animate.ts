@@ -5,13 +5,14 @@ import type { GeneratedImage } from "../../kernel/ports/image.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageProviders } from "../../kernel/runner/providers.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
+import { isReadyOutput } from "../revisions/view.js";
 import { discardPreparedAssets, writeAsset } from "../storage/assets.js";
 import { outputPath, projectDir } from "../storage/layout.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
 import { executionView } from "./runtime-plan.js";
 import type { ProviderExecutionDeps } from "./runtime-provider.js";
 import { preparedResult, publishResult } from "./runtime-publication.js";
-import type { WorkPiece } from "./work-records.js";
+import { pieceAlreadyDone, type WorkPiece } from "./work-records.js";
 
 // Animate images: one still of the slideshow sent to the image provider's image-to-video
 // model, and the clip it makes saved beside the image. The still goes up as a small JPEG, so
@@ -31,12 +32,7 @@ export async function executeAnimateRecipe(
   providers: StageProviders,
   piece: WorkPiece,
 ): Promise<StageRunResult> {
-  if (
-    deps.db
-      .prepare("SELECT state FROM revision_work_pieces WHERE id=? AND work_id=?")
-      .get(piece.id, context.work.workId)?.state === "done"
-  )
-    return "done";
+  if (pieceAlreadyDone(deps.db, context.work.workId, piece.id)) return "done";
   const input = piece.input;
   if (input.kind !== "image" || input.animate === undefined)
     throw new Error(internalError("an animated image was set up wrongly"));
@@ -44,8 +40,7 @@ export async function executeAnimateRecipe(
   const view = executionView(deps, context.work.projectId, context.work.revisionId);
   const index = (view?.revision.content.imageOrder.indexOf(imageKey) ?? -1) + 1;
   const still = view?.outputs.find(
-    (row) =>
-      row.workKey === `image:${imageKey}` && row.selected && row.available && row.state === "ready",
+    (row) => row.workKey === `image:${imageKey}` && isReadyOutput(row),
   );
   const fallback = async (reason: string): Promise<StageRunResult> => {
     deps.log.write("warn", "video.animate.fallback", { detail: reason });

@@ -1,6 +1,7 @@
 import { statSync } from "node:fs";
 import { z } from "zod";
 import type { ManifestPiece, RevisionDeps } from "../revisions/model.js";
+import { assetPathOrUndefined } from "../revisions/mutation-assets.js";
 import { stagePieceSchema } from "../revisions/schema.js";
 import { outputPath } from "../storage/layout.js";
 
@@ -42,12 +43,10 @@ export function referencedAssetsAvailable(
   ids: readonly string[],
 ): readonly string[] {
   return ids.filter((id) => {
-    const row = deps.db
-      .prepare("SELECT path FROM project_assets WHERE project_id=? AND id=?")
-      .get(projectId, id);
+    const path = assetPathOrUndefined(deps, projectId, id);
     return (
-      row !== undefined &&
-      statSync(outputPath(deps.paths, projectId, z.string().parse(row.path)), {
+      path !== undefined &&
+      statSync(outputPath(deps.paths, projectId, path), {
         throwIfNoEntry: false,
       })?.isFile() === true
     );

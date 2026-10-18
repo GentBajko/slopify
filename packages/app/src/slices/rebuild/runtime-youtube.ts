@@ -1,10 +1,8 @@
-import { readFileSync } from "node:fs";
 import { internalError } from "../../kernel/errors.js";
 import { withLanguage } from "../../kernel/ports/languages.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageProviders } from "../../kernel/runner/providers.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
-import { outputPath } from "../storage/layout.js";
 import {
   assembleDescription,
   checkDescriptionAnswer,
@@ -16,10 +14,10 @@ import { keepsShape, titleShape } from "../youtube/titles.js";
 import { transcriptPassages, transcriptText } from "../youtube/transcript.js";
 import type { ExportExecutionDeps } from "./runtime-export.js";
 import { exportSnapshot, revisionAudio } from "./runtime-export-inputs.js";
-import { savedCatalogue } from "./runtime-plan.js";
+import { workLlm } from "./runtime-plan.js";
 import { preparedTexts, publishResult } from "./runtime-publication.js";
-import { wordsSchema } from "./runtime-subtitles.js";
-import type { WorkPiece } from "./work-records.js";
+import { readTimingWords } from "./runtime-subtitles.js";
+import { pieceAlreadyDone, type WorkPiece } from "./work-records.js";
 
 // Writes the YouTube description, tags, pinned comment and other titles from the saved word timing: the transcript's
 // passages carry their start in the final video, so the chapters the model picks are real
@@ -31,12 +29,7 @@ export async function executeYoutubeRecipe(
   providers: StageProviders,
   piece: WorkPiece,
 ): Promise<StageRunResult> {
-  if (
-    deps.db
-      .prepare("SELECT state FROM revision_work_pieces WHERE id=? AND work_id=?")
-      .get(piece.id, context.work.workId)?.state === "done"
-  )
-    return "done";
+  if (pieceAlreadyDone(deps.db, context.work.workId, piece.id)) return "done";
   if (!context.maySubmit(piece.id)) return "held";
   context.signal.throwIfAborted();
   const input = piece.input;
@@ -49,22 +42,11 @@ export async function executeYoutubeRecipe(
     throw new Error(
       "The YouTube description needs an AI text model, and none is chosen. Choose one in Edit project → Providers, then Try again.",
     );
-  const timing = view.outputs.find(
-    (row) =>
-      row.selected &&
-      row.available &&
-      row.state === "ready" &&
-      row.workKey === "subtitles:timing" &&
-      row.output.role === "subtitle_words",
-  );
-  if (timing === undefined)
-    throw new Error(
-      "The narration's word timing, which the YouTube description's chapters come from, is missing. Use More → Render the video again in the Video section, then Try again.",
-    );
-  const { words } = wordsSchema.parse(
-    JSON.parse(
-      readFileSync(outputPath(deps.paths, context.work.projectId, timing.output.path), "utf8"),
-    ),
+  const { words } = readTimingWords(
+    deps,
+    context,
+    view,
+    "the YouTube description's chapters come from",
   );
   const passages = transcriptPassages(words);
   if (passages.length === 0)
@@ -91,27 +73,17 @@ export async function executeYoutubeRecipe(
     }),
     config.language,
   );
-  const row = deps.db
-    .prepare("SELECT recipe_context FROM revision_work WHERE id=?")
-    .get(context.work.workId);
-  const model = savedCatalogue(row?.recipe_context).llm.find(
-    (one) => one.provider === llm.provider && one.id === llm.model,
-  );
+  const call = workLlm(deps.db, context.work.workId, llm, piece.key);
   if (!context.maySubmit(piece.id)) return "held";
-  const answer = await providers.forPiece(piece.id).llm({
-    provider: llm.provider,
-    model: llm.model,
-    ...(llm.thinking === undefined ? {} : { thinking: llm.thinking }),
-    thinkingConfig:
-      llm.thinking === undefined ? null : (model?.llm.thinking?.[llm.thinking] ?? null),
-    messages,
-    webSearch: false,
-    previewLabel: piece.key,
-    check: (value) => {
-      const checked = checkDescriptionAnswer(value.text, durationSeconds, config.title, shape);
-      return checked.ok ? undefined : checked.reason;
-    },
-  });
+  const answer = await providers.forPiece(piece.id).llm(
+    call({
+      messages,
+      check: (value) => {
+        const checked = checkDescriptionAnswer(value.text, durationSeconds, config.title, shape);
+        return checked.ok ? undefined : checked.reason;
+      },
+    }),
+  );
   if (!answer.ok) return "held";
   const checked = checkDescriptionAnswer(answer.value.text, durationSeconds, config.title);
   if (!checked.ok) throw new Error(checked.reason);
