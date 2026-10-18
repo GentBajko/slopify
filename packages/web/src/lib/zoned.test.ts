@@ -10,7 +10,10 @@ it("reads a schedule's time in its own zone and names the zone when it isn't the
   expect(zonedTime(at, "Europe/London", "Europe/London")).toBe(clock("Europe/London"));
   // Another zone at the same offset at that moment reads the same, so needs no name.
   expect(zonedTime(at, "Europe/London", "Europe/Lisbon")).toBe(clock("Europe/London"));
-  expect(zonedTime(at, undefined, "Europe/Tirane")).toBe(clock("Europe/Tirane"));
+  // No zone of its own: the browser's clock, whichever zone this machine is in.
+  expect(zonedTime(at, undefined, "Europe/Tirane")).toBe(
+    new Intl.DateTimeFormat(undefined, { timeStyle: "short" }).format(new Date(at)),
+  );
 });
 
 it("names zones the way people say them", () => {
