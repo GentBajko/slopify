@@ -102,6 +102,9 @@ export function legacyOutputWorkKey(output: Output, config?: Pick<RunConfig, "so
     case "render_params":
     case "instructions":
       return `${output.stageKind}:${output.role}`;
+    // Only ever made by a revision.
+    case "social_post":
+      return `social:post:${output.meta.platform ?? "x"}`;
   }
 }
 export function legacyPieceKey(

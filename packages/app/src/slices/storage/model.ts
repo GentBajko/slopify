@@ -57,6 +57,9 @@ export const outputRoles = [
   // Level the volume: a narration segment joined again from its pieces, each brought to one
   // loudness first (`meta.segment` says which). The exports play it in place of the plain join.
   "audio_levelled",
+  // A post for another site written by a Library prompt of kind "post" (`slices/social`);
+  // `meta.platform` says which site.
+  "social_post",
 ] as const;
 export type OutputRole = (typeof outputRoles)[number];
 
@@ -92,6 +95,8 @@ export interface OutputMeta {
   // narration; and what a mastered export measured once finished.
   readonly loudness?: import("../loudness/model.js").LoudnessReport | undefined;
   readonly master?: import("../loudness/model.js").MasterReport | undefined;
+  // Which site a social post was written for.
+  readonly platform?: import("../social/model.js").SocialPlatform | undefined;
 }
 
 export interface Output {

@@ -138,6 +138,8 @@ export function outputFileName(
       return `audio-levelled${extension}`;
     case "reference":
       return `reference${extension}`;
+    case "social_post":
+      return `social/post-${String(index).padStart(2, "0")}.txt`;
     case "image":
       return `images/${String(index).padStart(3, "0")}${extension}`;
   }
