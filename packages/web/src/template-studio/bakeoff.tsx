@@ -10,7 +10,7 @@ import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { TextLink } from "@/components/kit/link";
 import { MediaFrame, MediaGrid } from "@/components/kit/media";
 import { SectionHead } from "@/components/kit/section-head";
-import { Badge, Lamp, type Tone } from "@/components/kit/status";
+import { Lamp, type Tone } from "@/components/kit/status";
 import { Switch } from "@/components/kit/switch";
 import { usd } from "@/lib/format";
 import { ModelPicker, ProviderPicker } from "@/play/pickers";
@@ -240,7 +240,6 @@ export function BakeoffResults({
                 <p className="m-0 flex flex-wrap items-center gap-2 font-semibold">
                   <Lamp tone={tone} />
                   {entry.model}
-                  {entry.state === "current" ? <Badge tone="info">In use now</Badge> : null}
                 </p>
                 <p className="m-0 text-small text-ink-2">
                   {`${word} · ${cost} · ${secondsText(entry.seconds)}`}
