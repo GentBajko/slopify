@@ -1,9 +1,9 @@
 {
   "name": "@slopify/extension",
-  "version": "1.5.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "Fills YouTube Studio's upload dialog from a Slopify project's upload pack. Never publishes.",
+  "description": "Fills YouTube Studio's upload dialog and the post forms of X, LinkedIn, Instagram, TikTok, Reddit and Bluesky from a Slopify project. Never publishes or posts.",
   "scripts": {
     "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit"
