@@ -3,12 +3,12 @@
 // a failing image is rolled back to the untouched original, and the data volume is reused by name.
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, readdir, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { treeDigest } from "../dist/edge/docker-install/tree.js";
+import { markerProject, projectMarker } from "../dist/slices/storage/arrange.js";
 
 assert.equal(process.platform, "linux");
 assert.notEqual(process.getuid(), 0);
@@ -137,15 +137,38 @@ try {
     },
   );
   const expected = JSON.parse(await readFile(join(seed, "expected.json"), "utf8"));
-  // The user's own project folders, each compared on its own: 3.0 adds the bundled sample
-  // projects beside them on first start, which is new content, not a change to theirs.
+  // The user's own projects, each compared on its own: 3.0 adds the bundled sample projects
+  // beside them on first start, which is new content, not a change to theirs. A running
+  // Slopify gives a project's id-named folder its readable layout within seconds (3.14's
+  // `storage/arrange.ts`): the folder takes the title, its files move to Upload, Working and
+  // History, and a marker names the project. So each project's files are compared by content,
+  // wherever its folder and files now are.
   const originals = await readdir(join(seed, "projects"));
-  const digestsOf = async (root) =>
-    Object.fromEntries(
+  const contentsOf = async (folder) => {
+    const digests = [];
+    for (const entry of await readdir(folder, { recursive: true, withFileTypes: true })) {
+      if (entry.isDirectory() || (entry.parentPath === folder && entry.name === projectMarker))
+        continue;
+      assert(entry.isFile(), `${join(entry.parentPath, entry.name)} is not a plain file`);
+      const bytes = await readFile(join(entry.parentPath, entry.name));
+      digests.push(createHash("sha256").update(bytes).digest("hex"));
+    }
+    return digests.sort();
+  };
+  const digestsOf = async (root) => {
+    const folders = await readdir(root);
+    return Object.fromEntries(
       await Promise.all(
-        originals.map(async (entry) => [entry, await treeDigest(join(root, entry))]),
+        originals.map(async (id) => {
+          const folder = folders.includes(id)
+            ? id
+            : folders.find((name) => markerProject(join(root, name)) === id);
+          assert(folder !== undefined, `No folder in ${root} holds project ${id}`);
+          return [id, await contentsOf(join(root, folder))];
+        }),
       ),
     );
+  };
   const ownBefore = await digestsOf(join(seed, "projects"));
 
   // An old-style install: plain docker run, project files inside the volume, image's own user.
