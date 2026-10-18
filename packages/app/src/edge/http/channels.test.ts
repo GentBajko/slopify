@@ -125,7 +125,7 @@ describe("channel routes", () => {
     const uploaded = await app.request(`/api/channels/cast/${member}/images`, {
       method: "POST",
       body: png,
-      headers: { "content-type": "image/png" },
+      headers: { "x-slopify-client": "test", "content-type": "image/png" },
     });
     expect(uploaded.status).toBe(201);
     const image = (await uploaded.json()) as { sha256: string };
@@ -134,6 +134,7 @@ describe("channel routes", () => {
     expect(new Uint8Array(await served.arrayBuffer())).toEqual(png);
     const text = await app.request(`/api/channels/cast/${member}/images`, {
       method: "POST",
+      headers: { "x-slopify-client": "test" },
       body: "hello",
     });
     expect(text.status).toBe(400);

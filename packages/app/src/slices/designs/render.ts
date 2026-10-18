@@ -10,7 +10,8 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { readFile } from "node:fs/promises";
+import { basename, join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import type { Clock } from "../../kernel/clock.js";
 import { errorText } from "../../kernel/errors.js";
@@ -97,11 +98,29 @@ export function createDesignRenderer(deps: DesignRenderDeps): DesignRenderer {
         });
       }
     }
+    const filled = fillDocument(doc, values);
+    const key = createHash("sha256")
+      .update(
+        JSON.stringify({
+          rendererVersion,
+          art: art.sha256,
+          format,
+          focus,
+          text: textLayer ? filled.text : null,
+          fonts: [...fonts].map(([id, font]) => [id, font.path, font.faceIndex]),
+        }),
+      )
+      .digest("hex")
+      .slice(0, 32);
+    const dir = join(rendersDir(deps.paths), designId);
+    const target = join(dir, `${format}-${key}.png`);
+    // Drawn before from the very same text, fonts and artwork, so it passed the checks then.
+    if (existsSync(target)) return { ok: true, value: target };
     const checkFonts: Record<string, CheckFont> = {};
     for (const [id, font] of fonts)
       checkFonts[id] = {
         name: font.name,
-        bytes: new Uint8Array(readFileSync(font.path)),
+        bytes: new Uint8Array(await readFile(font.path)),
         faceIndex: font.faceIndex,
       };
     // Measured with the font's own widths; a font that can't be read is estimated.
@@ -123,23 +142,6 @@ export function createDesignRenderer(deps: DesignRenderDeps): DesignRenderer {
       })[0];
       if (problem !== undefined) return { ok: false, reason: "invalid", message: problem.sentence };
     }
-    const filled = fillDocument(doc, values);
-    const key = createHash("sha256")
-      .update(
-        JSON.stringify({
-          rendererVersion,
-          art: art.sha256,
-          format,
-          focus,
-          text: textLayer ? filled.text : null,
-          fonts: [...fonts].map(([id, font]) => [id, font.path, font.faceIndex]),
-        }),
-      )
-      .digest("hex")
-      .slice(0, 32);
-    const dir = join(rendersDir(deps.paths), designId);
-    const target = join(dir, `${format}-${key}.png`);
-    if (existsSync(target)) return { ok: true, value: target };
     mkdirSync(dir, { recursive: true, mode: 0o700 });
     const work = mkdtempSync(join(dir, ".work-"));
     try {
@@ -166,6 +168,7 @@ export function createDesignRenderer(deps: DesignRenderDeps): DesignRenderer {
         onProgress: () => undefined,
       });
       renameSync(join(work, "out.png"), target);
+      dropOlderDrawings(dir, format, target);
       return { ok: true, value: target };
     } finally {
       rmSync(work, { recursive: true, force: true });
@@ -245,6 +248,17 @@ export function createDesignRenderer(deps: DesignRenderDeps): DesignRenderer {
         return { ok: true, value: { path: pdfPath, mime: "application/pdf", name: `${name}.pdf` } };
       }),
   };
+}
+
+// What this format looked like before its newest drawing (PNG and PDF): nothing asks for those
+// again, so the cache holds one drawing per format.
+function dropOlderDrawings(dir: string, format: DesignFormat, target: string): void {
+  const keep = basename(target, ".png");
+  const drawing = new RegExp(`^(${format}-[a-f0-9]{32})\\.(png|pdf)$`);
+  for (const name of readdirSync(dir)) {
+    const stem = drawing.exec(name)?.[1];
+    if (stem !== undefined && stem !== keep) rmSync(join(dir, name), { force: true });
+  }
 }
 
 // Every drawn file of a design, removed when it is purged. Design ids are letters, digits,

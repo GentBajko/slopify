@@ -13,6 +13,7 @@ import type { Paths } from "../../kernel/paths.js";
 import type { ModelInfo, ProviderFamily } from "../../kernel/ports/model.js";
 import type { Runner } from "../../kernel/runner/index.js";
 import { mcpPath } from "../../slices/agents/model.js";
+import type { RunAllowedCall } from "../../slices/assistant/access.js";
 import type { BackupService } from "../../slices/backups/service.js";
 import { isSampleProject } from "../../slices/onboarding/sample.js";
 import type { DraftStartDeps } from "../../slices/play-drafts/model.js";
@@ -23,7 +24,7 @@ import type { UnpackedExtension } from "../../slices/studio/unpacked.js";
 import { sampleOwner } from "../../slices/template-studio/repo.js";
 import type { AppUpdater } from "../../updater/model.js";
 import type { Hub } from "../events/hub.js";
-import { assistantMcpPath, assistantMcpRoutes } from "../mcp/assistant.js";
+import { assistantMcpPath, assistantMcpRoutes, runAllowedCall } from "../mcp/assistant.js";
 import { mcpRoutes } from "../mcp/http.js";
 import { actionRoutes } from "./actions.js";
 import { agentBindings, assistantBindings } from "./actor.js";
@@ -61,6 +62,8 @@ import { promptRoutes } from "./prompts.js";
 import { pronunciationRoutes } from "./pronunciations.js";
 import { providerRoutes } from "./providers.js";
 import { remoteAccessRoutes } from "./remote-access.js";
+import { remoteGuard } from "./remote-guard.js";
+import { requestGuard } from "./request-guard.js";
 import { reviewRoutes } from "./reviews.js";
 import { revisionFileRoutes, revisionFolderRoutes } from "./revision-files.js";
 import { revisionRoutes } from "./revisions.js";
@@ -180,6 +183,8 @@ export interface AppDeps {
   readonly assistantTurns?: import("../../slices/assistant/access.js").AssistantTurnTokens;
   // The address the server listens on (`--host`); `/mcp` accepts pages served from it.
   readonly host?: string | undefined;
+  // Other names the person opens Slopify by on purpose (SLOPIFY_ALLOWED_HOSTS).
+  readonly allowedHosts?: readonly string[] | undefined;
   // Where the bundled patch notes are (index.json and <id>.md); the build's own copy when left out.
   readonly patchNotesDir?: string;
   // Where the bundled tutorials are (the wiki's <Page>.md and _Sidebar.md); the build's own
@@ -211,7 +216,7 @@ const notBuilt =
   "The Slopify UI is not built yet. The API is running: try /api/health.\n" +
   "Build the SPA with `npm run build` at the repository root.\n";
 
-function apiRoutes(deps: AppDeps, startedAt: number) {
+function apiRoutes(deps: AppDeps, startedAt: number, runAllowed?: RunAllowedCall) {
   return (
     new Hono()
       .get("/health", (c) =>
@@ -278,12 +283,25 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/providers", providerRoutes(deps))
       .route("/model-checks", modelCheckRoutes(deps))
       .route("/onboarding", onboardingRoutes(deps))
-      .route("/assistant", assistantRoutes(deps))
+      .route("/assistant", assistantRoutes(deps, runAllowed))
   );
 }
 
 export function createApp(deps: AppDeps): Hono {
   const startedAt = deps.clock.now().getTime();
+  // An Allow's call goes through the API in-process as the assistant, like its MCP calls.
+  const runAllowed: RunAllowedCall = (call) =>
+    runAllowedCall(
+      {
+        db: deps.db,
+        ids: deps.ids,
+        clock: deps.clock,
+        log: deps.log,
+        api: async (request: Request): Promise<Response> =>
+          app.request(request, undefined, assistantBindings),
+      },
+      call,
+    );
 
   const app = new Hono()
     // Slopify has no login, so it never answers the public internet. Tailscale marks every
@@ -297,6 +315,17 @@ export function createApp(deps: AppDeps): Hono {
           "Slopify doesn't answer the public internet: this request came through Tailscale Funnel. On the computer Slopify runs on, run tailscale funnel status to see which port has Funnel, turn it off with tailscale funnel --https=<that port> off, and open Slopify on your other devices through Settings → General → Remote access instead.",
       });
     })
+    // Only Slopify's own names, and changes only from its own page (`request-guard.ts`).
+    .use(
+      "*",
+      requestGuard({
+        listenHost: deps.host,
+        remoteHost: deps.remoteAccess?.remoteHost,
+        extraHosts: deps.allowedHosts ?? [],
+      }),
+    )
+    // Over remote access: only the account that turned it on, and no host setup.
+    .use("*", remoteGuard(deps.remoteAccess))
     .use("*", async (c, next) => {
       // A provisional candidate must not trigger the stale-tab Reload dialog.
       if (!deps.updater?.locked()) c.header("X-Slopify-Version", deps.version);
@@ -373,7 +402,7 @@ export function createApp(deps: AppDeps): Hono {
     .use("/api/*", startRecorder(deps))
     .onError((error, c) => problemFromError(c, error, deps))
     .notFound(missing)
-    .route("/api", apiRoutes(deps, startedAt))
+    .route("/api", apiRoutes(deps, startedAt, runAllowed))
     .get("/api/events/global", (c) =>
       streamSSE(c, (stream) => deps.hub.subscribeGlobal(stream, c.req.raw.signal)),
     )

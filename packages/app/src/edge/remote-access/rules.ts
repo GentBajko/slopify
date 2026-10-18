@@ -15,12 +15,21 @@ export interface Problem {
 export interface Machine {
   // cachyhome.tail1234.ts.net, without the trailing dot.
   readonly dnsName: string;
+  // The Tailscale account this computer is signed in to (its LoginName), when status names it.
+  readonly owner?: string | undefined;
 }
 
 const statusShape = z
   .object({
     BackendState: z.string(),
-    Self: z.object({ DNSName: z.string().optional() }).loose().optional(),
+    Self: z
+      .object({ DNSName: z.string().optional(), UserID: z.number().optional() })
+      .loose()
+      .optional(),
+    User: z
+      .record(z.string(), z.object({ LoginName: z.string().optional() }).loose())
+      .nullable()
+      .optional(),
     CertDomains: z.array(z.string()).nullable().optional(),
   })
   .loose();
@@ -135,7 +144,9 @@ export function machineOf(stdout: string): Machine | Problem {
       fix: "In the Tailscale admin console open DNS (login.tailscale.com/admin/dns), turn on MagicDNS if it is off, then under HTTPS Certificates press Enable HTTPS. Then press Check again.",
       link: dnsAdminLink,
     };
-  return { dnsName };
+  const userId = parsed.Self?.UserID;
+  const owner = userId === undefined ? undefined : parsed.User?.[String(userId)]?.LoginName;
+  return owner === undefined || owner === "" ? { dnsName } : { dnsName, owner };
 }
 
 export function isProblem(value: Machine | Problem): value is Problem {

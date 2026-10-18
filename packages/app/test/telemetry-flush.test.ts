@@ -114,7 +114,11 @@ async function started(collectorUrl: string): Promise<{ url: string; dataDir: st
 async function stage(url: string, kind: string, name: string, bytes: Buffer): Promise<string> {
   const form = new FormData();
   form.set("file", new File([new Uint8Array(bytes)], name));
-  const response = await fetch(`${url}/api/staging/${kind}`, { method: "POST", body: form });
+  const response = await fetch(`${url}/api/staging/${kind}`, {
+    method: "POST",
+    headers: { "x-slopify-client": "test" },
+    body: form,
+  });
   return ((await response.json()) as { id: string }).id;
 }
 
@@ -152,7 +156,7 @@ async function runOneProject(url: string): Promise<void> {
   const created = await fetch(`${url}/api/projects`, {
     method: "POST",
     body: JSON.stringify(draft(audio, image)),
-    headers: { "content-type": "application/json" },
+    headers: { "x-slopify-client": "test", "content-type": "application/json" },
   });
   expect(created.status).toBe(201);
   const { project } = (await created.json()) as { project: { id: string } };
@@ -177,7 +181,14 @@ describe("a run against a collector", () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(collector.received).toEqual([]);
 
-    expect((await fetch(`${url}/api/telemetry/notice`, { method: "POST" })).status).toBe(200);
+    expect(
+      (
+        await fetch(`${url}/api/telemetry/notice`, {
+          method: "POST",
+          headers: { "x-slopify-client": "test" },
+        })
+      ).status,
+    ).toBe(200);
     await runOneProject(url);
     await vi.waitFor(() => expect(collector.received).toHaveLength(3), {
       timeout: 30_000,
@@ -220,7 +231,10 @@ describe("a run against a collector", () => {
     running.push(collector.close);
     const { url, dataDir } = await started(collector.url);
 
-    await fetch(`${url}/api/telemetry/notice`, { method: "POST" });
+    await fetch(`${url}/api/telemetry/notice`, {
+      method: "POST",
+      headers: { "x-slopify-client": "test" },
+    });
     await runOneProject(url);
     await new Promise((resolve) => setTimeout(resolve, 2_000));
 

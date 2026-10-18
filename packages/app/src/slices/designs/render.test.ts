@@ -1,7 +1,15 @@
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resolveFont } from "../fonts/index.js";
+import type { ResolvedFont } from "../fonts/model.js";
 import type { RenderRun } from "../video/ffmpeg.js";
 import { designHarness, type Harness, pngOf } from "./designs.fake.js";
 import { poster } from "./document.fake.js";
@@ -29,6 +37,7 @@ function setup(
     ],
   }),
   designValues = values,
+  font: (id: string) => Promise<ResolvedFont> = (id) => resolveFont(h.paths, id),
 ) {
   h = designHarness();
   const made = createDesign(h.deps, {
@@ -67,7 +76,7 @@ function setup(
     clock: h.deps.clock,
     ffmpeg: "ffmpeg",
     runFfmpeg,
-    font: (id) => resolveFont(h.paths, id),
+    font,
     pdf: async (job) => {
       jobs.push(job);
       return new TextEncoder().encode("%PDF-1.3 fake");
@@ -128,6 +137,38 @@ describe("drawing a designed piece", () => {
     const changed = await renderer.render("d1", "a4", "png", signal);
     expect(changed.ok && first.ok && changed.value.path !== first.value.path).toBe(true);
     expect(seen).toHaveLength(2);
+  });
+
+  it("keeps only the newest drawing of each format", async () => {
+    const { renderer } = setup();
+    const dir = join(rendersDir(h.paths), "d1");
+    await renderer.render("d1", "a4", "pdf", signal);
+    const square = await renderer.render("d1", "square", "png", signal);
+    h.db.exec(`UPDATE designs SET values_json='${JSON.stringify({ ...values, Price: "€15" })}'`);
+    const changed = await renderer.render("d1", "a4", "pdf", signal);
+    const names = readdirSync(dir).sort();
+    expect(names).toHaveLength(3);
+    expect(names.filter((name) => name.startsWith("a4-"))).toEqual(
+      [
+        changed.ok ? changed.value.path.slice(dir.length + 1) : "",
+        changed.ok ? changed.value.path.slice(dir.length + 1).replace(/\.pdf$/, ".png") : "",
+      ].sort(),
+    );
+    expect(square.ok && existsSync(square.value.path)).toBe(true);
+  });
+
+  it("answers a drawn piece without reading its font files again", async () => {
+    let copy = "";
+    const { renderer } = setup(undefined, values, async (id) => {
+      const font = await resolveFont(h.paths, id);
+      return { ...font, path: copy };
+    });
+    copy = join(h.paths.dataDir, "font-copy.ttf");
+    copyFileSync((await resolveFont(h.paths, "default")).path, copy);
+    const first = await renderer.render("d1", "a4", "png", signal);
+    expect(first.ok).toBe(true);
+    rmSync(copy);
+    expect(await renderer.render("d1", "a4", "png", signal)).toEqual(first);
   });
 
   it("draws one piece at a time, and answers a drawn one without waiting", async () => {

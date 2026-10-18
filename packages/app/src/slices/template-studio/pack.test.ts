@@ -366,3 +366,81 @@ describe("importPack", () => {
     expect(packSamplesDir(to.deps.paths, "x")).toContain(join("template-studio", "packs", "x"));
   });
 });
+
+// A pack whose central directory lists manifest.json and then `names.length` entries that all
+// point at one deflated block of `size` zeros: tiny on disk, far larger once unpacked.
+function overlappingZip(names: readonly string[], size: number): Uint8Array {
+  const one = zipSync(
+    { "manifest.json": strToU8("{}"), "samples/x.png": new Uint8Array(size) },
+    { level: 9 },
+  );
+  const view = new DataView(one.buffer, one.byteOffset, one.byteLength);
+  const eocd = one.byteLength - 22;
+  const cdOffset = view.getUint32(eocd + 16, true);
+  const cdSize = view.getUint32(eocd + 12, true);
+  const directory = one.slice(cdOffset, cdOffset + cdSize);
+  const at = (offset: number) => new DataView(directory.buffer).getUint16(offset, true);
+  const firstLength = 46 + at(28) + at(30) + at(32);
+  const manifestRecord = directory.slice(0, firstLength);
+  const sampleHead = directory.slice(firstLength, firstLength + 46);
+  const records: Uint8Array[] = [manifestRecord];
+  for (const name of names) {
+    const bytes = strToU8(name);
+    const entry = new Uint8Array(46 + bytes.length);
+    entry.set(sampleHead);
+    const entryView = new DataView(entry.buffer);
+    entryView.setUint16(28, bytes.length, true);
+    entryView.setUint16(30, 0, true);
+    entryView.setUint16(32, 0, true);
+    entry.set(bytes, 46);
+    records.push(entry);
+  }
+  const length = records.reduce((n, r) => n + r.length, 0);
+  const end = one.slice(eocd);
+  const endView = new DataView(end.buffer);
+  endView.setUint16(8, records.length, true);
+  endView.setUint16(10, records.length, true);
+  endView.setUint32(12, length, true);
+  const out = new Uint8Array(cdOffset + length + end.length);
+  out.set(one.slice(0, cdOffset));
+  let offset = cdOffset;
+  for (const r of records) {
+    out.set(r, offset);
+    offset += r.length;
+  }
+  out.set(end, offset);
+  return out;
+}
+
+const pictureNames = (count: number) =>
+  Array.from({ length: count }, (_, i) => `samples/p${String(i).padStart(5, "0")}.png`);
+
+describe("readPack against zip bombs", () => {
+  it("refuses a zip whose entries overlap, without unpacking them", () => {
+    const bomb = overlappingZip(pictureNames(2000), packLimits.sampleBytes);
+    expect(bomb.byteLength).toBeLessThan(packLimits.uploadBytes);
+    const before = process.memoryUsage().arrayBuffers;
+    const started = performance.now();
+    expect(readPack(bomb)).toMatchObject({
+      ok: false,
+      message: expect.stringContaining("more files than a template pack ever has"),
+    });
+    expect(performance.now() - started).toBeLessThan(2000);
+    expect(process.memoryUsage().arrayBuffers - before).toBeLessThan(64 * 1024 * 1024);
+  });
+
+  it("refuses a pack one file over the count, and two entries with the same name", () => {
+    expect(readPack(overlappingZip(pictureNames(packLimits.samples + 1), 10))).toMatchObject({
+      ok: false,
+      message: expect.stringContaining("more files than a template pack ever has"),
+    });
+    expect(readPack(overlappingZip(["samples/a.png", "samples/a.png"], 10))).toMatchObject({
+      ok: false,
+      message: expect.stringContaining("holds samples/a.png twice"),
+    });
+    expect(readPack(overlappingZip(pictureNames(packLimits.samples), 10))).toMatchObject({
+      ok: false,
+      message: expect.not.stringContaining("more files"),
+    });
+  });
+});

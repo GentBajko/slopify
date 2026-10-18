@@ -1,6 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
 import { z } from "zod";
+import type { RunAllowedCall } from "../../slices/assistant/access.js";
 import {
   assistantCliPreferences,
   assistantScreenSchema,
@@ -12,6 +13,8 @@ import { actorOf } from "./actor.js";
 import type { AppDeps } from "./app.js";
 import { idParam } from "./ids.js";
 import { onInvalid, problem } from "./problem.js";
+import { hostOnlySentence } from "./remote-guard.js";
+import { viaProxy } from "./same-page.js";
 
 // The assistant panel's chat. The person's own: an agent or the assistant itself is refused
 // here, so nothing but a press in the page answers an ask.
@@ -42,7 +45,11 @@ function personOnly(c: Context): Response | undefined {
       });
 }
 
-export function assistantRoutes(deps: Pick<AppDeps, "assistant" | "db">) {
+export function assistantRoutes(
+  deps: Pick<AppDeps, "assistant" | "db">,
+  // On Allow, the asked call is made by Slopify itself (`edge/mcp/assistant.ts`).
+  runAllowed?: RunAllowedCall,
+) {
   const assistant = deps.assistant;
   const wired = (c: Context): Assistant | Response =>
     personOnly(c) ?? assistant ?? problem(c, { status: 503, detail: notWired });
@@ -107,9 +114,21 @@ export function assistantRoutes(deps: Pick<AppDeps, "assistant" | "db">) {
       zValidator("param", idParam, onInvalid),
       zValidator("json", answerBody, onInvalid),
       (c) => {
+        // An Allow starts paid or removing work: it is pressed on this computer, or on the
+        // person's own device through remote access, never by another account (`remote-guard.ts`).
+        if (c.req.valid("json").answer === "allow" && viaProxy(c.req.raw.headers))
+          return problem(c, {
+            status: 403,
+            detail: hostOnlySentence("The assistant's Allow is pressed"),
+            extensions: { reason: "host-only" },
+          });
         const service = wired(c);
         if (service instanceof Response) return service;
-        const answered = service.answer(c.req.valid("param").id, c.req.valid("json").answer);
+        const answered = service.answer(
+          c.req.valid("param").id,
+          c.req.valid("json").answer,
+          runAllowed,
+        );
         if (answered.ok) return c.json({ ask: answered.ask });
         return problem(c, {
           status: answered.reason === "unknown" ? 404 : 409,

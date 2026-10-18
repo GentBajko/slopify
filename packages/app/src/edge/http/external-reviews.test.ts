@@ -101,7 +101,10 @@ it("says a body that isn't JSON wasn't JSON, and a JSON one without a verdict se
     h.app.request(`/api/projects/${h.projectId}/external-reviews/er1/verdict`, {
       method: "POST",
       body,
-      ...(type === undefined ? {} : { headers: { "content-type": type } }),
+      headers: {
+        "x-slopify-client": "test",
+        ...(type === undefined ? {} : { "content-type": type }),
+      },
     });
   const broken = await post("{verdict", "application/json");
   expect(broken.status).toBe(400);
@@ -125,7 +128,7 @@ it("answers a failure that isn't the agent's with the fixed sentence and a refer
   h.deps.db.exec("DROP TABLE external_reviews");
   const failed = await h.app.request(`/api/projects/${h.projectId}/external-reviews/er1/verdict`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "x-slopify-client": "test", "content-type": "application/json" },
     body: JSON.stringify({ verdict: "pass", reasons: [] }),
   });
   expect(failed.status).toBe(500);
@@ -282,14 +285,24 @@ it("lists a review again once its project is restored from the Trash, and passes
   const listed = async () =>
     JSON.stringify((await agent.callTool({ name: "needs_attention", arguments: {} })).content);
   expect(await listed()).toContain("er1");
-  expect((await h.app.request(`/api/projects/${h.projectId}`, { method: "DELETE" })).status).toBe(
-    204,
-  );
+  expect(
+    (
+      await h.app.request(`/api/projects/${h.projectId}`, {
+        method: "DELETE",
+        headers: { "x-slopify-client": "test" },
+      })
+    ).status,
+  ).toBe(204);
   expect(await listed()).not.toContain("er1");
   const deadline = new Date("2026-09-10T02:00:00.000Z");
   expect(settleExternalReviews(h.deps.db, deadline)).toEqual([]);
   expect(
-    (await h.app.request(`/api/trash/project/${h.projectId}/restore`, { method: "POST" })).status,
+    (
+      await h.app.request(`/api/trash/project/${h.projectId}/restore`, {
+        method: "POST",
+        headers: { "x-slopify-client": "test" },
+      })
+    ).status,
   ).toBe(200);
   expect(await listed()).toContain("er1");
   expect(settleExternalReviews(h.deps.db, deadline).map((review) => review.id)).toEqual(["er1"]);
@@ -302,7 +315,7 @@ it("leaves a review an agent was asked to answer to the agent or the person, nev
     `/api/projects/${h.projectId}/external-reviews/er1/verdict`,
     {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "x-slopify-client": "test", "content-type": "application/json" },
       body: JSON.stringify({ verdict: "pass", reasons: [] }),
     },
     assistantBindings,

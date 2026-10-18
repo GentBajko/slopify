@@ -1,6 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
 import { errorText } from "../../kernel/errors.js";
+import { projectPaused } from "../../slices/admission/repo.js";
 import {
   changeCheckpoints,
   checkpointChangeSchema,
@@ -8,8 +9,10 @@ import {
   replayCheckpointApproval,
   validateCheckpointApproval,
 } from "../../slices/checkpoints/change.js";
+import { listCheckpoints } from "../../slices/checkpoints/repo.js";
 import { checkpointApprovalSchema, checkpointRowSchema } from "../../slices/checkpoints/schema.js";
 import { withProjectControl } from "../../slices/control/lock.js";
+import { projectHolds } from "../../slices/reviews/holds.js";
 import type { AppDeps } from "./app.js";
 import { idParam, idString } from "./ids.js";
 import { onInvalid, problem } from "./problem.js";
@@ -31,6 +34,16 @@ function refused(c: Context, reason: string): Response {
         : reason === "invalid-input"
           ? "This checkpoint answer could not be read. Reload the page and try again."
           : "This checkpoint changed since the page loaded, for example it was already approved. Reload the page to see its current state, then try again.",
+  });
+}
+
+// Taking a checkpoint off that holds the run now would start the paid steps behind it without
+// the review: that goes through Approve, which checks what is approved is what was looked at.
+function heldThere(c: Context, stage: string): Response {
+  return problem(c, {
+    status: 409,
+    detail: `The run is waiting at the checkpoint before ${stage}, so it can't be taken off now: that would start the next steps without the review. Look over what is made, then press Approve on the checkpoint (agents: approve_checkpoint).`,
+    extensions: { reason: "held-at-checkpoint" },
   });
 }
 
@@ -108,6 +121,18 @@ function buildCheckpointRoutes(deps: AppDeps) {
         const projectId = c.req.valid("param").id;
         const body = c.req.valid("json");
         return withProjectControl(deps.db, projectId, () => {
+          // A paused run goes on only through Continue the run, so taking a checkpoint off
+          // then releases nothing by itself.
+          const holding = projectPaused(deps.db, projectId)
+            ? []
+            : (projectHolds(deps.db, { projectId }).holding.get(projectId) ?? []);
+          const removed = listCheckpoints(deps.db, projectId, body.revisionId).filter(
+            (row) => !body.stages.includes(row.stage),
+          );
+          const held = holding.find((hold) =>
+            removed.some((row) => row.checkpointId === hold.checkpointId),
+          );
+          if (held !== undefined) return heldThere(c, held.stage);
           const result = changeCheckpoints(deps, { ...body, projectId });
           if (!result.ok) return refused(c, result.reason);
           if (result.value.changed) notify(projectId, body.revisionId, result.value.released);

@@ -70,7 +70,7 @@ describe("editable projects through the real app", () => {
       app,
       "/api/staging/audio",
       stagedFileSchema,
-      { method: "POST", body: form },
+      { method: "POST", headers: { "x-slopify-client": "test" }, body: form },
       201,
     );
     expect(staged.stageKind).toBe("audio");

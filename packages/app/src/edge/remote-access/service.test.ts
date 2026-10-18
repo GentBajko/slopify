@@ -61,6 +61,16 @@ describe("turning it on", () => {
     expect((await service.view()).state).toBe("on");
   });
 
+  it("keeps the Tailscale account it was turned on under, as the only one let in", async () => {
+    const { service, deps } = setup();
+    expect(service.owner()).toBeUndefined();
+    await service.set(true);
+    expect(service.owner()).toBe("ann@example.com");
+    expect(createRemoteAccessService(deps).owner()).toBe("ann@example.com");
+    await service.set(false);
+    expect(service.owner()).toBeUndefined();
+  });
+
   it("writes the port into the address when it isn't 443", async () => {
     const { service } = setup();
     const view = await service.set(true, 8443);

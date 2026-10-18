@@ -51,6 +51,7 @@ const roleShare: Readonly<Record<BlockRole, number>> = {
   small: 0.03,
 };
 const lineSpacing = 1.2;
+const maxFilled = 10_000;
 const blockGap = 0.45;
 
 // Average advance per em: about half for mixed case, more for capitals.
@@ -151,21 +152,84 @@ export function wrapText(
     }
     if (line !== "") lines.push(line);
     line = "";
-    let rest = word;
-    if ([...rest].length <= shortWord || rest.includes(" ")) {
-      line = rest;
+    if ([...word].length <= shortWord || word.includes(" ")) {
+      line = word;
       continue;
     }
-    while (!fits(rest)) {
-      let cut = Math.max(1, [...rest].length - 1);
-      while (cut > 1 && !fits([...rest].slice(0, cut).join(""))) cut -= 1;
-      lines.push([...rest].slice(0, cut).join(""));
-      rest = [...rest].slice(cut).join("");
-    }
-    line = rest;
+    const cuts = cutWord([...word], size, room, font);
+    lines.push(...cuts.slice(0, -1));
+    line = cuts.at(-1) ?? "";
   }
   if (line !== "") lines.push(line);
   return lines;
+}
+
+// A word too wide for the line, cut into pieces that each take the longest run of characters
+// that fits (at least one). Each character's advance has a lowest and highest share (an
+// unknown one is guessed between `advanceOf`'s two figures), so running sums rule most cut
+// points in or out at once and only the few in between are measured exactly: the result is
+// what measuring every cut point would give, without the time that takes on a long URL.
+function cutWord(
+  chars: readonly string[],
+  size: number,
+  room: number,
+  font?: LayoutFont,
+): string[] {
+  const advance = font?.advance;
+  const low = [0];
+  const high = [0];
+  for (const ch of chars) {
+    const known = advance?.(ch.codePointAt(0) ?? 0);
+    if (known !== undefined && !(known >= 0)) return cutWordSlowly(chars, size, room, font);
+    low.push((low.at(-1) ?? 0) + (known ?? 0.56));
+    high.push((high.at(-1) ?? 0) + (known ?? 0.68));
+  }
+  const width = (em: number) =>
+    advance === undefined ? em * size : em * size * 1.02 + size * 0.08;
+  const slack = 1e-6 * (Math.abs(room) + size);
+  const lowAt = (from: number, to: number) => width((low[to] ?? 0) - (low[from] ?? 0));
+  const fitsRun = (from: number, to: number): boolean => {
+    if (lowAt(from, to) > room + slack) return false;
+    if (width((high[to] ?? 0) - (high[from] ?? 0)) < room - slack) return true;
+    return measuredWidth(chars.slice(from, to).join(""), size, font) <= room;
+  };
+  const pieces: string[] = [];
+  let start = 0;
+  while (!fitsRun(start, chars.length)) {
+    const top = Math.max(1, chars.length - start - 1);
+    let below = 0;
+    let above = top + 1;
+    while (above - below > 1) {
+      const middle = Math.floor((below + above) / 2);
+      if (lowAt(start, start + middle) <= room + slack) below = middle;
+      else above = middle;
+    }
+    let cut = Math.max(1, below);
+    while (cut > 1 && !fitsRun(start, start + cut)) cut -= 1;
+    pieces.push(chars.slice(start, start + cut).join(""));
+    start += cut;
+  }
+  pieces.push(chars.slice(start).join(""));
+  return pieces;
+}
+
+function cutWordSlowly(
+  chars: readonly string[],
+  size: number,
+  room: number,
+  font?: LayoutFont,
+): string[] {
+  const fits = (candidate: string) => measuredWidth(candidate, size, font) <= room;
+  const pieces: string[] = [];
+  let rest = [...chars];
+  while (!fits(rest.join(""))) {
+    let cut = Math.max(1, rest.length - 1);
+    while (cut > 1 && !fits(rest.slice(0, cut).join(""))) cut -= 1;
+    pieces.push(rest.slice(0, cut).join(""));
+    rest = rest.slice(cut);
+  }
+  pieces.push(rest.join(""));
+  return pieces;
 }
 
 interface Sized {
@@ -186,8 +250,17 @@ export function layoutText(
   const short = Math.min(frame.width, frame.height);
   const floor = Math.round(short * minTextShare);
   const area = safeArea(frame, text.preset);
+  let cutShort = false;
   const blocks = text.blocks
-    .map((block) => ({ ...block, filled: render(block.text, values).replace(/\s+/g, " ").trim() }))
+    .map((block) => {
+      const filled = render(block.text, values).replace(/\s+/g, " ").trim();
+      // More than any format holds even at the smallest size: the rest is never laid out, and
+      // the piece says it doesn't fit.
+      const chars = filled.length > maxFilled ? [...filled] : [];
+      if (chars.length <= maxFilled) return { ...block, filled };
+      cutShort = true;
+      return { ...block, filled: chars.slice(0, maxFilled).join("") };
+    })
     .filter((block) => block.filled !== "");
   const size = (role: BlockRole, scale: number) =>
     Math.max(floor, Math.round(short * roleShare[role] * scale));
@@ -227,7 +300,7 @@ export function layoutText(
   }
   if (widest(set) > area.width) set = sized(scale, true);
   const total = heightOf(set);
-  const overflow = total > area.height || widest(set) > area.width + 1;
+  const overflow = cutShort || total > area.height || widest(set) > area.width + 1;
   const vertical =
     text.preset === "top-title" ? 0 : (area.height - Math.min(total, area.height)) / 2;
   const left = text.preset === "left-column";

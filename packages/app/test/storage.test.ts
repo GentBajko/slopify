@@ -56,7 +56,11 @@ async function post(
 ): Promise<StagedFile> {
   const form = new FormData();
   form.set("file", new File([body], filename));
-  const response = await fetch(`${url}/api/staging/${kind}`, { method: "POST", body: form });
+  const response = await fetch(`${url}/api/staging/${kind}`, {
+    method: "POST",
+    headers: { "x-slopify-client": "test" },
+    body: form,
+  });
   if (response.status !== 201) {
     throw new Error(`upload of ${filename} answered ${response.status}`);
   }
@@ -132,7 +136,10 @@ describe("upload, attach, and download over a socket", () => {
 
     const upload = fetch(`${url}/api/staging/audio`, {
       method: "POST",
-      headers: { "content-type": "multipart/form-data; boundary=----slopifytest" },
+      headers: {
+        "x-slopify-client": "test",
+        "content-type": "multipart/form-data; boundary=----slopifytest",
+      },
       body: multipart(half, gate),
       // Required by fetch for a body that is a stream rather than a buffer.
       duplex: "half",

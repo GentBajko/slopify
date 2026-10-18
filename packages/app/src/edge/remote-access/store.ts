@@ -15,6 +15,9 @@ const appliedShape = z.object({
   dnsName: z.string(),
   httpsPort: z.number().int(),
   target: z.string(),
+  // The Tailscale account the computer was signed in to when Slopify added its address: the
+  // only one let in over the tailnet. Absent in what older versions saved.
+  owner: z.string().optional(),
 });
 export type Applied = z.infer<typeof appliedShape>;
 

@@ -169,6 +169,7 @@ Values of names matching `*_SECRET`, `*_TOKEN`, `*_PASSWORD`, `*_KEY` are shown 
 | SLOPIFY_FFMPEG | unset → bundled/recovered ffmpeg | `packages/app/src/adapters/ffmpeg.ts:22`, `packages/app/src/slices/video/ffmpeg.ts:31` | `README.md:111`, `docs/ffmpeg.md` |
 | FFMPEG_BIN | unset; lower-priority override; set on the recovery installer child | `packages/app/src/adapters/ffmpeg.ts:22`, `packages/app/src/adapters/ffmpeg.ts:57` | Error text `packages/app/src/adapters/ffmpeg.ts:78` |
 | SLOPIFY_NO_MODEL_PREFETCH | unset → caption model fetched at start | `packages/app/src/edge/cli.ts:88` | `README.md:112` |
+| SLOPIFY_ALLOWED_HOSTS | unset → only loopback, IP literals, the listen host, the machine's own name and *.ts.net are answered | `packages/app/src/main.ts` (createApp), `packages/app/src/edge/http/request-guard.ts` | `README.md`, `docs/wiki/Install.md` |
 | SLOPIFY_NO_MODEL_REFRESH | unset → model catalogue synced daily, and automatic model checks (key saved, CLI added, weekly) and picker listings run; set → both off, Check models still works | `packages/app/src/edge/cli.ts:97` | source only |
 | SLOPIFY_SUBTITLE_MODEL_SEED | unset; image points at `/opt/slopify/models/english-subtitles/wav2vec2-base-960h-fp32-e4661427.onnx` (the default fp32 model; only used when the chosen model is fp32) | `packages/app/src/edge/cli.ts:90`, `Dockerfile:30` | `Dockerfile:49` comment |
 | SLOPIFY_SUBTITLE_THREADS | `min(8, CPUs−1)` | `packages/app/src/adapters/alignment/threads.ts:12` | source only |

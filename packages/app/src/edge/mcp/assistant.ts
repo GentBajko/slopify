@@ -5,7 +5,13 @@ import { type Context, Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "zod";
-import type { AssistantTurnAccess, AssistantTurnTokens } from "../../slices/assistant/access.js";
+import { redact } from "../../kernel/log.js";
+import type {
+  AllowedCall,
+  AssistantTurnAccess,
+  AssistantTurnTokens,
+} from "../../slices/assistant/access.js";
+import { consumeGrant } from "../../slices/assistant/asks.js";
 import { costSentence, estimateOfAnswer, unpricedSentence } from "../../slices/assistant/cost.js";
 import {
   argsHash,
@@ -17,7 +23,14 @@ import { projectTitle } from "../../slices/assistant/names.js";
 import { screenBlock } from "../../slices/assistant/prompt.js";
 import { viaProxy } from "../http/same-page.js";
 import { subjectsOf } from "./attribution.js";
-import { callApi, confirmText, type RouteCallDeps, refusal, text } from "./call-route.js";
+import {
+  callApi,
+  callRoute,
+  confirmText,
+  type RouteCallDeps,
+  refusal,
+  text,
+} from "./call-route.js";
 import { registerFileTools } from "./file-tools.js";
 import { agentsLocalOnly, originAllowed } from "./http.js";
 import { registerRemakeTools } from "./remake-tools.js";
@@ -45,7 +58,7 @@ const askedConfirmed =
 
 function waiting(tool: RouteTool, shown: string): CallToolResult {
   return refusal(
-    `Waiting for the person: Slopify showed them «${shown}» with Allow and Don't. Stop and tell them; if they allow, you'll be asked to call ${tool.name} again with confirmed: true and the same arguments.`,
+    `Waiting for the person: Slopify showed them «${shown}» with Allow and Don't. Stop and tell them; if they allow, Slopify makes this ${tool.name} call itself and tells you what it answered.`,
   );
 }
 
@@ -80,7 +93,43 @@ async function askText(
         : isOutward(gateOf(tool))
           ? "This sends to, or changes, an address outside Slopify."
           : unpricedSentence);
-  return `${what} ${consequence}`;
+  const details = detailsOf(args);
+  return `${what} ${consequence}${details === "" ? "" : ` ${details}`}`;
+}
+
+// What the call carries, so the card shows what Allow lets go ahead: names, addresses,
+// numbers and how many of each list, never an id (the card names the project instead), a
+// retry key or anything that looks like a secret.
+const hiddenField = /(^id$|Id$|Ids$|^idempotencyKey$|^fingerprint$|^confirmed$)/;
+const secretField = /key|token|secret|password|authorization/i;
+const detailsMax = 400;
+function detailsOf(args: Readonly<Record<string, unknown>>): string {
+  const parts: string[] = [];
+  const add = (name: string, value: unknown, depth: number): void => {
+    if (hiddenField.test(name) || value === undefined || value === null) return;
+    if (secretField.test(name)) {
+      parts.push(`${name}: (hidden)`);
+      return;
+    }
+    if (typeof value === "string") {
+      const shown = redact(value.replace(/\s+/g, " ").trim());
+      if (shown !== "")
+        parts.push(`${name}: “${shown.length > 80 ? `${shown.slice(0, 79)}…` : shown}”`);
+    } else if (typeof value === "number" || typeof value === "boolean")
+      parts.push(`${name}: ${String(value)}`);
+    else if (Array.isArray(value))
+      parts.push(`${name}: ${String(value.length)} ${value.length === 1 ? "item" : "items"}`);
+    else if (typeof value === "object" && depth < 2)
+      for (const [key, inner] of Object.entries(value)) add(`${name}.${key}`, inner, depth + 1);
+  };
+  const { body, query, ...rest } = args;
+  for (const [key, value] of Object.entries(rest)) add(key, value, 1);
+  for (const source of [body, query])
+    if (typeof source === "object" && source !== null && !Array.isArray(source))
+      for (const [key, value] of Object.entries(source)) add(key, value, 1);
+  if (parts.length === 0) return "";
+  const line = `With ${parts.join(", ")}.`;
+  return line.length > detailsMax ? `${line.slice(0, detailsMax - 1)}…` : line;
 }
 
 function gateOf(tool: RouteTool) {
@@ -105,6 +154,7 @@ function gateFor(
       tool: tool.name,
       argsHash: hash,
       text: await askText(deps, tool, args, turn),
+      args,
     });
     return waiting(tool, ask.text);
   };
@@ -125,6 +175,43 @@ function remembering(api: RouteCallDeps["api"], turn: AssistantTurnAccess): Rout
     }
     return response;
   };
+}
+
+// Allow pressed: the asked call made by Slopify, as the assistant, using the person's Allow
+// once. Refused when that Allow is gone (used, expired) or the tool is not the assistant's.
+export async function runAllowedCall(
+  deps: RouteCallDeps,
+  call: AllowedCall,
+): Promise<{ readonly ok: boolean; readonly text: string }> {
+  const tool = assistantRouteTools.find((one) => one.name === call.tool);
+  if (tool === undefined || !isGated(gateOf(tool)))
+    return {
+      ok: false,
+      text: `Slopify didn't make this step: ${call.tool} isn't one the assistant asks for. Ask the assistant again.`,
+    };
+  const args = { ...call.args, confirmed: true };
+  const result = await callRoute(
+    {
+      ...deps,
+      actor: "assistant",
+      gate: async () =>
+        consumeGrant(
+          deps.db,
+          { sessionId: call.sessionId, tool: tool.name, argsHash: argsHash(args) },
+          deps.clock.now(),
+        )
+          ? undefined
+          : refusal(
+              "This Allow was already used or has expired, so Slopify didn't make the step again. Ask the assistant again if it is still needed.",
+            ),
+    },
+    tool,
+    args,
+  );
+  const said = result.content
+    .flatMap((part) => (part.type === "text" ? [part.text] : []))
+    .join("\n");
+  return { ok: result.isError !== true, text: said };
 }
 
 export function createAssistantMcpServer(deps: McpDeps, turn: AssistantTurnAccess): McpServer {

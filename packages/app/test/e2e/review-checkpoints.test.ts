@@ -141,10 +141,15 @@ it("runs unchanged zero-gate projects and saves gate changes without provider su
     expect((await h.status()).checkpoints).toEqual([]);
     expect((await h.change(["images"])).status).toBe(200);
     expect(images.calls()).toBe(0);
-    expect((await h.change([])).status).toBe(200);
+    // The run waits at the new checkpoint now: taking it off would release the paid step
+    // without the review, so that goes through Approve.
+    expect((await h.change([])).status).toBe(409);
+    expect(images.calls()).toBe(0);
+    const gate = (await h.status()).checkpoints[0];
+    if (!gate) throw new Error("Missing Images checkpoint");
+    expect((await h.approve(gate)).status).toBe(200);
     await h.runner.settled();
     expect(images.calls()).toBe(2);
-    expect((await h.status()).checkpoints).toEqual([]);
   } finally {
     await h.dispose();
   }

@@ -124,6 +124,51 @@ describe("assistantWorkspace", () => {
   });
 });
 
+describe("the assistant CLI's environment", () => {
+  it("passes what a CLI needs to start and sign in, and no key or other secret", () => {
+    const space = assistantWorkspace("http://127.0.0.1:1/mcp/assistant", "secret-token", {
+      PATH: "/usr/bin",
+      HOME: "/home/x",
+      USER: "x",
+      LANG: "de_CH.UTF-8",
+      LC_ALL: "de_CH.UTF-8",
+      XDG_CONFIG_HOME: "/home/x/.config",
+      TMPDIR: "/tmp/x",
+      CLAUDE_CONFIG_DIR: "/home/x/.claude-alt",
+      CODEX_HOME: "/home/x/.codex-alt",
+      HTTPS_PROXY: "http://proxy:3128",
+      ANTHROPIC_API_KEY: "sk-ant-live",
+      OPENAI_API_KEY: "sk-live",
+      OPENROUTER_API_KEY: "sk-or-live",
+      GEMINI_API_KEY: "g-live",
+      ELEVENLABS_API_KEY: "e-live",
+      AWS_SECRET_ACCESS_KEY: "aws",
+      SLOPIFY_DATA_DIR: "/home/x/.slopify",
+      GITHUB_TOKEN: "ghp",
+    });
+    try {
+      expect(Object.keys(space.env).sort()).toEqual(
+        [
+          "CLAUDE_CONFIG_DIR",
+          "CODEX_HOME",
+          "HOME",
+          "HTTPS_PROXY",
+          "LANG",
+          "LC_ALL",
+          "PATH",
+          "PWD",
+          "SLOPIFY_ASSISTANT_TOKEN",
+          "TMPDIR",
+          "USER",
+          "XDG_CONFIG_HOME",
+        ].sort(),
+      );
+    } finally {
+      space.remove();
+    }
+  });
+});
+
 describe("assistantStream", () => {
   it("reads Claude Code's partial text, Slopify tool calls, answer and end", () => {
     const read = assistantStream("claude-code");

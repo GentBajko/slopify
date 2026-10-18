@@ -76,7 +76,11 @@ function harness(): Harness {
 async function stage(app: Harness["app"], kind: string, body: string): Promise<string> {
   const form = new FormData();
   form.set("file", new File([body], `${kind}.bin`));
-  const response = await app.request(`/api/staging/${kind}`, { method: "POST", body: form });
+  const response = await app.request(`/api/staging/${kind}`, {
+    method: "POST",
+    headers: { "x-slopify-client": "test" },
+    body: form,
+  });
   return ((await response.json()) as { id: string }).id;
 }
 
@@ -108,7 +112,7 @@ async function post(app: Harness["app"], body: unknown): Promise<Response> {
   return await app.request("/api/projects", {
     method: "POST",
     body: JSON.stringify(body),
-    headers: { "content-type": "application/json" },
+    headers: { "x-slopify-client": "test", "content-type": "application/json" },
   });
 }
 
@@ -254,7 +258,7 @@ describe("POST /api/projects with library templates", () => {
     await app.request("/api/prompts", {
       method: "POST",
       body: JSON.stringify(body),
-      headers: { "content-type": "application/json" },
+      headers: { "x-slopify-client": "test", "content-type": "application/json" },
     });
   }
 
@@ -262,7 +266,7 @@ describe("POST /api/projects with library templates", () => {
     await app.request("/api/entries", {
       method: "POST",
       body: JSON.stringify(body),
-      headers: { "content-type": "application/json" },
+      headers: { "x-slopify-client": "test", "content-type": "application/json" },
     });
   }
 
@@ -435,7 +439,7 @@ describe("POST /api/projects/move-channel", () => {
     const move = (body: unknown) =>
       app.request("/api/projects/move-channel", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "x-slopify-client": "test", "content-type": "application/json" },
         body: JSON.stringify(body),
       });
     const moved = await move({ projectIds: ["p1", "gone"], channelId: "assets" });
@@ -829,7 +833,10 @@ describe("DELETE /api/projects/:id", () => {
     const id = await made(app);
     db.prepare("UPDATE stages SET state = 'done' WHERE project_id = ?").run(id);
 
-    const response = await app.request(`/api/projects/${id}`, { method: "DELETE" });
+    const response = await app.request(`/api/projects/${id}`, {
+      method: "DELETE",
+      headers: { "x-slopify-client": "test" },
+    });
 
     expect(response.status).toBe(204);
     expect(await (await app.request("/api/projects")).json()).toEqual({ projects: [] });
@@ -840,7 +847,10 @@ describe("DELETE /api/projects/:id", () => {
     expect(await opened.json()).toMatchObject({
       detail: expect.stringMatching(/Settings → Trash/),
     });
-    const again = await app.request(`/api/projects/${id}`, { method: "DELETE" });
+    const again = await app.request(`/api/projects/${id}`, {
+      method: "DELETE",
+      headers: { "x-slopify-client": "test" },
+    });
     expect(again.status).toBe(404);
   });
 
@@ -848,7 +858,10 @@ describe("DELETE /api/projects/:id", () => {
     const { app, db } = harness();
     const id = await made(app);
 
-    const response = await app.request(`/api/projects/${id}`, { method: "DELETE" });
+    const response = await app.request(`/api/projects/${id}`, {
+      method: "DELETE",
+      headers: { "x-slopify-client": "test" },
+    });
 
     expect(response.status).toBe(409);
     expect(response.headers.get("content-type")).toBe("application/problem+json");
@@ -859,7 +872,10 @@ describe("DELETE /api/projects/:id", () => {
   it("says so when no project has that id", async () => {
     const { app } = harness();
 
-    const response = await app.request("/api/projects/nope", { method: "DELETE" });
+    const response = await app.request("/api/projects/nope", {
+      method: "DELETE",
+      headers: { "x-slopify-client": "test" },
+    });
 
     expect(response.status).toBe(404);
   });
@@ -867,7 +883,10 @@ describe("DELETE /api/projects/:id", () => {
   it("refuses an id that is not one at all", async () => {
     const { app } = harness();
 
-    const response = await app.request("/api/projects/..%2Fetc", { method: "DELETE" });
+    const response = await app.request("/api/projects/..%2Fetc", {
+      method: "DELETE",
+      headers: { "x-slopify-client": "test" },
+    });
 
     expect(response.status).toBe(400);
   });
@@ -914,7 +933,7 @@ describe("subtitle admission", () => {
     const one = harness();
     const response = await one.app.request("/api/projects", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "x-slopify-client": "test", "content-type": "application/json" },
       body: JSON.stringify(
         draft({
           subtitles: {
@@ -938,7 +957,7 @@ describe("planning and batch admission", () => {
   async function generating(app: Harness["app"], over: Partial<RunDraft>): Promise<RunDraft> {
     const response = await app.request("/api/prompts", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "x-slopify-client": "test", "content-type": "application/json" },
       body: JSON.stringify({
         kind: "article",
         name: "Dossier",
@@ -966,7 +985,7 @@ describe("planning and batch admission", () => {
     const configured = await generating(h.app, { values: { topic: "Arda" } });
     const response = await h.app.request("/api/projects/estimate", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "x-slopify-client": "test", "content-type": "application/json" },
       body: JSON.stringify({ draft: configured, expectedWords: 5000 }),
     });
     expect(response.status).toBe(200);
@@ -982,7 +1001,7 @@ describe("planning and batch admission", () => {
     const submit = (values: string) =>
       h.app.request("/api/projects/batch", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "x-slopify-client": "test", "content-type": "application/json" },
         body: JSON.stringify({
           requestId,
           draft: configured,
@@ -1064,7 +1083,7 @@ describe("cast voices on API starts", () => {
 
     const batch = await h.app.request("/api/projects/batch", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "x-slopify-client": "test", "content-type": "application/json" },
       body: JSON.stringify({
         requestId: "4f1c2d3e-5a6b-4c7d-8e9f-0a1b2c3d4e5f",
         draft: voiced,

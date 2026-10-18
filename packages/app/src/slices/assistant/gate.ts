@@ -58,13 +58,128 @@ export const assistantCostlyTools = [
   "set_sample_full_script",
   "say_it_as",
   "update_template_studio_settings",
+  // Redo makes a flagged item again with the provider.
+  "redo_review",
+  // Taking a checkpoint off lets the paid steps behind it start (one the run waits at must be
+  // approved instead, `edge/http/checkpoints.ts`).
+  "change_checkpoints",
+  // A schedule starts paid runs at its times: making, changing or resuming one decides them.
+  "create_schedule",
+  "update_schedule",
+  "resume_schedule",
+  // A restored project picks up where it was, paid steps included.
+  "restore_from_trash",
+  "restore_from_trash_many",
 ] as const;
 const costly: ReadonlySet<string> = new Set(assistantCostlyTools);
 
 // The tools that send something out of Slopify, or choose where it is sent: words a page or a
 // file planted in the chat must not be able to point Slopify's notifications elsewhere.
-export const assistantOutwardTools = ["set_notification_url", "send_test_notification"] as const;
+export const assistantOutwardTools = [
+  "set_notification_url",
+  "send_test_notification",
+  // Rescore sends each topic's title to search engines; Check providers asks every provider
+  // with the person's keys.
+  "score_topics",
+  "check_providers",
+] as const;
 const outward: ReadonlySet<string> = new Set(assistantOutwardTools);
+
+// Every other tool that changes something, named here so that a new one has to be put in one
+// list or the other (`edge/mcp/assistant.test.ts`): free to call, nothing billed or sent.
+export const assistantFreeTools = [
+  "move_projects_to_channel",
+  "move_in_run_queue",
+  "estimate_run",
+  "hide_autopilot_warning",
+  "set_weekly_report",
+  "mark_uploaded",
+  "keep_as_is",
+  "preview_added_output",
+  "add_output",
+  "overrule_review",
+  "edit_description_field",
+  "set_description_links",
+  "set_pack_slot",
+  "set_pack_real_footage",
+  "set_pack_pick",
+  "set_pack_playlists",
+  "remove_from_fill_queue",
+  "swap_releases",
+  "set_release",
+  "set_posting_plan",
+  "set_lead_time",
+  "set_youtube_link",
+  "pause_project",
+  "prepare_revision",
+  "save_revision",
+  "restore_revision",
+  "preview_rebuild",
+  "create_draft",
+  "save_draft",
+  "fork_draft",
+  "review_draft",
+  "create_template",
+  "template_from_project",
+  "next_chapter_template",
+  "update_template",
+  "pause_schedule",
+  "reject_topics",
+  "restore_topics",
+  "reject_topic",
+  "edit_held_topic",
+  "set_topic_queue",
+  "move_topic",
+  "transfer_topic",
+  "create_channel",
+  "update_channel",
+  "set_ai_disclosure",
+  "add_cast_member",
+  "move_cast_member",
+  "update_cast_member",
+  "set_channel_template",
+  "set_episode_memory",
+  "update_episode_memory",
+  "preview_channel_videos",
+  "import_channel_videos",
+  "create_design",
+  "update_design",
+  "quote_design_edit",
+  "quote_design_artwork",
+  "set_design_version",
+  "create_design_template",
+  "quote_design_template",
+  "create_prompt",
+  "update_prompt",
+  "set_prompt_photorealistic",
+  "restore_prompt_version",
+  "create_entry",
+  "update_entry",
+  "restore_entry_version",
+  "create_document_theme",
+  "update_document_theme",
+  "set_narration_aliases",
+  "update_settings",
+  "set_default_channel_links",
+  "add_voice",
+  "set_voice_languages",
+  "set_voice_real_person",
+  "set_studio_playlists",
+  "dismiss_model_notices",
+  // The published catalogue: read from Slopify's site, nothing of the person's goes with it.
+  "check_catalogue",
+  "refresh_catalogue",
+  "install_starter_pack",
+  "restore_samples",
+  "copy_sample",
+  "quote_template_save",
+  "quote_say_it_as",
+  "quote_samples_for_all",
+  "make_template_free_samples",
+  "quote_bakeoff",
+  // Prices remakes for several projects; starting each is start_rebuild's.
+  "preview_remake_outdated",
+] as const;
 
 export interface GatedTool {
   readonly name: string;

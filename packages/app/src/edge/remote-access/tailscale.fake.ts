@@ -60,7 +60,8 @@ export function fakeTailscale(start: ServeStatus = {}): FakeTailscale {
           ...ok(
             JSON.stringify({
               BackendState: fake.backend,
-              Self: { DNSName: `${fakeDns}.` },
+              Self: { DNSName: `${fakeDns}.`, UserID: 7 },
+              User: { "7": { ID: 7, LoginName: "ann@example.com" } },
               CertDomains: fake.https ? [fakeDns] : null,
             }),
           ),
