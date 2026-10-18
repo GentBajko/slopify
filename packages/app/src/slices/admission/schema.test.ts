@@ -77,3 +77,18 @@ it("reads a config saved before the video timing settings with the defaults", ()
   }
   expect(runConfigSchema.parse({ ...draft, imageSeconds: 40, rendered: {} }).imageSeconds).toBe(40);
 });
+
+it("reads a template studio sample's limits, and an old config without them as no sample", () => {
+  const old = runConfigSchema.parse({ ...draft, rendered: {} });
+  expect(Object.hasOwn(old, "sample")).toBe(false);
+  expect(
+    runConfigSchema.parse({ ...draft, rendered: {}, sample: { fullScript: false } }).sample,
+  ).toEqual({ fullScript: false });
+  expect(
+    runConfigSchema.safeParse({ ...draft, rendered: {}, sample: { fullScript: "yes" } }).success,
+  ).toBe(false);
+  expect(
+    runConfigSchema.safeParse({ ...draft, rendered: {}, sample: { fullScript: true, extra: 1 } })
+      .success,
+  ).toBe(false);
+});

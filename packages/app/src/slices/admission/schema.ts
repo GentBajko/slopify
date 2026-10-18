@@ -219,6 +219,9 @@ export const runDraftSchema = z.object({
   levelSentences: z.boolean().optional(),
   // Absent is English (`kernel/ports/languages.ts`).
   language: languageSchema.optional(),
+  // A template studio sample (`slices/template-studio/scope.ts`): its steps make a short taste
+  // of the video, not all of it. Absent on every other project, whose steps it never changes.
+  sample: z.object({ fullScript: z.boolean() }).strict().optional(),
 });
 
 export const runConfigSchema = runDraftSchema.extend({

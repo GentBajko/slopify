@@ -150,6 +150,10 @@ export type RunMode = (typeof runModes)[number];
 // What Play posts. Everything a run is configured with, before any rule has looked at it.
 export interface RunDraft {
   readonly mode?: RunMode | undefined;
+  // A template studio sample (`slices/template-studio/scope.ts`): the article writes only its
+  // outline and first chapter unless `fullScript`, and the narration says only its opening.
+  // Absent on every other project.
+  readonly sample?: { readonly fullScript: boolean } | undefined;
   // The other projects' pronunciations as copied when this one started or was last refreshed
   // in Edit project; used only while `audio.shareGlossary` is on.
   readonly sharedGlossary?: readonly SharedPronunciation[] | undefined;
