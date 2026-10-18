@@ -8,8 +8,11 @@ import { appearanceKeyword, detectSlots, render } from "../admission/substitute.
 // picture then gets the subject's look and the looks of the characters its scene names, so a
 // figure looks the same from image to image and like the one people know.
 
+// `{{Appearance}}` is the old name of `{{Slopify_Appearance}}`; both mean the same.
+const appearanceNames: readonly string[] = [appearanceKeyword, "Slopify_Appearance"];
+
 export function usesAppearance(body: string | null | undefined): boolean {
-  return body != null && detectSlots(body).names.includes(appearanceKeyword);
+  return body != null && detectSlots(body).names.some((name) => appearanceNames.includes(name));
 }
 
 const figureSchema = z.object({
@@ -105,7 +108,7 @@ export function appearanceFor(
 
 // The prompt with its looks; a line asking for looks nobody in the picture has is left out.
 export function withAppearance(body: string, text: string): string {
-  if (text !== "") return render(body, { [appearanceKeyword]: text });
+  if (text !== "") return render(body, { [appearanceKeyword]: text, Slopify_Appearance: text });
   return body
     .split("\n")
     .filter((line) => !usesAppearance(line))
