@@ -33,7 +33,7 @@ export async function draftRequest<T>(
 export function draftJson(body: unknown): RequestInit {
   return {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "x-slopify-client": "test", "content-type": "application/json" },
     body: JSON.stringify(body),
   };
 }
@@ -180,7 +180,7 @@ export async function createSupplied(
       app,
       filePath(id, file.attachmentId),
       draftAttachmentSchema,
-      { method: "PUT", body: form },
+      { method: "PUT", headers: { "x-slopify-client": "test" }, body: form },
     );
     expect(attachment).toMatchObject({
       id: file.attachmentId,

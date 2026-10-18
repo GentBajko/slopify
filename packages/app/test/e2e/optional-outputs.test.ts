@@ -60,7 +60,7 @@ interface View {
 async function create(app: Boot, body: RunDraft): Promise<string> {
   const response = await fetch(`${app.url}/api/projects`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "x-slopify-client": "test", "content-type": "application/json" },
     body: JSON.stringify(body),
   });
   expect(response.status).toBe(201);
@@ -91,7 +91,11 @@ async function upload(app: Boot, kind: "audio" | "images", path: string): Promis
     "file",
     new File([new Uint8Array(readFileSync(path))], kind === "audio" ? "tone.mp3" : "still.png"),
   );
-  const response = await fetch(`${app.url}/api/staging/${kind}`, { method: "POST", body: data });
+  const response = await fetch(`${app.url}/api/staging/${kind}`, {
+    method: "POST",
+    headers: { "x-slopify-client": "test" },
+    body: data,
+  });
   expect(response.status).toBe(201);
   return ((await response.json()) as { id: string }).id;
 }

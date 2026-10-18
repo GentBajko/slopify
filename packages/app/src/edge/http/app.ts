@@ -63,6 +63,7 @@ import { pronunciationRoutes } from "./pronunciations.js";
 import { providerRoutes } from "./providers.js";
 import { remoteAccessRoutes } from "./remote-access.js";
 import { remoteGuard } from "./remote-guard.js";
+import { requestGuard } from "./request-guard.js";
 import { reviewRoutes } from "./reviews.js";
 import { revisionFileRoutes, revisionFolderRoutes } from "./revision-files.js";
 import { revisionRoutes } from "./revisions.js";
@@ -182,6 +183,8 @@ export interface AppDeps {
   readonly assistantTurns?: import("../../slices/assistant/access.js").AssistantTurnTokens;
   // The address the server listens on (`--host`); `/mcp` accepts pages served from it.
   readonly host?: string | undefined;
+  // Other names the person opens Slopify by on purpose (SLOPIFY_ALLOWED_HOSTS).
+  readonly allowedHosts?: readonly string[] | undefined;
   // Where the bundled patch notes are (index.json and <id>.md); the build's own copy when left out.
   readonly patchNotesDir?: string;
   // Where the bundled tutorials are (the wiki's <Page>.md and _Sidebar.md); the build's own
@@ -312,6 +315,15 @@ export function createApp(deps: AppDeps): Hono {
           "Slopify doesn't answer the public internet: this request came through Tailscale Funnel. On the computer Slopify runs on, run tailscale funnel status to see which port has Funnel, turn it off with tailscale funnel --https=<that port> off, and open Slopify on your other devices through Settings → General → Remote access instead.",
       });
     })
+    // Only Slopify's own names, and changes only from its own page (`request-guard.ts`).
+    .use(
+      "*",
+      requestGuard({
+        listenHost: deps.host,
+        remoteHost: deps.remoteAccess?.remoteHost,
+        extraHosts: deps.allowedHosts ?? [],
+      }),
+    )
     // Over remote access: only the account that turned it on, and no host setup.
     .use("*", remoteGuard(deps.remoteAccess))
     .use("*", async (c, next) => {

@@ -89,7 +89,7 @@ it("prices a Save's sample without changing anything, and says why it can't when
   if (!created.ok) throw new Error(created.reason);
   const reply = await h.app.request(`/api/template-studio/${id}/quote`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "x-slopify-client": "test", "content-type": "application/json" },
     body: JSON.stringify({ document }),
   });
   expect(reply.status).toBe(200);
@@ -99,7 +99,7 @@ it("prices a Save's sample without changing anything, and says why it can't when
   expect(h.deps.db.prepare("SELECT count(*) AS n FROM template_samples").get()).toEqual({ n: 0 });
   const bad = await h.app.request(`/api/template-studio/${id}/quote`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "x-slopify-client": "test", "content-type": "application/json" },
     body: JSON.stringify({ document: { nope: true } }),
   });
   expect(bad.status).toBe(400);
@@ -107,7 +107,7 @@ it("prices a Save's sample without changing anything, and says why it can't when
   const bare = studio();
   const refused = await bare.app.request(`/api/template-studio/${bare.id}/quote`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "x-slopify-client": "test", "content-type": "application/json" },
     body: JSON.stringify({ document }),
   });
   expect(refused.status).toBe(503);
@@ -133,7 +133,7 @@ function paidStudio(wake: () => void = () => undefined) {
   const post = (path: string, body: unknown) =>
     h.app.request(`/api/template-studio/${id}${path}`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "x-slopify-client": "test", "content-type": "application/json" },
       body: JSON.stringify(body),
     });
   return { ...h, id, document, post };
@@ -227,7 +227,7 @@ it("prices and changes the sample topic and the full script, with the new quote 
   const put = (body: unknown) =>
     h.app.request(`/api/template-studio/${h.id}/topic`, {
       method: "PUT",
-      headers: { "content-type": "application/json" },
+      headers: { "x-slopify-client": "test", "content-type": "application/json" },
       body: JSON.stringify(body),
     });
   const refused = await put({ topic: "Salt roads", acknowledgedHigh: 0 });
@@ -261,7 +261,7 @@ it("reads and sets the studio's daily budget, refusing one out of range", async 
   const put = (body: unknown) =>
     h.app.request("/api/template-studio/settings", {
       method: "PUT",
-      headers: { "content-type": "application/json" },
+      headers: { "x-slopify-client": "test", "content-type": "application/json" },
       body: JSON.stringify(body),
     });
   expect(await (await put({ dailyBudget: 0.5 })).json()).toMatchObject({ dailyBudget: 0.5 });
@@ -285,6 +285,7 @@ it("queues the free samples of the current version and wakes the sample loop", a
   });
   const reply = await h.app.request(`/api/template-studio/${h.id}/free-samples`, {
     method: "POST",
+    headers: { "x-slopify-client": "test" },
   });
   expect(reply.status).toBe(202);
   expect(await reply.json()).toEqual({ queued: true, version: 1 });
@@ -292,6 +293,7 @@ it("queues the free samples of the current version and wakes the sample loop", a
   expect(woken).toBe(1);
   const gone = await h.app.request(`/api/template-studio/${randomUUID()}/free-samples`, {
     method: "POST",
+    headers: { "x-slopify-client": "test" },
   });
   expect(gone.status).toBe(404);
   expect(await gone.json()).toMatchObject({ detail: missing });
@@ -353,7 +355,7 @@ it("refuses Mark ready with each thing to fix, and only for the newest version",
   const h = studio();
   const refused = await h.app.request(`/api/template-studio/${h.id}/ready`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "x-slopify-client": "test", "content-type": "application/json" },
     body: JSON.stringify({ version: 1 }),
   });
   expect(refused.status).toBe(409);
@@ -368,7 +370,7 @@ it("refuses Mark ready with each thing to fix, and only for the newest version",
 
   const older = await h.app.request(`/api/template-studio/${h.id}/ready`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "x-slopify-client": "test", "content-type": "application/json" },
     body: JSON.stringify({ version: 4 }),
   });
   expect(older.status).toBe(409);
@@ -376,7 +378,7 @@ it("refuses Mark ready with each thing to fix, and only for the newest version",
 
   const bad = await h.app.request(`/api/template-studio/${h.id}/ready`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "x-slopify-client": "test", "content-type": "application/json" },
     body: JSON.stringify({}),
   });
   expect(bad.status).toBe(400);
@@ -389,7 +391,7 @@ it("answers Mark ready again for a version already ready", async () => {
     .run(h.id);
   const reply = await h.app.request(`/api/template-studio/${h.id}/ready`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "x-slopify-client": "test", "content-type": "application/json" },
     body: JSON.stringify({ version: 1 }),
   });
   expect(reply.status).toBe(200);
@@ -404,7 +406,7 @@ it("prices the samples of every template, and queues them at the total shown", a
   const post = (path: string, body?: unknown) =>
     h.app.request(`/api/template-studio${path}`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "x-slopify-client": "test", "content-type": "application/json" },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
   const reply = await post("/samples-for-all/quote");
@@ -478,6 +480,7 @@ it("exports the ready version as a pack and imports it as a new, unchecked templ
   form.append("file", new File([bytes], "show.slopify-pack.zip", { type: "application/zip" }));
   const imported = await h.app.request("/api/template-studio/packs/import", {
     method: "POST",
+    headers: { "x-slopify-client": "test" },
     body: form,
   });
   expect(imported.status).toBe(201);
@@ -499,6 +502,7 @@ it("refuses an import that isn't a pack, and one with no file, saying what to ch
   form.append("file", new File([new TextEncoder().encode("hello")], "notes.txt"));
   const refused = await h.app.request("/api/template-studio/packs/import", {
     method: "POST",
+    headers: { "x-slopify-client": "test" },
     body: form,
   });
   expect(refused.status).toBe(400);
@@ -508,6 +512,7 @@ it("refuses an import that isn't a pack, and one with no file, saying what to ch
   });
   const empty = await h.app.request("/api/template-studio/packs/import", {
     method: "POST",
+    headers: { "x-slopify-client": "test" },
     body: new FormData(),
   });
   expect(empty.status).toBe(400);
@@ -538,7 +543,10 @@ it("answers no bake-off, refuses one before the template has a sample, and disca
   expect(start.status).toBe(409);
   const bad = await h.post("/bakeoff/quote", { section: "shorts", models: [] });
   expect(bad.status).toBe(400);
-  const discard = await h.app.request(`/api/template-studio/${h.id}/bakeoff`, { method: "DELETE" });
+  const discard = await h.app.request(`/api/template-studio/${h.id}/bakeoff`, {
+    method: "DELETE",
+    headers: { "x-slopify-client": "test" },
+  });
   expect(await discard.json()).toEqual({ removed: 0 });
   const gone = await h.app.request(`/api/template-studio/${randomUUID()}/bakeoff`);
   expect(gone.status).toBe(404);

@@ -77,6 +77,7 @@ describe("POST /api/staging/:kind", () => {
 
     const response = await app.request("/api/staging/audio", {
       method: "POST",
+      headers: { "x-slopify-client": "test" },
       body: upload("narration bytes", "Take One.mp3"),
     });
 
@@ -99,6 +100,7 @@ describe("POST /api/staging/:kind", () => {
 
     const response = await app.request("/api/staging/research", {
       method: "POST",
+      headers: { "x-slopify-client": "test" },
       body: upload("notes", "notes.txt"),
     });
 
@@ -111,6 +113,7 @@ describe("POST /api/staging/:kind", () => {
 
     const response = await app.request("/api/staging/images", {
       method: "POST",
+      headers: { "x-slopify-client": "test" },
       body: upload("png", "../../etc/passwd"),
     });
 
@@ -125,7 +128,7 @@ describe("POST /api/staging/:kind", () => {
     const response = await app.request("/api/staging/audio", {
       method: "POST",
       body: "raw bytes",
-      headers: { "content-type": "application/octet-stream" },
+      headers: { "x-slopify-client": "test", "content-type": "application/octet-stream" },
     });
 
     expect(response.status).toBe(415);
@@ -136,7 +139,11 @@ describe("POST /api/staging/:kind", () => {
     const form = new FormData();
     form.set("stage", "audio");
 
-    const response = await app.request("/api/staging/audio", { method: "POST", body: form });
+    const response = await app.request("/api/staging/audio", {
+      method: "POST",
+      headers: { "x-slopify-client": "test" },
+      body: form,
+    });
 
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ detail: /no file part/ });
@@ -147,6 +154,7 @@ describe("POST /api/staging/:kind", () => {
 
     const response = await app.request("/api/staging/thumbnail", {
       method: "POST",
+      headers: { "x-slopify-client": "test" },
       body: upload("", "empty.png"),
     });
 
@@ -158,8 +166,16 @@ describe("POST /api/staging/:kind", () => {
 describe("GET /api/staging", () => {
   it("lists what is staged", async () => {
     const { app } = harness();
-    await app.request("/api/staging/images", { method: "POST", body: upload("a", "one.png") });
-    await app.request("/api/staging/images", { method: "POST", body: upload("bb", "two.png") });
+    await app.request("/api/staging/images", {
+      method: "POST",
+      headers: { "x-slopify-client": "test" },
+      body: upload("a", "one.png"),
+    });
+    await app.request("/api/staging/images", {
+      method: "POST",
+      headers: { "x-slopify-client": "test" },
+      body: upload("bb", "two.png"),
+    });
 
     const response = await app.request("/api/staging");
 
@@ -176,9 +192,16 @@ describe("GET /api/staging", () => {
 describe("DELETE /api/staging/:id", () => {
   it("discards a staged file the user removed from the form", async () => {
     const { app, paths } = harness();
-    await app.request("/api/staging/images", { method: "POST", body: upload("a", "one.png") });
+    await app.request("/api/staging/images", {
+      method: "POST",
+      headers: { "x-slopify-client": "test" },
+      body: upload("a", "one.png"),
+    });
 
-    const response = await app.request("/api/staging/id1", { method: "DELETE" });
+    const response = await app.request("/api/staging/id1", {
+      method: "DELETE",
+      headers: { "x-slopify-client": "test" },
+    });
 
     expect(response.status).toBe(204);
     expect(existsSync(join(paths.staging, "id1"))).toBe(false);
@@ -187,7 +210,10 @@ describe("DELETE /api/staging/:id", () => {
   it("says so when the id was never staged", async () => {
     const { app } = harness();
 
-    const response = await app.request("/api/staging/nope", { method: "DELETE" });
+    const response = await app.request("/api/staging/nope", {
+      method: "DELETE",
+      headers: { "x-slopify-client": "test" },
+    });
 
     expect(response.status).toBe(404);
     expect(response.headers.get("content-type")).toBe("application/problem+json");
@@ -198,6 +224,7 @@ it("returns 409 for direct deletion of a draft-owned staged file", async () => {
   const { app, db, paths } = harness();
   await app.request("/api/staging/images", {
     method: "POST",
+    headers: { "x-slopify-client": "test" },
     body: upload("owned", "original.png"),
   });
   db.exec(
@@ -206,7 +233,10 @@ it("returns 409 for direct deletion of a draft-owned staged file", async () => {
   db.exec(
     "INSERT INTO play_draft_attachments VALUES ('attachment','draft','id1','images','original.png','ready',NULL)",
   );
-  const response = await app.request("/api/staging/id1", { method: "DELETE" });
+  const response = await app.request("/api/staging/id1", {
+    method: "DELETE",
+    headers: { "x-slopify-client": "test" },
+  });
   expect(response.status).toBe(409);
   expect(readFileSync(join(paths.staging, "id1"), "utf8")).toBe("owned");
   expect(db.prepare("SELECT id FROM staged_files").all()).toEqual([{ id: "id1" }]);
@@ -216,7 +246,7 @@ it("cleans staged bytes when a later multipart part is truncated", async () => {
   const { app, db, paths } = harness();
   const response = await app.request("/api/staging/images", {
     method: "POST",
-    headers: { "content-type": "multipart/form-data; boundary=test" },
+    headers: { "x-slopify-client": "test", "content-type": "multipart/form-data; boundary=test" },
     body: '--test\r\nContent-Disposition: form-data; name="file"; filename="one.png"\r\nContent-Type: image/png\r\n\r\nbytes\r\n--test\r\nContent-Disposition: form-data; name="field"\r\n\r\nunterminated',
   });
   expect(response.status).toBe(400);

@@ -81,7 +81,7 @@ function draft(over: Partial<RunDraft> = {}): RunDraft {
 async function create(app: Boot, body: RunDraft): Promise<string> {
   const response = await fetch(`${app.url}/api/projects`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "x-slopify-client": "test", "content-type": "application/json" },
     body: JSON.stringify(body),
   });
   expect(response.status).toBe(201);
@@ -144,7 +144,11 @@ describe("the Document stage through the real app", () => {
     const app = await start();
     const data = new FormData();
     data.set("file", new File([new Uint8Array(readFileSync(thumbnail()))], "cover.png"));
-    const staged = await fetch(`${app.url}/api/staging/thumbnail`, { method: "POST", body: data });
+    const staged = await fetch(`${app.url}/api/staging/thumbnail`, {
+      method: "POST",
+      headers: { "x-slopify-client": "test" },
+      body: data,
+    });
     expect(staged.status).toBe(201);
     const cover = ((await staged.json()) as { id: string }).id;
     const id = await create(

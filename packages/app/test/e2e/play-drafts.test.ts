@@ -65,7 +65,7 @@ describe("Play drafts through real restart and admission", () => {
         app,
         "/api/staging/audio",
         stagedFileSchema,
-        { method: "POST", body: abandonedForm },
+        { method: "POST", headers: { "x-slopify-client": "test" }, body: abandonedForm },
         201,
       );
       await stop(app);

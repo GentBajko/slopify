@@ -99,13 +99,28 @@ describe("update HTTP API", () => {
     const h = await harness();
     const response = await h.app.request("/api/update", {
       method: "POST",
+      headers: { "x-slopify-client": "test" },
       body: JSON.stringify({ version: "99.0.0;bad" }),
     });
     expect(response.status).toBe(202);
     expect(h.versions).toEqual(["0.6.2"]);
-    expect((await h.app.request("/api/settings", { method: "PATCH" })).status).toBe(409);
+    expect(
+      (
+        await h.app.request("/api/settings", {
+          method: "PATCH",
+          headers: { "x-slopify-client": "test" },
+        })
+      ).status,
+    ).toBe(409);
     expect((await h.app.request("/api/health")).status).toBe(200);
-    expect((await h.app.request("/api/update", { method: "POST" })).status).toBe(409);
+    expect(
+      (
+        await h.app.request("/api/update", {
+          method: "POST",
+          headers: { "x-slopify-client": "test" },
+        })
+      ).status,
+    ).toBe(409);
   });
   it("waits for active work instead of installing, and drops the wait when asked", async () => {
     const h = await harness();
@@ -114,22 +129,42 @@ describe("update HTTP API", () => {
       canUpdate: true,
       busy: true,
     });
-    const accepted = await h.app.request("/api/update", { method: "POST" });
+    const accepted = await h.app.request("/api/update", {
+      method: "POST",
+      headers: { "x-slopify-client": "test" },
+    });
     expect(accepted.status).toBe(202);
     expect(await accepted.json()).toMatchObject({ status: "waiting" });
-    expect((await h.app.request("/api/update", { method: "POST" })).status).toBe(409);
+    expect(
+      (
+        await h.app.request("/api/update", {
+          method: "POST",
+          headers: { "x-slopify-client": "test" },
+        })
+      ).status,
+    ).toBe(409);
     expect(h.versions).toEqual([]);
-    const dropped = await h.app.request("/api/update", { method: "DELETE" });
+    const dropped = await h.app.request("/api/update", {
+      method: "DELETE",
+      headers: { "x-slopify-client": "test" },
+    });
     expect(dropped.status).toBe(200);
     expect(await dropped.json()).toMatchObject({ status: "idle" });
-    expect((await h.app.request("/api/update", { method: "DELETE" })).status).toBe(409);
+    expect(
+      (
+        await h.app.request("/api/update", {
+          method: "DELETE",
+          headers: { "x-slopify-client": "test" },
+        })
+      ).status,
+    ).toBe(409);
     expect(h.versions).toEqual([]);
   });
   it("rejects cross-origin form submissions before checking or installing", async () => {
     const h = await harness();
     const response = await h.app.request("http://localhost/api/update", {
       method: "POST",
-      headers: { Origin: "https://other.example" },
+      headers: { "x-slopify-client": "test", Origin: "https://other.example" },
     });
     expect(response.status).toBe(403);
     expect(h.calls()).toBe(0);
@@ -139,11 +174,18 @@ describe("update HTTP API", () => {
     const h = await harness();
     await h.app.request("/api/settings", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: { "x-slopify-client": "test", "Content-Type": "application/json" },
       body: "{}",
     });
     expect((await h.updater.check()).busy).toBe(false);
-    expect((await h.app.request("/api/update", { method: "POST" })).status).toBe(202);
+    expect(
+      (
+        await h.app.request("/api/update", {
+          method: "POST",
+          headers: { "x-slopify-client": "test" },
+        })
+      ).status,
+    ).toBe(202);
   });
   it("serves health while refusing mutations until the private candidate is committed and unlocked", async () => {
     const h = await harness(true);
@@ -152,17 +194,45 @@ describe("update HTTP API", () => {
     expect((await h.app.request("/api/health")).status).toBe(200);
     expect((await h.app.request("/api/update/ready")).status).toBe(403);
     expect((await h.app.request("/api/update/ready", { headers: token })).status).toBe(200);
-    expect((await h.app.request("/api/settings", { method: "PATCH" })).status).toBe(409);
+    expect(
+      (
+        await h.app.request("/api/settings", {
+          method: "PATCH",
+          headers: { "x-slopify-client": "test" },
+        })
+      ).status,
+    ).toBe(409);
     expect(
       (await h.app.request("/api/update/activate", { method: "POST", headers: token })).status,
     ).toBe(409);
     h.commit();
-    expect((await h.app.request("/api/update/activate", { method: "POST" })).status).toBe(403);
-    expect((await h.app.request("/api/settings", { method: "PATCH" })).status).toBe(409);
+    expect(
+      (
+        await h.app.request("/api/update/activate", {
+          method: "POST",
+          headers: { "x-slopify-client": "test" },
+        })
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await h.app.request("/api/settings", {
+          method: "PATCH",
+          headers: { "x-slopify-client": "test" },
+        })
+      ).status,
+    ).toBe(409);
     expect(
       (await h.app.request("/api/update/activate", { method: "POST", headers: token })).status,
     ).toBe(200);
-    expect((await h.app.request("/api/settings", { method: "PATCH" })).status).not.toBe(409);
+    expect(
+      (
+        await h.app.request("/api/settings", {
+          method: "PATCH",
+          headers: { "x-slopify-client": "test" },
+        })
+      ).status,
+    ).not.toBe(409);
     expect(await (await h.app.request("/api/update")).text()).not.toContain("a".repeat(64));
     expect((await h.app.request("/api/health")).headers.get("X-Slopify-Version")).toBe("0.6.1");
   });

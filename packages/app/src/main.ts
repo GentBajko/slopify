@@ -897,6 +897,10 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       db,
       paths,
       host: config.host,
+      allowedHosts: (process.env.SLOPIFY_ALLOWED_HOSTS ?? "")
+        .split(",")
+        .map((name) => name.trim())
+        .filter((name) => name !== ""),
       hub,
       runner,
       updater,

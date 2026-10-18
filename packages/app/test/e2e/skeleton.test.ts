@@ -78,7 +78,11 @@ function fixtures(): { readonly audio: Buffer; readonly images: readonly Buffer[
 async function stage(url: string, kind: string, name: string, bytes: Buffer): Promise<string> {
   const form = new FormData();
   form.set("file", new File([new Uint8Array(bytes)], name));
-  const response = await fetch(`${url}/api/staging/${kind}`, { method: "POST", body: form });
+  const response = await fetch(`${url}/api/staging/${kind}`, {
+    method: "POST",
+    headers: { "x-slopify-client": "test" },
+    body: form,
+  });
   if (response.status !== 201) {
     throw new Error(`staging ${name} answered ${response.status}`);
   }
@@ -181,7 +185,7 @@ describe("a project whose every stage is provided renders an mp4", () => {
     const created = await fetch(`${url}/api/projects`, {
       method: "POST",
       body: JSON.stringify(draft(audio, images)),
-      headers: { "content-type": "application/json" },
+      headers: { "x-slopify-client": "test", "content-type": "application/json" },
     });
     expect(created.status).toBe(201);
     const { project } = (await created.json()) as { project: { id: string; status: string } };
@@ -281,7 +285,7 @@ describe("shutdown", () => {
     const first = await fetch(`${url}/api/projects`, {
       method: "POST",
       body: JSON.stringify(draft(audio, [image])),
-      headers: { "content-type": "application/json" },
+      headers: { "x-slopify-client": "test", "content-type": "application/json" },
     });
     const { project } = (await first.json()) as { project: { id: string } };
 
@@ -291,7 +295,7 @@ describe("shutdown", () => {
     const second = await fetch(`${url}/api/projects`, {
       method: "POST",
       body: JSON.stringify(draft(audio, [image])),
-      headers: { "content-type": "application/json" },
+      headers: { "x-slopify-client": "test", "content-type": "application/json" },
     }).then(
       (response) => response.status,
       () => "refused" as const,
