@@ -93,6 +93,7 @@ Every slice is a folder of plain modules with no `index` barrel requirement. Edg
 | images | Image stage: scenes, appearance, scaling | `runImages` `packages/app/src/slices/images/run.ts:54` | none |
 | library | Prompt and entry library: save, history, lint, used-by, rename propagation into templates and Play drafts | `createPrompt` `packages/app/src/slices/library/save.ts:42`; `lintPrompt` `lint.ts:11` | prompts, entries, planning, project-create |
 | loudness | Loudness normalising and mastering | `normalizeFile` `packages/app/src/slices/loudness/loudnorm.ts:154`; `masterFile` `:219` | onboarding |
+| model-checks | Which models work for the saved keys and CLIs: free listings, check calls (one per model, priced first), learning from real runs, standings for pickers only | `createModelChecks` `packages/app/src/slices/model-checks/service.ts`; `planChecks` `run.ts`; `listedFor` `listing.ts`; `pickerEntries` `rules.ts` | providers, model-checks |
 | model-upkeep | Retired-model detection and switching | `switchRetiredModel` `packages/app/src/slices/model-upkeep/switch.ts:117`; `retiredModelUsage` `usage.ts:227` | providers |
 | narration | Narration planning, chunking, pronunciation, aliases, peaks | `runNarration` `packages/app/src/slices/narration/run.ts:71`; `planNarration` `plan.ts:55` | narration-peaks, pronunciations |
 | notifications | Run notifications sent to a user-set URL | `createRunNotifier` `packages/app/src/slices/notifications/notifier.ts:33`; `createNotificationSender` `send.ts:13` | settings |

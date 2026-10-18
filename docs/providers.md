@@ -81,6 +81,32 @@ and OpenRouter's public model list, and folds them into the local `models.yaml`:
 overwrites the local file instead (the previous one is kept as `models.yaml.previous`).
 `SLOPIFY_NO_MODEL_REFRESH=1` turns the automatic check off.
 
+A model's retirement date and its replacement come from a second file, `models-lifecycle.yaml`,
+downloaded with the same daily check (a failed download keeps the last copy). It is separate
+so older Slopify versions, which read `models.yaml` strictly, never meet a field they refuse.
+The published catalogue itself is kept current by a daily pull request built from OpenRouter's
+public metadata (`.github/workflows/catalogue.yml`).
+
+## Models that work for you
+
+Settings → Models also shows, per provider you set up, which models your own key or CLI can
+use. Every model picker badges each model:
+
+- **✓ works**: a check call or a real run succeeded;
+- **? listed for you**: your key's or CLI's own model list names it (free reads: OpenAI,
+  Google, ElevenLabs and OpenRouter list their models; Replicate and fal.ai answer per model;
+  each CLI lists its own);
+- **? not checked**: only Slopify's list names it;
+- **✕ not on your plan**: the provider refused it for your account, quoted under the picker;
+- **⚠ retiring** with the date and replacement.
+
+Pickers show the working models and the one already chosen; **Show all** reveals the rest, and
+before anything works they show the listed models, then every known one. **Check models**
+sends each model one tiny request (a one-word reply, "Hi", one small image) and shows the price
+first when it costs anything. With **Automatic checks** on (the default) Slopify does the free
+and near-free checks itself when a key or CLI is added and weekly; image checks never run by
+themselves. Real runs teach it too. None of this ever changes what a run does.
+
 ## Retired models in use
 
 Settings → Models → **Retired models in use** lists every template, schedule, draft and
