@@ -230,6 +230,7 @@ describe("migrate", () => {
       { version: 60, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 61, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 62, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 65, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -239,16 +240,16 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 55 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 56 });
   });
 
   it("refuses a database newer than the app knows", () => {
     const db = openDb(":memory:");
     migrate(db, clock);
-    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(63, clock.now().toISOString());
+    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(66, clock.now().toISOString());
 
     expect(() => migrate(db, clock)).toThrow(
-      "database schema 63 is newer than this app knows (62)",
+      "database schema 66 is newer than this app knows (65)",
     );
   });
 
@@ -705,4 +706,63 @@ it("keeps every external review and lets Cancel close one as canceled", () => {
   expect(db.prepare("SELECT state FROM external_reviews WHERE id='er3'").get()).toEqual({
     state: "canceled",
   });
+});
+
+it("keeps every review verdict and external review and lets the promise check and the assistant use them", () => {
+  const db = openDb(":memory:");
+  migrate(db, clock, { through: 62 });
+  db.exec("INSERT INTO projects VALUES ('p1','One','16:9','{}','a','a')");
+  const verdict = db.prepare(
+    `INSERT INTO review_verdicts (id,project_id,revision_id,item_key,stage,item_fingerprint,review_fingerprint,passed,reasons,outcome,attempt,action,action_at,action_by,redo_state,redo_error,answered_by,created_at)
+     VALUES (?,'p1','r1',?,?,'f',?,?,'[]',?,1,?,?,?,NULL,NULL,'model','a')`,
+  );
+  verdict.run("v1", "article", "article", "rf1", 1, "passed", null, null, null);
+  verdict.run("v2", "image:one", "images", "rf2", 0, "flagged", "overruled", "b", "agent");
+  expect(() =>
+    verdict.run("v3", "promise", "promise", "rf3", 1, "passed", null, null, null),
+  ).toThrow();
+  const external = db.prepare(
+    `INSERT INTO external_reviews (id,project_id,revision_id,work_id,piece_id,work_key,item_key,stage,item_fingerprint,review_fingerprint,material,state,waiting_since,deadline_at,verdict,answered_by,answered_at)
+     VALUES (?,'p1','r1','w1','pc1',?,?,?,'f',?,'{}',?,'a','b',?,?,?)`,
+  );
+  external.run("er1", "image:one", "image:one", "images", "rf1", "waiting", null, null, null);
+  external.run("er2", "article", "article", "article", "rf2", "canceled", null, null, null);
+  external.run(
+    "er3",
+    "article",
+    "article",
+    "article",
+    "rf3",
+    "answered",
+    '{"passed":true,"reasons":[]}',
+    "agent",
+    "c",
+  );
+  const verdictsBefore = db.prepare("SELECT * FROM review_verdicts ORDER BY id").all();
+  const externalBefore = db.prepare("SELECT * FROM external_reviews ORDER BY id").all();
+
+  migrate(db, clock);
+
+  expect(db.prepare("SELECT * FROM review_verdicts ORDER BY id").all()).toEqual(verdictsBefore);
+  expect(db.prepare("SELECT * FROM external_reviews ORDER BY id").all()).toEqual(externalBefore);
+  verdict.run("v3", "promise", "promise", "rf3", 0, "flagged", "redone", "c", "assistant");
+  external.run("er4", "promise", "promise", "promise", "rf4", "answered", "{}", "assistant", "d");
+  expect(() =>
+    verdict.run("v4", "promise", "poster", "rf4", 1, "passed", null, null, null),
+  ).toThrow();
+  expect(() =>
+    external.run("er5", "x", "x", "promise", "rf5", "answered", "{}", "robot", "d"),
+  ).toThrow();
+  expect(db.prepare("PRAGMA foreign_keys").get()).toEqual({ foreign_keys: 1 });
+  expect(db.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
+  expect(names(db, "index")).toEqual(
+    expect.arrayContaining([
+      "review_verdicts_item",
+      "review_verdicts_redo",
+      "external_reviews_waiting",
+    ]),
+  );
+  db.exec("DELETE FROM projects WHERE id='p1'");
+  expect(db.prepare("SELECT count(*) AS n FROM review_verdicts").get()).toEqual({ n: 0 });
+  expect(db.prepare("SELECT count(*) AS n FROM external_reviews").get()).toEqual({ n: 0 });
 });
