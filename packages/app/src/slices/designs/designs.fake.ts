@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
+import { catalogueSchema } from "../../catalog/schema.js";
 import type { Clock } from "../../kernel/clock.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
@@ -83,3 +84,24 @@ export function designHarness(): Harness {
     },
   };
 }
+
+export const designCatalogue = catalogueSchema.parse({
+  schemaVersion: 1,
+  updatedAt: "2026-10-10",
+  providers: { fal: { maxConcurrent: 4 } },
+  llm: [],
+  tts: [],
+  image: [
+    {
+      name: "FLUX.2",
+      source: "https://fal.ai/pricing",
+      enabled: true,
+      deprecated: false,
+      provider: "fal",
+      id: "fal-ai/flux-2",
+      keywords: ["reference"],
+      image: { aspectRatios: ["16:9", "9:16", "1:1"] },
+      pricing: { perImage: 0.04 },
+    },
+  ],
+});
