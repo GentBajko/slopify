@@ -5,6 +5,7 @@ import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
 import { derive } from "../../kernel/runner/graph.js";
 import { stagesOf } from "../admission/repo.js";
+import { dropReshaped } from "../social/reshape.js";
 import { projectDir, renderCacheDir } from "./layout.js";
 import type { ProjectPlaces } from "./places.js";
 
@@ -57,6 +58,8 @@ export function deleteProject(deps: DeleteDeps, projectId: string): DeleteResult
   try {
     rmSync(dir, { recursive: true, force: true });
     rmSync(renderCacheDir(deps.paths, projectId), { recursive: true, force: true });
+    // The pictures cut for its posts (`slices/social/reshape.ts`).
+    dropReshaped(deps.paths, projectId);
   } catch (error) {
     deps.log.write("warn", "project.delete", {
       projectId,

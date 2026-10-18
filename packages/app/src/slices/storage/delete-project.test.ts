@@ -13,6 +13,7 @@ import { retainedOutput, retainedPiece } from "../revisions/downloads.fake.js";
 import { mutationFixture } from "../revisions/mutation.fake.js";
 import { saveRevision } from "../revisions/mutations.js";
 import { insertRevision } from "../revisions/repo.js";
+import { socialDir } from "../social/reshape.js";
 import type { DeleteDeps } from "./delete-project.js";
 import { deleteProject } from "./delete-project.js";
 import { projectDir, renderCacheDir } from "./layout.js";
@@ -77,11 +78,15 @@ describe("deleting a project", () => {
     const cache = renderCacheDir(deps.paths, "p1");
     mkdirSync(cache, { recursive: true });
     writeFileSync(join(cache, "clip.mp4"), "clip");
+    const cut = socialDir(deps.paths, "p1");
+    mkdirSync(cut, { recursive: true });
+    writeFileSync(join(cut, "picture.jpg"), "jpg");
 
     expect(deleteProject(deps, "p1")).toEqual({ ok: true });
 
     expect(existsSync(dir)).toBe(false);
     expect(existsSync(cache)).toBe(false);
+    expect(existsSync(cut)).toBe(false);
     expect(deps.db.prepare("SELECT count(*) AS n FROM projects").get()).toEqual({ n: 0 });
     // ON DELETE CASCADE, with foreign keys on: nothing of the project is left behind.
     expect(deps.db.prepare("SELECT count(*) AS n FROM stages").get()).toEqual({ n: 0 });
