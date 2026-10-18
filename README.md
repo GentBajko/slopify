@@ -110,6 +110,7 @@ yourself, in the [Docker guide](docs/docker.md).
 | `--no-open` | `SLOPIFY_NO_OPEN` | opens a browser | Keeps the browser shut |
 | | `SLOPIFY_FFMPEG` | bundled | Use another [ffmpeg](docs/ffmpeg.md) |
 | | `SLOPIFY_NO_MODEL_PREFETCH` | downloads at start | Skip fetching the caption model (378 MB by default) at start |
+| | `SLOPIFY_ALLOWED_HOSTS` | loopback, IPs, this computer's name | Comma-separated host names you open Slopify by on purpose (others are refused) |
 
 A flag beats the variable. There is no login: keep it on `127.0.0.1`, because whoever
 reaches the port controls the app and its keys.
