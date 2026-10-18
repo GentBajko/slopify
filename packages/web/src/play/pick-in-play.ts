@@ -1,5 +1,7 @@
 import type { Entry, Prompt } from "@app/slices/library/model.js";
 import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
+import { defaultChoices } from "@app/slices/social/defaults.js";
+import { socialPlatforms } from "@app/slices/social/model.js";
 import { defaultVoicesSettings } from "@app/slices/voices/model.js";
 import { emptyReviews } from "./reviews";
 import type { PlaySection } from "./sections";
@@ -87,8 +89,26 @@ export function pickInPlay(document: PlayDraftDocument, item: Prompt | Entry): U
             };
       return next({ reviews: { ...reviews, stages } }, "review", "reviews");
     }
-    // Posting has no place on Play yet: Library opens Play as it was.
-    case "post":
-      return next({}, "outputs", "outputs");
+    // A Post prompt writes every site's post that a post prompt writes; with none, X's.
+    case "post": {
+      const social = form.social ?? {};
+      const prompted = socialPlatforms.filter((one) => social[one]?.text === "prompt");
+      const sites = prompted.length === 0 ? (["x"] as const) : prompted;
+      return next(
+        {
+          social: {
+            ...social,
+            ...Object.fromEntries(
+              sites.map((one) => [
+                one,
+                { ...(social[one] ?? defaultChoices[one]), text: "prompt", prompt: item.name },
+              ]),
+            ),
+          },
+        },
+        "outputs",
+        "social",
+      );
+    }
   }
 }

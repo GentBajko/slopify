@@ -361,6 +361,40 @@ it("carries the YouTube description switch and prompt only with narration on", (
   }
 });
 
+it("carries the sites a draft posts to, without unused prompt names or texts, and none when off", () => {
+  const h = draftFixture();
+  try {
+    const choice = {
+      text: "summary" as const,
+      prompt: "Unused",
+      custom: "Unused too",
+      media: { pictures: 4 },
+      hashtags: 2,
+      link: false,
+    };
+    const result = convert({
+      ...h.document,
+      form: {
+        ...h.document.form,
+        social: { bluesky: choice, x: { ...choice, text: "prompt" as const, prompt: " Teaser " } },
+      },
+    });
+    expect(result.ok && result.draft.social).toEqual({
+      x: { text: "prompt", prompt: "Teaser", media: { pictures: 4 }, hashtags: 2, link: false },
+      bluesky: { text: "summary", media: { pictures: 4 }, hashtags: 2, link: false },
+    });
+    for (const social of [undefined, {}]) {
+      const none = convert({
+        ...h.document,
+        form: { ...h.document.form, ...(social === undefined ? {} : { social }) },
+      });
+      expect(none.ok && Object.hasOwn(none.draft, "social")).toBe(false);
+    }
+  } finally {
+    h.close();
+  }
+});
+
 it("saves the document theme outright, Plain for a draft that names none", () => {
   const h = draftFixture();
   try {

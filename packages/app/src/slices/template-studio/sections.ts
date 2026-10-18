@@ -76,6 +76,7 @@ export const formSections: FormHomes = {
   document: "document",
   youtubeDescription: "upload",
   descriptionPrompt: "upload",
+  social: "upload",
 };
 
 export const documentSections: DocumentHomes = {

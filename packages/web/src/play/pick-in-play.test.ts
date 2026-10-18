@@ -49,6 +49,27 @@ describe("pickInPlay", () => {
     ).toMatchObject({ enabled: true, prompt: "Reels" });
   });
 
+  it("gives a post prompt to every site a post prompt writes, else to X", () => {
+    const fresh = pickInPlay(freshDraftDocument, prompt("post", "Teaser"));
+    expect(fresh.document.form.social?.x).toMatchObject({ text: "prompt", prompt: "Teaser" });
+    expect(fresh.field).toBe("social");
+    const summary = { text: "summary" as const, media: {}, hashtags: 2, link: false };
+    const picked = pickInPlay(
+      {
+        ...freshDraftDocument,
+        form: {
+          ...freshDraftDocument.form,
+          social: { bluesky: summary, linkedin: { ...summary, text: "prompt", prompt: "Old" } },
+        },
+      },
+      prompt("post", "Teaser"),
+    );
+    expect(picked.document.form.social).toEqual({
+      bluesky: summary,
+      linkedin: { ...summary, text: "prompt", prompt: "Teaser" },
+    });
+  });
+
   it("picks an intro or an outro by name", () => {
     const entry: Entry = {
       id: "e",

@@ -10,6 +10,7 @@ import {
   allowedSources,
   articleOffFields,
   llmUses,
+  needsLlmFor,
   usesNarrationPreparation,
   usesShorts,
   usesYoutubeDescription,
@@ -911,5 +912,37 @@ describe("the keywords Slopify fills", () => {
     expect(articleOffFields({ ...draft, sources: provided().sources }, { digest: "x" })).toEqual(
       [],
     );
+  });
+});
+
+describe("posts written by a post prompt", () => {
+  it("need the text model, saying what it is for", () => {
+    const choice = { text: "prompt" as const, media: {}, hashtags: 0, link: false };
+    const posting = {
+      title: "T",
+      format: "16:9" as const,
+      sources: {
+        research: "off" as const,
+        article: "provide" as const,
+        audio: "off" as const,
+        images: "off" as const,
+        thumbnail: "off" as const,
+        video: "off" as const,
+      },
+      imagePrompts: [],
+      values: {},
+      provided: { article: "A." },
+      silenceGapSeconds: 0,
+      imageSeconds: 15,
+      zoomPercent: 22.5,
+      motionStyle: "zoom" as const,
+      edgeSilenceSeconds: 0,
+    };
+    expect(llmUses({ ...posting, social: { x: choice } })).toContainEqual({
+      section: "outputs",
+      label: "writing the posts for other sites",
+    });
+    expect(needsLlmFor({ ...posting, social: { x: { ...choice, text: "summary" } } })).toBe(false);
+    expect(needsLlmFor(posting)).toBe(false);
   });
 });

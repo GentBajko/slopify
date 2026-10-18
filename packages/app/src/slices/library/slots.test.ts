@@ -48,6 +48,32 @@ function draft(over: Partial<RunDraft> = {}): RunDraft {
 }
 
 describe("pickTemplates", () => {
+  it("picks each prompt-written post's prompt, asks for its fields and names a deleted one", () => {
+    const deps = library();
+    createPrompt(deps, {
+      kind: "post",
+      name: "Teaser",
+      body: "Tease {{Topic}} for {{Slopify_Hook}}.",
+    });
+    const x = { text: "prompt" as const, prompt: "Teaser", media: {}, hashtags: 0, link: false };
+    const picked = pickTemplates(
+      deps.db,
+      draft({ social: { x, bluesky: { ...x, text: "summary" }, tiktok: { ...x, prompt: "" } } }),
+    );
+    expect(picked.bodies).toContainEqual({
+      key: "social.x",
+      body: "Tease {{Topic}} for {{Slopify_Hook}}.",
+    });
+    expect(picked.bodies.filter((one) => one.key.startsWith("social."))).toHaveLength(1);
+    expect(picked.requiredSlots).toContain("Topic");
+    expect(picked.keywordUses.digest).toBeDefined();
+    const gone = pickTemplates(deps.db, draft({ social: { x: { ...x, prompt: "Gone" } } }));
+    expect(gone.missing).toContainEqual({
+      field: "social.x.prompt",
+      message: "That post prompt was deleted. Choose another.",
+    });
+  });
+
   it("asks for a keyword the title names even when no prompt uses it", () => {
     const deps = library();
     const picked = pickTemplates(deps.db, draft({ title: "Lore: {{Topic}}" }));

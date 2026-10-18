@@ -2,6 +2,7 @@ import { detectSlots, filledKeywords } from "../admission/substitute.js";
 import { isReserved } from "../keywords/model.js";
 import type { PlayDraftDocument } from "../play-drafts/schema.js";
 import { topicKeywords } from "../project-templates/one-off.js";
+import { usesPostPrompt } from "../social/rules.js";
 import { sectionLabel, type TemplateSection } from "./model.js";
 
 export const freeCheckIds = [
@@ -140,6 +141,7 @@ function usedProviders(document: PlayDraftDocument): readonly {
     generates(form.sources.article) ||
     form.sources.thumbnail === "prompt_by_llm" ||
     form.youtubeDescription === true ||
+    usesPostPrompt(form) ||
     form.shorts?.enabled === true;
   const reviews =
     form.reviews !== undefined &&

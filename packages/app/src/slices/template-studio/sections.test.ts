@@ -34,6 +34,8 @@ describe("sectionOfField", () => {
 
   it("finds a setting's section by its path", () => {
     expect(sectionOfField(["form", "audio", "voice"])).toBe("voice");
+    expect(sectionOfField(["form", "social", "x"])).toBe("upload");
+    expect(sectionOfWork("social:post:x")).toBe("upload");
     expect(sectionOfField(["form", "sources", "images"])).toBe("pictures");
     expect(sectionOfField(["form", "provided", "shortsMusic"])).toBe("shorts");
     expect(sectionOfField(["form", "youtubeDescription"])).toBe("upload");
