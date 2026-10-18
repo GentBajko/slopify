@@ -31,6 +31,8 @@ import { createApp } from "./edge/http/app.js";
 import { createMutationLifecycle, drainMutationsWithDeadline } from "./edge/http/mutations.js";
 import { limitRequestTimes } from "./edge/http/timeouts.js";
 import { openFolder } from "./edge/open-folder.js";
+import { nodeTailscaleRun } from "./edge/remote-access/cli.js";
+import { createRemoteAccessService } from "./edge/remote-access/service.js";
 import { readHostLogin } from "./host-cli/status.js";
 import type { AudioPreviewStore } from "./kernel/audio-preview.js";
 import { createAudioPreviewStore } from "./kernel/audio-preview.js";
@@ -194,6 +196,19 @@ import { workInProgress } from "./updater/work-in-progress.js";
 const flushDelayMs = 1000;
 const collectorTimeoutMs = 10_000;
 const mutationDrainTimeoutMs = 5_000;
+// ceiling: removing the serve handler is two quick tailscale calls; a hung Tailscale must not
+// hold the shutdown, and the next start removes or replaces what is left.
+const remoteAccessStopMs = 5_000;
+
+function withDeadline(work: Promise<void>, ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, ms);
+    void work.finally(() => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
+}
 
 export interface Boot {
   readonly paths: Paths;
@@ -723,6 +738,18 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       version,
       env: process.env,
     });
+    // Settings → General → Remote access. It proxies to the port the server really got, read
+    // when it applies; nothing applies before the server listens.
+    const remoteAccess = createRemoteAccessService({
+      db,
+      run: nodeTailscaleRun(process.platform),
+      platform: process.platform,
+      container: process.env.SLOPIFY_CONTAINER === "1",
+      listenHost: config.host,
+      port: () => listeningPort,
+      log,
+      now: () => Date.now(),
+    });
     if (options.refreshAutostart === true)
       void autostart.refresh().catch((error: unknown) => {
         log.write("warn", "autostart.refresh", { detail: causedBy(error) });
@@ -832,6 +859,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         },
       },
       autostart,
+      remoteAccess,
       rebuild,
       drafts: draftDeps,
       schedules: scheduleDeps,
@@ -1025,6 +1053,11 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     };
     const arrangeTimer = setInterval(arrange, 5_000);
     listeningPort = portOf(server) ?? config.port;
+    // Never awaited: Tailscale's answer must not hold the start-up. A problem is logged with
+    // its fix and shown in Settings.
+    void remoteAccess.start().catch((error: unknown) => {
+      log.write("warn", "remote-access.start", { detail: causedBy(error) });
+    });
     // Whatever last run left queued goes out at start. Nothing waits for
     // it, and an unreachable collector costs one refused socket.
     flusher.soon();
@@ -1069,6 +1102,14 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         const backupDrain = backups.stop();
         const serverClose = beginServerClose(server);
         stopActivation();
+        // Slopify's serve handler goes with it, so no proxy points at a port another program
+        // could take while Slopify is stopped; the next start puts it back.
+        const remoteDrain = withDeadline(
+          remoteAccess.stop().catch((error: unknown) => {
+            log.write("warn", "remote-access.stop", { detail: causedBy(error) });
+          }),
+          remoteAccessStopMs,
+        );
         audioPreviews.close();
         modelPrefetch.abort();
         try {
@@ -1083,6 +1124,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
           await topicDrain;
           await sampleDrain;
           await backupDrain;
+          await remoteDrain;
           // An assistant turn left running would keep spending the person's plan.
           await assistant.stopAll();
           await runner.abortAll();

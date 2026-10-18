@@ -28,6 +28,9 @@ export function mcpFixture(
     readonly assistantTurns?: AssistantTurnTokens;
     // Library → Designs over the same database, with no provider and no ffmpeg.
     readonly designs?: boolean;
+    readonly remoteAccess?: (
+      db: DatabaseSync,
+    ) => import("../remote-access/service.js").RemoteAccessService;
   } = {},
 ): {
   readonly app: Hono;
@@ -66,6 +69,9 @@ export function mcpFixture(
         }),
     ...(options.assistantTurns === undefined ? {} : { assistantTurns: options.assistantTurns }),
     ...(options.designs === true ? { designs: designsOver(h.deps) } : {}),
+    ...(options.remoteAccess === undefined
+      ? {}
+      : { remoteAccess: options.remoteAccess(h.deps.db) }),
   });
   return { app, deps: h.deps, projectId: h.projectId, ticks, close: h.close };
 }

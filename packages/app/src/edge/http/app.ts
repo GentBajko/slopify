@@ -60,10 +60,12 @@ import { projectRoutes } from "./projects.js";
 import { promptRoutes } from "./prompts.js";
 import { pronunciationRoutes } from "./pronunciations.js";
 import { providerRoutes } from "./providers.js";
+import { remoteAccessRoutes } from "./remote-access.js";
 import { reviewRoutes } from "./reviews.js";
 import { revisionFileRoutes, revisionFolderRoutes } from "./revision-files.js";
 import { revisionRoutes } from "./revisions.js";
 import { runCostRoutes } from "./run-cost.js";
+import { viaFunnel } from "./same-page.js";
 import { calendarRoutes, scheduleRoutes } from "./schedules.js";
 import { settingsRoutes } from "./settings.js";
 import { stagingRoutes } from "./staging.js";
@@ -84,6 +86,8 @@ import { whatsNewRoutes } from "./whats-new.js";
 import { youtubeEditRoutes } from "./youtube-edits.js";
 
 export interface AppDeps {
+  // Settings → General → Remote access (Tailscale serve); absent answers that it can't be set.
+  readonly remoteAccess?: import("../remote-access/service.js").RemoteAccessService | undefined;
   // Settings → General's "Start Slopify when I log in"; absent answers that it can't be set.
   readonly autostart?: import("../autostart/service.js").AutostartService | undefined;
   readonly hostCliStatus?:
@@ -262,6 +266,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/telemetry", telemetryRoutes(deps))
       .route("/usage", usageRoutes(deps))
       .route("/settings/autostart", autostartRoutes(deps.autostart))
+      .route("/settings/remote-access", remoteAccessRoutes(deps.remoteAccess))
       .route("/settings", settingsRoutes(deps))
       .route("/studio", studioRoutes(deps))
       .route("/style-preview", stylePreviewRoutes(deps))
@@ -281,6 +286,17 @@ export function createApp(deps: AppDeps): Hono {
   const startedAt = deps.clock.now().getTime();
 
   const app = new Hono()
+    // Slopify has no login, so it never answers the public internet. Tailscale marks every
+    // request that came through Funnel; Slopify never turns Funnel on, and this holds even if
+    // someone else does.
+    .use("*", async (c, next) => {
+      if (!viaFunnel(c.req.raw.headers)) return next();
+      return problem(c, {
+        status: 403,
+        detail:
+          "Slopify doesn't answer the public internet: this request came through Tailscale Funnel. On the computer Slopify runs on, run tailscale funnel status to see which port has Funnel, turn it off with tailscale funnel --https=<that port> off, and open Slopify on your other devices through Settings → General → Remote access instead.",
+      });
+    })
     .use("*", async (c, next) => {
       // A provisional candidate must not trigger the stale-tab Reload dialog.
       if (!deps.updater?.locked()) c.header("X-Slopify-Version", deps.version);

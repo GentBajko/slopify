@@ -15,10 +15,11 @@ import {
 } from "../../slices/assistant/gate.js";
 import { projectTitle } from "../../slices/assistant/names.js";
 import { screenBlock } from "../../slices/assistant/prompt.js";
+import { viaProxy } from "../http/same-page.js";
 import { subjectsOf } from "./attribution.js";
 import { callApi, confirmText, type RouteCallDeps, refusal, text } from "./call-route.js";
 import { registerFileTools } from "./file-tools.js";
-import { originAllowed } from "./http.js";
+import { agentsLocalOnly, originAllowed } from "./http.js";
 import { registerRemakeTools } from "./remake-tools.js";
 import { type RouteTool, routeOf } from "./route-tool.js";
 import { type McpDeps, registerAttention, registerRouteTool } from "./server.js";
@@ -213,6 +214,10 @@ const assistantBodyMax = 4 * 1024 * 1024;
 
 export function assistantMcpRoutes(deps: AssistantMcpRouteDeps): Hono {
   return new Hono()
+    .use("*", async (c, next) => {
+      if (!viaProxy(c.req.raw.headers)) return next();
+      return rpcError(c, 403, agentsLocalOnly);
+    })
     .use("*", async (c, next) => {
       if (originAllowed(c.req.header("origin"), deps.host)) return next();
       return rpcError(

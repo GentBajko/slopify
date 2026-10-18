@@ -5,10 +5,11 @@ import { z } from "zod";
 import type { FilesService } from "../../slices/storage/files-location.js";
 import type { AppDeps } from "./app.js";
 import { onInvalid, problem } from "./problem.js";
+import { fromSlopifyPage } from "./same-page.js";
 
 // Settings → Backup & storage → Your files: where projects and backups are, Open folder, and
 // moving them. A move copies and checks every file, so it answers at once and the screen polls.
-export function filesRoutes(deps: Pick<AppDeps, "files" | "log">) {
+export function filesRoutes(deps: Pick<AppDeps, "files" | "log" | "remoteAccess">) {
   const files = (): FilesService => {
     if (deps.files === undefined) throw new HTTPException(404);
     return deps.files;
@@ -33,8 +34,7 @@ export function filesRoutes(deps: Pick<AppDeps, "files" | "log">) {
       },
     )
     .post("/open", async (c) => {
-      const origin = c.req.header("origin");
-      if (origin !== undefined && origin !== new URL(c.req.url).origin)
+      if (!fromSlopifyPage(c, deps.remoteAccess?.remoteHost))
         return problem(c, {
           status: 403,
           detail:

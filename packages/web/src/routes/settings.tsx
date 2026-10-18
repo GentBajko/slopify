@@ -21,6 +21,7 @@ import { NotificationSettings } from "@/notifications/settings-panel";
 import { SampleSettings } from "@/onboarding/sample-settings";
 import { patchNotesQuery } from "@/patch-notes/api";
 import { PatchNotesSettings } from "@/patch-notes/settings-panel";
+import { RemoteAccessSettings } from "@/remote-access/remote-access-settings";
 import { StudioSettings } from "@/studio/settings-panel";
 import { TemplateStudioSettings } from "@/template-studio/settings-panel";
 import { TrashSettings } from "@/trash/trash-settings";
@@ -199,6 +200,7 @@ export function SettingsRoute({
                 <AutostartSettings />
               </>
             ) : null}
+            {section === "remote-access" ? <RemoteAccessSettings /> : null}
             {section === "voices" ? <Voices /> : null}
             {section === "models" ? (
               <>

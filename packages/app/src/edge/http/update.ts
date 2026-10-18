@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { UpdateInfo } from "../../updater/model.js";
 import type { AppDeps } from "./app.js";
 import { problem } from "./problem.js";
+import { fromSlopifyPage } from "./same-page.js";
 
 export function updateRoutes(deps: AppDeps) {
   const unavailable: UpdateInfo = {
@@ -39,8 +40,7 @@ export function updateRoutes(deps: AppDeps) {
       })
       // Drops an update that is waiting for running work to finish.
       .delete("/", async (c) => {
-        const origin = c.req.header("Origin");
-        if (origin !== undefined && origin !== new URL(c.req.url).origin)
+        if (!fromSlopifyPage(c, deps.remoteAccess?.remoteHost))
           return problem(c, {
             status: 403,
             detail:
@@ -55,8 +55,7 @@ export function updateRoutes(deps: AppDeps) {
         return c.json(await deps.updater.check());
       })
       .post("/", async (c) => {
-        const origin = c.req.header("Origin");
-        if (origin !== undefined && origin !== new URL(c.req.url).origin)
+        if (!fromSlopifyPage(c, deps.remoteAccess?.remoteHost))
           return problem(c, {
             status: 403,
             detail:

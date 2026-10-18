@@ -7,6 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { AutostartView } from "@/autostart/api";
 import { selfExplanatory, unexplainedControls } from "@/help/coverage";
+import type { RemoteAccessView } from "@/remote-access/api";
 import { HomeRoute } from "@/routes/home";
 import { body, stage } from "@/routes/project-fixtures";
 import { SettingsRoute, type SettingsSection, settingsSections } from "@/routes/settings";
@@ -57,6 +58,20 @@ const providers: readonly ProviderStatus[] = [
     readiness: { kind: "keyed", hasKey: false },
   },
 ];
+
+const remoteAccess: RemoteAccessView = {
+  available: true,
+  enabled: true,
+  state: "on",
+  address: "https://box.tail1234.ts.net",
+  httpsPort: 443,
+  suggestedPort: null,
+  summary: "On: any device in your tailnet can open this address, never the public internet.",
+  fix: null,
+  link: null,
+  local: "http://127.0.0.1:6969",
+  changeable: true,
+};
 
 const autostart: AutostartView = {
   kind: "native",
@@ -116,6 +131,7 @@ function settingsDeps(extra: Readonly<Record<string, Answer>> = {}) {
     "GET /api/settings/agents": jsonAnswer({ lastConnectedAt: null, recent: [] }),
     "GET /api/settings": jsonAnswer({ silenceGapSeconds: 3, appearance: "system" }),
     "GET /api/settings/autostart": jsonAnswer(autostart),
+    "GET /api/settings/remote-access": jsonAnswer(remoteAccess),
     "GET /api/settings/notifications": jsonAnswer({ url: "https://ntfy.sh/slopify-runs" }),
     "GET /api/settings/channel-links": jsonAnswer({
       links: [{ name: "Patreon", url: "https://patreon.com/slopify" }],
@@ -195,6 +211,7 @@ function settingsDeps(extra: Readonly<Record<string, Answer>> = {}) {
 // What each section shows once its data is in, so the walk checks the loaded screen.
 const loaded: Readonly<Record<SettingsSection, () => Promise<unknown>>> = {
   general: () => screen.findByRole("switch", { name: /log in/ }),
+  "remote-access": () => screen.findByText("https://box.tail1234.ts.net"),
   providers: () => screen.findByLabelText("ElevenLabs API key"),
   voices: () => screen.findByRole("heading", { level: 1, name: "Voices" }),
   models: () => screen.findByText("/data/catalogue.json"),

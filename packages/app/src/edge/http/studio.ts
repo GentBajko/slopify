@@ -83,6 +83,7 @@ import { setAsideProjects, uploadedProjects } from "../../slices/uploads/repo.js
 import type { AppDeps } from "./app.js";
 import { idString } from "./ids.js";
 import { onInvalid, problem } from "./problem.js";
+import { fromSlopifyPage } from "./same-page.js";
 
 const id = idString;
 const projectParam = z.object({ projectId: id });
@@ -184,8 +185,7 @@ export function studioRoutes(deps: AppDeps) {
     });
 
   const samePage = (c: Context): Response | undefined => {
-    const origin = c.req.header("origin");
-    if (origin === undefined || origin === new URL(c.req.url).origin) return undefined;
+    if (fromSlopifyPage(c, deps.remoteAccess?.remoteHost)) return undefined;
     return problem(c, {
       status: 403,
       detail:
