@@ -12,13 +12,18 @@ import { draftFixture } from "../../slices/play-drafts/draft.fake.js";
 import { createTemplate } from "../../slices/project-templates/service.js";
 import { weekSummary } from "../../slices/run-cost/week.js";
 import { calendarRange } from "../../slices/schedules/agenda.js";
+import { preparedProject } from "../../slices/schedules/prepare.js";
 import { knownTitles } from "../../slices/schedules/topics.js";
 import { startBakeoff } from "../../slices/template-studio/bakeoff.js";
 import { makeBakeoff } from "../../slices/template-studio/bakeoff-make.js";
 import { clonesOf } from "../../slices/template-studio/bakeoff-repo.js";
 import { makePaidSample } from "../../slices/template-studio/paid.js";
 import { sampleOf, sampleProjects } from "../../slices/template-studio/repo.js";
-import { paidDocument, paidSampleDeps } from "../../slices/template-studio/studio.fake.js";
+import {
+  paidDocument,
+  paidSampleDeps,
+  reviewOver,
+} from "../../slices/template-studio/studio.fake.js";
 import { connectAgent, mcpFixture } from "../mcp/mcp.fake.js";
 
 // A template's hidden sample project is the studio's alone: no list, count or feed the user
@@ -372,5 +377,57 @@ describe("the template studio's sample project", () => {
     expect(channel.cost).toBeCloseTo(0.5);
     expect(channel.calls).toBe(1);
     expect(channel.studioCost).toBe(0);
+  });
+
+  it("is named by no route that takes an id while it runs, nor taken by a schedule's topic of its title", async () => {
+    const h = withSample();
+    const { db } = h.deps;
+    // The sample is being made right now.
+    for (const id of [sampleId, cloneId])
+      db.prepare("UPDATE stages SET state='running',failure_reason=NULL WHERE project_id=?").run(
+        id,
+      );
+    // Every project used the same article prompt.
+    paidDocument(reviewOver(h.deps));
+    const promptId = String(
+      db.prepare("SELECT id FROM prompts WHERE name='Documentary'").get()?.id,
+    );
+    for (const id of [sampleId, cloneId, "visible0control"])
+      db.prepare(
+        `INSERT INTO project_revisions (id,project_id,config,content,fingerprints,created_at) VALUES (?,?,'{"articlePrompt":"Documentary"}','{}','{}','2026-09-10T00:00:00.000Z')`,
+      ).run(`${id}-r1`, id);
+    // A schedule of the template whose next topic is the sample's very title: its run must
+    // never take the running sample as the project it continues.
+    const scheduleId = randomUUID();
+    db.prepare(
+      `INSERT INTO schedules(id,name,template_id,template_version,cadence_json,timezone,missed_policy,overlap_policy,items_json,status,version,creation_hash,created_at,updated_at)
+       VALUES (?,'Lore',?,1,'{"kind":"daily","time":"00:01"}','UTC','skip','skip',?,'active',1,'h','a','a')`,
+    ).run(scheduleId, h.templateId, JSON.stringify([{ title: sampleTitle, values: {} }]));
+    db.prepare(
+      "INSERT INTO prepared_videos (schedule_id,title,project_id,added_checkpoint,prepared_at) VALUES (?,?,?,0,'2026-09-10T00:00:00.000Z')",
+    ).run(scheduleId, cloneTitle, cloneId);
+    expect(preparedProject(db, scheduleId, cloneTitle)).toBeUndefined();
+    expect(preparedProject(db, scheduleId, sampleTitle)).toBeUndefined();
+    const leaks: string[] = [];
+    for (const route of [
+      ...getRoutes(h.app),
+      `/api/prompts/${promptId}/used-by`,
+      `/api/channels/${defaultChannelId}`,
+      `/api/channels/${defaultChannelId}/episodes`,
+      `/api/channels/${defaultChannelId}/videos`,
+    ]) {
+      const body = await (await h.app.request(route)).text();
+      // The backup carries the schedule, whose topic is the sample's title: only the sample's
+      // ids may not be in it.
+      const named =
+        route === "/api/storage/export"
+          ? body.includes(sampleId) || body.includes(cloneId)
+          : leaksIn(body);
+      if (named) leaks.push(route);
+    }
+    expect(leaks).toEqual([]);
+    expect(await (await h.app.request(`/api/prompts/${promptId}/used-by`)).text()).toContain(
+      "visible0control",
+    );
   });
 });
