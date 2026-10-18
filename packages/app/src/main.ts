@@ -201,6 +201,10 @@ const mutationDrainTimeoutMs = 5_000;
 // hold the shutdown, and the next start removes or replaces what is left.
 const remoteAccessStopMs = 5_000;
 
+// ceiling: an image call usually answers within a minute; shutdown waits no longer than this
+// for one already sent, and the next start marks a step still making as stopped.
+const designIdleMs = 60_000;
+
 function withDeadline(work: Promise<void>, ms: number): Promise<void> {
   return new Promise((resolve) => {
     const timer = setTimeout(resolve, ms);
@@ -475,6 +479,8 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     // Folders are renamed only by a version that is committed: an update on trial can still be
     // rolled back to a version that knows only id-named folders.
     let arrangeAllowed = !pendingActivation;
+    // What an update waits for that only lives in memory; set once those parts are wired.
+    let liveWork = (): string | undefined => undefined;
     const updater = createUpdater({
       ...(isUpdateToken(candidateToken)
         ? {
@@ -520,10 +526,14 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
               : undefined,
       // An update never installs while a job is going (`updater/work-in-progress.ts`).
       busy: () =>
-        workInProgress(updateDb, (id) => runner.hasInflight?.(id) === true, Date.now()) !==
-        undefined,
+        workInProgress(
+          updateDb,
+          (id) => runner.hasInflight?.(id) === true,
+          Date.now(),
+          liveWork,
+        ) !== undefined,
       busyWith: () =>
-        workInProgress(updateDb, (id) => runner.hasInflight?.(id) === true, Date.now()),
+        workInProgress(updateDb, (id) => runner.hasInflight?.(id) === true, Date.now(), liveWork),
       report: (message) => log.write("warn", "update", { detail: message }),
       install: async (next, restarting) => {
         if (npm === undefined) throw new Error("npm is unavailable.");
@@ -828,6 +838,12 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       shrink: (bytes) => designRenderer.shrink(bytes, AbortSignal.timeout(120_000)),
     });
     designRunner.recover();
+    liveWork = () =>
+      modelChecks.running().length > 0
+        ? "the model checks"
+        : assistant.turnsRunning() > 0
+          ? "the assistant's answer"
+          : undefined;
     designMake = {
       service: designService,
       runner: designRunner,
@@ -1132,6 +1148,8 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
           await remoteDrain;
           // An assistant turn left running would keep spending the person's plan.
           await assistant.stopAll();
+          // A picture call already sent is paid for: let it land rather than lose it.
+          await withDeadline(designRunner.idle(), designIdleMs);
           await runner.abortAll();
           await episodes?.settled();
         } finally {

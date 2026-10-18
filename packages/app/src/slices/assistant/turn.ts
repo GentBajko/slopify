@@ -99,6 +99,8 @@ export interface Assistant {
   readonly answer: (askId: string, answer: "allow" | "deny") => AnswerResult;
   // Stops every turn and waits for its CLI to end.
   readonly stopAll: () => Promise<void>;
+  // How many turns are answering now, for what an update waits for.
+  readonly turnsRunning: () => number;
 }
 
 interface Running {
@@ -379,6 +381,7 @@ export function createAssistant(deps: AssistantDeps): Assistant {
       }
       return decided;
     },
+    turnsRunning: () => running.size,
     stopAll: async () => {
       queued.clear();
       const turns = [...running.values()];
