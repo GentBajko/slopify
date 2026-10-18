@@ -6,23 +6,24 @@ import { type SampleProjects, templateSamplesDir } from "../../kernel/paths.js";
 import { carryGate } from "./gate.js";
 import { gateStates, type VersionGate } from "./model.js";
 
-// The clause that keeps a template's hidden sample project out of a query over projects. Every
-// list the user sees uses it (`edge/http/template-sample-isolation.test.ts` asks each GET
-// route); the studio and its runner read the sample project by id, which it never limits.
+// The clause that keeps the studio's hidden projects (each template's sample and each
+// bake-off copy, `template_hidden_projects`) out of a query over projects. Every list the user
+// sees uses it (`edge/http/template-sample-isolation.test.ts` asks each GET route); the studio
+// and its runner read those projects by id, which it never limits.
 export function notTemplateSample(alias = "projects", column = "id"): string {
-  return `NOT EXISTS (SELECT 1 FROM template_samples WHERE template_samples.project_id = ${alias}.${column})`;
+  return `NOT EXISTS (SELECT 1 FROM template_hidden_projects h WHERE h.project_id = ${alias}.${column})`;
 }
 
+const hiddenProject = "SELECT 1 FROM template_hidden_projects WHERE project_id=?";
+
 export function isTemplateSample(db: DatabaseSync, projectId: string): boolean {
-  return (
-    db.prepare("SELECT 1 FROM template_samples WHERE project_id=?").get(projectId) !== undefined
-  );
+  return db.prepare(hiddenProject).get(projectId) !== undefined;
 }
 
 // The same question asked on every project event (the shell's tally, the global stream):
 // one prepared statement, reused.
 export function templateSampleCheck(db: DatabaseSync): (projectId: string) => boolean {
-  const named = db.prepare("SELECT 1 FROM template_samples WHERE project_id=?");
+  const named = db.prepare(hiddenProject);
   return (projectId) => named.get(projectId) !== undefined;
 }
 
@@ -30,7 +31,7 @@ export function templateSampleCheck(db: DatabaseSync): (projectId: string) => bo
 // named by a template's sample row, or one whose folder is already there (a sample whose row
 // went with its template keeps its files where they are until the project is deleted).
 export function sampleProjects(db: DatabaseSync, dataDir: string): SampleProjects {
-  const named = db.prepare("SELECT 1 FROM template_samples WHERE project_id=?");
+  const named = db.prepare(hiddenProject);
   const root = templateSamplesDir({ dataDir });
   return {
     has: (projectId) =>
@@ -42,23 +43,29 @@ export function sampleProjects(db: DatabaseSync, dataDir: string): SampleProject
 export function templateSampleProjects(db: DatabaseSync): ReadonlySet<string> {
   return new Set(
     db
-      .prepare("SELECT project_id FROM template_samples")
+      .prepare("SELECT project_id FROM template_hidden_projects")
       .all()
       .map((row) => String(row.project_id)),
   );
 }
 
-// The template whose sample a project is, with its current name; undefined for any other project.
+// The template whose sample (or bake-off copy) a project is, with its current name; undefined
+// for any other project.
 export function sampleOwner(
   db: DatabaseSync,
   projectId: string,
 ): { readonly templateId: string; readonly name: string } | undefined {
   const row = db
     .prepare(
-      `SELECT s.template_id AS templateId, r.name AS name FROM template_samples s
-       JOIN project_templates t ON t.id=s.template_id
+      `SELECT o.template_id AS templateId, r.name AS name FROM (
+         SELECT template_id, project_id FROM template_samples
+         UNION ALL
+         SELECT b.template_id, c.project_id FROM template_bakeoff_clones c
+           JOIN template_bakeoffs b ON b.id=c.bakeoff_id
+       ) o
+       JOIN project_templates t ON t.id=o.template_id
        JOIN project_template_revisions r ON r.template_id=t.id AND r.version=t.head_version
-       WHERE s.project_id=?`,
+       WHERE o.project_id=?`,
     )
     .get(projectId);
   return row === undefined

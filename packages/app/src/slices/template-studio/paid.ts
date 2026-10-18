@@ -13,9 +13,9 @@ import { previewRebuild, type RebuildDeps, startRebuild } from "../rebuild/servi
 import { saveRevision } from "../revisions/mutations.js";
 import { currentRevisionId } from "../revisions/repo.js";
 import { getRevisionView } from "../revisions/view.js";
-import { deleteProject } from "../storage/delete-project.js";
 import { budgetRoom, fitsBudget } from "./budget.js";
 import { sampleEdit } from "./edit.js";
+import { removeHiddenProject } from "./hidden.js";
 import type { SampleJob } from "./jobs.js";
 import { resolveSampleRun, totals } from "./quote.js";
 import { sampleOf, sampleVersions, setSampleVersion, upsertSample } from "./repo.js";
@@ -273,7 +273,7 @@ export async function makePaidSample(
     });
     return;
   }
-  if (replaced !== undefined && !deleteProject(deps.rebuild, replaced.projectId).ok) {
+  if (replaced !== undefined && !removeHiddenProject(deps.rebuild, replaced.projectId).ok) {
     mark({ state: "failed", heldReason: replaced.sentence });
     return;
   }

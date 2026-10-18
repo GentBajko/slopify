@@ -5,6 +5,7 @@ import { deleteVersions, recordVersion } from "../library/history.js";
 import { nameMax } from "../library/model.js";
 import { entryById, promptById } from "../library/repo.js";
 import { deleteProject, projectBusy } from "../storage/delete-project.js";
+import { removeHiddenProject } from "../template-studio/hidden.js";
 import { removePackSamples } from "../template-studio/pack-samples.js";
 import { carryGateOnto, notTemplateSample, sampleOf } from "../template-studio/repo.js";
 import {
@@ -284,7 +285,7 @@ export function deleteNow(deps: TrashDeps, kind: TrashKind, id: string): TrashRe
       // in the data dir; a sample still being made keeps the template in the trash.
       const sample = sampleOf(deps.db, id);
       if (sample !== undefined) {
-        const removed = deleteProject(deps, sample.projectId);
+        const removed = removeHiddenProject(deps, sample.projectId);
         if (!removed.ok && removed.reason !== "no-project")
           return {
             ok: false,

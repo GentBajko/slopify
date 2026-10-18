@@ -23,6 +23,14 @@ import { connectAgent, mcpFixture } from "../mcp/mcp.fake.js";
 
 const sampleId = "tsample0zebrakite";
 const sampleTitle = "Zebra kite lantern sample";
+// A model bake-off's copy of the sample is hidden the same way.
+const cloneId = "tclone00zebrakite";
+const cloneTitle = "Zebra kite lantern bake-off copy";
+const leaksIn = (body: string): boolean =>
+  body.includes(sampleId) ||
+  body.includes(sampleTitle) ||
+  body.includes(cloneId) ||
+  body.includes(cloneTitle);
 const open: { readonly close: () => void }[] = [];
 afterEach(() => {
   for (const fixture of open.splice(0)) fixture.close();
@@ -44,6 +52,7 @@ function withSample() {
   const db = h.deps.db;
   for (const [id, title] of [
     [sampleId, sampleTitle],
+    [cloneId, cloneTitle],
     ["visible0control", "Visible control project"],
   ] as const) {
     insertProject(db, {
@@ -85,6 +94,12 @@ function withSample() {
   db.prepare(
     "INSERT INTO template_samples (template_id,project_id,topic,topic_source,full_script,created_at) VALUES (?,?,'The history of the lighthouse','fixed',0,?)",
   ).run(templateId, sampleId, at);
+  db.prepare(
+    "INSERT INTO template_bakeoffs (id,template_id,template_version,section,ack_high,state,created_at,updated_at) VALUES ('bake1',?,1,'script',1,'done',?,?)",
+  ).run(templateId, at, at);
+  db.prepare(
+    "INSERT INTO template_bakeoff_clones (bakeoff_id,slot,provider,model,project_id,state) VALUES ('bake1',0,'openrouter','m',?,'done')",
+  ).run(cloneId);
   return { ...h, templateId };
 }
 
@@ -116,7 +131,7 @@ describe("the template studio's sample project", () => {
     const leaks: string[] = [];
     for (const route of routes) {
       const body = await (await h.app.request(route)).text();
-      if (body.includes(sampleId) || body.includes(sampleTitle)) leaks.push(route);
+      if (leaksIn(body)) leaks.push(route);
     }
     expect(leaks).toEqual([]);
     const listed = await (await h.app.request("/api/projects")).text();
@@ -127,7 +142,7 @@ describe("the template studio's sample project", () => {
     const h = withSample();
     const { db } = h.deps;
     // Both projects made a video this week, so a count that took the sample would say 2.
-    for (const id of [sampleId, "visible0control"])
+    for (const id of [sampleId, cloneId, "visible0control"])
       db.prepare(
         "INSERT INTO outputs (id,project_id,stage_kind,role,path,bytes,created_at) VALUES (?,?,'video','video','v.mp4',1,'2026-09-10T00:00:00.000Z')",
       ).run(`${id}-video`, id);
@@ -140,13 +155,16 @@ describe("the template studio's sample project", () => {
     const shown = calendar.value.projects.map((one) => one.id);
     expect(shown).toContain("visible0control");
     expect(shown).not.toContain(sampleId);
+    expect(shown).not.toContain(cloneId);
     const failed = weeklyReport(db, "2026-01-01T00:00:00.000Z", "2026-12-31T00:00:00.000Z").failed;
     expect(failed.map((one) => one.projectId)).toContain("visible0control");
     expect(failed.map((one) => one.projectId)).not.toContain(sampleId);
+    expect(failed.map((one) => one.projectId)).not.toContain(cloneId);
     expect(weekSummary(db, "2026-01-01T00:00:00.000Z").videos).toBe(1);
     const covered = knownTitles(h.deps, randomUUID()).projects;
     expect(covered).toContain("Visible control project");
     expect(covered).not.toContain(sampleTitle);
+    expect(covered).not.toContain(cloneTitle);
     const factsNow = () =>
       keywordFactsFor(
         h.deps,
@@ -156,13 +174,16 @@ describe("the template studio's sample project", () => {
     const facts = factsNow();
     expect(facts.coveredBefore).toContain("Visible control project");
     expect(facts.coveredBefore).not.toContain(sampleTitle);
+    expect(facts.coveredBefore).not.toContain(cloneTitle);
     expect(facts.previousVideo?.title).not.toBe(sampleTitle);
     // The episode number is the same as with no sample at all.
     db.prepare("DELETE FROM template_samples WHERE project_id=?").run(sampleId);
-    db.prepare("INSERT INTO project_trash (project_id,deleted_at) VALUES (?,?)").run(
-      sampleId,
-      "2026-09-10T00:00:00.000Z",
-    );
+    db.prepare("DELETE FROM template_bakeoff_clones WHERE project_id=?").run(cloneId);
+    for (const id of [sampleId, cloneId])
+      db.prepare("INSERT INTO project_trash (project_id,deleted_at) VALUES (?,?)").run(
+        id,
+        "2026-09-10T00:00:00.000Z",
+      );
     expect(factsNow().episode).toBe(facts.episode);
   });
 
@@ -173,10 +194,15 @@ describe("the template studio's sample project", () => {
         "INSERT INTO project_trash (project_id,deleted_at) VALUES (?,'2026-09-10T00:00:00.000Z'),('visible0control','2026-09-10T00:00:00.000Z')",
       )
       .run(sampleId);
+    h.deps.db
+      .prepare(
+        "INSERT INTO project_trash (project_id,deleted_at) VALUES (?,'2026-09-10T00:00:00.000Z')",
+      )
+      .run(cloneId);
     const leaks: string[] = [];
     for (const route of getRoutes(h.app)) {
       const body = await (await h.app.request(route)).text();
-      if (body.includes(sampleId) || body.includes(sampleTitle)) leaks.push(route);
+      if (leaksIn(body)) leaks.push(route);
     }
     expect(leaks).toEqual([]);
     expect(await (await h.app.request("/api/trash")).text()).toContain("visible0control");
@@ -227,6 +253,8 @@ describe("the template studio's sample project", () => {
       ["PUT", `/api/projects/${sampleId}/title`],
       ["DELETE", `/api/projects/${sampleId}`],
       ["POST", `/api/projects/${sampleId}/rebuild`],
+      ["POST", `/api/projects/${cloneId}/pause`],
+      ["DELETE", `/api/projects/${cloneId}`],
     ] as const) {
       const reply = await h.app.request(path, {
         method,

@@ -12,6 +12,7 @@ import {
   spentToday,
   writeStudioSettings,
 } from "./budget.js";
+import { removeHiddenProject } from "./hidden.js";
 
 const open: (() => void)[] = [];
 afterEach(() => {
@@ -66,7 +67,7 @@ function harness() {
         "INSERT INTO provider_usage (id,project_id,stage,kind,provider,model,wall_ms,on_plan,cost,created_at) VALUES (?,?,'images','image','fal','m',10,?,?,?)",
       )
       .run(`u${String(++n)}`, projectId, onPlan, cost, at);
-  return { db, call };
+  return { db, call, project, paths: h.deps.paths };
 }
 
 describe("spentToday", () => {
@@ -84,6 +85,33 @@ describe("spentToday", () => {
     expect(spentToday(db, new Date("2026-10-18T09:50:00.000Z"), "Pacific/Kiritimati")).toBeCloseTo(
       3.35,
     );
+  });
+});
+
+describe("spentToday with bake-off copies and removed projects", () => {
+  it("counts a bake-off copy's calls, and keeps counting them once the copy is removed", () => {
+    const { db, call, project, paths } = harness();
+    project("COPY");
+    db.prepare(
+      "INSERT INTO template_bakeoffs (id,template_id,template_version,section,ack_high,state,created_at,updated_at) SELECT 'b1',template_id,1,'script',1,'making','t','t' FROM template_samples",
+    ).run();
+    db.prepare(
+      "INSERT INTO template_bakeoff_clones (bakeoff_id,slot,provider,model,project_id,state) VALUES ('b1',0,'openrouter','m','COPY','done')",
+    ).run();
+    call("COPY", "2026-10-18T09:00:00.000Z", 0.4);
+    call("COPY", "2026-10-18T09:10:00.000Z", 0.2, 1);
+    call("SAMPLE", "2026-10-18T09:00:00.000Z", 0.1);
+    const now = new Date("2026-10-18T10:00:00.000Z");
+    expect(spentToday(db, now, "UTC")).toBeCloseTo(0.5);
+    expect(removeHiddenProject({ db, paths, log: { write: () => undefined } }, "COPY").ok).toBe(
+      true,
+    );
+    expect(
+      db.prepare("SELECT count(*) AS n FROM provider_usage WHERE project_id='COPY'").get(),
+    ).toEqual({ n: 0 });
+    expect(spentToday(db, now, "UTC")).toBeCloseTo(0.5);
+    // Tomorrow it no longer counts.
+    expect(spentToday(db, new Date("2026-10-19T10:00:00.000Z"), "UTC")).toBe(0);
   });
 });
 

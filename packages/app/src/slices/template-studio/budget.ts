@@ -45,17 +45,19 @@ export function systemTimeZone(): string {
 }
 
 // What the studio's samples were charged since local midnight: the priced calls of every
-// template's sample project, billed per use (a CLI plan's calls add nothing). Other projects'
-// calls never count.
+// template's sample project and every bake-off copy, billed per use (a CLI plan's calls add
+// nothing), and what such a project spent before it was removed. Other projects' calls never
+// count.
 export function spentToday(db: DatabaseSync, now: Date, timeZone = systemTimeZone()): number {
   const since = localMidnight(now, timeZone).toISOString();
   const row = db
     .prepare(
-      `SELECT COALESCE(SUM(u.cost),0) AS spent FROM provider_usage u
-       JOIN template_samples s ON s.project_id = u.project_id
-       WHERE u.on_plan = 0 AND u.created_at >= ?`,
+      `SELECT COALESCE((SELECT SUM(u.cost) FROM provider_usage u
+         WHERE u.project_id IN (SELECT project_id FROM template_hidden_projects)
+           AND u.on_plan = 0 AND u.created_at >= ?), 0)
+       + COALESCE((SELECT SUM(cost) FROM template_studio_spend WHERE created_at >= ?), 0) AS spent`,
     )
-    .get(since);
+    .get(since, since);
   return z.object({ spent: z.number() }).parse(row).spent;
 }
 

@@ -82,6 +82,11 @@ const leftOut = new Set([
   "template_samples",
   "template_sample_versions",
   "template_sample_jobs",
+  // Bake-offs are this install's working copies, discarded after the comparison; what the
+  // studio's hidden projects spent counts against this install's daily budget only.
+  "template_bakeoffs",
+  "template_bakeoff_clones",
+  "template_studio_spend",
 ]);
 
 function install(): BackupDeps & { readonly db: DatabaseSync; readonly paths: Paths } {

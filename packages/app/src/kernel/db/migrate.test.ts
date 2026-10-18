@@ -121,10 +121,13 @@ describe("migrate", () => {
       "standalone_usage",
       "studio_reports",
       "telemetry_events",
+      "template_bakeoff_clones",
+      "template_bakeoffs",
       "template_gates",
       "template_sample_jobs",
       "template_sample_versions",
       "template_samples",
+      "template_studio_spend",
       "told_failures",
       "topic_scores",
       "video_stats",
@@ -186,6 +189,7 @@ describe("migrate", () => {
       "schedules_due",
       "stages_project_identity",
       "standalone_usage_created",
+      "template_studio_spend_at",
     ]);
   });
 
@@ -260,6 +264,7 @@ describe("migrate", () => {
       { version: 71, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 72, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 73, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 74, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -269,7 +274,7 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 65 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 66 });
   });
 
   it("upgrades a database at 62 through every later migration, the template studio's included", () => {
@@ -281,7 +286,7 @@ describe("migrate", () => {
         .prepare("SELECT version FROM schema_migrations WHERE version > 62 ORDER BY version")
         .all()
         .map((row) => row.version),
-    ).toEqual([63, 64, 65, 66, 67, 68, 70, 71, 72, 73]);
+    ).toEqual([63, 64, 65, 66, 67, 68, 70, 71, 72, 73, 74]);
   });
 
   // Applied by the set of versions a database has, never by its newest: one that took the
@@ -306,20 +311,23 @@ describe("migrate", () => {
         .all()
         .map((row) => row.name),
     ).toEqual([
+      "template_bakeoff_clones",
+      "template_bakeoffs",
       "template_gates",
       "template_sample_jobs",
       "template_sample_versions",
       "template_samples",
+      "template_studio_spend",
     ]);
   });
 
   it("refuses a database newer than the app knows", () => {
     const db = openDb(":memory:");
     migrate(db, clock);
-    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(74, clock.now().toISOString());
+    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(75, clock.now().toISOString());
 
     expect(() => migrate(db, clock)).toThrow(
-      "database schema 74 is newer than this app knows (73)",
+      "database schema 75 is newer than this app knows (74)",
     );
   });
 
