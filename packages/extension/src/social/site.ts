@@ -71,7 +71,7 @@ export interface Waits {
 export function waitsOf(options: Partial<Waits> = {}): Waits {
   return {
     sleep: options.sleep ?? ((ms: number) => new Promise((done) => setTimeout(done, ms))),
-    timeoutMs: options.timeoutMs ?? 6000,
+    timeoutMs: options.timeoutMs ?? 10_000,
     uploadMs: options.uploadMs ?? 5 * 60 * 1000,
   };
 }

@@ -1,6 +1,7 @@
 import { setFiles } from "../../fill.js";
 import { findAllIn, findIn, labelOf, missingOf, type SiteSelectors } from "../find.js";
 import { RefusedClick } from "../guard.js";
+import { siteMatches } from "../matches.js";
 import { typeRich } from "../rich-text.js";
 import {
   type FillContext,
@@ -219,7 +220,7 @@ function findLink(doc: Document, _location: URL, start: string): string | null {
 
 export const reddit: Site = {
   platform: "reddit",
-  matches: ["https://www.reddit.com/*"],
+  matches: siteMatches.reddit,
   selectors,
   forbidden: {
     selectors: ["#submit-post-button", '[slot="submit-button"]', "#inner-post-submit-button"],

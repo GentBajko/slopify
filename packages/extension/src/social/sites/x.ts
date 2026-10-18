@@ -1,6 +1,7 @@
 import { setFiles } from "../../fill.js";
 import { findAllIn, findIn, isOn, labelOf, missingOf, type SiteSelectors } from "../find.js";
 import { RefusedClick } from "../guard.js";
+import { siteMatches } from "../matches.js";
 import { typeRich } from "../rich-text.js";
 import {
   absolute,
@@ -270,7 +271,7 @@ function findLink(doc: Document, location: URL, start: string): string | null {
 
 export const x: Site = {
   platform: "x",
-  matches: ["https://x.com/*"],
+  matches: siteMatches.x,
   selectors,
   forbidden: {
     selectors: [

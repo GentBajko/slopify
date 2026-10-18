@@ -1,5 +1,6 @@
 import { setFiles } from "../../fill.js";
 import { findAllIn, findIn, missingOf, type SiteSelectors } from "../find.js";
+import { siteMatches } from "../matches.js";
 import { typeRich } from "../rich-text.js";
 import {
   absolute,
@@ -75,6 +76,7 @@ const selectors = {
 
 async function fill(context: FillContext): Promise<SiteReport> {
   const { doc, pack, files, waits, press } = context;
+  await until(waits, () => findIn(doc, selectors.composer) ?? findIn(doc, selectors.compose));
   if (findIn(doc, selectors.composer) === null) {
     const open = findIn(doc, selectors.compose);
     if (open === null)
@@ -149,7 +151,7 @@ function findLink(doc: Document, location: URL, start: string): string | null {
 
 export const bluesky: Site = {
   platform: "bluesky",
-  matches: ["https://bsky.app/*"],
+  matches: siteMatches.bluesky,
   selectors,
   forbidden: { selectors: ['[data-testid="composerPublishBtn"]'], labels: [] },
   isCompose: (location) => location.pathname === "/",

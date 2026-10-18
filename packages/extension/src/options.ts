@@ -1,8 +1,10 @@
 import { browserApi } from "./browser.js";
 import type { WorkerAnswer } from "./pack.js";
+import { renderSites } from "./social/options-sites.js";
 
-// The options page: the Slopify address and the pairing token from Slopify's Settings. Pairing
-// is done by the background worker, so Slopify sees the extension's own origin.
+// The options page: the Slopify address and the pairing token from Slopify's Settings, and the
+// sites the extension may post on. Pairing is done by the background worker, so Slopify sees the
+// extension's own origin.
 
 const api = browserApi();
 const form = document.getElementById("pair") as HTMLFormElement;
@@ -42,3 +44,6 @@ form.addEventListener("submit", (event) => {
     } else say(answer.message, "error");
   });
 });
+
+const sites = document.getElementById("sites");
+if (sites !== null) void renderSites(sites, api, (request) => api.runtime.sendMessage(request));

@@ -1,6 +1,7 @@
 import { setFiles } from "../../fill.js";
 import { findAllIn, findIn, labelOf, missingOf, type SiteSelectors, switchNear } from "../find.js";
 import { RefusedClick } from "../guard.js";
+import { siteMatches } from "../matches.js";
 import { typeRich } from "../rich-text.js";
 import {
   absolute,
@@ -137,7 +138,8 @@ async function fill(context: FillContext): Promise<SiteReport> {
       ],
     };
 
-  // Create new post.
+  // Create new post (the sidebar renders a moment after the page).
+  await until(waits, () => findIn(doc, selectors.input) ?? findIn(doc, selectors.create));
   if (findIn(doc, selectors.input) === null) {
     const create = findIn(doc, selectors.create);
     if (create === null) return { filled: false, missing: [selectors.create.label], notes: [] };
@@ -287,7 +289,7 @@ function findLink(doc: Document, location: URL, start: string): string | null {
 
 export const instagram: Site = {
   platform: "instagram",
-  matches: ["https://www.instagram.com/*"],
+  matches: siteMatches.instagram,
   selectors,
   // The dialog's close (X) leads to "Discard post?".
   forbidden: {

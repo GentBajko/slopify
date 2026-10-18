@@ -9,6 +9,8 @@ import {
   type WorkerRequest,
 } from "./pack.js";
 import { reloadIfUpdated } from "./self-update.js";
+import { isSocialRequest } from "./social/messages.js";
+import { socialWorker } from "./social/worker.js";
 
 // The background worker: the only part of the extension that talks to Slopify. It keeps the
 // Slopify address and the pairing token, reads upload packs and their files and hands them to
@@ -167,6 +169,29 @@ async function getJson<T>(path: string, what: string): Promise<T> {
   return (await response.json()) as T;
 }
 
+async function getBytes(path: string, what: string): Promise<ArrayBuffer> {
+  const current = await paired();
+  const response = await call(path, current);
+  if (!response.ok) throw new Error(await failure(response, what));
+  return response.arrayBuffer();
+}
+
+// Posting to X, LinkedIn, Instagram, TikTok, Reddit and Bluesky (`social/worker.ts`).
+const social = socialWorker({
+  api,
+  paired: async () => (await pairing()) !== undefined,
+  getJson,
+  postJson: post,
+  getBytes,
+  now: () => Date.now(),
+});
+
+async function checkPosts(): Promise<void> {
+  await social.reportSites().catch(() => undefined);
+  await social.checkDue().catch(() => undefined);
+  await social.findLinks().catch(() => undefined);
+}
+
 const query = (projectId: string, short: number | null) =>
   `p=${encodeURIComponent(projectId)}&s=${String(short ?? 0)}`;
 
@@ -223,6 +248,7 @@ async function checkTasks(): Promise<void> {
   }
   await checkGone(goneEveryMs);
   await sweepAbResults();
+  await checkPosts();
 }
 
 // Once a day: each running A/B test's result, one Details page after another (the page reads
@@ -465,6 +491,16 @@ async function answer(request: WorkerRequest): Promise<WorkerAnswer<unknown>> {
 const activityKey = "slopify-last-activity";
 api.runtime.onMessage.addListener((message, sender, respond) => {
   void api.storage.local.set({ [activityKey]: Date.now() });
+  if (isSocialRequest(message as { type?: unknown })) {
+    void social
+      .answer(message as Parameters<typeof social.answer>[0], sender)
+      .then(({ reply, closeTab }) => {
+        respond(reply);
+        const tab = sender.tab?.id;
+        if (closeTab === true && tab !== undefined) void api.tabs?.remove(tab);
+      });
+    return true;
+  }
   const request = message as WorkerRequest;
   void answer(request).then((reply) => {
     respond(reply);
@@ -486,6 +522,7 @@ api.action?.onClicked.addListener(() => {
 
 api.alarms?.onAlarm.addListener((alarm) => {
   if (alarm.name === "slopify-ab-tests") void checkTasks();
+  void social.onAlarm(alarm.name).catch(() => undefined);
   if (alarm.name === "slopify-stats-watch") {
     void unstickAbRead();
     // Loaded from the folder Slopify keeps current: run its new build once it's quiet.
@@ -505,7 +542,15 @@ const schedule = (): void => {
   api.alarms?.create("slopify-ab-tests", { periodInMinutes: 15, delayInMinutes: 1 });
   api.alarms?.create("slopify-stats-watch", { periodInMinutes: 1, delayInMinutes: 1 });
 };
-api.runtime.onInstalled.addListener(schedule);
+// A filled post's notification brings its tab forward.
+api.notifications?.onClicked.addListener((id) => {
+  void social.onNotificationClick(id).catch(() => undefined);
+});
+api.runtime.onInstalled.addListener(() => {
+  schedule();
+  // The posting sites' content scripts, for the sites allowed in the options.
+  void social.reportSites().catch(() => undefined);
+});
 api.runtime.onStartup.addListener(() => {
   schedule();
   void checkTasks();

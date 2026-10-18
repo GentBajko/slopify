@@ -9,6 +9,7 @@ import {
   switchNear,
 } from "../find.js";
 import { RefusedClick } from "../guard.js";
+import { siteMatches } from "../matches.js";
 import { typeRich } from "../rich-text.js";
 import {
   absolute,
@@ -248,7 +249,7 @@ function findLink(doc: Document, location: URL, start: string): string | null {
 
 export const tiktok: Site = {
   platform: "tiktok",
-  matches: ["https://www.tiktok.com/*"],
+  matches: siteMatches.tiktok,
   selectors,
   forbidden: {
     selectors: ['[data-e2e="post_video_button"]', '[data-e2e="discard_post_button"]'],
