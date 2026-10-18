@@ -21,6 +21,7 @@ import { SampleSettings } from "@/onboarding/sample-settings";
 import { patchNotesQuery } from "@/patch-notes/api";
 import { PatchNotesSettings } from "@/patch-notes/settings-panel";
 import { StudioSettings } from "@/studio/settings-panel";
+import { TemplateStudioSettings } from "@/template-studio/settings-panel";
 import { TrashSettings } from "@/trash/trash-settings";
 import { ChannelLinksSettings } from "@/youtube/channel-links";
 import { AboutSettings } from "./settings-about";
@@ -201,6 +202,7 @@ export function SettingsRoute({
             {section === "models" ? <CatalogueSettings /> : null}
             {section === "agents" ? <AgentSettings /> : null}
             {section === "playback" ? <ProductionDefaults /> : null}
+            {section === "template-studio" ? <TemplateStudioSettings /> : null}
             {section === "notifications" ? <NotificationSettings /> : null}
             {section === "channel-links" ? <ChannelLinksSettings /> : null}
             {section === "studio" ? <StudioSettings /> : null}

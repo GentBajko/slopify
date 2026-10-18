@@ -166,6 +166,10 @@ function settingsDeps(extra: Readonly<Record<string, Answer>> = {}) {
       dockerCommand: null,
     }),
     "GET /api/backups": jsonAnswer(backups),
+    "GET /api/template-studio/settings": jsonAnswer({
+      dailyBudget: 2,
+      today: { budget: 2, spent: 0.4, left: 1.6 },
+    }),
     "GET /api/trash": jsonAnswer({ items: [trashed] }),
     "GET /api/usage": jsonAnswer(usage),
     "GET /api/patch-notes": jsonAnswer({
@@ -190,6 +194,7 @@ const loaded: Readonly<Record<SettingsSection, () => Promise<unknown>>> = {
   models: () => screen.findByText("/data/catalogue.json"),
   agents: () => screen.findByText("No agent has connected yet."),
   playback: () => screen.findByLabelText("Silence between segments"),
+  "template-studio": () => screen.findByLabelText("Daily sample budget"),
   notifications: () => screen.findByDisplayValue("https://ntfy.sh/slopify-runs"),
   "channel-links": () => screen.findByRole("link", { name: "Open the default channel's links" }),
   studio: () => screen.findByDisplayValue("Lore"),

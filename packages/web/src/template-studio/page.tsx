@@ -4,24 +4,24 @@ import type { StudioView } from "@app/slices/template-studio/schema.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useCallback, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
-import { ActionBar, StatusSlot, type StatusTone } from "@/components/kit/action-bar";
-import { Button } from "@/components/kit/button";
+import type { StatusTone } from "@/components/kit/action-bar";
 import { Fold } from "@/components/kit/fold";
 import { PageHeader, Workspace } from "@/components/kit/layout";
 import { TextLink } from "@/components/kit/link";
 import { SectionHead } from "@/components/kit/section-head";
-import { Chip } from "@/components/kit/status";
 import { Tabs } from "@/components/kit/tabs";
 import { cn } from "@/lib/utils";
 import { UnsavedLeaveGuard } from "@/routes/unsaved-leave-guard";
-import { templatesKey, updateProjectTemplate } from "@/templates/api";
+import { PromptAnatomy } from "./anatomy";
 import { requestFreeSamples, templateStudioKey, templateStudioQuery } from "./api";
 import { ChecksList } from "./checks-list";
 import { FineTune } from "./fine-tune";
 import { MadeWith } from "./made-with";
 import { SamplePanel } from "./sample-panel";
+import { SaveBar } from "./save-bar";
 import { SectionRail } from "./section-rail";
 import { TemplateSession } from "./session";
+import { SampleTopic } from "./topic";
 import { VisibleControls } from "./visible";
 
 type Pane = "sections" | "settings" | "sample";
@@ -90,7 +90,6 @@ function Studio({
   const [pane, setPane] = useState<Pane>("settings");
   const [fineTune, setFineTune] = useState(0);
   const [status, setStatus] = useState<{ tone: StatusTone; text: string } | undefined>();
-  const [saving, setSaving] = useState(false);
   const [making, setMaking] = useState(false);
   const asked = useRef(false);
   async function make(): Promise<void> {
@@ -115,7 +114,6 @@ function Studio({
     asked.current = true;
     void make();
   }, [view]);
-  const mutation = useRef(crypto.randomUUID());
   const dirty = JSON.stringify(document) !== JSON.stringify(saved);
   const current = view.sections.find((one) => one.id === section) ?? view.sections[0];
   const onFiles = useCallback(
@@ -130,32 +128,6 @@ function Studio({
     setDocument(next);
     setStatus(undefined);
   }, []);
-  async function save(): Promise<void> {
-    setSaving(true);
-    setStatus({ tone: "info", text: "Saving…" });
-    try {
-      const reply = await updateProjectTemplate(api, view.template.id, {
-        baseVersion: view.template.version,
-        mutationId: mutation.current,
-        name: view.template.name,
-        document,
-      });
-      if (!reply.ok) {
-        setStatus({ tone: "error", text: `The template wasn't saved: ${reply.message}` });
-        return;
-      }
-      mutation.current = crypto.randomUUID();
-      await client.invalidateQueries({ queryKey: templatesKey });
-      await client.invalidateQueries({ queryKey: templateStudioKey(view.template.id) });
-    } catch (error) {
-      setStatus({
-        tone: "error",
-        text: `The template wasn't saved: ${error instanceof Error ? error.message : String(error)} Press Save again.`,
-      });
-    } finally {
-      setSaving(false);
-    }
-  }
   if (current === undefined) return <StudioSkeleton />;
   const hidden = (which: Pane) => (pane === which ? undefined : "max-md:hidden");
   return (
@@ -166,7 +138,7 @@ function Studio({
         crumb={<TextLink to="/templates">Templates</TextLink>}
         title={view.template.name}
         meta={`Version ${String(view.template.version)} · ${gateWords(view)}`}
-        actions={<Chip>{`Sample topic: ${view.sample.topic}`}</Chip>}
+        actions={<SampleTopic view={view} />}
       />
       <Tabs
         className="mb-4 md:hidden"
@@ -217,24 +189,10 @@ function Studio({
           >
             <FineTune section={current.id} onFiles={onFiles} />
           </Fold>
+          <PromptAnatomy view={view} section={current.id} />
         </section>
       </Workspace>
-      <ActionBar
-        status={
-          <StatusSlot tone={status?.tone ?? "info"}>
-            {status?.text ?? (dirty ? "Unsaved changes." : undefined)}
-          </StatusSlot>
-        }
-      >
-        <Button
-          variant="primary"
-          disabled={!dirty || saving}
-          disabledReason={saving ? "Saving" : "Nothing changed since the last save"}
-          onClick={() => void save()}
-        >
-          Save
-        </Button>
-      </ActionBar>
+      <SaveBar view={view} document={document} dirty={dirty} note={status} />
     </TemplateSession>
   );
 }

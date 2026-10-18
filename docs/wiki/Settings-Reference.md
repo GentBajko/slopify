@@ -13,6 +13,7 @@ Every section of Settings, what each control does and its default. Sections with
 | Connections | [Models](#models) | Model catalogue, retired models | [Models](Models) |
 | Connections | [Agents (MCP)](#agents-mcp) | The MCP address and setup lines for Claude Code and Codex, the last connection, what agents did | [Agents-MCP](Agents-MCP) |
 | Production defaults | [Production defaults](#production-defaults) | Silence gap, volume levelling for new runs | This page |
+| Production defaults | [Template studio](#template-studio) | The most a template's paid samples may spend in a day | This page |
 | Notifications | [Notifications](#notifications) | Browser and phone notifications | [Notifications](Notifications) |
 | Publishing | [Channel links](#channel-links) | A pointer to each channel's own links | [Channels](Channels#channel-links) |
 | Publishing | [YouTube Studio](#youtube-studio) | Playlists per channel, the Studio extension's download and pairing | [Studio-Extension](Studio-Extension) |
@@ -143,6 +144,14 @@ The volume fields show only while the switch is on. A project keeps what it star
 | **Subtitle timing model** | The speech model that times English captions on this computer. The same model in three sizes: **Most accurate (378 MB, recommended)**, **Balanced (189 MB)** and **Smallest (95 MB, less accurate)**. Bigger hears the narration more accurately and, on most computers, also runs faster. | Most accurate |
 
 The chosen model downloads once, the first time captions are timed (or when Slopify starts, unless `SLOPIFY_NO_MODEL_PREFETCH` is set), and is kept in `<data folder>/models/english-subtitles/`. A model already downloaded stays there when you switch, so switching back costs nothing. Smallest can mishear a line and stop a run with "Subtitles stopped matching the audio" where the narration is fine. Changing the model never marks finished subtitles outdated, and a timing that is already running finishes with the model it started with; the next one uses the new choice. It is a setting of this computer, not of a project. Other languages use their own model and are not affected. Changes save as you make them.
+
+### Template studio
+
+| Control | What it does | Default / range |
+|---|---|---|
+| **Daily sample budget** | The most a template's paid samples may spend in one day, in US dollars, counted from midnight on this computer. Below it: what the samples spent today and what is left. Type an amount and choose **Save**. | $2.00, $0 to $1,000 |
+
+A sample that would go over the budget is not made: the template's studio shows it **Waiting** with "this sample costs about $0.40 and $0.10 of today's $2.00 sample budget is left", and **Make sample** makes it once there is room again. Calls on a CLI plan count as $0. Only the studio's samples count; your projects never do.
 
 ## Notifications
 

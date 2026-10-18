@@ -1,6 +1,6 @@
 import type { TemplateSection } from "@app/slices/template-studio/model.js";
 import type { StudioView } from "@app/slices/template-studio/schema.js";
-import type { ReactElement, ReactNode } from "react";
+import { type ReactElement, type ReactNode, useState } from "react";
 import { useApp } from "@/app-context";
 import { AudioPlayer } from "@/components/kit/audio-player";
 import { Button } from "@/components/kit/button";
@@ -11,11 +11,18 @@ import { DataTable } from "@/components/kit/stats";
 import { Status } from "@/components/kit/status";
 import { Steps } from "@/components/kit/steps";
 import { cn } from "@/lib/utils";
+import {
+  EarlierSamples,
+  FullScriptSwitch,
+  MakeSampleButton,
+  PaidBody,
+  paidSections,
+} from "./paid-sample";
 import { stateTone, stateWord } from "./section-rail";
 
 type Section = StudioView["sections"][number];
 
-// The free samples a section shows, made on this computer; the paid ones come with phase 3.
+// The free samples a section shows, made on this computer.
 const freeOf = (
   view: StudioView,
   section: TemplateSection,
@@ -28,7 +35,8 @@ const freeOf = (
         ? view.free.document
         : undefined;
 
-// Beside a section's settings: its sample, and Make samples for the free ones.
+// Beside a section's settings: its sample, Make samples for the free ones and Make sample for
+// a paid one that is outdated, waiting or failed. A failed one shows the step's own sentence.
 export function SamplePanel({
   view,
   section,
@@ -41,8 +49,15 @@ export function SamplePanel({
   readonly making: boolean;
   readonly onMake: () => void;
 }): ReactElement {
+  const [problem, setProblem] = useState<string | null>(null);
   const free = freeOf(view, section.id);
   const makeable = free !== undefined && (free.state === "stale" || free.state === "needs-fix");
+  const paid = paidSections.includes(section.id);
+  const remakeable =
+    paid &&
+    ["stale", "needs-fix", "waiting"].includes(section.state) &&
+    view.paid.state !== "queued" &&
+    view.paid.state !== "making";
   return (
     <section aria-label={`${section.label} sample`} className="flex flex-col gap-3">
       <SectionHead
@@ -51,7 +66,8 @@ export function SamplePanel({
         className="pb-0"
         status={<Status tone={stateTone[section.state]}>{stateWord[section.state]}</Status>}
       >
-        {free === undefined ? null : (
+        {remakeable ? <MakeSampleButton view={view} onDone={setProblem} /> : null}
+        {free === undefined || paid ? null : (
           <Button
             size="small"
             disabled={!makeable || making}
@@ -70,8 +86,25 @@ export function SamplePanel({
           </Button>
         )}
       </SectionHead>
-      <p className="m-0 text-small text-ink-2">{section.sentence}</p>
+      <p
+        className={cn(
+          "m-0 text-small",
+          section.state === "needs-fix" ? "text-danger" : "text-ink-2",
+        )}
+      >
+        {section.sentence}
+      </p>
+      {problem === null ? null : (
+        <p role="alert" className="m-0 text-small text-danger">
+          {problem}
+        </p>
+      )}
+      {section.id === "script" && section.state !== "off" ? (
+        <FullScriptSwitch view={view} onDone={setProblem} />
+      ) : null}
+      <PaidBody view={view} section={section.id} />
       <SampleBody view={view} section={section.id} />
+      {paid ? <EarlierSamples view={view} /> : null}
     </section>
   );
 }

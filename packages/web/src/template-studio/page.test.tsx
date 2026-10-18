@@ -221,45 +221,240 @@ it("lists the free checks, each failing one with its fix as a link", async () =>
   ).toBe(`/templates/${templateId}?section=voice`);
 });
 
-it("saves a change through the template's own PUT as the next version", async () => {
+const quote = (over: Record<string, unknown> = {}) => ({
+  version: 3,
+  first: false,
+  sections: ["video", "shorts", "upload"],
+  rows: [{ stage: "Export / subtitles", low: 0, high: 0, detail: "Local." }],
+  low: 0.08,
+  high: 0.12,
+  unknown: 0,
+  onPlan: false,
+  budget: { budget: 2, spent: 0, left: 2 },
+  fits: true,
+  problem: null,
+  ...over,
+});
+
+it("prices the Save on its button and saves at that price", async () => {
   const user = userEvent.setup();
   const sent = vi.fn(async (request: Request) => {
-    const body = (await request.json()) as { baseVersion: number; document: typeof document };
-    expect(body.baseVersion).toBe(3);
+    const body = (await request.json()) as {
+      baseVersion: number;
+      sample: string;
+      acknowledgedHigh: number;
+      document: typeof document;
+    };
+    expect(body).toMatchObject({ baseVersion: 3, sample: "make", acknowledgedHigh: 0.12 });
     expect(body.document.form.format).toBe("9:16");
-    return Response.json({ ...view.template, version: 4, document: body.document });
+    return Response.json({
+      template: { ...view.template, version: 4 },
+      sample: "queued",
+      quote: null,
+      replayed: false,
+    });
   });
-  open("video", { [`PUT /api/project-templates/${templateId}`]: sent });
+  open("video", {
+    [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(quote()),
+    [`POST /api/template-studio/${templateId}/save`]: sent,
+  });
   const save = await screen.findByRole("button", { name: "Save" });
   expect(save.hasAttribute("disabled")).toBe(true);
   await user.click(screen.getByRole("button", { name: "Vertical 9:16" }));
   expect(screen.getByText("Unsaved changes.")).not.toBeNull();
-  await user.click(screen.getByRole("button", { name: "Save" }));
+  const priced = await screen.findByRole("button", { name: "Save · about $0.12" });
+  await waitFor(() => expect(priced.hasAttribute("disabled")).toBe(false));
+  await user.click(priced);
   await waitFor(() => expect(sent).toHaveBeenCalledOnce());
 });
 
-it("says why a save was refused, in the server's words", async () => {
+it("saves without a sample, which spends nothing", async () => {
+  const user = userEvent.setup();
+  const sent = vi.fn(async (request: Request) => {
+    expect(await request.json()).toMatchObject({ sample: "skip", acknowledgedHigh: 0 });
+    return Response.json({
+      template: { ...view.template, version: 4 },
+      sample: "skipped",
+      quote: null,
+      replayed: false,
+    });
+  });
+  open("video", {
+    [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(quote()),
+    [`POST /api/template-studio/${templateId}/save`]: sent,
+  });
+  await user.click(await screen.findByRole("button", { name: "Square 1:1" }));
+  await user.click(screen.getByRole("button", { name: "Save without a sample" }));
+  await waitFor(() => expect(sent).toHaveBeenCalledOnce());
+});
+
+it("puts a higher price back on the button, in the server's words, when the Save is refused", async () => {
   const user = userEvent.setup();
   open("video", {
-    [`PUT /api/project-templates/${templateId}`]: () =>
+    [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(quote()),
+    [`POST /api/template-studio/${templateId}/save`]: () =>
       Response.json(
         {
           title: "Conflict",
           status: 409,
           detail:
-            "This template or its project changed while you were editing. Reload the page to see the latest, then make your change again.",
-          reason: "conflict",
+            "The sample now costs about $0.61, more than the $0.12 you saw. Press Save again to accept the new price, or Save without a sample.",
+          reason: "cost-changed",
+          quote: quote({ high: 0.61 }),
         },
-        { status: 409 },
+        { status: 409, headers: { "content-type": "application/problem+json" } },
       ),
   });
   await user.click(await screen.findByRole("button", { name: "Square 1:1" }));
-  await user.click(screen.getByRole("button", { name: "Save" }));
+  const priced = await screen.findByRole("button", { name: "Save · about $0.12" });
+  await waitFor(() => expect(priced.hasAttribute("disabled")).toBe(false));
+  await user.click(priced);
   expect(
     await screen.findByText(
-      "The template wasn't saved: This template or its project changed while you were editing. Reload the page to see the latest, then make your change again.",
+      "The template wasn't saved: The sample now costs about $0.61, more than the $0.12 you saw. Press Save again to accept the new price, or Save without a sample.",
     ),
   ).not.toBeNull();
+  expect(await screen.findByRole("button", { name: "Save · about $0.61" })).not.toBeNull();
+});
+
+it("keeps Save on screen but off at today's budget, linking to where it is raised", async () => {
+  const user = userEvent.setup();
+  open("video", {
+    [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(
+      quote({ fits: false, budget: { budget: 2, spent: 1.95, left: 0.05 } }),
+    ),
+  });
+  await user.click(await screen.findByRole("button", { name: "Square 1:1" }));
+  const priced = await screen.findByRole("button", { name: "Save · about $0.12" });
+  expect(priced.hasAttribute("disabled") || priced.getAttribute("aria-disabled") === "true").toBe(
+    true,
+  );
+  expect(
+    screen.getByRole("link", { name: "Settings → Template studio" }).getAttribute("href"),
+  ).toBe("/settings?section=template-studio");
+  expect(
+    screen.getByRole("button", { name: "Save without a sample" }).hasAttribute("disabled"),
+  ).toBe(false);
+});
+
+it("asks to accept steps with no known price before a priced Save", async () => {
+  const user = userEvent.setup();
+  open("video", {
+    [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(quote({ unknown: 2 })),
+  });
+  await user.click(await screen.findByRole("button", { name: "Square 1:1" }));
+  const priced = await screen.findByRole("button", { name: "Save · about $0.12" });
+  const accept = await screen.findByRole("switch", { name: "Accept 2 steps with no known price" });
+  expect(priced.hasAttribute("disabled") || priced.getAttribute("aria-disabled") === "true").toBe(
+    true,
+  );
+  await user.click(accept);
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Save · about $0.12" }).hasAttribute("disabled"),
+    ).toBe(false),
+  );
+});
+
+it("shows a failed sample's own sentence and Make sample at its price", async () => {
+  const user = userEvent.setup();
+  const failed = "OpenRouter refused the key. Paste a new one in Settings → Providers.";
+  const made = vi.fn(async (request: Request) => {
+    expect(await request.json()).toMatchObject({ version: 3, acknowledgedHigh: 0.3 });
+    return Response.json({ queued: true, version: 3 }, { status: 202 });
+  });
+  open("script", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({
+      ...view,
+      sections: view.sections.map((one) =>
+        one.id === "script" ? { ...one, state: "needs-fix", sentence: failed } : one,
+      ),
+      paid: { ...view.paid, state: "failed", sentence: failed, quotedHigh: 0.3 },
+    }),
+    [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(quote()),
+    [`POST /api/template-studio/${templateId}/samples/make`]: made,
+  });
+  const sample = await screen.findByRole("region", { name: "Script sample" });
+  expect(within(sample).getByText(failed)).not.toBeNull();
+  await user.click(within(sample).getByRole("button", { name: "Make sample · about $0.30" }));
+  await waitFor(() => expect(made).toHaveBeenCalledOnce());
+});
+
+it("shows the paid sample's pictures and its earlier versions", async () => {
+  open("pictures", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({
+      ...view,
+      paid: {
+        ...view.paid,
+        projectId: "P1",
+        revisionId: "R1",
+        state: "done",
+        outputs: [
+          { section: "pictures", role: "image", url: "/files/P1/revisions/R1/a", name: "001.png" },
+          { section: "pictures", role: "image", url: "/files/P1/revisions/R1/b", name: "002.png" },
+        ],
+        versions: [
+          { version: 3, state: "done", updatedAt: "2026-10-02T00:00:00.000Z" },
+          { version: 2, state: "skipped", updatedAt: "2026-10-01T00:00:00.000Z" },
+        ],
+      },
+    }),
+  });
+  const grid = await screen.findByRole("region", { name: "Sample pictures" });
+  expect(
+    within(grid)
+      .getAllByRole("img")
+      .map((img) => img.getAttribute("alt")),
+  ).toEqual(["001.png", "002.png"]);
+  expect(screen.getByText("Earlier samples · 1")).not.toBeNull();
+  expect(screen.getByText("Version 2 · Saved without a sample")).not.toBeNull();
+});
+
+it("shows a prompt's anatomy, part by part, once opened", async () => {
+  const user = userEvent.setup();
+  open("script", {
+    [`GET /api/template-studio/${templateId}/anatomy`]: jsonAnswer({
+      section: "script",
+      items: [{ key: "article", label: "Article prompt" }],
+      item: "article",
+      segments: [
+        { origin: "yours", text: "Write about " },
+        { origin: "keyword", name: "Topic", text: "lighthouses" },
+        { origin: "slopify", text: "\n\nThis is a short sample of the script." },
+      ],
+      fromSample: true,
+      problem: null,
+    }),
+  });
+  const summary = await screen.findByText("Prompt anatomy");
+  await user.click(summary);
+  expect(await screen.findByText("lighthouses")).not.toBeNull();
+  expect(screen.getByTitle("Your keywords: Topic")).not.toBeNull();
+  expect(screen.getByText("As the sample sent it.")).not.toBeNull();
+});
+
+it("changes the sample topic at the price the drawer shows", async () => {
+  const user = userEvent.setup();
+  const changed = vi.fn(async (request: Request) => {
+    expect(await request.json()).toMatchObject({ topic: "Salt roads", acknowledgedHigh: 0.9 });
+    return Response.json({ topic: "Salt roads", topicSource: "fixed", fullScript: false });
+  });
+  open("subject", {
+    [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(
+      quote({ high: 0.9, first: true }),
+    ),
+    [`PUT /api/template-studio/${templateId}/topic`]: changed,
+  });
+  await user.click(
+    await screen.findByRole("button", { name: "Sample topic: The history of the lighthouse" }),
+  );
+  const input = await screen.findByRole("textbox", { name: "Topic" });
+  await user.clear(input);
+  await user.type(input, "Salt roads");
+  const use = await screen.findByRole("button", { name: "Use topic · about $0.90" });
+  await waitFor(() => expect(use.hasAttribute("disabled")).toBe(false));
+  await user.click(use);
+  await waitFor(() => expect(changed).toHaveBeenCalledOnce());
 });
 
 it("switches between sections, settings and sample with tabs on a narrow screen", async () => {

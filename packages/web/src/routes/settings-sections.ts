@@ -28,6 +28,11 @@ export const settingsSections = [
     meta: "How new runs pace the narration and level the volume, and which model times English captions.",
   },
   {
+    id: "template-studio",
+    label: "Template studio",
+    meta: "The most a template's paid samples may spend in one day.",
+  },
+  {
     id: "notifications",
     label: "Notifications",
     meta: "When a run finishes, fails, waits for you, or a review needs a decision.",
@@ -92,7 +97,7 @@ const connections: SettingsGroup = {
 
 export const settingsGroups: readonly SettingsGroup[] = [
   connections,
-  { id: "production", label: "Production defaults", sections: ["playback"] },
+  { id: "production", label: "Production defaults", sections: ["playback", "template-studio"] },
   { id: "notifications", label: "Notifications", sections: ["notifications"] },
   { id: "publishing", label: "Publishing", sections: ["channel-links", "studio"] },
   { id: "storage", label: "Backup & storage", sections: ["storage", "trash"] },
