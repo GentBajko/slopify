@@ -29,6 +29,8 @@ it("tells a connecting agent the attend routine and offers it as a prompt", asyn
     "confirmed: true",
     "Ready to upload",
     "Settings → Backup & storage",
+    "studio sample project never appears there",
+    "get_template_studio",
   ])
     expect(routine).toContain(step);
   const queue = await agent.callTool({ name: "needs_attention", arguments: {} });
