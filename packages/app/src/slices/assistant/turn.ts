@@ -280,34 +280,46 @@ export function createAssistant(deps: AssistantDeps): Assistant {
       controller.abort();
     }, timeoutMs);
     timer.unref();
-    void (async () => {
-      let state: TurnState;
+    const run = async (): Promise<void> => {
+      let state: TurnState = "failed";
       try {
-        state = await answerTurn(sessionId, turnId, message, screen, self);
-      } catch (error) {
-        state = "failed";
-        if (self.stoppedBy === undefined) {
-          const detail = redact(causedBy(error));
-          deps.log.write("warn", "assistant.turn", { detail });
-          say(
-            sessionId,
-            turnId,
-            "error",
-            `Slopify couldn't run the assistant's CLI: ${detail}. Check it in Settings → Providers, then send your message again.`,
-            { kind: "cli" },
-          );
+        try {
+          state = await answerTurn(sessionId, turnId, message, screen, self);
+        } catch (error) {
+          state = "failed";
+          if (self.stoppedBy === undefined) {
+            const detail = redact(causedBy(error));
+            deps.log.write("warn", "assistant.turn", { detail });
+            say(
+              sessionId,
+              turnId,
+              "error",
+              `Slopify couldn't run the assistant's CLI: ${detail}. Check it in Settings → Providers, then send your message again.`,
+              { kind: "cli" },
+            );
+          }
         }
+        if (self.stoppedBy !== undefined) {
+          say(sessionId, turnId, "error", stoppedText[self.stoppedBy], { kind: "stopped" });
+          state = self.stoppedBy === "person" ? "stopped" : "failed";
+        }
+      } finally {
+        // Whatever failed above, the chat is free again and shutdown isn't left waiting.
+        clearTimeout(timer);
+        running.delete(sessionId);
+        finish();
+        deps.emit({ type: "assistant.turn", sessionId, turnId, state });
+        if (self.stoppedBy !== "shutdown") drain();
       }
-      clearTimeout(timer);
-      if (self.stoppedBy !== undefined) {
-        say(sessionId, turnId, "error", stoppedText[self.stoppedBy], { kind: "stopped" });
-        state = self.stoppedBy === "person" ? "stopped" : "failed";
+    };
+    run().catch((error: unknown) => {
+      const detail = redact(causedBy(error));
+      try {
+        deps.log.write("warn", "assistant.turn", { detail });
+      } catch (logError) {
+        console.error(`assistant turn ${turnId}: ${detail}; the log failed: ${causedBy(logError)}`);
       }
-      running.delete(sessionId);
-      deps.emit({ type: "assistant.turn", sessionId, turnId, state });
-      finish();
-      if (self.stoppedBy !== "shutdown") drain();
-    })();
+    });
     return turnId;
   }
 

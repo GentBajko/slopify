@@ -22,7 +22,11 @@ type Script = (turn: AssistantCliTurn) => AsyncIterable<AssistantStreamEvent>;
 
 function harness(
   script: Script,
-  options: { states?: AssistantCliStates; timeoutMs?: number } = {},
+  options: {
+    states?: AssistantCliStates;
+    timeoutMs?: number;
+    log?: (level: string) => void;
+  } = {},
 ) {
   const db = openDb(":memory:");
   migrate(db, fixedClock("2026-10-18T10:00:00.000Z"));
@@ -38,7 +42,7 @@ function harness(
     db,
     ids: { next: () => `id${String(++n).padStart(3, "0")}` },
     clock: fixedClock("2026-10-18T10:00:00.000Z"),
-    log: { write: () => undefined },
+    log: { write: (level) => options.log?.(level) },
     emit: (event) => void events.push(event),
     runCli,
     clis: async () => options.states ?? ready,
@@ -238,6 +242,28 @@ describe("a turn", () => {
     const [, text] = h.said(session).at(-1) ?? [];
     expect(text).toContain("Slopify couldn't run the assistant's CLI");
     expect(text).not.toContain("0123456789abcdef0123456789abcdef");
+  });
+});
+
+describe("a turn whose own ending fails", () => {
+  it("still ends, frees its chat and lets shutdown finish", async () => {
+    const h = harness(
+      () => {
+        throw new Error("spawn failed");
+      },
+      {
+        log: () => {
+          throw new Error("the log is full");
+        },
+      },
+    );
+    const session = h.assistant.newSession();
+    h.assistant.send(session, "x", undefined);
+    await h.settled(session);
+    expect(h.events.at(-1)).toMatchObject({ type: "assistant.turn", state: "failed" });
+    expect(h.assistant.send(session, "again", undefined)).toMatchObject({ ok: true });
+    await h.settled(session);
+    await h.assistant.stopAll();
   });
 });
 
