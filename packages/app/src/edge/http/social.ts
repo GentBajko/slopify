@@ -2,8 +2,14 @@ import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
 import { z } from "zod";
 import { projectById } from "../../slices/admission/repo.js";
+import { webhookBody } from "../../slices/notifications/address.js";
+import type { NoticeText } from "../../slices/notifications/rules.js";
+import { sendFailureText } from "../../slices/notifications/send.js";
+import { readNotificationUrl } from "../../slices/notifications/settings.js";
+import { waitsForRelease } from "../../slices/social/due.js";
 import { postingExtension, writeExtensionSites } from "../../slices/social/extension.js";
 import type { SocialPacksResponse } from "../../slices/social/model.js";
+import { postReadyNotice } from "../../slices/social/notice.js";
 import { packFor, postPacks } from "../../slices/social/pack.js";
 import { readPost, writeChoice, writeReddit, writeTextEdit } from "../../slices/social/repo.js";
 import type { Reshaper } from "../../slices/social/reshape.js";
@@ -104,6 +110,17 @@ export function socialRoutes(deps: AppDeps) {
             "This project doesn't post there. Turn the site on in the post's settings under Prepare upload, or in Edit project → Upload pack.",
         })
       : undefined;
+  // A post filled at its release time tells the Notification URL, when one is set. Never
+  // awaited: the extension's report doesn't wait on it.
+  const notify = (text: NoticeText, projectId: string): void => {
+    const url = readNotificationUrl(deps.db);
+    const send = deps.sendNotification;
+    if (url === null || send === undefined) return;
+    void send(url, webhookBody(text)).then((sent) => {
+      if (!sent.ok)
+        deps.log.write("warn", "social.notify", { projectId, detail: sendFailureText(sent) });
+    });
+  };
   const changed = (projectId: string) =>
     deps.hub.emit(projectId, { type: "project.updated", projectId });
 
@@ -287,6 +304,8 @@ export function socialRoutes(deps: AppDeps) {
         const result = reportPost(deps, body, deps.clock.now());
         if (!result.ok) return refusal(c, result);
         changed(body.projectId);
+        if (body.state === "filled" && waitsForRelease(body.platform) && result.pack !== undefined)
+          notify(postReadyNotice(result.pack), body.projectId);
         return c.json({ status: readPost(deps.db, body).state });
       })
       .get("/ext/find-links", (c) => {
