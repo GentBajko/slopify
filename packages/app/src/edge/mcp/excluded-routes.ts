@@ -19,6 +19,8 @@ const notStarted =
 
 export const excludedRoutes: Readonly<Record<string, string>> = {
   "GET /api/health": "the MCP connection itself shows Slopify is running",
+  "GET /api/home/autopilot/weekly":
+    "Settings → Notifications reads it alone; get_autopilot answers weeklyNotify",
   "GET /api/events/global": "a live stream for open pages; agents read needs_attention",
   "GET /api/events/projects/:id": "a live stream for open pages; agents read needs_attention",
   "POST /api/storage/files/open": desktop,

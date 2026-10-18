@@ -58,6 +58,8 @@ const leftOut = new Set([
   "assistant_sessions",
   "assistant_messages",
   "assistant_asks",
+  // Warnings hidden on this install's Home.
+  "autopilot_snoozes",
   // What the Notification URL of this install was told: a restored project tells its run's end
   // again.
   "told_failures",

@@ -13,6 +13,7 @@ import { prefetchModel } from "./adapters/alignment/prefetch.js";
 import { prepareFfmpeg } from "./adapters/ffmpeg.js";
 import { createHostCliClient } from "./adapters/host-cli/index.js";
 import { nodeRunCli } from "./adapters/llm/run-cli.js";
+import { startAutopilot } from "./autopilot-timers.js";
 import { curateRegistry } from "./catalog/registry.js";
 import { type CatalogueStore, createCatalogueStore } from "./catalog/store.js";
 import { createAutostart } from "./edge/autostart/index.js";
@@ -630,7 +631,20 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       } catch (error) {
         log.write("warn", "studio.extension", { detail: causedBy(error) });
       }
+    const autopilot = startAutopilot({
+      db: updateDb,
+      clock,
+      log,
+      dataDir: paths.dataDir,
+      template: (id) => templateById(updateDb, id),
+      catalogue: () => catalogue.read(),
+      fetch: globalThis.fetch,
+      send: sendNotification,
+      hostCli,
+      readLogin: readHostLogin,
+    });
     const app = createApp({
+      autopilot,
       autostart,
       rebuild,
       drafts: draftDeps,
@@ -830,6 +844,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         clearInterval(trashTimer);
         clearInterval(arrangeTimer);
         clearInterval(modelTimer);
+        autopilot.stop();
         const mutationDrain = mutations.stop();
         const scheduleDrain = scheduleTicks.stop();
         const topicDrain = scheduleRunner.stop();

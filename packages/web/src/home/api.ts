@@ -1,9 +1,10 @@
+import type { AutopilotView } from "@app/slices/autopilot/model.js";
 import type { WeekSummary } from "@app/slices/run-cost/week.js";
 import { queryOptions } from "@tanstack/react-query";
 import type { Api } from "@/api";
 import { read } from "@/http";
 
-export type { WeekSummary };
+export type { AutopilotView, WeekSummary };
 
 export const weekKey = ["home", "week"] as const;
 
@@ -54,6 +55,52 @@ export async function markUploaded(
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ uploaded }),
+    }),
+  );
+}
+
+export const autopilotKey = ["home", "autopilot"] as const;
+
+// How far ahead the schedules are and what may stop them; the server answers from its hourly
+// check, so this never waits for a CLI.
+export function autopilotQuery(api: Api, channelId: string | null) {
+  return queryOptions({
+    queryKey: [...autopilotKey, channelId],
+    queryFn: async () => {
+      const query = channelId === null ? "" : `?channelId=${encodeURIComponent(channelId)}`;
+      return read<AutopilotView>(await api.fetch(`${api.origin}/api/home/autopilot${query}`));
+    },
+    staleTime: 60_000,
+  });
+}
+
+// Hide: the warning stays hidden for a week, or until it changes.
+export async function hideWarning(api: Api, key: string): Promise<{ readonly until: string }> {
+  return read(
+    await api.fetch(`${api.origin}/api/home/autopilot/snooze`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ key }),
+    }),
+  );
+}
+
+export const weeklyReportKey = ["settings", "weekly-report"] as const;
+
+export async function readWeeklyReport(api: Api): Promise<{ readonly enabled: boolean }> {
+  return read(await api.fetch(`${api.origin}/api/home/autopilot/weekly`));
+}
+
+// Settings → Notifications → Weekly report.
+export async function setWeeklyReport(
+  api: Api,
+  enabled: boolean,
+): Promise<{ readonly enabled: boolean }> {
+  return read(
+    await api.fetch(`${api.origin}/api/home/autopilot/weekly`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ enabled }),
     }),
   );
 }

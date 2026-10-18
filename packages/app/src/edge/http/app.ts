@@ -108,6 +108,14 @@ export interface AppDeps {
     readonly openOnHost?: (path: string, signal: AbortSignal) => Promise<boolean>;
   };
   readonly catalogue?: CatalogueStore;
+  // The autopilot's hourly check (`slices/autopilot/signals.ts`); absent reads as not run yet.
+  readonly autopilot?:
+    | {
+        readonly latest: () =>
+          | import("../../slices/autopilot/signals.js").AutopilotProbes
+          | undefined;
+      }
+    | undefined;
   // The network for Settings → Providers' Test and Check all. Handed in so a test never
   // reaches a real provider.
   readonly fetch?: typeof globalThis.fetch;

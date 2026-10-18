@@ -75,6 +75,27 @@ const projects: readonly RouteTool[] = [
       "Home's This week: videos made, calls, cost and CLI plan standings. Query: {since: an ISO time, channelId?}.",
   },
   {
+    name: "get_autopilot",
+    route: "GET /api/home/autopilot",
+    title: "Read autopilot health",
+    description:
+      "Home's autopilot block: how far ahead the schedules' content is (forecast: readyCount, daysAhead, coveredUntil, runsDryAt and each schedule's own), the warnings that may stop them (each with key, what failed, why, and where the fix is), checkedAt (when sign-ins, the OpenRouter key and the disk were last checked, hourly), the last seven days (finished, failed steps, cost) and weeklyNotify. It never starts a CLI. Query: {channelId?}.",
+  },
+  {
+    name: "hide_autopilot_warning",
+    route: "POST /api/home/autopilot/snooze",
+    title: "Hide an autopilot warning",
+    description:
+      "Hide, like the button beside a warning on Home: the warning stays hidden for 7 days, or until it changes. It fixes nothing. Body: {key: a warning's key from get_autopilot}.",
+  },
+  {
+    name: "set_weekly_report",
+    route: "PUT /api/home/autopilot/weekly",
+    title: "Turn the weekly report on or off",
+    description:
+      "Settings → Notifications → Weekly report: each Monday from 09:00 Slopify sends last week's report (made, failed, cost) to the Notification URL. Off by default. Body: {enabled: true | false}.",
+  },
+  {
     name: "mark_uploaded",
     route: "PUT /api/projects/:id/uploaded",
     title: "Mark uploaded",
