@@ -15,6 +15,7 @@ import { documentSettingsSchema } from "../document/theme-schema.js";
 import { librarySnapshotSchema } from "../library/snapshot.js";
 import { chunkModes } from "../narration/chunk.js";
 import { reviewers, reviewModes, reviewStages } from "../reviews/model.js";
+import { socialSettingsSchema } from "../social/schema.js";
 import { subtitleModes, subtitlePositions } from "../subtitles/model.js";
 import { ambientBedSources } from "../video/ambient-bed.js";
 import { voicesSettingsSchema } from "../voices/model.js";
@@ -100,6 +101,9 @@ export const playDraftFormSchema = z
     levelSentences: z.boolean().optional(),
     // Absent on drafts and templates saved before the YouTube description: off, built-in prompt.
     youtubeDescription: z.boolean().optional(),
+    // Which other sites the project posts to and what each gets (`slices/social`), as the run
+    // stores it. Absent on drafts and templates saved before posting: nowhere.
+    social: socialSettingsSchema.optional(),
     showFigures: z.boolean().optional(),
     descriptionPrompt: text.optional(),
     // The project language (`kernel/ports/languages.ts`). Absent on drafts and templates saved

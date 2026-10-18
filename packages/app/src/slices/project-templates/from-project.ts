@@ -15,6 +15,8 @@ import { reviewSettingsForm } from "../reviews/model.js";
 import type { ProjectRevision } from "../revisions/model.js";
 import { currentRevisionId, revisionById } from "../revisions/repo.js";
 import { shortsExtrasForm } from "../shorts/model.js";
+import { socialPlatforms } from "../social/model.js";
+import { socialSettingsSchema } from "../social/schema.js";
 import { ambientBedFormOf } from "../video/ambient-bed.js";
 import { usesScriptPrompt, type VoicesSettings } from "../voices/model.js";
 import type { ProjectTemplate, TemplateDeps, TemplateResult } from "./model.js";
@@ -102,6 +104,9 @@ export function documentFromProject(
   addPrompt(usesScriptPrompt(config) ? "script" : "article", config.articlePrompt, "article");
   addPrompt("narration", config.narrationPrompt, "narration");
   addPrompt("description", config.descriptionPrompt, "description");
+  for (const platform of socialPlatforms)
+    if (config.social?.[platform]?.text === "prompt")
+      addPrompt("post", config.social[platform]?.prompt, `social.${platform}`);
   for (const [stage, picked] of Object.entries(config.reviews?.stages ?? {}))
     addPrompt("review", picked.prompt, `review.${stage}`);
   const definitions = revision.content.imageOrder.flatMap((key) => {
@@ -216,6 +221,7 @@ export function documentFromProject(
       ...(config.thumbnailCount === 3 ? { thumbnailCount: 3 as const } : {}),
       ...(config.narrationPrompt === undefined ? {} : { narrationPrompt: config.narrationPrompt }),
       ...(config.youtubeDescription === true ? { youtubeDescription: true } : {}),
+      ...(config.social === undefined ? {} : { social: socialSettingsSchema.parse(config.social) }),
       ...(config.language === undefined ? {} : { language: config.language }),
       ...(config.descriptionPrompt === undefined
         ? {}

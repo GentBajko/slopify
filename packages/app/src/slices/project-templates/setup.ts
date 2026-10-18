@@ -2,6 +2,7 @@ import { templateChannelId } from "../channels/repo.js";
 import type { LibrarySnapshot } from "../library/snapshot.js";
 import { snapshotEntry, snapshotPrompt } from "../library/snapshot.js";
 import type { PlayDraftDocument } from "../play-drafts/model.js";
+import { socialPlatforms } from "../social/model.js";
 import type { TemplateDeps, TemplateResult } from "./model.js";
 import { templateDocument } from "./one-off.js";
 
@@ -33,6 +34,13 @@ export function templateSetup(
       kind: "image" as const,
       name: input.form.reference?.source === "prompt" ? input.form.reference.prompt : "",
     },
+    ...socialPlatforms.map((platform) => {
+      const choice = input.form.social?.[platform];
+      return {
+        kind: "post" as const,
+        name: choice?.text === "prompt" ? (choice.prompt ?? "") : "",
+      };
+    }),
   ];
   for (const choice of choices) {
     if (choice.name === "") continue;

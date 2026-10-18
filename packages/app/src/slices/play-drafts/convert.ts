@@ -40,6 +40,7 @@ import {
   shortsExtrasOf,
   shortsSettingsProblems,
 } from "../shorts/model.js";
+import { socialOfForm } from "../social/settings.js";
 import { defaultSubtitles } from "../subtitles/model.js";
 import { ambientBedOfForm, ambientBedProblems } from "../video/ambient-bed.js";
 import type { DraftAttachment, PlayDraftDocument } from "./model.js";
@@ -269,6 +270,9 @@ export function toAdmissionDraft(input: {
           ...(form.descriptionPrompt?.trim() ? { descriptionPrompt: form.descriptionPrompt } : {}),
         }
       : {}),
+    // Posting is free unless a site's words come from a post prompt; none turned on is left out,
+    // which is what every draft saved before posting was.
+    ...((social) => (social === undefined ? {} : { social }))(socialOfForm(form.social)),
     // Cut from the narration too, so the same rule: a switch left on with narration Off asks
     // for nothing.
     ...(shortsOn && form.shorts !== undefined ? { shorts: shortsOf(form.shorts) } : {}),
