@@ -4,6 +4,7 @@ import { thinkingModes } from "../../kernel/ports/llm.js";
 import { castSnapshotSchema } from "../channels/schema.js";
 import { checkpointStageSchema } from "../checkpoints/schema.js";
 import { documentSettingsSchema } from "../document/theme-schema.js";
+import { keywordFactsSchema } from "../keywords/schema.js";
 import { narrationAliasesSchema } from "../narration/aliases-schema.js";
 import { chunkModes } from "../narration/chunk.js";
 import { reviewModes, reviewStages } from "../reviews/model.js";
@@ -179,6 +180,7 @@ export const runDraftSchema = z.object({
     .array(z.object({ title: z.string(), summary: z.string() }))
     .readonly()
     .optional(),
+  keywordFacts: keywordFactsSchema.optional(),
   titleStyle: z
     .object({
       fontId: z

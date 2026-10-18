@@ -1,6 +1,7 @@
 // What the editor and Play say about the keywords in one body: a `Slopify_` name that is no
 // keyword, a keyword where it can't be filled, and an old name that still works. Browser-safe.
 
+import { detectSlots } from "../admission/substitute.js";
 import {
   isReserved,
   type KeywordPlace,
@@ -9,7 +10,7 @@ import {
   placeLabels,
   reservedPrefix,
 } from "./model.js";
-import { keywordOf, legacyNames } from "./specs.js";
+import { keywordOf, keywordSpecs, legacyNames } from "./specs.js";
 
 export const keywordProblemKinds = ["unknown", "wrong-place", "legacy"] as const;
 export type KeywordProblemKind = (typeof keywordProblemKinds)[number];
@@ -143,4 +144,14 @@ export function positionOf(body: string, at: number): string {
   const line = before.split("\n").length;
   const column = at - lastBreak;
   return `line ${String(line)}, column ${String(column)}`;
+}
+
+// The keywords filled from the facts a run copies when it starts (`facts.ts`).
+const factNames: readonly string[] = keywordSpecs
+  .filter((spec) => spec.filler === "facts" && spec.name !== "Slopify_Title")
+  .map((spec) => spec.name);
+
+// Whether any of the bodies asks for a fact Slopify copies (the title is the project's own).
+export function usesFacts(bodies: readonly string[]): boolean {
+  return bodies.some((body) => detectSlots(body).names.some((name) => factNames.includes(name)));
 }

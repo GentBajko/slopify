@@ -40,6 +40,7 @@ import { externalReviewRoutes } from "./external-reviews.js";
 import { fileRoutes } from "./files.js";
 import { fontsRoutes } from "./fonts.js";
 import { homeRoutes, uploadedRoutes } from "./home.js";
+import { keywordRoutes } from "./keywords.js";
 import type { MutationLifecycle } from "./mutations.js";
 import { type DecodePeaks, narrationPeakRoutes } from "./narration-peaks.js";
 import { onboardingRoutes } from "./onboarding.js";
@@ -218,6 +219,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/projects", youtubeEditRoutes(deps))
       .route("/fonts", fontsRoutes(deps))
       .route("/prompts", promptRoutes(deps))
+      .route("/keywords", keywordRoutes(deps))
       .route("/entries", entryRoutes(deps))
       .route("/document-themes", documentThemeRoutes(deps))
       .route("/pronunciations", pronunciationRoutes(deps))

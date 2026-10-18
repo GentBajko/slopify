@@ -12,14 +12,28 @@ export const libraryTools: readonly RouteTool[] = [
     route: "POST /api/prompts",
     title: "Create a prompt",
     description:
-      "Body: {kind: article | image | thumbnail | narration | description | shorts | review | script, name, body}.",
+      "Body: {kind: article | image | thumbnail | narration | description | shorts | review | script, name, body}. A body can use the keywords Slopify fills ({{Slopify_Title}}, {{Slopify_Summary}}, {{Slopify_Scene}}…; list_keywords says which work in which kind); any other name starting with Slopify_ is refused.",
   },
   {
     name: "update_prompt",
     route: "PUT /api/prompts/:id",
     title: "Save a prompt",
     description:
-      "Body: {kind, name, body}. Saving adds a history version; a rename follows into templates and Play drafts.",
+      "Body: {kind, name, body}. Saving adds a history version; a rename follows into templates and Play drafts. The body follows create_prompt's keyword rules; an unknown Slopify_ name the prompt already had is kept.",
+  },
+  {
+    name: "list_keywords",
+    route: "GET /api/keywords",
+    title: "List the keywords Slopify fills",
+    description:
+      "Every {{Slopify_…}} keyword: what it fills in, an example, when it exists, which prompt kinds can use it and what it costs (free, or part of one AI call per run). {{Scene}} and {{Appearance}} are the old names of {{Slopify_Scene}} and {{Slopify_Appearance}}.",
+  },
+  {
+    name: "get_keyword_facts",
+    route: "GET /api/keywords/facts/:projectId",
+    title: "Read a project's keyword facts as they are now",
+    description:
+      "The facts keywords like {{Slopify_Channel}}, {{Slopify_Links}} and {{Slopify_Previous_Video}} are filled from, copied again from the project's channel and its other projects, like Refresh keyword facts in Edit project. Put the answer's keywordFacts into the revision's config and save it with save_revision.",
   },
   {
     name: "set_prompt_photorealistic",

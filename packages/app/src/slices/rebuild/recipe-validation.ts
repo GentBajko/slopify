@@ -12,6 +12,7 @@ import {
 } from "../admission/rules.js";
 import { detectSlots, filledKeywords, render } from "../admission/substitute.js";
 import { imagesPerVideoMax } from "../images/scale.js";
+import { usesFacts } from "../keywords/rules.js";
 import { loudnessFields } from "../loudness/model.js";
 import { pauseFields } from "../narration/pauses-model.js";
 import { reviewFields } from "../reviews/rules.js";
@@ -166,6 +167,13 @@ export function validateRecipeInputs(
   for (const prompt of prompts) {
     if (!(prompt.raw === null ? prompt.literal : render(prompt.raw, config.values))?.trim())
       fields.push({ field: prompt.field, message: "Enter a prompt or text." });
+    const text = prompt.raw ?? prompt.literal ?? "";
+    if (config.keywordFacts === undefined && usesFacts([text]))
+      fields.push({
+        field: prompt.field,
+        message:
+          "This prompt uses a keyword Slopify fills from the channel and its videos, but this project has no keyword facts yet. Use Refresh keyword facts in Edit project → Prompts, then save again.",
+      });
     if (prompt.raw === null) continue;
     const slots = detectSlots(prompt.raw);
     if (slots.errors.length > 0)
