@@ -95,7 +95,9 @@ describe("/api/settings/remote-access", () => {
     await put({ enabled: true });
     const refused = await put({ enabled: false }, viaTailscale());
     expect(refused.status).toBe(403);
-    expect(((await refused.json()) as { detail: string }).detail).toMatch(/only on the computer/u);
+    const body = (await refused.json()) as { title: string; detail: string };
+    expect(body.title).toBe("Forbidden");
+    expect(body.detail).toMatch(/only on the computer/u);
     const read = (await (
       await h.app.request("/api/settings/remote-access", { headers: viaTailscale() })
     ).json()) as RemoteAccessView;

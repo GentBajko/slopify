@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CopyIcon } from "lucide-react";
 import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
+import { CommandText } from "@/components/command-text";
 import { Button } from "@/components/kit/button";
 import { Callout, type CalloutTone } from "@/components/kit/callout";
 import { helpScope } from "@/components/kit/info-tip";
@@ -71,13 +72,15 @@ export function RemoteAccessSettings(): ReactElement {
             onChange={(enabled) => change.mutate({ enabled })}
           />
           <p id="remote-access-summary" role="status" className="m-0 text-small text-ink-2">
-            {busy ? "Asking Tailscale…" : problem ? "" : data.summary}
+            {busy ? "Asking Tailscale…" : problem ? "" : <CommandText text={data.summary} />}
             {!data.changeable && data.available
               ? " Turn it on or off on the computer Slopify runs on."
               : ""}
           </p>
           {data.state === "docker" && data.fix !== null ? (
-            <p className="m-0 text-small text-ink-2">{data.fix}</p>
+            <p className="m-0 text-small text-ink-2">
+              <CommandText text={data.fix} />
+            </p>
           ) : null}
           {data.address === null ? null : (
             <div className="flex flex-wrap items-start gap-4">
@@ -104,7 +107,7 @@ export function RemoteAccessSettings(): ReactElement {
           {problem ? (
             <Callout
               tone={tones[data.state] ?? "waiting"}
-              title={data.summary}
+              title={<CommandText text={data.summary} />}
               actions={
                 data.changeable ? (
                   <>
@@ -135,7 +138,7 @@ export function RemoteAccessSettings(): ReactElement {
                 ) : undefined
               }
             >
-              {data.fix}
+              {data.fix === null ? null : <CommandText text={data.fix} />}
             </Callout>
           ) : null}
           {change.error === null ? null : (

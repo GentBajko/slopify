@@ -19,6 +19,7 @@ export interface ProblemDeps {
 
 const titles: Readonly<Record<number, string>> = {
   400: "Bad Request",
+  403: "Forbidden",
   404: "Not Found",
   409: "Conflict",
   415: "Unsupported Media Type",

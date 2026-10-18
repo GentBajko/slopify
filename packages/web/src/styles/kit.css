@@ -276,6 +276,15 @@
     padding: 1px 6px;
     color: var(--color-ink);
   }
+  /* A command inside a sentence: literal characters ("--" never becomes a dash), breaking only
+     where the window must. */
+  .sl-command {
+    font-variant-ligatures: none;
+    font-feature-settings:
+      "liga" 0,
+      "calt" 0;
+    overflow-wrap: anywhere;
+  }
 
   /* Switch and segmented */
   .sl-switch {

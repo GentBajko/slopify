@@ -1,16 +1,8 @@
 import type { DatabaseSync } from "node:sqlite";
-import { z } from "zod";
 import type { Log } from "../../kernel/log.js";
-import { deleteSetting, readSetting, writeSetting } from "../../slices/settings/repo.js";
 import { type TailscaleRun, tailscaleCommands } from "./cli.js";
+import type { RemoteAccessView } from "./model.js";
 import {
-  defaultHttpsPort,
-  type RemoteAccessView,
-  remoteAccessAppliedKey,
-  remoteAccessKey,
-} from "./model.js";
-import {
-  addressOf,
   freePort,
   isProblem,
   type Machine,
@@ -24,6 +16,8 @@ import {
   sameTarget,
   serveRefusedProblem,
 } from "./rules.js";
+import { remoteAccessStore } from "./store.js";
+import { remoteAccessViews } from "./views.js";
 
 export interface RemoteAccessDeps {
   readonly db: DatabaseSync;
@@ -52,100 +46,15 @@ export interface RemoteAccessService {
   remoteHost(): string | undefined;
 }
 
-const savedShape = z.object({
-  enabled: z.boolean(),
-  httpsPort: z.number().int().min(1).max(65535),
-});
-type Saved = z.infer<typeof savedShape>;
-const appliedShape = z.object({
-  dnsName: z.string(),
-  httpsPort: z.number().int(),
-  target: z.string(),
-});
-type Applied = z.infer<typeof appliedShape>;
-
-function readJson<T>(db: DatabaseSync, key: string, shape: z.ZodType<T>): T | undefined {
-  const raw = readSetting(db, key);
-  if (raw === undefined) return undefined;
-  try {
-    const parsed = shape.safeParse(JSON.parse(raw));
-    return parsed.success ? parsed.data : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 // ceiling: a view is a few CLI calls; an open Settings tab and agents reading it together
 // share one answer for this long.
 const cacheMs = 5_000;
 
 export function createRemoteAccessService(deps: RemoteAccessDeps): RemoteAccessService {
-  const saved = (): Saved =>
-    readJson(deps.db, remoteAccessKey, savedShape) ?? {
-      enabled: false,
-      httpsPort: defaultHttpsPort,
-    };
-  let applied: Applied | undefined = readJson(deps.db, remoteAccessAppliedKey, appliedShape);
-  const record = (next: Applied | undefined): void => {
-    applied = next;
-    if (next === undefined) deleteSetting(deps.db, remoteAccessAppliedKey);
-    else writeSetting(deps.db, remoteAccessAppliedKey, JSON.stringify(next));
-  };
-
-  const loopbackTarget = (): string => {
-    const host = deps.listenHost;
-    const name =
-      host === "" || host === "0.0.0.0" || host === "localhost" || host === "127.0.0.1"
-        ? "127.0.0.1"
-        : host === "::" || host === "::1"
-          ? "[::1]"
-          : host.includes(":")
-            ? `[${host}]`
-            : host;
-    return `http://${name}:${deps.port()}`;
-  };
-  const local = (): string => loopbackTarget();
-
-  const base = (
-    state: RemoteAccessView["state"],
-    summary: string,
-    rest: Partial<RemoteAccessView> = {},
-  ): RemoteAccessView => ({
-    available: !deps.container,
-    enabled: saved().enabled,
-    state,
-    address: null,
-    httpsPort: saved().httpsPort,
-    suggestedPort: null,
-    summary,
-    fix: null,
-    link: null,
-    local: local(),
-    changeable: !deps.container,
-    ...rest,
-  });
-  const fromProblem = (problem: Problem, rest: Partial<RemoteAccessView> = {}) =>
-    base(problem.state, problem.summary, { fix: problem.fix, link: problem.link, ...rest });
-
-  const dockerView = (): RemoteAccessView =>
-    base(
-      "docker",
-      "Slopify runs in Docker here, so it can't set up Tailscale on the computer itself.",
-      {
-        enabled: false,
-        fix: "Remote access needs Slopify started on the computer itself (npx @gentbajko/slopify). Or set Tailscale up yourself on the host: tailscale serve --bg --https=443 http://127.0.0.1:<Slopify's port>.",
-      },
-    );
-  const offView = (): RemoteAccessView =>
-    base("off", `Off: Slopify answers only on this computer, at ${local()}.`);
-
-  const funnelProblem = (httpsPort: number): Problem => ({
-    state: "funnel",
-    summary:
-      "Tailscale Funnel was on for Slopify's address, which would put Slopify on the public internet. Slopify removed its address and refuses every request that comes through Funnel.",
-    fix: `Turn Funnel off with tailscale funnel --https=${httpsPort} off, then press Check again.`,
-    link: null,
-  });
+  const store = remoteAccessStore(deps.db);
+  const { saved, record } = store;
+  const { loopbackTarget, base, fromProblem, dockerView, offView, funnelProblem, onView } =
+    remoteAccessViews(deps, saved);
 
   type Ready = { readonly machine: Machine; readonly serve: ServeStatus };
   const diagnose = async (): Promise<Ready | Problem> => {
@@ -172,7 +81,7 @@ export function createRemoteAccessService(deps: RemoteAccessDeps): RemoteAccessS
 
   // Removes the handler Slopify added, only while it is still exactly that.
   const removeOurs = async (now: Ready): Promise<Problem | undefined> => {
-    const ours = applied;
+    const ours = store.applied();
     if (ours === undefined) return undefined;
     if (ours.dnsName === now.machine.dnsName) {
       const use = portUse(now.serve, ours.dnsName, ours.httpsPort);
@@ -188,19 +97,12 @@ export function createRemoteAccessService(deps: RemoteAccessDeps): RemoteAccessS
     return undefined;
   };
 
-  const onView = (dnsName: string, httpsPort: number): RemoteAccessView =>
-    base(
-      "on",
-      "On: any device in your tailnet can open this address, never the public internet. It works while Slopify runs: Slopify removes it when it stops and adds it back when it starts.",
-      { address: addressOf(dnsName, httpsPort) },
-    );
-
   const apply = async (): Promise<RemoteAccessView> => {
     const want = saved();
     const target = loopbackTarget();
     let now = await diagnose();
     if (!ready(now)) return fromProblem(now);
-    const ours = applied;
+    const ours = store.applied();
     if (
       ours !== undefined &&
       (ours.httpsPort !== want.httpsPort ||
@@ -214,8 +116,9 @@ export function createRemoteAccessService(deps: RemoteAccessDeps): RemoteAccessS
     }
     const { dnsName } = now.machine;
     const use = portUse(now.serve, dnsName, want.httpsPort);
+    const before = store.applied();
     const mine =
-      applied !== undefined && use.kind === "proxy" && sameTarget(use.target, applied.target);
+      before !== undefined && use.kind === "proxy" && sameTarget(use.target, before.target);
     if (!mine && use.kind !== "free")
       return fromProblem(
         portTakenProblem(want.httpsPort, use, target, freePort(now.serve, dnsName, want.httpsPort)),
@@ -253,11 +156,12 @@ export function createRemoteAccessService(deps: RemoteAccessDeps): RemoteAccessS
     if (!ready(now)) return fromProblem(now);
     const { dnsName } = now.machine;
     const use = portUse(now.serve, dnsName, want.httpsPort);
+    const ours = store.applied();
     if (
-      applied !== undefined &&
-      applied.httpsPort === want.httpsPort &&
+      ours !== undefined &&
+      ours.httpsPort === want.httpsPort &&
       use.kind === "proxy" &&
-      sameTarget(use.target, applied.target)
+      sameTarget(use.target, ours.target)
     )
       return use.funnel
         ? fromProblem(funnelProblem(want.httpsPort))
@@ -294,11 +198,11 @@ export function createRemoteAccessService(deps: RemoteAccessDeps): RemoteAccessS
   };
 
   const turnOff = async (): Promise<RemoteAccessView> => {
-    if (applied === undefined) return offView();
+    if (store.applied() === undefined) return offView();
     const now = await diagnose();
     const problem = ready(now) ? await removeOurs(now) : now;
     if (problem === undefined) return offView();
-    const port = applied?.httpsPort ?? saved().httpsPort;
+    const port = store.applied()?.httpsPort ?? saved().httpsPort;
     return fromProblem(problem, {
       state: problem.state,
       summary: `The switch is off, but Slopify couldn't remove its address from Tailscale yet: ${problem.summary} Slopify tries again at every start.`,
@@ -315,11 +219,7 @@ export function createRemoteAccessService(deps: RemoteAccessDeps): RemoteAccessS
       fresh(
         serial(async () => {
           if (deps.container) return dockerView();
-          writeSetting(
-            deps.db,
-            remoteAccessKey,
-            JSON.stringify({ enabled, httpsPort: httpsPort ?? saved().httpsPort }),
-          );
+          store.save({ enabled, httpsPort: httpsPort ?? saved().httpsPort });
           return enabled ? apply() : turnOff();
         }),
       ),
@@ -336,17 +236,19 @@ export function createRemoteAccessService(deps: RemoteAccessDeps): RemoteAccessS
     stop: () =>
       serial(async () => {
         cached = undefined;
-        if (deps.container || applied === undefined) return;
+        if (deps.container || store.applied() === undefined) return;
         const now = await diagnose();
         const problem = ready(now) ? await removeOurs(now) : now;
         if (problem !== undefined)
           deps.log.write("warn", "remote-access.stop", { detail: problem.summary });
       }),
-    remoteHost: () =>
-      applied === undefined
+    remoteHost: () => {
+      const ours = store.applied();
+      return ours === undefined
         ? undefined
-        : applied.httpsPort === 443
-          ? applied.dnsName
-          : `${applied.dnsName}:${applied.httpsPort}`,
+        : ours.httpsPort === 443
+          ? ours.dnsName
+          : `${ours.dnsName}:${ours.httpsPort}`;
+    },
   };
 }

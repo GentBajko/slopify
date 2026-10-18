@@ -11,6 +11,7 @@ import { useToast } from "@/components/kit/toast";
 import { copyText } from "@/fixes/fix-actions";
 import { startedAt } from "@/lib/utils";
 import { Stamp } from "@/library/time";
+import { readRemoteAccess, remoteAccessKey } from "@/remote-access/api";
 import { agentConnectionQueryKey, readAgentConnection } from "./api";
 
 // Settings → Connections → Agents (MCP): where an agent on this computer connects, the two
@@ -22,7 +23,15 @@ export function AgentSettings(): ReactElement {
     queryKey: agentConnectionQueryKey,
     queryFn: () => readAgentConnection(api),
   });
-  const url = mcpUrl(api.origin);
+  // A page opened through Tailscale's address can't give agents its own: /mcp answers only on
+  // the computer Slopify runs on, so the address there is shown.
+  const remote = useQuery({
+    queryKey: remoteAccessKey,
+    queryFn: () => readRemoteAccess(api),
+    retry: false,
+  });
+  const throughTailnet = remote.data?.available === true && remote.data.changeable === false;
+  const url = mcpUrl(throughTailnet && remote.data !== undefined ? remote.data.local : api.origin);
   const setups = [
     { label: "Claude Code", where: "Run it once in a terminal.", text: claudeAddCommand(url) },
     { label: "Codex", where: "Add it to ~/.codex/config.toml.", text: codexConfig(url) },
@@ -42,6 +51,12 @@ export function AgentSettings(): ReactElement {
       <div className="flex flex-col gap-1">
         <span className="text-small font-semibold">MCP address</span>
         <code className="sl-code py-2 select-all">{url}</code>
+        {throughTailnet ? (
+          <p className="m-0 text-small text-ink-2">
+            Agents connect on the computer Slopify runs on, never through the remote address: this
+            is the address there.
+          </p>
+        ) : null}
       </div>
       {setups.map((setup) => (
         <div key={setup.label} className="flex flex-col gap-1">
