@@ -315,4 +315,124 @@ describe("the design template editor", () => {
       expect(saved).toMatchObject({ spendLimitCents: 150, baseVersion: 3, templateKind: "design" }),
     );
   });
+  describe("Make a piece", () => {
+    const dated: DesignDocument = {
+      ...blankTemplate(),
+      schedule: { dateField: "Date", daysBefore: 7, time: "09:00" },
+    };
+    const madeView = { id: "d9", name: "Midnight Jazz Session" };
+
+    it("opens a drawer of the fields, prefilled, and makes the piece at its price", async () => {
+      const user = userEvent.setup();
+      let asked: Record<string, unknown> | undefined;
+      renderRouted(
+        <DesignTemplateRoute templateId="t1" />,
+        deps(template({ readyVersion: 2 }, dated), {
+          "POST /api/design-templates/t1/make": async (request) => {
+            asked = (await request.json()) as Record<string, unknown>;
+            return jsonAnswer(madeView, 202)(request);
+          },
+        }),
+      );
+      await user.click(await screen.findByRole("button", { name: "Make a piece" }));
+      const drawer = await screen.findByRole("dialog", { name: "Make a piece" });
+      expect((within(drawer).getByLabelText("Event") as HTMLInputElement).value).toBe(
+        "Midnight Jazz Session",
+      );
+      expect(within(drawer).getByLabelText("Date").getAttribute("type")).toBe("date");
+      await user.clear(within(drawer).getByLabelText("Place"));
+      await user.type(within(drawer).getByLabelText("Place"), "Harbour Hall");
+      await user.click(await within(drawer).findByRole("button", { name: "Make · about $0.04" }));
+      await waitFor(() =>
+        expect(asked).toMatchObject({
+          values: { Event: "Midnight Jazz Session", Date: "2026-11-14", Place: "Harbour Hall" },
+          acknowledgedHigh: 0.04,
+        }),
+      );
+      expect(typeof asked?.mutationId).toBe("string");
+    });
+
+    it("is the quiet secondary action and waits for a Save", async () => {
+      const user = userEvent.setup();
+      renderRouted(<DesignTemplateRoute templateId="t1" />, deps(template({ readyVersion: 2 })));
+      const button = await screen.findByRole("button", { name: "Make a piece" });
+      expect(button.getAttribute("data-variant")).not.toBe("primary");
+      await user.click(screen.getByRole("button", { name: "Text layout" }));
+      await user.click(screen.getByRole("button", { name: "Add a line" }));
+      expect(
+        screen.getByRole("button", { name: "Make a piece" }).getAttribute("aria-disabled"),
+      ).toBe("true");
+    });
+
+    it("needs the unknown price accepted first", async () => {
+      const user = userEvent.setup();
+      renderRouted(
+        <DesignTemplateRoute templateId="t1" />,
+        deps(template({ readyVersion: 2 }), {
+          "POST /api/design-templates/t1/quote": jsonAnswer(
+            quote(0, { unknown: 1, sections: [], makesPicture: true }),
+          ),
+        }),
+      );
+      await user.click(await screen.findByRole("button", { name: "Make a piece" }));
+      const drawer = await screen.findByRole("dialog", { name: "Make a piece" });
+      const make = await within(drawer).findByRole("button", { name: "Make · price unknown" });
+      expect(make.hasAttribute("disabled") || make.getAttribute("aria-disabled") === "true").toBe(
+        true,
+      );
+      await user.click(within(drawer).getByRole("switch", { name: /I accept/ }));
+      expect(
+        within(drawer)
+          .getByRole("button", { name: "Make · price unknown" })
+          .hasAttribute("disabled"),
+      ).toBe(false);
+    });
+
+    it("says plainly when the version is not marked ready, and still allows it", async () => {
+      const user = userEvent.setup();
+      renderRouted(<DesignTemplateRoute templateId="t1" />, deps(template({ readyVersion: 1 })));
+      await user.click(await screen.findByRole("button", { name: "Make a piece" }));
+      const drawer = await screen.findByRole("dialog", { name: "Make a piece" });
+      expect(within(drawer).getByText(/Version 2 isn't marked ready/)).not.toBeNull();
+      expect(
+        (await within(drawer).findByRole("button", { name: "Make · about $0.04" })).hasAttribute(
+          "disabled",
+        ),
+      ).toBe(false);
+    });
+
+    it("shows the server's sentence for a changed price and a missing value", async () => {
+      const user = userEvent.setup();
+      let call = 0;
+      renderRouted(
+        <DesignTemplateRoute templateId="t1" />,
+        deps(template({ readyVersion: 2 }), {
+          "POST /api/design-templates/t1/make": (request) => {
+            call += 1;
+            return call === 1
+              ? new Response(
+                  JSON.stringify({
+                    title: "Conflict",
+                    status: 409,
+                    detail:
+                      "The price changed since you looked: this piece now costs up to $0.09. Check the new price on the button and press it again.",
+                    reason: "cost-changed",
+                    quote: quote(0.09),
+                  }),
+                  { status: 409, headers: { "content-type": "application/problem+json" } },
+                )
+              : problemAnswer("Fill in Place before making the piece.", 409)(request);
+          },
+        }),
+      );
+      await user.click(await screen.findByRole("button", { name: "Make a piece" }));
+      const drawer = await screen.findByRole("dialog", { name: "Make a piece" });
+      await user.click(await within(drawer).findByRole("button", { name: "Make · about $0.04" }));
+      expect(await within(drawer).findByText(/now costs up to \$0\.09/)).not.toBeNull();
+      await user.click(await within(drawer).findByRole("button", { name: "Make · about $0.09" }));
+      expect(
+        await within(drawer).findByText("Fill in Place before making the piece."),
+      ).not.toBeNull();
+    });
+  });
 });

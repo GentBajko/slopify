@@ -22,6 +22,7 @@ import {
   type TemplateCheck,
   type TemplateView,
 } from "../api";
+import { MakePieceDrawer } from "./make-piece";
 import { SamplePanel } from "./sample-panel";
 import { ScheduleRows } from "./schedule-rows";
 import { FormatsSection, PictureSection, ScheduleSettings, TextSection } from "./sections";
@@ -66,6 +67,7 @@ function TemplateEditor({ template }: { readonly template: TemplateView }): Reac
     sectionOf(typeof window === "undefined" ? "" : window.location.hash),
   );
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [making, setMaking] = useState(false);
   const [status, setStatus] = useState<{ readonly tone: StatusTone; readonly text: string } | null>(
     null,
   );
@@ -253,6 +255,14 @@ function TemplateEditor({ template }: { readonly template: TemplateView }): Reac
           Save without a sample
         </Button>
         <Button
+          disabled={dirty}
+          disabledReason="Save first: a piece is made from the saved version."
+          focusableWhenDisabled
+          onClick={() => setMaking(true)}
+        >
+          Make a piece
+        </Button>
+        <Button
           disabled={dirty || isReady || ready.isPending}
           disabledReason={
             dirty
@@ -288,6 +298,12 @@ function TemplateEditor({ template }: { readonly template: TemplateView }): Reac
           {savePrice === undefined ? "Save" : `Save · ${savePrice}`}
         </Button>
       </ActionBar>
+      <MakePieceDrawer
+        key={`${String(template.headVersion)}-${String(making)}`}
+        template={template}
+        open={making}
+        onClose={() => setMaking(false)}
+      />
     </div>
   );
 }

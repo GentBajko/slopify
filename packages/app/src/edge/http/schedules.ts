@@ -277,7 +277,7 @@ function routes(deps: ScheduleDeps | undefined) {
             "spend-limit":
               "Preparing it would go over this schedule's spend limit. Raise the limit under Edit, or prepare it from Play instead.",
             design:
-              "A design schedule makes each piece on its day, so there is nothing to prepare ahead. To have a piece sooner, give its row an earlier date in the design template's Schedule section (Library → Designs → Templates).",
+              "A design schedule makes each piece on its day, so there is nothing to prepare ahead. To have a piece now, open the design template (Library → Designs → Templates) and press Make a piece; to have it sooner on a schedule, give its row an earlier date in the Schedule section.",
           };
           return problem(c, {
             status: result.reason === "not-found" ? 404 : 409,

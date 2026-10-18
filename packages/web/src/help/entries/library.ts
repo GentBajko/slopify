@@ -748,6 +748,14 @@ export const libraryHelp = {
     title: "Sample values",
     body: "Words for each {{name}} used to draw the template's sample, so you can see a finished piece while you design. Pieces a schedule makes use each row's own words instead. A field used as the schedule's date takes a date.",
   },
+  "library.design.make-values": {
+    title: "Fields for this piece",
+    body: "The words for each {{name}} in the template, for this one piece. They start as the template's sample values; change them as you like. Every field needs words. A field used as the schedule's date takes a date. Nothing here changes the template.",
+  },
+  "library.design.accept-unknown": {
+    title: "Accept an unknown price",
+    body: "Slopify can't work out what this piece's artwork costs, for example because the model has no listed price. Turn this on to make it anyway and pay whatever the provider charges. Make stays off until you do. Default: off.",
+  },
   "library.design.formats": {
     title: "Formats",
     body: "The sizes the piece is drawn in: posters, a flyer, social pictures and a brochure. The artwork is made once and cropped for each, so more formats cost nothing more. A piece keeps at least one format. A4, A3, flyer and brochure also download as print PDFs.",

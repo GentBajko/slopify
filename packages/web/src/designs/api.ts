@@ -340,3 +340,17 @@ export function priceWords(quote: CostEstimate | undefined): string {
   const high = `$${quote.high.toFixed(2)}`;
   return quote.low === quote.high ? `about ${high}` : `up to ${high}`;
 }
+
+// One piece made by hand from a template's saved version; the server draws it at once.
+export async function makePiece(
+  api: Api,
+  id: string,
+  input: {
+    readonly mutationId: string;
+    readonly version: number;
+    readonly values: Readonly<Record<string, string>>;
+    readonly acknowledgedHigh: number;
+  },
+): Promise<DesignReply<DesignView>> {
+  return reply(await api.fetch(`${templatesRoot(api)}/${at(id)}/make`, json("POST", input)));
+}

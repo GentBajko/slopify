@@ -195,4 +195,23 @@ describe("Library → Designs explains every control", () => {
       expectExplained();
     }
   });
+
+  it("in the Make a piece drawer, with an unknown price to accept", async () => {
+    const user = userEvent.setup();
+    renderRouted(
+      <DesignTemplateRoute templateId="t1" />,
+      testDeps({
+        "GET /api/design-templates/t1": jsonAnswer(template(blankTemplate())),
+        "POST /api/design-templates/t1/quote": jsonAnswer(
+          quote(0, { unknown: 1, sections: [], makesPicture: true }),
+        ),
+        "GET /api/schedules": jsonAnswer({ schedules: [] }),
+        ...providers,
+      }),
+    );
+    await user.click(await screen.findByRole("button", { name: "Make a piece" }));
+    await screen.findByRole("dialog", { name: "Make a piece" });
+    await screen.findByRole("switch", { name: /I accept/ });
+    expectExplained();
+  });
 });
