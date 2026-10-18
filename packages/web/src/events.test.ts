@@ -147,6 +147,21 @@ describe("the global event stream", () => {
     expect(sink.stagingChanged).not.toHaveBeenCalled();
   });
 
+  it("hands a template's sample change to the studio, and nothing else", () => {
+    const source = fakeSource();
+    const sink = {
+      tally: vi.fn(),
+      stagingChanged: vi.fn(),
+      refetch: vi.fn(),
+      templateSample: vi.fn(),
+    };
+    subscribeGlobal(() => source, "/api/events/global", sink);
+    source.emit({ type: "template.sample", templateId: "t1" });
+    expect(sink.templateSample).toHaveBeenCalledWith({ type: "template.sample", templateId: "t1" });
+    expect(sink.stagingChanged).not.toHaveBeenCalled();
+    expect(sink.refetch).not.toHaveBeenCalled();
+  });
+
   it("hands every step's new state to the run notifications", () => {
     const source = fakeSource();
     const sink = { tally: vi.fn(), stagingChanged: vi.fn(), refetch: vi.fn(), stageState: vi.fn() };

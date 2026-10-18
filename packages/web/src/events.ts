@@ -8,7 +8,7 @@ import type {
   StageProgressEvent,
   StageStateEvent,
 } from "@app/edge/events/hub.js";
-import type { LlmPreviewEvent } from "@app/kernel/events.js";
+import type { LlmPreviewEvent, TemplateSampleEvent } from "@app/kernel/events.js";
 import type { PatchEvent } from "@/project/live";
 
 // A project's events and the global ones, over the page's one live connection
@@ -58,6 +58,8 @@ export interface GlobalSink {
   readonly stageState?: (event: StageStateEvent) => void;
   // A schedule held new generated topics for approval.
   readonly scheduleTopics?: (event: ScheduleTopicsEvent) => void;
+  // A template's studio samples were queued, started, made or failed.
+  readonly templateSample?: (event: TemplateSampleEvent) => void;
   // An automatic review kept an item flagged and waits for Overrule or Redo.
   readonly reviewFlagged?: (event: ReviewFlaggedEvent) => void;
   // An external review passed at its deadline with no agent's verdict.
@@ -86,6 +88,7 @@ const globalEventNames = [
   "project.updated",
   "project.state",
   "schedule.topics",
+  "template.sample",
   "review.flagged",
   "review.auto-passed",
   // A step starting, finishing or moving on: the lists, meters and cards showing the
@@ -153,6 +156,10 @@ export function subscribeGlobal(open: OpenEvents, url: string, sink: GlobalSink)
       }
       if (event.type === "schedule.topics") {
         sink.scheduleTopics?.(event);
+        return;
+      }
+      if (event.type === "template.sample") {
+        sink.templateSample?.(event);
         return;
       }
       if (event.type === "review.flagged") {

@@ -22,6 +22,7 @@ const names = [
   "staging.progress",
   "staging.failed",
   "schedule.topics",
+  "template.sample",
   "stage.state",
   "stage.progress",
   "article.delta",

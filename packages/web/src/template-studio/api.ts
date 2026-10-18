@@ -16,3 +16,12 @@ export async function readTemplateStudio(api: Api, id: string): Promise<StudioVi
 export function templateStudioQuery(api: Api, id: string): UseQueryOptions<StudioView> {
   return { queryKey: templateStudioKey(id), queryFn: () => readTemplateStudio(api, id) };
 }
+
+// Make samples: queues the free samples of the template's current version.
+export async function requestFreeSamples(api: Api, id: string): Promise<void> {
+  const response = await api.fetch(
+    `${api.origin}/api/template-studio/${encodeURIComponent(id)}/free-samples`,
+    { method: "POST" },
+  );
+  if (!response.ok) throw await failure(response);
+}

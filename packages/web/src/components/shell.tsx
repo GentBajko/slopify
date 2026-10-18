@@ -257,6 +257,9 @@ function ShellContent() {
         void queryClient.invalidateQueries({ queryKey: ["schedule"] });
         void queryClient.invalidateQueries({ queryKey: ["calendar"] });
       },
+      templateSample: (event) => {
+        void queryClient.invalidateQueries({ queryKey: ["template-studio", event.templateId] });
+      },
       stagingChanged: () => {
         void queryClient.invalidateQueries({ queryKey: keys.staging });
       },

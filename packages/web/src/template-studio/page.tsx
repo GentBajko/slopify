@@ -2,7 +2,7 @@ import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import type { TemplateSection } from "@app/slices/template-studio/model.js";
 import type { StudioView } from "@app/slices/template-studio/schema.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactElement, useCallback, useRef, useState } from "react";
+import { type ReactElement, useCallback, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { ActionBar, StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
@@ -15,7 +15,7 @@ import { Tabs } from "@/components/kit/tabs";
 import { cn } from "@/lib/utils";
 import { UnsavedLeaveGuard } from "@/routes/unsaved-leave-guard";
 import { templatesKey, updateProjectTemplate } from "@/templates/api";
-import { templateStudioKey, templateStudioQuery } from "./api";
+import { requestFreeSamples, templateStudioKey, templateStudioQuery } from "./api";
 import { ChecksList } from "./checks-list";
 import { FineTune } from "./fine-tune";
 import { MadeWith } from "./made-with";
@@ -91,6 +91,30 @@ function Studio({
   const [fineTune, setFineTune] = useState(0);
   const [status, setStatus] = useState<{ tone: StatusTone; text: string } | undefined>();
   const [saving, setSaving] = useState(false);
+  const [making, setMaking] = useState(false);
+  const asked = useRef(false);
+  async function make(): Promise<void> {
+    setMaking(true);
+    try {
+      await requestFreeSamples(api, view.template.id);
+      await client.invalidateQueries({ queryKey: templateStudioKey(view.template.id) });
+    } catch (error) {
+      setStatus({
+        tone: "error",
+        text: `The samples weren't asked for: ${error instanceof Error ? error.message : String(error)} Press Make samples again.`,
+      });
+    } finally {
+      setMaking(false);
+    }
+  }
+  // Each version's free samples are asked for once, by themselves: they cost nothing.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once per version, which keys this component.
+  useEffect(() => {
+    const free = [view.free.video, view.free.loudness, view.free.document];
+    if (asked.current || !free.some((sample) => sample.state === "stale")) return;
+    asked.current = true;
+    void make();
+  }, [view]);
   const mutation = useRef(crypto.randomUUID());
   const dirty = JSON.stringify(document) !== JSON.stringify(saved);
   const current = view.sections.find((one) => one.id === section) ?? view.sections[0];
@@ -170,7 +194,7 @@ function Studio({
         }
         aside={
           <div className={cn("flex flex-col gap-6", hidden("sample"))}>
-            <SamplePanel view={view} section={current} />
+            <SamplePanel view={view} section={current} making={making} onMake={() => void make()} />
             <ChecksList checks={view.checks} />
           </div>
         }
