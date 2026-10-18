@@ -54,6 +54,7 @@ export interface DesignTemplateRoutesDeps extends TemplateMakeDeps {
           templateId: string,
           version: number,
           acknowledgedHigh: number,
+          acknowledgedUnknown?: boolean,
         ) => DesignResult<unknown>;
         readonly state?: (templateId: string) => unknown;
       }
@@ -63,7 +64,12 @@ export interface DesignTemplateRoutesDeps extends TemplateMakeDeps {
 }
 
 const sampleRequestSchema = z
-  .object({ version: z.number().int().min(1), acknowledgedHigh: z.number().min(0).max(1000) })
+  .object({
+    version: z.number().int().min(1),
+    acknowledgedHigh: z.number().min(0).max(1000),
+    // That the button said the picture's price is unknown, and the person pressed it anyway.
+    acknowledgedUnknown: z.boolean().optional(),
+  })
   .strict();
 const quoteBodySchema = z.object({ document: designDocumentSchema }).strict();
 
@@ -192,6 +198,7 @@ export function designTemplateRoutes(deps: DesignTemplateRoutesDeps | undefined)
         c.req.valid("param").id,
         parsed.data.version,
         parsed.data.acknowledgedHigh,
+        parsed.data.acknowledgedUnknown,
       );
       return result.ok ? c.json(result.value, 202) : designRefused(c, result);
     })

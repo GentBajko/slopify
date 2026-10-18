@@ -39,7 +39,15 @@ export function SamplePanel({ template }: { readonly template: TemplateView }): 
   const [problem, setProblem] = useState<string | null>(null);
   const quote = useQuery(pieceQuoteQuery(api, template.id, template.headVersion));
   const make = useMutation({
-    mutationFn: () => makeSample(api, template.id, template.headVersion, quote.data?.high ?? 0),
+    // The button says when the price is unknown: pressing it accepts that.
+    mutationFn: () =>
+      makeSample(
+        api,
+        template.id,
+        template.headVersion,
+        quote.data?.high ?? 0,
+        (quote.data?.unknown ?? 0) > 0,
+      ),
     onSuccess: async (result) => {
       setProblem(result.ok ? null : result.message);
       await client.invalidateQueries({ queryKey: [...keys.designTemplates, template.id] });

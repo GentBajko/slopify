@@ -67,12 +67,26 @@ export const editPictureSchema = z
     castMemberIds: z.array(id).max(castPerDesignMax).optional(),
     // The highest cost the person saw on the button, in dollars; 0 for plan usage.
     acknowledgedHigh: z.number().min(0).max(1000),
+    // That the button said the price is unknown, and the person pressed it anyway.
+    acknowledgedUnknown: z.boolean().optional(),
   })
   .strict();
 export type EditPictureInput = z.infer<typeof editPictureSchema>;
 
 export const makeArtworkSchema = z
-  .object({ mutationId, acknowledgedHigh: z.number().min(0).max(1000) })
+  .object({
+    mutationId,
+    acknowledgedHigh: z.number().min(0).max(1000),
+    acknowledgedUnknown: z.boolean().optional(),
+  })
+  .strict();
+
+// Try again asks the provider again, which is paid again: at the price the button showed.
+export const retryStepSchema = z
+  .object({
+    acknowledgedHigh: z.number().min(0).max(1000),
+    acknowledgedUnknown: z.boolean().optional(),
+  })
   .strict();
 export type MakeArtworkInput = z.infer<typeof makeArtworkSchema>;
 

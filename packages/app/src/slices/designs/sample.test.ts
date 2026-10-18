@@ -259,4 +259,55 @@ describe("a design template's sample", () => {
     expect(calls).toHaveLength(2);
     expect(samples.state("t1")?.state).toBe("making");
   });
+
+  it("counts what other templates' samples are making against today's budget", async () => {
+    const { samples, calls, save } = setup({ budget: 0.05 });
+    expect(save(prompt("A neon stage"))?.state).toBe("making");
+    const other = createTemplate(
+      { ...h.deps },
+      { id: "t2", mutationId: "mutation-0002", name: "Flyer", document: prompt("A quiet room") },
+    );
+    if (!other.ok) throw new Error(other.message);
+    const second = samples.afterSave({
+      templateId: "t2",
+      version: 1,
+      before: poster(),
+      after: prompt("A quiet room"),
+      sample: "make",
+      acknowledgedHigh: 0.04,
+    });
+    expect(second.ok && second.value?.state).toBe("held");
+    await tick();
+    expect(calls).toHaveLength(1);
+  });
+
+  it("checks today's budget again when a waiting sample starts", async () => {
+    const { samples, calls, save, land } = setup({ budget: 0.1 });
+    save(prompt("First"));
+    expect(save(prompt("Second"))?.state).toBe("queued");
+    // Meanwhile another template's sample spent most of what was left.
+    h.db.exec(
+      "INSERT INTO designs (id,kind,name,channel_id,values_json,sample_of,created_at,updated_at) VALUES ('old','design','Old','00000000-0000-4000-8000-000000000001','{}','t9','2026-10-18T09:00:00.000Z','2026-10-18T09:00:00.000Z')",
+    );
+    h.db.exec(
+      "INSERT INTO standalone_usage(id,owner_kind,owner_id,channel_id,purpose,kind,provider,model,wall_ms,cost,created_at) VALUES ('u1','design','old','00000000-0000-4000-8000-000000000001','design-art','image','fal','fal-ai/flux-2',900,0.07,'2026-10-18T09:30:00.000Z')",
+    );
+    await land(0);
+    await tick();
+    expect(calls).toHaveLength(1);
+    expect(samples.state("t1")?.state).toBe("held");
+    expect(samples.state("t1")?.heldReason).toContain("over the $0.10 a day samples may spend");
+  });
+
+  it("makes a sample whose price is unknown only when Make sample accepts that", async () => {
+    const { samples, calls, save } = setup({ perImage: null });
+    expect(save(prompt("A neon stage"))?.state).toBe("held");
+    const refused = samples.request("t1", 2, 0);
+    expect(refused.ok ? "made" : refused.reason).toBe("cost-changed");
+    await tick();
+    expect(calls).toHaveLength(0);
+    expect(samples.request("t1", 2, 0, true).ok).toBe(true);
+    await tick();
+    expect(calls).toHaveLength(1);
+  });
 });

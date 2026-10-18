@@ -158,10 +158,10 @@ export function designRoutes(deps: DesignRoutesDeps | undefined) {
         const result = deps.runner.artwork(c.req.valid("param").id, await jsonBody(c));
         return result.ok ? c.json(result.value, 202) : designRefused(c, result);
       })
-      .post("/:id/steps/:stepId/retry", zValidator("param", stepParam, onInvalid), (c) => {
+      .post("/:id/steps/:stepId/retry", zValidator("param", stepParam, onInvalid), async (c) => {
         if (deps === undefined) return unavailable(c);
         const { id, stepId } = c.req.valid("param");
-        const result = deps.runner.retry(id, stepId);
+        const result = deps.runner.retry(id, stepId, await jsonBody(c));
         return result.ok ? c.json(result.value, 202) : designRefused(c, result);
       })
       .put("/:id/head", zValidator("param", idParam, onInvalid), async (c) => {

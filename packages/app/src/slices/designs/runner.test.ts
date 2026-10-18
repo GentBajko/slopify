@@ -110,12 +110,16 @@ describe("editing a picture", () => {
     ]);
     expect(designView(h.db, "d1")?.headStepId).toBe(first);
     fail = false;
-    expect(runner.retry("d1", failed?.id ?? "").ok).toBe(true);
+    // Asking the provider again is paid again: at the price the button showed.
+    const cheap = runner.retry("d1", failed?.id ?? "", { acknowledgedHigh: 0 });
+    expect(cheap).toMatchObject({ ok: false, reason: "cost-changed" });
+    expect(runner.retry("d1", failed?.id ?? "", {}).ok).toBe(false);
+    expect(runner.retry("d1", failed?.id ?? "", { acknowledgedHigh: 0.06 }).ok).toBe(true);
     await runner.idle();
     expect(designView(h.db, "d1")?.steps[1]?.state).toBe("ready");
-    const again = runner.retry("d1", failed?.id ?? "");
+    const again = runner.retry("d1", failed?.id ?? "", { acknowledgedHigh: 0.06 });
     expect(again.ok ? "retried" : again.reason).toBe("busy");
-    expect(runner.retry("d1", "nope").ok).toBe(false);
+    expect(runner.retry("d1", "nope", { acknowledgedHigh: 0.06 }).ok).toBe(false);
   });
 
   it("says the fix, not Try again, when the model can't edit a picture", async () => {
@@ -333,5 +337,43 @@ describe("making a designed piece's artwork", () => {
     expect(edit.ok ? "quoted" : edit.message).toMatch(/^This design has no settings/);
     const cheap = runner.artwork("d2", { mutationId: "x", acknowledgedHigh: 0 });
     expect(cheap.ok ? "started" : cheap.reason).toBe("invalid");
+  });
+});
+
+describe("a picture with no known price", () => {
+  it("is made only once the person accepts that its price is unknown", async () => {
+    h = designHarness();
+    const unpriced = {
+      ...designCatalogue,
+      image: designCatalogue.image.map((model) => ({ ...model, pricing: {} })),
+    };
+    const asked: Asked[] = [];
+    const runner = createDesignRunner({
+      ...h.deps,
+      catalogue: () => unpriced,
+      generate: async (request) => {
+        asked.push(request);
+        return { bytes: pngOf(800, 800, 7), mime: "image/png" };
+      },
+    });
+    const made = createDesign(h.deps, {
+      id: "d1",
+      mutationId: "mutation-0001",
+      kind: "edit",
+      name: "Me",
+      stagedFileId: h.stage(pngOf(1080, 1920)),
+    });
+    if (!made.ok) throw new Error(made.message);
+    const first = made.value.steps[0]?.id ?? "";
+    const refused = runner.edit("d1", edit(first, { acknowledgedHigh: 0 }));
+    expect(refused).toMatchObject({ ok: false, reason: "cost-changed" });
+    expect(refused.ok ? "" : refused.message).toContain("no known price");
+    await runner.idle();
+    expect(asked).toHaveLength(0);
+    expect(
+      runner.edit("d1", edit(first, { acknowledgedHigh: 0, acknowledgedUnknown: true })).ok,
+    ).toBe(true);
+    await runner.idle();
+    expect(asked).toHaveLength(1);
   });
 });

@@ -36,6 +36,7 @@ export interface StudioKind<Doc> {
     templateId: string,
     version: number,
     acknowledgedHigh: number,
+    acknowledgedUnknown?: boolean,
   ) => SampleRequestResult;
   readonly sampleState: (templateId: string) => Readonly<Record<string, SectionState>>;
 }
@@ -58,8 +59,8 @@ export function designStudioKind(deps: {
       sampleNeedsPicture(affected as readonly DesignSectionId[])
         ? quoteDocument(deps.catalogue(), doc)
         : freeSample(deps.catalogue()),
-    requestSample: (templateId, version, acknowledgedHigh) =>
-      deps.samples.request(templateId, version, acknowledgedHigh),
+    requestSample: (templateId, version, acknowledgedHigh, acknowledgedUnknown) =>
+      deps.samples.request(templateId, version, acknowledgedHigh, acknowledgedUnknown),
     sampleState: (templateId) => {
       const sample = deps.samples.state(templateId);
       const doc = deps.document(templateId);

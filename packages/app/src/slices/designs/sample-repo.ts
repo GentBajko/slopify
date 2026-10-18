@@ -109,6 +109,19 @@ export function sampleSpentToday(db: DatabaseSync, now: Date, timeZone: string):
   return Number(row?.spent ?? 0);
 }
 
+// What samples queued or being made will cost: each one's quoted price, before any of it is
+// spent. A template's own sample is left out, unless its picture is being made now.
+export function sampleReserved(db: DatabaseSync, templateId: string): number {
+  const row = db
+    .prepare(
+      `SELECT COALESCE(SUM(quoted_high), 0) AS reserved FROM design_template_samples
+       WHERE (state IN ('queued','making') AND template_id IS NOT ?)
+          OR (state='making' AND template_id=?)`,
+    )
+    .get(templateId, templateId);
+  return Number(row?.reserved ?? 0);
+}
+
 // Earlier samples of a template, kept until the day they were made is over so today's spend
 // still counts them; then removed with their pictures' renders by the caller.
 export function oldSamples(

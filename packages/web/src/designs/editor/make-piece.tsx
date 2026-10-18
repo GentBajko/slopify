@@ -45,6 +45,7 @@ export function MakePieceDrawer({
         version: template.headVersion,
         values,
         acknowledgedHigh: quote?.high ?? 0,
+        acknowledgedUnknown: unknown && accepted,
       }),
     onSuccess: async (result) => {
       if (result.ok) {

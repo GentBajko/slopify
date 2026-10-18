@@ -118,6 +118,8 @@ export function claimDesignRun(deps: ScheduleDeps, schedule: ScheduleSummary, no
         mutationId: `schedule-${started.id}`,
         values: row.values,
         acknowledgedHigh: quote.high,
+        // A schedule with no spend limit makes pieces whose price is unknown, as it always has.
+        acknowledgedUnknown: quote.unknown > 0,
         version: plan.readyVersion,
         name: row.title,
       },

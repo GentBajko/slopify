@@ -6,7 +6,12 @@ import { createDesignCalls, noProviderMessage } from "./calls.js";
 import type { DesignResult, DesignView } from "./model.js";
 import { nearestFormat } from "./picture-size.js";
 import { costChanged, costChangedMessage, quoteDesignImage } from "./quote.js";
-import { editPictureSchema, makeArtworkSchema, quoteEditSchema } from "./requests.js";
+import {
+  editPictureSchema,
+  makeArtworkSchema,
+  quoteEditSchema,
+  retryStepSchema,
+} from "./requests.js";
 import { type DesignDeps, designView, mutationHash, reusedMessage } from "./service.js";
 import {
   insertStep,
@@ -48,7 +53,7 @@ export interface DesignRunner {
   readonly quoteArtwork: (designId: string) => DesignResult<ReturnType<typeof quoteDesignImage>>;
   readonly edit: (designId: string, raw: unknown) => DesignResult<DesignView>;
   readonly artwork: (designId: string, raw: unknown) => DesignResult<DesignView>;
-  readonly retry: (designId: string, stepId: string) => DesignResult<DesignView>;
+  readonly retry: (designId: string, stepId: string, raw: unknown) => DesignResult<DesignView>;
   // Steps still "making" when Slopify stopped never land.
   readonly recover: () => number;
   // Resolves once every started call has settled; for tests and shutdown.
@@ -113,7 +118,12 @@ export function createDesignRunner(deps: DesignRunnerDeps): DesignRunner {
           message: "Write what to change (at most 4,000 characters), then press Edit.",
         };
       const input = parsed.data;
-      const { mutationId, acknowledgedHigh: _shown, ...asked } = input;
+      const {
+        mutationId,
+        acknowledgedHigh: _shown,
+        acknowledgedUnknown: _accepted,
+        ...asked
+      } = input;
       const replay = stepByMutation(deps.db, mutationId);
       if (replay !== undefined)
         return replay.hash === mutationHash(asked) && replay.step.designId === designId
@@ -142,7 +152,7 @@ export function createDesignRunner(deps: DesignRunnerDeps): DesignRunner {
         purpose: "picture-edit",
         sendsPictures: true,
       });
-      if (costChanged(quote, input.acknowledgedHigh))
+      if (costChanged(quote, input.acknowledgedHigh, input.acknowledgedUnknown))
         return {
           ok: false,
           reason: "cost-changed",
@@ -198,7 +208,7 @@ export function createDesignRunner(deps: DesignRunnerDeps): DesignRunner {
         purpose: "design-art",
         sendsPictures: request.value.castMemberIds.length > 0,
       });
-      if (costChanged(quote, parsed.data.acknowledgedHigh))
+      if (costChanged(quote, parsed.data.acknowledgedHigh, parsed.data.acknowledgedUnknown))
         return {
           ok: false,
           reason: "cost-changed",
@@ -229,7 +239,15 @@ export function createDesignRunner(deps: DesignRunnerDeps): DesignRunner {
       start(designId, step.id);
       return view(designId);
     },
-    retry: (designId, stepId) => {
+    retry: (designId, stepId, raw) => {
+      const parsed = retryStepSchema.safeParse(raw);
+      if (!parsed.success)
+        return {
+          ok: false,
+          reason: "invalid",
+          message:
+            "Try again is paid again, and the request didn't say the price you saw. Reload the design and press Try again.",
+        };
       const step = stepById(deps.db, stepId);
       if (
         step === undefined ||
@@ -248,6 +266,20 @@ export function createDesignRunner(deps: DesignRunnerDeps): DesignRunner {
           message: "This version didn't fail, so there is nothing to try again.",
         };
       if (deps.generate === undefined) return noProvider;
+      // A step a restart stopped may have been charged already: asked again, it is paid again.
+      const quote = quoteDesignImage(deps.catalogue(), {
+        provider: step.provider ?? "",
+        model: step.model ?? "",
+        purpose: step.kind === "edit" ? "picture-edit" : "design-art",
+        sendsPictures: step.kind === "edit" || step.inputs.castMemberIds.length > 0,
+      });
+      if (costChanged(quote, parsed.data.acknowledgedHigh, parsed.data.acknowledgedUnknown))
+        return {
+          ok: false,
+          reason: "cost-changed",
+          message: costChangedMessage(quote, "trying this version again"),
+          current: quote,
+        };
       restartStep(deps.db, stepId);
       start(designId, stepId);
       return view(designId);

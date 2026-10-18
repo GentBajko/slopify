@@ -181,6 +181,7 @@ export async function editPicture(
     readonly provider: string;
     readonly model: string;
     readonly acknowledgedHigh: number;
+    readonly acknowledgedUnknown: boolean;
   },
 ): Promise<DesignReply<DesignView>> {
   return reply(await api.fetch(`${designsRoot(api)}/${at(id)}/edit`, json("POST", input)));
@@ -189,18 +190,24 @@ export async function editPicture(
 export async function makeArtwork(
   api: Api,
   id: string,
-  input: { readonly mutationId: string; readonly acknowledgedHigh: number },
+  input: {
+    readonly mutationId: string;
+    readonly acknowledgedHigh: number;
+    readonly acknowledgedUnknown: boolean;
+  },
 ): Promise<DesignReply<DesignView>> {
   return reply(await api.fetch(`${designsRoot(api)}/${at(id)}/artwork`, json("POST", input)));
 }
 
+// Try again asks the provider again, which is paid again: at the price the person was shown.
 export async function retryStep(
   api: Api,
   id: string,
   stepId: string,
+  price: { readonly acknowledgedHigh: number; readonly acknowledgedUnknown: boolean },
 ): Promise<DesignReply<DesignView>> {
   return reply(
-    await api.fetch(`${designsRoot(api)}/${at(id)}/steps/${at(stepId)}/retry`, { method: "POST" }),
+    await api.fetch(`${designsRoot(api)}/${at(id)}/steps/${at(stepId)}/retry`, json("POST", price)),
   );
 }
 
@@ -318,11 +325,12 @@ export async function makeSample(
   id: string,
   version: number,
   acknowledgedHigh: number,
+  acknowledgedUnknown: boolean,
 ): Promise<DesignReply<SampleView>> {
   return reply(
     await api.fetch(
       `${templatesRoot(api)}/${at(id)}/sample`,
-      json("POST", { version, acknowledgedHigh }),
+      json("POST", { version, acknowledgedHigh, acknowledgedUnknown }),
     ),
   );
 }
@@ -350,6 +358,7 @@ export async function makePiece(
     readonly version: number;
     readonly values: Readonly<Record<string, string>>;
     readonly acknowledgedHigh: number;
+    readonly acknowledgedUnknown: boolean;
   },
 ): Promise<DesignReply<DesignView>> {
   return reply(await api.fetch(`${templatesRoot(api)}/${at(id)}/make`, json("POST", input)));

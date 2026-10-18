@@ -234,9 +234,9 @@ describe("a design's page", () => {
     expect(label()).toBe("Edit · about $0.06");
   });
 
-  it("offers Try again for a version that failed", async () => {
+  it("offers Try again for a version that failed, at its price", async () => {
     const user = userEvent.setup();
-    let retried = false;
+    let retried: unknown = false;
     renderRouted(
       <DesignRoute designId="d1" />,
       deps(
@@ -252,8 +252,8 @@ describe("a design's page", () => {
           ],
         }),
         {
-          "POST /api/designs/d1/steps/s3/retry": (request) => {
-            retried = true;
+          "POST /api/designs/d1/steps/s3/retry": async (request) => {
+            retried = await request.clone().json();
             return jsonAnswer(design(), 202)(request);
           },
         },
@@ -263,7 +263,11 @@ describe("a design's page", () => {
     const bar = document.querySelector("[data-slot='action-bar']") as HTMLElement;
     expect(within(bar).getByText(/The model is busy/)).not.toBeNull();
     await user.click(within(bar).getByRole("button", { name: "Try again" }));
-    await waitFor(() => expect(retried).toBe(true));
+    // Asking again is paid again: the first press says the price, the second pays it.
+    await within(bar).findByText(/is paid again/);
+    expect(retried).toBe(false);
+    await user.click(within(bar).getByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(retried).toMatchObject({ acknowledgedHigh: expect.any(Number) }));
   });
 
   it("warns that the AI may misspell the text it draws", async () => {

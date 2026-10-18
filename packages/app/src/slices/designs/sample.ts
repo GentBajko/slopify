@@ -8,6 +8,7 @@ import {
   oldSamples,
   queuedTemplates,
   type SampleRow,
+  sampleReserved,
   sampleRow,
   sampleRowOfDesign,
   sampleSpentToday,
@@ -58,6 +59,7 @@ export interface DesignSamples {
     templateId: string,
     version: number,
     acknowledgedHigh: number,
+    acknowledgedUnknown?: boolean,
   ) => DesignResult<SampleView>;
   readonly state: (templateId: string) => SampleView | null;
   // A design changed: when it is a sample, its job may have finished and the next can start.
@@ -112,6 +114,31 @@ export function createDesignSamples(deps: DesignSampleDeps): DesignSamples {
     }
   };
 
+  // Why a sample a Save asked for waits instead of starting: a CLI plan samples may not use, a
+  // price nobody knows, more than the person saw, or past today's budget counting what other
+  // samples already queued or making will cost. Undefined when it may start.
+  const holdOf = (
+    templateId: string,
+    quote: ReturnType<typeof quoteDocument>,
+    acknowledgedHigh: number,
+  ): string | null => {
+    const spent = sampleSpentToday(db, now(), deps.timeZone()) + sampleReserved(db, templateId);
+    const budget = deps.budget();
+    return quote.rows.some((one) => one.onPlan === true) && !deps.plans()
+      ? "Waiting: this sample's picture runs on your CLI plan, and samples may not use CLI plans. Turn on Samples may use my CLI plans in Settings → Template studio, or press Make sample to make it anyway."
+      : quote.unknown > 0
+        ? "Waiting: the price of this sample's picture isn't known, so Slopify didn't make it. Press Make sample to make it anyway."
+        : quote.high > holdSlack(acknowledgedHigh)
+          ? `Waiting: this sample now costs about ${money(quote.high)}, more than the ${money(acknowledgedHigh)} you saw. Press Make sample (${money(quote.high)}) to make it.`
+          : spent + quote.high > budget + 0.005
+            ? budgetSentence(spent + quote.high, budget)
+            : null;
+  };
+
+  // The templates whose queued sample the person started with Make sample: it starts on their
+  // say, without the Save's holds. In memory: after a restart it is checked again.
+  const pressed = new Set<string>();
+
   // Starts a queued job once the picture before it is done.
   const start = (templateId: string): void => {
     const row = sampleRow(db, templateId);
@@ -120,6 +147,20 @@ export function createDesignSamples(deps: DesignSampleDeps): DesignSamples {
     if (current?.steps.some((step) => step.state === "making") === true) return;
     const revision = templateRevision(db, templateId, row.version);
     if (revision === undefined || getTemplate(db, templateId) === undefined) return;
+    const asked = pressed.delete(templateId);
+    // What a Save queued may have waited behind another picture: checked again as it starts.
+    if (!asked) {
+      const held = holdOf(
+        templateId,
+        quoteDocument(deps.catalogue(), revision.document),
+        row.quotedHigh ?? 0,
+      );
+      if (held !== null) {
+        writeSample(db, { ...row, state: "held", heldReason: held, updatedAt: at() });
+        emit(templateId);
+        return;
+      }
+    }
     const made = makeFromTemplate(
       deps,
       templateId,
@@ -127,6 +168,8 @@ export function createDesignSamples(deps: DesignSampleDeps): DesignSamples {
         mutationId: `sample-${deps.service.ids.next()}`,
         values: revision.document.samples,
         acknowledgedHigh: row.quotedHigh ?? 0,
+        // Checked just above, or accepted on Make sample.
+        acknowledgedUnknown: true,
         version: row.version,
       },
       { sampleOf: templateId },
@@ -209,21 +252,11 @@ export function createDesignSamples(deps: DesignSampleDeps): DesignSamples {
       if (hasArtwork && !sampleNeedsPicture(affected))
         return { ok: true, value: redraw(input.templateId, input.version, input.after) };
       const quote = quoteDocument(deps.catalogue(), input.after);
-      const spent = sampleSpentToday(db, now(), deps.timeZone());
-      const budget = deps.budget();
-      const held =
-        quote.rows.some((one) => one.onPlan === true) && !deps.plans()
-          ? "Waiting: this sample's picture runs on your CLI plan, and samples may not use CLI plans. Turn on Samples may use my CLI plans in Settings → Template studio, or press Make sample to make it anyway."
-          : quote.unknown > 0
-            ? "Waiting: the price of this sample's picture isn't known, so Slopify didn't make it. Press Make sample to make it anyway."
-            : quote.high > holdSlack(input.acknowledgedHigh)
-              ? `Waiting: this sample now costs about ${money(quote.high)}, more than the ${money(input.acknowledgedHigh)} you saw. Press Make sample (${money(quote.high)}) to make it.`
-              : spent + quote.high > budget + 0.005
-                ? budgetSentence(spent + quote.high, budget)
-                : null;
+      const held = holdOf(input.templateId, quote, input.acknowledgedHigh);
+      pressed.delete(input.templateId);
       return { ok: true, value: queue(input.templateId, input.version, quote.high, held) };
     },
-    request: (templateId, version, acknowledgedHigh) => {
+    request: (templateId, version, acknowledgedHigh, acknowledgedUnknown = false) => {
       const revision = templateRevision(db, templateId, version);
       if (getTemplate(db, templateId) === undefined || revision === undefined)
         return {
@@ -235,13 +268,14 @@ export function createDesignSamples(deps: DesignSampleDeps): DesignSamples {
       if (row?.state === "making" && row.version === version) return { ok: true, value: view(row) };
       const quote = quoteDocument(deps.catalogue(), revision.document);
       // The person's own press: the price they saw is the limit, unknown prices included.
-      if (costChanged(quote, acknowledgedHigh))
+      if (costChanged(quote, acknowledgedHigh, acknowledgedUnknown))
         return {
           ok: false,
           reason: "cost-changed",
           message: costChangedMessage(quote, "the sample"),
           current: quote,
         };
+      pressed.add(templateId);
       return { ok: true, value: queue(templateId, version, quote.high, null) };
     },
     state: (templateId) => current(templateId),

@@ -131,7 +131,9 @@ describe("design routes", () => {
     };
     expect(after.steps.map((step) => step.state)).toEqual(["ready", "ready"]);
     const retry = await problemOf(
-      await send("POST", `/designs/d1/steps/${after.steps[1]?.id ?? ""}/retry`),
+      await send("POST", `/designs/d1/steps/${after.steps[1]?.id ?? ""}/retry`, {
+        acknowledgedHigh: quote.high,
+      }),
     );
     expect([retry.status, retry.reason]).toEqual([409, "busy"]);
     const head = await send("PUT", "/designs/d1/head", { stepId: after.steps[0]?.id });

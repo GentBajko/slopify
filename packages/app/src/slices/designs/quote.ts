@@ -28,11 +28,17 @@ export function quoteDesignImage(
 }
 
 // A paid step starts only when what it costs now is no more than what the person was shown,
-// give or take half a cent of rounding.
-export function costChanged(quote: CostEstimate, acknowledgedHigh: number): boolean {
-  return quote.high > acknowledgedHigh + 0.005;
+// give or take half a cent of rounding, and a price nobody knows only once they accepted that.
+export function costChanged(
+  quote: CostEstimate,
+  acknowledgedHigh: number,
+  acknowledgedUnknown = false,
+): boolean {
+  return quote.high > acknowledgedHigh + 0.005 || (quote.unknown > 0 && !acknowledgedUnknown);
 }
 
 export function costChangedMessage(quote: CostEstimate, what: string): string {
+  if (quote.unknown > 0)
+    return `The price changed since you looked: ${what} has no known price now, so nothing was started. Check the button, which says the price is unknown, and press it again to make it anyway.`;
   return `The price changed since you looked: ${what} now costs up to $${quote.high.toFixed(2)}. Check the new price on the button and press it again.`;
 }

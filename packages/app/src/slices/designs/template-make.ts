@@ -25,6 +25,7 @@ export const makeFromTemplateSchema = z
     mutationId: z.string().min(8).max(100),
     values: designValuesSchema,
     acknowledgedHigh: z.number().min(0).max(1000),
+    acknowledgedUnknown: z.boolean().optional(),
     version: z.number().int().min(1).optional(),
     name: z.string().trim().min(1).max(200).optional(),
     projectId: id.optional(),
@@ -107,7 +108,7 @@ export function makeFromTemplate(
   if (missing.length > 0)
     return { ok: false, reason: "missing-values", message: missingSentence(missing) };
   const quote = quoteDocument(deps.catalogue(), doc);
-  if (costChanged(quote, input.acknowledgedHigh))
+  if (costChanged(quote, input.acknowledgedHigh, input.acknowledgedUnknown))
     return {
       ok: false,
       reason: "cost-changed",
@@ -157,5 +158,6 @@ export function makeFromTemplate(
   return deps.runner.artwork(made.value.id, {
     mutationId: `${input.mutationId}:artwork`,
     acknowledgedHigh: input.acknowledgedHigh,
+    acknowledgedUnknown: input.acknowledgedUnknown,
   });
 }

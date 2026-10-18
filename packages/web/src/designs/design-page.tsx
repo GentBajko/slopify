@@ -176,8 +176,14 @@ function DesignEditor({ design }: { readonly design: DesignView }): ReactElement
   const paid = useMutation({
     mutationFn: async () => {
       const acknowledgedHigh = quote?.high ?? 0;
+      // The button says when the price is unknown: pressing it accepts that.
+      const acknowledgedUnknown = (quote?.unknown ?? 0) > 0;
       return needsArtwork
-        ? makeArtwork(api, design.id, { mutationId: crypto.randomUUID(), acknowledgedHigh })
+        ? makeArtwork(api, design.id, {
+            mutationId: crypto.randomUUID(),
+            acknowledgedHigh,
+            acknowledgedUnknown,
+          })
         : editPicture(api, design.id, {
             mutationId: crypto.randomUUID(),
             fromStepId: head?.id ?? "",
@@ -185,6 +191,7 @@ function DesignEditor({ design }: { readonly design: DesignView }): ReactElement
             provider: model.provider,
             model: model.model,
             acknowledgedHigh,
+            acknowledgedUnknown,
           });
     },
     onSuccess: (result) => {
@@ -193,16 +200,44 @@ function DesignEditor({ design }: { readonly design: DesignView }): ReactElement
     },
     onError: (error) => setStatus({ tone: "error", text: error.message }),
   });
+  // Try again is paid again: the first press shows its price, the second pays it.
+  const [retryPrice, setRetryPrice] = useState<{
+    readonly stepId: string;
+    readonly quote: CostEstimate;
+  } | null>(null);
   const step = useMutation({
-    mutationFn: async (input: { readonly kind: "retry" | "continue"; readonly stepId: string }) =>
-      input.kind === "retry"
-        ? retryStep(api, design.id, input.stepId)
-        : continueFrom(api, design.id, input.stepId),
-    onSuccess: (result, input) =>
+    mutationFn: async (input: {
+      readonly kind: "retry" | "continue";
+      readonly stepId: string;
+    }): Promise<DesignReply<DesignView> | "priced"> => {
+      if (input.kind === "continue") return continueFrom(api, design.id, input.stepId);
+      if (retryPrice?.stepId === input.stepId)
+        return retryStep(api, design.id, input.stepId, {
+          acknowledgedHigh: retryPrice.quote.high,
+          acknowledgedUnknown: retryPrice.quote.unknown > 0,
+        });
+      const target = design.steps.find((one) => one.id === input.stepId);
+      const priced =
+        target?.kind === "edit"
+          ? await quoteEdit(api, design.id, {
+              provider: target.provider ?? "",
+              model: target.model ?? "",
+            })
+          : await quoteArtwork(api, design.id);
+      if (!priced.ok) return priced;
+      setRetryPrice({ stepId: input.stepId, quote: priced.value });
+      return "priced";
+    },
+    onSuccess: (result, input) => {
+      if (result === "priced") return;
+      if (input.kind === "retry") setRetryPrice(null);
+      if (!result.ok && result.reason === "cost-changed" && result.quote !== undefined)
+        setRetryPrice({ stepId: input.stepId, quote: result.quote });
       answer(
         result,
         input.kind === "retry" ? "Trying again…" : "The next edit starts from that version.",
-      ),
+      );
+    },
   });
   const project = useMutation({
     mutationFn: (projectId: string | null) =>
@@ -229,19 +264,27 @@ function DesignEditor({ design }: { readonly design: DesignView }): ReactElement
         : instruction.trim() === ""
           ? "Write what to change first."
           : undefined;
+  const retrying =
+    retryPrice === null ? undefined : design.steps.find((one) => one.id === retryPrice.stepId);
   const shown: Status | null =
     making !== undefined
       ? {
           tone: "info",
           text: `Making version ${String(making.n)} with ${making.model ?? "the image model"}…`,
         }
-      : status?.tone === "error"
-        ? status
-        : failed !== undefined && failed.n > (head?.n ?? 0)
-          ? { tone: "error", text: failed.error ?? "The last version failed.", retry: failed.id }
-          : save.isPending
-            ? { tone: "info", text: "Saving…" }
-            : status;
+      : retryPrice !== null && retrying?.state === "failed"
+        ? {
+            tone: "warning",
+            text: `Trying version ${String(retrying.n)} again asks the provider again, and is paid again: ${priceWords(retryPrice.quote)}. Press Try again to make it.`,
+            retry: retryPrice.stepId,
+          }
+        : status?.tone === "error"
+          ? status
+          : failed !== undefined && failed.n > (head?.n ?? 0)
+            ? { tone: "error", text: failed.error ?? "The last version failed.", retry: failed.id }
+            : save.isPending
+              ? { tone: "info", text: "Saving…" }
+              : status;
 
   return (
     <>

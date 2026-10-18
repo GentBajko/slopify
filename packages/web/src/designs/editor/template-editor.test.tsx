@@ -183,7 +183,9 @@ describe("the design template editor", () => {
     expect(within(panel).getByText(/Waiting: this sample now costs/)).not.toBeNull();
     const make = await within(panel).findByRole("button", { name: "Make sample · about $0.04" });
     await user.click(make);
-    await waitFor(() => expect(asked).toEqual({ version: 2, acknowledgedHigh: 0.04 }));
+    await waitFor(() =>
+      expect(asked).toEqual({ version: 2, acknowledgedHigh: 0.04, acknowledgedUnknown: false }),
+    );
   });
 
   it("draws a finished sample from the sample design", async () => {
