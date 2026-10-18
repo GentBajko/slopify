@@ -40,6 +40,7 @@ import { externalReviewRoutes } from "./external-reviews.js";
 import { fileRoutes } from "./files.js";
 import { fontsRoutes } from "./fonts.js";
 import { homeRoutes, uploadedRoutes } from "./home.js";
+import { modelCheckRoutes, providerCheckRoutes } from "./model-checks.js";
 import type { MutationLifecycle } from "./mutations.js";
 import { type DecodePeaks, narrationPeakRoutes } from "./narration-peaks.js";
 import { onboardingRoutes } from "./onboarding.js";
@@ -108,6 +109,12 @@ export interface AppDeps {
     readonly openOnHost?: (path: string, signal: AbortSignal) => Promise<boolean>;
   };
   readonly catalogue?: CatalogueStore;
+  // Settings → Models' checks and the pickers' standings (`slices/model-checks`).
+  readonly modelChecks?: import("../../slices/model-checks/service.js").ModelChecks | undefined;
+  readonly modelListing?: import("../../slices/model-checks/listing.js").Listing | undefined;
+  // Whether listings and free checks run by themselves (a key saved, a picker opened). Off in
+  // tests, so a route never reaches the network on its own.
+  readonly autoModelChecks?: boolean | undefined;
   // The network for Settings → Providers' Test and Check all. Handed in so a test never
   // reaches a real provider.
   readonly fetch?: typeof globalThis.fetch;
@@ -232,7 +239,9 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/whats-new", whatsNewRoutes(deps))
       .route("/patch-notes", patchNotesRoutes(deps))
       .route("/tutorials", tutorialPagesRoutes(deps))
+      .route("/providers", providerCheckRoutes(deps))
       .route("/providers", providerRoutes(deps))
+      .route("/model-checks", modelCheckRoutes(deps))
       .route("/onboarding", onboardingRoutes(deps))
   );
 }

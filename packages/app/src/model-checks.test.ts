@@ -4,8 +4,9 @@ import { manualClock } from "./kernel/clock.fake.js";
 import type { LlmCompletion } from "./kernel/ports/llm.js";
 import { providerError } from "./kernel/ports/model.js";
 import type { Registry } from "./kernel/ports/registry.js";
-import { modelChecker, type RecipeDeps, recipeFor } from "./model-checks.js";
+import { cliWatcher, modelChecker, type RecipeDeps, recipeFor } from "./model-checks.js";
 import { catalogue as fixture } from "./slices/model-checks/catalogue.fake.js";
+import type { ProviderStatus } from "./slices/settings/model.js";
 
 const catalogue: Catalogue = {
   ...fixture,
@@ -184,5 +185,46 @@ describe("modelChecker", () => {
       spent: 0,
     });
     expect(seen).toEqual([]);
+  });
+});
+
+describe("cliWatcher", () => {
+  const status = (installed: boolean, issue?: string): ProviderStatus => ({
+    id: "codex",
+    family: "llm",
+    displayName: "Codex CLI",
+    readiness: { kind: "cli", installed, ...(issue === undefined ? {} : { issue }) },
+  });
+
+  it("checks a CLI that became usable, or one usable and never listed", async () => {
+    const started: string[] = [];
+    let current = [status(true)];
+    let known = false;
+    const look = cliWatcher(
+      { automatic: async (trigger, provider) => void started.push(`${trigger}:${provider ?? ""}`) },
+      async () => current,
+      () => known,
+    );
+    await look();
+    expect(started).toEqual(["cli-added:codex"]);
+    known = true;
+    await look();
+    expect(started).toHaveLength(1);
+    current = [status(true, "Not signed in.")];
+    await look();
+    current = [status(true)];
+    await look();
+    expect(started).toEqual(["cli-added:codex", "cli-added:codex"]);
+  });
+
+  it("leaves a CLI that was already usable and listed at start alone", async () => {
+    const started: string[] = [];
+    const look = cliWatcher(
+      { automatic: async () => void started.push("x") },
+      async () => [status(true), { ...status(false), id: "claude-code" }],
+      () => true,
+    );
+    await look();
+    expect(started).toEqual([]);
   });
 });

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { keyProbes } from "../../adapters/key-probes.js";
 import { catalogueModelInfo } from "../../catalog/model-info.js";
 import { videoModelsOf } from "../../catalog/schema.js";
+import type { ModelInfo } from "../../kernel/ports/model.js";
 import { defaultSpeechVoice, detectSpeechCached } from "../../kernel/ports/system-speech.js";
 import { switchAllRetired, switchRetiredModel } from "../../slices/model-upkeep/switch.js";
 import { retiredModelUsage, usageKinds, usageSlots } from "../../slices/model-upkeep/usage.js";
@@ -63,6 +64,15 @@ export function providerRoutes(deps: AppDeps) {
   });
 
   const upkeep = () => ({ ...deps, uuid: deps.drafts?.uuid ?? randomUUID });
+  // A picker opening reads the key's own model list again when it is due; never waited for.
+  const relist = (id: ProviderId): void => {
+    if (deps.autoModelChecks !== true) return;
+    void deps.modelListing?.refresh(id).catch((error: unknown) => {
+      deps.log.write("warn", "model-checks.listing", { detail: `${id}: ${String(error)}` });
+    });
+  };
+  const standingsOf = (id: ProviderId, models: readonly ModelInfo[]) =>
+    deps.modelChecks?.standings(id, models);
 
   return (
     new Hono()
@@ -189,28 +199,36 @@ export function providerRoutes(deps: AppDeps) {
         const { id } = c.req.valid("param");
         // Animate images lists the provider's image-to-video models, which only the catalogue
         // names.
-        if (c.req.query("video") === "1")
+        relist(id);
+        if (c.req.query("video") === "1") {
+          const videos =
+            deps.catalogue === undefined ? [] : videoModelsOf(deps.catalogue.read(), id);
           return c.json({
-            models: deps.catalogue === undefined ? [] : videoModelsOf(deps.catalogue.read(), id),
+            models: videos,
             allowsCustom: false,
+            standings: standingsOf(id, videos),
           });
-        if (deps.catalogue && !isUncataloguedProvider(id))
+        }
+        if (deps.catalogue && !isUncataloguedProvider(id)) {
+          const models = deps.catalogue
+            .models(id, providerById(id).family)
+            .map((m) => ({ ...m, ...catalogueModelInfo(m) }));
           return c.json({
-            models: deps.catalogue
-              .models(id, providerById(id).family)
-              .map((m) => ({ ...m, ...catalogueModelInfo(m) })),
+            models,
             allowsCustom: false,
             notice:
               "Curated active models from models.yaml. Edit it locally or refresh in Settings.",
             warning: deps.catalogue.status().warning ?? undefined,
+            standings: standingsOf(id, models),
           });
+        }
         const result = await catalog.get(
           id,
           providerById(id).family,
           c.req.query("refresh") === "1",
         );
         c.header("Cache-Control", "no-store");
-        return c.json(result);
+        return c.json({ ...result, standings: standingsOf(id, result.models) });
       })
       .put(
         "/:id/path",
@@ -244,6 +262,11 @@ export function providerRoutes(deps: AppDeps) {
             return refusal(c, id, result.reason);
           }
           catalog.invalidate(id);
+          // A new key: read its model list and check what is free to check, in the background.
+          if (deps.autoModelChecks === true)
+            void deps.modelChecks?.automatic("key-added", id).catch((error: unknown) => {
+              deps.log.write("warn", "model-checks", { detail: `${id}: ${String(error)}` });
+            });
           // The response says a key is stored and shows the mask, never the value.
           return c.json(keyStatus(keys, id));
         },

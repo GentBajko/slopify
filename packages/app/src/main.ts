@@ -70,6 +70,7 @@ import { type StandaloneDeps, standaloneImage, standaloneLlm } from "./kernel/ru
 import type { WorkRef } from "./kernel/runner/work.js";
 import { readVersion } from "./kernel/version.js";
 import { modelSources } from "./model-catalog.js";
+import { cliWatcher, wireModelChecks } from "./model-checks.js";
 import { projectPaused, projectTrashed } from "./slices/admission/repo.js";
 import { createBackupService } from "./slices/backups/service.js";
 import { pumpQueue, queueWaiting } from "./slices/batch/index.js";
@@ -86,6 +87,7 @@ import {
 } from "./slices/episodes/summarize.js";
 import { resolveFont } from "./slices/fonts/index.js";
 import { accessRecorder } from "./slices/model-checks/record.js";
+import { readChecks } from "./slices/model-checks/repo.js";
 import { decodePeaks } from "./slices/narration/peaks.js";
 import { projectLink } from "./slices/notifications/address.js";
 import { createNotificationSender } from "./slices/notifications/send.js";
@@ -116,7 +118,7 @@ import type { ScheduleDeps } from "./slices/schedules/model.js";
 import { settleTerminalScheduleRuns } from "./slices/schedules/repo.js";
 import { createScheduleRunner } from "./slices/schedules/scheduler.js";
 import { nodeCliProbe } from "./slices/settings/cli-status.js";
-import { isLocalCliProvider, localCliConcurrency } from "./slices/settings/model.js";
+import { isLocalCliProvider, localCliConcurrency, providerIds } from "./slices/settings/model.js";
 import { readSettings } from "./slices/settings/playback.js";
 import { providerStatuses } from "./slices/settings/readiness.js";
 import { readSetting } from "./slices/settings/repo.js";
@@ -183,8 +185,10 @@ export interface BootOptions {
   // Import the bundled sample project on the first launch. The CLI turns it on; tests boot
   // without it so each starts with no projects.
   readonly seedSample?: boolean;
-  // Check the published model catalogue and OpenRouter's live list at start and once a day.
-  // The CLI turns it on; tests boot without it so they never reach the network.
+  // Check the published model catalogue and OpenRouter's live list at start and once a day,
+  // and which models work for the saved keys and CLIs (free listings, cheap checks) when a key
+  // or CLI is added and weekly. The CLI turns it on; tests boot without it so they never reach
+  // the network.
   readonly refreshModels?: boolean;
   // A new install keeps its projects, backups and exports in <Documents>/Slopify. The CLI turns
   // it on unless a data dir was chosen; tests boot without it so they never touch Documents.
@@ -507,6 +511,17 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       modelsFor: modelSources(registry).modelsFor,
       emit: (projectId, event) => hub.emit(projectId, event),
     };
+    // Which models work for the person's keys and logins (Settings → Models, the pickers).
+    const { checks: modelChecks, listing: modelListing } = wireModelChecks({
+      db,
+      clock,
+      log,
+      registry,
+      catalogue: () => catalogue.read(),
+      fetch: globalThis.fetch,
+      statuses: rebuild.providers,
+    });
+    const autoModelChecks = options.refreshModels === true;
     // Redos a review asked for before the last shutdown start now.
     reviewRedos.bind(rebuild);
     reviewRedos.kick();
@@ -675,6 +690,9 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         }
       },
       catalogue,
+      modelChecks,
+      modelListing,
+      autoModelChecks,
       clock,
       ids,
       log,
@@ -750,13 +768,34 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         (status) => {
           if (status.warning !== null)
             log.write("warn", "model-catalog.sync", { detail: status.warning });
+          // A model new to the list may already be on the person's key's own list.
+          for (const provider of new Set(status.changes.added.map((added) => added.provider)))
+            if (isProviderId(provider))
+              void modelListing.refresh(provider, true).catch((error: unknown) => {
+                log.write("warn", "model-checks.listing", { detail: causedBy(error) });
+              });
         },
         (error: unknown) => log.write("warn", "model-catalog.sync", { detail: causedBy(error) }),
       );
     };
     syncModels();
+    // Model checks look hourly too: a CLI that became usable, and the weekly look. Both run in
+    // the background and never hold a request or a run.
+    const lookForClis = cliWatcher(
+      modelChecks,
+      rebuild.providers,
+      (provider) => readChecks(updateDb, provider).length > 0,
+    );
+    const lookAtModels = (): void => {
+      if (!autoModelChecks) return;
+      lookForClis()
+        .then(() => (modelChecks.weeklyDue() ? modelChecks.automatic("weekly") : undefined))
+        .catch((error: unknown) => log.write("warn", "model-checks", { detail: causedBy(error) }));
+    };
+    lookAtModels();
     const modelTimer = setInterval(() => {
       if (catalogue.syncDue?.(Date.now()) === true) syncModels();
+      lookAtModels();
     }, 60 * 60_000);
     const backupTimer = setInterval(() => {
       backups.tick().catch((error: unknown) => {
@@ -835,6 +874,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         clearInterval(trashTimer);
         clearInterval(arrangeTimer);
         clearInterval(modelTimer);
+        modelChecks.stop();
         const mutationDrain = mutations.stop();
         const scheduleDrain = scheduleTicks.stop();
         const topicDrain = scheduleRunner.stop();
@@ -1093,6 +1133,10 @@ export function urlOf(host: string, port: number): string {
 
 // A stage can only be `running` at boot if the previous process died mid-run;
 // nothing auto-resumes, the user retries by hand.
+function isProviderId(id: string): id is (typeof providerIds)[number] {
+  return (providerIds as readonly string[]).includes(id);
+}
+
 export function markInterruptedStages(db: DatabaseSync, clock: Clock): number {
   const result = db
     .prepare(

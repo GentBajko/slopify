@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { ModelInfo } from "../../kernel/ports/model.js";
 import type { ModelCheckRow, ModelStandingView } from "./model.js";
-import { ago, badgeOf, mergeVerdict, newForYou, pickerEntries, standingOf } from "./rules.js";
+import {
+  ago,
+  badgeOf,
+  dollarsText,
+  mergeVerdict,
+  newForYou,
+  pickerEntries,
+  standingOf,
+} from "./rules.js";
 
 const row = (over: Partial<ModelCheckRow> = {}): ModelCheckRow => ({
   provider: "openrouter",
@@ -223,5 +231,15 @@ describe("newForYou", () => {
       row({ model: "e", verdict: "works", firstWorksAt: null }),
     ];
     expect(newForYou(rows).map((r) => r.model)).toEqual(["b", "a"]);
+  });
+});
+
+describe("dollarsText", () => {
+  it("says what a check costs in words", () => {
+    expect(dollarsText(0)).toBe("free");
+    expect(dollarsText(0.0004)).toBe("less than a cent");
+    expect(dollarsText(0.0412)).toBe("about $0.04");
+    expect(dollarsText(0, 1)).toBe("1 model with no listed price (price unknown)");
+    expect(dollarsText(0.05, 2)).toBe("about $0.05, plus 2 models with no listed price");
   });
 });

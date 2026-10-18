@@ -160,3 +160,12 @@ export function newForYou(rows: readonly ModelCheckRow[]): readonly ModelCheckRo
     .filter((row) => row.verdict === "works" && row.firstWorksAt !== null && !row.noticeSeen)
     .sort((a, b) => (b.firstWorksAt ?? "").localeCompare(a.firstWorksAt ?? ""));
 }
+
+// A check estimate in words: "free", "less than a cent", "about $0.04".
+export function dollarsText(dollars: number, unpriced = 0): string {
+  const base =
+    dollars <= 0 ? "free" : dollars < 0.01 ? "less than a cent" : `about $${dollars.toFixed(2)}`;
+  if (unpriced === 0) return base;
+  const more = `${String(unpriced)} model${unpriced === 1 ? "" : "s"} with no listed price`;
+  return dollars <= 0 ? `${more} (price unknown)` : `${base}, plus ${more}`;
+}

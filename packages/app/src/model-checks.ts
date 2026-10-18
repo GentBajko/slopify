@@ -1,11 +1,26 @@
+import type { DatabaseSync } from "node:sqlite";
+import { keyProbes } from "./adapters/key-probes.js";
 import type { Catalogue } from "./catalog/schema.js";
+import type { Clock } from "./kernel/clock.js";
+import type { Log } from "./kernel/log.js";
 import { type ThinkingMode, thinkingModes } from "./kernel/ports/llm.js";
-import type { ModelInfo, ProviderFamily } from "./kernel/ports/model.js";
+import { type ModelInfo, type ProviderFamily, readinessIsUsable } from "./kernel/ports/model.js";
+import type { Registry } from "./kernel/ports/registry.js";
 import { type CheckCall, type CheckDeps, checkModel } from "./kernel/runner/model-check.js";
+import { modelSources } from "./model-catalog.js";
 import { isVideoTarget, spentOn } from "./slices/model-checks/cost.js";
+import { createListing, type Listing } from "./slices/model-checks/listing.js";
 import type { ModelKey } from "./slices/model-checks/model.js";
 import type { ModelChecker } from "./slices/model-checks/run.js";
-import { isLocalCliProvider, systemVoiceProvider, type Voice } from "./slices/settings/model.js";
+import { createModelChecks, type ModelChecks } from "./slices/model-checks/service.js";
+import {
+  isLocalCliProvider,
+  type ProviderId,
+  type ProviderStatus,
+  systemVoiceProvider,
+  type Voice,
+} from "./slices/settings/model.js";
+import { listVoices } from "./slices/settings/repo.js";
 
 // The composition layer's check recipes: what the smallest request is for each kind of model.
 // A reply of one word at the lowest thinking setting, a voice saying "Hi", a one-to-one grey
@@ -119,5 +134,77 @@ export function modelChecker(deps: RecipeDeps & CheckDeps): ModelChecker {
       stopProvider: answer.stopProvider,
       spent: answer.verdict === "works" ? spentOn(deps.catalogue(), target, answer.use) : 0,
     };
+  };
+}
+
+export interface ChecksWiring {
+  readonly db: DatabaseSync;
+  readonly clock: Clock;
+  readonly log: Log;
+  readonly registry: Registry;
+  readonly catalogue: () => Catalogue;
+  readonly fetch: typeof globalThis.fetch;
+  readonly statuses: () => Promise<readonly ProviderStatus[]>;
+}
+
+// The model-checks service as main.ts runs it: free listings from the providers' own model
+// endpoints, and checks made through the recipes above.
+export function wireModelChecks(deps: ChecksWiring): {
+  readonly checks: ModelChecks;
+  readonly listing: Listing;
+} {
+  const { modelsFor } = modelSources(deps.registry);
+  const listing = createListing({
+    db: deps.db,
+    clock: deps.clock,
+    fetch: deps.fetch,
+    probes: keyProbes,
+    known: (provider, family) =>
+      deps
+        .catalogue()
+        [family].filter((row) => row.provider === provider && row.enabled && !row.deprecated)
+        .map((row) => row.id),
+    cliModels: async (provider, family) => (await modelsFor(provider, family)).map((m) => m.id),
+  });
+  const checks = createModelChecks({
+    db: deps.db,
+    clock: deps.clock,
+    log: deps.log,
+    catalogue: deps.catalogue,
+    listing,
+    providerModels: modelsFor,
+    check: modelChecker({
+      registry: deps.registry,
+      clock: deps.clock,
+      log: deps.log,
+      catalogue: deps.catalogue,
+      voices: () => listVoices(deps.db),
+      cliModels: modelsFor,
+      systemVoiceReady: async () =>
+        (await deps.statuses()).some(
+          (status) => status.id === systemVoiceProvider && readinessIsUsable(status.readiness),
+        ),
+    }),
+  });
+  return { checks, listing };
+}
+
+// A CLI that has become usable - installed and signed in - since the last look, or one that is
+// usable and was never listed, is checked as if it had just been added.
+export function cliWatcher(
+  checks: Pick<ModelChecks, "automatic">,
+  statuses: () => Promise<readonly ProviderStatus[]>,
+  known: (provider: ProviderId) => boolean,
+): () => Promise<void> {
+  const usable = new Map<ProviderId, boolean>();
+  return async () => {
+    for (const status of await statuses()) {
+      if (status.readiness.kind !== "cli") continue;
+      const now = readinessIsUsable(status.readiness);
+      const before = usable.get(status.id);
+      usable.set(status.id, now);
+      if (now && (before === false || (before === undefined && !known(status.id))))
+        await checks.automatic("cli-added", status.id);
+    }
   };
 }
