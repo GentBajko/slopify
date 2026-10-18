@@ -16,6 +16,7 @@ import { Callout } from "@/components/kit/callout";
 import { Field, Select } from "@/components/kit/field";
 import { useToast } from "@/components/kit/toast";
 import { reapplyEdit } from "./draft-merge.js";
+import { KeywordFactsRefresh } from "./keyword-facts-refresh.js";
 import { RawPromptField } from "./raw-prompt-field.js";
 import { editOfForm, setPrompt } from "./revision-form-state.js";
 export function RevisionPrompts({
@@ -23,6 +24,7 @@ export function RevisionPrompts({
   saved = edit.config.imagePrompts,
   prompts,
   entries,
+  projectId,
   onChange,
 }: {
   readonly edit: RevisionEdit;
@@ -32,6 +34,8 @@ export function RevisionPrompts({
   readonly saved?: readonly ImagePromptChoice[];
   readonly prompts: readonly Prompt[];
   readonly entries: readonly Entry[];
+  // The project, for Refresh keyword facts.
+  readonly projectId?: string | undefined;
   readonly onChange: (edit: RevisionEdit) => void;
 }): import("react").ReactElement {
   const formId = useId();
@@ -229,6 +233,14 @@ export function RevisionPrompts({
           {added.length === 1 ? "uses its" : "use their"} Library wording. Save, then change it
           here.
         </p>
+      )}
+      {projectId === undefined ? null : (
+        <KeywordFactsRefresh
+          projectId={projectId}
+          edit={edit}
+          getEdit={() => latest.current}
+          onChange={onChange}
+        />
       )}
       {slots.length ? (
         <section aria-label="Keywords" className="space-y-3 pt-3">
