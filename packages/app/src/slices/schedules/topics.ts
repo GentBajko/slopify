@@ -8,6 +8,7 @@ import { defaultChannelId } from "../channels/model.js";
 import { projectChannels, scheduleChannel } from "../channels/repo.js";
 import { channelVideoTitles } from "../channels/videos.js";
 import { readJsonSetting, writeSetting } from "../settings/repo.js";
+import { notTemplateSample } from "../template-studio/repo.js";
 import type { ScheduleDeps, ScheduleResult } from "./model.js";
 import { scheduleById } from "./repo.js";
 import {
@@ -311,7 +312,10 @@ export function knownTitles(
   const channel = scheduleChannel(deps.db, scheduleId);
   const channels = projectChannels(deps.db);
   const projects = deps.db
-    .prepare(`SELECT id,title FROM projects WHERE ${liveProject()} ORDER BY created_at DESC`)
+    // A template's studio sample is no video of the channel's.
+    .prepare(
+      `SELECT id,title FROM projects WHERE ${liveProject()} AND ${notTemplateSample()} ORDER BY created_at DESC`,
+    )
     .all()
     .map((row) => z.object({ id: z.string(), title: z.string() }).parse(row))
     .filter(

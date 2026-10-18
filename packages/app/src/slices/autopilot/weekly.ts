@@ -8,6 +8,7 @@ import { projectChannels } from "../channels/repo.js";
 import type { NoticeText } from "../notifications/rules.js";
 import { weekSummary } from "../run-cost/week.js";
 import { validTimeZone } from "../schedules/calendar.js";
+import { notTemplateSample } from "../template-studio/repo.js";
 import type { FailedRun, WeeklyReport } from "./model.js";
 
 // ceiling: the report names this many failed steps; the rest are counted.
@@ -47,6 +48,7 @@ export function weeklyReport(
       `SELECT stages.project_id, projects.title, stages.kind, stages.failure_reason
        FROM stages JOIN projects ON projects.id=stages.project_id
        WHERE stages.state='failed' AND stages.finished_at>=? AND ${liveProject()}
+         AND ${notTemplateSample()}
        ORDER BY stages.finished_at DESC, stages.id`,
     )
     .all(since)

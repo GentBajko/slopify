@@ -9,6 +9,7 @@ import { sampleIds } from "../onboarding/model.js";
 import { readSampleRecord } from "../onboarding/state.js";
 import { type ProjectHolds, projectHolds } from "../reviews/holds.js";
 import { limitWaitsByProject, listingWait } from "../run-cost/panel.js";
+import { notTemplateSample } from "../template-studio/repo.js";
 import { setAsideProjects, uploadedAndSettled, uploadedProjects } from "../uploads/repo.js";
 import { settledStatus } from "../uploads/rules.js";
 import { nextOccurrence } from "./calendar.js";
@@ -234,7 +235,8 @@ function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calen
          COALESCE(project_controls.paused,0) AS paused,max(stages.finished_at) AS finished_at
        FROM projects LEFT JOIN stages ON stages.project_id=projects.id
        LEFT JOIN project_controls ON project_controls.project_id=projects.id
-       WHERE projects.created_at<? AND ${liveProject()} GROUP BY projects.id
+       WHERE projects.created_at<? AND ${liveProject()} AND ${notTemplateSample()}
+       GROUP BY projects.id
        HAVING COALESCE(project_controls.paused,0)=1 OR count(stages.id)=0
          OR sum(stages.state IN ('pending','running'))>0
          OR COALESCE(max(stages.finished_at),projects.created_at)>=?
@@ -298,7 +300,7 @@ function queued(deps: Pick<ScheduleDeps, "db">): Calendar["queued"] {
     const row = deps.db
       .prepare(
         `SELECT projects.title, batches.created_at FROM projects, batches
-         WHERE projects.id=? AND batches.id=? AND ${liveProject()}`,
+         WHERE projects.id=? AND batches.id=? AND ${liveProject()} AND ${notTemplateSample()}`,
       )
       .get(entry.projectId, entry.batchId);
     if (row === undefined) return [];

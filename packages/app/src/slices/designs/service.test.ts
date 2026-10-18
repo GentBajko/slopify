@@ -196,6 +196,20 @@ describe("changing a design", () => {
     expect(reason("d1", { document: { version: 2 } })).toBe("invalid");
   });
 
+  it("never links a design to a template's studio sample", () => {
+    const design = made();
+    h.db.exec(
+      `INSERT INTO projects VALUES ('ps','Sample','16:9','{}','a','a');
+       INSERT INTO project_templates (id,head_version,creation_hash,created_at) VALUES ('t1',1,'h','a');
+       INSERT INTO template_samples (template_id,project_id,topic,topic_source,full_script,created_at) VALUES ('t1','ps','Salt roads','fixed',0,'a');`,
+    );
+    const linked = updateDesignRecord(h.deps, "d1", {
+      baseUpdatedAt: design.updatedAt,
+      projectId: "ps",
+    });
+    expect(linked.ok ? "linked" : linked.reason).toBe("project-not-found");
+  });
+
   it("continues from a version that has its picture, and only one of this design's", () => {
     const design = made();
     const step = design.steps[0]?.id ?? "";

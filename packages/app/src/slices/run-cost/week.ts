@@ -8,6 +8,7 @@ import {
 } from "../../kernel/ports/plan-limits.js";
 import { defaultChannelId } from "../channels/model.js";
 import { projectChannels } from "../channels/repo.js";
+import { notTemplateSample } from "../template-studio/repo.js";
 
 // Home's "This week": how many videos were made since a moment, what the provider calls cost,
 // what the plan-billed ones would have cost through the API, and where each CLI plan's windows
@@ -96,8 +97,11 @@ export function weekSummary(db: DatabaseSync, since: string, channelId?: string)
     if (channelId === undefined || channel === channelId) count(row);
   }
   // A video is made when its file lands; a remade video counts again, as it was made again.
+  // A template's studio sample is no video of the person's (its spend still counts above).
   const videos = db
-    .prepare("SELECT project_id FROM outputs WHERE role = 'video' AND created_at >= ?")
+    .prepare(
+      `SELECT project_id FROM outputs WHERE role = 'video' AND created_at >= ? AND ${notTemplateSample("outputs", "project_id")}`,
+    )
     .all(since)
     .filter((row) => projectInScope(String(row.project_id))).length;
   return { since, videos, calls, cost, unpriced, apiEquivalent, plans: planStandings(db) };

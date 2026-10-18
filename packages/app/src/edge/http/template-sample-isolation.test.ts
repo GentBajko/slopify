@@ -5,8 +5,13 @@ import { afterEach, describe, expect, it } from "vitest";
 import { ulidIds } from "../../kernel/ids.js";
 import { attachSamples } from "../../kernel/paths.js";
 import { insertProject } from "../../slices/admission/repo.js";
+import { weeklyReport } from "../../slices/autopilot/weekly.js";
+import { keywordFactsFor } from "../../slices/keywords/facts.js";
 import { draftFixture } from "../../slices/play-drafts/draft.fake.js";
 import { createTemplate } from "../../slices/project-templates/service.js";
+import { weekSummary } from "../../slices/run-cost/week.js";
+import { calendarRange } from "../../slices/schedules/agenda.js";
+import { knownTitles } from "../../slices/schedules/topics.js";
 import { makePaidSample } from "../../slices/template-studio/paid.js";
 import { sampleOf, sampleProjects } from "../../slices/template-studio/repo.js";
 import { paidDocument, paidSampleDeps } from "../../slices/template-studio/studio.fake.js";
@@ -24,7 +29,8 @@ afterEach(() => {
 });
 
 function withSample() {
-  const h = mcpFixture();
+  // Library → Designs too, so its routes are asked as well.
+  const h = mcpFixture({ designs: true });
   open.push(h);
   const drafts = draftFixture();
   open.push(drafts);
@@ -96,6 +102,9 @@ function getRoutes(app: ReturnType<typeof mcpFixture>["app"]): readonly string[]
         )
         .map((row) => row.path),
     ),
+    // Routes that answer only with a query or an id, asked with one.
+    `/api/home/week?since=${encodeURIComponent("2026-01-01T00:00:00.000Z")}`,
+    "/api/keywords/facts/visible0control",
   ];
 }
 
@@ -112,6 +121,49 @@ describe("the template studio's sample project", () => {
     expect(leaks).toEqual([]);
     const listed = await (await h.app.request("/api/projects")).text();
     expect(listed).toContain("visible0control");
+  });
+
+  it("is left out of the calendar, the weekly report, topic scoring and keyword facts", () => {
+    const h = withSample();
+    const { db } = h.deps;
+    // Both projects made a video this week, so a count that took the sample would say 2.
+    for (const id of [sampleId, "visible0control"])
+      db.prepare(
+        "INSERT INTO outputs (id,project_id,stage_kind,role,path,bytes,created_at) VALUES (?,?,'video','video','v.mp4',1,'2026-09-10T00:00:00.000Z')",
+      ).run(`${id}-video`, id);
+    const calendar = calendarRange(
+      { db, clock: h.deps.clock, template: () => undefined },
+      new Date("2026-09-01T00:00:00.000Z"),
+      new Date("2026-10-01T00:00:00.000Z"),
+    );
+    if (!calendar.ok) throw new Error(calendar.reason);
+    const shown = calendar.value.projects.map((one) => one.id);
+    expect(shown).toContain("visible0control");
+    expect(shown).not.toContain(sampleId);
+    const failed = weeklyReport(db, "2026-01-01T00:00:00.000Z", "2026-12-31T00:00:00.000Z").failed;
+    expect(failed.map((one) => one.projectId)).toContain("visible0control");
+    expect(failed.map((one) => one.projectId)).not.toContain(sampleId);
+    expect(weekSummary(db, "2026-01-01T00:00:00.000Z").videos).toBe(1);
+    const covered = knownTitles(h.deps, randomUUID()).projects;
+    expect(covered).toContain("Visible control project");
+    expect(covered).not.toContain(sampleTitle);
+    const factsNow = () =>
+      keywordFactsFor(
+        h.deps,
+        { channelId: undefined, useBrandKit: false, title: "Next one" },
+        h.deps.clock.now(),
+      );
+    const facts = factsNow();
+    expect(facts.coveredBefore).toContain("Visible control project");
+    expect(facts.coveredBefore).not.toContain(sampleTitle);
+    expect(facts.previousVideo?.title).not.toBe(sampleTitle);
+    // The episode number is the same as with no sample at all.
+    db.prepare("DELETE FROM template_samples WHERE project_id=?").run(sampleId);
+    db.prepare("INSERT INTO project_trash (project_id,deleted_at) VALUES (?,?)").run(
+      sampleId,
+      "2026-09-10T00:00:00.000Z",
+    );
+    expect(factsNow().episode).toBe(facts.episode);
   });
 
   it("is named by no GET route once it is in the trash either", async () => {

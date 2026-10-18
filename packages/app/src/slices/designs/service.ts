@@ -11,6 +11,7 @@ import { storeImageBlob } from "../channels/images.js";
 import { defaultChannelId } from "../channels/model.js";
 import { imageBlob } from "../channels/repo.js";
 import { releaseStagedFile } from "../storage/staging-refs.js";
+import { notTemplateSample } from "../template-studio/repo.js";
 import type { DesignEvent, DesignResult, DesignView } from "./model.js";
 import { readPicture, startingPicture } from "./pictures.js";
 import { designById, designByMutation, insertDesign, listDesigns, updateDesign } from "./repo.js";
@@ -171,7 +172,12 @@ export function createDesign(deps: DesignDeps, raw: unknown): DesignResult<Desig
 }
 
 function projectExists(db: DatabaseSync, id: string): boolean {
-  return db.prepare(`SELECT 1 FROM projects WHERE id=? AND ${liveProject()}`).get(id) !== undefined;
+  // A template's studio sample is the studio's alone: no design can be linked to it.
+  return (
+    db
+      .prepare(`SELECT 1 FROM projects WHERE id=? AND ${liveProject()} AND ${notTemplateSample()}`)
+      .get(id) !== undefined
+  );
 }
 
 export function updateDesignRecord(
