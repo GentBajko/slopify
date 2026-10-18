@@ -20,6 +20,7 @@ import { withSharedGlossary } from "../narration/shared-glossary.js";
 import { researchDocuments } from "../research/documents.js";
 import { plannerMessages, subAgentMessages } from "../research/planner.js";
 import { synthesisMessages } from "../research/synthesis.js";
+import { sampleArticleInstruction, sampleNarrationText } from "../template-studio/scope.js";
 import { thumbnailMessages } from "../thumbnail/by-llm.js";
 import { adaptationMessages } from "../voices/adaptation.js";
 import { attributionMessages } from "../voices/attribution.js";
@@ -198,7 +199,12 @@ export function textRecipes(context: RecipeContext): TextRecipes {
   // The related earlier episodes go under the prompt only when the run carries them, so a
   // project made without them keeps its fingerprint. Either is written in the project's
   // language (`withLanguage`; English adds nothing).
-  const writtenPrompt = withEarlierEpisodes(brief.articlePrompt, config.earlierEpisodes);
+  // A template studio sample asks for its outline and first chapter only (`config.sample`);
+  // nothing is added for any other project, so its fingerprint stays as it was.
+  const writtenPrompt = withSampleScope(
+    withEarlierEpisodes(brief.articlePrompt, config.earlierEpisodes),
+    config.sample,
+  );
   const messages = withLanguage(
     voices !== undefined && writesScript
       ? scriptMessages(voices.format, voices.speakers, writtenPrompt, articleNotes)
@@ -307,7 +313,11 @@ export function textRecipes(context: RecipeContext): TextRecipes {
       };
     }
   }
-  let narrationText = articleText;
+  // A sample says only the narration's opening (`template-studio/scope.ts`).
+  let narrationText =
+    config.sample === undefined || articleText === null
+      ? articleText
+      : sampleNarrationText(articleText);
   const descriptions: ResolvedWorkRecipe[] = [];
   const cards: ResolvedWorkRecipe[] = [];
   if (describing(context) && voices === undefined) {
@@ -462,4 +472,13 @@ export function narrationGlossary(context: RecipeContext): GlossaryResult | null
 function withShared(own: GlossaryResult, config: RecipeContext["config"]): GlossaryResult {
   if (!own.ok || config.audio?.shareGlossary !== true) return own;
   return { ...own, entries: withSharedGlossary(own.entries, config.sharedGlossary) };
+}
+
+function withSampleScope(
+  prompt: string,
+  sample: { readonly fullScript: boolean } | undefined,
+): string {
+  return sample === undefined || sample.fullScript
+    ? prompt
+    : `${prompt.trimEnd()}\n\n${sampleArticleInstruction}`;
 }

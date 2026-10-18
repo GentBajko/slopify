@@ -38,7 +38,12 @@ export function withReviews(
   const stages = activeReviewStages(context.config);
   if (settings === undefined || stages.length === 0) return recipes;
   const byKey = new Map(recipes.map((row) => [row.key, row]));
-  const items = stages.flatMap((stage) => reviewedItems(stage, recipes, byKey));
+  const all = stages.flatMap((stage) => reviewedItems(stage, recipes, byKey));
+  // A template studio sample shows how each stage's review answers on its first item only.
+  const items =
+    context.config.sample === undefined
+      ? all
+      : all.filter((item, index) => all.findIndex((one) => one.stage === item.stage) === index);
   const byAgent = reviewedByAgent(settings);
   const reviews = items.map((item) => {
     const inputs = item.inputs.map((input) => [input.key, resourceIdentity(context, input)]);

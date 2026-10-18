@@ -45,6 +45,7 @@ import { defaultDescriptionPrompt } from "../youtube/model.js";
 // top of the 5-12 chapters the built-in YouTube description prompt asks for.
 const chapterOpenersMax = 12;
 
+import { sampleSpokenWords } from "../template-studio/scope.js";
 import { estimateRequests, groupEstimateRows, type PricedRequest } from "./requests.js";
 
 export { estimateRequests, type PricedRequest } from "./requests.js";
@@ -234,6 +235,9 @@ export function estimateRun(
           "TTS character charges include delivery tags; their length is known after preparation.",
       });
     }
+    // A template studio sample says only the narration's opening (`template-studio/scope.ts`).
+    const spokenChars =
+      draft.sample === undefined ? articleChars : Math.min(articleChars, sampleSpokenWords * 6);
     const extras = ["intro", "outro"].reduce((n, key) => n + (rendered[key]?.length ?? 0), 0);
     const llmExtras =
       (draft.intro?.mode === "llm" ? 1200 : 0) + (draft.outro?.mode === "llm" ? 1200 : 0);
@@ -248,7 +252,7 @@ export function estimateRun(
           stage: "Narration",
           provider: speaker.voice.provider,
           model: speaker.voice.model,
-          characters: Math.round(articleChars / speakers.length),
+          characters: Math.round(spokenChars / speakers.length),
           detail: `${speaker.name.trim() || "A speaker"}: assumes every speaker says about the same.`,
         });
       if (extras + llmExtras > 0)
@@ -270,7 +274,7 @@ export function estimateRun(
     } else
       requests.push(
         generatedArticle || llmExtras > 0
-          ? { ...choice, kind: "tts-estimate", characters: articleChars + extras + llmExtras }
+          ? { ...choice, kind: "tts-estimate", characters: spokenChars + extras + llmExtras }
           : {
               ...choice,
               kind: "tts",

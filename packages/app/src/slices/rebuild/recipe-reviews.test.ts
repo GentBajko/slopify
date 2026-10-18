@@ -79,6 +79,16 @@ describe("review recipes", () => {
     expect(recipeProviderChoice(review, on)).toEqual({ ...reviewer, family: "llm" });
   });
 
+  it("reviews only each stage's first item in a template studio sample", () => {
+    const on: RunConfig = {
+      ...narrated,
+      reviews: { ...reviewer, stages: { images: { mode: "flag" } } },
+      sample: { fullScript: false },
+    };
+    const reviews = recipesFor(on).filter((row) => row.key.startsWith("review:"));
+    expect(reviews.map((row) => row.key)).toEqual(["review:image:harbor"]);
+  });
+
   it("hears the narration through the word timing without making the timing wait for it", () => {
     const on: RunConfig = {
       ...narrated,

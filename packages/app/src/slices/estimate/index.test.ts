@@ -34,6 +34,23 @@ const draft: RunDraft = {
   edgeSilenceSeconds: 0,
 };
 describe("cost planning", () => {
+  it("prices a template studio sample's narration as its opening only, every other run as all of it", () => {
+    const written: RunDraft = {
+      ...draft,
+      llm: { provider: "openrouter", model: "anthropic/claude-sonnet-4.5" },
+      sources: { ...draft.sources, article: "generate" },
+      provided: {},
+    };
+    const narration = (one: RunDraft) =>
+      estimateRun(one, {}, 1500, catalogue).rows.find((row) => row.stage === "Narration");
+    const whole = narration(written);
+    const sample = narration({ ...written, sample: { fullScript: false } });
+    expect(whole?.high).toBeGreaterThan(0);
+    expect(sample?.high).toBeGreaterThan(0);
+    // 80 words of 1,500.
+    expect((sample?.high ?? 0) / (whole?.high ?? 1)).toBeCloseTo(80 / 1500, 2);
+  });
+
   it("adds one text call per table, figure, equation or code block described", () => {
     const described = {
       ...draft,
