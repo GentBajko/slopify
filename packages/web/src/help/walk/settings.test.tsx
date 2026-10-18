@@ -184,7 +184,8 @@ function settingsDeps(extra: Readonly<Record<string, Answer>> = {}) {
     "GET /api/backups": jsonAnswer(backups),
     "GET /api/template-studio/settings": jsonAnswer({
       dailyBudget: 2,
-      today: { budget: 2, spent: 0.4, left: 1.6 },
+      samplesUsePlans: false,
+      today: { budget: 2, spent: 0.4, left: 1.6, plans: false },
     }),
     "POST /api/template-studio/samples-for-all/quote": jsonAnswer({
       items: [],

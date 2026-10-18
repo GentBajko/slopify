@@ -172,7 +172,7 @@ describe("Library → Designs explains every control", () => {
       <DesignRoute designId="d1" />,
       designDeps(design({ kind: "design", document: blankDocument("picture") })),
     );
-    await screen.findByRole("img", { name: "Version 2 of Band photo" });
+    await screen.findByRole("img", { name: /^Band photo as drawn, / });
     expectExplained();
     for (const tab of ["Text", "Formats"]) {
       await user.click(screen.getByRole("tab", { name: tab }));

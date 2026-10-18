@@ -163,7 +163,7 @@ export const settingsHelp = {
   },
   "settings.template-studio.budget": {
     title: "Daily sample budget",
-    body: "The most a template's samples, Compare models and Make samples for all may spend in one day, in US dollars, counted from midnight on this computer. At $0.00 no sample spends money. A sample that would go over it waits in the studio and says so; press Make sample once there is room again, or raise the budget. Steps on a CLI plan have no dollar price: Samples may use my CLI plans decides those. Default: $2.00, from $0 to $1,000.",
+    body: "The most the studio's samples may spend in one day, in US dollars, from midnight on this computer; at $0.00 none spends money. A sample over it waits in the studio and says so: press Make sample once there is room, or raise the budget. Steps on a CLI plan have no dollar price; Samples may use my CLI plans decides those. Default: $2.00, from $0 to $1,000.",
     tutorial: { page: "Settings-Reference", anchor: "template-studio" },
   },
   "settings.template-studio.plans": {
