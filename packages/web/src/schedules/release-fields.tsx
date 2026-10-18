@@ -82,8 +82,27 @@ function TimeCell({
   );
 }
 
+// What a line fills in beyond the schedule's saved times (the template makes more shorts now),
+// said so the form and the studio's check agree: "Short 2 has no saved time: …".
+function unsavedNote(
+  line: ScheduleRelease,
+  saved: readonly ScheduleRelease[] | undefined,
+  shorts: number,
+): string | undefined {
+  if (saved === undefined || saved.length === 0) return undefined;
+  const kept = saved.find((one) => one.day === line.day)?.shorts.length ?? 0;
+  const missing = line.shorts.slice(kept).map((_, index) => String(kept + index + 1));
+  if (missing.length === 0) return undefined;
+  const names =
+    missing.length === 1
+      ? `Short ${missing[0] ?? ""} has`
+      : `Shorts ${missing.slice(0, -1).join(", ")} and ${missing.at(-1) ?? ""} have`;
+  return `${names} no saved time: the template makes ${String(shorts)} shorts. Save changes keeps the time shown.`;
+}
+
 export function ReleaseFields({
   releases,
+  saved,
   onReleases,
   runDays,
   shorts,
@@ -92,6 +111,9 @@ export function ReleaseFields({
 }: {
   // Null: the schedule sets no release times.
   readonly releases: readonly ScheduleRelease[] | null;
+  // The release times the schedule has saved, while it is edited: a short time filled in
+  // beyond them (the template makes more shorts now) is said to be unsaved.
+  readonly saved?: readonly ScheduleRelease[] | undefined;
   readonly onReleases: (next: readonly ScheduleRelease[] | null) => void;
   readonly runDays: readonly number[];
   // How many shorts the template makes.
@@ -152,6 +174,9 @@ export function ReleaseFields({
                   />
                 ))}
               </div>
+              {unsavedNote(line, saved, shorts) === undefined ? null : (
+                <p className="m-0 text-small text-ink-3">{unsavedNote(line, saved, shorts)}</p>
+              )}
             </div>
           ))}
           {shorts === 0 ? (

@@ -474,6 +474,7 @@ export function ScheduleForm({
           </div>
           <ReleaseFields
             releases={releases}
+            saved={editing?.releases}
             onReleases={setReleases}
             runDays={runDays}
             shorts={shortCount}
