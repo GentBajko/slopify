@@ -49,6 +49,27 @@ describe("pickInPlay", () => {
     ).toMatchObject({ enabled: true, prompt: "Reels" });
   });
 
+  it("puts a post prompt on every site that posts, or on X when none does", () => {
+    const none = pickInPlay(freshDraftDocument, prompt("post", "Hooky"));
+    expect(none.document.form.social).toEqual({
+      x: { text: "prompt", prompt: "Hooky", media: { video: "long" }, hashtags: 2, link: false },
+    });
+    expect(none).toMatchObject({ section: "outputs", field: "social" });
+    const some = pickInPlay(
+      {
+        ...freshDraftDocument,
+        form: {
+          ...freshDraftDocument.form,
+          social: { bluesky: { text: "title", media: {}, hashtags: 1, link: true } },
+        },
+      },
+      prompt("post", "Hooky"),
+    );
+    expect(some.document.form.social).toEqual({
+      bluesky: { text: "prompt", prompt: "Hooky", media: {}, hashtags: 1, link: true },
+    });
+  });
+
   it("picks an intro or an outro by name", () => {
     const entry: Entry = {
       id: "e",

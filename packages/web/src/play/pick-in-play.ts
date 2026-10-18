@@ -1,5 +1,7 @@
 import type { Entry, Prompt } from "@app/slices/library/model.js";
 import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
+import { defaultChoices } from "@app/slices/social/defaults.js";
+import { socialPlatforms } from "@app/slices/social/model.js";
 import { defaultVoicesSettings } from "@app/slices/voices/model.js";
 import { emptyReviews } from "./reviews";
 import type { PlaySection } from "./sections";
@@ -72,6 +74,31 @@ export function pickInPlay(document: PlayDraftDocument, item: Prompt | Entry): U
         "content",
         "articlePrompt",
       );
+    // A Post prompt writes every site's post that is on; with none on, it turns X's on.
+    case "post": {
+      const social = form.social ?? {};
+      const on = socialPlatforms.filter((platform) => social[platform] !== undefined);
+      const sites = on.length === 0 ? (["x"] as const) : on;
+      return next(
+        {
+          social: {
+            ...social,
+            ...Object.fromEntries(
+              sites.map((platform) => [
+                platform,
+                {
+                  ...(social[platform] ?? defaultChoices[platform]),
+                  text: "prompt",
+                  prompt: item.name,
+                },
+              ]),
+            ),
+          },
+        },
+        "outputs",
+        "social",
+      );
+    }
     // A Review prompt goes to every review that is on; with none on, it turns the article's on.
     case "review": {
       const reviews = form.reviews ?? emptyReviews;

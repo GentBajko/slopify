@@ -27,6 +27,7 @@ const keywordTips = {
   description: "library.keywords.description",
   shorts: "library.keywords.shorts",
   review: "library.keywords.review",
+  post: "library.keywords.post",
   intro: "library.keywords.intro",
   outro: "library.keywords.outro",
 } as const satisfies Record<BodyKeywordPlace, HelpId>;

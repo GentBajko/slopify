@@ -20,7 +20,7 @@ export const libraryHelp = {
   // ── Prompts ──────────────────────────────────────────────────────────────────────────
   "library.prompt.kind": {
     title: "Prompt kind",
-    body: "What the prompt is for, which decides where Play offers it. Article writes the video's text, Image and Thumbnail describe pictures, Narration Preparation adds delivery cues, YouTube Description writes the description, Shorts picks the short clips, Review checks a finished stage, Script writes speaker turns for several voices.",
+    body: "What the prompt is for, which decides where Play offers it. Article writes the video's text, Image and Thumbnail describe pictures, Narration Preparation adds delivery cues, YouTube Description writes the description, Shorts picks the short clips, Review checks a finished stage, Script writes speaker turns, Post writes a post for another site.",
     tutorial: { page: "Prompts", anchor: "prompt-kinds" },
   },
   "library.prompt.name": {
@@ -68,6 +68,11 @@ export const libraryHelp = {
     body: "Used in place of an Article prompt when a run has several voices and writes a script. The text model answers with # section headings and Name: words turns, one speaker per paragraph; text in [square brackets] is not spoken. One call on the project's LLM.",
     tutorial: { page: "Prompts", anchor: "write-a-new-prompt" },
   },
+  "library.prompt.body.post": {
+    title: "Post prompt",
+    body: "Tells the text model how to write a post for X, LinkedIn, Instagram, TikTok, Reddit or Bluesky from the article. Slopify adds the site's length limit and the hashtags and link after it. One call per site that uses it, on the project's text model. Pick it in a template's Upload pack.",
+    tutorial: { page: "Posting-to-Social-Sites", anchor: "post-prompts" },
+  },
   "library.keywords.article": {
     title: "Keywords Slopify fills in Article prompts",
     body: keywordsHere("article"),
@@ -108,6 +113,11 @@ export const libraryHelp = {
     body: keywordsHere("review"),
     tutorial: digestSection,
   },
+  "library.keywords.post": {
+    title: "Keywords Slopify fills in Post prompts",
+    body: keywordsHere("post"),
+    tutorial: digestSection,
+  },
   "library.keywords.intro": {
     title: "Keywords Slopify fills in intros",
     body: keywordsHere("intro"),
@@ -120,7 +130,7 @@ export const libraryHelp = {
   },
   "library.prompt.starter": {
     title: "Starter text",
-    body: "Fills the body with ready-made text to start from: the documentary delivery cues for Narration Preparation, or the Built-in wording YouTube Description and Shorts use when no prompt is picked. When the body already has text you confirm first. Nothing is saved until you choose Save.",
+    body: "Fills the body with ready-made text to start from: the documentary delivery cues for Narration Preparation, or the Built-in wording YouTube Description, Shorts and Post use when no prompt is picked. When the body already has text you confirm first. Nothing is saved until you choose Save.",
     tutorial: { page: "Prompts", anchor: "start-from-ready-made-text" },
   },
   "library.prompt.photorealistic": {
