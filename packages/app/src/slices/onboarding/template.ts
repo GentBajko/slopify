@@ -15,7 +15,8 @@ export function packTemplate(
   return playDraftDocumentSchema.parse({
     schemaVersion: 1,
     form: {
-      title: "",
+      // The topic typed in Play, or the one a schedule fills each run, names the video.
+      title: "{{Topic}}",
       format: "16:9",
       sources: {
         research: style.research ? "generate" : "off",

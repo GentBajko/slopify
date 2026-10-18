@@ -61,6 +61,35 @@ describe("installPack", () => {
     expect(templateSummaries(deps.db)).toHaveLength(starterPacks.length);
   });
 
+  it("asks for {{Topic}}, the keyword the template's title and every schedule fill per video", () => {
+    const deps = fixture();
+    for (const pack of starterPacks) {
+      expect(pack.prompts.every((prompt) => !prompt.body.includes("{{topic}}"))).toBe(true);
+      const installed = installPack(deps, pack.id);
+      if (!installed.ok) throw new Error("not installed");
+      const template = templateById(deps.db, installed.value.templateId ?? "");
+      expect(template?.document.form.title).toBe("{{Topic}}");
+    }
+    const ids = listPrompts(deps.db).flatMap((prompt) => prompt.slots);
+    expect(new Set(ids)).toEqual(new Set(["Topic"]));
+  });
+
+  it("keeps an install made before {{Topic}}: its own prompts and template stay as they were", () => {
+    const deps = fixture();
+    const pack = starterPacks[0];
+    if (pack === undefined) throw new Error("no packs");
+    const first = installPack(deps, pack.id);
+    if (!first.ok) throw new Error("not installed");
+    const article = listPrompts(deps.db).find((one) => one.name === first.value.prompts.article);
+    if (article === undefined) throw new Error("no article prompt");
+    replacePrompt(deps.db, { ...article, body: "Old words about {{topic}}.", slots: ["topic"] });
+    const again = installPack(deps, pack.id);
+    expect(again).toMatchObject({ ok: true, value: { added: false } });
+    expect(listPrompts(deps.db).find((one) => one.id === article.id)?.body).toBe(
+      "Old words about {{topic}}.",
+    );
+  });
+
   it("never overwrites the user's prompt, voice or template of the same name", () => {
     const deps = fixture();
     const pack = starterPacks[0];

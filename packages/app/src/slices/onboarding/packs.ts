@@ -5,7 +5,8 @@ import { defaultVideoEdit } from "../video/edit-settings.js";
 
 // Starter packs: a niche's worth of library prompts, a suggested voice and a Play template
 // that uses them, installed together from the first-run screen or the Library. Every prompt
-// asks for one keyword, {{topic}}, so "pick a pack, type a topic, go" is all a first run
+// asks for one keyword, {{Topic}} (the one the template's title and every schedule fill per
+// video), so "pick a pack, type a topic, go" is all a first run
 // needs. The "starter" set is what "Make a 60-second short" uses when no pack is picked.
 
 export interface PackPrompt {
@@ -119,7 +120,7 @@ export const starterPacks: readonly StarterPack[] = [
         kind: "article",
         name: "Sleep lore · Story",
         body: [
-          "Write a long, calm bedtime telling of {{topic}} for listeners who want to drift off to sleep.",
+          "Write a long, calm bedtime telling of {{Topic}} for listeners who want to drift off to sleep.",
           "",
           "Length: 2800-3200 words.",
           "",
@@ -144,7 +145,7 @@ export const starterPacks: readonly StarterPack[] = [
         kind: "article",
         name: "Sleep lore · 60-second short",
         body: [
-          `Subject: {{topic}}, as a quiet moment from myth or legend.`,
+          `Subject: {{Topic}}, as a quiet moment from myth or legend.`,
           "",
           scriptRules,
           "- Keep the calm, hushed tone of a bedtime story even in the hook.",
@@ -155,7 +156,7 @@ export const starterPacks: readonly StarterPack[] = [
         kind: "image",
         name: "Sleep lore · Scene",
         body: [
-          "A dreamlike painted scene from the legend of {{topic}}.",
+          "A dreamlike painted scene from the legend of {{Topic}}.",
           "Soft oil-painting style with visible brushwork, muted twilight palette of deep blues, dusky violets and warm lantern gold.",
           "Gentle haze, low contrast, wide calm composition with plenty of quiet space; distant figures rather than close faces.",
           "Peaceful and still, nothing threatening in the frame.",
@@ -167,7 +168,7 @@ export const starterPacks: readonly StarterPack[] = [
         kind: "thumbnail",
         name: "Sleep lore · Thumbnail",
         body: [
-          "A serene, luminous painting that sums up the legend of {{topic}} in one image.",
+          "A serene, luminous painting that sums up the legend of {{Topic}} in one image.",
           "One clear subject in the centre, soft moonlight or candlelight, deep blue and gold palette, gentle mist.",
           "Readable at a small size: simple shapes, strong silhouette, calm mood.",
           noText,
@@ -178,7 +179,7 @@ export const starterPacks: readonly StarterPack[] = [
         kind: "description",
         name: "Sleep lore · Description",
         body: [
-          "Write a YouTube description for a sleep story about {{topic}}.",
+          "Write a YouTube description for a sleep story about {{Topic}}.",
           "",
           "- Summary: 2-3 soothing sentences that invite the viewer to settle in. Mention that the story is calm and has no sudden sounds.",
           "- Chapters: one per part of the story, 3-6 gentle words each.",
@@ -227,7 +228,7 @@ export const starterPacks: readonly StarterPack[] = [
         kind: "article",
         name: "True crime · Case",
         body: [
-          "Write a documentary narration about the case of {{topic}}.",
+          "Write a documentary narration about the case of {{Topic}}.",
           "",
           "Length: 2200-2600 words.",
           "",
@@ -253,7 +254,7 @@ export const starterPacks: readonly StarterPack[] = [
         kind: "article",
         name: "True crime · 60-second short",
         body: [
-          "Subject: one striking, well-documented moment from the case of {{topic}}.",
+          "Subject: one striking, well-documented moment from the case of {{Topic}}.",
           "",
           scriptRules,
           "- Respectful and factual: no gore, no speculation about guilt, no invented detail.",
@@ -264,7 +265,7 @@ export const starterPacks: readonly StarterPack[] = [
         kind: "image",
         name: "True crime · Scene",
         body: [
-          "A moody documentary-style photograph evoking the setting of {{topic}}: the place, the era, the objects, the weather.",
+          "A moody documentary-style photograph evoking the setting of {{Topic}}: the place, the era, the objects, the weather.",
           "Cinematic 35mm look, overcast or night light, desaturated cool palette with deep shadows and a single practical light source.",
           "Empty streets, closed doors, rain on glass, paperwork on a desk; no recognisable real people, no bodies, no blood, no weapons pointed at anyone.",
           noText,
@@ -275,7 +276,7 @@ export const starterPacks: readonly StarterPack[] = [
         kind: "thumbnail",
         name: "True crime · Thumbnail",
         body: [
-          "A tense cinematic image that sums up the case of {{topic}}: one strong object or place in sharp focus against a dark, blurred background.",
+          "A tense cinematic image that sums up the case of {{Topic}}: one strong object or place in sharp focus against a dark, blurred background.",
           "High contrast, cold blue and amber light, heavy vignette, readable at phone size.",
           "No real people's faces, no gore.",
           noText,
@@ -286,7 +287,7 @@ export const starterPacks: readonly StarterPack[] = [
         kind: "description",
         name: "True crime · Description",
         body: [
-          "Write a YouTube description for a documentary about the case of {{topic}}.",
+          "Write a YouTube description for a documentary about the case of {{Topic}}.",
           "",
           "- Summary: 2-3 factual sentences on what happened and what the video covers. No sensational words.",
           "- Chapters: split where the story moves from events to investigation to outcome; 3-6 plain words each.",
@@ -338,7 +339,7 @@ export const starterPacks: readonly StarterPack[] = [
         kind: "article",
         name: "History · Documentary",
         body: [
-          "Write a documentary narration about {{topic}}.",
+          "Write a documentary narration about {{Topic}}.",
           "",
           "Length: 2000-2400 words.",
           "",
@@ -362,7 +363,7 @@ export const starterPacks: readonly StarterPack[] = [
         kind: "article",
         name: "History · 60-second short",
         body: [
-          "Subject: one surprising, true story or detail about {{topic}}.",
+          "Subject: one surprising, true story or detail about {{Topic}}.",
           "",
           scriptRules,
           "- Put the year and the place in the first two sentences.",
@@ -373,7 +374,7 @@ export const starterPacks: readonly StarterPack[] = [
         kind: "image",
         name: "History · Scene",
         body: [
-          "A historically grounded illustration of {{topic}}: period-accurate clothing, architecture, tools and landscape.",
+          "A historically grounded illustration of {{Topic}}: period-accurate clothing, architecture, tools and landscape.",
           "Rich painterly realism in the manner of a museum reconstruction, warm golden light, earthy ochre, umber and faded blue palette.",
           "Wide establishing views and mid shots of daily life; figures shown at a distance or from behind rather than as portraits of real people.",
           noText,
@@ -384,7 +385,7 @@ export const starterPacks: readonly StarterPack[] = [
         kind: "thumbnail",
         name: "History · Thumbnail",
         body: [
-          "A dramatic, detailed painting that sums up {{topic}} in one moment: one clear focal subject, strong light from one side, dust or smoke in the air.",
+          "A dramatic, detailed painting that sums up {{Topic}} in one moment: one clear focal subject, strong light from one side, dust or smoke in the air.",
           "Warm ochre and deep blue palette, high contrast, simple composition that reads at phone size.",
           noText,
         ].join(" "),
@@ -394,7 +395,7 @@ export const starterPacks: readonly StarterPack[] = [
         kind: "description",
         name: "History · Description",
         body: [
-          "Write a YouTube description for a history documentary about {{topic}}.",
+          "Write a YouTube description for a history documentary about {{Topic}}.",
           "",
           "- Summary: 2-3 sentences that name the period and place and say what the viewer will understand by the end.",
           "- Chapters: one per section of the narration, 2-6 words each, in title case.",
@@ -438,7 +439,7 @@ export const starterPacks: readonly StarterPack[] = [
         kind: "article",
         name: "Science · Explainer",
         body: [
-          "Write an explainer video narration about {{topic}} for curious viewers with no science background.",
+          "Write an explainer video narration about {{Topic}} for curious viewers with no science background.",
           "",
           "Length: 1400-1800 words.",
           "",
@@ -463,7 +464,7 @@ export const starterPacks: readonly StarterPack[] = [
         kind: "article",
         name: "Science · 60-second short",
         body: [
-          "Subject: one mind-bending but true fact about {{topic}}, and why it is so.",
+          "Subject: one mind-bending but true fact about {{Topic}}, and why it is so.",
           "",
           scriptRules,
           "- Give one real number with its unit and a comparison that makes it graspable.",
@@ -474,7 +475,7 @@ export const starterPacks: readonly StarterPack[] = [
         kind: "image",
         name: "Science · Visual",
         body: [
-          "A clean, striking visual that explains an aspect of {{topic}}.",
+          "A clean, striking visual that explains an aspect of {{Topic}}.",
           "Modern 3D-rendered or macro-photography look, crisp detail, dark background with vivid cyan, magenta and amber accents, soft rim light.",
           "One clear subject, scientifically plausible shapes and scales, generous negative space.",
           noText,
@@ -485,7 +486,7 @@ export const starterPacks: readonly StarterPack[] = [
         kind: "thumbnail",
         name: "Science · Thumbnail",
         body: [
-          "A bold, eye-catching image about {{topic}}: one surprising subject, glowing against a deep dark background.",
+          "A bold, eye-catching image about {{Topic}}: one surprising subject, glowing against a deep dark background.",
           "Saturated cyan and amber, strong contrast, simple composition that reads at phone size.",
           noText,
         ].join(" "),
@@ -495,7 +496,7 @@ export const starterPacks: readonly StarterPack[] = [
         kind: "description",
         name: "Science · Description",
         body: [
-          "Write a YouTube description for a science explainer about {{topic}}.",
+          "Write a YouTube description for a science explainer about {{Topic}}.",
           "",
           "- Summary: 2-3 sentences that pose the question and promise a clear answer, without exaggeration.",
           "- Chapters: one per step of the explanation, 2-6 words each.",
@@ -539,14 +540,14 @@ export const starterSet: StarterPack = {
       key: "shortScript",
       kind: "article",
       name: "Starter · 60-second short",
-      body: ["Subject: {{topic}}.", "", scriptRules].join("\n"),
+      body: ["Subject: {{Topic}}.", "", scriptRules].join("\n"),
     },
     {
       key: "image",
       kind: "image",
       name: "Starter · Vertical scene",
       body: [
-        "A cinematic vertical image about {{topic}}.",
+        "A cinematic vertical image about {{Topic}}.",
         "Rich colour, dramatic light, one clear subject large in the frame so it reads on a phone.",
         "Keep the lower half calm: captions are drawn over it.",
         noText,

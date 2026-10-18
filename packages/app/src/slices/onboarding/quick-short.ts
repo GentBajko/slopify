@@ -195,7 +195,8 @@ export function shortDraft(input: {
     images: input.providers.images,
     articlePrompt: input.names.shortScript ?? "",
     imagePrompts: [{ name: input.names.image ?? "", number: shortImages }],
-    values: { topic },
+    // {{Topic}} since 4.0; a pack installed before asks for {{topic}}, so both are filled.
+    values: { Topic: topic, topic },
     provided: {},
     silenceGapSeconds: 0.5,
     imageSeconds: shortImageSeconds,

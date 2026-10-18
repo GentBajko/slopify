@@ -41,7 +41,7 @@ export function fullVideoDraft(
   if (project === undefined) return { ok: false, reason: "not-found" };
   const config = project.config;
   if (!usesShortMode(config)) return { ok: false, reason: "not-short" };
-  const topic = config.values.topic?.trim() || project.title;
+  const topic = config.values.Topic?.trim() || config.values.topic?.trim() || project.title;
   const pack = shortPack(deps, config.articlePrompt ?? "");
   const document = packDocument(deps, pack);
   if (document === undefined) return { ok: false, reason: "not-found" };
@@ -64,7 +64,8 @@ export function fullVideoDraft(
       form: {
         ...form,
         title: project.title,
-        values: { ...form.values, topic },
+        // {{Topic}} since 4.0; a pack installed before asks for {{topic}}.
+        values: { ...form.values, Topic: topic, topic },
         llm: provider(config.llm, form.llm),
         images: provider(config.images, form.images),
         audio:
