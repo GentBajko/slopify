@@ -27,9 +27,9 @@ import { draftProblem } from "./draft-problem.js";
 import { onInvalid } from "./problem.js";
 
 const idParam = z.object({ id: z.uuid() });
-const versionBody = discardDraftInputSchema.unwrap().omit({ id: true });
-const saveBody = saveDraftInputSchema.unwrap().omit({ id: true });
-const startBody = versionBody.extend({ reviewId: z.uuid() }).strict();
+export const versionBody = discardDraftInputSchema.unwrap().omit({ id: true });
+export const saveBody = saveDraftInputSchema.unwrap().omit({ id: true });
+export const startBody = versionBody.extend({ reviewId: z.uuid() }).strict();
 const summariesSchema = z
   .object({
     drafts: z.array(

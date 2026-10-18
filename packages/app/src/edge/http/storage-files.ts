@@ -7,6 +7,8 @@ import type { AppDeps } from "./app.js";
 import { onInvalid, problem } from "./problem.js";
 import { fromSlopifyPage } from "./same-page.js";
 
+export const moveFilesBody = z.object({ target: z.string().min(1).max(4096) }).strict();
+
 // Settings → Backup & storage → Your files: where projects and backups are, Open folder, and
 // moving them. A move copies and checks every file, so it answers at once and the screen polls.
 export function filesRoutes(deps: Pick<AppDeps, "files" | "log" | "remoteAccess">) {
@@ -19,20 +21,16 @@ export function filesRoutes(deps: Pick<AppDeps, "files" | "log" | "remoteAccess"
       c.header("Cache-Control", "no-store");
       return c.json(await files().view());
     })
-    .post(
-      "/move",
-      zValidator("json", z.object({ target: z.string().min(1).max(4096) }).strict(), onInvalid),
-      async (c) => {
-        const started = await files().move(c.req.valid("json").target);
-        if (!started.ok)
-          return problem(c, {
-            status: started.status,
-            detail: started.detail,
-            extensions: { field: "target" },
-          });
-        return c.json(await files().view(), 202);
-      },
-    )
+    .post("/move", zValidator("json", moveFilesBody, onInvalid), async (c) => {
+      const started = await files().move(c.req.valid("json").target);
+      if (!started.ok)
+        return problem(c, {
+          status: started.status,
+          detail: started.detail,
+          extensions: { field: "target" },
+        });
+      return c.json(await files().view(), 202);
+    })
     .post("/open", async (c) => {
       if (!fromSlopifyPage(c, deps.remoteAccess?.remoteHost))
         return problem(c, {

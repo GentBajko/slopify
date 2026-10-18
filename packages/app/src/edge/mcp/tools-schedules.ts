@@ -1,8 +1,13 @@
 import {
+  heldTopicEditSchema,
   scheduleCreateSchema,
   scheduleSaveBodySchema,
   scheduleVersionBodySchema,
+  topicMoveSchema,
+  topicQueueSchema,
+  topicTransferSchema,
 } from "../../slices/schedules/schema.js";
+import { approveHeldTopicBody, heldIds, heldRestore, prepareTopicBody } from "../http/schedules.js";
 import { formBody, type RouteTool } from "./route-tool.js";
 
 export const scheduleTools: readonly RouteTool[] = [
@@ -80,6 +85,7 @@ export const scheduleTools: readonly RouteTool[] = [
   {
     name: "prepare_topic",
     route: "POST /api/schedules/:id/topics/prepare",
+    body: prepareTopicBody,
     title: "Prepare a topic",
     description:
       "Prepare, from the schedule's topics or Open on calendar: makes the topic's project now, exactly as the schedule would, and runs everything but the video, which its scheduled day renders. It spends what Play's review estimates and is refused over the schedule's spend limit and while the schedule is paused. Body: {topic: the topic's title}.",
@@ -107,6 +113,7 @@ export const scheduleTools: readonly RouteTool[] = [
   {
     name: "approve_topics",
     route: "POST /api/schedules/:id/topics/held/approve",
+    body: heldIds,
     title: "Approve selected topics",
     description:
       "Approve selected: moves these held topics into the queue. Body: {ids: [held topic ids]}.",
@@ -114,6 +121,7 @@ export const scheduleTools: readonly RouteTool[] = [
   {
     name: "reject_topics",
     route: "POST /api/schedules/:id/topics/held/reject",
+    body: heldIds,
     title: "Reject selected topics",
     description:
       "Reject selected, or Reject all with every id shown: later generations won't suggest them again. Body: {ids: [held topic ids]}.",
@@ -121,12 +129,14 @@ export const scheduleTools: readonly RouteTool[] = [
   {
     name: "restore_topics",
     route: "POST /api/schedules/:id/topics/held/restore",
+    body: heldRestore,
     title: "Bring rejected topics back",
     description: `The Undo after a rejection: puts turned-down topics back. ${formBody("the Undo in the rejection's message")}`,
   },
   {
     name: "approve_topic",
     route: "POST /api/schedules/:id/topics/held/:topicId/approve",
+    body: approveHeldTopicBody,
     title: "Approve a topic",
     description: formBody("Approve in Calendar → Suggested topics"),
   },
@@ -139,24 +149,28 @@ export const scheduleTools: readonly RouteTool[] = [
   {
     name: "edit_held_topic",
     route: "PUT /api/schedules/:id/topics/held/:topicId",
+    body: heldTopicEditSchema,
     title: "Edit a suggested topic",
     description: formBody("the suggested topic's editor"),
   },
   {
     name: "set_topic_queue",
     route: "PUT /api/schedules/:id/topics",
+    body: topicQueueSchema,
     title: "Set the topic queue",
     description: `${formBody("the schedule's topic queue")} Bulk paste is this with the pasted topics added to the queue.`,
   },
   {
     name: "move_topic",
     route: "POST /api/schedules/:id/topics/move",
+    body: topicMoveSchema,
     title: "Move a topic",
     description: `Reorders the queue. ${formBody("the topic queue's move")}`,
   },
   {
     name: "transfer_topic",
     route: "POST /api/schedules/:id/topics/transfer",
+    body: topicTransferSchema,
     title: "Move a topic to another schedule",
     description: formBody("the topic queue's move to another schedule"),
   },

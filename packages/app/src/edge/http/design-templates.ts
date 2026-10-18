@@ -63,7 +63,7 @@ export interface DesignTemplateRoutesDeps extends TemplateMakeDeps {
   readonly templateChanged?: ((templateId: string) => void) | undefined;
 }
 
-const sampleRequestSchema = z
+export const sampleRequestSchema = z
   .object({
     version: z.number().int().min(1),
     acknowledgedHigh: z.number().min(0).max(1000),

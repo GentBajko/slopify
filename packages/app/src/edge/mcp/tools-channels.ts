@@ -1,3 +1,4 @@
+import { castGenerateSchema } from "../../slices/channels/schema.js";
 import { formBody, type RouteTool } from "./route-tool.js";
 
 export const channelTools: readonly RouteTool[] = [
@@ -75,6 +76,7 @@ export const channelTools: readonly RouteTool[] = [
   {
     name: "generate_cast_picture",
     route: "POST /api/channels/cast/:memberId/generate",
+    body: castGenerateSchema,
     title: "Generate a cast picture",
     description:
       "Draws a cast picture with the image provider, a paid call, like Generate on the Cast tab.",

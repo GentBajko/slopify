@@ -48,7 +48,7 @@ const voiceLanguagesBody = z.object({ languages: z.array(z.string().max(20)).max
 const voiceRealPersonBody = z.object({ imitatesRealPerson: z.boolean() });
 // Length and scheme are the slice's rules, so their sentences reach the field; this bound only
 // keeps a pasted novel off the parser.
-const notificationBody = z.object({ url: z.string().max(notificationUrlMax * 2) });
+export const notificationBody = z.object({ url: z.string().max(notificationUrlMax * 2) });
 // Shape and a generous bound only; `channelLinksProblem` says what is wrong in Settings' words.
 export const channelLinksBody = z.object({
   links: z

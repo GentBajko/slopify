@@ -1,4 +1,5 @@
 import { afterEach, expect, it } from "vitest";
+import { isGated } from "../../slices/assistant/gate.js";
 import { excludedRoutes } from "./excluded-routes.js";
 import { connectAgent, mcpFixture } from "./mcp.fake.js";
 import { routeTools } from "./tools.js";
@@ -179,4 +180,63 @@ it("offers designs with the confirm sentence Mark ready shows and takes a pictur
   expect(tool("upload_design_picture")?.upload).toBe("raw");
   for (const name of ["edit_design_picture", "make_design_artwork", "make_design_from_template"])
     expect(tool(name)?.description).toContain("acknowledgedHigh");
+});
+
+// The gated tools whose route reads no JSON body (an id in the path, or nothing at all). A new
+// gated tool must declare `body` (the schema its route's zValidator takes) or be named here.
+const gatedWithoutBody: ReadonlySet<string> = new Set([
+  "trash_project",
+  "keep_project_outputs",
+  "delete_old_versions",
+  "reset_description_field",
+  "delete_staged_file",
+  "generate_topics",
+  "score_topics",
+  "approve_all_topics",
+  "delete_channel",
+  "delete_cast_member",
+  "delete_cast_picture",
+  "delete_episode_memory",
+  "remove_channel_videos",
+  "remove_channel_video",
+  "delete_design",
+  "delete_design_template",
+  "delete_prompt",
+  "delete_entry",
+  "delete_document_theme",
+  "send_test_notification",
+  "remove_voice",
+  "check_providers",
+  "switch_all_retired_models",
+  "restore_from_trash",
+  "delete_from_trash",
+  "discard_bakeoff",
+]);
+
+it("gives every gated tool that takes a JSON body the route's own schema", () => {
+  const gated = routeTools.filter(
+    (tool) =>
+      tool.route.split(" ")[0] !== "GET" &&
+      tool.upload === undefined &&
+      isGated({
+        name: tool.name,
+        method: tool.route.split(" ")[0] ?? "",
+        confirm: tool.confirm,
+        sends: tool.reachesOut === "sends",
+      }),
+  );
+  expect(
+    gated
+      .filter((tool) => tool.body === undefined && !gatedWithoutBody.has(tool.name))
+      .map((tool) => tool.name),
+  ).toEqual([]);
+  // The list stays honest: a tool that declares a body is not also said to have none.
+  expect(
+    gated
+      .filter((tool) => tool.body !== undefined && gatedWithoutBody.has(tool.name))
+      .map((tool) => tool.name),
+  ).toEqual([]);
+  expect([...gatedWithoutBody].filter((name) => !gated.some((tool) => tool.name === name))).toEqual(
+    [],
+  );
 });

@@ -1,3 +1,14 @@
+import { createDraftInputSchema } from "../../slices/play-drafts/schema.js";
+import { templateCreateSchema } from "../../slices/project-templates/schema.js";
+import { startBody, versionBody } from "../http/drafts.js";
+import {
+  nextChapterBody,
+  templateDeleteBody,
+  templateFromProjectBody,
+  templateInstantiateBody,
+  templateUpdateBody,
+} from "../http/project-templates.js";
+import { saveBody } from "../http/revisions.js";
 import { formBody, type RouteTool } from "./route-tool.js";
 
 const drafts: readonly RouteTool[] = [
@@ -10,6 +21,7 @@ const drafts: readonly RouteTool[] = [
   {
     name: "create_draft",
     route: "POST /api/drafts",
+    body: createDraftInputSchema,
     title: "Create a Play draft",
     description:
       "Create, like New project: a draft whose document is the Play form (kind and outputs, format including square 1:1, sources, prompts, voices, reviews, the queue switch). Body: {id: a new UUID, document}. get_draft shows a document's shape; instantiate_template makes one from a template.",
@@ -23,6 +35,7 @@ const drafts: readonly RouteTool[] = [
   {
     name: "save_draft",
     route: "PUT /api/drafts/:id",
+    body: saveBody,
     title: "Save a Play draft",
     description:
       "Saves the draft's document; queue: true is Play's Queue switch, so several videos run one after another. Body: {baseVersion: the draft's version, mutationId: a new UUID, document}.",
@@ -30,12 +43,14 @@ const drafts: readonly RouteTool[] = [
   {
     name: "fork_draft",
     route: "POST /api/drafts/:id/fork",
+    body: createDraftInputSchema,
     title: "Copy a Play draft",
     description: "Body: {id: a new UUID for the copy, sourceId: this draft's id, document}.",
   },
   {
     name: "discard_draft",
     route: "DELETE /api/drafts/:id",
+    body: versionBody,
     title: "Discard a Play draft",
     description: "Body: {baseVersion}.",
     confirm: "This discards the draft and its uploaded files for good.",
@@ -43,6 +58,7 @@ const drafts: readonly RouteTool[] = [
   {
     name: "review_draft",
     route: "POST /api/drafts/:id/review",
+    body: versionBody,
     title: "Review a Play draft",
     description:
       "Play's Review step: readiness, warnings and the cost estimate the person sees before Start. Body: {baseVersion}. start_draft needs this review's id.",
@@ -51,6 +67,7 @@ const drafts: readonly RouteTool[] = [
   {
     name: "start_draft",
     route: "POST /api/drafts/:id/start",
+    body: startBody,
     title: "Start a Play draft",
     description:
       "Start in Play: starts the reviewed draft's runs, which spend what the review estimated. Body: {baseVersion, reviewId: the id review_draft returned}.",
@@ -105,18 +122,21 @@ const templates: readonly RouteTool[] = [
   {
     name: "create_template",
     route: "POST /api/project-templates",
+    body: templateCreateSchema,
     title: "Create a template",
     description: `${formBody("the template editor")} ${templateGateRule}`,
   },
   {
     name: "template_from_project",
     route: "POST /api/project-templates/from-project/:projectId",
+    body: templateFromProjectBody,
     title: "Save a project as a template",
     description: `${formBody("Save as template on the project page")} ${templateGateRule}`,
   },
   {
     name: "next_chapter_template",
     route: "POST /api/project-templates/next-chapter/:projectId",
+    body: nextChapterBody,
     title: "Template for the next chapter",
     description: `${formBody("Next chapter on the project page")} ${templateGateRule}`,
   },
@@ -129,12 +149,14 @@ const templates: readonly RouteTool[] = [
   {
     name: "update_template",
     route: "PUT /api/project-templates/:id",
+    body: templateUpdateBody,
     title: "Save a template",
     description: `${formBody("the template editor")} Saving adds a version. ${templateGateRule}`,
   },
   {
     name: "delete_template",
     route: "DELETE /api/project-templates/:id",
+    body: templateDeleteBody,
     title: "Delete a template",
     description: formBody("Delete in Library → Templates"),
     confirm:
@@ -143,6 +165,7 @@ const templates: readonly RouteTool[] = [
   {
     name: "instantiate_template",
     route: "POST /api/project-templates/:id/instantiate",
+    body: templateInstantiateBody,
     title: "Use a template",
     description: "Opens a new Play draft from the template, like Use template.",
   },

@@ -1,21 +1,27 @@
+import { revisionControlSchema } from "../../slices/control/revision-control-schema.js";
+import { previewRebuildSchema, startRebuildSchema } from "../../slices/rebuild/model.js";
+import { restoreBody, saveBody } from "../http/revisions.js";
 import { control, type RouteTool } from "./route-tool.js";
 
 const runs: readonly RouteTool[] = [
   {
     name: "pause_project",
     route: "POST /api/projects/:id/pause",
+    body: revisionControlSchema,
     title: "Pause",
     description: `Pause: the run stops after the steps already sent finish; nothing starts until resume_project. ${control}`,
   },
   {
     name: "resume_project",
     route: "POST /api/projects/:id/resume",
+    body: revisionControlSchema,
     title: "Continue the run",
     description: `Continue the run: starts the project's held and unfinished work, including work a saved edit left waiting. On a canceled run it resumes the whole run, the canceled steps too; once a step of it was taken up again (retry_stage), only the steps taken up again go on and the rest stay canceled. ${control}`,
   },
   {
     name: "cancel_project",
     route: "POST /api/projects/:id/cancel",
+    body: revisionControlSchema,
     title: "Cancel run",
     description: `Cancel run: stops every running stage of the project. ${control}`,
     confirm: "Cancel this run? It stops every running stage; finished outputs are kept.",
@@ -23,12 +29,14 @@ const runs: readonly RouteTool[] = [
   {
     name: "retry_stage",
     route: "POST /api/projects/:id/stages/:kind/retry",
+    body: revisionControlSchema,
     title: "Try again",
     description: `Try again on a failed step (kind: research, article, audio, images, thumbnail, video or document), keeping what it already made. ${control}`,
   },
   {
     name: "soften_stage",
     route: "POST /api/projects/:id/stages/:kind/soften",
+    body: revisionControlSchema,
     title: "Soften and retry",
     description: `Soften and retry, for a picture a content filter refused (kind images or thumbnail, or video for a short's picture): rewords the refused prompts and draws them again. ${control}`,
     confirm:
@@ -37,6 +45,7 @@ const runs: readonly RouteTool[] = [
   {
     name: "rerun_stage",
     route: "POST /api/projects/:id/stages/:kind/rerun",
+    body: revisionControlSchema,
     title: "Re-run a stage",
     description: `Re-run section: makes a stage again and everything built on it. A re-run that costs money is refused until it is reviewed: use preview_rebuild (Choose what to remake), then start_rebuild. ${control}`,
     confirm:
@@ -76,6 +85,7 @@ const revisions: readonly RouteTool[] = [
   {
     name: "save_revision",
     route: "POST /api/projects/:id/revisions",
+    body: saveBody,
     title: "Save an edit",
     description:
       "Saves an edit as a new version, like Save in Edit project; it starts nothing. Body: {baseRevisionId, idempotencyKey: a new UUID, edit: {config, content, regenerate?: [work keys to make again, such as a narration chunk key], uploads?: [{stagedFileId, destination}]}}; send get_revision's revision.config and revision.content with your change. One chunk's wording or delivery note is content.narrationOverrides[chunk key] = {kind: \"text\", text, direction?}. Finished shorts kept through a new pick are content.shortsKeep: leave one out to pick a new moment for it, and lower config.shorts.count as well to drop it. Then preview_rebuild (Choose what to remake) says what it makes and costs, and start_rebuild starts it.",
@@ -83,6 +93,7 @@ const revisions: readonly RouteTool[] = [
   {
     name: "restore_revision",
     route: "POST /api/projects/:id/revisions/restore",
+    body: restoreBody,
     title: "Restore a version",
     description:
       "Makes an earlier version current again, like Restore this revision; it starts nothing. Body: {baseRevisionId, idempotencyKey: a new UUID, targetRevisionId}.",
@@ -90,6 +101,7 @@ const revisions: readonly RouteTool[] = [
   {
     name: "preview_rebuild",
     route: "POST /api/projects/:id/rebuild/preview",
+    body: previewRebuildSchema,
     title: "Choose what to remake",
     description:
       'Choose what to remake: what a remake makes again, reuses or leaves blocked, each output\'s estimate and the total, like the project\'s Choose what to remake. Body: {baseRevisionId, request: {kind: "allAffected"} | {kind: "selected", workKeys: [...]}}. Nothing starts; start_rebuild does, with this preview\'s id.',
@@ -98,6 +110,7 @@ const revisions: readonly RouteTool[] = [
   {
     name: "start_rebuild",
     route: "POST /api/projects/:id/rebuild",
+    body: startRebuildSchema,
     title: "Start a remake",
     description:
       "Starts the remake you previewed: the acknowledgement Choose what to remake asks for. Body: {baseRevisionId, idempotencyKey: a new UUID, previewId: the preview's id, acknowledgeUnknownCosts: true only after reading the preview's unknown costs, confirmedProvidedWorkKeys: the preview's providedReuseRequired keys you accept replacing}.",

@@ -19,8 +19,8 @@ import { refusal } from "./refusal.js";
 const id = idString;
 const projectParam = idParam;
 const revisionParam = projectParam.extend({ revisionId: id });
-const saveBody = saveRevisionSchema.extend({ idempotencyKey: z.uuid() });
-const restoreBody = restoreRevisionSchema.extend({ idempotencyKey: z.uuid() });
+export const saveBody = saveRevisionSchema.extend({ idempotencyKey: z.uuid() });
+export const restoreBody = restoreRevisionSchema.extend({ idempotencyKey: z.uuid() });
 const statuses = {
   "no-project": 404,
   "no-revision": 404,

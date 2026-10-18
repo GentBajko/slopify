@@ -408,7 +408,11 @@ describe("/mcp/assistant", () => {
     for (const confirmed of [undefined, true]) {
       const result = await client.callTool({
         name: "resume_project",
-        arguments: { id: h.projectId, ...(confirmed === undefined ? {} : { confirmed }) },
+        arguments: {
+          id: h.projectId,
+          body: { baseRevisionId: "r", idempotencyKey: crypto.randomUUID() },
+          ...(confirmed === undefined ? {} : { confirmed }),
+        },
       });
       expect(result.isError).toBe(true);
       expect(textOf(result)).toContain("Waiting for the person: Slopify showed them «Continue");
@@ -529,7 +533,16 @@ describe("/mcp/assistant", () => {
     );
     const result = await client.callTool({
       name: "start_rebuild",
-      arguments: { id: h.projectId, body: { previewId: "v1", baseRevisionId: "r" } },
+      arguments: {
+        id: h.projectId,
+        body: {
+          previewId: "v1",
+          baseRevisionId: "r",
+          idempotencyKey: crypto.randomUUID(),
+          acknowledgeUnknownCosts: false,
+          confirmedProvidedWorkKeys: [],
+        },
+      },
     });
     expect(textOf(result)).toContain(
       "Start a remake for “Saved”. This starts paid work: estimated at $0.40–$0.85; 1 step has no price in the catalogue.",

@@ -16,7 +16,7 @@ import { onInvalid, problem } from "./problem.js";
 const providerParam = z.object({ id: z.enum(providerIds) });
 const modelList = z.string().min(1).max(200);
 const estimateQuery = z.object({ models: z.string().max(10_000).optional() });
-const checkBody = z
+export const checkBody = z
   .object({
     models: z.array(modelList).max(300).optional(),
     confirmedDollars: z.number().finite().nonnegative().optional(),

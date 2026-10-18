@@ -23,7 +23,7 @@ const line = z.object({
   model: z.string().min(1).max(200),
   text: z.string().trim().min(1).max(auditionLineMax),
 });
-const quoteBody = z.object({
+export const quoteBody = z.object({
   lines: z
     .array(line.extend({ speaker: z.string().max(100) }))
     .min(1)

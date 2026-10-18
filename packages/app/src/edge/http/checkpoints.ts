@@ -21,7 +21,7 @@ import { refusal } from "./refusal.js";
 const id = idString;
 const projectParam = idParam;
 const approvalParam = projectParam.extend({ checkpointId: id });
-const approvalBody = checkpointApprovalSchema
+export const approvalBody = checkpointApprovalSchema
   .unwrap()
   .omit({ projectId: true, checkpointId: true, approvedAt: true });
 function refused(c: Context, reason: string): Response {

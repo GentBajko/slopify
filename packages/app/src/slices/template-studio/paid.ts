@@ -142,15 +142,20 @@ function outcome(db: DatabaseSync, projectId: string): { readonly failed: string
   return { failed: null };
 }
 
-// A step's sentence names a project's Try again (on its stage); the studio's button for it is
-// Make sample.
-function studioWords(reason: string): string {
+// A step's sentence names a project's Try again (on its stage); a studio's own button for it
+// is another: Make sample for a sample, Compare again for a model comparison. `then` is what
+// follows the button's name in the sentence.
+export function studioWords(
+  reason: string,
+  button: string = "Make sample",
+  then: string = " to try again",
+): string {
   return reason.replace(
     /(\b[UuPp](?:se|ress) )?Try again(?: on [A-Z][a-z]+)?/g,
     (_, verb: string | undefined, at: number) => {
       const opens =
         verb === undefined ? /(^|[.;:!?]\s+)$/.test(reason.slice(0, at)) : /^[UP]/.test(verb);
-      return `${opens ? "Press" : "press"} Make sample to try again`;
+      return `${opens ? "Press" : "press"} ${button}${then}`;
     },
   );
 }

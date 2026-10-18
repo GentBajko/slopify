@@ -28,6 +28,15 @@ import { onInvalid, problem } from "./problem.js";
 import { refusal } from "./refusal.js";
 
 const param = z.object({ id: z.uuid() });
+
+// The JSON bodies; the id or project the path names is not part of them.
+export const templateFromProjectBody = templateFromProjectSchema.unwrap().omit({ projectId: true });
+export const nextChapterBody = nextChapterSchema.unwrap().omit({ projectId: true });
+export const templateUpdateBody = templateUpdateSchema.unwrap().omit({ id: true });
+export const templateDeleteBody = templateDeleteSchema.unwrap().omit({ id: true });
+export const templateInstantiateBody = templateInstantiateSchema
+  .unwrap()
+  .omit({ templateId: true });
 function refused(c: Context, result: Extract<TemplateResult<never>, { ok: false }>): Response {
   return refusal(c, result.reason, {
     statuses: { "not-found": 404, conflict: 409, "referenced-by-schedule": 409 },
@@ -71,7 +80,7 @@ function routes(deps: DraftDeps | undefined) {
           templateFromProjectSchema.unwrap().pick({ projectId: true }),
           onInvalid,
         ),
-        zValidator("json", templateFromProjectSchema.unwrap().omit({ projectId: true }), onInvalid),
+        zValidator("json", templateFromProjectBody, onInvalid),
         (c) => {
           const result = createTemplateFromProject(service(), {
             ...c.req.valid("json"),
@@ -84,7 +93,7 @@ function routes(deps: DraftDeps | undefined) {
       .post(
         "/next-chapter/:projectId",
         zValidator("param", nextChapterSchema.unwrap().pick({ projectId: true }), onInvalid),
-        zValidator("json", nextChapterSchema.unwrap().omit({ projectId: true }), onInvalid),
+        zValidator("json", nextChapterBody, onInvalid),
         (c) => {
           const result = makeNextChapter(service(), {
             ...c.req.valid("json"),
@@ -124,7 +133,7 @@ function routes(deps: DraftDeps | undefined) {
       .put(
         "/:id",
         zValidator("param", param, onInvalid),
-        zValidator("json", templateUpdateSchema.unwrap().omit({ id: true }), onInvalid),
+        zValidator("json", templateUpdateBody, onInvalid),
         (c) => {
           const result = updateTemplate(service(), {
             ...c.req.valid("json"),
@@ -136,7 +145,7 @@ function routes(deps: DraftDeps | undefined) {
       .delete(
         "/:id",
         zValidator("param", param, onInvalid),
-        zValidator("json", templateDeleteSchema.unwrap().omit({ id: true }), onInvalid),
+        zValidator("json", templateDeleteBody, onInvalid),
         (c) => {
           const result = deleteTemplate(service(), {
             ...c.req.valid("json"),
@@ -148,11 +157,7 @@ function routes(deps: DraftDeps | undefined) {
       .post(
         "/:id/instantiate",
         zValidator("param", param, onInvalid),
-        zValidator(
-          "json",
-          templateInstantiateSchema.unwrap().omit({ templateId: true }),
-          onInvalid,
-        ),
+        zValidator("json", templateInstantiateBody, onInvalid),
         (c) => {
           const result = instantiateTemplate(service(), {
             ...c.req.valid("json"),

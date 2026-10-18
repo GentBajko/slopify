@@ -378,7 +378,13 @@ describe("makeBakeoff", () => {
     expect(clonesOf(deps.db, bakeoffOf(deps.db, id)?.id ?? "")[0]?.projectId).toBeNull();
   });
 
-  it("says each model's own failure", async () => {
+  it.each([
+    ["The model refused the prompt.", "The model refused the prompt."],
+    [
+      "Fix the key, then use Try again on Images. Or Try again later.",
+      "Fix the key, then press Compare again. Or press Compare again later.",
+    ],
+  ])("says each model's own failure (%s), naming Compare again", async (reason, said) => {
     const { deps, paid, id, other, sample, job } = await harness();
     await sample();
     const started = await startBakeoff({ ...deps, uuid: randomUUID }, id, {
@@ -398,9 +404,9 @@ describe("makeBakeoff", () => {
           .run(projectId);
         deps.db
           .prepare(
-            "UPDATE stages SET state=CASE WHEN state IN ('pending','running') THEN 'failed' ELSE state END, failure_reason='The model refused the prompt.' WHERE project_id=?",
+            "UPDATE stages SET state=CASE WHEN state IN ('pending','running') THEN 'failed' ELSE state END, failure_reason=? WHERE project_id=?",
           )
-          .run(projectId);
+          .run(reason, projectId);
       },
     };
     await makeBakeoff(
@@ -415,7 +421,7 @@ describe("makeBakeoff", () => {
     });
     expect(clonesOf(deps.db, row?.id ?? "")[0]).toMatchObject({
       state: "failed",
-      failure: "The model refused the prompt.",
+      failure: said,
     });
   });
 });

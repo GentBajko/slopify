@@ -33,7 +33,7 @@ const healthQuery = z.object({ provider: z.enum(providerIds).optional() });
 const pathBody = z.object({ path: z.string().max(cliPathMaxLength) });
 const keyBody = z.object({ key: z.string().min(1).max(4096) });
 const modelId = z.string().min(1).max(200);
-const switchBody = z
+export const switchBody = z
   .object({
     kind: z.enum(usageKinds),
     id: z.string().min(1).max(64),

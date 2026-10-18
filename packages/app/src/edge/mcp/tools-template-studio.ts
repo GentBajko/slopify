@@ -1,3 +1,4 @@
+import { bakeoffStartSchema } from "../../slices/template-studio/bakeoff.js";
 import { studioSettingsSchema } from "../../slices/template-studio/budget.js";
 import { samplesForAllSchema } from "../../slices/template-studio/for-all.js";
 import { markReadySchema } from "../../slices/template-studio/ready.js";
@@ -167,6 +168,7 @@ export const templateStudioTools: readonly RouteTool[] = [
   {
     name: "start_bakeoff",
     route: "POST /api/template-studio/:id/bakeoff",
+    body: bakeoffStartSchema,
     title: "Compare models on a template's sample",
     description:
       "Makes the section's sample again on each model, each on a hidden copy of the template's sample with only that section's work started, which spends money: price it first with quote_bakeoff and pass its high as acknowledgedHigh (and acknowledgedUnknown: true to accept steps with no price). A higher total, an unaccepted unknown price or a total past today's budget is refused with the new quote, starting nothing. The template doesn't change: read the results with get_bakeoff, then switch the model with save_template_studio and discard the copies with discard_bakeoff.",

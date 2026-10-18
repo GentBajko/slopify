@@ -22,7 +22,7 @@ const itemParam = z.object({
 
 // Settings → Trash's Restore selected / Restore all and Delete selected / Empty trash: the
 // items named, each done on its own so one refusal leaves the rest done.
-const manySchema = z.object({ items: z.array(itemParam).min(1).max(5000) });
+export const manySchema = z.object({ items: z.array(itemParam).min(1).max(5000) });
 
 // A template comes back before the schedules that run it, so restoring both at once works.
 const restoreOrder: Readonly<Record<TrashKind, number>> = {

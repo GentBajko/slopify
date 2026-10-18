@@ -1,3 +1,16 @@
+import {
+  editPictureSchema,
+  makeArtworkSchema,
+  quoteEditSchema,
+  retryStepSchema,
+} from "../../slices/designs/requests.js";
+import { makeFromTemplateSchema } from "../../slices/designs/template-make.js";
+import {
+  createTemplateSchema,
+  markReadySchema as markDesignReadySchema,
+  saveTemplateSchema,
+} from "../../slices/designs/templates.js";
+import { sampleRequestSchema } from "../http/design-templates.js";
 import { formBody, type RouteTool } from "./route-tool.js";
 
 // Library → Designs: pictures edited step by step and designed pieces (posters, flyers,
@@ -53,6 +66,7 @@ export const designTools: readonly RouteTool[] = [
   {
     name: "quote_design_edit",
     route: "POST /api/designs/:id/quote",
+    body: quoteEditSchema,
     title: "Price a picture edit",
     description:
       "What one edit costs with this model. Body: {provider, model, castMemberIds?}. Records nothing.",
@@ -68,18 +82,21 @@ export const designTools: readonly RouteTool[] = [
   {
     name: "edit_design_picture",
     route: "POST /api/designs/:id/edit",
+    body: editPictureSchema,
     title: "Edit the picture",
     description: `Changes a version of the picture as the instruction says; the result lands as the next version (read get_design until it is ready or failed). This is ${paid}. Body: {mutationId: a new UUID, fromStepId, instruction, provider, model, castMemberIds?, acknowledgedHigh}.`,
   },
   {
     name: "make_design_artwork",
     route: "POST /api/designs/:id/artwork",
+    body: makeArtworkSchema,
     title: "Make the artwork",
     description: `Draws the designed piece's artwork from its picture prompt with its fields filled. This is ${paid}. Body: {mutationId: a new UUID, acknowledgedHigh}.`,
   },
   {
     name: "retry_design_step",
     route: "POST /api/designs/:id/steps/:stepId/retry",
+    body: retryStepSchema,
     title: "Try a failed version again",
     description:
       "Asks the provider again for a version that failed, as Try again does. It is paid again, even for a version a restart stopped that may already have been charged: send acknowledgedHigh as the high price quote_design_edit (an edited picture) or quote_design_artwork (artwork) gives for that version's provider and model, and acknowledgedUnknown: true when that price is unknown; refused with the current quote when it differs. Body: {acknowledgedHigh, acknowledgedUnknown?}.",
@@ -113,6 +130,7 @@ export const designTools: readonly RouteTool[] = [
   {
     name: "create_design_template",
     route: "POST /api/design-templates",
+    body: createTemplateSchema,
     title: "Create a design template",
     description: "Body: {id: a new id, mutationId: a new UUID, name, document, channelId?}.",
   },
@@ -125,6 +143,7 @@ export const designTools: readonly RouteTool[] = [
   {
     name: "save_design_template",
     route: "PUT /api/design-templates/:id",
+    body: saveTemplateSchema,
     title: "Save a design template",
     description: `Saves a new version. Body: {baseVersion: the headVersion get_design_template returns, name, document, sample?: "make" | "skip", acknowledgedHigh?}. ${formBody("the template editor")}`,
   },
@@ -147,12 +166,14 @@ export const designTools: readonly RouteTool[] = [
   {
     name: "make_design_template_sample",
     route: "POST /api/design-templates/:id/sample",
+    body: sampleRequestSchema,
     title: "Make a template's sample",
     description: `Makes the template editor's sample of a version now, when it is held (it cost more than shown, a price is unknown or the day's sample budget is spent), failed or not made yet. This is ${paid}. Body: {version, acknowledgedHigh: the quote's high}.`,
   },
   {
     name: "mark_design_template_ready",
     route: "POST /api/design-templates/:id/ready",
+    body: markDesignReadySchema,
     title: "Mark a template version ready",
     description:
       "Runs the version's checks and marks it ready when they pass; refused with the checks that failed. Body: {version}.",
@@ -161,6 +182,7 @@ export const designTools: readonly RouteTool[] = [
   {
     name: "make_design_from_template",
     route: "POST /api/design-templates/:id/make",
+    body: makeFromTemplateSchema,
     title: "Make a piece from a template",
     description: `Makes one designed piece from a template version with these values and starts its artwork. This is ${paid}. Body: {mutationId: a new UUID, values, acknowledgedHigh, version?, name?, projectId?}.`,
   },

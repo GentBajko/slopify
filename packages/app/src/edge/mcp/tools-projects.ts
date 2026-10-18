@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { checkpointChangeSchema } from "../../slices/checkpoints/change.js";
+import { revisionControlSchema } from "../../slices/control/revision-control-schema.js";
+import {
+  addOutputPreviewRequestSchema,
+  addOutputRequestSchema,
+} from "../../slices/outputs/model.js";
 import { oldVersionsConsequence } from "../../slices/storage/consequences.js";
+import { approvalBody } from "../http/checkpoints.js";
 import { control, type RouteTool } from "./route-tool.js";
 import { listWithStateWords, projectWithStateWords } from "./state-shapes.js";
 
@@ -152,6 +158,7 @@ const outputs: readonly RouteTool[] = [
   {
     name: "preview_added_output",
     route: "POST /api/projects/:id/outputs/preview",
+    body: addOutputPreviewRequestSchema,
     title: "Preview another output",
     description:
       "Add another output, first step: what the new output reuses, makes and is estimated to cost, and any choice the project lacks for it. Body: {baseRevisionId, kind: narration | audiobook | images | video | pdf | podcast}.",
@@ -160,6 +167,7 @@ const outputs: readonly RouteTool[] = [
   {
     name: "add_output",
     route: "POST /api/projects/:id/outputs",
+    body: addOutputRequestSchema,
     title: "Add another output",
     description:
       'Switches the output on as a new version and answers the workKeys to make; it starts nothing. Then preview_rebuild with {kind: "selected", workKeys} and start_rebuild, as the page\'s Add does. Body: {baseRevisionId, idempotencyKey: a new UUID, kind, adapt?: true to accept rewriting the text as a conversation}.',
@@ -177,6 +185,7 @@ const decisions: readonly RouteTool[] = [
   {
     name: "approve_checkpoint",
     route: "POST /api/projects/:id/checkpoints/:checkpointId/approve",
+    body: approvalBody,
     title: "Approve a checkpoint",
     description:
       "Approves a held checkpoint so the stages after it run, like Approve on the project page. Body: {revisionId, fingerprint: the gate's currentFingerprint, idempotencyKey: a new UUID}.",
@@ -206,6 +215,7 @@ const decisions: readonly RouteTool[] = [
   {
     name: "redo_review",
     route: "POST /api/projects/:id/reviews/:verdictId/redo",
+    body: revisionControlSchema,
     title: "Redo a flagged item",
     description: `Makes a flagged item again, like Redo beside it. ${control}`,
   },

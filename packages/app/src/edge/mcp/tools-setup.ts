@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { type Readiness, readinessIsUsable } from "../../kernel/ports/model.js";
+import { quoteBody } from "../http/auditions.js";
+import { checkBody } from "../http/model-checks.js";
+import { switchBody } from "../http/providers.js";
+import { notificationBody } from "../http/settings.js";
 import { formBody, type RouteTool } from "./route-tool.js";
 
 const readinessShape = z.discriminatedUnion("kind", [
@@ -101,6 +105,7 @@ const settings: readonly RouteTool[] = [
   {
     name: "set_notification_url",
     route: "PUT /api/settings/notifications",
+    body: notificationBody,
     title: "Save the Notification URL",
     description:
       "Body: {url: an http(s) address, or empty to stop}. Answers configured or missing, never the address.",
@@ -148,6 +153,7 @@ const settings: readonly RouteTool[] = [
   {
     name: "quote_voice_sample",
     route: "POST /api/auditions/quote",
+    body: quoteBody,
     title: "Price a voice sample",
     description:
       "Try a sample's price, as Play shows it before playing one. Body: {lines: [{speaker, provider, model, text}]}.",
@@ -222,6 +228,7 @@ const providers: readonly RouteTool[] = [
   {
     name: "check_models",
     route: "POST /api/providers/:id/models/check",
+    body: checkBody,
     title: "Check a provider's models",
     description:
       "Settings → Models' Check models: sends each model the smallest request (one word, a spoken Hi, one small image) to learn whether it works for the saved key or CLI, in the background. A check that costs money is refused with its estimate until the body carries confirmedDollars of at least the estimate's totalDollars (read estimate_model_checks first). Body: {models?: [ids], confirmedDollars?: number}.",
@@ -292,6 +299,7 @@ const providers: readonly RouteTool[] = [
   {
     name: "switch_retired_model",
     route: "POST /api/providers/catalogue/retired/switch",
+    body: switchBody,
     title: "Switch a retired model",
     description: formBody("Settings → Models' Switch"),
   },

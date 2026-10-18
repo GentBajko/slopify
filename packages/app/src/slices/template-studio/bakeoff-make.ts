@@ -21,7 +21,7 @@ import { sampleEdit } from "./edit.js";
 import { removeHiddenProject } from "./hidden.js";
 import type { SampleJob } from "./jobs.js";
 import { sectionLabel } from "./model.js";
-import { type PaidSampleDeps, refused, settled } from "./paid.js";
+import { type PaidSampleDeps, refused, settled, studioWords } from "./paid.js";
 import { resolveSampleRun } from "./quote.js";
 import { sampleOf } from "./repo.js";
 import { exceedsAcknowledged } from "./save.js";
@@ -269,11 +269,12 @@ async function prepare(
 function failureOf(deps: Deps, projectId: string): string | null {
   const stages = stagesOf(deps.start.db, projectId);
   const state = derive(stages, projectPaused(deps.start.db, projectId));
-  if (state === "failed")
-    return (
-      stages.find((stage) => stage.state === "failed")?.failureReason ??
-      "A step of this model's copy failed without saying why. Compare again; if it fails again, use Download diagnostics in Settings and report it."
-    );
+  if (state === "failed") {
+    const reason = stages.find((stage) => stage.state === "failed")?.failureReason;
+    return reason === undefined || reason === null
+      ? "A step of this model's copy failed without saying why. Compare again; if it fails again, use Download diagnostics in Settings and report it."
+      : studioWords(reason, "Compare again", "");
+  }
   if (state === "canceled" || state === "paused")
     return "This model's copy stopped before it finished. Compare again to make it.";
   return null;

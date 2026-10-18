@@ -48,8 +48,12 @@ import { refusal } from "./refusal.js";
 const id = z.object({ id: z.uuid() });
 const topicParam = z.object({ id: z.uuid(), topicId: z.string().min(1).max(100) });
 const topicIds = z.array(z.string().min(1).max(100)).min(1).max(queueMax);
-const heldIds = z.object({ ids: topicIds }).strict();
-const heldRestore = z
+// Prepare one queued topic: its title as the queue lists it.
+export const prepareTopicBody = z.object({ topic: z.string().min(1).max(500) }).strict();
+// Approve one held topic, optionally under another title.
+export const approveHeldTopicBody = z.object({ title: z.string().optional() }).strict();
+export const heldIds = z.object({ ids: topicIds }).strict();
+export const heldRestore = z
   .object({
     topics: z
       .array(
@@ -247,7 +251,7 @@ function routes(deps: ScheduleDeps | undefined) {
       .post(
         "/:id/topics/prepare",
         zValidator("param", id, onInvalid),
-        zValidator("json", z.object({ topic: z.string().min(1).max(500) }).strict(), onInvalid),
+        zValidator("json", prepareTopicBody, onInvalid),
         async (c) => {
           const result = await prepareTopic(service(), {
             scheduleId: c.req.valid("param").id,
@@ -354,7 +358,7 @@ function routes(deps: ScheduleDeps | undefined) {
       .post(
         "/:id/topics/held/:topicId/approve",
         zValidator("param", topicParam, onInvalid),
-        zValidator("json", z.object({ title: z.string().optional() }).strict(), onInvalid),
+        zValidator("json", approveHeldTopicBody, onInvalid),
         (c) => {
           const { id: scheduleId, topicId } = c.req.valid("param");
           const { title } = c.req.valid("json");

@@ -1,3 +1,6 @@
+import { fullVideoInputSchema, quickShortInputSchema } from "../../slices/onboarding/model.js";
+import { moveFilesBody } from "../http/storage-files.js";
+import { manySchema } from "../http/trash.js";
 import { formBody, type RouteTool } from "./route-tool.js";
 
 const storage: readonly RouteTool[] = [
@@ -10,6 +13,7 @@ const storage: readonly RouteTool[] = [
   {
     name: "move_files_folder",
     route: "POST /api/storage/files/move",
+    body: moveFilesBody,
     title: "Move the files folder",
     description: "Body: {target: the new folder's full path; it must be empty or new}.",
     confirm:
@@ -38,6 +42,7 @@ const storage: readonly RouteTool[] = [
   {
     name: "restore_from_trash_many",
     route: "POST /api/trash/bulk/restore",
+    body: manySchema,
     title: "Restore several from the trash",
     description: "Restore for the ticked rows. Body: {items: [{kind, id}]}.",
   },
@@ -52,6 +57,7 @@ const storage: readonly RouteTool[] = [
   {
     name: "delete_from_trash_many",
     route: "POST /api/trash/bulk/delete",
+    body: manySchema,
     title: "Delete several for good",
     description: "Delete now for the ticked rows. Body: {items: [{kind, id}]}.",
     confirm:
@@ -75,12 +81,14 @@ const onboarding: readonly RouteTool[] = [
   {
     name: "make_quick_short",
     route: "POST /api/onboarding/short",
+    body: quickShortInputSchema,
     title: "Make a quick short",
     description: `${formBody("the welcome's Make a short")} It starts a paid run.`,
   },
   {
     name: "make_full_video_draft",
     route: "POST /api/onboarding/full-video",
+    body: fullVideoInputSchema,
     title: "Draft a full video",
     description: formBody("the welcome's Make a full video"),
   },
