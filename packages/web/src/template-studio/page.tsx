@@ -17,6 +17,7 @@ import { requestFreeSamples, templateStudioKey, templateStudioQuery } from "./ap
 import { ChecksList } from "./checks-list";
 import { FineTune } from "./fine-tune";
 import { MadeWith } from "./made-with";
+import { MarkReady } from "./ready-gate";
 import { SamplePanel } from "./sample-panel";
 import { SaveBar } from "./save-bar";
 import { SectionRail } from "./section-rail";
@@ -138,7 +139,18 @@ function Studio({
         crumb={<TextLink to="/templates">Templates</TextLink>}
         title={view.template.name}
         meta={`Version ${String(view.template.version)} · ${gateWords(view)}`}
-        actions={<SampleTopic view={view} />}
+        actions={
+          <>
+            <SampleTopic view={view} />
+            <MarkReady
+              view={view}
+              dirty={dirty}
+              onProblem={(message) =>
+                setStatus(message === undefined ? undefined : { tone: "error", text: message })
+              }
+            />
+          </>
+        }
       />
       <Tabs
         className="mb-4 md:hidden"

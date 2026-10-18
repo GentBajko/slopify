@@ -622,3 +622,84 @@ it("lists the names to check in the voice's sample", async () => {
   const sample = await screen.findByRole("region", { name: "Voice sample" });
   expect(await within(sample).findByRole("listitem", { name: "Kish" })).not.toBeNull();
 });
+
+const settledView: StudioView = {
+  ...view,
+  sections: view.sections.map((one) => ({
+    ...one,
+    state: one.id === "thumbnail" ? "off" : "current",
+  })),
+};
+const passing = { version: 3, checks: checks.checks.map((check) => ({ ...check, ok: true })) };
+
+it("keeps Mark ready visible but disabled, saying what to fix first", async () => {
+  open();
+  const button = await screen.findByRole("button", { name: "Mark ready" });
+  await waitFor(() => expect(button.getAttribute("aria-disabled")).toBe("true"));
+  expect(button.getAttribute("aria-describedby")).not.toBeNull();
+});
+
+it("marks the version ready after saying schedules start running it", async () => {
+  const user = userEvent.setup();
+  let asked: unknown;
+  const ready = vi.fn(async (request: Request) => {
+    asked = await request.json();
+    return Response.json({ version: 3, gate: "ready", replayed: false });
+  });
+  open("subject", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer(settledView),
+    [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer(passing),
+    [`POST /api/template-studio/${templateId}/ready`]: ready,
+  });
+  const button = await screen.findByRole("button", { name: "Mark ready" });
+  await waitFor(() => expect(button.getAttribute("aria-disabled")).toBeNull());
+  await user.click(button);
+  const dialog = await screen.findByRole("dialog", { name: "Mark version 3 ready?" });
+  expect(
+    within(dialog).getByText(
+      "Schedules start running this version from their next run. Until now they ran version 2.",
+    ),
+  ).not.toBeNull();
+  await user.click(within(dialog).getByRole("button", { name: "Mark ready" }));
+  await waitFor(() => expect(ready).toHaveBeenCalledOnce());
+  expect(asked).toEqual({ version: 3 });
+});
+
+it("shows Mark ready's refusal with each thing to fix", async () => {
+  const user = userEvent.setup();
+  open("subject", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer(settledView),
+    [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer(passing),
+    [`POST /api/template-studio/${templateId}/ready`]: jsonAnswer(
+      {
+        title: "Conflict",
+        reason: "not-ready",
+        detail: "Version 3 can't be marked ready yet. Voice: Press Make sample.",
+        problems: [{ label: "Voice", sentence: "Press Make sample.", section: "voice" }],
+      },
+      409,
+    ),
+  });
+  const button = await screen.findByRole("button", { name: "Mark ready" });
+  await waitFor(() => expect(button.getAttribute("aria-disabled")).toBeNull());
+  await user.click(button);
+  const dialog = await screen.findByRole("dialog");
+  await user.click(within(dialog).getByRole("button", { name: "Mark ready" }));
+  expect(
+    await screen.findByText("Version 3 can't be marked ready yet. Voice: Press Make sample."),
+  ).not.toBeNull();
+});
+
+it("says a ready version is marked, with no button to press again", async () => {
+  open("subject", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({
+      ...settledView,
+      gate: "ready",
+      runnableVersion: 3,
+    }),
+    [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer(passing),
+  });
+  const button = await screen.findByRole("button", { name: "Marked ready" });
+  expect(button.getAttribute("aria-disabled")).toBe("true");
+  expect(screen.getByText("Version 3 · Ready")).not.toBeNull();
+});
