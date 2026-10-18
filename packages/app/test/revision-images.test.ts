@@ -160,7 +160,7 @@ it("stops an image call in flight on cancel, keeps what landed, and makes only t
         {
           ...h.deps,
           abort: (id) => h.runner.abortProject(id),
-          hasInflight: (id) => h.runner.hasInflight(id),
+          hasInflight: h.runner.hasInflight,
           settleCheckpoints: (projectId) => settleReleasedCheckpoints(h.deps, projectId),
           emit: () => undefined,
         },

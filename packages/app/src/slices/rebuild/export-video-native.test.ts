@@ -179,7 +179,7 @@ it("burns the captions in, drawn only from the moment they start", async () => {
 
 const subtitlesOff = {
   mode: "off" as const,
-  language: "en",
+  language: "en" as const,
   fontId: "default",
   fontSize: 48,
   position: "bottom" as const,
