@@ -308,3 +308,41 @@ describe("an establishing image", () => {
     expect(seen).toEqual([]);
   });
 });
+
+describe("a picture to edit", () => {
+  const source = { bytes: pngBytes, mime: "image/png" as const };
+  const member = { bytes: Uint8Array.from([0xff, 0xd8, 0xff, 0xe0]), mime: "image/jpeg" as const };
+  const editing = (fetcher: FalImageDeps["fetch"], which: string) =>
+    falImage({ fetch: fetcher, key: () => key }).generate({
+      model: which,
+      prompt: "Darker sky",
+      aspect: "1:1",
+      edit: { source },
+      cast: [{ name: "Ada", description: "", images: [member] }],
+      signal: new AbortController().signal,
+    });
+
+  it("goes to the edit endpoint with the source first in image_urls and the edit wording", async () => {
+    const seen: Seen[] = [];
+    await editing(replaying(answering("fal-success.json"), delivered, seen), "fal-ai/flux-2");
+    expect(seen[0]?.url).toBe(`${falBase}/fal-ai/flux-2/edit`);
+    const body = bodyOf(seen[0]) as { image_urls: string[]; prompt: string };
+    expect(body.image_urls).toEqual([
+      `data:image/png;base64,${Buffer.from(pngBytes).toString("base64")}`,
+      `data:image/jpeg;base64,${Buffer.from(member.bytes).toString("base64")}`,
+    ]);
+    expect(body.prompt).toMatch(/^Change the first attached image as follows\./);
+    expect(body.prompt).toMatch(/Darker sky$/);
+  });
+
+  it("is refused, before any request, by a model without an edit endpoint", async () => {
+    const seen: Seen[] = [];
+    const thrown: unknown = await editing(
+      replaying(answering("fal-success.json"), delivered, seen),
+      "fal-ai/flux/schnell",
+    ).catch((error: unknown) => error);
+    expect(isProviderError(thrown) && thrown.fault.kind).toBe("unsupported");
+    expect(String(thrown)).toContain("can't edit a picture");
+    expect(seen).toEqual([]);
+  });
+});

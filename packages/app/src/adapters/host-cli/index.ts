@@ -190,6 +190,16 @@ export function createHostCliClient(options: {
                   base64: Buffer.from(req.reference.bytes).toString("base64"),
                 },
               }),
+          ...(req.edit === undefined
+            ? {}
+            : {
+                edit: {
+                  source: {
+                    mime: req.edit.source.mime,
+                    base64: Buffer.from(req.edit.source.bytes).toString("base64"),
+                  },
+                },
+              }),
           ...(req.cast === undefined
             ? {}
             : {

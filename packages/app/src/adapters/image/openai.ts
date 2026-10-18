@@ -7,7 +7,7 @@ import { httpFailure, missingKey, noImage, refusedImage, unreadable } from "../e
 import { retryAfter } from "../retry-after.js";
 import { describeBytes, sniffImage } from "./bytes.js";
 import { discoverOpenAiImages } from "./models.js";
-import { type ReferencePicture, referencePictures, withReferences } from "./reference.js";
+import { attachedPictures, promptFor, type ReferencePicture } from "./reference.js";
 
 // The HTTP gateway adapter for OpenAI's images endpoint: the platform's own `fetch` and
 // nothing else, because the whole call is one request. Unlike fal and Replicate this one
@@ -74,7 +74,7 @@ export function openAiImage(deps: OpenAiImageDeps): ImagePort {
     id: "openai-image",
     models: () => discoverOpenAiImages(deps),
     generate: async (req: ImageRequest): Promise<GeneratedImage> => {
-      const pictures = referencePictures(req);
+      const pictures = attachedPictures(req);
       const response =
         pictures.length === 0
           ? await deps.fetch(`${openAiImagesBase}/images/generations`, {
@@ -116,11 +116,11 @@ export function openAiImage(deps: OpenAiImageDeps): ImagePort {
 }
 
 // The edits endpoint takes several input images as repeated `image[]` parts: the establishing
-// image first, then the cast pictures.
+// image (or, for a design's edit, the picture to change) first, then the cast pictures.
 function editForm(req: ImageRequest, pictures: readonly ReferencePicture[]): FormData {
   const form = new FormData();
   form.set("model", req.model);
-  form.set("prompt", withReferences(req.prompt, req));
+  form.set("prompt", promptFor(req.prompt, req));
   form.set("n", "1");
   form.set("size", sizeFor(req.model, req.aspect));
   for (const [index, { image }] of pictures.entries())

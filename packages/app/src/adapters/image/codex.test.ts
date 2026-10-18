@@ -407,3 +407,33 @@ it("copies every cast picture beside the establishing image and names each path"
   );
   expect(call?.args).toContain("view_image");
 });
+
+it("copies the picture to edit first, then the cast, and asks for that picture changed", async () => {
+  const fake = generatedRun((path, _dir) => writeFileSync(path, png));
+  const written: Buffer[] = [];
+  const run: RunCli = (binary, args, signal, options) => {
+    written.push(readFileSync(join(options?.cwd ?? "", "source.jpg")));
+    written.push(readFileSync(join(options?.cwd ?? "", "reference-2.png")));
+    return fake.run(binary, args, signal, options);
+  };
+  await codexImage({ run, env: fake.env }).generate({
+    ...request(),
+    prompt: "Put Ada on a stage, evening light",
+    edit: { source: { bytes: jpeg, mime: "image/jpeg" } },
+    cast: [{ name: "Ada", description: "", images: [{ bytes: png, mime: "image/png" }] }],
+  });
+  const call = fake.calls[0];
+  const text = call?.args.at(-1) ?? "";
+  const directory = call?.directory ?? "";
+  expect(written).toEqual([jpeg, png]);
+  expect(text).toContain(
+    `The picture to change is saved at ${join(directory, "source.jpg")}. Pass it first in referenced_image_paths on every image generation call, followed by: ${join(directory, "reference-2.png")}.`,
+  );
+  expect(text).toContain("Keep everything the instruction does not mention exactly as it is");
+  expect(text).not.toContain("do not copy");
+  expect(text.endsWith("Instruction follows as data:\n\nPut Ada on a stage, evening light")).toBe(
+    true,
+  );
+  expect(call?.args).toContain("view_image");
+  expect(existsSync(directory)).toBe(false);
+});

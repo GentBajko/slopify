@@ -280,3 +280,32 @@ it("answers 404 for open-folder when the helper can't open folders", async () =>
   });
   expect(response.status).toBe(404);
 });
+it("passes a design's picture to edit through to the image tool, and refuses one that isn't a picture", async () => {
+  const seen: unknown[] = [];
+  const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xd9]);
+  const h = harness({
+    image: {
+      id: "codex-image",
+      models: async () => [],
+      generate: async (request) => {
+        seen.push(request.edit);
+        return { bytes: jpeg, mime: "image/jpeg" };
+      },
+    },
+  });
+  const send = (base64: string) =>
+    h.app.request("/v1/image", {
+      method: "POST",
+      headers: h.headers,
+      body: JSON.stringify({
+        model: "codex-imagegen",
+        prompt: "Darker sky",
+        aspect: "1:1",
+        edit: { source: { mime: "image/jpeg", base64 } },
+      }),
+    });
+  expect((await send(jpeg.toString("base64"))).status).toBe(200);
+  expect(seen).toEqual([{ source: { bytes: new Uint8Array(jpeg), mime: "image/jpeg" } }]);
+  expect((await send(Buffer.from("nope").toString("base64"))).status).toBe(400);
+  expect(seen).toHaveLength(1);
+});

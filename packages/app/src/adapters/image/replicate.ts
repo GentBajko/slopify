@@ -71,6 +71,9 @@ const errorBody = z.object({ detail: z.string().optional(), title: z.string().op
 // it as terminal beats polling forever.
 const settled: readonly string[] = ["succeeded", "failed", "canceled"];
 
+export const replicateEditRefusal =
+  "Replicate's image models can't edit a picture. Choose Codex CLI, OpenAI, Google, or FLUX.2 or Nano Banana 2 on fal.ai under Made with … · change.";
+
 export function replicateImage(deps: ReplicateImageDeps): ImagePort {
   return {
     id: "replicate",
@@ -78,6 +81,8 @@ export function replicateImage(deps: ReplicateImageDeps): ImagePort {
     generate: async (req: ImageRequest): Promise<GeneratedImage> => {
       // The Replicate models listed take no input image to draw from (the FLUX image inputs
       // copy the picture's composition), so an establishing image is refused, not dropped.
+      if (req.edit !== undefined)
+        throw providerError({ kind: "unsupported", message: replicateEditRefusal });
       if (req.reference !== undefined)
         throw providerError({
           kind: "unsupported",
