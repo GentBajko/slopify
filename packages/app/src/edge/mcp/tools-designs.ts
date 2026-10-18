@@ -81,7 +81,8 @@ export const designTools: readonly RouteTool[] = [
     name: "retry_design_step",
     route: "POST /api/designs/:id/steps/:stepId/retry",
     title: "Try a failed version again",
-    description: "Asks the provider again for a version that failed, as Try again does.",
+    description:
+      "Asks the provider again for a version that failed, as Try again does. It is paid again, even for a version a restart stopped that may already have been charged: send acknowledgedHigh as the high price quote_design_edit (an edited picture) or quote_design_artwork (artwork) gives for that version's provider and model, and acknowledgedUnknown: true when that price is unknown; refused with the current quote when it differs. Body: {acknowledgedHigh, acknowledgedUnknown?}.",
   },
   {
     name: "set_design_version",

@@ -1,6 +1,8 @@
 import { afterEach, expect, it } from "vitest";
+import { assistantCostlyTools } from "../../slices/assistant/gate.js";
 import { pngOf } from "../../slices/designs/designs.fake.js";
 import { connectAgent, mcpFixture } from "./mcp.fake.js";
+import { designTools } from "./tools-designs.js";
 
 const open: { readonly close: () => void }[] = [];
 afterEach(() => {
@@ -81,4 +83,12 @@ it("asks for confirmed: true before marking a template version ready", async () 
   });
   expect(unconfirmed.isError).toBe(true);
   expect(textOf(unconfirmed)).toContain("Schedules start making pieces from this version.");
+});
+
+it("says Try again is paid again, with the acknowledgement it needs, and the assistant asks first", () => {
+  const retry = designTools.find((tool) => tool.name === "retry_design_step");
+  expect(retry?.description).toContain("paid again");
+  expect(retry?.description).toContain("acknowledgedHigh");
+  expect(retry?.description).toContain("acknowledgedUnknown: true");
+  expect(assistantCostlyTools).toContain("retry_design_step");
 });
