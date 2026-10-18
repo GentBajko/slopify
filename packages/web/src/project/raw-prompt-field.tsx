@@ -1,6 +1,6 @@
 import { detectSlots } from "@app/slices/admission/substitute.js";
 import type { KeywordPlace } from "@app/slices/keywords/model.js";
-import { keywordProblems, placeOfKey } from "@app/slices/keywords/rules.js";
+import { keywordProblems, placeOfKey, textEntryProblems } from "@app/slices/keywords/rules.js";
 import { lintEntry, lintPrompt } from "@app/slices/library/lint.js";
 import { bodyMax, type PromptKind } from "@app/slices/library/model.js";
 import type { ReactElement } from "react";
@@ -18,6 +18,7 @@ export function RawPromptField({
   name,
   promptKey,
   script,
+  textEntry,
   value,
   onChange,
 }: {
@@ -27,6 +28,8 @@ export function RawPromptField({
   readonly promptKey: string;
   // Whether the article key holds a Script prompt.
   readonly script?: boolean | undefined;
+  // Whether this is a Text intro or outro that narration reads as written.
+  readonly textEntry?: boolean | undefined;
   readonly value: string;
   readonly onChange: (next: string) => void;
 }): ReactElement {
@@ -38,7 +41,11 @@ export function RawPromptField({
       : keywordProblems(value, place)
           .filter((problem) => problem.kind === "wrong-place")
           .map((problem) => problem.message);
-  const problems = [...syntaxProblems(value, name, place, checked), ...misplaced];
+  const narrated =
+    checked && textEntry === true && (place === "intro" || place === "outro")
+      ? textEntryProblems(value, place).map((problem) => problem.message)
+      : [];
+  const problems = [...syntaxProblems(value, name, place, checked), ...misplaced, ...narrated];
   const error = problems.length === 0 ? undefined : problems.join(" ");
   return (
     <div className="flex flex-col gap-3">

@@ -10,10 +10,12 @@ function Raw({
   start,
   promptKey,
   script,
+  textEntry,
 }: {
   readonly start: string;
   readonly promptKey: string;
   readonly script?: boolean;
+  readonly textEntry?: boolean;
 }) {
   const [value, setValue] = useState(start);
   return (
@@ -22,6 +24,7 @@ function Raw({
       name="Thing"
       promptKey={promptKey}
       script={script}
+      textEntry={textEntry}
       value={value}
       onChange={setValue}
     />
@@ -74,6 +77,16 @@ describe("a project's raw prompt", () => {
   it("offers nothing where the old name was always plain text, or for a key it doesn't know", () => {
     render(<Raw start="{{Scene}} {{Slopify_Summary}}" promptKey="somethingElse" />);
     expect(screen.queryByRole("status", { name: "Update to new names" })).toBeNull();
+    expect(box().getAttribute("aria-invalid")).toBe("false");
+  });
+
+  it("refuses the release date in a Text intro, which is narrated as written", () => {
+    const { unmount } = render(
+      <Raw start="Out {{Slopify_Release_Date}}" promptKey="intro" textEntry />,
+    );
+    expect(screen.getByText(/can't be used in a Text intro/)).not.toBeNull();
+    unmount();
+    render(<Raw start="Out {{Slopify_Release_Date}}" promptKey="intro" />);
     expect(box().getAttribute("aria-invalid")).toBe("false");
   });
 });

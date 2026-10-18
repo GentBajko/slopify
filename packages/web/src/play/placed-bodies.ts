@@ -6,7 +6,7 @@ import {
   usesShorts,
   usesYoutubeDescription,
 } from "@app/slices/admission/rules.js";
-import type { PlacedBody } from "@app/slices/keywords/rules.js";
+import { type PlacedBody, textEntryProblems } from "@app/slices/keywords/rules.js";
 import type { Entry, EntryCategory, Prompt, PromptKind } from "@app/slices/library/model.js";
 import { activeReviewStages } from "@app/slices/reviews/rules.js";
 import { usesScriptPrompt } from "@app/slices/voices/model.js";
@@ -57,4 +57,20 @@ export function placedBodies(
   if (sources.thumbnail === "from_prompt" || sources.thumbnail === "prompt_by_llm")
     body("thumbnail", draft.thumbnailPrompt, "thumbnailPrompt");
   return placed;
+}
+
+// A picked Text intro or outro is narrated as written, so a keyword only an AI step fills is
+// refused there, judged by the saved entry's mode as `pickTemplates` does.
+export function textEntryRefusals(
+  draft: RunDraft,
+  entries: readonly Entry[],
+): readonly { readonly field: string; readonly message: string }[] {
+  return (["intro", "outro"] as const).flatMap((category) => {
+    const choice = draft[category];
+    const found =
+      choice === undefined
+        ? undefined
+        : entries.find((one) => one.category === category && one.name === choice.name);
+    return found?.mode === "text" ? textEntryProblems(found.body, category) : [];
+  });
 }

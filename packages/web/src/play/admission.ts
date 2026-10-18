@@ -16,7 +16,7 @@ import type { DraftInput, PlayFormState, Upload } from "@/play/state";
 import { ambientUploadOn, draftOf, shortsOn, stagedOf } from "@/play/state";
 import { validSubtitleStyle } from "@/subtitles/config";
 import { articleKind } from "./article-kind";
-import { placedBodies } from "./placed-bodies";
+import { placedBodies, textEntryRefusals } from "./placed-bodies";
 
 // Live admission. `admit` is the server's own function, imported through `@app/*`: the
 // sentence the form shows and the refusal the server writes are one rule, and the only
@@ -97,7 +97,10 @@ export function admission(input: AdmissionInput): Admission {
   const draft = draftOf(draftInput);
   // The picked bodies' keywords Slopify fills, checked where each runs, as the server does.
   const placed = placedBodies(draft, input.prompts, input.entries);
-  const misplaced = placedProblems(placed, draft.values);
+  const misplaced = [
+    ...placedProblems(placed, draft.values),
+    ...textEntryRefusals(draft, input.entries),
+  ];
   const admitted = admit({
     draft,
     staged: stagedOf(input.form.provided),
@@ -318,6 +321,8 @@ function keywordHint(error: FieldError): string | undefined {
   if (name === undefined) return undefined;
   if (error.message.includes("Article is Off")) return "Set Article to Generate or Provide to play";
   if (error.field === "title") return `Remove {{${name}}} from the title to play`;
+  if (error.field === "intro" || error.field === "outro")
+    return `Remove {{${name}}} from the ${error.field}, or set its Mode to LLM, to play`;
   return `Remove {{${name}}} from that prompt, or pick another, to play`;
 }
 

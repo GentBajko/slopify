@@ -215,6 +215,11 @@ export function RevisionPrompts({
               name={name}
               promptKey={key}
               script={usesScriptPrompt(edit.config)}
+              textEntry={
+                (key === "intro" || key === "outro") &&
+                edit.config.sources.audio === "generate" &&
+                edit.config[key]?.mode === "text"
+              }
               value={raw ?? ""}
               onChange={(text) => onChange(setPrompt(edit, key, text))}
             />

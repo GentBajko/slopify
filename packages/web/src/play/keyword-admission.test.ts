@@ -144,6 +144,37 @@ describe("keywords Slopify fills on Play", () => {
   });
 });
 
+describe("a Text intro or outro", () => {
+  const dated: readonly Entry[] = [
+    { ...(entries[0] as Entry), body: "Out on {{Slopify_Release_Date}}." },
+  ];
+  const form: PlayFormState = {
+    ...generated,
+    sources: { ...generated.sources, audio: "generate" },
+    intro: "Cold open",
+  };
+
+  it("refuses the release date, which only an LLM step fills, as the server does", () => {
+    const { result, blocker } = admission({
+      form,
+      prompts: base,
+      entries: dated,
+      silenceGapSeconds: 3,
+    });
+    expect(result.ok ? [] : result.fields.map((one) => one.field)).toContain("intro");
+    expect(blocker?.hint).toBe(
+      "Remove {{Slopify_Release_Date}} from the intro, or set its Mode to LLM, to play",
+    );
+  });
+
+  it("lets it through in an LLM intro", () => {
+    const llm = dated.map((one) => ({ ...one, mode: "llm" as const }));
+    expect(admission({ form, prompts: base, entries: llm, silenceGapSeconds: 3 }).result.ok).toBe(
+      true,
+    );
+  });
+});
+
 describe("placedBodies", () => {
   it("places every picked body as pickTemplates does, with the field that picked it", () => {
     const prompts = [
