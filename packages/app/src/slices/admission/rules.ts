@@ -7,6 +7,7 @@ import { loudnessFields } from "../loudness/model.js";
 import { pauseFields } from "../narration/pauses-model.js";
 import { reviewFields } from "../reviews/rules.js";
 import { shortsSettingsProblems } from "../shorts/model.js";
+import { usesPostPrompt } from "../social/rules.js";
 import type { StagedFile } from "../storage/model.js";
 import { ambientBedProblems, usesAmbientBed } from "../video/ambient-bed.js";
 import { usesAnimation, videoEditProblems } from "../video/edit-settings.js";
@@ -440,6 +441,8 @@ export function llmUses(draft: RunDraft, keywords: KeywordUses = {}): readonly L
   if (usesYoutubeDescription(draft))
     uses.push({ section: "outputs", label: "writing the YouTube description" });
   if (usesShorts(draft)) uses.push({ section: "outputs", label: "picking the shorts" });
+  if (usesPostPrompt(draft))
+    uses.push({ section: "outputs", label: "writing the posts for other sites" });
   if (keywords.scenes !== undefined)
     uses.push({ section: "outputs", label: "writing image scenes" });
   if (keywords.digest !== undefined)

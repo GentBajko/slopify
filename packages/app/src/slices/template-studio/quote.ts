@@ -108,6 +108,7 @@ const sectionOfRow: Readonly<Record<string, TemplateSection>> = {
   "Export / subtitles": "video",
   "Animated images": "video",
   "YouTube description": "upload",
+  Posts: "upload",
   Shorts: "shorts",
   Reviews: "reviews",
   Document: "document",

@@ -1,5 +1,6 @@
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { RevisionDeps } from "../revisions/model.js";
+import { platformLabels, socialPlatforms } from "../social/model.js";
 import { executionPlan, executionView, savedCatalogue } from "./runtime-plan.js";
 import type { WorkPiece } from "./work-records.js";
 
@@ -19,6 +20,9 @@ export function pieceLabel(
   if (key === "article:body") return "Article";
   if (key === "document:pdf") return "Document";
   if (key === "youtube:description") return "YouTube description";
+  const post = /^social:post:([a-z]+)$/.exec(key);
+  if (post !== null)
+    return `${platformLabels[socialPlatforms.find((one) => one === post[1]) ?? "x"]} post`;
   if (key.startsWith("review:")) {
     const item = key.slice("review:".length);
     const itemLabel =

@@ -25,6 +25,8 @@ import { pauseFields } from "../narration/pauses-model.js";
 import { reviewPromptKey } from "../reviews/model.js";
 import { activeReviewStages, reviewFields } from "../reviews/rules.js";
 import type { RevisionContent } from "../revisions/model.js";
+import { socialPlatforms } from "../social/model.js";
+import { usesPostPrompt } from "../social/rules.js";
 import { usesAnimation } from "../video/edit-settings.js";
 import { usesScriptPrompt } from "../voices/model.js";
 
@@ -47,6 +49,8 @@ export function validateRecipeInputs(
     config.sources.thumbnail === "prompt_by_llm" ||
     usesNarrationPreparation(config) ||
     usesYoutubeDescription(config) ||
+    // A post written by a post prompt.
+    usesPostPrompt(config) ||
     usesShorts(config) ||
     (config.sources.audio === "generate" &&
       (config.intro?.mode === "llm" || config.outro?.mode === "llm")) ||
@@ -207,6 +211,18 @@ function checkedPrompts(config: RunConfig, content: RevisionContent): readonly C
         raw: content.promptTemplates[category] ?? null,
         literal: config.rendered[category],
       });
+  // Each site's post prompt, only when one is picked: none picked uses the built-in one.
+  for (const platform of socialPlatforms) {
+    const choice = config.social?.[platform];
+    const key = `social.${platform}`;
+    if (choice?.text === "prompt" && choice.prompt?.trim() && content.promptTemplates[key] != null)
+      prompts.push({
+        field: `rendered.${key}`,
+        place: "post",
+        raw: content.promptTemplates[key] ?? null,
+        literal: config.rendered[key],
+      });
+  }
   if (config.sources.thumbnail === "from_prompt" || config.sources.thumbnail === "prompt_by_llm")
     prompts.push({
       field: "rendered.thumbnailPrompt",

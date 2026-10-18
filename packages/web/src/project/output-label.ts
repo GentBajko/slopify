@@ -37,6 +37,7 @@ const labels: Readonly<Record<Output["role"], string>> = {
   audio_mp3: "Audio (MP3 with chapters)",
   audio_m4b: "Audiobook (M4B with chapters)",
   audio_levelled: "Levelled narration",
+  social_post: "Post",
 };
 export function outputLabel(output: Output): string {
   if ((output.role === "narration_txt" || output.role === "tts_script") && output.meta.segment)

@@ -35,6 +35,8 @@ import {
   shortsImageUpperBound,
   shortsSettingsProblems,
 } from "../shorts/model.js";
+import { socialPlatforms } from "../social/model.js";
+import { defaultPostPrompt } from "../social/post-prompt.js";
 import {
   animatedClipSeconds,
   animatedImageIndexes,
@@ -126,7 +128,8 @@ export function estimateRun(
       key === "description" ||
       key === "shorts" ||
       key === "shortsImage" ||
-      key.startsWith("review.")
+      key.startsWith("review.") ||
+      key.startsWith("social.")
         ? 0
         : value.length),
     0,
@@ -373,6 +376,17 @@ export function estimateRun(
       2400,
       "One LLM call on the timed transcript.",
     );
+  // Each site whose post is written by a post prompt: one call that reads the article.
+  for (const platform of socialPlatforms) {
+    if (draft.social?.[platform]?.text !== "prompt") continue;
+    const own = rendered[`social.${platform}`]?.trim() ?? "";
+    text(
+      "Posts",
+      (own === "" ? defaultPostPrompt.length : own.length) + articleChars + 400,
+      600,
+      "One LLM call per site whose post a post prompt writes, reading the article.",
+    );
+  }
   // Shorts: one call picks the clips from the numbered transcript, one per clip writes its
   // image prompts, and the images are charged at the most the step can ask for, every clip
   // at the longest length allowed.

@@ -23,6 +23,7 @@ import {
 } from "../keywords/rules.js";
 import { reviewPromptKey } from "../reviews/model.js";
 import { activeReviewStages } from "../reviews/rules.js";
+import { socialPlatforms } from "../social/model.js";
 import { usesScriptPrompt } from "../voices/model.js";
 import type { Entry, EntryCategory, PromptKind } from "./model.js";
 import { type LibrarySnapshot, snapshotEntry, snapshotPrompt } from "./snapshot.js";
@@ -116,6 +117,14 @@ export function pickTemplates(
       text,
       reviewPromptKey(stage),
     );
+
+  // Each site's post prompt, for the sites whose post is written by one; none picked is the
+  // built-in one, which asks for no keyword.
+  for (const platform of socialPlatforms) {
+    const choice = draft.social?.[platform];
+    if (choice?.text === "prompt")
+      body("post", choice.prompt, `social.${platform}.prompt`, text, `social.${platform}`);
+  }
 
   // The establishing image's prompt: an image prompt like the others, its keywords filled the
   // same way.

@@ -59,6 +59,8 @@ export function videoActivity(db: DatabaseSync, projectId: string): StageActivit
   if (prompts !== undefined) return { label: "planning the shorts' pictures", ...prompts };
   if (running("shorts:pick")) return { label: "picking the shorts" };
   if (running("youtube:description")) return { label: "writing the YouTube description" };
+  if (rows.some((row) => row.key.startsWith("social:post:") && row.state === "running"))
+    return { label: "writing the posts for other sites" };
   if (running("subtitles:timing"))
     return percent("timing the captions", running("subtitles:timing"));
   if (running("subtitles:cues") || running("subtitles:files"))

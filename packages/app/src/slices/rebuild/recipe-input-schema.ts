@@ -3,6 +3,7 @@ import { messageRoles, thinkingModes } from "../../kernel/ports/llm.js";
 import { llmDocumentsSchema } from "../../kernel/ports/llm-documents.js";
 import type { FingerprintValue } from "../../kernel/runner/work.js";
 import { describedKinds } from "../narration/blocks.js";
+import { socialPlatforms } from "../social/model.js";
 import { deferredOperations, localOperations, type RecipeInput } from "./recipe-model.js";
 
 const value: z.ZodType<FingerprintValue> = z.lazy(() =>
@@ -60,6 +61,15 @@ export const recipeInputSchema: z.ZodType<RecipeInput> = z.discriminatedUnion("k
           kind: z.enum(describedKinds),
           index: z.number().int().positive(),
           image: z.string().optional(),
+        })
+        .strict()
+        .optional(),
+      // A post for another site (`recipe-social.ts`): the limit its answer must keep.
+      social: z
+        .object({
+          platform: z.enum(socialPlatforms),
+          max: z.number().int().positive(),
+          unit: z.enum(["weighted", "graphemes", "characters"]),
         })
         .strict()
         .optional(),

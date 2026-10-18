@@ -13,6 +13,7 @@ import {
 import type { RevisionDeps, RevisionView } from "../revisions/model.js";
 import { getRevisionView } from "../revisions/view.js";
 import { musicVolumeOf, shortsSpeedOf } from "../shorts/model.js";
+import { platformLabels, socialPlatforms } from "../social/model.js";
 import { ambientBedLabels } from "../video/ambient-bed.js";
 import { videoEditOf, videoEditRows } from "../video/edit-settings.js";
 import type { RebuildPreview } from "./model.js";
@@ -234,6 +235,7 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
     after.youtubeDescription === true ? "On" : "Off",
   );
   add("Description prompt", before.descriptionPrompt, after.descriptionPrompt);
+  add("Posts", postsSummary(before.social), postsSummary(after.social));
   add(
     "Shorts",
     before.shorts?.enabled === true ? "On" : "Off",
@@ -388,4 +390,19 @@ function aliasLines(aliases: RunConfig["narrationAliases"]): string {
         `${alias.written} → ${alias.spoken}${alias.wholeWord ? "" : " (inside words too)"}${alias.caseSensitive ? " (match case)" : ""}`,
     )
     .join("\n");
+}
+
+// The sites a version posts to, each with where its words come from: "X (post prompt), Bluesky
+// (summary)"; "Off" for none.
+function postsSummary(social: RunConfig["social"]): string {
+  const sites = socialPlatforms.flatMap((platform) => {
+    const choice = social?.[platform];
+    if (choice === undefined) return [];
+    const source =
+      choice.text === "prompt"
+        ? `post prompt${choice.prompt?.trim() ? ` ${choice.prompt.trim()}` : ""}`
+        : choice.text;
+    return [`${platformLabels[platform]} (${source})`];
+  });
+  return sites.length === 0 ? "Off" : sites.join(", ");
 }
