@@ -1,9 +1,10 @@
 import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
-import type { TemplateSection } from "@app/slices/template-studio/model.js";
+import { sectionLabel, type TemplateSection } from "@app/slices/template-studio/model.js";
 import type { StudioView } from "@app/slices/template-studio/schema.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useCallback, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
+import { useAssistantContext } from "@/assistant/screen";
 import type { StatusTone } from "@/components/kit/action-bar";
 import { Fold } from "@/components/kit/fold";
 import { PageHeader, Workspace } from "@/components/kit/layout";
@@ -37,6 +38,8 @@ export function TemplateStudioPage({
   readonly section: TemplateSection;
 }): ReactElement {
   const { api } = useApp();
+  // The assistant knows which template and section the person has open.
+  useAssistantContext({ templateId, section: sectionLabel[section] });
   const studio = useQuery(templateStudioQuery(api, templateId));
   if (studio.error)
     return (

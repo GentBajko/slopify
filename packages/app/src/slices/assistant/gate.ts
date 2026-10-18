@@ -48,6 +48,16 @@ export const assistantCostlyTools = [
   "make_design_template_sample",
   "retry_design_step",
   "save_design_template",
+  // Library → Templates → Open studio: each makes (or remakes) a template's paid sample. A
+  // studio Save makes the paid sample of what changed when it asks for one, so it asks
+  // whatever it sends. The daily budget is the most the samples may spend, so raising it is
+  // the person's call too.
+  "save_template_studio",
+  "make_template_sample",
+  "set_sample_topic",
+  "set_sample_full_script",
+  "say_it_as",
+  "update_template_studio_settings",
 ] as const;
 const costly: ReadonlySet<string> = new Set(assistantCostlyTools);
 

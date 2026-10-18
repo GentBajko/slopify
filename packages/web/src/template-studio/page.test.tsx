@@ -3,6 +3,7 @@ import type { SampleQuoteView, StudioView } from "@app/slices/template-studio/sc
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { AssistantScreenProvider, useAssistantScreen } from "@/assistant/screen";
 import { freshDraftDocument } from "@/play/draft-state";
 import { jsonAnswer, problemAnswer, renderRouted, testDeps } from "@/test-app";
 import { TemplateStudioPage } from "./page";
@@ -723,4 +724,23 @@ it("asks for the free samples by itself when only the schedule's cost is still t
     [`POST /api/template-studio/${templateId}/free-samples`]: asked,
   });
   await waitFor(() => expect(asked).toHaveBeenCalledOnce());
+});
+
+function ScreenProbe() {
+  return <output aria-label="assistant screen">{JSON.stringify(useAssistantScreen())}</output>;
+}
+
+it("tells the assistant which template and section are open", async () => {
+  renderRouted(
+    <AssistantScreenProvider>
+      <TemplateStudioPage templateId={templateId} section="voice" />
+      <ScreenProbe />
+    </AssistantScreenProvider>,
+    testDeps(routes),
+  );
+  await waitFor(() =>
+    expect(JSON.parse(screen.getByLabelText("assistant screen").textContent ?? "{}")).toMatchObject(
+      { templateId, section: "Voice" },
+    ),
+  );
 });

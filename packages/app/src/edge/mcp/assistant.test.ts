@@ -15,6 +15,7 @@ import { connectAgent, mcpFixture } from "./mcp.fake.js";
 import { routeOf } from "./route-tool.js";
 import { routeTools } from "./tools.js";
 import { designTools } from "./tools-designs.js";
+import { templateStudioTools } from "./tools-template-studio.js";
 
 const open: { readonly close: () => void }[] = [];
 afterEach(() => {
@@ -223,6 +224,44 @@ describe("/mcp/assistant", () => {
     for (const name of free) expect([name, gated(name)]).toEqual([name, false]);
     // Uploads take files from disk, so the assistant never gets one.
     expect(assistantRouteTools.map((tool) => tool.name)).not.toContain("upload_design_picture");
+  });
+
+  it("asks before every paid template studio step and Mark ready, and reads and prices freely", () => {
+    const gated = (name: string): boolean => {
+      const tool = templateStudioTools.find((one) => one.name === name);
+      if (tool === undefined) throw new Error(`no template studio tool ${name}`);
+      return isGated({ name: tool.name, method: routeOf(tool).method, confirm: tool.confirm });
+    };
+    const asks = [
+      "save_template_studio",
+      "make_template_sample",
+      "set_sample_topic",
+      "set_sample_full_script",
+      "say_it_as",
+      "make_samples_for_all",
+      // Schedules start running the version marked ready.
+      "mark_template_ready",
+      // The most the samples may spend in a day.
+      "update_template_studio_settings",
+    ];
+    const free = [
+      "get_template_studio",
+      "get_template_checks",
+      "get_prompt_anatomy",
+      "quote_template_save",
+      "get_sample_pronunciations",
+      "quote_say_it_as",
+      "get_template_studio_settings",
+      "quote_samples_for_all",
+      // Made on this computer at no cost.
+      "make_template_free_samples",
+    ];
+    // Every template studio tool is classified here, so a new one has to be decided on.
+    expect(templateStudioTools.map((tool) => tool.name).toSorted()).toEqual(
+      [...asks, ...free].toSorted(),
+    );
+    for (const name of asks) expect([name, gated(name)]).toEqual([name, true]);
+    for (const name of free) expect([name, gated(name)]).toEqual([name, false]);
   });
 
   it("names only tools that exist", () => {
