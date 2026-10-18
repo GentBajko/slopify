@@ -381,3 +381,141 @@ stops filling:
 2. Add that selector in front of the field's list in `selectors.ts` (each field lists several,
    tried in order), and update the fixture to match.
 3. Run `npx vitest run --project extension`, rebuild, and reload the extension.
+
+## Posting to other sites (extension 2.0.0)
+
+From extension 2.0.0 the same extension fills your posts on **X, LinkedIn, Instagram, TikTok,
+Reddit and Bluesky** from a project's posts (Prepare upload, and Edit project → Upload pack).
+It works like the YouTube side: Slopify decides what each post says and carries, the extension
+fills the site's own post form in your signed-in browser and reports back. There are no site
+APIs and no logins.
+
+**It never presses the final Post, Share, Publish or Schedule, nor Discard.** Each site lists
+its own forbidden buttons in its adapter (`packages/extension/src/social/sites/<site>.ts`,
+`forbidden`), and every site refuses a button whose whole label is Post, Post all, Share, Share
+now, Publish, Publish post, Schedule, Tweet, Reply, Discard, Discard post, Turn on, Allow or
+Delete (`src/social/guard.ts`). A press on one throws `RefusedClick` before any event is sent;
+the fill stops there and says so. The buttons inside a schedule dialog that only set the time
+are allowed: X's date picker **Confirm**, LinkedIn's schedule step **Next**, and TikTok's
+**Schedule** radio (a radio, not a button) with its date and time.
+
+### Allow posting on a site
+
+The six sites are **optional** permissions (`optional_host_permissions` in the manifest), never
+required ones: a required host added in an update would switch the installed extension off
+until you accepted it, and YouTube Studio would stop filling. The manifest's required host
+permissions are exactly 1.x's (a test checks it). So nothing runs on a site until you allow it:
+
+1. Open the extension's options (click its toolbar button, or Options in the browser's
+   extensions page).
+2. Under **Posting**, press **Allow posting on X** (or another site). The browser asks you for
+   that site only. For Instagram, Bluesky and Reddit it also asks to show notifications (see
+   below).
+3. The extension then registers its page script for that site
+   (`chrome.scripting.registerContentScripts`, id `slopify-social-<site>`) and tells Slopify,
+   so Prepare upload's **Fill in <site>** knows it can work. **Stop posting on <site>** takes it
+   back. Taking the permission away in the browser's own settings works too: the next sync
+   (browser start, every 15 minutes) unregisters the script.
+
+### What happens when you press Fill in <site>
+
+Slopify puts the post in the extension's queue and opens the site's post form. The page script
+(`src/social-content.ts` → `src/social/runner.ts`) runs only on the post form
+(`x.com/compose/post`, `linkedin.com/feed/?shareActive=true`, `instagram.com/`,
+`tiktok.com/tiktokstudio/upload`, `reddit.com/…/submit`, `bsky.app/`); there it asks the worker
+for the site's next waiting post, gets its media, fills the form, reports `filled` (or `failed`
+with the reason) and shows a message per part, with Copy where something must be pasted by hand.
+It then watches the page for up to 30 minutes for the site's sign that you posted it and
+reports `posted` with the post's link when the page shows one, or `scheduled`.
+
+Before writing anything it checks that every control the post needs is on the page. If one is
+missing (the site changed), it fills nothing, names what it couldn't find, and offers the text
+to paste. Sites whose form has several steps (Instagram, TikTok) are checked step by step: each
+step's controls are all found before that step is written.
+
+**Text** goes into the sites' rich editors (Draft.js, ProseMirror/Tiptap, Lexical) the way a
+person's would, each way checked before the next is tried: a paste of the text, then the
+browser's insertText command line by line, then a `beforeinput` event. If none leaves the box
+showing the text, the box is emptied, the text is put on the clipboard and the message says to
+paste it (`src/social/rich-text.ts`).
+
+**Media**: a video comes through the extension's hidden frame (`video-frame.html`, now web
+accessible to the six sites as well as Studio; each origin may ask only for its own kind of
+file, and Slopify serves a post's own media only). Pictures, and a video under 50 MB on a page
+that blocks the frame, come through the worker. A bigger video on such a page: the message says
+to download it from Prepare upload and add it yourself.
+
+**AI labels** are always switched on for a post with Slopify media: Instagram's **Add AI label**,
+TikTok's **AI-generated content** (under Show more) and X's **Content disclosure** AI choice.
+Where the label isn't found, the message says so and nothing else is pressed. LinkedIn, Bluesky
+and Reddit have none.
+
+**Account-setting prompts** a site raises over its form, like TikTok's "Turn on automatic
+content checks?", are closed with their **Cancel** (`src/social/modals.ts`), never Turn on,
+Allow or Discard. An unknown prompt is left for you.
+
+**Release time.** X, LinkedIn and TikTok have their own scheduler: when the post has a release
+time inside the site's window, the extension sets it (you press Schedule). Outside the window,
+in the past, or when the scheduler can't be set, the post is left to go out when you press Post
+and the message says which time to set by hand. Instagram, Bluesky and Reddit have no
+scheduler: about two minutes before the release time a worker alarm opens the site's post form
+in a background tab, the page fills it, and a notification says it's ready (clicking it brings
+the tab forward; without the notifications permission the tab comes forward itself). If the
+browser was closed at that time, the post is still filled when it starts, up to 12 hours late,
+and the notification says it's late.
+
+**Links.** When the page doesn't show the published post's link, the worker later opens your
+profile on that site (from the channel's account names, set with the channel's posting
+settings) in a background tab, at most every six hours per post; the page finds the post by its
+first 40 characters, reports its link and the tab closes. You can always paste the link under
+the post in Prepare upload.
+
+### How it talks to Slopify (posting)
+
+Only the background worker talks to Slopify, with the same pairing token and CORS rules as
+YouTube Studio's routes: `GET /api/social/ext/next?platform=` (the site's next waiting post,
+marked filling), `GET /api/social/ext/files/:projectId/:file` (only that post's media),
+`GET /api/social/ext/due` (posts due on sites without a scheduler), `POST /api/social/ext/result`
+(filled, scheduled, posted or failed, with a link only when it matches the site's link pattern),
+`GET /api/social/ext/find-links` and `POST /api/social/ext/sites` (the sites allowed). The pages
+on the sites never call Slopify. A Slopify from before posting answers 404 to all of these, and
+the extension then does nothing on the sites; an extension from before 2.0.0 with a new Slopify
+keeps working for YouTube and simply never takes a post.
+
+### Posting selectors and the live sites
+
+Every control is one entry in its site's `selectors` table, with a `checked` date: the day it
+was seen on the live site, or `null` where it follows the site's web app or help pages and
+**needs a live check by the person**. The forms were looked at read-only in the owner's Chrome
+on 2026-10-18 (Instagram and TikTok with a test file that was discarded, never shared or
+posted). The fixtures in `packages/extension/test/fixtures/social/` copy what was seen; the
+later steps sit in `<template>`s the tests render. The tests check, per site: the controls are
+found, the text goes in, files arrive through a DataTransfer with a change event, the AI switch
+ends up on, the scheduler is set or left with a sentence, no forbidden button is ever pressed
+(spied), a missing control fills nothing and names it, and the published sign gives the link.
+
+| Site | Checked 2026-10-18 | Not seen (`checked: null`) |
+| --- | --- | --- |
+| X | text box `[data-testid="tweetTextarea_0"]`, media `input[data-testid="fileInput"]`, `scheduleOption`, `contentDisclosureButton`; forbidden `tweetButton`, `app-bar-close`, `unsentButton` | the schedule dialog's selects (Month, Day, Year, Hour, Minute, AM/PM) and Confirm (`scheduledConfirmationPrimaryAction`); the disclosure's AI choice and Done; the "Your post was sent" / "will be sent on" toasts; profile `article[data-testid="tweet"]` |
+| LinkedIn | text box `.tiptap.ProseMirror`, the "Schedule post" clock; forbidden Post (`button.share-actions__primary-action` and the label) | the share box's file input and the media editor's Next; the schedule step's date, time and Next; "Post successful … View post"; profile `[data-urn^="urn:li:activity:"]` |
+| Instagram | Create `svg[aria-label="New post"]`, the dialog's file input, "Select crop" and its choices, Next, the caption box `[aria-label="Add a caption..."]`, "Add AI label", Accessibility's "Write alt text..."; forbidden Share, the dialog's Close, "Discard post?"'s Discard | the "shared as reels" notice's OK; "Your post has been shared"; the profile grid's links |
+| TikTok | video input `accept="video/*"`, photo input, Draft.js description, Show more, "AI-generated content", When to post radios `name=postSchedule`, the "Turn on automatic content checks?" prompt; forbidden Post, Discard, Turn on | the date and time pickers under Schedule; the move to `/tiktokstudio/content` as the posted sign; the profile's videos |
+| Bluesky | "Compose new post", `[data-testid="composePostView"]`, its Tiptap text box; forbidden `composerPublishBtn` | the hidden file input behind "Add media to post"; alt text boxes; the published toast; profile feed items |
+| Reddit | nothing: Claude in Chrome refuses reddit.com | **all of it** — title, body and link boxes, the Images & Video tab and input, flair (all searched inside open shadow roots); forbidden `#submit-post-button` and Post. Treat a Reddit fill as a first try and check every field. |
+
+Still unverified, beyond the `null` selectors:
+
+- **Whether each editor takes the paste** the extension sends; the fallbacks are tried and
+  checked, and the last resort is the clipboard.
+- **Whether the sites let the extension's frame load** (their Content Security Policy). If not,
+  videos under 50 MB still come through the worker; bigger ones are added by hand.
+- **X's and TikTok's AI choices and every scheduler's pickers**: the extension sets what it
+  finds and checks it read back, but a site may keep its own state; the message asks you to
+  check the time before pressing Schedule.
+- **Reddit as a whole**, above.
+- **Firefox**: optional host permissions and run-time content scripts follow the same
+  WebExtension calls, but posting was only built against Chrome.
+
+When a site stops filling: Inspect the control, put a selector that finds it in front of its
+entry in the site's `selectors` table, set `checked` to the day you saw it, update the site's
+fixture to match, run `npx vitest run --project extension`, rebuild and reload the extension.
