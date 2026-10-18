@@ -51,6 +51,8 @@ const refuse = (message: string): StudioResult<never> => ({
 const notAPack =
   "This file isn't a template pack Slopify can read. Choose the .zip that Export pack in a template's studio made.";
 
+class ZipStopped extends Error {}
+
 interface Unpacked {
   readonly manifest: PackManifest;
   readonly files: ReadonlyMap<string, Uint8Array>;
@@ -65,11 +67,28 @@ export function readPack(bytes: Uint8Array): StudioResult<Unpacked> {
     );
   let oversized: string | undefined;
   let unexpected: string | undefined;
+  let twice: string | undefined;
+  let tooMany = false;
+  // A zip's central directory can list one compressed block many times over: entries are
+  // counted, named once each and capped in total before any of them is unpacked.
+  const maxEntries = 1 + packLimits.samples;
+  const maxTotal = packLimits.manifestBytes + packLimits.samples * packLimits.sampleBytes;
+  const seen = new Set<string>();
+  let total = 0;
   let entries: Record<string, Uint8Array>;
   try {
     entries = unzipSync(bytes, {
       filter: (file) => {
         if (file.name.endsWith("/")) return false;
+        if (seen.has(file.name)) {
+          twice ??= file.name;
+          throw new ZipStopped();
+        }
+        seen.add(file.name);
+        if (seen.size > maxEntries) {
+          tooMany = true;
+          throw new ZipStopped();
+        }
         const known = file.name === "manifest.json" || packSampleFile.test(file.name);
         if (!known) {
           unexpected ??= file.name;
@@ -81,12 +100,26 @@ export function readPack(bytes: Uint8Array): StudioResult<Unpacked> {
           oversized ??= file.name;
           return false;
         }
+        total += file.originalSize;
+        if (total > maxTotal) {
+          tooMany = true;
+          throw new ZipStopped();
+        }
         return true;
       },
     });
-  } catch {
-    return refuse(notAPack);
+  } catch (error) {
+    if (!(error instanceof ZipStopped)) return refuse(notAPack);
+    entries = {};
   }
+  if (tooMany)
+    return refuse(
+      `This pack holds more files than a template pack ever has (a manifest and at most ${String(packLimits.samples)} samples), so nothing was imported. Export the pack again from the template's studio.`,
+    );
+  if (twice !== undefined)
+    return refuse(
+      `This pack holds ${twice.slice(0, 120)} twice, which an exported pack never does, so nothing was imported. Export the pack again from the template's studio.`,
+    );
   if (oversized !== undefined)
     return refuse(
       `This pack's ${oversized} is larger than a template pack allows, so nothing was imported. Export the pack again from the template's studio.`,
