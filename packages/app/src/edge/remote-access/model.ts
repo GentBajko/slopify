@@ -44,6 +44,8 @@ export interface RemoteAccessView {
   readonly link: string | null;
   // The address on this computer, always reachable here.
   readonly local: string;
+  // False on a page opened through the remote address: the switch is changed on this computer.
+  readonly changeable: boolean;
 }
 
 export const defaultHttpsPort = 443;

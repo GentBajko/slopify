@@ -121,6 +121,7 @@ export function createRemoteAccessService(deps: RemoteAccessDeps): RemoteAccessS
     fix: null,
     link: null,
     local: local(),
+    changeable: !deps.container,
     ...rest,
   });
   const fromProblem = (problem: Problem, rest: Partial<RemoteAccessView> = {}) =>

@@ -7,6 +7,7 @@ import type { AppDeps } from "./app.js";
 import { replyForFolder } from "./folder-location.js";
 import { idString } from "./ids.js";
 import { onInvalid, problem } from "./problem.js";
+import { fromSlopifyPage } from "./same-page.js";
 
 export function openFolderRoutes(deps: AppDeps) {
   return new Hono().post(
@@ -29,8 +30,7 @@ export function openFolderRoutes(deps: AppDeps) {
       onInvalid,
     ),
     async (c) => {
-      const origin = c.req.header("origin");
-      if (origin !== undefined && origin !== new URL(c.req.url).origin) {
+      if (!fromSlopifyPage(c, deps.remoteAccess?.remoteHost)) {
         return problem(c, {
           status: 403,
           detail:

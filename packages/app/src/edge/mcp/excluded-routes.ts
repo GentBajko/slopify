@@ -5,6 +5,8 @@ const backups = "backups (export, import, restore and their schedule) are the pe
 const updater = "updating Slopify is the person's";
 const hostSetup =
   "host setup (start at login, CLI paths, the extension's download) is the person's";
+const remoteAccess =
+  "remote access opens Slopify's page on the person's other devices through Tailscale: turning it on or off is the person's alone (get_remote_access reads it)";
 const desktop = "opens a window on the person's desktop; agents read files with get_project_file";
 const listening = "sound and pictures for the person watching the page";
 const personal = "the person's own tutorial, notices and reading state";
@@ -87,6 +89,7 @@ export const excludedRoutes: Readonly<Record<string, string>> = {
   "POST /api/onboarding/dismiss": personal,
   "GET /api/settings/autostart": hostSetup,
   "PUT /api/settings/autostart": hostSetup,
+  "PUT /api/settings/remote-access": remoteAccess,
   "POST /api/settings/autostart/answer": hostSetup,
   "PUT /api/providers/:id/path": hostSetup,
   "GET /api/studio/extension/:file": hostSetup,

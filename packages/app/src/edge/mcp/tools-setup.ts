@@ -57,6 +57,13 @@ export function notificationUrlState(value: unknown): unknown {
 
 const settings: readonly RouteTool[] = [
   {
+    name: "get_remote_access",
+    route: "GET /api/settings/remote-access",
+    title: "Read remote access",
+    description:
+      "Settings → General → Remote access: whether Slopify's page is open on the person's other devices through Tailscale serve (their tailnet only, never the public internet), its https address, and any problem with the exact fix. Turning it on or off is the person's; agents can't.",
+  },
+  {
     name: "get_settings",
     route: "GET /api/settings",
     title: "Read production defaults",

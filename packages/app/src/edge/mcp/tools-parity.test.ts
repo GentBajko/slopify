@@ -54,6 +54,7 @@ it("never offers keys, the pairing token, backups, the updater, host setup or Yo
     "POST /api/update",
     "POST /api/update/activate",
     "PUT /api/settings/autostart",
+    "PUT /api/settings/remote-access",
     "PUT /api/providers/:id/path",
     "GET /api/studio/extension/:file",
     "POST /api/studio/packs/:projectId/choose",
