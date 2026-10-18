@@ -18,7 +18,7 @@ import { createEntry, createPrompt, removeEntry, removePrompt } from "../library
 import { templateById, templateSummaries } from "../project-templates/repo.js";
 import { dueSchedules, scheduleById } from "../schedules/repo.js";
 import { projectDir } from "../storage/layout.js";
-import { sampleProjects } from "../template-studio/repo.js";
+import { gatesOf, sampleProjects, writeGate } from "../template-studio/repo.js";
 import type { TrashDeps } from "./model.js";
 import {
   createTrashPurge,
@@ -223,6 +223,19 @@ describe("templates in the trash", () => {
     expect(templateSummaries(h.db).map((one) => one.name)).toEqual([
       "weekly show",
       "Weekly show (restored)",
+    ]);
+  });
+
+  it("come back renamed with the gate of the version they were, so their schedules keep running", () => {
+    const h = harness();
+    template(h, T1, "Weekly show");
+    writeGate(h.db, T1, { version: 1, state: "legacy", carriedFrom: null });
+    h.db.prepare("UPDATE project_templates SET deleted_at=? WHERE id=?").run(now(h), T1);
+    template(h, T2, "weekly show");
+    expect(ok(restoreItem(h, "template", T1)).renamedFrom).toBe("Weekly show");
+    expect(gatesOf(h.db, T1)).toEqual([
+      { version: 1, state: "legacy", carriedFrom: null },
+      { version: 2, state: "carried", carriedFrom: 1 },
     ]);
   });
 

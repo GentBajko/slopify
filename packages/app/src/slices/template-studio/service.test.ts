@@ -130,6 +130,34 @@ describe("getStudio", () => {
     expect(result.value.runnableVersion).toBe(1);
   });
 
+  it("says a stale section's version was made by Slopify itself when its gate was carried", async () => {
+    const { h, deps, id } = studio();
+    h.deps.db
+      .prepare("INSERT INTO template_gates (template_id,version,state) VALUES (?,1,'ready')")
+      .run(id);
+    updateTemplate(h.deps, {
+      id,
+      baseVersion: 1,
+      mutationId: randomUUID(),
+      name: "Show",
+      document: h.document,
+    });
+    h.deps.db
+      .prepare(
+        "INSERT INTO template_gates (template_id,version,state,carried_from) VALUES (?,2,'carried',1)",
+      )
+      .run(id);
+    const result = await getStudio(deps, id);
+    if (!result.ok) throw new Error(result.message);
+    expect(result.value.gate).toBe("carried");
+    expect(result.value.runnableVersion).toBe(2);
+    const script = result.value.sections.find((section) => section.id === "script");
+    expect(script?.state).toBe("stale");
+    expect(script?.sentence).toMatch(
+      /^Slopify made version 2 from version 1 itself \(a retired model switched, or a new name on restore\)\. /u,
+    );
+  });
+
   it("uses the sample topic set in Settings, and a template's own once it has one", async () => {
     const { h, deps, id } = studio();
     writeSetting(h.deps.db, "templateStudio.sampleTopic.default", JSON.stringify("Tea clippers"));

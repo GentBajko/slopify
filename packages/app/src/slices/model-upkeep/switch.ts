@@ -12,6 +12,7 @@ import { updateTemplate } from "../project-templates/service.js";
 import { ensureBaseline, saveRevision } from "../revisions/index.js";
 import type { RevisionDeps } from "../revisions/model.js";
 import { currentRevisionId } from "../revisions/repo.js";
+import { carryGateOnto } from "../template-studio/repo.js";
 import {
   configChoices,
   formChoices,
@@ -180,6 +181,8 @@ function switchTemplate(
             ? `The template "${template.name}" uses a prompt or intro/outro that was deleted, so it cannot be saved. Open it in Library → Templates, choose another, and save.`
             : changedMeanwhile,
       };
+    // Slopify's own change: a schedule running the version it came from keeps running.
+    carryGateOnto(deps.db, template.id, template.version, saved.value.version);
     deps.db
       .prepare(
         "UPDATE schedules SET template_version=?,version=version+1,updated_at=? WHERE template_id=? AND template_version=? AND deleted_at IS NULL AND status IN ('active','paused')",

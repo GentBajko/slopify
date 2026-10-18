@@ -3,6 +3,7 @@ import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { type SampleProjects, templateSamplesDir } from "../../kernel/paths.js";
+import { carryGate } from "./gate.js";
 import { gateStates, type VersionGate } from "./model.js";
 
 // The clause that keeps a template's hidden sample project out of a query over projects. Every
@@ -209,4 +210,17 @@ export function writeGate(
     gate.checksJson ?? null,
     gate.markedAt ?? null,
   );
+}
+
+// A version Slopify wrote itself from `parent` (a retired model switched, a restore under a new
+// name) keeps its gate: a runnable parent makes `next` carried, so no schedule stops over a
+// change its user didn't make. Call it in the writer's transaction.
+export function carryGateOnto(
+  db: DatabaseSync,
+  templateId: string,
+  parent: number,
+  next: number,
+): void {
+  const carried = carryGate(gatesOf(db, templateId), parent, next);
+  if (carried !== undefined) writeGate(db, templateId, carried);
 }

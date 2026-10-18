@@ -15,13 +15,13 @@ import { type FreeCheckInput, freeChecks, type ScheduleFit } from "./checks.js";
 import type { FreeSamples } from "./free.js";
 import { gateOf, runnableVersion } from "./gate.js";
 import { queuedJob, runningJob } from "./jobs.js";
-import { fallbackSampleTopic, type StudioResult } from "./model.js";
+import { fallbackSampleTopic, type StudioResult, type VersionGate } from "./model.js";
 import { paidView } from "./paid-view.js";
 import { gatesOf, sampleOf } from "./repo.js";
 import { reviewsPath } from "./reviews-path.js";
 import { monthlyCost, type RunPrice, upcomingRuns } from "./schedule-sample.js";
 import type { StudioChecks, StudioView } from "./schema.js";
-import { baseStatuses, madeStatuses } from "./status.js";
+import { baseStatuses, madeStatuses, type SectionStatus } from "./status.js";
 
 export interface StudioDeps {
   readonly db: DatabaseSync;
@@ -167,16 +167,32 @@ export async function getStudio(deps: StudioDeps, id: string): Promise<StudioRes
         topicSource: sample?.topicSource ?? "fixed",
         fullScript: sample?.fullScript ?? false,
       },
-      sections: baseStatuses(template.document, {
-        ...madeStatuses(free, schedules.length, cost),
-        ...paid.statuses,
-      }),
+      sections: carriedSentences(
+        baseStatuses(template.document, {
+          ...madeStatuses(free, schedules.length, cost),
+          ...paid.statuses,
+        }),
+        gates.find((gate) => gate.version === template.version),
+      ),
       paid: paid.view,
       free,
       schedule: { runs: upcomingRuns(schedules, template.document, now), cost },
       reviews: reviewsPath(template.document),
     },
   };
+}
+
+// A version Slopify wrote itself keeps its gate, but what it changed has no sample yet: each
+// stale section says who made the change.
+function carriedSentences(
+  sections: readonly SectionStatus[],
+  gate: VersionGate | undefined,
+): readonly SectionStatus[] {
+  if (gate?.state !== "carried" || gate.carriedFrom === null) return sections;
+  const why = `Slopify made version ${String(gate.version)} from version ${String(gate.carriedFrom)} itself (a retired model switched, or a new name on restore).`;
+  return sections.map((section) =>
+    section.state === "stale" ? { ...section, sentence: `${why} ${section.sentence}` } : section,
+  );
 }
 
 function pricesOf(

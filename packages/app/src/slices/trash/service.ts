@@ -5,7 +5,7 @@ import { deleteVersions, recordVersion } from "../library/history.js";
 import { nameMax } from "../library/model.js";
 import { entryById, promptById } from "../library/repo.js";
 import { deleteProject, projectBusy } from "../storage/delete-project.js";
-import { notTemplateSample, sampleOf } from "../template-studio/repo.js";
+import { carryGateOnto, notTemplateSample, sampleOf } from "../template-studio/repo.js";
 import {
   type Restored,
   type TrashDeps,
@@ -200,6 +200,8 @@ function restoreTemplate(deps: Pick<TrashDeps, "db" | "clock">, id: string): Tra
       )
       .run(id, version, name, found.document_json, deps.clock.now().toISOString());
     deps.db.prepare("UPDATE project_templates SET head_version = ? WHERE id = ?").run(version, id);
+    // Only the name changed: a schedule running the version it was keeps running.
+    carryGateOnto(deps.db, id, found.version, version);
   }
   return {
     ok: true,

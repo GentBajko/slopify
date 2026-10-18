@@ -18,6 +18,7 @@ import { readChannelLinksFor } from "../youtube/edits-repo.js";
 import { type BackupDeps, planBackup, streamBackup } from "./backup-export.js";
 import { libraryTables, projectPartSchema, projectTables, usageTables } from "./backup-format.js";
 import { importBackup } from "./backup-import.js";
+import { readTar, tarEnd, tarHeader, tarPadding } from "./tar.js";
 
 // Backups carry everything added since 2.5.0 (migrations 0022-0039): prompt history, channels
 // with their cast and pictures, episode memories, existing videos, reviews, run cost, project
@@ -335,6 +336,58 @@ describe("backups carry everything added since 2.5.0", () => {
     expect(
       rows(target.db, "SELECT template_id,version,state,marked_at FROM template_gates"),
     ).toEqual([{ template_id: id, version: 1, state: "ready", marked_at: "a" }]);
+  });
+
+  it("marks every template version of a backup from before the studio legacy, so its schedules keep running", async () => {
+    const source = install();
+    const fixture = draftFixture();
+    const document = JSON.stringify(fixture.document);
+    fixture.close();
+    const id = "00000000-0000-4000-8000-000000000002";
+    source.db
+      .prepare(
+        "INSERT INTO project_templates (id,head_version,creation_hash,created_at) VALUES (?,2,'h','a')",
+      )
+      .run(id);
+    source.db
+      .prepare(
+        "INSERT INTO project_template_revisions VALUES (?,1,'Old show',?,'a'),(?,2,'Old show',?,'b')",
+      )
+      .run(id, document, id, document);
+    const entries: { name: string; content: Uint8Array }[] = [];
+    await readTar(once(await exported(source)), async (entry, body) => {
+      const chunks: Uint8Array[] = [];
+      for await (const chunk of body.chunks()) chunks.push(chunk);
+      entries.push({ name: entry.name, content: Buffer.concat(chunks) });
+    });
+    // As Slopify 3.25 wrote it: schema 62, no studio tables.
+    const old = entries.map((entry) => {
+      if (entry.name !== "manifest.json" && entry.name !== "data/library.json") return entry;
+      const value = JSON.parse(Buffer.from(entry.content).toString()) as {
+        databaseVersion?: number;
+        tables?: Record<string, unknown>;
+      };
+      if (entry.name === "manifest.json") value.databaseVersion = 62;
+      else if (value.tables !== undefined) delete value.tables.template_gates;
+      return { name: entry.name, content: Buffer.from(JSON.stringify(value)) };
+    });
+    const archive = Buffer.concat(
+      old
+        .flatMap((entry) => [
+          tarHeader({ name: entry.name, size: entry.content.byteLength }),
+          entry.content,
+          new Uint8Array(tarPadding(entry.content.byteLength)),
+        ])
+        .concat([tarEnd]),
+    );
+    const target = install();
+    await importBackup(target, once(archive));
+    expect(
+      rows(target.db, "SELECT template_id,version,state FROM template_gates ORDER BY version"),
+    ).toEqual([
+      { template_id: id, version: 1, state: "legacy" },
+      { template_id: id, version: 2, state: "legacy" },
+    ]);
   });
 
   it("keeps a default channel this install already edited, and merges cast into it by id", async () => {

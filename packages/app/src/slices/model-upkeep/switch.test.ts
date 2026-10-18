@@ -10,6 +10,7 @@ import { draftFixture } from "../play-drafts/draft.fake.js";
 import type { PlayDraftDocument } from "../play-drafts/model.js";
 import { templateById } from "../project-templates/repo.js";
 import { createTemplate } from "../project-templates/service.js";
+import { gatesOf, writeGate } from "../template-studio/repo.js";
 import { defaultVideoEdit } from "../video/edit-settings.js";
 import {
   requestOf,
@@ -191,6 +192,38 @@ describe("switchRetiredModel", () => {
       h.deps.db.prepare("SELECT template_version FROM schedules WHERE id=?").get(scheduleId)
         ?.template_version,
     ).toBe(2);
+  });
+
+  it("carries a runnable version's gate onto the version it makes, so its schedules keep running", async () => {
+    const templateId = randomUUID();
+    expect(
+      createTemplate(h.deps, {
+        id: templateId,
+        name: "Weekly",
+        document: { ...h.document, form: form() },
+      }).ok,
+    ).toBe(true);
+    writeGate(h.deps.db, templateId, { version: 1, state: "ready", carriedFrom: null });
+    const result = await switchRetiredModel(h.deps, catalogue, request({ id: templateId }));
+    expect(result).toEqual({ ok: true, changed: true });
+    expect(gatesOf(h.deps.db, templateId)).toEqual([
+      { version: 1, state: "ready", carriedFrom: null },
+      { version: 2, state: "carried", carriedFrom: 1 },
+    ]);
+  });
+
+  it("carries no gate from a version that was never checked", async () => {
+    const templateId = randomUUID();
+    expect(
+      createTemplate(h.deps, {
+        id: templateId,
+        name: "Weekly",
+        document: { ...h.document, form: form() },
+      }).ok,
+    ).toBe(true);
+    await switchRetiredModel(h.deps, catalogue, request({ id: templateId }));
+    expect(templateById(h.deps.db, templateId)?.version).toBe(2);
+    expect(gatesOf(h.deps.db, templateId)).toEqual([]);
   });
 
   it("refuses what is gone or running, saying what to do", async () => {
