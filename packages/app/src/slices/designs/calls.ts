@@ -1,5 +1,6 @@
 import { transact } from "../../kernel/db/tx.js";
 import { errorText } from "../../kernel/errors.js";
+import { isProviderError } from "../../kernel/ports/model.js";
 import { castImageMaxBytes, storeImageBlob } from "../channels/images.js";
 import { imageBlob } from "../channels/repo.js";
 import { backupMaxImageBytes } from "../storage/backup-format.js";
@@ -111,10 +112,7 @@ export function createDesignCalls(deps: DesignRunnerDeps): DesignCalls {
       deps.log.write("warn", "designs.picture.failed", {
         detail: `${designId}/${stepId}: ${reason}`,
       });
-      finish(designId, stepId, {
-        state: "failed",
-        error: `The picture couldn't be made: ${reason} Press Try again, or choose another image model under Made with … · change.`,
-      });
+      finish(designId, stepId, { state: "failed", error: failedSentence(error, reason) });
     } finally {
       release();
     }
@@ -138,4 +136,15 @@ export function createDesignCalls(deps: DesignRunnerDeps): DesignCalls {
       while (inFlight.size > 0) await Promise.allSettled([...inFlight]);
     },
   };
+}
+
+// Try again is offered only when asking again can help: a model that can't do this, or a key
+// the provider refuses, fails the same way every time, so the sentence says the fix instead.
+function failedSentence(error: unknown, reason: string): string {
+  const kind = isProviderError(error) ? error.fault.kind : undefined;
+  if (kind === "unsupported")
+    return `The picture couldn't be made: ${reason}${reason.includes("Made with") ? "" : " Choose another image model under Made with … · change."}`;
+  if (kind === "auth" || kind === "missing_key")
+    return `The picture couldn't be made: ${reason}${/Settings/.test(reason) ? "" : " Check the provider's key in Settings → Providers, then press Try again."}`;
+  return `The picture couldn't be made: ${reason} Press Try again, or choose another image model under Made with … · change.`;
 }

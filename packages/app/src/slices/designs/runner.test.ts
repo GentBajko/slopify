@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { editRefusal } from "../../catalog/schema.js";
 import type { GeneratedImage } from "../../kernel/ports/image.js";
+import { providerError } from "../../kernel/ports/model.js";
 import { designCatalogue, designHarness, type Harness, pngOf } from "./designs.fake.js";
 import { poster } from "./document.fake.js";
 import { createDesignRunner, type DesignImageGenerator, type DesignRunner } from "./runner.js";
@@ -114,6 +116,39 @@ describe("editing a picture", () => {
     const again = runner.retry("d1", failed?.id ?? "");
     expect(again.ok ? "retried" : again.reason).toBe("busy");
     expect(runner.retry("d1", "nope").ok).toBe(false);
+  });
+
+  it("says the fix, not Try again, when the model can't edit a picture", async () => {
+    const { runner, first } = setup(async () => {
+      throw providerError({ kind: "unsupported", message: editRefusal });
+    });
+    runner.edit("d1", edit(first));
+    await runner.idle();
+    const failed = designView(h.db, "d1")?.steps[1];
+    expect(failed?.error).toBe(`The picture couldn't be made: ${editRefusal}`);
+    expect(failed?.error).not.toContain("Try again");
+  });
+
+  it("adds where to change the model to an unsupported refusal that doesn't say it", async () => {
+    const { runner, first } = setup(async () => {
+      throw providerError({ kind: "unsupported", message: "This size isn't offered." });
+    });
+    runner.edit("d1", edit(first));
+    await runner.idle();
+    expect(designView(h.db, "d1")?.steps[1]?.error).toBe(
+      "The picture couldn't be made: This size isn't offered. Choose another image model under Made with … · change.",
+    );
+  });
+
+  it("points a refused key at Settings → Providers", async () => {
+    const { runner, first } = setup(async () => {
+      throw providerError({ kind: "auth", message: "The key was rejected." });
+    });
+    runner.edit("d1", edit(first));
+    await runner.idle();
+    expect(designView(h.db, "d1")?.steps[1]?.error).toBe(
+      "The picture couldn't be made: The key was rejected. Check the provider's key in Settings → Providers, then press Try again.",
+    );
   });
 
   it("fails a step whose answer is not a picture", async () => {
