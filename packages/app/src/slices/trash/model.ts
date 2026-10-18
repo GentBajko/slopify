@@ -4,20 +4,29 @@ import type { Clock } from "../../kernel/clock.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
 
-// Settings → Trash. Deleting a project, a Library prompt or intro/outro, a template or a
-// schedule stamps it instead of removing it; it stays here this long, then the daily purge
+// Settings → Trash. Deleting a project, a Library prompt or intro/outro, a template, a
+// schedule, a design or a design template stamps it instead of removing it; it stays here this long, then the daily purge
 // removes it for good (a project's folder with it).
 export const trashDays = 30;
 export const trashMs = trashDays * 24 * 60 * 60_000;
 
-export const trashKinds = ["project", "prompt", "entry", "template", "schedule"] as const;
+export const trashKinds = [
+  "project",
+  "prompt",
+  "entry",
+  "template",
+  "schedule",
+  "design",
+  "design-template",
+] as const;
 export type TrashKind = (typeof trashKinds)[number];
 
 export const trashItemSchema = z.object({
   kind: z.enum(trashKinds),
   id: z.string(),
   name: z.string(),
-  // What sort of prompt ("article", "image"…) or entry ("intro", "outro"); null otherwise.
+  // What sort of prompt ("article", "image"…), entry ("intro", "outro") or design ("edit",
+  // "design"); null otherwise.
   detail: z.string().nullable(),
   deletedAt: z.string(),
   // When the daily purge removes it for good.

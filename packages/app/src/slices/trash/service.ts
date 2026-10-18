@@ -6,6 +6,13 @@ import { nameMax } from "../library/model.js";
 import { entryById, promptById } from "../library/repo.js";
 import { deleteProject, projectBusy } from "../storage/delete-project.js";
 import {
+  deleteDesignNow,
+  deleteDesignTemplateNow,
+  restoreDesign,
+  restoreDesignTemplate,
+  trashedDesignRows,
+} from "./designs.js";
+import {
   type Restored,
   type TrashDeps,
   type TrashItem,
@@ -44,7 +51,7 @@ const trashedRows = `
     JOIN project_template_revisions r ON r.template_id = t.id AND r.version = t.head_version
     WHERE t.deleted_at IS NOT NULL
   UNION ALL SELECT 'schedule', id, name, NULL, deleted_at FROM schedules
-    WHERE deleted_at IS NOT NULL AND purged_at IS NULL`;
+    WHERE deleted_at IS NOT NULL AND purged_at IS NULL${trashedDesignRows}`;
 
 export function listTrash(deps: Pick<TrashDeps, "db" | "clock">): readonly TrashItem[] {
   const now = deps.clock.now().valueOf();
@@ -110,6 +117,10 @@ export function restoreItem(
         return restoreTemplate(deps, id);
       case "schedule":
         return restoreSchedule(deps, id);
+      case "design":
+        return restoreDesign(deps, id);
+      case "design-template":
+        return restoreDesignTemplate(deps, id);
     }
   });
 }
@@ -274,6 +285,10 @@ export function deleteNow(deps: TrashDeps, kind: TrashKind, id: string): TrashRe
         .run(deps.clock.now().toISOString(), id).changes;
       return Number(changed) === 0 ? { ok: false, reason: "not-found" } : { ok: true, value: null };
     }
+    case "design":
+      return deleteDesignNow(deps, id);
+    case "design-template":
+      return deleteDesignTemplateNow(deps, id);
   }
 }
 
