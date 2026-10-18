@@ -4,7 +4,9 @@ import {
   bodyPieces,
   bodyProblems,
   draftProblems,
+  draftWarnings,
   firstProblem,
+  keywordSlots,
   nameProblems,
   slotNames,
 } from "./draft-lint.js";
@@ -72,6 +74,15 @@ describe("draftProblems", () => {
     expect(draftProblems(draft({ body: "{{a{b}}" }), [])[0]?.message).toBe(
       "The keyword at line 1, column 1 contains a brace. Keywords cannot be placed inside other keywords.",
     );
+  });
+
+  it("refuses an unknown Slopify_ name, unless the stored prompt already had it", () => {
+    const body = "Write about {{Slopify_Wish}}.";
+    expect(draftProblems(draft({ body }), [])[0]?.message).toContain(
+      "{{Slopify_Wish}} at line 1, column 13 isn't a keyword Slopify fills",
+    );
+    expect(draftProblems(draft({ body }), [], ["Slopify_Wish"])).toEqual([]);
+    expect(draftProblems(entry({ body }), [], ["Slopify_Wish"])).toEqual([]);
   });
 
   it("appends a refusal the browser could not have known", () => {
@@ -179,5 +190,98 @@ describe("bodyPieces", () => {
         .map((piece) => piece.text)
         .join(""),
     ).toBe(body);
+  });
+});
+
+describe("draftWarnings", () => {
+  it("warns about a keyword where it can't be filled and an old name, without refusing", () => {
+    const misplaced = draft({ body: "Recap {{Slopify_Summary}}." });
+    expect(draftProblems(misplaced, [])).toEqual([]);
+    expect(draftWarnings(misplaced).map((one) => one.message)).toEqual([
+      expect.stringContaining(
+        "{{Slopify_Summary}} at line 1, column 7 can't be used in an Article prompt",
+      ),
+    ]);
+    expect(
+      draftWarnings(draft({ kind: "image", body: "{{Scene}}" })).map((one) => one.message),
+    ).toEqual([expect.stringContaining("is the old name of {{Slopify_Scene}}")]);
+    expect(draftWarnings(draft({}))).toEqual([]);
+  });
+});
+
+describe("keywordSlots", () => {
+  it("parts the keywords Slopify fills from the person's own, old names included", () => {
+    expect(keywordSlots(["Topic", "Slopify_Title", "Scene", "Slopify_Wish", "Appearance"])).toEqual(
+      {
+        own: ["Topic", "Slopify_Wish"],
+        filled: ["Slopify_Title", "Scene", "Appearance"],
+      },
+    );
+  });
+});
+
+describe("bodyPieces with a place", () => {
+  it("marks a keyword usable here, a misplaced one, an unknown one and an old name", () => {
+    const body = "{{Slopify_Title}} {{Slopify_Summary}} {{Slopify_Wish}} {{Topic}}";
+    expect(bodyPieces(body, { place: "article" })).toEqual([
+      {
+        start: 0,
+        text: "{{Slopify_Title}}",
+        marked: false,
+        keyword: { name: "Slopify_Title", kind: "known" },
+      },
+      { start: 17, text: " ", marked: false },
+      {
+        start: 18,
+        text: "{{Slopify_Summary}}",
+        marked: false,
+        keyword: {
+          name: "Slopify_Summary",
+          kind: "misuse",
+          message: expect.stringContaining("can't be used in an Article prompt"),
+        },
+      },
+      { start: 37, text: " ", marked: false },
+      {
+        start: 38,
+        text: "{{Slopify_Wish}}",
+        marked: false,
+        keyword: {
+          name: "Slopify_Wish",
+          kind: "misuse",
+          message: expect.stringContaining("isn't a keyword Slopify fills"),
+        },
+      },
+      { start: 54, text: " {{Topic}}", marked: false },
+    ]);
+    expect(bodyPieces("{{ Scene }}", { place: "image" })).toEqual([
+      {
+        start: 0,
+        text: "{{ Scene }}",
+        marked: false,
+        keyword: {
+          name: "Scene",
+          kind: "legacy",
+          message: expect.stringContaining("old name of {{Slopify_Scene}}"),
+        },
+      },
+    ]);
+  });
+
+  it("leaves an old name plain where it was always plain text, and a stored unknown name", () => {
+    expect(bodyPieces("{{Scene}}", { place: "article" })).toEqual([
+      { start: 0, text: "{{Scene}}", marked: false },
+    ]);
+    expect(
+      bodyPieces("{{Slopify_Wish}}", { place: "article", grandfathered: ["Slopify_Wish"] }),
+    ).toEqual([{ start: 0, text: "{{Slopify_Wish}}", marked: false }]);
+  });
+
+  it("keeps the brace errors and rebuilds the body exactly", () => {
+    const body = "{{Slopify_Title}} {{bad {{Slopify_Hook}}\n{{}}";
+    const pieces = bodyPieces(body, { place: "image" });
+    expect(pieces.map((piece) => piece.text).join("")).toBe(body);
+    expect(pieces.filter((piece) => piece.marked).map((piece) => piece.start)).toEqual([18, 41]);
+    expect(pieces.filter((piece) => piece.keyword !== undefined)).toHaveLength(2);
   });
 });
