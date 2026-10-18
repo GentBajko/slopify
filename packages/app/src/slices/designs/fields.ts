@@ -1,11 +1,9 @@
 import { detectSlots, filledKeywords, render, type SlotLintKind } from "../admission/substitute.js";
+import { isReserved, reservedPrefix } from "../keywords/model.js";
 import type { DesignDocument } from "./schema.js";
 
 // A design's fields are the {{names}} in its picture prompt, its text blocks and its brochure,
 // in the order they first appear. The person fills every one; nothing is filled by Slopify.
-
-// Written ahead of the names Slopify fills itself (`{{Slopify_Title}}`), so never a field.
-export const reservedPrefix = "Slopify_";
 
 export type FieldProblem =
   | { readonly kind: "reserved"; readonly name: string; readonly sentence: string }
@@ -63,11 +61,11 @@ export function fieldProblems(doc: DesignDocument): readonly FieldProblem[] {
       });
   const names = designFields(doc);
   for (const name of names)
-    if (name.startsWith(reservedPrefix) || filledKeywords.includes(name))
+    if (isReserved(name) || filledKeywords.includes(name))
       problems.push({
         kind: "reserved",
         name,
-        sentence: `{{${name}}} is a name Slopify keeps for videos, so a design can't use it. Rename it (for example {{${name.replace(reservedPrefix, "")}Text}}).`,
+        sentence: `{{${name}}} is a name Slopify keeps for videos, so a design can't use it. Rename it (for example {{${isReserved(name) ? name.slice(reservedPrefix.length) : name}Text}}).`,
       });
   const dateField = doc.schedule?.dateField;
   if (dateField !== undefined && !names.includes(dateField))

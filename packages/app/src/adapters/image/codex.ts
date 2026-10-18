@@ -26,6 +26,7 @@ import {
   stopCliRun,
 } from "../llm/run-cli.js";
 import { lines } from "../llm/sse-lines.js";
+import { accessField } from "../model-access.js";
 import { codexGeneratedImage, codexImageCount } from "./codex-output.js";
 import { attachedPictures, editNote, type ReferencePicture } from "./reference.js";
 
@@ -362,6 +363,7 @@ export function codexImage(deps: {
               message: /refus|content.policy|safety/i.test(message)
                 ? refusedImage("The Codex CLI", redact(message))
                 : cliReported(binary, redact(message), imageNext),
+              ...(/refus|content.policy|safety/i.test(message) ? {} : accessField(null, message)),
             });
           } else if (event.type === "error") {
             const message = cliShaped(binary, errorEvent, event.value).message;
@@ -376,6 +378,7 @@ export function codexImage(deps: {
               message: /image.generation|image tool|feature.*unavailable/i.test(message)
                 ? `The Codex CLI cannot make images${quoted("", redact(message))}. ${cannotDraw}`
                 : cliReported(binary, redact(message), imageNext),
+              ...accessField(null, message),
             });
           } else if (event.type === "item.completed") {
             const { item: value } = cliShaped(binary, item, event.value);

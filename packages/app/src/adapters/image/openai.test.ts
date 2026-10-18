@@ -344,4 +344,32 @@ describe("a picture to edit", () => {
     expect(String(form.get("prompt"))).toContain("Image 2 shows Ada");
     expect(String(form.get("prompt"))).not.toContain("visual reference");
   });
+
+  it("marks an edit the organization can't run with the model, like any other call", async () => {
+    const thrown = await openAiImage({
+      fetch: replaying(
+        () =>
+          new Response(
+            JSON.stringify({
+              error: {
+                message: "Your organization must be verified to use the model `gpt-image-1`.",
+                type: "invalid_request_error",
+                code: null,
+              },
+            }),
+            { status: 403 },
+          ),
+      ),
+      key: () => key,
+    })
+      .generate({
+        model,
+        prompt: "Remove the sign",
+        aspect: "1:1",
+        edit: { source: { bytes: new Uint8Array(pngHead), mime: "image/png" } },
+        signal: new AbortController().signal,
+      })
+      .catch((error: unknown) => error);
+    expect(isProviderError(thrown) && thrown.fault.access).toBe("no-access");
+  });
 });

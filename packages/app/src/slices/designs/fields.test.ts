@@ -84,6 +84,16 @@ describe("design fields", () => {
     expect(fieldProblems(poster())).toEqual([]);
   });
 
+  it("keeps the whole Slopify_ prefix whatever its case, as the keywords do", () => {
+    const doc = poster({
+      picture: { ...poster().picture, prompt: "{{slopify_title}} and {{SLOPIFY_Hook}}" },
+    });
+    expect(fieldProblems(doc).map((problem) => problem.sentence)).toEqual([
+      "{{slopify_title}} is a name Slopify keeps for videos, so a design can't use it. Rename it (for example {{titleText}}).",
+      "{{SLOPIFY_Hook}} is a name Slopify keeps for videos, so a design can't use it. Rename it (for example {{HookText}}).",
+    ]);
+  });
+
   it("counts a blank or absent value as missing and says which to fill", () => {
     expect(missingValues(poster(), { Event: "Late Set", Date: " ", Venue: "Cellar" })).toEqual([
       "Date",

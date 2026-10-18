@@ -204,4 +204,24 @@ describe("learning from real runs", () => {
     expect(seen.worked.map((u) => u.family)).toEqual(["llm", "image", "tts"]);
     expect(seen.denied.map((u) => u.family)).toEqual(["llm", "image", "tts"]);
   });
+
+  it("learns from a design's picture edit like any other picture", async () => {
+    const { access, seen } = recorder();
+    const deps = {
+      registry: registry(false),
+      clock: manualClock(),
+      log: { write: () => {} },
+      access,
+    };
+    const edit = {
+      ...imageCall,
+      owner: { kind: "design", id: "d" },
+      purpose: "picture-edit",
+      edit: { source: { bytes: png, mime: "image/png" as const } },
+    } as const;
+    await standaloneImage(deps, edit);
+    await expect(standaloneImage({ ...deps, registry: registry(true) }, edit)).rejects.toThrow();
+    expect(seen.worked).toEqual([{ provider: "fal", family: "image", model: "i1" }]);
+    expect(seen.denied.map((u) => u.model)).toEqual(["i1"]);
+  });
 });

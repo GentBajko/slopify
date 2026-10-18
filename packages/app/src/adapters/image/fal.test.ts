@@ -363,4 +363,12 @@ describe("a picture to edit", () => {
     expect(String(thrown)).toContain("can't edit a picture");
     expect(seen).toEqual([]);
   });
+
+  it("marks an edit endpoint the key can't reach, like any other call", async () => {
+    const thrown: unknown = await editing(
+      replaying(() => new Response(JSON.stringify({ detail: "Forbidden" }), { status: 403 })),
+      "fal-ai/flux-2",
+    ).catch((error: unknown) => error);
+    expect(isProviderError(thrown) && thrown.fault.access).toBe("no-access");
+  });
 });

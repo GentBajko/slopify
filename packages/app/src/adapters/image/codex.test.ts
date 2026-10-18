@@ -325,6 +325,26 @@ it("rejects a linked session directory", async () => {
   ).rejects.toMatchObject({ fault: { kind: "unavailable" } });
 });
 
+it("marks an edit or a picture the ChatGPT plan's model can't make, kind unchanged", async () => {
+  const source = { bytes: Uint8Array.from([0x89, 0x50, 0x4e, 0x47]), mime: "image/png" as const };
+  const plan = fakeRun(
+    () => {},
+    '{"type":"turn.failed","error":{"message":"The \'gpt-5.5-pro\' model is not supported when using Codex with a ChatGPT account."}}\n',
+  );
+  const edit: unknown = await codexImage({ run: plan.run })
+    .generate({ ...request(), model: "gpt-5.5-pro", edit: { source } })
+    .catch((e: unknown) => e);
+  expect(isProviderError(edit) && edit.fault).toEqual({ kind: "other", access: "no-access" });
+  const missing = fakeRun(
+    () => {},
+    '{"type":"error","message":"The model `gpt-9` does not exist or you do not have access to it."}\n',
+  );
+  const made: unknown = await codexImage({ run: missing.run })
+    .generate({ ...request(), model: "gpt-9" })
+    .catch((e: unknown) => e);
+  expect(isProviderError(made) && made.fault).toEqual({ kind: "other", access: "not-found" });
+});
+
 it("requires a completed turn and cleans up refused or failed calls", async () => {
   const fake = fakeRun(() => {}, '{"type":"turn.failed","error":{"message":"refused"}}\n');
   const error: unknown = await codexImage({ run: fake.run })
