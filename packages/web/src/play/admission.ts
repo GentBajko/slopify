@@ -10,11 +10,13 @@ import {
 } from "@app/slices/admission/rules.js";
 import type { Field } from "@app/slices/admission/substitute.js";
 import { collectFields, detectSlots } from "@app/slices/admission/substitute.js";
+import { keywordUsesOf, placedProblems } from "@app/slices/keywords/rules.js";
 import type { Entry, Prompt, PromptKind } from "@app/slices/library/model.js";
 import type { DraftInput, PlayFormState, Upload } from "@/play/state";
 import { ambientUploadOn, draftOf, shortsOn, stagedOf } from "@/play/state";
 import { validSubtitleStyle } from "@/subtitles/config";
 import { articleKind } from "./article-kind";
+import { placedBodies } from "./placed-bodies";
 
 // Live admission. `admit` is the server's own function, imported through `@app/*`: the
 // sentence the form shows and the refusal the server writes are one rule, and the only
@@ -93,23 +95,26 @@ export function admission(input: AdmissionInput): Admission {
     silenceGapSeconds: input.silenceGapSeconds,
   };
   const draft = draftOf(draftInput);
+  // The picked bodies' keywords Slopify fills, checked where each runs, as the server does.
+  const placed = placedBodies(draft, input.prompts, input.entries);
+  const misplaced = placedProblems(placed, draft.values);
   const admitted = admit({
     draft,
     staged: stagedOf(input.form.provided),
     requiredSlots: draftInput.slots,
+    keywordUses: keywordUsesOf(placed),
   });
-  const result: AdmissionResult = !validSubtitleStyle(draft.subtitles ?? input.form.subtitles)
-    ? {
-        ok: false,
-        fields: [
-          ...(admitted.ok ? [] : admitted.fields),
-          {
-            field: "subtitles.fontSize",
-            message: "Choose a whole subtitle font size from 16 to 120.",
-          },
-        ],
-      }
-    : admitted;
+  const subtitles = validSubtitleStyle(draft.subtitles ?? input.form.subtitles)
+    ? []
+    : [
+        {
+          field: "subtitles.fontSize",
+          message: "Choose a whole subtitle font size from 16 to 120.",
+        },
+      ];
+  const refused = [...misplaced, ...(admitted.ok ? [] : admitted.fields), ...subtitles];
+  const result: AdmissionResult =
+    admitted.ok && refused.length === 0 ? admitted : { ok: false, fields: refused };
 
   return { fields, draft, result, blocker: firstBlocker(input.form, result) };
 }
@@ -236,6 +241,8 @@ function hintOf(form: PlayFormState, error: FieldError): string {
   if (error.field.startsWith("values.")) {
     return `Fill ${error.field.slice("values.".length)} to play`;
   }
+  const keyword = keywordHint(error);
+  if (keyword !== undefined) return keyword;
   if (error.field.startsWith("imagePrompts.")) {
     return error.field.endsWith(".number")
       ? `Set a Number between 1 and ${String(numberPerPromptMax)} to play`
@@ -302,6 +309,16 @@ function hintOf(form: PlayFormState, error: FieldError): string {
       // invented and nothing is swallowed.
       return error.message;
   }
+}
+
+// A keyword Slopify fills that can't be filled where it is: the sentence names it, and the field
+// is the prompt (or title) that holds it, which the field's own hint would misread as unpicked.
+function keywordHint(error: FieldError): string | undefined {
+  const name = /\{\{(Slopify_\w+)\}\}/.exec(error.message)?.[1];
+  if (name === undefined) return undefined;
+  if (error.message.includes("Article is Off")) return "Set Article to Generate or Provide to play";
+  if (error.field === "title") return `Remove {{${name}}} from the title to play`;
+  return `Remove {{${name}}} from that prompt, or pick another, to play`;
 }
 
 function bodyOf(prompts: readonly Prompt[], kind: PromptKind, name: string): string | undefined {
