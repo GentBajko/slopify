@@ -63,7 +63,7 @@ function BudgetField(): ReactElement {
       <Field
         label="Daily sample budget"
         tip="settings.template-studio.budget"
-        help={`The most the studio's samples may spend in one day, in US dollars; at $0.00 no sample spends money. Spent today: ${usd(data.today.spent)}; left: ${usd(data.today.left)}.`}
+        help={`The most the studio's samples may spend in one day, in US dollars; at $0.00 no sample spends money. Spent today: ${usd(data.today.spent)}${data.today.unpriced > 0 ? ` plus ${String(data.today.unpriced)} ${data.today.unpriced === 1 ? "call" : "calls"} with no known price` : ""}; left: ${usd(data.today.left)}.`}
         error={
           problem ?? (save.error ? `The budget wasn't saved: ${save.error.message}` : undefined)
         }

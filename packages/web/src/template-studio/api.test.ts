@@ -42,7 +42,7 @@ describe("studio refusals", () => {
       unknown: 0,
       onPlan: false,
       usesPlan: false,
-      budget: { budget: 2, spent: 0, left: 2, plans: false },
+      budget: { budget: 2, spent: 0, unpriced: 0, left: 2, plans: false },
       fits: true,
       problem: null,
     };

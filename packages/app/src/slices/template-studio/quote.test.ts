@@ -71,7 +71,7 @@ describe("quoteSave", () => {
       expect.arrayContaining(["Article", "Narration"]),
     );
     expect(quote.value.high).toBeGreaterThan(0);
-    expect(quote.value.budget).toEqual({ budget: 2, spent: 0, left: 2, plans: false });
+    expect(quote.value.budget).toEqual({ budget: 2, spent: 0, unpriced: 0, left: 2, plans: false });
     expect(quote.value.fits).toBe(quote.value.high <= 2);
   });
 

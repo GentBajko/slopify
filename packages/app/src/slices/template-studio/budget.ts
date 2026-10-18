@@ -79,9 +79,24 @@ export function spentToday(db: DatabaseSync, now: Date, timeZone = systemTimeZon
   return z.object({ spent: z.number() }).parse(row).spent;
 }
 
+// Today's sample calls billed per use whose price no one knows: they add nothing to `spentToday`,
+// so they are counted and said beside it rather than read as free.
+export function unpricedToday(db: DatabaseSync, now: Date, timeZone = systemTimeZone()): number {
+  const row = db
+    .prepare(
+      `SELECT count(*) AS n FROM provider_usage u
+       WHERE u.project_id IN (SELECT project_id FROM template_hidden_projects)
+         AND u.on_plan = 0 AND u.cost IS NULL AND u.created_at >= ?`,
+    )
+    .get(localMidnight(now, timeZone).toISOString());
+  return z.object({ n: z.number() }).parse(row).n;
+}
+
 export interface BudgetRoom {
   readonly budget: number;
   readonly spent: number;
+  // Calls today with no known price, on top of `spent`.
+  readonly unpriced: number;
   readonly left: number;
   // Whether samples may run on a CLI plan (Samples may use my CLI plans).
   readonly plans: boolean;
@@ -93,6 +108,7 @@ export function budgetRoom(db: DatabaseSync, now: Date, timeZone = systemTimeZon
   return {
     budget: dailyBudget,
     spent,
+    unpriced: unpricedToday(db, now, timeZone),
     left: Math.max(0, dailyBudget - spent),
     plans: samplesUsePlans,
   };
@@ -116,5 +132,9 @@ export function budgetWords(
 ): string {
   if (cost.usesPlan && !room.plans)
     return `${subject} runs on your CLI plan, and samples may not use CLI plans. Turn on Samples may use my CLI plans in Settings → Template studio`;
-  return `${subject} costs about ${money(cost.high)} and ${money(room.left)} of today's ${money(room.budget)} sample budget is left. Raise the budget in Settings → Template studio`;
+  const unpriced =
+    room.unpriced === 0
+      ? ""
+      : ` (samples spent ${money(room.spent)} today plus ${String(room.unpriced)} ${room.unpriced === 1 ? "call" : "calls"} with no known price)`;
+  return `${subject} costs about ${money(cost.high)} and ${money(room.left)} of today's ${money(room.budget)} sample budget is left${unpriced}. Raise the budget in Settings → Template studio`;
 }

@@ -134,3 +134,27 @@ it("lets samples use CLI plans only once switched on, saying what each state lim
   expect(sent).toEqual({ dailyBudget: 2, samplesUsePlans: true });
   expect(await screen.findByText(/the budget above doesn't limit it/)).toBeTruthy();
 });
+
+it("says today's sample calls with no known price beside what was spent", async () => {
+  renderRouted(
+    <TemplateStudioSettings />,
+    testDeps({
+      "GET /api/template-studio/settings": jsonAnswer({
+        dailyBudget: 2,
+        samplesUsePlans: false,
+        today: { budget: 2, spent: 0.5, unpriced: 3, left: 1.5, plans: false },
+      }),
+      "POST /api/template-studio/samples-for-all/quote": jsonAnswer({
+        items: [],
+        total: 0,
+        fitting: 0,
+        sentence: "Every template's sample is made for its newest version. Nothing to make.",
+      }),
+    }),
+  );
+  expect(
+    await screen.findByText(
+      /Spent today: \$0\.50 plus 3 calls with no known price; left: \$1\.50\./,
+    ),
+  ).toBeTruthy();
+});

@@ -220,6 +220,8 @@ export const studioSettingsSchema = z
     today: z.object({
       budget: z.number(),
       spent: z.number(),
+      // Calls with no known price on top of what was spent.
+      unpriced: z.number().default(0),
       left: z.number(),
       plans: z.boolean(),
     }),

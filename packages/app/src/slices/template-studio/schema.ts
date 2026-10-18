@@ -195,7 +195,13 @@ export const sampleQuoteSchema = z
     onPlan: z.boolean(),
     usesPlan: z.boolean(),
     budget: z
-      .object({ budget: z.number(), spent: z.number(), left: z.number(), plans: z.boolean() })
+      .object({
+        budget: z.number(),
+        spent: z.number(),
+        unpriced: z.number().int().nonnegative(),
+        left: z.number(),
+        plans: z.boolean(),
+      })
       .strict()
       .readonly(),
     fits: z.boolean(),

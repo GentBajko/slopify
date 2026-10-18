@@ -117,7 +117,7 @@ const quote = (over: Partial<SampleQuoteView> = {}): SampleQuoteView => ({
   unknown: 0,
   onPlan: false,
   usesPlan: false,
-  budget: { budget: 2, spent: 0, left: 2, plans: false },
+  budget: { budget: 2, spent: 0, unpriced: 0, left: 2, plans: false },
   fits: true,
   problem: null,
   ...over,
@@ -214,7 +214,10 @@ it("keeps Save on screen but off at today's budget, linking to where it is raise
   const user = userEvent.setup();
   open("video", {
     [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(
-      quote({ fits: false, budget: { budget: 2, spent: 1.95, left: 0.05, plans: false } }),
+      quote({
+        fits: false,
+        budget: { budget: 2, spent: 1.95, unpriced: 0, left: 0.05, plans: false },
+      }),
     ),
   });
   await user.click(await screen.findByRole("button", { name: "Square 1:1" }));

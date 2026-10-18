@@ -256,7 +256,7 @@ it("reads and sets the studio's daily budget, refusing one out of range", async 
   expect(await read.json()).toEqual({
     dailyBudget: 2,
     samplesUsePlans: false,
-    today: { budget: 2, spent: 0, left: 2, plans: false },
+    today: { budget: 2, spent: 0, unpriced: 0, left: 2, plans: false },
   });
   const put = (body: unknown) =>
     h.app.request("/api/template-studio/settings", {

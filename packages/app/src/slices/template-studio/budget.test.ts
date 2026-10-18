@@ -89,6 +89,24 @@ describe("spentToday", () => {
   });
 });
 
+describe("unpriced sample calls", () => {
+  // A call with no known price adds nothing to what was spent, so it is counted and said
+  // instead of read as free.
+  it("counts today's sample calls billed per use with no known price", () => {
+    const { db, call } = harness();
+    call("SAMPLE", "2026-10-18T09:00:00.000Z", null);
+    call("SAMPLE", "2026-10-18T09:10:00.000Z", null);
+    call("SAMPLE", "2026-10-18T09:20:00.000Z", null, 1);
+    call("SAMPLE", "2026-10-17T09:00:00.000Z", null);
+    call("REAL", "2026-10-18T09:00:00.000Z", null);
+    const room = budgetRoom(db, new Date("2026-10-18T10:00:00.000Z"), "UTC");
+    expect(room.unpriced).toBe(2);
+    expect(budgetWords(room, { high: 1, usesPlan: false }, "This sample")).toContain(
+      "plus 2 calls with no known price",
+    );
+  });
+});
+
 describe("spentToday with bake-off copies and removed projects", () => {
   it("counts a bake-off copy's calls, and keeps counting them once the copy is removed", () => {
     const { db, call, project, paths } = harness();
