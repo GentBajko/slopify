@@ -167,10 +167,9 @@ function ScheduleSample({ view }: { readonly view: StudioView }): ReactElement {
           { id: "schedule", header: "Schedule", cell: (run) => run.scheduleName },
         ]}
       />
-      {cost === null ? null : (
+      {cost === null || cost.problem !== null ? null : (
         <p className="m-0 text-small text-ink-2">
-          {cost.problem ??
-            `About $${cost.high.toFixed(2)} a month at most, for about ${String(cost.runs)} runs.`}
+          {`About $${cost.high.toFixed(2)} a month at most, for about ${String(cost.runs)} runs.`}
         </p>
       )}
       <TextLink to="/calendar" search={{ tab: "schedules" }} className="text-small">

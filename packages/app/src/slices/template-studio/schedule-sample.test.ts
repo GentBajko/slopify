@@ -110,10 +110,11 @@ describe("monthlyCost", () => {
       runs: 8.7,
       high: 0,
       unknown: 1,
-      problem: "Weekdays's runs couldn't be priced: No voice is chosen. Choose a voice.",
+      problem:
+        "The runs of Weekdays couldn't be priced: No voice is chosen. Choose a voice. Fix it in this studio, press Save, then Make samples.",
     });
     expect(monthlyCost([schedule({})], new Map(), now)?.problem).toBe(
-      "The cost of Weekdays's runs isn't worked out yet: it is, with the free samples.",
+      "The cost of the runs of Weekdays isn't worked out yet: it is, with the free samples.",
     );
   });
 

@@ -39,7 +39,7 @@ export async function priceDocument(
   if (!review.ok)
     return review.fields.length === 0
       ? "Play's review refused this setup. Open the template in Play (Use in Play) to see why."
-      : review.fields.map((field) => field.message).join(" ");
+      : [...new Set(review.fields.map((field) => field.message))].join(" ");
   return {
     high: review.value.estimates.reduce((sum, estimate) => sum + estimate.high, 0),
     unknown: review.value.estimates.reduce((sum, estimate) => sum + estimate.unknown, 0),

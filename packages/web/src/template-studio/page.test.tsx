@@ -47,7 +47,9 @@ const view: StudioView = {
     label: labels[index] ?? id,
     state: id === "thumbnail" ? "off" : "stale",
     sentence:
-      id === "thumbnail" ? "The thumbnail is off." : "No sample yet. Press Save to make one.",
+      id === "thumbnail"
+        ? "The thumbnail is off."
+        : "No sample yet: this section's sample is made by a provider, which the studio doesn't do yet.",
   })),
   free: {
     video: {

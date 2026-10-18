@@ -86,8 +86,8 @@ export function monthlyCost(
       unknown += 1;
       problem ??=
         price === undefined
-          ? `The cost of ${schedule.name}'s runs isn't worked out yet: it is, with the free samples.`
-          : `${schedule.name}'s runs couldn't be priced: ${price}`;
+          ? `The cost of the runs of ${schedule.name} isn't worked out yet: it is, with the free samples.`
+          : `The runs of ${schedule.name} couldn't be priced: ${price} Fix it in this studio, press Save, then Make samples.`;
       continue;
     }
     high += price.high * perMonth;

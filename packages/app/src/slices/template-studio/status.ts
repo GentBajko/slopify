@@ -82,7 +82,13 @@ export function baseStatuses(
         sentence: "Provided at run time: you add the file to each video, so there is no sample.",
       };
     return (
-      made[id] ?? { id, label, state: "stale", sentence: "No sample yet. Press Save to make one." }
+      made[id] ?? {
+        id,
+        label,
+        state: "stale",
+        sentence:
+          "No sample yet: this section's sample is made by a provider, which the studio doesn't do yet.",
+      }
     );
   });
 }
