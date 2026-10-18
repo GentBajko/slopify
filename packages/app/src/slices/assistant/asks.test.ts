@@ -30,6 +30,8 @@ describe("isGated", () => {
       isGated({ name: "keep_project_outputs", method: "POST", confirm: "Removes files." }),
     ).toBe(true);
     for (const name of assistantCostlyTools) expect(isGated({ name, method: "POST" })).toBe(true);
+    expect(isGated({ name: "set_notification_url", method: "PUT" })).toBe(true);
+    expect(isGated({ name: "any_send", method: "POST", sends: true })).toBe(true);
     expect(isGated({ name: "list_templates", method: "GET" })).toBe(false);
     expect(isGated({ name: "update_prompt", method: "PUT" })).toBe(false);
   });

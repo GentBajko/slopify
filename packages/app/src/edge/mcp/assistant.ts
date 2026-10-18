@@ -7,7 +7,12 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "zod";
 import type { AssistantTurnAccess, AssistantTurnTokens } from "../../slices/assistant/access.js";
 import { costSentence, estimateOfAnswer, unpricedSentence } from "../../slices/assistant/cost.js";
-import { argsHash, assistantExcludedTools, isGated } from "../../slices/assistant/gate.js";
+import {
+  argsHash,
+  assistantExcludedTools,
+  isGated,
+  isOutward,
+} from "../../slices/assistant/gate.js";
 import { projectTitle } from "../../slices/assistant/names.js";
 import { screenBlock } from "../../slices/assistant/prompt.js";
 import { subjectsOf } from "./attribution.js";
@@ -71,8 +76,19 @@ async function askText(
       ? costSentence(costs)
       : routeOf(tool).method === "DELETE"
         ? "This deletes it."
-        : unpricedSentence);
+        : isOutward(gateOf(tool))
+          ? "This sends to, or changes, an address outside Slopify."
+          : unpricedSentence);
   return `${what} ${consequence}`;
+}
+
+function gateOf(tool: RouteTool) {
+  return {
+    name: tool.name,
+    method: routeOf(tool).method,
+    confirm: tool.confirm,
+    sends: tool.reachesOut === "sends",
+  };
 }
 
 function gateFor(
@@ -80,8 +96,7 @@ function gateFor(
   turn: AssistantTurnAccess,
 ): NonNullable<RouteCallDeps["gate"]> {
   return async (tool, args) => {
-    if (!isGated({ name: tool.name, method: routeOf(tool).method, confirm: tool.confirm }))
-      return undefined;
+    if (!isGated(gateOf(tool))) return undefined;
     const hash = argsHash(args);
     if (args.confirmed === true && turn.grant({ tool: tool.name, argsHash: hash }))
       return undefined;
@@ -119,14 +134,7 @@ export function createAssistantMcpServer(deps: McpDeps, turn: AssistantTurnAcces
   const own: McpDeps = { ...deps, actor: "assistant", api: remembering(deps.api, turn) };
   const gated: McpDeps = { ...own, gate: gateFor(own, turn) };
   for (const tool of assistantRouteTools)
-    registerRouteTool(
-      server,
-      gated,
-      tool,
-      isGated({ name: tool.name, method: routeOf(tool).method, confirm: tool.confirm })
-        ? askedConfirmed
-        : undefined,
-    );
+    registerRouteTool(server, gated, tool, isGated(gateOf(tool)) ? askedConfirmed : undefined);
   registerFileTools(server, own);
   registerRemakeTools(server, own);
   registerAttention(server, own);

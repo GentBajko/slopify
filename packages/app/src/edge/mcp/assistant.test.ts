@@ -2,7 +2,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { AssistantTurnAccess } from "../../slices/assistant/access.js";
 import { asksOf, consumeGrant, decideAsk, openAsk } from "../../slices/assistant/asks.js";
 import type { PricedWork } from "../../slices/assistant/cost.js";
-import { assistantCostlyTools, assistantExcludedTools } from "../../slices/assistant/gate.js";
+import {
+  assistantCostlyTools,
+  assistantExcludedTools,
+  assistantOutwardTools,
+} from "../../slices/assistant/gate.js";
 import { createTurnTokens } from "../../slices/assistant/tokens.js";
 import type { RevisionDeps } from "../../slices/revisions/model.js";
 import { assistantRouteTools } from "./assistant.js";
@@ -128,9 +132,22 @@ describe("/mcp/assistant", () => {
     await client.close();
   });
 
+  it("asks before pointing notifications at another address", async () => {
+    const { h, connect } = fixture();
+    const client = await connect();
+    const result = await client.callTool({
+      name: "set_notification_url",
+      arguments: { body: { url: "https://ntfy.sh/elsewhere" } },
+    });
+    expect(textOf(result)).toContain("an address outside Slopify");
+    expect(asksOf(h.deps.db, "s1", h.deps.clock.now())).toHaveLength(1);
+    await client.close();
+  });
+
   it("names only tools that exist", () => {
     const names = new Set(routeTools.map((tool) => tool.name));
     expect(assistantCostlyTools.filter((name) => !names.has(name))).toEqual([]);
+    expect(assistantOutwardTools.filter((name) => !names.has(name))).toEqual([]);
     expect(
       [...assistantExcludedTools].filter(
         (name) =>

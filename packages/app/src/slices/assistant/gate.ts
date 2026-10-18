@@ -41,16 +41,33 @@ export const assistantCostlyTools = [
 ] as const;
 const costly: ReadonlySet<string> = new Set(assistantCostlyTools);
 
+// The tools that send something out of Slopify, or choose where it is sent: words a page or a
+// file planted in the chat must not be able to point Slopify's notifications elsewhere.
+export const assistantOutwardTools = ["set_notification_url", "send_test_notification"] as const;
+const outward: ReadonlySet<string> = new Set(assistantOutwardTools);
+
 export interface GatedTool {
   readonly name: string;
   readonly method: string;
   // The consequence the page's confirm dialog states, when it has one.
   readonly confirm?: string | undefined;
+  // It sends something out of Slopify.
+  readonly sends?: boolean | undefined;
 }
 
-// Removing something (DELETE), anything the page confirms, and paid work.
+// Removing something (DELETE), anything the page confirms, paid work, and sending out.
 export function isGated(tool: GatedTool): boolean {
-  return tool.method === "DELETE" || tool.confirm !== undefined || costly.has(tool.name);
+  return (
+    tool.method === "DELETE" ||
+    tool.confirm !== undefined ||
+    costly.has(tool.name) ||
+    tool.sends === true ||
+    outward.has(tool.name)
+  );
+}
+
+export function isOutward(tool: GatedTool): boolean {
+  return tool.sends === true || outward.has(tool.name);
 }
 
 // ceiling: an ask can be answered, and an Allow used, for 15 minutes. Past that the costs
