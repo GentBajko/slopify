@@ -153,7 +153,7 @@ With Level the volume on, each join gets a sibling `level:<segment>` recipe (`le
 | `system-voice` | `packages/app/src/adapters/tts/system.ts:84` (say, SAPI, Piper, Pico, eSpeak NG, eSpeak; no key) | none |
 | `google-tts` | `packages/app/src/adapters/tts/gemini.ts:81` | dialogue |
 
-`runNarration` (`packages/app/src/slices/narration/run.ts:71`) has no production caller; the audio stage runs through `runRevisionInvocation` (`packages/app/src/main.ts:948`).
+The audio stage runs through `runRevisionInvocation` (`packages/app/src/main.ts:948`); there is no separate narration stage runner.
 
 ## Entry points
 

@@ -28,7 +28,7 @@ absorbed_from: features/2026-09-24-research-documents@2026-09-25
 
 # 07 Article writing
 
-The article stage writes the article from the rendered prompt and, when research ran, the research documents; stores Markdown, a plain-text narration source and the end matter as separate files; then writes the intro and outro texts. Article can also be Provide (scenario 05) or Off. Runs execute through the revision work-piece system (`packages/app/src/slices/rebuild/`); `runArticle` in `packages/app/src/slices/article/run.ts:41` has no caller outside its own test.
+The article stage writes the article from the rendered prompt and, when research ran, the research documents; stores Markdown, a plain-text narration source and the end matter as separate files; then writes the intro and outro texts. Article can also be Provide (scenario 05) or Off. Runs execute through the revision work-piece system (`packages/app/src/slices/rebuild/`).
 
 ## Trigger & preconditions
 

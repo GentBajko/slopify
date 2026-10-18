@@ -17,7 +17,6 @@ paths_covered:
   - ":(top)packages/app/src/slices/loudness/**"
   - ":(top)packages/app/src/slices/video/ambient-*.ts"
   - ":(top)packages/app/src/slices/video/audio-*.ts"
-  - ":(top)packages/app/src/slices/video/reuse-audio.ts"
   - ":(top)packages/app/src/slices/video/plan.ts"
   - ":(top)packages/app/src/slices/video/ffmpeg.ts"
   - ":(top)packages/app/src/slices/video/slideshow.ts"
@@ -121,7 +120,7 @@ paths_covered:
 
 ## Outcomes & side effects
 
-With levelling on: `audio_levelled` outputs with a `LoudnessReport` ("Levelled N pieces to −20 LUFS…: the spread was X LU, now Y LU.", `reportText`, `model.ts:214`, shown in `packages/web/src/project/body-audio.tsx:85`), and `MasterReport` meta on the MP4, WAV, shorts and MP3/M4B. With a bed: the long video carries the ducked bed, is extended by any tail beyond the edge silence, and the project stores the uploaded bed as an asset. The rebuild preview lists "Ambient sound" before/after (`packages/app/src/slices/rebuild/preview-details.ts:299`). Legacy pre-revision code: `exportAudioWav`, `audioInputs` and `reusableAudioExport` (`packages/app/src/slices/video/audio-export.ts:21`, `audio-inputs.ts:8`, `reuse-audio.ts:26`) are reached only from `renderVideo` (`packages/app/src/slices/video/run.ts:36`), which no source file calls; tests under `packages/app/test/` use it.
+With levelling on: `audio_levelled` outputs with a `LoudnessReport` ("Levelled N pieces to −20 LUFS…: the spread was X LU, now Y LU.", `reportText`, `model.ts:214`, shown in `packages/web/src/project/body-audio.tsx:85`), and `MasterReport` meta on the MP4, WAV, shorts and MP3/M4B. With a bed: the long video carries the ducked bed, is extended by any tail beyond the edge silence, and the project stores the uploaded bed as an asset. The rebuild preview lists "Ambient sound" before/after (`packages/app/src/slices/rebuild/preview-details.ts:299`).
 
 ## Dimensions not in play
 

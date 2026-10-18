@@ -17,7 +17,6 @@ paths_covered:
   - ":(top)packages/app/src/slices/rebuild/recipe-save.ts"
   - ":(top)packages/app/src/slices/rebuild/recipe-validation.ts"
   - ":(top)packages/app/src/slices/rebuild/runtime-image.ts"
-  - ":(top)packages/app/src/slices/rebuild/runtime-actions.ts"
   - ":(top)packages/app/src/slices/rebuild/runtime-provider.ts"
   - ":(top)packages/app/src/slices/admission/rules.ts"
   - ":(top)packages/app/src/slices/admission/model.ts"
@@ -73,7 +72,7 @@ depends_on:
 
 The Images stage (slideshow images, the establishing image, image scenes and looks) and the prompt-drawn thumbnail, built as fingerprinted revision recipes and drawn by the configured image provider. The LLM-written thumbnail prompt is scenario 10; thumbnail A/B variants and the YouTube side are scenario 27; automatic image reviews are scenario 33; on-screen table/figure cards are scenario 11.
 
-The revision runtime is the only live path. `runImages` in `packages/app/src/slices/images/run.ts:54` has no importer outside its own file; only its comments are cited by `slices/reruns/index.ts:155`. `revisionAction` in `packages/app/src/slices/rebuild/runtime-actions.ts:18` is imported only by its test.
+The revision runtime is the only live path.
 
 ## Trigger & preconditions
 

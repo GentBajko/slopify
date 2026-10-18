@@ -40,7 +40,7 @@ Anonymous JSON shapes in scope (no declared type name) are documented under Boun
 
 ### ResearchBrief
 
-All fields `readonly`. Built from `config.rendered.article` / `renderedPrompt(context, "article")` and `config.values` (`packages/app/src/slices/rebuild/recipe-text.ts:115`, `packages/app/src/slices/research/run.ts:71`).
+All fields `readonly`. Built from `config.rendered.article` / `renderedPrompt(context, "article")` and `config.values` (`packages/app/src/slices/rebuild/recipe-text.ts:115`).
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
@@ -54,7 +54,7 @@ All fields `readonly`.
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | title | string | yes | Chapter title from the planner's outline. |
-| notes | string | yes | Sub-agent answer, trimmed in `packages/app/src/slices/research/run.ts:244`; untrimmed answer text in the rebuild runtime (`packages/app/src/slices/rebuild/runtime-provider.ts:432`). |
+| notes | string | yes | Sub-agent answer text, untrimmed (`packages/app/src/slices/rebuild/runtime-provider.ts:432`). |
 
 ### LlmDocument
 
@@ -94,7 +94,6 @@ All fields `readonly`.
 - The article request (research `generate` with notes present) carries the chapter documents plus `{ id: "editorial-notes", title: "Editorial notes", content: notes }`; its prompt receives `documentIndex(documents)` in place of the notes text (`packages/app/src/slices/rebuild/recipe-text.ts:179`, `packages/app/src/slices/rebuild/recipe-text.ts:188`). With research `provide`, the provided notes text is passed inline and no documents are attached.
 - `ResolvedRevisionInputs.research` is rebuilt from selected, done piece payloads whose key and fingerprint match the current recipes: planner payload → `outline`; each matching chapter payload → one Finding (`packages/app/src/slices/rebuild/runtime-plan.ts:63`, `packages/app/src/slices/rebuild/runtime-plan.ts:135`).
 - The document workspace for CLI providers holds one `<id>.md` per LlmDocument plus `manifest.json`, `index.md`, `mcp.json` and `read-pages.json` in a `slopify-documents-*` temp directory (`packages/app/src/adapters/llm/document-workspace.ts:28`).
-- `slices/research/run.ts` (`runResearch`, stage-runner flavour using `stage_pieces` kind `chapter`) is referenced only by `packages/app/src/slices/research/run.test.ts`; the live pipeline runs research through the rebuild recipes above.
 
 ## Boundaries
 

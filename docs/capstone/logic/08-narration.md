@@ -62,7 +62,7 @@ paths_covered:
 
 # 08 Narration
 
-Narration turns the article (or a multi-voice script) into audio: optional block descriptions, logical chunking, aliases and IPA pronunciations, optional delivery cues (Narration Preparation), physical TTS requests, then a join that can add sentence pauses and a levelled copy. Whole supplied audio follows the provided-content rules in scenario 05. Caption timing and the mismatch that triggers an automatic chunk retry belong to scenario 17; the export master (LUFS target of the finished video/audio files) belongs to scenario 11. `packages/app/src/slices/narration/run.ts:71` (`runNarration`, the pre-revision stage runner) is referenced only by tests under `packages/app/test/`; the revision recipes below are the live path.
+Narration turns the article (or a multi-voice script) into audio: optional block descriptions, logical chunking, aliases and IPA pronunciations, optional delivery cues (Narration Preparation), physical TTS requests, then a join that can add sentence pauses and a levelled copy. Whole supplied audio follows the provided-content rules in scenario 05. Caption timing and the mismatch that triggers an automatic chunk retry belong to scenario 17; the export master (LUFS target of the finished video/audio files) belongs to scenario 11. The revision recipes below are the only path.
 
 ## Trigger & preconditions
 

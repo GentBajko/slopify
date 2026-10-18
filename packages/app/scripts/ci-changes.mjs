@@ -105,7 +105,7 @@ const shared = String.raw`^(package-lock\.json|package\.json|packages/app/packag
 // What the Windows job installs and tests: the package and how it starts and updates, and the
 // platform-specific code its test list covers.
 const windowsPaths = new RegExp(
-  `${shared}|^packages/app/(scripts/|src/(main\\.ts|edge/cli|edge/launch|edge/open-folder|edge/http/(files|fonts)|updater/|kernel/(paths|cli-command)|adapters/(ffmpeg|llm/)|adapter-registry-paths|slices/(fonts/|settings/cli-|storage/assets|video/|subtitles/))|test/(e2e/skeleton|video-render))`,
+  `${shared}|^packages/app/(scripts/|src/(main\\.ts|edge/cli|edge/launch|edge/open-folder|edge/http/(files|fonts)|updater/|kernel/(paths|cli-command)|adapters/(ffmpeg|llm/)|adapter-registry-paths|slices/(fonts/|settings/cli-|storage/assets|video/|subtitles/|rebuild/(export-|runtime-export|runtime-subtitles)))|test/e2e/skeleton)`,
 );
 // What the container jobs build and test: the image, the Docker installer and the host bridge.
 const dockerPaths = new RegExp(

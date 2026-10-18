@@ -41,9 +41,9 @@ The research → synthesis → article handoff, including document delivery to C
    | `stage.progress` | stage runs through a 500 ms `progressGate` (`packages/app/src/kernel/runner/progress.ts:6`, `packages/app/src/kernel/runner/index.ts:190`) |
    | `running.count` | `retally` on in-flight set change (`packages/app/src/kernel/runner/index.ts:118`, `packages/app/src/main.ts:959`) |
    | `llm.preview` | provider wrapper (`packages/app/src/kernel/runner/providers.ts:180`, `packages/app/src/kernel/runner/providers.ts:367`) |
-   | `article.delta` | `packages/app/src/slices/rebuild/runtime-article.ts:66`, `packages/app/src/slices/article/run.ts:162` |
+   | `article.delta` | `packages/app/src/slices/rebuild/runtime-article.ts:63` |
    | `narration.piece` | `packages/app/src/slices/rebuild/runtime-provider.ts:153` |
-   | `image.landed` | `packages/app/src/slices/images/run.ts:203` |
+   | `image.landed` | declared (`packages/app/src/kernel/events.ts:50`) and handled by the web client, but no longer emitted: a landed image is announced by `project.updated` |
    | `project.updated` | publication, admission, pause, limit gate (`packages/app/src/slices/rebuild/runtime-publication.ts:134`, `packages/app/src/slices/rebuild/service.ts:160`, `packages/app/src/main.ts:882`) |
    | `review.flagged` | `packages/app/src/slices/rebuild/runtime-review.ts:133`; an External agent review's kept flag with `byAgent` (`packages/app/src/slices/rebuild/runtime-agent-review.ts:116`) |
    | `review.auto-passed` | `releaseDueReviews`, one per review passed at its deadline (`packages/app/src/slices/reviews/external-release.ts:31`) |
