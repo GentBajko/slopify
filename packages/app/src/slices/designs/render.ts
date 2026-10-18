@@ -17,6 +17,7 @@ import { errorText } from "../../kernel/errors.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
 import type { ResolvedFont } from "../fonts/model.js";
+import { fontAdvances } from "../fonts/sfnt.js";
 import type { RenderRun } from "../video/ffmpeg.js";
 import { type CheckFont, checkText } from "./check-text.js";
 import { fillDocument } from "./fields.js";
@@ -33,7 +34,8 @@ import { fileName, type Prepared, prepare } from "./render-input.js";
 // the design and a hash of everything drawn, so the same piece is drawn once; they are never
 // backed up and are deleted with the design.
 
-export const rendererVersion = 1;
+// 2: text measured with the font's own widths.
+export const rendererVersion = 2;
 export const rendersDir = (paths: Pick<Paths, "dataDir">): string =>
   join(paths.dataDir, "design-renders");
 
@@ -95,18 +97,23 @@ export function createDesignRenderer(deps: DesignRenderDeps): DesignRenderer {
         });
       }
     }
-    const assNames = Object.fromEntries(
-      [...fonts].map(([id, font]) => [id, { assName: font.assName }]),
+    const checkFonts: Record<string, CheckFont> = {};
+    for (const [id, font] of fonts)
+      checkFonts[id] = {
+        name: font.name,
+        bytes: new Uint8Array(readFileSync(font.path)),
+        faceIndex: font.faceIndex,
+      };
+    // Measured with the font's own widths; a font that can't be read is estimated.
+    const layoutFonts = Object.fromEntries(
+      [...fonts].map(([id, font]) => {
+        const bytes = checkFonts[id]?.bytes;
+        const advance = bytes === undefined ? undefined : fontAdvances(bytes, font.faceIndex);
+        return [id, { assName: font.assName, advance }];
+      }),
     );
-    const layout = layoutText(frame, doc.text, values, assNames);
+    const layout = layoutText(frame, doc.text, values, layoutFonts);
     if (textLayer) {
-      const checkFonts: Record<string, CheckFont> = {};
-      for (const [id, font] of fonts)
-        checkFonts[id] = {
-          name: font.name,
-          bytes: new Uint8Array(readFileSync(font.path)),
-          faceIndex: font.faceIndex,
-        };
       const problem = checkText({
         text: doc.text,
         values,

@@ -6,13 +6,18 @@ import type { DesignText } from "./schema.js";
 
 // The text layer of a designed piece as one ASS script, drawn over the cropped artwork by the
 // ffmpeg Slopify ships (`render.ts`). Pure: the same text, values and frame always make the
-// same script. Every value is placed verbatim, wrapped by an advance estimate (the figure
-// cards' approach) and shrunk until it fits, never below 2.4% of the short side; text is never
-// dropped, so a piece too full to fit says so (`overflow`) instead of losing a word.
+// same script. Every value is placed verbatim, wrapped by the font's own advance widths (an
+// estimate, the figure cards' approach, when the font can't be read) and shrunk until it fits,
+// never below 2.4% of the short side; text is never dropped, so a piece too full to fit says so
+// (`overflow`) instead of losing a word. A number stays on one line with its unit or currency
+// ("CHF 15", "20:00 Uhr"), and a short word is never cut.
 
 export interface LayoutFont {
   // The family libass is asked for; the render copies the font file into its fonts folder.
   readonly assName: string;
+  // Each character's drawn width as a share of the font size (`fontAdvances`); undefined for
+  // one the font lacks. Absent when the font couldn't be read.
+  readonly advance?: ((codepoint: number) => number | undefined) | undefined;
 }
 
 export interface PlacedLine {
@@ -59,6 +64,15 @@ export function estimatedWidth(text: string, size: number): number {
   return [...text].length * size * advanceOf(text);
 }
 
+// What a line takes on the frame: the font's advances when known, plus room for the outline.
+export function measuredWidth(text: string, size: number, font?: LayoutFont): number {
+  const advance = font?.advance;
+  if (advance === undefined) return estimatedWidth(text, size);
+  const guess = advanceOf(text);
+  let em = 0;
+  for (const ch of text) em += advance(ch.codePointAt(0) ?? 0) ?? guess;
+  return em * size * 1.02 + size * 0.08;
+}
 export function safeArea(frame: Pick<Frame, "width" | "height">, preset: LayoutPreset): Area {
   const { width, height } = frame;
   const margin = Math.round(Math.min(width, height) * 0.06);
@@ -86,13 +100,50 @@ export function safeArea(frame: Pick<Frame, "width" | "height">, preset: LayoutP
   }
 }
 
-// Greedy wrap by estimated width; a word wider than the line is broken, so nothing leaves
-// the area sideways.
-export function wrapText(text: string, size: number, room: number): string[] {
+// A word this short is never cut: it moves to its own line, and the text shrinks if even that
+// is too wide.
+const shortWord = 8;
+const numeric = /\p{N}/u;
+// A currency or code written before the number ("CHF 15", "€ 12"), and a unit after it
+// ("20:00 Uhr", "15 €", "5 km").
+const unitBefore = /^(?:\p{Sc}{1,3}|\p{Lu}{2,4}\.?)$/u;
+const unitAfter = /^[\p{L}\p{Sc}%°]{1,4}[.,;:!?]?$/u;
+
+// The words that must stay on one line: a number with the unit or currency beside it.
+export function wrapUnits(text: string): string[] {
+  const words = text.split(/\s+/).filter((part) => part !== "");
+  const units: string[][] = [];
+  for (const word of words) {
+    const last = units.at(-1);
+    const previous = last?.at(-1);
+    const open = last !== undefined && last.length === 1 && previous !== undefined;
+    const joins =
+      open &&
+      ((numeric.test(previous) && !numeric.test(word) && unitAfter.test(word)) ||
+        (numeric.test(word) && !numeric.test(previous) && unitBefore.test(previous)));
+    if (joins) last.push(word);
+    else units.push([word]);
+  }
+  return units.map((unit) => unit.join(" "));
+}
+
+// Greedy wrap by width. A long word wider than the line is broken, so nothing leaves the area
+// sideways; a short word or a number with its unit is kept whole (the caller shrinks the text),
+// and only `split` (at the smallest size) lets a unit go across two lines.
+export function wrapText(
+  text: string,
+  size: number,
+  room: number,
+  font?: LayoutFont,
+  split = false,
+): string[] {
   const lines: string[] = [];
   let line = "";
-  const fits = (candidate: string) => estimatedWidth(candidate, size) <= room;
-  for (const word of text.split(/\s+/).filter((part) => part !== "")) {
+  const fits = (candidate: string) => measuredWidth(candidate, size, font) <= room;
+  const pieces = wrapUnits(text).flatMap((unit) =>
+    split && !fits(unit) ? unit.split(" ") : [unit],
+  );
+  for (const word of pieces) {
     const candidate = line === "" ? word : `${line} ${word}`;
     if (fits(candidate)) {
       line = candidate;
@@ -101,6 +152,10 @@ export function wrapText(text: string, size: number, room: number): string[] {
     if (line !== "") lines.push(line);
     line = "";
     let rest = word;
+    if ([...rest].length <= shortWord || rest.includes(" ")) {
+      line = rest;
+      continue;
+    }
     while (!fits(rest)) {
       let cut = Math.max(1, [...rest].length - 1);
       while (cut > 1 && !fits([...rest].slice(0, cut).join(""))) cut -= 1;
@@ -118,6 +173,7 @@ interface Sized {
   readonly lines: readonly string[];
   readonly size: number;
   readonly fontName: string;
+  readonly font: LayoutFont | undefined;
   readonly color: string;
 }
 
@@ -135,13 +191,14 @@ export function layoutText(
     .filter((block) => block.filled !== "");
   const size = (role: BlockRole, scale: number) =>
     Math.max(floor, Math.round(short * roleShare[role] * scale));
-  const sized = (scale: number): Sized[] =>
+  const sized = (scale: number, split = false): Sized[] =>
     blocks.map((block) => {
       const at = size(block.role, scale);
       return {
         id: block.id,
-        lines: wrapText(block.filled, at, area.width),
+        lines: wrapText(block.filled, at, area.width, fonts[block.fontId], split),
         size: at,
+        font: fonts[block.fontId],
         fontName: fonts[block.fontId]?.assName ?? "Barlow",
         color: block.color,
       };
@@ -154,14 +211,23 @@ export function layoutText(
         (index === 0 ? 0 : block.size * blockGap),
       0,
     );
+  const widest = (set: readonly Sized[]) =>
+    Math.max(
+      0,
+      ...set.flatMap((block) =>
+        block.lines.map((line) => measuredWidth(line, block.size, block.font)),
+      ),
+    );
+  const tooBig = (set: readonly Sized[]) => heightOf(set) > area.height || widest(set) > area.width;
   let scale = 1;
   let set = sized(scale);
-  while (heightOf(set) > area.height && set.some((block) => block.size > floor)) {
+  while (tooBig(set) && set.some((block) => block.size > floor)) {
     scale *= 0.92;
     set = sized(scale);
   }
+  if (widest(set) > area.width) set = sized(scale, true);
   const total = heightOf(set);
-  const overflow = total > area.height;
+  const overflow = total > area.height || widest(set) > area.width + 1;
   const vertical =
     text.preset === "top-title" ? 0 : (area.height - Math.min(total, area.height)) / 2;
   const left = text.preset === "left-column";
@@ -176,7 +242,7 @@ export function layoutText(
         x: Math.round(left ? area.x : area.x + area.width / 2),
         y: Math.round(y),
         size: block.size,
-        width: Math.round(estimatedWidth(line, block.size)),
+        width: Math.round(measuredWidth(line, block.size, block.font)),
       });
       y += block.size * lineSpacing;
     }

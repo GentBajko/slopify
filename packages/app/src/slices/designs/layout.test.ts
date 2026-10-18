@@ -1,11 +1,26 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { fontAdvances } from "../fonts/sfnt.js";
 import { poster } from "./document.fake.js";
 import { frames } from "./frames.js";
-import { estimatedWidth, layoutText, minTextShare, safeArea, wrapText } from "./layout.js";
+import {
+  estimatedWidth,
+  layoutText,
+  measuredWidth,
+  minTextShare,
+  safeArea,
+  wrapText,
+  wrapUnits,
+} from "./layout.js";
 import { layoutPresets } from "./model.js";
 import type { DesignText } from "./schema.js";
 
 const fonts = { default: { assName: "Barlow" } };
+const barlow = fontAdvances(
+  readFileSync(new URL("../../assets/fonts/Barlow-Regular.ttf", import.meta.url)),
+  0,
+);
+const measured = { default: { assName: "Barlow", advance: barlow } };
 const values = { Event: "Late Set", Date: "2026-11-14", Venue: "The Cellar", Price: "€12" };
 
 // A small seeded generator, so a failing case can be replayed.
@@ -102,9 +117,68 @@ describe("text layout", () => {
     expect(wrapText("W", 100, 10)).toEqual(["W"]);
   });
 
+  it("measures text with the font's own widths, so a title that fits stays on one line", () => {
+    expect(barlow).toBeDefined();
+    const text: DesignText = {
+      ...poster().text,
+      preset: "top-title",
+      blocks: [
+        { id: "b1", role: "headline", text: "{{Event}}", fontId: "default", color: "#FFFFFF" },
+      ],
+    };
+    const event = { Event: "Midnight Jazz Session" };
+    const real = layoutText(frames.a4, text, event, measured);
+    expect(real.lines.map((line) => line.text)).toEqual(["Midnight Jazz Session"]);
+    expect(real.lines[0]?.size).toBe(Math.round(2480 * 0.11));
+    expect(real.lines[0]?.width).toBeLessThanOrEqual(real.area.width);
+    // Without the font's widths the estimate is used, which is cautious.
+    expect(layoutText(frames.a4, text, event, fonts).lines.length).toBe(2);
+    expect(measuredWidth("iiii", 100, measured.default)).toBeLessThan(
+      measuredWidth("MMMM", 100, measured.default),
+    );
+  });
+
+  it("falls back to the estimate for a character the font lacks", () => {
+    const none = { assName: "X", advance: () => undefined };
+    expect(measuredWidth("abc", 100, none)).toBeCloseTo(estimatedWidth("abc", 100) * 1.02 + 8);
+  });
+
+  it("keeps a number with its unit or currency and never cuts a short word", () => {
+    expect(wrapUnits("Entry CHF 15 at the door")).toEqual(["Entry", "CHF 15", "at", "the", "door"]);
+    expect(wrapUnits("Doors 20:00 Uhr, 15 € or €12")).toEqual([
+      "Doors",
+      "20:00 Uhr,",
+      "15 €",
+      "or",
+      "€12",
+    ]);
+    expect(wrapUnits("€ 12 and 5 km")).toEqual(["€ 12", "and", "5 km"]);
+    expect(wrapUnits("2026-11-14 · The Cellar")).toEqual(["2026-11-14", "·", "The", "Cellar"]);
+    expect(wrapText("€12", 100, 10)).toEqual(["€12"]);
+    for (let room = 150; room < 1400; room += 25) {
+      const lines = wrapText("Entry CHF 15 at the door", 100, room, measured.default);
+      expect(lines.some((line) => line.includes("CHF 15"))).toBe(true);
+      expect(lines.join(" ")).toBe("Entry CHF 15 at the door");
+    }
+  });
+
+  it("shrinks the text rather than splitting a price across two lines", () => {
+    const text: DesignText = {
+      ...poster().text,
+      preset: "left-column",
+      blocks: [
+        { id: "b1", role: "headline", text: "{{Price}}", fontId: "default", color: "#FFFFFF" },
+      ],
+    };
+    const layout = layoutText(frames.story, text, { Price: "CHF 1500.00" }, measured);
+    expect(layout.lines.map((line) => line.text)).toEqual(["CHF 1500.00"]);
+    expect(layout.lines[0]?.size).toBeLessThan(Math.round(1080 * 0.11));
+    expect(layout.overflow).toBe(false);
+  });
+
   it("keeps every value verbatim, inside the safe area, and never below the size floor", () => {
     const next = random(20261018);
-    for (let run = 0; run < 300; run += 1) {
+    for (let run = 0; run < 400; run += 1) {
       const format = (["a4", "square", "story", "wide", "flyer"] as const)[run % 5] ?? "a4";
       const frame = frames[format];
       const preset = layoutPresets[Math.floor(next() * layoutPresets.length)] ?? "centered";
@@ -114,7 +188,13 @@ describe("text layout", () => {
         Venue: phrase(next, 80),
         Price: phrase(next, 12),
       };
-      const layout = layoutText(frame, { ...poster().text, preset }, filled, fonts);
+      // Every other run measures with the real font, the rest with the estimate.
+      const layout = layoutText(
+        frame,
+        { ...poster().text, preset },
+        filled,
+        run % 2 === 0 ? fonts : measured,
+      );
       const floor = Math.round(Math.min(frame.width, frame.height) * minTextShare);
       const drawn = layout.ass
         .split("\n")
