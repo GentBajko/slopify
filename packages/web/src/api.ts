@@ -496,6 +496,17 @@ export async function saveAppSettings(api: Api, settings: AppSettings): Promise<
   return read<AppSettings>(await api.client.settings.$put({ json: { ...settings } }));
 }
 
+// Settings → Production defaults → Video encoder: whether this computer's NVIDIA encoder works.
+export interface VideoEncodersBody {
+  readonly nvidia:
+    | { readonly available: true }
+    | { readonly available: false; readonly reason: string };
+}
+
+export async function readVideoEncoders(api: Api): Promise<VideoEncodersBody> {
+  return read<VideoEncodersBody>(await api.client.settings.encoders.$get());
+}
+
 export interface NotificationUrlBody {
   readonly url: string | null;
 }

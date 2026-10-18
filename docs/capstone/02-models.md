@@ -234,7 +234,10 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | Provider | `packages/app/src/slices/settings/model.ts:71` | In-memory | Union of KeyedProvider, CliProvider and LocalProvider |
 | ProviderStatus | `packages/app/src/slices/settings/model.ts:189` | In-memory | Provider identity plus readiness and CLI path, as Settings lists it |
 | Voice | `packages/app/src/slices/settings/model.ts:201` | `voices` | A saved TTS voice |
-| AppSettings | `packages/app/src/slices/settings/model.ts:219` | `settings` keys `silenceGapSeconds`, `appearance`, `loudness`, `subtitleModel` | App-wide settings: silence gap, appearance, loudness, English subtitle timing model |
+| AppSettings | `packages/app/src/slices/settings/model.ts:219` | `settings` keys `silenceGapSeconds`, `appearance`, `loudness`, `subtitleModel`, `videoEncoder`, `clipEncodeSpeed`, `renderPriority` | App-wide settings: silence gap, appearance, loudness, English subtitle timing model, this computer's render settings |
+| RenderSettings | `packages/app/src/slices/video/encoding.ts:16` | Part of AppSettings | Video encoder, clip encoding speed and render priority |
+| RenderMachine | `packages/app/src/slices/video/encoding.ts:28` | In-memory | What one render encodes with (x264 or NVENC through a given ffmpeg) and at which priority, read as it starts |
+| NvencStatus | `packages/app/src/slices/video/encoding.ts:89` | In-memory; `GET /api/settings/encoders` | Whether this computer's NVIDIA encoder works, cached until restart |
 | TutorialSession | `packages/app/src/slices/settings/tutorial-schema.ts:46` | `settings` key `tutorial.session` | Persisted in-app tutorial cursor |
 | TutorialWrite | `packages/app/src/slices/settings/tutorial-schema.ts:47` | In-memory | Compare-and-set tutorial save |
 | TutorialView | `packages/app/src/slices/settings/tutorial-schema.ts:48` | In-memory | Versioned tutorial progress |
@@ -3029,6 +3032,9 @@ Union of 3 object variants; a field present in only some variants is `Required: 
 | appearance | `Appearance` | yes | accepted: system, light, dark |
 | loudness | `LoudnessDefault` | yes |  |
 | subtitleModel | `EnglishSubtitleModel` | yes | accepted: fp32, fp16, int8; default fp32; this computer's English caption-timing model, never part of a fingerprint |
+| videoEncoder | `VideoEncoder` | yes | accepted: cpu, nvidia; default cpu; nvidia falls back to cpu with a notice when NVENC does not work; never part of a fingerprint |
+| clipEncodeSpeed | `ClipEncodeSpeed` | yes | accepted: thorough, fast; default thorough; fast is x264 veryfast for the CRF 16 clips under burned-in captions; never part of a fingerprint |
+| renderPriority | `RenderPriority` | yes | accepted: normal, background; default background (nice 10 / below-normal for every render ffmpeg); never part of a fingerprint |
 
 ### TutorialSession
 

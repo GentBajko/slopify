@@ -28,6 +28,9 @@ function deps(extra: Readonly<Record<string, Answer>> = {}) {
     "GET /api/providers": jsonAnswer({ providers: [] }),
     "GET /api/settings/voices": jsonAnswer({ voices: [] }),
     "GET /api/settings": jsonAnswer(settings),
+    "GET /api/settings/encoders": jsonAnswer({
+      nvidia: { available: false, reason: "No NVIDIA encoder found on this computer." },
+    }),
     // Backup & storage shows the daily backups first.
     "GET /api/backups": jsonAnswer({
       config: { enabled: false, time: "03:00", timeZone: "UTC", keep: 5, folder: null },
@@ -292,6 +295,55 @@ describe("the settings screen", () => {
 
     await waitFor(() => expect(sent).toEqual({ ...settings, subtitleModel: "fp16" }));
     expect(select.value).toBe("fp16");
+  });
+
+  it("shows the render settings at their defaults, without NVIDIA where there is none", async () => {
+    renderApp(<SettingsRoute section="playback" />, deps());
+
+    expect(await screen.findByRole("heading", { name: "Rendering" })).not.toBeNull();
+    const encoder = (await screen.findByLabelText("Video encoder")) as HTMLSelectElement;
+    expect(encoder.value).toBe("cpu");
+    expect([...encoder.options].map((option) => option.text)).toEqual(["Processor (x264)"]);
+    expect(await screen.findByText("No NVIDIA encoder found on this computer.")).not.toBeNull();
+    const clips = screen.getByLabelText("Clip encoding") as HTMLSelectElement;
+    expect(clips.value).toBe("thorough");
+    expect([...clips.options].map((option) => option.text)).toEqual(["Thorough", "Fast"]);
+    const priority = screen.getByLabelText("Render priority") as HTMLSelectElement;
+    expect(priority.value).toBe("background");
+    expect([...priority.options].map((option) => option.text)).toEqual([
+      "Normal",
+      "Background (your other programs come first)",
+    ]);
+  });
+
+  it("offers the NVIDIA card where its encoder works, and saves each render choice", async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    renderApp(
+      <SettingsRoute section="playback" />,
+      deps({
+        "GET /api/settings/encoders": jsonAnswer({ nvidia: { available: true } }),
+        "PUT /api/settings": async (request) => {
+          const body: unknown = await request.json();
+          sent.push(body);
+          return jsonAnswer(body)(request);
+        },
+      }),
+    );
+
+    const encoder = (await screen.findByLabelText("Video encoder")) as HTMLSelectElement;
+    await waitFor(() =>
+      expect([...encoder.options].map((option) => option.text)).toEqual([
+        "Processor (x264)",
+        "NVIDIA graphics card (NVENC)",
+      ]),
+    );
+    await user.selectOptions(encoder, "nvidia");
+    await waitFor(() => expect(sent.at(-1)).toEqual({ ...settings, videoEncoder: "nvidia" }));
+    await user.selectOptions(screen.getByLabelText("Clip encoding"), "fast");
+    await waitFor(() => expect(sent.at(-1)).toMatchObject({ clipEncodeSpeed: "fast" }));
+    await user.selectOptions(screen.getByLabelText("Render priority"), "normal");
+    await waitFor(() => expect(sent.at(-1)).toMatchObject({ renderPriority: "normal" }));
   });
 
   it("names the problem when the settings cannot be read", async () => {

@@ -11,6 +11,7 @@ import {
   editListVersion,
   type Shot,
 } from "../video/edit-list.js";
+import type { RenderMachine } from "../video/encoding.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
 import { motionFor } from "../video/motion.js";
 import { type FigureShot, figureFrames, fps } from "../video/plan.js";
@@ -235,6 +236,9 @@ export interface ShortRender {
   // frame's layout and are scaled with it, so a smaller frame (the style preview) shows them
   // exactly where a real short does.
   readonly frame?: { readonly width: number; readonly height: number } | undefined;
+  // Settings → Production defaults → Rendering, as the video's render reads them.
+  readonly machine?: RenderMachine | undefined;
+  readonly notice?: ((sentence: string) => void) | undefined;
 }
 
 // What the master measured, when the run asked for one.
@@ -254,6 +258,7 @@ export async function renderShort(run: ShortRender): Promise<MasterReport | unde
       }),
       signal: run.signal,
       log: run.log,
+      priority: run.machine?.priority,
       onProgress: () => undefined,
     });
     writeFileSync(
@@ -296,6 +301,8 @@ export async function renderShort(run: ShortRender): Promise<MasterReport | unde
       signal: run.signal,
       log: run.log,
       onProgress: run.onProgress,
+      machine: run.machine,
+      notice: run.notice,
     });
   } finally {
     rmSync(workspace, { recursive: true, force: true });

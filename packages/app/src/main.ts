@@ -10,7 +10,7 @@ import type { Hono } from "hono";
 import { buildRegistry } from "./adapter-registry.js";
 import { alignSubtitlesWith } from "./adapters/alignment/index.js";
 import { prefetchModel } from "./adapters/alignment/prefetch.js";
-import { prepareFfmpeg } from "./adapters/ffmpeg.js";
+import { ffmpegOutput, prepareFfmpeg } from "./adapters/ffmpeg.js";
 import { createHostCliClient } from "./adapters/host-cli/index.js";
 import { createSearchInterest } from "./adapters/interest/search-interest.js";
 import { nodeRunCli } from "./adapters/llm/run-cli.js";
@@ -183,6 +183,12 @@ import {
 } from "./slices/template-studio/schedule-gate.js";
 import { createPriceCache } from "./slices/template-studio/service.js";
 import { createTrashPurge } from "./slices/trash/service.js";
+import {
+  createNvencProbe,
+  type NvencStatus,
+  noNvenc,
+  renderMachine,
+} from "./slices/video/encoding.js";
 import { probeDurationMs, runFfmpeg } from "./slices/video/ffmpeg.js";
 import { watchActivation } from "./updater/candidate.js";
 import { launchUpdate } from "./updater/install.js";
@@ -363,6 +369,13 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     // candidate's committed activation pointer has been verified.
     const reconciled = pendingActivation ? undefined : reconcileStorage(db, paths);
     const log = openLog(paths.logs, clock);
+    // Settings → Production defaults → Video encoder: the bundled ffmpeg first, then the
+    // computer's own. Asked once, when the settings page or a render first needs it.
+    const nvenc = createNvencProbe({
+      candidates: [ffmpeg, "ffmpeg", "/usr/bin/ffmpeg"],
+      exec: ffmpegOutput,
+      log,
+    });
     log.write("info", "boot", {
       detail:
         reconciled === undefined
@@ -460,6 +473,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       registry,
       catalogue,
       ffmpeg,
+      nvenc,
       audioPreviews,
     });
     const updateDb = db;
@@ -910,6 +924,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       updater,
       mutations,
       sendNotification,
+      nvenc,
       audioPreviews,
       stylePreviews,
       templateStudio: {
@@ -1196,6 +1211,8 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
 interface Wiring {
   readonly audioPreviews: AudioPreviewStore;
   readonly ffmpeg: string;
+  // Whether this computer's NVIDIA encoder works; absent is that it has none.
+  readonly nvenc?: (() => Promise<NvencStatus>) | undefined;
   readonly db: DatabaseSync;
   readonly paths: Paths;
   readonly clock: Clock;
@@ -1226,6 +1243,7 @@ export function wireRunner({
   registry,
   catalogue,
   ffmpeg,
+  nvenc = async () => ({ available: false, reason: noNvenc }),
   // Settings → Production defaults → Subtitle timing model, read as each alignment starts.
   alignSubtitles: aligner = alignSubtitlesWith(() => readSettings({ db, log }).subtitleModel),
 }: Wiring): Runner & { readonly checkpoints: CheckpointAuthority<CheckpointRow> } {
@@ -1244,6 +1262,9 @@ export function wireRunner({
     log,
     ffmpeg,
     alignSubtitles: aligner,
+    // Settings → Production defaults → Rendering, read as each render starts.
+    renderMachine: (projectId: string) =>
+      renderMachine({ settings: readSettings({ db, log }), nvenc, log, projectId }),
     audioPreviews,
     count,
   };

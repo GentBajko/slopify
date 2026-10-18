@@ -8,6 +8,12 @@ import { cardsAss } from "./cards.js";
 import { cacheKey, fileIdentity, keepClip, pruneClips, reuseClip } from "./clip-cache.js";
 import type { EditList } from "./edit-list.js";
 import {
+  defaultEncode,
+  nvencFallbackNotice,
+  type RenderMachine,
+  type VideoEncode,
+} from "./encoding.js";
+import {
   audioMixArgs,
   burnPartArgs,
   concatList,
@@ -44,6 +50,11 @@ export interface SlideshowRun {
   readonly cache?: string | undefined;
   // How many ffmpeg runs go at once; the machine's share when left out (`pool.ts`).
   readonly jobs?: number | undefined;
+  // Settings → Production defaults → Rendering, read as the render started (`encoding.ts`);
+  // absent is x264 at normal priority.
+  readonly machine?: RenderMachine | undefined;
+  // Told, in a sentence for the project page, when the render could not be made as set there.
+  readonly notice?: ((sentence: string) => void) | undefined;
 }
 
 // estimate: a zoompan frame from a 4x still costs several plain encoded frames, and a
@@ -57,9 +68,32 @@ const leastPartFrames = 60 * 30;
 // The sound the join plays, as the join itself brings every segment to it.
 const masterFormat = { sampleRate: 44100, channels: 2 } as const;
 
-// What the master measured, when the run asked for one.
+// What the master measured, when the run asked for one. A render on the NVIDIA card that fails
+// for any reason but a cancel is made again on the processor: the card never fails a render.
 export async function renderSlideshow(run: SlideshowRun): Promise<MasterReport | undefined> {
+  const encode = run.machine?.encode ?? defaultEncode;
+  if (encode.kind !== "nvenc") return renderWith(run, encode);
+  try {
+    return await renderWith(run, encode);
+  } catch (error) {
+    if (run.signal.aborted) throw error;
+    const detail = errorText(error);
+    run.log.write("warn", "video.encoder", {
+      detail: `the NVENC render failed; rendering again on the processor: ${detail}`,
+    });
+    run.notice?.(nvencFallbackNotice(`it stopped the render: ${detail}`));
+    return renderWith(run, { kind: "x264", clipSpeed: encode.clipSpeed });
+  }
+}
+
+async function renderWith(
+  run: SlideshowRun,
+  encode: VideoEncode,
+): Promise<MasterReport | undefined> {
   const { edit } = run;
+  const priority = run.machine?.priority;
+  // The ffmpeg that encodes the picture; copying, sound and probing stay with the bundled one.
+  const encoder = encode.kind === "nvenc" ? encode.bin : run.bin;
   const { clips, order } = slideshowClips(edit);
   const msOf = (frames: number): number => (frames / edit.fps) * 1000;
   const joinMs = msOf(edit.shots.reduce((sum, shot) => sum + shot.frames, 0));
@@ -133,7 +167,7 @@ export async function renderSlideshow(run: SlideshowRun): Promise<MasterReport |
             : undefined;
         if (drawn !== undefined) writeFileSync(join(workspace, script), drawn, { mode: 0o600 });
         const output = join(workspace, clip.name);
-        const args = segmentArgs(edit, clip.segment, output, run.burnSubtitles, script);
+        const args = segmentArgs(edit, clip.segment, output, run.burnSubtitles, script, encode);
         const weight = msOf(clip.frames) * clipWeight;
         const cache = run.cache;
         let key: string | undefined;
@@ -142,7 +176,7 @@ export async function renderSlideshow(run: SlideshowRun): Promise<MasterReport |
         try {
           if (cache !== undefined) {
             key = cacheKey(
-              run.bin,
+              encoder,
               args.map((value) =>
                 drawn === undefined ? value : value.replaceAll(script, "\u0000cards"),
               ),
@@ -161,11 +195,12 @@ export async function renderSlideshow(run: SlideshowRun): Promise<MasterReport |
           rmSync(output, { force: true });
         }
         await runFfmpeg({
-          bin: run.bin,
+          bin: encoder,
           ...(cards.length > 0 ? { cwd: workspace } : {}),
           args,
           signal,
           log: run.log,
+          priority,
           onProgress: (elapsedMs) => {
             running.set(clip.name, Math.min(elapsedMs * clipWeight, weight));
             tell();
@@ -195,7 +230,7 @@ export async function renderSlideshow(run: SlideshowRun): Promise<MasterReport |
         const partList = join(workspace, `${part.name}.ffconcat`);
         writeFileSync(partList, concatList(part.names), { mode: 0o600 });
         await runFfmpeg({
-          bin: run.bin,
+          bin: encoder,
           cwd: run.cwd,
           args: burnPartArgs(
             edit,
@@ -203,9 +238,11 @@ export async function renderSlideshow(run: SlideshowRun): Promise<MasterReport |
             join(workspace, `${part.name}.mp4`),
             part.start,
             run.portraits,
+            encode,
           ),
           signal,
           log: run.log,
+          priority,
           onProgress: (elapsedMs) => {
             done.set(part.name, Math.min(elapsedMs, msOf(part.frames)));
             burned();
@@ -228,11 +265,12 @@ export async function renderSlideshow(run: SlideshowRun): Promise<MasterReport |
     if (played === undefined) throw new Error("the render was canceled");
     const burnsHere = run.burnSubtitles && parts.length <= 1;
     await runFfmpeg({
-      bin: run.bin,
+      bin: burnsHere ? encoder : run.bin,
       cwd: run.cwd,
-      args: joinArgs(edit, run.output, played, burnsHere, run.portraits, sound),
+      args: joinArgs(edit, run.output, played, burnsHere, run.portraits, sound, encode),
       signal: run.signal,
       log: run.log,
+      priority,
       onProgress: (elapsedMs) => report(rendered + elapsedMs * (burnsHere ? 1 : copyWeight)),
     });
     if (run.cache !== undefined) {
@@ -244,7 +282,7 @@ export async function renderSlideshow(run: SlideshowRun): Promise<MasterReport |
     }
     // What the finished video measures, after its AAC encode.
     return run.master !== undefined && edit.audio.length > 0
-      ? await masterReport(run, run.output, run.master)
+      ? await masterReport({ ...run, priority }, run.output, run.master)
       : undefined;
   } finally {
     rmSync(workspace, { recursive: true, force: true });
@@ -259,13 +297,14 @@ async function renderSound(
   workspace: string,
   signal: AbortSignal,
 ): Promise<string> {
-  const quiet = { bin: run.bin, signal, log: run.log, onProgress: (): void => {} };
+  const priority = run.machine?.priority;
+  const quiet = { bin: run.bin, signal, log: run.log, priority, onProgress: (): void => {} };
   let played: EditList = edit;
   if (run.master !== undefined) {
     const mixed = join(workspace, "mix.wav");
     await runFfmpeg({ ...quiet, args: audioMixArgs(edit, mixed) });
     const mastered = join(workspace, "master.wav");
-    await masterFile({ ...run, signal }, mixed, mastered, run.master, masterFormat);
+    await masterFile({ ...run, signal, priority }, mixed, mastered, run.master, masterFormat);
     played = {
       ...edit,
       audio: [

@@ -1,10 +1,21 @@
-import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { execFile, execFileSync, spawnSync } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { promisify } from "node:util";
 import ffmpegStatic from "ffmpeg-static";
 import { describe, expect, it } from "vitest";
 import type { EditList } from "./edit-list.js";
+import { createNvencProbe } from "./encoding.js";
 import { resolveFfmpeg } from "./ffmpeg.js";
 import type { PlanInput } from "./plan.js";
 import { planRender } from "./plan.js";
@@ -225,6 +236,103 @@ describe("renderSlideshow", () => {
       rmSync(scratch, { recursive: true, force: true });
     }
   }, 30_000);
+});
+
+// The computer's NVENC, when it has one: the same probe Settings uses.
+const nvenc = await createNvencProbe({
+  candidates: [resolveFfmpeg(process.env, ffmpegStatic), "ffmpeg", "/usr/bin/ffmpeg"],
+  exec: async (bin, args) =>
+    (await promisify(execFile)(bin, [...args], { timeout: 20_000 })).stdout.toString(),
+  log,
+})();
+
+describe("renderSlideshow on the NVIDIA card", () => {
+  const still = (scratch: string): string => {
+    const path = join(scratch, "still.ppm");
+    writeFileSync(
+      path,
+      Buffer.concat([Buffer.from("P6\n16 16\n255\n"), Buffer.alloc(16 * 16 * 3, 90)]),
+    );
+    return path;
+  };
+
+  // A card chosen but failing mid-render never fails the render: the processor makes it, and
+  // the notice says so.
+  it("renders on the processor with a notice when the NVENC ffmpeg fails", async () => {
+    const scratch = mkdtempSync(join(tmpdir(), "slopify-slideshow-"));
+    try {
+      const output = join(scratch, "out.mp4");
+      const notices: string[] = [];
+      await renderSlideshow({
+        bin: resolveFfmpeg(process.env, ffmpegStatic),
+        ...plan({ imageSeconds: 1, images: [still(scratch)], body: undefined, output }),
+        burnSubtitles: false,
+        scratch,
+        machine: {
+          encode: { kind: "nvenc", bin: "/nonexistent/ffmpeg", clipSpeed: "fast" },
+          priority: "background",
+        },
+        notice: (sentence) => notices.push(sentence),
+        signal: new AbortController().signal,
+        log,
+        onProgress: (): void => {},
+      });
+      expect(statSync(output).size).toBeGreaterThan(0);
+      expect(readFileSync(output).includes("x264 - core")).toBe(true);
+      expect(notices).toHaveLength(1);
+      expect(notices[0]).toMatch(/encoded on the processor/);
+    } finally {
+      rmSync(scratch, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  // Real NVENC, on a computer that has it: clips joined by copying and captions burned in.
+  it.skipIf(!nvenc.available).each([false, true])(
+    "encodes with NVENC (captions burned in: %s)",
+    async (burn) => {
+      const scratch = mkdtempSync(join(tmpdir(), "slopify-slideshow-"));
+      try {
+        writeFileSync(
+          join(scratch, "subtitles.ass"),
+          "[Script Info]\nScriptType: v4.00+\nPlayResX: 1920\nPlayResY: 1080\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n",
+        );
+        mkdirSync(join(scratch, "fonts"));
+        const output = join(scratch, "out.mp4");
+        const notices: string[] = [];
+        await renderSlideshow({
+          bin: resolveFfmpeg(process.env, ffmpegStatic),
+          ...plan({
+            imageSeconds: 1,
+            images: [still(scratch), still(scratch)],
+            body: undefined,
+            output,
+          }),
+          burnSubtitles: burn,
+          cwd: scratch,
+          scratch,
+          machine: {
+            encode: { kind: "nvenc", bin: nvenc.available ? nvenc.bin : "", clipSpeed: "thorough" },
+            priority: "background",
+          },
+          notice: (sentence) => notices.push(sentence),
+          signal: new AbortController().signal,
+          log,
+          onProgress: (): void => {},
+        });
+        expect(notices).toEqual([]);
+        // x264 signs every stream it writes; NVENC does not.
+        expect(readFileSync(output).includes("x264 - core")).toBe(false);
+        const probe = spawnSync(resolveFfmpeg(process.env, ffmpegStatic), [
+          ...["-hide_banner", "-v", "error", "-i", output, "-f", "null", "-"],
+        ]);
+        expect(probe.status).toBe(0);
+        expect(probe.stderr.toString()).toBe("");
+      } finally {
+        rmSync(scratch, { recursive: true, force: true });
+      }
+    },
+    60_000,
+  );
 });
 
 describe("burnParts", () => {

@@ -7,6 +7,7 @@ import { englishSubtitleModels } from "../../kernel/ports/subtitles.js";
 import type { FieldError } from "../admission/rules.js";
 import { silenceGapSecondsMax } from "../admission/rules.js";
 import { loudnessFields } from "../loudness/model.js";
+import { clipEncodeSpeeds, renderPriorities, videoEncoders } from "../video/encoding.js";
 import type { AppSettings } from "./model.js";
 import { appearances, defaultSettings } from "./model.js";
 import { readJsonSetting, writeSetting } from "./repo.js";
@@ -26,10 +27,16 @@ const silenceGapKey = "silenceGapSeconds";
 const appearanceKey = "appearance";
 const loudnessKey = "loudness";
 const subtitleModelKey = "subtitleModel";
+const videoEncoderKey = "videoEncoder";
+const clipEncodeSpeedKey = "clipEncodeSpeed";
+const renderPriorityKey = "renderPriority";
 
 const silenceGapValue = z.number().int().min(0).max(silenceGapSecondsMax);
 const appearanceValue = z.enum(appearances);
 const subtitleModelValue = z.enum(englishSubtitleModels);
+const videoEncoderValue = z.enum(videoEncoders);
+const clipEncodeSpeedValue = z.enum(clipEncodeSpeeds);
+const renderPriorityValue = z.enum(renderPriorities);
 const loudnessValue = z.object({
   enabled: z.boolean(),
   videoLufs: z.number(),
@@ -51,6 +58,19 @@ export function readSettings(deps: PlaybackDeps): AppSettings {
       subtitleModelKey,
       subtitleModelValue,
       defaultSettings.subtitleModel,
+    ),
+    videoEncoder: parsed(deps, videoEncoderKey, videoEncoderValue, defaultSettings.videoEncoder),
+    clipEncodeSpeed: parsed(
+      deps,
+      clipEncodeSpeedKey,
+      clipEncodeSpeedValue,
+      defaultSettings.clipEncodeSpeed,
+    ),
+    renderPriority: parsed(
+      deps,
+      renderPriorityKey,
+      renderPriorityValue,
+      defaultSettings.renderPriority,
     ),
   };
 }
@@ -78,6 +98,25 @@ export function saveSettings(deps: PlaybackDeps, settings: AppSettings): SaveSet
         "Choose Most accurate, Balanced or Smallest in Settings → Production defaults → Subtitle timing model.",
     });
   }
+  if (!videoEncoderValue.safeParse(settings.videoEncoder).success) {
+    fields.push({
+      field: "videoEncoder",
+      message:
+        "Choose Processor (x264) or NVIDIA graphics card (NVENC) in Settings → Production defaults → Video encoder.",
+    });
+  }
+  if (!clipEncodeSpeedValue.safeParse(settings.clipEncodeSpeed).success) {
+    fields.push({
+      field: "clipEncodeSpeed",
+      message: "Choose Thorough or Fast in Settings → Production defaults → Clip encoding.",
+    });
+  }
+  if (!renderPriorityValue.safeParse(settings.renderPriority).success) {
+    fields.push({
+      field: "renderPriority",
+      message: "Choose Normal or Background in Settings → Production defaults → Render priority.",
+    });
+  }
   if (fields.length > 0) {
     return { ok: false, fields };
   }
@@ -85,6 +124,9 @@ export function saveSettings(deps: PlaybackDeps, settings: AppSettings): SaveSet
   writeSetting(deps.db, appearanceKey, JSON.stringify(settings.appearance));
   writeSetting(deps.db, loudnessKey, JSON.stringify(settings.loudness));
   writeSetting(deps.db, subtitleModelKey, JSON.stringify(settings.subtitleModel));
+  writeSetting(deps.db, videoEncoderKey, JSON.stringify(settings.videoEncoder));
+  writeSetting(deps.db, clipEncodeSpeedKey, JSON.stringify(settings.clipEncodeSpeed));
+  writeSetting(deps.db, renderPriorityKey, JSON.stringify(settings.renderPriority));
   return { ok: true, settings };
 }
 

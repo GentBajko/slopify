@@ -1,5 +1,6 @@
 import { defaultLoudness } from "@app/slices/loudness/model.js";
 import type { Appearance, AppSettings } from "@app/slices/settings/model.js";
+import type { ClipEncodeSpeed, RenderPriority, VideoEncoder } from "@app/slices/video/encoding.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useEffect, useState } from "react";
 import { saveAppSettings } from "@/api";
@@ -7,9 +8,10 @@ import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Field, Input, Select } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { SectionHead } from "@/components/kit/section-head";
 import { Segmented } from "@/components/kit/switch";
 import { SavedTick, savedTickMs } from "@/components/saved-tick";
-import { keys, settingsQuery } from "@/queries";
+import { keys, settingsQuery, videoEncodersQuery } from "@/queries";
 import { englishModelChoices } from "@/subtitles/model-facts";
 import { LoudnessControls } from "@/video/loudness-controls";
 
@@ -21,6 +23,19 @@ const appearances: readonly { readonly value: Appearance; readonly label: string
   { value: "system", label: "System" },
   { value: "dark", label: "Dark" },
   { value: "light", label: "Light" },
+];
+
+const videoEncoderChoices: readonly { readonly value: VideoEncoder; readonly label: string }[] = [
+  { value: "cpu", label: "Processor (x264)" },
+  { value: "nvidia", label: "NVIDIA graphics card (NVENC)" },
+];
+const clipEncodeChoices: readonly { readonly value: ClipEncodeSpeed; readonly label: string }[] = [
+  { value: "thorough", label: "Thorough" },
+  { value: "fast", label: "Fast" },
+];
+const priorityChoices: readonly { readonly value: RenderPriority; readonly label: string }[] = [
+  { value: "normal", label: "Normal" },
+  { value: "background", label: "Background (your other programs come first)" },
 ];
 
 // Empty, negative, fractional or past the bound: one sentence, the server's own
@@ -179,9 +194,107 @@ export function ProductionDefaults(): ReactElement {
           }}
         />
       </div>
+
+      <RenderSettings current={current} save={save} />
     </div>
   );
 }
+
+// Settings → Production defaults → Rendering: how this computer encodes videos. Machine-wide,
+// never copied into a project, and changing them never marks anything outdated.
+function RenderSettings({
+  current,
+  save,
+}: {
+  readonly current: AppSettings;
+  readonly save: ReturnType<typeof useSaveSettings>;
+}): ReactElement {
+  const { api } = useApp();
+  const encoders = useQuery(videoEncodersQuery(api));
+  // A settings answer from before the settings reads as their defaults.
+  const encoder = current.videoEncoder ?? "cpu";
+  const nvidia = encoders.data?.nvidia;
+  // The card is offered where its encoder works, and kept in the list while it is the saved
+  // choice so the control never shows what is not saved.
+  const offered = videoEncoderChoices.filter(
+    (choice) => choice.value === "cpu" || nvidia?.available === true || encoder === "nvidia",
+  );
+  const encoderHelp =
+    nvidia === undefined
+      ? "Checking for an NVIDIA graphics card…"
+      : nvidia.available
+        ? "The graphics card takes most of the work off the processor, for a slightly softer picture than x264."
+        : encoder === "nvidia"
+          ? `Videos are encoded on the processor until this is fixed: ${nvidia.reason}`
+          : nvidia.reason;
+  const failed = (field: keyof AppSettings, label: string): string | undefined =>
+    save.error && save.variables?.[field] !== current[field]
+      ? `The ${label} wasn't saved. ${save.error.message}`
+      : undefined;
+  return (
+    <div className="grid gap-4 md:col-span-2" {...helpScope}>
+      <SectionHead
+        as="h3"
+        title="Rendering"
+        meta="How this computer encodes videos and shorts. Changing these never marks anything outdated."
+      />
+      <div className="grid items-start gap-6 md:grid-cols-3">
+        <Field
+          label="Video encoder"
+          tip="settings.video-encoder"
+          help={encoderHelp}
+          error={failed("videoEncoder", "video encoder")}
+        >
+          <Select
+            className="self-start"
+            value={encoder}
+            options={offered}
+            onChange={(event) => {
+              const picked = videoEncoderChoices.find((one) => one.value === event.target.value);
+              if (picked !== undefined) save.mutate({ ...current, videoEncoder: picked.value });
+            }}
+          />
+        </Field>
+        <Field
+          label="Clip encoding"
+          tip="settings.clip-encoding"
+          help={clipEncodingHelp}
+          error={failed("clipEncodeSpeed", "clip encoding")}
+        >
+          <Select
+            className="self-start"
+            value={current.clipEncodeSpeed ?? "thorough"}
+            options={clipEncodeChoices}
+            onChange={(event) => {
+              const picked = clipEncodeChoices.find((one) => one.value === event.target.value);
+              if (picked !== undefined) save.mutate({ ...current, clipEncodeSpeed: picked.value });
+            }}
+          />
+        </Field>
+        <Field
+          label="Render priority"
+          tip="settings.render-priority"
+          help="Background lets your other programs run first; a render takes longer while they are busy."
+          error={failed("renderPriority", "render priority")}
+        >
+          <Select
+            className="self-start"
+            value={current.renderPriority ?? "background"}
+            options={priorityChoices}
+            onChange={(event) => {
+              const picked = priorityChoices.find((one) => one.value === event.target.value);
+              if (picked !== undefined) save.mutate({ ...current, renderPriority: picked.value });
+            }}
+          />
+        </Field>
+      </div>
+    </div>
+  );
+}
+
+// measured on a real project (docs/capstone/changelog.d/2026-10-13-render-settings.md).
+const clipEncodingHelp =
+  "Fast uses about half the processor time for the clips under burned-in captions, for a slightly softer picture.";
 
 // Settings → General: how Slopify looks, beside how it starts.
 export function AppearanceSetting(): ReactElement {

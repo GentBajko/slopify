@@ -7,6 +7,7 @@ import {
   type EnglishSubtitleModel,
 } from "../../kernel/ports/subtitles.js";
 import { defaultLoudness, type LoudnessDefault } from "../loudness/model.js";
+import type { RenderSettings } from "../video/encoding.js";
 
 export type { ProviderFamily } from "../../kernel/ports/model.js";
 // The three families are the three ports, so the set is named beside them.
@@ -216,7 +217,9 @@ export interface Voice {
 export const appearances = ["system", "light", "dark"] as const;
 export type Appearance = (typeof appearances)[number];
 
-export interface AppSettings {
+// The render settings (`video/encoding.ts`) are this computer's, like the subtitle model: how
+// a video is made, never what it is, so no project copies them and no fingerprint carries them.
+export interface AppSettings extends RenderSettings {
   // The silence beside a segment that exists, default 3 s.
   readonly silenceGapSeconds: number;
   readonly appearance: Appearance;
@@ -233,4 +236,7 @@ export const defaultSettings: AppSettings = {
   appearance: "system",
   loudness: defaultLoudness,
   subtitleModel: defaultEnglishSubtitleModel,
+  videoEncoder: "cpu",
+  clipEncodeSpeed: "thorough",
+  renderPriority: "background",
 };

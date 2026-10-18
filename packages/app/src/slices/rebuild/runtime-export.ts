@@ -12,6 +12,7 @@ import { allocateAsset, discardPreparedAssets, sealAsset } from "../storage/asse
 import { outputPath, projectDir, renderCacheDir } from "../storage/layout.js";
 import { audioExportArgs } from "../video/audio-export.js";
 import { withPaths } from "../video/edit-list.js";
+import type { RenderMachine } from "../video/encoding.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
 import { planRender } from "../video/plan.js";
 import { renderSlideshow } from "../video/slideshow.js";
@@ -33,6 +34,33 @@ import type { WorkPiece } from "./work-records.js";
 
 export interface ExportExecutionDeps extends LocalExecutionDeps {
   readonly alignSubtitles?: SubtitleAligner | undefined;
+  // Settings → Production defaults → Rendering, read once as each render starts
+  // (`video/encoding.ts`); absent renders as before, x264 at normal priority.
+  readonly renderMachine?:
+    | ((
+        projectId: string,
+      ) => Promise<{ readonly machine: RenderMachine; readonly notice?: string | undefined }>)
+    | undefined;
+}
+
+// The machine settings for one render, and the notices it gathers for the project page.
+export async function exportMachine(
+  deps: ExportExecutionDeps,
+  projectId: string,
+): Promise<{
+  readonly machine: RenderMachine | undefined;
+  readonly notices: string[];
+  readonly notice: (sentence: string) => void;
+}> {
+  const chosen = await deps.renderMachine?.(projectId);
+  const notices = chosen?.notice === undefined ? [] : [chosen.notice];
+  return {
+    machine: chosen?.machine,
+    notices,
+    notice: (sentence) => {
+      notices.push(sentence);
+    },
+  };
 }
 export async function executeExportRecipe(
   deps: ExportExecutionDeps,
@@ -147,6 +175,8 @@ export async function executeExportRecipe(
               : { warnings: edited.warnings }),
           };
     if (!context.maySubmit(piece.id)) return "held";
+    const machine = await exportMachine(deps, context.work.projectId);
+    const priority = machine.machine?.priority;
     const onProgress = (elapsedMs: number): void =>
       context.emit({
         type: "stage.progress",
@@ -168,10 +198,11 @@ export async function executeExportRecipe(
           args: audioExportArgs(sound, mixed),
           signal: context.signal,
           log: deps.log,
+          priority,
           onProgress,
         });
         if (goal !== undefined) {
-          const run = { bin: deps.ffmpeg, log: deps.log, signal: context.signal };
+          const run = { bin: deps.ffmpeg, log: deps.log, signal: context.signal, priority };
           await masterFile(run, mixed, `${pending.absolutePath}.master.wav`, goal, {
             sampleRate: 48000,
             channels: 2,
@@ -196,6 +227,7 @@ export async function executeExportRecipe(
             ],
             signal: context.signal,
             log: deps.log,
+            priority,
             onProgress: (): void => {},
           });
           master = await masterReport(run, pending.absolutePath, goal);
@@ -220,6 +252,8 @@ export async function executeExportRecipe(
         log: deps.log,
         onProgress,
         ...(goal === undefined ? {} : { master: goal }),
+        machine: machine.machine,
+        notice: machine.notice,
       });
     context.signal.throwIfAborted();
     const asset = sealAsset(deps, pending);
@@ -233,9 +267,8 @@ export async function executeExportRecipe(
         Math.round(totalSeconds * 1000),
         {
           subtitlesMode: mode,
-          ...(edited === undefined || edited.warnings.length === 0
-            ? {}
-            : { warnings: edited.warnings }),
+          // An audio export encodes no picture, so the encoder's notice is not its to show.
+          ...warningsOf([...(edited?.warnings ?? []), ...(wav ? [] : machine.notices)]),
           ...(master === undefined ? {} : { master }),
         },
       ),
@@ -302,4 +335,9 @@ function captionDirectory(
     rmSync(directory, { recursive: true, force: true });
     throw error;
   }
+}
+
+// What the video could not do as asked, for the project page; nothing when it did it all.
+export function warningsOf(warnings: readonly string[]): { readonly warnings?: readonly string[] } {
+  return warnings.length === 0 ? {} : { warnings };
 }

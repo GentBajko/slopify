@@ -94,6 +94,23 @@ async function verify(bin: string): Promise<void> {
   }
 }
 
+// One short ffmpeg run to its end, answering its stdout; a failure carries the last thing it
+// said on stderr. For questions about an ffmpeg (its encoders, a test encode), never renders.
+export async function ffmpegOutput(bin: string, args: readonly string[]): Promise<string> {
+  try {
+    const { stdout } = await promisify(execFile)(bin, [...args], {
+      windowsHide: true,
+      timeout: 30_000,
+      maxBuffer: 4 * 1024 * 1024,
+    });
+    return stdout;
+  } catch (error) {
+    const stderr = z.object({ stderr: z.string() }).safeParse(error);
+    const said = stderr.success ? stderr.data.stderr.trim().split("\n").slice(-2).join(" / ") : "";
+    throw new Error(said === "" ? detail(error) : redact(said));
+  }
+}
+
 function detail(error: unknown): string {
   return redact(errorText(error));
 }

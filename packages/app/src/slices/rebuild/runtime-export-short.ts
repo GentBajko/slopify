@@ -9,7 +9,12 @@ import { allocateAsset, discardPreparedAssets, sealAsset } from "../storage/asse
 import { projectDir } from "../storage/layout.js";
 import type { AudioSegment } from "../video/edit-list.js";
 import { probeDurationMs } from "../video/ffmpeg.js";
-import { type ExportExecutionDeps, slideshowImages } from "./runtime-export.js";
+import {
+  type ExportExecutionDeps,
+  exportMachine,
+  slideshowImages,
+  warningsOf,
+} from "./runtime-export.js";
 import type { ExportSnapshot } from "./runtime-export-inputs.js";
 import { preparedResult, preparedText, publishResult } from "./runtime-publication.js";
 import { timingWords } from "./runtime-shorts.js";
@@ -42,8 +47,11 @@ export async function executeShortExport(
   const directory = projectDir(deps.paths, context.work.projectId);
   const relativePath = (path: string): string => relative(directory, path).split(sep).join("/");
   try {
+    const machine = await exportMachine(deps, context.work.projectId);
     const master = await renderShort({
       bin: deps.ffmpeg,
+      machine: machine.machine,
+      notice: machine.notice,
       master: masterGoal(config, "video"),
       timeline,
       start: 0,
@@ -79,6 +87,7 @@ export async function executeShortExport(
     prepared.push(
       preparedResult(deps, context, piece, "video", asset, durationMs, {
         subtitlesMode: "off",
+        ...warningsOf(machine.notices),
         ...(master === undefined ? {} : { master }),
       }),
     );

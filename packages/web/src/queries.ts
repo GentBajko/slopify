@@ -14,6 +14,7 @@ import {
   readProject,
   readRunCost,
   readUsage,
+  readVideoEncoders,
 } from "./api.js";
 
 // One place names a cache key, so an SSE handler and the query it invalidates cannot
@@ -56,6 +57,7 @@ export const keys = {
   studioReleases: ["studio", "releases"] as const,
   narrationAliases: ["narration-aliases"] as const,
   settings: ["settings"] as const,
+  videoEncoders: ["video-encoders"] as const,
   // The project page's hand edits to the YouTube description, and the channel links: the
   // older Settings list alone, or a project's channel's (under the same prefix, so saving a
   // channel refreshes both).
@@ -138,4 +140,13 @@ export function narrationAliasesQuery(api: Api) {
 
 export function settingsQuery(api: Api) {
   return queryOptions({ queryKey: keys.settings, queryFn: () => readAppSettings(api) });
+}
+
+// Asked once per page load: the answer only changes when Slopify restarts.
+export function videoEncodersQuery(api: Api) {
+  return queryOptions({
+    queryKey: keys.videoEncoders,
+    queryFn: () => readVideoEncoders(api),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
 }
