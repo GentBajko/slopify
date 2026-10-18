@@ -90,6 +90,17 @@ describe("makeSamplesForAll", () => {
     });
   });
 
+  it("holds each sample to its share of the total the person saw, not to the new price", async () => {
+    const { deps, ids } = harness(["Alpha"]);
+    writeStudioSettings(deps.db, { dailyBudget: 100 });
+    const quote = await quoteSamplesForAll(deps);
+    // Shown a little less than it costs now: within what may still go ahead.
+    const seen = quote.total / 1.2;
+    const made = await makeSamplesForAll(deps, { acknowledgedTotal: seen });
+    if (!made.ok) throw new Error(made.message);
+    expect(queuedJob(deps.db, ids[0] ?? "")?.ackHigh).toBeCloseTo(seen, 6);
+  });
+
   it("refuses with the new quote when the total went up since it was shown", async () => {
     const { deps, ids } = harness();
     const made = await makeSamplesForAll(deps, { acknowledgedTotal: 0 });

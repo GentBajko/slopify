@@ -164,6 +164,8 @@ export async function makeSamplesForAll(deps: SaveDeps, raw: unknown): Promise<F
       quote,
     };
   const at = deps.clock.now().toISOString();
+  // Each sample's share of the total the person saw: its leeway is applied once, at make time.
+  const seenShare = quote.total > 0 ? Math.min(1, parsed.data.acknowledgedTotal / quote.total) : 1;
   const queued: string[] = [];
   const held: string[] = [];
   transact(deps.db, () => {
@@ -198,7 +200,7 @@ export async function makeSamplesForAll(deps: SaveDeps, raw: unknown): Promise<F
       enqueueJob(deps.db, {
         templateId: item.templateId,
         templateVersion: item.version,
-        ackHigh: item.high,
+        ackHigh: item.high * seenShare,
         kind: "save",
         requestedAt: at,
       });

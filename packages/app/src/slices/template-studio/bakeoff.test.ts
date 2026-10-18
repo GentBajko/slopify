@@ -185,6 +185,22 @@ describe("startBakeoff", () => {
     );
   });
 
+  it("holds the bake-off to the price the person saw, not to the new one", async () => {
+    const { deps, id, other, sample } = await harness();
+    await sample();
+    const quoted = await quoteBakeoff(deps, id, scriptOn(other));
+    if (!quoted.ok) throw new Error(quoted.message);
+    const seen = quoted.value.high / 1.2;
+    const started = await startBakeoff({ ...deps, uuid: randomUUID }, id, {
+      ...scriptOn(other),
+      acknowledgedHigh: seen,
+      acknowledgedUnknown: true,
+    });
+    if (!started.ok) throw new Error(started.message);
+    expect(bakeoffOf(deps.db, id)?.ackHigh).toBeCloseTo(seen, 6);
+    expect(queuedJob(deps.db, id)?.ackHigh).toBeCloseTo(seen, 6);
+  });
+
   it("is dropped, saying so, when a newer Save takes its place before it starts", async () => {
     const { deps, id, other, sample } = await harness();
     await sample();

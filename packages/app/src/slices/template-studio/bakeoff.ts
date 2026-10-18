@@ -319,7 +319,8 @@ export async function startBakeoff(
         templateId,
         templateVersion: quote.version,
         section: input.section,
-        ackHigh: quote.high,
+        // The person's figure: the quarter-and-five-cents leeway is applied once, at make time.
+        ackHigh: input.acknowledgedHigh,
         ackUnknown: quote.unknown > 0,
         createdAt: at,
       },
@@ -332,7 +333,7 @@ export async function startBakeoff(
     enqueueJob(deps.db, {
       templateId,
       templateVersion: quote.version,
-      ackHigh: quote.high,
+      ackHigh: input.acknowledgedHigh,
       kind: "bakeoff",
       requestedAt: at,
     });
