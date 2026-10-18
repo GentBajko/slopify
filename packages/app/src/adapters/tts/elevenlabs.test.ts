@@ -225,6 +225,27 @@ describe("elevenLabsTts.synthesize", () => {
     expect(String(error)).toContain("voice_not_found");
   });
 
+  it("marks a model the subscription lacks or ElevenLabs doesn't have, never a missing voice", async () => {
+    const body = (status: string, message: string) =>
+      JSON.stringify({ detail: { status, message } });
+    const missing = await failed(
+      new Response(body("model_not_found", "Model eleven_v9 was not found."), { status: 400 }),
+    );
+    expect(isProviderError(missing) && missing.fault).toEqual({
+      kind: "other",
+      access: "not-found",
+    });
+    const plan = await failed(
+      new Response(
+        body("model_access_denied", "This model is not available on your current subscription."),
+        { status: 403 },
+      ),
+    );
+    expect(isProviderError(plan) && plan.fault.access).toBe("no-access");
+    const voice = await failed(new Response(fixture("elevenlabs-400-voice.json"), { status: 400 }));
+    expect(isProviderError(voice) && voice.fault.access).toBeUndefined();
+  });
+
   it("quotes a body that is not the documented envelope", async () => {
     const error = await failed(new Response("<html>upstream is down</html>", { status: 502 }));
 

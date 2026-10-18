@@ -165,6 +165,23 @@ describe("openAiTts.synthesize", () => {
     expect(String(error)).toContain("401");
   });
 
+  it("marks a speech model the key can't use", async () => {
+    const error = await failed(
+      new Response(
+        JSON.stringify({
+          error: {
+            message: "The model `gpt-9-tts` does not exist or you do not have access to it.",
+            code: "model_not_found",
+          },
+        }),
+        { status: 404 },
+      ),
+    );
+    expect(isProviderError(error) && error.fault).toEqual({ kind: "other", access: "not-found" });
+    const auth = await failed(new Response(fixture("openai-401.json"), { status: 401 }));
+    expect(isProviderError(auth) && auth.fault.access).toBeUndefined();
+  });
+
   it("names a 429 a rate limit and carries the provider's Retry-After", async () => {
     const error = await failed(
       new Response(fixture("openai-429.json"), {

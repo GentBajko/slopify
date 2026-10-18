@@ -254,6 +254,30 @@ describe("googleImage failures", () => {
     expect(error instanceof Error && error.message).toMatch(/^Google refused access/);
   });
 
+  it("marks a model the key can't use or that Google doesn't have, kind unchanged", async () => {
+    const answer =
+      (status: number, message: string, named: string): GoogleImageDeps["fetch"] =>
+      () =>
+        Promise.resolve(
+          Response.json({ error: { code: status, message, status: named } }, { status }),
+        );
+    const denied = await generate(
+      answer(403, "The caller does not have permission", "PERMISSION_DENIED"),
+    ).catch((e: unknown) => e);
+    expect(isProviderError(denied) && denied.fault).toMatchObject({
+      kind: "refusal",
+      access: "no-access",
+    });
+    const missing = await generate(
+      answer(404, "models/imagen-9 is not found for API version v1beta", "NOT_FOUND"),
+    ).catch((e: unknown) => e);
+    expect(isProviderError(missing) && missing.fault.access).toBe("not-found");
+    const busy = await generate(answer(503, "The model is overloaded.", "UNAVAILABLE")).catch(
+      (e: unknown) => e,
+    );
+    expect(isProviderError(busy) && busy.fault.access).toBeUndefined();
+  });
+
   // An absent key is terminal, so it never becomes a request.
   it("fails without calling when no key is stored", async () => {
     const seen: Seen[] = [];

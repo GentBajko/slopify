@@ -180,6 +180,7 @@ function classify(
       message: redact(error.message),
       ...(error.fault.retryAfterMs === undefined ? {} : { retryAfterMs: error.fault.retryAfterMs }),
       ...(error.fault.planLimit === undefined ? {} : { planLimit: error.fault.planLimit }),
+      ...(error.fault.access === undefined ? {} : { access: error.fault.access }),
     });
   }
   if (unreachable(error)) {

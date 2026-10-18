@@ -12,6 +12,7 @@ import type {
   PlanLimitReading,
 } from "../../kernel/ports/plan-limits.js";
 import { cliCheck, cliReported } from "../explain.js";
+import { accessField } from "../model-access.js";
 import { cliLoginError } from "./cli-login-error.js";
 import { codexPlanLimit } from "./codex-limits.js";
 import { nodeCodexModels } from "./codex-models.js";
@@ -272,6 +273,7 @@ export function codexLlm(deps: CodexDeps): LlmPort {
           if (planLimit !== undefined) throw codexLimitError(failed, planLimit);
           throw providerError({
             kind: "other",
+            ...accessField(null, failed),
             message: cliReported(
               binary,
               redact(cliShaped(binary, turnFailed, event.value).error.message),
@@ -287,6 +289,7 @@ export function codexLlm(deps: CodexDeps): LlmPort {
           if (planLimit !== undefined) throw codexLimitError(failed, planLimit);
           throw providerError({
             kind: "other",
+            ...accessField(null, failed),
             message: cliReported(
               binary,
               redact(cliShaped(binary, errorEvent, event.value).message),

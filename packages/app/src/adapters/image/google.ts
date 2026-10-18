@@ -4,6 +4,7 @@ import type { GeneratedImage, ImagePort, ImageRequest } from "../../kernel/ports
 import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import { httpFailure, missingKey, noImage, quoted, refusedImage, unreadable } from "../explain.js";
+import { accessField } from "../model-access.js";
 import { retryAfter } from "../retry-after.js";
 import { describeBytes, sniffImage } from "./bytes.js";
 import { discoverGoogleImages } from "./models.js";
@@ -206,8 +207,12 @@ async function failure(response: Response): Promise<Error> {
   const retryAfterMs =
     retryAfter(response.headers.get("retry-after")) ?? googleRetryDelay(delay, message);
   const detail = message || response.statusText;
+  const refused = kind === "refusal" && refusalWords.test(message);
   return providerError({
     kind,
+    // A key that reads the model list but is denied or told "not found" here is denied the
+    // model the request names: Google answers a bad key with 400 API_KEY_INVALID.
+    ...(refused ? {} : accessField(response.status, `${named ?? ""} ${message}`, true)),
     message:
       kind === "unsupported"
         ? `Google gives this API key no image quota for this model${quoted(`error ${String(response.status)}`, detail)}. Retrying will not help: turn on billing for the key's project in Google AI Studio, or choose another image provider in the Providers section of Edit project.`

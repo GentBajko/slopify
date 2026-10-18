@@ -4,6 +4,7 @@ import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import type { TtsAudio, TtsPort, TtsRequest } from "../../kernel/ports/tts.js";
 import { httpFailure, missingKey, noAudio, voiceFix } from "../explain.js";
+import { accessField } from "../model-access.js";
 import { retryAfter } from "../retry-after.js";
 import { cartesiaLanguages, lookUp } from "./voice-languages.js";
 
@@ -118,6 +119,7 @@ async function failure(response: Response, voiceId: string): Promise<Error> {
   const retryAfterMs = retryAfter(response.headers.get("retry-after"));
   return providerError({
     kind: kindOf(response.status),
+    ...accessField(response.status, text),
     // `voice_not_found` has to say which voice was asked for; Cartesia's
     // own message does not repeat the id.
     message: httpFailure({

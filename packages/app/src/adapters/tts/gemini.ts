@@ -13,6 +13,7 @@ import {
   unreadable,
   voiceFix,
 } from "../explain.js";
+import { accessField } from "../model-access.js";
 import { retryAfter } from "../retry-after.js";
 
 // The HTTP gateway adapter for Gemini's speech generation (generateContent with an AUDIO
@@ -234,6 +235,14 @@ async function failure(response: Response, voiceId?: string, next?: string): Pro
   const retryAfterMs = retryAfter(response.headers.get("retry-after"));
   return providerError({
     kind: badKey ? "auth" : kindOf(response.status),
+    // A narration request goes to the model's own address (models/<id>:generateContent).
+    ...(badKey || voiceId === undefined
+      ? {}
+      : accessField(
+          response.status,
+          `${parsed.success ? (parsed.data.error.status ?? "") : ""} ${detail}`,
+          true,
+        )),
     message: httpFailure({
       provider: "Google",
       status,

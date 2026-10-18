@@ -284,6 +284,7 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
             });
           throw providerError({
             kind: kindOf(result.api_error_status ?? null),
+            ...(result.api_error_status === 404 ? { access: "not-found" as const } : {}),
             message: cliReported(
               binary,
               redact(result.result ?? result.subtype),

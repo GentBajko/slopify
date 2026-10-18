@@ -199,6 +199,25 @@ describe("openAiImage.generate", () => {
     expect(String(thrown)).toContain("Invalid value for 'size'");
   });
 
+  it("marks a model the organization can't use, and one that doesn't exist", async () => {
+    const answer = (status: number, message: string, code: string | null) => (): Response =>
+      new Response(JSON.stringify({ error: { message, type: "invalid_request_error", code } }), {
+        status,
+      });
+    const unverified = await failed(
+      replaying(
+        answer(403, "Your organization must be verified to use the model `gpt-image-1`.", null),
+      ),
+    );
+    expect(isProviderError(unverified) && unverified.fault.access).toBe("no-access");
+    const missing = await failed(
+      replaying(answer(404, "The model `gpt-image-9` does not exist.", "model_not_found")),
+    );
+    expect(isProviderError(missing) && missing.fault.access).toBe("not-found");
+    const size = await failed(replaying(answer(400, "Invalid value for 'size'", null)));
+    expect(isProviderError(size) && size.fault.access).toBeUndefined();
+  });
+
   it("fails the attempt when the base64 decodes to something that is not an image", async () => {
     const thrown = await failed(replaying(answering("openai-image-truncated.json")));
 

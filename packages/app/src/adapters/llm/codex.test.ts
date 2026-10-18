@@ -290,6 +290,21 @@ describe("codexLlm.complete", () => {
       '{"type":"turn.started"}\n{"type":"turn.failed","error":{"message":"stream disconnected"}}\n',
     ).catch((thrown: unknown) => thrown);
     expect(String(error)).toContain("stream disconnected");
+    expect(isProviderError(error) && error.fault.access).toBeUndefined();
+  });
+
+  it("marks a model the ChatGPT plan can't use, and one that doesn't exist", async () => {
+    const plan: unknown = await drain(
+      '{"type":"turn.failed","error":{"message":"{\\"detail\\":\\"The \'gpt-5.5-pro\' model is not supported when using Codex with a ChatGPT account.\\"}"}}\n',
+    ).catch((thrown: unknown) => thrown);
+    expect(isProviderError(plan) && plan.fault).toEqual({ kind: "other", access: "no-access" });
+    const missing: unknown = await drain(
+      '{"type":"error","message":"The model `gpt-9` does not exist or you do not have access to it."}\n',
+    ).catch((thrown: unknown) => thrown);
+    expect(isProviderError(missing) && missing.fault).toEqual({
+      kind: "other",
+      access: "not-found",
+    });
   });
 
   it("answers no usage when the turn reported none", async () => {

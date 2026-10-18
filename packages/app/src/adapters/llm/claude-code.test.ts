@@ -235,6 +235,7 @@ describe("claudeCodeLlm.complete", () => {
       (thrown: unknown) => thrown,
     );
     expect(isProviderError(error) && error.fault.kind).toBe("other");
+    expect(isProviderError(error) && error.fault.access).toBe("not-found");
     expect(String(error)).toContain("There's an issue with the selected model");
   });
 
@@ -243,6 +244,7 @@ describe("claudeCodeLlm.complete", () => {
       (thrown: unknown) => thrown,
     );
     expect(isProviderError(auth) && auth.fault.kind).toBe("auth");
+    expect(isProviderError(auth) && auth.fault.access).toBeUndefined();
     expect(String(auth)).toContain("Invalid API key");
 
     const limited: unknown = await drain(fixture("claude-code-rate-limit.jsonl")).catch(

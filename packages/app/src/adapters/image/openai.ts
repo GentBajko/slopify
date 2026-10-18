@@ -4,6 +4,7 @@ import type { GeneratedImage, ImagePort, ImageRequest } from "../../kernel/ports
 import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import { httpFailure, missingKey, noImage, refusedImage, unreadable } from "../explain.js";
+import { accessField } from "../model-access.js";
 import { retryAfter } from "../retry-after.js";
 import { describeBytes, sniffImage } from "./bytes.js";
 import { discoverOpenAiImages } from "./models.js";
@@ -186,6 +187,12 @@ async function failure(response: Response): Promise<Error> {
   const kind = kindOf(response.status, parsed.success ? parsed.data.error.code : undefined);
   return providerError({
     kind,
+    ...(kind === "refusal"
+      ? {}
+      : accessField(
+          response.status,
+          `${parsed.success ? (parsed.data.error.code ?? "") : ""} ${message}`,
+        )),
     message:
       kind === "refusal"
         ? refusedImage("OpenAI", message)

@@ -249,6 +249,23 @@ describe("attempt", () => {
     expect(calls).toBe(1);
   });
 
+  it("keeps the provider's word that the model is not on the plan, kind unchanged", async () => {
+    const h = harness();
+    const call: ProviderCall<string> = () =>
+      Promise.reject(
+        providerError({ kind: "unsupported", message: "Not on your plan.", access: "no-access" }),
+      );
+
+    const failure: unknown = await h.clock
+      .settle(attempt(h.context, call, { kind: "llm" }))
+      .catch((error: unknown) => error);
+
+    expect(isProviderError(failure) && failure.fault).toEqual({
+      kind: "unsupported",
+      access: "no-access",
+    });
+  });
+
   // The next attempt finds no key, fails immediately without retries.
   it("stops when the provider has no key stored", async () => {
     const h = harness();

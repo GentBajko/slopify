@@ -4,6 +4,7 @@ import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import type { TtsAudio, TtsPort, TtsRequest } from "../../kernel/ports/tts.js";
 import { httpFailure, missingKey, noAudio, refreshList, unreadable, voiceFix } from "../explain.js";
+import { accessField } from "../model-access.js";
 import { retryAfter } from "../retry-after.js";
 
 // The HTTP gateway adapter for OpenAI's speech endpoint. `fetch` and nothing else; the response
@@ -128,6 +129,7 @@ async function failure(response: Response, voiceId?: string, next?: string): Pro
   const retryAfterMs = retryAfter(response.headers.get("retry-after"));
   return providerError({
     kind: kindOf(response.status),
+    ...accessField(response.status, text),
     // The voice ID is named, so a rejected voice reads differently from
     // a rejected key.
     message: httpFailure({

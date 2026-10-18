@@ -4,6 +4,7 @@ import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import type { TtsAudio, TtsPort, TtsRequest } from "../../kernel/ports/tts.js";
 import { httpFailure, missingKey, noAudio, refreshList, unreadable, voiceFix } from "../explain.js";
+import { accessField } from "../model-access.js";
 import { retryAfter } from "../retry-after.js";
 import { elevenLabsLanguages, lookUp } from "./voice-languages.js";
 
@@ -160,6 +161,7 @@ async function failure(response: Response, voiceId?: string, next?: string): Pro
   const retryAfterMs = retryAfter(response.headers.get("retry-after"));
   return providerError({
     kind: kindOf(response.status),
+    ...accessField(response.status, text),
     // A rejected voice ID has to be named, and it is the one part of the
     // request the user chose. It is not secret, unlike everything else on the wire.
     message: httpFailure({
