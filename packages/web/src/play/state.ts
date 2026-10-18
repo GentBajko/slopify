@@ -95,6 +95,8 @@ export interface LegacyPlayFormState {
   // The Video stage's Shorts step, as the draft holds it: the numbers as typed, and the two
   // prompts' names ("" is built-in). Absent until Shorts is first touched: off.
   readonly shorts?: ShortsForm | undefined;
+  // Posting to other sites, as the draft holds it; absent is posting nowhere.
+  readonly social?: PlayDraftForm["social"];
   // The ticked image prompts, in tick order, each with its Number.
   readonly imagePrompts: readonly ImagePromptChoice[];
   readonly thumbnailPrompt: string;

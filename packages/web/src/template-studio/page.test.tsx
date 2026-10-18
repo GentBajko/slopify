@@ -5,6 +5,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { AssistantScreenProvider, useAssistantScreen } from "@/assistant/screen";
+import { packs, xPack } from "@/social/post.fake";
 import { jsonAnswer, problemAnswer, renderRouted, testDeps } from "@/test-app";
 import { TemplateStudioPage } from "./page";
 import { priceLabel } from "./save-bar";
@@ -828,4 +829,54 @@ it("names each choice row in Video & captions above its buttons", async () => {
   );
   expect(names).toEqual(["Format", "Captions", "Motion"]);
   expect(within(panel).getByRole("group", { name: "Captions" })).not.toBeNull();
+});
+
+it("turns a site on in the Upload pack with its defaults, and saves it with the template", async () => {
+  const user = userEvent.setup();
+  const priced: unknown[] = [];
+  open("upload", {
+    "GET /api/prompts": jsonAnswer({
+      prompts: [{ id: "q1", kind: "post", name: "Hooky", body: "b", slots: [], updatedAt: "x" }],
+    }),
+    [`POST /api/template-studio/${templateId}/quote`]: async (request: Request) => {
+      priced.push(((await request.json()) as { document: typeof document }).document.form.social);
+      return jsonAnswer(quote())(request);
+    },
+  });
+  const postTo = (await screen.findAllByRole("group", { name: "Post to" }))[0];
+  if (postTo === undefined) throw new Error("The Upload pack has a Post to row.");
+  await user.click(within(postTo).getByRole("checkbox", { name: "Bluesky" }));
+  const bluesky = (await screen.findAllByRole("region", { name: "Bluesky post" }))[0];
+  if (bluesky === undefined) throw new Error("Bluesky's settings show once it is on.");
+  expect((within(bluesky).getByLabelText("Bluesky text") as HTMLSelectElement).value).toBe(
+    "summary",
+  );
+  await user.selectOptions(within(bluesky).getByLabelText("Bluesky text"), "prompt");
+  await user.selectOptions(within(bluesky).getByLabelText("Post prompt"), "Hooky");
+  await waitFor(() =>
+    expect(priced.at(-1)).toEqual({
+      bluesky: {
+        text: "prompt",
+        prompt: "Hooky",
+        media: { pictures: 4 },
+        hashtags: 2,
+        link: false,
+      },
+    }),
+  );
+});
+
+it("shows the sample's posts as each site shows them", async () => {
+  open("upload", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({
+      ...view,
+      paid: { ...view.paid, projectId: "P1", revisionId: "R1", state: "done" },
+    }),
+    "GET /api/social/packs/P1": jsonAnswer(packs([{ ...xPack, projectId: "P1" }])),
+  });
+  const preview = await screen.findByRole("region", { name: "X post preview" });
+  expect(within(preview).getByText("A fox ran. #fox #cliff")).not.toBeNull();
+  expect(within(preview).getByLabelText("X length").textContent).toBe(
+    "22 / 280 · links count as 23",
+  );
 });

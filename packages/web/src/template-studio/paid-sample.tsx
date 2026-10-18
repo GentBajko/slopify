@@ -13,6 +13,8 @@ import { Player } from "@/components/kit/player";
 import { ReadingView } from "@/components/kit/reading-view";
 import { Switch } from "@/components/kit/switch";
 import { readText } from "@/http";
+import { readPostPacks, socialPacksKey } from "@/social/api";
+import { PostPreview } from "@/social/post-preview";
 import { about, changeFullScript, makeSample, quoteSample, templateStudioKey } from "./api";
 
 type Output = StudioView["paid"]["outputs"][number];
@@ -93,7 +95,7 @@ export function PaidBody({
       );
     }
     case "upload":
-      return <UploadSample outputs={outputs} />;
+      return <UploadSample outputs={outputs} projectId={view.paid.projectId} />;
     case "document": {
       // The free sample lays out Slopify's own article; this one is the sample's script.
       const [pdf] = of("document_pdf");
@@ -157,7 +159,14 @@ function titleOf(view: StudioView): string {
   });
 }
 
-function UploadSample({ outputs }: { readonly outputs: readonly Output[] }): ReactElement | null {
+function UploadSample({
+  outputs,
+  projectId,
+}: {
+  readonly outputs: readonly Output[];
+  // The sample project, whose posts for other sites are shown as each site shows them.
+  readonly projectId: string | null;
+}): ReactElement | null {
   const { api } = useApp();
   const description = outputs.find((one) => one.role === "youtube_description");
   const text = useQuery({
@@ -166,27 +175,40 @@ function UploadSample({ outputs }: { readonly outputs: readonly Output[] }): Rea
       description === undefined ? "" : readText(await api.fetch(`${api.origin}${description.url}`)),
     enabled: description !== undefined,
   });
-  if (outputs.length === 0) return null;
+  const posts = useQuery({
+    queryKey: socialPacksKey(projectId ?? ""),
+    queryFn: () => readPostPacks(api, projectId ?? ""),
+    enabled: projectId !== null,
+    retry: false,
+  });
+  const packs = posts.data?.packs ?? [];
+  const files = outputs.filter((one) => one.role !== "social_post");
+  if (files.length === 0 && packs.length === 0) return null;
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       {text.data === undefined || text.data === "" ? null : (
         <p className="m-0 whitespace-pre-wrap rounded-media border border-line p-3 text-small">
           {text.data}
         </p>
       )}
-      <div className="flex flex-wrap gap-3">
-        {outputs.map((one) => (
-          <FileLink
-            key={one.url}
-            href={`${api.origin}${one.url}`}
-            target="_blank"
-            rel="noreferrer"
-            size="small"
-          >
-            {one.name}
-          </FileLink>
-        ))}
-      </div>
+      {files.length === 0 ? null : (
+        <div className="flex flex-wrap gap-3">
+          {files.map((one) => (
+            <FileLink
+              key={one.url}
+              href={`${api.origin}${one.url}`}
+              target="_blank"
+              rel="noreferrer"
+              size="small"
+            >
+              {one.name}
+            </FileLink>
+          ))}
+        </div>
+      )}
+      {packs.map((pack) => (
+        <PostPreview key={pack.platform} pack={pack} />
+      ))}
     </div>
   );
 }
