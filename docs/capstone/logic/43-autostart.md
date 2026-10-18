@@ -37,13 +37,13 @@ paths_covered:
 ## Trigger & preconditions
 
 - Triggers:
-  - Settings → General switch (`packages/web/src/routes/settings.tsx:299`, `packages/web/src/autostart/autostart-settings.tsx:42-84`).
-  - First-run screen offer (`packages/web/src/routes/welcome.tsx:384`, `packages/web/src/autostart/autostart-settings.tsx:110-161`; first-run flow: `41-onboarding-and-sample.md`).
-  - One-time reminder dialog for updated installs (`packages/web/src/autostart/autostart-reminder.tsx:16-55`, mounted `packages/web/src/components/shell.tsx:517`).
+  - Settings → General switch (`packages/web/src/routes/settings.tsx:200`, `packages/web/src/autostart/autostart-settings.tsx:42-84`).
+  - First-run screen offer (`packages/web/src/routes/welcome.tsx:440`, `packages/web/src/autostart/autostart-settings.tsx:110-161`; first-run flow: `41-onboarding-and-sample.md`).
+  - One-time reminder dialog for updated installs (`packages/web/src/autostart/autostart-reminder.tsx:16-55`, mounted `packages/web/src/components/shell.tsx:469`).
   - CLI `--autostart` / `--no-autostart` or the terminal question on a native start (`packages/app/src/edge/cli-args.ts:12-13`, `packages/app/src/edge/cli.ts:23`, `packages/app/src/edge/cli.ts:121-129`).
   - The `--docker` installer's question (`packages/app/src/edge/docker-install/run.ts:129-149`).
   - Every native CLI boot refreshes an existing entry (`packages/app/src/edge/cli.ts:85-86`, `packages/app/src/main.ts:586-598`).
-- Kind selection: `SLOPIFY_CONTAINER=1` → Docker source; otherwise native (`packages/app/src/edge/autostart/index.ts:23-50`). The service is created during boot and passed to the HTTP app as `deps.autostart` (`packages/app/src/main.ts:586-600`); when absent, every route answers 404 "Starting at login can't be set from this Slopify. Start it with npx @gentbajko/slopify and try Settings → General again." (`packages/app/src/edge/http/autostart.ts:13-37`).
+- Kind selection: `SLOPIFY_CONTAINER=1` → Docker source; otherwise native (`packages/app/src/edge/autostart/index.ts:23-50`). The service is created during boot and passed to the HTTP app as `deps.autostart` (`packages/app/src/main.ts:744-768`); when absent, every route answers 404 "Starting at login can't be set from this Slopify. Start it with npx @gentbajko/slopify and try Settings → General again." (`packages/app/src/edge/http/autostart.ts:13-37`).
 - Native availability: platform `linux`, `darwin` or `win32` and not WSL; otherwise `available: false` with a sentence saying why (`packages/app/src/edge/autostart/native.ts:100-118`).
 
 ## Steps
@@ -51,7 +51,7 @@ paths_covered:
 ### View
 
 1. `GET /api/settings/autostart` (`Cache-Control: no-store`) returns `AutostartView {kind, available, enabled, summary, where, howTo, checkedAt, offer}` (`packages/app/src/edge/http/autostart.ts:17-22`, `packages/app/src/edge/autostart/model.ts:3-22`).
-2. **Native.** `status()` reads the current entry: Linux `$XDG_CONFIG_HOME/autostart/slopify.desktop` (XDG only when absolute, else `~/.config`), macOS `~/Library/LaunchAgents/stream.slopify.app.plist`, Windows registry `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` value `Slopify` via `reg query` (`packages/app/src/edge/autostart/native.ts:78-98`, `packages/app/src/edge/autostart/native.ts:130-144`, `packages/app/src/edge/autostart/launcher.ts:34-39`). The entry is `ours` when it contains the marker (`X-Slopify-Autostart=true` on Linux, `Written by Slopify: Settings` on macOS, `start-slopify.cmd` in the Windows value), else `foreign` (`packages/app/src/edge/autostart/native.ts:136-143`). `enabled` is true only when the entry is ours **and** references this data folder's launcher (`packages/app/src/edge/autostart/native.ts:146-149`, `packages/app/src/edge/autostart/native.ts:191-193`). `offer = available && !enabled && settings["autostart.answered"] !== "1"` (`packages/app/src/edge/autostart/service.ts:35`, `packages/app/src/edge/autostart/service.ts:66-76`, `packages/app/src/edge/autostart/model.ts:30`).
+2. **Native.** `status()` reads the current entry: Linux `$XDG_CONFIG_HOME/autostart/slopify.desktop` (XDG only when absolute, else `~/.config`), macOS `~/Library/LaunchAgents/stream.slopify.app.plist`, Windows registry `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` value `Slopify` via `reg query` (`packages/app/src/edge/autostart/native.ts:78-98`, `packages/app/src/edge/autostart/native.ts:130-144`, `packages/app/src/edge/autostart/launcher.ts:34-39`). The entry is `ours` when it contains the marker (`X-Slopify-Autostart=true` on Linux, `Written by Slopify: Settings` on macOS, `start-slopify.cmd` in the Windows value), else `foreign` (`packages/app/src/edge/autostart/native.ts:136-143`). `enabled` is true only when the entry is ours **and** references this data folder's launcher (`packages/app/src/edge/autostart/native.ts:146-149`, `packages/app/src/edge/autostart/native.ts:191-193`). `offer = available && !enabled && settings["autostart.answered"] !== "1"` (`packages/app/src/edge/autostart/service.ts:35`, `packages/app/src/edge/autostart/service.ts:66-76`, `packages/app/src/edge/autostart/model.ts:20-21`).
 3. **Docker.** The service reads `/opt/slopify-install/login-start.json` (only when `SLOPIFY_DOCKER_INSTALL_STATE` is set) through `readState` with the process uid; damaged or foreign → `null` (`packages/app/src/edge/autostart/index.ts:24-31`, `packages/app/src/edge/autostart/index.ts:53-60`, `packages/app/src/edge/autostart/docker.ts:10-29`). The view is always `available: false`, `offer: false`; `enabled` = `docker === "yes"`, or `null` for no record / `unknown`; `summary` distinguishes no record, Docker Desktop, rootless (starts at login) and system Docker (starts at boot); `howTo` names the Docker Desktop sign-in setting, `systemctl --user enable docker` (rootless) or `sudo systemctl enable docker`, plus "run npx @gentbajko/slopify --docker" to re-check (`packages/app/src/edge/autostart/service.ts:39-65`, `packages/app/src/edge/autostart/service.ts:105-111`, `packages/app/src/edge/autostart/docker.ts:31-50`).
 
 ### Turn on (native)
@@ -77,7 +77,7 @@ paths_covered:
 
 ### Refresh on boot
 
-13. A native CLI boot (`refreshAutostart: true`) calls `refresh()` without awaiting: when the entry runs this data folder, it rewrites the launcher and entry if their text changed (new Node path, entry or version); otherwise nothing. Failure is logged as `autostart.refresh` (`packages/app/src/main.ts:595-598`, `packages/app/src/edge/autostart/native.ts:232-239`). In-app updates still apply at login because the started version forwards to the newest installed one (see `21-app-updater.md`, step 13) (`packages/app/src/edge/autostart/launcher.ts:12-14`).
+13. A native CLI boot (`refreshAutostart: true`) calls `refresh()` without awaiting: when the entry runs this data folder, it rewrites the launcher and entry if their text changed (new Node path, entry or version); otherwise nothing. Failure is logged as `autostart.refresh` (`packages/app/src/main.ts:765-768`, `packages/app/src/edge/autostart/native.ts:232-239`). In-app updates still apply at login because the started version forwards to the newest installed one (see `21-app-updater.md`, step 13) (`packages/app/src/edge/autostart/launcher.ts:12-14`).
 
 ### Docker installer
 
@@ -106,13 +106,13 @@ paths_covered:
 - Foreign entry → 409 naming the file (or the `Slopify` Run value and Task Manager → Startup apps) and saying Slopify left it alone (`packages/app/src/edge/autostart/native.ts:204-209`).
 - Windows `%`-path → 409 suggesting `--data-dir C:\Slopify` (`packages/app/src/edge/autostart/launcher.ts:140-144`).
 - `reg add` / `reg delete` non-zero (15 s exec timeout; missing command → code 127) → 409 with the stderr and the Task Manager fallback (`packages/app/src/edge/autostart/native.ts:170-184`, `packages/app/src/edge/autostart/native.ts:219-223`, `packages/app/src/edge/autostart/native.ts:275-292`).
-- A file-system error carrying a `code` is restated: "Slopify couldn't add|remove its login entry: writing <path> failed (<message>). Make sure your user owns that folder and can write to it, then press Start Slopify when I log in in Settings → General again." (`packages/app/src/edge/autostart/service.ts:113-126`).
+- A file-system error carrying a `code` is restated: "Slopify couldn't add|remove its login entry: writing <path> failed (<message>). Make sure your user owns that folder and can write to it, then press Start Slopify when I log in in Settings → General again." (`packages/app/src/edge/autostart/service.ts:113-124`).
 - Any refusal leaves `autostart.answered` unchanged (the mark comes after the change) (`packages/app/src/edge/autostart/service.ts:88-93`).
 - Invalid PUT body → the shared validation problem (`packages/app/src/edge/http/autostart.ts:23`).
 - Terminal path: any failure is printed as a warning; the start never fails (`packages/app/src/edge/autostart/prompt.ts:84-86`).
 - Docker installer: inspection or write failure prints "Slopify couldn't check whether Docker starts when you log in (…). Settings → General will say it doesn't know; run the command again to check again." (`packages/app/src/edge/docker-install/run.ts:145-149`).
-- Login start: Node missing (POSIX) → the log gets "Slopify could not start at login: Node.js was not found…" and the launcher exits 1 (`packages/app/src/edge/autostart/launcher.ts:70-73`). Failures of the started Slopify itself go to `<logs>/autostart.log` (`packages/app/src/edge/autostart/launcher.ts:67`).
-- Refresh failure at boot → logged `warn autostart.refresh`, boot continues (`packages/app/src/main.ts:596-598`).
+- Login start: Node missing (POSIX) → the log gets "Slopify could not start at login: Node.js was not found…" and the launcher exits 1 (`packages/app/src/edge/autostart/launcher.ts:70-73`). Failures of the started Slopify itself go to `<logs>/autostart.log` (`packages/app/src/edge/autostart/index.ts:48`).
+- Refresh failure at boot → logged `warn autostart.refresh`, boot continues (`packages/app/src/main.ts:765-768`).
 - Web: a view load error shows "Starting at login couldn't be checked: <message>"; a set/answer error is shown under the controls (`packages/web/src/autostart/autostart-settings.tsx:49-53`, `packages/web/src/autostart/autostart-settings.tsx:75-79`, `packages/web/src/autostart/autostart-reminder.tsx:48-52`).
 - `PUT`/`POST` during an update or shutdown → refused by the global mutation barrier (see `21-app-updater.md`, step 16).
 
@@ -129,8 +129,8 @@ paths_covered:
 - A login start never opens a browser tab (`--no-open`) (`packages/app/src/edge/autostart/launcher.ts:43-51`).
 - No administrator rights and no systemd unit are used on native installs (`packages/app/src/edge/autostart/native.ts:76-77`).
 - Slopify never changes Docker's or Docker Desktop's settings (`packages/app/src/edge/autostart/docker.ts:52-55`, `packages/app/src/edge/autostart/docker.ts:111-115`).
-- The question is asked at most until answered once, on any of the first-run screen, reminder, Settings or terminal (`packages/app/src/edge/autostart/model.ts:28-30`, `packages/app/src/edge/autostart/prompt.ts:61-62`).
-- `autostart.answered` is not a portable setting, so backups and exports leave it behind (`packages/app/src/slices/storage/portable.ts:524`, `packages/app/src/slices/storage/portable.ts:530-545`).
+- The question is asked at most until answered once, on any of the first-run screen, reminder, Settings or terminal (`packages/app/src/edge/autostart/model.ts:24-26`, `packages/app/src/edge/autostart/prompt.ts:61-62`).
+- `autostart.answered` is not a portable setting, so backups and exports leave it behind (`packages/app/src/slices/storage/portable.ts:536`, `packages/app/src/slices/storage/portable.ts:546-558`).
 
 ## Outcomes & side effects
 

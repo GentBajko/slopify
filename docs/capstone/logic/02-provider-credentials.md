@@ -49,15 +49,15 @@ API keys, the key Test, key guides, the health check, local agent CLIs (path ove
 ## Trigger & preconditions
 
 - Trigger: Save, Test or Remove on a key row; Save/Reset on a CLI path row; Check all or a row's Check again; Add or Remove on a voice row (Settings → Providers / Voices, `packages/web/src/components/provider-keys.tsx`, `provider-cli.tsx`, `provider-health.tsx`).
-- Every request that lists providers (`GET /api/providers`, `packages/app/src/edge/http/providers.ts:173`) recomputes readiness.
-- Preconditions: none. A key may be saved for any keyed provider at any time; a voice may be added with or without a key (`packages/app/src/slices/settings/voices.ts:46-49`).
+- Every request that lists providers (`GET /api/providers`, `packages/app/src/edge/http/providers.ts:181`) recomputes readiness.
+- Preconditions: none. A key may be saved for any keyed provider at any time; a voice may be added with or without a key (`packages/app/src/slices/settings/voices.ts:49-51`).
 - Actor: the single local user.
 
 ## Steps
 
 ### Provider set
 
-15 provider ids in three families (`packages/app/src/slices/settings/model.ts:14-30`, table `:77-121`), each with an `auth` kind:
+15 provider ids in three families (`packages/app/src/slices/settings/model.ts:18-34`, table `:89-133`), each with an `auth` kind:
 
 | auth | Providers | Ready when |
 |---|---|---|
@@ -65,20 +65,20 @@ API keys, the key Test, key guides, the health check, local agent CLIs (path ove
 | `cli` | claude-code, codex, gemini (llm); codex-image (image) | the binary answers `--version` and reports no issue (`kernel/ports/model.ts:37-41`) |
 | `local` | system-voice (tts) | a speech program is found (`readiness.ts:29-39`) |
 
-- `google-tts` uses the `google-image` key until it has its own (`sharedKeyOf`, `model.ts:125-127`; `keyWithShared`, `keys.ts:83-86`).
-- OpenAI has two ids (`openai-tts`, `openai-image`), one row each, so TTS can be keyed without images (`model.ts:11-13`).
+- `google-tts` uses the `google-image` key until it has its own (`sharedKeyOf`, `model.ts:137-139`; `keyWithShared`, `keys.ts:83-86`).
+- OpenAI has two ids (`openai-tts`, `openai-image`), one row each, so TTS can be keyed without images (`model.ts:15-17`).
 
 ### Keys
 
-1. Save key (`PUT /api/providers/:id/key`, `providers.ts:238-252`): body `key` 1..4096 chars (`providers.ts:32`); trimmed; blank after trim → 400 with a `key` field error (`keys.ts:49-52`, `providers.ts:312-319`); a non-`key` provider → 400 "signs in through its own command-line tool" or, for system-voice, "your computer's own speech" (`providers.ts:295-304`). Stored as the provider's single key, overwriting (`keys.ts:54`, `repo.ts:21`). No format check and no automatic test (`keys.ts:43-44`). A storage error is rewritten to carry only the SQLite code (`keys.ts:55-60`). The response is `{provider, hasKey, masked}` with the constant mask `••••••••••••` (`keys.ts:16`, `:24-27`). The model catalogue cache for that provider is invalidated (`providers.ts:248`).
-2. Remove key (`DELETE /api/providers/:id/key`): deletes the row; no row → 404 "nothing to remove" (`keys.ts:64-69`, `providers.ts:305-311`).
-3. Test key (`POST /api/providers/:id/key/test`, `providers.ts:256-276`): keyed providers only. With a body `{key}` the pasted key is tried and neither stored nor logged; without a body the saved (or shared) key is (`key-test.ts:121-138`). One authenticated read per provider (`packages/app/src/adapters/key-probes.ts:37-94`), 15 s timeout, redirects refused, only the first 4096 chars of an error body read (`key-test.ts:150-158`). Outcome mapping (`key-test.ts:38-109`):
+1. Save key (`PUT /api/providers/:id/key`, `providers.ts:250-271`): body `key` 1..4096 chars (`providers.ts:34`); trimmed; blank after trim → 400 with a `key` field error (`keys.ts:49-52`, `providers.ts:325-331`); a non-`key` provider → 400 "signs in through its own command-line tool" or, for system-voice, "your computer's own speech" (`providers.ts:306-318`). Stored as the provider's single key, overwriting (`keys.ts:54`, `repo.ts:21`). No format check and no automatic test (`keys.ts:43-44`). A storage error is rewritten to carry only the SQLite code (`keys.ts:55-60`). The response is `{provider, hasKey, masked}` with the constant mask `••••••••••••` (`keys.ts:16`, `:24-27`). The model catalogue cache for that provider is invalidated (`providers.ts:260`).
+2. Remove key (`DELETE /api/providers/:id/key`): deletes the row; no row → 404 "nothing to remove" (`keys.ts:64-69`, `providers.ts:292-300`, `:319-324`).
+3. Test key (`POST /api/providers/:id/key/test`, `providers.ts:273-291`): keyed providers only. With a body `{key}` the pasted key is tried and neither stored nor logged; without a body the saved (or shared) key is (`key-test.ts:121-138`). One authenticated read per provider (`packages/app/src/adapters/key-probes.ts:36-145`), 15 s timeout, redirects refused, only the first 4096 chars of an error body read (`key-test.ts:150-158`). Outcome mapping (`key-test.ts:38-109`):
 
 | Answer | result | ok |
 |---|---|---|
 | no key saved or pasted | `no-key` | no |
 | 2xx | `valid` (pasted key: "It is not saved yet: choose Save to keep it.", `:135-137`) | yes |
-| 401, or provider-specific bad-key body (Google 400 `API_KEY_INVALID`, ElevenLabs 400 `invalid_api_key`, Inworld 403 "does not exist"/"was deleted", `key-probes.ts:30,77,92`) | `rejected` | no |
+| 401, or provider-specific bad-key body (Google 400 `API_KEY_INVALID`, ElevenLabs 400 `invalid_api_key`, Inworld 403 "does not exist"/"was deleted", `key-probes.ts:62,121,143`) | `rejected` | no |
 | 402 | `no-credit` | no |
 | 403 | `forbidden` | no |
 | 429 | `rate-limited` | no |
@@ -86,47 +86,47 @@ API keys, the key Test, key guides, the health check, local agent CLIs (path ove
 | timeout / network error | `unreachable` | no |
 | any other status | `unexpected` | no |
 
-   Each message names the provider's key page and billing page from the key guide. `fetch` not yet wired → 503 (`providers.ts:259-260`).
-4. Key guides (`GET /api/providers/key-guides`, `providers.ts:69`): per keyed provider a sign-up link, key page, optional billing link, ordered steps, required permissions and docs link (`packages/app/src/slices/settings/key-guides.ts:9-18`, map `:56`). Settings shows the steps open when no key is saved and collapsed under "Where to get a key" once one is (`provider-keys.tsx:282-293`).
+   Each message names the provider's key page and billing page from the key guide. `fetch` not yet wired → 503 (`providers.ts:97`).
+4. Key guides (`GET /api/providers/key-guides`, `providers.ts:80`): per keyed provider a sign-up link, key page, optional billing link, ordered steps, required permissions and docs link (`packages/app/src/slices/settings/key-guides.ts:9-18`, map `:56`). Settings shows the steps open when no key is saved and collapsed under "Where to get a key" once one is (`provider-keys.tsx:283-294`).
 5. A provider call reads the key at the moment the attempt starts (`keyForAttempt`, `keys.ts:74-80`; `packages/app/src/adapter-registry.ts:61-67`).
 
 ### Local agent CLI providers
 
-- Native mode: readiness is probed per request from the saved override or the default command (`claude`, `codex`, `agy` for the `gemini` provider, shown as "Antigravity CLI" (`slices/settings/model.ts:100-107`); in Docker the host helper resolves `agy` on PATH, `host-cli/status.ts:16-39`) with `--version`, 15 s timeout, 64 KiB output cap; identical command+args probes in one request are shared (`readiness.ts:56-67`, `cli-status.ts:22`, `:30-55`). The version is the first dotted number in stdout (`cli-status.ts:119-122`). Codex (text and image) additionally requires version ≥ `0.149.1`; unparsable or older → `issueKind: "version"` (`cli-status.ts:25`, `:69-88`).
+- Native mode: readiness is probed per request from the saved override or the default command (`claude`, `codex`, `agy` for the `gemini` provider, shown as "Antigravity CLI" (`slices/settings/model.ts:89-133`); in Docker the host helper resolves `agy` on PATH, `host-cli/status.ts:16-39`) with `--version`, 15 s timeout, 64 KiB output cap; identical command+args probes in one request are shared (`readiness.ts:56-67`, `cli-status.ts:22`, `:30-55`). The version is the first dotted number in stdout (`cli-status.ts:119-122`). Codex (text and image) additionally requires version ≥ `0.149.1`; unparsable or older → `issueKind: "version"` (`cli-status.ts:25`, `:69-88`).
 - `codex-image` shares the `codex` install: path setting and login source are Codex's (`cli-paths.ts:20-22`, `health.ts:55-57`).
-- Path override (`PUT /api/providers/:id/path`, `providers.ts:217-237`; `saveCliPath`, `cli-paths.ts:58-151`): trimmed; blank resets to PATH (stored as JSON `null`); nonblank must be absolute, without control characters, ≤ 4096 chars (`cli-paths.ts:11-16`), an existing file (folder → "This path is a folder"), executable (`X_OK`), or readable for `.js/.mjs/.cjs` and on Windows (`:103-128`); a nonblank path whose `--version` probe fails is refused with the probe error (`:131-139`). Failures → 400 with a `path` field error and the saved setting unchanged (`providers.ts:227-233`). Stored under setting `cli.path.<installation id>` (`cli-paths.ts:140`). Saves serialize per database and installation id (`cli-paths.ts:69-87`). Every new invocation reads `cliBinary` (`cli-paths.ts:46-48`, `adapter-registry.ts:69-73`); running processes keep their binary.
+- Path override (`PUT /api/providers/:id/path`, `providers.ts:230-249`; `saveCliPath`, `cli-paths.ts:58-88`, `save`, `:90-147`): trimmed; blank resets to PATH (stored as JSON `null`); nonblank must be absolute, without control characters, ≤ 4096 chars (`cli-paths.ts:11-16`), an existing file (folder → "This path is a folder"), executable (`X_OK`), or readable for `.js/.mjs/.cjs` and on Windows (`:104-124`); a nonblank path whose `--version` probe fails is refused with the probe error (`:126-135`). Failures → 400 with a `path` field error and the saved setting unchanged (`providers.ts:240-247`). Stored under setting `cli.path.<installation id>` (`cli-paths.ts:136`). Saves serialize per database and installation id (`cli-paths.ts:69-87`). Every new invocation reads `cliBinary` (`cli-paths.ts:46-48`, `adapter-registry.ts:69-73`); running processes keep their binary.
 - Windows npm-style `.cmd`/`.bat` shims resolve to Node plus the JS entry; prompts never pass through `cmd.exe` (`packages/app/src/kernel/cli-command.ts:9-35`).
-- Docker host mode (`hostCliStatus` present): status comes from the host bridge; `cliPath.managedOnHost=true`, `configured: null` (`readiness.ts:42-55`); PUT path is refused with "Slopify runs in Docker … run the Slopify Docker launcher again" (`cli-paths.ts:63-68`). Host status resolves the command on host PATH, probes `--version`, then reads login; missing command → `issueKind: "missing"`, resolver failure → `"bridge"`, signed-out → `"login"` (`packages/app/src/host-cli/status.ts:97-157`). Results are cached per installation for 5 s after they settle; failures are not cached (`status.ts:158-176`). A not-ready host CLI fails generation with `missing_key` (login) or `unavailable` (`host-cli/runtime.ts:29-37`). The bridge protocol is scenario 20's.
-- Sign-in state (`readHostLogin`, `status.ts:66-90`; parsing in `parseHostLogin`, `status.ts:41-65`): Claude Code `claude auth status` JSON `loggedIn`; Codex `codex login status` text ("Not logged in" / "Logged in using …"); Antigravity CLI (provider `gemini`) has no status command, so Slopify runs `agy models` (`status.ts:79-80`): a parsable model list → `signed-in`; stdout or stderr containing "Please sign in" or "authentication required" → `signed-out` (signed-out agy prints "Error: Please sign in to view available models. Launch the CLI without arguments to sign in.") (`status.ts:46-52`). Anything else, a kill or a non-numeric exit → `unknown`. No settings file is read and `GEMINI_API_KEY` is not used.
-- Labels for a not-usable provider (`packages/web/src/lib/provider-status.ts:3-13`): keyed "Key Missing", local "Speech Program Missing", CLI "Sign In Required" (login), "Host Helper Unavailable" (bridge), "CLI Update Required" (version), "CLI Missing" (missing or no issue text), else "CLI Unavailable". Play's pickers and the project's retry/re-run readiness use the same function (`packages/web/src/play/pickers.tsx:149`, `packages/web/src/project/readiness.ts:74`).
+- Docker host mode (`hostCliStatus` present): status comes from the host bridge; `cliPath.managedOnHost=true`, `configured: null` (`readiness.ts:42-55`); PUT path is refused with "Slopify runs in Docker … run the Slopify Docker launcher again" (`cli-paths.ts:63-68`). Host status resolves the command on host PATH, probes `--version`, then reads login; missing command → `issueKind: "missing"`, resolver failure → `"bridge"`, signed-out → `"login"` (`packages/app/src/host-cli/status.ts:104-162`). Results are cached per installation for 5 s after they settle; failures are not cached (`status.ts:163-181`). A not-ready host CLI fails generation with `missing_key` (login) or `unavailable` (`host-cli/runtime.ts:29-37`). The bridge protocol is scenario 20's.
+- Sign-in state (`readHostLogin`, `status.ts:71-95`; parsing in `parseHostLogin`, `status.ts:46-70`): Claude Code `claude auth status` JSON `loggedIn`; Codex `codex login status` text ("Not logged in" / "Logged in using …"); Antigravity CLI (provider `gemini`) has no status command, so Slopify runs `agy models` (`status.ts:83-85`): a parsable model list → `signed-in`; stdout or stderr containing "Please sign in" or "authentication required" → `signed-out` (signed-out agy prints "Error: Please sign in to view available models. Launch the CLI without arguments to sign in.") (`status.ts:51-57`). Anything else, a kill or a non-numeric exit → `unknown`. No settings file is read and `GEMINI_API_KEY` is not used.
+- Labels for a not-usable provider (`packages/web/src/lib/provider-status.ts:3-13`): keyed "Key Missing", local "Speech Program Missing", CLI "Sign In Required" (login), "Host Helper Unavailable" (bridge), "CLI Update Required" (version), "CLI Missing" (missing or no issue text), else "CLI Unavailable". Play's pickers and the project's retry/re-run readiness use the same function (`packages/web/src/play/pickers.tsx:142-144`, `packages/web/src/project/readiness.ts:74`).
 
 ### System voice
 
-- `system-voice` needs no key or login and has no catalogue row (`model.ts:61-75`). Detection per platform: macOS `say -v ?`; Windows System.Speech via PowerShell; Linux Piper, SVOX Pico, eSpeak NG, eSpeak, best first (`packages/app/src/kernel/ports/system-speech.ts:1-23`, `:79-135`). Results are cached for 60 s (`system-speech.ts:237-253`). None found → `available: false` with an install instruction as `issue` (`readiness.ts:34-37`).
-- `GET /api/providers/system-voice/voices` lists engines, their voices and each engine's default voice (`providers.ts:175-186`).
+- `system-voice` needs no key or login and has no catalogue row (`model.ts:73`, `:119`). Detection per platform: macOS `say -v ?`; Windows System.Speech via PowerShell; Linux Piper, SVOX Pico, eSpeak NG, eSpeak, best first (`packages/app/src/kernel/ports/system-speech.ts:1-23`, `:79-135`). Results are cached for 60 s (`system-speech.ts:237-253`). None found → `available: false` with an install instruction as `issue` (`readiness.ts:34-37`).
+- `GET /api/providers/system-voice/voices` lists engines, their voices and each engine's default voice (`providers.ts:183-194`).
 
 ### First-run provider defaults
 
-`GET /api/providers/first-run` (`providers.ts:71-79`, `packages/app/src/slices/settings/first-run.ts:63-130`): `firstRun` is true while no key is saved and `first-run.done` is unset. On a first run with no saved defaults, the first usable CLI in the order claude-code, codex, gemini becomes Play's LLM default and a usable `codex-image` the image default, each with the first model its list returns ("" when the list fails), written once to setting `provider.defaults` (`first-run.ts:39`, `:81-105`, `:132-143`). The message says a video can be made without keys, or that no CLI was found; the narration sentence depends on whether a system voice is available (`:106-129`). `POST /first-run/dismiss` sets `first-run.done` (`:52-54`).
+`GET /api/providers/first-run` (`providers.ts:82-94`, `packages/app/src/slices/settings/first-run.ts:63-130`): `firstRun` is true while no key is saved and `first-run.done` is unset. On a first run with no saved defaults, the first usable CLI in the order claude-code, codex, gemini becomes Play's LLM default and a usable `codex-image` the image default, each with the first model its list returns ("" when the list fails), written once to setting `provider.defaults` (`first-run.ts:39`, `:81-105`, `:132-143`). The message says a video can be made without keys, or that no CLI was found; the narration sentence depends on whether a system voice is available (`:106-129`). `POST /first-run/dismiss` sets `first-run.done` (`:52-54`).
 
 ### Health check
 
-`POST /api/providers/health[?provider=id]` (`providers.ts:87-105`, `packages/app/src/slices/settings/health.ts:89-109`). "In use" means a non-empty provider+model choice in any template, schedule, draft or unfinished project (`choiceSites`, `health.ts:60-74`). Per provider:
+`POST /api/providers/health[?provider=id]` (`providers.ts:98-115`, `packages/app/src/slices/settings/health.ts:89-109`). "In use" means a non-empty provider+model choice in any template, schedule, draft or unfinished project (`choiceSites`, `health.ts:60-74`). Per provider:
 
-- Keyed (`health.ts:289-340`): no key → "Key saved" `problem` if in use, else the provider is `unused`; otherwise "Key valid" runs the key Test (rate-limited/provider-down/unreachable → `warning`, other failures → `problem`); retired chosen models → "Chosen models" `problem` pointing to Settings → Models → Retired models in use (scenario 19); if in use and the key is valid, "Model reachable" reads each chosen model (at most 5 distinct) through the provider's model endpoint without generating (`model-reach.ts:14-52`): 2xx found (or listed), 404 on a per-model URL missing, anything else or no answer unknown → `warning`; providers without a model read (cartesia, inworld) → `skipped` (`health.ts:255-260`).
+- Keyed (`health.ts:283-334`): no key → "Key saved" `problem` if in use, else the provider is `unused`; otherwise "Key valid" runs the key Test (rate-limited/provider-down/unreachable → `warning`, other failures → `problem`); retired chosen models → "Chosen models" `problem` pointing to Settings → Models → Retired models in use (scenario 19); if in use and the key is valid, "Model reachable" reads each chosen model (at most 5 distinct) through the provider's model endpoint without generating (`model-reach.ts:14-52`): 2xx found (or listed), 404 on a per-model URL missing, anything else or no answer unknown → `warning`; providers without a model read (cartesia, inworld) → `skipped` (`health.ts:249-254`).
 - CLI (`health.ts:132-198`): not installed / missing / bridge → "Installed" `problem` if in use, else `unused`; version issue → `problem`; "Signed in" from the host status (Docker) or `readHostLogin` with a 15 s timeout (native): signed-out → `problem` with the sign-in command (`claude auth login`, `codex login`, `agy`; `signInCommand`, `health.ts:50-53`) in the generic sentence "<name> is not signed in. Open a terminal on the computer running it, run \"<command>\" and sign in, then choose Check all again.", unknown → `skipped` with the generic "Slopify could not tell whether <name> is signed in…" (`health.ts:182-196`; there is no Antigravity-specific wording); if in use, "Chosen models" compares chosen ids with the CLI's model list (unreadable → `warning`, absent id → `problem`) (`health.ts:200-236`).
 - Local (`health.ts:112-130`): "Speech program found" `ok`, or `problem` if in use, else `skipped`.
 - Provider state: any `problem` → problem; any `warning` → warning; else ok when set up or in use, otherwise `unused` (`health.ts:76-84`).
 
 ### Voices
 
-1. Add voice (`POST /api/settings/voices`, `packages/app/src/edge/http/settings.ts:149-178`): TTS providers only; name and voice ID trimmed, non-empty, each ≤ 200 chars; languages optional (`voices.ts:49-89`); ID unique within its provider, enforced by the table's UNIQUE(provider, voice_id) → 409 (`voices.ts:77-87`, `settings.ts:160-168`). Names may repeat. Nothing is verified against the provider. Languages left blank are asked of the provider when it can say (`settings.ts:151-155`); language handling is `34-speakers-and-voices.md`'s.
-2. Remove voice (`DELETE /api/settings/voices/:id`): deletes the row and drops it from the real-person list; absent → 404 (`voices.ts:114-121`, `settings.ts:226-236`).
-3. Google Gemini TTS offers the 30 prebuilt voices listed in `geminiVoices` (`model.ts:131-162`).
+1. Add voice (`POST /api/settings/voices`, `packages/app/src/edge/http/settings.ts:159-186`): TTS providers only; name and voice ID trimmed, non-empty, each ≤ 200 chars; languages optional (`voices.ts:51-91`); ID unique within its provider, enforced by the table's UNIQUE(provider, voice_id) → 409 (`voices.ts:82-88`, `settings.ts:171-181`). Names may repeat. Nothing is verified against the provider. Languages left blank are asked of the provider when it can say (`settings.ts:161-165`); language handling is `34-speakers-and-voices.md`'s.
+2. Remove voice (`DELETE /api/settings/voices/:id`): deletes the row and drops it from the real-person list; absent → 404 (`voices.ts:116-123`, `settings.ts:231-240`).
+3. Google Gemini TTS offers the 30 prebuilt voices listed in `geminiVoices` (`model.ts:143-174`).
 
 ### Model lists for uncatalogued providers
 
-`GET /api/providers/:id/models` (`providers.ts:187-216`). Catalogued providers answer from `models.yaml` with `allowsCustom: false` (scenario 19). CLI providers and system-voice go through `createModelCatalog` (`packages/app/src/slices/settings/models.ts:31-106`): successful lists cached 5 min, failures 30 s, concurrent loads coalesced, `?refresh=1` bypasses the cache, `invalidate` on key/path change discards in-flight results. A failed CLI list returns no models and a warning to check install/sign-in; a failed keyed list returns the last list or the bundled fallback with a warning (`models.ts:63-82`). Custom IDs are allowed except for fal, replicate, codex-image and system-voice (`models.ts:20-27`). Per-provider notices explain the list's origin (`models.ts:115-131`). The web query refetches every 30 s, without retry (`packages/web/src/lib/models.ts:28-37`).
+`GET /api/providers/:id/models` (`providers.ts:195-229`). Catalogued providers answer from `models.yaml` with `allowsCustom: false` (scenario 19). CLI providers and system-voice go through `createModelCatalog` (`packages/app/src/slices/settings/models.ts:31-106`): successful lists cached 5 min, failures 30 s, concurrent loads coalesced, `?refresh=1` bypasses the cache, `invalidate` on key/path change discards in-flight results. A failed CLI list returns no models and a warning to check install/sign-in; a failed keyed list returns the last list or the bundled fallback with a warning (`models.ts:63-82`). Custom IDs are allowed except for fal, replicate, codex-image and system-voice (`models.ts:20-27`). Per-provider notices explain the list's origin (`models.ts:115-131`). The web query refetches every 30 s, without retry (`packages/web/src/lib/models.ts:28-37`).
 
 ### Antigravity CLI invocation
 
@@ -142,19 +142,19 @@ The adapter (`packages/app/src/adapters/llm/antigravity.ts`) runs `agy --input-f
 - Provider neither set up nor in use → health state `unused`, checks `skipped`.
 - Docker host mode → CLI paths are read-only, status from the host bridge; native → local probe and editable path.
 - Project's provider not usable → its retry and re-run controls are disabled with the same label; usable again → re-enabled (`project/readiness.ts:60-76`). A provider id the build no longer lists yields no label (`:69-72`).
-- Voice ID rejected by ElevenLabs at run time → the audio error names the voice ID, distinct from an authentication error (`packages/app/src/adapters/tts/elevenlabs.ts:163`).
+- Voice ID rejected by ElevenLabs at run time → the audio error names the voice ID, distinct from an authentication error (`packages/app/src/adapters/tts/elevenlabs.ts:149-160`).
 
 ## Unhappy paths
 
 - Bad key: Test reports `rejected`; a run's first call fails with `auth`, a terminal kind that is not retried (`packages/app/src/kernel/runner/attempt.ts:26-36`).
 - Key replaced while a project is running: in-flight attempts finish on the old key; every later attempt uses the new one (`adapter-registry.ts:61-67`).
 - Key removed while running: the next attempt finds none, fails with `missing_key` without retries.
-- Test while offline / timed out → `unreachable`; server still starting (no `fetch`) → 503 (`providers.ts:43-44`).
+- Test while offline / timed out → `unreachable`; server still starting (no `fetch`) → 503 (`providers.ts:45-46`).
 - CLI path save racing another tab → serialized; the later request wins (`cli-paths.ts:69-87`).
 - CLI path probe hangs → bounded by 15 s, then refused.
-- CLI signs out mid-run → `missing_key` with terminal sign-in guidance (`antigravity.ts:192`, `:282-293`; Claude/Codex via `adapters/llm/cli-login-error.ts`).
-- `agy models` prints neither a model list nor a sign-in message (or is killed or times out) → login `unknown` in the health check (`status.ts:46-52`, `:85`).
-- Several Antigravity calls at once hit `RESOURCE_EXHAUSTED` → a short reset is retried by itself; a long one waits as a plan limit (`antigravity.ts:250-275`).
+- CLI signs out mid-run → `missing_key` with terminal sign-in guidance (`antigravity.ts:193`, `:286-297`; Claude/Codex via `adapters/llm/cli-login-error.ts`).
+- `agy models` prints neither a model list nor a sign-in message (or is killed or times out) → login `unknown` in the health check (`status.ts:51-57`, `:90`).
+- Several Antigravity calls at once hit `RESOURCE_EXHAUSTED` → a short reset is retried by itself; a long one waits as a plan limit (`antigravity.ts:253-279`).
 - Model list unreachable → warning, cached/bundled choices kept; fal and replicate never accept arbitrary IDs.
 - Duplicate voice ID within a provider → 409 at add time.
 - Empty voice list with narration Generate → admission blocks Play (scenario 04).
@@ -172,7 +172,7 @@ The adapter (`packages/app/src/adapters/llm/antigravity.ts`) runs `agy --input-f
 
 - A key is sent only to its own provider (`key-test.ts:118-120`, `adapter-registry.ts:61-63`).
 - No response carries a key's characters or length; the mask is constant (`keys.ts:12-16`).
-- Keys never appear in backups or exports (`packages/app/src/slices/storage/backup-format.ts:15-17`, `backup-import.ts:79`), logs or error bodies (`keys.ts:55-60`).
+- Keys never appear in backups or exports (`packages/app/src/slices/storage/backup-format.ts:16-18`, `backup-import.ts:79`), logs or error bodies (`keys.ts:55-60`).
 - At most one key per provider.
 - A CLI path is never passed through a shell (`cli-command.ts:9`).
 - A run never starts with a not-usable provider selected (scenario 04).
@@ -180,7 +180,7 @@ The adapter (`packages/app/src/adapters/llm/antigravity.ts`) runs `agy --input-f
 ## Outcomes & side effects
 
 - Keys, voices, CLI path overrides, provider defaults and first-run state persist in the local SQLite database; the silence gap and playback settings are `35-audio-levelling-and-ambient.md` / scenario 11's.
-- Saving/removing a key or path invalidates that provider's model-list cache (`providers.ts:234`, `:248`, `:283`).
+- Saving/removing a key or path invalidates that provider's model-list cache (`providers.ts:267`, `:260`, `:119`).
 - Test and health check make read-only calls to providers; nothing is generated or billed by Slopify for them (`model-reach.ts:5-8`).
 - Nothing is notified.
 

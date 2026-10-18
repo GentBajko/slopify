@@ -30,11 +30,11 @@ What a run's provider calls actually cost (recorded as each call lands), the wai
 
 ## Trigger & preconditions
 
-- Metering: every successful provider call a stage makes through `ProviderDeps` (`packages/app/src/kernel/runner/providers.ts:160-172`, `:257-274`; wired at `packages/app/src/main.ts:1254`). Calls made outside a project (schedule topics, channel episode summaries, cast pictures, a design's picture edits and artwork) go through `createStandaloneMeter` (`packages/app/src/main.ts:432`, `packages/app/src/kernel/runner/standalone.ts:217-227`).
-- Plan-limit gate: every provider call to a provider that `planAccountOf` maps to an account — `claude-code`, `codex`/`codex-image` (one shared account), `gemini` (the Antigravity CLI; `packages/app/src/kernel/ports/plan-limits.ts:7-15`) — made by a project stage (`providers.ts:142-159`; wired `main.ts:1256-1261`).
+- Metering: every successful provider call a stage makes through `ProviderDeps` (`packages/app/src/kernel/runner/providers.ts:160-172`, `:259-274`; wired at `packages/app/src/main.ts:1254`). Calls made outside a project (schedule topics, channel episode summaries, cast pictures, a design's picture edits and artwork) go through `createStandaloneMeter` (`packages/app/src/main.ts:432`, `packages/app/src/kernel/runner/standalone.ts:217-227`).
+- Plan-limit gate: every provider call to a provider that `planAccountOf` maps to an account — `claude-code`, `codex`/`codex-image` (one shared account), `gemini` (the Antigravity CLI; `packages/app/src/kernel/ports/plan-limits.ts:7-15`) — made by a project stage (`providers.ts:139-159`; wired `main.ts:1256-1261`).
 - Reads (no authority check, local API):
-  - `GET /api/projects/:id/run-cost` → `runCostOf` (`packages/app/src/edge/http/run-cost.ts:17-27`; mount `packages/app/src/edge/http/app.ts:196`).
-  - `GET /api/home/week?since=<ISO>&channelId=<id?>` → `weekSummary` (`packages/app/src/edge/http/home.ts:9-20`; mount `app.ts:198`). The browser sends Monday 00:00 of the viewer's time zone (`packages/web/src/home/api.ts:10-25`).
+  - `GET /api/projects/:id/run-cost` → `runCostOf` (`packages/app/src/edge/http/run-cost.ts:17-27`; mount `packages/app/src/edge/http/app.ts:255`).
+  - `GET /api/home/week?since=<ISO>&channelId=<id?>` → `weekSummary` (`packages/app/src/edge/http/home.ts:9-20`; mount `app.ts:257`). The browser sends Monday 00:00 of the viewer's time zone (`packages/web/src/home/api.ts:10-25`).
   - `GET /api/projects/:id` attaches ETA fields to running stages via `stagesWithEta` (`packages/app/src/edge/http/projects.ts:123-128`).
   - `GET /api/projects` and the calendar agenda attach `limitWaits` per project via `limitWaitsByProject` (`projects.ts:82-101`, `packages/app/src/slices/schedules/agenda.ts:195`).
 
@@ -164,7 +164,7 @@ What a run's provider calls actually cost (recorded as each call lands), the wai
 
 - D1 Authority: no per-user rule; reads and metering are local and unauthenticated.
 - D3 Input: only the id param and `since`/`channelId` query are validated (`run-cost.ts:9`, `home.ts:14-17`).
-- D5 Money: amounts are recorded in USD (`panel.ts:63`) and nothing is charged, refunded or capped here; spend ceilings are in `18-cost-review-batch.md`.
+- D5 Money: amounts are recorded in USD (`panel.ts:62`) and nothing is charged, refunded or capped here; spend ceilings are in `18-cost-review-batch.md`.
 - D6 Limits: no Slopify-side spend limit on a running project; the only limit is the CLI plan allowance the CLI itself reports. Two other account limits are read, not enforced (next section).
 - D12 Visibility: data never leaves the machine and is independent of the telemetry notice (`meter.ts:24-26`).
 - D13 Notification: no user notification on a plan-limit wait beyond the page refresh event and the "Waiting for … limits" lines (`packages/web/src/home/running-now.tsx:96-97`).

@@ -32,10 +32,10 @@ What a channel remembers of what it already made, in two stores. **Episode memor
 
 ## Trigger & preconditions
 
-- Routes, mounted at `/api/channels` beside the channel routes (`edge/http/app.ts:185`), in `channelMemoryRoutes` (`edge/http/channel-memory.ts:37-84`): `GET /:id/episodes`, `PUT /:id/episodes/setting`, `PUT /:id/episodes/:memoryId`, `DELETE /:id/episodes/:memoryId`, `GET /:id/videos`, `POST /:id/videos/preview`, `POST /:id/videos`, `DELETE /:id/videos`, `DELETE /:id/videos/:videoId`. The channel id and video id are UUIDs; a memory id is 1–100 characters (`:22-24`).
+- Routes, mounted at `/api/channels` beside the channel routes (`edge/http/app.ts:240`), in `channelMemoryRoutes` (`edge/http/channel-memory.ts:38-88`): `GET /:id/episodes`, `PUT /:id/episodes/setting`, `PUT /:id/episodes/:memoryId`, `DELETE /:id/episodes/:memoryId`, `GET /:id/videos`, `POST /:id/videos/preview`, `POST /:id/videos`, `DELETE /:id/videos`, `DELETE /:id/videos/:videoId`. The channel id and video id are UUIDs; a memory id is 1–100 characters (`:23-25`).
 - Storage (`kernel/db/migrations/0039-channel-essentials.sql`): `episode_memories` with one row per project (unique index on `project_id`) and no foreign key to projects, cascading with its channel (`:27-42`), plus a later `recipe` column (`:64`); `channels.episode_memory` 0/1 (`:45`); `channel_videos` with titles 1–500 characters, unique per channel ignoring case (`:53-59`).
 - Episode memory switch defaults: every channel that existed at the migration is off; on an install with no project yet the default channel is on (`0039-channel-essentials.sql:43-46`); every channel created afterwards starts on (`slices/channels/service.ts:46-52`).
-- Summaries are triggered by the event hub: `createEpisodeMemoryWatcher` observes every project event (`main.ts:307-316`, `:355-362`) and acts on `project.state` with state `done` (`slices/episodes/summarize.ts:205-206`).
+- Summaries are triggered by the event hub: `createEpisodeMemoryWatcher` observes every project event (`main.ts:381-392`, `:435-442`) and acts on `project.state` with state `done` (`slices/episodes/summarize.ts:205-206`).
 - Single local user; no authority checks.
 
 ## Steps
@@ -53,7 +53,7 @@ What a channel remembers of what it already made, in two stores. **Episode memor
 
 **Earlier episodes (on run start)**
 
-9. Admission strips any `earlierEpisodes` the draft brings and computes them afresh (`slices/admission/start.ts:68-71`, `:83`). `earlierEpisodesFor` (`slices/episodes/related.ts:67-88`) returns undefined unless `sources.article === "generate"`, the resolved channel has memory on, and it has at least one memory.
+9. Admission strips any `earlierEpisodes` the draft brings and computes them afresh (`slices/admission/start.ts:154-157`, `:178`). `earlierEpisodesFor` (`slices/episodes/related.ts:67-88`) returns undefined unless `sources.article === "generate"`, the resolved channel has memory on, and it has at least one memory.
 10. The subject is the rendered title plus every keyword value (`:83`). `relatedEpisodes` (`:24-55`) scores each memory: 100 per cast member it lists that the subject mentions (`castWeight` `:18`), plus 1 per title word shared with the subject. Title words are `topicWords` (normalised, filler words and plural `s` removed, `slices/schedules/similar.ts:35-53`) longer than 2 letters or containing a digit (`titleWords` `slices/episodes/related.ts:59-61`); a word in at least 2 memory titles and in more than half of them is ignored as the template's (`:32-39`). A memory whose normalised title equals the new title is a remake and is excluded (`:44`). Score 0 is dropped; sort by score, then newest first; keep at most 5 (`earlierEpisodesMax` `:15`).
 11. The picked `{ title, summary }` list is frozen into the run config as `earlierEpisodes` (`slices/admission/schema.ts:177-180`). `withEarlierEpisodes` appends an "Earlier episodes" block with the instruction to stay consistent, never contradict, refer back where natural and not retell, then one `- "<title>": <summary>` line each (`slices/episodes/related.ts:93-107`). It is applied to the article or script prompt in the recipe (`slices/rebuild/recipe-text.ts:192`); how the article is written is scenario 07.
 
@@ -70,7 +70,7 @@ What a channel remembers of what it already made, in two stores. **Episode memor
 17. CSV: the file is first sent to `POST /:id/videos/preview` `{ format: "csv", text }`, which saves nothing and returns the titles plus the channel's remembered filter (`previewChannelVideos`, `slices/channels/videos.ts:84-96`). `titlesFromCsv` (`slices/channels/studio-csv.ts:55-68`): drops a byte-order mark; picks the separator among comma, semicolon and tab by count in the first line (`:49-53`); parses quoted fields with commas, doubled quotes and line breaks (`:11-47`); takes the column headed "video title", else "title", else "content" (any case, in that order), else the first column whose sample (rows 2–21) holds multi-word text that is not a number, duration, date or 11-character video id, else the first non-plain column (`textColumn` `:81-92`, `plainValue` `:71-79`); skips the header row when named or when it looks like one (`:94-98`); drops empty cells and a "Total" row.
 18. The preview shows one tick per title; "Keep only titles containing…" ticks the titles containing the text case-insensitively, and an empty filter ticks all (`tickedBy`, `packages/web/src/channels/videos-tab.tsx:30-35`). Saving sends the ticked titles as lines plus the filter (`:162-163`).
 19. `importChannelVideos` (`slices/channels/videos.ts:98-121`): each title cut to 500 characters (`videoTitleMax` `:35`, `:140-144`); inside one transaction each is inserted with `ON CONFLICT DO NOTHING`, so titles already on the channel (any case) and repeats in the import are skipped; a sent filter is stored trimmed as JSON under setting `channels.importFilter.<channelId>` (`:40`, `:117-118`). Answer 201 `{ added, skipped }`.
-20. `DELETE /:id/videos/:videoId` removes one; `DELETE /:id/videos` removes all and answers `{ deleted }` (`slices/channels/videos.ts:163-183`), the latter behind a "Remove all" confirmation (`packages/web/src/channels/videos-tab.tsx:205`).
+20. `DELETE /:id/videos/:videoId` removes one; `DELETE /:id/videos` removes all and answers `{ deleted }` (`slices/channels/videos.ts:152-172`), the latter behind a "Remove all" confirmation (`packages/web/src/channels/videos-tab.tsx:233-240`).
 
 **Already-made checks**
 
@@ -90,7 +90,7 @@ What a channel remembers of what it already made, in two stores. **Episode memor
 - Any thrown error during a summary (LLM failure, empty answer, file read) is caught: a `episode.memory` warn log "The episode summary wasn't saved: <error>. The project is unaffected; only later episodes won't be reminded of this one. Check the project's text model in Settings → Providers." and outcome `failed`; the project stays done (`slices/episodes/summarize.ts:85-101`). No retry is scheduled; the next finish of that project tries again.
 - Shutdown: `close` aborts in-flight summaries and stops new ones; the shutdown path waits for `settled` (`slices/episodes/summarize.ts:218-223`, `main.ts:755`, `:783`). An aborted call returns `failed` without logging (`slices/episodes/summarize.ts:93-94`).
 - Finished twice concurrently: the second `done` event is ignored while the first is in flight (`slices/episodes/summarize.ts:208`).
-- Episodes and videos refusals (`edge/http/channel-memory.ts:111-126`): `not-found` → 404 "This channel or episode summary no longer exists; it may have been deleted in another tab. Reload the channel's Episodes tab." or the Existing videos equivalent; `invalid-input` → 400 with the slice's message, else "This request isn't valid. Reload the page and try again."
+- Episodes and videos refusals (`edge/http/channel-memory.ts:104-113`): `not-found` → 404 "This channel or episode summary no longer exists; it may have been deleted in another tab. Reload the channel's Episodes tab." or the Existing videos equivalent; `invalid-input` → 400 with the slice's message, else "This request isn't valid. Reload the page and try again."
 - Edit summary blank → "Write the summary, or delete the memory instead."; over 4,000 → "Keep the summary to 4,000 characters or fewer; about 150 words is plenty." (`slices/episodes/service.ts:32-43`). Editing or deleting a memory under another channel's id → not found (`:84`, `:99`).
 - Import body over 20 MB → 400 "This file is larger than 20 MB. Export fewer videos from YouTube Studio, or paste the titles instead." (`edge/http/channel-memory.ts:25-26`, `:86-101`).
 - No titles found: CSV → "No video titles were found in this file. Export it from YouTube Studio → Analytics → Content (Export current view → Comma-separated values), or paste the titles one per line instead."; lines → "Paste at least one video title, one per line." (`slices/channels/videos.ts:145-153`).
@@ -116,7 +116,7 @@ What a channel remembers of what it already made, in two stores. **Episode memor
 ## Outcomes & side effects
 
 - Cost: the summary call is metered against the channel and shows on Home's run cost (`slices/episodes/summarize.ts:34-35`, `kernel/runner/meter.ts:42`).
-- Backups carry `episode_memories` and `channel_videos` (`slices/storage/backup-format.ts:90-97`); scenario 14.
+- Backups carry `episode_memories` and `channel_videos` (`slices/storage/backup-format.ts:108-109`); scenario 14.
 - Topic suggestions and the Play note read the stored titles; nothing else reads `channel_videos`.
 - No notifications and no telemetry events.
 

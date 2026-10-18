@@ -16,7 +16,7 @@ One scenario file per externally triggerable capability. Runs flow from setup (P
 
 ## Trigger & preconditions
 
-Open the scenario whose capability a change touches; `depends_on` in each file's frontmatter names the scenarios it relies on. Every project mutation route refuses the bundled sample project with 409 `sample-read-only` (`packages/app/src/edge/http/app.ts:292`).
+Open the scenario whose capability a change touches; `depends_on` in each file's frontmatter names the scenarios it relies on. Every project mutation route refuses the bundled sample project with 409 `sample-read-only` (`packages/app/src/edge/http/app.ts:379-388`).
 
 ## Steps
 
@@ -78,7 +78,7 @@ Open the scenario whose capability a change touches; `depends_on` in each file's
 
 ## Branches
 
-Play starts projects from durable drafts (`packages/app/src/slices/play-drafts/start.ts:24`); Templates make fresh drafts (`packages/app/src/slices/project-templates/service.ts:136`); Schedules make drafts and projects from the template as it is at dispatch time, so an edit reaches the next run (`packages/app/src/slices/schedules/scheduler.ts:174`); onboarding makes the quick short (41).
+Play starts projects from durable drafts (`packages/app/src/slices/play-drafts/start.ts:24`); Templates make fresh drafts (`packages/app/src/slices/project-templates/service.ts:136`); Schedules make drafts and projects from the template as it is at dispatch time, so an edit reaches the next run (`packages/app/src/slices/schedules/scheduler.ts:183`); onboarding makes the quick short (41).
 
 ## Unhappy paths
 

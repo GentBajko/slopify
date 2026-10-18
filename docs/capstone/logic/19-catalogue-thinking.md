@@ -113,7 +113,7 @@ paths_covered:
 - A model's standing for the person's key never changes what a run, an admission or a registry call does (`packages/app/src/catalog/registry.compat.test.ts:32`).
 - Catalogue writes are bounded (1 MiB published, 16 MiB OpenRouter) and atomic (`.next` + rename) (`packages/app/src/catalog/store.ts:55`, `packages/app/src/catalog/store.ts:151`, `packages/app/src/catalog/store.ts:166-167`).
 - Local CLI providers never appear in the YAML-derived catalogue (`packages/app/src/catalog/store.ts:59-64`).
-- A model the user added (never published) is never marked retired; a model the user disabled stays disabled across checks (`packages/app/src/catalog/merge.ts:87`, `packages/app/src/catalog/merge.ts:98-101`).
+- A model the user added (never published) is never marked retired; a model the user disabled stays disabled across checks (`packages/app/src/catalog/merge.ts:86`, `packages/app/src/catalog/merge.ts:97-101`).
 - A check never changes a template, schedule, draft or project; only an explicit switch does (`packages/app/src/catalog/merge.ts:3-4`, `packages/app/src/slices/model-upkeep/usage.ts:242-243`).
 - A switch changes exactly the one slot to exactly the named model (`packages/app/src/slices/model-upkeep/switch.ts:36-37`, `packages/app/src/slices/model-upkeep/switch.ts:58-114`).
 - Thinking choices and their provider mappings come from the selected model's validated `llm.thinking` entry or the CLI's reported `thinkingModes`; unsupported modes are rejected, not substituted (`packages/app/src/catalog/registry.ts:53-62`, `packages/app/src/catalog/registry.ts:103-110`).

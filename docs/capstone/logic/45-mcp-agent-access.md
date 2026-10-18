@@ -154,9 +154,9 @@ Setup lines the tab shows, each with Copy: Claude Code `claude mcp add --transpo
 | Case | Behavior | Site |
 |---|---|---|
 | Request from a web page at another address (DNS rebinding included) | 403 JSON-RPC error naming Settings → Connections → Agents (MCP) | `edge/mcp/http.ts:61-61` |
-| GET or DELETE on `/mcp` | 405 "…keeps no session and no event stream: send each request as a POST." | `edge/mcp/http.ts:61-61` |
-| Body over 48 MB | 413 "…larger than 48 MB, more than any file Slopify takes. Send a smaller file." | `edge/mcp/http.ts:61-61` |
-| Body not JSON | 400 "…its body is not JSON. Send one JSON-RPC message." | `edge/mcp/http.ts:61-61` |
+| GET or DELETE on `/mcp` | 405 "…keeps no session and no event stream: send each request as a POST." | `edge/mcp/http.ts:113-119` |
+| Body over 48 MB | 413 "…larger than 48 MB, more than any file Slopify takes. Send a smaller file." | `edge/mcp/http.ts:79-87` |
+| Body not JSON | 400 "…its body is not JSON. Send one JSON-RPC message." | `edge/mcp/http.ts:92-98` |
 | Id with a dot, slash or other character | Refused before any request: "<param> must be an id exactly as Slopify listed it…" | `edge/mcp/call-route.ts:61-67`, `:144-148` |
 | Confirmation missing | Refused with the page's consequence and "call … again with confirmed: true" | `edge/mcp/call-route.ts:70-73` |
 | Confirmation numbers can't be read | The tool's fixed consequence is said instead; logged `mcp.confirm` | `edge/mcp/call-route.ts:109-128` |

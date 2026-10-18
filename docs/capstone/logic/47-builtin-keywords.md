@@ -130,10 +130,10 @@ Prompts, intro/outro entries and descriptions can use keywords Slopify fills its
 | Name starts `Slopify_` but is unknown | refused on save unless already stored; an ordinary field on Play | `rules.ts:44-51`, `lint.ts:80-81` |
 | Keyword outside its places | warning in the editor, refusal at Review and for a saved version, unless the person gave the name a value | `rules.ts:197-221` |
 | Keyword in the title | refused | `admission/rules.ts:112` |
-| Text intro/outro with the release date | refused | `rules.ts:223-238` |
+| Text intro/outro with the release date | refused | `rules.ts:220-235` |
 | Digest, chapters or scene keyword used | text model required, priced, deferred behind its producer; refused with Article Off | `rules.ts:175-195`, `admission/rules.ts:450`, `:664-740` |
 | Fact keyword used | facts copied at start; absent facts refuse a saved version | `start.ts:162`, `recipe-validation.ts:117-127` |
-| Value empty | its line is left out | `fill.ts:75-85` |
+| Value empty | its line is left out | `fill.ts:77-85` |
 | Producer not answered | the prompt waits, its step deferred | `recipe-keywords.ts:89-95` |
 | Description prompt | links and neighbour videos stay the description's own placeholders | `values.ts:29-60` |
 | Release date / length | filled when the request is sent | `runtime-keywords.ts:20-53` |
