@@ -18,7 +18,7 @@ Three connected surfaces for pictures that are not projects: the Library's Desig
 
 Routes (`packages/web/src/router.tsx:226-273`):
 - `/designs?tab=` (child of the Library layout; `tab` is `templates`, otherwise Designs), the "Designs" Library tab under Setups (`packages/web/src/routes/library.tsx:19-23`).
-- `/designs/$designId` and `/design-templates/$templateId` (children of the root route, so no Library header or tabs). The shell's Library item lists no `/designs` match, so no rail item is lit on the gallery (`packages/web/src/components/shell.tsx:103-117`).
+- `/designs/$designId` and `/design-templates/$templateId` (children of the root route, so no Library header or tabs). The shell's Library item matches `/designs` and `/design-templates`, so Library stays lit on the gallery and on both editors (`packages/web/src/components/shell.tsx:117-125`, tested in `shell.test.ts`).
 - Starts: the gallery toolbar, the Create output picker's quiet line "Or start from a picture: Edit a picture · Design a poster" and a project's overflow menu item "Designs (N)…" (`packages/web/src/designs/start.tsx:117-139`, `packages/web/src/play/output-picker.tsx:62`, `packages/web/src/routes/project.tsx:561-566`).
 - A change to a design or a design template reaches the page through the shell's live events (`design.changed` and the template event) which invalidate the lists (`packages/web/src/components/shell.tsx:271-275`).
 

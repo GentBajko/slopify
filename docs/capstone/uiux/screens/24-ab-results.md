@@ -16,7 +16,7 @@ paths_covered:
 Operate surface at `/ab-results`, the Library's "A/B results" tab: every finished YouTube A/B test the Slopify Studio extension read from Studio, one block per test with the winner first, and one button that copies them as notes to paste into the Library prompts that write titles and thumbnails; nothing on the page changes a prompt (`packages/web/src/routes/ab-results.tsx:10-13`, `packages/web/src/routes/library.tsx:14-21`).
 
 - The route is a child of the pathless Library layout, so it renders under the "Library" `PageHeader` and the `TabLinks` row (`packages/web/src/router.tsx:311-315`, `packages/web/src/router.tsx:621`, `packages/web/src/routes/library.tsx:23-35`).
-- The rail's Library item does not list `/ab-results` among its matches, so no rail item is lit on this tab (`packages/web/src/components/shell.tsx:103-117`, `packages/web/src/components/shell.tsx:143-147`).
+- The rail's Library item lists `/ab-results` among its matches, so Library stays lit on this tab (`packages/web/src/components/shell.tsx:117-125`).
 - No Ctrl+K command opens this tab; the Library commands open prompts, intros and outros, templates and document themes only (`packages/web/src/routes/library.tsx:39-109`).
 - Data: `GET /api/studio/ab-results`, newest read first, each row joined to its project's title (`packages/web/src/api.ts:571-578`, `packages/app/src/slices/studio/stats.ts:107-131`). The extension writes a result during its daily Analytics sweep, on the long video's Details page (`packages/extension/src/content.ts:384-407`). A/B tests are started from a project's On YouTube rows or the extension popup (03-project, 23-studio-upload).
 
