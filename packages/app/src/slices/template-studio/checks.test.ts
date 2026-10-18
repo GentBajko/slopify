@@ -239,6 +239,51 @@ describe("freeChecks", () => {
       ).toBe("Daily's runs couldn't be priced: x.");
     });
 
+    it("says a paused schedule costs nothing now, and what it costs when resumed", () => {
+      expect(
+        check(
+          {
+            monthlyCost: { high: 0, unknown: 0, paused: { schedules: 1, runs: 8.7, high: 4.35 } },
+          },
+          "monthly-cost",
+        ),
+      ).toMatchObject({
+        ok: true,
+        sentence:
+          "1 paused schedule uses this template: it costs nothing while paused, and up to about $4.35 a month when resumed.",
+      });
+      expect(
+        check(
+          {
+            monthlyCost: { high: 3, unknown: 0, paused: { schedules: 2, runs: 17.4, high: 8.7 } },
+          },
+          "monthly-cost",
+        )?.sentence,
+      ).toBe(
+        "Its schedules cost up to about $3.00 a month; 2 paused schedules would add up to about $8.70 a month when resumed.",
+      );
+    });
+
+    it("names a paused schedule as paused where its release times are missing", () => {
+      expect(
+        check(
+          {
+            schedules: [
+              {
+                id: "s1",
+                name: "Weekdays",
+                topicKeyword: null,
+                runDays: [1, 3],
+                releases: [{ day: 1, shorts: 0 }],
+                paused: true,
+              },
+            ],
+          },
+          "release-slots",
+        )?.sentence,
+      ).toBe("Weekdays (paused) runs on Wednesday but has no release time for that day.");
+    });
+
     it("fails when a step has no price", () => {
       expect(check({ monthlyCost: { high: 3, unknown: 2 } }, "monthly-cost")).toMatchObject({
         ok: false,

@@ -70,17 +70,20 @@ describe("upcomingRuns", () => {
     ]);
   });
 
-  it("leaves out paused schedules and a one-off already past", () => {
-    expect(
-      upcomingRuns(
-        [
-          schedule({ status: "paused" }),
-          schedule({ id: "s3", cadence: { kind: "once", at: "2026-10-01T10:00:00.000Z" } }),
-        ],
-        document,
-        now,
-      ),
-    ).toEqual([]);
+  it("lists a paused schedule's runs marked paused, and leaves out a one-off already past", () => {
+    const runs = upcomingRuns(
+      [
+        schedule({ status: "paused" }),
+        schedule({ id: "s3", cadence: { kind: "once", at: "2026-10-01T10:00:00.000Z" } }),
+      ],
+      document,
+      now,
+      2,
+    );
+    expect(runs.map((run) => [run.at, run.scheduleName, run.paused])).toEqual([
+      ["2026-10-19T20:00:00.000Z", "Weekdays", true],
+      ["2026-10-21T20:00:00.000Z", "Weekdays", true],
+    ]);
   });
 });
 
@@ -98,7 +101,13 @@ describe("monthlyCost", () => {
       ]),
       now,
     );
-    expect(cost).toEqual({ runs: 39.1, high: 7.39, unknown: 0, problem: null });
+    expect(cost).toEqual({
+      runs: 39.1,
+      high: 7.39,
+      unknown: 0,
+      problem: null,
+      paused: { schedules: 0, runs: 0, high: 0 },
+    });
     expect(runsPerMonth(schedule({}), now)).toBeCloseTo(8.7, 1);
   });
 
@@ -108,7 +117,7 @@ describe("monthlyCost", () => {
       new Map([["s1", "No voice is chosen. Choose a voice."]]),
       now,
     );
-    expect(cost).toEqual({
+    expect(cost).toMatchObject({
       runs: 8.7,
       high: 0,
       unknown: 1,
@@ -118,6 +127,32 @@ describe("monthlyCost", () => {
     expect(monthlyCost([schedule({})], new Map(), now)?.problem).toBe(
       "The cost of the runs of Weekdays isn't worked out yet: it is, with the free samples.",
     );
+  });
+
+  it("counts nothing a month for a paused schedule, and says what it costs when resumed", () => {
+    const cost = monthlyCost(
+      [
+        schedule({ status: "paused" }),
+        schedule({ id: "s2", cadence: { kind: "daily", time: "08:00" } }),
+      ],
+      new Map([
+        ["s1", { high: 0.5, unknown: 0 }],
+        ["s2", { high: 0.1, unknown: 0 }],
+      ]),
+      now,
+    );
+    expect(cost).toEqual({
+      runs: 30.4,
+      high: 3.04,
+      unknown: 0,
+      problem: null,
+      paused: { schedules: 1, runs: 8.7, high: 4.35 },
+    });
+    expect(monthlyCost([schedule({ status: "paused" })], new Map(), now)).toMatchObject({
+      runs: 0,
+      high: 0,
+      paused: { schedules: 1, runs: 8.7, high: 0 },
+    });
   });
 
   it("counts a one-off run only when it falls within the month", () => {

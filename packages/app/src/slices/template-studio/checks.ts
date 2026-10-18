@@ -39,6 +39,10 @@ export interface FreeCheckInput {
     readonly high: number;
     readonly unknown: number;
     readonly problem?: string | null;
+    // The active schedules' runs a month.
+    readonly runs?: number;
+    // Paused schedules: nothing a month now, `high` a month once resumed.
+    readonly paused?: { readonly schedules: number; readonly runs?: number; readonly high: number };
   } | null;
   // The voices saved in Settings → Voices, which Play's voice list offers. Absent: only that a
   // voice is chosen is checked.
@@ -56,7 +60,12 @@ export interface ScheduleFit {
   // The weekdays the schedule runs on (0 is Sunday) and the release times it gives each.
   readonly runDays: readonly number[];
   readonly releases: readonly { readonly day: number; readonly shorts: number }[];
+  // Paused: it still uses the template, so its gaps are named, marked paused.
+  readonly paused?: boolean;
 }
+
+const nameOf = (schedule: ScheduleFit): string =>
+  schedule.paused === true ? `${schedule.name} (paused)` : schedule.name;
 
 export const studioHref = (templateId: string, section: TemplateSection): string =>
   `/templates/${encodeURIComponent(templateId)}?section=${section}`;
@@ -258,7 +267,7 @@ function releaseSlotsCheck(input: FreeCheckInput): Check {
       return {
         id: "release-slots",
         ok: false,
-        sentence: `${schedule.name} runs on ${list(missing.map((day) => weekdays[day] ?? String(day)))} but has no release time for ${missing.length === 1 ? "that day" : "those days"}.`,
+        sentence: `${nameOf(schedule)} runs on ${list(missing.map((day) => weekdays[day] ?? String(day)))} but has no release time for ${missing.length === 1 ? "that day" : "those days"}.`,
         fix: {
           label: `Add the release times in ${schedule.name}`,
           href: scheduleHref(schedule.id),
@@ -269,7 +278,7 @@ function releaseSlotsCheck(input: FreeCheckInput): Check {
       return {
         id: "release-slots",
         ok: false,
-        sentence: `This template makes ${String(wanted)} shorts a video, but ${schedule.name} gives ${weekdays[short.day] ?? ""}'s run release times for ${String(short.shorts)}.`,
+        sentence: `This template makes ${String(wanted)} shorts a video, but ${nameOf(schedule)} gives ${weekdays[short.day] ?? ""}'s run release times for ${String(short.shorts)}.`,
         fix: {
           label: `Add short release times in ${schedule.name}`,
           href: scheduleHref(schedule.id),
@@ -293,12 +302,22 @@ function monthlyCostCheck(input: FreeCheckInput): Check {
       ok: true,
       sentence: "No schedule runs this template, so it costs nothing a month.",
     };
-  if (input.monthlyCost.unknown === 0)
+  const paused = input.monthlyCost.paused?.schedules ?? 0;
+  const resumed = `up to about $${(input.monthlyCost.paused?.high ?? 0).toFixed(2)} a month when resumed`;
+  const many = (n: number) => `${String(n)} paused ${n === 1 ? "schedule" : "schedules"}`;
+  if (input.monthlyCost.unknown === 0) {
+    const activeCost = `Its schedules cost up to about $${input.monthlyCost.high.toFixed(2)} a month`;
     return {
       id: "monthly-cost",
       ok: true,
-      sentence: `Its schedules cost up to about $${input.monthlyCost.high.toFixed(2)} a month.`,
+      sentence:
+        paused === 0
+          ? `${activeCost}.`
+          : input.monthlyCost.high === 0 && (input.monthlyCost.runs ?? 0) === 0
+            ? `${many(paused)} ${paused === 1 ? "uses" : "use"} this template: ${paused === 1 ? "it costs" : "they cost"} nothing while paused, and ${resumed}.`
+            : `${activeCost}; ${many(paused)} would add ${resumed}.`,
     };
+  }
   return {
     id: "monthly-cost",
     ok: false,

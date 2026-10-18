@@ -64,6 +64,7 @@ export const scheduleSampleSchema = z
             scheduleName: z.string(),
             title: z.string(),
             topic: z.boolean(),
+            paused: z.boolean(),
           })
           .strict()
           .readonly(),
@@ -75,6 +76,10 @@ export const scheduleSampleSchema = z
         high: z.number(),
         unknown: z.number(),
         problem: z.string().nullable(),
+        paused: z
+          .object({ schedules: z.number(), runs: z.number(), high: z.number() })
+          .strict()
+          .readonly(),
       })
       .strict()
       .readonly()

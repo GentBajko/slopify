@@ -136,7 +136,9 @@ export function madeStatuses(
           state: cost?.problem === null || cost === null ? "current" : "stale",
           sentence:
             cost?.problem ??
-            "The next runs with the titles their topics fill, and the cost a month.",
+            (cost !== null && cost.paused.schedules === schedules
+              ? `${schedules === 1 ? "1 paused schedule uses" : `${String(schedules)} paused schedules use`} this template: its next runs once resumed, and what they would cost a month.`
+              : "The next runs with the titles their topics fill, and the cost a month."),
         };
   return made;
 }

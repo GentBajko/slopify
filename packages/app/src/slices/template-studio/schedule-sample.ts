@@ -4,7 +4,9 @@ import type { ScheduleSummary } from "../schedules/schema.js";
 import { renderedTitle } from "../schedules/topic-list.js";
 
 // The Schedule sample: the next runs of every schedule that runs the template, with the titles
-// their queued topics fill, and what they cost a month at the high estimate.
+// their queued topics fill, and what they cost a month at the high estimate. A paused schedule
+// still uses the template: its runs are listed marked paused (as the calendar shows them), and
+// it costs nothing a month until it is resumed, when it would cost what `paused` says.
 
 export interface UpcomingRun {
   readonly at: string;
@@ -13,6 +15,8 @@ export interface UpcomingRun {
   readonly title: string;
   // False when the queue has run out by then: the run waits for a topic, or writes one.
   readonly topic: boolean;
+  // Its schedule is paused: the run happens only once the schedule is resumed.
+  readonly paused: boolean;
 }
 
 export function upcomingRuns(
@@ -23,7 +27,7 @@ export function upcomingRuns(
 ): readonly UpcomingRun[] {
   const runs: UpcomingRun[] = [];
   for (const schedule of schedules) {
-    if (schedule.status !== "active") continue;
+    if (schedule.status !== "active" && schedule.status !== "paused") continue;
     let after = now;
     for (let index = 0; index < count; index++) {
       const at = nextOccurrence(schedule.cadence, schedule.timezone, after);
@@ -38,6 +42,7 @@ export function upcomingRuns(
             ? document.form.title
             : renderedTitle(document.form, schedule, topic).trim() || document.form.title,
         topic: topic !== undefined,
+        paused: schedule.status === "paused",
       });
       after = new Date(at.getTime() + 1);
     }
@@ -45,9 +50,10 @@ export function upcomingRuns(
   return runs.toSorted((a, b) => a.at.localeCompare(b.at)).slice(0, count);
 }
 
-// How many runs a schedule makes in an average month.
-export function runsPerMonth(schedule: ScheduleSummary, now: Date): number {
-  if (schedule.status !== "active") return 0;
+// How many runs a schedule makes in an average month; a paused one's are counted only
+// `asResumed`.
+export function runsPerMonth(schedule: ScheduleSummary, now: Date, asResumed = false): number {
+  if (schedule.status !== "active" && !(asResumed && schedule.status === "paused")) return 0;
   const { cadence } = schedule;
   if (cadence.kind === "daily") return 365.25 / 12;
   if (cadence.kind === "weekly") return (cadence.days.length * 365.25) / 12 / 7;
@@ -65,6 +71,9 @@ export interface MonthlyCost {
   readonly unknown: number;
   // Why a schedule's run couldn't be priced, when one couldn't.
   readonly problem: string | null;
+  // The paused schedules that use the template, and what they would cost a month resumed (at
+  // the high estimate; 0 while their runs aren't priced).
+  readonly paused: { readonly schedules: number; readonly runs: number; readonly high: number };
 }
 
 export function monthlyCost(
@@ -73,7 +82,21 @@ export function monthlyCost(
   now: Date,
 ): MonthlyCost | null {
   const active = schedules.filter((schedule) => schedule.status === "active");
-  if (active.length === 0) return null;
+  const stopped = schedules.filter((schedule) => schedule.status === "paused");
+  if (active.length === 0 && stopped.length === 0) return null;
+  let pausedRuns = 0;
+  let pausedHigh = 0;
+  for (const schedule of stopped) {
+    const perMonth = runsPerMonth(schedule, now, true);
+    pausedRuns += perMonth;
+    const price = prices.get(schedule.id);
+    if (price !== undefined && typeof price !== "string") pausedHigh += price.high * perMonth;
+  }
+  const paused = {
+    schedules: stopped.length,
+    runs: Math.round(pausedRuns * 10) / 10,
+    high: Math.round(pausedHigh * 100) / 100,
+  };
   let runs = 0;
   let high = 0;
   let unknown = 0;
@@ -93,5 +116,11 @@ export function monthlyCost(
     high += price.high * perMonth;
     unknown += price.unknown;
   }
-  return { runs: Math.round(runs * 10) / 10, high: Math.round(high * 100) / 100, unknown, problem };
+  return {
+    runs: Math.round(runs * 10) / 10,
+    high: Math.round(high * 100) / 100,
+    unknown,
+    problem,
+    paused,
+  };
 }

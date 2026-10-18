@@ -19,7 +19,14 @@ afterEach(() => {
 const made = { state: "current" as const, sentence: "Made.", url: null };
 const allMade: FreeSamplesView = {
   video: made,
-  loudness: { ...made, beforeUrl: null, beforeLufs: null, afterLufs: null },
+  loudness: {
+    ...made,
+    beforeUrl: null,
+    beforeLufs: null,
+    afterLufs: null,
+    targetLufs: null,
+    ceiling: null,
+  },
   document: made,
 };
 

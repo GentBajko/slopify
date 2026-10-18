@@ -73,9 +73,16 @@ export const view: StudioView = {
         scheduleName: "Weekdays",
         title: "History: Salt roads",
         topic: true,
+        paused: false,
       },
     ],
-    cost: { runs: 8.7, high: 4.35, unknown: 0, problem: null },
+    cost: {
+      runs: 8.7,
+      high: 4.35,
+      unknown: 0,
+      problem: null,
+      paused: { schedules: 0, runs: 0, high: 0 },
+    },
   },
   paid: {
     projectId: null,

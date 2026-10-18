@@ -96,6 +96,7 @@ function fitOf(schedule: ScheduleSummary): ScheduleFit {
       day: release.day,
       shorts: release.shorts.length,
     })),
+    paused: schedule.status === "paused",
   };
 }
 

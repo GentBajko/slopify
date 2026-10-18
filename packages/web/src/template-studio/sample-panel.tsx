@@ -215,13 +215,15 @@ function ScheduleSample({ view }: { readonly view: StudioView }): ReactElement {
             header: "Title",
             cell: (run) => (run.topic ? run.title : `${run.title} (no topic queued yet)`),
           },
-          { id: "schedule", header: "Schedule", cell: (run) => run.scheduleName },
+          {
+            id: "schedule",
+            header: "Schedule",
+            cell: (run) => (run.paused ? `${run.scheduleName} (paused)` : run.scheduleName),
+          },
         ]}
       />
       {cost === null || cost.problem !== null ? null : (
-        <p className="m-0 text-small text-ink-2">
-          {`About ${usd(cost.high)} a month at most, for about ${String(cost.runs)} runs.`}
-        </p>
+        <p className="m-0 text-small text-ink-2">{costWords(cost)}</p>
       )}
       <TextLink to="/calendar" search={{ tab: "schedules" }} className="text-small">
         Schedules in the calendar
@@ -253,4 +255,18 @@ function heldBack(loudness: StudioView["free"]["loudness"]): string {
   if (Math.abs(short) <= 0.5) return "";
   if (short < 0) return ` (target ${targetLufs.toFixed(1)} LUFS)`;
   return `: held back ${short.toFixed(1)} LU from ${targetLufs.toFixed(1)} so peaks stay under ${ceiling.toFixed(1)} dBTP`;
+}
+
+// What the schedules cost a month: the active ones now, and the paused ones once resumed (a
+// paused schedule still uses the template, and the calendar lists its runs).
+function costWords(cost: NonNullable<StudioView["schedule"]["cost"]>): string {
+  const active = `About ${usd(cost.high)} a month at most, for about ${String(cost.runs)} runs.`;
+  const { paused } = cost;
+  if (paused.schedules === 0) return active;
+  const resumed = `about ${usd(paused.high)} a month at most, for about ${String(paused.runs)} runs`;
+  if (cost.runs === 0)
+    return paused.schedules === 1
+      ? `1 paused schedule uses this template: nothing runs while it is paused. Resumed, ${resumed}.`
+      : `${String(paused.schedules)} paused schedules use this template: nothing runs while they are paused. Resumed, ${resumed}.`;
+  return `${active} ${paused.schedules === 1 ? "1 paused schedule" : `${String(paused.schedules)} paused schedules`} would add ${resumed}, once resumed.`;
 }
