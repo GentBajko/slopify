@@ -50,7 +50,7 @@ function partsOf(body: string): readonly Part[] {
   return parts;
 }
 
-const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 
 // Each keyword's value as the sent prompt shows it: the body's own text around the slots is
 // matched in the sent text, and what lies between is the value. Undefined when the sent prompt
@@ -63,7 +63,7 @@ export function sentValues(
   const names: string[] = [];
   const pattern = parts
     .map((part) => {
-      if (part.name === undefined) return escape(part.literal ?? "");
+      if (part.name === undefined) return escapeRegex(part.literal ?? "");
       names.push(part.name);
       return "([\\s\\S]*?)";
     })
@@ -81,7 +81,7 @@ export function sentValues(
 export function promptAnatomy(input: AnatomyInput): readonly Segment[] {
   const filled = input.filled ?? filledKeywords;
   const read = input.sent === undefined ? undefined : sentValues(input.body, input.sent);
-  const valueOf = (name: string): string | undefined => {
+  const filledValue = (name: string): string | undefined => {
     const shown = read?.[name];
     // A slot the sent prompt still shows as written was never filled.
     if (shown !== undefined && shown !== `{{${name}}}`) return shown;
@@ -96,7 +96,7 @@ export function promptAnatomy(input: AnatomyInput): readonly Segment[] {
       if (text !== "") segments.push({ origin: "yours", text });
       continue;
     }
-    const value = valueOf(part.name);
+    const value = filledValue(part.name);
     const origin = filled.includes(part.name) ? "slopify" : "keyword";
     segments.push(
       value === undefined
