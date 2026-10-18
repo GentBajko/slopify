@@ -50,7 +50,7 @@ export function createDesignCalls(deps: DesignRunnerDeps): DesignCalls {
         updateDesign(deps.db, designId, undefined, { headStepId: stepId }, at);
     });
     try {
-      deps.emit?.({ kind: "design.changed", designId });
+      deps.emit?.({ type: "design.changed", designId });
     } catch (error) {
       deps.log.write("warn", "designs.emit", { detail: errorText(error) });
     }

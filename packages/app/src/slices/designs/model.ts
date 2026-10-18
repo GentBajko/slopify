@@ -123,4 +123,4 @@ export interface DesignView extends Design {
   readonly steps: readonly DesignStep[];
 }
 
-export type DesignEvent = { readonly kind: "design.changed"; readonly designId: string };
+export type DesignEvent = { readonly type: "design.changed"; readonly designId: string };

@@ -41,7 +41,7 @@ describe("making a design", () => {
     );
     expect(existsSync(stagingPath(h.paths, staged))).toBe(false);
     expect(h.db.prepare("SELECT count(*) AS n FROM staged_files").get()).toEqual({ n: 0 });
-    expect(h.events).toEqual([{ kind: "design.changed", designId: "d1" }]);
+    expect(h.events).toEqual([{ type: "design.changed", designId: "d1" }]);
   });
 
   it("refuses a file that is not a picture, one too large, one still uploading or gone", () => {

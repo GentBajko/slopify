@@ -14,6 +14,7 @@ import type {
 } from "../../kernel/events.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
+import type { DesignEvent } from "../../slices/designs/model.js";
 import type { StagingEvent } from "../../slices/storage/model.js";
 import { createPreviewCache } from "./preview-cache.js";
 
@@ -42,7 +43,8 @@ export type GlobalEvent =
   | ProjectStateEvent
   | ProjectUpdatedEvent
   | ReviewFlaggedEvent
-  | ReviewAutoPassedEvent;
+  | ReviewAutoPassedEvent
+  | DesignEvent;
 
 export interface SseMessage {
   readonly event: string;

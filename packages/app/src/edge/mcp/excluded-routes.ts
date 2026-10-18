@@ -17,6 +17,9 @@ const cleanup =
 const notStarted =
   "not a page action: projects start from Play drafts (start_draft) after their review and estimate";
 
+// Removed once tools-designs.ts offers them.
+const designsPending = "pending: the designs tools land in tools-designs.ts";
+
 export const excludedRoutes: Readonly<Record<string, string>> = {
   "GET /api/health": "the MCP connection itself shows Slopify is running",
   "GET /api/events/global": "a live stream for open pages; agents read needs_attention",
@@ -97,4 +100,17 @@ export const excludedRoutes: Readonly<Record<string, string>> = {
   "POST /api/studio/ext/video": extension,
   "POST /api/studio/ext/video/done": extension,
   "GET /api/studio/ext/files/:projectId/:asset": extension,
+  "GET /api/designs": designsPending,
+  "POST /api/designs": designsPending,
+  "GET /api/designs/:id": designsPending,
+  "PUT /api/designs/:id": designsPending,
+  "DELETE /api/designs/:id": designsPending,
+  "POST /api/designs/:id/quote": designsPending,
+  "POST /api/designs/:id/artwork/quote": designsPending,
+  "POST /api/designs/:id/edit": designsPending,
+  "POST /api/designs/:id/artwork": designsPending,
+  "POST /api/designs/:id/steps/:stepId/retry": designsPending,
+  "PUT /api/designs/:id/head": designsPending,
+  "GET /api/designs/:id/steps/:stepId/picture": designsPending,
+  "GET /api/designs/:id/files/:file": designsPending,
 };

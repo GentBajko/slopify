@@ -80,6 +80,10 @@ import {
   recoverCheckpointWork,
   settleReleasedCheckpoints,
 } from "./slices/checkpoints/recovery.js";
+import { runPdfWorker } from "./slices/designs/pdf-runner.js";
+import { createDesignRenderer } from "./slices/designs/render.js";
+import { createDesignRunner } from "./slices/designs/runner.js";
+import type { DesignDeps } from "./slices/designs/service.js";
 import {
   createEpisodeMemoryWatcher,
   type EpisodeMemoryWatcher,
@@ -146,7 +150,7 @@ import type { RecordEvent } from "./slices/telemetry/model.js";
 import type { TelemetryDeps } from "./slices/telemetry/record.js";
 import { record } from "./slices/telemetry/record.js";
 import { createTrashPurge } from "./slices/trash/service.js";
-import { probeDurationMs } from "./slices/video/ffmpeg.js";
+import { probeDurationMs, runFfmpeg } from "./slices/video/ffmpeg.js";
 import { watchActivation } from "./updater/candidate.js";
 import { launchUpdate } from "./updater/install.js";
 import { isUpdateToken } from "./updater/model.js";
@@ -630,7 +634,36 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       } catch (error) {
         log.write("warn", "studio.extension", { detail: causedBy(error) });
       }
+    // Library → Designs: paid pictures through the attempt wrapper, metered on the design;
+    // drawing in a child ffmpeg and PDFs in a forked worker, never on this thread.
+    const designService: DesignDeps = {
+      db,
+      clock,
+      ids,
+      paths,
+      log,
+      emit: (event) => hub.emitGlobal(event),
+    };
+    const designRenderer = createDesignRenderer({
+      db,
+      paths,
+      log,
+      clock,
+      ffmpeg,
+      runFfmpeg,
+      font: (fontId) => resolveFont(paths, fontId),
+      pdf: (job, signal) => runPdfWorker(job, signal),
+    });
+    const designRunner = createDesignRunner({
+      ...designService,
+      catalogue: () => catalogue.read(),
+      generate: ({ designId, ...call }) =>
+        standaloneImage(standalone, { ...call, owner: { kind: "design", id: designId } }),
+      shrink: (bytes) => designRenderer.shrink(bytes, AbortSignal.timeout(120_000)),
+    });
+    designRunner.recover();
     const app = createApp({
+      designs: { service: designService, runner: designRunner, renderer: designRenderer },
       autostart,
       rebuild,
       drafts: draftDeps,

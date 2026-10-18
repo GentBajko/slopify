@@ -60,7 +60,7 @@ export function getDesign(deps: Pick<DesignDeps, "db">, id: string): DesignResul
 
 function emit(deps: DesignDeps, designId: string): void {
   try {
-    deps.emit?.({ kind: "design.changed", designId });
+    deps.emit?.({ type: "design.changed", designId });
   } catch (error) {
     deps.log.write("warn", "designs.emit", { detail: errorText(error) });
   }
