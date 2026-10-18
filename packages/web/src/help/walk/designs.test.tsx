@@ -188,7 +188,7 @@ describe("Library → Designs explains every control", () => {
     };
     renderRouted(<DesignTemplateRoute templateId="t1" />, templateDeps(template(doc)));
     for (const section of ["Picture", "Text layout", "Formats", "Schedule"]) {
-      await user.click(await screen.findByRole("button", { name: section }));
+      await user.click(await screen.findByRole("button", { name: new RegExp(`^${section}( |$)`) }));
       await screen.findByRole("region", { name: section });
       // The schedule's rows and spend ceiling show once the schedule has loaded.
       if (section === "Schedule") await screen.findByRole("button", { name: "Save schedule" });

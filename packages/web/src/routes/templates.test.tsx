@@ -44,6 +44,7 @@ const draftView = {
   start: null,
 };
 const routes = {
+  "GET /api/design-templates": jsonAnswer({ templates: [] }),
   "GET /api/project-templates": jsonAnswer({ templates: [template] }),
   "GET /api/drafts": jsonAnswer(drafts),
   [`GET /api/drafts/${sourceId}`]: jsonAnswer(draftView),
@@ -311,6 +312,7 @@ it("deletes the selected version and refreshes the list", async () => {
     <TemplatesRoute onApplied={vi.fn()} />,
     testDeps({
       ...routes,
+      "GET /api/design-templates": jsonAnswer({ templates: [] }),
       "GET /api/project-templates": () => Response.json({ templates: deleted ? [] : [template] }),
       [`DELETE /api/project-templates/${templateId}`]: remove,
     }),
@@ -473,6 +475,7 @@ it("lists a template's versions in History and restores an older one as a new ve
     <TemplatesRoute onApplied={vi.fn()} />,
     testDeps({
       ...routes,
+      "GET /api/design-templates": jsonAnswer({ templates: [] }),
       "GET /api/project-templates": jsonAnswer({ templates: [second] }),
       [`GET /api/project-templates/${templateId}`]: (request) => {
         const version = new URL(request.url).searchParams.get("version");
@@ -526,6 +529,7 @@ it("searches templates by name and sorts them by name or last change", async () 
     <TemplatesRoute onApplied={vi.fn()} />,
     testDeps({
       ...routes,
+      "GET /api/design-templates": jsonAnswer({ templates: [] }),
       "GET /api/project-templates": jsonAnswer({ templates: [template, older] }),
     }),
   );
@@ -557,6 +561,7 @@ it("keeps the picked template in the URL and shows its version with the exact ti
     </>,
     testDeps({
       ...routes,
+      "GET /api/design-templates": jsonAnswer({ templates: [] }),
       "GET /api/project-templates": jsonAnswer({ templates: [template, older] }),
     }),
   );
@@ -574,6 +579,7 @@ it("badges each template with whether its schedules run its newest version", asy
     <TemplatesRoute onApplied={() => undefined} />,
     testDeps({
       ...routes,
+      "GET /api/design-templates": jsonAnswer({ templates: [] }),
       "GET /api/project-templates": jsonAnswer({
         templates: [
           { ...template, gate: { head: 1, runs: 1, gate: "legacy" } },
@@ -601,4 +607,31 @@ it("badges each template with whether its schedules run its newest version", asy
     "Schedules run version 3 until you mark version 4 ready in its studio.",
   );
   expect(within(list).getByText("Ready")).not.toBeNull();
+});
+
+it("lists the design templates below the project templates, each opened in its studio", async () => {
+  renderRouted(
+    <TemplatesRoute onApplied={vi.fn()} />,
+    testDeps({
+      ...routes,
+      "GET /api/design-templates": jsonAnswer({
+        templates: [
+          {
+            id: "55555555-5555-4555-8555-555555555555",
+            name: "Event poster",
+            headVersion: 2,
+            readyVersion: 2,
+            document: {},
+          },
+        ],
+      }),
+    }),
+  );
+  const section = await screen.findByRole("region", { name: "Design templates" });
+  const open = await within(section).findByRole("link", {
+    name: "Open the studio of Event poster",
+  });
+  expect(open.getAttribute("href")).toBe("/design-templates/55555555-5555-4555-8555-555555555555");
+  expect(within(section).getByText("Ready · v2")).not.toBeNull();
+  expect(within(section).getByRole("button", { name: "New design template" })).not.toBeNull();
 });

@@ -2,6 +2,7 @@ import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import { sectionLabel, type TemplateSection } from "@app/slices/template-studio/model.js";
 import type { StudioView } from "@app/slices/template-studio/schema.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Navigate } from "@tanstack/react-router";
 import { type ReactElement, useCallback, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { useAssistantContext } from "@/assistant/screen";
@@ -11,6 +12,7 @@ import { PageHeader, Workspace } from "@/components/kit/layout";
 import { TextLink } from "@/components/kit/link";
 import { SectionHead } from "@/components/kit/section-head";
 import { Tabs } from "@/components/kit/tabs";
+import { designTemplateQuery } from "@/designs/api";
 import { cn } from "@/lib/utils";
 import { UnsavedLeaveGuard } from "@/routes/unsaved-leave-guard";
 import { PromptAnatomy } from "./anatomy";
@@ -41,6 +43,17 @@ export function TemplateStudioPage({
   // The assistant knows which template and section the person has open.
   useAssistantContext({ templateId, section: sectionLabel[section] });
   const studio = useQuery(templateStudioQuery(api, templateId));
+  // One studio address for every kind of template: a design template's id opens its studio.
+  const design = useQuery({
+    ...designTemplateQuery(api, templateId),
+    enabled: studio.error !== null,
+    retry: false,
+  });
+  if (studio.error && design.data !== undefined)
+    return (
+      <Navigate to="/design-templates/$templateId" params={{ templateId }} search={{}} replace />
+    );
+  if (studio.error && design.isFetching) return <StudioSkeleton />;
   if (studio.error)
     return (
       <div>

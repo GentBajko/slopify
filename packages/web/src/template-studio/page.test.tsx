@@ -1,5 +1,6 @@
 import { templateSections } from "@app/slices/template-studio/model.js";
 import type { SampleQuoteView, StudioView } from "@app/slices/template-studio/schema.js";
+import { useLocation } from "@tanstack/react-router";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
@@ -742,5 +743,41 @@ it("tells the assistant which template and section are open", async () => {
     expect(JSON.parse(screen.getByLabelText("assistant screen").textContent ?? "{}")).toMatchObject(
       { templateId, section: "Voice" },
     ),
+  );
+});
+
+it("opens a design template's studio when the address names a design template", async () => {
+  const designId = "44444444-4444-4444-8444-444444444444";
+  let path = "";
+  function Probe(): null {
+    path = useLocation().pathname;
+    return null;
+  }
+  renderRouted(
+    <>
+      <TemplateStudioPage templateId={designId} section="subject" />
+      <Probe />
+    </>,
+    testDeps({
+      [`GET /api/template-studio/${designId}`]: problemAnswer("No such template.", 404),
+      [`GET /api/design-templates/${designId}`]: jsonAnswer({ id: designId, name: "Poster" }),
+    }),
+  );
+  await waitFor(() => expect(path).toBe(`/design-templates/${designId}`));
+});
+
+it("says the studio didn't open when the address names no template of either kind", async () => {
+  renderRouted(
+    <TemplateStudioPage templateId={templateId} section="subject" />,
+    testDeps({
+      [`GET /api/template-studio/${templateId}`]: problemAnswer(
+        "This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates.",
+        404,
+      ),
+      [`GET /api/design-templates/${templateId}`]: problemAnswer("No such design template.", 404),
+    }),
+  );
+  expect((await screen.findByRole("alert")).textContent).toContain(
+    "The studio didn't open: This template no longer exists",
   );
 });

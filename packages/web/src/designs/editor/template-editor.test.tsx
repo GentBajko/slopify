@@ -8,6 +8,9 @@ import type { SampleView, TemplateView } from "../api";
 import { blankTemplate } from "../document";
 import { DesignTemplateRoute } from "./template-editor";
 
+// A rail section's button reads its name, then its sample's state ("Picture Off").
+const railName = (name: string): RegExp => new RegExp(`^${name}( |$)`);
+
 afterEach(() => {
   cleanup();
   window.history.replaceState(null, "", "/");
@@ -107,7 +110,7 @@ describe("the design template editor", () => {
     const rail = await screen.findByText("Picture", { selector: "span" });
     expect(rail).not.toBeNull();
     for (const name of ["Picture", "Text layout", "Formats", "Schedule"]) {
-      await user.click(screen.getByRole("button", { name }));
+      await user.click(screen.getByRole("button", { name: railName(name) }));
       await screen.findByRole("region", { name });
       expect(visibleSettings()).toBeGreaterThan(0);
       expect(visibleSettings()).toBeLessThanOrEqual(4);
@@ -139,10 +142,10 @@ describe("the design template editor", () => {
     );
     expect(words(await waitFor(saveButton))).toBe("Save");
     expect(saveButton().getAttribute("aria-disabled")).toBe("true");
-    await user.click(screen.getByRole("button", { name: "Text layout" }));
+    await user.click(screen.getByRole("button", { name: railName("Text layout") }));
     await user.click(screen.getByRole("button", { name: "Centre" }));
     await waitFor(() => expect(words(saveButton())).toBe("Save · free"));
-    await user.click(screen.getByRole("button", { name: "Picture" }));
+    await user.click(screen.getByRole("button", { name: railName("Picture") }));
     await user.type(screen.getByLabelText("Describe the artwork"), " at night");
     await waitFor(() => expect(words(saveButton())).toBe("Save · about $0.04"));
     await user.click(saveButton());
@@ -236,7 +239,7 @@ describe("the design template editor", () => {
         },
       }),
     );
-    await user.click(await screen.findByRole("button", { name: "Schedule" }));
+    await user.click(await screen.findByRole("button", { name: railName("Schedule") }));
     await user.click(screen.getByRole("button", { name: "Add a row" }));
     const date = screen.getByLabelText("Date of row 1");
     expect(date.getAttribute("type")).toBe("date");
@@ -296,7 +299,7 @@ describe("the design template editor", () => {
         },
       }),
     );
-    await user.click(await screen.findByRole("button", { name: "Schedule" }));
+    await user.click(await screen.findByRole("button", { name: railName("Schedule") }));
     const ceiling = await screen.findByLabelText("Spend ceiling per piece (US$, optional)");
     await waitFor(() => expect((ceiling as HTMLInputElement).value).toBe("4"));
     await user.clear(ceiling);
@@ -357,7 +360,7 @@ describe("the design template editor", () => {
       renderRouted(<DesignTemplateRoute templateId="t1" />, deps(template({ readyVersion: 2 })));
       const button = await screen.findByRole("button", { name: "Make a piece" });
       expect(button.getAttribute("data-variant")).not.toBe("primary");
-      await user.click(screen.getByRole("button", { name: "Text layout" }));
+      await user.click(screen.getByRole("button", { name: railName("Text layout") }));
       await user.click(screen.getByRole("button", { name: "Add a line" }));
       expect(
         screen.getByRole("button", { name: "Make a piece" }).getAttribute("aria-disabled"),

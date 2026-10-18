@@ -221,6 +221,11 @@ export const libraryHelp = {
     body: "Makes a new Play draft from the template and opens it in Play for you to review; nothing starts. Keywords the project title names start empty for this video's topic, and uploaded files keep their names but must be attached again. The template itself is unchanged.",
     tutorial: { page: "Templates", anchor: "use-a-template" },
   },
+  "templates.design": {
+    title: "Design templates",
+    body: "Posters, flyers and other designed pieces kept as templates, listed here beside your project templates. Open studio sets one up section by section (Picture, Text layout, Formats, Schedule) with a live sample, the same way a project template is set up. New design template starts an empty one.",
+    tutorial: { page: "Templates" },
+  },
   "templates.save": {
     title: "Save a setup",
     body: "Keeps a saved Play draft as a reusable template: every setting and checkpoint choice, plus a copy of each picked prompt and intro or outro. Keywords the project title names, like {{Topic}}, are saved empty; other keywords keep their values. Queued extra videos and uploaded fonts are left out.",

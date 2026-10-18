@@ -1,5 +1,6 @@
 import type { DesignDocument } from "@app/slices/designs/schema.js";
 import { type DesignSectionId, designSections } from "@app/slices/designs/sections.js";
+import type { SectionState } from "@app/slices/template-studio/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { type ReactElement, useState } from "react";
@@ -9,10 +10,9 @@ import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { PageHeader, Workspace } from "@/components/kit/layout";
 import { LoadFailed, LoadingBlock } from "@/components/kit/query-state";
-import { RailButton } from "@/components/kit/rail";
-import { Lamp, type Tone } from "@/components/kit/status";
 import { EditorCrumb } from "@/library/editor-frame";
 import { keys } from "@/queries";
+import { StudioRail } from "@/template-studio/section-rail";
 import {
   designTemplateQuery,
   markReady,
@@ -134,17 +134,21 @@ function TemplateEditor({ template }: { readonly template: TemplateView }): Reac
     },
   });
 
-  const stateOf = (id: DesignSectionId): Tone => {
-    if (failing.some((check) => check.fix?.href.endsWith(`#${id}`) === true)) return "failed";
+  // The same states the template studio shows: a check that fails in a section needs a fix;
+  // the picture's sample says whether it is being made, waits, failed or is current.
+  const stateOf = (id: DesignSectionId): SectionState => {
+    if (failing.some((check) => check.fix?.href.endsWith(`#${id}`) === true)) return "needs-fix";
     if (id === "picture") {
       const state = template.sample?.state;
       return state === "making" || state === "queued"
-        ? "running"
+        ? "making"
         : state === "held"
           ? "waiting"
           : state === "failed"
-            ? "failed"
-            : "off";
+            ? "needs-fix"
+            : state === "done"
+              ? "current"
+              : "off";
     }
     return "off";
   };
@@ -177,19 +181,16 @@ function TemplateEditor({ template }: { readonly template: TemplateView }): Reac
         }`}
       />
       <Workspace
-        sections={designSections.map((one) => (
-          <RailButton
-            key={one.id}
-            current={section === one.id}
-            icon={<Lamp tone={stateOf(one.id)} />}
-            onClick={() => {
-              setSection(one.id);
-              window.history.replaceState(null, "", `#${one.id}`);
+        sections={
+          <StudioRail
+            sections={designSections.map((one) => ({ ...one, state: stateOf(one.id) }))}
+            current={section}
+            onSelect={(id) => {
+              setSection(id);
+              window.history.replaceState(null, "", `#${id}`);
             }}
-          >
-            {one.label}
-          </RailButton>
-        ))}
+          />
+        }
         aside={
           <>
             <SamplePanel template={template} />

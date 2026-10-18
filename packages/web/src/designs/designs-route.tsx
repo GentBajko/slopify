@@ -82,7 +82,7 @@ export function DesignsRoute({
       </LibraryToolbar>
       {starts.input}
       <div role="tabpanel" id={`designs-panel-${tab}`} aria-labelledby={`designs-tab-${tab}`}>
-        {tab === "designs" ? <DesignGallery /> : <TemplateList />}
+        {tab === "designs" ? <DesignGallery /> : <DesignTemplateList />}
       </div>
     </div>
   );
@@ -162,7 +162,9 @@ function DesignGallery(): ReactElement {
   );
 }
 
-function TemplateList(): ReactElement {
+// The design templates, each opened in its studio. Shown here and in Library → Templates,
+// the one list of every kind of template.
+export function DesignTemplateList(): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
   const query = useQuery(designTemplatesQuery(api));
@@ -209,13 +211,16 @@ function TemplateList(): ReactElement {
               <ButtonLink
                 to="/design-templates/$templateId"
                 params={{ templateId: template.id }}
+                variant="secondary"
                 size="small"
+                aria-label={`Open the studio of ${template.name}`}
               >
-                Open
+                Open studio
               </ButtonLink>
               <Button
                 size="small"
                 variant="quiet"
+                aria-label={`Delete ${template.name}`}
                 disabled={remove.isPending}
                 onClick={() => remove.mutate(template.id)}
               >

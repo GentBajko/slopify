@@ -115,6 +115,11 @@ function testRouter(ui: ReactNode) {
         path: "templates/$templateId",
         component: nowhere,
       }),
+      designTemplate: createRoute({
+        getParentRoute: () => rootRoute,
+        path: "design-templates/$templateId",
+        component: nowhere,
+      }),
       settings: createRoute({
         getParentRoute: () => rootRoute,
         path: "settings",

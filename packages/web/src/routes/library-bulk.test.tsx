@@ -273,6 +273,7 @@ describe("templates", () => {
     renderRouted(
       withToasts(<TemplatesRoute onApplied={() => {}} />),
       testDeps({
+        "GET /api/design-templates": jsonAnswer({ templates: [] }),
         "GET /api/project-templates": jsonAnswer({
           templates: [
             {

@@ -124,6 +124,7 @@ it("renames a template by saving its setup as it is under the new name", async (
   renderRouted(
     <TemplatesRoute onApplied={() => undefined} />,
     testDeps({
+      "GET /api/design-templates": jsonAnswer({ templates: [] }),
       "GET /api/project-templates": (request) =>
         jsonAnswer({ templates: [{ ...summary, name }] })(request),
       "GET /api/drafts": jsonAnswer({ drafts: [] }),

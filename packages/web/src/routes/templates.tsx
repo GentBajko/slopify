@@ -16,10 +16,13 @@ import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { ListDetail } from "@/components/kit/layout";
 import { ButtonLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
+import { SectionHead } from "@/components/kit/section-head";
 import { Badge } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
 import { RetiredModelRow } from "@/components/retired-models";
 import { RowCheck, useSelection } from "@/components/selection";
+import { DesignTemplateList } from "@/designs/designs-route";
+import { useDesignStarts } from "@/designs/start";
 import { LibraryBulkBar, SelectionArea } from "@/library/bulk-bar";
 import { InlineName } from "@/library/inline-name";
 import { ListSkeleton, libraryListDetail } from "@/library/list-states";
@@ -337,6 +340,7 @@ export function TemplatesRoute({
           detail={<TemplateDetail template={templates.data?.find((one) => one.id === picked)} />}
         />
       ) : null}
+      <DesignTemplates />
       <SaveTemplateDrawer
         open={saving}
         onClose={() => setSaving(false)}
@@ -378,5 +382,31 @@ function GateBadge({ gate }: { readonly gate: TemplateGate }): ReactElement {
     <Badge tone={badge.tone} className="ml-2" title={badge.detail}>
       {badge.word}
     </Badge>
+  );
+}
+
+// Library → Templates is where every template is set up: below the project templates, the
+// design templates (posters, flyers), each opened in its own studio.
+function DesignTemplates(): ReactElement {
+  const starts = useDesignStarts();
+  return (
+    <section aria-label="Design templates" className="mt-8">
+      <SectionHead
+        title="Design templates"
+        info="templates.design"
+        meta="Posters and flyers with fields such as {{Event}}, made again by hand or by a schedule."
+      >
+        <Button variant="secondary" disabled={starts.busy} onClick={starts.startTemplate}>
+          New design template
+        </Button>
+      </SectionHead>
+      {starts.problem === null ? null : (
+        <p role="alert" className="m-0 mb-2 text-body text-danger">
+          {starts.problem}
+        </p>
+      )}
+      {starts.input}
+      <DesignTemplateList />
+    </section>
   );
 }

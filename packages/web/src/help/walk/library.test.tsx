@@ -263,6 +263,7 @@ describe("every Library control has an info button", () => {
     renderRouted(
       <TemplatesRoute onApplied={vi.fn()} />,
       testDeps({
+        "GET /api/design-templates": jsonAnswer({ templates: [] }),
         "GET /api/project-templates": jsonAnswer({
           templates: [
             {
