@@ -11,6 +11,10 @@ export const samplePictures = 4;
 // The narration a sample says: about 30 seconds, the length of the video sample.
 export const sampleSpokenWords = 80;
 
+// The shortest short a sample cuts: its narration is only about 30-45 seconds, so a template's
+// own minimum (45 s or more for the starter packs) would leave nothing to cut.
+export const sampleShortMinSeconds = 15;
+
 // Put under the article prompt of a sample, unless the person asked for the full script. The
 // prompt anatomy shows it as Slopify's.
 export const sampleArticleInstruction =
@@ -69,7 +73,13 @@ export function sampleDocument(template: PlayDraftDocument, scope: SampleScope):
       imagePrompts: cappedPrompts(form.imagePrompts, samplePictures),
       ...(form.shorts === undefined
         ? {}
-        : { shorts: { ...form.shorts, count: form.shorts.enabled ? "1" : form.shorts.count } }),
+        : {
+            shorts: {
+              ...form.shorts,
+              count: form.shorts.enabled ? "1" : form.shorts.count,
+              minSeconds: sampleShortMinimum(form.shorts.minSeconds),
+            },
+          }),
       ...(reviews === undefined ? {} : { reviews }),
       ...(form.reference === undefined || form.reference.source !== "provide"
         ? {}
@@ -119,4 +129,12 @@ export function sampleNarrationText(text: string, words = sampleSpokenWords): st
     count += size;
   }
   return kept.trim();
+}
+
+// The template's minimum, or the sample's when the template's is longer (or not a number).
+function sampleShortMinimum(minSeconds: string): string {
+  const wanted = Number.parseInt(minSeconds, 10);
+  return Number.isFinite(wanted) && wanted <= sampleShortMinSeconds
+    ? minSeconds
+    : String(sampleShortMinSeconds);
 }

@@ -98,6 +98,23 @@ describe("sampleDocument", () => {
     expect(sample.form.checkpoints).toEqual([]);
   });
 
+  // The sample says about 80 words (30-45 s); a short of at least the template's 60 s had
+  // nothing to cut, and the whole sample failed on its Shorts step.
+  it("lets its one short be cut from the sample's own short narration", () => {
+    expect(sample.form.shorts).toMatchObject({ minSeconds: "15", maxSeconds: "120" });
+    const brief = sampleDocument(
+      {
+        ...template,
+        form: {
+          ...template.form,
+          shorts: { ...template.form.shorts, minSeconds: "10", maxSeconds: "12" },
+        } as typeof template.form,
+      },
+      { topic: "Salt roads", fullScript: false },
+    );
+    expect(brief.form.shorts).toMatchObject({ minSeconds: "10", maxSeconds: "12" });
+  });
+
   it("turns off what the user provides at run time, with no file to attach", () => {
     expect(sample.form.sources.audio).toBe("off");
     expect(sample.form.sources.thumbnail).toBe("off");
