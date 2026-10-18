@@ -14,10 +14,18 @@ const youtube =
   "acts on YouTube: agents stop at Ready to upload, and uploading is the person's (the extension's queue is filled only from Prepare upload)";
 const cleanup =
   "every project's cleanup is the person's: Delete all old versions and Clean up everything are in Settings → Backup & storage";
+const assistantChat =
+  "the in-app assistant's chat is the person's own: its asks are answered only by a press in the page, never by an agent";
 const notStarted =
   "not a page action: projects start from Play drafts (start_draft) after their review and estimate";
 
 export const excludedRoutes: Readonly<Record<string, string>> = {
+  "GET /api/assistant": assistantChat,
+  "POST /api/assistant/sessions": assistantChat,
+  "POST /api/assistant/sessions/:id/messages": assistantChat,
+  "POST /api/assistant/sessions/:id/stop": assistantChat,
+  "POST /api/assistant/asks/:id": assistantChat,
+  "PUT /api/assistant/cli": assistantChat,
   "GET /api/health": "the MCP connection itself shows Slopify is running",
   "GET /api/home/autopilot/weekly":
     "Settings → Notifications reads it alone; get_autopilot answers weeklyNotify",

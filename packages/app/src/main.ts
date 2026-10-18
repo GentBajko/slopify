@@ -14,6 +14,7 @@ import { prepareFfmpeg } from "./adapters/ffmpeg.js";
 import { createHostCliClient } from "./adapters/host-cli/index.js";
 import { createSearchInterest } from "./adapters/interest/search-interest.js";
 import { nodeRunCli } from "./adapters/llm/run-cli.js";
+import { assistantSelfUrl, wireAssistant } from "./assistant-wiring.js";
 import { startAutopilot } from "./autopilot-timers.js";
 import { curateRegistry } from "./catalog/registry.js";
 import { type CatalogueStore, createCatalogueStore } from "./catalog/store.js";
@@ -646,7 +647,22 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       hostCli,
       readLogin: readHostLogin,
     });
+    // The assistant panel's chat: turns on this computer's Claude Code or Codex, reaching this
+    // server's own `/mcp/assistant`. In the Docker copy it says why it isn't there.
+    const assistant = wireAssistant({
+      db: updateDb,
+      ids,
+      clock,
+      log,
+      emit: hub.emitGlobal,
+      spawn: nodeRunCli,
+      probe: nodeCliProbe,
+      readLogin: readHostLogin,
+      selfUrl: () => assistantSelfUrl(config.host, listeningPort),
+      container: hostCli !== undefined,
+    });
     const app = createApp({
+      assistant,
       autopilot,
       autostart,
       rebuild,
@@ -868,6 +884,8 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
           await scheduleDrain;
           await topicDrain;
           await backupDrain;
+          // An assistant turn left running would keep spending the person's plan.
+          await assistant.stopAll();
           await runner.abortAll();
           await episodes?.settled();
         } finally {

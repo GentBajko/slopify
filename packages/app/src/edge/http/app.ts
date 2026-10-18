@@ -26,6 +26,7 @@ import { assistantMcpPath, assistantMcpRoutes } from "../mcp/assistant.js";
 import { mcpRoutes } from "../mcp/http.js";
 import { actionRoutes } from "./actions.js";
 import { agentBindings, assistantBindings } from "./actor.js";
+import { assistantRoutes } from "./assistant.js";
 import { audioPreviewRoutes } from "./audio-preview.js";
 import { type Audition, auditionRoutes } from "./auditions.js";
 import { autostartRoutes } from "./autostart.js";
@@ -150,8 +151,10 @@ export interface AppDeps {
   readonly ids: Ids;
   readonly log: Log;
   readonly version: string;
-  // The in-app assistant's running turns, by their tokens (`slices/assistant/tokens.ts`);
-  // absent, `/mcp/assistant` opens for nobody.
+  // The in-app assistant's chat and turns (`slices/assistant/turn.ts`); absent, the panel says
+  // it is unavailable and `/mcp/assistant` opens for nobody.
+  readonly assistant?: import("../../slices/assistant/turn.js").Assistant | undefined;
+  // The running turns' tokens when no assistant is wired (a test's own).
   readonly assistantTurns?: import("../../slices/assistant/access.js").AssistantTurnTokens;
   // The address the server listens on (`--host`); `/mcp` accepts pages served from it.
   readonly host?: string | undefined;
@@ -246,6 +249,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/tutorials", tutorialPagesRoutes(deps))
       .route("/providers", providerRoutes(deps))
       .route("/onboarding", onboardingRoutes(deps))
+      .route("/assistant", assistantRoutes(deps))
   );
 }
 
@@ -347,7 +351,7 @@ export function createApp(deps: AppDeps): Hono {
     assistantMcpPath,
     assistantMcpRoutes({
       ...mcpDeps,
-      turns: deps.assistantTurns,
+      turns: deps.assistant?.tokens ?? deps.assistantTurns,
       api: async (request) => app.request(request, undefined, assistantBindings),
     }),
   );

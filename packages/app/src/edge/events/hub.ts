@@ -14,12 +14,14 @@ import type {
 } from "../../kernel/events.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
+import type { AssistantEvent } from "../../slices/assistant/model.js";
 import type { StagingEvent } from "../../slices/storage/model.js";
 import { createPreviewCache } from "./preview-cache.js";
 
 export type { ProjectState, StageState } from "../../kernel/pipeline.js";
 export type {
   ArticleDeltaEvent,
+  AssistantEvent,
   ImageLandedEvent,
   ProjectEvent,
   ProjectStateEvent,
@@ -42,7 +44,9 @@ export type GlobalEvent =
   | ProjectStateEvent
   | ProjectUpdatedEvent
   | ReviewFlaggedEvent
-  | ReviewAutoPassedEvent;
+  | ReviewAutoPassedEvent
+  // The assistant panel's chat: what it is writing, the tools it used, its asks, its turns.
+  | AssistantEvent;
 
 export interface SseMessage {
   readonly event: string;
