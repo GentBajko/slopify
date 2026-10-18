@@ -154,7 +154,7 @@ async function fillPost(
   if (!result.filled) {
     const message =
       result.missing.length > 0
-        ? `Nothing was filled: ${name}'s post form has changed, and Slopify couldn't find ${listed(result.missing)}. Press Copy for the post's text and fill it by hand. Updating the extension (Slopify → Settings → YouTube Studio and posting → Download) may fix it.`
+        ? `Nothing was filled: ${name}'s post form has changed, and Slopify couldn't find ${listed(result.missing)}. Press Copy for the post's text and fill it by hand. Updating the extension (Slopify → Settings → YouTube Studio → Download) may fix it.`
         : result.notes.map((note) => note.message).join(" ");
     await report("failed", { message });
     deps.toast(message, "error", pack.text);
