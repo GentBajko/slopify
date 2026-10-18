@@ -201,6 +201,36 @@ describe("startRun", () => {
     expect(storage.db.prepare("SELECT count(*) AS n FROM staged_files").get()).toEqual({ n: 0 });
   });
 
+  it("stores a pasted article's sources and glossary apart from its narration source", () => {
+    const storage = deps();
+    const pasted =
+      "# Rope\n\nRope is twisted fibre.\n\n## Sources Consulted\n\n- https://example.test/rope\n\n## Pronunciation Glossary\n\n- bowline /ˈboʊlɪn/\n";
+    const { project } = startRun(
+      storage,
+      draft({
+        sources: { ...draft().sources, audio: "off", images: "off", video: "off" },
+        provided: { article: pasted },
+      }),
+      {},
+    );
+    const dir = join(storage.paths.projects, project.id);
+    expect(readFileSync(join(dir, "article.txt"), "utf8")).toBe("Rope\n\nRope is twisted fibre.\n");
+    expect(readFileSync(join(dir, "sources.txt"), "utf8")).toBe(
+      "## Sources Consulted\n\n- https://example.test/rope\n\n",
+    );
+    // The paste is trimmed before it is split, so the last section keeps no trailing blank
+    // line the user did not type.
+    expect(readFileSync(join(dir, "glossary.txt"), "utf8")).toBe(
+      "## Pronunciation Glossary\n\n- bowline /ˈboʊlɪn/",
+    );
+    const roles = storage.db
+      .prepare("SELECT role FROM outputs WHERE project_id = ? ORDER BY rowid")
+      .all(project.id)
+      .map((row) => row.role);
+    expect(roles).toEqual(expect.arrayContaining(["article_txt", "sources", "glossary"]));
+    storage.db.close();
+  });
+
   it("queues the document when the run asks for one, with its theme in the config", () => {
     const storage = deps();
 

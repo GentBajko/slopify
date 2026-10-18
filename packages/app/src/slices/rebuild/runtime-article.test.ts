@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import type { Catalogue } from "../../catalog/schema.js";
+import type { ProjectEvent } from "../../kernel/events.js";
 import { stageKinds } from "../../kernel/pipeline.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageProviders } from "../../kernel/runner/providers.js";
@@ -172,6 +173,193 @@ describe("owned article continuations", () => {
         h.deps.db.prepare("SELECT result_json FROM revision_work_pieces WHERE id=?").get(h.piece.id)
           ?.result_json,
       ).toContain("Partial result");
+    } finally {
+      h.close();
+    }
+  });
+});
+
+// A text model that answers every call with `answer`, holding it to the request's own check the
+// way the attempt wrapper does: an unusable answer throws its sentence.
+function answering(
+  answer: (call: number) => { readonly text: string; readonly finishReason: string },
+  onDelta?: (text: string) => void,
+  seen: (readonly { readonly role: string; readonly content: string }[])[] = [],
+): StageProviders & { readonly calls: () => number } {
+  let calls = 0;
+  const providers: StageProviders & { readonly calls: () => number } = {
+    calls: () => calls,
+    llm: async (call, onEvent) => {
+      calls += 1;
+      seen.push(call.messages);
+      const value = { ...answer(calls), usage: null };
+      for (const piece of value.text.match(/.{1,6}/gs) ?? []) {
+        onDelta?.(piece);
+        onEvent?.({ type: "delta", text: piece });
+      }
+      const issue = call.check?.(value);
+      if (issue !== undefined) throw new Error(issue);
+      return { ok: true, value };
+    },
+    tts: async () => {
+      throw new Error("Unexpected TTS");
+    },
+    image: async () => {
+      throw new Error("Unexpected image");
+    },
+    forPiece: () => providers,
+  };
+  return providers;
+}
+
+describe("the written article", () => {
+  it("stores the markdown as written and the narration source, sources and glossary apart", async () => {
+    const h = await fixture();
+    try {
+      const markdown =
+        "# Rope\n\nRope is **twisted** fibre.\n\n## Sources Consulted\n\n- https://example.test/rope\n\n## Pronunciation Glossary\n\n- bowline /ˈboʊlɪn/\n";
+      const providers = answering(() => ({ text: markdown, finishReason: "stop" }));
+      expect(await executeProviderRecipe(h.deps, h.context, providers, h.piece)).toBe("done");
+      const view = getRevisionView(h.deps, h.projectId, h.baseline.revision.id);
+      const selected = (view?.outputs ?? []).filter((row) => row.selected);
+      expect(selected.map((row) => row.output.role).sort()).toEqual([
+        "article_md",
+        "article_txt",
+        "glossary",
+        "instructions",
+        "sources",
+      ]);
+      const read = (role: string) => {
+        const row = selected.find((one) => one.output.role === role);
+        if (row === undefined) throw new Error(`Missing ${role}`);
+        return readFileSync(outputPath(h.deps.paths, h.projectId, row.output.path), "utf8");
+      };
+      expect(read("article_md")).toBe(markdown);
+      expect(read("article_txt")).toBe("Rope\n\nRope is twisted fibre.\n");
+      expect(read("sources")).toContain("- https://example.test/rope");
+      expect(read("sources")).not.toContain("bowline");
+      expect(read("glossary")).toContain("- bowline /ˈboʊlɪn/");
+      expect(read("article_txt")).not.toContain("example.test");
+    } finally {
+      h.close();
+    }
+  });
+
+  it("writes no sources or glossary file when the article has neither section", async () => {
+    const h = await fixture();
+    try {
+      const providers = answering(() => ({ text: "# Rope\n\nAll of it.\n", finishReason: "stop" }));
+      expect(await executeProviderRecipe(h.deps, h.context, providers, h.piece)).toBe("done");
+      const roles = (getRevisionView(h.deps, h.projectId, h.baseline.revision.id)?.outputs ?? [])
+        .filter((row) => row.selected)
+        .map((row) => row.output.role);
+      expect(roles).not.toContain("sources");
+      expect(roles).not.toContain("glossary");
+      expect(roles).toContain("article_txt");
+    } finally {
+      h.close();
+    }
+  });
+
+  it("streams every piece of the article into the page as it arrives, in order", async () => {
+    const h = await fixture();
+    try {
+      const emitted: ProjectEvent[] = [];
+      const sent: string[] = [];
+      const providers = answering(
+        () => ({ text: "Rope is older than writing.", finishReason: "stop" }),
+        (text) => void sent.push(text),
+      );
+      const context: StageContext = { ...h.context, emit: (event) => void emitted.push(event) };
+      expect(await executeProviderRecipe(h.deps, context, providers, h.piece)).toBe("done");
+      const deltas = emitted.filter((event) => event.type === "article.delta");
+      expect(sent.length).toBeGreaterThan(1);
+      expect(deltas.map((event) => (event.type === "article.delta" ? event.text : ""))).toEqual(
+        sent,
+      );
+      expect(deltas.every((event) => event.projectId === h.projectId)).toBe(true);
+    } finally {
+      h.close();
+    }
+  });
+
+  it("fails an article still unfinished after three continuations", async () => {
+    const h = await fixture();
+    try {
+      const providers = answering(() => ({ text: "on and on ", finishReason: "length" }));
+      await expect(executeProviderRecipe(h.deps, h.context, providers, h.piece)).rejects.toThrow(
+        /still unfinished after 3 continuations/,
+      );
+      expect(providers.calls()).toBe(4);
+      expect(workPieces(h.deps.db, h.stage.work.workId).map((piece) => piece.key)).toEqual([
+        "article:body",
+        "article:continuation:1",
+        "article:continuation:2",
+        "article:continuation:3",
+      ]);
+      expect(
+        getRevisionView(h.deps, h.projectId, h.baseline.revision.id)?.outputs.some(
+          (row) => row.selected && row.output.role === "article_md",
+        ),
+      ).toBe(false);
+    } finally {
+      h.close();
+    }
+  });
+
+  it("refuses an empty article answer and stores nothing", async () => {
+    const h = await fixture();
+    try {
+      const providers = answering(() => ({ text: " \n ", finishReason: "stop" }));
+      await expect(executeProviderRecipe(h.deps, h.context, providers, h.piece)).rejects.toThrow(
+        /empty article/,
+      );
+      expect(
+        getRevisionView(h.deps, h.projectId, h.baseline.revision.id)?.outputs.some(
+          (row) => row.selected && row.output.role === "article_md",
+        ),
+      ).toBe(false);
+    } finally {
+      h.close();
+    }
+  });
+
+  it("hands each continuation everything written so far and joins the pieces as they came", async () => {
+    const h = await fixture();
+    try {
+      const seen: (readonly { readonly role: string; readonly content: string }[])[] = [];
+      const parts = [
+        { text: "one", finishReason: "length" },
+        { text: " two", finishReason: "length" },
+        { text: " three", finishReason: "stop" },
+      ];
+      const providers = answering(
+        (call) => parts[call - 1] ?? { text: "", finishReason: "stop" },
+        undefined,
+        seen,
+      );
+      expect(await executeProviderRecipe(h.deps, h.context, providers, h.piece)).toBe("done");
+      expect(seen[2]?.[1]).toEqual({ role: "assistant", content: "one two" });
+      expect(seen[2]?.at(-1)?.content).toContain("Do not repeat");
+      expect(getRevisionView(h.deps, h.projectId, h.baseline.revision.id)?.articleMarkdown).toBe(
+        "one two three",
+      );
+    } finally {
+      h.close();
+    }
+  });
+
+  it("refuses an empty continuation", async () => {
+    const h = await fixture();
+    try {
+      const providers = answering((call) =>
+        call === 1
+          ? { text: "the start", finishReason: "length" }
+          : { text: "", finishReason: "stop" },
+      );
+      await expect(executeProviderRecipe(h.deps, h.context, providers, h.piece)).rejects.toThrow(
+        /empty article/,
+      );
     } finally {
       h.close();
     }

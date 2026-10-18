@@ -266,6 +266,16 @@ it.each([
       llm: undefined,
     },
   },
+  {
+    field: "llm",
+    next: {
+      ...config,
+      sources: { ...config.sources, audio: "generate" as const },
+      intro: { name: "Intro", mode: "llm" as const },
+      rendered: { ...config.rendered, intro: "Write a welcome." },
+      llm: undefined,
+    },
+  },
   { field: "images", next: { ...config, images: undefined } },
   { field: "chunking.words", next: { ...config, chunking: { mode: "words" as const, words: 0 } } },
 ])("returns a field error for unusable $field selection", ({ field, next }) => {
@@ -273,6 +283,19 @@ it.each([
   expect(result.ok).toBe(false);
   if (result.ok) throw new Error("Invalid selection accepted");
   expect(result.fields.some((row) => row.field === field)).toBe(true);
+});
+it("needs no text model for a text-mode intro around narration", () => {
+  const result = planRevision(emptyView(), {
+    config: {
+      ...config,
+      sources: { ...config.sources, audio: "generate" },
+      intro: { name: "Intro", mode: "text" },
+      rendered: { ...config.rendered, intro: "Welcome." },
+      llm: undefined,
+    },
+    content,
+  });
+  expect(result.ok ? [] : result.fields.map((row) => row.field)).not.toContain("llm");
 });
 it("validates active raw template keywords without rejecting disabled image definitions", () => {
   const linked = {

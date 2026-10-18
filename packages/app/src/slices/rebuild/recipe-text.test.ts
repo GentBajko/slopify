@@ -310,3 +310,23 @@ it("uses an adopted thumbnail prompt instead of deferring its image request agai
     prompt: "A retained coastal image",
   });
 });
+
+it.each([
+  ["off", 0],
+  ["provide", 0],
+  ["generate", 2],
+] as const)("prepares intro and outro text only when Audio is generated (%s)", (audio, entries) => {
+  const c = {
+    ...config,
+    sources: { ...config.sources, audio },
+    intro: { name: "Intro", mode: "text" as const },
+    outro: { name: "Outro", mode: "llm" as const },
+    rendered: { ...config.rendered, intro: "Welcome.", outro: "Write a goodbye." },
+  };
+  const base = emptyView(c, content);
+  const plan = planRevisionWork(base.revision, base, catalogue, new Set(), {
+    articleMarkdown: "# Rope\n\nRope is old.",
+    researchNotes: null,
+  });
+  expect(plan.recipes.filter((r) => r.key.startsWith("entry:"))).toHaveLength(entries);
+});
