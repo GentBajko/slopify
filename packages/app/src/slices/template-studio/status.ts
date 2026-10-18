@@ -21,10 +21,11 @@ export interface SectionStatus {
 function sourceOf(document: PlayDraftDocument, section: TemplateSection): string | null {
   const { form } = document;
   switch (section) {
+    // Text the template itself holds is in every run, and in its sample (`scope.ts`).
     case "subject":
-      return form.sources.research;
+      return heldText(form.sources.research, form.provided.research);
     case "script":
-      return form.sources.article;
+      return heldText(form.sources.article, form.provided.article);
     case "voice":
       return form.sources.audio;
     case "pictures":
@@ -48,6 +49,10 @@ function sourceOf(document: PlayDraftDocument, section: TemplateSection): string
     case "schedule":
       return null;
   }
+}
+
+function heldText(source: string, text: string): string {
+  return source === "provide" && text.trim() !== "" ? "held" : source;
 }
 
 const offSentence: Readonly<Record<TemplateSection, string>> = {

@@ -1,11 +1,12 @@
 import { templateSections } from "@app/slices/template-studio/model.js";
-import type { StudioView } from "@app/slices/template-studio/schema.js";
+import type { SampleQuoteView, StudioView } from "@app/slices/template-studio/schema.js";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { freshDraftDocument } from "@/play/draft-state";
 import { jsonAnswer, problemAnswer, renderRouted, testDeps } from "@/test-app";
 import { TemplateStudioPage } from "./page";
+import { priceLabel } from "./save-bar";
 
 afterEach(cleanup);
 const templateId = "33333333-3333-4333-8333-333333333333";
@@ -221,7 +222,7 @@ it("lists the free checks, each failing one with its fix as a link", async () =>
   ).toBe(`/templates/${templateId}?section=voice`);
 });
 
-const quote = (over: Record<string, unknown> = {}) => ({
+const quote = (over: Partial<SampleQuoteView> = {}): SampleQuoteView => ({
   version: 3,
   first: false,
   sections: ["video", "shorts", "upload"],
@@ -315,6 +316,12 @@ it("puts a higher price back on the button, in the server's words, when the Save
     ),
   ).not.toBeNull();
   expect(await screen.findByRole("button", { name: "Save · about $0.61" })).not.toBeNull();
+});
+
+it("says a first sample that costs nothing is free, and a change no sample shows needs none", async () => {
+  expect(priceLabel(quote({ high: 0, first: true, sections: [] }))).toBe("Save · free");
+  expect(priceLabel(quote({ high: 0, first: false, sections: [] }))).toBe("Save · no paid change");
+  expect(priceLabel(quote({ onPlan: true }))).toBe("Save · plan usage");
 });
 
 it("keeps Save on screen but off at today's budget, linking to where it is raised", async () => {

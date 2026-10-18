@@ -20,7 +20,7 @@ const pricingDelayMs = 400;
 export function priceLabel(quote: SampleQuoteView): string {
   if (quote.onPlan) return "Save · plan usage";
   if (quote.high === 0)
-    return quote.sections.length === 0 ? "Save · no paid change" : "Save · free";
+    return quote.first || quote.sections.length > 0 ? "Save · free" : "Save · no paid change";
   return `Save · ${about(quote.high)}`;
 }
 

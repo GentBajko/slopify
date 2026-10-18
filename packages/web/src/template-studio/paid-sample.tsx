@@ -97,6 +97,21 @@ export function PaidBody({
     }
     case "upload":
       return <UploadSample outputs={outputs} />;
+    case "document": {
+      // The free sample lays out Slopify's own article; this one is the sample's script.
+      const [pdf] = of("document_pdf");
+      return pdf === undefined ? null : (
+        <FileLink
+          href={at(pdf.url)}
+          target="_blank"
+          rel="noreferrer"
+          size="small"
+          className="self-start"
+        >
+          Open the PDF of the sample's script
+        </FileLink>
+      );
+    }
     default:
       return null;
   }

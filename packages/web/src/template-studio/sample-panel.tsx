@@ -99,7 +99,7 @@ export function SamplePanel({
           {problem}
         </p>
       )}
-      {section.id === "script" && section.state !== "off" ? (
+      {section.id === "script" && view.template.document.form.sources.article === "generate" ? (
         <FullScriptSwitch view={view} onDone={setProblem} />
       ) : null}
       <PaidBody view={view} section={section.id} />

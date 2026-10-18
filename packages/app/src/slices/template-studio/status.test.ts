@@ -106,6 +106,16 @@ describe("baseStatuses", () => {
       baseStatuses(provided, made).map((status) => [status.id, status.state]),
     );
     expect(sections.voice).toBe("provided");
+    // A pasted article the template holds is in its sample, so it isn't "provided at run time".
+    const pasted: PlayDraftDocument = {
+      ...one,
+      form: {
+        ...one.form,
+        sources: { ...one.form.sources, article: "provide" },
+        provided: { ...one.form.provided, article: "A pasted article." },
+      },
+    };
+    expect(baseStatuses(pasted).find((status) => status.id === "script")?.state).toBe("stale");
     expect(sections.thumbnail).toBe("off");
     expect(sections.script).toBe("current");
   });
