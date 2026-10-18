@@ -129,9 +129,18 @@ export function ListView({
                       {run.templateName === null ? null : (
                         <>
                           {" · "}
-                          <TextLink to="/templates" search={{ item: run.templateId }}>
-                            {run.templateName}
-                          </TextLink>
+                          {run.templateKind === "design" ? (
+                            <TextLink
+                              to="/design-templates/$templateId"
+                              params={{ templateId: run.templateId }}
+                            >
+                              {run.templateName}
+                            </TextLink>
+                          ) : (
+                            <TextLink to="/templates" search={{ item: run.templateId }}>
+                              {run.templateName}
+                            </TextLink>
+                          )}
                         </>
                       )}
                       {run.paused ? " · Paused" : ""}

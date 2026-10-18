@@ -10,6 +10,7 @@ import { templateById } from "../project-templates/repo.js";
 import { calendarRange } from "./agenda.js";
 import type { ScheduleDeps } from "./model.js";
 import { refreshDesignSchedules } from "./next-run.js";
+import { prepareTopic } from "./prepare.js";
 import { scheduleById } from "./repo.js";
 import { createScheduleRunner } from "./scheduler.js";
 import { createSchedule, listScheduleRuns, updateSchedule } from "./service.js";
@@ -238,10 +239,20 @@ describe("a design schedule", () => {
       new Date("2026-12-01T00:00:00.000Z"),
     );
     expect(
-      calendar.ok && calendar.value.runs.map((run) => [run.at, run.topic, run.templateName]),
+      calendar.ok &&
+        calendar.value.runs.map((run) => [run.at, run.topic, run.templateName, run.templateKind]),
     ).toEqual([
-      ["2026-11-07T09:00:00.000Z", "Late Set", "Gig poster"],
-      ["2026-11-28T09:00:00.000Z", "Early Set", "Gig poster"],
+      ["2026-11-07T09:00:00.000Z", "Late Set", "Gig poster", "design"],
+      ["2026-11-28T09:00:00.000Z", "Early Set", "Gig poster", "design"],
     ]);
+  });
+
+  it("has nothing to prepare ahead, and says so instead of a deleted template", async () => {
+    const { deps, id, create } = await setup();
+    create();
+    expect(await prepareTopic(deps, { scheduleId: id, title: "Late Set" })).toEqual({
+      ok: false,
+      reason: "design",
+    });
   });
 });

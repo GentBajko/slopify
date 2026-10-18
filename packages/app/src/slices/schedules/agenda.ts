@@ -121,6 +121,7 @@ function upcomingRuns(
                 ? "held"
                 : "generated",
         renderedTitle: title,
+        templateKind: "project",
         // Prepared ahead (`prepare.ts`): the project the day continues.
         prepared:
           title === null || queuedTopic === undefined

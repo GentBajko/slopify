@@ -40,6 +40,7 @@ export function upcomingDesignRuns(
         topicSource: "queued" as const,
         renderedTitle: row?.title ?? null,
         prepared: null,
+        templateKind: "design" as const,
       };
     });
 }

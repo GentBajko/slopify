@@ -266,6 +266,9 @@ export const calendarRunSchema = z
     // The project prepared ahead for this run (Prepare), which its day continues. Older servers
     // leave it out.
     prepared: z.string().nullable().default(null),
+    // A design schedule's run makes a designed piece on its day, never a video: it has nothing
+    // to prepare ahead and fills no video slot. Older servers leave it out.
+    templateKind: z.enum(scheduleTemplateKinds).default("project"),
   })
   .strict()
   .readonly();

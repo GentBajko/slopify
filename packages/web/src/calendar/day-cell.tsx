@@ -200,6 +200,9 @@ function RunChip({
   );
 }
 
+export const designNotPrepared =
+  "A design is made on its day, so there is nothing to prepare ahead.";
+
 // Prepare a queued topic ahead: its project runs everything but the video now, and its day
 // renders. Once prepared, the way to its project.
 export function PrepareRun({
@@ -237,6 +240,9 @@ export function PrepareRun({
         {compact ? "Open" : "Open prepared"}
       </ButtonLink>
     );
+  // The server refuses it: a design is made on its day, and there is no video to hold back.
+  if (run.templateKind === "design")
+    return compact ? null : <span className="text-label text-ink-2">{designNotPrepared}</span>;
   if (run.index === null || run.topic === null || run.topicSource !== "queued") return null;
   return (
     <>
