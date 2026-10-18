@@ -80,6 +80,8 @@ import {
   recoverCheckpointWork,
   settleReleasedCheckpoints,
 } from "./slices/checkpoints/recovery.js";
+import { designCheckContext } from "./slices/designs/check-context.js";
+import { contextChecks } from "./slices/designs/gate.js";
 import { runPdfWorker } from "./slices/designs/pdf-runner.js";
 import { createDesignRenderer } from "./slices/designs/render.js";
 import { createDesignRunner } from "./slices/designs/runner.js";
@@ -662,12 +664,17 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       shrink: (bytes) => designRenderer.shrink(bytes, AbortSignal.timeout(120_000)),
     });
     designRunner.recover();
+    const designChecks = designCheckContext({
+      resolveFont: (fontId) => resolveFont(paths, fontId),
+      providers: rebuild.providers,
+    });
     const app = createApp({
       designs: { service: designService, runner: designRunner, renderer: designRenderer },
       designTemplates: {
         service: designService,
         runner: designRunner,
         catalogue: () => catalogue.read(),
+        checks: (templateId, doc) => contextChecks(doc, templateId, designChecks),
       },
       autostart,
       rebuild,
