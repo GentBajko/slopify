@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
+import { poster } from "../designs/document.fake.js";
+import { createTemplate as createDesignTemplate, markTemplateReady } from "../designs/templates.js";
 import { startFixture } from "../play-drafts/draft.fake.js";
 import { templateById } from "../project-templates/repo.js";
 import { createTemplate } from "../project-templates/service.js";
@@ -147,6 +149,39 @@ describe("autopilotView", () => {
     const view = autopilotView(f.deps, undefined, "00000000-0000-4000-8000-00000000abcd");
     expect(view.forecast.perSchedule).toEqual([]);
     expect(view.warnings).toEqual([]);
+  });
+
+  it("leaves a design schedule out: its pieces fill no video slot and it has no topics", async () => {
+    const f = fixture(1);
+    const before = autopilotView(f.deps, undefined);
+    const service = { ...f.h.deps, emit: () => {} };
+    const made = createDesignTemplate(service, {
+      id: "gig-poster",
+      mutationId: "mutation-0001",
+      name: "Gig poster",
+      document: poster({ schedule: { dateField: "Date", daysBefore: 1, time: "09:00" } }),
+    });
+    expect(made.ok).toBe(true);
+    await markTemplateReady(service, "gig-poster", { version: 1 });
+    const day = (ahead: number) =>
+      new Date(f.deps.clock.now().valueOf() + ahead * 24 * 60 * 60_000).toISOString().slice(0, 10);
+    const design = createSchedule(f.scheduleDeps, {
+      id: randomUUID(),
+      name: "Gig posters",
+      templateKind: "design",
+      templateId: "gig-poster",
+      templateVersion: 1,
+      cadence: { kind: "by-date", time: "09:00" },
+      timezone: "UTC",
+      items: [3, 5].map((ahead) => ({
+        title: `Set ${String(ahead)}`,
+        values: { Event: `Set ${String(ahead)}`, Date: day(ahead), Venue: "Cellar", Price: "€5" },
+      })),
+    });
+    expect(design.ok).toBe(true);
+    const after = autopilotView(f.deps, undefined);
+    expect(after.forecast).toEqual(before.forecast);
+    expect(after.warnings).toEqual(before.warnings);
   });
 
   it("says nothing of a paused schedule's queue", () => {

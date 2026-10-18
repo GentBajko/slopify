@@ -66,10 +66,15 @@ export interface AutopilotProbes {
 const live = (schedule: ScheduleSummary) =>
   schedule.deletedAt === null && (schedule.status === "active" || schedule.status === "paused");
 
+// A design schedule makes designed pieces from dated rows: no video fills a slot, no topic runs
+// out and no CLI writes it, so the forecast and its warnings leave it out entirely.
+const makesVideos = (schedule: Pick<ScheduleSummary, "templateKind">) =>
+  schedule.templateKind !== "design";
+
 // The CLIs an active schedule's template or topic finding chooses: the only ones worth asking.
 export function clisInUse(db: DatabaseSync): readonly HostLlmId[] {
   const schedules = scheduleRows(db).filter(
-    (one) => one.deletedAt === null && one.status === "active",
+    (one) => one.deletedAt === null && one.status === "active" && makesVideos(one),
   );
   const templates = new Set(schedules.map((one) => one.templateId));
   const ids = new Set(schedules.map((one) => one.id));
@@ -169,7 +174,9 @@ export function autopilotView(
   const until = new Date(now.valueOf() + forecastDays * dayMs);
   const inChannel = (templateId: string) =>
     channelId === undefined || templateChannelId(deps.db, templateId) === channelId;
-  const schedules = scheduleRows(deps.db).filter((one) => live(one) && inChannel(one.templateId));
+  const schedules = scheduleRows(deps.db).filter(
+    (one) => live(one) && makesVideos(one) && inChannel(one.templateId),
+  );
   const ahead = calendarRange(deps, now, until);
   // Finished videos not uploaded: the calendar's longest look back.
   const behind = calendarRange(deps, new Date(now.valueOf() - 91 * dayMs), now);
@@ -182,7 +189,9 @@ export function autopilotView(
           (channelId === undefined || (channels.get(one.id) ?? defaultChannelId) === channelId),
       ).length
     : 0;
-  const runs = ahead.ok ? ahead.value.runs.filter((run) => inChannel(run.templateId)) : [];
+  const runs = ahead.ok
+    ? ahead.value.runs.filter((run) => makesVideos(run) && inChannel(run.templateId))
+    : [];
   const forecast = bufferForecast({
     now,
     until,
