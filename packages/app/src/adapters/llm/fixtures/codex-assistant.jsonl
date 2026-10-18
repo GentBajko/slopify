@@ -1,0 +1,9 @@
+{"type":"thread.started","thread_id":"x"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"error","message":"Model metadata not found"}}
+{"type":"item.started","item":{"id":"item_1","type":"mcp_tool_call","server":"slopify","tool":"list_templates","arguments":{},"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_1","type":"mcp_tool_call","server":"slopify","tool":"list_templates","arguments":{},"status":"completed"}}
+{"type":"item.updated","item":{"id":"item_2","type":"agent_message","text":"You have"}}
+{"type":"item.updated","item":{"id":"item_2","type":"agent_message","text":"You have two templates."}}
+{"type":"item.completed","item":{"id":"item_2","type":"agent_message","text":"You have two templates."}}
+{"type":"turn.completed","usage":{"input_tokens":10,"output_tokens":5}}
