@@ -5,9 +5,9 @@ const answer = {
   summary: " How a city  fell. ",
   hook: "It was sold.",
   thumbnailText: "SOLD",
-  keyFacts: ["Walls were tall.", "- The siege lasted 90 days."],
-  quote: "Silver buys everything.",
-  tags: ["lost cities", " siege "],
+  keyFacts: ["The tower was tall.", "- The lamp was first lit in 1811."],
+  quote: "A light needs a keeper.",
+  tags: ["lighthouses", " engineering "],
 };
 
 describe("digestMessages", () => {
@@ -27,9 +27,9 @@ describe("checkDigest", () => {
         Slopify_Summary: "How a city fell.",
         Slopify_Hook: "It was sold.",
         Slopify_Thumbnail_Text: "SOLD",
-        Slopify_Key_Facts: "Walls were tall.\nThe siege lasted 90 days.",
-        Slopify_Quote: "Silver buys everything.",
-        Slopify_Tags: "lost cities, siege",
+        Slopify_Key_Facts: "The tower was tall.\nThe lamp was first lit in 1811.",
+        Slopify_Quote: "A light needs a keeper.",
+        Slopify_Tags: "lighthouses, engineering",
       },
     });
   });

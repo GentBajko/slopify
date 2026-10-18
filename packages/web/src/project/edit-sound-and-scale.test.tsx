@@ -16,7 +16,7 @@ function editOf(over: Partial<RevisionEdit["config"]> = {}): RevisionEdit {
     config: {
       ...view.revision.config,
       sources: { ...view.revision.config.sources, images: "generate", audio: "generate" },
-      imagePrompts: [{ name: "Castle", number: 2 }],
+      imagePrompts: [{ name: "Lighthouse", number: 2 }],
       ...over,
     },
     content: { ...view.revision.content, articleMarkdown: "word ".repeat(9000) },
@@ -155,7 +155,7 @@ describe("Edit project's Scenes from the article", () => {
         thumbnail: "from_prompt",
       },
       imagePrompts: [
-        { name: "Castle", number: 2 },
+        { name: "Lighthouse", number: 2 },
         { name: "Maps", number: 1 },
       ],
       ...(imageScenes ? { imageScenes: true } : {}),
@@ -165,7 +165,7 @@ describe("Edit project's Scenes from the article", () => {
       content: {
         ...edit.content,
         promptTemplates: {
-          "imagePrompts.0": "A castle at {{Slopify_Setting}}",
+          "imagePrompts.0": "A lighthouse at {{Slopify_Setting}}",
           "imagePrompts.1": "A map with {{Scene}}",
           thumbnailPrompt: "Cover: {{Slopify_Scene}}",
         },
@@ -188,7 +188,7 @@ describe("Edit project's Scenes from the article", () => {
         (row as HTMLButtonElement).disabled,
       ]);
     expect(rows).toEqual([
-      ['On for "Castle": it uses {{Slopify_Setting}}', "true", true],
+      ['On for "Lighthouse": it uses {{Slopify_Setting}}', "true", true],
       ["On for the thumbnail: it uses {{Slopify_Scene}}", "true", true],
     ]);
     expect(changed).not.toHaveBeenCalled();

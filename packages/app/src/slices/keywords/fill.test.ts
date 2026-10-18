@@ -11,9 +11,9 @@ describe("fillKeywords", () => {
     expect(
       fillKeywords("{{Slopify_Title}} on {{ Slopify_Channel }}: {{Slopify_Title}}", "article", {
         Slopify_Title: "The Gate",
-        Slopify_Channel: "Night Archive",
+        Slopify_Channel: "Quiet Histories",
       }),
-    ).toEqual({ ok: true, text: "The Gate on Night Archive: The Gate" });
+    ).toEqual({ ok: true, text: "The Gate on Quiet Histories: The Gate" });
   });
 
   it("leaves out a line whose keyword has nothing to fill", () => {

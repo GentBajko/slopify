@@ -2,16 +2,16 @@ import { describe, expect, it } from "vitest";
 import { durationText, factValues, releaseDateText } from "./values.js";
 
 const facts = {
-  channel: "Night Archive",
-  series: " Calm legends. ",
+  channel: "Quiet Histories",
+  series: " Calm histories. ",
   links: [
     { name: "Website", url: "https://example.com" },
     { name: "Patreon", url: "https://patreon.com/x" },
   ],
   previousVideo: { title: "The Bridge", url: "https://youtu.be/a" },
-  nextVideo: { title: "The Queen" },
+  nextVideo: { title: "The Clipper" },
   cast: [
-    { name: "Mira", description: "an archivist" },
+    { name: "Mira", description: "a lighthouse keeper" },
     { name: "Tom", description: " " },
   ],
   coveredBefore: ["The Bridge", "The Well"],
@@ -23,12 +23,12 @@ describe("factValues", () => {
   it("writes each fact as its keyword's text", () => {
     expect(factValues(facts, "The Gate", "article")).toEqual({
       Slopify_Title: "The Gate",
-      Slopify_Channel: "Night Archive",
-      Slopify_Series: "Calm legends.",
+      Slopify_Channel: "Quiet Histories",
+      Slopify_Series: "Calm histories.",
       Slopify_Links: "Website: https://example.com\nPatreon: https://patreon.com/x",
       Slopify_Previous_Video: "The Bridge – https://youtu.be/a",
-      Slopify_Next_Video: "The Queen",
-      Slopify_Cast: "Mira: an archivist\nTom",
+      Slopify_Next_Video: "The Clipper",
+      Slopify_Cast: "Mira: a lighthouse keeper\nTom",
       Slopify_Covered_Before: "The Bridge\nThe Well",
       Slopify_Episode: "7",
       Slopify_Brand: "Colours: #ffffff, #101010. Fonts: Barlow.",

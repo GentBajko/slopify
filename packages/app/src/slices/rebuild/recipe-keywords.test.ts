@@ -13,7 +13,7 @@ const base: RunConfig = {
   title: "The Gate",
   sources: { ...config.sources, article: "generate", audio: "generate" },
   articlePrompt: "Article",
-  keywordFacts: { channel: "Night Archive", series: "" },
+  keywordFacts: { channel: "Quiet Histories", series: "" },
 };
 
 function plan(
@@ -59,7 +59,7 @@ describe("fillPrompt", () => {
         "{{Slopify_Title}} on {{Slopify_Channel}}.\nSeries: {{Slopify_Series}}",
         "article",
       ).text,
-    ).toBe("The Gate on Night Archive.");
+    ).toBe("The Gate on Quiet Histories.");
   });
 
   it("fills the chapters once the article is written, and runs after it", () => {
@@ -93,7 +93,7 @@ describe("keywords in planned requests", () => {
         "article:body",
       ),
     );
-    expect(text).toContain("A video called The Gate for Night Archive.");
+    expect(text).toContain("A video called The Gate for Quiet Histories.");
   });
 
   // Rule: a value the person gave a `Slopify_` name before the prefix was reserved still wins.
@@ -132,7 +132,7 @@ describe("keywords in planned requests", () => {
       },
     );
     expect(find(recipes, "image:one").input).toMatchObject({
-      prompt: "A poster for Night Archive.",
+      prompt: "A poster for Quiet Histories.",
     });
   });
 

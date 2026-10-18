@@ -89,7 +89,7 @@ it("writes the digest after the article and draws the thumbnail from it", async 
                 ? JSON.stringify({
                     summary: "S.",
                     hook: "H.",
-                    thumbnailText: "SOLD FOR SILVER",
+                    thumbnailText: "BUILT UNDER WATER",
                     keyFacts: ["F."],
                     quote: "Q.",
                     tags: ["t"],
@@ -132,12 +132,12 @@ it("writes the digest after the article and draws the thumbnail from it", async 
       finishWork(deps.db, stage.work, "done", null);
     }
     expect(asked).toEqual(["article:body", "article:digest"]);
-    expect(drawn).toEqual(["Words: SOLD FOR SILVER"]);
+    expect(drawn).toEqual(["Words: BUILT UNDER WATER"]);
     const id = currentRevisionId(deps.db, h.projectId);
     const view = id === undefined ? undefined : getRevisionView(deps, h.projectId, id);
     const digest = view?.pieces.find((row) => row.key === "article:digest");
     expect(JSON.parse(digest?.piece.payload ?? "{}")).toMatchObject({
-      digest: { Slopify_Thumbnail_Text: "SOLD FOR SILVER" },
+      digest: { Slopify_Thumbnail_Text: "BUILT UNDER WATER" },
     });
   } finally {
     h.close();
