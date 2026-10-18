@@ -47,6 +47,8 @@ A channel page has six tabs: **Brand**, **Cast**, **Templates**, **Schedules**, 
 
 Mark voices in **Settings → Voices** and Image prompts in **Library → Prompts**. See [Publishing to YouTube](Publishing-to-YouTube).
 
+**Posting.** The channel's accounts on other sites, used only for [posting](Posting-to-Social-Sites). **X subscription** (Free, Premium or Premium+) only changes which warnings a post gets: Free warns about text over 280 characters and videos over 2 min 20 s. **Account names** (such as `@yourname` on X, `in/your-name` on LinkedIn, `yourname.bsky.social` on Bluesky, `u/yourname` on Reddit) let the extension find a published post's link on your profile. They are never a sign-in. Saved with **Save channel**.
+
 **Series brief.** What the channel covers, its style and what makes a topic worth a video. Topic generation reads it for every schedule of this channel that has no brief of its own. It doesn't change how videos are written. Up to 10,000 characters. See [Schedules](Schedules#topics-that-find-themselves).
 
 **Language of new projects.** The language this channel's new projects are written and narrated in when Play or the template picks none. It applies even with the brand kit off, since it is not styling. Pick voices that speak it. Not set means English. Projects already made keep their language. See [Other languages](Other-Languages).

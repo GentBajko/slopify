@@ -303,6 +303,27 @@ its thumbnails, the finishing-touch and A/B queues, and take the extension's rep
 uploaded, task results, A/B results), nothing else. The only other address the extension calls is
 YouTube's public oEmbed.
 
+### Posting to other sites: the routes (from 4.0.0)
+
+Posting adds its own routes beside Studio's, under `/api/social/ext/*`, with the same pairing
+token and the same CORS rule (the paired extension's origin only). They are additive: an
+extension from before posting never calls them, and a newer extension seeing 404 from an older
+Slopify hides posting.
+
+| Route | What it does |
+|---|---|
+| `GET /api/social/ext/next?platform=<site>` | The oldest post waiting for that site that can be filled now (`{pack, waiting}`, `ActivePost` in `slices/social/model.ts`); it becomes `filling`. 404 with a sentence when none waits. |
+| `GET /api/social/ext/packs/:projectId/:platform` | One post's pack (`PostPack`), for a due fill opened with `#slopify-post=`. |
+| `GET /api/social/ext/files/:projectId/:file` | A file one of the project's posts lists (`PostPack.media[].file`); pictures cut to the site's shape are made on the first ask. Anything else is 404. |
+| `GET /api/social/ext/due?hours=1-48` | `{posts: DuePost[]}`: waiting posts on Instagram, Bluesky and Reddit whose fill time (two minutes before release) is within the hours, or passed at most 12 hours ago (`late`). |
+| `POST /api/social/ext/result` | `{projectId, platform, state: filling\|filled\|scheduled\|posted\|failed, url?, message?}`; answers `{status}`. A link must be a post on that site; a report for a post nobody asked to fill is refused. |
+| `GET /api/social/ext/find-links` | `{posts: LinkLookup[]}`: filled or scheduled posts without a link, ten minutes after they went out, with the profile page (the channel's account) and the post's first 40 characters. |
+| `POST /api/social/ext/sites` | `{sites: [...]}`: the sites the options page was allowed to post on; Prepare upload says why Fill can't run without them. |
+
+The page's own routes (`GET /api/social/packs/:projectId` and its `choice`, `text`, `reddit`,
+`link` and `fill` routes) answer `SocialPacksResponse` (the packs plus what the extension
+reported); `fill` answers `FillResponse`. Nothing on the server posts: Fill only queues.
+
 ### Selectors and the live page
 
 Studio changes its page from time to time. The selectors in

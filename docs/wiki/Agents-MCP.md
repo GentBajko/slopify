@@ -144,7 +144,8 @@ Slopify cannot wake an agent; the agent looks. Its work list is the `needs_atten
 | A paused run, or a run a restart **Stopped** | Continues it once nothing on the project still needs fixing. |
 | Topics a schedule holds for approval | Approves the ones that fit and turns down the rest. |
 | A video marked **Late · upload now** | Reports it. It cannot upload. |
-| A finishing touch the Studio extension failed (captions, end screen, pinned comment) | Reports it. Fixing it is the extension's or yours. |
+| A finishing touch the Studio extension failed (captions, end screen, pinned comment), or a post it couldn't fill on another site | Reports it. Fixing it is the extension's or yours. |
+| A post filled in another site's form, waiting for your **Post** (`post-due`) | Reports it. Posting is yours. |
 
 Projects that are **Kept as is** are not listed. Each entry says whether Slopify is already retrying or redoing it by itself (the agent leaves those alone and looks again later) and whether the agent can act on it at all.
 

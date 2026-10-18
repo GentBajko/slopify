@@ -18,8 +18,9 @@ The kind decides where Play offers the prompt.
 | **Shorts** | Tells the text model which moments to cut into vertical shorts (3 of 60 to 120 s by default). A project that picks none uses the built-in wording. | One call to pick them, one per short for its picture prompts, one image call per picture |
 | **Review** | Tells the reviewer what to check in a finished article, set of images, narration, thumbnail or shorts, and when to flag or redo it. Pictures can only be judged by the Claude Code and Codex reviewers. A stage with none picked uses its own built-in wording. | One reviewer call per item checked |
 | **Script (speakers)** | Used instead of an Article prompt when a run has several voices. The text model answers with `#` section headings and `Name: words` turns, one speaker per paragraph. Text in `[square brackets]` is not spoken. | One call on the project's LLM |
+| **Post** | Writes a project's post for X, LinkedIn, Instagram, TikTok, Reddit or Bluesky from the article, when that site's text source is a post prompt. Slopify adds the hashtags and the link itself and holds the answer to the site's limit; an answer over it is asked for again. A site set to a post prompt with none picked uses the built-in wording. | One call per site on the project's LLM |
 
-See [Title and article](Play-Title-and-Article), [Images](Play-Images), [Narration](Play-Narration), [YouTube description](YouTube-Description), [Shorts](Shorts), [Reviews and checkpoints](Reviews-and-Checkpoints) and [Multiple voices](Multiple-Voices) for how each is used.
+See [Title and article](Play-Title-and-Article), [Images](Play-Images), [Narration](Play-Narration), [YouTube description](YouTube-Description), [Shorts](Shorts), [Reviews and checkpoints](Reviews-and-Checkpoints), [Multiple voices](Multiple-Voices) and [Posting to social sites](Posting-to-Social-Sites) for how each is used.
 
 ## Write a new prompt
 

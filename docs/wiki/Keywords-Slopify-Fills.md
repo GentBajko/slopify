@@ -33,7 +33,7 @@ Free: no AI call. Copied when the run starts, so later changes to the channel or
 | `{{Slopify_Brand}}` | The brand kit's caption and title colours and font names | Colours: #F5C542. Fonts: Barlow. | Image and Thumbnail prompts |
 | `{{Slopify_Release_Date}}` | The release date from the posting plan, read when the step runs | Thursday 22 October 2026 | Every prompt and entry |
 | `{{Slopify_Chapters}}` | The article's chapter titles, one per line | The first lamps | Every prompt except Article and Script |
-| `{{Slopify_Duration}}` | The finished video's length | 42 min 10 s | Description, Shorts and Review prompts |
+| `{{Slopify_Duration}}` | The finished video's length | 42 min 10 s | Description, Shorts, Review and Post prompts |
 
 - In a **Description** prompt, `{{Slopify_Links}}`, `{{Slopify_Previous_Video}}` and `{{Slopify_Next_Video}}` stay links the description fills when it is shown or copied (`{{Previous video}}`, `{{Next video}}`, `{{Patreon}}`…), so changing a link changes every description at once. See [YouTube description](YouTube-Description).
 - Moving the release date later never remakes anything, and neither does a new length.
@@ -46,7 +46,7 @@ One shared AI call per run, the **keyword digest**, writes every one of these th
 
 | Keyword | Fills in | Example | Works in |
 | --- | --- | --- | --- |
-| `{{Slopify_Summary}}` | Two or three sentences on what the video covers | How engineers raised towers on rocks the sea covered twice a day | Image, Thumbnail, Description, Shorts and Review prompts |
+| `{{Slopify_Summary}}` | Two or three sentences on what the video covers | How engineers raised towers on rocks the sea covered twice a day | Image, Thumbnail, Description, Shorts, Review and Post prompts |
 | `{{Slopify_Hook}}` | The video's most click-worthy idea | The rock was under water half of every day. They built on it anyway. | The same |
 | `{{Slopify_Thumbnail_Text}}` | Two to four words to put on the thumbnail | BUILT UNDER WATER | The same |
 | `{{Slopify_Key_Facts}}` | Three to five striking facts, one per line | The tower stands 35 metres high. | The same |

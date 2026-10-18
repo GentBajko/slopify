@@ -44,6 +44,7 @@
 **Publishing**
 - [Publishing to YouTube](Publishing-to-YouTube)
 - [Studio extension](Studio-Extension)
+- [Posting to social sites](Posting-to-Social-Sites)
 
 **Automation**
 - [Templates](Templates)
