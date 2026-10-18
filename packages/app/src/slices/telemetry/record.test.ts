@@ -10,7 +10,7 @@ import { stageKinds } from "../../kernel/pipeline.js";
 import type { AudioSegment, TelemetryCounters, TelemetryEventType } from "./model.js";
 import { audioSegments, telemetryEventTypes } from "./model.js";
 import type { TelemetryDeps } from "./record.js";
-import { record, writeEvent } from "./record.js";
+import { record, skippingProjects, writeEvent } from "./record.js";
 import { insertMachine, undeliveredEvents } from "./repo.js";
 
 const clock = fixedClock("2026-09-02T10:00:00.000Z");
@@ -225,4 +225,16 @@ describe("writeEvent", () => {
       /os/,
     );
   });
+});
+
+it("leaves out what a skipped project's stages count, and counts the rest", () => {
+  const seen: (string | undefined)[] = [];
+  const count = skippingProjects(
+    (_type, _counters, projectId) => seen.push(projectId),
+    (projectId) => projectId === "sample",
+  );
+  count("stage.completed", { stage: "video" }, "sample");
+  count("stage.completed", { stage: "video" }, "mine");
+  count("project.created", {});
+  expect(seen).toEqual(["mine", undefined]);
 });

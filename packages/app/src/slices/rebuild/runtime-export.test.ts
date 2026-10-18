@@ -32,7 +32,7 @@ it("renders WAV once, then attaches sidecars while retaining its exact audio ass
     const count = vi.fn();
     expect(await executeExportRecipe({ ...h.deps, count }, context, piece)).toBe("done");
     expect(await executeExportRecipe({ ...h.deps, count }, context, piece)).toBe("done");
-    expect(count).toHaveBeenCalledExactlyOnceWith("stage.completed", { stage: "video" });
+    expect(count).toHaveBeenCalledExactlyOnceWith("stage.completed", { stage: "video" }, "p1");
     const wav = h.view().outputs.find((row) => row.selected && row.output.role === "audio_export");
     expect(wav).toBeDefined();
     for (const key of ["subtitles:cues", "subtitles:files"]) {

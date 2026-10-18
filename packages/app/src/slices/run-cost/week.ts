@@ -8,7 +8,7 @@ import {
 } from "../../kernel/ports/plan-limits.js";
 import { defaultChannelId } from "../channels/model.js";
 import { projectChannels } from "../channels/repo.js";
-import { notTemplateSample } from "../template-studio/repo.js";
+import { notTemplateSample, templateSampleProjects } from "../template-studio/repo.js";
 
 // Home's "This week": how many videos were made since a moment, what the provider calls cost,
 // what the plan-billed ones would have cost through the API, and where each CLI plan's windows
@@ -34,6 +34,9 @@ export interface WeekSummary {
   readonly cost: number;
   // Calls with no known price, counted rather than read as free.
   readonly unpriced: number;
+  // What the template studio's samples and bake-offs cost, part of `cost` for the whole account
+  // and never part of a channel's: a sample is no channel's video.
+  readonly studioCost: number;
   // What the plan-billed calls would have cost through the API; null when there were none.
   readonly apiEquivalent: number | null;
   readonly plans: readonly PlanStanding[];
@@ -79,12 +82,27 @@ export function weekSummary(db: DatabaseSync, since: string, channelId?: string)
     if (row.cost === null) unpriced += 1;
     if (row.on_plan === 1) apiEquivalent = (apiEquivalent ?? 0) + (row.api_cost ?? 0);
   };
+  let studioCost = 0;
+  const hidden = templateSampleProjects(db);
   for (const raw of db
     .prepare("SELECT project_id, on_plan, cost, api_cost FROM provider_usage WHERE created_at >= ?")
     .all(since)) {
     const row = usageRow.parse(raw);
-    if (projectInScope(row.project_id)) count(row);
+    if (hidden.has(row.project_id)) {
+      if (channelId !== undefined) continue;
+      studioCost += row.cost ?? 0;
+    } else if (!projectInScope(row.project_id)) continue;
+    count(row);
   }
+  // A sample or bake-off copy removed since keeps what it was charged here.
+  if (channelId === undefined)
+    for (const raw of db
+      .prepare("SELECT cost FROM template_studio_spend WHERE created_at >= ?")
+      .all(since)) {
+      const spent = z.object({ cost: z.number() }).parse(raw).cost;
+      studioCost += spent;
+      count({ channel_id: "", on_plan: 0, cost: spent, api_cost: null });
+    }
   for (const raw of db
     .prepare(
       "SELECT channel_id, on_plan, cost, api_cost FROM standalone_usage WHERE created_at >= ?",
@@ -104,7 +122,16 @@ export function weekSummary(db: DatabaseSync, since: string, channelId?: string)
     )
     .all(since)
     .filter((row) => projectInScope(String(row.project_id))).length;
-  return { since, videos, calls, cost, unpriced, apiEquivalent, plans: planStandings(db) };
+  return {
+    since,
+    videos,
+    calls,
+    cost,
+    unpriced,
+    studioCost,
+    apiEquivalent,
+    plans: planStandings(db),
+  };
 }
 
 function knownChannels(db: DatabaseSync): ReadonlySet<string> {

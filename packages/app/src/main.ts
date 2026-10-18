@@ -164,7 +164,7 @@ import type { Flusher } from "./slices/telemetry/flush.js";
 import { createFlusher } from "./slices/telemetry/flush.js";
 import type { RecordEvent } from "./slices/telemetry/model.js";
 import type { TelemetryDeps } from "./slices/telemetry/record.js";
-import { record } from "./slices/telemetry/record.js";
+import { record, skippingProjects } from "./slices/telemetry/record.js";
 import { makeBakeoff } from "./slices/template-studio/bakeoff-make.js";
 import { readStudioSettings } from "./slices/template-studio/budget.js";
 import { createDocumentSamples } from "./slices/template-studio/document-sample.js";
@@ -1206,10 +1206,10 @@ export function wireRunner({
   // A stage counts what it did and the queue is flushed after each new event. `record`
   // swallows its own failures, so this can neither fail a stage nor widen what leaves the
   // machine - the payload allow-list is checked inside it.
-  const count: RecordEvent = (type, counters) => {
+  const count: RecordEvent = skippingProjects((type, counters) => {
     record(telemetry, type, counters);
     flusher.soon();
-  };
+  }, templateSampleCheck(db));
   const execution = {
     db,
     paths,

@@ -105,13 +105,17 @@ describe("owned article continuations", () => {
       expect(await executeProviderRecipe({ ...h.deps, count }, h.context, providers, h.piece)).toBe(
         "done",
       );
-      expect(count).toHaveBeenCalledExactlyOnceWith("stage.completed", {
-        stage: "article",
-        provider: "openrouter",
-        model: "text",
-        tokensIn: 4,
-        tokensOut: 6,
-      });
+      expect(count).toHaveBeenCalledExactlyOnceWith(
+        "stage.completed",
+        {
+          stage: "article",
+          provider: "openrouter",
+          model: "text",
+          tokensIn: 4,
+          tokensOut: 6,
+        },
+        "p1",
+      );
       const pieces = workPieces(h.deps.db, h.stage.work.workId);
       expect(pieces.map((piece) => piece.key)).toEqual(["article:body", "article:continuation:1"]);
       expect(new Set(bound).size).toBe(2);

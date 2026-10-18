@@ -245,7 +245,7 @@ export async function executeExportRecipe(
     );
     prepared.push(...captions.map((row) => retainedOutput(deps, view, row)));
     await publishResult(deps, context, piece, prepared, { totalSeconds }, asset);
-    deps.count?.("stage.completed", { stage: "video" });
+    deps.count?.("stage.completed", { stage: "video" }, context.work.projectId);
     return "done";
   } finally {
     discardPreparedAssets(deps, [pending, ...prepared.map((one) => one.asset)]);

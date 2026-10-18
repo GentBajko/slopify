@@ -138,12 +138,16 @@ export async function executeYoutubeRecipe(
       durationSeconds,
     },
   );
-  deps.count?.("stage.completed", {
-    provider: llm.provider,
-    model: llm.model,
-    tokensIn: answer.value.usage?.inputTokens ?? 0,
-    tokensOut: answer.value.usage?.outputTokens ?? 0,
-    descriptions: 1,
-  });
+  deps.count?.(
+    "stage.completed",
+    {
+      provider: llm.provider,
+      model: llm.model,
+      tokensIn: answer.value.usage?.inputTokens ?? 0,
+      tokensOut: answer.value.usage?.outputTokens ?? 0,
+      descriptions: 1,
+    },
+    context.work.projectId,
+  );
   return "done";
 }

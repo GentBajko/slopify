@@ -5,6 +5,7 @@ import { causedBy } from "../../kernel/errors.js";
 import type { Log } from "../../kernel/log.js";
 import type { PlanAccount, PlanLimitHit } from "../../kernel/ports/plan-limits.js";
 import type { LimitGate, LimitWaiter } from "../../kernel/runner/meter.js";
+import { notTemplateSample } from "../template-studio/repo.js";
 
 // Living within a CLI's plan limits. When a CLI says its allowance is used up, the time it
 // returns is stored per account; every call to that CLI - from any project, and after a
@@ -124,7 +125,8 @@ export function createLimitGate(deps: LimitGateDeps): LimitGate {
 // At start, a stage that was waiting on a plan limit when the app stopped was marked
 // interrupted like any other (main.ts markInterruptedStages). Those projects are resumed so
 // the wait carries on by itself - their calls meet the stored reset and wait again. A project
-// paused or cancelled meanwhile is left as it is.
+// paused or cancelled meanwhile is left as it is. A template studio sample is the studio's own
+// recovery's to resume, which checks the sample budget and its plans switch first.
 export async function resumeAfterRestart(
   db: DatabaseSync,
   resume: (projectId: string) => Promise<boolean>,
@@ -135,7 +137,8 @@ export async function resumeAfterRestart(
       `SELECT DISTINCT w.project_id AS id FROM plan_limit_waiters w
        JOIN stages s ON s.project_id = w.project_id AND s.kind = w.stage
        WHERE s.state = 'failed' AND s.failure_reason = 'interrupted'
-       AND NOT EXISTS (SELECT 1 FROM project_controls c WHERE c.project_id = w.project_id AND c.paused = 1)`,
+       AND NOT EXISTS (SELECT 1 FROM project_controls c WHERE c.project_id = w.project_id AND c.paused = 1)
+       AND ${notTemplateSample("w", "project_id")}`,
     )
     .all()
     .map((row) => z.string().parse(row.id));

@@ -84,14 +84,18 @@ export async function executeProviderRecipe(
         : piece.key === "entry:outro:text"
           ? "outro"
           : undefined;
-    deps.count?.("stage.completed", {
-      stage: context.work.kind,
-      provider: input.provider,
-      model: input.model,
-      ...(segment === undefined ? {} : { segment }),
-      tokensIn: answer.value.usage?.inputTokens ?? 0,
-      tokensOut: answer.value.usage?.outputTokens ?? 0,
-    });
+    deps.count?.(
+      "stage.completed",
+      {
+        stage: context.work.kind,
+        provider: input.provider,
+        model: input.model,
+        ...(segment === undefined ? {} : { segment }),
+        tokensIn: answer.value.usage?.inputTokens ?? 0,
+        tokensOut: answer.value.usage?.outputTokens ?? 0,
+      },
+      context.work.projectId,
+    );
     return "done";
   }
   if (input.kind === "tts") {
@@ -161,13 +165,17 @@ export async function executeProviderRecipe(
         workId: context.work.workId,
         workPieceId: piece.id,
       });
-      deps.count?.("stage.completed", {
-        stage: "audio",
-        segment: input.segment,
-        provider: input.provider,
-        model: input.model,
-        ...(durationMs === undefined ? {} : { audioSeconds: durationMs / 1000 }),
-      });
+      deps.count?.(
+        "stage.completed",
+        {
+          stage: "audio",
+          segment: input.segment,
+          provider: input.provider,
+          model: input.model,
+          ...(durationMs === undefined ? {} : { audioSeconds: durationMs / 1000 }),
+        },
+        context.work.projectId,
+      );
     } finally {
       discardPreparedAssets(deps, [asset]);
     }
@@ -222,12 +230,16 @@ export async function executeProviderRecipe(
     );
     await publishResult(deps, context, piece, [output], { prompt }, asset);
     if (softened !== undefined) clearSoftening(deps.db, context.work.projectId, [piece.key]);
-    deps.count?.("stage.completed", {
-      stage: context.work.kind,
-      provider: input.provider,
-      model: input.model,
-      ...(variant !== undefined ? { thumbnails: 1 } : { images: 1 }),
-    });
+    deps.count?.(
+      "stage.completed",
+      {
+        stage: context.work.kind,
+        provider: input.provider,
+        model: input.model,
+        ...(variant !== undefined ? { thumbnails: 1 } : { images: 1 }),
+      },
+      context.work.projectId,
+    );
     return "done";
   }
   throw new Error(internalError("this step has no provider request to run"));

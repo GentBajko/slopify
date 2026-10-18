@@ -805,9 +805,25 @@ describe("home's pieces", () => {
         calls: 3,
         cost: 1,
         unpriced: 2,
+        studioCost: 0,
         apiEquivalent: null,
         plans: [],
       }),
     ).toBe("spent · 2 calls without a price");
+  });
+
+  it("says what of the spend went on template studio samples", () => {
+    expect(
+      spentLabel({
+        since: "",
+        videos: 0,
+        calls: 3,
+        cost: 1,
+        unpriced: 0,
+        studioCost: 0.4,
+        apiEquivalent: null,
+        plans: [],
+      }),
+    ).toBe("spent · $0.40 of it on template studio samples");
   });
 });

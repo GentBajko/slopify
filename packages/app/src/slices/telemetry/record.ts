@@ -3,7 +3,12 @@ import type { Clock } from "../../kernel/clock.js";
 import { errorText } from "../../kernel/errors.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
-import type { TelemetryCounters, TelemetryEvent, TelemetryEventType } from "./model.js";
+import type {
+  RecordEvent,
+  TelemetryCounters,
+  TelemetryEvent,
+  TelemetryEventType,
+} from "./model.js";
 import { payloadSchema } from "./model.js";
 import { insertTelemetryEvent, machineOf } from "./repo.js";
 
@@ -58,4 +63,16 @@ export function record(
       detail: `${type}: ${errorText(error)}`,
     });
   }
+}
+
+// A template studio sample (or bake-off copy) is the studio's, not a video of the person's:
+// Settings → Usage and the public counters leave its stages out.
+export function skippingProjects(
+  count: RecordEvent,
+  skipped: (projectId: string) => boolean,
+): RecordEvent {
+  return (type, counters, projectId) => {
+    if (projectId !== undefined && skipped(projectId)) return;
+    count(type, counters, projectId);
+  };
 }

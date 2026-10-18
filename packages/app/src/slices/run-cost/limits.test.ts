@@ -165,3 +165,35 @@ describe("waiting across a restart", () => {
     ]);
   });
 });
+
+// A template studio sample is resumed by the studio's own recovery, which first checks the
+// sample budget and "Samples may use my CLI plans"; never from here.
+it("leaves a template studio sample waiting on a plan limit to the studio after a restart", async () => {
+  const db = database();
+  const gate = createLimitGate({ db, clock: manualClock(), log: quiet, changed: () => {} });
+  gate.exhausted({ account: "codex", resetsAt: "2026-09-27T14:00:00.000Z" });
+  const stopping = new AbortController();
+  const first = gate.ready("codex", waiter, stopping.signal);
+  const second = gate.ready("codex", { projectId: "p2", stage: "images" }, stopping.signal);
+  await new Promise((resolve) => setImmediate(resolve));
+  stopping.abort(new Error("shutting down"));
+  await expect(first).rejects.toThrow();
+  await expect(second).rejects.toThrow();
+  db.exec("UPDATE stages SET state = 'failed', failure_reason = 'interrupted'");
+  db.exec(
+    "INSERT INTO project_templates (id,head_version,creation_hash,created_at) VALUES ('t1',1,'h','t')",
+  );
+  db.exec(
+    "INSERT INTO template_samples (template_id,project_id,topic,topic_source,full_script,created_at) VALUES ('t1','p2','Topic','fixed',0,'t')",
+  );
+  const resumed: string[] = [];
+  await resumeAfterRestart(
+    db,
+    async (projectId) => {
+      resumed.push(projectId);
+      return true;
+    },
+    quiet,
+  );
+  expect(resumed).toEqual(["p1"]);
+});

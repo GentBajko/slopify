@@ -148,6 +148,7 @@ describe("GET /api/home/week", () => {
       calls: 3,
       cost: 1.5,
       unpriced: 1,
+      studioCost: 0,
       apiEquivalent: 2.25,
       plans: [
         {

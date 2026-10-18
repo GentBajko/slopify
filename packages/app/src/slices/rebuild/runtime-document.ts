@@ -85,7 +85,7 @@ export async function executeDocumentRecipe(
     [preparedResult(deps, context, piece, "document_pdf", asset)],
     { pages: rendered.pages, words: rendered.words, cover: rendered.cover },
   );
-  deps.count?.("stage.completed", { stage: "document" });
+  deps.count?.("stage.completed", { stage: "document" }, context.work.projectId);
   return "done";
 }
 

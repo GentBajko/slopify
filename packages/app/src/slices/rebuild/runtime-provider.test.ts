@@ -117,12 +117,16 @@ describe("revision provider publication", () => {
         "done",
       );
       expect(seen).toEqual(["Original prompt"]);
-      expect(count).toHaveBeenCalledExactlyOnceWith("stage.completed", {
-        stage: "images",
-        provider: "fal",
-        model: "image",
-        images: 1,
-      });
+      expect(count).toHaveBeenCalledExactlyOnceWith(
+        "stage.completed",
+        {
+          stage: "images",
+          provider: "fal",
+          model: "image",
+          images: 1,
+        },
+        "p1",
+      );
       const old = getRevisionView(h.deps, h.projectId, baseline.view.revision.id);
       const current = getRevisionView(h.deps, h.projectId, saved.view.revision.id);
       expect(old?.outputs.some((row) => row.output.role === "image" && row.available)).toBe(true);

@@ -6,6 +6,7 @@ import { ulidIds } from "../../kernel/ids.js";
 import { attachSamples } from "../../kernel/paths.js";
 import { insertProject } from "../../slices/admission/repo.js";
 import { weeklyReport } from "../../slices/autopilot/weekly.js";
+import { defaultChannelId } from "../../slices/channels/model.js";
 import { keywordFactsFor } from "../../slices/keywords/facts.js";
 import { draftFixture } from "../../slices/play-drafts/draft.fake.js";
 import { createTemplate } from "../../slices/project-templates/service.js";
@@ -352,5 +353,24 @@ describe("the template studio's sample project", () => {
       expect(reply.status).toBe(200);
     }
     // What the global actions skip is `slices/storage/trim.test.ts`'s; here they only answer.
+  });
+
+  it("is no project in Download diagnostics, and its spend is the studio's, never a channel's", async () => {
+    const h = withSample();
+    const { db } = h.deps;
+    const diagnostics = await (await h.app.request("/api/diagnostics")).json();
+    const every = Number(db.prepare("SELECT count(*) AS n FROM projects").get()?.n);
+    expect(diagnostics).toMatchObject({ projects: { total: every - 2 } });
+    // A sample removed since keeps what it was charged.
+    db.prepare(
+      "INSERT INTO template_studio_spend (project_id,cost,created_at) VALUES ('gone',0.25,?)",
+    ).run(h.deps.clock.now().toISOString());
+    const all = weekSummary(db, "2026-01-01T00:00:00.000Z");
+    expect(all.cost).toBeCloseTo(1.75);
+    expect(all.studioCost).toBeCloseTo(1.25);
+    const channel = weekSummary(db, "2026-01-01T00:00:00.000Z", defaultChannelId);
+    expect(channel.cost).toBeCloseTo(0.5);
+    expect(channel.calls).toBe(1);
+    expect(channel.studioCost).toBe(0);
   });
 });

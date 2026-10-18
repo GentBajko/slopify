@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { providerStatuses } from "../../slices/settings/readiness.js";
+import { notTemplateSample } from "../../slices/template-studio/repo.js";
 import type { AppDeps } from "./app.js";
 
 /**
@@ -15,7 +16,10 @@ export function diagnosticsRoutes(deps: AppDeps) {
       hostCliStatus: deps.hostCliStatus,
       host: deps.speechHost,
     });
-    const projectCount = deps.db.prepare("SELECT count(*) AS count FROM projects").get();
+    // The template studio's hidden samples are no projects of the person's.
+    const projectCount = deps.db
+      .prepare(`SELECT count(*) AS count FROM projects WHERE ${notTemplateSample()}`)
+      .get();
     const schema = deps.db.prepare("SELECT max(version) AS version FROM schema_migrations").get();
     c.header("Cache-Control", "no-store");
     c.header("Content-Disposition", 'attachment; filename="slopify-diagnostics.json"');

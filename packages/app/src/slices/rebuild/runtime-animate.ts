@@ -100,11 +100,15 @@ export async function executeAnimateRecipe(
       { prompt: input.prompt },
       asset,
     );
-    deps.count?.("stage.completed", {
-      stage: context.work.kind,
-      provider: input.provider,
-      model: input.model,
-    });
+    deps.count?.(
+      "stage.completed",
+      {
+        stage: context.work.kind,
+        provider: input.provider,
+        model: input.model,
+      },
+      context.work.projectId,
+    );
   } finally {
     discardPreparedAssets(deps, [asset]);
   }

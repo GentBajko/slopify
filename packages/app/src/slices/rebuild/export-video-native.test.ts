@@ -157,7 +157,7 @@ it("renders the narration over the still to the length it planned, and keeps no 
         (name) => name.startsWith("render-") || name.startsWith("lines-"),
       ),
     ).toEqual([]);
-    expect(count).toHaveBeenCalledExactlyOnceWith("stage.completed", { stage: "video" });
+    expect(count).toHaveBeenCalledExactlyOnceWith("stage.completed", { stage: "video" }, "p1");
     expect(video.output.meta.subtitlesMode).toBe("files");
     // Captions left as files are not drawn on the picture.
     expect(captionStripPeak(path, 3)).toBeLessThan(40);

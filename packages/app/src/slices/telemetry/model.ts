@@ -17,7 +17,12 @@ export type AudioSegment = (typeof audioSegments)[number];
 // What a stage slice is handed instead of the telemetry module: one call, already inside
 // the swallow of `record`, so a slice can neither widen the payload nor fail a pipeline by
 // counting it. The composition root closes over the deps and the flusher (main.ts).
-export type RecordEvent = (type: TelemetryEventType, counters: TelemetryCounters) => void;
+// A stage passes its project, so a template studio sample's work is left out of the counts.
+export type RecordEvent = (
+  type: TelemetryEventType,
+  counters: TelemetryCounters,
+  projectId?: string,
+) => void;
 
 // Tokens in and out as the provider reports them, 0 when unreported. Never estimated, so a
 // provider that reports nothing adds nothing.

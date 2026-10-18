@@ -69,6 +69,7 @@ it("plans, researches each chapter, writes the notes and stores what it sent", a
           tokensIn: 1,
           tokensOut: 2,
         },
+        "p1",
       ]),
     );
   } finally {

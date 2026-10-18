@@ -107,7 +107,7 @@ export async function executeShortExport(
       ),
     );
     await publishResult(deps, context, piece, prepared, { totalSeconds: seconds }, asset);
-    deps.count?.("stage.completed", { stage: "video" });
+    deps.count?.("stage.completed", { stage: "video" }, context.work.projectId);
     return "done";
   } finally {
     discardPreparedAssets(deps, [pending, ...prepared.map((one) => one.asset)]);
