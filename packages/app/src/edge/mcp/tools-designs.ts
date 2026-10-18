@@ -139,8 +139,15 @@ export const designTools: readonly RouteTool[] = [
     name: "quote_design_template",
     route: "POST /api/design-templates/:id/quote",
     title: "Price a piece from a template",
-    description: "What one piece made from the template's newest version costs. Records nothing.",
+    description:
+      "What one piece made from the template's newest version costs. With a body {document}: what saving that document would cost the editor's sample instead (only a changed picture is paid), with the sections it changes and whether it makes a picture. Records nothing.",
     unrecorded: true,
+  },
+  {
+    name: "make_design_template_sample",
+    route: "POST /api/design-templates/:id/sample",
+    title: "Make a template's sample",
+    description: `Makes the template editor's sample of a version now, when it is held (it cost more than shown, a price is unknown or the day's sample budget is spent), failed or not made yet. This is ${paid}. Body: {version, acknowledgedHigh: the quote's high}.`,
   },
   {
     name: "mark_design_template_ready",

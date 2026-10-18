@@ -123,4 +123,7 @@ export interface DesignView extends Design {
   readonly steps: readonly DesignStep[];
 }
 
-export type DesignEvent = { readonly type: "design.changed"; readonly designId: string };
+export type DesignEvent =
+  | { readonly type: "design.changed"; readonly designId: string }
+  // The template editor's sample started, landed, failed or is held (`sample.ts`).
+  | { readonly type: "design-template.sample"; readonly templateId: string };

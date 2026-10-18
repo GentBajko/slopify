@@ -20,3 +20,7 @@ export function dailySampleBudget(db: DatabaseSync, log?: Pick<Log, "write">): n
     log,
   );
 }
+
+export function budgetSentence(total: number, budget: number): string {
+  return `Waiting: this sample would take today's sample spending to $${total.toFixed(2)}, over the $${budget.toFixed(2)} a day samples may spend. Press Make sample to make it anyway; the limit starts again at midnight.`;
+}

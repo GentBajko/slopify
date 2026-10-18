@@ -80,11 +80,13 @@ import {
   recoverCheckpointWork,
   settleReleasedCheckpoints,
 } from "./slices/checkpoints/recovery.js";
+import { dailySampleBudget } from "./slices/designs/budget.js";
 import { designCheckContext } from "./slices/designs/check-context.js";
 import { contextChecks } from "./slices/designs/gate.js";
 import { runPdfWorker } from "./slices/designs/pdf-runner.js";
 import { createDesignRenderer } from "./slices/designs/render.js";
 import { createDesignRunner } from "./slices/designs/runner.js";
+import { createDesignSamples, type DesignSamples } from "./slices/designs/sample.js";
 import type { DesignDeps } from "./slices/designs/service.js";
 import {
   createEpisodeMemoryWatcher,
@@ -638,13 +640,18 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       }
     // Library → Designs: paid pictures through the attempt wrapper, metered on the design;
     // drawing in a child ffmpeg and PDFs in a forked worker, never on this thread.
+    // The template editor's samples hear when a sample's picture lands, to start the next.
+    let designSamples: DesignSamples | undefined;
     const designService: DesignDeps = {
       db,
       clock,
       ids,
       paths,
       log,
-      emit: (event) => hub.emitGlobal(event),
+      emit: (event) => {
+        hub.emitGlobal(event);
+        if (event.type === "design.changed") designSamples?.designChanged(event.designId);
+      },
     };
     const designRenderer = createDesignRenderer({
       db,
@@ -664,6 +671,14 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       shrink: (bytes) => designRenderer.shrink(bytes, AbortSignal.timeout(120_000)),
     });
     designRunner.recover();
+    designSamples = createDesignSamples({
+      service: designService,
+      runner: designRunner,
+      catalogue: () => catalogue.read(),
+      budget: () => dailySampleBudget(runtimeDb, log),
+      timeZone: () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+    });
+    designSamples.recover();
     const designChecks = designCheckContext({
       resolveFont: (fontId) => resolveFont(paths, fontId),
       providers: rebuild.providers,
@@ -675,6 +690,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         runner: designRunner,
         catalogue: () => catalogue.read(),
         checks: (templateId, doc) => contextChecks(doc, templateId, designChecks),
+        samples: designSamples,
       },
       autostart,
       rebuild,

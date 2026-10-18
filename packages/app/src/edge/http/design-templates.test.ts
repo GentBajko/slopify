@@ -96,6 +96,58 @@ it("hands a Save to the sample when the editor has one", async () => {
   expect(seen).toEqual([[2, "make", 0.04]]);
 });
 
+it("prices a Save for the sample: free for text, the artwork for a new picture", async () => {
+  let sample: unknown = null;
+  const { send } = setup({
+    samples: { afterSave: () => ({ ok: true, value: null }), state: () => sample },
+  });
+  await send("POST", "/design-templates", {
+    id: "t1",
+    mutationId: "mutation-0001",
+    name: "Gig poster",
+    document: poster(),
+  });
+  const text = poster({ text: { ...poster().text, preset: "centered" } });
+  const first = await (await send("POST", "/design-templates/t1/quote", { document: text })).json();
+  expect(first).toMatchObject({ sections: ["text"], makesPicture: true, high: 0.04 });
+  sample = { state: "done", designId: "d1" };
+  const free = await (await send("POST", "/design-templates/t1/quote", { document: text })).json();
+  expect(free).toMatchObject({ sections: ["text"], makesPicture: false, high: 0 });
+  const picture = poster({ picture: { ...poster().picture, prompt: "A barn" } });
+  expect(
+    await (await send("POST", "/design-templates/t1/quote", { document: picture })).json(),
+  ).toMatchObject({ sections: ["picture"], makesPicture: true, high: 0.04 });
+  expect((await send("POST", "/design-templates/t1/quote", { document: { bad: 1 } })).status).toBe(
+    400,
+  );
+  expect(await (await send("GET", "/design-templates/t1")).json()).toMatchObject({
+    id: "t1",
+    sample: { state: "done" },
+  });
+});
+
+it("makes a held sample on Make sample, at the price shown", async () => {
+  const asked: unknown[] = [];
+  const { send } = setup({
+    samples: {
+      afterSave: () => ({ ok: true, value: null }),
+      request: (templateId, version, acknowledgedHigh) => {
+        asked.push([templateId, version, acknowledgedHigh]);
+        return { ok: true, value: { state: "making" } };
+      },
+    },
+  });
+  const made = await send("POST", "/design-templates/t1/sample", {
+    version: 2,
+    acknowledgedHigh: 0.4,
+  });
+  expect([made.status, await made.json()]).toEqual([202, { state: "making" }]);
+  expect(asked).toEqual([["t1", 2, 0.4]]);
+  const bad = await send("POST", "/design-templates/t1/sample", { version: 0 });
+  expect(bad.status).toBe(400);
+  expect(((await bad.json()) as { detail: string }).detail).toContain("press Make sample");
+});
+
 it("refuses Mark ready with the checks that failed, then marks it once they pass", async () => {
   const { send } = setup({
     checks: async () => [

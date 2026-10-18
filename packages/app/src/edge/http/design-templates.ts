@@ -2,10 +2,13 @@ import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
 import type { DesignResult } from "../../slices/designs/model.js";
-import type { DesignDocument } from "../../slices/designs/schema.js";
+import { type DesignDocument, designDocumentSchema } from "../../slices/designs/schema.js";
+import { designAffectedSections, sampleNeedsPicture } from "../../slices/designs/sections.js";
+import { freeSample } from "../../slices/designs/studio-kind.js";
 import type { TemplateCheck } from "../../slices/designs/template-checks.js";
 import {
   makeFromTemplate,
+  quoteDocument,
   quoteTemplate,
   type TemplateMakeDeps,
 } from "../../slices/designs/template-make.js";
@@ -41,11 +44,28 @@ export interface DesignTemplateRoutesDeps extends TemplateMakeDeps {
           readonly sample: "make" | "skip";
           readonly acknowledgedHigh: number;
         }) => DesignResult<unknown>;
+        // Make sample: starts a held, failed or missing sample at the price the person saw.
+        readonly request?: (
+          templateId: string,
+          version: number,
+          acknowledgedHigh: number,
+        ) => DesignResult<unknown>;
+        readonly state?: (templateId: string) => unknown;
       }
     | undefined;
 }
 
+const sampleRequestSchema = z
+  .object({ version: z.number().int().min(1), acknowledgedHigh: z.number().min(0).max(1000) })
+  .strict();
+const quoteBodySchema = z.object({ document: designDocumentSchema }).strict();
+
 const idParam = z.object({ id: idString });
+const notFoundRefusal = {
+  reason: "not-found",
+  message:
+    "This design template no longer exists. Open Library → Designs → Templates to choose another.",
+} as const;
 
 export function designTemplateRoutes(deps: DesignTemplateRoutesDeps | undefined) {
   const unavailable = (c: Parameters<typeof problem>[0]) =>
@@ -72,7 +92,7 @@ export function designTemplateRoutes(deps: DesignTemplateRoutesDeps | undefined)
             message:
               "This design template no longer exists. Open Library → Designs → Templates to choose another.",
           })
-        : c.json(template);
+        : c.json({ ...template, sample: deps.samples?.state?.(template.id) ?? null });
     })
     .put("/:id", zValidator("param", idParam, onInvalid), async (c) => {
       if (deps === undefined) return unavailable(c);
@@ -116,10 +136,57 @@ export function designTemplateRoutes(deps: DesignTemplateRoutesDeps | undefined)
               "This design template no longer exists. Open Library → Designs → Templates to choose another.",
           });
     })
-    .post("/:id/quote", zValidator("param", idParam, onInvalid), (c) => {
+    .post("/:id/quote", zValidator("param", idParam, onInvalid), async (c) => {
       if (deps === undefined) return unavailable(c);
-      const result = quoteTemplate(deps, c.req.valid("param").id);
+      const id = c.req.valid("param").id;
+      const body = await jsonBody(c);
+      // With a document: what saving it would cost the editor's sample (only a changed
+      // picture is paid). Without: what one piece from the newest version costs.
+      if (typeof body === "object" && body !== null && Object.keys(body).length > 0) {
+        const parsed = quoteBodySchema.safeParse(body);
+        if (!parsed.success)
+          return designRefused(c, {
+            reason: "invalid",
+            message: `The template can't be priced: ${parsed.error.issues[0]?.message ?? "a field is missing"}.`,
+          });
+        const template = getTemplate(deps.service.db, id);
+        if (template === undefined) return designRefused(c, notFoundRefusal);
+        const sample = deps.samples?.state?.(id) as
+          | { readonly designId?: string | null; readonly state?: string }
+          | null
+          | undefined;
+        const sections = designAffectedSections(template.document, parsed.data.document);
+        const makesPicture =
+          sampleNeedsPicture(sections) ||
+          sample === null ||
+          sample === undefined ||
+          sample.designId == null ||
+          sample.state === "failed";
+        const quote = makesPicture
+          ? quoteDocument(deps.catalogue(), parsed.data.document)
+          : freeSample(deps.catalogue());
+        return c.json({ ...quote, sections, makesPicture });
+      }
+      const result = quoteTemplate(deps, id);
       return result.ok ? c.json(result.value) : designRefused(c, result);
+    })
+    .post("/:id/sample", zValidator("param", idParam, onInvalid), async (c) => {
+      if (deps === undefined) return unavailable(c);
+      const request = deps.samples?.request;
+      if (request === undefined) return unavailable(c);
+      const parsed = sampleRequestSchema.safeParse(await jsonBody(c));
+      if (!parsed.success)
+        return designRefused(c, {
+          reason: "invalid",
+          message:
+            "Say which version to make a sample of and the price you saw, then press Make sample.",
+        });
+      const result = request(
+        c.req.valid("param").id,
+        parsed.data.version,
+        parsed.data.acknowledgedHigh,
+      );
+      return result.ok ? c.json(result.value, 202) : designRefused(c, result);
     })
     .post("/:id/ready", zValidator("param", idParam, onInvalid), async (c) => {
       if (deps === undefined) return unavailable(c);
