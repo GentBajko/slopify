@@ -7,6 +7,7 @@ import { AudioPlayer } from "@/components/kit/audio-player";
 import { Button, ButtonRow } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { TextLink } from "@/components/kit/link";
 import { MediaFrame, MediaGrid } from "@/components/kit/media";
 import { SectionHead } from "@/components/kit/section-head";
 import { Badge, Lamp, type Tone } from "@/components/kit/status";
@@ -478,6 +479,15 @@ function CompareDrawer({
               : ""
             : `${quote.data.models.map((one) => `${one.model}: ${about(one.high)}`).join(" · ")} · ${usd(quote.data.budget.left)} of today's ${usd(quote.data.budget.budget)} sample budget left`}
         </p>
+        {quote.data?.fits === false ? (
+          <p className="m-0 text-body text-waiting">
+            {`This costs ${about(quote.data.high)} and ${usd(quote.data.budget.left)} of today's sample budget is left. Compare tomorrow, or raise it in `}
+            <TextLink to="/settings" search={{ section: "template-studio" }}>
+              Settings → Template studio
+            </TextLink>
+            .
+          </p>
+        ) : null}
         {failed === null ? null : (
           <p role="alert" className="m-0 text-body text-danger">
             {failed}

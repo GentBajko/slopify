@@ -125,6 +125,12 @@ describe("Compare models", () => {
     const dialog = await screen.findByRole("dialog", { name: "Compare models" });
     const go = await within(dialog).findByRole("button", { name: "Compare · about $3.00" });
     expect(go.getAttribute("aria-disabled") ?? go.getAttribute("disabled")).not.toBeNull();
+    expect(
+      within(dialog).getByText(
+        /This costs about \$3\.00 and \$2\.00 of today's sample budget is left/,
+      ),
+    ).not.toBeNull();
+    expect(within(dialog).getByRole("link", { name: "Settings → Template studio" })).not.toBeNull();
   });
 
   it("is greyed while the settings have unsaved changes", async () => {
