@@ -8,6 +8,7 @@ import { useApp } from "@/app-context";
 import { DetectedSlots } from "@/components/detected-slots";
 import { EditorActions } from "@/components/editor-actions";
 import { EditorSkeleton } from "@/components/editor-states";
+import { KeywordInsertBar } from "@/components/keyword-insert-bar";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Field, Input } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
@@ -108,7 +109,9 @@ export function EntryEditorRoute({
     setRefused((current) => current.filter((problem) => problem.field !== field));
   };
 
-  const problems = draftProblems(draft, refused);
+  // The stored entry's own slot names, which its save lets through, as the server does.
+  const grandfathered = entryId !== undefined && found !== undefined ? found.slots : [];
+  const problems = draftProblems(draft, refused, grandfathered);
   const blocked = firstProblem(problems);
   const slots = slotNames(draft.body);
   // An untouched body is not an error on the page: its "A body is required." is the
@@ -199,6 +202,14 @@ export function EntryEditorRoute({
               </label>
               <InfoTip id="library.entry.body" label="Body" className="-my-1" />
             </div>
+            <KeywordInsertBar
+              place={draft.category}
+              targetId={bodyId}
+              value={draft.body}
+              onChange={(next) => {
+                edit({ ...draft, body: next }, "body");
+              }}
+            />
             <SlotBody
               id={bodyId}
               value={draft.body}

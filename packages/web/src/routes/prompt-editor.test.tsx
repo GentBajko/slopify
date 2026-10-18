@@ -470,3 +470,36 @@ describe("an existing prompt", () => {
     );
   });
 });
+
+describe("the prompt editor's keywords Slopify fills", () => {
+  it("offers the keywords of the prompt's kind above the body, and follows a change of kind", async () => {
+    const user = userEvent.setup();
+    await newEditor();
+    const bar = screen.getByRole("toolbar", { name: "Insert a keyword Slopify fills" });
+    expect(within(bar).queryByRole("button", { name: "Insert Summary" })).toBeNull();
+    await user.click(screen.getByRole("radio", { name: "Image" }));
+    await user.click(within(bar).getByRole("button", { name: "Insert Summary" }));
+    expect((screen.getByLabelText("Body") as HTMLTextAreaElement).value).toBe(
+      "{{Slopify_Summary}}",
+    );
+  });
+
+  it("saves a stored prompt whose unknown Slopify_ name it already had, and refuses a new one", async () => {
+    const user = userEvent.setup();
+    const stored: Prompt = {
+      ...dossier,
+      body: "About {{Slopify_Wish}}.",
+      slots: ["Slopify_Wish"],
+    };
+    renderRouted(
+      <PromptEditorRoute promptId="p1" kind="article" from={undefined} onLeave={vi.fn()} />,
+      deps([stored]),
+    );
+    await screen.findByDisplayValue("Documentary dossier");
+    expect(screen.queryByText(/isn't a keyword Slopify fills/)).toBeNull();
+    await fill(user, "Body", "About {{Slopify_Wish}} and {{Slopify_Other}}.");
+    expect(
+      screen.getAllByText(/\{\{Slopify_Other\}\} at line 1, column 28 isn't a keyword/).length,
+    ).toBeGreaterThan(0);
+  });
+});

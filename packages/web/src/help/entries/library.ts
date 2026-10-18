@@ -1,4 +1,17 @@
+import type { KeywordPlace } from "@app/slices/keywords/model.js";
+import { keywordsFor } from "@app/slices/keywords/specs.js";
 import type { HelpEntry } from "../entry.js";
+
+// The keywords Slopify fills that a prompt kind or entry category can use, read from the
+// keyword table so the tip never lists one that kind can't use.
+function keywordsHere(place: KeywordPlace): string {
+  const names = keywordsFor(place).map((spec) => `{{${spec.name}}}`);
+  return `Keywords Slopify fills here: ${names.join(", ")}. They never become fields on Play. Click one in the Insert bar to put it at the cursor; point at it there or in the text for what it fills in, an example and what it costs.`;
+}
+
+const factsSection = { page: "Keywords-Slopify-Fills", anchor: "facts-slopify-already-has" };
+const digestSection = { page: "Keywords-Slopify-Fills", anchor: "written-from-the-article" };
+const pictureSection = { page: "Keywords-Slopify-Fills", anchor: "per-picture" };
 
 // Library → Prompts, Intros & Outros, Templates, Documents and Aliases. The document theme
 // numbers (defaults and ranges) are the built-in Plain theme's and the save schema's, from
@@ -54,6 +67,56 @@ export const libraryHelp = {
     title: "Script prompt",
     body: "Used in place of an Article prompt when a run has several voices and writes a script. The text model answers with # section headings and Name: words turns, one speaker per paragraph; text in [square brackets] is not spoken. One call on the project's LLM.",
     tutorial: { page: "Prompts", anchor: "write-a-new-prompt" },
+  },
+  "library.keywords.article": {
+    title: "Keywords Slopify fills in Article prompts",
+    body: keywordsHere("article"),
+    tutorial: factsSection,
+  },
+  "library.keywords.script": {
+    title: "Keywords Slopify fills in Script prompts",
+    body: keywordsHere("script"),
+    tutorial: factsSection,
+  },
+  "library.keywords.narration": {
+    title: "Keywords Slopify fills in Narration Preparation prompts",
+    body: keywordsHere("narration"),
+    tutorial: factsSection,
+  },
+  "library.keywords.image": {
+    title: "Keywords Slopify fills in Image prompts",
+    body: keywordsHere("image"),
+    tutorial: pictureSection,
+  },
+  "library.keywords.thumbnail": {
+    title: "Keywords Slopify fills in Thumbnail prompts",
+    body: keywordsHere("thumbnail"),
+    tutorial: pictureSection,
+  },
+  "library.keywords.description": {
+    title: "Keywords Slopify fills in YouTube Description prompts",
+    body: keywordsHere("description"),
+    tutorial: digestSection,
+  },
+  "library.keywords.shorts": {
+    title: "Keywords Slopify fills in Shorts prompts",
+    body: keywordsHere("shorts"),
+    tutorial: digestSection,
+  },
+  "library.keywords.review": {
+    title: "Keywords Slopify fills in Review prompts",
+    body: keywordsHere("review"),
+    tutorial: digestSection,
+  },
+  "library.keywords.intro": {
+    title: "Keywords Slopify fills in intros",
+    body: keywordsHere("intro"),
+    tutorial: factsSection,
+  },
+  "library.keywords.outro": {
+    title: "Keywords Slopify fills in outros",
+    body: keywordsHere("outro"),
+    tutorial: factsSection,
   },
   "library.prompt.starter": {
     title: "Starter text",

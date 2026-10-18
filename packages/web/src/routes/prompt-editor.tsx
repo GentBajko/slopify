@@ -10,6 +10,7 @@ import { useApp } from "@/app-context";
 import { DetectedSlots } from "@/components/detected-slots";
 import { EditorActions } from "@/components/editor-actions";
 import { EditorSkeleton } from "@/components/editor-states";
+import { KeywordInsertBar } from "@/components/keyword-insert-bar";
 import { Button } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Field, Input } from "@/components/kit/field";
@@ -125,7 +126,9 @@ export function PromptEditorRoute({
     setRefused((current) => current.filter((problem) => problem.field !== field));
   };
 
-  const problems = draftProblems(draft, refused);
+  // The stored prompt's own slot names, which its save lets through, as the server does.
+  const grandfathered = promptId !== undefined && found !== undefined ? found.slots : [];
+  const problems = draftProblems(draft, refused, grandfathered);
   const blocked = firstProblem(problems);
   const slots = slotNames(draft.body);
   // An untouched body is not an error on the page: its "A body is required." is the sentence
@@ -237,6 +240,14 @@ export function PromptEditorRoute({
                 </span>
               ) : null}
             </div>
+            <KeywordInsertBar
+              place={draft.kind}
+              targetId={bodyId}
+              value={draft.body}
+              onChange={(next) => {
+                edit({ ...draft, body: next }, "body");
+              }}
+            />
             <SlotBody
               id={bodyId}
               value={draft.body}
