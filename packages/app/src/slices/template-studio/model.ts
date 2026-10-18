@@ -18,6 +18,20 @@ export const templateSections = [
 ] as const;
 export type TemplateSection = (typeof templateSections)[number];
 
+export const sectionLabel: Readonly<Record<TemplateSection, string>> = {
+  subject: "Subject & research",
+  script: "Script",
+  voice: "Voice",
+  pictures: "Pictures",
+  video: "Video & captions",
+  thumbnail: "Thumbnail & title",
+  shorts: "Shorts",
+  document: "Document (PDF)",
+  reviews: "Reviews & checkpoints",
+  upload: "Upload pack",
+  schedule: "Schedule",
+};
+
 // What a section's sample is: made for the current version, being made, queued behind another,
 // failed with a fix, made for an older version, switched off, or provided by the user at run time.
 export const sectionStates = [
