@@ -132,13 +132,6 @@ export function PostPanel({
             </>
           )}
         </div>
-        {pack.status.url === null ? (
-          <PasteLink
-            platform={pack.platform}
-            pending={link.isPending}
-            onSave={(url) => link.mutate(url)}
-          />
-        ) : null}
       </section>
       <PostWarnings warnings={pack.warnings} />
       <PostPreview
@@ -179,6 +172,13 @@ export function PostPanel({
         {releaseLine(pack.schedule, platform, postTime)}
         <InfoTip id="social.release" className="-my-1" />
       </p>
+      {pack.status.url === null ? (
+        <PasteLink
+          platform={pack.platform}
+          pending={link.isPending}
+          onSave={(url) => link.mutate(url)}
+        />
+      ) : null}
       {pack.reddit === undefined ? null : (
         <RedditFieldsEditor projectId={projectId} fields={pack.reddit} say={say} />
       )}

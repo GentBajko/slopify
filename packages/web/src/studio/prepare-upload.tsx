@@ -39,6 +39,7 @@ import { Segmented, Switch } from "@/components/kit/switch";
 import { OpenFolder } from "@/project/open-folder";
 import { readPostPacks, socialPacksKey } from "@/social/api";
 import { PostFillButton, PostPanel } from "@/social/post-panel";
+import { fillBlocked } from "@/social/words";
 import { ExtensionInstall } from "./extension-install";
 import { studioSettingsKey } from "./settings-panel";
 
@@ -238,7 +239,10 @@ export function PrepareUploadDrawer({
       footer={
         post !== undefined && social.data !== undefined ? (
           <>
-            <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
+            {/* Until something happens, the slot says why Fill can't be pressed yet. */}
+            <StatusSlot tone={status?.tone ?? "warning"} wrap={status === undefined}>
+              {status?.text ?? fillBlocked(social.data.extension, post.platform)}
+            </StatusSlot>
             <PostFillButton pack={post} extension={social.data.extension} say={say} />
           </>
         ) : (

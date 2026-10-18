@@ -133,7 +133,8 @@ export function PostChoiceFields({
           }}
           options={pictureCounts(limits.pictures, choice.media.pictures ?? 0).map((count) => ({
             value: String(count),
-            label: count === 0 ? "None" : `${String(count)} of the project's pictures`,
+            label:
+              count === 0 ? "None" : `${String(count)} ${count === 1 ? "picture" : "pictures"}`,
           }))}
         />
       </Field>
