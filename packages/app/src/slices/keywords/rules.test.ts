@@ -72,7 +72,7 @@ describe("keywordProblems", () => {
         name: "Scene",
         at: 0,
         message:
-          "{{Scene}} at line 1, column 1 is the old name of {{Slopify_Scene}}. It keeps working; use Update to new names above the text to rename it.",
+          "{{Scene}} at line 1, column 1 is the old name of {{Slopify_Scene}}. It keeps working; use Update to new names in the editor to rename it.",
       },
     ]);
   });

@@ -63,7 +63,7 @@ export function keywordProblems(
         kind: "legacy",
         name,
         at,
-        message: `${where} is the old name of {{${spec.name}}}. It keeps working; use Update to new names above the text to rename it.`,
+        message: `${where} is the old name of {{${spec.name}}}. It keeps working; use Update to new names in the editor to rename it.`,
       });
   }
   return problems;
