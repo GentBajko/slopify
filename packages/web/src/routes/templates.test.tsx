@@ -568,3 +568,37 @@ it("keeps the picked template in the URL and shows its version with the exact ti
   expect(stamp?.getAttribute("title")).toMatch(/2026/u);
   expect(detail.textContent).toContain("Version 4 · saved");
 });
+
+it("badges each template with whether its schedules run its newest version", async () => {
+  renderRouted(
+    <TemplatesRoute onApplied={() => undefined} />,
+    testDeps({
+      ...routes,
+      "GET /api/project-templates": jsonAnswer({
+        templates: [
+          { ...template, gate: { head: 1, runs: 1, gate: "legacy" } },
+          {
+            ...template,
+            id: "33333333-3333-4333-8333-333333333333",
+            name: "Shorts",
+            version: 4,
+            gate: { head: 4, runs: 3, gate: "ready" },
+          },
+          {
+            ...template,
+            id: "44444444-4444-4444-8444-444444444444",
+            name: "Fresh",
+            gate: { head: 1, runs: 1, gate: "ready" },
+          },
+        ],
+      }),
+    }),
+  );
+  const list = await screen.findByRole("list", { name: "Project templates" });
+  expect(within(list).getByText("Not checked in the studio")).not.toBeNull();
+  const waiting = within(list).getByText("Not ready");
+  expect(waiting.getAttribute("title")).toBe(
+    "Schedules run version 3 until you mark version 4 ready in its studio.",
+  );
+  expect(within(list).getByText("Ready")).not.toBeNull();
+});

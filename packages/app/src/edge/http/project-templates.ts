@@ -23,6 +23,7 @@ import {
   readTemplate,
   updateTemplate,
 } from "../../slices/project-templates/service.js";
+import { templateGate } from "../../slices/template-studio/schedule-gate.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
 
 const param = z.object({ id: z.uuid() });
@@ -59,7 +60,16 @@ function routes(deps: DraftDeps | undefined) {
   };
   return (
     new Hono()
-      .get("/", (c) => c.json({ templates: listTemplates(service()) }))
+      // Each with the version its schedules run (`template-studio/schedule-gate.ts`).
+      .get("/", (c) => {
+        const db = service().db;
+        return c.json({
+          templates: listTemplates(service()).map((template) => {
+            const gate = templateGate(db, template.id);
+            return gate === undefined ? template : { ...template, gate };
+          }),
+        });
+      })
       .post(
         "/from-project/:projectId",
         zValidator(

@@ -13,6 +13,14 @@ const summarySchema = z.object({
   updatedAt: z.string(),
   // The channel the template belongs to (Channels); absent from an older server.
   channelId: z.string().optional(),
+  // Which version its schedules run (the template studio's gate); absent from an older server.
+  gate: z
+    .object({
+      head: z.number(),
+      runs: z.number().nullable(),
+      gate: z.enum(["legacy", "ready", "carried", "unchecked"]),
+    })
+    .optional(),
 });
 const templateSchema = summarySchema.extend({ document: playDraftDocumentSchema });
 const templateReplySchema = z.union([

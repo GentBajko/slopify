@@ -15,6 +15,7 @@ import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { ListDetail } from "@/components/kit/layout";
 import { ButtonLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
+import { Badge } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
 import { RetiredModelRow } from "@/components/retired-models";
 import { RowCheck, useSelection } from "@/components/selection";
@@ -27,6 +28,7 @@ import { sortLibrary, useLibrarySort } from "@/library/sort";
 import { SortMenu } from "@/library/sort-menu";
 import { Stamp } from "@/library/time";
 import { PacksDrawer } from "@/onboarding/packs-drawer";
+import { type TemplateGate, templateGateBadge } from "@/template-studio/gate-words";
 import {
   deleteProjectTemplate,
   renameProjectTemplate,
@@ -276,6 +278,7 @@ export function TemplatesRoute({
                         <>
                           {channelName(template) === undefined ? "" : `${channelName(template)} · `}
                           Version {template.version} · updated <Stamp iso={template.updatedAt} />
+                          {template.gate === undefined ? null : <GateBadge gate={template.gate} />}
                         </>
                       }
                       actions={
@@ -360,5 +363,15 @@ export function TemplatesRoute({
         }}
       />
     </div>
+  );
+}
+
+// Whether the template's newest version is ready for its schedules, its detail on hover.
+function GateBadge({ gate }: { readonly gate: TemplateGate }): ReactElement {
+  const badge = templateGateBadge(gate);
+  return (
+    <Badge tone={badge.tone} className="ml-2" title={badge.detail}>
+      {badge.word}
+    </Badge>
   );
 }

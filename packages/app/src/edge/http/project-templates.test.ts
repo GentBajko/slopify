@@ -65,3 +65,29 @@ it("exposes versioned CRUD and creates a draft without starting work", async () 
     h.close();
   }
 });
+
+it("says on each listed template which version its schedules run", async () => {
+  const h = draftFixture();
+  try {
+    const app = new Hono().route("/api/project-templates", projectTemplateRoutes(h.deps));
+    const id = randomUUID();
+    await app.request("/api/project-templates", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id, name: "Show", document: h.document }),
+    });
+    const listed = async () =>
+      (
+        (await (await app.request("/api/project-templates")).json()) as {
+          templates: { id: string; gate?: unknown }[];
+        }
+      ).templates.find((one) => one.id === id)?.gate;
+    expect(await listed()).toEqual({ head: 1, runs: null, gate: "unchecked" });
+    h.deps.db
+      .prepare("INSERT INTO template_gates (template_id,version,state) VALUES (?,1,'legacy')")
+      .run(id);
+    expect(await listed()).toEqual({ head: 1, runs: 1, gate: "legacy" });
+  } finally {
+    h.close();
+  }
+});
