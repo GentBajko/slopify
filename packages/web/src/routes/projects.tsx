@@ -4,6 +4,7 @@ import { PlusIcon, SearchIcon } from "lucide-react";
 import { type ReactElement, useEffect, useMemo, useRef, useState } from "react";
 import { removeProject } from "@/api";
 import { useApp } from "@/app-context";
+import { useAssistantSelection } from "@/assistant/screen";
 import { useCurrentChannel } from "@/channels/current";
 import { Board, BoardColumn } from "@/components/kit/board";
 import { Button } from "@/components/kit/button";
@@ -179,6 +180,10 @@ export function ProjectsRoute({
   const shownIds = shown.map((one) => one.id).join("\n");
   const shownKeys = useMemo(() => (shownIds === "" ? [] : shownIds.split("\n")), [shownIds]);
   const selection = useSelection(shownKeys);
+  useAssistantSelection(
+    "project",
+    shown.filter((one) => selection.has(one.id)).map((one) => ({ id: one.id, label: one.title })),
+  );
 
   return (
     <div>

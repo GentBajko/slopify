@@ -1,4 +1,5 @@
 import type {
+  AssistantEvent,
   GlobalEvent,
   ProjectEvent,
   ProjectStateEvent,
@@ -169,6 +170,22 @@ export function subscribeGlobal(open: OpenEvents, url: string, sink: GlobalSink)
     },
     sink.connection,
   );
+}
+
+const assistantEventNames = [
+  "assistant.delta",
+  "assistant.tool",
+  "assistant.ask",
+  "assistant.turn",
+] as const;
+
+// The assistant panel's chat, over the same one connection; a reconnect refetches the chat.
+export function subscribeAssistant(
+  open: OpenEvents,
+  url: string,
+  sink: { readonly event: (event: AssistantEvent) => void; readonly refetch: () => void },
+): () => void {
+  return listen<AssistantEvent>(open, url, assistantEventNames, sink.refetch, sink.event);
 }
 
 function listen<Event extends ProjectEvent | GlobalEvent>(
