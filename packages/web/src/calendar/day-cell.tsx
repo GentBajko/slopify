@@ -201,6 +201,9 @@ function RunChip({
   );
 }
 
+export const pausedPrepareReason =
+  "Its schedule is paused: resume it under Calendar → Schedules to prepare its runs.";
+
 export const designNotPrepared =
   "A design is made on its day, so there is nothing to prepare ahead.";
 
@@ -250,7 +253,10 @@ export function PrepareRun({
       <Button
         size="small"
         variant={compact ? "quiet" : "secondary"}
-        disabled={prepare.isPending}
+        // A paused schedule makes nothing, ahead or on its day.
+        disabled={prepare.isPending || run.paused}
+        disabledReason={run.paused ? pausedPrepareReason : "Preparing"}
+        focusableWhenDisabled={run.paused}
         onClick={(event) => {
           event.stopPropagation();
           prepare.mutate();
