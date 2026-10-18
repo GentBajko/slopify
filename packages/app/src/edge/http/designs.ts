@@ -1,8 +1,10 @@
 import { readFile } from "node:fs/promises";
 import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "zod";
+import { castImageMaxBytes } from "../../slices/channels/images.js";
 import { type DesignRefusal, designFormats } from "../../slices/designs/model.js";
 import type { DesignRenderer } from "../../slices/designs/render.js";
 import type { DesignRunner } from "../../slices/designs/runner.js";
@@ -13,6 +15,7 @@ import {
   listDesignViews,
   setDesignHead,
   stepPicture,
+  storeUploadedPicture,
   updateDesignRecord,
 } from "../../slices/designs/service.js";
 import { trashDesign } from "../../slices/trash/designs.js";
@@ -93,6 +96,26 @@ export function designRoutes(deps: DesignRoutesDeps | undefined) {
         const result = createDesign(deps.service, await jsonBody(c));
         return result.ok ? c.json(result.value, 201) : designRefused(c, result);
       })
+      // The picture's bytes are the body; the answer's sha256 starts a design (fromStepSha).
+      .post(
+        "/pictures",
+        bodyLimit({
+          maxSize: castImageMaxBytes,
+          onError: (c) =>
+            designRefused(c, {
+              reason: "not-an-image",
+              message: `This picture is larger than ${String(castImageMaxBytes / 1024 / 1024)} MB. Save it smaller (for example as a JPEG) and upload it again.`,
+            }),
+        }),
+        async (c) => {
+          if (deps === undefined) return unavailable(c);
+          const result = storeUploadedPicture(
+            deps.service,
+            new Uint8Array(await c.req.arrayBuffer()),
+          );
+          return result.ok ? c.json(result.value, 201) : designRefused(c, result);
+        },
+      )
       .get("/:id", zValidator("param", idParam, onInvalid), (c) => {
         if (deps === undefined) return unavailable(c);
         const result = getDesign(deps.service, c.req.valid("param").id);

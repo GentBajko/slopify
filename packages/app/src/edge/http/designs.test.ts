@@ -198,4 +198,26 @@ describe("design routes", () => {
     expect(response.status).toBe(503);
     h = designHarness();
   });
+
+  it("keeps a picture sent as bytes for a new design to start from", async () => {
+    const { app, send } = setup();
+    const stored = await app.request("/designs/pictures", {
+      method: "POST",
+      body: pngOf(300, 200),
+    });
+    const picture = (await stored.json()) as { sha256: string; width: number };
+    expect([stored.status, picture.width]).toEqual([201, 300]);
+    const made = await send("POST", "/designs", create({ fromStepSha: picture.sha256 }));
+    expect(made.status).toBe(201);
+    const bad = await app.request("/designs/pictures", { method: "POST", body: "GIF89a" });
+    expect([bad.status, ((await bad.json()) as { reason: string }).reason]).toEqual([
+      400,
+      "not-an-image",
+    ]);
+    const big = await app.request("/designs/pictures", {
+      method: "POST",
+      body: new Uint8Array(10 * 1024 * 1024 + 1),
+    });
+    expect(big.status).toBe(400);
+  });
 });

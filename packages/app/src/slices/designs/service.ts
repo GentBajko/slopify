@@ -12,7 +12,7 @@ import { defaultChannelId } from "../channels/model.js";
 import { imageBlob } from "../channels/repo.js";
 import { releaseStagedFile } from "../storage/staging-refs.js";
 import type { DesignEvent, DesignResult, DesignView } from "./model.js";
-import { startingPicture } from "./pictures.js";
+import { readPicture, startingPicture } from "./pictures.js";
 import { designById, designByMutation, insertDesign, listDesigns, updateDesign } from "./repo.js";
 import { createDesignSchema, setHeadSchema, updateDesignSchema } from "./requests.js";
 import { insertStep, stepById, stepsOf } from "./steps-repo.js";
@@ -258,4 +258,29 @@ export function stepPicture(
   if (step === undefined || step.designId !== designId || step.sha256 === null) return undefined;
   if (designView(db, designId) === undefined) return undefined;
   return imageBlob(db, step.sha256);
+}
+
+// A picture sent as bytes (an agent's upload_design_picture): kept in image_blobs, answered with
+// the hash a new design starts from (`fromStepSha`).
+export function storeUploadedPicture(
+  deps: Pick<DesignDeps, "db" | "clock">,
+  bytes: Uint8Array,
+): DesignResult<{
+  readonly sha256: string;
+  readonly mime: "image/png" | "image/jpeg";
+  readonly width: number;
+  readonly height: number;
+}> {
+  const read = readPicture(bytes);
+  if (!read.ok) return read;
+  const sha256 = storeImageBlob(
+    deps.db,
+    read.value.bytes,
+    read.value.mime,
+    deps.clock.now().toISOString(),
+  );
+  return {
+    ok: true,
+    value: { sha256, mime: read.value.mime, width: read.value.width, height: read.value.height },
+  };
 }
