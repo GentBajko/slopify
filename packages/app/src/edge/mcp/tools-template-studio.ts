@@ -25,6 +25,27 @@ export const templateStudioTools: readonly RouteTool[] = [
     unrecorded: true,
   },
   {
+    name: "save_template_studio",
+    route: "POST /api/template-studio/:id/save",
+    title: "Save a template in its studio",
+    description:
+      'Saves the template document as its next version. With sample "make" it also makes the paid sample of what changed, which spends money: price it first with quote_template_save and pass that quote\'s high as acknowledgedHigh (and acknowledgedUnknown: true when the quote counts steps with no price). A higher price, an unaccepted unknown one or a sample past today\'s budget is refused with the new quote and nothing is saved. With sample "skip" only the free samples are made. Send the same mutationId to retry the very same Save.',
+  },
+  {
+    name: "get_template_studio_settings",
+    route: "GET /api/template-studio/settings",
+    title: "Read the template studio's settings",
+    description:
+      "The most the studio's samples may spend in one day (dailyBudget, US dollars) and what they spent today and have left.",
+  },
+  {
+    name: "update_template_studio_settings",
+    route: "PUT /api/template-studio/settings",
+    title: "Change the template studio's daily budget",
+    description:
+      "Sets the most the studio's samples may spend in one day, in US dollars (0 to 1000). A sample that would go over it waits until the next day or a higher budget.",
+  },
+  {
     name: "make_template_free_samples",
     route: "POST /api/template-studio/:id/free-samples",
     title: "Make a template's free samples",

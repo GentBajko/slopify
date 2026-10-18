@@ -7,10 +7,22 @@ import { playDraftDocumentSchema } from "../../slices/play-drafts/schema.js";
 import { templateById } from "../../slices/project-templates/repo.js";
 import { readSettings } from "../../slices/settings/playback.js";
 import { providerStatuses } from "../../slices/settings/readiness.js";
+import {
+  budgetRoom,
+  readStudioSettings,
+  studioSettingsSchema,
+  writeStudioSettings,
+} from "../../slices/template-studio/budget.js";
 import { createFreeSamples, type FreeSamples } from "../../slices/template-studio/free.js";
 import { enqueueJob } from "../../slices/template-studio/jobs.js";
 import type { StudioResult } from "../../slices/template-studio/model.js";
 import { quoteSave } from "../../slices/template-studio/quote.js";
+import {
+  createUnknownAcks,
+  saveStudio,
+  saveStudioSchema,
+  type UnknownAcks,
+} from "../../slices/template-studio/save.js";
 import {
   createPriceCache,
   createReadinessCache,
@@ -44,6 +56,8 @@ export interface TemplateStudioService {
   // Play's review, which prices a sample; without it (and without `drafts`) no sample is
   // priced or made.
   readonly review?: DraftReviewDeps | undefined;
+  // The unknown prices accepted on Save, which the sample loop reads.
+  readonly acks?: UnknownAcks | undefined;
 }
 
 export function refusedStudio(
@@ -105,6 +119,7 @@ export function templateStudioRoutes(deps: AppDeps) {
   const studio = service(deps);
   const read = studioDeps(deps, studio);
   const review = studio.review ?? deps.drafts;
+  const acks = studio.acks ?? createUnknownAcks();
   const gone = (c: Context, detail: string) =>
     problem(c, { status: 404, title: titleOf(404), detail });
   const media = (
@@ -122,6 +137,20 @@ export function templateStudioRoutes(deps: AppDeps) {
         });
   return (
     new Hono()
+      // Settings → Template studio: the samples' daily budget, and what was spent today.
+      .get("/settings", (c) =>
+        c.json({
+          ...readStudioSettings(deps.db),
+          today: budgetRoom(deps.db, deps.clock.now()),
+        }),
+      )
+      .put("/settings", zValidator("json", studioSettingsSchema, onInvalid), (c) => {
+        writeStudioSettings(deps.db, c.req.valid("json"));
+        return c.json({
+          ...readStudioSettings(deps.db),
+          today: budgetRoom(deps.db, deps.clock.now()),
+        });
+      })
       .get("/:id", zValidator("param", param, onInvalid), async (c) => {
         const result = await getStudio(read, c.req.valid("param").id);
         return result.ok ? c.json(result.value) : refusedStudio(c, result);
@@ -145,6 +174,42 @@ export function templateStudioRoutes(deps: AppDeps) {
             c.req.valid("json").document,
           );
           return result.ok ? c.json(result.value) : refusedStudio(c, result);
+        },
+      )
+      // Save: the template's next version, with its sample queued at the price the person saw,
+      // or without a sample. A higher price, an unaccepted unknown one, or a sample past today's
+      // budget is refused with the new quote.
+      .post(
+        "/:id/save",
+        zValidator("param", param, onInvalid),
+        zValidator("json", saveStudioSchema, onInvalid),
+        async (c) => {
+          if (review === undefined)
+            return problem(c, { status: 503, title: titleOf(503), detail: unpriced });
+          const id = c.req.valid("param").id;
+          const result = await saveStudio(
+            { db: deps.db, clock: deps.clock, review, acks },
+            id,
+            c.req.valid("json"),
+          );
+          if (!result.ok)
+            return problem(c, {
+              status:
+                result.reason === "not-found" ? 404 : result.reason === "invalid-input" ? 400 : 409,
+              title: titleOf(
+                result.reason === "not-found" ? 404 : result.reason === "invalid-input" ? 400 : 409,
+              ),
+              detail: result.message,
+              extensions: {
+                reason: result.reason,
+                ...(result.quote === undefined ? {} : { quote: result.quote }),
+              },
+            });
+          if (!result.value.replayed) {
+            studio.wake();
+            deps.hub.emitGlobal({ type: "template.sample", templateId: id });
+          }
+          return c.json(result.value);
         },
       )
       // Make samples: the free ones (video, loudness, PDF, the schedule's cost) for the current

@@ -113,6 +113,80 @@ it("prices a Save's sample without changing anything, and says why it can't when
   });
 });
 
+function paidStudio(wake: () => void = () => undefined) {
+  const h = mcpFixture({
+    templateStudio: (deps) => ({
+      free: createFreeSamples({ loudnessDefault: () => defaultLoudness }),
+      prices: createPriceCache(),
+      wake,
+      review: reviewOver(deps),
+    }),
+  });
+  open.push(h);
+  const document = paidDocument(reviewOver(h.deps));
+  const id = randomUUID();
+  const created = createTemplate({ ...h.deps, uuid: randomUUID }, { id, name: "Show", document });
+  if (!created.ok) throw new Error(created.reason);
+  const post = (path: string, body: unknown) =>
+    h.app.request(`/api/template-studio/${id}${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  return { ...h, id, document, post };
+}
+
+it("saves in the studio with the sample's price, refusing a higher one with the new quote", async () => {
+  let woken = 0;
+  const h = paidStudio(() => {
+    woken += 1;
+  });
+  const changed = {
+    ...h.document,
+    form: { ...h.document.form, audio: { ...h.document.form.audio, voice: "other" } },
+  };
+  const quote = sampleQuoteSchema.parse(
+    await (await h.post("/quote", { document: changed })).json(),
+  );
+  const save = (acknowledgedHigh: number, mutationId = randomUUID()) =>
+    h.post("/save", {
+      mutationId,
+      baseVersion: 1,
+      name: "Show",
+      document: changed,
+      sample: "make",
+      acknowledgedHigh,
+    });
+  const higher = await save(0);
+  expect(higher.status).toBe(409);
+  const refusal = await higher.json();
+  expect(refusal).toMatchObject({ reason: "cost-changed", quote: { high: quote.high } });
+  expect(woken).toBe(0);
+  const saved = await save(quote.high);
+  expect(saved.status).toBe(200);
+  expect(await saved.json()).toMatchObject({ sample: "queued", template: { version: 2 } });
+  expect(queuedJob(h.deps.db, h.id)).toMatchObject({ kind: "save", templateVersion: 2 });
+  expect(woken).toBe(1);
+  const stale = await save(quote.high);
+  expect(stale.status).toBe(409);
+  expect(await stale.json()).toMatchObject({ reason: "conflict" });
+});
+
+it("reads and sets the studio's daily budget, refusing one out of range", async () => {
+  const h = studio();
+  const read = await h.app.request("/api/template-studio/settings");
+  expect(await read.json()).toEqual({ dailyBudget: 2, today: { budget: 2, spent: 0, left: 2 } });
+  const put = (body: unknown) =>
+    h.app.request("/api/template-studio/settings", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  expect(await (await put({ dailyBudget: 0.5 })).json()).toMatchObject({ dailyBudget: 0.5 });
+  expect((await put({ dailyBudget: -1 })).status).toBe(400);
+  expect((await put({ dailyBudget: 5000 })).status).toBe(400);
+});
+
 it("queues the free samples of the current version and wakes the sample loop", async () => {
   let woken = 0;
   const h = studio({

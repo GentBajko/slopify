@@ -97,3 +97,94 @@ export function sampleOf(db: DatabaseSync, templateId: string): SampleRecord | u
     .parse(row);
   return { ...parsed, fullScript: parsed.fullScript === 1 };
 }
+
+export interface SampleVersion {
+  readonly templateVersion: number;
+  readonly revisionId: string | null;
+  readonly state: import("./model.js").SampleVersionState;
+  readonly quotedHigh: number | null;
+  readonly heldReason: string | null;
+  readonly updatedAt: string;
+}
+
+const versionRow = z.object({
+  templateVersion: z.number().int().positive(),
+  revisionId: z.string().nullable(),
+  state: z.enum(["queued", "making", "done", "failed", "skipped", "held"]),
+  quotedHigh: z.number().nullable(),
+  heldReason: z.string().nullable(),
+  updatedAt: z.string(),
+});
+
+// Each version's paid sample, newest first.
+export function sampleVersions(db: DatabaseSync, templateId: string): readonly SampleVersion[] {
+  return db
+    .prepare(
+      `SELECT template_version AS templateVersion,revision_id AS revisionId,state,quoted_high AS quotedHigh,
+         held_reason AS heldReason,updated_at AS updatedAt
+       FROM template_sample_versions WHERE template_id=? ORDER BY template_version DESC`,
+    )
+    .all(templateId)
+    .map((row) => versionRow.parse(row));
+}
+
+// Records what a version's paid sample is now. A field left out keeps what it was.
+export function setSampleVersion(
+  db: DatabaseSync,
+  templateId: string,
+  version: number,
+  change: {
+    readonly state: SampleVersion["state"];
+    readonly at: string;
+    readonly revisionId?: string | null;
+    readonly quotedHigh?: number | null;
+    readonly heldReason?: string | null;
+  },
+): void {
+  db.prepare(
+    `INSERT INTO template_sample_versions (template_id,template_version,revision_id,state,quoted_high,held_reason,updated_at)
+     VALUES (?,?,?,?,?,?,?)
+     ON CONFLICT(template_id,template_version) DO UPDATE SET state=excluded.state,updated_at=excluded.updated_at,
+       revision_id=CASE WHEN ? THEN excluded.revision_id ELSE revision_id END,
+       quoted_high=CASE WHEN ? THEN excluded.quoted_high ELSE quoted_high END,
+       held_reason=CASE WHEN ? THEN excluded.held_reason ELSE held_reason END`,
+  ).run(
+    templateId,
+    version,
+    change.revisionId ?? null,
+    change.state,
+    change.quotedHigh ?? null,
+    change.heldReason ?? null,
+    change.at,
+    change.revisionId === undefined ? 0 : 1,
+    change.quotedHigh === undefined ? 0 : 1,
+    change.heldReason === undefined ? 0 : 1,
+  );
+}
+
+// Records the hidden project a template's samples are made on.
+export function upsertSample(
+  db: DatabaseSync,
+  templateId: string,
+  sample: {
+    readonly projectId: string;
+    readonly topic: string;
+    readonly topicSource: "fixed" | "queued";
+    readonly fullScript: boolean;
+    readonly at: string;
+  },
+): void {
+  db.prepare(
+    `INSERT INTO template_samples (template_id,project_id,topic,topic_source,full_script,created_at)
+     VALUES (?,?,?,?,?,?)
+     ON CONFLICT(template_id) DO UPDATE SET project_id=excluded.project_id,topic=excluded.topic,
+       topic_source=excluded.topic_source,full_script=excluded.full_script`,
+  ).run(
+    templateId,
+    sample.projectId,
+    sample.topic,
+    sample.topicSource,
+    sample.fullScript ? 1 : 0,
+    sample.at,
+  );
+}
