@@ -52,6 +52,18 @@ You can also press `Ctrl+K` and run **Download diagnostics** from anywhere in Se
 
 In Docker, this section only shows whether Docker starts at login ("Starts with Docker: yes / no / unknown"), when the installer checked, and where to change that. With Docker Desktop it names Docker Desktop's own setting: Docker Desktop → Settings → General → **Start Docker Desktop when you sign in to your computer**. Slopify starts whenever Docker does and never changes Docker's own settings. See [Start-at-Login](Start-at-Login).
 
+### Remote access
+
+"Open Slopify on your phone or laptop through Tailscale, only inside your tailnet." It is the second tab of **General**.
+
+| Control | What it does | Default |
+|---|---|---|
+| **Open on my other devices (Tailscale)** | Has the Tailscale already on this computer serve Slopify's page at `https://<computer>.<tailnet>.ts.net`, reachable only from devices signed in to your tailnet. Shows the address with **Copy address** and a QR code. Uses Tailscale Serve, never Funnel. Turning it off removes only the serve setting Slopify added. | Off |
+| **Use port 8443** | Shown when another Tailscale serve setting already uses HTTPS port 443: gives Slopify its own address on another port and leaves yours alone. | - |
+| **Check again** | Asks Tailscale again after you fixed what the notice says. | - |
+
+See [Remote-Access](Remote-Access).
+
 ## Providers
 
 "Keys stay on this machine and go only to their provider. Readiness is checked again before each run."

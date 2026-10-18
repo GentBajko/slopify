@@ -8,6 +8,7 @@
 - [Home and Projects](Home-and-Projects)
 - [Where your files live](Where-Your-Files-Live)
 - [Start at login](Start-at-Login)
+- [Remote access](Remote-Access)
 - [Updating and patch notes](Updating-and-Patch-Notes)
 - [Uninstalling and moving](Uninstalling-and-Moving)
 
