@@ -85,6 +85,7 @@ import {
   type EpisodeMemoryWatcher,
 } from "./slices/episodes/summarize.js";
 import { resolveFont } from "./slices/fonts/index.js";
+import { accessRecorder } from "./slices/model-checks/record.js";
 import { decodePeaks } from "./slices/narration/peaks.js";
 import { projectLink } from "./slices/notifications/address.js";
 import { createNotificationSender } from "./slices/notifications/send.js";
@@ -362,11 +363,15 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     );
     // Calls that belong to no project (topic generation, episode summaries, cast pictures)
     // still go through the attempt wrapper, and are metered against their schedule or channel.
+    // What real calls teach about each model for the person's keys and logins (Settings →
+    // Models, the pickers); no run reads it back.
+    const access = accessRecorder({ db, clock });
     const standalone: StandaloneDeps = {
       registry,
       clock,
       log,
       meter: createStandaloneMeter({ db, ids, clock, catalogue: () => catalogue.read() }),
+      access,
     };
     episodes = createEpisodeMemoryWatcher({
       db,
@@ -661,7 +666,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         log,
       }),
       ...modelSources(registry),
-      audition: (call, signal) => auditionVoice({ registry, clock, log }, call, signal),
+      audition: (call, signal) => auditionVoice({ registry, clock, log, access }, call, signal),
       voiceLanguages: async (provider, voiceId, signal) => {
         try {
           return await registry.tts(provider).voiceLanguages?.(voiceId, signal);
@@ -947,6 +952,7 @@ export function wireRunner({
     clock,
     log,
     meter: createUsageMeter({ db, ids, clock, catalogue: () => catalogue.read() }),
+    access: accessRecorder({ db, clock }),
     limits: createLimitGate({
       db,
       clock,

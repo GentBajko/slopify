@@ -3,6 +3,7 @@ import type { Log } from "../log.js";
 import type { Registry } from "../ports/registry.js";
 import { attempt } from "./attempt.js";
 import type { AttemptStore } from "./attempt-repo.js";
+import { type ModelAccessRecorder, observed } from "./model-access.js";
 import type { NarratedAudio, TtsCall } from "./providers.js";
 import type { AttemptResult } from "./work.js";
 
@@ -15,6 +16,7 @@ export interface AuditionDeps {
   readonly registry: Registry;
   readonly clock: Clock;
   readonly log: Log;
+  readonly access?: ModelAccessRecorder | undefined;
 }
 
 const unrecorded: AttemptStore = {
@@ -28,7 +30,7 @@ export function auditionVoice(
   signal: AbortSignal,
 ): Promise<AttemptResult<NarratedAudio>> {
   const port = deps.registry.tts(call.provider);
-  return attempt(
+  const spoken = attempt(
     {
       work: {
         projectId: "audition",
@@ -59,5 +61,12 @@ export function auditionVoice(
       return { bytes, container: spoken.container };
     },
     { kind: "tts", streaming: port.capabilities.streams },
+  );
+  return observed(
+    deps.access,
+    deps.log,
+    { provider: call.provider, family: "tts", model: call.model ?? "" },
+    spoken,
+    (result) => result.ok,
   );
 }

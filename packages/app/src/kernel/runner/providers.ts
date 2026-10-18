@@ -13,6 +13,7 @@ import { attempt } from "./attempt.js";
 import type { AttemptStore } from "./attempt-repo.js";
 import type { StageContext } from "./index.js";
 import type { LimitGate, MeteredCall, UsageMeter } from "./meter.js";
+import { type ModelAccessRecorder, observed } from "./model-access.js";
 import type { ProviderQueue } from "./queue.js";
 import type { AttemptResult } from "./work.js";
 
@@ -111,6 +112,9 @@ export interface ProviderDeps {
   // Holds a CLI's calls while its plan allowance is used up; absent, a used-up plan fails
   // the call like any other terminal error.
   readonly limits?: LimitGate | undefined;
+  // Learns from each call whether its model works for the person's key or login; absent,
+  // nothing is learned. Never consulted before a call.
+  readonly access?: ModelAccessRecorder | undefined;
 }
 
 export function stageProviders(
@@ -166,6 +170,10 @@ export function stageProviders(
     }
   };
   const since = (started: number): number => Math.max(0, deps.clock.now().getTime() - started);
+  const learn = <T>(
+    use: import("./model-access.js").AccessUse,
+    call: Promise<AttemptResult<T>>,
+  ): Promise<AttemptResult<T>> => observed(deps.access, deps.log, use, call, (result) => result.ok);
   return {
     llm: (
       call: LlmCall,
@@ -188,55 +196,60 @@ export function stageProviders(
         });
       const started = deps.clock.now().getTime();
       let limits: PlanLimitReading | undefined;
-      const answered = schedule(call.provider, () =>
-        attempt(
-          ctx,
-          async (signal: AbortSignal, progress: () => void): Promise<LlmAnswer> => {
-            preview("", true);
-            let text = "";
-            // Typed-ahead text the panel shows past the committed answer; the next delta
-            // replaces it, so the panel never shows a sentence twice.
-            let typed = false;
-            let usage: Usage | null = null;
-            let finishReason: string | null = null;
-            limits = undefined;
-            for await (const event of port.complete({
-              model: call.model,
-              ...(call.thinkingConfig === undefined ? {} : { thinkingConfig: call.thinkingConfig }),
-              ...(call.thinking === undefined ? {} : { thinking: call.thinking }),
-              messages: call.messages,
-              ...(call.documents === undefined ? {} : { documents: call.documents }),
-              ...(call.webSearch === undefined ? {} : { webSearch: call.webSearch }),
-              ...(call.images === undefined ? {} : { images: call.images }),
-              signal,
-            })) {
-              signal.throwIfAborted();
-              // Every event is a sign of life, so the idle clock restarts here.
-              progress();
-              if (event.type === "delta") {
-                text += event.text;
-                if (typed) preview(text, true);
-                else preview(event.text);
-                typed = false;
-              } else if (event.type === "partial") {
-                typed = true;
-                preview(event.text);
-              } else if (event.type === "done") {
-                usage = event.usage;
-                finishReason = event.finishReason;
-                limits = event.limits;
+      const answered = learn(
+        { provider: call.provider, family: "llm", model: call.model },
+        schedule(call.provider, () =>
+          attempt(
+            ctx,
+            async (signal: AbortSignal, progress: () => void): Promise<LlmAnswer> => {
+              preview("", true);
+              let text = "";
+              // Typed-ahead text the panel shows past the committed answer; the next delta
+              // replaces it, so the panel never shows a sentence twice.
+              let typed = false;
+              let usage: Usage | null = null;
+              let finishReason: string | null = null;
+              limits = undefined;
+              for await (const event of port.complete({
+                model: call.model,
+                ...(call.thinkingConfig === undefined
+                  ? {}
+                  : { thinkingConfig: call.thinkingConfig }),
+                ...(call.thinking === undefined ? {} : { thinking: call.thinking }),
+                messages: call.messages,
+                ...(call.documents === undefined ? {} : { documents: call.documents }),
+                ...(call.webSearch === undefined ? {} : { webSearch: call.webSearch }),
+                ...(call.images === undefined ? {} : { images: call.images }),
+                signal,
+              })) {
+                signal.throwIfAborted();
+                // Every event is a sign of life, so the idle clock restarts here.
+                progress();
+                if (event.type === "delta") {
+                  text += event.text;
+                  if (typed) preview(text, true);
+                  else preview(event.text);
+                  typed = false;
+                } else if (event.type === "partial") {
+                  typed = true;
+                  preview(event.text);
+                } else if (event.type === "done") {
+                  usage = event.usage;
+                  finishReason = event.finishReason;
+                  limits = event.limits;
+                }
+                if (event.type === "delta" || event.type === "done") onEvent?.(event);
               }
-              if (event.type === "delta" || event.type === "done") onEvent?.(event);
-            }
-            const answer: LlmAnswer = { text, usage, finishReason };
-            const unusable = call.check?.(answer);
-            if (unusable !== undefined) {
-              // Thrown bare: the wrapper names it `other` and retries it like any bad answer.
-              throw new Error(unusable);
-            }
-            return answer;
-          },
-          { kind: "llm", streaming: port.capabilities.streams },
+              const answer: LlmAnswer = { text, usage, finishReason };
+              const unusable = call.check?.(answer);
+              if (unusable !== undefined) {
+                // Thrown bare: the wrapper names it `other` and retries it like any bad answer.
+                throw new Error(unusable);
+              }
+              return answer;
+            },
+            { kind: "llm", streaming: port.capabilities.streams },
+          ),
         ),
       );
       return answered.then((result) => {
@@ -290,57 +303,60 @@ export function stageProviders(
         }
       };
       const started = deps.clock.now().getTime();
-      const spoken = schedule(call.provider, () =>
-        attempt(
-          { ...ctx, continuation },
-          async (signal: AbortSignal, progress: () => void): Promise<NarratedAudio> => {
-            notify({ type: "start" });
-            try {
-              if (call.dialogue !== undefined && port.capabilities.dialogue !== true)
-                throw providerError({
-                  kind: "unsupported",
-                  message: `${call.provider} can't speak several voices in one request. Turn off Native multi-speaker under Speakers (Play → Narration, or Edit project → Providers), then Try again.`,
-                });
-              const spoken = await port.synthesize({
-                model: call.model,
-
-                voiceId: call.voiceId,
-                text: call.text,
-                ...(call.dialogue === undefined ? {} : { dialogue: call.dialogue }),
-                signal,
-                onActivity: progress,
-                continuation,
-              });
-              const reader = spoken.audio.getReader();
-              const chunks: Uint8Array[] = [];
-              let total = 0;
+      const spoken = learn(
+        { provider: call.provider, family: "tts", model: call.model ?? "" },
+        schedule(call.provider, () =>
+          attempt(
+            { ...ctx, continuation },
+            async (signal: AbortSignal, progress: () => void): Promise<NarratedAudio> => {
+              notify({ type: "start" });
               try {
-                for (;;) {
-                  const { done, value } = await reader.read();
-                  signal.throwIfAborted();
-                  if (done || value === undefined) break;
-                  progress();
-                  chunks.push(value);
-                  total += value.length;
-                  notify({ type: "chunk", bytes: value });
+                if (call.dialogue !== undefined && port.capabilities.dialogue !== true)
+                  throw providerError({
+                    kind: "unsupported",
+                    message: `${call.provider} can't speak several voices in one request. Turn off Native multi-speaker under Speakers (Play → Narration, or Edit project → Providers), then Try again.`,
+                  });
+                const spoken = await port.synthesize({
+                  model: call.model,
+
+                  voiceId: call.voiceId,
+                  text: call.text,
+                  ...(call.dialogue === undefined ? {} : { dialogue: call.dialogue }),
+                  signal,
+                  onActivity: progress,
+                  continuation,
+                });
+                const reader = spoken.audio.getReader();
+                const chunks: Uint8Array[] = [];
+                let total = 0;
+                try {
+                  for (;;) {
+                    const { done, value } = await reader.read();
+                    signal.throwIfAborted();
+                    if (done || value === undefined) break;
+                    progress();
+                    chunks.push(value);
+                    total += value.length;
+                    notify({ type: "chunk", bytes: value });
+                  }
+                } finally {
+                  reader.releaseLock();
                 }
-              } finally {
-                reader.releaseLock();
+                const bytes = new Uint8Array(total);
+                let at = 0;
+                for (const chunk of chunks) {
+                  bytes.set(chunk, at);
+                  at += chunk.length;
+                }
+                notify({ type: "complete" });
+                return { bytes, container: spoken.container };
+              } catch (error) {
+                notify({ type: "interrupted" });
+                throw error;
               }
-              const bytes = new Uint8Array(total);
-              let at = 0;
-              for (const chunk of chunks) {
-                bytes.set(chunk, at);
-                at += chunk.length;
-              }
-              notify({ type: "complete" });
-              return { bytes, container: spoken.container };
-            } catch (error) {
-              notify({ type: "interrupted" });
-              throw error;
-            }
-          },
-          { kind: "tts", streaming: port.capabilities.streams },
+            },
+            { kind: "tts", streaming: port.capabilities.streams },
+          ),
         ),
       );
       return spoken.then((result) => {
@@ -374,26 +390,29 @@ export function stageProviders(
           reset: true,
         });
       const started = deps.clock.now().getTime();
-      const drawn = schedule(call.provider, () =>
-        attempt(
-          ctx,
-          (signal: AbortSignal): Promise<GeneratedImage> =>
-            port.generate({
-              model: call.model,
-              prompt: call.prompt,
-              aspect: call.aspect,
-              ...(call.thinking === undefined ? {} : { thinking: call.thinking }),
-              ...(call.reference === undefined ? {} : { reference: call.reference }),
-              ...(call.cast === undefined ? {} : { cast: call.cast }),
-              onProgress,
-              signal,
-            }),
-          // One request, one answer: the limit runs over the whole call - 300 s, or the
-          // provider's own when it needs longer.
-          {
-            kind: "image",
-            ...(port.timeoutMs === undefined ? {} : { timeoutMs: port.timeoutMs }),
-          },
+      const drawn = learn(
+        { provider: call.provider, family: "image", model: call.model },
+        schedule(call.provider, () =>
+          attempt(
+            ctx,
+            (signal: AbortSignal): Promise<GeneratedImage> =>
+              port.generate({
+                model: call.model,
+                prompt: call.prompt,
+                aspect: call.aspect,
+                ...(call.thinking === undefined ? {} : { thinking: call.thinking }),
+                ...(call.reference === undefined ? {} : { reference: call.reference }),
+                ...(call.cast === undefined ? {} : { cast: call.cast }),
+                onProgress,
+                signal,
+              }),
+            // One request, one answer: the limit runs over the whole call - 300 s, or the
+            // provider's own when it needs longer.
+            {
+              kind: "image",
+              ...(port.timeoutMs === undefined ? {} : { timeoutMs: port.timeoutMs }),
+            },
+          ),
         ),
       );
       return drawn.then((result) => {
@@ -434,20 +453,23 @@ export function stageProviders(
           }),
         );
       const started = deps.clock.now().getTime();
-      const animated = schedule(call.provider, () =>
-        attempt(
-          ctx,
-          (signal: AbortSignal): Promise<GeneratedVideo> =>
-            animate({
-              model: call.model,
-              prompt: call.prompt,
-              image: call.image,
-              aspect: call.aspect,
-              seconds: call.seconds,
-              signal,
-            }),
-          // Queued and slow: the 900 s runs over the whole call, polling included.
-          { kind: "video" },
+      const animated = learn(
+        { provider: call.provider, family: "image", model: call.model },
+        schedule(call.provider, () =>
+          attempt(
+            ctx,
+            (signal: AbortSignal): Promise<GeneratedVideo> =>
+              animate({
+                model: call.model,
+                prompt: call.prompt,
+                image: call.image,
+                aspect: call.aspect,
+                seconds: call.seconds,
+                signal,
+              }),
+            // Queued and slow: the 900 s runs over the whole call, polling included.
+            { kind: "video" },
+          ),
         ),
       );
       return animated.then((result) => {
