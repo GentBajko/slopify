@@ -127,6 +127,11 @@
     flex-direction: column;
     min-width: 0;
   }
+  /* A row whose title is a field (a schedule's queued topic): the field takes the row's free
+     width, so a long title reads whole. */
+  .sl-row--wide-title .sl-row__text {
+    flex: 1 1 auto;
+  }
 
   /* One target per row or card (kit/list-row `hitArea`, `hitTarget`): the row's title link or
      select button stretches over the whole row, so a press anywhere on it - not only on the

@@ -131,7 +131,7 @@ Under Edit → Topic generation, **Rank topics** orders the topics Slopify gener
 
 | Choice | What it reads | What leaves this computer |
 | --- | --- | --- |
-| **Off** (default) | Nothing: topics join in the order the LLM suggests, as before | Nothing |
+| **Off** (default) | Nothing: no scores, and topics join in the order they arrive, as before | Nothing |
 | **By what the library already covers** | How far the topic is from everything made, queued, held or turned down in this channel ("Library: new; nearest “…” (40% overlap)") | Nothing |
 | **Also by public search interest** | The library, plus how many of Google's search suggestions name the topic (DuckDuckGo's when Google doesn't answer) and its Wikipedia article's views last month | Each new topic's title, sent to Google, DuckDuckGo and Wikipedia |
 
@@ -139,6 +139,8 @@ Under Edit → Topic generation, **Rank topics** orders the topics Slopify gener
 - A topic you move keeps its place from then on.
 - With no connection, topics are still added, ranked by the library alone, and their reasons say "Search interest unknown: no connection".
 - **Rescore**, beside Queued topics, scores every queued and held topic again now and puts them in order; a topic you added gets a score but stays where it is.
+- It works with **New topics** Off too: Rescore then scores the topics you added, which keep the places you gave them.
+- With Rank topics Off, no scores show.
 - It never uses your channel's analytics.
 
 ### Approve held topics

@@ -78,6 +78,14 @@ export function isUncataloguedProvider(id: string): boolean {
   return isLocalCliProvider(id) || id === systemVoiceProvider;
 }
 
+// The local stand-ins the bundled samples were made with (`src/sample-build/`): no catalogue
+// lists them, they cost nothing, and they exist only while the sample archives are built, so
+// a sample project names them but nothing new can run on them.
+export const sampleStandInProviders = ["sample-writer", "sample-artist", "sample-voice"] as const;
+export function isSampleStandIn(id: string): boolean {
+  return (sampleStandInProviders as readonly string[]).includes(id);
+}
+
 export const providers: readonly Provider[] = [
   { id: "openrouter", family: "llm", displayName: "OpenRouter", auth: "key" },
   {

@@ -92,14 +92,14 @@ describe("keywordFactsFor", () => {
     if (channel === undefined) throw new Error("no default channel");
     expect(
       updateChannel({ db: h.db, clock, uuid: randomUUID }, defaultChannelId, {
-        name: "Night Archive",
+        name: "Quiet Histories",
         brand: {
           captionColor: "#ffffff",
           titleColor: "#f5c542",
           titleFontId: "default",
           links: [{ name: "Website", url: "https://example.com" }],
         },
-        seriesBrief: " Calm legends. ",
+        seriesBrief: " Calm histories. ",
         baseVersion: channel.version,
       }).ok,
     ).toBe(true);
@@ -107,23 +107,27 @@ describe("keywordFactsFor", () => {
       id: randomUUID(),
       kind: "character",
       name: "Mira",
-      description: "an archivist",
+      description: "a lighthouse keeper",
     });
-    const first = startRun(h.storage, draft("The Bridge | Legends"), {}).project;
+    const first = startRun(h.storage, draft("The Bridge | Histories"), {}).project;
     recordVideo(h.db, first.id, null, "abcdefghijk", "2026-09-20T00:00:00.000Z");
     const other = startRun(h.storage, draft("A cooking show"), {}).project;
-    const planned = startRun(h.storage, draft("The Queen | Legends"), {}).project;
+    const planned = startRun(h.storage, draft("The Clipper | Histories"), {}).project;
     setRelease(h.db, planned.id, 0, "2026-10-08T18:00:00.000Z", null, clock.now());
 
     expect(
-      keywordFactsFor(h, { title: "The Gate | Legends", channelId: defaultChannelId }, clock.now()),
+      keywordFactsFor(
+        h,
+        { title: "The Gate | Histories", channelId: defaultChannelId },
+        clock.now(),
+      ),
     ).toEqual({
-      channel: "Night Archive",
-      series: "Calm legends.",
+      channel: "Quiet Histories",
+      series: "Calm histories.",
       links: [{ name: "Website", url: "https://example.com" }],
-      previousVideo: { title: "The Queen | Legends" },
-      nextVideo: { title: "The Queen | Legends" },
-      cast: [{ name: "Mira", description: "an archivist" }],
+      previousVideo: { title: "The Clipper | Histories" },
+      nextVideo: { title: "The Clipper | Histories" },
+      cast: [{ name: "Mira", description: "a lighthouse keeper" }],
       coveredBefore: [planned.title, other.title, first.title],
       episode: 3,
       brand: { colours: ["#FFFFFF", "#F5C542"], fonts: ["Barlow"] },
@@ -132,22 +136,24 @@ describe("keywordFactsFor", () => {
 
   it("links the previous video in the series when it is on YouTube", () => {
     const h = harness();
-    const first = startRun(h.storage, draft("The Bridge | Legends"), {}).project;
+    const first = startRun(h.storage, draft("The Bridge | Histories"), {}).project;
     recordVideo(h.db, first.id, null, "abcdefghijk", "2026-09-20T00:00:00.000Z");
-    expect(keywordFactsFor(h, { title: "The Gate | Legends" }, clock.now()).previousVideo).toEqual({
-      title: "The Bridge | Legends",
+    expect(
+      keywordFactsFor(h, { title: "The Gate | Histories" }, clock.now()).previousVideo,
+    ).toEqual({
+      title: "The Bridge | Histories",
       url: "https://youtu.be/abcdefghijk",
     });
   });
 
   it("counts episodes and neighbours in the project's own channel and series only", () => {
     const h = harness();
-    const lore = randomUUID();
-    createChannel({ db: h.db, clock, uuid: randomUUID }, { id: lore, name: "Other" });
-    const elsewhere = startRun(h.storage, draft("Far | Legends"), {}).project;
-    setProjectChannel(h.db, elsewhere.id, lore);
+    const other = randomUUID();
+    createChannel({ db: h.db, clock, uuid: randomUUID }, { id: other, name: "Other" });
+    const elsewhere = startRun(h.storage, draft("Far | Histories"), {}).project;
+    setProjectChannel(h.db, elsewhere.id, other);
     startRun(h.storage, draft("Unrelated | Cooking"), {});
-    const facts = keywordFactsFor(h, { title: "The Gate | Legends" }, clock.now());
+    const facts = keywordFactsFor(h, { title: "The Gate | Histories" }, clock.now());
     expect(facts.episode).toBe(1);
     expect(facts.previousVideo).toBeUndefined();
     expect(facts.nextVideo).toBeUndefined();
@@ -156,10 +162,10 @@ describe("keywordFactsFor", () => {
 
   it("reads the series from the title pattern, and leaves out the project itself", () => {
     const h = harness();
-    const own = startRun(h.storage, draft("The Gate | Legends"), {}).project;
+    const own = startRun(h.storage, draft("The Gate | Histories"), {}).project;
     const facts = keywordFactsFor(
       h,
-      { title: "The Gate | Legends", titlePattern: "{{Topic}} | Legends" },
+      { title: "The Gate | Histories", titlePattern: "{{Topic}} | Histories" },
       clock.now(),
       own.id,
     );
@@ -196,9 +202,9 @@ describe("keywordFactsFor", () => {
 describe("keywordFactsFor on a refresh", () => {
   it("sees only the episodes made before the project, and plans after it", () => {
     const h = harness();
-    const first = startRun(h.storage, draft("The Bridge | Legends"), {}).project;
-    const own = startRun(h.storage, draft("The Gate | Legends"), {}).project;
-    const after = startRun(h.storage, draft("The Queen | Legends"), {}).project;
+    const first = startRun(h.storage, draft("The Bridge | Histories"), {}).project;
+    const own = startRun(h.storage, draft("The Gate | Histories"), {}).project;
+    const after = startRun(h.storage, draft("The Clipper | Histories"), {}).project;
     setRelease(h.db, after.id, 0, "2026-10-08T18:00:00.000Z", null, clock.now());
     const facts = keywordFactsFor(h, { title: own.title }, clock.now(), own.id);
     expect(facts.episode).toBe(2);

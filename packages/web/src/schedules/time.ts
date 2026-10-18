@@ -1,6 +1,7 @@
 /// <reference lib="esnext.temporal" />
 
 import { Temporal } from "@js-temporal/polyfill";
+import { browserZone, zoneDiffers, zoneName } from "@/lib/zoned";
 
 function parts(value: Date, timeZone: string): string {
   const fields = new Intl.DateTimeFormat("en-CA", {
@@ -35,12 +36,19 @@ export function scheduleInstant(local: string, timeZone: string): string {
   return zoned.toInstant().toString({ smallestUnit: "millisecond" });
 }
 
-export function formatScheduleDate(value: string, timeZone: string): string {
-  return new Intl.DateTimeFormat(undefined, {
+// On the schedule's clock, as Home and the Calendar read it, with its zone named when it isn't
+// this browser's: "Oct 20, 2026, 8:00 PM London".
+export function formatScheduleDate(
+  value: string,
+  timeZone: string,
+  browser = browserZone(),
+): string {
+  const date = new Intl.DateTimeFormat(undefined, {
     timeZone,
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+  return zoneDiffers(value, timeZone, browser) ? `${date} ${zoneName(timeZone)}` : date;
 }
 
 // The same, with the zone's short name ("12 Sept 2026, 09:00 UTC", "… GMT+2"), for a time

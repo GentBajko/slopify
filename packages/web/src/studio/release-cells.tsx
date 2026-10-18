@@ -7,8 +7,9 @@ import { Button } from "@/components/kit/button";
 import { Input, Select } from "@/components/kit/field";
 import { Badge, type BadgeTone } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
-import { localInput } from "@/lib/format";
+import { browserZone, zoneDiffers, zonedFormat, zonedTime, zoneName } from "@/lib/zoned";
 import { keys } from "@/queries";
+import { localScheduleTime, scheduleInstant } from "@/schedules/time";
 
 // The pieces of Calendar → Releases: a release time and its state, its editor, and a free time
 // of the posting plan offering the finished projects of its series.
@@ -20,8 +21,9 @@ export const day = new Intl.DateTimeFormat(undefined, {
   day: "numeric",
   month: "short",
 });
-const clock = new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" });
-export const when = (iso: string) => `${day.format(new Date(iso))}, ${clock.format(new Date(iso))}`;
+// On the clock of the line's zone (its schedule's), named when it isn't this browser's.
+export const when = (iso: string, zone?: string) =>
+  `${zonedFormat(iso, zone, { weekday: "short", day: "numeric", month: "short" })}, ${zonedTime(iso, zone)}`;
 
 function look(item: CalendarItem): { readonly tone: BadgeTone; readonly word: string } {
   switch (item.state) {
@@ -72,16 +74,18 @@ export interface Editing {
 function TimeEditor({
   item,
   projectId,
+  zone,
   onDone,
 }: {
   readonly item: CalendarItem;
   readonly projectId: string;
+  readonly zone: string;
   readonly onDone: () => void;
 }): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
   const notify = useToast();
-  const [value, setValue] = useState(item.at === null ? "" : localInput(item.at));
+  const [value, setValue] = useState(item.at === null ? "" : localScheduleTime(item.at, zone));
   const save = useMutation({
     mutationFn: (at: string | null) => saveRelease(api, projectId, { short: item.short, at }),
     onSuccess: () => {
@@ -100,11 +104,23 @@ function TimeEditor({
         value={value}
         onChange={(event) => setValue(event.currentTarget.value)}
       />
+      {zoneDiffers(new Date().toISOString(), zone) ? (
+        <span className="text-small text-ink-3">{`${zoneName(zone)} time`}</span>
+      ) : null}
       <Button
         type="button"
         size="small"
         disabled={value === "" || save.isPending}
-        onClick={() => save.mutate(new Date(value).toISOString())}
+        onClick={() => {
+          try {
+            save.mutate(scheduleInstant(value, zone));
+          } catch (error) {
+            notify(
+              `The time wasn't changed: ${error instanceof Error ? error.message : String(error)}`,
+              "error",
+            );
+          }
+        }}
       >
         Save
       </Button>
@@ -129,11 +145,14 @@ function TimeEditor({
 export function ItemCell({
   item,
   projectId,
+  zone,
   editing,
   onEdit,
 }: {
   readonly item: CalendarItem;
   readonly projectId: string;
+  // The zone the line's times are read in.
+  readonly zone?: string | undefined;
   readonly editing: Editing | undefined;
   readonly onEdit: (next: Editing | undefined) => void;
 }): ReactElement {
@@ -152,16 +171,21 @@ export function ItemCell({
         </span>
       )}
       {open ? (
-        <TimeEditor item={item} projectId={projectId} onDone={() => onEdit(undefined)} />
+        <TimeEditor
+          item={item}
+          projectId={projectId}
+          zone={zone ?? browserZone()}
+          onDone={() => onEdit(undefined)}
+        />
       ) : (
         <Button
           type="button"
           size="small"
           variant="quiet"
-          aria-label={`${label}: move from ${item.at === null ? "no time" : when(item.at)}`}
+          aria-label={`${label}: move from ${item.at === null ? "no time" : when(item.at, zone)}`}
           onClick={() => onEdit({ projectId, short: item.short })}
         >
-          {item.at === null ? "Set a time" : when(item.at)}
+          {item.at === null ? "Set a time" : when(item.at, zone)}
         </Button>
       )}
       <Badge tone={state.tone}>{state.word}</Badge>
@@ -169,11 +193,30 @@ export function ItemCell({
   );
 }
 
+// A free time's short times, as the plan would give them: "Shorts: Wed, Oct 21, 12:00 PM · …".
+export function FreeShorts({
+  entry,
+  zone,
+}: {
+  readonly entry: CalendarEntry;
+  readonly zone: string | undefined;
+}): ReactElement | null {
+  const shorts = entry.shortsAt ?? [];
+  if (shorts.length === 0) return null;
+  return (
+    <span className="text-small text-ink-3">
+      {`${shorts.length === 1 ? "Short" : "Shorts"}: ${shorts.map((at) => when(at, zone)).join(" · ")}`}
+    </span>
+  );
+}
+
 export function FreeTime({
   entry,
+  zone,
   candidates,
 }: {
   readonly entry: CalendarEntry;
+  readonly zone?: string | undefined;
   readonly candidates: ReleaseCalendar["candidates"];
 }): ReactElement {
   const { api } = useApp();
@@ -203,7 +246,7 @@ export function FreeTime({
   return (
     <span className="flex flex-wrap items-center gap-2">
       <Select
-        aria-label={`Project for ${when(entry.at)}`}
+        aria-label={`Project for ${when(entry.at, zone)}`}
         className="w-[260px]"
         value={chosen}
         onChange={(event) => setChosen(event.currentTarget.value)}

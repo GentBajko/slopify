@@ -474,6 +474,7 @@ export function ScheduleForm({
           </div>
           <ReleaseFields
             releases={releases}
+            saved={editing?.releases}
             onReleases={setReleases}
             runDays={runDays}
             shorts={shortCount}
@@ -622,22 +623,21 @@ function GenerationFields({
         id="schedule-scoring"
         tip="planning.schedule.rank-topics"
         help={
-          generation.mode === "off"
-            ? "Ranks the topics Slopify generates: choose New topics first."
-            : scoring === "search"
-              ? "Sends each new topic's title to Google, DuckDuckGo and Wikipedia. Nothing else leaves this computer."
+          scoring === "search"
+            ? "Sends each new topic's title to Google, DuckDuckGo and Wikipedia. Nothing else leaves this computer."
+            : scoring === "library" && generation.mode === "off"
+              ? "Scores your topics when you press Rescore; your own and moved topics keep their place."
               : undefined
         }
       >
         <Select
           value={scoring}
-          disabled={generation.mode === "off"}
           onChange={(event) => {
             const next = event.target.value;
             onScoring(next === "library" || next === "search" ? next : "off");
           }}
         >
-          <option value="off">Off: in the order the LLM suggests</option>
+          <option value="off">Off: no scores, in the order topics arrive</option>
           <option value="library">By what the library already covers</option>
           <option value="search">
             Also by public search interest (sends topic titles to Google, DuckDuckGo and Wikipedia)

@@ -36,8 +36,8 @@ export function keywordLabel(name: string): string {
   return name.slice(reservedPrefix.length).replaceAll("_", " ");
 }
 
-// The keywords Slopify fills that this body can use, one row above the text. The row keeps its
-// height whatever the kind (it scrolls sideways), so switching kind never moves the text. A
+// The keywords Slopify fills that this body can use, above the text. The chips wrap onto more
+// lines rather than scroll out of sight, and the bar is no wider than the editor (80ch). A
 // press puts `{{Slopify_X}}` where the caret is, over the selection, and hands the caret back
 // after it. The row is one tab stop; the arrow keys, Home and End move along it.
 export function KeywordInsertBar({
@@ -106,15 +106,17 @@ export function KeywordInsertBar({
   const hide = (name: string): void => setShown((now) => (now?.name === name ? undefined : now));
 
   return (
-    <div className="mb-1 flex min-w-0 items-center gap-2" {...helpScope}>
-      <span className="sl-field__label shrink-0">Insert</span>
-      <InfoTip id={keywordTips[place]} className="-my-1" />
+    <div className="mb-1 flex min-w-0 max-w-[80ch] items-start gap-2" {...helpScope}>
+      <span className="flex shrink-0 items-center gap-2 py-1">
+        <span className="sl-field__label">Insert</span>
+        <InfoTip id={keywordTips[place]} className="-my-1" />
+      </span>
       <div
         ref={row}
         role="toolbar"
         aria-label="Insert a keyword Slopify fills"
         onKeyDown={onKeyDown}
-        className="flex min-w-0 flex-1 flex-nowrap gap-1 overflow-x-auto py-1"
+        className="flex min-w-0 flex-1 flex-wrap gap-1 py-1"
       >
         {specs.map((spec, index) => (
           <Button

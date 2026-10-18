@@ -18,7 +18,7 @@ function editWith(templates: Record<string, string | null>, facts?: KeywordFacts
   };
 }
 
-const fresh: KeywordFacts = { channel: "Night Archive", series: "Old legends" };
+const fresh: KeywordFacts = { channel: "Quiet Histories", series: "Old histories" };
 
 describe("Refresh keyword facts", () => {
   it("is wanted when a prompt uses a fact keyword or the project has facts", () => {

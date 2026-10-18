@@ -20,6 +20,7 @@ import { usesScriptPrompt, type VoicesSettings } from "../voices/model.js";
 import type { ProjectTemplate, TemplateDeps, TemplateResult } from "./model.js";
 import { templateNameMax } from "./schema.js";
 import { createTemplate, readTemplate } from "./service.js";
+import { withoutSampleStandIns } from "./stand-ins.js";
 
 export const projectTemplateCreateSchema = z
   .object({
@@ -185,7 +186,7 @@ export function documentFromProject(
   return {
     schemaVersion: 1,
     librarySnapshot: { prompts, entries },
-    form: {
+    form: withoutSampleStandIns({
       title: config.title,
       format: config.format,
       sources: config.sources,
@@ -289,7 +290,7 @@ export function documentFromProject(
       motionStyle: config.motionStyle,
       values: config.values,
       provided,
-    },
+    }),
     section: "content",
     variants: [],
     // The length a project that scales its images planned for, so the template plans the same.

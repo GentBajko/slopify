@@ -106,6 +106,8 @@ it("lists every coming run with its topic, and projects and batch items in the r
       ["09-14T11:00", "Template", null, "template", null, true],
     ]);
     expect(result.value.runs[0]?.templateName).toBe("Lore");
+    // Each run carries its schedule's zone, so every page shows it on that zone's clock.
+    expect(new Set(result.value.runs.map((run) => run.timezone))).toEqual(new Set(["UTC"]));
     expect(
       result.value.projects
         .map((project) => [project.title, project.state])

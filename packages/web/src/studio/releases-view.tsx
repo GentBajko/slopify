@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/kit/empty-state";
 import {
   day,
   type Editing,
+  FreeShorts,
   FreeTime,
   ItemCell,
   releasesKey,
@@ -113,6 +114,7 @@ export function ReleasesView(): ReactElement {
           <ul className="m-0 flex list-none flex-col gap-4 p-0">
             {week.entries.map((entry) => {
               const long = entry.items.find((item) => item.short === 0);
+              const zone = entry.timeZone ?? data.timeZone;
               const shorts = entry.items.filter((item) => item.short > 0);
               return (
                 <li
@@ -120,7 +122,7 @@ export function ReleasesView(): ReactElement {
                   className="flex flex-col gap-2 border-b border-line pb-4"
                 >
                   <div className="flex flex-wrap items-baseline gap-x-3">
-                    <span className="font-semibold">{when(entry.at)}</span>
+                    <span className="font-semibold">{when(entry.at, zone)}</span>
                     {entry.series === "" ? null : (
                       <span className="text-small text-ink-3">{entry.series}</span>
                     )}
@@ -131,12 +133,16 @@ export function ReleasesView(): ReactElement {
                     )}
                   </div>
                   {entry.project === null ? (
-                    <FreeTime entry={entry} candidates={data.candidates} />
+                    <>
+                      <FreeShorts entry={entry} zone={zone} />
+                      <FreeTime entry={entry} zone={zone} candidates={data.candidates} />
+                    </>
                   ) : (
                     <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-x-4 gap-y-3">
                       {long === undefined ? null : (
                         <ItemCell
                           item={long}
+                          zone={zone}
                           projectId={entry.project.id}
                           editing={editing}
                           onEdit={setEditing}
@@ -146,6 +152,7 @@ export function ReleasesView(): ReactElement {
                         <ItemCell
                           key={item.short}
                           item={item}
+                          zone={zone}
                           projectId={entry.project?.id ?? ""}
                           editing={editing}
                           onEdit={setEditing}

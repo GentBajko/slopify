@@ -33,7 +33,7 @@ function setup() {
     ...h.document,
     form: { ...h.document.form, title: "First cut: {{Topic}}", values: { Topic: "x" } },
   };
-  if (!createTemplate(h.deps, { id: templateId, name: "Lore", document }).ok)
+  if (!createTemplate(h.deps, { id: templateId, name: "Lighthouses", document }).ok)
     throw new Error("template");
   const deps: ScheduleDeps = {
     ...h.deps,
@@ -63,7 +63,7 @@ function setup() {
       id: templateId,
       baseVersion,
       mutationId: randomUUID(),
-      name: "Lore",
+      name: "Lighthouses",
       document: { ...document, form: { ...document.form, title } },
     });
     if (!saved.ok) throw new Error(saved.reason);
@@ -134,7 +134,7 @@ describe("a schedule's template version", () => {
       {
         status: "skipped",
         error:
-          "Not started: Lore has no version marked ready. Open it in Library → Templates → Open studio and press Mark ready.",
+          "Not started: Lighthouses has no version marked ready. Open it in Library → Templates → Open studio and press Mark ready.",
       },
     ]);
     expect(queue().map((item) => item.title)).toEqual(["Pyramids", "Obelisks"]);
@@ -160,7 +160,7 @@ describe("a schedule's template version", () => {
       ok: false,
       reason: "not-ready",
       detail:
-        "Not started: Lore has no version marked ready. Open it in Library → Templates → Open studio and press Mark ready.",
+        "Not started: Lighthouses has no version marked ready. Open it in Library → Templates → Open studio and press Mark ready.",
     });
     expect(h.events).toEqual([]);
   });

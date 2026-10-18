@@ -3,16 +3,13 @@ import type { ReactElement } from "react";
 import { runTitle } from "@/calendar/plan";
 import { List, ListRow } from "@/components/kit/list-row";
 import { Badge } from "@/components/kit/status";
-import { shortTime } from "@/lib/format";
+import { zonedFormat, zonedTime } from "@/lib/zoned";
 
 // Home's "Coming up": the scheduled runs of the next seven days, the title each will make and
 // its schedule. Reordering lives on the calendar.
 
-const when = new Intl.DateTimeFormat(undefined, {
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-});
+// On the schedule's own clock, its zone named when it isn't this browser's.
+const when = { weekday: "short", day: "numeric", month: "short" } as const;
 
 export function ComingUp({ runs }: { readonly runs: readonly CalendarRun[] }): ReactElement {
   return (
@@ -20,7 +17,7 @@ export function ComingUp({ runs }: { readonly runs: readonly CalendarRun[] }): R
       {runs.map((run) => (
         <ListRow
           key={`${run.scheduleId}-${run.at}`}
-          title={`${when.format(new Date(run.at))} · ${shortTime.format(new Date(run.at))} · ${runTitle(run)}`}
+          title={`${zonedFormat(run.at, run.timezone, when)} · ${zonedTime(run.at, run.timezone)} · ${runTitle(run)}`}
           meta={[run.scheduleName, run.templateName].filter((part) => part !== null).join(" · ")}
           actions={
             run.paused ? (

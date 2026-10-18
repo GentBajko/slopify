@@ -41,6 +41,7 @@ export function upcomingDesignRuns(
         renderedTitle: row?.title ?? null,
         prepared: null,
         templateKind: "design" as const,
+        timezone: schedule.timezone,
         // A design template's readiness is the designs' own (runnableDesignVersion), not the
         // template studio's.
         notReady: false,

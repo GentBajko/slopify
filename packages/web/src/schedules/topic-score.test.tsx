@@ -78,8 +78,22 @@ it("shows each scored topic's score with why, and rescores the queue on request"
   expect(await screen.findByText(/^Topics rescored and put in score order/)).toBeTruthy();
 });
 
-it("offers no Rescore while the schedule doesn't rank topics", async () => {
+it("offers no Rescore and shows no old scores while the schedule doesn't rank topics", async () => {
   mount("off");
   const queue = await screen.findByRole("region", { name: "Queued topics" });
+  await within(queue).findByLabelText("Topic 1");
   expect(within(queue).queryByRole("button", { name: "Rescore" })).toBeNull();
+  expect(within(queue).queryByText(/^Score /)).toBeNull();
+});
+
+// Rescore orders only the topics Slopify added; the person's own and moved topics keep their
+// places by design, which the queue says where Rescore is.
+it("says which topics Rescore reorders", async () => {
+  mount("library");
+  const queue = await screen.findByRole("region", { name: "Queued topics" });
+  expect(
+    await within(queue).findByText(
+      /Rescore orders new topics by score; your own and moved topics keep their place\.$/,
+    ),
+  ).toBeTruthy();
 });

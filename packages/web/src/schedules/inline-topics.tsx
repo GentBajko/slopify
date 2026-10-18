@@ -8,7 +8,7 @@ import { SectionHead } from "@/components/kit/section-head";
 import { SelectionBar, useSelection } from "@/components/selection";
 import { InlineTopicRow } from "./inline-topic-row";
 import { TopicAddField } from "./topic-add-field";
-import { RescoreButton, useTopicScores } from "./topic-score";
+import { RescoreButton, rescoreRule, useTopicScores } from "./topic-score";
 import { useInlineQueue } from "./use-inline-queue";
 
 // A queue this long shows its first rows and a Show all button, so the page stays quick.
@@ -53,11 +53,12 @@ export function InlineTopics({ schedule }: { readonly schedule: ScheduleSummary 
         as="h3"
         title={`Queued topics · ${String(items.length)}`}
         info="planning.schedule.inline-topics"
-        meta={
+        meta={[
           schedule.topicKeyword === null
             ? "Each topic becomes the next project's title."
-            : `Each topic fills ${topicWord}; the next run takes the first.`
-        }
+            : `Each topic fills ${topicWord}; the next run takes the first.`,
+          ...(schedule.topicScoring === "off" ? [] : [rescoreRule]),
+        ].join(" ")}
       >
         {schedule.topicScoring === "off" ? null : (
           <RescoreButton
@@ -133,6 +134,7 @@ export function InlineTopics({ schedule }: { readonly schedule: ScheduleSummary 
                   onInsertBelow={() => setInsertAfter(key)}
                   onDuplicate={() => queue.duplicate(index)}
                   score={scoreOf(row.title)}
+                  scored={schedule.topicScoring !== "off"}
                 />
               );
               return index !== insertAt

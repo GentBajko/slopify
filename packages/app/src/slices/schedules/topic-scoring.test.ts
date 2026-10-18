@@ -29,7 +29,7 @@ function setup(options: {
   expect(
     createTemplate(h.deps, {
       id: templateId,
-      name: "Lore",
+      name: "Lighthouses",
       document: {
         ...h.document,
         form: {

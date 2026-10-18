@@ -2,7 +2,14 @@ import { listProjects } from "../admission/repo.js";
 import { type PackDeps, uploadPack } from "./pack.js";
 import { readPlan } from "./plan.js";
 import { seriesOf } from "./plan-model.js";
-import { allReleases, lineSlots, readLeadHours, releasesOf } from "./releases.js";
+import {
+  allReleases,
+  lineShortTimes,
+  lineSlots,
+  lineZone,
+  readLeadHours,
+  releasesOf,
+} from "./releases.js";
 import { videoOf } from "./videos.js";
 
 // Calendar → Releases: each long video due in the coming weeks with its shorts, each item
@@ -34,6 +41,11 @@ export interface CalendarItem {
 export interface CalendarEntry {
   readonly at: string;
   readonly line: string | null;
+  // The zone its line's times are read in (the schedule's, else the plan's); older servers
+  // leave it out.
+  readonly timeZone?: string;
+  // A free time's short times, as the plan would give them; older servers leave it out.
+  readonly shortsAt?: readonly string[];
   readonly series: string;
   // Null for a free time of the plan.
   readonly project: { readonly id: string; readonly title: string } | null;
@@ -87,6 +99,7 @@ export function releaseCalendar(
     return {
       at: long.at,
       line: long.line,
+      timeZone: lineZone(plan, long.line),
       series: project === undefined ? "" : seriesOf(project.config),
       project: { id: long.projectId, title: project?.title ?? "" },
       items: items.map((item) => {
@@ -127,6 +140,8 @@ export function releaseCalendar(
       entries.push({
         at: slot.longAt,
         line: slot.row,
+        timeZone: lineZone(plan, slot.row),
+        shortsAt: lineShortTimes(plan, slot.row, slot.longAt),
         series: seriesOfLine(slot.row),
         project: null,
         items: [],

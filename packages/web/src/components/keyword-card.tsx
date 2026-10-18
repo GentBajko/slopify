@@ -19,7 +19,8 @@ export function KeywordCard({
   return (
     <div className="flex flex-col gap-2">
       <p className="m-0 font-mono text-small text-ink">{`{{${spec?.name ?? name}}}`}</p>
-      {spec !== undefined && spec.legacy === name ? (
+      {/* The lint's sentence about an old name already says it keeps working. */}
+      {spec !== undefined && spec.legacy === name && problem === undefined ? (
         <p className="m-0">{`{{${name}}} is its old name, which keeps working.`}</p>
       ) : null}
       {problem === undefined ? null : <p className="m-0 text-danger">{problem}</p>}

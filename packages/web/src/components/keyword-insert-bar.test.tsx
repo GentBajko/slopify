@@ -46,6 +46,16 @@ describe("the Insert bar", () => {
     ).not.toBeNull();
   });
 
+  // A sideways scroll hid the last chips with no cue; every chip is on screen instead, and the
+  // bar is never wider than the editor under it (`slot-body.tsx`, 80ch).
+  it("wraps its chips within the editor's width instead of scrolling sideways", () => {
+    render(<Editor start="" place="image" />);
+    const bar = screen.getByRole("toolbar", { name: "Insert a keyword Slopify fills" });
+    expect(bar.className).toContain("flex-wrap");
+    expect(bar.className).not.toContain("overflow-x-auto");
+    expect(bar.parentElement?.className).toContain("max-w-[80ch]");
+  });
+
   it("inserts at the caret and leaves the caret after the keyword, focus in the text", async () => {
     const user = userEvent.setup();
     render(<Editor start="A picture of ." />);

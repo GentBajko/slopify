@@ -37,13 +37,13 @@ function fixture(queued = 2) {
       llm: { provider: "codex", model: "gpt" },
     },
   };
-  expect(createTemplate(h.deps, { id: templateId, name: "Lore", document }).ok).toBe(true);
+  expect(createTemplate(h.deps, { id: templateId, name: "Lighthouses", document }).ok).toBe(true);
   const template = (id: string) => templateById(h.deps.db, id);
   const scheduleDeps: ScheduleDeps = { ...h.deps, template };
   const id = randomUUID();
   const saved = createSchedule(scheduleDeps, {
     id,
-    name: "Nightly lore",
+    name: "Nightly histories",
     templateId,
     templateVersion: 1,
     cadence: { kind: "daily" as const, time: "09:00" },

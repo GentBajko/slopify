@@ -87,7 +87,7 @@ describe("Autopilot", () => {
             {
               key: "few-topics:s1:2",
               severity: "warning",
-              text: "“Myths” has 2 topics left.",
+              text: "“Canals” has 2 topics left.",
               fix: { kind: "schedule", scheduleId: "s1", label: "Open the schedule" },
             },
           ]),

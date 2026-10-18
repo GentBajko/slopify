@@ -195,6 +195,29 @@ describe("the Run cost tab", () => {
     expect(within(byModel).getByText("$0 on plan")).toBeTruthy();
   });
 
+  it("calls a sample's stand-in models free rather than unknown", async () => {
+    const sample: RunCost = {
+      ...cost,
+      byModel: [
+        {
+          ...line,
+          apiEquivalent: null,
+          provider: "sample-artist",
+          model: "codex-painted",
+          kind: "image",
+          onPlan: false,
+          apiModel: null,
+        },
+      ],
+    };
+    renderApp(
+      <RunCostPanel projectId="p1" />,
+      testDeps({ "GET /api/projects/p1/run-cost": jsonAnswer(sample) }),
+    );
+    const byModel = await screen.findByRole("table", { name: "Run cost by model" });
+    expect(within(byModel).getByText("$0 · sample, free")).toBeTruthy();
+  });
+
   it("sums the finished run up in one line on the project page, linking to the tab", async () => {
     const user = userEvent.setup();
     const onOpen = vi.fn();

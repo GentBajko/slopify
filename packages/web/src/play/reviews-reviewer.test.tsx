@@ -77,3 +77,25 @@ it("offers the promise check while a model writes the article", () => {
   expect(seen.at(-1)?.stages.promise).toEqual({ mode: "redo", prompt: "" });
   expect(screen.queryByText(/Needs an article a model writes/)).toBeNull();
 });
+
+// In the narrow Review drawer the two pickers wrap under each other instead of cutting their
+// words short ("Flag and re…").
+it("puts a stage's review and prompt pickers in one wrapping cell", () => {
+  renderApp(
+    <ReviewSettings
+      value={emptyReviews}
+      providers={[]}
+      prompts={[]}
+      makes={() => true}
+      problem={() => undefined}
+      onChange={() => undefined}
+    />,
+    testDeps({}),
+  );
+  const mode = screen.getByLabelText("Promise check (before narration) review");
+  const prompt = screen.getByLabelText("Promise check (before narration) review prompt");
+  const cell = mode.closest("td");
+  expect(cell).not.toBeNull();
+  expect(cell?.contains(prompt)).toBe(true);
+  expect(mode.closest(".flex-wrap")?.contains(prompt)).toBe(true);
+});

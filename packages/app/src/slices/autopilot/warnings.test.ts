@@ -95,7 +95,7 @@ describe("warningsOf", () => {
   it("warns about a queue nearly empty with nothing to refill it, and topic finding that fails", () => {
     const schedule = {
       id: "s1",
-      name: "Myths",
+      name: "Canals",
       paused: false,
       queued: 2,
       generation: "off" as const,
@@ -126,7 +126,7 @@ describe("warningsOf", () => {
       ["few-topics:s1:2", "warning"],
     ]);
     expect(warnings[1]?.text).toBe(
-      "“Myths” has 2 topics left and doesn't find new ones, so it stops after its next 2 runs. Add topics to its queue, or turn on topic generation.",
+      "“Canals” has 2 topics left and doesn't find new ones, so it stops after its next 2 runs. Add topics to its queue, or turn on topic generation.",
     );
     expect(warnings[0]?.fix).toEqual({
       kind: "schedule",
@@ -152,7 +152,7 @@ describe("warningsOf", () => {
           {
             kind: "schedule",
             id: "s1",
-            name: "Myths",
+            name: "Canals",
             slot: "Text model",
             model: "gone",
             why: "unlisted",
@@ -169,7 +169,7 @@ describe("warningsOf", () => {
         { kind: "templates", label: "Open Templates" },
       ],
       [
-        "The text model “gone” in schedule “Myths” is no longer offered, so its runs will fail once it is gone. Switch it to another model.",
+        "The text model “gone” in schedule “Canals” is no longer offered, so its runs will fail once it is gone. Switch it to another model.",
         { kind: "schedule", scheduleId: "s1", label: "Open the schedule" },
       ],
     ]);

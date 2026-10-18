@@ -126,6 +126,39 @@ export function lineSlots(
     .toSorted((left, right) => Date.parse(left.longAt) - Date.parse(right.longAt));
 }
 
+// The short times a line gives the video released at `longAt`: each short the line's first
+// time after the one before it, the way a project's shorts are planned (other releases aside).
+export function lineShortTimes(
+  plan: PostingPlan,
+  row: string,
+  longAt: string,
+  shorts?: number,
+): readonly string[] {
+  const line = plan.rows.find((one) => one.name === row);
+  if (line === undefined) return [];
+  const start = Date.parse(longAt);
+  const times = line.shorts
+    .flatMap((slot) =>
+      zonedTimes(zoneOf(plan, line), slot, new Date(start), new Date(start + 5 * 7 * 24 * hourMs)),
+    )
+    .toSorted((left, right) => left.getTime() - right.getTime());
+  const out: string[] = [];
+  let after = start;
+  for (let short = 1; short <= (shorts ?? line.shorts.length); short += 1) {
+    const at = times.find((time) => time.getTime() > after);
+    if (at === undefined) break;
+    after = at.getTime();
+    out.push(at.toISOString());
+  }
+  return out;
+}
+
+// The time zone a line's times are read in: its schedule's, else the plan's.
+export function lineZone(plan: PostingPlan, row: string | null): string {
+  const line = plan.rows.find((one) => one.name === row);
+  return line === undefined ? plan.timeZone : zoneOf(plan, line);
+}
+
 // The coming long-video times a project may take: far enough ahead to upload in time, of a
 // line that takes it, in an hour no other release has.
 export function freeSlots(

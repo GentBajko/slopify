@@ -101,3 +101,38 @@ it("pages through the coming weeks with Earlier and Later and comes back to this
   expect(await screen.findByText("✓ Scheduled · checks clear")).toBeTruthy();
   expect(screen.getByText("The next two weeks")).toBeTruthy();
 });
+
+// A schedule's free time lists the short times it gives too, all on the schedule's clock with
+// its zone named; Kiritimati (UTC+14) is no browser's zone in a test run.
+it("lists a free time's short times on its line's clock", async () => {
+  const shortAt = later(100);
+  renderRouted(
+    <ReleasesView />,
+    testDeps({
+      "GET /api/studio/releases": jsonAnswer({
+        ...calendar,
+        entries: [
+          {
+            at: later(96),
+            line: "2",
+            series: "",
+            project: null,
+            items: [],
+            timeZone: "Pacific/Kiritimati",
+            shortsAt: [shortAt],
+          },
+        ],
+      }),
+    }),
+  );
+  const clock = new Intl.DateTimeFormat(undefined, {
+    timeZone: "Pacific/Kiritimati",
+    timeStyle: "short",
+  });
+  expect(
+    await screen.findByText(new RegExp(`^Short: .*${clock.format(new Date(shortAt))} Kiritimati$`)),
+  ).toBeTruthy();
+  expect(
+    screen.getByText(new RegExp(`${clock.format(new Date(later(96)))} Kiritimati$`)),
+  ).toBeTruthy();
+});

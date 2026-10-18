@@ -124,6 +124,7 @@ function upcomingRuns(
                 : "generated",
         renderedTitle: title,
         templateKind: "project",
+        timezone: schedule.timezone,
         // Prepared ahead (`prepare.ts`): the project the day continues.
         prepared:
           title === null || queuedTopic === undefined

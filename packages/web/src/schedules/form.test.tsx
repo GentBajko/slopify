@@ -65,7 +65,9 @@ it("sends the spend ceiling typed in dollars as cents", async () => {
   expect(bodies[0]?.spendLimitCents).toBe(250);
 });
 
-it("ranks generated topics only once topics are generated, and says what search sends", async () => {
+// Ranking by what the library covers is free and local, so it scores the person's own topics
+// too: it is offered whether or not Slopify finds new topics.
+it("ranks topics with or without generated ones, and says what search sends", async () => {
   const user = userEvent.setup();
   renderRouted(
     <SchedulesView />,
@@ -73,13 +75,15 @@ it("ranks generated topics only once topics are generated, and says what search 
   );
   await user.click(await screen.findByRole("button", { name: "New schedule" }));
   const rank = screen.getByLabelText("Rank topics") as HTMLSelectElement;
-  expect(rank.disabled).toBe(true);
-  expect(
-    screen.getByText("Ranks the topics Slopify generates: choose New topics first."),
-  ).toBeTruthy();
-  await user.selectOptions(screen.getByLabelText("New topics"), "queue");
   expect(rank.disabled).toBe(false);
   expect(rank.value).toBe("off");
+  await user.selectOptions(rank, "library");
+  expect(
+    screen.getByText(
+      "Scores your topics when you press Rescore; your own and moved topics keep their place.",
+    ),
+  ).toBeTruthy();
+  await user.selectOptions(screen.getByLabelText("New topics"), "queue");
   await user.selectOptions(rank, "search");
   expect(
     screen.getByText(

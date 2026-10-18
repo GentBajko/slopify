@@ -10,9 +10,9 @@ const digest = {
   Slopify_Summary: "How a city fell.",
   Slopify_Hook: "It was sold.",
   Slopify_Thumbnail_Text: "SOLD",
-  Slopify_Key_Facts: "Walls were tall.",
-  Slopify_Quote: "Silver buys everything.",
-  Slopify_Tags: "lost cities, siege",
+  Slopify_Key_Facts: "The tower was tall.",
+  Slopify_Quote: "A light needs a keeper.",
+  Slopify_Tags: "lighthouses, engineering",
 };
 
 const base: RunConfig = {

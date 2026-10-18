@@ -1,9 +1,10 @@
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { freshDraftDocument } from "@/play/draft-state";
 import { SchedulesView } from "@/schedules/view";
 import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
+import { ReleaseFields } from "./release-fields";
 
 afterEach(cleanup);
 
@@ -78,4 +79,53 @@ it("sets each run day's release times, with one time for each short the template
   await user.selectOptions(screen.getAllByLabelText("Short 1: day")[0] as HTMLElement, "3");
   await user.click(screen.getByRole("button", { name: "Save schedule" }));
   await waitFor(() => expect(create).toHaveBeenCalledOnce());
+});
+
+// A schedule saved with one short time, for a template that now makes two: the form fills in
+// a time for the second, which is not saved until Save changes, and says so, the same thing the
+// studio's check says.
+it("says which short times are only filled in and not saved yet", () => {
+  const saved = [{ day: 2, long: { day: 2, time: "20:00" }, shorts: [{ day: 3, time: "12:00" }] }];
+  render(
+    <ReleaseFields
+      releases={saved}
+      saved={saved}
+      onReleases={() => undefined}
+      runDays={[2]}
+      shorts={2}
+      once={false}
+      timezone="Europe/London"
+    />,
+  );
+  expect(screen.getAllByLabelText("Short 2: day")).toHaveLength(1);
+  expect(
+    screen.getByText(
+      "Short 2 has no saved time: the template makes 2 shorts. Save changes keeps the time shown.",
+    ),
+  ).toBeTruthy();
+});
+
+it("says nothing about saving when every shown time is saved", () => {
+  const saved = [
+    {
+      day: 2,
+      long: { day: 2, time: "20:00" },
+      shorts: [
+        { day: 3, time: "12:00" },
+        { day: 3, time: "17:00" },
+      ],
+    },
+  ];
+  render(
+    <ReleaseFields
+      releases={saved}
+      saved={saved}
+      onReleases={() => undefined}
+      runDays={[2]}
+      shorts={2}
+      once={false}
+      timezone="Europe/London"
+    />,
+  );
+  expect(screen.queryByText(/has no saved time/)).toBeNull();
 });

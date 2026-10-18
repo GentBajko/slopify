@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { pausedPrepareReason } from "@/calendar/day-cell";
 import { type Answer, jsonAnswer, problemAnswer, renderRouted, testDeps } from "../test-app";
 import { CalendarRoute } from "./calendar";
 
@@ -188,6 +189,30 @@ describe("the calendar", () => {
     await user.click(screen.getByRole("button", { name: "Move Hypatia earlier" }));
     await waitFor(() => expect(move).toHaveBeenCalledOnce());
     expect(screen.getByRole("combobox", { name: "Move Cleopatra to…" })).not.toBeNull();
+  });
+
+  it("keeps Prepare off a paused schedule's run and says why", async () => {
+    const user = userEvent.setup();
+    const prepare = vi.fn(jsonAnswer({ projectId: "p", title: "x" }, 201));
+    renderRouted(
+      <CalendarRoute />,
+      deps({
+        "GET /api/calendar": jsonAnswer({
+          from: inDays(0, 0),
+          to: inDays(28, 0),
+          runs: [{ ...run(2, 0, "Cleopatra"), paused: true }],
+          projects: [],
+          queued: [],
+        }),
+        [`POST /api/schedules/${otherId}/topics/prepare`]: prepare,
+      }),
+    );
+    const chip = await screen.findByRole("article", { name: /^Cleopatra,/ });
+    const button = within(chip).getByRole("button", { name: "Prepare" });
+    expect(button.getAttribute("aria-disabled")).toBe("true");
+    expect(button.getAttribute("data-tip")).toBe(pausedPrepareReason);
+    await user.click(button);
+    expect(prepare).not.toHaveBeenCalled();
   });
 
   it("offers Prepare only for a video run, and says why a design run has none", async () => {
