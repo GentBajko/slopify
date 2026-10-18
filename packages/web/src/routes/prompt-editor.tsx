@@ -385,6 +385,7 @@ const bodyTips = {
   shorts: "library.prompt.body.shorts",
   review: "library.prompt.body.review",
   script: "library.prompt.body.script",
+  post: "library.prompt.body.post",
 } as const satisfies Record<PromptKind, HelpId>;
 
 // The kinds with a starting text: the documentary delivery cues, and the wording the YouTube

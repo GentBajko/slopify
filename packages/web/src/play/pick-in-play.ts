@@ -87,5 +87,8 @@ export function pickInPlay(document: PlayDraftDocument, item: Prompt | Entry): U
             };
       return next({ reviews: { ...reviews, stages } }, "review", "reviews");
     }
+    // Posting has no place on Play yet: Library opens Play as it was.
+    case "post":
+      return next({}, "outputs", "outputs");
   }
 }

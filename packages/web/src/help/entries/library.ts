@@ -63,6 +63,11 @@ export const libraryHelp = {
     body: "Tells the reviewer what to check in a finished article, set of images, narration, thumbnail or shorts, and when to flag or redo it. One reviewer call per item checked; pictures can only be judged by the Claude Code and Codex reviewers. A stage with none picked uses its own built-in wording.",
     tutorial: { page: "Prompts", anchor: "write-a-new-prompt" },
   },
+  "library.prompt.body.post": {
+    title: "Post prompt",
+    body: "Writes a project's post for X, LinkedIn, Instagram, TikTok, Reddit or Bluesky from the article, for a site whose words come from a post prompt. Slopify adds the hashtags and link and holds the answer to the site's limit. One call per site on the project's LLM.",
+    tutorial: { page: "Prompts", anchor: "prompt-kinds" },
+  },
   "library.prompt.body.script": {
     title: "Script prompt",
     body: "Used in place of an Article prompt when a run has several voices and writes a script. The text model answers with # section headings and Name: words turns, one speaker per paragraph; text in [square brackets] is not spoken. One call on the project's LLM.",
@@ -101,6 +106,11 @@ export const libraryHelp = {
   "library.keywords.shorts": {
     title: "Keywords Slopify fills in Shorts prompts",
     body: keywordsHere("shorts"),
+    tutorial: digestSection,
+  },
+  "library.keywords.post": {
+    title: "Keywords Slopify fills in Post prompts",
+    body: keywordsHere("post"),
     tutorial: digestSection,
   },
   "library.keywords.review": {

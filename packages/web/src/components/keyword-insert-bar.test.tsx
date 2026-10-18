@@ -83,7 +83,7 @@ describe("the Insert bar", () => {
     expect(card.textContent).toContain("Two to four words");
     expect(card.textContent).toContain("Example");
     expect(card.textContent).toContain("Works in");
-    expect(card.textContent).toContain("Image, Thumbnail, Description, Shorts and Review");
+    expect(card.textContent).toContain("Image, Thumbnail, Description, Shorts, Review and Post");
     expect(card.textContent).toContain("Part of one AI call per run: the keyword digest");
     expect(chip.getAttribute("aria-describedby")).toBe(card.id);
     fireEvent.pointerLeave(chip);

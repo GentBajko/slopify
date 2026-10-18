@@ -22,6 +22,8 @@ export function kindLabel(kind: PromptKind): string {
       return "Review";
     case "script":
       return "Script (speakers)";
+    case "post":
+      return "Post";
   }
 }
 

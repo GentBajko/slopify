@@ -182,7 +182,7 @@ describe("keywords Slopify fills", () => {
     const draft = { kind: "article" as const, name: "D", body: "{{Slopify_Chapters}}" };
     expect(lintPrompt(draft)).toEqual([]);
     expect(keywordWarnings(draft).map((one) => one.message)).toEqual([
-      "{{Slopify_Chapters}} at line 1, column 1 can't be used in an Article prompt: it exists once the article is written, so never in the Article or Script prompt. Remove it; it works in Narration, Intro, Outro, Image, Thumbnail, Description, Shorts and Review.",
+      "{{Slopify_Chapters}} at line 1, column 1 can't be used in an Article prompt: it exists once the article is written, so never in the Article or Script prompt. Remove it; it works in Narration, Intro, Outro, Image, Thumbnail, Description, Shorts, Review and Post.",
     ]);
   });
 
