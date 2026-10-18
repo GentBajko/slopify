@@ -63,6 +63,12 @@ const leftOut = new Set([
   // its stored path, and the importing install arranges them itself.
   "project_folders",
   "file_places",
+  // Designs join the library part with their own export (pending: designs backups task).
+  "designs",
+  "design_steps",
+  "design_templates",
+  "design_template_revisions",
+  "design_template_samples",
 ]);
 
 function install(): BackupDeps & { readonly db: DatabaseSync; readonly paths: Paths } {

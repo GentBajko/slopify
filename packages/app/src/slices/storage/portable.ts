@@ -26,6 +26,7 @@ import { liveProject } from "../admission/repo.js";
 import { silenceGapSecondsMax } from "../admission/rules.js";
 import { detectSlots } from "../admission/substitute.js";
 import { agentConnectionKey } from "../agents/connection.js";
+import { dailySampleBudgetKey, dailySampleBudgetSchema } from "../designs/budget.js";
 import { fontMaxBytes } from "../fonts/model.js";
 import { readFontMetadata } from "../fonts/sfnt.js";
 import { lintEntry, lintPrompt } from "../library/lint.js";
@@ -516,6 +517,7 @@ function portableSettings(settings: Readonly<Record<string, string>>): Record<st
     else if (key.startsWith(uploadPickPrefix)) uploadPickSchema.parse(parsed);
     else if (key === studioProjectPlaylistsKey) storedProjectPlaylistsSchema.parse(parsed);
     else if (key === channelLinksKey) storedChannelLinks.parse(parsed);
+    else if (key === dailySampleBudgetKey) dailySampleBudgetSchema.parse(parsed);
     else if (
       key === realPersonVoicesKey ||
       key === photorealisticPromptsKey ||
