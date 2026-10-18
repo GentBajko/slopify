@@ -170,6 +170,12 @@ function settingsDeps(extra: Readonly<Record<string, Answer>> = {}) {
       dailyBudget: 2,
       today: { budget: 2, spent: 0.4, left: 1.6 },
     }),
+    "POST /api/template-studio/samples-for-all/quote": jsonAnswer({
+      items: [],
+      total: 0,
+      fitting: 0,
+      sentence: "Every template's sample is made for its newest version. Nothing to make.",
+    }),
     "GET /api/trash": jsonAnswer({ items: [trashed] }),
     "GET /api/usage": jsonAnswer(usage),
     "GET /api/patch-notes": jsonAnswer({

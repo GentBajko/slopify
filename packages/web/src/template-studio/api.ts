@@ -231,3 +231,105 @@ export async function writeStudioSettings(
 export function about(high: number): string {
   return `about $${high.toFixed(2)}`;
 }
+
+// Settings → Template studio → Make samples for all: every template needing a sample, priced
+// together first.
+export const forAllQuoteSchema = z
+  .object({
+    items: z.array(
+      z
+        .object({
+          templateId: z.string(),
+          name: z.string(),
+          version: z.number(),
+          high: z.number(),
+          unknown: z.number(),
+          fits: z.boolean(),
+          problem: z.string().nullable(),
+        })
+        .loose(),
+    ),
+    total: z.number(),
+    fitting: z.number(),
+    sentence: z.string(),
+  })
+  .loose();
+export type ForAllQuoteView = z.infer<typeof forAllQuoteSchema>;
+export const forAllKey = ["template-studio", "samples-for-all"] as const;
+
+export async function quoteSamplesForAll(api: Api): Promise<ForAllQuoteView> {
+  const response = await api.fetch(`${api.origin}/api/template-studio/samples-for-all/quote`, {
+    method: "POST",
+  });
+  if (!response.ok) throw await failure(response);
+  return understood(forAllQuoteSchema, await response.json());
+}
+
+export async function makeSamplesForAll(
+  api: Api,
+  input: { readonly acknowledgedTotal: number; readonly acknowledgedUnknown: boolean },
+): Promise<
+  | { readonly ok: true; readonly queued: number; readonly held: number }
+  | { readonly ok: false; readonly message: string; readonly quote: ForAllQuoteView | null }
+> {
+  const response = await api.fetch(
+    `${api.origin}/api/template-studio/samples-for-all`,
+    post("POST", input),
+  );
+  if (response.ok) {
+    const value = understood(
+      z.object({ queued: z.array(z.string()), held: z.array(z.string()) }).loose(),
+      await response.json(),
+    );
+    return { ok: true, queued: value.queued.length, held: value.held.length };
+  }
+  if (response.status === 400 || response.status === 409) {
+    const parsed = z
+      .object({ detail: z.string().optional(), quote: forAllQuoteSchema.optional() })
+      .loose()
+      .safeParse(await response.json());
+    if (parsed.success)
+      return {
+        ok: false,
+        message: parsed.data.detail ?? "Slopify refused the request.",
+        quote: parsed.data.quote ?? null,
+      };
+  }
+  throw await failure(response);
+}
+
+const readyProblemSchema = z
+  .object({
+    label: z.string(),
+    sentence: z.string(),
+    fix: z.object({ label: z.string(), href: z.string() }).optional(),
+    section: z.string().optional(),
+  })
+  .loose();
+export type ReadyProblemView = z.infer<typeof readyProblemSchema>;
+
+// Mark ready: the newest version becomes the one its schedules run, or the things to fix first.
+export async function markTemplateReady(
+  api: Api,
+  id: string,
+  version: number,
+): Promise<
+  | { readonly ok: true }
+  | { readonly ok: false; readonly message: string; readonly problems: readonly ReadyProblemView[] }
+> {
+  const response = await api.fetch(`${base(api, id)}/ready`, post("POST", { version }));
+  if (response.ok) return { ok: true };
+  if (response.status === 400 || response.status === 409) {
+    const parsed = z
+      .object({ detail: z.string().optional(), problems: z.array(readyProblemSchema).optional() })
+      .loose()
+      .safeParse(await response.json());
+    if (parsed.success)
+      return {
+        ok: false,
+        message: parsed.data.detail ?? "Slopify refused the request.",
+        problems: parsed.data.problems ?? [],
+      };
+  }
+  throw await failure(response);
+}
