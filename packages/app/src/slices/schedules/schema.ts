@@ -94,11 +94,22 @@ export type ScheduleRelease = z.infer<typeof scheduleReleaseSchema>;
 const releases = z.array(scheduleReleaseSchema).max(7).readonly();
 // Enough for a year of daily runs, pasted as one list.
 export const queueMax = 500;
+// What a schedule makes: projects from a project template (every schedule before designs), or
+// designed pieces from a design template, one per row ahead of its date.
+export const scheduleTemplateKinds = ["project", "design"] as const;
+// A project template's id is a UUID (checked by the service); a design template's may be any
+// id its creator chose.
+const templateId = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(/^[A-Za-z0-9_-]+$/);
 export const scheduleCreateSchema = z
   .object({
     id,
     name: z.string().trim().min(1).max(200),
-    templateId: id,
+    templateKind: z.enum(scheduleTemplateKinds).default("project"),
+    templateId,
     templateVersion: z.number().int().positive(),
     cadence: cadenceSchema,
     timezone: z
@@ -139,7 +150,8 @@ export const scheduleSummarySchema = z
   .object({
     id,
     name: z.string(),
-    templateId: id,
+    templateKind: z.enum(scheduleTemplateKinds).default("project"),
+    templateId,
     templateVersion: z.number().int().positive(),
     cadence: cadenceSchema,
     timezone: z.string(),
@@ -172,6 +184,8 @@ export const scheduleRunSchema = z
     status: z.enum(["running", "succeeded", "failed", "skipped"]),
     requestId: id.nullable(),
     projectIds: z.array(z.string()).readonly(),
+    // The designed pieces a design schedule's run made. Older servers leave it out.
+    designIds: z.array(z.string()).readonly().default([]),
     estimate: z.unknown().nullable(),
     startedAt: z.string().datetime({ offset: true }),
     endedAt: z.string().datetime({ offset: true }).nullable(),
@@ -229,7 +243,7 @@ export const calendarRunSchema = z
     scheduleName: z.string(),
     scheduleVersion: z.number().int().positive(),
     paused: z.boolean(),
-    templateId: id,
+    templateId,
     templateVersion: z.number().int().positive(),
     templateName: z.string().nullable(),
     // The topic's position in the schedule's queue, for reordering; null without one.

@@ -33,8 +33,12 @@ export function AddToCalendar({
   const { api } = useApp();
   const client = useQueryClient();
   const notify = useToast();
+  // A design schedule's rows each need a date, so they are added in its template's editor.
   const usable = schedules.filter(
-    (one) => one.deletedAt === null && (one.status === "active" || one.status === "paused"),
+    (one) =>
+      one.deletedAt === null &&
+      one.templateKind === "project" &&
+      (one.status === "active" || one.status === "paused"),
   );
   const [scheduleId, setScheduleId] = useState<string>("");
   const [text, setText] = useState("");
@@ -47,6 +51,7 @@ export function AddToCalendar({
       const { id, ...rest } = schedule;
       return updateSchedule(api, id, {
         name: rest.name,
+        templateKind: rest.templateKind,
         templateId: rest.templateId,
         templateVersion: rest.templateVersion,
         cadence: rest.cadence,

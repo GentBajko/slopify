@@ -53,6 +53,8 @@ export interface DesignTemplateRoutesDeps extends TemplateMakeDeps {
         readonly state?: (templateId: string) => unknown;
       }
     | undefined;
+  // A Save or Mark ready changed what the template's design schedules make, or when.
+  readonly templateChanged?: ((templateId: string) => void) | undefined;
 }
 
 const sampleRequestSchema = z
@@ -101,6 +103,7 @@ export function designTemplateRoutes(deps: DesignTemplateRoutesDeps | undefined)
       const result = saveTemplate(deps.service, id, body);
       if (!result.ok) return designRefused(c, result);
       const { template, saved, before } = result.value;
+      if (saved) deps.templateChanged?.(id);
       const asked = z
         .object({
           sample: z.enum(["make", "skip"]).optional(),
@@ -198,7 +201,10 @@ export function designTemplateRoutes(deps: DesignTemplateRoutesDeps | undefined)
         await jsonBody(c),
         checks === undefined ? undefined : (doc) => checks(id, doc),
       );
-      if (result.ok) return c.json(result.value);
+      if (result.ok) {
+        deps.templateChanged?.(id);
+        return c.json(result.value);
+      }
       return result.reason === "not-ready"
         ? problem(c, {
             status: 409,

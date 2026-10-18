@@ -250,3 +250,21 @@ it("keeps a design whose project did not come in, unlinked from the different pr
     { project_id: null },
   ]);
 });
+
+it("brings in a design schedule with its design template, paused", async () => {
+  const source = install();
+  seed(source.db);
+  source.db
+    .prepare(
+      `INSERT INTO schedules (id,name,template_kind,template_id,template_version,cadence_json,timezone,missed_policy,overlap_policy,spend_limit_cents,items_json,topic_keyword,values_json,status,version,creation_hash,next_run_at,created_at,updated_at,deleted_at)
+       VALUES ('00000000-0000-4000-8000-0000000000cc','Gig posters','design','t1',1,'{"kind":"by-date","time":"09:00"}','UTC','skip','skip',NULL,'[]',NULL,'{}','active',1,'h',NULL,?,?,NULL)`,
+    )
+    .run("2026-10-18T10:00:00.000Z", "2026-10-18T10:00:00.000Z");
+  const archive = await exported(source);
+  const target = install();
+  const summary = await importBackup(target, once(archive));
+  expect(summary.schedules).toMatchObject({ added: 1, skipped: 0, paused: 1 });
+  expect(rows(target.db, "SELECT template_kind, template_id, status FROM schedules")).toEqual([
+    { template_kind: "design", template_id: "t1", status: "paused" },
+  ]);
+});

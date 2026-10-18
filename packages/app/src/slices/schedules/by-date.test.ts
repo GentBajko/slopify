@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { designOccurrences, nextDesignOccurrence, rowDate } from "./by-date.js";
 
-const row = (Date: string, Event = "Gig") => ({ values: { Event, Date } });
+const row = (date: string, Event = "Gig") => ({ values: { Event, Date: date } });
 const now = new Date("2026-10-18T10:00:00.000Z");
 
 describe("when a design schedule makes each row's piece", () => {

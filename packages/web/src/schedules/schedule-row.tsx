@@ -12,6 +12,7 @@ export type Reply = { readonly ok: true } | { readonly ok: false; readonly messa
 export type Act = (job: () => Promise<Reply>) => void;
 
 function cadenceOf(schedule: ScheduleSummary): string {
+  if (schedule.cadence.kind === "by-date") return `Ahead of each date at ${schedule.cadence.time}`;
   return schedule.cadence.kind === "once"
     ? "One time"
     : schedule.cadence.kind === "daily"

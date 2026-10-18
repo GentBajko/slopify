@@ -74,7 +74,10 @@ export function ScheduleForm({
   const { api } = useApp();
   const [name, setName] = useState(editing?.name ?? "");
   const [templateId, setTemplateId] = useState(editing?.templateId ?? "");
-  const [kind, setKind] = useState<Cadence["kind"]>(editing?.cadence.kind ?? "daily");
+  // Design schedules (Ahead of each date) are made in their design template's editor.
+  const [kind, setKind] = useState<Exclude<Cadence["kind"], "by-date">>(
+    editing === null || editing.cadence.kind === "by-date" ? "daily" : editing.cadence.kind,
+  );
   const [onceAt, setOnceAt] = useState(
     editing?.cadence.kind === "once" ? localScheduleTime(editing.cadence.at, editing.timezone) : "",
   );
@@ -222,6 +225,7 @@ export function ScheduleForm({
         const input: ScheduleCreate = {
           id: editing?.id ?? crypto.randomUUID(),
           name: name.trim(),
+          templateKind: "project",
           templateId: selectedTemplate.id,
           templateVersion: selectedTemplate.version,
           cadence,

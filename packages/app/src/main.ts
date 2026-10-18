@@ -88,6 +88,7 @@ import { createDesignRenderer } from "./slices/designs/render.js";
 import { createDesignRunner } from "./slices/designs/runner.js";
 import { createDesignSamples, type DesignSamples } from "./slices/designs/sample.js";
 import type { DesignDeps } from "./slices/designs/service.js";
+import type { TemplateMakeDeps } from "./slices/designs/template-make.js";
 import {
   createEpisodeMemoryWatcher,
   type EpisodeMemoryWatcher,
@@ -120,6 +121,7 @@ import { currentRevisionId } from "./slices/revisions/repo.js";
 import { createLimitGate, resumeAfterRestart } from "./slices/run-cost/limits.js";
 import { createStandaloneMeter, createUsageMeter } from "./slices/run-cost/meter.js";
 import type { ScheduleDeps } from "./slices/schedules/model.js";
+import { refreshDesignSchedules } from "./slices/schedules/next-run.js";
 import { settleTerminalScheduleRuns } from "./slices/schedules/repo.js";
 import { createScheduleRunner } from "./slices/schedules/scheduler.js";
 import { nodeCliProbe } from "./slices/settings/cli-status.js";
@@ -549,8 +551,11 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         flusher.soon();
       },
     };
+    // Built with the designs further down; design schedules make their pieces with it.
+    let designMake: TemplateMakeDeps | undefined;
     const scheduleRunnerDeps: ScheduleDeps = {
       ...draftDeps,
+      designs: () => designMake,
       template: (id) => templateById(runtimeDb, id),
       topicLlm: (call) => standaloneLlm(standalone, call),
       topicsWaiting: (event) => {
@@ -671,6 +676,11 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       shrink: (bytes) => designRenderer.shrink(bytes, AbortSignal.timeout(120_000)),
     });
     designRunner.recover();
+    designMake = {
+      service: designService,
+      runner: designRunner,
+      catalogue: () => catalogue.read(),
+    };
     designSamples = createDesignSamples({
       service: designService,
       runner: designRunner,
@@ -691,6 +701,9 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         catalogue: () => catalogue.read(),
         checks: (templateId, doc) => contextChecks(doc, templateId, designChecks),
         samples: designSamples,
+        templateChanged: (templateId) => {
+          refreshDesignSchedules(runtimeDb, templateId, clock.now());
+        },
       },
       autostart,
       rebuild,

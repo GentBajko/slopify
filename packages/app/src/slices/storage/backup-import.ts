@@ -837,14 +837,19 @@ function commit(
 
       const schedules = { added: 0, renamed: 0, skipped: 0, paused: 0 };
       for (const schedule of rowsOf(scratch, "SELECT * FROM schedules ORDER BY rowid")) {
-        if (
-          has("SELECT 1 FROM schedules WHERE id=?", String(schedule.id)) ||
-          !has(
-            "SELECT 1 FROM project_template_revisions WHERE template_id=? AND version=?",
-            String(schedule.template_id),
-            Number(schedule.template_version),
-          )
-        ) {
+        // A design schedule's template comes in with the designs, further down.
+        const design = schedule.template_kind === "design";
+        const templateHere = design
+          ? scratch
+              .prepare("SELECT 1 FROM design_templates WHERE id=?")
+              .get(String(schedule.template_id)) !== undefined ||
+            has("SELECT 1 FROM design_templates WHERE id=?", String(schedule.template_id))
+          : has(
+              "SELECT 1 FROM project_template_revisions WHERE template_id=? AND version=?",
+              String(schedule.template_id),
+              Number(schedule.template_version),
+            );
+        if (has("SELECT 1 FROM schedules WHERE id=?", String(schedule.id)) || !templateHere) {
           schedules.skipped += 1;
           continue;
         }

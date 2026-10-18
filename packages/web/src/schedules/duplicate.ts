@@ -22,6 +22,7 @@ export function duplicateInput(
   return {
     id,
     name,
+    templateKind: schedule.templateKind,
     templateId: schedule.templateId,
     templateVersion: schedule.templateVersion,
     cadence: schedule.cadence,
