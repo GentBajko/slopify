@@ -18,6 +18,7 @@ import {
 } from "@/lib/model-checks";
 import { useCheckModels } from "@/lib/use-check-models";
 import { providersQuery } from "@/queries";
+import { CompareOnSample } from "@/template-studio/compare-on-sample";
 
 const autoOptions: readonly { readonly value: AutoMode; readonly label: string }[] = [
   { value: "free", label: "Free and near-free checks only" },
@@ -182,6 +183,7 @@ export function ModelChecksSettings(): ReactElement {
                   </p>
                 </div>
                 <ButtonRow>
+                  <CompareOnSample model={model} />
                   <Button
                     size="small"
                     variant="quiet"

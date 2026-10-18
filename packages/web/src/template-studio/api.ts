@@ -393,3 +393,211 @@ export function saveSayItAs(
     .fetch(`${base(api, id)}/say-it-as`, post("POST", input))
     .then((r) => answered(r, z.object({ queued: z.boolean() }).loose()));
 }
+
+// Export pack: the version marked ready as a zip, or the reason there is none.
+export async function downloadPack(
+  api: Api,
+  id: string,
+): Promise<
+  | { readonly ok: true; readonly filename: string; readonly blob: Blob }
+  | { readonly ok: false; readonly message: string }
+> {
+  const response = await api.fetch(`${base(api, id)}/pack`);
+  if (response.ok) {
+    const named = /filename="([^"]+)"/.exec(response.headers.get("content-disposition") ?? "");
+    return {
+      ok: true,
+      filename: named?.[1] ?? "template.slopify-pack.zip",
+      blob: await response.blob(),
+    };
+  }
+  return {
+    ok: false,
+    message: refusalFrom(response, await jsonOf(response), studioRefusals).message,
+  };
+}
+
+export const importedPackSchema = z
+  .object({
+    templateId: z.string(),
+    name: z.string(),
+    added: z.number(),
+    renamed: z.array(z.object({ from: z.string(), to: z.string() }).loose()),
+    voiceKnown: z.boolean(),
+    samples: z.number(),
+  })
+  .loose();
+export type ImportedPackView = z.infer<typeof importedPackSchema>;
+
+// Import pack: a pack's .zip becomes a new, unchecked template.
+export async function importTemplatePack(
+  api: Api,
+  file: File,
+): Promise<
+  | { readonly ok: true; readonly value: ImportedPackView }
+  | { readonly ok: false; readonly message: string }
+> {
+  const body = new FormData();
+  body.set("file", file);
+  const response = await api.fetch(`${api.origin}/api/template-studio/packs/import`, {
+    method: "POST",
+    body,
+  });
+  const raw = await jsonOf(response);
+  if (response.ok) return { ok: true, value: understood(importedPackSchema, raw) };
+  return { ok: false, message: refusalFrom(response, raw, { statuses: [400, 409, 413] }).message };
+}
+
+const packSamplesSchema = z
+  .object({
+    samples: z.array(
+      z
+        .object({
+          role: z.enum(["thumbnail", "picture", "narration"]),
+          name: z.string(),
+          url: z.string(),
+        })
+        .loose(),
+    ),
+  })
+  .loose();
+export type PackSamplesView = z.infer<typeof packSamplesSchema>;
+
+// The samples an imported pack came with.
+export function packSamplesQuery(api: Api, id: string): UseQueryOptions<PackSamplesView> {
+  return {
+    queryKey: [...templateStudioKey(id), "pack-samples"],
+    queryFn: async () => {
+      const response = await api.fetch(`${base(api, id)}/pack-samples`);
+      if (!response.ok) throw await failure(response);
+      return understood(packSamplesSchema, await response.json());
+    },
+  };
+}
+
+// Compare models (the bake-off): one section's sample on one or two other models.
+export type BakeoffSection = "script" | "voice" | "pictures";
+export interface BakeoffPick {
+  readonly provider: string;
+  readonly model: string;
+}
+
+export const bakeoffQuoteSchema = z
+  .object({
+    version: z.number(),
+    section: z.enum(["script", "voice", "pictures"]),
+    current: z.object({ provider: z.string(), model: z.string() }).loose(),
+    models: z.array(
+      z
+        .object({
+          provider: z.string(),
+          model: z.string(),
+          high: z.number(),
+          unknown: z.number(),
+          onPlan: z.boolean(),
+          problem: z.string().nullable(),
+        })
+        .loose(),
+    ),
+    high: z.number(),
+    unknown: z.number(),
+    budget: z.object({ budget: z.number(), spent: z.number(), left: z.number() }).loose(),
+    fits: z.boolean(),
+    problem: z.string().nullable(),
+  })
+  .loose();
+export type BakeoffQuoteView = z.infer<typeof bakeoffQuoteSchema>;
+
+const bakeoffEntrySchema = z
+  .object({
+    provider: z.string(),
+    model: z.string(),
+    slot: z.number().nullable(),
+    state: z.enum(["current", "queued", "making", "done", "failed"]),
+    quotedHigh: z.number().nullable(),
+    cost: z.number().nullable(),
+    seconds: z.number().nullable(),
+    failure: z.string().nullable(),
+    outputs: z.array(z.object({ role: z.string(), url: z.string(), name: z.string() }).loose()),
+    article: z.string().nullable(),
+  })
+  .loose();
+export const bakeoffViewSchema = z
+  .object({
+    bakeoff: z
+      .object({
+        id: z.string(),
+        section: z.enum(["script", "voice", "pictures"]),
+        version: z.number(),
+        stale: z.boolean(),
+        state: z.enum(["queued", "making", "done", "held", "failed"]),
+        sentence: z.string().nullable(),
+        entries: z.array(bakeoffEntrySchema),
+      })
+      .loose()
+      .nullable(),
+  })
+  .loose();
+export type BakeoffView = NonNullable<z.infer<typeof bakeoffViewSchema>["bakeoff"]>;
+export type BakeoffEntryView = BakeoffView["entries"][number];
+
+export function bakeoffQuery(
+  api: Api,
+  id: string,
+): UseQueryOptions<z.infer<typeof bakeoffViewSchema>> {
+  return {
+    queryKey: [...templateStudioKey(id), "bakeoff"],
+    queryFn: async () => {
+      const response = await api.fetch(`${base(api, id)}/bakeoff`);
+      if (!response.ok) throw await failure(response);
+      return understood(bakeoffViewSchema, await response.json());
+    },
+    // The event stream says when it changes; this is the fallback while it is being made.
+    refetchInterval: (query) => {
+      const state = query.state.data?.bakeoff?.state;
+      return state === "queued" || state === "making" ? 5000 : false;
+    },
+  };
+}
+
+export async function quoteBakeoff(
+  api: Api,
+  id: string,
+  ask: { readonly section: BakeoffSection; readonly models: readonly BakeoffPick[] },
+): Promise<{ readonly ok: true; readonly value: BakeoffQuoteView } | StudioRefusal> {
+  const response = await api.fetch(`${base(api, id)}/bakeoff/quote`, post("POST", ask));
+  return answered(response, bakeoffQuoteSchema);
+}
+
+export async function startBakeoff(
+  api: Api,
+  id: string,
+  input: {
+    readonly section: BakeoffSection;
+    readonly models: readonly BakeoffPick[];
+    readonly acknowledgedHigh: number;
+    readonly acknowledgedUnknown: boolean;
+  },
+): Promise<
+  | { readonly ok: true }
+  | { readonly ok: false; readonly message: string; readonly quote: BakeoffQuoteView | null }
+> {
+  const response = await api.fetch(`${base(api, id)}/bakeoff`, post("POST", input));
+  const raw = await jsonOf(response);
+  if (response.ok) return { ok: true };
+  return {
+    ok: false,
+    message: refusalFrom(response, raw, studioRefusals).message,
+    quote: extension(raw, "quote", bakeoffQuoteSchema) ?? null,
+  };
+}
+
+export async function discardBakeoff(
+  api: Api,
+  id: string,
+): Promise<{ readonly ok: true } | { readonly ok: false; readonly message: string }> {
+  const response = await api.fetch(`${base(api, id)}/bakeoff`, { method: "DELETE" });
+  const raw = await jsonOf(response);
+  if (response.ok) return { ok: true };
+  return { ok: false, message: refusalFrom(response, raw, studioRefusals).message };
+}

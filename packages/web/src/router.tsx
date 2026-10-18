@@ -378,18 +378,43 @@ function TemplatesPage(): import("react").ReactElement {
 const templateStudioRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "templates/$templateId",
-  validateSearch: (search: Record<string, unknown>): { section?: TemplateSection } =>
-    templateSections.find((one) => one === search.section) === undefined
-      ? {}
-      : { section: search.section as TemplateSection },
+  validateSearch: (search: Record<string, unknown>): StudioSearch => {
+    const section = templateSections.find((one) => one === search.section);
+    const named = (value: unknown): string | undefined =>
+      typeof value === "string" && value.trim() !== "" && value.length <= 200 ? value : undefined;
+    const provider = named(search.compareProvider);
+    const model = named(search.compareModel);
+    return {
+      ...(section === undefined ? {} : { section }),
+      ...(provider === undefined || model === undefined
+        ? {}
+        : { compareProvider: provider, compareModel: model }),
+    };
+  },
   component: TemplateStudioRoutePage,
 });
 
+// `?compareProvider=&compareModel=`: a model Settings → Models offers to compare on a sample.
+interface StudioSearch {
+  readonly section?: TemplateSection;
+  readonly compareProvider?: string;
+  readonly compareModel?: string;
+}
+
 function TemplateStudioRoutePage(): import("react").ReactElement {
   const { templateId } = templateStudioRoute.useParams();
-  const { section } = templateStudioRoute.useSearch();
+  const { section, compareProvider, compareModel } = templateStudioRoute.useSearch();
   return (
-    <TemplateStudioPage key={templateId} templateId={templateId} section={section ?? "subject"} />
+    <TemplateStudioPage
+      key={templateId}
+      templateId={templateId}
+      section={section ?? "subject"}
+      compare={
+        compareProvider === undefined || compareModel === undefined
+          ? undefined
+          : { provider: compareProvider, model: compareModel }
+      }
+    />
   );
 }
 

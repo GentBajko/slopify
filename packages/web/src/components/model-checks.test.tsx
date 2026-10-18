@@ -180,6 +180,35 @@ describe("Settings → Models: models that work for you", () => {
     );
   });
 
+  it("offers to compare a new model on a template's sample, opening that template's studio ready", async () => {
+    renderRouted(
+      <ModelChecksSettings />,
+      testDeps({
+        "GET /api/model-checks": overview(),
+        "GET /api/providers": providers,
+        "GET /api/project-templates": jsonAnswer({
+          templates: [
+            {
+              id: "11111111-1111-4111-8111-111111111111",
+              name: "Weekly history",
+              version: 4,
+              createdAt: "2026-10-01T00:00:00Z",
+              updatedAt: "2026-10-02T00:00:00Z",
+            },
+          ],
+        }),
+      }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Compare New One on a sample" }),
+    );
+    await screen.findByRole("dialog", { name: "Compare New One on a sample" });
+    const link = await screen.findByRole("link", { name: "Compare on Weekly history" });
+    expect(link.getAttribute("href")).toBe(
+      "/templates/11111111-1111-4111-8111-111111111111?section=script&compareProvider=openrouter&compareModel=x%2Fnew",
+    );
+  });
+
   it("tells apart two providers that share a name", async () => {
     renderApp(
       <ModelChecksSettings />,

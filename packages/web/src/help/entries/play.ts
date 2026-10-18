@@ -141,6 +141,11 @@ export const playHelp = {
     body: "Who reads the narration. The list holds the voices you added under Settings → Voices for this provider, filtered to the project's language. With several speakers, this voice reads the intro and outro.",
     tutorial: { page: "Play-Narration", anchor: "pick-a-voice" },
   },
+  "play.voice-sample": {
+    title: "Try a sample of your text",
+    body: "Reads the passage you paste in the chosen voice, so you hear how it says your names before a run. Up to a few hundred characters, priced on the button; Library → Narration aliases apply when the voice uses them, the Pronunciation Glossary and Narration Preparation don't. The sample is never reused in the run.",
+    tutorial: { page: "Play-Narration" },
+  },
   "play.show-all-voices": {
     title: "Show all voices",
     body: "The voice list hides voices listed for other languages than the project's. Tick this to pick one anyway, for example a multilingual voice whose languages are listed wrong. A voice with unknown languages is always shown.",

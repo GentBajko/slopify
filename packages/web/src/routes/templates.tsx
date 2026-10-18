@@ -33,6 +33,7 @@ import { SortMenu } from "@/library/sort-menu";
 import { Stamp } from "@/library/time";
 import { PacksDrawer } from "@/onboarding/packs-drawer";
 import { type TemplateGate, templateGateBadge } from "@/template-studio/gate-words";
+import { ImportPack } from "@/template-studio/pack";
 import {
   deleteProjectTemplate,
   renameProjectTemplate,
@@ -168,6 +169,7 @@ export function TemplatesRoute({
       <LibraryToolbar
         action={
           <>
+            <ImportPack />
             <span className="flex items-center gap-1">
               <Button variant="secondary" onClick={() => setAdding(true)} aria-expanded={adding}>
                 Add pack

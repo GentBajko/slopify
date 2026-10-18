@@ -149,7 +149,11 @@ export function TitlePattern({
   readonly onChange: (title: string) => void;
 }): ReactElement {
   return (
-    <Field label="Title" help="{{Topic}} is filled with each video's topic.">
+    <Field
+      label="Title"
+      help="{{Topic}} is filled with each video's topic."
+      tip="play.title-pattern"
+    >
       <Input value={value} maxLength={200} onChange={(event) => onChange(event.target.value)} />
     </Field>
   );

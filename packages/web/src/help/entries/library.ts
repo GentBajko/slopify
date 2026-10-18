@@ -224,7 +224,7 @@ export const libraryHelp = {
   "templates.design": {
     title: "Design templates",
     body: "Posters, flyers and other designed pieces kept as templates, listed here beside your project templates. Open studio sets one up section by section (Picture, Text layout, Formats, Schedule) with a live sample, the same way a project template is set up. New design template starts an empty one.",
-    tutorial: { page: "Templates" },
+    tutorial: { page: "Template-Studio", anchor: "design-templates" },
   },
   "templates.save": {
     title: "Save a setup",

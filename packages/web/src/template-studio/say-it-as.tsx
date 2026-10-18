@@ -4,6 +4,7 @@ import { quoteAuditions, speakAudition } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Field, Input } from "@/components/kit/field";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { usd } from "@/lib/format";
 import {
   type PronunciationsView,
@@ -90,7 +91,7 @@ export function SayItAs({
             </ul>
           )}
           {revisionId === null ? null : (
-            <Field label="Another word to check">
+            <Field label="Another word to check" tip="template-studio.say-it-as">
               <Input
                 value={another}
                 maxLength={100}
@@ -237,7 +238,7 @@ function NameRow({
         )}
       </div>
       {name.line === null ? null : <p className="m-0 text-small text-ink-2">{name.line}</p>}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2" {...helpScope}>
         <Button
           size="small"
           variant="quiet"
@@ -256,6 +257,7 @@ function NameRow({
           disabled={!enabled}
           onChange={(event) => setTyped(event.target.value)}
         />
+        <InfoTip id="template-studio.say-it-as" label={`Say ${name.term} as`} />
         <Button
           size="small"
           disabled={saveReason !== undefined}

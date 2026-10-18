@@ -33,6 +33,7 @@ export function VisibleControls({
           <TitlePattern value={form.title} onChange={(title) => edit({ ...form, title })} />
           <Segmented
             label="Research"
+            tip="play.source.research"
             value={form.sources.research === "off" ? "off" : "generate"}
             options={[
               { value: "off", label: "Off" },
@@ -47,6 +48,7 @@ export function VisibleControls({
         <Controls>
           <Segmented
             label="Script"
+            tip="play.source.article"
             value={form.sources.article === "provide" ? "provide" : "generate"}
             options={[
               { value: "generate", label: "Written by AI" },
@@ -54,7 +56,11 @@ export function VisibleControls({
             ]}
             onChange={(article) => edit(sources({ article }))}
           />
-          <Field label="Expected length (words)" help="For the cost estimate.">
+          <Field
+            label="Expected length (words)"
+            help="For the cost estimate."
+            tip="play.expected-words"
+          >
             <Input
               inputMode="numeric"
               value={document.expectedWords}
@@ -68,16 +74,19 @@ export function VisibleControls({
         <Controls>
           <Switch
             label="Level the volume"
+            tip="project.loudness"
             checked={form.loudness?.enabled ?? true}
             onChange={(enabled) => edit({ ...form, loudness: { ...form.loudness, enabled } })}
           />
           <Switch
             label="Soften breaths"
+            tip="project.remove-breaths"
             checked={form.removeBreaths === true}
             onChange={(removeBreaths) => edit({ ...form, removeBreaths })}
           />
           <Switch
             label="Soften S sounds"
+            tip="project.soften-s"
             checked={form.deEss === true}
             onChange={(deEss) => edit({ ...form, deEss })}
           />
@@ -88,6 +97,7 @@ export function VisibleControls({
         <Controls>
           <Segmented
             label="Pictures"
+            tip="play.source.images"
             value={
               form.sources.images === "provide"
                 ? "provide"
@@ -104,6 +114,7 @@ export function VisibleControls({
           />
           <Switch
             label="Scenes from the script"
+            tip="play.image-scenes"
             checked={form.imageScenes === true}
             disabled={form.sources.images !== "generate"}
             onChange={(imageScenes) => edit({ ...form, imageScenes })}
@@ -115,6 +126,7 @@ export function VisibleControls({
         <Controls>
           <Segmented
             label="Format"
+            tip="play.format"
             value={form.format}
             options={[
               { value: "16:9", label: "Landscape 16:9" },
@@ -125,6 +137,7 @@ export function VisibleControls({
           />
           <Segmented
             label="Captions"
+            tip="project.subtitles.mode"
             value={form.subtitles.mode}
             options={[
               { value: "off", label: "Off" },
@@ -135,6 +148,7 @@ export function VisibleControls({
           />
           <Segmented
             label="Motion"
+            tip="play.motion"
             value={form.motionStyle}
             options={[
               { value: "zoom", label: "Zoom" },
@@ -144,7 +158,7 @@ export function VisibleControls({
             ]}
             onChange={(motionStyle) => edit({ ...form, motionStyle })}
           />
-          <Field label="Seconds per picture">
+          <Field label="Seconds per picture" tip="play.image-seconds">
             <Input
               inputMode="decimal"
               value={form.imageSeconds}
@@ -158,6 +172,7 @@ export function VisibleControls({
         <Controls>
           <Segmented
             label="Thumbnail"
+            tip="play.source.thumbnail"
             value={
               form.sources.thumbnail === "provide" ||
               form.sources.thumbnail === "off" ||
@@ -175,6 +190,7 @@ export function VisibleControls({
           />
           <Segmented
             label="Thumbnails per video"
+            tip="play.thumbnail-count"
             value={String(form.thumbnailCount ?? 1) as "1" | "3"}
             options={[
               { value: "1", label: "One" },
@@ -189,12 +205,13 @@ export function VisibleControls({
         <Controls>
           <Switch
             label="Make shorts from the video"
+            tip="play.shorts"
             checked={form.shorts?.enabled === true}
             onChange={(enabled) =>
               edit({ ...form, shorts: { ...(form.shorts ?? freshShorts), enabled } })
             }
           />
-          <Field label="Shorts per video">
+          <Field label="Shorts per video" tip="play.shorts.count">
             <Input
               inputMode="numeric"
               disabled={form.shorts?.enabled !== true}
@@ -214,6 +231,7 @@ export function VisibleControls({
         <Controls>
           <Segmented
             label="PDF document"
+            tip="play.source.document"
             value={form.sources.document === "generate" ? "generate" : "off"}
             options={[
               { value: "off", label: "Off" },
@@ -234,6 +252,7 @@ export function VisibleControls({
         <Controls>
           <Switch
             label="Write the YouTube description, chapters and tags"
+            tip="play.youtube-description"
             checked={form.youtubeDescription === true}
             onChange={(youtubeDescription) => edit({ ...form, youtubeDescription })}
           />

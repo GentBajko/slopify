@@ -16,10 +16,13 @@ import { designTemplateQuery } from "@/designs/api";
 import { cn } from "@/lib/utils";
 import { UnsavedLeaveGuard } from "@/routes/unsaved-leave-guard";
 import { PromptAnatomy } from "./anatomy";
+import type { BakeoffPick } from "./api";
 import { requestFreeSamples, templateStudioKey, templateStudioQuery } from "./api";
+import { BakeoffResults, bakeoffSectionOf, CompareModels, usingModel } from "./bakeoff";
 import { ChecksList } from "./checks-list";
 import { FineTune } from "./fine-tune";
 import { MadeWith } from "./made-with";
+import { ExportPack, PackSamples } from "./pack";
 import { MarkReady } from "./ready-gate";
 import { SamplePanel } from "./sample-panel";
 import { SaveBar } from "./save-bar";
@@ -35,9 +38,12 @@ type Pane = "sections" | "settings" | "sample";
 export function TemplateStudioPage({
   templateId,
   section,
+  compare,
 }: {
   readonly templateId: string;
   readonly section: TemplateSection;
+  // A model to compare on the sample (Settings → Models → Compare on a sample).
+  readonly compare?: BakeoffPick | undefined;
 }): ReactElement {
   const { api } = useApp();
   // The assistant knows which template and section the person has open.
@@ -72,6 +78,7 @@ export function TemplateStudioPage({
       key={`${studio.data.template.id}:${String(studio.data.template.version)}`}
       view={studio.data}
       section={section}
+      compare={compare}
     />
   );
 }
@@ -96,9 +103,11 @@ function gateWords(view: StudioView): string {
 function Studio({
   view,
   section,
+  compare,
 }: {
   readonly view: StudioView;
   readonly section: TemplateSection;
+  readonly compare?: BakeoffPick | undefined;
 }): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
@@ -148,6 +157,7 @@ function Studio({
     setStatus(undefined);
   }, []);
   if (current === undefined) return <StudioSkeleton />;
+  const comparable = bakeoffSectionOf(current.id);
   const hidden = (which: Pane) => (pane === which ? undefined : "max-md:hidden");
   return (
     <TemplateSession document={document} onEdit={edit} onFiles={onFiles}>
@@ -160,6 +170,12 @@ function Studio({
         actions={
           <>
             <SampleTopic view={view} />
+            <ExportPack
+              view={view}
+              onProblem={(message) =>
+                setStatus(message === undefined ? undefined : { tone: "error", text: message })
+              }
+            />
             <MarkReady
               view={view}
               dirty={dirty}
@@ -197,6 +213,7 @@ function Studio({
         aside={
           <div className={cn("flex flex-col gap-6", hidden("sample"))}>
             <SamplePanel view={view} section={current} making={making} onMake={() => void make()} />
+            <PackSamples templateId={view.template.id} />
             <ChecksList templateId={view.template.id} />
           </div>
         }
@@ -212,6 +229,25 @@ function Studio({
             document={document}
             onChange={() => setFineTune((n) => n + 1)}
           />
+          {comparable === undefined ? null : (
+            <>
+              <CompareModels
+                templateId={view.template.id}
+                section={comparable}
+                document={document}
+                dirty={dirty}
+                preset={compare}
+              />
+              <BakeoffResults
+                templateId={view.template.id}
+                section={comparable}
+                onUse={(pick, sentence) => {
+                  edit(usingModel(document, comparable, pick));
+                  setStatus({ tone: "success", text: sentence });
+                }}
+              />
+            </>
+          )}
           <Fold
             key={`${current.id}:${String(fineTune)}`}
             defaultOpen={fineTune > 0}

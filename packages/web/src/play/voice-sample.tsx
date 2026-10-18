@@ -6,6 +6,7 @@ import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Textarea } from "@/components/kit/field";
 import { Fold } from "@/components/kit/fold";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { usd } from "@/lib/format";
 import { narrationAliasesQuery } from "@/queries";
 import { spokenText } from "./article-task";
@@ -73,17 +74,22 @@ export function VoiceSample({ form }: { readonly form: PlayFormState }): ReactEl
           {useAliases ? ", with Library → Narration aliases" : ""}. The Pronunciation Glossary and
           Narration Preparation are not applied, and the sample is not reused in the run.
         </p>
-        <label htmlFor={id} className="sl-field__label">
-          Passage
-        </label>
-        <Textarea
-          id={id}
-          rows={3}
-          maxLength={auditionLineMax}
-          value={passage}
-          placeholder="Paste a passage with the names you want to hear."
-          onChange={(event) => setTyped(event.target.value)}
-        />
+        <div className="flex flex-col gap-1" {...helpScope}>
+          <span className="flex items-center gap-1">
+            <label htmlFor={id} className="sl-field__label">
+              Passage
+            </label>
+            <InfoTip id="play.voice-sample" label="Passage" className="-my-1" />
+          </span>
+          <Textarea
+            id={id}
+            rows={3}
+            maxLength={auditionLineMax}
+            value={passage}
+            placeholder="Paste a passage with the names you want to hear."
+            onChange={(event) => setTyped(event.target.value)}
+          />
+        </div>
         <div className="flex flex-wrap items-center gap-3">
           <Button
             type="button"

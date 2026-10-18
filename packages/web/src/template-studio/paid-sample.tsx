@@ -279,6 +279,8 @@ export function FullScriptSwitch({
       disabled={asking || price.data === undefined}
       onChange={() => void change()}
       label={`Write the full script in the sample${price.data === undefined ? "" : ` (${about(price.data.high)})`}`}
+      tip="template-studio.full-script"
+      tipLabel="Write the full script in the sample"
     />
   );
 }

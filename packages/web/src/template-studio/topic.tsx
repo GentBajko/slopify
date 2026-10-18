@@ -120,6 +120,7 @@ function TopicDrawer({
         </p>
         <Segmented
           label="Topic"
+          tip="template-studio.sample-topic"
           value={choice}
           onChange={setChoice}
           options={[
@@ -129,7 +130,7 @@ function TopicDrawer({
           ]}
         />
         {choice === "typed" ? (
-          <Field label="Topic">
+          <Field label="Topic" tip="template-studio.sample-topic">
             <Input
               value={typed}
               maxLength={300}
@@ -142,6 +143,8 @@ function TopicDrawer({
             checked={acceptUnknown}
             onChange={setAcceptUnknown}
             label={`Accept ${String(unknown)} ${unknown === 1 ? "step" : "steps"} with no known price`}
+            tip="template-studio.accept-unknown"
+            tipLabel="Steps with no known price"
           />
         ) : null}
         {failed === null ? null : (

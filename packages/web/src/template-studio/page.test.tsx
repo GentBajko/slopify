@@ -5,129 +5,12 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { AssistantScreenProvider, useAssistantScreen } from "@/assistant/screen";
-import { freshDraftDocument } from "@/play/draft-state";
 import { jsonAnswer, problemAnswer, renderRouted, testDeps } from "@/test-app";
 import { TemplateStudioPage } from "./page";
 import { priceLabel } from "./save-bar";
+import { checks, type document, labels, routes, templateId, view } from "./studio.fake";
 
 afterEach(cleanup);
-const templateId = "33333333-3333-4333-8333-333333333333";
-const labels = [
-  "Subject & research",
-  "Script",
-  "Voice",
-  "Pictures",
-  "Video & captions",
-  "Thumbnail & title",
-  "Shorts",
-  "Document (PDF)",
-  "Reviews & checkpoints",
-  "Upload pack",
-  "Schedule",
-];
-const document = {
-  ...freshDraftDocument,
-  form: {
-    ...freshDraftDocument.form,
-    title: "History: {{Topic}}",
-    llm: { provider: "openrouter", model: "claude" },
-  },
-};
-const view: StudioView = {
-  template: {
-    id: templateId,
-    name: "Weekly documentary",
-    version: 3,
-    createdAt: "2026-10-01T00:00:00.000Z",
-    updatedAt: "2026-10-02T00:00:00.000Z",
-    document,
-  },
-  gate: "unchecked",
-  runnableVersion: 2,
-  sample: { topic: "The history of the lighthouse", topicSource: "fixed", fullScript: false },
-  sections: templateSections.map((id, index) => ({
-    id,
-    label: labels[index] ?? id,
-    state: id === "thumbnail" ? "off" : "stale",
-    sentence:
-      id === "thumbnail"
-        ? "The thumbnail is off."
-        : "No sample yet. Press Save to make one, or Make sample.",
-  })),
-  free: {
-    video: {
-      state: "current",
-      sentence: "30 seconds in your frame.",
-      url: "/api/style-preview/abc.mp4?v=1",
-    },
-    loudness: {
-      state: "current",
-      sentence: "Before and after.",
-      url: `/api/template-studio/${templateId}/loudness/after.mp3?v=1`,
-      beforeUrl: `/api/template-studio/${templateId}/loudness/before.mp3`,
-      beforeLufs: -19.4,
-      afterLufs: -14,
-    },
-    document: { state: "off", sentence: "The PDF document is off.", url: null },
-  },
-  schedule: {
-    runs: [
-      {
-        at: "2026-10-19T20:00:00.000Z",
-        scheduleId: "s1",
-        scheduleName: "Weekdays",
-        title: "History: Salt roads",
-        topic: true,
-      },
-    ],
-    cost: { runs: 8.7, high: 4.35, unknown: 0, problem: null },
-  },
-  paid: {
-    projectId: null,
-    revisionId: null,
-    state: null,
-    sentence: null,
-    quotedHigh: null,
-    article: null,
-    outputs: [],
-    versions: [],
-  },
-  reviews: [
-    {
-      id: "checkpoint:video",
-      name: "Before the video",
-      kind: "checkpoint",
-      by: "you",
-      detail: "The run waits here until you approve it.",
-    },
-  ],
-};
-const checks = {
-  version: 3,
-  checks: [
-    { id: "keywords", ok: true, sentence: "Every keyword has a value or is filled per video." },
-    {
-      id: "providers",
-      ok: false,
-      sentence: "No voice is chosen, so the run can't start.",
-      fix: { label: "Choose one in Voice", href: `/templates/${templateId}?section=voice` },
-    },
-  ],
-};
-const routes = {
-  [`GET /api/template-studio/${templateId}`]: jsonAnswer(view),
-  [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer(checks),
-  "GET /api/providers": jsonAnswer({
-    providers: [
-      {
-        id: "openrouter",
-        family: "llm",
-        displayName: "OpenRouter",
-        readiness: { kind: "keyed", hasKey: true },
-      },
-    ],
-  }),
-};
 
 function open(section: (typeof templateSections)[number] = "subject", extra = {}) {
   return renderRouted(
@@ -780,4 +663,66 @@ it("says the studio didn't open when the address names no template of either kin
   expect((await screen.findByRole("alert")).textContent).toContain(
     "The studio didn't open: This template no longer exists",
   );
+});
+
+it("exports the version schedules run as a pack, and says why when there is none", async () => {
+  const user = userEvent.setup();
+  const create = vi.fn(() => "blob:pack");
+  const revoke = vi.fn();
+  Object.assign(URL, { createObjectURL: create, revokeObjectURL: revoke });
+  const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+  open("subject", {
+    [`GET /api/template-studio/${templateId}/pack`]: () =>
+      new Response(new Uint8Array([80, 75]), {
+        headers: {
+          "content-type": "application/zip",
+          "content-disposition": 'attachment; filename="weekly-documentary.slopify-pack.zip"',
+        },
+      }),
+  });
+  await user.click(await screen.findByRole("button", { name: "Export pack (version 2)" }));
+  await waitFor(() => expect(click).toHaveBeenCalledTimes(1));
+  expect(create).toHaveBeenCalledTimes(1);
+  click.mockRestore();
+  cleanup();
+
+  open("subject", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({ ...view, runnableVersion: null }),
+  });
+  const blocked = await screen.findByRole("button", { name: "Export pack" });
+  expect(blocked.getAttribute("aria-disabled") ?? blocked.getAttribute("disabled")).not.toBeNull();
+  cleanup();
+
+  open("subject", {
+    [`GET /api/template-studio/${templateId}/pack`]: problemAnswer(
+      "Something in this template looks like an API key or a login token.",
+      400,
+    ),
+  });
+  await user.click(await screen.findByRole("button", { name: "Export pack (version 2)" }));
+  expect(
+    await screen.findByText("Something in this template looks like an API key or a login token."),
+  ).not.toBeNull();
+});
+
+it("shows the samples an imported pack came with", async () => {
+  open("subject", {
+    [`GET /api/template-studio/${templateId}/pack-samples`]: jsonAnswer({
+      samples: [
+        {
+          role: "thumbnail",
+          name: "thumb.png",
+          url: `/api/template-studio/${templateId}/pack-samples/thumbnail-1.png`,
+        },
+        {
+          role: "narration",
+          name: "n.mp3",
+          url: `/api/template-studio/${templateId}/pack-samples/narration-2.mp3`,
+        },
+      ],
+    }),
+  });
+  const section = await screen.findByRole("region", { name: "Samples from the pack" });
+  expect(within(section).getByRole("img", { name: "The pack's thumbnail" })).not.toBeNull();
+  expect(within(section).getByText(/Your own samples replace these/)).not.toBeNull();
 });

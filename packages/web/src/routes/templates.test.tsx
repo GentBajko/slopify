@@ -635,3 +635,66 @@ it("lists the design templates below the project templates, each opened in its s
   expect(within(section).getByText("Ready · v2")).not.toBeNull();
   expect(within(section).getByRole("button", { name: "New design template" })).not.toBeNull();
 });
+
+it("imports a template pack and opens the new template's studio", async () => {
+  const user = userEvent.setup();
+  let path = "";
+  function Probe() {
+    path = useLocation().pathname;
+    return null;
+  }
+  const imported = vi.fn(async () =>
+    Response.json(
+      {
+        templateId: "66666666-6666-4666-8666-666666666666",
+        name: "Weekly history",
+        added: 1,
+        renamed: [],
+        voiceKnown: false,
+        samples: 2,
+      },
+      { status: 201 },
+    ),
+  );
+  renderRouted(
+    <>
+      <TemplatesRoute onApplied={vi.fn()} />
+      <Probe />
+    </>,
+    testDeps({ ...routes, "POST /api/template-studio/packs/import": imported }),
+  );
+  const button = await screen.findByRole("button", { name: "Import template pack" });
+  const input = button.parentElement?.querySelector<HTMLInputElement>('input[type="file"]');
+  if (input === null || input === undefined) throw new Error("no file input");
+  await user.upload(
+    input,
+    new File(["zip"], "weekly.slopify-pack.zip", { type: "application/zip" }),
+  );
+  await waitFor(() => expect(path).toBe("/templates/66666666-6666-4666-8666-666666666666"));
+  expect(imported).toHaveBeenCalledTimes(1);
+});
+
+it("says why a pack wasn't imported", async () => {
+  const user = userEvent.setup();
+  renderRouted(
+    <TemplatesRoute onApplied={vi.fn()} />,
+    testDeps({
+      ...routes,
+      "POST /api/template-studio/packs/import": () =>
+        Response.json(
+          {
+            title: "Bad Request",
+            status: 400,
+            detail: "This pack holds what looks like an API key or a login token.",
+            reason: "invalid-input",
+          },
+          { status: 400, headers: { "content-type": "application/problem+json" } },
+        ),
+    }),
+  );
+  const button = await screen.findByRole("button", { name: "Import template pack" });
+  const input = button.parentElement?.querySelector<HTMLInputElement>('input[type="file"]');
+  if (input === null || input === undefined) throw new Error("no file input");
+  await user.upload(input, new File(["zip"], "x.zip", { type: "application/zip" }));
+  expect((await screen.findByText(/looks like an API key/)).getAttribute("role")).toBe("alert");
+});
