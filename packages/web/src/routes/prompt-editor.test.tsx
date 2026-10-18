@@ -484,6 +484,19 @@ describe("the prompt editor's keywords Slopify fills", () => {
     );
   });
 
+  it("marks the keywords in the body for the prompt's kind", async () => {
+    const user = userEvent.setup();
+    const { container } = await newEditor();
+    await fill(user, "Body", "{{Slopify_Title}} {{Slopify_Hook}}");
+    const kinds = () =>
+      [...container.querySelectorAll("[data-keyword-kind]")].map((span) =>
+        span.getAttribute("data-keyword-kind"),
+      );
+    expect(kinds()).toEqual(["known", "misuse"]);
+    await user.click(screen.getByRole("radio", { name: "Image" }));
+    expect(kinds()).toEqual(["known", "known"]);
+  });
+
   it("saves a stored prompt whose unknown Slopify_ name it already had, and refuses a new one", async () => {
     const user = userEvent.setup();
     const stored: Prompt = {

@@ -60,3 +60,105 @@ describe("prompt body", () => {
     expect([box.selectionStart, box.selectionEnd]).toEqual([13, 15]);
   });
 });
+
+function rect(left: number, top: number, width: number, height: number): DOMRect {
+  return {
+    left,
+    top,
+    width,
+    height,
+    right: left + width,
+    bottom: top + height,
+    x: left,
+    y: top,
+    toJSON: () => ({}),
+  } as DOMRect;
+}
+
+describe("keywords in the prompt body", () => {
+  function Body({ start }: { readonly start: string }) {
+    const [body, setBody] = useState(start);
+    return (
+      <SlotBody
+        id="body"
+        value={body}
+        invalid={false}
+        describedBy={undefined}
+        place="article"
+        onChange={setBody}
+      />
+    );
+  }
+
+  it("marks a keyword usable here, a misuse and an old name, apart from the person's own", () => {
+    const { container } = render(
+      <Body start={"{{Slopify_Title}} {{Slopify_Summary}}\n{{Topic}} {{Slopify_Wish}}"} />,
+    );
+    const marks = [...container.querySelectorAll("[data-keyword]")].map((span) => [
+      span.getAttribute("data-keyword"),
+      span.getAttribute("data-keyword-kind"),
+    ]);
+    expect(marks).toEqual([
+      ["Slopify_Title", "known"],
+      ["Slopify_Summary", "misuse"],
+      ["Slopify_Wish", "misuse"],
+    ]);
+  });
+
+  it("shows what a keyword fills in when the pointer is over it, with the misuse said", async () => {
+    const { container } = render(<Body start="Recap: {{Slopify_Summary}}" />);
+    const span = container.querySelector('[data-keyword="Slopify_Summary"]');
+    if (!(span instanceof HTMLElement)) throw new Error("no keyword mark");
+    span.getBoundingClientRect = () => rect(100, 20, 150, 20);
+    const box = screen.getByRole("textbox");
+    fireEvent.mouseMove(box, { clientX: 10, clientY: 25 });
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    fireEvent.mouseMove(box, { clientX: 120, clientY: 25 });
+    const card = await screen.findByRole("tooltip");
+    expect(card.textContent).toContain("{{Slopify_Summary}}");
+    expect(card.textContent).toContain("Two or three sentences");
+    expect(card.textContent).toContain("can't be used in an Article prompt");
+    expect(box.getAttribute("aria-describedby")).toContain(card.id);
+    fireEvent.mouseLeave(box);
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  it("shows the card while the caret is inside a keyword, so the keyboard reaches it", async () => {
+    render(<Body start="By {{Slopify_Channel}}." />);
+    const box = screen.getByRole("textbox") as HTMLTextAreaElement;
+    box.setSelectionRange(8, 8);
+    fireEvent.select(box);
+    expect((await screen.findByRole("tooltip")).textContent).toContain(
+      "The name of the project's channel.",
+    );
+    box.setSelectionRange(1, 1);
+    fireEvent.select(box);
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  it("says an old name keeps working on its card", async () => {
+    function Image() {
+      const [body, setBody] = useState("{{Appearance}}");
+      return (
+        <SlotBody
+          id="body"
+          value={body}
+          invalid={false}
+          describedBy={undefined}
+          place="image"
+          onChange={setBody}
+        />
+      );
+    }
+    const { container } = render(<Image />);
+    expect(container.querySelector("[data-keyword]")?.getAttribute("data-keyword-kind")).toBe(
+      "legacy",
+    );
+    const box = screen.getByRole("textbox") as HTMLTextAreaElement;
+    box.setSelectionRange(4, 4);
+    fireEvent.select(box);
+    const card = await screen.findByRole("tooltip");
+    expect(card.textContent).toContain("{{Slopify_Appearance}}");
+    expect(card.textContent).toContain("{{Appearance}} is its old name, which keeps working.");
+  });
+});

@@ -251,6 +251,8 @@ export function PromptEditorRoute({
             <SlotBody
               id={bodyId}
               value={draft.body}
+              place={draft.kind}
+              grandfathered={grandfathered}
               invalid={lint.length > 0}
               describedBy={lint.length === 0 ? undefined : lintId}
               onChange={(next) => {

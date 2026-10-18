@@ -213,6 +213,8 @@ export function EntryEditorRoute({
             <SlotBody
               id={bodyId}
               value={draft.body}
+              place={draft.category}
+              grandfathered={grandfathered}
               invalid={lint.length > 0}
               describedBy={lint.length === 0 ? undefined : lintId}
               onChange={(next) => {
