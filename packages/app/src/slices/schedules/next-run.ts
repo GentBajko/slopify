@@ -6,6 +6,10 @@ import { nextDesignOccurrence } from "./by-date.js";
 import { type Cadence, nextOccurrence } from "./calendar.js";
 import type { ScheduleSummary } from "./schema.js";
 
+// How late a run may start and still count as on time; later, it was missed (Slopify was
+// closed), and a schedule that skips missed runs skips it.
+export const missedGraceMs = 60_000;
+
 // When a schedule runs next. A project schedule asks `nextOccurrence`, exactly as before
 // designs; a design schedule asks its table's dates (`by-date.ts`), reading the date field and
 // how many days ahead from the design template's ready version (else its newest).

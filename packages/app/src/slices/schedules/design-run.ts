@@ -6,7 +6,7 @@ import { makeFromTemplate, quoteDocument } from "../designs/template-make.js";
 import { designOccurrences } from "./by-date.js";
 import { nextOccurrence } from "./calendar.js";
 import type { ScheduleDeps } from "./model.js";
-import { designPlanOf, nextRunOf } from "./next-run.js";
+import { designPlanOf, missedGraceMs, nextRunOf } from "./next-run.js";
 import { insertRun, scheduleById, updateRun } from "./repo.js";
 import type { ScheduleRun, ScheduleSummary } from "./schema.js";
 
@@ -82,6 +82,14 @@ export function claimDesignRun(deps: ScheduleDeps, schedule: ScheduleSummary, no
       insertRun(deps.db, run(status, error));
       setNext(deps, current, tomorrow(), current.items, now);
     };
+    // A run Slopify wasn't open for, like a project schedule's: skipped when the schedule skips
+    // missed runs. The row stays and is tried again at the same time the next day.
+    const scheduledFor = schedule.nextRunAt === null ? now : new Date(schedule.nextRunAt);
+    if (current.missedPolicy === "skip" && now.valueOf() - scheduledFor.valueOf() > missedGraceMs)
+      return keep(
+        "skipped",
+        `Skipped: Slopify wasn't open at ${time} when ${row.title}'s piece was due, and this schedule skips the runs it misses. It tries again at ${time} tomorrow; to make a missed piece as soon as Slopify opens, set Missed run to Run once when Slopify reopens in Library → Designs → Templates → ${plan.name} → Schedule.`,
+      );
     if (designs === undefined)
       return keep(
         "failed",

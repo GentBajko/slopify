@@ -6,7 +6,7 @@ import { PlusIcon, Trash2Icon } from "lucide-react";
 import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button, IconButton } from "@/components/kit/button";
-import { Field, Input } from "@/components/kit/field";
+import { Field, Input, Select } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { Status } from "@/components/kit/status";
@@ -70,9 +70,13 @@ export function ScheduleRows({
   // The spend ceiling as typed; null until changed, so the saved one shows once it loads.
   const [spend, setSpend] = useState<string | null>(null);
   const [spendProblem, setSpendProblem] = useState<string | null>(null);
+  // Null until changed, so the saved choice shows once it loads. A new schedule makes a piece
+  // it missed once Slopify reopens: its date still matters.
+  const [missed, setMissed] = useState<"skip" | "run-once" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const shown = rows ?? rowsOf(schedule);
   const spendShown = spend ?? centsToDollars(schedule?.spendLimitCents);
+  const missedShown = missed ?? schedule?.missedPolicy ?? "run-once";
   const fields = designFields(saved);
   const dateField = saved.schedule?.dateField;
   const save = useMutation({
@@ -98,7 +102,7 @@ export function ScheduleRows({
         templateVersion: template.headVersion,
         cadence: { kind: "by-date" as const, time: saved.schedule?.time ?? "09:00" },
         timezone: schedule?.timezone ?? (Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"),
-        missedPolicy: "skip" as const,
+        missedPolicy: missedShown,
         overlapPolicy: "skip" as const,
         spendLimitCents: limit,
         items,
@@ -124,6 +128,7 @@ export function ScheduleRows({
       }
       setRows(null);
       setSpend(null);
+      setMissed(null);
       setMessage(
         result.value.nextRunAt === null
           ? "Saved. No row has a date still to come."
@@ -152,8 +157,8 @@ export function ScheduleRows({
     ? "Save the template first: the rows follow its saved fields."
     : dateField === undefined
       ? "Choose which field holds each date above, then save the template."
-      : rows === null && spend === null
-        ? "Change a row or the spend ceiling first."
+      : rows === null && spend === null && missed === null
+        ? "Change a row, the spend ceiling or the missed run first."
         : undefined;
   return (
     // One scope: the table's cells are explained by the Rows heading's info button.
@@ -243,6 +248,20 @@ export function ScheduleRows({
           }}
           placeholder="1.00"
         />
+      </Field>
+      <Field
+        label="Missed run"
+        tip="planning.schedule.missed"
+        help="When Slopify was closed at the time a piece was due."
+        className="max-w-[20rem]"
+      >
+        <Select
+          value={missedShown}
+          onChange={(event) => setMissed(event.target.value === "skip" ? "skip" : "run-once")}
+        >
+          <option value="run-once">Run once when Slopify reopens</option>
+          <option value="skip">Skip if Slopify was closed, and try the next day</option>
+        </Select>
       </Field>
       <div className="flex flex-wrap items-center gap-2">
         <Button

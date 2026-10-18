@@ -5,6 +5,7 @@ import { startPlayDraft } from "../play-drafts/start.js";
 import { nextOccurrence } from "./calendar.js";
 import { claimDesignRun } from "./design-run.js";
 import type { ClaimedScheduleRun, ScheduleDeps } from "./model.js";
+import { missedGraceMs } from "./next-run.js";
 import { continuePrepared, preparedProject, scheduledDocument, scheduledTitle } from "./prepare.js";
 import {
   activeRun,
@@ -19,8 +20,6 @@ import {
 } from "./repo.js";
 import type { ScheduleRun, ScheduleSummary } from "./schema.js";
 import { generateTopics, generationDue, releaseTopicLeases } from "./topics.js";
-
-const missedGraceMs = 60_000;
 
 export interface ScheduleRunner {
   readonly tick: (now?: Date) => Promise<void>;

@@ -169,6 +169,32 @@ describe("a design schedule", () => {
     expect(asked).toHaveLength(0);
   });
 
+  it("skips a run Slopify missed when it skips missed runs, and tries the row again the next day", async () => {
+    const { h, deps, id, create, runs, asked, runner } = await setup();
+    create({ items: [row("Late Set", "2026-11-14")], missedPolicy: "skip" });
+    // Slopify was closed at 09:00 and opened at 11:00.
+    await createScheduleRunner(deps).tick(new Date("2026-11-07T11:00:00.000Z"));
+    await runner.idle();
+    expect(runs().map((run) => [run.status, run.error])).toEqual([
+      [
+        "skipped",
+        "Skipped: Slopify wasn't open at 09:00 when Late Set's piece was due, and this schedule skips the runs it misses. It tries again at 09:00 tomorrow; to make a missed piece as soon as Slopify opens, set Missed run to Run once when Slopify reopens in Library → Designs → Templates → Gig poster → Schedule.",
+      ],
+    ]);
+    expect(asked).toHaveLength(0);
+    expect(scheduleById(h.deps.db, id)?.items).toHaveLength(1);
+    expect(scheduleById(h.deps.db, id)?.nextRunAt).toBe("2026-11-08T09:00:00.000Z");
+  });
+
+  it("makes a missed piece as soon as Slopify opens when it runs missed runs once", async () => {
+    const { deps, create, runs, asked, runner } = await setup();
+    create({ items: [row("Late Set", "2026-11-14")], missedPolicy: "run-once" });
+    await createScheduleRunner(deps).tick(new Date("2026-11-07T11:00:00.000Z"));
+    await runner.idle();
+    expect(runs().map((run) => run.status)).toEqual(["succeeded"]);
+    expect(asked).toHaveLength(1);
+  });
+
   it("makes nothing from a template with no version marked ready, and tries again once one is", async () => {
     const { h, deps, id, create, runs, asked, service } = await setup({ ready: false });
     create();
