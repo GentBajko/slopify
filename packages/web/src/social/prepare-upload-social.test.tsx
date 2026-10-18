@@ -122,7 +122,12 @@ describe("Prepare upload's other sites", () => {
       await within(drawer).findByRole("button", { name: "Reset to the written text" }),
     ).not.toBeNull();
     await user.click(within(drawer).getByRole("button", { name: "Fill in X" }));
-    expect(opened).toHaveBeenCalledWith("https://x.com/compose/post", "_blank", "noopener");
+    // The tab carries the mark the extension fills by; a post form opened by hand has none.
+    expect(opened).toHaveBeenCalledWith(
+      "https://x.com/compose/post#slopify-post=p1:x",
+      "_blank",
+      "noopener",
+    );
     await waitFor(() => expect(filled).toHaveLength(1));
     expect(within(drawer).queryByRole("button", { name: "Fill in YouTube Studio" })).toBeNull();
   });

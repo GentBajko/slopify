@@ -1,7 +1,7 @@
 import type { WorkerAnswer } from "../pack.js";
 import { listed } from "../ui.js";
 import { RefusedClick } from "./guard.js";
-import { dueHash, findHash, type LookupHash, type SocialRequest } from "./messages.js";
+import { findHash, type LookupHash, postMarkOf, type SocialRequest } from "./messages.js";
 import { watchPrompts } from "./modals.js";
 import {
   type FillContext,
@@ -17,10 +17,12 @@ import { type ActivePost, linkPatterns, type PostPack, platformLabels } from "./
 // browser):
 // - a profile page the worker opened to find a post's link ("#slopify-find=…") looks for it and
 //   reports it, then the worker closes the tab;
-// - the site's post form (or a form the worker opened at a post's release time,
-//   "#slopify-post=…") asks the worker for the site's next waiting post, gets its media, fills
-//   the form, reports what it did, and watches for the site's sign that the person posted it,
-//   to report the link. It never presses Post: the person does.
+// - a post form Slopify opened, by Fill in <site> or by the worker at a post's release time
+//   ("#slopify-post=<projectId>:<platform>", see `messages.ts`), asks the worker for that
+//   project's waiting post, gets its media, fills the form, reports what it did, and watches for
+//   the site's sign that the person posted it, to report the link. It never presses Post: the
+//   person does. A post form the person opened themselves carries no mark and is left alone:
+//   nothing is asked of Slopify and nothing on the page is touched.
 
 export interface RunnerDeps {
   readonly send: <T>(request: SocialRequest) => Promise<WorkerAnswer<T>>;
@@ -57,19 +59,23 @@ export async function runSocialPage(
   const lookup = hash.get(findHash);
   if (lookup !== null) return findLink(site, doc, deps, waits, lookup);
 
-  const due = hash.has(dueHash);
-  const late = hash.get("late") === "1";
   const carried = deps.storage?.getItem(carryKey) ?? null;
   deps.storage?.removeItem(carryKey);
-  if (carried === null && !due && !site.isCompose(location)) return "idle";
+  const mark = postMarkOf(location.toString(), site.platform);
+  const due = mark?.due ?? false;
+  const late = mark?.late ?? false;
 
   let active: ActivePost;
   if (carried !== null) active = JSON.parse(carried) as ActivePost;
   else {
-    const answer = await deps.send<ActivePost>({ type: "social-next", platform: site.platform });
+    if (mark === undefined) return "idle";
+    const answer = await deps.send<ActivePost>({
+      type: "social-next",
+      platform: site.platform,
+      projectId: mark.projectId,
+    });
     if (!answer.ok) {
-      // A post form opened by hand with nothing waiting is the person's own post.
-      if (due) deps.toast(answer.message, "error");
+      deps.toast(answer.message, "error");
       return "idle";
     }
     active = answer.value;
@@ -78,7 +84,9 @@ export async function runSocialPage(
   const moved = site.pageFor?.(pack, location) ?? null;
   if (moved !== null && carried === null) {
     deps.storage?.setItem(carryKey, JSON.stringify(active));
-    deps.navigate(due ? `${moved}#${location.hash.replace(/^#/, "")}` : moved);
+    // The post goes along in the tab's session; a due fill keeps its mark for the notification.
+    const target = moved.replace(/#.*$/, "");
+    deps.navigate(due ? `${target}${location.hash}` : target);
     return "moved";
   }
   return fillPost(site, doc, deps, waits, pack, { due, late });

@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { fillUrl } from "../../app/src/slices/social/limits.js";
+import { markedUrl } from "../src/social/messages.js";
 
 // `src/social/types.ts` is a hand copy of the app's `slices/social/model.ts` (and its link
 // patterns, from `limits.ts`) so the extension builds alone. These checks keep the two from
@@ -67,5 +69,10 @@ describe("the extension's copy of the posts", () => {
     });
   it("the link patterns are the app's", () => {
     expect(constOf(copy, "linkPatterns")).toBe(constOf(limits, "linkPatterns"));
+  });
+  it("the mark Fill in <site> puts on its tab is the one the pages fill by", () => {
+    expect(markedUrl("https://x.com/compose/post", "p 1", "x")).toBe(
+      fillUrl("https://x.com/compose/post", "p 1", "x"),
+    );
   });
 });

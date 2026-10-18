@@ -77,16 +77,22 @@ const waits =
     waitsForRelease(post.platform) &&
     !tooLate(post.platform, releaseOf(deps, post.projectId, post.platform, now), now);
 
-// The extension's next post for a site: the oldest waiting one that can be filled now.
+// The extension's next post for a site: the oldest waiting one that can be filled now, of
+// `projectId` when the tab Slopify opened names it.
 export function nextPost(
   deps: SourceDeps,
   platform: SocialPlatform,
   now: Date,
+  projectId?: string,
 ): ActivePost | undefined {
   expireWaiting(deps.db, now, waits(deps, now));
   for (;;) {
-    const taken = takeNext(deps.db, platform, now, (post) =>
-      readyNow(platform, releaseOf(deps, post.projectId, platform, now), now),
+    const taken = takeNext(
+      deps.db,
+      platform,
+      now,
+      (post) => readyNow(platform, releaseOf(deps, post.projectId, platform, now), now),
+      projectId,
     );
     if (taken === undefined) return undefined;
     const pack = packFor(deps, taken.post.projectId, platform, now);

@@ -1,7 +1,7 @@
 import type { ExtensionApi } from "../browser.js";
 import type { WorkerAnswer } from "../pack.js";
 import { allowedSites, syncScripts } from "./grant.js";
-import { dueHash, findHash, type LookupHash, type SocialRequest } from "./messages.js";
+import { findHash, type LookupHash, markedUrl, type SocialRequest } from "./messages.js";
 import {
   type ActivePost,
   type DuePost,
@@ -109,8 +109,11 @@ export function socialWorker(deps: SocialWorkerDeps) {
     if (!name.startsWith(alarmPrefix)) return false;
     const entry = (await stored<Record<string, DueEntry>>(dueKey, {}))[name];
     if (entry === undefined) return false;
-    const hash = `${dueHash}=${encodeURIComponent(entry.projectId)}${entry.late ? "&late=1" : ""}`;
-    return openOnce(name, `${entry.composeUrl.replace(/#.*$/, "")}#${hash}`, reopenMs);
+    const url = markedUrl(entry.composeUrl, entry.projectId, entry.platform, {
+      due: true,
+      late: entry.late,
+    });
+    return openOnce(name, url, reopenMs);
   }
 
   async function findLinks(): Promise<number> {
@@ -182,7 +185,7 @@ export function socialWorker(deps: SocialWorkerDeps) {
             reply: {
               ok: true,
               value: await deps.getJson<ActivePost>(
-                `/api/social/ext/next?platform=${request.platform}`,
+                `/api/social/ext/next?platform=${request.platform}&projectId=${encodeURIComponent(request.projectId)}`,
                 `the post waiting for ${platformLabels[request.platform]}`,
               ),
             },

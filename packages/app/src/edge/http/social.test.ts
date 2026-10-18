@@ -266,6 +266,17 @@ describe("the extension's routes", () => {
     expect(await detail(none)).toMatch(/Nothing is waiting to be filled on this site/);
   });
 
+  it("hands a tab only the post of the project whose Fill opened it", async () => {
+    const { call, send, pair } = harness({ social: { x: defaultChoices.x } });
+    const headers = await pair();
+    await send("POST", "/social/packs/p1/x/fill");
+    const other = await call("/social/ext/next?platform=x&projectId=p9", { headers });
+    expect(other.status).toBe(404);
+    const mine = await call("/social/ext/next?platform=x&projectId=p1", { headers });
+    expect(mine.status).toBe(200);
+    expect(((await mine.json()) as ActivePost).pack.projectId).toBe("p1");
+  });
+
   it("records what the extension reports, refusing what nobody asked for", async () => {
     const { call, send, pair } = harness({ social: { x: defaultChoices.x } });
     const headers = { ...(await pair()), "content-type": "application/json" };

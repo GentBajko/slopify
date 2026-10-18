@@ -148,6 +148,15 @@ export const composeUrls: Readonly<Record<SocialPlatform, string>> = {
   bluesky: "https://bsky.app/",
 };
 
+// The address Fill in <site> opens: the post form with "#slopify-post=<projectId>:<platform>".
+// The extension fills only a post form that carries this mark (or the one its alarm opens at
+// release time, `packages/extension/src/social/messages.ts`), and only that project's post; a
+// post form the person opens themselves is never touched.
+export const fillMark = "slopify-post";
+export function fillUrl(composeUrl: string, projectId: string, platform: SocialPlatform): string {
+  return `${composeUrl.replace(/#.*$/, "")}#${fillMark}=${encodeURIComponent(projectId)}:${platform}`;
+}
+
 // Reddit's submit page takes the title, text and link in its address.
 export function redditSubmitUrl(fields: {
   readonly subreddit: string;

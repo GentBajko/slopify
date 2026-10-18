@@ -1,5 +1,5 @@
 import { readyNow } from "@app/slices/social/due.js";
-import { linkExamples, linkPatterns, nativeSchedule } from "@app/slices/social/limits.js";
+import { fillUrl, linkExamples, linkPatterns, nativeSchedule } from "@app/slices/social/limits.js";
 import {
   type PostChoice,
   type PostingExtension,
@@ -311,7 +311,11 @@ export function PostFillButton({
         onClick={() => {
           // Opened inside the click, so the browser doesn't block the new tab.
           if (readyNow(pack.platform, pack.schedule.at, new Date()))
-            window.open(pack.composeUrl, "_blank", "noopener");
+            window.open(
+              fillUrl(pack.composeUrl, pack.projectId, pack.platform),
+              "_blank",
+              "noopener",
+            );
           fill.mutate();
         }}
       >

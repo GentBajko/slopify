@@ -30,15 +30,18 @@ export function expireWaiting(
   }
 }
 
-// The oldest waiting post for a site that can be filled now; it becomes "filling" so another
-// tab of the site doesn't take it too.
+// The oldest waiting post for a site that can be filled now (of `projectId` when the tab Slopify
+// opened names one); it becomes "filling" so another tab of the site doesn't take it too.
 export function takeNext(
   db: DatabaseSync,
   platform: SocialPlatform,
   now: Date,
   readyNow: (post: PostRecord) => boolean,
+  projectId?: string,
 ): { readonly post: PostRecord; readonly waiting: number } | undefined {
-  const waiting = postsIn(db, ["waiting"], platform).filter(readyNow);
+  const waiting = postsIn(db, ["waiting"], platform).filter(
+    (post) => (projectId === undefined || post.projectId === projectId) && readyNow(post),
+  );
   const [first] = waiting;
   if (first === undefined) return undefined;
   writeProgress(db, first, { ...first, state: "filling", message: null }, now);

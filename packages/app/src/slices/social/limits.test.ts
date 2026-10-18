@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   accountPatterns,
+  fillUrl,
   limitsFor,
   linkPatterns,
   nativeSchedule,
@@ -103,5 +104,16 @@ describe("browser-safe", () => {
     const source = readFileSync(new URL(file, import.meta.url), "utf8");
     expect(source).not.toMatch(/from "node:/);
     expect(source).not.toMatch(/from "\.\.\//);
+  });
+});
+
+describe("fillUrl", () => {
+  it("marks the post form Fill in <site> opens with the project and site, for the extension", () => {
+    expect(fillUrl("https://x.com/compose/post", "p 1", "x")).toBe(
+      "https://x.com/compose/post#slopify-post=p%201:x",
+    );
+    expect(fillUrl("https://www.reddit.com/submit?title=Fox#old", "p1", "reddit")).toBe(
+      "https://www.reddit.com/submit?title=Fox#slopify-post=p1:reddit",
+    );
   });
 });

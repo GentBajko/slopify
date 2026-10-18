@@ -217,9 +217,9 @@ describe("the posting worker", () => {
     expect(await social.onAlarm(`${alarmPrefix}p1:instagram`)).toBe(true);
     expect(await social.onAlarm(`${alarmPrefix}p1:reddit`)).toBe(true);
     expect(browser.tabs).toEqual([
-      { url: "https://www.instagram.com/#slopify-post=p1", active: false },
+      { url: "https://www.instagram.com/#slopify-post=p1:instagram&due=1", active: false },
       {
-        url: "https://www.reddit.com/r/fantasy/submit?title=Fox#slopify-post=p1&late=1",
+        url: "https://www.reddit.com/r/fantasy/submit?title=Fox#slopify-post=p1:reddit&due=1&late=1",
         active: false,
       },
     ]);
@@ -319,6 +319,17 @@ describe("the posting worker", () => {
     );
     expect(found.closeTab).toBe(true);
     expect((await social.answer({ type: "social-lookup-done" }, {})).closeTab).toBe(true);
+  });
+
+  it("claims only the post of the project whose tab Slopify opened", async () => {
+    const browser = fakeBrowser({ granted: siteMatches.x });
+    const { social, got } = worker(browser, { "/api/social/ext/next": { waiting: 0 } });
+    const next = await social.answer(
+      { type: "social-next", platform: "x", projectId: "p 1" },
+      { tab: { id: 3 } },
+    );
+    expect(next.reply.ok).toBe(true);
+    expect(got).toEqual(["/api/social/ext/next?platform=x&projectId=p%201"]);
   });
 
   it("hands a file over as base64 and tells Slopify the allowed sites", async () => {

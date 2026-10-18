@@ -31,6 +31,14 @@ describe("takeNext", () => {
     expect(takeNext(db, "x", now, () => true)).toBeUndefined();
   });
 
+  it("takes only the named project's post when the tab names one", () => {
+    wait("p2", "x", "2026-10-18T09:00:00.000Z");
+    wait("p1", "x", "2026-10-18T09:30:00.000Z");
+    expect(takeNext(db, "x", now, () => true, "p1")?.post.projectId).toBe("p1");
+    expect(readPost(db, { projectId: "p2", platform: "x" }).state).toBe("waiting");
+    expect(takeNext(db, "x", now, () => true, "p1")).toBeUndefined();
+  });
+
   it("skips a post that isn't ready yet", () => {
     wait("p1", "instagram", "2026-10-18T09:00:00.000Z");
     expect(takeNext(db, "instagram", now, () => false)).toBeUndefined();

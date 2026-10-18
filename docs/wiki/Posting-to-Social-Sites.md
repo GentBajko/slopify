@@ -83,7 +83,7 @@ The post follows the YouTube item it carries: a short's own release time when it
 - the extension is new enough to post; and
 - the site is allowed in the extension's options (**Allow posting on X**, and so on).
 
-The extension never presses Post, Share, Publish or the final Schedule.
+The extension only fills a tab that Slopify opened: the one **Fill in X** opens, or the background tab it opens at release time. A site's page you open yourself is never filled or touched. The extension never presses Post, Share, Publish or the final Schedule.
 
 ## AI labels
 

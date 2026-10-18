@@ -81,17 +81,38 @@ describe("a page on a posting site", () => {
     expect(page.sent).toEqual([]);
   });
 
-  it("stays quiet on the post form when nothing waits", async () => {
-    const page = harness("https://bsky.app/", null);
+  it("never touches a post form the person opened themselves, even with a post waiting", async () => {
+    const page = harness("https://bsky.app/", { pack: pack("bluesky"), waiting: 0 });
     expect(await runSocialPage(bluesky, document, page.deps)).toBe("idle");
+    // No claim on Slopify's queue, no toast, nothing typed.
+    expect(page.sent).toEqual([]);
     expect(page.toasts).toEqual([]);
+    expect(document.querySelector(".ProseMirror")?.textContent ?? "").toBe("");
+  });
+
+  it("leaves a form marked for another site alone", async () => {
+    const page = harness("https://bsky.app/#slopify-post=p1:x", {
+      pack: pack("bluesky"),
+      waiting: 0,
+    });
+    expect(await runSocialPage(bluesky, document, page.deps)).toBe("idle");
+    expect(page.sent).toEqual([]);
+  });
+
+  it("asks for exactly the project whose Fill was pressed", async () => {
+    const page = harness("https://bsky.app/#slopify-post=p%3A1:bluesky", {
+      pack: pack("bluesky"),
+      waiting: 0,
+    });
+    await runSocialPage(bluesky, document, page.deps);
+    expect(page.sent[0]).toEqual({ type: "social-next", platform: "bluesky", projectId: "p:1" });
   });
 
   it("fills the waiting post, reports it filled, and reports the link once the person posts", async () => {
     const post = pack("bluesky", {
       warnings: [{ code: "text-cut", sentence: "The text was cut to fit 300 characters." }],
     });
-    const page = harness("https://bsky.app/", { pack: post, waiting: 0 });
+    const page = harness("https://bsky.app/#slopify-post=p1:bluesky", { pack: post, waiting: 0 });
     expect(await runSocialPage(bluesky, document, page.deps)).toBe("filled");
     expect(results(page.sent)[0]).toMatchObject({
       type: "social-result",
@@ -113,7 +134,7 @@ describe("a page on a posting site", () => {
   });
 
   it("marks a fill opened at its release time as due (and late), for the notification", async () => {
-    const page = harness("https://bsky.app/#slopify-post=p1&late=1", {
+    const page = harness("https://bsky.app/#slopify-post=p1:bluesky&due=1&late=1", {
       pack: pack("bluesky"),
       waiting: 0,
     });
@@ -126,8 +147,8 @@ describe("a page on a posting site", () => {
     });
   });
 
-  it("says what failed when a due fill finds nothing waiting", async () => {
-    const page = harness("https://bsky.app/#slopify-post=p1", null);
+  it("says what failed when a fill Slopify opened finds nothing waiting", async () => {
+    const page = harness("https://bsky.app/#slopify-post=p1:bluesky", null);
     expect(await runSocialPage(bluesky, document, page.deps)).toBe("idle");
     expect(page.toasts).toEqual([
       { text: "Nothing is waiting to be filled on this site.", tone: "error" },
@@ -136,7 +157,10 @@ describe("a page on a posting site", () => {
 
   it("reports a failure with the missing controls and offers the text, when the form changed", async () => {
     document.querySelector('button[aria-label="Compose new post"]')?.remove();
-    const page = harness("https://bsky.app/", { pack: pack("bluesky"), waiting: 0 });
+    const page = harness("https://bsky.app/#slopify-post=p1:bluesky", {
+      pack: pack("bluesky"),
+      waiting: 0,
+    });
     expect(await runSocialPage(bluesky, document, page.deps)).toBe("failed");
     const failed = results(page.sent)[0];
     expect(failed?.state).toBe("failed");
@@ -158,7 +182,10 @@ describe("a page on a posting site", () => {
     document
       .querySelector('[data-testid="composerPublishBtn"]')
       ?.addEventListener("click", publish);
-    const page = harness("https://bsky.app/", { pack: pack("bluesky"), waiting: 0 });
+    const page = harness("https://bsky.app/#slopify-post=p1:bluesky", {
+      pack: pack("bluesky"),
+      waiting: 0,
+    });
     expect(await runSocialPage(pressing, document, page.deps)).toBe("failed");
     expect(publish).not.toHaveBeenCalled();
     expect(results(page.sent)[0]?.message).toContain("never posts");
@@ -210,7 +237,10 @@ describe("TikTok through the page runner", () => {
       });
     });
     const post = pack("tiktok", { media: [media("short", "short-1.mp4")], aiLabel: false });
-    const page = harness("https://www.tiktok.com/tiktokstudio/upload", { pack: post, waiting: 0 });
+    const page = harness("https://www.tiktok.com/tiktokstudio/upload#slopify-post=p1:tiktok", {
+      pack: post,
+      waiting: 0,
+    });
     expect(await runSocialPage(tiktok, document, page.deps)).toBe("filled");
     expect(cancel).toHaveBeenCalled();
     expect(turnOn).not.toHaveBeenCalled();
@@ -220,7 +250,10 @@ describe("TikTok through the page runner", () => {
   it("moves to the Photos tab with the post, then fills it there without asking again", async () => {
     loadFixture("tiktok-upload.html");
     const post = pack("tiktok");
-    const page = harness("https://www.tiktok.com/tiktokstudio/upload", { pack: post, waiting: 0 });
+    const page = harness("https://www.tiktok.com/tiktokstudio/upload#slopify-post=p1:tiktok", {
+      pack: post,
+      waiting: 0,
+    });
     expect(await runSocialPage(tiktok, document, page.deps)).toBe("moved");
     expect(page.navigate).toHaveBeenCalledWith(
       "https://www.tiktok.com/tiktokstudio/upload?tab=photo",

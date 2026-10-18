@@ -57,7 +57,10 @@ const fileParam = projectParam.extend({
     .max(200)
     .regex(/^[A-Za-z0-9_-]+$/),
 });
-const nextQuery = z.object({ platform: platformSchema });
+const nextQuery = z.object({
+  platform: platformSchema,
+  projectId: z.string().min(1).max(200).optional(),
+});
 const dueQuery = z.object({ hours: z.coerce.number().int().min(1).max(48).optional() });
 const sitesBody = z.object({ sites: z.array(platformSchema).max(6) });
 
@@ -264,8 +267,8 @@ export function socialRoutes(deps: AppDeps) {
       .get("/ext/next", zValidator("query", nextQuery, onInvalid), (c) => {
         allowOrigin(c, false);
         if (!allowed(c)) return refused(c);
-        const { platform } = c.req.valid("query");
-        const next = nextPost(deps, platform, deps.clock.now());
+        const { platform, projectId } = c.req.valid("query");
+        const next = nextPost(deps, platform, deps.clock.now(), projectId);
         if (next === undefined)
           return problem(c, {
             status: 404,

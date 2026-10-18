@@ -312,8 +312,8 @@ Slopify hides posting.
 
 | Route | What it does |
 |---|---|
-| `GET /api/social/ext/next?platform=<site>` | The oldest post waiting for that site that can be filled now (`{pack, waiting}`, `ActivePost` in `slices/social/model.ts`); it becomes `filling`. 404 with a sentence when none waits. |
-| `GET /api/social/ext/packs/:projectId/:platform` | One post's pack (`PostPack`), for a due fill opened with `#slopify-post=`. |
+| `GET /api/social/ext/next?platform=<site>&projectId=<id>` | The post of that project waiting for that site, when it can be filled now (without `projectId`, the oldest one) (`{pack, waiting}`, `ActivePost` in `slices/social/model.ts`); it becomes `filling`. 404 with a sentence when none waits. |
+| `GET /api/social/ext/packs/:projectId/:platform` | One post's pack (`PostPack`). |
 | `GET /api/social/ext/files/:projectId/:file` | A file one of the project's posts lists (`PostPack.media[].file`); pictures cut to the site's shape are made on the first ask. Anything else is 404. |
 | `GET /api/social/ext/due?hours=1-48` | `{posts: DuePost[]}`: waiting posts on Instagram, Bluesky and Reddit whose fill time (two minutes before release) is within the hours, or passed at most 12 hours ago (`late`). |
 | `POST /api/social/ext/result` | `{projectId, platform, state: filling\|filled\|scheduled\|posted\|failed, url?, message?}`; answers `{status}`. A link must be a post on that site; a report for a post nobody asked to fill is refused. |
@@ -440,12 +440,14 @@ permissions are exactly 1.x's (a test checks it). So nothing runs on a site unti
 
 ### What happens when you press Fill in <site>
 
-Slopify puts the post in the extension's queue and opens the site's post form. The page script
-(`src/social-content.ts` → `src/social/runner.ts`) runs only on the post form
-(`x.com/compose/post`, `linkedin.com/feed/?shareActive=true`, `instagram.com/`,
-`tiktok.com/tiktokstudio/upload`, `reddit.com/…/submit`, `bsky.app/`); there it asks the worker
-for the site's next waiting post, gets its media, fills the form, reports `filled` (or `failed`
-with the reason) and shows a message per part, with Copy where something must be pasted by hand.
+Slopify puts the post in the extension's queue and opens the site's post form with a mark after
+`#`: `#slopify-post=<projectId>:<platform>` (`fillUrl` in `slices/social/limits.ts`; the worker's
+release-time alarm adds `&due=1`). The page script (`src/social-content.ts` →
+`src/social/runner.ts`) runs on the sites' pages, but fills only a tab that carries that mark:
+there it asks the worker for that project's waiting post (never another one), gets its media,
+fills the form, reports `filled` (or `failed` with the reason) and shows a message per part, with
+Copy where something must be pasted by hand. A post form you open yourself has no mark, and the
+extension leaves it alone: it asks Slopify nothing, claims nothing and touches nothing.
 It then watches the page for up to 30 minutes for the site's sign that you posted it and
 reports `posted` with the post's link when the page shows one, or `scheduled`.
 
@@ -494,8 +496,8 @@ the post in Prepare upload.
 ### How it talks to Slopify (posting)
 
 Only the background worker talks to Slopify, with the same pairing token and CORS rules as
-YouTube Studio's routes: `GET /api/social/ext/next?platform=` (the site's next waiting post,
-marked filling), `GET /api/social/ext/files/:projectId/:file` (only that post's media),
+YouTube Studio's routes: `GET /api/social/ext/next?platform=&projectId=` (the marked tab's project's waiting
+post, marked filling), `GET /api/social/ext/files/:projectId/:file` (only that post's media),
 `GET /api/social/ext/due` (posts due on sites without a scheduler), `POST /api/social/ext/result`
 (filled, scheduled, posted or failed, with a link only when it matches the site's link pattern),
 `GET /api/social/ext/find-links` and `POST /api/social/ext/sites` (the sites allowed). The pages
