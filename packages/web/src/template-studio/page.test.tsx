@@ -703,3 +703,24 @@ it("says a ready version is marked, with no button to press again", async () => 
   expect(button.getAttribute("aria-disabled")).toBe("true");
   expect(screen.getByText("Version 3 · Ready")).not.toBeNull();
 });
+
+it("asks for the free samples by itself when only the schedule's cost is still to work out", async () => {
+  const asked = vi.fn(() => Response.json({ queued: true, version: 3 }, { status: 202 }));
+  open("schedule", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({
+      ...view,
+      schedule: {
+        ...view.schedule,
+        cost: {
+          runs: 4,
+          high: 0,
+          unknown: 1,
+          problem:
+            "The cost of the runs of Weekdays isn't worked out yet: it is, with the free samples.",
+        },
+      },
+    }),
+    [`POST /api/template-studio/${templateId}/free-samples`]: asked,
+  });
+  await waitFor(() => expect(asked).toHaveBeenCalledOnce());
+});

@@ -111,7 +111,9 @@ function Studio({
   // biome-ignore lint/correctness/useExhaustiveDependencies: once per version, which keys this component.
   useEffect(() => {
     const free = [view.free.video, view.free.loudness, view.free.document];
-    if (asked.current || !free.some((sample) => sample.state === "stale")) return;
+    // The schedule's cost a month is worked out by the same free job.
+    const unpriced = view.schedule.cost !== null && view.schedule.cost.problem !== null;
+    if (asked.current || !(unpriced || free.some((sample) => sample.state === "stale"))) return;
     asked.current = true;
     void make();
   }, [view]);
