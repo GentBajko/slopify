@@ -3,7 +3,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { CheckFont } from "./check-text.js";
 import { designHarness, type Harness } from "./designs.fake.js";
 import { poster } from "./document.fake.js";
-import { type CheckContext, contextChecks, runnableDesignVersion } from "./gate.js";
+import { type CheckContext, contextChecks, runnableDesignVersion, sampleCheck } from "./gate.js";
+import { writeSample } from "./sample-repo.js";
 import { createTemplate, markTemplateReady, saveTemplate } from "./templates.js";
 
 const barlow: CheckFont = {
@@ -144,5 +145,37 @@ describe("the checks that read this computer", () => {
       { ...ready, font: async () => undefined },
     );
     expect(checks.map((check) => check.id)).toEqual(["provider"]);
+  });
+});
+
+describe("the sample Mark ready asks for", () => {
+  it("passes only when the version's own sample is made, like a project template's studio", async () => {
+    h = designHarness();
+    createTemplate(h.deps, { id: "t1", mutationId: "mutation-1", name: "Gig", document: poster() });
+    expect(sampleCheck(h.db, "t1", 1)).toEqual({
+      id: "sample",
+      ok: false,
+      sentence:
+        "Version 1 has no sample yet. Make its sample, look it over beside the settings, then press Mark ready.",
+      fix: { label: "Open Picture", href: "/library/design-templates/t1#picture" },
+    });
+    const row = {
+      templateId: "t1",
+      designId: null,
+      version: 1,
+      state: "held" as const,
+      heldReason: "Waiting.",
+      quotedHigh: 0.04,
+      updatedAt: "2026-10-18T09:00:00.000Z",
+    };
+    writeSample(h.db, row);
+    expect(sampleCheck(h.db, "t1", 1).ok).toBe(false);
+    writeSample(h.db, { ...row, state: "done", heldReason: null });
+    expect(sampleCheck(h.db, "t1", 1)).toMatchObject({ ok: true });
+    expect(sampleCheck(h.db, "t1", 2)).toMatchObject({
+      ok: false,
+      sentence:
+        "Version 2 has no sample yet: the one shown is of version 1. Make its sample, look it over beside the settings, then press Mark ready.",
+    });
   });
 });

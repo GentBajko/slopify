@@ -9,7 +9,6 @@ import { Button, IconButton } from "@/components/kit/button";
 import { Field, Input } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
-import { type Column, DataTable } from "@/components/kit/stats";
 import { Status } from "@/components/kit/status";
 import { keys } from "@/queries";
 import {
@@ -149,35 +148,6 @@ export function ScheduleRows({
   });
   const set = (key: string, name: string, value: string) =>
     setRows(shown.map((row) => (row._key === key ? { ...row, [name]: value } : row)));
-  const columns: Column<Row>[] = [
-    ...fields.map(
-      (name): Column<Row> => ({
-        id: name,
-        header: name,
-        cell: (row) => (
-          <Input
-            aria-label={`${name} of row ${String(shown.indexOf(row) + 1)}`}
-            type={name === dateField ? "date" : "text"}
-            value={row[name] ?? ""}
-            onChange={(event) => set(row._key, name, event.target.value)}
-            className="min-w-[8rem]"
-          />
-        ),
-      }),
-    ),
-    {
-      id: "remove",
-      header: <span className="sr-only">Remove</span>,
-      cell: (row) => (
-        <IconButton
-          label={`Remove row ${String(shown.indexOf(row) + 1)}`}
-          onClick={() => setRows(shown.filter((one) => one._key !== row._key))}
-        >
-          <Trash2Icon aria-hidden="true" className="size-4" />
-        </IconButton>
-      ),
-    },
-  ];
   const blocked = dirty
     ? "Save the template first: the rows follow its saved fields."
     : dateField === undefined
@@ -221,16 +191,41 @@ export function ScheduleRows({
           </Button>
         )}
       </SectionHead>
-      {/* Relative, so the hidden column names scroll with the table instead of widening the page. */}
-      <div className="relative min-w-0 overflow-x-auto">
-        <DataTable
-          caption="The schedule's rows"
-          columns={columns}
-          rows={shown}
-          rowKey={(row) => row._key}
-          empty="No rows yet."
-        />
-      </div>
+      {/* One group a row, its fields wrapping to the column's width: every field and the
+          Remove button stay in view, however many fields the template has. */}
+      {shown.length === 0 ? (
+        <p className="m-0 text-small text-ink-2">No rows yet.</p>
+      ) : (
+        <ul aria-label="The schedule's rows" className="sl-list m-0 list-none p-0">
+          {shown.map((row, index) => (
+            <li
+              key={row._key}
+              aria-label={`Row ${String(index + 1)}`}
+              className="flex flex-wrap items-end gap-2 border-b border-line py-3"
+            >
+              {fields.map((name) => (
+                <div key={name} className="flex min-w-[8rem] flex-1 flex-col gap-1">
+                  <span aria-hidden="true" className="text-small text-ink-2">
+                    {name}
+                  </span>
+                  <Input
+                    aria-label={`${name} of row ${String(index + 1)}`}
+                    type={name === dateField ? "date" : "text"}
+                    value={row[name] ?? ""}
+                    onChange={(event) => set(row._key, name, event.target.value)}
+                  />
+                </div>
+              ))}
+              <IconButton
+                label={`Remove row ${String(index + 1)}`}
+                onClick={() => setRows(shown.filter((one) => one._key !== row._key))}
+              >
+                <Trash2Icon aria-hidden="true" className="size-4" />
+              </IconButton>
+            </li>
+          ))}
+        </ul>
+      )}
       <Field
         label="Spend ceiling per piece (US$, optional)"
         tip="library.design.spend"

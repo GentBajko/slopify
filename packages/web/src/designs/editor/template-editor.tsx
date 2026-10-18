@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
+import { useDocumentTitle } from "@/components/document-title";
 import { ActionBar, StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
@@ -73,6 +74,7 @@ function TemplateEditor({ template }: { readonly template: TemplateView }): Reac
   );
   const [failing, setFailing] = useState<readonly TemplateCheck[]>([]);
   const name = draft?.name ?? template.name;
+  useDocumentTitle(`${template.name} · Design template`);
   const doc = draft?.doc ?? template.document;
   const dirty = draft !== null;
   const edit = (next: Partial<Draft>) => setDraft({ name, doc, ...next });
@@ -160,9 +162,12 @@ function TemplateEditor({ template }: { readonly template: TemplateView }): Reac
         ? priceWords(quote.data)
         : "free";
   const isReady = template.readyVersion === template.headVersion;
+  // As in a project template's studio, a version is marked ready once its own sample is made.
+  const sampled =
+    template.sample?.state === "done" && template.sample.version === template.headVersion;
 
   return (
-    <div>
+    <>
       <PageHeader
         crumb={
           <EditorCrumb>
@@ -247,10 +252,14 @@ function TemplateEditor({ template }: { readonly template: TemplateView }): Reac
       >
         <Button
           variant="quiet"
-          disabled={
-            !(dirty && quote.data?.makesPicture === true && quote.data.high > 0) || save.isPending
+          disabled={!dirty || save.isPending || name.trim() === ""}
+          disabledReason={
+            !dirty
+              ? "Nothing to save."
+              : name.trim() === ""
+                ? "Give the template a name under Picture."
+                : "Saving…"
           }
-          disabledReason="Only a Save that makes a new picture for the sample costs anything."
           onClick={() => save.mutate("skip")}
         >
           Save without a sample
@@ -264,13 +273,15 @@ function TemplateEditor({ template }: { readonly template: TemplateView }): Reac
           Make a piece
         </Button>
         <Button
-          disabled={dirty || isReady || ready.isPending}
+          disabled={dirty || isReady || ready.isPending || !sampled}
           disabledReason={
             dirty
               ? "Save first: a version is marked ready as saved."
               : isReady
                 ? "This version is already ready."
-                : undefined
+                : !sampled
+                  ? "Make this version's sample first: Mark ready needs a current sample to look over."
+                  : undefined
           }
           focusableWhenDisabled
           onClick={() => {
@@ -305,6 +316,6 @@ function TemplateEditor({ template }: { readonly template: TemplateView }): Reac
         open={making}
         onClose={() => setMaking(false)}
       />
-    </div>
+    </>
   );
 }

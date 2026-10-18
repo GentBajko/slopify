@@ -89,7 +89,7 @@ import {
 } from "./slices/checkpoints/recovery.js";
 import { dailySampleBudget } from "./slices/designs/budget.js";
 import { designCheckContext } from "./slices/designs/check-context.js";
-import { contextChecks } from "./slices/designs/gate.js";
+import { contextChecks, sampleCheck } from "./slices/designs/gate.js";
 import { runPdfWorker } from "./slices/designs/pdf-runner.js";
 import { createDesignRenderer } from "./slices/designs/render.js";
 import { createDesignRunner } from "./slices/designs/runner.js";
@@ -854,7 +854,10 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         service: designService,
         runner: designRunner,
         catalogue: () => catalogue.read(),
-        checks: (templateId, doc) => contextChecks(doc, templateId, designChecks),
+        checks: async (templateId, doc, version) => [
+          ...(await contextChecks(doc, templateId, designChecks)),
+          sampleCheck(runtimeDb, templateId, version),
+        ],
         samples: designSamples,
         templateChanged: (templateId) => {
           refreshDesignSchedules(runtimeDb, templateId, clock.now());

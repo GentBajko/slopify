@@ -29,9 +29,14 @@ import { jsonBody } from "./refusal.js";
 // Make. The template editor's sample (Phase E, `sample.ts`) plugs in through `samples`.
 
 export interface DesignTemplateRoutesDeps extends TemplateMakeDeps {
-  // The checks that read fonts, providers and formats, added to the free ones at Mark ready.
+  // The checks that read fonts, providers, formats and the version's sample, added to the free
+  // ones at Mark ready.
   readonly checks?:
-    | ((templateId: string, doc: DesignDocument) => Promise<readonly TemplateCheck[]>)
+    | ((
+        templateId: string,
+        doc: DesignDocument,
+        version: number,
+      ) => Promise<readonly TemplateCheck[]>)
     | undefined;
   // Redraws the sample after a Save; absent, a Save only saves.
   readonly samples?:
@@ -198,7 +203,7 @@ export function designTemplateRoutes(deps: DesignTemplateRoutesDeps | undefined)
         deps.service,
         id,
         await jsonBody(c),
-        checks === undefined ? undefined : (doc) => checks(id, doc),
+        checks === undefined ? undefined : (doc, version) => checks(id, doc, version),
       );
       if (result.ok) {
         deps.templateChanged?.(id);

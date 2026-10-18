@@ -192,11 +192,39 @@ describe("the design template editor", () => {
     expect(image.getAttribute("src")).toContain("/api/designs/s1/files/a4.png?v=2");
   });
 
+  it("keeps Mark ready off until this version's sample is made, saying why", async () => {
+    renderRouted(
+      <DesignTemplateRoute templateId="t1" />,
+      deps(template({ sample: { ...done, version: 1 } })),
+    );
+    const button = await screen.findByRole("button", { name: "Mark ready" });
+    expect(button.getAttribute("aria-disabled")).toBe("true");
+    expect(button.getAttribute("data-tip")).toBe(
+      "Make this version's sample first: Mark ready needs a current sample to look over.",
+    );
+  });
+
+  it("offers Save without a sample for any unsaved change, whatever the sample costs", async () => {
+    const user = userEvent.setup();
+    renderRouted(
+      <DesignTemplateRoute templateId="t1" />,
+      deps(template({ sample: done }), {
+        "POST /api/design-templates/t1/quote": jsonAnswer(
+          quote(0, { sections: ["picture"], makesPicture: true, unknown: 1 }),
+        ),
+      }),
+    );
+    const without = await screen.findByRole("button", { name: "Save without a sample" });
+    expect(without.hasAttribute("disabled")).toBe(true);
+    await user.type(await screen.findByLabelText("Template name"), " B");
+    await waitFor(() => expect(without.hasAttribute("disabled")).toBe(false));
+  });
+
   it("lists what Mark ready found, each with the section to open", async () => {
     const user = userEvent.setup();
     renderRouted(
       <DesignTemplateRoute templateId="t1" />,
-      deps(template(), {
+      deps(template({ sample: done }), {
         "POST /api/design-templates/t1/ready": () =>
           new Response(
             JSON.stringify({

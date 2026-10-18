@@ -257,7 +257,10 @@ export async function markTemplateReady(
   deps: DesignDeps,
   templateId: string,
   raw: unknown,
-  more: (doc: DesignDocument) => Promise<readonly TemplateCheck[]> = async () => [],
+  more: (
+    doc: DesignDocument,
+    version: number,
+  ) => Promise<readonly TemplateCheck[]> = async () => [],
 ): Promise<DesignResult<DesignTemplate>> {
   const parsed = markReadySchema.safeParse(raw);
   if (!parsed.success)
@@ -272,7 +275,7 @@ export async function markTemplateReady(
     };
   const checks = [
     ...documentChecks(revision.document, templateId),
-    ...(await more(revision.document)),
+    ...(await more(revision.document, parsed.data.version)),
   ];
   const passed = checks.every((check) => check.ok);
   deps.db

@@ -7,6 +7,7 @@ import { designFields } from "./fields.js";
 import { frames } from "./frames.js";
 import { type LayoutFont, layoutText } from "./layout.js";
 import { formatLabels } from "./model.js";
+import { sampleRow } from "./sample-repo.js";
 import type { DesignDocument } from "./schema.js";
 import type { TemplateCheck } from "./template-checks.js";
 import { templateRevision } from "./templates.js";
@@ -149,4 +150,24 @@ export async function contextChecks(
     fix: tooFull.length === 0 ? null : at("text"),
   });
   return checks;
+}
+
+// Mark ready asks for the version's own sample, made, as a project template's studio does: the
+// person has seen what a schedule will make before it makes it.
+export function sampleCheck(db: DatabaseSync, templateId: string, version: number): TemplateCheck {
+  const row = sampleRow(db, templateId);
+  const made = row?.state === "done" && row.version === version;
+  const how = "Make its sample, look it over beside the settings, then press Mark ready.";
+  return {
+    id: "sample",
+    ok: made,
+    sentence: made
+      ? `Version ${String(version)}'s sample is made.`
+      : row?.state === "done" && row.version !== version
+        ? `Version ${String(version)} has no sample yet: the one shown is of version ${String(row.version)}. ${how}`
+        : `Version ${String(version)} has no sample yet. ${how}`,
+    fix: made
+      ? null
+      : { label: "Open Picture", href: `/library/design-templates/${templateId}#picture` },
+  };
 }
