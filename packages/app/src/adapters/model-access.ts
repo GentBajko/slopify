@@ -10,7 +10,7 @@ import type { ModelAccess } from "../kernel/ports/model.js";
 // voice or a file that does not exist is not mistaken for one.
 const notFound =
   /model_not_found|not a valid model|model not found|no endpoints found|invalid model|unknown model|is not found for api version|models\/[^ ]+ is not found/i;
-const looseNotFound = /does not exist|not[_ ]found/i;
+const looseNotFound = /does not exist|may not exist|not[_ ]found/i;
 const noAccess =
   /not supported when using codex with a chatgpt account|not (?:available|included|supported) (?:on|in|for|with) your (?:current )?(?:plan|account|subscription|tier|region|country)|upgrade your (?:plan|subscription)|must be verified to use the model|does not have access to (?:the )?model|do not have access to (?:this|the) model|not allowed to (?:use|access) (?:this|the) model|requires a paid plan/i;
 const mentionsModel = /\bmodel/i;
