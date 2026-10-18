@@ -582,19 +582,19 @@ it("badges each template with whether its schedules run its newest version", asy
       "GET /api/design-templates": jsonAnswer({ templates: [] }),
       "GET /api/project-templates": jsonAnswer({
         templates: [
-          { ...template, gate: { head: 1, runs: 1, gate: "legacy" } },
+          { ...template, gate: { head: 1, runs: 1, gated: false, gate: "legacy" } },
           {
             ...template,
             id: "33333333-3333-4333-8333-333333333333",
             name: "Shorts",
             version: 4,
-            gate: { head: 4, runs: 3, gate: "ready" },
+            gate: { head: 4, runs: 3, gated: true, gate: "ready" },
           },
           {
             ...template,
             id: "44444444-4444-4444-8444-444444444444",
             name: "Fresh",
-            gate: { head: 1, runs: 1, gate: "ready" },
+            gate: { head: 1, runs: 1, gated: true, gate: "ready" },
           },
         ],
       }),

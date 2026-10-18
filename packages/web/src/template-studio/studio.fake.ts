@@ -37,6 +37,8 @@ export const view: StudioView = {
   },
   gate: "unchecked",
   runnableVersion: 2,
+  gated: true,
+  checkedVersion: 2,
   sample: { topic: "The history of the lighthouse", topicSource: "fixed", fullScript: false },
   sections: templateSections.map((id, index) => ({
     id,

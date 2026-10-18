@@ -82,11 +82,15 @@ it("says on each listed template which version its schedules run", async () => {
           templates: { id: string; gate?: unknown }[];
         }
       ).templates.find((one) => one.id === id)?.gate;
-    expect(await listed()).toEqual({ head: 1, runs: null, gate: "unchecked" });
+    expect(await listed()).toEqual({ head: 1, runs: 1, gated: false, gate: "unchecked" });
     h.deps.db
       .prepare("INSERT INTO template_gates (template_id,version,state) VALUES (?,1,'legacy')")
       .run(id);
-    expect(await listed()).toEqual({ head: 1, runs: 1, gate: "legacy" });
+    expect(await listed()).toEqual({ head: 1, runs: 1, gated: false, gate: "legacy" });
+    h.deps.db
+      .prepare("UPDATE template_gates SET state='ready' WHERE template_id=? AND version=1")
+      .run(id);
+    expect(await listed()).toEqual({ head: 1, runs: 1, gated: true, gate: "ready" });
   } finally {
     h.close();
   }

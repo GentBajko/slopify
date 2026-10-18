@@ -616,6 +616,32 @@ it("marks the version ready after saying schedules start running it", async () =
   expect(asked).toEqual({ version: 3 });
 });
 
+it("says the newest version runs, and that Mark ready starts the gate, before any version is ready", async () => {
+  const user = userEvent.setup();
+  open("subject", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({
+      ...settledView,
+      gated: false,
+      runnableVersion: 3,
+    }),
+    [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer(passing),
+  });
+  expect(
+    await screen.findByText(
+      "Version 3 · Not checked in the studio: schedules run the newest version",
+    ),
+  ).not.toBeNull();
+  const button = await screen.findByRole("button", { name: "Mark ready" });
+  await waitFor(() => expect(button.getAttribute("aria-disabled")).toBeNull());
+  await user.click(button);
+  const dialog = await screen.findByRole("dialog", { name: "Mark version 3 ready?" });
+  expect(
+    within(dialog).getByText(
+      "Schedules keep running this version. From now on a version you save waits until you press Mark ready, so an edit no longer changes the next run by itself.",
+    ),
+  ).not.toBeNull();
+});
+
 it("shows Mark ready's refusal with each thing to fix", async () => {
   const user = userEvent.setup();
   open("subject", {
@@ -754,7 +780,7 @@ it("exports the version schedules run as a pack, and says why when there is none
   cleanup();
 
   open("subject", {
-    [`GET /api/template-studio/${templateId}`]: jsonAnswer({ ...view, runnableVersion: null }),
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({ ...view, checkedVersion: null }),
   });
   const blocked = await screen.findByRole("button", { name: "Export pack" });
   expect(blocked.getAttribute("aria-disabled") ?? blocked.getAttribute("disabled")).not.toBeNull();

@@ -85,6 +85,7 @@ export function TemplateStudioPage({
 }
 
 function gateWords(view: StudioView): string {
+  if (!view.gated) return "Not checked in the studio: schedules run the newest version";
   const runs =
     view.runnableVersion === null || view.runnableVersion === view.template.version
       ? ""

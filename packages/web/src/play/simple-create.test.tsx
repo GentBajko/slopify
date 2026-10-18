@@ -103,7 +103,7 @@ it("says a template wasn't checked in the studio, and still starts it", async ()
             name: "Weekly",
             version: 2,
             updatedAt: "2026-10-01T00:00:00.000Z",
-            gate: { head: 2, runs: 1, gate: "legacy" },
+            gate: { head: 2, runs: 2, gated: false, gate: "unchecked" },
           },
         ],
       }),

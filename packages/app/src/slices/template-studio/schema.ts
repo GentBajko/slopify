@@ -141,8 +141,12 @@ export const studioViewSchema = z
   .object({
     template: projectTemplateSchema,
     gate: z.enum([...gateStates, "unchecked"]),
-    // The version schedules run; null when no version was ever checked.
+    // The version schedules run: the newest until a version was first marked ready (`gated`),
+    // then the newest checked one (null when none is).
     runnableVersion: z.number().int().positive().nullable(),
+    gated: z.boolean(),
+    // The newest legacy, ready or carried version, which Export pack carries; null when none.
+    checkedVersion: z.number().int().positive().nullable(),
     sample: z
       .object({
         topic: z.string(),

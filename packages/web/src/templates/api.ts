@@ -18,6 +18,7 @@ const summarySchema = z.object({
     .object({
       head: z.number(),
       runs: z.number().nullable(),
+      gated: z.boolean(),
       gate: z.enum(["legacy", "ready", "carried", "unchecked"]),
     })
     .optional(),

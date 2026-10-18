@@ -310,7 +310,9 @@ it("says which template version the schedule runs, and what to press when none i
     <SchedulesView />,
     testDeps({
       "GET /api/schedules": jsonAnswer({
-        schedules: [{ ...summary, templateGate: { head: 1, runs: null, gate: "unchecked" } }],
+        schedules: [
+          { ...summary, templateGate: { head: 1, runs: null, gated: true, gate: "unchecked" } },
+        ],
       }),
       "GET /api/project-templates": jsonAnswer({
         templates: [{ id: templateId, name: "Stories", version: 1, updatedAt: summary.updatedAt }],
@@ -327,12 +329,36 @@ it("says which template version the schedule runs, and what to press when none i
   ).toBe(`/templates/${templateId}`);
 });
 
-it("shows a legacy template's schedule still running it, and a newer version waiting", async () => {
+it("says a schedule runs its template's newest version until a version is marked ready", async () => {
   renderRouted(
     <SchedulesView />,
     testDeps({
       "GET /api/schedules": jsonAnswer({
-        schedules: [{ ...summary, templateGate: { head: 7, runs: 6, gate: "legacy" } }],
+        schedules: [
+          { ...summary, templateGate: { head: 7, runs: 7, gated: false, gate: "unchecked" } },
+        ],
+      }),
+      "GET /api/project-templates": jsonAnswer({
+        templates: [{ id: templateId, name: "Stories", version: 7, updatedAt: summary.updatedAt }],
+      }),
+      [`GET /api/schedules/${scheduleId}`]: jsonAnswer({ schedule: summary, runs: [] }),
+    }),
+  );
+  const detail = await screen.findByRole("region", { name: "Morning stories detail" });
+  expect(
+    within(detail).getByText("Runs the newest version · Not checked in the studio"),
+  ).toBeTruthy();
+  expect(within(detail).queryByText(/Its runs are skipped/)).toBeNull();
+});
+
+it("shows a gated template's schedule running an older version while a newer one waits", async () => {
+  renderRouted(
+    <SchedulesView />,
+    testDeps({
+      "GET /api/schedules": jsonAnswer({
+        schedules: [
+          { ...summary, templateGate: { head: 7, runs: 6, gated: true, gate: "legacy" } },
+        ],
       }),
       "GET /api/project-templates": jsonAnswer({
         templates: [{ id: templateId, name: "Stories", version: 7, updatedAt: summary.updatedAt }],

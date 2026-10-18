@@ -21,8 +21,9 @@ export const templateStudioTools: readonly RouteTool[] = [
     route: "POST /api/template-studio/:id/ready",
     title: "Mark a template ready for its schedules",
     description:
-      "Marks the template's newest version (pass it as version) ready, so its schedules run it from their next run on. Refused, marking nothing, while a check fails or a section's sample isn't current, with each thing to fix (problems). A version already ready is answered again. A schedule never runs a version that wasn't marked ready, saved before the studio, or carried over from one by Slopify.",
-    confirm: "Schedules start running this version.",
+      "Marks the template's newest version (pass it as version) ready, so its schedules run it from their next run on. Refused, marking nothing, while a check fails or a section's sample isn't current, with each thing to fix (problems). A version already ready is answered again. Until a template's first Mark ready its schedules run its newest version; from then on a schedule runs only a version marked ready, saved before the studio, or carried over from one by Slopify, and each version saved later waits until it is marked ready.",
+    confirm:
+      "Schedules run this version from their next run, and each version saved later waits until it is marked ready.",
   },
   {
     name: "get_prompt_anatomy",
@@ -131,7 +132,7 @@ export const templateStudioTools: readonly RouteTool[] = [
     route: "POST /api/template-studio/packs/import",
     title: "Import a template pack",
     description:
-      "Makes a new template from a template pack (the .zip a template studio's Export pack made, at most 30 MB): its prompts and intros join the Library (a name taken by other text comes in as \"<name> (2)\" and the template names that one), its voice is used as it is, and it is unchecked, so no schedule runs it until it is marked ready. A pack holding anything that looks like a key, a file a pack never has or a newer format is refused, writing nothing. Answers templateId, the name it got, how many Library items it added and which were renamed, whether Settings → Voices has its voice (voiceKnown; when false, get_template_checks' voice check says what to do) and how many samples it brought.",
+      "Makes a new template from a template pack (the .zip a template studio's Export pack made, at most 30 MB): its prompts and intros join the Library (a name taken by other text comes in as \"<name> (2)\" and the template names that one), its voice is used as it is, and it is not checked in the studio yet: look its samples over and mark it ready (mark_template_ready). A pack holding anything that looks like a key, a file a pack never has or a newer format is refused, writing nothing. Answers templateId, the name it got, how many Library items it added and which were renamed, whether Settings → Voices has its voice (voiceKnown; when false, get_template_checks' voice check says what to do) and how many samples it brought.",
     upload: "multipart",
   },
   {

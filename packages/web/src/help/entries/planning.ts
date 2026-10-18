@@ -16,7 +16,7 @@ export const planningHelp = {
   },
   "planning.schedule.template": {
     title: "Template",
-    body: "The saved template each run starts from, with its version. The schedule keeps this version when you save the template again; pick the template again here to use the newer one. The template decides the providers, and so what each run costs. Save templates from Play; they are listed in Library → Templates.",
+    body: "The saved template each run starts from, with its version. Each run uses the template's newest version until you press Mark ready in its Template studio; from then on runs use the newest version marked ready, and a version you save later waits until you mark it ready. The template decides the providers, and so what each run costs. Save templates from Play; they are listed in Library → Templates.",
     tutorial: { page: "Schedules", anchor: "create-a-schedule" },
   },
   "planning.schedule.cadence": {

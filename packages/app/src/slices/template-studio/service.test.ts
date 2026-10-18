@@ -58,7 +58,9 @@ describe("getStudio", () => {
     const result = await getStudio(deps, id);
     if (!result.ok) throw new Error(result.message);
     expect(result.value.gate).toBe("unchecked");
-    expect(result.value.runnableVersion).toBeNull();
+    expect(result.value.runnableVersion).toBe(1);
+    expect(result.value.gated).toBe(false);
+    expect(result.value.checkedVersion).toBeNull();
     expect(result.value.sample).toEqual({
       topic: "The history of the lighthouse",
       topicSource: "fixed",
@@ -110,7 +112,7 @@ describe("getStudio", () => {
     });
   });
 
-  it("reads the legacy gate a template saved before the studio has, and keeps it runnable after an unchecked edit", async () => {
+  it("reads the legacy gate a template saved before the studio has, and follows its unchecked edit", async () => {
     const { h, deps, id } = studio();
     h.deps.db
       .prepare("INSERT INTO template_gates (template_id,version,state) VALUES (?,1,'legacy')")
@@ -127,7 +129,9 @@ describe("getStudio", () => {
     if (!result.ok) throw new Error(result.message);
     expect(result.value.template.version).toBe(2);
     expect(result.value.gate).toBe("unchecked");
-    expect(result.value.runnableVersion).toBe(1);
+    expect(result.value.runnableVersion).toBe(2);
+    expect(result.value.gated).toBe(false);
+    expect(result.value.checkedVersion).toBe(1);
   });
 
   it("says a stale section's version was made by Slopify itself when its gate was carried", async () => {

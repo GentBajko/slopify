@@ -2,8 +2,9 @@ import type { ScheduleTemplateGate } from "@app/slices/schedules/schema.js";
 import type { BadgeTone } from "@/components/kit/status";
 
 // The words for which version of a template its schedules run, shared by the Schedules screen,
-// Library → Templates and Create. A version saved before the studio keeps running ("Not checked
-// in the studio"); a newer one waits until it is marked ready.
+// Library → Templates and Create. Until a version is first marked ready in the studio, schedules
+// run the newest version ("Not checked in the studio"); from then on a newer one waits until it
+// is marked ready.
 
 export type TemplateGate = ScheduleTemplateGate;
 
@@ -12,6 +13,8 @@ export function scheduleGateWords(gate: TemplateGate): {
   readonly text: string;
   readonly tone: BadgeTone;
 } {
+  if (!gate.gated)
+    return { text: "Runs the newest version · Not checked in the studio", tone: "neutral" };
   if (gate.runs === null)
     return {
       text: "Runs nothing yet: no version is marked ready",
@@ -31,6 +34,13 @@ export function templateGateBadge(gate: TemplateGate): {
   readonly tone: BadgeTone;
   readonly detail: string;
 } {
+  if (!gate.gated)
+    return {
+      word: "Not checked in the studio",
+      tone: "neutral",
+      detail:
+        "Schedules run the newest version. Once you press Mark ready in its studio, new versions wait for Mark ready.",
+    };
   const headGate = gate.runs === gate.head ? gate.gate : "unchecked";
   if (headGate === "ready" || headGate === "carried")
     return { word: "Ready", tone: "running", detail: "Schedules run this version." };

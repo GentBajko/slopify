@@ -71,7 +71,9 @@ Every paid sample is priced before anything is spent:
 
 ## Mark ready
 
-A schedule runs only a version that was marked ready (or one saved before the studio existed). **Mark ready** in the header is greyed, with the reason, until:
+Until you mark a version of a template ready for the first time, its schedules run its newest version, checked or not, as they always did, and the header says **Not checked in the studio: schedules run the newest version**. Pressing **Mark ready** once turns the check on for that template: from then on a schedule runs only a version marked ready (or one saved before the studio existed, or one Slopify carried over), and every version you save later waits for **Mark ready**.
+
+**Mark ready** in the header is greyed, with the reason, until:
 
 - every free check passes: keywords are filled, the providers are set up, the narration's voice is one of yours (Settings → Voices), each run has release times, the monthly cost is known, and someone answers each checkpoint (a notification address, or an agent seen in the last week),
 - and every section's sample is current, off or provided.
@@ -98,14 +100,14 @@ Only the section's own work runs on each copy. A comparison is held, spending no
 
 A template pack is a template as one .zip file, to share with someone else or move to another computer.
 
-**Export pack** in the studio's header saves the version marked ready (the button says which when a newer one waits): its prompts' and intros' text as your Library has them now, the voice it picks, the Look, the PDF theme, and its sample's thumbnail, up to four pictures and its narration. No key, login or other file of yours goes in; a template whose text looks like a key is refused, with where to remove it. A template with no version marked ready can't be exported yet.
+**Export pack** in the studio's header saves the version marked ready (the button says which when a newer one waits): its prompts' and intros' text as your Library has them now, the voice it picks, the Look, the PDF theme, and its sample's thumbnail, up to four pictures and its narration. No key, login or other file of yours goes in; a template whose text looks like a key is refused, with where to remove it. A template with no version marked ready (and none saved before the studio) can't be exported yet.
 
 **Import template pack** on Library → Templates makes a new template from a pack:
 
 - Its prompts and intros join your Library. One whose name your Library already uses for other text comes in as "name (2)", and the template uses that one.
 - Its voice is used as it is. When Settings → Voices has no voice with that ID, the studio's Voice check says so: add the voice there under that ID, or choose one of yours.
 - It opens in its studio with **Samples from the pack**, what the person who exported it got, until your own samples are made.
-- It is unchecked: no schedule runs it until you look it over and press **Mark ready**.
+- It is not checked in the studio yet: look it over and press **Mark ready**.
 
 A file larger than 30 MB, one that isn't a pack, one made by a newer Slopify, or one holding anything that looks like a key is refused, and nothing is imported.
 

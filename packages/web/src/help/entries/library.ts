@@ -243,7 +243,7 @@ export const libraryHelp = {
   },
   "templates.edit": {
     title: "Edit a template",
-    body: "Shows the keywords the template fills and what each feeds. The pencil beside its name renames it; every save adds a version that History keeps. To change its settings, use it in Play, change the draft, then Save a setup.",
+    body: "Shows the keywords the template fills and what each feeds. The pencil beside its name renames it; every save adds a version that History keeps. Schedules run the newest version until you press Mark ready in its Template studio; from then on a new version waits until you mark it ready. To change its settings, use it in Play, change the draft, then Save a setup.",
     tutorial: { page: "Templates", anchor: "see-a-templates-keywords" },
   },
   "templates.history": {

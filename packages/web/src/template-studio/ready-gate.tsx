@@ -52,6 +52,9 @@ export function MarkReady({
     view.runnableVersion === null || view.runnableVersion === view.template.version
       ? " Until now none of their runs started."
       : ` Until now they ran version ${String(view.runnableVersion)}.`;
+  const consequence = view.gated
+    ? `Schedules start running this version from their next run.${before}`
+    : "Schedules keep running this version. From now on a version you save waits until you press Mark ready, so an edit no longer changes the next run by itself.";
   async function mark(): Promise<void> {
     setSending(true);
     try {
@@ -81,7 +84,7 @@ export function MarkReady({
       <ConfirmDialog
         open={asking}
         title={`Mark version ${version} ready?`}
-        consequence={`Schedules start running this version from their next run.${before}`}
+        consequence={consequence}
         confirmLabel="Mark ready"
         cancelLabel="Not yet"
         tone="primary"

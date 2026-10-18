@@ -8,7 +8,7 @@ const studio = (anchor: string) => ({ page: "Template-Studio", anchor });
 export const templateStudioHelp = {
   "templates.import-pack": {
     title: "Import template pack",
-    body: "Makes a new template from a template pack, the .zip made by Export pack in a template's studio. Its prompts and intros join your Library; a name you already use for other text comes in as \"name (2)\". It opens in its studio with the pack's samples, unchecked: no schedule runs it until you press Mark ready. A pack holding anything that looks like a key is refused.",
+    body: "Makes a new template from a template pack, the .zip made by Export pack in a template's studio. Its prompts and intros join your Library; a name you already use for other text comes in as \"name (2)\". It opens in its studio with the pack's samples, not checked yet: look it over and press Mark ready. A pack holding anything that looks like a key is refused.",
     tutorial: { page: "Template-Studio", anchor: "template-packs" },
   },
   "template-studio.export-pack": {

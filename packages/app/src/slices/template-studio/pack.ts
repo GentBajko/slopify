@@ -14,7 +14,7 @@ import { findRevisionDownload } from "../revisions/downloads.js";
 import { currentRevisionId } from "../revisions/repo.js";
 import { getRevisionView } from "../revisions/view.js";
 import { listVoices } from "../settings/repo.js";
-import { runnableVersion } from "./gate.js";
+import { checkedVersion } from "./gate.js";
 import type { StudioResult } from "./model.js";
 import { gatesOf, sampleOf } from "./repo.js";
 
@@ -193,7 +193,7 @@ export async function exportPack(
       message:
         "This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates.",
     };
-  const runs = runnableVersion(gatesOf(deps.db, templateId), head.version);
+  const runs = checkedVersion(gatesOf(deps.db, templateId), head.version);
   const template = runs === undefined ? undefined : templateById(deps.db, templateId, runs);
   if (template === undefined)
     return {

@@ -26,7 +26,7 @@ function saveBlob(name: string, blob: Blob): void {
 
 // Why Export pack can't be pressed, or undefined when it can.
 export function exportBlocker(view: StudioView): string | undefined {
-  return view.runnableVersion === null
+  return view.checkedVersion === null
     ? "Mark a version ready first: a pack carries the version you checked"
     : undefined;
 }
@@ -66,9 +66,9 @@ export function ExportPack({
         focusableWhenDisabled
         onClick={() => void save()}
       >
-        {view.runnableVersion === null || view.runnableVersion === view.template.version
+        {view.checkedVersion === null || view.checkedVersion === view.template.version
           ? "Export pack"
-          : `Export pack (version ${String(view.runnableVersion)})`}
+          : `Export pack (version ${String(view.checkedVersion)})`}
       </Button>
       <InfoTip id="template-studio.export-pack" label="Export pack" />
     </span>

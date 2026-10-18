@@ -14,13 +14,25 @@ function runnable(
   return from !== null && from < version && runnable(byVersion, from, new Set([...seen, version]));
 }
 
-// The version a schedule runs: the newest one at or below the head that was legacy, marked ready,
-// or carried from a runnable one. Undefined when none was ever checked.
-export function runnableVersion(gates: readonly VersionGate[], head: number): number | undefined {
+// The newest version at or below the head that was legacy, marked ready, or carried from a
+// runnable one. Undefined when none was ever checked. What a pack carries.
+export function checkedVersion(gates: readonly VersionGate[], head: number): number | undefined {
   const byVersion = new Map(gates.map((gate) => [gate.version, gate]));
   return [...byVersion.keys()]
     .filter((version) => version <= head && runnable(byVersion, version))
     .sort((a, b) => b - a)[0];
+}
+
+// A template is gated from the first time any of its versions is marked ready in the studio.
+// Before that it follows its newest version as 3.x did, so an edit applies to the next run.
+export function isGated(gates: readonly VersionGate[]): boolean {
+  return gates.some((gate) => gate.state === "ready");
+}
+
+// The version a schedule runs: the newest one while the template isn't gated, else the newest
+// checked one (a newer unchecked version waits for Mark ready).
+export function runnableVersion(gates: readonly VersionGate[], head: number): number | undefined {
+  return isGated(gates) ? checkedVersion(gates, head) : head;
 }
 
 export function gateOf(gates: readonly VersionGate[], version: number): GateView {

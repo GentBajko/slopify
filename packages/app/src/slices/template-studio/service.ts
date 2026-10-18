@@ -14,7 +14,7 @@ import type { ProviderStatus } from "../settings/model.js";
 import { listVoices, readJsonSetting } from "../settings/repo.js";
 import { type FreeCheckInput, freeChecks, type ScheduleFit } from "./checks.js";
 import type { FreeSamples } from "./free.js";
-import { gateOf, runnableVersion } from "./gate.js";
+import { checkedVersion, gateOf, isGated, runnableVersion } from "./gate.js";
 import { queuedJob, runningJob } from "./jobs.js";
 import { fallbackSampleTopic, type StudioResult, type VersionGate } from "./model.js";
 import { paidView } from "./paid-view.js";
@@ -160,6 +160,8 @@ export async function getStudio(deps: StudioDeps, id: string): Promise<StudioRes
       template,
       gate: gateOf(gates, template.version),
       runnableVersion: runnableVersion(gates, template.version) ?? null,
+      gated: isGated(gates),
+      checkedVersion: checkedVersion(gates, template.version) ?? null,
       sample: {
         topic: sample?.topic ?? defaultSampleTopic(deps.db),
         topicSource: sample?.topicSource ?? "fixed",
