@@ -14,6 +14,8 @@ const retired = "retired: answers revision-required; edits go through save_revis
 const extension = "only the paired Slopify Studio extension calls these";
 const youtube =
   "acts on YouTube: agents stop at Ready to upload, and uploading is the person's (the extension's queue is filled only from Prepare upload)";
+const posting =
+  "acts on X, LinkedIn, Instagram, TikTok, Reddit or Bluesky: agents stop at Ready to post, and filling a site's form and posting are the person's";
 const cleanup =
   "every project's cleanup is the person's: Delete all old versions and Clean up everything are in Settings → Backup & storage";
 const assistantChat =
@@ -117,4 +119,13 @@ export const excludedRoutes: Readonly<Record<string, string>> = {
   "POST /api/studio/ext/video": extension,
   "POST /api/studio/ext/video/done": extension,
   "GET /api/studio/ext/files/:projectId/:asset": extension,
+  "POST /api/social/packs/:projectId/:platform/fill": posting,
+  "GET /api/social/media/:projectId/:file": `${listening}; get_post_packs lists each post's files`,
+  "GET /api/social/ext/next": `${extension}; ${posting}`,
+  "GET /api/social/ext/packs/:projectId/:platform": extension,
+  "GET /api/social/ext/files/:projectId/:file": extension,
+  "GET /api/social/ext/due": extension,
+  "POST /api/social/ext/result": extension,
+  "GET /api/social/ext/find-links": extension,
+  "POST /api/social/ext/sites": extension,
 };

@@ -104,6 +104,11 @@ export const assistantFreeTools = [
   "set_pack_real_footage",
   "set_pack_pick",
   "set_pack_playlists",
+  // A post's settings, text, Reddit fields and link: Fill in <site> stays the person's.
+  "set_post_choice",
+  "edit_post_text",
+  "set_reddit_post",
+  "set_post_link",
   "remove_from_fill_queue",
   "swap_releases",
   "set_release",

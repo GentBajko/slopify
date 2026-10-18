@@ -197,6 +197,22 @@ describe("/mcp/assistant", () => {
     await client.close();
   });
 
+  it("never offers Fill in <site>, only reading and preparing a project's posts", async () => {
+    const { connect } = fixture();
+    const client = await connect();
+    const tools = (await client.listTools()).tools;
+    const names = tools.map((tool) => tool.name);
+    expect(names).toEqual(expect.arrayContaining(["get_post_packs", "set_post_choice"]));
+    expect(names.filter((name) => /fill_post|fill_in|post_now|publish_post/.test(name))).toEqual(
+      [],
+    );
+    const routes = routeTools.filter((tool) => names.includes(tool.name)).map((tool) => tool.route);
+    expect(
+      routes.filter((route) => route.endsWith("/fill") || route.includes("/social/ext/")),
+    ).toEqual([]);
+    await client.close();
+  });
+
   it("asks before checking models, which costs money, and reads keywords and model checks freely", async () => {
     const { h, connect } = fixture();
     expect(assistantCostlyTools).toContain("check_models");

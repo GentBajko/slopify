@@ -71,6 +71,7 @@ import { runCostRoutes } from "./run-cost.js";
 import { viaFunnel } from "./same-page.js";
 import { calendarRoutes, scheduleRoutes } from "./schedules.js";
 import { settingsRoutes } from "./settings.js";
+import { type SocialRoutesDeps, socialRoutes } from "./social.js";
 import { stagingRoutes } from "./staging.js";
 import { startRecorder } from "./starts.js";
 import { storageRoutes } from "./storage.js";
@@ -108,6 +109,8 @@ export interface AppDeps {
   // Library → Designs; absent answers that designs aren't available.
   readonly designs?: DesignRoutesDeps | undefined;
   readonly designTemplates?: DesignTemplateRoutesDeps | undefined;
+  // Posting to other sites: pictures cut to a site's shape; absent answers that it can't.
+  readonly social?: SocialRoutesDeps | undefined;
   readonly backups?: BackupService;
   // Settings → Backup & storage's files folder: where it is, Open folder, and moving it.
   readonly files?: import("../../slices/storage/files-location.js").FilesService;
@@ -274,6 +277,7 @@ function apiRoutes(deps: AppDeps, startedAt: number, runAllowed?: RunAllowedCall
       .route("/settings/remote-access", remoteAccessRoutes(deps.remoteAccess))
       .route("/settings", settingsRoutes(deps))
       .route("/studio", studioRoutes(deps))
+      .route("/social", socialRoutes(deps))
       .route("/style-preview", stylePreviewRoutes(deps))
       .route("/tutorial", tutorialRoutes(deps))
       .route("/whats-new", whatsNewRoutes(deps))

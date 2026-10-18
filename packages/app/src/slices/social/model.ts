@@ -245,3 +245,27 @@ export interface LinkLookup {
 
 // The person's account on each site, only to find a published post's link; never a login.
 export type SocialAccounts = { readonly [P in SocialPlatform]?: string | undefined };
+
+// What Slopify last heard from the extension about posting: paired at all, and which sites it
+// was allowed to post on ("Allow posting on <site>" in its options). `sites` is null until an
+// extension that posts reported once; an extension from before posting never does.
+export interface PostingExtension {
+  readonly paired: boolean;
+  readonly sites: readonly SocialPlatform[] | null;
+  readonly seenAt: string | null;
+}
+
+// The page's answer for a project's posts (`GET /api/social/packs/:projectId` and every change
+// to them): the packs and the extension's state, for Fill in <site> to say why it can't yet.
+export interface SocialPacksResponse extends PostPacks {
+  readonly extension: PostingExtension;
+}
+
+// `POST /api/social/packs/:projectId/:platform/fill`: the post waits for the extension; the page
+// opens `url` (the site's post form) unless `waitsForRelease`, when the extension fills it at the
+// release time and the person presses Post.
+export interface FillResponse {
+  readonly pack: PostPack;
+  readonly waitsForRelease: boolean;
+  readonly url: string;
+}

@@ -138,6 +138,7 @@ import { isLocalCliProvider, localCliConcurrency, providerIds } from "./slices/s
 import { readSettings } from "./slices/settings/playback.js";
 import { providerStatuses } from "./slices/settings/readiness.js";
 import { readSetting } from "./slices/settings/repo.js";
+import { createReshaper } from "./slices/social/reshape.js";
 import { arrangeChanged } from "./slices/storage/arrange.js";
 import { busyProjects } from "./slices/storage/backup-export.js";
 import { documentsDir, nodeDocumentsHost } from "./slices/storage/documents.js";
@@ -867,6 +868,8 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       assistant,
       autopilot,
       designs: { service: designService, runner: designRunner, renderer: designRenderer },
+      // Pictures cut to a post's shape, in a child ffmpeg like the designs' drawing.
+      social: { reshaper: createReshaper({ paths, ffmpeg, runFfmpeg, log }) },
       designTemplates: {
         service: designService,
         runner: designRunner,

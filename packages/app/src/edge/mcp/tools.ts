@@ -8,6 +8,7 @@ import { publishingTools } from "./tools-publishing.js";
 import { runTools } from "./tools-runs.js";
 import { scheduleTools } from "./tools-schedules.js";
 import { setupTools } from "./tools-setup.js";
+import { socialTools } from "./tools-social.js";
 import { storageTools } from "./tools-storage.js";
 import { templateStudioTools } from "./tools-template-studio.js";
 
@@ -15,6 +16,7 @@ import { templateStudioTools } from "./tools-template-studio.js";
 export const routeTools: readonly RouteTool[] = [
   ...projectTools,
   ...publishingTools,
+  ...socialTools,
   ...runTools,
   ...planningTools,
   ...scheduleTools,
