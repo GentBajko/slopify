@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 
-// The YouTube video each upload became, and its A/B test waiting to start
+// The YouTube video each upload became, and its A/B test
 // (`0045-youtube-videos.sql`). `short` is null for the long video, as in the fill queue.
 
 export type AbState = "none" | "waiting" | "started" | "failed";
@@ -129,6 +129,30 @@ export function videoOf(
     .prepare("SELECT * FROM youtube_videos WHERE project_id=? AND short=?")
     .get(projectId, slot(short));
   return row === undefined ? undefined : rowOf(row);
+}
+
+// What the extension reported after setting up Studio's A/B Testing on the video's Details page,
+// asked for from On YouTube or its popup: "started" once filled (the person presses Set test),
+// "failed" with its reason. A failed later attempt keeps a test already set up ("started"), so
+// its result is still read. False when the project has no video recorded for that upload.
+export function setAbState(
+  db: DatabaseSync,
+  projectId: string,
+  short: number | null,
+  state: "started" | "failed",
+  message: string,
+  at: string,
+): boolean {
+  return (
+    db
+      .prepare(
+        `UPDATE youtube_videos SET
+           ab_state=CASE WHEN ?='failed' AND ab_state='started' THEN 'started' ELSE ? END,
+           ab_message=?, ab_at=?
+         WHERE project_id=? AND short=?`,
+      )
+      .run(state, state, message, at, projectId, slot(short)).changes > 0
+  );
 }
 
 export function setTaskState(

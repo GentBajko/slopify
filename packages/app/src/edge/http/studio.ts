@@ -72,6 +72,7 @@ import {
   projectVideos,
   recordedVideos,
   recordVideo,
+  setAbState,
   setChecks,
   setTaskState,
   videoIdOf,
@@ -139,8 +140,9 @@ const videoLinkBody = z.object({ short: shortField, link: z.string().max(500) })
 const slotBody = z.object({
   slot: z.object({ row: z.string().min(1).max(20), longAt: z.string().max(40) }).nullable(),
 });
+// "ab": the extension set up (or couldn't set up) A/B Testing on the video's Details page.
 const taskResultBody = z.object({
-  task: z.enum(["finish", "comment"]),
+  task: z.enum(["finish", "comment", "ab"]),
   projectId: id,
   short: shortField,
   ok: z.boolean(),
@@ -829,10 +831,20 @@ export function studioRoutes(deps: AppDeps) {
         allowOrigin(c, false);
         if (!extAllowed(c)) return refused(c);
         const { task, projectId, short, ok, message } = c.req.valid("json");
-        setTaskState(deps.db, task, projectId, short ?? null, ok ? "done" : "failed", message);
+        if (task === "ab")
+          setAbState(
+            deps.db,
+            projectId,
+            short ?? null,
+            ok ? "started" : "failed",
+            message,
+            deps.clock.now().toISOString(),
+          );
+        else setTaskState(deps.db, task, projectId, short ?? null, ok ? "done" : "failed", message);
         return c.json({ ok: true });
       })
-      // The long videos whose A/B test is running, for the extension to read each result.
+      // The long videos whose A/B test is running (the extension reported setting it up), for
+      // the extension to read each result.
       .get("/ext/known-videos", (c) => {
         allowOrigin(c, false);
         if (!extAllowed(c)) return refused(c);

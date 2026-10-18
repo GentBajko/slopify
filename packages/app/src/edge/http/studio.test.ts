@@ -1223,4 +1223,72 @@ describe("the posting plan, Upload all Shorts and Studio's numbers", () => {
       results: [{ projectId: "p1", variants: [{ title: "A", winner: true }, { title: "B" }] }],
     });
   });
+
+  const ext = (token: string, body?: unknown): RequestInit => ({
+    method: body === undefined ? "GET" : "POST",
+    headers: extHeaders(token),
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+
+  it("reads A/B results only from the long videos whose A/B Testing the extension set up", async () => {
+    const h = harness();
+    finished(h.output);
+    const token = await paired(h);
+    const upload = { projectId: "p1", short: null, videoId: "lKS3FAjekpI" };
+    await h.call("/ext/video", ext(token, upload));
+    await h.call("/ext/video/done", ext(token, upload));
+    const known = async () =>
+      ((await (await h.call("/ext/known-videos", ext(token))).json()) as { videos: unknown[] })
+        .videos;
+    // Uploaded, but no A/B test asked for: nothing to read.
+    expect(await known()).toEqual([]);
+    expect(await (await h.call("/videos/p1")).json()).toMatchObject({
+      videos: [{ abState: "none" }],
+    });
+    const report = (ok: boolean, message: string) =>
+      h.call(
+        "/ext/task-result",
+        ext(token, { task: "ab", projectId: "p1", short: null, ok, message }),
+      );
+    expect((await report(true, "A/B Testing (Titles) has 3 titles.")).status).toBe(200);
+    expect(await (await h.call("/videos/p1")).json()).toMatchObject({
+      videos: [{ abState: "started", abMessage: "A/B Testing (Titles) has 3 titles." }],
+    });
+    expect(await known()).toEqual([upload]);
+    // A later attempt that couldn't fill the dialog doesn't stop reading the test already set.
+    await report(false, "Studio's A/B Testing button wasn't found.");
+    expect(await (await h.call("/videos/p1")).json()).toMatchObject({
+      videos: [{ abState: "started", abMessage: "Studio's A/B Testing button wasn't found." }],
+    });
+    expect(await known()).toEqual([upload]);
+    expect((await h.call("/ext/known-videos")).status).toBe(401);
+  });
+
+  it("keeps a failed A/B set-up with its reason, and reads nothing for it", async () => {
+    const h = harness();
+    finished(h.output);
+    const token = await paired(h);
+    const upload = { projectId: "p1", short: null, videoId: "lKS3FAjekpI" };
+    await h.call("/ext/video", ext(token, upload));
+    await h.call("/ext/video/done", ext(token, upload));
+    await h.call(
+      "/ext/task-result",
+      ext(token, {
+        task: "ab",
+        projectId: "p1",
+        short: null,
+        ok: false,
+        message: "Studio's A/B Testing didn't open.",
+      }),
+    );
+    expect(await (await h.call("/videos/p1")).json()).toMatchObject({
+      videos: [{ abState: "failed", abMessage: "Studio's A/B Testing didn't open." }],
+    });
+    expect(await (await h.call("/ext/known-videos", ext(token))).json()).toEqual({ videos: [] });
+    // A new video id for the upload starts its A/B test over.
+    await h.call("/ext/video", ext(token, { ...upload, videoId: "abcdefghijk" }));
+    expect(await (await h.call("/videos/p1")).json()).toMatchObject({
+      videos: [{ abState: "none", abMessage: null }],
+    });
+  });
 });

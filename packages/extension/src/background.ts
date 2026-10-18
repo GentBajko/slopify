@@ -1,11 +1,12 @@
 import { browserApi } from "./browser.js";
-import type {
-  ActivePack,
-  FillPayload,
-  PackItem,
-  WaitingTask,
-  WorkerAnswer,
-  WorkerRequest,
+import {
+  type ActivePack,
+  closesSenderTab,
+  type FillPayload,
+  type PackItem,
+  type WaitingTask,
+  type WorkerAnswer,
+  type WorkerRequest,
 } from "./pack.js";
 import { reloadIfUpdated } from "./self-update.js";
 
@@ -470,13 +471,9 @@ api.runtime.onMessage.addListener((message, sender, respond) => {
     // The test's tab did its work: close it.
     const tab = sender.tab?.id;
     if (tab === undefined) return;
-    if (request.type === "task-result") void api.tabs?.remove(tab);
-    if (request.type === "gone") void api.tabs?.remove(tab);
+    if (closesSenderTab(request)) void api.tabs?.remove(tab);
     if (request.type === "backfill" && request.close === true) void api.tabs?.remove(tab);
-    if (request.type === "ab-result") {
-      void api.tabs?.remove(tab);
-      void nextAbRead();
-    }
+    if (request.type === "ab-result") void nextAbRead();
   });
   // The answer comes later.
   return true;

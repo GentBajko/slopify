@@ -225,11 +225,15 @@ test starts only when you ask: **A/B test** on On YouTube (project → Video), o
 choices on an uploaded long video (Titles and thumbnails, Titles, Thumbnails). Either opens the
 video's Details page with a `#slopify-ab=` hash; the extension presses A/B Testing, picks the
 mode and fills the titles and thumbnails. You check them and press **Set test** and **Save**
-yourself; the extension never presses them.
+yourself; the extension never presses them. It then tells Slopify (`POST /ext/task-result` with
+`task: "ab"`): filled, the video's A/B test counts as running (`ab_state` `started`); not, it is
+`failed` with the reason, shown on On YouTube. A failed later attempt keeps a test already set
+up running. A new video id for the upload starts over at `none`.
 
 ### A/B test results
 
-Once a day the extension opens the Details page of each long video whose A/B test is running,
+Once a day the extension opens the Details page of each long video whose A/B test is running
+(`GET /ext/known-videos`: the ones set up as above),
 in a background tab, and reads the test's result once Studio has one (`POST /ext/stats`, kept in
 `ab_results`). **Library → A/B results** lists them, winner first, and **Copy as prompt notes**
 puts a summary on the clipboard for the Library prompts that write titles and thumbnails. Nothing

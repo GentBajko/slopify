@@ -130,10 +130,11 @@ export type WorkerRequest =
   | { readonly type: "item"; readonly projectId: string; readonly short: number | null }
   // The popup's Upload all Shorts.
   | { readonly type: "upload-all"; readonly projectId: string }
-  // A Details-page touch or a pinned comment, done or not; the worker closes its tab.
+  // A Details-page touch or a pinned comment, done or not; the worker closes its tab. "ab":
+  // A/B Testing set up (or not) on the video's Details page; that tab stays open for the person.
   | {
       readonly type: "task-result";
-      readonly task: "finish" | "comment";
+      readonly task: "finish" | "comment" | "ab";
       readonly projectId: string;
       readonly short: number | null;
       readonly ok: boolean;
@@ -206,3 +207,27 @@ export function packText(item: PackItem): string {
 export type WorkerAnswer<T> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly message: string };
+
+// What the Details page tells Slopify after setting up A/B Testing: once it is set up, Slopify
+// counts the test as running and the daily sweep reads its result; a failure keeps its reason.
+export function abSetupReport(
+  projectId: string,
+  short: number | null,
+  result: { readonly ok: boolean; readonly message: string },
+): WorkerRequest {
+  return {
+    type: "task-result",
+    task: "ab",
+    projectId,
+    short,
+    ok: result.ok,
+    message: result.message,
+  };
+}
+
+// Whether the worker closes the tab that sent this, once answered: a task's page did its work,
+// except A/B Testing's, which waits for the person to press Set test.
+export function closesSenderTab(request: WorkerRequest): boolean {
+  if (request.type === "task-result") return request.task !== "ab";
+  return request.type === "gone" || request.type === "ab-result";
+}

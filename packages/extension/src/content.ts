@@ -1,7 +1,13 @@
 import { browserApi } from "./browser.js";
 import { type AbMode, type FieldResult, fillStudio, openAbTest, setFiles } from "./fill.js";
 import { checkVideos, confirmedOf, type RecordedVideo, type VideoState } from "./gone.js";
-import { type ActivePack, type FillPayload, packText, type WorkerAnswer } from "./pack.js";
+import {
+  type ActivePack,
+  abSetupReport,
+  type FillPayload,
+  packText,
+  type WorkerAnswer,
+} from "./pack.js";
 import { findField, title, uploadDialog, videoInput } from "./selectors.js";
 import {
   adSuitabilityShown,
@@ -391,6 +397,8 @@ async function runAb(mode: AbMode, projectId: string, short: number | null): Pro
   const result = await openAbTest(document, payload.item, payload.thumbnails.map(file), mode, {
     timeoutMs: 8000,
   });
+  // Slopify reads a running test's result once a day; an older Slopify refuses the report.
+  await api.runtime.sendMessage(abSetupReport(projectId, short, result)).catch(() => undefined);
   toast(
     result.ok ? `${result.message} Then press Save on the video.` : result.message,
     result.ok ? "ok" : "error",

@@ -41,3 +41,34 @@ it("forgets a short deleted in Studio, so it can be uploaded again", async () =>
     expect(screen.queryByRole("button", { name: "Deleted on YouTube" })).toBeNull(),
   );
 });
+
+it("says whether A/B Testing was set up, and why it wasn't", async () => {
+  renderApp(
+    <OnYoutube projectId="p1" shorts={0} />,
+    testDeps({
+      "GET /api/studio/videos/p1": jsonAnswer({
+        videos: [
+          {
+            ...video,
+            short: null,
+            abState: "failed",
+            abMessage: "Studio's A/B Testing didn't open.",
+          },
+        ],
+      }),
+    }),
+  );
+  expect(
+    await screen.findByText(/Setting up A\/B Testing failed: Studio's A\/B Testing didn't open\./),
+  ).toBeTruthy();
+  cleanup();
+  renderApp(
+    <OnYoutube projectId="p1" shorts={0} />,
+    testDeps({
+      "GET /api/studio/videos/p1": jsonAnswer({
+        videos: [{ ...video, short: null, abState: "started" }],
+      }),
+    }),
+  );
+  expect(await screen.findByText(/A\/B Testing set up/)).toBeTruthy();
+});

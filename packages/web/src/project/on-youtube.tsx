@@ -57,6 +57,14 @@ function stateWords(video: YoutubeVideo): string {
   if (video.commentState === "done") parts.push("Comment pinned.");
   if (video.commentState === "failed")
     parts.push(`Pinning the comment failed: ${video.commentMessage ?? "no reason given"}`);
+  if (video.abState === "started")
+    parts.push(
+      "A/B Testing set up: once you press Set test and Save in Studio, the extension reads its result once a day (Library → A/B results).",
+    );
+  if (video.abState === "failed")
+    parts.push(
+      `Setting up A/B Testing failed: ${video.abMessage ?? "no reason given"} Press A/B test again once that is fixed.`,
+    );
   return parts.join(" ");
 }
 
@@ -198,7 +206,7 @@ function UploadRow({
       </div>
       {video === undefined && error === undefined ? null : (
         <p
-          className={`m-0 pl-18 text-small ${error !== undefined || video?.finishState === "failed" || video?.commentState === "failed" ? "text-danger" : "text-ink-3"}`}
+          className={`m-0 pl-18 text-small ${error !== undefined || video?.finishState === "failed" || video?.commentState === "failed" || video?.abState === "failed" ? "text-danger" : "text-ink-3"}`}
         >
           {error ?? (video === undefined ? "" : stateWords(video))}
         </p>

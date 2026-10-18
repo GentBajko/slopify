@@ -10,7 +10,7 @@ import {
   RefusedClick,
   setEditableText,
 } from "../src/fill.js";
-import { type PackItem, packText } from "../src/pack.js";
+import { abSetupReport, closesSenderTab, type PackItem, packText } from "../src/pack.js";
 import * as selectors from "../src/selectors.js";
 
 const fixture = readFileSync(join(import.meta.dirname, "fixtures", "studio-upload.html"), "utf8");
@@ -411,6 +411,26 @@ describe("filling Studio's upload dialog", () => {
     const none = await openAbTest(document, item, [png("one.png")], "thumbnails", noWait);
     expect(none.ok).toBe(false);
     expect(pressed).toEqual([]);
+  });
+
+  it("reports the set-up to Slopify, so it reads the result, and keeps the tab open", async () => {
+    const titled = { ...item, titles: ["Fox Flight | Tales"] };
+    const set = await openAbTest(document, titled, [], "titles", noWait);
+    const report = abSetupReport("p1", null, set);
+    expect(report).toEqual({
+      type: "task-result",
+      task: "ab",
+      projectId: "p1",
+      short: null,
+      ok: true,
+      message: set.message,
+    });
+    // The person still checks the dialog and presses Set test there.
+    expect(closesSenderTab(report)).toBe(false);
+    const none = await openAbTest(document, item, [png("one.png")], "thumbnails", noWait);
+    expect(abSetupReport("p1", null, none)).toMatchObject({ task: "ab", ok: false });
+    const finish = { ...report, task: "finish" as const };
+    expect(closesSenderTab(finish)).toBe(true);
   });
 
   it("leaves the A/B test for later on the upload: only the first thumbnail goes in", async () => {

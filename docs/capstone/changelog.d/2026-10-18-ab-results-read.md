@@ -1,0 +1,4 @@
+# A/B results are read again
+
+- **A/B test results reach Library → A/B results again.** Since 3.9.0 the daily read asked Slopify for the videos with a running A/B test, but nothing ever marked a test as running, so it read none. Now, when the extension sets up A/B Testing on a video (A/B test on On YouTube or in the popup), it tells Slopify, and that video's result is read once a day after you press Set test and Save. On YouTube says whether A/B Testing was set up, or why it wasn't. A test set up before this update isn't known to Slopify, so its result isn't read.
+- Code: `/ext/task-result` takes `task: "ab"` and sets `youtube_videos.ab_state` to `started` or `failed` (with `ab_message`, `ab_at`; a failure never downgrades `started`) through `setAbState` in `slices/studio/videos.ts`. Extension: `abSetupReport` and `closesSenderTab` in `pack.ts`; the A/B page reports after `openAbTest` and its tab stays open. An older Slopify refuses the report and nothing changes.
