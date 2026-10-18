@@ -40,6 +40,9 @@ describe("migrate", () => {
     expect(names(db, "table")).toEqual([
       "ab_results",
       "agent_actions",
+      "assistant_asks",
+      "assistant_messages",
+      "assistant_sessions",
       "attempts",
       "backup_imports",
       "batches",
@@ -121,6 +124,8 @@ describe("migrate", () => {
       "agent_actions_once",
       "agent_actions_project",
       "agent_actions_time",
+      "assistant_asks_session",
+      "assistant_messages_session",
       "cast_images_member",
       "cast_members_channel",
       "cast_members_order",
@@ -231,6 +236,7 @@ describe("migrate", () => {
       { version: 61, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 62, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 65, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 66, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -240,16 +246,16 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 56 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 57 });
   });
 
   it("refuses a database newer than the app knows", () => {
     const db = openDb(":memory:");
     migrate(db, clock);
-    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(66, clock.now().toISOString());
+    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(67, clock.now().toISOString());
 
     expect(() => migrate(db, clock)).toThrow(
-      "database schema 66 is newer than this app knows (65)",
+      "database schema 67 is newer than this app knows (66)",
     );
   });
 
@@ -765,4 +771,62 @@ it("keeps every review verdict and external review and lets the promise check an
   db.exec("DELETE FROM projects WHERE id='p1'");
   expect(db.prepare("SELECT count(*) AS n FROM review_verdicts").get()).toEqual({ n: 0 });
   expect(db.prepare("SELECT count(*) AS n FROM external_reviews").get()).toEqual({ n: 0 });
+});
+
+it("keeps every agent action and run start, and lets the assistant act and chat", () => {
+  const db = openDb(":memory:");
+  migrate(db, clock, { through: 65 });
+  db.exec("INSERT INTO projects VALUES ('p1','One','16:9','{}','a','a')");
+  db.exec(
+    "INSERT INTO agent_actions (id,project_id,schedule_id,tool,title,revision_id,created_at,idempotency_key) VALUES ('a1','p1',NULL,'save_revision','Saved','r1','b','k1')",
+  );
+  db.exec("INSERT INTO project_starts VALUES ('p1','agent','c')");
+  expect(() => db.exec("INSERT INTO project_starts VALUES ('p1','assistant','d')")).toThrow();
+
+  migrate(db, clock);
+
+  expect(db.prepare("SELECT id, tool, actor, idempotency_key FROM agent_actions").all()).toEqual([
+    { id: "a1", tool: "save_revision", actor: "agent", idempotency_key: "k1" },
+  ]);
+  expect(db.prepare("SELECT * FROM project_starts").all()).toEqual([
+    { project_id: "p1", actor: "agent", started_at: "c" },
+  ]);
+  db.exec(
+    "INSERT INTO agent_actions (id,project_id,tool,title,created_at,actor) VALUES ('a2','p1','start_draft','Started','e','assistant')",
+  );
+  expect(() =>
+    db.exec(
+      "INSERT INTO agent_actions (id,project_id,tool,title,created_at,actor) VALUES ('a3','p1','x','X','e','robot')",
+    ),
+  ).toThrow();
+  db.exec("UPDATE project_starts SET actor='assistant' WHERE project_id='p1'");
+  expect(() => db.exec("UPDATE project_starts SET actor='robot'")).toThrow();
+  db.exec("INSERT INTO assistant_sessions VALUES ('s1','claude-code','f','f')");
+  db.exec(
+    `INSERT INTO assistant_messages (id,session_id,turn_id,role,text,meta,created_at) VALUES ('m1','s1','t1','person','Hi','{}','g')`,
+  );
+  expect(() =>
+    db.exec(
+      `INSERT INTO assistant_messages (id,session_id,turn_id,role,text,meta,created_at) VALUES ('m2','s1','t1','robot','Hi','{}','g')`,
+    ),
+  ).toThrow();
+  expect(() =>
+    db.exec(
+      `INSERT INTO assistant_messages (id,session_id,turn_id,role,text,meta,created_at) VALUES ('m3','s1','t1','tool','Hi','not json','g')`,
+    ),
+  ).toThrow();
+  db.exec(
+    `INSERT INTO assistant_asks (id,session_id,tool,args_hash,text,state,created_at,decided_at) VALUES ('q1','s1','start_draft','h','Start it?','asked','g',NULL)`,
+  );
+  expect(() =>
+    db.exec(
+      `INSERT INTO assistant_asks (id,session_id,tool,args_hash,text,state,created_at,decided_at) VALUES ('q2','s1','x','h','?','maybe','g',NULL)`,
+    ),
+  ).toThrow();
+  db.exec("DELETE FROM assistant_sessions WHERE id='s1'");
+  expect(db.prepare("SELECT count(*) AS n FROM assistant_messages").get()).toEqual({ n: 0 });
+  expect(db.prepare("SELECT count(*) AS n FROM assistant_asks").get()).toEqual({ n: 0 });
+  db.exec("DELETE FROM projects WHERE id='p1'");
+  expect(db.prepare("SELECT count(*) AS n FROM project_starts").get()).toEqual({ n: 0 });
+  expect(db.prepare("PRAGMA foreign_keys").get()).toEqual({ foreign_keys: 1 });
 });

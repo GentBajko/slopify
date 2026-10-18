@@ -6,6 +6,7 @@ import { openExternalReview, settleExternalReviews } from "../../slices/reviews/
 import { externalReviewById } from "../../slices/reviews/external-rows.js";
 import { insertRevision } from "../../slices/revisions/repo.js";
 import { connectAgent, mcpFixture } from "../mcp/mcp.fake.js";
+import { assistantBindings } from "./actor.js";
 
 const open: { readonly close: () => void }[] = [];
 afterEach(() => {
@@ -293,4 +294,22 @@ it("lists a review again once its project is restored from the Trash, and passes
   expect(await listed()).toContain("er1");
   expect(settleExternalReviews(h.deps.db, deadline).map((review) => review.id)).toEqual(["er1"]);
   expect(externalReviewById(h.deps.db, h.projectId, "er1")?.state).toBe("auto-passed");
+});
+
+it("leaves a review an agent was asked to answer to the agent or the person, never the assistant", async () => {
+  const h = waiting();
+  const response = await h.app.request(
+    `/api/projects/${h.projectId}/external-reviews/er1/verdict`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ verdict: "pass", reasons: [] }),
+    },
+    assistantBindings,
+  );
+  expect(response.status).toBe(403);
+  expect(((await response.json()) as { detail: string }).detail).toBe(
+    "The assistant can't answer this review: it waits for the agent you connected in Settings → Connections → Agents (MCP). Answer it from that agent, or it passes on its own 2 hours after it began waiting.",
+  );
+  expect(externalReviewById(h.deps.db, h.projectId, "er1")).toMatchObject({ state: "waiting" });
 });

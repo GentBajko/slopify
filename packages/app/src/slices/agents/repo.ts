@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
-import { type Actor, actors } from "./model.js";
+import { type Actor, type AgentActor, actors, agentActors } from "./model.js";
 
 export interface AgentAction {
   readonly id: string;
@@ -12,6 +12,8 @@ export interface AgentAction {
   // The version the action saved, when it saved one.
   readonly revisionId: string | null;
   readonly createdAt: string;
+  // An external agent through `/mcp`, or the in-app assistant through `/mcp/assistant`.
+  readonly actor: AgentActor;
 }
 
 // An action with the name of the project or schedule it changed, when it still exists.
@@ -30,6 +32,7 @@ const actionRow = z.object({
   title: z.string(),
   revision_id: z.string().nullable(),
   created_at: z.string(),
+  actor: z.enum(agentActors),
 });
 
 function actionOf(value: unknown): AgentAction {
@@ -42,6 +45,7 @@ function actionOf(value: unknown): AgentAction {
     title: row.title,
     revisionId: row.revision_id,
     createdAt: row.created_at,
+    actor: row.actor,
   };
 }
 
@@ -54,8 +58,8 @@ export function recordAgentAction(
   idempotencyKey?: string,
 ): void {
   db.prepare(
-    `INSERT INTO agent_actions(id,project_id,schedule_id,tool,title,revision_id,created_at,idempotency_key)
-     VALUES (?,(SELECT id FROM projects WHERE id=?),?,?,?,?,?,?)
+    `INSERT INTO agent_actions(id,project_id,schedule_id,tool,title,revision_id,created_at,idempotency_key,actor)
+     VALUES (?,(SELECT id FROM projects WHERE id=?),?,?,?,?,?,?,?)
      ON CONFLICT(tool,COALESCE(project_id,''),idempotency_key) WHERE idempotency_key IS NOT NULL
      DO NOTHING`,
   ).run(
@@ -67,6 +71,7 @@ export function recordAgentAction(
     action.revisionId,
     action.createdAt,
     idempotencyKey ?? null,
+    action.actor,
   );
 }
 
@@ -77,15 +82,27 @@ export function agentActionsOf(db: DatabaseSync, projectId: string): readonly Ag
     .map(actionOf);
 }
 
-export function agentRevisionIds(db: DatabaseSync, projectId: string): ReadonlySet<string> {
+function revisionIdsBy(
+  db: DatabaseSync,
+  projectId: string,
+  actor: AgentActor,
+): ReadonlySet<string> {
   return new Set(
     db
       .prepare(
-        "SELECT DISTINCT revision_id FROM agent_actions WHERE project_id=? AND revision_id IS NOT NULL",
+        "SELECT DISTINCT revision_id FROM agent_actions WHERE project_id=? AND actor=? AND revision_id IS NOT NULL",
       )
-      .all(projectId)
+      .all(projectId, actor)
       .map((row) => String(row.revision_id)),
   );
+}
+
+export function agentRevisionIds(db: DatabaseSync, projectId: string): ReadonlySet<string> {
+  return revisionIdsBy(db, projectId, "agent");
+}
+
+export function assistantRevisionIds(db: DatabaseSync, projectId: string): ReadonlySet<string> {
+  return revisionIdsBy(db, projectId, "assistant");
 }
 
 export function recentAgentActions(db: DatabaseSync): readonly AgentActionView[] {

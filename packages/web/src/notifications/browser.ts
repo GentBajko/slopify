@@ -188,7 +188,7 @@ export function showStartNotification(
 ): void {
   const title = notice.title.trim() === "" ? "Untitled project" : notice.title.trim();
   const shown = new Notification(
-    `Started: ${title}${notice.byAgent === true ? " · by agent" : ""}`,
+    `Started: ${title}${notice.byAgent === true ? " · by agent" : notice.byAssistant === true ? " · by assistant" : ""}`,
     {
       body: "Slopify is working on it. You'll hear a different chime when it ends.",
       tag: `slopify-run-${notice.projectId}`,

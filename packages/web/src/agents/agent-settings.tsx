@@ -88,7 +88,8 @@ export function AgentSettings(): ReactElement {
                   {data.recent.map((action) => (
                     <li key={action.id}>
                       {action.title}
-                      {action.subject === null ? "" : ` · ${action.subject}`} ·{" "}
+                      {action.subject === null ? "" : ` · ${action.subject}`}
+                      {action.actor === "assistant" ? " · by assistant" : ""} ·{" "}
                       <Stamp iso={action.createdAt}>{startedAt(action.createdAt)}</Stamp>
                     </li>
                   ))}

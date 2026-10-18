@@ -211,3 +211,21 @@ it("names the promise check beside the article, where it shares the place with t
   ).toBeTruthy();
   expect(screen.getByText("It greets the viewer first. Start with: The rope held.")).toBeTruthy();
 });
+
+it("says when the in-app assistant decided a flagged item", async () => {
+  for (const [action, label] of [
+    ["overruled", "Accepted by assistant"],
+    ["redone", "Made again by assistant"],
+  ] as const) {
+    renderApp(
+      <Subject />,
+      testDeps({
+        "GET /api/projects/p1/reviews": jsonAnswer({
+          reviews: [{ ...flagged, action, actionAt: "now", actionBy: "assistant" }],
+        }),
+      }),
+    );
+    expect(await screen.findByText(label)).toBeTruthy();
+    cleanup();
+  }
+});

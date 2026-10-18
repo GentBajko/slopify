@@ -88,4 +88,17 @@ describe("noticeText", () => {
       detail: "Open the project to see which step failed and the button that fixes it.",
     });
   });
+
+  it("says who started the run when it wasn't the person", () => {
+    const subject = { title: "Cleopatra", makesVideo: true } as const;
+    expect(noticeText("ready", { ...subject, startedBy: "agent" }).headline).toBe(
+      "Video ready: Cleopatra · started by agent",
+    );
+    expect(noticeText("ready", { ...subject, startedBy: "assistant" }).headline).toBe(
+      "Video ready: Cleopatra · started by assistant",
+    );
+    expect(noticeText("ready", { ...subject, startedBy: "person" }).headline).toBe(
+      "Video ready: Cleopatra",
+    );
+  });
 });

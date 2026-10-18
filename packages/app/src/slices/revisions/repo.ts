@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
-import { agentRevisionIds } from "../agents/repo.js";
+import { agentRevisionIds, assistantRevisionIds } from "../agents/repo.js";
 import type { ProjectAsset, ProjectRevision, RevisionSummary } from "./model.js";
 import { projectRevisionSchema } from "./schema.js";
 
@@ -70,6 +70,7 @@ export function listRevisionHistory(
 ): readonly RevisionSummary[] {
   const head = currentRevisionId(db, projectId);
   const byAgent = agentRevisionIds(db, projectId);
+  const byAssistant = assistantRevisionIds(db, projectId);
   return db
     .prepare("SELECT * FROM project_revisions WHERE project_id=? ORDER BY created_at DESC,id DESC")
     .all(projectId)
@@ -83,6 +84,7 @@ export function listRevisionHistory(
         createdAt: revision.createdAt,
         current: revision.id === head,
         ...(byAgent.has(revision.id) ? { byAgent: true } : {}),
+        ...(byAssistant.has(revision.id) ? { byAssistant: true } : {}),
       };
     });
 }

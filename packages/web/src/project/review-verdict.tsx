@@ -44,12 +44,18 @@ function statusOf(review: Review): {
       : { label: agent ? "Passed by agent" : "Review passed", tone: "neutral" };
   if (review.action === "overruled")
     return {
-      label: review.actionBy === "agent" ? "Accepted by agent" : "Accepted by you",
+      label:
+        review.actionBy === "person" || review.actionBy === null
+          ? "Accepted by you"
+          : `Accepted by ${review.actionBy}`,
       tone: "neutral",
     };
   if (review.action === "redone")
     return {
-      label: review.actionBy === "agent" ? "Made again by agent" : "Being made again",
+      label:
+        review.actionBy === "person" || review.actionBy === null
+          ? "Being made again"
+          : `Made again by ${review.actionBy}`,
       tone: "running",
     };
   if (review.redoState === "pending") return { label: "Waiting to be made again", tone: "running" };

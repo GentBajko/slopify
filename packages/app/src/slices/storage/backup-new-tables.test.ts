@@ -54,6 +54,10 @@ const leftOut = new Set([
   "external_reviews",
   "agent_actions",
   "project_starts",
+  // The assistant's chats and what it asked first belong to this install's sessions.
+  "assistant_sessions",
+  "assistant_messages",
+  "assistant_asks",
   // What the Notification URL of this install was told: a restored project tells its run's end
   // again.
   "told_failures",

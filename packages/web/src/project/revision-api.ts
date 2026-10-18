@@ -137,6 +137,8 @@ const agentActionSchema = z.object({
   title: z.string(),
   revisionId: z.string().nullable(),
   createdAt: z.string(),
+  // Absent from a Slopify that kept no actor: every action then was an agent's.
+  actor: z.enum(["agent", "assistant"]).default("agent"),
 });
 export type AgentActionView = z.infer<typeof agentActionSchema>;
 export function historyOf(

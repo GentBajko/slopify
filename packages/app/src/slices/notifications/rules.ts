@@ -247,8 +247,8 @@ export function shortReason(reason: string | null | undefined): string | undefin
 
 export function noticeText(kind: RunNotice, subject: NoticeSubject): NoticeText {
   const text = runNoticeText(kind, subject);
-  return subject.startedBy === "agent"
-    ? { ...text, headline: `${text.headline} · started by agent` }
+  return subject.startedBy === "agent" || subject.startedBy === "assistant"
+    ? { ...text, headline: `${text.headline} · started by ${subject.startedBy}` }
     : text;
 }
 

@@ -38,12 +38,25 @@ it("says when an agent last connected, lists what agents did, and copies a setup
             createdAt: "2026-09-10T08:01:00.000Z",
             subject: "Harbor tales",
           },
+          {
+            id: "a2",
+            projectId: null,
+            scheduleId: null,
+            tool: "update_settings",
+            title: "Change settings",
+            revisionId: null,
+            createdAt: "2026-09-10T08:02:00.000Z",
+            subject: null,
+            actor: "assistant",
+          },
         ],
       }),
     }),
   );
   expect(await screen.findByText(/^Last connected /)).toBeTruthy();
   expect(screen.getByText(/Approve selected topics · Harbor tales/)).toBeTruthy();
+  expect(screen.queryByText(/Harbor tales · by assistant/)).toBeNull();
+  expect(screen.getByText(/Change settings · by assistant/)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Copy the Claude Code setup" }));
   expect(writeText).toHaveBeenCalledWith(
     "claude mcp add --transport http slopify http://slopify.test/mcp",

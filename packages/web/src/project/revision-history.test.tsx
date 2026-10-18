@@ -154,3 +154,52 @@ it("marks a version an agent saved and lists what agents did", async () => {
   expect(await screen.findByRole("button", { name: /· by agent/ })).toBeTruthy();
   expect(screen.getByText(/Continue the run · by agent/)).toBeTruthy();
 });
+
+it("marks what the in-app assistant saved and did as the assistant's", async () => {
+  const view = revisionView();
+  const revision = view.revision;
+  renderApp(
+    <RevisionHistory projectId="p1" pending={false} onRestore={() => {}} />,
+    testDeps({
+      "GET /api/projects/p1/revisions": jsonAnswer({
+        revisions: [
+          {
+            id: revision.id,
+            parentId: null,
+            restoredFromId: null,
+            title: revision.config.title,
+            createdAt: revision.createdAt,
+            current: true,
+            byAssistant: true,
+          },
+        ],
+        agentActions: [
+          {
+            id: "a1",
+            projectId: "p1",
+            scheduleId: null,
+            tool: "start_draft",
+            title: "Start a draft",
+            revisionId: null,
+            createdAt: "2026-09-10T00:05:00.000Z",
+            actor: "assistant",
+          },
+          {
+            id: "a0",
+            projectId: "p1",
+            scheduleId: null,
+            tool: "resume_project",
+            title: "Continue the run",
+            revisionId: null,
+            createdAt: "2026-09-10T00:04:00.000Z",
+          },
+        ],
+      }),
+    }),
+  );
+  expect(await screen.findByRole("button", { name: /· by assistant/ })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /· by agent/ })).toBeNull();
+  expect(screen.getByText(/Start a draft · by assistant/)).toBeTruthy();
+  expect(screen.getByText(/Continue the run · by agent/)).toBeTruthy();
+  expect(screen.getByRole("region", { name: "Done by agents and the assistant" })).toBeTruthy();
+});

@@ -3,8 +3,12 @@ import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
 import { internalError } from "../../kernel/errors.js";
 import { liveProject } from "../admission/repo.js";
-import type { Actor } from "../agents/model.js";
-import type { ExternalAnswerResult, ExternalReview, SettledReview } from "./external-model.js";
+import type {
+  ExternalAnswerer,
+  ExternalAnswerResult,
+  ExternalReview,
+  SettledReview,
+} from "./external-model.js";
 import { externalReviewByFingerprint, externalReviewById } from "./external-rows.js";
 import { liveWork, reviewStanding, wantedBy } from "./external-waiting.js";
 import { type ReviewVerdict, reviewStages } from "./model.js";
@@ -81,7 +85,7 @@ export function answerExternalReview(
     readonly projectId: string;
     readonly id: string;
     readonly verdict: ReviewVerdict;
-    readonly by: Actor;
+    readonly by: ExternalAnswerer;
     readonly at: string;
   },
 ): ExternalAnswerResult {

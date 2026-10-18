@@ -5,6 +5,7 @@ import type { Clock } from "../../kernel/clock.js";
 import { causedBy } from "../../kernel/errors.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
+import type { AgentActor } from "../../slices/agents/model.js";
 import { recordAgentAction } from "../../slices/agents/repo.js";
 import { revisionIdOf, subjectsOf } from "./attribution.js";
 import { fileArg, paramsOf, pathParam, type RouteTool, routeOf } from "./route-tool.js";
@@ -17,6 +18,8 @@ export interface RouteCallDeps {
   readonly ids: Ids;
   readonly clock: Clock;
   readonly log: Pick<Log, "write">;
+  // Who the calls are recorded as; absent is an external agent.
+  readonly actor?: AgentActor | undefined;
 }
 
 const problemSchema = z
@@ -85,6 +88,7 @@ export async function callRoute(
           title: tool.title,
           revisionId: revisionIdOf(value),
           createdAt: deps.clock.now().toISOString(),
+          actor: deps.actor ?? "agent",
         },
         key.success ? key.data.idempotencyKey : undefined,
       );
