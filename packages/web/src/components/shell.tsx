@@ -121,6 +121,8 @@ const destinations: readonly Destination[] = [
       "/document-themes",
       "/narration-aliases",
       "/ab-results",
+      "/designs",
+      "/design-templates",
     ],
     phone: true,
   },
@@ -178,6 +180,11 @@ export function isActive(pathname: string, match: readonly string[]): boolean {
   return match.some((path) =>
     path === "/" ? pathname === "/" : pathname === path || pathname.startsWith(`${path}/`),
   );
+}
+
+// The rail item a page lights, by its address.
+export function activeDestination(pathname: string): string | undefined {
+  return destinations.find((destination) => isActive(pathname, destination.match))?.id;
 }
 
 const support = [
