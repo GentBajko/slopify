@@ -5,6 +5,7 @@ import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import type { AssistantCliTurn, AssistantStreamEvent } from "../../kernel/ports/assistant-cli.js";
+import type { AllowedCall, RunAllowedCall } from "../../slices/assistant/access.js";
 import { cliPreferenceOf } from "../../slices/assistant/repo.js";
 import { createTurnTokens } from "../../slices/assistant/tokens.js";
 import { type Assistant, createAssistant } from "../../slices/assistant/turn.js";
@@ -16,7 +17,10 @@ afterEach(async () => {
   for (const cleanup of cleanups.splice(0)) await cleanup();
 });
 
-function harness(script?: (turn: AssistantCliTurn) => AsyncIterable<AssistantStreamEvent>) {
+function harness(
+  script?: (turn: AssistantCliTurn) => AsyncIterable<AssistantStreamEvent>,
+  runAllowed?: RunAllowedCall,
+) {
   const db = openDb(":memory:");
   const clock = fixedClock("2026-10-18T10:00:00.000Z");
   migrate(db, clock);
@@ -47,7 +51,7 @@ function harness(script?: (turn: AssistantCliTurn) => AsyncIterable<AssistantStr
     await assistant.stopAll();
     db.close();
   });
-  const app = new Hono().route("/api/assistant", assistantRoutes({ db, assistant }));
+  const app = new Hono().route("/api/assistant", assistantRoutes({ db, assistant }, runAllowed));
   const call = (
     path: string,
     init: { method?: string; body?: unknown } = {},
@@ -164,6 +168,39 @@ describe("/api/assistant", () => {
     expect(
       (await call(`/asks/${asked}`, { method: "POST", body: { answer: "maybe" } })).status,
     ).toBe(400);
+  });
+
+  it("makes the asked call on Allow with the arguments it was asked with", async () => {
+    let asked = "";
+    const ran: AllowedCall[] = [];
+    const { call, assistant } = harness(
+      async function* (turn) {
+        if (asked === "")
+          asked =
+            assistant.tokens.resolve(turn.token)?.ask({
+              tool: "resume_project",
+              argsHash: "h",
+              text: "Continue.",
+              args: { id: "p1", body: { baseRevisionId: "r1" } },
+            }).id ?? "";
+        yield { type: "done" };
+      },
+      async (allowed) => {
+        ran.push(allowed);
+        return { ok: true, text: "{}" };
+      },
+    );
+    const id = await newSession(call);
+    await call(`/sessions/${id}/messages`, { method: "POST", body: { text: "Go" } });
+    for (let tries = 0; tries < 100 && asked === ""; tries += 1) await delay(5);
+    await delay(10);
+    expect(
+      (await call(`/asks/${asked}`, { method: "POST", body: { answer: "allow" } })).status,
+    ).toBe(200);
+    for (let tries = 0; tries < 100 && ran.length === 0; tries += 1) await delay(5);
+    expect(ran).toEqual([
+      { sessionId: id, tool: "resume_project", args: { id: "p1", body: { baseRevisionId: "r1" } } },
+    ]);
   });
 
   it("is the person's: an agent or the assistant itself is refused", async () => {

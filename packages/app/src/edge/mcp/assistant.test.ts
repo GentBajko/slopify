@@ -11,7 +11,8 @@ import {
 } from "../../slices/assistant/gate.js";
 import { createTurnTokens } from "../../slices/assistant/tokens.js";
 import type { RevisionDeps } from "../../slices/revisions/model.js";
-import { assistantRouteTools } from "./assistant.js";
+import { assistantBindings } from "../http/actor.js";
+import { assistantRouteTools, runAllowedCall } from "./assistant.js";
 import { connectAgent, mcpFixture } from "./mcp.fake.js";
 import { routeOf } from "./route-tool.js";
 import { routeTools } from "./tools.js";
@@ -146,6 +147,52 @@ describe("/mcp/assistant", () => {
     });
     expect(textOf(result)).toContain("an address outside Slopify");
     expect(asksOf(h.deps.db, "s1", h.deps.clock.now())).toHaveLength(1);
+    await client.close();
+  });
+
+  it("shows on the card the address, names and numbers the call carries, never a secret", async () => {
+    const { h, connect } = fixture();
+    const client = await connect();
+    await client.callTool({
+      name: "set_notification_url",
+      arguments: {
+        body: { url: "https://ntfy.sh/elsewhere", token: "abc123", idempotencyKey: "k" },
+      },
+    });
+    const [ask] = asksOf(h.deps.db, "s1", h.deps.clock.now());
+    expect(ask?.text).toContain("url: “https://ntfy.sh/elsewhere”");
+    expect(ask?.text).toContain("token: (hidden)");
+    expect(ask?.text).not.toContain("abc123");
+    expect(ask?.text).not.toContain("idempotencyKey");
+    await client.close();
+  });
+
+  it("makes the asked call itself on Allow, once, as the assistant", async () => {
+    const { h, connect } = fixture();
+    const client = await connect();
+    const id = "00000000-0000-4000-8000-000000000003";
+    await client.callTool({ name: "create_channel", arguments: { body: { id, name: "Third" } } });
+    await client.callTool({ name: "delete_channel", arguments: { id } });
+    const [ask] = asksOf(h.deps.db, "s1", h.deps.clock.now());
+    const deps = {
+      ...h.deps,
+      api: async (request: Request) => h.app.request(request, undefined, assistantBindings),
+    };
+    const call = { sessionId: "s1", tool: "delete_channel", args: { id } };
+    expect((await runAllowedCall(deps, call)).text).toContain("already used or has expired");
+    expect(decideAsk(h.deps.db, ask?.id ?? "", "allow", h.deps.clock.now()).ok).toBe(true);
+    const made = await runAllowedCall(deps, call);
+    expect(made.ok).toBe(true);
+    expect(h.deps.db.prepare("SELECT count(*) AS n FROM channels WHERE id=?").get(id)).toEqual({
+      n: 0,
+    });
+    expect(
+      h.deps.db.prepare("SELECT tool, actor FROM agent_actions ORDER BY rowid DESC LIMIT 1").get(),
+    ).toEqual({ tool: "delete_channel", actor: "assistant" });
+    expect(await runAllowedCall(deps, call)).toMatchObject({ ok: false });
+    expect(
+      await runAllowedCall(deps, { sessionId: "s1", tool: "list_channels", args: {} }),
+    ).toMatchObject({ ok: false });
     await client.close();
   });
 
@@ -364,7 +411,7 @@ describe("/mcp/assistant", () => {
       });
       expect(result.isError).toBe(true);
       expect(textOf(result)).toContain("Waiting for the person: Slopify showed them «Continue");
-      expect(textOf(result)).toContain("call resume_project again with confirmed: true");
+      expect(textOf(result)).toContain("Slopify makes this resume_project call itself");
     }
     expect(h.ticks).toEqual([]);
     const asks = asksOf(h.deps.db, "s1", h.deps.clock.now());

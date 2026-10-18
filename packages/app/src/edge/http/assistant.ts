@@ -1,6 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
 import { z } from "zod";
+import type { RunAllowedCall } from "../../slices/assistant/access.js";
 import {
   assistantCliPreferences,
   assistantScreenSchema,
@@ -42,7 +43,11 @@ function personOnly(c: Context): Response | undefined {
       });
 }
 
-export function assistantRoutes(deps: Pick<AppDeps, "assistant" | "db">) {
+export function assistantRoutes(
+  deps: Pick<AppDeps, "assistant" | "db">,
+  // On Allow, the asked call is made by Slopify itself (`edge/mcp/assistant.ts`).
+  runAllowed?: RunAllowedCall,
+) {
   const assistant = deps.assistant;
   const wired = (c: Context): Assistant | Response =>
     personOnly(c) ?? assistant ?? problem(c, { status: 503, detail: notWired });
@@ -109,7 +114,11 @@ export function assistantRoutes(deps: Pick<AppDeps, "assistant" | "db">) {
       (c) => {
         const service = wired(c);
         if (service instanceof Response) return service;
-        const answered = service.answer(c.req.valid("param").id, c.req.valid("json").answer);
+        const answered = service.answer(
+          c.req.valid("param").id,
+          c.req.valid("json").answer,
+          runAllowed,
+        );
         if (answered.ok) return c.json({ ask: answered.ask });
         return problem(c, {
           status: answered.reason === "unknown" ? 404 : 409,
