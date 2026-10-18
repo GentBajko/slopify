@@ -27,19 +27,25 @@ export function Callout({
   readonly className?: string;
 }): ReactElement {
   const titleId = useId();
-  return (
-    <div
-      role={tone === "danger" ? "alert" : "status"}
-      aria-labelledby={titleId}
-      data-tone={tone}
-      className={cn("sl-callout", tone !== "info" && `sl-callout--${tone}`, className)}
-    >
+  const look = cn("sl-callout", tone !== "info" && `sl-callout--${tone}`, className);
+  const parts = (
+    <>
       {icons[tone]}
       <span id={titleId} className="sl-callout__title">
         {title}
       </span>
       {children === undefined ? null : <div className="sl-callout__body">{children}</div>}
       {actions === undefined ? null : <div className="sl-callout__actions">{actions}</div>}
+    </>
+  );
+  // Named by its title, so a page with several is read one by one.
+  return tone === "danger" ? (
+    <div role="alert" aria-labelledby={titleId} data-tone={tone} className={look}>
+      {parts}
+    </div>
+  ) : (
+    <div role="status" aria-labelledby={titleId} data-tone={tone} className={look}>
+      {parts}
     </div>
   );
 }
