@@ -10,6 +10,7 @@ import { documentOf } from "../play-drafts/service.js";
 import { templateById } from "../project-templates/repo.js";
 import { currentRevisionId, revisionById } from "../revisions/repo.js";
 import { isUncataloguedProvider } from "../settings/model.js";
+import { runnableTemplate } from "../template-studio/schedule-gate.js";
 import type { ModelChoice, RetiredUsage, UsageKind, UsageSlot } from "./model.js";
 import { usageSlots } from "./model.js";
 
@@ -179,7 +180,11 @@ export function choiceSites(db: DatabaseSync): readonly ChoiceSite[] {
     )
     .all()) {
     const row = scheduleRow.parse(raw);
-    const template = templateById(db, row.template_id, row.template_version);
+    // What the schedule actually runs (`template-studio/schedule-gate.ts`): with an unchecked
+    // head that is an older ready version, whose models are the ones its runs use.
+    const template =
+      runnableTemplate(db, row.template_id) ??
+      templateById(db, row.template_id, row.template_version);
     if (template === undefined) continue;
     const head =
       heads.get(row.template_id) ??

@@ -8,12 +8,14 @@ import type { DraftDeps } from "../play-drafts/model.js";
 import { draftRow } from "../play-drafts/repo.js";
 import type { PlayDraftForm } from "../play-drafts/schema.js";
 import { documentOf, saveDraft } from "../play-drafts/service.js";
+import type { ProjectTemplate } from "../project-templates/model.js";
 import { templateById } from "../project-templates/repo.js";
 import { updateTemplate } from "../project-templates/service.js";
 import { ensureBaseline, saveRevision } from "../revisions/index.js";
 import type { RevisionDeps } from "../revisions/model.js";
 import { currentRevisionId } from "../revisions/repo.js";
 import { carryGateOnto } from "../template-studio/repo.js";
+import { templateGate } from "../template-studio/schedule-gate.js";
 import {
   configChoices,
   formChoices,
@@ -162,35 +164,79 @@ function switchTemplate(
   request: SwitchRequest,
   templateId: string,
 ): SwitchResult {
-  return transact(deps.db, (): SwitchResult => {
-    const template = templateById(deps.db, templateId);
-    if (template === undefined) return { ok: false, message: changedMeanwhile };
-    const form = switchForm(template.document.form, catalogue, request);
-    if (form === undefined) return { ok: true, changed: false };
-    const saved = updateTemplate(deps, {
+  const template = templateById(deps.db, templateId);
+  if (template === undefined) return { ok: false, message: changedMeanwhile };
+  try {
+    return transact(deps.db, () => switchTemplateIn(deps, catalogue, request, template));
+  } catch (error) {
+    if (!(error instanceof SwitchRefused)) throw error;
+    return {
+      ok: false,
+      message:
+        error.reason === "missing-prompt"
+          ? `The template "${template.name}" uses a prompt or intro/outro that was deleted, so it cannot be saved. Open it in Library → Templates, choose another, and save.`
+          : changedMeanwhile,
+    };
+  }
+}
+
+// A refused save inside the switch's transaction: thrown so the carried version written before
+// it is rolled back with it.
+class SwitchRefused extends Error {
+  constructor(readonly reason: string) {
+    super(reason);
+  }
+}
+
+function switchTemplateIn(
+  deps: UpkeepDeps,
+  catalogue: Catalogue,
+  request: SwitchRequest,
+  template: ProjectTemplate,
+): SwitchResult {
+  const form = switchForm(template.document.form, catalogue, request);
+  // The version schedules run, when it isn't the head (an unchecked edit waits on Mark ready).
+  const runs = templateGate(deps.db, template.id)?.runs ?? null;
+  const running =
+    runs === null || runs === template.version
+      ? undefined
+      : templateById(deps.db, template.id, runs);
+  const runningForm =
+    running === undefined ? undefined : switchForm(running.document.form, catalogue, request);
+  if (form === undefined && runningForm === undefined) return { ok: true, changed: false };
+  let base = template.version;
+  if (running !== undefined && runningForm !== undefined) {
+    // The version that runs, switched, carried from it: schedules never keep running a
+    // retired model while the person's newer edit waits to be marked ready.
+    const carried = updateTemplate(deps, {
       id: template.id,
-      name: template.name,
-      document: { ...template.document, form },
-      baseVersion: template.version,
+      name: running.name,
+      document: { ...running.document, form: runningForm },
+      baseVersion: base,
       mutationId: deps.uuid(),
     });
-    if (!saved.ok)
-      return {
-        ok: false,
-        message:
-          saved.reason === "missing-prompt"
-            ? `The template "${template.name}" uses a prompt or intro/outro that was deleted, so it cannot be saved. Open it in Library → Templates, choose another, and save.`
-            : changedMeanwhile,
-      };
-    // Slopify's own change: a schedule running the version it came from keeps running.
-    carryGateOnto(deps.db, template.id, template.version, saved.value.version);
-    deps.db
-      .prepare(
-        "UPDATE schedules SET template_version=?,version=version+1,updated_at=? WHERE template_id=? AND template_version=? AND deleted_at IS NULL AND status IN ('active','paused')",
-      )
-      .run(saved.value.version, deps.clock.now().toISOString(), template.id, template.version);
-    return { ok: true, changed: true };
+    if (!carried.ok) throw new SwitchRefused(carried.reason);
+    carryGateOnto(deps.db, template.id, running.version, carried.value.version);
+    base = carried.value.version;
+  }
+  // The head stays the person's newest work: switched too when it picks the model, and
+  // written again above the carried version so it is still the newest one.
+  const saved = updateTemplate(deps, {
+    id: template.id,
+    name: template.name,
+    document: { ...template.document, form: form ?? template.document.form },
+    baseVersion: base,
+    mutationId: deps.uuid(),
   });
+  if (!saved.ok) throw new SwitchRefused(saved.reason);
+  // Slopify's own change: a schedule running the version it came from keeps running.
+  carryGateOnto(deps.db, template.id, template.version, saved.value.version);
+  deps.db
+    .prepare(
+      "UPDATE schedules SET template_version=?,version=version+1,updated_at=? WHERE template_id=? AND template_version=? AND deleted_at IS NULL AND status IN ('active','paused')",
+    )
+    .run(saved.value.version, deps.clock.now().toISOString(), template.id, template.version);
+  return { ok: true, changed: true };
 }
 
 function switchDraft(deps: UpkeepDeps, catalogue: Catalogue, request: SwitchRequest): SwitchResult {

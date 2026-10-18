@@ -9,8 +9,9 @@ import { insertStage } from "../admission/stage-writes.js";
 import { draftFixture } from "../play-drafts/draft.fake.js";
 import type { PlayDraftDocument } from "../play-drafts/model.js";
 import { templateById } from "../project-templates/repo.js";
-import { createTemplate } from "../project-templates/service.js";
+import { createTemplate, updateTemplate } from "../project-templates/service.js";
 import { gatesOf, writeGate } from "../template-studio/repo.js";
+import { runnableTemplate } from "../template-studio/schedule-gate.js";
 import { defaultVideoEdit } from "../video/edit-settings.js";
 import {
   requestOf,
@@ -224,6 +225,99 @@ describe("switchRetiredModel", () => {
     await switchRetiredModel(h.deps, catalogue, request({ id: templateId }));
     expect(templateById(h.deps.db, templateId)?.version).toBe(2);
     expect(gatesOf(h.deps.db, templateId)).toEqual([]);
+  });
+
+  // The head is the person's unchecked edit and an older ready version is what schedules run:
+  // the switch must reach the version that runs, or the schedule keeps the retired model.
+  function readyThenUnchecked(headForm: PlayDraftDocument["form"]): {
+    readonly templateId: string;
+    readonly scheduleId: string;
+  } {
+    const templateId = randomUUID();
+    expect(
+      createTemplate(h.deps, {
+        id: templateId,
+        name: "Weekly",
+        document: { ...h.document, form: form() },
+      }).ok,
+    ).toBe(true);
+    writeGate(h.deps.db, templateId, { version: 1, state: "ready", carriedFrom: null });
+    expect(
+      updateTemplate(h.deps, {
+        id: templateId,
+        name: "Weekly (edited)",
+        document: { ...h.document, form: headForm },
+        baseVersion: 1,
+        mutationId: randomUUID(),
+      }).ok,
+    ).toBe(true);
+    const scheduleId = randomUUID();
+    h.deps.db
+      .prepare(
+        `INSERT INTO schedules (id,name,template_id,template_version,cadence_json,timezone,missed_policy,
+          overlap_policy,spend_limit_cents,items_json,status,version,creation_hash,next_run_at,created_at,updated_at)
+         VALUES (?,'Weekly run',?,2,'{}','UTC','skip','skip',NULL,'[]','active',1,'h',NULL,'t','t')`,
+      )
+      .run(scheduleId, templateId);
+    return { templateId, scheduleId };
+  }
+
+  it("switches the ready version a schedule runs when the head is unchecked, keeping the head as the newest version", async () => {
+    const { templateId, scheduleId } = readyThenUnchecked({ ...form(), title: "Edited" });
+    const usage = retiredModelUsage(h.deps.db, catalogue).find(
+      (one) => one.kind === "schedule" && one.id === scheduleId && one.slot === "llm",
+    );
+    expect(usage).toBeDefined();
+    if (usage === undefined) return;
+    expect(await switchRetiredModel(h.deps, catalogue, requestOf(usage))).toEqual({
+      ok: true,
+      changed: true,
+    });
+    // Version 3: what ran (version 1) with the model switched, carried so schedules run it.
+    expect(gatesOf(h.deps.db, templateId)).toEqual([
+      { version: 1, state: "ready", carriedFrom: null },
+      { version: 3, state: "carried", carriedFrom: 1 },
+    ]);
+    const runs = runnableTemplate(h.deps.db, templateId);
+    expect(runs?.version).toBe(3);
+    expect(runs?.document.form.llm.model).toBe(usage.replacement?.id);
+    expect(runs?.document.form.title).toBe("Moon");
+    expect(runs?.name).toBe("Weekly");
+    // Version 4: the person's unchecked edit, switched too, still the head and still unchecked.
+    const head = templateById(h.deps.db, templateId);
+    expect(head?.version).toBe(4);
+    expect(head?.name).toBe("Weekly (edited)");
+    expect(head?.document.form.title).toBe("Edited");
+    expect(head?.document.form.llm.model).toBe(usage.replacement?.id);
+    expect(retiredModelUsage(h.deps.db, catalogue).filter((one) => one.slot === "llm")).toEqual([]);
+  });
+
+  it("switches the version that runs even when the unchecked head already picks another model", async () => {
+    const { templateId, scheduleId } = readyThenUnchecked({
+      ...form(),
+      title: "Edited",
+      llm: { provider: "openrouter", model: activeLlm },
+    });
+    const usages = retiredModelUsage(h.deps.db, catalogue).filter((one) => one.slot === "llm");
+    // Only the schedule still runs the retired model: the template's head doesn't pick it.
+    expect(usages.map((one) => [one.kind, one.id])).toEqual([["schedule", scheduleId]]);
+    const usage = usages[0];
+    if (usage === undefined) return;
+    expect(await switchRetiredModel(h.deps, catalogue, requestOf(usage))).toEqual({
+      ok: true,
+      changed: true,
+    });
+    expect(runnableTemplate(h.deps.db, templateId)?.document.form.llm.model).toBe(
+      usage.replacement?.id,
+    );
+    const head = templateById(h.deps.db, templateId);
+    expect(head?.version).toBe(4);
+    expect(head?.document.form).toEqual({
+      ...form(),
+      title: "Edited",
+      llm: { provider: "openrouter", model: activeLlm },
+    });
+    expect(gatesOf(h.deps.db, templateId).find((gate) => gate.version === 4)).toBeUndefined();
   });
 
   it("refuses what is gone or running, saying what to do", async () => {
