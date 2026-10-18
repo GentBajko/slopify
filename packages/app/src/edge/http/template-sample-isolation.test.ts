@@ -1,11 +1,16 @@
 import { randomUUID } from "node:crypto";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { ulidIds } from "../../kernel/ids.js";
+import { attachSamples } from "../../kernel/paths.js";
 import { insertProject } from "../../slices/admission/repo.js";
 import { draftFixture } from "../../slices/play-drafts/draft.fake.js";
 import { createTemplate } from "../../slices/project-templates/service.js";
-import { mcpFixture } from "../mcp/mcp.fake.js";
+import { makePaidSample } from "../../slices/template-studio/paid.js";
+import { sampleOf, sampleProjects } from "../../slices/template-studio/repo.js";
+import { paidDocument, paidSampleDeps } from "../../slices/template-studio/studio.fake.js";
+import { connectAgent, mcpFixture } from "../mcp/mcp.fake.js";
 
 // A template's hidden sample project is the studio's alone: no list, count or feed the user
 // sees may name it. Every GET route of the API is asked, so a route added later that lists
@@ -123,6 +128,44 @@ describe("the template studio's sample project", () => {
     }
     expect(leaks).toEqual([]);
     expect(await (await h.app.request("/api/trash")).text()).toContain("visible0control");
+  });
+
+  it("is named by no GET route, and has no folder in Projects, once the studio made it for real", async () => {
+    const h = mcpFixture();
+    open.push(h);
+    attachSamples(h.deps.paths, sampleProjects(h.deps.db, h.deps.paths.dataDir));
+    // Ids as long as a real install's, so a match is the sample and never a short counter.
+    const { review, paid } = paidSampleDeps({ ...h.deps, ids: ulidIds });
+    const templateId = randomUUID();
+    const created = createTemplate(
+      { ...h.deps, uuid: randomUUID },
+      { id: templateId, name: "Show", document: paidDocument(review) },
+    );
+    if (!created.ok) throw new Error(created.reason);
+    const before = readdirSync(h.deps.paths.projects).sort();
+    await makePaidSample(
+      paid,
+      { templateId, templateVersion: 1, ackHigh: 5, kind: "save", requestedAt: "a" },
+      new AbortController().signal,
+    );
+    const sample = sampleOf(h.deps.db, templateId);
+    if (sample === undefined) throw new Error("The studio made no sample.");
+    const title = "History: The history of the lighthouse";
+    expect(
+      h.deps.db.prepare("SELECT title FROM projects WHERE id=?").get(sample.projectId),
+    ).toEqual({
+      title,
+    });
+    const leaks: string[] = [];
+    for (const route of getRoutes(h.app)) {
+      const body = await (await h.app.request(route)).text();
+      if (body.includes(sample.projectId) || body.includes(title)) leaks.push(route);
+    }
+    expect(leaks).toEqual([]);
+    expect(readdirSync(h.deps.paths.projects).sort()).toEqual(before);
+    const agent = await connectAgent(h.app);
+    const attention = await agent.callTool({ name: "needs_attention", arguments: {} });
+    expect(JSON.stringify(attention.content)).not.toContain(sample.projectId);
   });
 
   it("refuses every change through the project routes, naming the studio to use instead", async () => {

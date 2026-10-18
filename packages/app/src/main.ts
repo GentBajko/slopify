@@ -151,8 +151,10 @@ import { createDocumentSamples } from "./slices/template-studio/document-sample.
 import { createFreeSamples } from "./slices/template-studio/free.js";
 import { createLoudnessSamples } from "./slices/template-studio/loudness.js";
 import { sampleMaker } from "./slices/template-studio/make.js";
+import { makePaidSample } from "./slices/template-studio/paid.js";
 import { sampleProjects } from "./slices/template-studio/repo.js";
 import { createSampleRunner } from "./slices/template-studio/runner.js";
+import { createUnknownAcks } from "./slices/template-studio/save.js";
 import { createPriceCache } from "./slices/template-studio/service.js";
 import { createTrashPurge } from "./slices/trash/service.js";
 import { probeDurationMs } from "./slices/video/ffmpeg.js";
@@ -599,6 +601,8 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       loudnessDefault: () => readSettings({ db: runtimeDb, log }).loudness,
     });
     const studioPrices = createPriceCache();
+    // The unknown prices accepted on Save, shared by the studio's routes and its sample loop.
+    const studioAcks = createUnknownAcks();
     const sampleChanged = (templateId: string): void =>
       hub.emitGlobal({ type: "template.sample", templateId });
     const sampleRunner = createSampleRunner({
@@ -611,6 +615,9 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         prices: studioPrices,
         review: draftDeps,
         changed: sampleChanged,
+        // Paid samples run on their hidden project through the same engine as every project.
+        paid: (job, signal) =>
+          makePaidSample({ start: draftDeps, rebuild, acks: studioAcks }, job, signal),
       }),
     });
     sampleRunner.start();
@@ -709,6 +716,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         free: freeSamples,
         prices: studioPrices,
         wake: sampleRunner.wake,
+        acks: studioAcks,
         loudnessSource: loudnessSamples.source,
         loudnessFile: loudnessSamples.file,
         documentFile: documentSamples.file,

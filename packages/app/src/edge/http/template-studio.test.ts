@@ -172,6 +172,26 @@ it("saves in the studio with the sample's price, refusing a higher one with the 
   expect(await stale.json()).toMatchObject({ reason: "conflict" });
 });
 
+it("asks for the current version's paid sample again at the price shown, and refuses an older version", async () => {
+  let woken = 0;
+  const h = paidStudio(() => {
+    woken += 1;
+  });
+  const again = await h.post("/samples/make", { version: 1, acknowledgedHigh: 0.42 });
+  expect(again.status).toBe(202);
+  expect(await again.json()).toEqual({ queued: true, version: 1 });
+  expect(queuedJob(h.deps.db, h.id)).toMatchObject({ kind: "save", ackHigh: 0.42 });
+  expect(woken).toBe(1);
+  const old = await h.post("/samples/make", { version: 7, acknowledgedHigh: 0.42 });
+  expect(old.status).toBe(409);
+  expect(await old.json()).toMatchObject({
+    reason: "conflict",
+    detail:
+      "This template is now version 1, not the version 7 you saw. Reload the studio, then press Make sample.",
+  });
+  expect((await h.post("/samples/make", { version: 1 })).status).toBe(400);
+});
+
 it("reads and sets the studio's daily budget, refusing one out of range", async () => {
   const h = studio();
   const read = await h.app.request("/api/template-studio/settings");

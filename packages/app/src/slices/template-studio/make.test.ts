@@ -85,3 +85,21 @@ it("makes nothing for a template deleted since its job was queued", async () => 
   );
   expect(made).toEqual([]);
 });
+
+it("makes the paid sample of a Save after its free ones, and never for a free-only job", async () => {
+  const { h, id } = setup();
+  const order: string[] = [];
+  const free = createFreeSamples({ loudnessDefault: () => defaultLoudness });
+  const make = sampleMaker({
+    db: h.deps.db,
+    free: { ...free, make: async () => void order.push("free") },
+    prices: createPriceCache(),
+    review: h.deps,
+    changed: () => undefined,
+    paid: async (job) => void order.push(`paid ${job.kind}`),
+  });
+  const job = { templateId: id, templateVersion: 1, ackHigh: 1, requestedAt: "a" };
+  await make({ ...job, kind: "save" }, new AbortController().signal);
+  await make({ ...job, kind: "free" }, new AbortController().signal);
+  expect(order).toEqual(["free", "paid save", "free"]);
+});

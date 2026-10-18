@@ -4,9 +4,13 @@ import type { Clock } from "../../kernel/clock.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
+import type { Runner } from "../../kernel/runner/index.js";
 import { resolveFont } from "../fonts/index.js";
 import { createPrompt } from "../library/save.js";
-import type { DraftReviewDeps, PlayDraftDocument } from "../play-drafts/model.js";
+import type { DraftReviewDeps, DraftStartDeps, PlayDraftDocument } from "../play-drafts/model.js";
+import { createRebuildDeps } from "../rebuild/service.fake.js";
+import { insertVoice, upsertKey } from "../settings/repo.js";
+import { createUnknownAcks } from "./save.js";
 
 // Play's review over any test database, on the bundled model list, with no network.
 export function reviewOver(deps: {
@@ -85,6 +89,76 @@ export function paidDocument(deps: DraftReviewDeps): PlayDraftDocument {
       motionStyle: "zoom",
       values: { Topic: "" },
       provided: { research: "", article: "", audio: null, thumbnail: null, images: [] },
+    },
+  };
+}
+
+// The paid-sample loop's deps over a test database: test keys and voices for the paid
+// document's providers (nothing is ever sent), and a runner that finishes, or fails with
+// `fail`, whatever it is ticked for at once, as if the provider had answered.
+export function paidSampleDeps(
+  deps: Parameters<typeof reviewOver>[0],
+  options: {
+    readonly fail?: string;
+    readonly providers?: readonly import("../settings/model.js").ProviderStatus[];
+  } = {},
+): {
+  readonly review: DraftReviewDeps;
+  readonly paid: import("./paid.js").PaidSampleDeps;
+  readonly ticks: string[];
+} {
+  const review = reviewOver(deps);
+  for (const provider of ["openrouter", "elevenlabs"] as const)
+    upsertKey(deps.db, provider, "test-key", "2026-09-12T00:00:00.000Z");
+  for (const voice of ["v", "other"])
+    insertVoice(deps.db, { id: randomUUID(), provider: "elevenlabs", name: voice, voiceId: voice });
+  const ticks: string[] = [];
+  const runner: Runner = {
+    tick: (projectId) => {
+      ticks.push(projectId);
+      const state = options.fail === undefined ? "done" : "failed";
+      deps.db
+        .prepare(
+          "UPDATE revision_work SET state=? WHERE project_id=? AND state IN ('pending','running')",
+        )
+        .run(state, projectId);
+      deps.db
+        .prepare(
+          "UPDATE stages SET state=CASE WHEN state IN ('pending','running') THEN ? ELSE state END, failure_reason=? WHERE project_id=?",
+        )
+        .run(state, options.fail ?? null, projectId);
+    },
+    settled: async () => undefined,
+    abortProject: async () => undefined,
+    abortAll: async () => undefined,
+  };
+  const ready = (id: string, family: "llm" | "tts" | "image") => ({
+    id: id as import("../settings/model.js").ProviderStatus["id"],
+    family,
+    displayName: id,
+    readiness: { kind: "keyed" as const, hasKey: true },
+  });
+  const start: DraftStartDeps = {
+    ...review,
+    runner,
+    emit: () => undefined,
+    recordStarted: () => undefined,
+    providers: async () =>
+      options.providers ?? [ready("openrouter", "llm"), ready("elevenlabs", "tts")],
+  };
+  const rebuild = createRebuildDeps(
+    { db: deps.db, paths: deps.paths, ids: deps.ids, clock: deps.clock, log: deps.log },
+    review.catalogue.read(),
+  );
+  return {
+    review,
+    ticks,
+    paid: {
+      start,
+      rebuild: { ...rebuild.deps, runner },
+      acks: createUnknownAcks(),
+      timeZone: "UTC",
+      pollMs: 0,
     },
   };
 }

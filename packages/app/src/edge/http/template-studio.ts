@@ -19,6 +19,8 @@ import type { StudioResult } from "../../slices/template-studio/model.js";
 import { quoteSave } from "../../slices/template-studio/quote.js";
 import {
   createUnknownAcks,
+  makeSampleSchema,
+  requestSample,
   saveStudio,
   saveStudioSchema,
   type UnknownAcks,
@@ -210,6 +212,24 @@ export function templateStudioRoutes(deps: AppDeps) {
             deps.hub.emitGlobal({ type: "template.sample", templateId: id });
           }
           return c.json(result.value);
+        },
+      )
+      // Make sample: the current version's paid sample again, at the price the button showed.
+      .post(
+        "/:id/samples/make",
+        zValidator("param", param, onInvalid),
+        zValidator("json", makeSampleSchema, onInvalid),
+        (c) => {
+          const id = c.req.valid("param").id;
+          const result = requestSample(
+            { db: deps.db, clock: deps.clock, acks },
+            id,
+            c.req.valid("json"),
+          );
+          if (!result.ok) return refusedStudio(c, result);
+          studio.wake();
+          deps.hub.emitGlobal({ type: "template.sample", templateId: id });
+          return c.json({ queued: true, ...result.value }, 202);
         },
       )
       // Make samples: the free ones (video, loudness, PDF, the schedule's cost) for the current

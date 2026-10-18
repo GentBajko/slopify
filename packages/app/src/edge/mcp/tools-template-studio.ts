@@ -32,6 +32,13 @@ export const templateStudioTools: readonly RouteTool[] = [
       'Saves the template document as its next version. With sample "make" it also makes the paid sample of what changed, which spends money: price it first with quote_template_save and pass that quote\'s high as acknowledgedHigh (and acknowledgedUnknown: true when the quote counts steps with no price). A higher price, an unaccepted unknown one or a sample past today\'s budget is refused with the new quote and nothing is saved. With sample "skip" only the free samples are made. Send the same mutationId to retry the very same Save.',
   },
   {
+    name: "make_template_sample",
+    route: "POST /api/template-studio/:id/samples/make",
+    title: "Make a template's paid sample again",
+    description:
+      "Queues the paid sample of the template's current version again, which spends money: after it waited (a higher price, steps with no price, today's budget) or failed. Pass the version and the price get_template_studio shows for it as acknowledgedHigh, and acknowledgedUnknown: true to accept steps with no price. A sample that would cost more still waits.",
+  },
+  {
     name: "get_template_studio_settings",
     route: "GET /api/template-studio/settings",
     title: "Read the template studio's settings",

@@ -206,3 +206,60 @@ export async function saveStudio(deps: SaveDeps, id: string, raw: unknown): Prom
     value: { template, sample: quote === null ? "skipped" : "queued", quote, replayed: false },
   };
 }
+
+export const makeSampleSchema = z
+  .object({
+    version: z.number().int().positive(),
+    // The price the Make sample button showed.
+    acknowledgedHigh: z.number().finite().min(0).max(10_000),
+    acknowledgedUnknown: z.boolean().optional(),
+  })
+  .strict()
+  .readonly();
+
+// Make sample: the current version's paid sample asked for again, at the price shown, after it
+// waited (a higher price, unknown prices, the budget) or failed.
+export function requestSample(
+  deps: Pick<SaveDeps, "db" | "clock" | "acks">,
+  id: string,
+  raw: unknown,
+): SaveResult | { readonly ok: true; readonly value: { readonly version: number } } {
+  const parsed = makeSampleSchema.safeParse(raw);
+  if (!parsed.success)
+    return {
+      ok: false,
+      reason: "invalid-input",
+      message:
+        "The studio sent a request Slopify couldn't read. Reload the page and press Make sample again.",
+    };
+  const head = templateById(deps.db, id);
+  if (head === undefined)
+    return {
+      ok: false,
+      reason: "not-found",
+      message:
+        "This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates.",
+    };
+  if (head.version !== parsed.data.version)
+    return {
+      ok: false,
+      reason: "conflict",
+      message: `This template is now version ${String(head.version)}, not the version ${String(parsed.data.version)} you saw. Reload the studio, then press Make sample.`,
+    };
+  const at = deps.clock.now().toISOString();
+  if (parsed.data.acknowledgedUnknown === true) deps.acks.accept(id, head.version);
+  setSampleVersion(deps.db, id, head.version, {
+    state: "queued",
+    at,
+    quotedHigh: parsed.data.acknowledgedHigh,
+    heldReason: null,
+  });
+  enqueueJob(deps.db, {
+    templateId: id,
+    templateVersion: head.version,
+    ackHigh: parsed.data.acknowledgedHigh,
+    kind: "save",
+    requestedAt: at,
+  });
+  return { ok: true, value: { version: head.version } };
+}
