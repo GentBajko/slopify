@@ -10,6 +10,7 @@ import { List, ListRow } from "@/components/kit/list-row";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/kit/popover";
 import { useToast } from "@/components/kit/toast";
 import { cn, exactTime, startedAt } from "@/lib/utils";
+import { keys } from "@/queries";
 import { listPlayDrafts } from "./draft-api";
 import { usePlaySession } from "./draft-context";
 
@@ -22,7 +23,7 @@ export function DraftList(): ReactElement {
   const [busy, setBusy] = useState(false);
   const notify = useToast();
   const list = useQuery({
-    queryKey: ["play-drafts"],
+    queryKey: keys.playDrafts,
     queryFn: async () => {
       const reply = await listPlayDrafts(api);
       if (!reply.ok) throw new Error(reply.message);
@@ -37,8 +38,8 @@ export function DraftList(): ReactElement {
     try {
       await session.discard({ id: confirm.id, version: confirm.version });
       setConfirm(null);
-      await queryClient.cancelQueries({ queryKey: ["play-drafts"] });
-      queryClient.setQueryData<readonly DraftSummary[]>(["play-drafts"], (current) =>
+      await queryClient.cancelQueries({ queryKey: keys.playDrafts });
+      queryClient.setQueryData<readonly DraftSummary[]>(keys.playDrafts, (current) =>
         current?.filter((draft) => draft.id !== discardedId),
       );
     } catch (error) {

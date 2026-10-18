@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import type { Api } from "@/api";
+import { keys } from "@/queries";
 import { refreshDraftChoices } from "./draft-restore";
 import type { ReviewOwner } from "./review-state";
 
@@ -21,7 +22,7 @@ export function useReviewChoices(api: Api, queryClient: QueryClient, review: Rev
     const focus = () => {
       review.invalidate();
       void refreshDraftChoices(api, queryClient);
-      void queryClient.refetchQueries({ queryKey: ["provider-models"] });
+      void queryClient.refetchQueries({ queryKey: keys.providerModels });
     };
     window.addEventListener("focus", focus);
     return () => {

@@ -133,7 +133,7 @@ export function useNextAction({
         projectId: project.id,
         draftId: fullDraft.current,
       });
-      await client.invalidateQueries({ queryKey: ["play-drafts"] });
+      await client.invalidateQueries({ queryKey: keys.playDrafts });
       if (!(await session.open(draft.id)))
         throw new Error("The full video's draft was made but didn't open. Open Play and pick it");
       fullDraft.current = null;

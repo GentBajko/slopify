@@ -8,7 +8,7 @@ import {
 } from "@app/slices/checkpoints/schema.js";
 import { z } from "zod";
 import type { Api } from "@/api";
-import { errorOf, understood } from "@/http";
+import { errorOf, refusable } from "@/http";
 
 const statusSchema = z.object({
   revisionId: z.string(),
@@ -45,12 +45,7 @@ export interface ApprovalIdentity {
 export type CheckpointReply<T> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly reason: CheckpointRefusal; readonly message: string };
-const problemSchema = z.object({
-  title: z.string(),
-  status: z.number(),
-  detail: z.string().optional(),
-  reason: z.enum(["duplicate", "not-found", "conflict", "invalid-input"]).optional(),
-});
+const refusalReasons = z.enum(["duplicate", "not-found", "conflict", "invalid-input"]);
 const approvalSchema = checkpointApprovalSchema
   .unwrap()
   .omit({ projectId: true, checkpointId: true, approvedAt: true });
@@ -61,22 +56,11 @@ export const checkpointRevisionKey = (projectId: string, revisionId: string): re
 ];
 
 async function reply<T>(response: Response, schema: z.ZodType<T>): Promise<CheckpointReply<T>> {
-  let raw: unknown;
-  try {
-    raw = await response.json();
-  } catch {
-    throw errorOf(response, undefined);
-  }
-  if (response.ok) return { ok: true, value: understood(schema, raw) };
-  const problem = problemSchema.safeParse(raw);
-  if (!problem.success) throw errorOf(response, undefined);
-  if (![400, 404, 409].includes(response.status))
-    throw new Error(problem.data.detail ?? problem.data.title);
-  return {
-    ok: false,
-    reason: problem.data.reason ?? "invalid-input",
-    message: problem.data.detail ?? problem.data.title,
-  };
+  const result = await refusable(response, schema);
+  if (result.ok) return result;
+  const reason = refusalReasons.safeParse(result.refusal.reason ?? "invalid-input");
+  if (!reason.success) throw errorOf(response, undefined);
+  return { ok: false, reason: reason.data, message: result.refusal.message };
 }
 export async function checkpointStatus(
   api: Api,

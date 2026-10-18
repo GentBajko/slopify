@@ -7,11 +7,12 @@ import { Button } from "@/components/kit/button";
 import { Input, Select } from "@/components/kit/field";
 import { Badge, type BadgeTone } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
+import { keys } from "@/queries";
 
 // The pieces of Calendar → Releases: a release time and its state, its editor, and a free time
 // of the posting plan offering the finished projects of its series.
 
-export const releasesKey = ["studio", "releases"] as const;
+export const releasesKey = keys.studioReleases;
 
 export const day = new Intl.DateTimeFormat(undefined, {
   weekday: "short",

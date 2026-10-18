@@ -8,6 +8,7 @@ import type {
 import type { QueryClient } from "@tanstack/react-query";
 import type { Api } from "@/api";
 import { sentence } from "@/http";
+import { keys } from "@/queries";
 import { type DraftRefusal, readPlayDraft, reviewPlayDraft, startPlayDraft } from "./draft-api";
 import { refreshDraftChoices, rememberDraft } from "./draft-restore";
 import type { DraftSessionState } from "./draft-save";
@@ -162,7 +163,7 @@ export function createReviewOwner({
       try {
         await Promise.all([
           refreshDraftChoices(api, queryClient),
-          queryClient.refetchQueries({ queryKey: ["provider-models"] }),
+          queryClient.refetchQueries({ queryKey: keys.providerModels }),
         ]);
         if (selected !== reviewSequence || !(await flush()) || !current().id) return;
         const captured = identity();

@@ -8,6 +8,7 @@ import { Input, Select } from "@/components/kit/field";
 import { SectionHead } from "@/components/kit/section-head";
 import { Badge } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
+import { keys } from "@/queries";
 
 // The project page's Release block (Video section): when the long video and each short go
 // out, editable here, with the time each must be uploaded and scheduled by. The same times
@@ -37,7 +38,7 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
   const [drafts, setDrafts] = useState<Readonly<Record<number, string>>>({});
   // The other scheduled videos, for Swap with….
   const calendar = useQuery({
-    queryKey: ["studio", "releases", "swap", 8],
+    queryKey: [...keys.studioReleases, "swap", 8],
     queryFn: () => readReleaseCalendar(api, 8),
   });
   const others = (calendar.data?.entries ?? []).flatMap((entry) =>
@@ -53,7 +54,7 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
       swapRelease(api, projectId, other),
     onSuccess: (_, { other, undo }) => {
       void client.invalidateQueries({ queryKey: key });
-      void client.invalidateQueries({ queryKey: ["studio", "releases"] });
+      void client.invalidateQueries({ queryKey: keys.studioReleases });
       void client.invalidateQueries({ queryKey: ["studio", "project-releases", other] });
       setSwapPick("");
       const title = others.find((one) => one.id === other)?.title ?? "the other video";
@@ -75,7 +76,7 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
       saveRelease(api, projectId, change),
     onSuccess: (_, change) => {
       void client.invalidateQueries({ queryKey: key });
-      void client.invalidateQueries({ queryKey: ["studio", "releases"] });
+      void client.invalidateQueries({ queryKey: keys.studioReleases });
       setDrafts((all) => {
         const { [change.short]: _gone, ...rest } = all;
         return rest;

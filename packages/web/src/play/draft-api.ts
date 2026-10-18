@@ -19,7 +19,7 @@ import {
 } from "@app/slices/play-drafts/schema.js";
 import { z } from "zod";
 import type { Api } from "@/api";
-import { errorOf, understood } from "@/http";
+import { refusable } from "@/http";
 
 export interface DraftRefusal {
   readonly ok: false;
@@ -30,16 +30,6 @@ export interface DraftRefusal {
   readonly reviewId?: string;
 }
 export type DraftReply<T> = { readonly ok: true; readonly value: T } | DraftRefusal;
-const problemSchema = z.object({
-  title: z.string(),
-  status: z.number(),
-  detail: z.string().optional(),
-  reason: z.string().optional(),
-  currentVersion: z.number().int().positive().nullable().optional(),
-  reviewId: z.uuid().optional(),
-  fields: z.array(z.object({ field: z.string(), message: z.string() })).optional(),
-  errors: z.array(z.object({ path: z.string(), message: z.string() })).optional(),
-});
 const summariesSchema = z
   .object({
     drafts: z
@@ -64,31 +54,16 @@ const startSchema = discardDraftInputSchema
   .strict();
 
 async function responseOf<T>(response: Response, schema: z.ZodType<T>): Promise<DraftReply<T>> {
-  let raw: unknown;
-  try {
-    raw = await response.json();
-  } catch {
-    throw errorOf(response, undefined);
-  }
-  if (response.ok) return { ok: true, value: understood(schema, raw) };
-  const parsed = problemSchema.safeParse(raw);
-  if (!parsed.success) throw errorOf(response, undefined);
-  const value = parsed.data;
-  if (![400, 404, 409].includes(response.status))
-    throw errorOf(response, {
-      title: value.title,
-      status: value.status,
-      ...(value.detail === undefined ? {} : { detail: value.detail }),
-      ...(value.fields === undefined ? {} : { fields: value.fields }),
-    });
+  const result = await refusable(response, schema);
+  if (result.ok) return result;
+  const { refusal } = result;
   return {
     ok: false,
-    reason: value.reason ?? "invalid-request",
-    message: value.detail ?? value.title,
-    currentVersion: value.currentVersion ?? null,
-    fields:
-      value.fields ?? value.errors?.map((one) => ({ field: one.path, message: one.message })) ?? [],
-    ...(value.reviewId === undefined ? {} : { reviewId: value.reviewId }),
+    reason: refusal.reason ?? "invalid-request",
+    message: refusal.message,
+    currentVersion: refusal.currentVersion,
+    fields: refusal.fields,
+    ...(refusal.reviewId === undefined ? {} : { reviewId: refusal.reviewId }),
   };
 }
 async function request<T>(

@@ -11,6 +11,7 @@ import { Drawer } from "@/components/kit/drawer";
 import { Field, Input, Select } from "@/components/kit/field";
 import { useToast } from "@/components/kit/toast";
 import { listPlayDrafts, readPlayDraft } from "@/play/draft-api";
+import { keys } from "@/queries";
 import { saveProjectTemplate, type TemplateSummary, templatesKey } from "./api";
 
 // Save a setup: a saved Play draft kept as a template under a name, in a channel. The save
@@ -37,7 +38,7 @@ export function SaveTemplateDrawer({
   const client = useQueryClient();
   const notify = useToast();
   const drafts = useQuery({
-    queryKey: ["play-drafts"],
+    queryKey: keys.playDrafts,
     queryFn: async () => {
       const reply = await listPlayDrafts(api);
       if (!reply.ok) throw new Error(reply.message);

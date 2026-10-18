@@ -19,7 +19,7 @@ import { ProjectStorageList } from "./settings-storage";
 // Settings → Backup & storage: export everything, import a backup, clean up, and the disk
 // space each project takes.
 
-export const storageQueryKey = ["storage-usage"] as const;
+export const storageQueryKey = keys.storageUsage;
 export const portableMaxUploadBytes = 100 * 1024 * 1024;
 export const portableImportQueryKeys = [
   storageQueryKey,
@@ -28,7 +28,7 @@ export const portableImportQueryKeys = [
   keys.usage,
   keys.documentThemes,
   schedulesKey,
-  ["play-drafts"] as const,
+  keys.playDrafts,
   keys.settings,
   keys.providers,
   keys.voices,
@@ -37,7 +37,7 @@ export const portableImportQueryKeys = [
   keys.staging,
   templatesKey,
   fontsKey,
-  ["provider-models"] as const,
+  keys.providerModels,
 ] as const;
 
 export async function refreshPortableImportQueries(queryClient: QueryClient): Promise<void> {

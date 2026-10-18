@@ -16,7 +16,7 @@ import { keepOutputsConsequence } from "@/routes/settings-storage";
 // the same Keep outputs only as Settings → Storage). Not offered on the bundled samples, nor
 // while anything of the project runs or waits.
 
-export const projectStorageKey = (projectId: string) => ["storage", "project", projectId] as const;
+const projectStorageKey = keys.projectStorage;
 
 export function FreeSpaceOffer({
   projectId,
@@ -55,7 +55,7 @@ export function FreeSpaceOffer({
     onSettled: async () => {
       await Promise.all([
         client.invalidateQueries({ queryKey: projectStorageKey(projectId) }),
-        client.invalidateQueries({ queryKey: ["storage-usage"] }),
+        client.invalidateQueries({ queryKey: keys.storageUsage }),
         client.invalidateQueries({ queryKey: keys.project(projectId) }),
       ]);
     },
@@ -74,7 +74,7 @@ export function FreeSpaceOffer({
     onSettled: async () => {
       await Promise.all([
         client.invalidateQueries({ queryKey: projectStorageKey(projectId) }),
-        client.invalidateQueries({ queryKey: ["storage-usage"] }),
+        client.invalidateQueries({ queryKey: keys.storageUsage }),
         client.invalidateQueries({ queryKey: keys.project(projectId) }),
       ]);
     },

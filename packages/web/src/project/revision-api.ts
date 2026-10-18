@@ -27,7 +27,7 @@ import {
 } from "@app/slices/revisions/schema.js";
 import { z } from "zod";
 import type { Api } from "@/api";
-import { errorOf, understood } from "@/http";
+import { refusable } from "@/http";
 export interface RevisionRefusal {
   readonly ok: false;
   readonly reason: string;
@@ -36,40 +36,16 @@ export interface RevisionRefusal {
   readonly fields: readonly { readonly field: string; readonly message: string }[];
 }
 export type RevisionReply<T> = { readonly ok: true; readonly value: T } | RevisionRefusal;
-const problemSchema = z.object({
-  title: z.string(),
-  status: z.number(),
-  detail: z.string().optional(),
-  reason: z.string().optional(),
-  currentRevisionId: z.string().nullable().optional(),
-  fields: z.array(z.object({ field: z.string(), message: z.string() })).optional(),
-  errors: z.array(z.object({ path: z.string(), message: z.string() })).optional(),
-});
 async function responseOf<T>(response: Response, schema: z.ZodType<T>): Promise<RevisionReply<T>> {
-  let raw: unknown;
-  try {
-    raw = await response.json();
-  } catch {
-    throw errorOf(response, undefined);
-  }
-  if (response.ok) return { ok: true, value: understood(schema, raw) };
-  const parsed = problemSchema.safeParse(raw);
-  if (!parsed.success) throw errorOf(response, undefined);
-  const value = parsed.data;
-  if (![400, 404, 409].includes(response.status))
-    throw errorOf(response, {
-      title: value.title,
-      status: value.status,
-      ...(value.detail === undefined ? {} : { detail: value.detail }),
-      ...(value.fields === undefined ? {} : { fields: value.fields }),
-    });
+  const result = await refusable(response, schema);
+  if (result.ok) return result;
+  const { refusal } = result;
   return {
     ok: false,
-    reason: value.reason ?? "invalid-request",
-    message: value.detail ?? value.title,
-    currentRevisionId: value.currentRevisionId ?? null,
-    fields:
-      value.fields ?? value.errors?.map((one) => ({ field: one.path, message: one.message })) ?? [],
+    reason: refusal.reason ?? "invalid-request",
+    message: refusal.message,
+    currentRevisionId: refusal.currentRevisionId,
+    fields: refusal.fields,
   };
 }
 async function request<T>(

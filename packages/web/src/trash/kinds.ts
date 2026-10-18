@@ -61,11 +61,11 @@ export function itemKey(item: Pick<TrashItem, "kind" | "id">): string {
 
 // The lists an item returns to, so they show it again at once.
 export const listsOf: Readonly<Record<TrashKind, readonly (readonly string[])[]>> = {
-  project: [keys.projects, ["calendar"]],
+  project: [keys.projects, keys.calendar],
   prompt: [keys.prompts],
   entry: [keys.entries],
   template: [templatesKey],
-  schedule: [schedulesKey, ["calendar"]],
+  schedule: [schedulesKey, keys.calendar],
 };
 
 // The one-sentence consequence of removing these items for good.

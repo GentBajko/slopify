@@ -255,7 +255,7 @@ function ShellContent() {
         runs.observeTopics(event);
         void queryClient.invalidateQueries({ queryKey: ["schedules"] });
         void queryClient.invalidateQueries({ queryKey: ["schedule"] });
-        void queryClient.invalidateQueries({ queryKey: ["calendar"] });
+        void queryClient.invalidateQueries({ queryKey: keys.calendar });
       },
       stagingChanged: () => {
         void queryClient.invalidateQueries({ queryKey: keys.staging });

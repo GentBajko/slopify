@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { useApp } from "@/app-context";
 import { useToast } from "@/components/kit/toast";
+import { keys } from "@/queries";
 import {
   instantiateProjectTemplate,
   readProjectTemplate,
@@ -66,7 +67,7 @@ export function useTemplateActions({
       (startGeneration !== undefined && startGeneration !== getGeneration?.())
     )
       return;
-    await client.invalidateQueries({ queryKey: ["play-drafts"] });
+    await client.invalidateQueries({ queryKey: keys.playDrafts });
     if (
       !mounted.current ||
       (startGeneration !== undefined && startGeneration !== getGeneration?.())

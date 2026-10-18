@@ -2,6 +2,7 @@ import type { ModelInfo } from "@app/kernel/ports/model.js";
 import { queryOptions } from "@tanstack/react-query";
 import type { Api } from "@/api";
 import { read } from "@/http";
+import { keys } from "@/queries";
 
 export interface ProviderModels {
   readonly models: readonly ModelInfo[];
@@ -10,10 +11,7 @@ export interface ProviderModels {
   readonly notice?: string;
 }
 
-export const modelsKey = (provider: string): readonly ["provider-models", string] => [
-  "provider-models",
-  provider,
-];
+export const modelsKey = keys.modelsOf;
 
 export async function listProviderModels(
   api: Api,
