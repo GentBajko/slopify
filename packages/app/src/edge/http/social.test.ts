@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { fixedClock } from "../../kernel/clock.fake.js";
 import type { Log } from "../../kernel/log.js";
 import type { RunConfig } from "../../slices/admission/model.js";
+import type { SendNotification } from "../../slices/notifications/send.js";
+import { saveNotificationUrl } from "../../slices/notifications/settings.js";
 import { defaultChoices } from "../../slices/social/defaults.js";
 import type { ActivePost, FillResponse, SocialPacksResponse } from "../../slices/social/model.js";
 import type { Reshaper } from "../../slices/social/reshape.js";
@@ -20,7 +22,11 @@ afterEach(() => {
   for (const one of open.splice(0)) one.close();
 });
 
-function harness(config: Partial<RunConfig> = {}, reshaper?: Reshaper) {
+function harness(
+  config: Partial<RunConfig> = {},
+  reshaper?: Reshaper,
+  sendNotification?: SendNotification,
+) {
   const fixture = packFixture({ youtubeDescription: true, ...config });
   open.push(fixture);
   fixture.output("youtube_description", "description.txt", "A tower on a rock.\n\n0:00 Rock\n");
@@ -47,6 +53,7 @@ function harness(config: Partial<RunConfig> = {}, reshaper?: Reshaper) {
     flushSoon: (): void => {},
     probe: () => Promise.resolve({ ran: false, stdout: "" }),
     ...(reshaper === undefined ? {} : { social: { reshaper } }),
+    ...(sendNotification === undefined ? {} : { sendNotification }),
   });
   const call = (path: string, init: RequestInit = {}) =>
     app.request(`http://127.0.0.1:4545/api${path}`, init);
@@ -333,6 +340,43 @@ describe("the extension's routes", () => {
       sites: ["x", "bluesky"],
       seenAt: "2026-10-18T10:00:00.000Z",
     });
+  });
+
+  it("tells the Notification URL when a post is filled at its release time, never for a scheduler site", async () => {
+    const sent: string[] = [];
+    const send: SendNotification = async (_url, body) => {
+      sent.push(body);
+      return { ok: true };
+    };
+    const {
+      call,
+      send: page,
+      pair,
+      fixture,
+    } = harness(
+      { social: { bluesky: defaultChoices.bluesky, x: defaultChoices.x } },
+      undefined,
+      send,
+    );
+    const headers = { ...(await pair()), "content-type": "application/json" };
+    const report = (platform: string) =>
+      call("/social/ext/result", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ projectId: "p1", platform, state: "filled" }),
+      });
+    await page("POST", "/social/packs/p1/bluesky/fill");
+    await page("POST", "/social/packs/p1/x/fill");
+    await report("bluesky");
+    expect(sent).toEqual([]);
+    saveNotificationUrl(fixture.db, "https://ntfy.sh/topic");
+    await page("POST", "/social/packs/p1/bluesky/fill");
+    await report("bluesky");
+    await report("x");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(sent).toEqual([
+      "Ready to post on Bluesky: Episode one\nThe Slopify Studio extension filled the post in your browser. Open the Bluesky tab and press Publish; Slopify never posts by itself.\n",
+    ]);
   });
 
   it("lists nothing to look up without the channel's account", async () => {

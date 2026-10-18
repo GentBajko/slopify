@@ -9,6 +9,7 @@ import { waitingExternalReviewRows } from "../reviews/external-waiting.js";
 import { type ProjectHolds, projectHolds } from "../reviews/holds.js";
 import { templateSampleProjects } from "../template-studio/repo.js";
 import { setAsideProjects } from "../uploads/repo.js";
+import { postsWaiting } from "./attention-posts.js";
 import { templatesNotReady } from "./attention-templates.js";
 import {
   extensionFailures,
@@ -32,6 +33,8 @@ export const attentionKinds = [
   "late-upload",
   "extension-failure",
   "template-not-ready",
+  // A post filled in another site's form, waiting for the person to press Post (`slices/social`).
+  "post-due",
 ] as const;
 export type AttentionKind = (typeof attentionKinds)[number];
 
@@ -97,6 +100,7 @@ export function needsAttention(deps: AttentionDeps, now: Date): readonly Attenti
     ["late uploads", () => lateUploads(deps, now)],
     ["extension failures", () => extensionFailures(db, skip)],
     ["templates not ready", () => templatesNotReady(db, now, skip, deps.notReady)],
+    ["posts", () => postsWaiting(deps)],
   ];
   const aside = setAsideProjects(db);
   const samples = templateSampleProjects(db);
