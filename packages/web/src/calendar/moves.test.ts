@@ -16,6 +16,7 @@ const run = (index: number, topic: string, scheduleId = "s1"): CalendarRun => ({
   topicSource: "queued",
   renderedTitle: null,
   prepared: null,
+  notReady: false,
 });
 
 describe("undoOf", () => {
