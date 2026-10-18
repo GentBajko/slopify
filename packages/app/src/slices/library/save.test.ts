@@ -3,7 +3,15 @@ import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import type { Ids } from "../../kernel/ids.js";
-import { entryByName, listEntries, listPrompts, promptById, promptByName } from "./repo.js";
+import {
+  entryByName,
+  insertEntry,
+  insertPrompt,
+  listEntries,
+  listPrompts,
+  promptById,
+  promptByName,
+} from "./repo.js";
 import type { LibraryDeps } from "./save.js";
 import {
   createEntry,
@@ -213,6 +221,61 @@ describe("updatePrompt", () => {
       updatePrompt(library, "t1", { kind: "article", name: "Dossier", body: "{{{{topic}}}}" }).ok,
     ).toBe(false);
     expect(promptById(library.db, "t1")?.body).toBe("{{topic}}");
+  });
+});
+
+// A prompt saved before the `Slopify_` prefix was reserved can hold a name no keyword has.
+describe("an unknown Slopify_ name", () => {
+  const old = {
+    id: "old",
+    kind: "article" as const,
+    name: "Old",
+    body: "About {{Slopify_Wish}}.",
+    slots: ["Slopify_Wish"],
+    updatedAt: "2026-09-01T00:00:00.000Z",
+  };
+
+  it("refuses a new prompt that uses one", () => {
+    const result = createPrompt(deps(), { kind: "article", name: "N", body: "{{Slopify_Wish}}" });
+    expect(result.ok ? [] : result.reason === "invalid" ? result.fields : []).toHaveLength(1);
+  });
+
+  it("lets a prompt that already had it save again", () => {
+    const library = deps();
+    insertPrompt(library.db, old);
+    expect(
+      updatePrompt(library, "old", { kind: "article", name: "Old", body: "New {{Slopify_Wish}}." })
+        .ok,
+    ).toBe(true);
+  });
+
+  it("refuses one the stored prompt didn't have", () => {
+    const library = deps();
+    insertPrompt(library.db, old);
+    expect(
+      updatePrompt(library, "old", { kind: "article", name: "Old", body: "{{Slopify_Other}}" }).ok,
+    ).toBe(false);
+  });
+
+  it("lets an entry that already had it save again, and refuses a new one", () => {
+    const library = deps();
+    insertEntry(library.db, {
+      id: "e",
+      category: "intro",
+      mode: "text",
+      name: "Hi",
+      body: "{{Slopify_Wish}}",
+      slots: ["Slopify_Wish"],
+      updatedAt: "2026-09-01T00:00:00.000Z",
+    });
+    const draft = {
+      category: "intro" as const,
+      mode: "text" as const,
+      name: "Hi",
+      body: "{{Slopify_Wish}}!",
+    };
+    expect(updateEntry(library, "e", draft).ok).toBe(true);
+    expect(createEntry(library, { ...draft, name: "Other" }).ok).toBe(false);
   });
 });
 

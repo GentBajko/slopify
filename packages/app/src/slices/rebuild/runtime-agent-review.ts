@@ -2,6 +2,7 @@ import { z } from "zod";
 import { internalError } from "../../kernel/errors.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { WorkRef } from "../../kernel/runner/work.js";
+import { fillLateKeywords, mentionsLateKeyword } from "../keywords/fill.js";
 import { externalReviewWaitMs } from "../reviews/external-model.js";
 import { openExternalReview } from "../reviews/external-repo.js";
 import { externalReviewByFingerprint } from "../reviews/external-rows.js";
@@ -11,6 +12,7 @@ import { latestVerdict, saveVerdict } from "../reviews/repo.js";
 import type { RevisionDeps } from "../revisions/model.js";
 import type { ExportExecutionDeps } from "./runtime-export.js";
 import { exportSnapshot } from "./runtime-export-inputs.js";
+import { lateValuesOf } from "./runtime-keywords.js";
 import { publishResult } from "./runtime-publication.js";
 import { reviewMaterial } from "./runtime-review.js";
 import type { WorkPiece } from "./work-records.js";
@@ -44,7 +46,11 @@ export async function executeAgentReviewRecipe(
     piece.input.kind === "local" ? valuesSchema.safeParse(piece.input.values) : undefined;
   if (values === undefined || !values.success)
     throw new Error(internalError("a review step was set up wrongly"));
-  const [stage, itemKey, , prompt, mode, retries] = values.data;
+  const [stage, itemKey, , planned, mode, retries] = values.data;
+  // The release date and the length are filled as the review opens, like a request a model is sent.
+  const prompt = mentionsLateKeyword(planned)
+    ? fillLateKeywords(planned, await lateValuesOf(deps, context))
+    : planned;
   const projectId = context.work.projectId;
   const known = externalReviewByFingerprint(deps.db, projectId, piece.fingerprint);
   if (known === undefined || known.state === "superseded" || known.state === "canceled") {

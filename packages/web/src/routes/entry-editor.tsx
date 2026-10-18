@@ -8,6 +8,7 @@ import { useApp } from "@/app-context";
 import { DetectedSlots } from "@/components/detected-slots";
 import { EditorActions } from "@/components/editor-actions";
 import { EditorSkeleton } from "@/components/editor-states";
+import { KeywordInsertBar } from "@/components/keyword-insert-bar";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Field, Input } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
@@ -19,6 +20,7 @@ import { SlotBody } from "@/components/slot-body";
 import {
   bodyProblems,
   draftProblems,
+  draftWarnings,
   firstProblem,
   nameProblems,
   slotNames,
@@ -108,13 +110,16 @@ export function EntryEditorRoute({
     setRefused((current) => current.filter((problem) => problem.field !== field));
   };
 
-  const problems = draftProblems(draft, refused);
+  // The stored entry's own slot names, which its save lets through, as the server does.
+  const grandfathered = entryId !== undefined && found !== undefined ? found.slots : [];
+  const problems = draftProblems(draft, refused, grandfathered);
   const blocked = firstProblem(problems);
   const slots = slotNames(draft.body);
   // An untouched body is not an error on the page: its "A body is required." is the
   // sentence beside Save, not a red mark on a field nobody has typed in yet.
   const lint = draft.body.trim() === "" ? [] : bodyProblems(problems);
   const named = draft.name.trim() === "" ? [] : nameProblems(problems);
+  const warnings = draft.body.trim() === "" ? [] : draftWarnings(draft);
 
   if (entries.error !== null) {
     return <Notice category={draft.category}>{entries.error.message}</Notice>;
@@ -199,9 +204,19 @@ export function EntryEditorRoute({
               </label>
               <InfoTip id="library.entry.body" label="Body" className="-my-1" />
             </div>
+            <KeywordInsertBar
+              place={draft.category}
+              targetId={bodyId}
+              value={draft.body}
+              onChange={(next) => {
+                edit({ ...draft, body: next }, "body");
+              }}
+            />
             <SlotBody
               id={bodyId}
               value={draft.body}
+              place={draft.category}
+              grandfathered={grandfathered}
               invalid={lint.length > 0}
               describedBy={lint.length === 0 ? undefined : lintId}
               onChange={(next) => {
@@ -243,6 +258,12 @@ export function EntryEditorRoute({
             lint={lint}
             lintId={lintId}
             noSlots={noSlotsHint(draft.mode)}
+            warnings={warnings}
+            place={draft.category}
+            bodyId={bodyId}
+            onChange={(next) => {
+              edit({ ...draft, body: next }, "body");
+            }}
           />
         </div>
       </div>

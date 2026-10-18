@@ -2,6 +2,7 @@ import type { StageKind } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
 import type { NarrationAlias } from "../../kernel/ports/narration-aliases.js";
 import { imageScaleProblem } from "../images/scale.js";
+import { type KeywordUses, placedProblems } from "../keywords/rules.js";
 import { loudnessFields } from "../loudness/model.js";
 import { pauseFields } from "../narration/pauses-model.js";
 import { reviewFields } from "../reviews/rules.js";
@@ -30,6 +31,9 @@ export interface AdmissionInput {
   // The distinct slot names the selected prompt bodies and picked entries ask for. The caller
   // collects them; the rule only checks the values.
   readonly requiredSlots: readonly string[];
+  // The costly keywords Slopify fills that the picked bodies use (`keywords/rules.ts`). Absent
+  // is none.
+  readonly keywordUses?: KeywordUses | undefined;
 }
 
 export const titleMax = 200;
@@ -103,6 +107,10 @@ export function admit(input: AdmissionInput): AdmissionResult {
   } else if (draft.title.length > titleMax) {
     fields.push({ field: "title", message: `Keep the title to ${titleMax} characters or fewer.` });
   }
+  // Slopify fills its keywords from the title, so the title can't use them.
+  fields.push(
+    ...placedProblems([{ field: "title", place: "title", body: draft.title }], draft.values),
+  );
 
   for (const kind of stageKinds) {
     if (!allowedSources[kind].includes(sourceOf(sources, kind))) {
@@ -113,7 +121,7 @@ export function admit(input: AdmissionInput): AdmissionResult {
     }
   }
 
-  if (needsLlmFor(draft) && !chosen(draft.llm)) {
+  if (needsLlmFor(draft, input.keywordUses) && !chosen(draft.llm)) {
     fields.push({ field: "llm", message: "Choose a text (LLM) provider and model." });
   }
 
@@ -177,7 +185,7 @@ export function admit(input: AdmissionInput): AdmissionResult {
       "Upload the establishing image, or set Establishing image to Off in the Images section.",
       fields,
     );
-  checkProvided(draft, input.staged, fields);
+  checkProvided(draft, input.staged, fields, input.keywordUses);
   checkValues(draft, input.requiredSlots, fields);
 
   if (
@@ -274,7 +282,12 @@ function checkImagePrompts(draft: RunDraft, fields: FieldError[]): void {
   if (scaleProblem !== undefined) fields.push({ field: "imageScale", message: scaleProblem });
 }
 
-function checkProvided(draft: RunDraft, staged: readonly StagedFile[], fields: FieldError[]): void {
+function checkProvided(
+  draft: RunDraft,
+  staged: readonly StagedFile[],
+  fields: FieldError[],
+  uses: KeywordUses = {},
+): void {
   const { sources, provided } = draft;
   if (sources.research === "provide" && blank(provided.research)) {
     fields.push({
@@ -285,7 +298,7 @@ function checkProvided(draft: RunDraft, staged: readonly StagedFile[], fields: F
   if (sources.article === "provide" && blank(provided.article)) {
     fields.push({ field: "provided.article", message: "Paste the article." });
   }
-  fields.push(...articleOffFields(draft));
+  fields.push(...articleOffFields(draft, uses));
   if (sources.audio === "provide") {
     checkFile(staged, provided.audio, "audio", "provided.audio", "Pick an audio file.", fields);
   }
@@ -407,7 +420,7 @@ export interface LlmUse {
   readonly label: string;
 }
 
-export function llmUses(draft: RunDraft): readonly LlmUse[] {
+export function llmUses(draft: RunDraft, keywords: KeywordUses = {}): readonly LlmUse[] {
   const sources = draft.sources;
   const uses: LlmUse[] = [];
   if (sources.research === "generate")
@@ -427,11 +440,15 @@ export function llmUses(draft: RunDraft): readonly LlmUse[] {
   if (usesYoutubeDescription(draft))
     uses.push({ section: "outputs", label: "writing the YouTube description" });
   if (usesShorts(draft)) uses.push({ section: "outputs", label: "picking the shorts" });
+  if (keywords.scenes !== undefined)
+    uses.push({ section: "outputs", label: "writing image scenes" });
+  if (keywords.digest !== undefined)
+    uses.push({ section: "outputs", label: "writing the keyword digest" });
   return uses;
 }
 
-export function needsLlmFor(draft: RunDraft): boolean {
-  return llmUses(draft).length > 0;
+export function needsLlmFor(draft: RunDraft, keywords: KeywordUses = {}): boolean {
+  return llmUses(draft, keywords).length > 0;
 }
 
 export function usesNarrationPreparation(
@@ -649,6 +666,7 @@ export function articleOffFields(
     RunDraft,
     "sources" | "imageScenes" | "subtitles" | "youtubeDescription" | "shorts" | "mode"
   >,
+  keywords: KeywordUses = {},
 ): readonly FieldError[] {
   const { sources } = draft;
   if (sources.article !== "off") return [];
@@ -711,5 +729,30 @@ export function articleOffFields(
           },
         ]
       : []),
+    // The keywords Slopify writes from the article (`keywords/specs.ts`).
+    ...(keywords.digest === undefined
+      ? []
+      : [
+          {
+            field: keywords.digest,
+            message: `{{Slopify_Summary}}, {{Slopify_Hook}} and the other digest keywords are written from the article, and Article is Off. ${fix}, or remove them from this prompt.`,
+          },
+        ]),
+    ...(keywords.chapters === undefined
+      ? []
+      : [
+          {
+            field: keywords.chapters,
+            message: `{{Slopify_Chapters}} lists the article's chapters, and Article is Off. ${fix}, or remove it from this prompt.`,
+          },
+        ]),
+    ...(keywords.scenes === undefined
+      ? []
+      : [
+          {
+            field: keywords.scenes,
+            message: `{{Slopify_Scene}}, {{Slopify_Setting}} and {{Slopify_Mood}} are written from the article, and Article is Off. ${fix}, or remove them from this prompt.`,
+          },
+        ]),
   ];
 }

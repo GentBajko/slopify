@@ -5,6 +5,8 @@ import { storeArticleText } from "../article/store.js";
 import { resolveChannelId, setProjectChannel } from "../channels/repo.js";
 import { defaultDocumentTheme } from "../document/model.js";
 import { earlierEpisodesFor } from "../episodes/related.js";
+import { keywordFactsFor } from "../keywords/facts.js";
+import { usesFacts } from "../keywords/rules.js";
 import { listNarrationAliases } from "../narration/aliases-library.js";
 import { currentPronunciationRules } from "../narration/pronunciation.js";
 import { collectSharedGlossary } from "../narration/shared-glossary.js";
@@ -69,14 +71,19 @@ export function startRun(
   const title = render(draft.title, draft.values).trim() || draft.title;
   // The channel's related earlier episodes as they are now (`slices/episodes`): later edits
   // there never change this project. A draft never brings its own.
-  const { earlierEpisodes: _carried, ...fresh } = draft;
+  const { earlierEpisodes: _carried, keywordFacts: _facts, ...fresh } = draft;
   const earlier = earlierEpisodesFor(deps.db, draft, title);
+  const titlePattern =
+    title !== draft.title && detectSlots(draft.title).names.length > 0 ? draft.title : undefined;
+  // The facts the keywords Slopify fills come from, as they are now, and only when a picked
+  // prompt asks for one: a run that uses none saves the config it always did.
+  const facts = usesFacts(Object.values(templates ?? rendered))
+    ? keywordFactsFor(deps, { ...draft, title, titlePattern }, deps.clock.now())
+    : undefined;
   const config: RunConfig = {
     ...fresh,
     title,
-    ...(title !== draft.title && detectSlots(draft.title).names.length > 0
-      ? { titlePattern: draft.title }
-      : {}),
+    ...(titlePattern === undefined ? {} : { titlePattern }),
     // A new project always names its document theme: a config without one reads as the
     // DiceMaster of older projects (see documentThemeOf), which no new project should get.
     ...(sourceOf(draft.sources, "document") === "generate" && draft.document === undefined
@@ -87,6 +94,7 @@ export function startRun(
     ...(aliases.length === 0 ? {} : { narrationAliases: aliases }),
     pronunciationRules: currentPronunciationRules,
     ...(earlier === undefined ? {} : { earlierEpisodes: earlier }),
+    ...(facts === undefined ? {} : { keywordFacts: facts }),
   };
   const project: Project = {
     id,

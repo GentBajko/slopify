@@ -1,7 +1,14 @@
 import { z } from "zod";
 import { withLanguage } from "../../kernel/ports/languages.js";
 import { subjectOf, thumbnailCountOf } from "../admission/model.js";
-import { pictureKind, sceneMessages, usesScene } from "../images/scenes.js";
+import {
+  pictureKind,
+  type SceneDetails,
+  sceneMessages,
+  usesScene,
+  usesSlopifyScene,
+  wantsSceneDetails,
+} from "../images/scenes.js";
 import {
   type RecipeContext,
   type ResolvedWorkRecipe,
@@ -18,6 +25,12 @@ export interface ImageScenes {
   readonly keys: readonly string[];
   // Undefined until the step has written them for this request.
   readonly scenes: readonly string[] | undefined;
+  // Each scene's setting and mood, when a prompt asks for `{{Slopify_Setting}}` or
+  // `{{Slopify_Mood}}`.
+  readonly details?: readonly SceneDetails[] | undefined;
+  // Images → Scenes from the article is on: every image takes a scene and `{{Scene}}` is filled.
+  // Off, only the pictures whose prompts use a `Slopify_` scene keyword are here.
+  readonly legacy: boolean;
 }
 
 // The thumbnails' own scenes step, in the Thumbnail stage, so changing the thumbnail never
@@ -26,29 +39,35 @@ export interface ThumbnailScenes {
   readonly recipe: ResolvedWorkRecipe;
   readonly count: number;
   readonly scenes: readonly string[] | undefined;
+  readonly details?: readonly SceneDetails[] | undefined;
+  readonly legacy: boolean;
 }
 
 export const imageScenesKey = "images:scenes";
 export const thumbnailScenesKey = "thumbnail:scenes";
 
 // With Scenes from the article on, a thumbnail drawn from a Library prompt whose text asks for
-// `{{Scene}}` takes one scene per thumbnail; any other thumbnail is drawn as it always was.
+// `{{Scene}}` takes one scene per thumbnail; so does one whose prompt uses a `Slopify_` scene
+// keyword, switch or no switch. Any other thumbnail is drawn as it always was.
 export function thumbnailScenes(
   context: RecipeContext,
   text: { readonly pictureText: string | null; readonly article: ResolvedWorkRecipe },
 ): ThumbnailScenes | undefined {
   const { config, content } = context;
-  if (config.sources.images !== "generate" || config.imageScenes !== true) return undefined;
   if (config.sources.thumbnail !== "from_prompt") return undefined;
   const body = content.promptTemplates.thumbnailPrompt ?? config.rendered.thumbnailPrompt;
-  if (!usesScene(body)) return undefined;
+  const legacy =
+    config.sources.images === "generate" && config.imageScenes === true && usesScene(body);
+  if (!legacy && !usesSlopifyScene(body)) return undefined;
   const count = thumbnailCountOf(config);
+  const details = wantsSceneDetails(body);
   const messages = withLanguage(
     sceneMessages({
       title: subjectOf(config),
       article: text.pictureText ?? "",
       pictures: [],
       thumbnails: count,
+      ...(details ? { details } : {}),
     }),
     config.language,
   );
@@ -66,10 +85,13 @@ export function thumbnailScenes(
       : llmInput(context, messages),
     [text.article.key],
   );
+  const saved = text.pictureText === null ? undefined : savedScenes(context, value, count);
   return {
     recipe: value,
     count,
-    scenes: text.pictureText === null ? undefined : savedScenes(context, value, count),
+    scenes: saved?.scenes,
+    ...(saved?.details === undefined ? {} : { details: saved.details }),
+    legacy,
   };
 }
 
@@ -78,9 +100,11 @@ export function imageScenes(
   text: { readonly pictureText: string | null; readonly article: ResolvedWorkRecipe },
 ): ImageScenes | undefined {
   const { config, content } = context;
-  if (config.sources.images !== "generate" || config.imageScenes !== true) return undefined;
+  if (config.sources.images !== "generate") return undefined;
+  const legacy = config.imageScenes === true;
   const keys: string[] = [];
   const pictures: string[] = [];
+  let details = false;
   for (const key of content.imageOrder) {
     const image = content.imageDefinitions[key];
     if (image?.source !== "generate") continue;
@@ -89,6 +113,9 @@ export function imageScenes(
         ? image.prompt
         : (content.promptTemplates[image.templateKey] ?? image.prompt);
     if (body == null || body.trim() === "") continue;
+    // With the switch off a picture takes a scene only for its own `Slopify_` keywords.
+    if (!legacy && !usesSlopifyScene(body)) continue;
+    details ||= wantsSceneDetails(body);
     const at = /^imagePrompts\.(\d+)$/.exec(image.templateKey ?? "")?.[1];
     const name = at === undefined ? "Image" : (config.imagePrompts[Number(at)]?.name ?? "Image");
     keys.push(key);
@@ -96,7 +123,12 @@ export function imageScenes(
   }
   if (keys.length === 0) return undefined;
   const messages = withLanguage(
-    sceneMessages({ title: subjectOf(config), article: text.pictureText ?? "", pictures }),
+    sceneMessages({
+      title: subjectOf(config),
+      article: text.pictureText ?? "",
+      pictures,
+      ...(details ? { details } : {}),
+    }),
     config.language,
   );
   const value = recipe(
@@ -113,10 +145,13 @@ export function imageScenes(
       : llmInput(context, messages),
     [text.article.key],
   );
+  const saved = text.pictureText === null ? undefined : savedScenes(context, value, keys.length);
   return {
     recipe: value,
     keys,
-    scenes: text.pictureText === null ? undefined : savedScenes(context, value, keys.length),
+    scenes: saved?.scenes,
+    ...(saved?.details === undefined ? {} : { details: saved.details }),
+    legacy,
   };
 }
 
@@ -127,7 +162,9 @@ function savedScenes(
   context: RecipeContext,
   value: ResolvedWorkRecipe,
   count: number,
-): readonly string[] | undefined {
+):
+  | { readonly scenes: readonly string[]; readonly details?: readonly SceneDetails[] | undefined }
+  | undefined {
   const logical =
     context.catalogue === undefined || value.input.kind !== "llm"
       ? value.fingerprint
@@ -147,7 +184,16 @@ function savedScenes(
   );
   if (piece?.piece.payload == null) return undefined;
   const parsed = z
-    .object({ scenes: z.array(z.string()) })
+    .object({
+      scenes: z.array(z.string()),
+      details: z
+        .array(z.object({ setting: z.string().optional(), mood: z.string().optional() }))
+        .optional(),
+    })
     .safeParse(JSON.parse(piece.piece.payload));
-  return parsed.success && parsed.data.scenes.length === count ? parsed.data.scenes : undefined;
+  if (!parsed.success || parsed.data.scenes.length !== count) return undefined;
+  return {
+    scenes: parsed.data.scenes,
+    ...(parsed.data.details === undefined ? {} : { details: parsed.data.details }),
+  };
 }

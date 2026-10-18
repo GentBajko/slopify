@@ -549,3 +549,39 @@ describe("startRun with the ambient bed's own file", () => {
     expect(existsSync(join(storage.paths.staging, file))).toBe(true);
   });
 });
+
+describe("keyword facts", () => {
+  const articleOnly: Partial<RunDraft> = {
+    sources: {
+      research: "off",
+      article: "provide",
+      audio: "off",
+      images: "off",
+      thumbnail: "off",
+      video: "off",
+    },
+  };
+
+  it("copies none for a run whose prompts use no fact", () => {
+    const run = startRun(deps(), draft(articleOnly), { article: "Write about {{Slopify_Title}}." });
+    expect(run.project.config.keywordFacts).toBeUndefined();
+    expect("keywordFacts" in run.project.config).toBe(false);
+  });
+
+  it("copies the facts when a picked prompt uses one", () => {
+    const run = startRun(deps(), draft(articleOnly), { article: "rendered" }, false, {
+      article: "For {{Slopify_Channel}}.",
+    });
+    expect(run.project.config.keywordFacts).toMatchObject({ episode: 1 });
+    expect(run.project.config.keywordFacts?.channel).toBeTypeOf("string");
+  });
+
+  it("never keeps facts a draft brings with it", () => {
+    const run = startRun(
+      deps(),
+      draft({ ...articleOnly, keywordFacts: { channel: "Forged", episode: 99 } }),
+      {},
+    );
+    expect(run.project.config.keywordFacts).toBeUndefined();
+  });
+});

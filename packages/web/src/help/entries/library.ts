@@ -1,4 +1,17 @@
+import type { KeywordPlace } from "@app/slices/keywords/model.js";
+import { keywordsFor } from "@app/slices/keywords/specs.js";
 import type { HelpEntry } from "../entry.js";
+
+// The keywords Slopify fills that a prompt kind or entry category can use, read from the
+// keyword table so the tip never lists one that kind can't use.
+function keywordsHere(place: KeywordPlace): string {
+  const names = keywordsFor(place).map((spec) => `{{${spec.name}}}`);
+  return `Keywords Slopify fills here: ${names.join(", ")}. They never become fields on Play. Click one in the Insert bar to put it at the cursor; point at it there or in the text for what it fills in, an example and what it costs.`;
+}
+
+const factsSection = { page: "Keywords-Slopify-Fills", anchor: "facts-slopify-already-has" };
+const digestSection = { page: "Keywords-Slopify-Fills", anchor: "written-from-the-article" };
+const pictureSection = { page: "Keywords-Slopify-Fills", anchor: "per-picture" };
 
 // Library → Prompts, Intros & Outros, Templates, Documents and Aliases. The document theme
 // numbers (defaults and ranges) are the built-in Plain theme's and the save schema's, from
@@ -17,7 +30,7 @@ export const libraryHelp = {
   },
   "library.prompt.body.article": {
     title: "Article prompt",
-    body: "The instruction the text model gets to write the video's article, which becomes the narration. Each {{keyword}} becomes a field on Play. One call on the project's LLM, plus up to 3 more when the answer runs out of room; research notes go first when research ran. The answer's sources and pronunciation sections are never narrated.",
+    body: "The instruction the text model gets to write the video's article, which becomes the narration. Each {{keyword}} of your own becomes a field on Play. One call on the project's LLM, plus up to 3 more when the answer runs out of room; research notes go first when research ran. The answer's sources and pronunciation sections are never narrated.",
     tutorial: { page: "Prompts", anchor: "write-a-new-prompt" },
   },
   "library.prompt.body.image": {
@@ -37,7 +50,7 @@ export const libraryHelp = {
   },
   "library.prompt.body.description": {
     title: "YouTube Description prompt",
-    body: "Tells the text model how to write the video's YouTube description, chapters, hashtags and tags from the timestamped transcript. One call per video. Each {{keyword}} becomes a field on Play. A project that picks none uses the Built-in wording.",
+    body: "Tells the text model how to write the video's YouTube description, chapters, hashtags and tags from the timestamped transcript. One call per video. Each {{keyword}} of your own becomes a field on Play. A project that picks none uses the Built-in wording.",
     tutorial: { page: "Prompts", anchor: "write-a-new-prompt" },
   },
   "library.prompt.body.shorts": {
@@ -55,6 +68,56 @@ export const libraryHelp = {
     body: "Used in place of an Article prompt when a run has several voices and writes a script. The text model answers with # section headings and Name: words turns, one speaker per paragraph; text in [square brackets] is not spoken. One call on the project's LLM.",
     tutorial: { page: "Prompts", anchor: "write-a-new-prompt" },
   },
+  "library.keywords.article": {
+    title: "Keywords Slopify fills in Article prompts",
+    body: keywordsHere("article"),
+    tutorial: factsSection,
+  },
+  "library.keywords.script": {
+    title: "Keywords Slopify fills in Script prompts",
+    body: keywordsHere("script"),
+    tutorial: factsSection,
+  },
+  "library.keywords.narration": {
+    title: "Keywords Slopify fills in Narration Preparation prompts",
+    body: keywordsHere("narration"),
+    tutorial: factsSection,
+  },
+  "library.keywords.image": {
+    title: "Keywords Slopify fills in Image prompts",
+    body: keywordsHere("image"),
+    tutorial: pictureSection,
+  },
+  "library.keywords.thumbnail": {
+    title: "Keywords Slopify fills in Thumbnail prompts",
+    body: keywordsHere("thumbnail"),
+    tutorial: pictureSection,
+  },
+  "library.keywords.description": {
+    title: "Keywords Slopify fills in YouTube Description prompts",
+    body: keywordsHere("description"),
+    tutorial: digestSection,
+  },
+  "library.keywords.shorts": {
+    title: "Keywords Slopify fills in Shorts prompts",
+    body: keywordsHere("shorts"),
+    tutorial: digestSection,
+  },
+  "library.keywords.review": {
+    title: "Keywords Slopify fills in Review prompts",
+    body: keywordsHere("review"),
+    tutorial: digestSection,
+  },
+  "library.keywords.intro": {
+    title: "Keywords Slopify fills in intros",
+    body: keywordsHere("intro"),
+    tutorial: factsSection,
+  },
+  "library.keywords.outro": {
+    title: "Keywords Slopify fills in outros",
+    body: keywordsHere("outro"),
+    tutorial: factsSection,
+  },
   "library.prompt.starter": {
     title: "Starter text",
     body: "Fills the body with ready-made text to start from: the documentary delivery cues for Narration Preparation, or the Built-in wording YouTube Description and Shorts use when no prompt is picked. When the body already has text you confirm first. Nothing is saved until you choose Save.",
@@ -67,8 +130,13 @@ export const libraryHelp = {
   },
   "library.slots": {
     title: "Detected slots",
-    body: "Every {{keyword}} in the body, listed as you type. Each becomes one field on Play, typed once and filled into every prompt that names it. Names are case-sensitive, so {{Topic}} and {{topic}} are two fields. A keyword the project title also names is typed per video and saved empty in templates.",
+    body: "Your own {{keywords}} in the body, listed as you type; the keywords Slopify fills are listed apart. Each of yours becomes one field on Play, typed once and filled into every prompt that names it. Names are case-sensitive, so {{Topic}} and {{topic}} are two fields. A keyword the project title also names is typed per video and saved empty in templates.",
     tutorial: { page: "Prompts", anchor: "keywords-slots" },
+  },
+  "library.slots.filled": {
+    title: "Keywords Slopify fills",
+    body: "The keywords in the text that Slopify fills itself, such as {{Slopify_Title}}: they never become fields on Play. Using one turns on what fills it, free or part of one AI call per run. One where it can't be filled is warned about below; Save still works, but Play refuses the run until you move or remove it.",
+    tutorial: { page: "Keywords-Slopify-Fills", anchor: "how-they-work" },
   },
   "library.used-by": {
     title: "Used by",
@@ -113,7 +181,7 @@ export const libraryHelp = {
   },
   "library.entry.body": {
     title: "Entry body",
-    body: "In Text mode, the words the narrator says; in LLM mode, the instruction whose answer is said. Each {{keyword}} becomes a field on Play. It is narrated as its own audio file with the run's voice, one voice request each.",
+    body: "In Text mode, the words the narrator says; in LLM mode, the instruction whose answer is said. Each {{keyword}} of your own becomes a field on Play. It is narrated as its own audio file with the run's voice, one voice request each.",
     tutorial: { page: "Intros-and-Outros", anchor: "write-an-intro-or-outro" },
   },
   // ── Narration aliases ────────────────────────────────────────────────────────────────

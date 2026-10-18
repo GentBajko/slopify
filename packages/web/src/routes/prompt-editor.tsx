@@ -10,6 +10,7 @@ import { useApp } from "@/app-context";
 import { DetectedSlots } from "@/components/detected-slots";
 import { EditorActions } from "@/components/editor-actions";
 import { EditorSkeleton } from "@/components/editor-states";
+import { KeywordInsertBar } from "@/components/keyword-insert-bar";
 import { Button } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Field, Input } from "@/components/kit/field";
@@ -24,6 +25,7 @@ import type { HelpId } from "@/help/catalog";
 import {
   bodyProblems,
   draftProblems,
+  draftWarnings,
   firstProblem,
   nameProblems,
   slotNames,
@@ -125,7 +127,9 @@ export function PromptEditorRoute({
     setRefused((current) => current.filter((problem) => problem.field !== field));
   };
 
-  const problems = draftProblems(draft, refused);
+  // The stored prompt's own slot names, which its save lets through, as the server does.
+  const grandfathered = promptId !== undefined && found !== undefined ? found.slots : [];
+  const problems = draftProblems(draft, refused, grandfathered);
   const blocked = firstProblem(problems);
   const slots = slotNames(draft.body);
   // An untouched body is not an error on the page: its "A body is required." is the sentence
@@ -134,6 +138,7 @@ export function PromptEditorRoute({
   // characters to see; the upgrade is a second list.
   const lint = draft.body.trim() === "" ? [] : bodyProblems(problems);
   const named = draft.name.trim() === "" ? [] : nameProblems(problems);
+  const warnings = draft.body.trim() === "" ? [] : draftWarnings(draft);
   useTutorialProgress({
     promptNamed: draft.name.trim() !== "" && named.length === 0,
     promptBodyReady: draft.body.trim() !== "" && lint.length === 0,
@@ -237,9 +242,19 @@ export function PromptEditorRoute({
                 </span>
               ) : null}
             </div>
+            <KeywordInsertBar
+              place={draft.kind}
+              targetId={bodyId}
+              value={draft.body}
+              onChange={(next) => {
+                edit({ ...draft, body: next }, "body");
+              }}
+            />
             <SlotBody
               id={bodyId}
               value={draft.body}
+              place={draft.kind}
+              grandfathered={grandfathered}
               invalid={lint.length > 0}
               describedBy={lint.length === 0 ? undefined : lintId}
               onChange={(next) => {
@@ -313,7 +328,18 @@ export function PromptEditorRoute({
         </div>
 
         <div data-tour="prompt-slots" className={editorAside}>
-          <DetectedSlots slots={slots} body={draft.body} lint={lint} lintId={lintId} />
+          <DetectedSlots
+            slots={slots}
+            body={draft.body}
+            lint={lint}
+            lintId={lintId}
+            warnings={warnings}
+            place={draft.kind}
+            bodyId={bodyId}
+            onChange={(next) => {
+              edit({ ...draft, body: next }, "body");
+            }}
+          />
         </div>
       </div>
 

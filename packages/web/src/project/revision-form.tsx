@@ -679,6 +679,7 @@ export function RevisionForm(
           />
           <RevisionPrompts
             edit={edit}
+            projectId={view.revision.projectId}
             saved={view.revision.config.imagePrompts}
             prompts={prompts.data?.prompts ?? []}
             entries={entries.data?.entries ?? []}

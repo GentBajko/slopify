@@ -62,6 +62,7 @@ export async function createProject(deps: AppDeps, sent: RunDraft): Promise<Crea
     draft: picked.draft,
     staged: stagedFiles(deps.db),
     requiredSlots: picked.requiredSlots,
+    keywordUses: picked.keywordUses,
   });
   const modelErrors = modelFields(picked.draft, deps.catalogue);
   if (!admitted.ok || picked.missing.length > 0 || modelErrors.length > 0)

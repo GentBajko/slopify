@@ -1,16 +1,26 @@
+import type { KeywordPlace } from "@app/slices/keywords/model.js";
 import type { FieldError } from "@/api";
 import { Button } from "@/components/kit/button";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
+import { OldKeywordNames } from "@/components/old-keyword-names";
 import { SlotChip } from "@/components/slot-chip";
+import { keywordSlots } from "@/lib/draft-lint";
 
-// The editor's right-hand panel: every `{{name}}` the body holds, and beneath them the lint the
-// shared rule found. The lint is text, not a colour: the red mark in the body is the same
-// problem said twice, and `lintId` is what the textarea points its `aria-describedby` at.
+// The editor's right-hand panel: every `{{name}}` the body holds (the person's own fields apart
+// from the keywords Slopify fills), Update to new names for an old keyword name, and beneath
+// them the warnings Save lets through and the lint the shared rule found. The lint is text, not
+// a colour: the red mark in the body is the same problem said twice, and `lintId` is what the
+// textarea points its `aria-describedby` at.
 export function DetectedSlots({
   slots,
   body,
   lint,
   lintId,
+  warnings = [],
+  place,
+  bodyId,
+  onChange,
   // What a body with no slots does instead. A prompt runs as written; an intro is
   // narrated or instructs, so 09 hands its own sentence in rather than calling a
   // narrated opener a prompt.
@@ -21,21 +31,72 @@ export function DetectedSlots({
   readonly lint: readonly FieldError[];
   readonly lintId: string;
   readonly noSlots?: string;
+  // What Save lets through but Play refuses: a keyword where it can't be filled.
+  readonly warnings?: readonly FieldError[];
+  // Where the body runs and how to change it, for Update to new names.
+  readonly place?: KeywordPlace;
+  // The textarea a Go to button puts the caret in.
+  readonly bodyId?: string;
+  readonly onChange?: (next: string) => void;
 }) {
+  const { own, filled } = keywordSlots(slots);
+  const go = (at: number) => showInBody(lintId, at, bodyId);
   return (
     <>
       <SectionHead title="Detected slots" info="library.slots" size="small" className="pb-0" />
 
-      {slots.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
-          {slots.map((slot) => (
-            <SlotChip key={slot} name={slot} className="px-2 py-1" />
+      {own.length > 0 ? (
+        <ul aria-label="Your keywords" className="m-0 flex list-none flex-wrap gap-2 p-0">
+          {own.map((slot) => (
+            <li key={slot} className="flex">
+              <SlotChip name={slot} className="px-2 py-1" />
+            </li>
           ))}
-        </div>
+        </ul>
       ) : body.trim() === "" ? (
         <p className="m-0 text-small text-ink-3">{"Slots appear here as you type {{name}}."}</p>
+      ) : filled.length > 0 ? (
+        <p className="m-0 text-small text-ink-2">
+          No fields to fill: Slopify fills every keyword here.
+        </p>
       ) : (
         <p className="m-0 text-small text-ink-2">{noSlots}</p>
+      )}
+
+      {filled.length === 0 ? null : (
+        <div className="flex flex-col gap-2" {...helpScope}>
+          <span className="flex items-center gap-1">
+            <span className="sl-kicker">Keywords Slopify fills</span>
+            <InfoTip id="library.slots.filled" label="Keywords Slopify fills" className="-my-1" />
+          </span>
+          <ul
+            aria-label="Keywords Slopify fills"
+            className="m-0 flex list-none flex-wrap gap-2 p-0"
+          >
+            {filled.map((slot) => (
+              <li key={slot} className="flex">
+                <SlotChip name={slot} className="px-2 py-1 text-accent-ink" />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {place === undefined || onChange === undefined ? null : (
+        <OldKeywordNames body={body} place={place} onChange={onChange} />
+      )}
+
+      {warnings.length === 0 ? null : (
+        <div className="flex flex-col gap-2 border-t border-line pt-3">
+          <span className="sl-kicker text-waiting">
+            {warnings.length === 1
+              ? "1 keyword warning"
+              : `${String(warnings.length)} keyword warnings`}
+          </span>
+          {warnings.map((warning) => (
+            <Problem key={warning.message} body={body} message={warning.message} onGo={go} />
+          ))}
+        </div>
       )}
 
       {lint.length === 0 ? null : (
@@ -43,22 +104,42 @@ export function DetectedSlots({
           <span className="sl-kicker text-danger">
             {lint.length === 1 ? "1 slot error" : `${String(lint.length)} slot errors`}
           </span>
-          {lint.map((problem) => {
-            const at = offsetOf(body, problem.message);
-            return (
-              <span key={problem.message} className="flex flex-col items-start gap-1">
-                <span className="text-small text-danger">{problem.message}</span>
-                {at === undefined ? null : (
-                  <Button variant="quiet" size="small" onClick={() => showInBody(lintId, at)}>
-                    {`Go to ${where(problem.message) ?? "it"}`}
-                  </Button>
-                )}
-              </span>
-            );
-          })}
+          {lint.map((problem) => (
+            <Problem
+              key={problem.message}
+              body={body}
+              message={problem.message}
+              tone="text-danger"
+              onGo={go}
+            />
+          ))}
         </div>
       )}
     </>
+  );
+}
+
+function Problem({
+  body,
+  message,
+  tone = "text-ink",
+  onGo,
+}: {
+  readonly body: string;
+  readonly message: string;
+  readonly tone?: string;
+  readonly onGo: (at: number) => void;
+}) {
+  const at = offsetOf(body, message);
+  return (
+    <span className="flex flex-col items-start gap-1">
+      <span className={`text-small ${tone}`}>{message}</span>
+      {at === undefined ? null : (
+        <Button variant="quiet" size="small" onClick={() => onGo(at)}>
+          {`Go to ${where(message) ?? "it"}`}
+        </Button>
+      )}
+    </span>
   );
 }
 
@@ -80,10 +161,12 @@ export function offsetOf(body: string, message: string): number | undefined {
   return start + column - 1;
 }
 
-// Puts the caret on the marked `{{` in the body this list describes: the textarea is the one
-// whose `aria-describedby` names the list.
-function showInBody(lintId: string, at: number): void {
-  const box = document.querySelector(`textarea[aria-describedby~="${lintId}"]`);
+// Puts the caret on the marked `{{` in the body this list describes: the textarea named, or the
+// one whose `aria-describedby` names the list.
+function showInBody(lintId: string, at: number, bodyId?: string): void {
+  const box =
+    (bodyId === undefined ? null : document.getElementById(bodyId)) ??
+    document.querySelector(`textarea[aria-describedby~="${lintId}"]`);
   if (!(box instanceof HTMLTextAreaElement)) return;
   box.focus();
   box.setSelectionRange(at, Math.min(at + 2, box.value.length));

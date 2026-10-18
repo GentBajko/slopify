@@ -19,7 +19,8 @@ import {
   llmUses,
 } from "@app/slices/admission/rules.js";
 import { type DocumentSettings, defaultDocumentTheme } from "@app/slices/document/model.js";
-import type { Entry } from "@app/slices/library/model.js";
+import { keywordUsesOf } from "@app/slices/keywords/rules.js";
+import type { Entry, Prompt } from "@app/slices/library/model.js";
 import {
   defaultLoudness,
   type LoudnessDefault,
@@ -37,6 +38,7 @@ import type { VideoEditSettings } from "@app/slices/video/edit-settings.js";
 import type { UploadKind } from "@/api";
 import { subtitlesFor } from "@/subtitles/config";
 import { freshDraftDocument } from "./draft-state";
+import { placedBodies } from "./placed-bodies";
 
 // One picked file and how far its copy into staging got. A file starts copying the moment it is
 // picked; until the copy finishes the run cannot start. The whole staged row is kept rather
@@ -211,12 +213,23 @@ export function sourceOptions(
 // whether the row is drawn at all.
 // What the run asks an LLM for: the server's own list (`llmUses`) on the draft this form sends,
 // so the picker shows exactly when, and where, the run can't start without a model.
-export function llmUsesOf(form: PlayFormState, entries: readonly Entry[]): readonly LlmUse[] {
-  return llmUses(draftOf({ form, entries, slots: [], silenceGapSeconds: 0 }));
+// With the library's prompts, the keywords Slopify fills that they use count too: the keyword
+// digest and the image scenes are written by the text model.
+export function llmUsesOf(
+  form: PlayFormState,
+  entries: readonly Entry[],
+  prompts: readonly Prompt[] = [],
+): readonly LlmUse[] {
+  const draft = draftOf({ form, entries, slots: [], silenceGapSeconds: 0 });
+  return llmUses(draft, keywordUsesOf(placedBodies(draft, prompts, entries)));
 }
 
-export function needsLlm(form: PlayFormState, entries: readonly Entry[]): boolean {
-  return llmUsesOf(form, entries).length > 0;
+export function needsLlm(
+  form: PlayFormState,
+  entries: readonly Entry[],
+  prompts: readonly Prompt[] = [],
+): boolean {
+  return llmUsesOf(form, entries, prompts).length > 0;
 }
 
 export function modeOf(

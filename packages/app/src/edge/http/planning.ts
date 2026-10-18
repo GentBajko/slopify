@@ -52,6 +52,7 @@ export function planningRoutes(deps: AppDeps) {
         draft: picked.draft,
         staged: stagedFiles(deps.db),
         requiredSlots: picked.requiredSlots,
+        keywordUses: picked.keywordUses,
       });
       const accepted = admitted.ok ? admitted.draft : picked.draft;
       const fields = [

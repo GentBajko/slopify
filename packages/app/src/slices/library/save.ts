@@ -62,8 +62,10 @@ export function updatePrompt(
   id: string,
   draft: PromptDraft,
   restoredFrom?: number,
+  // Slot names a restored version had, which it may keep like the stored prompt's.
+  restoredSlots: readonly string[] = [],
 ): SaveResult<Prompt> {
-  const fields = lintPrompt(draft);
+  const fields = lintPrompt(draft, [...(promptById(deps.db, id)?.slots ?? []), ...restoredSlots]);
   if (fields.length > 0) {
     return { ok: false, reason: "invalid", fields };
   }
@@ -97,7 +99,13 @@ export function restorePrompt(deps: LibraryDeps, id: string, version: number): S
   const kind = promptKinds.find((one) => one === saved?.kind);
   if (saved === undefined || kind === undefined || promptById(deps.db, id) === undefined)
     return { ok: false, reason: "not-found" };
-  return updatePrompt(deps, id, { kind, name: saved.name, body: saved.body }, version);
+  return updatePrompt(
+    deps,
+    id,
+    { kind, name: saved.name, body: saved.body },
+    version,
+    detectSlots(saved.body).names,
+  );
 }
 
 // Delete moves the prompt to the trash with its history; Settings → Trash puts it back or
@@ -130,8 +138,9 @@ export function updateEntry(
   id: string,
   draft: EntryDraft,
   restoredFrom?: number,
+  restoredSlots: readonly string[] = [],
 ): SaveResult<Entry> {
-  const fields = lintEntry(draft);
+  const fields = lintEntry(draft, [...(entryById(deps.db, id)?.slots ?? []), ...restoredSlots]);
   if (fields.length > 0) {
     return { ok: false, reason: "invalid", fields };
   }
@@ -173,6 +182,7 @@ export function restoreEntry(deps: LibraryDeps, id: string, version: number): Sa
     id,
     { category, mode: saved.mode, name: saved.name, body: saved.body },
     version,
+    detectSlots(saved.body).names,
   );
 }
 

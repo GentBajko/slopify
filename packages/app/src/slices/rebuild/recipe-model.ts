@@ -74,6 +74,8 @@ export const deferredOperations = [
   "thumbnail-scenes",
   // How the subject and characters look (`recipe-appearance.ts`), looked up on the web.
   "image-appearance",
+  // The keyword digest (`recipe-digest.ts`), written once the article is.
+  "keyword-digest",
 ] as const;
 export interface DialogueLine {
   readonly speaker: string;
@@ -189,6 +191,8 @@ export interface RecipeContext {
   readonly pinnedChapters?: FingerprintValue | undefined;
   readonly resolved: ResolvedRevisionInputs;
   readonly catalogue?: Catalogue | undefined;
+  // The steps keywords are filled from (`recipe-keywords.ts`), set once the text steps are planned.
+  readonly keywords?: import("./recipe-keywords.js").KeywordState | undefined;
 }
 
 export function recipe(

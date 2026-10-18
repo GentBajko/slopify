@@ -242,6 +242,10 @@ export interface RunDraft {
   // started, appended to the article (or script) prompt (`slices/episodes/related.ts`). Absent
   // is none, which is what every project made before episode memory, or with it off, has.
   readonly earlierEpisodes?: readonly import("../episodes/repo.js").EarlierEpisode[] | undefined;
+  // The facts the keywords Slopify fills are written from (channel, links, neighbouring videos,
+  // cast…), copied when the run started and only when a picked prompt uses one
+  // (`keywords/facts.ts`). Absent is none, which is what every project made before them has.
+  readonly keywordFacts?: import("../keywords/values.js").KeywordFacts | undefined;
   // The chapter cards' and end screen's font and colour, from the channel's brand kit. Absent
   // is the caption font in white, as every video before it.
   readonly titleStyle?: TitleStyle | undefined;

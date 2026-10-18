@@ -410,7 +410,8 @@ export function priceRecipe(
     (input.operation === "image-scene" ||
       input.operation === "image-scenes" ||
       input.operation === "thumbnail-scenes" ||
-      input.operation === "image-appearance")
+      input.operation === "image-appearance" ||
+      input.operation === "keyword-digest")
   ) {
     const choice = config === undefined ? undefined : recipeProviderChoice(value, config);
     if (choice !== undefined && input.operation === "image-scene")
@@ -422,7 +423,12 @@ export function priceRecipe(
         provider: choice.provider,
         model: choice.model,
         inputCharacters: 90000,
-        outputCharacters: input.operation === "image-appearance" ? 6000 : 4000,
+        outputCharacters:
+          input.operation === "image-appearance"
+            ? 6000
+            : input.operation === "keyword-digest"
+              ? 2000
+              : 4000,
         detail:
           "The article is read when the step runs; its length is estimated. Retries are excluded.",
       };
