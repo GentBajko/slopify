@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { draftFixture } from "../play-drafts/draft.fake.js";
 import { createTemplate } from "../project-templates/service.js";
-import { sampleProjects } from "./repo.js";
+import { sampleProjects, templateSampleCheck } from "./repo.js";
 
 const open: (() => void)[] = [];
 afterEach(() => {
@@ -32,4 +32,21 @@ it("names a template's sample project, and a project whose folder is already amo
   expect(samples.has("ORPHANED")).toBe(true);
   expect(samples.has("SOMEOTHERPROJECT")).toBe(false);
   expect(samples.has("../..")).toBe(false);
+});
+
+it("tells a template's sample project from any other, the answer kept current", () => {
+  const h = draftFixture();
+  open.push(h.close);
+  const id = randomUUID();
+  const created = createTemplate(h.deps, { id, name: "Show", document: h.document });
+  if (!created.ok) throw new Error(created.reason);
+  const isSample = templateSampleCheck(h.deps.db);
+  expect(isSample("P1")).toBe(false);
+  h.deps.db
+    .prepare(
+      "INSERT INTO template_samples (template_id,project_id,topic,topic_source,full_script,created_at) VALUES (?,'P1','Salt','fixed',0,'a')",
+    )
+    .run(id);
+  expect(isSample("P1")).toBe(true);
+  expect(isSample("P2")).toBe(false);
 });

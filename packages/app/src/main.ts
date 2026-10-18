@@ -152,7 +152,7 @@ import { createFreeSamples } from "./slices/template-studio/free.js";
 import { createLoudnessSamples } from "./slices/template-studio/loudness.js";
 import { sampleMaker } from "./slices/template-studio/make.js";
 import { makePaidSample } from "./slices/template-studio/paid.js";
-import { isTemplateSample, sampleProjects } from "./slices/template-studio/repo.js";
+import { sampleProjects, templateSampleCheck } from "./slices/template-studio/repo.js";
 import { createSampleRunner } from "./slices/template-studio/runner.js";
 import { createUnknownAcks } from "./slices/template-studio/save.js";
 import {
@@ -346,7 +346,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         log,
         presentEvent: eventPresenter(eventDb),
         // A template's hidden sample is told to its studio, never to the shell or Home.
-        quiet: (projectId) => isTemplateSample(eventDb, projectId),
+        quiet: templateSampleCheck(eventDb),
       }),
       (event) => {
         notifier.observe(event);
@@ -1108,7 +1108,10 @@ export function wireRunner({
       hub.emitGlobal({ type: "running.count", count: running });
     },
     // The shell's "N running" leaves out the template studio's hidden samples.
-    counted: (projectId) => !isTemplateSample(db, projectId),
+    counted: (() => {
+      const sample = templateSampleCheck(db);
+      return (projectId: string) => !sample(projectId);
+    })(),
     log,
   });
   return { ...runner, checkpoints };

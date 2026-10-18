@@ -19,6 +19,13 @@ export function isTemplateSample(db: DatabaseSync, projectId: string): boolean {
   );
 }
 
+// The same question asked on every project event (the shell's tally, the global stream):
+// one prepared statement, reused.
+export function templateSampleCheck(db: DatabaseSync): (projectId: string) => boolean {
+  const named = db.prepare("SELECT 1 FROM template_samples WHERE project_id=?");
+  return (projectId) => named.get(projectId) !== undefined;
+}
+
 // Which projects' folders are kept in the data dir (`kernel/paths.ts` samples): a project
 // named by a template's sample row, or one whose folder is already there (a sample whose row
 // went with its template keeps its files where they are until the project is deleted).
