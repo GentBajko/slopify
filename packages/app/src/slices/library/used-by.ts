@@ -7,7 +7,8 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { liveProject } from "../admission/repo.js";
-import { notTemplateSample } from "../template-studio/repo.js";
+import { runnableVersion } from "../template-studio/gate.js";
+import { gatesOf, notTemplateSample } from "../template-studio/repo.js";
 import type { EntryCategory, PromptKind } from "./model.js";
 
 export type LibraryRef =
@@ -174,20 +175,32 @@ export function usedBy(
       const parsed = templateRow.parse(row);
       return matches(formOf(parsed.document_json)) ? [{ id: parsed.id, name: parsed.name }] : [];
     });
-  // A schedule runs its template as it is now (`schedules/scheduler.ts`), so the template's
-  // current version is what it uses.
+  // A schedule runs the version of its template the studio gate lets it run
+  // (`template-studio/schedule-gate.ts`), which can be older than the newest one.
+  const runsOf = new Map<string, unknown>();
+  const formRun = (templateId: string, head: number): unknown => {
+    if (!runsOf.has(templateId)) {
+      const version = runnableVersion(gatesOf(db, templateId), head) ?? head;
+      const row = db
+        .prepare(
+          "SELECT document_json FROM project_template_revisions WHERE template_id=? AND version=?",
+        )
+        .get(templateId, version);
+      runsOf.set(templateId, row === undefined ? undefined : formOf(String(row.document_json)));
+    }
+    return runsOf.get(templateId);
+  };
   const schedules = db
     .prepare(
-      `SELECT s.id,s.name,s.status,r.document_json FROM schedules s
+      `SELECT s.id,s.name,s.status,s.template_id,t.head_version FROM schedules s
        JOIN project_templates t ON t.id=s.template_id
-       JOIN project_template_revisions r ON r.template_id=t.id AND r.version=t.head_version
-       WHERE s.deleted_at IS NULL AND s.status IN ('active','paused') AND ${mentions("r.document_json")}
+       WHERE s.deleted_at IS NULL AND s.status IN ('active','paused') AND s.template_kind='project'
        ORDER BY lower(s.name),s.id`,
     )
-    .all(...plain)
+    .all()
     .flatMap((row) => {
       const parsed = scheduleRow.parse(row);
-      return matches(formOf(parsed.document_json))
+      return matches(formRun(parsed.template_id, parsed.head_version))
         ? [{ id: parsed.id, name: parsed.name, status: parsed.status }]
         : [];
     });
@@ -241,7 +254,8 @@ const scheduleRow = z.object({
   id: z.string(),
   name: z.string(),
   status: z.string(),
-  document_json: z.string(),
+  template_id: z.string(),
+  head_version: z.number(),
 });
 const revisionRow = z.object({
   project_id: z.string(),

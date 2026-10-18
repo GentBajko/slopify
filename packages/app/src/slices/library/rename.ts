@@ -1,8 +1,12 @@
 // Renaming a Library prompt or intro/outro. Everything names the Library by name, so a rename
-// rewrites the name where a future run reads it: each live template's current version (its
-// form and the copy it saved of the Library) and every Play draft still being edited.
-// Schedules run their template as it is now, so they follow. A project revision is the record
-// of what its run used and keeps the old name; "Used by" finds it through `formerNames`.
+// rewrites the name where a future run reads it: every version of every template (its form and
+// the copy it saved of the Library) and every Play draft still being edited. Every version, not
+// only the newest: a gated template's schedules run its newest ready version (`template-studio/
+// gate.ts`), Export pack carries that one, a version's samples stay current only while the
+// versions since differ in what they changed, and a trashed template or an old version can be
+// put back. The name is a pointer, so rewriting it changes nothing a version means. A project
+// revision is the record of what its run used and keeps the old name; "Used by" finds it
+// through `formerNames`.
 
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
@@ -67,11 +71,7 @@ function renamedSnapshot(
 export function renameReferences(db: DatabaseSync, ref: LibraryRef, id: string, to: string): void {
   if (ref.name === to) return;
   const templates = db
-    .prepare(
-      `SELECT t.id AS key,r.version,r.document_json FROM project_templates t
-       JOIN project_template_revisions r ON r.template_id=t.id AND r.version=t.head_version
-       WHERE t.deleted_at IS NULL`,
-    )
+    .prepare("SELECT template_id AS key,version,document_json FROM project_template_revisions")
     .all()
     .map((row) => documentRow.parse(row));
   const updateTemplate = db.prepare(

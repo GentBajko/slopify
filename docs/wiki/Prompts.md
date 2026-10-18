@@ -118,7 +118,7 @@ Press the pencil (**Rename <name>**) beside the name, type the new name and pres
 
 ## What happens when you edit a prompt
 
-Projects keep their own copy of every prompt they used. Editing a prompt here changes only runs started later. Templates keep their own copy too, and remember a prompt by name: after a rename they use the copy saved with them until you pick the prompt again.
+Projects keep their own copy of every prompt they used. Editing a prompt here changes only runs started later. Templates remember a prompt by name and use its current text. Renaming a prompt renames it in every version of every template, so a template, and a schedule running an older version marked ready, keeps using it. A template uses the copy saved with it only once the prompt is deleted.
 
 To bring a new prompt version into an existing project, open the project's **Edit project**, and on the prompt press **Use the Library version** (or pick it again). What was made from the old wording turns outdated, and nothing is remade until you choose. See [Editing a project](Editing-a-Project).
 

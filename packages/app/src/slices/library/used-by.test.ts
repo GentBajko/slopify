@@ -142,7 +142,7 @@ describe("usedBy", () => {
     // The template's head names it; an older version of another template did, but not now.
     template(db, "t1", "Weekly essay", [{ articlePrompt: "Essay" }]);
     template(db, "t2", "Changed", [{ articlePrompt: "Essay" }, { articlePrompt: "Other" }]);
-    // A schedule runs its template as it is now, whatever version it was saved with.
+    // An ungated template's schedule runs its newest version, whatever version it was saved with.
     schedule(db, "s1", "t1", 1, "active");
     schedule(db, "s2", "t2", 1, "active");
     schedule(db, "s3", "t1", 1, "canceled");
@@ -162,6 +162,20 @@ describe("usedBy", () => {
       ]),
     );
     expect(found.projects).toHaveLength(2);
+  });
+
+  it("matches a schedule by the version its gated template lets it run", () => {
+    const db = database();
+    // Version 1 is marked ready and names the prompt; version 2, the newest, waits for Mark ready.
+    template(db, "t1", "Gated", [{ articlePrompt: "Essay" }, { articlePrompt: "Other" }]);
+    db.prepare(
+      "INSERT INTO template_gates (template_id,version,state,carried_from) VALUES ('t1',1,'ready',NULL)",
+    ).run();
+    schedule(db, "s1", "t1", 1, "active");
+    const found = usedBy(db, { item: "prompt", kind: "article", name: "Essay" });
+    expect(found.templates).toEqual([]);
+    expect(found.schedules).toEqual([{ id: "s1", name: "Schedule s1", status: "active" }]);
+    expect(usedBy(db, { item: "prompt", kind: "article", name: "Other" }).schedules).toEqual([]);
   });
 
   it("leaves out a template studio sample and its bake-off copies", () => {
