@@ -201,6 +201,56 @@ describe("stageProviders", () => {
     expect(h.clock.now().toISOString()).toBe("2026-09-02T10:00:13.000Z");
   });
 
+  it("counts an answer its check calls unusable as a failed attempt and asks again", async () => {
+    const h = harness();
+    const llm = fakeLlm({
+      reply: (_req, attempt) => (attempt === 1 ? ["  "] : ["A usable answer"]),
+    });
+    const providers = stageProviders(
+      { registry: registry({ llm }), attempts: h.attempts, clock: h.clock, log },
+      context("research", h.controller.signal),
+    );
+
+    const answer = await h.clock.settle(
+      providers.llm({
+        provider: "fake-llm",
+        model: "fake-model",
+        messages: [],
+        check: (reply) => (reply.text.trim() === "" ? "The answer was empty." : undefined),
+      }),
+    );
+
+    if (!answer.ok) throw new Error("Unexpected held request");
+    expect(answer.value.text).toBe("A usable answer");
+    expect(llm.calls()).toBe(2);
+    expect(h.attempts.rows.map((row) => [row.outcome, row.errorText])).toEqual([
+      ["other", "The answer was empty."],
+      ["ok", null],
+    ]);
+  });
+
+  it("fails with the check's own sentence once every attempt was unusable", async () => {
+    const h = harness();
+    const llm = fakeLlm({ deltas: [""] });
+    const providers = stageProviders(
+      { registry: registry({ llm }), attempts: h.attempts, clock: h.clock, log },
+      context("research", h.controller.signal),
+    );
+
+    const answered = h.clock.settle(
+      providers.llm({
+        provider: "fake-llm",
+        model: "fake-model",
+        messages: [],
+        check: () => "The answer had no sources.",
+      }),
+    );
+
+    await expect(answered).rejects.toThrow("The answer had no sources.");
+    expect(llm.calls()).toBe(4);
+    expect(h.attempts.rows.map((row) => row.outcome)).toEqual(["other", "other", "other", "other"]);
+  });
+
   it("drains a narration stream into bytes", async () => {
     const h = harness();
     const tts = fakeTts({ chunks: ["fake ", "audio"] });
