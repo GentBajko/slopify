@@ -9,10 +9,16 @@ import type {
   ImagePort,
   ImageRequest,
 } from "../../kernel/ports/image.js";
-import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
+import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
-import { httpFailure, missingKey, noImage, providerSaid, unreadable } from "../explain.js";
-import { retryAfter } from "../retry-after.js";
+import { httpFailure, noImage, providerSaid, unreadable } from "../explain.js";
+import {
+  failureText,
+  httpProviderError,
+  kindOfStatus,
+  requireKey,
+  safeJson,
+} from "../http-failure.js";
 import { downloadImage } from "./bytes.js";
 import { referencePictures, withReferences } from "./reference.js";
 import { dataUri, downloadVideo } from "./video.js";
@@ -236,12 +242,7 @@ function read<T>(schema: z.ZodType<T>, text: string): T {
 }
 
 function keyOf(deps: FalImageDeps): string {
-  // `missing_key`, not `auth`, because that rule makes it terminal.
-  const key = deps.key();
-  if (key === undefined || key === "") {
-    throw providerError({ kind: "missing_key", message: missingKey("fal.ai") });
-  }
-  return key;
+  return requireKey(deps.key(), "fal.ai");
 }
 
 // A content-policy refusal is final, named here and made terminal by the wrapper. fal declines
@@ -257,37 +258,15 @@ function refused(answer: z.infer<typeof generated>, prompt: string): void {
   }
 }
 
-// Only the adapter sees the vendor's status code, so only the adapter names the kind.
-function kindOf(status: number): ProviderErrorKind {
-  if (status === 401 || status === 403) {
-    return "auth";
-  }
-  if (status === 429) {
-    return "rate_limit";
-  }
-  // ceiling: everything else is `other` and is retried, so a 422 naming an input this model
-  // does not take fails the same way four times over. A terminal "this will never work" kind
-  // has to reach the port's error contract first, which is not this adapter's to widen.
-  // The provider's own server failed; the same request may well succeed later.
-  if (status >= 500) return "dropped";
-  return "other";
-}
-
 async function failure(response: Response, subject = "image request"): Promise<Error> {
-  const text = await response.text().catch(() => "");
+  const text = await failureText(response);
   // The provider's own words, through the redactor - an error body may quote the key back.
   const message = redact(detailOf(text) || response.statusText);
-  const retryAfterMs = retryAfter(response.headers.get("retry-after"));
-  return providerError({
-    kind: kindOf(response.status),
-    message: httpFailure({
-      provider: "fal.ai",
-      status: response.status,
-      detail: message,
-      subject,
-    }),
-    ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
-  });
+  return httpProviderError(
+    response,
+    kindOfStatus(response.status),
+    httpFailure({ provider: "fal.ai", status: response.status, detail: message, subject }),
+  );
 }
 
 function detailOf(text: string): string {
@@ -311,12 +290,4 @@ function parse(text: string): z.infer<typeof generated> {
     });
   }
   return parsed.data;
-}
-
-function safeJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return undefined;
-  }
 }

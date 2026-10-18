@@ -1,10 +1,16 @@
 import { z } from "zod";
 import { redact } from "../../kernel/log.js";
-import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
+import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import type { TtsAudio, TtsPort, TtsRequest } from "../../kernel/ports/tts.js";
-import { httpFailure, missingKey, noAudio, voiceFix } from "../explain.js";
-import { retryAfter } from "../retry-after.js";
+import { httpFailure, noAudio, voiceFix } from "../explain.js";
+import {
+  failureText,
+  httpProviderError,
+  kindOfStatus,
+  requireKey,
+  safeJson,
+} from "../http-failure.js";
 import { cartesiaLanguages, lookUp } from "./voice-languages.js";
 
 // The HTTP gateway adapter for Cartesia. `fetch` and
@@ -89,46 +95,25 @@ export function cartesiaTts(deps: CartesiaDeps): TtsPort {
 }
 
 function keyOf(deps: CartesiaDeps): string {
-  const key = deps.key();
-  // An absent key is terminal, so it never becomes a request.
-  if (key === undefined || key === "") {
-    throw providerError({ kind: "missing_key", message: missingKey("Cartesia") });
-  }
-  return key;
-}
-
-function kindOf(status: number): ProviderErrorKind {
-  if (status === 401 || status === 403) {
-    return "auth";
-  }
-  // `concurrency_limited` is the plan's own limit and arrives as a 429 like any other, so
-  // the status is enough and the code below only reaches the message.
-  if (status === 429) {
-    return "rate_limit";
-  }
-  // ceiling: as in the other two adapters, everything else is `other` and is retried.
-  // The provider's own server failed; the same request may well succeed later.
-  if (status >= 500) return "dropped";
-  return "other";
+  return requireKey(deps.key(), "Cartesia");
 }
 
 async function failure(response: Response, voiceId: string): Promise<Error> {
-  const text = await response.text().catch(() => "");
+  const text = await failureText(response);
   const message = redact(detailOf(text) || response.statusText);
-  const retryAfterMs = retryAfter(response.headers.get("retry-after"));
-  return providerError({
-    kind: kindOf(response.status),
+  return httpProviderError(
+    response,
+    kindOfStatus(response.status),
     // `voice_not_found` has to say which voice was asked for; Cartesia's
     // own message does not repeat the id.
-    message: httpFailure({
+    httpFailure({
       provider: "Cartesia",
       status: response.status,
       detail: message,
       subject: `narration request for voice "${voiceId}"`,
       fix: voiceFix(voiceId),
     }),
-    ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
-  });
+  );
 }
 
 function detailOf(text: string): string {
@@ -141,12 +126,4 @@ function detailOf(text: string): string {
   // both are the provider's own words, so both are shown.
   const parts = [code, message].filter((part) => part !== undefined && part !== "");
   return parts.length === 0 ? text.trim() : parts.join(": ");
-}
-
-function safeJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return undefined;
-  }
 }

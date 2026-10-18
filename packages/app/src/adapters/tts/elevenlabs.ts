@@ -1,10 +1,16 @@
 import { z } from "zod";
 import { redact } from "../../kernel/log.js";
-import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
+import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import type { TtsAudio, TtsPort, TtsRequest } from "../../kernel/ports/tts.js";
-import { httpFailure, missingKey, noAudio, refreshList, unreadable, voiceFix } from "../explain.js";
-import { retryAfter } from "../retry-after.js";
+import { httpFailure, noAudio, refreshList, unreadable, voiceFix } from "../explain.js";
+import {
+  failureText,
+  httpProviderError,
+  kindOfStatus,
+  requireKey,
+  safeJson,
+} from "../http-failure.js";
 import { elevenLabsLanguages, lookUp } from "./voice-languages.js";
 
 // The HTTP gateway adapter for ElevenLabs: the platform's own `fetch` and nothing else. The
@@ -129,40 +135,19 @@ export function elevenLabsTts(deps: ElevenLabsDeps): TtsPort {
 }
 
 function keyOf(deps: ElevenLabsDeps): string {
-  const key = deps.key();
-  // `missing_key`, not `auth`, because that rule makes it terminal.
-  if (key === undefined || key === "") {
-    throw providerError({ kind: "missing_key", message: missingKey("ElevenLabs") });
-  }
-  return key;
-}
-
-// Only the adapter sees the vendor's status code, so only the adapter names the kind.
-function kindOf(status: number): ProviderErrorKind {
-  if (status === 401 || status === 403) {
-    return "auth";
-  }
-  if (status === 429) {
-    return "rate_limit";
-  }
-  // ceiling: everything else is `other` and is retried, so a text past the character limit
-  // fails the same way four times over. A terminal "this will never work" kind has to reach the
-  // port's error contract first, which is not this adapter's to widen.
-  // The provider's own server failed; the same request may well succeed later.
-  if (status >= 500) return "dropped";
-  return "other";
+  return requireKey(deps.key(), "ElevenLabs");
 }
 
 async function failure(response: Response, voiceId?: string, next?: string): Promise<Error> {
-  const text = await response.text().catch(() => "");
+  const text = await failureText(response);
   // The provider's own words, through the redactor - an error body may quote the key back.
   const message = redact(detailOf(text) || response.statusText);
-  const retryAfterMs = retryAfter(response.headers.get("retry-after"));
-  return providerError({
-    kind: kindOf(response.status),
+  return httpProviderError(
+    response,
+    kindOfStatus(response.status),
     // A rejected voice ID has to be named, and it is the one part of the
     // request the user chose. It is not secret, unlike everything else on the wire.
-    message: httpFailure({
+    httpFailure({
       provider: "ElevenLabs",
       status: response.status,
       detail: message,
@@ -174,8 +159,7 @@ async function failure(response: Response, voiceId?: string, next?: string): Pro
             fix: voiceFix(voiceId),
           }),
     }),
-    ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
-  });
+  );
 }
 
 function detailOf(text: string): string {
@@ -190,12 +174,4 @@ function detailOf(text: string): string {
   // Both halves are kept: the status is the machine-readable reason
   // (`max_character_limit_exceeded`, `voice_not_found`) and the message is the sentence.
   return [detail.status, detail.message].filter((part) => part !== undefined).join(": ");
-}
-
-function safeJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return undefined;
-  }
 }

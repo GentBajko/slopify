@@ -3,8 +3,14 @@ import { redact } from "../../kernel/log.js";
 import type { GeneratedImage, ImagePort, ImageRequest } from "../../kernel/ports/image.js";
 import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
-import { httpFailure, missingKey, noImage, quoted, refusedImage, unreadable } from "../explain.js";
-import { retryAfter } from "../retry-after.js";
+import { httpFailure, noImage, quoted, refusedImage, unreadable } from "../explain.js";
+import {
+  failureText,
+  httpProviderError,
+  kindOfStatus,
+  requireKey,
+  safeJson,
+} from "../http-failure.js";
 import { describeBytes, sniffImage } from "./bytes.js";
 import { discoverGoogleImages } from "./models.js";
 import { referencePictures, withReferences } from "./reference.js";
@@ -147,12 +153,7 @@ function decode(part: z.infer<typeof content>): GeneratedImage {
 }
 
 function keyOf(deps: GoogleImageDeps): string {
-  // `missing_key`, not `auth`, because that rule makes it terminal.
-  const key = deps.key();
-  if (key === undefined || key === "") {
-    throw providerError({ kind: "missing_key", message: missingKey("Google") });
-  }
-  return key;
+  return requireKey(deps.key(), "Google");
 }
 
 // Only the adapter sees the vendor's status code, so only the adapter names the kind.
@@ -170,27 +171,19 @@ function kindOf(
   if (status === 400 && refusalWords.test(message)) {
     return "refusal";
   }
-  if (status === 401 || status === 403) {
-    return "auth";
+  // Interactions wraps quota failures in a string-coded error and exposes the limit
+  // in the message. Zero allocated capacity cannot be fixed by waiting and retrying.
+  if (
+    status === 429 &&
+    /quota exceeded for metric:[^\r\n]*?\blimit:\s*0\s*(?:,|$)/im.test(message)
+  ) {
+    return "unsupported";
   }
-  if (status === 429) {
-    // Interactions wraps quota failures in a string-coded error and exposes the limit
-    // in the message. Zero allocated capacity cannot be fixed by waiting and retrying.
-    if (/quota exceeded for metric:[^\r\n]*?\blimit:\s*0\s*(?:,|$)/im.test(message)) {
-      return "unsupported";
-    }
-    return "rate_limit";
-  }
-  // ceiling: everything else is `other` and is retried, so a prompt past the model's limit
-  // fails the same way four times over. A terminal "this will never work" kind has to reach
-  // the port's error contract first, which is not this adapter's to widen.
-  // The provider's own server failed; the same request may well succeed later.
-  if (status >= 500) return "dropped";
-  return "other";
+  return kindOfStatus(status);
 }
 
 async function failure(response: Response): Promise<Error> {
-  const text = await response.text().catch(() => "");
+  const text = await failureText(response);
   const parsed = errorBody.safeParse(safeJson(text));
   // The provider's own words, through the redactor - an error body may quote the key back.
   const named = parsed.success ? parsed.data.error.status : undefined;
@@ -203,26 +196,24 @@ async function failure(response: Response): Promise<Error> {
         (one) => one["@type"] === "type.googleapis.com/google.rpc.RetryInfo",
       )?.retryDelay
     : undefined;
-  const retryAfterMs =
-    retryAfter(response.headers.get("retry-after")) ?? googleRetryDelay(delay, message);
   const detail = message || response.statusText;
-  return providerError({
+  return httpProviderError(
+    response,
     kind,
-    message:
-      kind === "unsupported"
-        ? `Google gives this API key no image quota for this model${quoted(`error ${String(response.status)}`, detail)}. Retrying will not help: turn on billing for the key's project in Google AI Studio, or choose another image provider in the Providers section of Edit project.`
-        : // PERMISSION_DENIED and FAILED_PRECONDITION also cover keys without access, billing
-          // and region limits, so they read as a content refusal only when Google says so.
-          kind === "refusal" && refusalWords.test(message)
-          ? refusedImage("Google", detail)
-          : httpFailure({
-              provider: "Google",
-              status: response.status,
-              detail,
-              subject: "image request",
-            }),
-    ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
-  });
+    kind === "unsupported"
+      ? `Google gives this API key no image quota for this model${quoted(`error ${String(response.status)}`, detail)}. Retrying will not help: turn on billing for the key's project in Google AI Studio, or choose another image provider in the Providers section of Edit project.`
+      : // PERMISSION_DENIED and FAILED_PRECONDITION also cover keys without access, billing
+        // and region limits, so they read as a content refusal only when Google says so.
+        kind === "refusal" && refusalWords.test(message)
+        ? refusedImage("Google", detail)
+        : httpFailure({
+            provider: "Google",
+            status: response.status,
+            detail,
+            subject: "image request",
+          }),
+    googleRetryDelay(delay, message),
+  );
 }
 
 function googleRetryDelay(delay: string | undefined, message: string): number | undefined {
@@ -243,12 +234,4 @@ function parse(text: string): z.infer<typeof interaction> {
     });
   }
   return parsed.data;
-}
-
-function safeJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return undefined;
-  }
 }

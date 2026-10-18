@@ -8,17 +8,16 @@ import type {
   ImagePort,
   ImageRequest,
 } from "../../kernel/ports/image.js";
-import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
+import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { httpFailure, noImage, providerSaid, refusedImage, unreadable } from "../explain.js";
 import {
-  httpFailure,
-  missingKey,
-  noImage,
-  providerSaid,
-  refusedImage,
-  unreadable,
-} from "../explain.js";
-import { retryAfter } from "../retry-after.js";
+  failureText,
+  httpProviderError,
+  kindOfStatus,
+  requireKey,
+  safeJson,
+} from "../http-failure.js";
 import { downloadImage } from "./bytes.js";
 import { withReferences } from "./reference.js";
 import { dataUri, downloadVideo } from "./video.js";
@@ -221,47 +220,25 @@ function declined(current: z.infer<typeof prediction>): Error {
 }
 
 function auth(deps: ReplicateImageDeps): Record<string, string> {
-  // `missing_key`, not `auth`, because that rule makes it terminal.
-  const key = deps.key();
-  if (key === undefined || key === "") {
-    throw providerError({ kind: "missing_key", message: missingKey("Replicate") });
-  }
-  return { Authorization: `Bearer ${key}` };
-}
-
-// Only the adapter sees the vendor's status code, so only the adapter names the kind.
-function kindOf(status: number): ProviderErrorKind {
-  if (status === 401 || status === 403) {
-    return "auth";
-  }
-  if (status === 429) {
-    return "rate_limit";
-  }
-  // ceiling: everything else is `other` and is retried, so a 402 with no credit left fails the
-  // same way four times over. A terminal "this will never work" kind has to reach the port's
-  // error contract first, which is not this adapter's to widen.
-  // The provider's own server failed; the same request may well succeed later.
-  if (status >= 500) return "dropped";
-  return "other";
+  return { Authorization: `Bearer ${requireKey(deps.key(), "Replicate")}` };
 }
 
 async function failure(response: Response, subject = "image request"): Promise<Error> {
-  const text = await response.text().catch(() => "");
+  const text = await failureText(response);
   const parsed = errorBody.safeParse(safeJson(text));
   // The provider's own words, through the redactor - an error body may quote the key back.
   const detail = parsed.success ? (parsed.data.detail ?? parsed.data.title) : undefined;
   const message = redact(detail ?? text.trim());
-  const retryAfterMs = retryAfter(response.headers.get("retry-after"));
-  return providerError({
-    kind: kindOf(response.status),
-    message: httpFailure({
+  return httpProviderError(
+    response,
+    kindOfStatus(response.status),
+    httpFailure({
       provider: "Replicate",
       status: response.status,
       detail: message || response.statusText,
       subject,
     }),
-    ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
-  });
+  );
 }
 
 function parse(text: string): z.infer<typeof prediction> {
@@ -273,12 +250,4 @@ function parse(text: string): z.infer<typeof prediction> {
     });
   }
   return parsed.data;
-}
-
-function safeJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return undefined;
-  }
 }

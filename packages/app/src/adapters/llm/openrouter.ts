@@ -2,17 +2,16 @@ import { z } from "zod";
 import { redact } from "../../kernel/log.js";
 import type { LlmCompletion, LlmEvent, LlmPort, Usage } from "../../kernel/ports/llm.js";
 import { documentMessages } from "../../kernel/ports/llm-documents.js";
-import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
+import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { droppedStream, httpFailure, providerSaid, refreshList, unreadable } from "../explain.js";
 import {
-  droppedStream,
-  httpFailure,
-  missingKey,
-  providerSaid,
-  refreshList,
-  unreadable,
-} from "../explain.js";
-import { retryAfter } from "../retry-after.js";
+  failureText,
+  httpProviderError,
+  kindOfStatus,
+  requireKey,
+  safeJson,
+} from "../http-failure.js";
 import { noImages } from "./image-workspace.js";
 import { sseData } from "./sse-lines.js";
 
@@ -114,7 +113,7 @@ export function openRouterLlm(deps: OpenRouterDeps): LlmPort {
         // A stream that has already answered 200 reports a mid-flight failure in a data
         // frame; without this the stage would store half an article as a success.
         throw providerError({
-          kind: kindOf(statusOf(chunk.error.code)),
+          kind: kindOfStatus(statusOf(chunk.error.code)),
           message: streamFailure(statusOf(chunk.error.code), redact(chunk.error.message)),
         });
       }
@@ -177,50 +176,23 @@ export function openRouterLlm(deps: OpenRouterDeps): LlmPort {
 }
 
 function headers(key: string | undefined): Record<string, string> {
-  // An attempt that finds no key fails rather than calling anonymously
-  // and being told off by the provider in words the user cannot act on. `missing_key`
-  // rather than `auth` because the same rule makes it terminal: there is nothing to
-  // retry until the user saves a key, and the wrapper is where that is decided.
-  if (key === undefined || key === "") {
-    throw providerError({ kind: "missing_key", message: missingKey("OpenRouter") });
-  }
-  return { Authorization: `Bearer ${key}`, ...appHeaders };
-}
-
-// Only the adapter sees the vendor's status code, so only the adapter names the kind.
-function kindOf(status: number): ProviderErrorKind {
-  if (status === 401 || status === 403) {
-    return "auth";
-  }
-  if (status === 429) {
-    return "rate_limit";
-  }
-  // ceiling: everything else is `other` and is retried, so a 400 or a 402 fails the same
-  // way four times over. A terminal "this will never work" kind has to reach the port's
-  // error contract first, which is not this adapter's to widen.
-  // The provider's own server failed; the same request may well succeed later.
-  if (status >= 500) return "dropped";
-  return "other";
+  // An attempt that finds no key fails rather than calling anonymously and being told off by
+  // the provider in words the user cannot act on.
+  return { Authorization: `Bearer ${requireKey(key, "OpenRouter")}`, ...appHeaders };
 }
 
 async function failure(response: Response, next?: string): Promise<Error> {
-  const text = await response.text().catch(() => "");
+  const text = await failureText(response);
   const parsed = errorBody.safeParse(safeJson(text));
   // The provider's own words, through the redactor - an error body may quote the key back.
   const message = redact(
     parsed.success ? parsed.data.error.message : text.trim() || response.statusText,
   );
-  const retryAfterMs = retryAfter(response.headers.get("retry-after"));
-  return providerError({
-    kind: kindOf(response.status),
-    message: httpFailure({
-      provider: "OpenRouter",
-      status: response.status,
-      detail: message,
-      next,
-    }),
-    ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
-  });
+  return httpProviderError(
+    response,
+    kindOfStatus(response.status),
+    httpFailure({ provider: "OpenRouter", status: response.status, detail: message, next }),
+  );
 }
 
 // A mid-stream error carries an HTTP-like code; with none, the provider's words are all there is.
@@ -251,12 +223,4 @@ function parseChunk(data: string): z.infer<typeof streamChunk> {
     });
   }
   return parsed.data;
-}
-
-function safeJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return undefined;
-  }
 }
