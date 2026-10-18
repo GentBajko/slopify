@@ -108,9 +108,7 @@ describe("a project's raw prompt", () => {
 
   it("says a scene keyword has no effect on the establishing image or a short's picture", () => {
     for (const promptKey of ["referencePrompt", "shortsImage"]) {
-      const { unmount } = render(
-        <Raw start={"A hall\n{{Slopify_Scene}}"} promptKey={promptKey} />,
-      );
+      const { unmount } = render(<Raw start={"A hall\n{{Slopify_Scene}}"} promptKey={promptKey} />);
       expect(screen.getByText(/has no effect here/)).not.toBeNull();
       unmount();
     }
