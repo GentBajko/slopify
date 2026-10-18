@@ -4,6 +4,7 @@ import { quoteAuditions, speakAudition } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Field, Input } from "@/components/kit/field";
+import { usd } from "@/lib/format";
 import {
   type PronunciationsView,
   pronunciationsQuery,
@@ -17,7 +18,7 @@ type Voice = NonNullable<PronunciationsView["voice"]>;
 
 // A price too small to say in cents.
 export function priceWords(high: number): string {
-  return high > 0 && high < 0.005 ? "under $0.01" : `about $${high.toFixed(2)}`;
+  return high > 0 && high < 0.005 ? "under $0.01" : `about ${usd(high)}`;
 }
 
 const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");

@@ -3,6 +3,7 @@ import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Field, Input } from "@/components/kit/field";
+import { usd } from "@/lib/format";
 import {
   about,
   forAllKey,
@@ -58,7 +59,7 @@ function BudgetField(): ReactElement {
     <Field
       label="Daily sample budget"
       tip="settings.template-studio.budget"
-      help={`The most the studio's paid samples may spend in one day, in US dollars. Spent today: $${data.today.spent.toFixed(2)}; left: $${data.today.left.toFixed(2)}. A CLI plan's calls count as $0.`}
+      help={`The most the studio's paid samples may spend in one day, in US dollars. Spent today: ${usd(data.today.spent)}; left: ${usd(data.today.left)}. A CLI plan's calls count as $0.`}
       error={problem ?? (save.error ? `The budget wasn't saved: ${save.error.message}` : undefined)}
     >
       <div className="flex flex-wrap items-center gap-2">

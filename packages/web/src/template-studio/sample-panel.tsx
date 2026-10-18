@@ -10,6 +10,7 @@ import { SectionHead } from "@/components/kit/section-head";
 import { DataTable } from "@/components/kit/stats";
 import { Status } from "@/components/kit/status";
 import { Steps } from "@/components/kit/steps";
+import { usd } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
   EarlierSamples,
@@ -219,7 +220,7 @@ function ScheduleSample({ view }: { readonly view: StudioView }): ReactElement {
       />
       {cost === null || cost.problem !== null ? null : (
         <p className="m-0 text-small text-ink-2">
-          {`About $${cost.high.toFixed(2)} a month at most, for about ${String(cost.runs)} runs.`}
+          {`About ${usd(cost.high)} a month at most, for about ${String(cost.runs)} runs.`}
         </p>
       )}
       <TextLink to="/calendar" search={{ tab: "schedules" }} className="text-small">

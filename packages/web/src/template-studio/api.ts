@@ -13,7 +13,8 @@ import {
 import type { UseQueryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import type { Api } from "@/api";
-import { failure, understood } from "@/http";
+import { failure, jsonOf, refusalFrom, understood } from "@/http";
+import { usd } from "@/lib/format";
 
 // Library → Templates → Open studio reads one template's studio: its sections, samples and
 // free checks (`/api/template-studio`, not the YouTube Studio pack's `/api/studio`).
@@ -62,31 +63,32 @@ export interface StudioRefusal {
   readonly quote: SampleQuoteView | null;
 }
 
-const refusalSchema = z
-  .object({
-    detail: z.string().optional(),
-    title: z.string().optional(),
-    reason: z.string().optional(),
-    quote: sampleQuoteSchema.optional(),
-  })
-  .loose();
+// The studio's refusals are 400 (invalid) and 409 (changed, priced higher, past the budget);
+// a missing template (404) is a fault the page shows as an error.
+const studioRefusals = { statuses: [400, 409] } as const;
+
+// The extensions a studio refusal may carry beside the shared ones `refusalFrom` reads.
+function extension<T>(raw: unknown, key: string, schema: z.ZodType<T>): T | undefined {
+  const parsed = z
+    .object({ [key]: schema })
+    .loose()
+    .safeParse(raw);
+  return parsed.success ? (parsed.data[key] as T) : undefined;
+}
 
 async function answered<T>(
   response: Response,
   schema: z.ZodType<T>,
 ): Promise<{ readonly ok: true; readonly value: T } | StudioRefusal> {
-  if (response.ok) return { ok: true, value: understood(schema, await response.json()) };
-  if (response.status === 400 || response.status === 409) {
-    const parsed = refusalSchema.safeParse(await response.json());
-    if (parsed.success)
-      return {
-        ok: false,
-        reason: parsed.data.reason ?? "conflict",
-        message: parsed.data.detail ?? parsed.data.title ?? "Slopify refused the request.",
-        quote: parsed.data.quote ?? null,
-      };
-  }
-  throw await failure(response);
+  const raw = await jsonOf(response);
+  if (response.ok) return { ok: true, value: understood(schema, raw) };
+  const refusal = refusalFrom(response, raw, studioRefusals);
+  return {
+    ok: false,
+    reason: refusal.reason ?? "conflict",
+    message: refusal.message,
+    quote: extension(raw, "quote", sampleQuoteSchema) ?? null,
+  };
 }
 
 const base = (api: Api, id: string) =>
@@ -227,9 +229,10 @@ export async function writeStudioSettings(
   return understood(studioSettingsSchema, await response.json());
 }
 
-// "about $0.12", the way every price in the studio is said.
+// "about $0.12", the way every price in the studio is said; a fraction of a cent keeps its
+// digits ("about $0.0032"), never "$0.00".
 export function about(high: number): string {
-  return `about $${high.toFixed(2)}`;
+  return `about ${usd(high)}`;
 }
 
 // Settings → Template studio → Make samples for all: every template needing a sample, priced
@@ -276,26 +279,19 @@ export async function makeSamplesForAll(
     `${api.origin}/api/template-studio/samples-for-all`,
     post("POST", input),
   );
+  const raw = await jsonOf(response);
   if (response.ok) {
     const value = understood(
       z.object({ queued: z.array(z.string()), held: z.array(z.string()) }).loose(),
-      await response.json(),
+      raw,
     );
     return { ok: true, queued: value.queued.length, held: value.held.length };
   }
-  if (response.status === 400 || response.status === 409) {
-    const parsed = z
-      .object({ detail: z.string().optional(), quote: forAllQuoteSchema.optional() })
-      .loose()
-      .safeParse(await response.json());
-    if (parsed.success)
-      return {
-        ok: false,
-        message: parsed.data.detail ?? "Slopify refused the request.",
-        quote: parsed.data.quote ?? null,
-      };
-  }
-  throw await failure(response);
+  return {
+    ok: false,
+    message: refusalFrom(response, raw, studioRefusals).message,
+    quote: extension(raw, "quote", forAllQuoteSchema) ?? null,
+  };
 }
 
 const readyProblemSchema = z
@@ -319,19 +315,12 @@ export async function markTemplateReady(
 > {
   const response = await api.fetch(`${base(api, id)}/ready`, post("POST", { version }));
   if (response.ok) return { ok: true };
-  if (response.status === 400 || response.status === 409) {
-    const parsed = z
-      .object({ detail: z.string().optional(), problems: z.array(readyProblemSchema).optional() })
-      .loose()
-      .safeParse(await response.json());
-    if (parsed.success)
-      return {
-        ok: false,
-        message: parsed.data.detail ?? "Slopify refused the request.",
-        problems: parsed.data.problems ?? [],
-      };
-  }
-  throw await failure(response);
+  const raw = await jsonOf(response);
+  return {
+    ok: false,
+    message: refusalFrom(response, raw, studioRefusals).message,
+    problems: extension(raw, "problems", z.array(readyProblemSchema)) ?? [],
+  };
 }
 
 // Voice → Say it as: the names the sample's script says, and saying one another way.

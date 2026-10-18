@@ -7,6 +7,7 @@ import { ActionBar, StatusSlot, type StatusTone } from "@/components/kit/action-
 import { Button } from "@/components/kit/button";
 import { TextLink } from "@/components/kit/link";
 import { Switch } from "@/components/kit/switch";
+import { usd } from "@/lib/format";
 import { templatesKey } from "@/templates/api";
 import { about, quoteSample, saveInStudio, templateStudioKey } from "./api";
 
@@ -133,7 +134,7 @@ export function SaveBar({
         shown !== undefined && !shown.fits && status === undefined ? (
           <StatusSlot tone="warning">
             <span className="min-w-0 truncate">
-              {`This sample costs ${about(shown.high)} and $${shown.budget.left.toFixed(2)} of today's $${shown.budget.budget.toFixed(2)} sample budget is left. Save without a sample, or raise it in `}
+              {`This sample costs ${about(shown.high)} and ${usd(shown.budget.left)} of today's ${usd(shown.budget.budget)} sample budget is left. Save without a sample, or raise it in `}
             </span>
             <TextLink to="/settings" search={{ section: "template-studio" }} className="shrink-0">
               Settings → Template studio
