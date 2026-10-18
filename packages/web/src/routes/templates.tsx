@@ -286,9 +286,10 @@ export function TemplatesRoute({
                       selected={template.id === picked}
                       meta={
                         <>
+                          {/* First, so a narrow row cuts the date rather than the badge. */}
+                          {template.gate === undefined ? null : <GateBadge gate={template.gate} />}
                           {channelName(template) === undefined ? "" : `${channelName(template)} · `}
                           Version {template.version} · updated <Stamp iso={template.updatedAt} />
-                          {template.gate === undefined ? null : <GateBadge gate={template.gate} />}
                         </>
                       }
                       actions={
@@ -381,7 +382,7 @@ export function TemplatesRoute({
 function GateBadge({ gate }: { readonly gate: TemplateGate }): ReactElement {
   const badge = templateGateBadge(gate);
   return (
-    <Badge tone={badge.tone} className="ml-2" title={badge.detail}>
+    <Badge tone={badge.tone} className="mr-2" title={badge.detail}>
       {badge.word}
     </Badge>
   );

@@ -6,6 +6,7 @@ import { Navigate } from "@tanstack/react-router";
 import { type ReactElement, useCallback, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { useAssistantContext } from "@/assistant/screen";
+import { useDocumentTitle } from "@/components/document-title";
 import type { StatusTone } from "@/components/kit/action-bar";
 import { Fold } from "@/components/kit/fold";
 import { PageHeader, Workspace } from "@/components/kit/layout";
@@ -111,6 +112,7 @@ function Studio({
 }): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
+  useDocumentTitle(`${view.template.name} · Template studio`);
   const saved = view.template.document;
   const [document, setDocument] = useState<PlayDraftDocument>(saved);
   const [pane, setPane] = useState<Pane>("settings");

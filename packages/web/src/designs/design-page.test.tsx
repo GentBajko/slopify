@@ -105,6 +105,44 @@ describe("a design's page", () => {
     ).toContain("/steps/s1/picture");
   });
 
+  it("shows a designed piece as drawn with its text, in the format picked", async () => {
+    const user = userEvent.setup();
+    const doc = {
+      ...blankDocument("picture"),
+      formats: [{ format: "a4" as const }, { format: "square" as const }],
+    };
+    renderRouted(
+      <DesignRoute designId="d1" />,
+      deps(design({ kind: "design", name: "Jazz night", document: doc })),
+    );
+    const drawn = await screen.findByRole("img", { name: "Jazz night as drawn, Poster A4" });
+    expect(drawn.getAttribute("src")).toContain(
+      `/api/designs/d1/files/a4.png?v=${encodeURIComponent(at)}`,
+    );
+    await user.selectOptions(screen.getByLabelText("Format shown"), "square");
+    expect(
+      screen.getByRole("img", { name: "Jazz night as drawn, Square 1:1" }).getAttribute("src"),
+    ).toContain("/files/square.png");
+    // Before is the bare picture the edit started from.
+    await user.click(screen.getByRole("button", { name: "Before" }));
+    expect(screen.getByRole("img", { name: "Version 1 of Jazz night" })).not.toBeNull();
+  });
+
+  it("carries only the open tab's actions in the bar", async () => {
+    const user = userEvent.setup();
+    renderRouted(
+      <DesignRoute designId="d1" />,
+      deps(design({ kind: "design", document: blankDocument("picture") })),
+    );
+    await waitFor(() => expect(primary()).not.toBeNull());
+    await user.click(screen.getByRole("tab", { name: "Text" }));
+    expect(screen.queryByRole("button", { name: /^(Edit|Make artwork) · / })).toBeNull();
+    await user.click(screen.getByRole("tab", { name: "Formats" }));
+    expect(screen.queryByRole("button", { name: /^(Edit|Make artwork) · / })).toBeNull();
+    await user.click(screen.getByRole("tab", { name: "Edit" }));
+    expect(primary()).not.toBeNull();
+  });
+
   it("can't show Before for a picture with no version before it", async () => {
     renderRouted(
       <DesignRoute designId="d1" />,

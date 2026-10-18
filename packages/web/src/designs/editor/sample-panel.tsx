@@ -16,7 +16,7 @@ import { formatName } from "../document";
 // changes only the text or formats redraws it at once for free; a new picture is paid, and a
 // sample that would cost more than shown or go over the day's budget waits here for Make sample.
 
-function aspectOf(format: DesignFormat): "landscape" | "portrait" | "square" {
+export function formatAspect(format: DesignFormat): "landscape" | "portrait" | "square" {
   const { width, height } = frames[format];
   return width > height * 1.15 ? "landscape" : height > width * 1.15 ? "portrait" : "square";
 }
@@ -70,7 +70,7 @@ export function SamplePanel({ template }: { readonly template: TemplateView }): 
         />
       ) : null}
       <MediaFrame
-        aspect={aspectOf(picture)}
+        aspect={formatAspect(picture)}
         alt={`Sample of ${template.name}, ${formatName(format)}`}
         {...(drawn && sample?.designId != null && sample.state === "done"
           ? {
@@ -84,7 +84,7 @@ export function SamplePanel({ template }: { readonly template: TemplateView }): 
                     ? "Making the sample's artwork…"
                     : "No sample for this version",
             })}
-        className={`mx-auto w-full [&_img]:object-contain ${sampleWidth[aspectOf(picture)]}`}
+        className={`mx-auto w-full [&_img]:object-contain ${sampleWidth[formatAspect(picture)]}`}
       />
       {sample?.state === "held" || sample?.state === "failed" || sample === null ? (
         <Callout

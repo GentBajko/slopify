@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { type ReactElement, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
+import { useDocumentTitle } from "@/components/document-title";
 import { ActionBar, StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { Field, Textarea } from "@/components/kit/field";
@@ -26,14 +27,16 @@ import {
   updateDesign,
 } from "./api";
 import { FormatsPanel, TextPanel } from "./design-panels";
-import { DesignPicture, headStep } from "./design-picture";
+import { DesignPicture, DesignVersions, headStep } from "./design-picture";
 import { blankDocument } from "./document";
 import { MadeWith } from "./made-with";
 
 // One design: its picture with every version, and the tabs that change it. Edit sends the
 // picture to an image model with what to change (paid, quoted on the button); Text and Formats
-// change Slopify's own layer and save as they are typed (free). The paid action is always on
-// screen in the sticky bar, disabled while a picture is being made, never taken away.
+// change Slopify's own layer and save as they are typed (free). The sticky bar carries what the
+// open tab does: Edit's paid action (disabled while a picture is being made, never taken away
+// while Edit is open), and for Text and Formats only the saving status, as they save by
+// themselves.
 
 type Tab = "edit" | "text" | "formats";
 
@@ -63,6 +66,7 @@ export function DesignRoute({ designId }: { readonly designId: string }): ReactE
 
 function DesignEditor({ design }: { readonly design: DesignView }): ReactElement {
   const { api } = useApp();
+  useDocumentTitle(`${design.name} · Design`);
   const client = useQueryClient();
   const [tab, setTab] = useState<Tab>("edit");
   const [instruction, setInstruction] = useState("");
@@ -240,7 +244,7 @@ function DesignEditor({ design }: { readonly design: DesignView }): ReactElement
             : status;
 
   return (
-    <div>
+    <>
       <PageHeader
         crumb={
           <EditorCrumb>
@@ -250,14 +254,16 @@ function DesignEditor({ design }: { readonly design: DesignView }): ReactElement
         title={design.name}
         meta={`${design.kind === "edit" ? "Picture edit" : "Designed piece"} · ${String(design.steps.length)} ${design.steps.length === 1 ? "version" : "versions"}`}
       />
+      {/* Picture, then the tabs that change it, then the versions: on a phone the tabs come
+          straight under the picture; on a wide window the versions sit under the picture. */}
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,440px)]">
-        <DesignPicture
-          design={design}
-          pending={step.isPending || busy}
-          onContinue={(stepId) => step.mutate({ kind: "continue", stepId })}
-          onRetry={(stepId) => step.mutate({ kind: "retry", stepId })}
-        />
-        <section aria-label="Change the design" className="flex min-w-0 flex-col gap-4">
+        <div className="min-w-0 lg:col-start-1 lg:row-start-1">
+          <DesignPicture design={design} doc={doc} />
+        </div>
+        <section
+          aria-label="Change the design"
+          className="flex min-w-0 flex-col gap-4 lg:col-start-2 lg:row-span-2 lg:row-start-1"
+        >
           <Tabs<Tab>
             label="Change the design"
             idPrefix="design"
@@ -336,6 +342,14 @@ function DesignEditor({ design }: { readonly design: DesignView }): ReactElement
             )}
           </div>
         </section>
+        <div className="min-w-0 lg:col-start-1 lg:row-start-2">
+          <DesignVersions
+            design={design}
+            pending={step.isPending || busy}
+            onContinue={(stepId) => step.mutate({ kind: "continue", stepId })}
+            onRetry={(stepId) => step.mutate({ kind: "retry", stepId })}
+          />
+        </div>
       </div>
       <ActionBar
         status={
@@ -358,19 +372,21 @@ function DesignEditor({ design }: { readonly design: DesignView }): ReactElement
           </StatusSlot>
         }
       >
-        <Button
-          variant="primary"
-          disabled={blocked !== undefined}
-          disabledReason={blocked}
-          focusableWhenDisabled
-          onClick={() => {
-            setStatus(null);
-            paid.mutate();
-          }}
-        >
-          {`${needsArtwork ? "Make artwork" : "Edit"} · ${priceWords(quote)}`}
-        </Button>
+        {tab === "edit" ? (
+          <Button
+            variant="primary"
+            disabled={blocked !== undefined}
+            disabledReason={blocked}
+            focusableWhenDisabled
+            onClick={() => {
+              setStatus(null);
+              paid.mutate();
+            }}
+          >
+            {`${needsArtwork ? "Make artwork" : "Edit"} · ${priceWords(quote)}`}
+          </Button>
+        ) : null}
       </ActionBar>
-    </div>
+    </>
   );
 }
