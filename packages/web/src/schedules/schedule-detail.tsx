@@ -8,7 +8,7 @@ import { useCommand } from "@/components/kit/command-palette";
 import { Rule } from "@/components/kit/layout";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
-import { readSchedule, scheduleAction } from "./api";
+import { scheduleAction, scheduleDetailQuery } from "./api";
 import { TopicGenerationPanel } from "./held-topics";
 import { InlineTopics } from "./inline-topics";
 import { type Act, ScheduleStatus } from "./schedule-row";
@@ -31,15 +31,7 @@ export function ScheduleDetail({
   readonly onDuplicate: () => void;
 }): ReactElement {
   const { api } = useApp();
-  const details = useQuery({
-    queryKey: ["schedule", schedule.id],
-    queryFn: async () => {
-      const reply = await readSchedule(api, schedule.id);
-      if (!reply.ok) throw new Error(reply.message);
-      return reply.value;
-    },
-    refetchInterval: 30_000,
-  });
+  const details = useQuery(scheduleDetailQuery(api, schedule.id));
   const live = schedule.deletedAt === null;
   const editable = live && (schedule.status === "active" || schedule.status === "paused");
   const paused = schedule.status === "paused";

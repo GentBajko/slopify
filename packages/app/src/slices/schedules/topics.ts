@@ -23,6 +23,7 @@ import {
 } from "./schema.js";
 import { newTopics } from "./similar.js";
 import { templateKeywords, topicRowProblems } from "./topic-list.js";
+import { pinTopic, rankedItems, saveScores, scoreTopics } from "./topic-scores.js";
 
 // A schedule that finds its own topics asks an LLM whenever its queue holds fewer than
 // `keepAtLeast`. Only one generation per schedule runs at a time: a lease on the schedule row
@@ -184,28 +185,56 @@ async function ask(
     return fail(
       `${llm.provider} (${llm.model}) answered without a list of topics. Try again, or pick another LLM under Edit → Topic generation.`,
     );
+  // Scored outside the transaction: search may take seconds, and never holds the database.
+  const scores =
+    schedule.topicScoring === "off"
+      ? undefined
+      : await scoreTopics(
+          deps,
+          schedule.topicScoring,
+          newTopics(suggested, known),
+          known,
+          template?.document.form.language ?? "en",
+          options.signal,
+        );
   return transact(deps.db, (): GenerateResult => {
     const current = scheduleById(deps.db, schedule.id);
     if (current === undefined || current.deletedAt !== null)
       return { ok: false, reason: "not-found", message: "This schedule no longer exists." };
     // Checked again against what is there now: a topic added while the LLM was thinking counts.
-    const fresh = newTopics(suggested, knownTitles(deps, schedule.id)).slice(
-      0,
-      Math.max(0, Math.min(wanted, queueMax - current.items.length)),
-    );
+    const candidates = newTopics(suggested, knownTitles(deps, schedule.id));
+    // With scoring, the best-scored are kept; without, the LLM's own order, as before.
+    const fresh = (
+      scores === undefined
+        ? candidates
+        : candidates.toSorted((a, b) => (scores.get(b)?.score ?? -1) - (scores.get(a)?.score ?? -1))
+    ).slice(0, Math.max(0, Math.min(wanted, queueMax - current.items.length)));
     if (fresh.length === 0)
       return fail(
         "every topic the LLM suggested was already made, queued or turned down for this schedule. Add more detail to the series brief under Edit, so it has new ground to cover.",
       );
     const at = deps.clock.now().toISOString();
     const mode = current.topicGeneration.mode === "hold" ? "hold" : "queue";
+    if (scores !== undefined)
+      saveScores(
+        deps.db,
+        schedule.id,
+        new Map(
+          fresh.flatMap((title) => {
+            const score = scores.get(title);
+            return score === undefined ? [] : [[title, score] as const];
+          }),
+        ),
+        at,
+      );
     if (mode === "queue") {
+      const items = [...current.items, ...fresh.map((title) => ({ title, values: {} }))];
       deps.db
         .prepare(
           "UPDATE schedules SET items_json=?,version=version+1,updated_at=? WHERE id=? AND deleted_at IS NULL",
         )
         .run(
-          JSON.stringify([...current.items, ...fresh.map((title) => ({ title, values: {} }))]),
+          JSON.stringify(scores === undefined ? items : rankedItems(deps.db, schedule.id, items)),
           at,
           schedule.id,
         );
@@ -219,6 +248,7 @@ async function ask(
           )
           .run(deps.uuid(), schedule.id, title, start + index, at);
       });
+      if (scores !== undefined) rankHeld(deps, schedule.id);
     }
     deps.db
       .prepare(
@@ -240,6 +270,20 @@ async function ask(
       }
     }
     return { ok: true, added: fresh.length, mode };
+  });
+}
+
+// Held topics in score order: unscored ones first as they were, then the scored, best first.
+export function rankHeld(deps: Pick<ScheduleDeps, "db">, scheduleId: string): void {
+  const held = deps.db
+    .prepare(
+      "SELECT id,title FROM schedule_topics WHERE schedule_id=? AND state='held' ORDER BY rank,created_at,id",
+    )
+    .all(scheduleId)
+    .map((row) => z.object({ id: z.string(), title: z.string() }).parse(row));
+  const rank = deps.db.prepare("UPDATE schedule_topics SET rank=? WHERE id=?");
+  rankedItems(deps.db, scheduleId, held).forEach((topic, index) => {
+    rank.run(index, topic.id);
   });
 }
 
@@ -547,6 +591,7 @@ export function moveTopic(
     if (topic === undefined) return { ok: false, reason: "invalid-input" };
     items.splice(Math.min(parsed.data.to, items.length), 0, topic);
     writeItems(deps, scheduleId, schedule.version, items);
+    pinTopic(deps.db, scheduleId, topic.title);
     return { ok: true, value: scheduleById(deps.db, scheduleId) as ScheduleSummary };
   });
 }

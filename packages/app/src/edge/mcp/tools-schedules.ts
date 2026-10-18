@@ -17,13 +17,14 @@ export const scheduleTools: readonly RouteTool[] = [
     name: "get_schedule",
     route: "GET /api/schedules/:id",
     title: "Read a schedule",
-    description: "One schedule with its topic queue and release lines.",
+    description:
+      "One schedule with its topic queue and release lines, and scores: each queued topic's score (0-100) and reasons by normalised title while the schedule ranks topics (topicScoring library or search).",
   },
   {
     name: "update_schedule",
     route: "PUT /api/schedules/:id",
     title: "Save a schedule",
-    description: `${formBody("the schedule editor")} Its release lines set when each run's videos are released.`,
+    description: `${formBody("the schedule editor")} Its release lines set when each run's videos are released. topicScoring ranks generated topics: "off" (the default), "library" (by what the library already covers) or "search" (also by public search interest: sends topic titles to Google, DuckDuckGo and Wikipedia); left out, a save keeps it.`,
   },
   {
     name: "pause_schedule",
@@ -77,6 +78,14 @@ export const scheduleTools: readonly RouteTool[] = [
     route: "POST /api/schedules/:id/topics/generate",
     title: "Suggest topics",
     description: "Asks the schedule's text model for topics, a paid call, like Suggest topics.",
+  },
+  {
+    name: "score_topics",
+    route: "POST /api/schedules/:id/topics/score",
+    title: "Rescore topics",
+    description:
+      "Rescore, like the button under the schedule's queue: scores every queued and held topic again (by what the library already covers; with search ranking also by Google, DuckDuckGo and Wikipedia, which are sent each topic's title) and puts them in score order. Topics the person added or moved keep their places. Refused while the schedule's Rank topics is Off. get_schedule and list_held_topics answer the scores (score 0-100 and reasons, by normalised title).",
+    reachesOut: "asks",
   },
   {
     name: "approve_all_topics",

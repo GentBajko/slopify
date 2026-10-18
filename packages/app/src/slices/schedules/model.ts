@@ -1,4 +1,5 @@
 import type { ScheduleTopicsEvent } from "../../kernel/events.js";
+import type { TopicInterest } from "../../kernel/ports/interest.js";
 import type { StandaloneLlm } from "../../kernel/runner/standalone.js";
 import type { DraftStartDeps } from "../play-drafts/model.js";
 import type { ProjectTemplate } from "../project-templates/model.js";
@@ -22,6 +23,9 @@ export interface ScheduleDeps extends DraftStartDeps {
   // The "Generate topics now" button: the schedule runner starts one generation in the
   // background and tracks it for shutdown.
   readonly requestTopics?: (scheduleId: string) => void;
+  // Public search interest, for schedules set to rank topics by it. Absent: those topics are
+  // scored by the library alone and say search couldn't be reached.
+  readonly interest?: TopicInterest | undefined;
 }
 export type ScheduleResult<T> =
   | { readonly ok: true; readonly value: T }

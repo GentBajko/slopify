@@ -12,6 +12,7 @@ import { alignSubtitlesWith } from "./adapters/alignment/index.js";
 import { prefetchModel } from "./adapters/alignment/prefetch.js";
 import { prepareFfmpeg } from "./adapters/ffmpeg.js";
 import { createHostCliClient } from "./adapters/host-cli/index.js";
+import { createSearchInterest } from "./adapters/interest/search-interest.js";
 import { nodeRunCli } from "./adapters/llm/run-cli.js";
 import { startAutopilot } from "./autopilot-timers.js";
 import { curateRegistry } from "./catalog/registry.js";
@@ -546,6 +547,8 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       ...draftDeps,
       template: (id) => templateById(runtimeDb, id),
       topicLlm: (call) => standaloneLlm(standalone, call),
+      // Asked only for schedules set to rank topics by public search interest.
+      interest: createSearchInterest({ fetch: globalThis.fetch, version, now: () => clock.now() }),
       topicsWaiting: (event) => {
         hub.emitGlobal(event);
         notifier.observeTopics(event);

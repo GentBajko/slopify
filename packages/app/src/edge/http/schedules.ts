@@ -6,6 +6,7 @@ import { calendarRange } from "../../slices/schedules/agenda.js";
 import { rejectHeldTopics, restoreRejectedTopics } from "../../slices/schedules/held-bulk.js";
 import type { ScheduleDeps, ScheduleResult } from "../../slices/schedules/model.js";
 import { preparedTopics, prepareTopic } from "../../slices/schedules/prepare.js";
+import { rescoreTopics } from "../../slices/schedules/rescore.js";
 import {
   calendarMaxDays,
   calendarSchema,
@@ -30,6 +31,7 @@ import {
   resumeSchedule,
   updateSchedule,
 } from "../../slices/schedules/service.js";
+import { scoresFor } from "../../slices/schedules/topic-scores.js";
 import {
   approveHeldTopics,
   editHeldTopic,
@@ -136,6 +138,12 @@ function routes(deps: ScheduleDeps | undefined) {
           ? c.json({
               schedule: scheduleSummarySchema.parse(schedule),
               runs: runs.value.map((run) => scheduleRunSchema.parse(run)),
+              // Each queued and held topic's score and reasons, by `topicKey`, while ranking
+              // is on.
+              scores: scoresFor(service().db, schedule.id, [
+                ...schedule.items.map((item) => item.title),
+                ...heldTopics(service(), schedule.id).map((topic) => topic.title),
+              ]),
             })
           : refused(c, runs);
       })
@@ -219,9 +227,30 @@ function routes(deps: ScheduleDeps | undefined) {
         const scheduleId = c.req.valid("param").id;
         if (listSchedules(service()).every((item) => item.id !== scheduleId))
           return refused(c, { ok: false, reason: "not-found" });
+        const topics = heldTopics(service(), scheduleId).map((topic) =>
+          heldTopicSchema.parse(topic),
+        );
         return c.json({
-          topics: heldTopics(service(), scheduleId).map((topic) => heldTopicSchema.parse(topic)),
+          topics,
+          scores: scoresFor(
+            service().db,
+            scheduleId,
+            topics.map((topic) => topic.title),
+          ),
         });
+      })
+      // Rescore: every queued and held topic scored again, then put in score order. With search
+      // ranking it asks Google, DuckDuckGo and Wikipedia, up to 15 seconds.
+      .post("/:id/topics/score", zValidator("param", id, onInvalid), async (c) => {
+        const result = await rescoreTopics(service(), c.req.valid("param").id);
+        if (result.ok) return c.json(scheduleSummarySchema.parse(result.value));
+        if (result.reason === "scoring-off")
+          return problem(c, {
+            status: 409,
+            detail: result.message,
+            extensions: { reason: result.reason },
+          });
+        return refused(c, result);
       })
       // Which queued topics are prepared ahead, and their projects.
       .get("/:id/prepared", zValidator("param", id, onInvalid), (c) =>

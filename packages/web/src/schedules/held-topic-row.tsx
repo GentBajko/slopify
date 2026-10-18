@@ -4,6 +4,7 @@ import { Button } from "@/components/kit/button";
 import { Field, Input } from "@/components/kit/field";
 import { ListRow } from "@/components/kit/list-row";
 import { RowCheck, type Selection } from "@/components/selection";
+import { type TopicScore, TopicScoreChip } from "./topic-score";
 
 export interface Editing {
   readonly id: string;
@@ -31,6 +32,7 @@ export function HeldTopicRow({
   onCancel,
   onApprove,
   onReject,
+  score,
 }: {
   readonly topic: HeldTopic;
   // This row's edit in progress, else undefined.
@@ -44,6 +46,8 @@ export function HeldTopicRow({
   readonly onCancel: () => void;
   readonly onApprove: () => void;
   readonly onReject: () => void;
+  // While the schedule ranks topics.
+  readonly score?: TopicScore | undefined;
 }): ReactElement {
   const keys = (event: KeyboardEvent) => {
     if (event.key === "Enter") {
@@ -56,7 +60,12 @@ export function HeldTopicRow({
   };
   return (
     <ListRow
-      lead={<RowCheck selection={selection} value={topic.id} label={topic.title} />}
+      lead={
+        <span className="flex items-center gap-2">
+          <RowCheck selection={selection} value={topic.id} label={topic.title} />
+          <TopicScoreChip title={topic.title} score={score} />
+        </span>
+      }
       title={
         editing === undefined ? (
           topic.title

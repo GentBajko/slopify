@@ -3,6 +3,7 @@ import { Input } from "@/components/kit/field";
 import { ListRow } from "@/components/kit/list-row";
 import { RowCheck, type Selection } from "@/components/selection";
 import { altArrowMove, type MoveTo, moveKeys, TopicRowActions } from "./topic-row-actions";
+import { type TopicScore, TopicScoreChip } from "./topic-score";
 
 // One queued topic: its checkbox, its place, its title field (Enter saves, Esc puts it back,
 // Alt+Up/Down moves it), Up, Down and Remove on the row, and the rarer moves under More.
@@ -19,6 +20,7 @@ export function InlineTopicRow({
   onRemove,
   onInsertBelow,
   onDuplicate,
+  score,
 }: {
   readonly rowKey: string;
   readonly index: number;
@@ -32,6 +34,8 @@ export function InlineTopicRow({
   readonly onRemove: () => void;
   readonly onInsertBelow: () => void;
   readonly onDuplicate: () => void;
+  // While the schedule ranks topics.
+  readonly score?: TopicScore | undefined;
 }): ReactElement {
   const [value, setValue] = useState(title);
   useEffect(() => setValue(title), [title]);
@@ -41,6 +45,7 @@ export function InlineTopicRow({
         <span className="flex items-center gap-2">
           <RowCheck selection={selection} value={rowKey} label={title} />
           <span className="w-7 text-right text-small text-ink-3 tabular-nums">{index + 1}</span>
+          <TopicScoreChip title={title} score={score} />
         </span>
       }
       title={

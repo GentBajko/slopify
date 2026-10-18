@@ -64,3 +64,26 @@ it("sends the spend ceiling typed in dollars as cents", async () => {
   await waitFor(() => expect(bodies).toHaveLength(1));
   expect(bodies[0]?.spendLimitCents).toBe(250);
 });
+
+it("ranks generated topics only once topics are generated, and says what search sends", async () => {
+  const user = userEvent.setup();
+  renderRouted(
+    <SchedulesView />,
+    deps(() => Response.json({})),
+  );
+  await user.click(await screen.findByRole("button", { name: "New schedule" }));
+  const rank = screen.getByLabelText("Rank topics") as HTMLSelectElement;
+  expect(rank.disabled).toBe(true);
+  expect(
+    screen.getByText("Ranks the topics Slopify generates: choose New topics first."),
+  ).toBeTruthy();
+  await user.selectOptions(screen.getByLabelText("New topics"), "queue");
+  expect(rank.disabled).toBe(false);
+  expect(rank.value).toBe("off");
+  await user.selectOptions(rank, "search");
+  expect(
+    screen.getByText(
+      "Sends each new topic's title to Google, DuckDuckGo and Wikipedia. Nothing else leaves this computer.",
+    ),
+  ).toBeTruthy();
+});

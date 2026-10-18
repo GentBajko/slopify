@@ -31,6 +31,7 @@ import {
 import { type Editing, HeldTopicRow } from "./held-topic-row";
 import { formatScheduleDateZoned } from "./time";
 import { TopicFailure } from "./topic-failure";
+import { useTopicScores } from "./topic-score";
 
 export { heldValuesLine } from "./held-topic-row";
 
@@ -45,6 +46,7 @@ export function TopicGenerationPanel({
   readonly schedule: ScheduleSummary;
 }): ReactElement | null {
   const { api } = useApp();
+  const scoreOf = useTopicScores(schedule.id);
   const client = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const notify = useToast();
@@ -261,6 +263,7 @@ export function TopicGenerationPanel({
                     everyRun={everyRun}
                     busy={busy}
                     selection={selection}
+                    score={scoreOf(topic.title)}
                     onEdit={setEditing}
                     onCancel={() => setEditing(null)}
                     onSave={() => {

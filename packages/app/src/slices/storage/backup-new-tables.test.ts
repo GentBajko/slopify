@@ -60,6 +60,9 @@ const leftOut = new Set([
   "assistant_asks",
   // Warnings hidden on this install's Home.
   "autopilot_snoozes",
+  // Scores are read again from the library and search by Rescore; the schedule keeps its
+  // ranking setting.
+  "topic_scores",
   // What the Notification URL of this install was told: a restored project tells its run's end
   // again.
   "told_failures",

@@ -23,7 +23,16 @@ const problemSchema = z.object({
   reason: z.string().optional(),
 });
 const summaryBody = z.object({ schedules: z.array(scheduleSummarySchema) });
-const detailBody = z.object({ schedule: scheduleSummarySchema, runs: z.array(scheduleRunSchema) });
+// Each scored topic's score and reasons, by `topicKey`; a server from before scoring sends none.
+const scoresBody = z
+  .record(z.string(), z.object({ score: z.number(), reasons: z.array(z.string()) }))
+  .default({});
+export type TopicScores = z.infer<typeof scoresBody>;
+const detailBody = z.object({
+  schedule: scheduleSummarySchema,
+  runs: z.array(scheduleRunSchema),
+  scores: scoresBody,
+});
 const root = (api: Api): string => `${api.origin}/api/schedules`;
 
 export type ScheduleReply<T> =
@@ -65,11 +74,30 @@ export function schedulesQuery(api: Api): UseQueryOptions<readonly ScheduleSumma
   };
 }
 
+export const scheduleDetailKey = (id: string) => ["schedule", id] as const;
+
+// One schedule's runs and its topics' scores; Schedules → the picked schedule reads it.
+export function scheduleDetailQuery(api: Api, id: string) {
+  return {
+    queryKey: scheduleDetailKey(id),
+    queryFn: async () => {
+      const reply = await readSchedule(api, id);
+      if (!reply.ok) throw new Error(reply.message);
+      return reply.value;
+    },
+    refetchInterval: 30_000,
+  };
+}
+
 export async function readSchedule(
   api: Api,
   id: string,
 ): Promise<
-  ScheduleReply<{ readonly schedule: ScheduleSummary; readonly runs: readonly ScheduleRun[] }>
+  ScheduleReply<{
+    readonly schedule: ScheduleSummary;
+    readonly runs: readonly ScheduleRun[];
+    readonly scores: TopicScores;
+  }>
 > {
   return responseOf(await api.fetch(`${root(api)}/${encodeURIComponent(id)}`), detailBody);
 }
@@ -136,6 +164,14 @@ export async function readHeldTopics(
 
 const topicPath = (api: Api, id: string, rest: string): string =>
   `${root(api)}/${encodeURIComponent(id)}/topics/${rest}`;
+
+// Rescore: every queued and held topic scored again and put in score order.
+export async function rescoreTopics(api: Api, id: string): Promise<ScheduleReply<ScheduleSummary>> {
+  return responseOf(
+    await api.fetch(topicPath(api, id, "score"), json("POST", {})),
+    scheduleSummarySchema,
+  );
+}
 
 export async function generateTopicsNow(
   api: Api,

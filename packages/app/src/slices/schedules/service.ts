@@ -122,6 +122,7 @@ export function updateSchedule(
       previous.version + 1,
       // Saving clears a recorded generation failure, so the next tick tries again.
       { ...previous.topics, failedAt: null, error: null },
+      previous.topicScoring,
     );
     if (!updateScheduleRow(deps.db, value, parsed.data.mutationId, hash, parsed.data.baseVersion))
       return { ok: false, reason: "conflict" };
@@ -283,6 +284,7 @@ function summary(
   status: ScheduleSummary["status"] = "active",
   version = 1,
   topics: ScheduleSummary["topics"] = topicStateIdle,
+  topicScoring: ScheduleSummary["topicScoring"] = "off",
 ): ScheduleSummary {
   return {
     id: input.id,
@@ -300,6 +302,7 @@ function summary(
     brief: input.brief === null || input.brief === "" ? null : input.brief,
     topicGeneration: input.topicGeneration,
     releases: input.releases,
+    topicScoring: input.topicScoring ?? topicScoring,
     topics,
     status,
     version,
