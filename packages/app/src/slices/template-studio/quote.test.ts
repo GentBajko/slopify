@@ -4,7 +4,7 @@ import { insertProject } from "../admission/repo.js";
 import { draftFixture } from "../play-drafts/draft.fake.js";
 import { createTemplate } from "../project-templates/service.js";
 import { writeStudioSettings } from "./budget.js";
-import { quoteSave } from "./quote.js";
+import { fieldSentence, quoteSave } from "./quote.js";
 import { paidDocument, reviewOver } from "./studio.fake.js";
 
 const open: (() => void)[] = [];
@@ -118,5 +118,16 @@ describe("quoteSave", () => {
       ok: false,
       reason: "not-found",
     });
+  });
+});
+
+describe("fieldSentence", () => {
+  it("names an empty keyword and where it is filled, and keeps every other message", () => {
+    expect(fieldSentence({ field: "values.topic", message: "Fill in this field." })).toBe(
+      "The keyword {{topic}} is empty. Fill it in Subject & research.",
+    );
+    expect(
+      fieldSentence({ field: "audio.voice", message: "Choose a voice for the narration." }),
+    ).toBe("Choose a voice for the narration.");
   });
 });

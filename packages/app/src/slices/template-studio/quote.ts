@@ -66,7 +66,7 @@ export async function resolveSampleRun(
       problem:
         resolved.fields.length === 0
           ? "Play's review refused this setup, so no sample can be made. Open the template in Play (Use in Play) to see why."
-          : `No sample can be made of this setup: ${[...new Set(resolved.fields.map((field) => field.message))].join(" ")}`,
+          : `No sample can be made of this setup: ${[...new Set(resolved.fields.map(fieldSentence))].join(" ")}`,
     };
   const run = resolved.value.runs[0];
   if (run === undefined)
@@ -79,6 +79,13 @@ export async function resolveSampleRun(
     run: { ...run, draft: { ...run.draft, sample: { fullScript } } },
     words: Number(document.expectedWords) || 1500,
   };
+}
+
+// A refused field in the studio's words: an empty keyword is named, with where it is filled.
+export function fieldSentence(field: { readonly field: string; readonly message: string }): string {
+  if (field.field.startsWith("values."))
+    return `The keyword {{${field.field.slice("values.".length)}}} is empty. Fill it in Subject & research.`;
+  return field.message;
 }
 
 const sectionOfRow: Readonly<Record<string, TemplateSection>> = {
