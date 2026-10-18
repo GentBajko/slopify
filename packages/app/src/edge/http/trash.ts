@@ -27,6 +27,8 @@ const manySchema = z.object({ items: z.array(itemParam).min(1).max(5000) });
 // A template comes back before the schedules that run it, so restoring both at once works.
 const restoreOrder: Readonly<Record<TrashKind, number>> = {
   template: 0,
+  "design-template": 0,
+  design: 1,
   prompt: 1,
   entry: 1,
   project: 1,

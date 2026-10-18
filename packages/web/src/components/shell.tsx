@@ -266,6 +266,11 @@ function ShellContent() {
       stagingChanged: () => {
         void queryClient.invalidateQueries({ queryKey: keys.staging });
       },
+      designChanged: (event) => {
+        void queryClient.invalidateQueries({
+          queryKey: event.type === "design.changed" ? keys.designs : keys.designTemplates,
+        });
+      },
       connection: setConnection,
       // A reconnect means the tally and every list may have moved on while the socket
       // was down, and nothing is replayed.

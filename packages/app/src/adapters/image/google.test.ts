@@ -296,3 +296,32 @@ describe("googleImage failures", () => {
     await expect(generate(shapeless)).rejects.toThrow(/could not read/);
   });
 });
+
+describe("a picture to edit", () => {
+  it("is the first input part, before the cast, with the edit wording last", async () => {
+    const seen: Seen[] = [];
+    const source = { bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47]), mime: "image/png" as const };
+    const ada = { bytes: new Uint8Array([0xff, 0xd8, 0xff, 1]), mime: "image/jpeg" as const };
+    await googleImage({ fetch: watching("google-success.json", seen), key: () => key }).generate({
+      model,
+      prompt: "Evening light",
+      aspect: "1:1",
+      edit: { source },
+      cast: [{ name: "Ada", description: "the host", images: [ada] }],
+      signal: new AbortController().signal,
+    });
+    const body = bodyOf(seen[0]) as {
+      input: { type: string; mime_type?: string; data?: string; text?: string }[];
+    };
+    expect(body.input.map((part) => part.type)).toEqual(["image", "image", "text"]);
+    expect(body.input[0]).toEqual({
+      type: "image",
+      mime_type: "image/png",
+      data: Buffer.from(source.bytes).toString("base64"),
+    });
+    expect(body.input[1]?.mime_type).toBe("image/jpeg");
+    expect(body.input[2]?.text).toMatch(/^Change the first attached image as follows\./);
+    expect(body.input[2]?.text).toContain("Image 2 shows Ada (the host)");
+    expect(body.input[2]?.text).toMatch(/Evening light$/);
+  });
+});

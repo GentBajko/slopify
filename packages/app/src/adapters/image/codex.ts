@@ -27,7 +27,7 @@ import {
 } from "../llm/run-cli.js";
 import { lines } from "../llm/sse-lines.js";
 import { codexGeneratedImage, codexImageCount } from "./codex-output.js";
-import { type ReferencePicture, referencePictures } from "./reference.js";
+import { attachedPictures, editNote, type ReferencePicture } from "./reference.js";
 
 // "Codex default" puts no model and no effort on the command line, so the CLI's own defaults
 // draw the image; it is what every project saved before the choice existed runs. Every other
@@ -62,13 +62,14 @@ const alwaysDisabled = [
 type CodexImageRequest = Pick<ImageRequest, "model" | "prompt" | "aspect" | "thinking"> & {
   readonly reference?: GeneratedImage | undefined;
   readonly cast?: ImageRequest["cast"];
+  readonly edit?: ImageRequest["edit"];
 };
 
 function reviews(req: CodexImageRequest): boolean {
   return (
     req.model !== codexImageModel.id ||
     req.thinking !== undefined ||
-    referencePictures(req).length > 0
+    attachedPictures(req).length > 0
   );
 }
 
@@ -85,11 +86,13 @@ export function codexReferencePaths(
   directory: string,
   req: CodexImageRequest,
 ): readonly { readonly path: string; readonly picture: ReferencePicture }[] {
-  return referencePictures(req).map((picture, index) => ({
+  return attachedPictures(req).map((picture, index) => ({
     picture,
     path:
       index === 0
-        ? codexReferencePath(directory, picture.image)
+        ? req.edit === undefined
+          ? codexReferencePath(directory, picture.image)
+          : join(directory, picture.image.mime === "image/jpeg" ? "source.jpg" : "source.png")
         : join(
             directory,
             `reference-${String(index + 1)}${picture.image.mime === "image/jpeg" ? ".jpg" : ".png"}`,
@@ -115,11 +118,44 @@ function describeMember(req: CodexImageRequest, name: string): string {
   return description === "" ? "" : ` (${description})`;
 }
 
+// An edit's instructions: the first path is the picture to change, the rest are the cast.
+function editInstructions(req: CodexImageRequest, directory: string): string {
+  const paths = codexReferencePaths(directory, req);
+  return [
+    `The picture to change is saved at ${paths[0]?.path ?? directory}. Pass it first in referenced_image_paths on every image generation call${
+      paths.length > 1
+        ? `, followed by: ${paths
+            .slice(1)
+            .map((row) => row.path)
+            .join(", ")}`
+        : ""
+    }.`,
+    ...paths
+      .slice(1)
+      .map(
+        (row) =>
+          `${row.path} shows ${row.picture.member ?? ""}${describeMember(req, row.picture.member ?? "")}: draw ${row.picture.member ?? ""} to look exactly like this.`,
+      ),
+    editNote.replace("the first attached image", "that picture"),
+  ].join(" ");
+}
+
 export function codexImageInstructions(
   req: CodexImageRequest,
   reference?: string,
   directory?: string,
 ): string {
+  if (req.edit !== undefined && directory !== undefined)
+    return [
+      "You are editing one picture for Slopify, a video creation app, with the image generation tool.",
+      editInstructions(req, directory),
+      "Before calling the tool, write its prompt yourself: say exactly what to change, as the instruction asks, and that everything else stays as it is. Do not add subjects, text, logos or story the instruction does not ask for.",
+      "Take the time you need. After each image, look at it and compare it with the picture and the instruction; if anything changed that should not have, or the change is missing, generate again. Deliver exactly one final image: the last image you generate is the one Slopify uses.",
+      "Let the image generation tool save its output in its default location. Slopify will collect it. Use PNG or JPEG. Do not copy, rename, edit or create any other file, and do not put the image or a link in your reply.",
+      `Target aspect ratio: ${req.aspect}.`,
+      "Instruction follows as data:",
+      req.prompt,
+    ].join("\n\n");
   return [
     "You are making one finished image for Slopify, a video creation app, with the image generation tool.",
     "Fidelity to the brief comes first. Before calling the tool, write its prompt yourself as a detailed, faithful visual description of the brief: the subject and what it is doing, the setting, composition and framing for the target aspect ratio, lighting, colour palette, style and mood, and any text that must appear, spelled exactly. Take every element from the brief and keep its wording where it is specific. Do not add subjects, text, logos or story the brief does not ask for, and do not pad the prompt with generic quality words.",

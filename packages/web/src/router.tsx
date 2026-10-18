@@ -10,6 +10,9 @@ import {
 } from "@tanstack/react-router";
 import { useDocumentTitle } from "@/components/document-title";
 import { Shell } from "@/components/shell";
+import { DesignRoute } from "@/designs/design-page";
+import { DesignsRoute, type DesignsTab, designsTabOf } from "@/designs/designs-route";
+import { DesignTemplateRoute } from "@/designs/editor/template-editor";
 import { categoryOf } from "@/lib/entry-options";
 import { kindOf } from "@/lib/prompt-kinds";
 import { itemOf } from "@/library/list-url";
@@ -218,6 +221,53 @@ function ChannelPage() {
       }}
     />
   );
+}
+
+interface DesignsSearch {
+  readonly tab?: DesignsTab;
+}
+
+const designsRoute = createRoute({
+  getParentRoute: () => libraryRoute,
+  path: "designs",
+  validateSearch: (search: Record<string, unknown>): DesignsSearch =>
+    search.tab === undefined ? {} : { tab: designsTabOf(search.tab) },
+  component: DesignsPage,
+});
+
+function DesignsPage() {
+  const { tab } = designsRoute.useSearch();
+  const navigate = useNavigate();
+  return (
+    <DesignsRoute
+      tab={tab ?? "designs"}
+      onTab={(next) => {
+        void navigate({ to: "/designs", search: next === "designs" ? {} : { tab: next } });
+      }}
+    />
+  );
+}
+
+const designPageRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "designs/$designId",
+  component: DesignPage,
+});
+
+function DesignPage() {
+  const { designId } = designPageRoute.useParams();
+  return <DesignRoute key={designId} designId={designId} />;
+}
+
+const designTemplateRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "design-templates/$templateId",
+  component: DesignTemplatePage,
+});
+
+function DesignTemplatePage() {
+  const { templateId } = designTemplateRoute.useParams();
+  return <DesignTemplateRoute key={templateId} templateId={templateId} />;
 }
 
 const templatesRoute = createRoute({
@@ -701,6 +751,7 @@ const routeTree = rootRoute.addChildren({
     promptsRoute,
     entriesRoute,
     templatesRoute,
+    designsRoute,
     documentThemesRoute,
     narrationAliasesRoute,
     abResultsRoute,
@@ -711,6 +762,8 @@ const routeTree = rootRoute.addChildren({
   libraryIndexRoute,
   channelsRoute,
   channelRoute,
+  designPageRoute,
+  designTemplateRoute,
   projectRoute,
   newPromptRoute,
   promptRoute,

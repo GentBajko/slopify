@@ -303,7 +303,7 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
     const signal = AbortSignal.any([job.signal, controller.signal]);
     const timer = setTimeout(() => controller.abort(), agentImageTimeoutMs);
     try {
-      const { reference, thinking, cast: bridgedCast, ...rest } = body.data;
+      const { reference, thinking, cast: bridgedCast, edit: bridgedEdit, ...rest } = body.data;
       const cast = bridgedCast?.map((member) => ({
         name: member.name,
         description: member.description,
@@ -326,11 +326,20 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
               mime: reference.mime,
             };
       if (image !== undefined && sniffImage(image.bytes) !== image.mime) return invalid(c);
+      const source =
+        bridgedEdit === undefined
+          ? undefined
+          : {
+              bytes: new Uint8Array(Buffer.from(bridgedEdit.source.base64, "base64")),
+              mime: bridgedEdit.source.mime,
+            };
+      if (source !== undefined && sniffImage(source.bytes) !== source.mime) return invalid(c);
       const result = await ports.image.generate({
         ...rest,
         ...(thinking === undefined ? {} : { thinking }),
         ...(image === undefined ? {} : { reference: image }),
         ...(cast === undefined ? {} : { cast }),
+        ...(source === undefined ? {} : { edit: { source } }),
         signal,
       });
       if (signal.aborted) throw providerError({ kind: "unavailable", message: unavailable });

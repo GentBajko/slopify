@@ -316,3 +316,32 @@ describe("cast pictures", () => {
     expect(seen[0]?.url).toBe(`${openAiImagesBase}/images/edits`);
   });
 });
+
+describe("a picture to edit", () => {
+  it("goes to the edits endpoint as image[] 0, before the cast, with the edit wording", async () => {
+    const seen: Seen[] = [];
+    const source = { bytes: new Uint8Array(pngHead), mime: "image/png" as const };
+    const ada = { bytes: new Uint8Array([0xff, 0xd8, 0xff, 1]), mime: "image/jpeg" as const };
+    await openAiImage({
+      fetch: replaying(answering("openai-image-success.json"), seen),
+      key: () => key,
+    }).generate({
+      model,
+      prompt: "Remove the sign",
+      aspect: "9:16",
+      edit: { source },
+      cast: [{ name: "Ada", description: "", images: [ada] }],
+      signal: new AbortController().signal,
+    });
+    expect(seen[0]?.url).toBe(`${openAiImagesBase}/images/edits`);
+    const form = seen[0]?.init?.body;
+    if (!(form instanceof FormData)) throw new Error("no form");
+    const images = form.getAll("image[]");
+    expect(images).toHaveLength(2);
+    expect(new Uint8Array(await (images[0] as Blob).arrayBuffer())).toEqual(source.bytes);
+    expect(new Uint8Array(await (images[1] as Blob).arrayBuffer())).toEqual(ada.bytes);
+    expect(String(form.get("prompt"))).toMatch(/^Change the first attached image as follows\./);
+    expect(String(form.get("prompt"))).toContain("Image 2 shows Ada");
+    expect(String(form.get("prompt"))).not.toContain("visual reference");
+  });
+});

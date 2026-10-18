@@ -45,6 +45,8 @@ export const keys = {
   prompts: ["prompts"] as const,
   entries: ["entries"] as const,
   documentThemes: ["document-themes"] as const,
+  designs: ["designs"] as const,
+  designTemplates: ["design-templates"] as const,
   playDrafts: ["play-drafts"] as const,
   providerModels: ["provider-models"] as const,
   modelsOf: (provider: string) => ["provider-models", provider] as const,

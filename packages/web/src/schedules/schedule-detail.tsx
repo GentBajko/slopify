@@ -38,11 +38,13 @@ export function ScheduleDetail({
   const facts: readonly (readonly [string, string])[] = [
     [
       "When",
-      schedule.cadence.kind === "once"
-        ? `Once, ${formatScheduleDate(schedule.cadence.at, schedule.timezone)}`
-        : schedule.cadence.kind === "daily"
-          ? `Every day at ${schedule.cadence.time}`
-          : `Selected weekdays at ${schedule.cadence.time}`,
+      schedule.cadence.kind === "by-date"
+        ? `Ahead of each row's date, at ${schedule.cadence.time}`
+        : schedule.cadence.kind === "once"
+          ? `Once, ${formatScheduleDate(schedule.cadence.at, schedule.timezone)}`
+          : schedule.cadence.kind === "daily"
+            ? `Every day at ${schedule.cadence.time}`
+            : `Selected weekdays at ${schedule.cadence.time}`,
     ],
     ["Timezone", schedule.timezone],
     [

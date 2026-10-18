@@ -3,6 +3,7 @@ import { reviewDraft } from "../play-drafts/review.js";
 import { createDraft } from "../play-drafts/service.js";
 import { startPlayDraft } from "../play-drafts/start.js";
 import { nextOccurrence } from "./calendar.js";
+import { claimDesignRun } from "./design-run.js";
 import type { ClaimedScheduleRun, ScheduleDeps } from "./model.js";
 import { continuePrepared, preparedProject, scheduledDocument, scheduledTitle } from "./prepare.js";
 import {
@@ -105,6 +106,11 @@ function claim(
   now: Date,
 ): readonly [ClaimedScheduleRun] | readonly [] {
   if (schedule.nextRunAt === null) return [];
+  // A design schedule's run makes its piece at once and never reaches `execute`.
+  if (schedule.templateKind === "design") {
+    claimDesignRun(deps, schedule, now);
+    return [];
+  }
   const scheduledFor = new Date(schedule.nextRunAt);
   const occurrence =
     schedule.missedPolicy === "skip" && now.valueOf() - scheduledFor.valueOf() > missedGraceMs;
@@ -139,6 +145,7 @@ function claim(
       status: skip ? "skipped" : "running",
       requestId: null,
       projectIds: [],
+      designIds: [],
       estimate: null,
       startedAt: now.toISOString(),
       endedAt: skip ? now.toISOString() : null,

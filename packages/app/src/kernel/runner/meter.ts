@@ -34,12 +34,18 @@ export interface UsageMeter {
 }
 
 // A call made outside any project (`standalone.ts`): a schedule's topic generation, a
-// channel's episode summary or cast picture. It is recorded against what it was made for, so
+// channel's episode summary or cast picture, a design's picture edit or artwork. It is recorded against what it was made for, so
 // Home's "This week" counts it and can narrow it to that channel.
 export type StandaloneOwner =
   | { readonly kind: "schedule"; readonly id: string }
-  | { readonly kind: "channel"; readonly id: string };
-export type StandalonePurpose = "topics" | "episode-summary" | "cast-image";
+  | { readonly kind: "channel"; readonly id: string }
+  | { readonly kind: "design"; readonly id: string };
+export type StandalonePurpose =
+  | "topics"
+  | "episode-summary"
+  | "cast-image"
+  | "picture-edit"
+  | "design-art";
 
 export interface StandaloneUse {
   readonly owner: StandaloneOwner;

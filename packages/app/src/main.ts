@@ -84,6 +84,15 @@ import {
   recoverCheckpointWork,
   settleReleasedCheckpoints,
 } from "./slices/checkpoints/recovery.js";
+import { dailySampleBudget } from "./slices/designs/budget.js";
+import { designCheckContext } from "./slices/designs/check-context.js";
+import { contextChecks } from "./slices/designs/gate.js";
+import { runPdfWorker } from "./slices/designs/pdf-runner.js";
+import { createDesignRenderer } from "./slices/designs/render.js";
+import { createDesignRunner } from "./slices/designs/runner.js";
+import { createDesignSamples, type DesignSamples } from "./slices/designs/sample.js";
+import type { DesignDeps } from "./slices/designs/service.js";
+import type { TemplateMakeDeps } from "./slices/designs/template-make.js";
 import {
   createEpisodeMemoryWatcher,
   type EpisodeMemoryWatcher,
@@ -118,6 +127,7 @@ import { currentRevisionId } from "./slices/revisions/repo.js";
 import { createLimitGate, resumeAfterRestart } from "./slices/run-cost/limits.js";
 import { createStandaloneMeter, createUsageMeter } from "./slices/run-cost/meter.js";
 import type { ScheduleDeps } from "./slices/schedules/model.js";
+import { refreshDesignSchedules } from "./slices/schedules/next-run.js";
 import { settleTerminalScheduleRuns } from "./slices/schedules/repo.js";
 import { createScheduleRunner } from "./slices/schedules/scheduler.js";
 import { nodeCliProbe } from "./slices/settings/cli-status.js";
@@ -152,7 +162,7 @@ import type { RecordEvent } from "./slices/telemetry/model.js";
 import type { TelemetryDeps } from "./slices/telemetry/record.js";
 import { record } from "./slices/telemetry/record.js";
 import { createTrashPurge } from "./slices/trash/service.js";
-import { probeDurationMs } from "./slices/video/ffmpeg.js";
+import { probeDurationMs, runFfmpeg } from "./slices/video/ffmpeg.js";
 import { watchActivation } from "./updater/candidate.js";
 import { launchUpdate } from "./updater/install.js";
 import { isUpdateToken } from "./updater/model.js";
@@ -565,8 +575,11 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         flusher.soon();
       },
     };
+    // Built with the designs further down; design schedules make their pieces with it.
+    let designMake: TemplateMakeDeps | undefined;
     const scheduleRunnerDeps: ScheduleDeps = {
       ...draftDeps,
+      designs: () => designMake,
       template: (id) => templateById(runtimeDb, id),
       topicLlm: (call) => standaloneLlm(standalone, call),
       // Asked only for schedules set to rank topics by public search interest.
@@ -682,9 +695,70 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       selfUrl: () => assistantSelfUrl(config.host, listeningPort),
       container: hostCli !== undefined,
     });
+    // Library → Designs: paid pictures through the attempt wrapper, metered on the design;
+    // drawing in a child ffmpeg and PDFs in a forked worker, never on this thread.
+    // The template editor's samples hear when a sample's picture lands, to start the next.
+    let designSamples: DesignSamples | undefined;
+    const designService: DesignDeps = {
+      db,
+      clock,
+      ids,
+      paths,
+      log,
+      emit: (event) => {
+        hub.emitGlobal(event);
+        if (event.type === "design.changed") designSamples?.designChanged(event.designId);
+      },
+    };
+    const designRenderer = createDesignRenderer({
+      db,
+      paths,
+      log,
+      clock,
+      ffmpeg,
+      runFfmpeg,
+      font: (fontId) => resolveFont(paths, fontId),
+      pdf: (job, signal) => runPdfWorker(job, signal),
+    });
+    const designRunner = createDesignRunner({
+      ...designService,
+      catalogue: () => catalogue.read(),
+      generate: ({ designId, ...call }) =>
+        standaloneImage(standalone, { ...call, owner: { kind: "design", id: designId } }),
+      shrink: (bytes) => designRenderer.shrink(bytes, AbortSignal.timeout(120_000)),
+    });
+    designRunner.recover();
+    designMake = {
+      service: designService,
+      runner: designRunner,
+      catalogue: () => catalogue.read(),
+    };
+    designSamples = createDesignSamples({
+      service: designService,
+      runner: designRunner,
+      catalogue: () => catalogue.read(),
+      budget: () => dailySampleBudget(runtimeDb, log),
+      timeZone: () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+    });
+    designSamples.recover();
+    const designChecks = designCheckContext({
+      resolveFont: (fontId) => resolveFont(paths, fontId),
+      providers: rebuild.providers,
+    });
     const app = createApp({
       assistant,
       autopilot,
+      designs: { service: designService, runner: designRunner, renderer: designRenderer },
+      designTemplates: {
+        service: designService,
+        runner: designRunner,
+        catalogue: () => catalogue.read(),
+        checks: (templateId, doc) => contextChecks(doc, templateId, designChecks),
+        samples: designSamples,
+        templateChanged: (templateId) => {
+          refreshDesignSchedules(runtimeDb, templateId, clock.now());
+        },
+      },
       autostart,
       rebuild,
       drafts: draftDeps,

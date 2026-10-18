@@ -125,8 +125,12 @@ export function createStandaloneMeter(deps: MeterDeps): StandaloneMeter {
 
 // A schedule counts under its template's channel; one whose template is gone, like a channel
 // this install doesn't have, under the default channel.
+// A design counts under its own channel; one deleted since, under the default channel.
 function channelOf(db: DatabaseSync, owner: StandaloneOwner): string {
-  return owner.kind === "schedule"
-    ? resolveChannelId(db, scheduleChannel(db, owner.id)?.id)
-    : resolveChannelId(db, owner.id);
+  if (owner.kind === "schedule") return resolveChannelId(db, scheduleChannel(db, owner.id)?.id);
+  if (owner.kind === "design") {
+    const row = db.prepare("SELECT channel_id FROM designs WHERE id=?").get(owner.id);
+    return resolveChannelId(db, row === undefined ? undefined : String(row.channel_id));
+  }
+  return resolveChannelId(db, owner.id);
 }

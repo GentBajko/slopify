@@ -6,6 +6,9 @@ import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import type { AssistantTurnTokens } from "../../slices/assistant/access.js";
+import { designCatalogue } from "../../slices/designs/designs.fake.js";
+import { createDesignRenderer } from "../../slices/designs/render.js";
+import { createDesignRunner } from "../../slices/designs/runner.js";
 import { createRebuildDeps } from "../../slices/rebuild/service.fake.js";
 import type { RevisionDeps } from "../../slices/revisions/model.js";
 import { revisionFixture } from "../../slices/revisions/revision.fake.js";
@@ -20,6 +23,8 @@ export function mcpFixture(
     readonly rebuild?: boolean;
     readonly measureAudio?: (path: string, signal?: AbortSignal) => Promise<number>;
     readonly assistantTurns?: AssistantTurnTokens;
+    // Library → Designs over the same database, with no provider and no ffmpeg.
+    readonly designs?: boolean;
   } = {},
 ): {
   readonly app: Hono;
@@ -49,6 +54,7 @@ export function mcpFixture(
     ...(options.rebuild === true ? { rebuild: createRebuildDeps(h.deps).deps } : {}),
     ...(options.measureAudio === undefined ? {} : { measureAudio: options.measureAudio }),
     ...(options.assistantTurns === undefined ? {} : { assistantTurns: options.assistantTurns }),
+    ...(options.designs === true ? { designs: designsOver(h.deps) } : {}),
   });
   return { app, deps: h.deps, projectId: h.projectId, ticks, close: h.close };
 }
@@ -90,5 +96,25 @@ export function routeCallDeps(
         ),
     },
     logged,
+  };
+}
+
+function designsOver(deps: RevisionDeps) {
+  const service = {
+    db: deps.db,
+    clock: deps.clock,
+    ids: deps.ids,
+    paths: deps.paths,
+    log: deps.log,
+  };
+  return {
+    service,
+    runner: createDesignRunner({ ...service, catalogue: () => designCatalogue }),
+    renderer: createDesignRenderer({
+      ...service,
+      ffmpeg: "ffmpeg",
+      runFfmpeg: () => Promise.reject(new Error("no ffmpeg in this test")),
+      font: () => Promise.reject(new Error("no fonts in this test")),
+    }),
   };
 }

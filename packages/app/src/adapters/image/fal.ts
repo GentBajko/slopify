@@ -21,7 +21,7 @@ import {
 } from "../http-failure.js";
 import { modelAccessOf } from "../model-access.js";
 import { downloadImage } from "./bytes.js";
-import { referencePictures, withReferences } from "./reference.js";
+import { attachedPictures, promptFor } from "./reference.js";
 import { dataUri, downloadVideo } from "./video.js";
 
 // The HTTP gateway adapter for fal.ai: `fetch` and the downloader beside this file, no SDK.
@@ -87,6 +87,9 @@ function editEndpoint(model: string): string | undefined {
   return editModels.includes(model) ? `${model}/edit` : undefined;
 }
 
+export const falEditRefusal =
+  "This fal.ai model can't edit a picture. Choose FLUX.2 or Nano Banana 2 on fal.ai, or Codex CLI, OpenAI or Google, under Made with … · change.";
+
 export interface FalImageDeps {
   // Injected so a test never needs the network.
   readonly fetch: typeof globalThis.fetch;
@@ -146,8 +149,10 @@ export function falImage(deps: FalImageDeps): ImagePort {
       // `image_urls`; only the models that have one are marked as taking a reference.
       // Cast pictures ride the same list; a model without an edit endpoint gets the cast in
       // words instead, since only the establishing image is something the user turned on.
-      const pictures = referencePictures(req);
+      const pictures = attachedPictures(req);
       const edit = pictures.length === 0 ? undefined : editEndpoint(req.model);
+      if (req.edit !== undefined && edit === undefined)
+        throw providerError({ kind: "unsupported", message: falEditRefusal });
       if (req.reference !== undefined && edit === undefined)
         throw providerError({
           kind: "unsupported",
@@ -159,7 +164,7 @@ export function falImage(deps: FalImageDeps): ImagePort {
         signal: req.signal,
         headers: { Authorization: `Key ${keyOf(deps)}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: withReferences(req.prompt, req, edit === undefined ? 0 : pictures.length),
+          prompt: promptFor(req.prompt, req, edit === undefined ? 0 : pictures.length),
           ...(edit === undefined
             ? {}
             : { image_urls: pictures.map((picture) => dataUri(picture.image)) }),

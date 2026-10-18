@@ -51,6 +51,11 @@ describe("migrate", () => {
       "cast_members",
       "channel_videos",
       "channels",
+      "design_steps",
+      "design_template_revisions",
+      "design_template_samples",
+      "design_templates",
+      "designs",
       "document_themes",
       "entries",
       "episode_memories",
@@ -134,6 +139,9 @@ describe("migrate", () => {
       "cast_members_order",
       "channel_videos_title",
       "channels_one_default",
+      "designs_project",
+      "designs_sample_of",
+      "designs_schedule",
       "document_themes_name",
       "entries_name",
       "episode_memories_channel",
@@ -243,6 +251,10 @@ describe("migrate", () => {
       { version: 66, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 67, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 68, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 70, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 71, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 72, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 73, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -252,16 +264,16 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 60 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 64 });
   });
 
   it("refuses a database newer than the app knows", () => {
     const db = openDb(":memory:");
     migrate(db, clock);
-    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(69, clock.now().toISOString());
+    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(74, clock.now().toISOString());
 
     expect(() => migrate(db, clock)).toThrow(
-      "database schema 69 is newer than this app knows (68)",
+      "database schema 74 is newer than this app knows (73)",
     );
   });
 

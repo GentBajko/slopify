@@ -15,4 +15,8 @@ export const attendRoutine = [
   "Rules: take every id from needs_attention or a read tool, never invent one. Every idempotencyKey is a new UUID, reused only to retry the very same request. A tool whose description states a consequence needs confirmed: true; send it only when this routine calls for that action. Paid work starts only through its own acknowledgement (start_rebuild after preview_rebuild, start_draft after review_draft). Delete all old versions and Clean up everything are the person's, in Settings → Backup & storage. Slopify never makes a video public, and no tool uploads to YouTube.",
 ].join("\n");
 
-export const serverInstructions = `Slopify makes faceless videos on this computer: research, article, narration, images, video, shorts, PDF documents and YouTube upload packs. Every tool does what the matching button in Slopify's web page does, with the same checks, costs and refusal sentences, and what you change is shown as "by agent". Your usual job is the attend routine, also offered as the prompt "attend":\n${attendRoutine}`;
+// Designs sit outside the attend routine: they never show in needs_attention.
+export const designsNote =
+  "Designs (edited pictures, posters, flyers, brochures and social images) never show in needs_attention: a failed version says so on the design itself (get_design). Every paid design step (edit_design_picture, make_design_artwork, make_design_from_template) needs the acknowledgedHigh its quote tool gave.";
+
+export const serverInstructions = `Slopify makes faceless videos on this computer: research, article, narration, images, video, shorts, PDF documents and YouTube upload packs. Every tool does what the matching button in Slopify's web page does, with the same checks, costs and refusal sentences, and what you change is shown as "by agent". Your usual job is the attend routine, also offered as the prompt "attend":\n${attendRoutine}\n${designsNote}`;

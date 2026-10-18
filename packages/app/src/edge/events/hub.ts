@@ -15,6 +15,7 @@ import type {
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import type { AssistantEvent } from "../../slices/assistant/model.js";
+import type { DesignEvent } from "../../slices/designs/model.js";
 import type { StagingEvent } from "../../slices/storage/model.js";
 import { createPreviewCache } from "./preview-cache.js";
 
@@ -46,7 +47,8 @@ export type GlobalEvent =
   | ReviewFlaggedEvent
   | ReviewAutoPassedEvent
   // The assistant panel's chat: what it is writing, the tools it used, its asks, its turns.
-  | AssistantEvent;
+  | AssistantEvent
+  | DesignEvent;
 
 export interface SseMessage {
   readonly event: string;

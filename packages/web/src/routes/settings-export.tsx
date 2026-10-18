@@ -351,6 +351,8 @@ export function ImportResult({
       : null,
     counted("Voices", result.voices),
     counted("Play drafts", result.drafts),
+    counted("Designs", result.designs),
+    counted("Design templates", result.designTemplates),
     result.settings.added + result.settings.kept > 0
       ? `Settings: ${result.settings.added} filled in${result.settings.kept > 0 ? `, ${result.settings.kept} kept as this install has them` : ""}.`
       : null,

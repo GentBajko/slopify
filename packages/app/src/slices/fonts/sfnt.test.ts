@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { readFontMetadata, standaloneFont } from "./sfnt.js";
+import { fontAdvances, readFontMetadata, standaloneFont } from "./sfnt.js";
 
 const regular = readFileSync(new URL("../../assets/fonts/Barlow-Regular.ttf", import.meta.url));
 
@@ -113,5 +113,18 @@ describe("SFNT metadata", () => {
     expect(preview).toBeDefined();
     expect(readFontMetadata(preview ?? new Uint8Array())?.[0]?.name).toBe("Custom Regular");
     expect(standaloneFont(bytes, 2)).toBeUndefined();
+  });
+
+  it("reads each character's advance from the font, scaled the way libass sizes it", () => {
+    const advance = fontAdvances(regular, 0);
+    expect(advance).toBeDefined();
+    const wide = advance?.("M".codePointAt(0) ?? 0) ?? 0;
+    const narrow = advance?.("i".codePointAt(0) ?? 0) ?? 0;
+    expect(narrow).toBeGreaterThan(0.1);
+    expect(wide).toBeGreaterThan(narrow);
+    expect(wide).toBeLessThan(1);
+    expect(advance?.(0x10ffff)).toBeUndefined();
+    expect(fontAdvances(new Uint8Array([1, 2, 3, 4]), 0)).toBeUndefined();
+    expect(fontAdvances(regular, 3)).toBeUndefined();
   });
 });

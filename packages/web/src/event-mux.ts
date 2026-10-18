@@ -36,6 +36,8 @@ const names = [
   "assistant.tool",
   "assistant.ask",
   "assistant.turn",
+  "design.changed",
+  "design-template.sample",
 ] as const;
 
 interface StandIn {

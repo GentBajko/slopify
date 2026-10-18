@@ -3,7 +3,7 @@ import { providerError } from "../kernel/ports/model.js";
 import type { Registry } from "../kernel/ports/registry.js";
 import type { TtsAudio } from "../kernel/ports/tts.js";
 import { isLocalCliProvider, systemVoiceProvider } from "../slices/settings/model.js";
-import { referenceRefusal, takesReferenceImage } from "./schema.js";
+import { editRefusal, referenceRefusal, takesReferenceImage } from "./schema.js";
 import type { CatalogueStore } from "./store.js";
 
 export function curateRegistry(registry: Registry, catalogue: CatalogueStore): Registry {
@@ -161,6 +161,8 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
               message:
                 "The chosen image model has no effort setting. In the Edit tab, choose Edit project and set the images' Effort back to Model default under Providers, then use Continue the run.",
             });
+          if (request.edit !== undefined && !takesReferenceImage(model))
+            throw providerError({ kind: "unsupported", message: editRefusal });
           if (request.reference !== undefined && !takesReferenceImage(model))
             throw providerError({
               kind: "unsupported",

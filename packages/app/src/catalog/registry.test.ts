@@ -367,6 +367,32 @@ describe("curated provider requests", () => {
     ).rejects.toThrow(/Establishing image to Off in the Images section/);
     expect(requests).toEqual([]);
   });
+
+  it("refuses a picture to edit for a catalogue model without the reference keyword", async () => {
+    const requests: string[] = [];
+    const port: ImagePort = {
+      id: "replicate",
+      models: async () => [],
+      generate: async (request) => {
+        requests.push(request.model);
+        return { bytes: new Uint8Array([137, 80, 78, 71]), mime: "image/png" };
+      },
+    };
+    const curated = curateRegistry(registry(undefined, undefined, port), catalogue).image(
+      "replicate",
+    );
+    const source = { bytes: new Uint8Array([137, 80, 78, 71]), mime: "image/png" as const };
+    await expect(
+      curated.generate({
+        model: "black-forest-labs/flux-1.1-pro",
+        prompt: "Darker sky",
+        aspect: "16:9",
+        edit: { source },
+        signal: new AbortController().signal,
+      }),
+    ).rejects.toThrow(/can't edit a picture.*Made with … · change/);
+    expect(requests).toEqual([]);
+  });
 });
 
 function ttsRequest(text: string): TtsRequest {
