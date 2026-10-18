@@ -1,9 +1,12 @@
 import { detectSlots } from "@app/slices/admission/substitute.js";
+import { usesScene, usesSlopifyScene } from "@app/slices/images/scenes.js";
 import type { KeywordPlace } from "@app/slices/keywords/model.js";
 import { keywordProblems, placeOfKey, textEntryProblems } from "@app/slices/keywords/rules.js";
 import { lintEntry, lintPrompt } from "@app/slices/library/lint.js";
 import { bodyMax, type PromptKind } from "@app/slices/library/model.js";
 import type { ReactElement } from "react";
+import { KeywordInsertBar } from "@/components/keyword-insert-bar";
+import { Callout } from "@/components/kit/callout";
 import { Field } from "@/components/kit/field";
 import { OldKeywordNames } from "@/components/old-keyword-names";
 import { SlotBody } from "@/components/slot-body";
@@ -49,6 +52,9 @@ export function RawPromptField({
   const error = problems.length === 0 ? undefined : problems.join(" ");
   return (
     <div className="flex flex-col gap-3">
+      {place === undefined || place === "title" ? null : (
+        <KeywordInsertBar place={place} targetId={id} value={value} onChange={onChange} />
+      )}
       <Field label={`Raw prompt for ${name}`} id={id} tip="project.prompts.raw" error={error}>
         <SlotBody
           id={id}
@@ -59,6 +65,15 @@ export function RawPromptField({
           onChange={onChange}
         />
       </Field>
+      {checked && leavesOutScene(promptKey, value) ? (
+        <Callout tone="waiting" title="The scene keyword has no effect here">
+          <p className="m-0">
+            {promptKey === "referencePrompt"
+              ? "The establishing image is drawn without a scene of its own, so any line holding {{Slopify_Scene}}, {{Slopify_Setting}} or {{Slopify_Mood}} is left out. Remove it, or keep the line for the pictures that use it."
+              : "A short's picture is drawn from what its clip says, so any line holding a scene keyword is left out. Remove it, or keep the line for the video's pictures."}
+          </p>
+        </Callout>
+      ) : null}
       {place === undefined ? null : (
         <OldKeywordNames body={value} place={place} onChange={onChange} />
       )}
@@ -93,4 +108,12 @@ function promptKindOf(place: KeywordPlace | undefined): PromptKind {
   return place === undefined || place === "title" || place === "intro" || place === "outro"
     ? "article"
     : place;
+}
+
+// The two pictures the server draws without a scene (`recipe-reference.ts`, `recipe-shorts.ts`):
+// a line holding a scene keyword is dropped from the prompt there, so the keyword does nothing.
+function leavesOutScene(promptKey: string, body: string): boolean {
+  if (promptKey === "referencePrompt") return usesSlopifyScene(body);
+  if (promptKey === "shortsImage") return usesScene(body) || usesSlopifyScene(body);
+  return false;
 }

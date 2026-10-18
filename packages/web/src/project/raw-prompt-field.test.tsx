@@ -89,4 +89,32 @@ describe("a project's raw prompt", () => {
     render(<Raw start="Out {{Slopify_Release_Date}}" promptKey="intro" />);
     expect(box().getAttribute("aria-invalid")).toBe("false");
   });
+
+  it("offers the Insert bar for the prompt's place and puts the keyword at the caret", async () => {
+    const user = userEvent.setup();
+    render(<Raw start="ab" promptKey="article" />);
+    const toolbar = screen.getByRole("toolbar", { name: "Insert a keyword Slopify fills" });
+    expect(within(toolbar).queryByRole("button", { name: "Insert Scene" })).toBeNull();
+    box().focus();
+    box().setSelectionRange(1, 1);
+    await user.click(within(toolbar).getAllByRole("button")[0] as HTMLElement);
+    expect(box().value).toMatch(/^a\{\{Slopify_\w+\}\}b$/);
+  });
+
+  it("lists the scene keywords for a picture prompt", () => {
+    render(<Raw start="" promptKey="imagePrompts.0" />);
+    expect(screen.getByRole("button", { name: "Insert Scene" })).not.toBeNull();
+  });
+
+  it("says a scene keyword has no effect on the establishing image or a short's picture", () => {
+    for (const promptKey of ["referencePrompt", "shortsImage"]) {
+      const { unmount } = render(
+        <Raw start={"A hall\n{{Slopify_Scene}}"} promptKey={promptKey} />,
+      );
+      expect(screen.getByText(/has no effect here/)).not.toBeNull();
+      unmount();
+    }
+    render(<Raw start={"A hall\n{{Slopify_Scene}}"} promptKey="imagePrompts.0" />);
+    expect(screen.queryByText(/has no effect here/)).toBeNull();
+  });
 });
