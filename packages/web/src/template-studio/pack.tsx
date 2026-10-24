@@ -150,24 +150,24 @@ export function PackSamples({ templateId }: { readonly templateId: string }): Re
         meta="Made by whoever shared it. Your own samples replace these once you make them."
       />
       {pictures.length === 0 ? null : (
-        <MediaGrid density="compact" list label="Pictures from the pack">
+        <MediaGrid density="compact" list label="Images it came with">
           {pictures.map((sample) => (
             <li key={sample.url}>
               <MediaFrame
                 src={url(sample.url)}
                 alt={
                   sample.role === "thumbnail"
-                    ? "The pack's thumbnail"
-                    : `A picture from the pack: ${sample.name}`
+                    ? "The thumbnail it came with"
+                    : `An image it came with: ${sample.name}`
                 }
-                title={sample.role === "thumbnail" ? "Thumbnail" : "Picture"}
+                title={sample.role === "thumbnail" ? "Thumbnail" : "Image"}
               />
             </li>
           ))}
         </MediaGrid>
       )}
       {narration === undefined ? null : (
-        <AudioPlayer src={url(narration.url)} label="The pack's narration" compact />
+        <AudioPlayer src={url(narration.url)} label="The narration it came with" compact />
       )}
     </section>
   );

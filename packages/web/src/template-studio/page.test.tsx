@@ -985,7 +985,7 @@ it("shows the samples an imported template came with", async () => {
     }),
   });
   const section = await screen.findByRole("region", { name: "Samples it came with" });
-  expect(within(section).getByRole("img", { name: "The pack's thumbnail" })).not.toBeNull();
+  expect(within(section).getByRole("img", { name: "The thumbnail it came with" })).not.toBeNull();
   expect(within(section).getByText(/Your own samples replace these/)).not.toBeNull();
 });
 
