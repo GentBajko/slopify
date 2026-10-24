@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { CheckIcon } from "lucide-react";
 import { type FormEvent, type ReactElement, type ReactNode, useRef, useState } from "react";
 import { useApp } from "@/app-context";
+import { autostartKey } from "@/autostart/api";
 import { AutostartOffer } from "@/autostart/autostart-settings";
 import { ActionBar, StatusSlot } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
@@ -52,6 +53,50 @@ const samples: readonly {
     action: "Hear a podcast",
   },
 ];
+
+// The bundled samples, to watch on the first step and while the first short is made. Read-only,
+// so opening one costs nothing.
+function Samples({
+  title,
+  made,
+}: {
+  readonly title: string;
+  readonly made: FirstRunView["samples"] | undefined;
+}): ReactElement {
+  return (
+    <>
+      <SectionHead title={title} size="small" as="h3" className="mt-6" />
+      <List label="Samples" className="sl-list--wrap-meta">
+        {samples.map((one) => {
+          const projectId = made?.[one.id] ?? null;
+          return (
+            <ListRow
+              key={one.id}
+              title={one.name}
+              meta={one.summary}
+              actions={
+                projectId === null ? (
+                  <TextLink to="/settings" search={{ section: "storage" }}>
+                    Restore samples in Settings
+                  </TextLink>
+                ) : (
+                  <ButtonLink
+                    variant="quiet"
+                    to="/projects/$projectId"
+                    params={{ projectId }}
+                    className={hitTarget}
+                  >
+                    {one.action}
+                  </ButtonLink>
+                )
+              }
+            />
+          );
+        })}
+      </List>
+    </>
+  );
+}
 
 // The three steps, in order. The step is in the address (?step=style), so a detour to
 // Settings for a key, or a reload, comes back to it.
@@ -169,6 +214,8 @@ export function WelcomeRoute({
   const skip = useMutation({
     mutationFn: () => dismissFirstRun(api),
     onSuccess: async () => {
+      // Leaving the welcome answered start-at-login too.
+      await client.invalidateQueries({ queryKey: autostartKey });
       await client.invalidateQueries({ queryKey: onboardingKey });
       await navigate({ to: "/" });
     },
@@ -193,6 +240,7 @@ export function WelcomeRoute({
       request.current = undefined;
       setRefused([]);
       setMade(result.projectId);
+      await client.invalidateQueries({ queryKey: autostartKey });
       await client.invalidateQueries({ queryKey: keys.projects });
       await client.invalidateQueries({ queryKey: keys.voices });
     },
@@ -261,6 +309,7 @@ export function WelcomeRoute({
 
       <StepPanel id="found" at={step}>
         <SetupChecklist back={{ return: "welcome", step: "found" }} />
+        <Samples title="What Slopify makes: finished samples" made={data?.samples} />
       </StepPanel>
 
       <StepPanel id="style" at={step}>
@@ -326,35 +375,9 @@ export function WelcomeRoute({
 
         <AutostartOffer />
 
-        <SectionHead title="Finished samples" size="small" as="h3" className="mt-4" />
-        <List label="Samples" className="mb-4 sl-list--wrap-meta">
-          {samples.map((one) => {
-            const projectId = data?.samples[one.id] ?? null;
-            return (
-              <ListRow
-                key={one.id}
-                title={one.name}
-                meta={one.summary}
-                actions={
-                  projectId === null ? (
-                    <TextLink to="/settings" search={{ section: "storage" }}>
-                      Restore samples in Settings
-                    </TextLink>
-                  ) : (
-                    <ButtonLink
-                      variant="quiet"
-                      to="/projects/$projectId"
-                      params={{ projectId }}
-                      className={hitTarget}
-                    >
-                      {one.action}
-                    </ButtonLink>
-                  )
-                }
-              />
-            );
-          })}
-        </List>
+        {made === undefined ? null : (
+          <Samples title="While you wait: finished samples" made={data?.samples} />
+        )}
       </StepPanel>
 
       <ActionBar
@@ -371,7 +394,14 @@ export function WelcomeRoute({
             {`Next: ${stepNames[next]}`}
           </Button>
         ) : made === undefined ? (
-          <Button type="submit" form="welcome-short" variant="primary" disabled={short.isPending}>
+          // Pressable while something is missing (the refusal says what), but not in lime: the
+          // fixes above come first.
+          <Button
+            type="submit"
+            form="welcome-short"
+            variant={(data?.needs.gaps.length ?? 0) > 0 ? "secondary" : "primary"}
+            disabled={short.isPending}
+          >
             Make a 60-second short
           </Button>
         ) : (

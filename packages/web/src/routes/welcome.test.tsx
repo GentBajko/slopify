@@ -239,6 +239,10 @@ describe("step 3: make the first short", () => {
     expect(screen.getByRole("link", { name: "Add a voice key" }).getAttribute("href")).toContain(
       "return=welcome&step=make",
     );
+    // Make still answers a press, but the lime waits until nothing is missing.
+    const make = screen.getByRole("button", { name: "Make a 60-second short" });
+    expect(make.hasAttribute("disabled")).toBe(false);
+    expect(make.className).not.toContain("sl-btn--primary");
   });
 
   it("makes the short with the style and topic, the same request across a refusal", async () => {
