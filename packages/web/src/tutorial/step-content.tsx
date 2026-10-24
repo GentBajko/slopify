@@ -129,20 +129,21 @@ export function StepContent({
       return (
         <>
           <p>
-            Leave <strong>Audio</strong> on <strong>Generate</strong>. Pick your voice{" "}
-            <strong>TTS</strong> provider, a <strong>TTS model</strong>, then the saved{" "}
-            <strong>Voice</strong>.
+            Leave <strong>Narration</strong> on <strong>AI voice</strong>. Under{" "}
+            <strong>Read by</strong>, pick the <strong>Service</strong>, its <strong>Model</strong>,
+            then the saved <strong>Voice</strong>.
           </p>
           <p>
-            Keep <strong>Chunking</strong> (under <strong>More audio settings</strong>) on{" "}
-            <strong>Whole</strong> for the short example: the narration is sent as one request.
-            Other chunking modes split longer text into pieces. <strong>Speakers</strong> is where
-            an audiobook or podcast gets more than one voice; leave it on one voice for now.
+            Keep <strong>Split the narration by</strong> (under{" "}
+            <strong>More narration settings</strong>) on <strong>Nothing (one piece)</strong> for
+            the short example: the narration is sent as one request. The other choices split longer
+            text into pieces. <strong>Speakers</strong> is where an audiobook or podcast gets more
+            than one voice; leave it on one voice for now.
           </p>
           <p>
-            Use Provide to upload existing narration, including any intro and outro in that file, or
-            Off to skip narration. Video can still run silently, with each image shown for 5
-            seconds.
+            Use My own audio file to upload narration you already have, including any intro and
+            outro in that file, or Off to skip narration. The video can still run silently, with
+            each image shown for 5 seconds.
           </p>
         </>
       );
@@ -150,17 +151,19 @@ export function StepContent({
       return (
         <>
           <p>
-            Leave <strong>Images</strong> on <strong>Generate</strong>. Choose the image{" "}
-            <strong>Provider</strong> and <strong>Model</strong>, tick your image prompt, and type{" "}
-            <strong>2</strong> in the number box beside it for a small first run.
+            Leave <strong>Images</strong> on <strong>Made by AI</strong>. Under{" "}
+            <strong>Images by</strong>, pick the <strong>Service</strong> and <strong>Model</strong>
+            , tick your image prompt under <strong>Which image style?</strong>, and type{" "}
+            <strong>2</strong> in its <strong>How many images</strong> box for a small first run.
           </p>
           <p>
             The number means separate images made from that same prompt. It does not make one scene
-            per article paragraph. Add more image prompts when you want different scenes.
+            per article paragraph. Tick more image prompts when you want different scenes.
           </p>
           <p>
-            Use Provide for your own images or Off to skip them. Turning Images Off also turns Video
-            Off. Thumbnail remains independent; keep it Off for this first run.
+            Use My own images for your own pictures or None to skip them. Images None also turns the
+            video off. The thumbnail is separate, under Outputs; leave it unticked for this first
+            run.
           </p>
         </>
       );
@@ -168,17 +171,18 @@ export function StepContent({
       return (
         <>
           <p>
-            On <strong>Export</strong>, choose <strong>Generate</strong> for an MP4 slideshow. It
-            needs generated or provided images. With Audio Off, the video is silent and each image
-            lasts 5 seconds.
+            Under <strong>Video and style</strong>, leave <strong>Video</strong> on{" "}
+            <strong>Make the video</strong> for an MP4 slideshow, put together on this computer. It
+            needs images. With Narration Off, the video is silent and each image lasts 5 seconds.
           </p>
           <p>
-            Choose <strong>Off</strong> to skip video. If Audio is active, Slopify exports one
-            combined <strong>WAV</strong> with the intro, body, outro and configured gaps.
+            Choose <strong>Off (sound only)</strong> to skip the video. With narration on, Slopify
+            then exports one combined <strong>WAV</strong> with the intro, body, outro and the gaps
+            between them.
           </p>
           <p>
-            If both Audio and Video are Off, download the article and any other enabled outputs
-            individually.
+            If both Narration and Video are Off, download the article and anything else the run made
+            one by one.
           </p>
         </>
       );
@@ -186,20 +190,21 @@ export function StepContent({
       return (
         <>
           <p>
-            Subtitles are optional and start <strong>Off</strong>. Choose{" "}
-            <strong>Subtitle files</strong> for SRT and VTT downloads, or{" "}
-            <strong>Burn into video + files</strong> to keep captions visible in an MP4.
+            <strong>Captions</strong> are optional and start <strong>Off</strong>. Choose{" "}
+            <strong>Caption files only (.srt + .vtt)</strong> for files to upload beside the video,
+            or <strong>Show captions in the video</strong> to draw them into the MP4 (the files come
+            too).
           </p>
           <p>
             English captions are timed locally from your narration with no paid API. First use
             downloads an approximately <strong>378 MB</strong> speech model (a smaller one can be
-            chosen in Settings → Production defaults). Audio must be active; WAV exports support
-            separate subtitle files.
+            chosen in Settings → Production defaults). Narration must be on; a sound-only run gets
+            the caption files.
           </p>
           <p>
-            Pick a font or upload a TTF/OTF file, then adjust its size in the preview. Styling
-            applies to burned captions. You can also add or change subtitles on a completed project
-            later without regenerating its narration.
+            Pick a font or upload a TTF/OTF file, then set its size and position. The style applies
+            to captions shown in the video. You can also add or change captions on a finished
+            project later without making its narration again.
           </p>
         </>
       );
@@ -211,14 +216,15 @@ export function StepContent({
             in Content.
           </p>
           <p>
-            Select the text <strong>LLM</strong> and <strong>Text model</strong>. The model list
-            loads for your provider. Use <strong>Refresh</strong> for updated choices or{" "}
-            <strong>Custom ID</strong>
-            to enter an exact model ID when supported.
+            Under <strong>Written by</strong>, pick the <strong>Service</strong> and{" "}
+            <strong>Model</strong> that write the article. The list shows the models that work for
+            your key; <strong>Show more models…</strong> and <strong>Type a model ID…</strong> are
+            at its end, and <strong>Manage models ↗</strong> (Settings → Models) refreshes and
+            checks them.
           </p>
           <p>
-            Intro and Outro are available in Outputs when Audio is Generate. The LLM controls appear
-            only when an enabled stage needs text generation.
+            Intro and Outro are under Narration's <strong>More narration settings</strong> while
+            Narration is AI voice. Written by appears only when a stage needs the AI to write.
           </p>
         </>
       );
