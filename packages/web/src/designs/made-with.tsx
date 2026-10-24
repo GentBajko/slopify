@@ -7,8 +7,8 @@ import { modelsQuery } from "@/lib/models";
 import { ModelPicker, ProviderPicker } from "@/play/pickers";
 import { providersQuery } from "@/queries";
 
-// "Made with FLUX.2 on fal.ai · change": the image model a paid picture uses, one line, with
-// the pickers behind it in a drawer.
+// "Made with FLUX.2 on fal.ai · Change": the image service and model a paid picture uses, one
+// line, with the pickers behind it in a drawer.
 export function MadeWith({
   provider,
   model,
@@ -36,12 +36,12 @@ export function MadeWith({
         <span className="min-w-0 truncate">{`Made with ${modelName} on ${providerName}`}</span>
         <span aria-hidden="true">·</span>
         <Button variant="quiet" size="small" disabled={disabled} onClick={() => setOpen(true)}>
-          change
+          Change
         </Button>
       </span>
       <Drawer
         open={open}
-        title="Image model"
+        title="Image service and model"
         width="narrow"
         onClose={() => setOpen(false)}
         footer={
@@ -52,7 +52,7 @@ export function MadeWith({
       >
         <div className="flex flex-col gap-4">
           <ProviderPicker
-            label="Provider"
+            label="Service"
             family="image"
             providers={providers.data?.providers ?? []}
             value={provider}
