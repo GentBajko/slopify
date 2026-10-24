@@ -16,8 +16,9 @@ import { type Answer, jsonAnswer, renderRouted, testDeps } from "@/test-app";
 
 afterEach(cleanup);
 
-// Every labelled control on Settings, Home and the first-run screen has an info button beside
-// it. Nothing on these screens is allowed without one.
+// Every labelled control on Settings, Home and the first-run screen is explained beside it, by
+// a visible help line or an info button (help/coverage.ts). Nothing on these screens is allowed
+// without one.
 const areaAllow: readonly (string | RegExp)[] = [];
 
 function expectExplained(): void {

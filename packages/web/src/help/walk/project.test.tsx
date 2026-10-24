@@ -26,7 +26,8 @@ import {
 } from "@/test-app";
 
 // Every control a person meets on the project page, in Edit project, the rebuild review and
-// Prepare upload has an info button beside it (help/coverage.ts).
+// Prepare upload is explained beside it, by a visible help line or an info button
+// (help/coverage.ts).
 
 afterEach(cleanup);
 

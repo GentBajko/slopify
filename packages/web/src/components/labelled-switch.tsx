@@ -1,4 +1,5 @@
-import { useId } from "react";
+import { type ReactNode, useId } from "react";
+import { HelpLine } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -15,6 +16,7 @@ export function LabelledSwitch<T extends string>({
   value,
   options,
   describedBy,
+  help,
   tip,
   onPick,
 }: {
@@ -22,10 +24,16 @@ export function LabelledSwitch<T extends string>({
   readonly value: T;
   readonly options: readonly { readonly value: T; readonly label: string }[];
   readonly describedBy?: string;
+  // One short sentence under the choice: what it changes. Its explanation, visible.
+  readonly help?: ReactNode;
+  // The info button after the label, only for a consequence that needs a paragraph.
   readonly tip?: HelpId;
   readonly onPick: (next: T) => void;
 }) {
   const labelId = useId();
+  const helpId = useId();
+  const described =
+    [describedBy, help === undefined ? undefined : helpId].filter(Boolean).join(" ") || undefined;
 
   return (
     <div {...helpScope}>
@@ -37,7 +45,7 @@ export function LabelledSwitch<T extends string>({
         type="single"
         value={value}
         aria-labelledby={labelId}
-        aria-describedby={describedBy}
+        aria-describedby={described}
         onValueChange={(next) => {
           const picked = options.find((option) => option.value === next);
           if (picked !== undefined) {
@@ -51,6 +59,11 @@ export function LabelledSwitch<T extends string>({
           </ToggleGroupItem>
         ))}
       </ToggleGroup>
+      {help === undefined ? null : (
+        <HelpLine id={helpId} className="mt-1">
+          {help}
+        </HelpLine>
+      )}
     </div>
   );
 }

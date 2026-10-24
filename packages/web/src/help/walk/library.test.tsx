@@ -23,7 +23,7 @@ import { selfExplanatory, unexplainedControls } from "../coverage.js";
 
 afterEach(cleanup);
 
-// What the Library may show without an info button beside it.
+// What the Library may show with neither a help line nor an info button beside it.
 const libraryAllow: readonly (string | RegExp)[] = [];
 
 function expectExplained(): void {
@@ -106,7 +106,7 @@ function EntriesScreen() {
   return <EntriesRoute category={category} onCategory={setCategory} />;
 }
 
-describe("every Library control has an info button", () => {
+describe("every Library control is explained", () => {
   it("on the Library tabs", async () => {
     renderRouted(
       <CommandPaletteProvider>

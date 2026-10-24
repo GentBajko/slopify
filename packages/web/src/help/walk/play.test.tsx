@@ -11,9 +11,10 @@ import { jsonAnswer } from "@/test-app";
 
 afterEach(cleanup);
 
-// Every labelled control on Play has an info button beside it: every setup row's editor with
-// each source switched to what shows the most controls, the Review panel, another video's
-// keywords, the drafts list and Save as template. Nothing on Play is allowed without one.
+// Every labelled control on Play is explained beside it, by a visible help line or an info
+// button (help/coverage.ts): every setup row's editor with each source switched to what shows
+// the most controls, the Review panel, another video's keywords, the drafts list and Save as
+// template. Nothing on Play is allowed without one.
 const areaAllow: readonly (string | RegExp)[] = [];
 
 function expectExplained(): void {

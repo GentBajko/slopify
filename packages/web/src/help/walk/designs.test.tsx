@@ -16,8 +16,9 @@ afterEach(() => {
   window.history.replaceState(null, "", "/");
 });
 
-// Library → Designs: every control on a design's page and in the design template editor has an
-// info button beside it. The walk opens each tab and section the way a person would.
+// Library → Designs: every control on a design's page and in the design template editor is
+// explained beside it, by a visible help line or an info button (help/coverage.ts). The walk
+// opens each tab and section the way a person would.
 function expectExplained(): void {
   expect(unexplainedControls(document.body, [...selfExplanatory])).toEqual([]);
 }

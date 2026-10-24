@@ -1,7 +1,48 @@
-import { type KeyboardEvent, type ReactElement, type ReactNode, useRef } from "react";
+import { type KeyboardEvent, type ReactElement, type ReactNode, useId, useRef } from "react";
 import type { HelpId } from "@/help/catalog";
 import { cn } from "@/lib/utils";
+import { HelpLine } from "./field.js";
 import { helpScope, InfoTip } from "./info-tip.js";
+
+// A control with its explanation: the info button after it, then the one visible sentence under
+// it, both inside one help scope (help/coverage.ts). With neither, the control stands alone.
+function Explained({
+  control,
+  tip,
+  tipLabel,
+  help,
+  helpId,
+  helpClassName,
+}: {
+  readonly control: ReactElement;
+  readonly tip: HelpId | undefined;
+  readonly tipLabel: string | undefined;
+  readonly help: ReactNode;
+  readonly helpId: string;
+  readonly helpClassName?: string | undefined;
+}): ReactElement {
+  const tipped =
+    tip === undefined ? (
+      control
+    ) : (
+      <span
+        className="inline-flex max-w-full items-center gap-1"
+        {...(help === undefined ? helpScope : {})}
+      >
+        {control}
+        <InfoTip id={tip} label={tipLabel} />
+      </span>
+    );
+  if (help === undefined) return tipped;
+  return (
+    <div className="flex min-w-0 flex-col items-start gap-1" {...helpScope}>
+      {tipped}
+      <HelpLine id={helpId} className={helpClassName}>
+        {help}
+      </HelpLine>
+    </div>
+  );
+}
 
 // An on/off setting that applies at once. The label is part of the button, so the whole row
 // toggles and the name is read with the state.
@@ -12,6 +53,7 @@ export function Switch({
   disabled,
   className,
   describedBy,
+  help,
   tip,
   tipLabel,
 }: {
@@ -21,16 +63,23 @@ export function Switch({
   readonly disabled?: boolean;
   readonly className?: string;
   readonly describedBy?: string;
-  // The info button after the switch; `tipLabel` names it when `label` is not plain text.
+  // One short sentence under the switch, lined up with its label: what turning it on does
+  // ("Pauses the run so you can approve the images first."). Its explanation, visible.
+  readonly help?: ReactNode;
+  // The info button after the switch, only for a consequence that needs a paragraph;
+  // `tipLabel` names it when `label` is not plain text.
   readonly tip?: HelpId;
   readonly tipLabel?: string;
 }): ReactElement {
+  const helpId = useId();
+  const described =
+    [describedBy, help === undefined ? undefined : helpId].filter(Boolean).join(" ") || undefined;
   const button = (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
-      aria-describedby={describedBy}
+      aria-describedby={described}
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cn("sl-switch", className)}
@@ -39,12 +88,15 @@ export function Switch({
       <span>{label}</span>
     </button>
   );
-  if (tip === undefined) return button;
   return (
-    <span className="inline-flex max-w-full items-center gap-1" {...helpScope}>
-      {button}
-      <InfoTip id={tip} label={tipLabel ?? (typeof label === "string" ? label : undefined)} />
-    </span>
+    <Explained
+      control={button}
+      tip={tip}
+      tipLabel={tipLabel ?? (typeof label === "string" ? label : undefined)}
+      help={help}
+      helpId={helpId}
+      helpClassName="sl-switch__help"
+    />
   );
 }
 
@@ -61,6 +113,7 @@ export function Segmented<T extends string>({
   onChange,
   label,
   className,
+  help,
   tip,
 }: {
   readonly value: T;
@@ -69,10 +122,13 @@ export function Segmented<T extends string>({
   // The group's accessible name.
   readonly label: string;
   readonly className?: string;
-  // The info button after the group.
+  // One short sentence under the group: what the choice changes. Its explanation, visible.
+  readonly help?: ReactNode;
+  // The info button after the group, only for a consequence that needs a paragraph.
   readonly tip?: HelpId;
 }): ReactElement {
   const group = useRef<HTMLDivElement>(null);
+  const helpId = useId();
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
     const enabled = options.filter((option) => !option.disabled);
@@ -90,6 +146,7 @@ export function Segmented<T extends string>({
       ref={group}
       role="group"
       aria-label={label}
+      aria-describedby={help === undefined ? undefined : helpId}
       onKeyDown={onKeyDown}
       className={cn("sl-seg", className)}
     >
@@ -109,11 +166,5 @@ export function Segmented<T extends string>({
       ))}
     </div>
   );
-  if (tip === undefined) return segmented;
-  return (
-    <span className="inline-flex max-w-full items-center gap-1" {...helpScope}>
-      {segmented}
-      <InfoTip id={tip} label={label} />
-    </span>
-  );
+  return <Explained control={segmented} tip={tip} tipLabel={label} help={help} helpId={helpId} />;
 }

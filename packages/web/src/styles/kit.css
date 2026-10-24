@@ -200,10 +200,13 @@
     line-height: 19px;
     color: var(--color-ink);
   }
+  /* The one visible sentence under a control (kit HelpLine, a Field's `help`). */
+  .sl-help,
   .sl-field__help {
     font-size: 13px;
     line-height: 19px;
     color: var(--color-ink-2);
+    max-width: var(--measure);
   }
   .sl-field__error {
     font-size: 13px;
@@ -323,6 +326,10 @@
   .sl-switch[aria-checked="true"] .sl-switch__track::after {
     transform: translateX(16px);
     background: var(--color-on-accent);
+  }
+  /* Under the switch's label, past the track and its gap. */
+  .sl-switch__help {
+    padding-left: calc(36px + var(--space-3));
   }
   .sl-seg {
     display: inline-flex;

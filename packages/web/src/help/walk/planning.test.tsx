@@ -15,8 +15,9 @@ import { ChannelLinksSettings } from "@/youtube/channel-links";
 
 afterEach(cleanup);
 
-// Schedules, the calendar and channels: every control a person meets there has an info button
-// beside it. The walk opens each form, mode, tab, editor and dialog the way a person would.
+// Schedules, the calendar and channels: every control a person meets there is explained beside
+// it, by a visible help line or an info button (help/coverage.ts). The walk opens each form,
+// mode, tab, editor and dialog the way a person would.
 const planningAllow: readonly (string | RegExp)[] = [];
 
 function expectExplained(): void {

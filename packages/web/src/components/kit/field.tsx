@@ -11,6 +11,26 @@ import type { HelpId } from "@/help/catalog";
 import { cn } from "@/lib/utils";
 import { helpScope, InfoTip } from "./info-tip.js";
 
+// One short visible sentence under a control, saying what its label cannot ("About 150 words
+// is one minute."). The screen walks (help/coverage.ts) count it as the control's explanation
+// when it sits inside the same `helpScope`. Inside a Field, pass `help` instead; a row that
+// lays out its own control spreads `helpScope` on the row and puts this line in it.
+export function HelpLine({
+  id,
+  className,
+  children,
+}: {
+  readonly id?: string | undefined;
+  readonly className?: string | undefined;
+  readonly children: ReactNode;
+}): ReactElement {
+  return (
+    <p id={id} className={cn("sl-help m-0", className)} data-help-text="">
+      {children}
+    </p>
+  );
+}
+
 // A label above its control, one short help line, and the error in words under it. The
 // control inside picks up its id, `aria-describedby` and `aria-invalid` from the field, so a
 // caller never wires them by hand.
@@ -37,9 +57,11 @@ export function Field({
   children,
 }: {
   readonly label: ReactNode;
-  // One short line under the control, for scanning. The full answer goes in `tip`.
+  // One short sentence under the control that says what the label cannot: the field's
+  // explanation (help/coverage.ts), visible without a click.
   readonly help?: ReactNode;
-  // The info button beside the label: what the field does, the default, what it costs.
+  // The info button beside the label, only for a setting whose consequence (a cost, a limit,
+  // a side effect) needs a paragraph.
   readonly tip?: HelpId;
   // "About {tipLabel}" when the label is not plain text.
   readonly tipLabel?: string;
@@ -75,9 +97,9 @@ export function Field({
         )}
         {children}
         {helpId === undefined ? null : (
-          <p id={helpId} className="sl-field__help m-0">
+          <HelpLine id={helpId} className="sl-field__help">
             {help}
-          </p>
+          </HelpLine>
         )}
         {errorId === undefined ? null : (
           <p id={errorId} className="sl-field__error m-0">

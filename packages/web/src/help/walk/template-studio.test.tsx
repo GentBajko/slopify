@@ -10,8 +10,8 @@ import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
 afterEach(cleanup);
 
 // Library → Templates → Open studio: every control in every section, in the topic and Compare
-// models drawers, and beside compared models, has an info button beside it. The walk opens
-// each one the way a person would.
+// models drawers, and beside compared models, is explained beside it, by a visible help line
+// or an info button (help/coverage.ts). The walk opens each one the way a person would.
 function expectExplained(): void {
   expect(unexplainedControls(document.body, [...selfExplanatory])).toEqual([]);
 }
