@@ -329,9 +329,17 @@ describe("project pause and provider changes", () => {
     expect(screen.queryByRole("button", { name: "Save providers" })).toBeNull();
     await user.click(screen.getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(fixture.save).toHaveBeenCalledOnce(), { timeout: 5_000 });
-    await waitFor(() => expect(screen.queryByLabelText("Project title")).toBeNull(), {
-      timeout: 5_000,
-    });
+    // The settings open again on the version just saved, at the section they were on.
+    await screen.findByText(
+      "Saved as a new version. Nothing is made again until you choose to.",
+      undefined,
+      { timeout: 5_000 },
+    );
+    expect(
+      within(screen.getByRole("navigation", { name: "Edit sections" }))
+        .getByRole("button", { name: /^Images/ })
+        .getAttribute("aria-current"),
+    ).not.toBeNull();
     expect(fixture.view().revision.config).toMatchObject({
       llm: { provider: "claude-code", model: "sonnet" },
       audio: { provider: "cartesia", model: "sonic-3", voice: "new-voice" },

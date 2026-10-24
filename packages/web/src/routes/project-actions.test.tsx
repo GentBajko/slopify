@@ -175,6 +175,12 @@ describe("editing the article", () => {
     await waitFor(() => expect(fixture.save).toHaveBeenCalledOnce());
     expect(fixture.view().revision.content.articleMarkdown).toBe("Rewritten.");
     expect(fixture.start).not.toHaveBeenCalled();
+    // The settings stay open, on the new version, and say it was saved.
+    await screen.findByText("Saved as a new version. Nothing is made again until you choose to.");
+    expect(screen.queryByRole("button", { name: "Edit project" })).toBeNull();
+    expect(((await screen.findByLabelText("Article text")) as HTMLTextAreaElement).value).toBe(
+      "Rewritten.",
+    );
   });
 
   it("keeps the typing when the revision save is refused", async () => {

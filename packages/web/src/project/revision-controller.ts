@@ -175,7 +175,7 @@ export function useRevisionController(
       setRefusal(result);
       return;
     }
-    await accepted(result.value.view);
+    if (await accepted(result.value.view)) setNotice({ kind: "saved" });
     saveMemory.current = undefined;
   }
   async function start(consent: RebuildConsent, shown = preview): Promise<void> {
@@ -257,7 +257,8 @@ export function useRevisionController(
     setUploading,
     openEditor: () =>
       void perform(async () => {
-        setNotice(undefined);
+        // Opening again right after a save keeps saying it was saved.
+        setNotice((current) => (current?.kind === "saved" ? current : undefined));
         setDiscarded(undefined);
         if (await restoreStored()) return;
         await prepare(true);

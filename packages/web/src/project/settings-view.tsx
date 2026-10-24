@@ -1,5 +1,5 @@
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
-import type { ReactElement } from "react";
+import { type ReactElement, useEffect, useState } from "react";
 import { Button } from "@/components/kit/button";
 import { TabPanel, Tabs } from "@/components/kit/tabs";
 import { CheckpointPanel } from "./checkpoint-panel.js";
@@ -45,6 +45,12 @@ export function SettingsView({
   readonly sample: boolean;
   readonly onCopyId: () => void;
 }): ReactElement {
+  // The section open in the settings: the one an address names, then the one the person
+  // picked, so a save (which opens the settings again on the new version) keeps the place.
+  const [section, setSection] = useState<EditSection | undefined>(opening);
+  useEffect(() => {
+    if (opening !== undefined) setSection(opening);
+  }, [opening]);
   return (
     <section hidden={!shown} aria-label="Settings" className="flex min-w-0 flex-col gap-3">
       <Tabs
@@ -69,7 +75,8 @@ export function SettingsView({
           renderEditor={(props) => (
             <RevisionForm
               {...props}
-              opening={opening}
+              opening={section}
+              onSection={setSection}
               checks={
                 <CheckpointPanel
                   projectId={projectId}

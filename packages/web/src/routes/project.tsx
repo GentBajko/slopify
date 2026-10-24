@@ -250,13 +250,20 @@ function ProjectWorkspace({
   // The settings view opens straight into the editor.
   const settingsShown = chosen === "settings" || chosen === "checkpoints";
   const opened = useRef(false);
+  const reopened = useRef<unknown>(undefined);
   useEffect(() => {
     if (!settingsShown) {
       opened.current = false;
       return;
     }
-    // Once per visit: a draft already open counts, so discarding it does not reopen one.
+    // Once per visit: a draft already open counts, so discarding it does not reopen one. A save
+    // closes the draft, and the settings open again on the version it made.
     if (controller.edit !== undefined) opened.current = true;
+    else if (controller.notice?.kind === "saved" && reopened.current !== controller.notice) {
+      // Once per save, so a refused reopening is not tried again and again.
+      reopened.current = controller.notice;
+      opened.current = false;
+    }
     if (opened.current || controller.busy) return;
     opened.current = true;
     controller.openEditor();

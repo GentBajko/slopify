@@ -23,7 +23,9 @@ export type DraftNotice =
   | { readonly kind: "restored"; readonly savedAt: string }
   | { readonly kind: "reapplied" }
   | { readonly kind: "discarded" }
-  | { readonly kind: "copied"; readonly ok: boolean };
+  | { readonly kind: "copied"; readonly ok: boolean }
+  // The draft was saved as the current version; the editor opens again on it.
+  | { readonly kind: "saved" };
 
 export interface RegenerateOptions {
   // The charge the person saw and accepted at the button, in USD. A remake whose estimate is

@@ -90,8 +90,10 @@ function Group({
 export function RevisionForm(
   props: EditorProps & {
     readonly renderContent?: (props: EditorProps) => ReactNode;
-    // The section an address opened the settings on.
+    // The section an address opened the settings on, or the one open before a save.
     readonly opening?: EditSection | undefined;
+    // Told which section is open, so the settings can open on it again after a save.
+    readonly onSection?: (section: EditSection) => void;
     // The pauses for this run, at the top of Pauses and checks: they take effect at once.
     readonly checks?: ReactNode;
   },
@@ -117,6 +119,10 @@ export function RevisionForm(
   useEffect(() => {
     if (props.opening !== undefined) setSection(props.opening);
   }, [props.opening]);
+  const { onSection } = props;
+  useEffect(() => {
+    onSection?.(section);
+  }, [onSection, section]);
   const [pending, setPending] = useState({ font: false, content: false, music: false });
   useEffect(() => {
     onPending(pending.font || pending.content || pending.music);

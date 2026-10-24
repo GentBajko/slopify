@@ -27,6 +27,8 @@ function DraftStatus({ c }: { readonly c: RevisionController }): ReactElement {
   );
   if (c.uploading) return line("info", "Waiting for uploads to finish…");
   const notice = c.notice;
+  if (notice?.kind === "saved")
+    return line("success", "Saved as a new version. Nothing is made again until you choose to.");
   if (notice?.kind === "restored")
     return line(
       "info",
