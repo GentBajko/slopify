@@ -7,6 +7,10 @@ import { Callout } from "@/components/kit/callout";
 // bottom of the window, and a plain column beside it on a wide screen.
 export const editorSurface = "pt-1";
 export const editorAside = "flex min-w-0 flex-col gap-3 pt-1 lg:sticky lg:top-4";
+// Around a choice whose segments can be wider than a phone (the nine kinds, "Let the AI write it
+// from these instructions"): the segments scroll sideways inside the form instead of widening
+// the page.
+export const editorChoice = "min-w-0 max-w-full overflow-x-auto";
 
 // "Prompts › Article" above an editor's title: the way back to the list it was opened from,
 // each part a link or a word.

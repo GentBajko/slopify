@@ -41,13 +41,15 @@ function PromptKinds({ shown }: { readonly shown: PromptsShown }): ReactElement 
   const { api } = useApp();
   const prompts = useQuery(promptsQuery(api)).data?.prompts;
   const entries = useQuery(entriesQuery(api)).data?.entries;
-  // "Article, 4" to a screen reader; the number alone on screen.
+  // "Article, 4" to a screen reader; the number alone on screen. The hidden comma is placed
+  // inside the count, so on a phone, where the kinds scroll sideways, it scrolls with them
+  // instead of widening the page.
   const count = (counted: number | undefined) =>
     counted === undefined ? undefined : (
-      <>
+      <span className="relative">
         <span className="sr-only">, </span>
         {String(counted)}
-      </>
+      </span>
     );
   return (
     <Rail label="Kinds of prompt">

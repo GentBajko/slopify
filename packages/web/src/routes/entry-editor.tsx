@@ -35,7 +35,13 @@ import {
   modeOptions,
   noSlotsHint,
 } from "@/lib/entry-options";
-import { EditorCrumb, EditorProblem, editorAside, editorSurface } from "@/library/editor-frame";
+import {
+  EditorCrumb,
+  EditorProblem,
+  editorAside,
+  editorChoice,
+  editorSurface,
+} from "@/library/editor-frame";
 import { entriesQuery } from "@/queries";
 
 // One intro or outro: a name, whether it is spoken before or after the video, whether the
@@ -195,24 +201,28 @@ export function EntryEditorRoute({
             </div>
             {/* The category may change after creation, and a name is only taken
                 within its own category, so a collision under the old one is moot. */}
+            <div className={editorChoice}>
+              <LabelledSwitch
+                label="Intro or outro"
+                value={draft.category}
+                options={categoryOptions}
+                onPick={(next) => {
+                  edit({ ...draft, category: next }, "name");
+                }}
+              />
+            </div>
+          </div>
+          <div className={editorChoice}>
             <LabelledSwitch
-              label="Intro or outro"
-              value={draft.category}
-              options={categoryOptions}
+              label="What the narrator reads"
+              value={draft.mode}
+              options={modeOptions}
+              help={modeHint(draft.mode, draft.category)}
               onPick={(next) => {
-                edit({ ...draft, category: next }, "name");
+                edit({ ...draft, mode: next }, "mode");
               }}
             />
           </div>
-          <LabelledSwitch
-            label="What the narrator reads"
-            value={draft.mode}
-            options={modeOptions}
-            help={modeHint(draft.mode, draft.category)}
-            onPick={(next) => {
-              edit({ ...draft, mode: next }, "mode");
-            }}
-          />
 
           <div className="flex flex-col gap-1" {...helpScope}>
             <label htmlFor={bodyId} className="sl-field__label">

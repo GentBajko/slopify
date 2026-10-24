@@ -49,7 +49,13 @@ import {
   kindPlaceholder,
   kindSentence,
 } from "@/lib/prompt-kinds";
-import { EditorCrumb, EditorProblem, editorAside, editorSurface } from "@/library/editor-frame";
+import {
+  EditorCrumb,
+  EditorProblem,
+  editorAside,
+  editorChoice,
+  editorSurface,
+} from "@/library/editor-frame";
 import { promptsQuery } from "@/queries";
 import { useTutorialEvent, useTutorialProgress } from "@/tutorial/context";
 
@@ -307,19 +313,21 @@ export function PromptEditorRoute({
           {/* The kind may change after creation, and a name is only taken within its own
               kind, so a collision under the old one is moot. */}
           {kindOpen ? (
-            <LabelledSwitch
-              label="Kind"
-              value={draft.kind}
-              options={kindOptions}
-              help={
-                promptId === undefined
-                  ? kindSentence(draft.kind)
-                  : `${kindSentence(draft.kind)} Saving moves it to the ${kindNoun(draft.kind)} list.`
-              }
-              onPick={(next) => {
-                edit({ ...draft, kind: next }, "name");
-              }}
-            />
+            <div className={editorChoice}>
+              <LabelledSwitch
+                label="Kind"
+                value={draft.kind}
+                options={kindOptions}
+                help={
+                  promptId === undefined
+                    ? kindSentence(draft.kind)
+                    : `${kindSentence(draft.kind)} Saving moves it to the ${kindNoun(draft.kind)} list.`
+                }
+                onPick={(next) => {
+                  edit({ ...draft, kind: next }, "name");
+                }}
+              />
+            </div>
           ) : null}
 
           <div data-tour="prompt-body" className="flex flex-col gap-1" {...helpScope}>
