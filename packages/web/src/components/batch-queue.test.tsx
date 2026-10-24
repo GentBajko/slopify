@@ -1,8 +1,8 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-import { emptyAnswer, jsonAnswer, renderApp, testDeps } from "@/test-app";
-import { QueueItemActions } from "./batch-queue";
+import { emptyAnswer, jsonAnswer, renderApp, renderRouted, testDeps } from "@/test-app";
+import { BatchQueueCount, QueueItemActions } from "./batch-queue";
 
 afterEach(cleanup);
 
@@ -26,18 +26,62 @@ describe("QueueItemActions", () => {
         },
       }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Move Rohan earlier in the queue" }));
+    const earlier = screen.getByRole("button", { name: "Move Rohan earlier in the queue" });
+    // Named in words on the button, not an arrow.
+    expect(earlier.textContent).toBe("Earlier");
+    await userEvent.click(earlier);
     await waitFor(() => expect(calls).toEqual(['move {"by":-1}']));
     await userEvent.click(screen.getByRole("button", { name: "Remove Rohan from the queue" }));
     await userEvent.click(await screen.findByRole("button", { name: "Undo" }));
     await waitFor(() => expect(calls).toEqual(['move {"by":-1}', "trash", "restore"]));
   });
 
-  it("keeps the first waiting video from moving earlier", () => {
+  // A move that cannot happen is not offered, rather than drawn greyed.
+  it("offers no Earlier to the first waiting video and no Later to the last", () => {
     renderApp(<QueueItemActions projectId="p1" title="Arda" place={0} waiting={2} />, testDeps({}));
-    expect(screen.getByRole("button", { name: "Move Arda earlier in the queue" })).toHaveProperty(
-      "disabled",
-      true,
+    expect(screen.queryByRole("button", { name: "Move Arda earlier in the queue" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Move Arda later in the queue" })).not.toBeNull();
+    cleanup();
+    renderApp(<QueueItemActions projectId="p2" title="Bea" place={1} waiting={2} />, testDeps({}));
+    expect(screen.queryByRole("button", { name: "Move Bea later in the queue" })).toBeNull();
+  });
+});
+
+describe("BatchQueueCount", () => {
+  const listing = { projects: [] };
+
+  it("says nothing while no video waits in the queue", async () => {
+    const queue = { queue: [{ projectId: "p1", batchId: "b", position: 0, state: "active" }] };
+    const { container } = renderRouted(
+      <BatchQueueCount />,
+      testDeps({
+        "GET /api/projects/queue": jsonAnswer(queue),
+        "GET /api/projects": jsonAnswer(listing),
+      }),
     );
+    await waitFor(() => expect(container.textContent).toBe(""));
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("says how many videos wait, and lists them in order", async () => {
+    const queue = {
+      queue: [
+        { projectId: "p1", batchId: "b", position: 0, state: "active" },
+        { projectId: "p2", batchId: "b", position: 1, state: "queued" },
+        { projectId: "p3", batchId: "b", position: 2, state: "queued" },
+      ],
+    };
+    renderRouted(
+      <BatchQueueCount />,
+      testDeps({
+        "GET /api/projects/queue": jsonAnswer(queue),
+        "GET /api/projects": jsonAnswer(listing),
+      }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "2 videos waiting in the queue" }),
+    );
+    const list = await screen.findByRole("list", { name: "Waiting to start" });
+    expect(list.querySelectorAll("li")).toHaveLength(2);
   });
 });
