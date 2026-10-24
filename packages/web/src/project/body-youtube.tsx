@@ -52,6 +52,7 @@ import { OnYoutube } from "./on-youtube.js";
 import { useOutputText } from "./parts.js";
 import { ReleaseTimes } from "./release-times.js";
 import { RegenerateNowContext } from "./revision-action-context.js";
+import { YoutubeCopyContext } from "./section-copy.js";
 import { EditableField, Filled, splitTags, TagChips } from "./youtube-field.js";
 
 const labels: Readonly<Record<DescriptionField, string>> = {
@@ -96,6 +97,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
   const titlesText = useOutputText(otherTitles).data;
   // Write again remakes only this step, at once: it saves a version with it marked.
   const regenerateNow = use(RegenerateNowContext);
+  const shared = use(YoutubeCopyContext);
   const [rewriting, setRewriting] = useState(false);
   // One part open at a time, so the section fits the window; each head still copies its part.
   const [openPart, setOpenPart] = useState<YoutubePart>("description");
@@ -287,6 +289,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
         ...(commented ? { pinnedComment: () => copy(filledComment.text, "pinned comment") } : {}),
       }
     : {};
+  if (shared !== undefined) shared.current = copyLatest.current;
   const waiting =
     stage.state === "running"
       ? "Written after the subtitle timing."
