@@ -310,9 +310,11 @@ describe("project pause and provider changes", () => {
     await openProjectEditor();
     // Each stage's service sits in that stage's section, in Create's words.
     await openEditSection("Article");
-    await user.selectOptions(await screen.findByLabelText("Service"), "claude-code");
-    await user.click(screen.getByRole("button", { name: "Enter Model ID" }));
-    await user.type(screen.getByRole("textbox", { name: "Model" }), "sonnet");
+    // Pauses and checks asks for its checker's Service and Model too; these are the writer's.
+    const writer = within(await screen.findByRole("region", { name: "Written by" }));
+    await user.selectOptions(writer.getByLabelText("Service"), "claude-code");
+    await user.click(writer.getByRole("button", { name: "Enter Model ID" }));
+    await user.type(writer.getByRole("textbox", { name: "Model" }), "sonnet");
     await openEditSection("Narration");
     await user.selectOptions(screen.getByLabelText("Voice service"), "cartesia");
     await user.click(screen.getByRole("button", { name: "Enter Voice model ID" }));

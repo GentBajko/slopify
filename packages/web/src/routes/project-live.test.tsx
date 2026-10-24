@@ -170,17 +170,24 @@ describe("the page under a live run", () => {
     const server: Server = { landed: 0, video: "pending", textModel: "model-before" };
     const { source, reads } = mount(server);
     await openProjectEditor();
-    const model = await screen.findByLabelText("Model");
+    // The writer's Model: Pauses and checks asks for its checker's Model too.
+    const writer = async () =>
+      within(await screen.findByRole("region", { name: "Written by", hidden: true }));
+    const model = (await writer()).getByLabelText("Model");
     expect((model as HTMLInputElement).value).toBe("model-before");
     const before = reads();
     server.textModel = "model-after";
     source.emit({ type: "project.updated", projectId: "p1" });
     await waitFor(() => expect(reads()).toBe(before + 1));
-    expect((screen.getByLabelText("Model") as HTMLSelectElement).value).toBe("model-before");
+    expect(((await writer()).getByLabelText("Model") as HTMLSelectElement).value).toBe(
+      "model-before",
+    );
     await userEvent.click(screen.getByRole("button", { name: "Discard changes" }));
     await openProjectEditor();
-    expect(((await screen.findByLabelText("Model")) as HTMLSelectElement).value).toBe(
-      "model-after",
+    await waitFor(async () =>
+      expect(((await writer()).getByLabelText("Model") as HTMLSelectElement).value).toBe(
+        "model-after",
+      ),
     );
   });
 
