@@ -1,18 +1,24 @@
+import { ChevronRightIcon } from "lucide-react";
 import { type ReactElement, type ReactNode, useState } from "react";
 import { cn } from "@/lib/utils";
 
-// A fold of occasional settings: a bordered `<details>` whose summary names what is inside
-// and, after a dot, what it is set to now ("More audio settings · Chunked, 2 voices"). With
-// `remember` the fold stays open or closed as the person left it, per browser, for folds
-// that get reopened on every visit.
+// A fold of occasional settings, drawn as a disclosure and never as a box that could pass for
+// an empty field: a chevron, what is inside in ink, what it is set to now in words ("More audio
+// settings · Chunked, 2 voices"), and Show or Hide at the end of the line. What opens lines up
+// under the name. With `remember` the fold stays open or closed as the person left it, per
+// browser, for folds that get reopened on every visit.
 export function Fold({
   summary,
+  state,
   remember,
   defaultOpen = false,
   className,
   children,
 }: {
+  // What is inside: "More audio settings", "Earlier samples".
   readonly summary: ReactNode;
+  // What it is set to or holds now, in words, after the name: "Chunked, 2 voices", "3".
+  readonly state?: ReactNode;
   // A stable key, such as "play.audio-more".
   readonly remember?: string;
   readonly defaultOpen?: boolean;
@@ -29,10 +35,17 @@ export function Fold({
         setOpen(next);
         keep(remember, next);
       }}
-      className={cn("rounded-control border border-line px-3", className)}
+      className={cn("sl-fold", className)}
+      data-slot="fold"
     >
-      <summary className="flex min-h-9 cursor-pointer items-center text-small text-ink-2">
-        {summary}
+      <summary className="sl-fold__summary">
+        <ChevronRightIcon aria-hidden="true" strokeWidth={2} className="sl-fold__chevron" />
+        <span className="sl-fold__label">{summary}</span>
+        {state === undefined || state === null ? null : (
+          <span className="sl-fold__state">{state}</span>
+        )}
+        {/* "Show" or "Hide" (kit.css): the summary already says expanded or collapsed aloud. */}
+        <span className="sl-fold__toggle" aria-hidden="true" />
       </summary>
       {children}
     </details>

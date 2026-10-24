@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Button, IconButton } from "./button.js";
 import { ConfirmDialog } from "./dialog.js";
 import { Checkbox, Field, Input, Select, Textarea } from "./field.js";
+import { Fold } from "./fold.js";
 import { hitArea, hitTarget, List, ListRow } from "./list-row.js";
 import { Lightbox, type LightboxItem, MediaFrame, MediaGrid } from "./media.js";
 import { foldPeaks } from "./media-controls.js";
@@ -156,6 +157,44 @@ describe("switch and segmented", () => {
     await user.keyboard("{ArrowRight}");
     expect(screen.getByRole("button", { name: "9:16" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByRole("button", { name: "16:9" }).getAttribute("aria-pressed")).toBe("false");
+  });
+});
+
+describe("a fold", () => {
+  const css = readFileSync(join(import.meta.dirname, "..", "..", "styles", "kit.css"), "utf8");
+
+  it("is a disclosure: a chevron, the name, its state in words, and Show or Hide", async () => {
+    const user = userEvent.setup();
+    render(
+      <Fold summary="More audio settings" state="Chunked, 2 voices">
+        <p>Inside</p>
+      </Fold>,
+    );
+    const details = screen.getByRole("group");
+    const summary = details.querySelector("summary");
+    expect(summary?.querySelector("svg")).not.toBeNull();
+    expect(screen.getByText("More audio settings").parentElement).toBe(summary);
+    expect(screen.getByText("Chunked, 2 voices").parentElement).toBe(summary);
+    // Never a bordered box that could pass for an empty field.
+    expect(details.className).not.toMatch(/\bborder\b/);
+    expect(css).toMatch(/\.sl-fold__toggle::after \{\s*content: "Show";/);
+    expect(css).toMatch(
+      /\.sl-fold\[open\] > \.sl-fold__summary \.sl-fold__toggle::after \{\s*content: "Hide";/,
+    );
+    expect((details as HTMLDetailsElement).open).toBe(false);
+    await user.click(screen.getByText("More audio settings"));
+    expect((details as HTMLDetailsElement).open).toBe(true);
+  });
+
+  it("leaves the state out when it has none", () => {
+    render(
+      <Fold summary="Install the extension">
+        <p>Inside</p>
+      </Fold>,
+    );
+    const summary = screen.getByRole("group").querySelector("summary");
+    expect(summary?.querySelector(".sl-fold__state")).toBeNull();
+    expect(summary?.textContent).toBe("Install the extension");
   });
 });
 

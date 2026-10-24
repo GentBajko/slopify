@@ -356,6 +356,75 @@
     box-shadow: inset 0 0 0 1px var(--color-line-strong);
   }
 
+  /* Fold: a disclosure, never a bordered box. What opens lines up under the name, past the
+     chevron and its gap. */
+  .sl-fold {
+    --fold-indent: calc(16px + var(--space-2));
+    min-width: 0;
+    padding-left: var(--fold-indent);
+  }
+  .sl-fold__summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 36px;
+    margin-left: calc(-1 * var(--fold-indent));
+    padding: 4px 8px 4px 0;
+    border-radius: var(--radius-control);
+    list-style: none;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 19px;
+    color: var(--color-ink);
+  }
+  .sl-fold__summary::-webkit-details-marker {
+    display: none;
+  }
+  .sl-fold__summary:hover {
+    background: var(--color-raised);
+  }
+  .sl-fold__chevron {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    color: var(--color-ink-2);
+    transition: transform 120ms;
+  }
+  .sl-fold[open] > .sl-fold__summary .sl-fold__chevron {
+    transform: rotate(90deg);
+  }
+  .sl-fold__label {
+    min-width: 0;
+    font-weight: 600;
+  }
+  .sl-fold__state {
+    min-width: 0;
+    color: var(--color-ink-2);
+  }
+  .sl-fold__state::before {
+    content: "·";
+    margin-right: var(--space-2);
+    color: var(--color-ink-3);
+  }
+  .sl-fold__toggle {
+    margin-left: auto;
+    padding-left: var(--space-3);
+    flex: none;
+    font-weight: 600;
+    color: var(--color-accent-ink);
+  }
+  .sl-fold__toggle::after {
+    content: "Show";
+  }
+  .sl-fold[open] > .sl-fold__summary .sl-fold__toggle::after {
+    content: "Hide";
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sl-fold__chevron {
+      transition: none;
+    }
+  }
+
   /* Tabs */
   .sl-tabs {
     display: flex;
