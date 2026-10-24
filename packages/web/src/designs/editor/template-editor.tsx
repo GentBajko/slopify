@@ -2,7 +2,6 @@ import type { DesignDocument } from "@app/slices/designs/schema.js";
 import { type DesignSectionId, designSections } from "@app/slices/designs/sections.js";
 import type { SectionState } from "@app/slices/template-studio/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
 import { useDocumentTitle } from "@/components/document-title";
@@ -10,8 +9,8 @@ import { ActionBar, StatusSlot, type StatusTone } from "@/components/kit/action-
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { PageHeader, Workspace } from "@/components/kit/layout";
+import { TextLink } from "@/components/kit/link";
 import { LoadFailed, LoadingBlock } from "@/components/kit/query-state";
-import { EditorCrumb } from "@/library/editor-frame";
 import { keys } from "@/queries";
 import { StudioRail } from "@/template-studio/section-rail";
 import {
@@ -157,6 +156,9 @@ function TemplateEditor({ template }: { readonly template: TemplateView }): Reac
     return "stale";
   };
   const isReady = template.readyVersion === template.headVersion;
+  // Approval matters only to a schedule: its words and its button show once the saved template
+  // has a schedule or a version was approved, never to someone making pieces by hand.
+  const scheduled = template.document.schedule !== undefined || template.readyVersion !== null;
   // As in a project template's studio, a version is marked ready once its own sample is made.
   const sampled =
     template.sample?.state === "done" && template.sample.version === template.headVersion;
@@ -165,19 +167,19 @@ function TemplateEditor({ template }: { readonly template: TemplateView }): Reac
     <>
       <PageHeader
         crumb={
-          <EditorCrumb>
-            <Link to="/templates" search={{ tab: "posters" }}>
-              Poster templates
-            </Link>
-          </EditorCrumb>
+          <TextLink to="/templates" search={{ tab: "posters" }}>
+            Templates
+          </TextLink>
         }
         title={name.trim() === "" ? "Untitled template" : name}
-        meta={`Version ${String(template.headVersion)} · ${
-          isReady
-            ? "ready for schedules"
-            : template.readyVersion === null
-              ? "not approved for schedules yet"
-              : `schedules make version ${String(template.readyVersion)}`
+        meta={`Version ${String(template.headVersion)}${
+          !scheduled
+            ? ""
+            : isReady
+              ? " · Ready for schedules"
+              : template.readyVersion === null
+                ? " · Not ready for schedules"
+                : ` · Schedules make version ${String(template.readyVersion)}`
         }`}
       />
       <Workspace
@@ -253,43 +255,43 @@ function TemplateEditor({ template }: { readonly template: TemplateView }): Reac
         >
           Make a piece
         </Button>
-        <Button
-          disabled={dirty || isReady || ready.isPending || !sampled}
-          disabledReason={
-            dirty
-              ? "Save first: a version is approved as saved."
-              : isReady
-                ? "This version is approved already."
-                : !sampled
-                  ? "Make this version's sample first: approval needs a current sample to look over."
-                  : undefined
-          }
-          focusableWhenDisabled
-          onClick={() => {
-            setStatus(null);
-            ready.mutate();
-          }}
-        >
-          Approve for schedules
-        </Button>
-        <Button
-          variant="primary"
-          disabled={!dirty || save.isPending || quote.isFetching || name.trim() === ""}
-          disabledReason={
-            !dirty
-              ? "Nothing to save."
-              : name.trim() === ""
-                ? "Give the template a name under Picture."
-                : "Working out the price…"
-          }
-          focusableWhenDisabled
-          onClick={() => {
-            setStatus(null);
-            save.mutate();
-          }}
-        >
-          Save
-        </Button>
+        {scheduled ? (
+          <Button
+            disabled={dirty || isReady || ready.isPending || !sampled}
+            disabledReason={
+              dirty
+                ? "Save first: a version is approved as saved."
+                : isReady
+                  ? "This version is approved already."
+                  : !sampled
+                    ? "Make this version's sample first: approval needs a current sample to look over."
+                    : undefined
+            }
+            focusableWhenDisabled
+            onClick={() => {
+              setStatus(null);
+              ready.mutate();
+            }}
+          >
+            Approve for schedules
+          </Button>
+        ) : null}
+        {dirty ? (
+          <Button
+            variant="primary"
+            disabled={save.isPending || quote.isFetching || name.trim() === ""}
+            disabledReason={
+              name.trim() === "" ? "Give the template a name under Picture." : "Saving…"
+            }
+            focusableWhenDisabled
+            onClick={() => {
+              setStatus(null);
+              save.mutate();
+            }}
+          >
+            Save
+          </Button>
+        ) : null}
       </ActionBar>
       <MakePieceDrawer
         key={`${String(template.headVersion)}-${String(making)}`}

@@ -2,7 +2,6 @@ import type { DesignView } from "@app/slices/designs/model.js";
 import type { DesignDocument } from "@app/slices/designs/schema.js";
 import type { CostEstimate } from "@app/slices/estimate/index.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { type ReactElement, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { useDocumentTitle } from "@/components/document-title";
@@ -10,9 +9,9 @@ import { ActionBar, StatusSlot, type StatusTone } from "@/components/kit/action-
 import { Button } from "@/components/kit/button";
 import { Field, Textarea } from "@/components/kit/field";
 import { PageHeader } from "@/components/kit/layout";
+import { TextLink } from "@/components/kit/link";
 import { LoadFailed, LoadingBlock } from "@/components/kit/query-state";
 import { Tabs } from "@/components/kit/tabs";
-import { EditorCrumb } from "@/library/editor-frame";
 import { keys } from "@/queries";
 import {
   continueFrom,
@@ -54,7 +53,7 @@ export function DesignRoute({ designId }: { readonly designId: string }): ReactE
       <LoadFailed
         what="The design"
         error={query.error}
-        fix="Open Library → Designs and choose it again."
+        fix="Open Designs and choose it again."
         onRetry={() => void query.refetch()}
         retrying={query.isFetching}
       />
@@ -289,11 +288,7 @@ function DesignEditor({ design }: { readonly design: DesignView }): ReactElement
   return (
     <>
       <PageHeader
-        crumb={
-          <EditorCrumb>
-            <Link to="/designs">Designs</Link>
-          </EditorCrumb>
-        }
+        crumb={<TextLink to="/designs">Designs</TextLink>}
         title={design.name}
         meta={`${design.kind === "edit" ? "Picture edit" : "Designed piece"} · ${String(design.steps.length)} ${design.steps.length === 1 ? "version" : "versions"}`}
       />

@@ -53,6 +53,12 @@ function template(
   };
 }
 
+// A poster template a schedule makes pieces from: approval is shown only for one.
+const scheduledDoc: DesignDocument = {
+  ...blankTemplate(),
+  schedule: { dateField: "Date", daysBefore: 7, time: "09:00" },
+};
+
 const done: SampleView = {
   state: "done",
   version: 2,
@@ -101,7 +107,6 @@ function visibleSettings(): number {
 }
 
 const saveButton = () => screen.getByRole("button", { name: "Save" });
-const words = (button: HTMLElement) => button.firstChild?.textContent;
 
 describe("the design template editor", () => {
   it("has four sections, each with at most four settings on show", async () => {
@@ -140,8 +145,9 @@ describe("the design template editor", () => {
         },
       }),
     );
-    expect(words(await waitFor(saveButton))).toBe("Save");
-    expect(saveButton().getAttribute("aria-disabled")).toBe("true");
+    // Nothing changed yet: there is nothing to save, so no Save is drawn.
+    await screen.findByRole("button", { name: "Make a piece" });
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
     await user.click(screen.getByRole("button", { name: railName("Text layout") }));
     await user.click(screen.getByRole("button", { name: "Centre" }));
     await waitFor(() => expect(saveButton().getAttribute("aria-disabled")).toBeNull());
@@ -218,7 +224,7 @@ describe("the design template editor", () => {
   it("keeps Approve for schedules off until this version's sample is made, saying why", async () => {
     renderRouted(
       <DesignTemplateRoute templateId="t1" />,
-      deps(template({ sample: { ...done, version: 1 } })),
+      deps(template({ sample: { ...done, version: 1 } }, scheduledDoc)),
     );
     const button = await screen.findByRole("button", { name: "Approve for schedules" });
     expect(button.getAttribute("aria-disabled")).toBe("true");
@@ -229,11 +235,27 @@ describe("the design template editor", () => {
     expect(within(panel).getByText("The sample shows version 1.")).not.toBeNull();
   });
 
+  it("says nothing of approval on a poster template no schedule makes", async () => {
+    renderRouted(<DesignTemplateRoute templateId="t1" />, deps(template({ sample: done })));
+    expect(await screen.findByText("Version 2")).not.toBeNull();
+    expect(screen.queryByRole("button", { name: "Approve for schedules" })).toBeNull();
+    expect(screen.queryByText(/for schedules/)).toBeNull();
+    expect(screen.getByRole("link", { name: "Templates" }).getAttribute("href")).toBe(
+      "/templates?tab=posters",
+    );
+    cleanup();
+    renderRouted(
+      <DesignTemplateRoute templateId="t1" />,
+      deps(template({ sample: done }, scheduledDoc)),
+    );
+    expect(await screen.findByText("Version 2 · Not ready for schedules")).not.toBeNull();
+  });
+
   it("lists what approval found, each with the section to open", async () => {
     const user = userEvent.setup();
     renderRouted(
       <DesignTemplateRoute templateId="t1" />,
-      deps(template({ sample: done }), {
+      deps(template({ sample: done }, scheduledDoc), {
         "POST /api/design-templates/t1/ready": () =>
           new Response(
             JSON.stringify({
