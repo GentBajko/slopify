@@ -355,11 +355,6 @@ export const settingsHelp = {
   },
 
   // Home
-  "home.channel": {
-    title: "Channel",
-    body: "Shows Home and the other screens for one channel, or for all of them. It only filters what you see: projects, schedules and costs of other channels keep running. Slopify remembers the choice in this browser.",
-    tutorial: { page: "Channels", anchor: "show-one-channels-work" },
-  },
   "home.needs-you": {
     title: "Needs you",
     body: "Runs held at a review before a step, paused runs, topics a schedule suggested for you to accept or reject, and runs that failed with the fix to try; then finished videos you have not marked uploaded. Nothing here moves on until you act: approving a review from here lets that run continue, and Mark uploaded takes a finished video off the list (Projects still has it).",

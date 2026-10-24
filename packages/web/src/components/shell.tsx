@@ -30,7 +30,6 @@ import {
   CommandPaletteProvider,
   useCommandPalette,
 } from "@/components/kit/command-palette";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { ButtonLink } from "@/components/kit/link";
 import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/kit/menu";
 import { Lamp } from "@/components/kit/status";
@@ -361,10 +360,7 @@ function ShellContent() {
           </Link>
         )}
         <div className="sl-app__foot">
-          <div className="flex items-end gap-1" {...helpScope}>
-            <ChannelPicker className="min-w-0 flex-1" />
-            <InfoTip id="home.channel" className="mb-1" />
-          </div>
+          <ChannelPicker className="min-w-0" />
           <PlayKey asChild className="h-12 text-[16px]">
             <Link to="/play" aria-keyshortcuts={ariaKeyShortcuts(shortcuts.newVideo)}>
               <PlusIcon {...iconProps} />

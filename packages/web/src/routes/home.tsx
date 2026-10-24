@@ -12,7 +12,6 @@ import { useApp } from "@/app-context";
 import { ChannelPicker, useCurrentChannel } from "@/channels/current";
 import { Board, BoardColumn } from "@/components/kit/board";
 import { EmptyState } from "@/components/kit/empty-state";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
 import { ButtonLink } from "@/components/kit/link";
 import { LoadFailed, LoadingBlock, QueryState, StaleNote } from "@/components/kit/query-state";
@@ -158,10 +157,7 @@ export function HomeRoute(): ReactElement {
           </>
         }
       />
-      <div className="mb-5 flex items-end gap-1 md:hidden" {...helpScope}>
-        <ChannelPicker className="min-w-0 flex-1" />
-        <InfoTip id="home.channel" className="mb-1" />
-      </div>
+      <ChannelPicker className="mb-5 min-w-0 md:hidden" />
       <Board split="main-side">
         <BoardColumn>
           {projects.data === undefined ? (
