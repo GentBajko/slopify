@@ -112,9 +112,9 @@ it("adds and removes pending gates with explicit revision-bound saves", async ()
     }),
   );
   const audio = await screen.findByRole("checkbox", { name: "Before Narration" });
-  expect(
-    screen.getByRole("checkbox", { name: "Before Video" }).hasAttribute("disabled"),
-  ).toBe(false);
+  expect(screen.getByRole("checkbox", { name: "Before Video" }).hasAttribute("disabled")).toBe(
+    false,
+  );
   audio.focus();
   await user.keyboard(" ");
   expect(patch).not.toHaveBeenCalled();
