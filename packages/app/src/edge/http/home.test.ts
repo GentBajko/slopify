@@ -4,6 +4,7 @@ import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import { defaultChannelId } from "../../slices/channels/model.js";
+import { projectVideos, recordVideo } from "../../slices/studio/videos.js";
 import { setAsideProjects, uploadedProjects } from "../../slices/uploads/repo.js";
 import type { AppDeps } from "./app.js";
 import { homeRoutes, uploadedRoutes } from "./home.js";
@@ -256,6 +257,25 @@ describe("PUT /api/projects/:id/uploaded", () => {
     expect(uploadedProjects(db).get("p1")).toBe("2026-09-27T10:00:00.000Z");
     expect(await (await put(app, "p1", false)).json()).toEqual({ uploadedAt: null });
     expect(uploadedProjects(db).has("p1")).toBe(false);
+  });
+
+  it("forgets the long video's link with the mark, so the two never disagree", async () => {
+    const { app, db } = harness();
+    recordVideo(db, "p1", null, "6tRcYUoxyQo", "2026-09-26T10:00:00.000Z");
+    recordVideo(db, "p1", 1, "SoiEotWS3dA", "2026-09-26T10:00:00.000Z");
+    expect(uploadedProjects(db).get("p1")).toBe("2026-09-26T10:00:00.000Z");
+    expect(await (await put(app, "p1", false)).json()).toEqual({ uploadedAt: null });
+    expect(uploadedProjects(db).has("p1")).toBe(false);
+    // A short is on YouTube by its own link, which stays.
+    expect(projectVideos(db, "p1").map((one) => one.short)).toEqual([1]);
+  });
+
+  it("leaves an upload only filled in Studio when the mark comes off", async () => {
+    const { app, db } = harness();
+    recordVideo(db, "p1", null, "6tRcYUoxyQo", "2026-09-26T10:00:00.000Z", "filled");
+    await put(app, "p1", true);
+    await put(app, "p1", false);
+    expect(projectVideos(db, "p1").map((one) => one.uploadState)).toEqual(["filled"]);
   });
 
   it("says a missing project no longer exists", async () => {

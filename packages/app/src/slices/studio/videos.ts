@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import { markUploaded } from "../uploads/repo.js";
+import { markUploaded, type UploadMarkResult } from "../uploads/repo.js";
 
 // The YouTube video each upload became, and its A/B test
 // (`0045-youtube-videos.sql`). `short` is null for the long video, as in the fill queue.
@@ -131,6 +131,13 @@ export function forgetVideo(
     slot(short),
   );
   if (short === null && was?.uploadState === "done") markUploaded(db, projectId, false, at);
+}
+
+// "Mark not uploaded" (Home, Projects): the long video's link goes with the mark, so the two
+// never disagree. An upload only filled in Studio is not on YouTube and stays.
+export function markNotUploaded(db: DatabaseSync, projectId: string, at: string): UploadMarkResult {
+  if (videoOf(db, projectId, null)?.uploadState === "done") forgetVideo(db, projectId, null, at);
+  return markUploaded(db, projectId, false, at);
 }
 
 export function projectVideos(db: DatabaseSync, projectId: string): readonly YoutubeVideo[] {
