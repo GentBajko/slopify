@@ -2,60 +2,25 @@ import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { ReactElement, ReactNode } from "react";
 import { ButtonRow } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
-import { PageHeader } from "@/components/kit/layout";
-import { TabLinks } from "@/components/kit/tabs";
 import { categoryOf } from "@/lib/entry-options";
 import { kindOf } from "@/lib/prompt-kinds";
 import { cn } from "@/lib/utils";
 
-// Everything reusable lives in one place: the saved setups a project can start from, the
-// building blocks those setups are made of (prompts, spoken intros and outros, PDF themes and
-// the narration aliases that say words a certain way), and A/B results. Each tab keeps its own
-// URL, so a link to any of them still lands.
-export const libraryGroups = [
-  {
-    label: "Setups",
-    tabs: [
-      { to: "/templates", label: "Templates" },
-      { to: "/designs", label: "Designs" },
-    ],
-  },
-  {
-    label: "Building blocks",
-    tabs: [
-      { to: "/prompts", label: "Prompts" },
-      { to: "/entries", label: "Intros & outros" },
-      { to: "/document-themes", label: "PDF themes" },
-      { to: "/narration-aliases", label: "Narration aliases" },
-    ],
-  },
-  { label: "Results", tabs: [{ to: "/ab-results", label: "A/B results" }] },
-] as const;
-
+// The pages that hold what a video is made from: Prompts (with intros and outros), Templates
+// and Designs, PDF themes, pronunciation aliases and A/B results. There is no Library page: each
+// is reached on its own (the rail, Settings, a channel) and draws its own header. This layout
+// only keeps their shared commands in Ctrl+K while one of them is open.
 export function LibraryLayout(): ReactElement {
   return (
-    <div>
-      <PageHeader
-        title="Library"
-        meta="Templates and designs to start from, and the prompts, intros and outros, PDF themes and narration aliases they use"
-      />
-      <div className="mb-6 flex min-w-0 flex-wrap items-end gap-x-8 gap-y-3 border-b border-line">
-        {libraryGroups.map((group) => (
-          <div key={group.label} className="min-w-0">
-            <div className="sl-kicker">{group.label}</div>
-            <TabLinks items={group.tabs} label={group.label} className="border-b-0" />
-          </div>
-        ))}
-      </div>
+    <>
       <LibraryCommands />
       <Outlet />
-    </div>
+    </>
   );
 }
 
-// The Library's frequent actions in Ctrl+K, on every tab: making a new item of each kind
-// (a new prompt or intro/outro starts on the kind or category the tab is showing) and moving
-// between the tabs.
+// The frequent actions in Ctrl+K: a new prompt, intro or outro (on the kind or list showing),
+// a new PDF theme, and the way to each list.
 function LibraryCommands(): null {
   const navigate = useNavigate();
   const location = useRouterState({ select: (state) => state.location });
@@ -65,7 +30,7 @@ function LibraryCommands(): null {
   useCommand({
     id: "library.new-prompt",
     title: "New prompt",
-    group: "Library",
+    group: "Prompts",
     keywords: ["create", "article", "image", "thumbnail"],
     run: () => {
       void navigate({ to: "/prompts/new", search: { kind } });
@@ -73,9 +38,9 @@ function LibraryCommands(): null {
   });
   useCommand({
     id: "library.new-entry",
-    title: "New intro or outro",
-    group: "Library",
-    keywords: ["create", "entry"],
+    title: `New ${category}`,
+    group: "Prompts",
+    keywords: ["create", "intro", "outro"],
     run: () => {
       void navigate({ to: "/entries/new", search: { category } });
     },
@@ -83,16 +48,16 @@ function LibraryCommands(): null {
   useCommand({
     id: "library.new-document-theme",
     title: "New PDF theme",
-    group: "Library",
+    group: "PDF themes",
     keywords: ["create", "pdf", "theme", "document"],
     run: () => {
-      void navigate({ to: "/document-themes/new", search: { from: "plain" } });
+      void navigate({ to: "/document-themes/new", search: {} });
     },
   });
   useCommand({
     id: "library.open-prompts",
     title: "Open prompts",
-    group: "Library",
+    group: "Prompts",
     run: () => {
       void navigate({ to: "/prompts", search: { kind: "article" } });
     },
@@ -100,7 +65,7 @@ function LibraryCommands(): null {
   useCommand({
     id: "library.open-entries",
     title: "Open intros and outros",
-    group: "Library",
+    group: "Prompts",
     keywords: ["entries"],
     run: () => {
       void navigate({ to: "/entries", search: { category: "intro" } });
@@ -109,7 +74,7 @@ function LibraryCommands(): null {
   useCommand({
     id: "library.open-templates",
     title: "Open templates",
-    group: "Library",
+    group: "Templates",
     keywords: ["setups"],
     run: () => {
       void navigate({ to: "/templates" });
@@ -118,8 +83,8 @@ function LibraryCommands(): null {
   useCommand({
     id: "library.open-document-themes",
     title: "Open PDF themes",
-    group: "Library",
-    keywords: ["pdf", "documents", "document themes"],
+    group: "PDF themes",
+    keywords: ["pdf", "documents", "document themes", "pdf look"],
     run: () => {
       void navigate({ to: "/document-themes" });
     },
@@ -127,8 +92,8 @@ function LibraryCommands(): null {
   return null;
 }
 
-// The row a Library tab opens with: its filters on the left, its one action on the right.
-// On a phone the action wraps under the filters.
+// The row a list page opens with: its filters on the left, its actions on the right. On a
+// phone the actions wrap under the filters.
 export function LibraryToolbar({
   children,
   action,
@@ -141,7 +106,7 @@ export function LibraryToolbar({
   return (
     <div
       data-slot="library-toolbar"
-      className={cn("mb-5 flex min-h-9 flex-wrap items-center gap-x-4 gap-y-3", className)}
+      className={cn("mb-4 flex min-h-9 flex-wrap items-center gap-x-4 gap-y-3", className)}
     >
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">{children}</div>
       {action === undefined ? null : <ButtonRow className="ml-auto shrink-0">{action}</ButtonRow>}
