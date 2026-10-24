@@ -26,7 +26,7 @@ export function TextGeneration({
       ? (labels[0] ?? "")
       : `${labels.slice(0, -1).join(", ")} and ${labels.at(-1) ?? ""}`;
   return (
-    <section aria-label="Written by" className="border-b border-line py-4">
+    <section aria-label="Written by" className="border-b border-line py-4 last:border-b-0">
       <ServiceGroup
         family="llm"
         meta={used === "" ? undefined : `for ${used}`}

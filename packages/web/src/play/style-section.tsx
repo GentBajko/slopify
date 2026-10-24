@@ -24,7 +24,10 @@ export function StyleSection({
   const captions = narrated || document.fontUpload !== null;
   if (!shaped && !captions)
     return (
-      <p data-tour="play-subtitles" className="m-0 border-b border-line py-4 text-small text-ink-2">
+      <p
+        data-tour="play-subtitles"
+        className="m-0 border-b border-line py-4 text-small text-ink-2 last:border-b-0"
+      >
         No frame or captions to set: this run makes no pictures and no narration.
       </p>
     );
@@ -36,7 +39,7 @@ export function StyleSection({
   return (
     <div
       data-tour="play-subtitles"
-      className="flex min-w-0 flex-col gap-4 border-b border-line py-4"
+      className="flex min-w-0 flex-col gap-4 border-b border-line py-4 last:border-b-0"
     >
       {shaped ? (
         <FormatPicker

@@ -31,7 +31,7 @@ export function OutputTick({
   const id = useId();
   return (
     <div
-      className={cn("flex min-w-0 flex-col border-b border-line py-3", className)}
+      className={cn("flex min-w-0 flex-col border-b border-line py-3 last:border-b-0", className)}
       {...helpScope}
     >
       <label

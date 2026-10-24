@@ -69,7 +69,7 @@ export function StageRail({
   return (
     <section
       data-tour={`play-${kind}`}
-      className="flex min-w-0 flex-col gap-4 border-b border-line py-4 [&>div:empty]:hidden"
+      className="flex min-w-0 flex-col gap-4 border-b border-line py-4 last:border-b-0 [&>div:empty]:hidden"
     >
       <div
         className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2"

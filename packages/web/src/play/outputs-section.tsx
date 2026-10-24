@@ -184,7 +184,7 @@ function SoundPolish({
     .join(", ")
     .replace(/^./, (first) => first.toUpperCase());
   return (
-    <section aria-label="Sound polish" className="border-b border-line py-3">
+    <section aria-label="Sound polish" className="border-b border-line py-3 last:border-b-0">
       <Fold
         key={spoken ? "spoken" : "video"}
         summary="Sound polish"
@@ -259,7 +259,7 @@ export function ExtrasSection(
     <>
       <TextGenerationIn {...props} section="outputs" />
       {props.publishing === false ? (
-        <div className="border-b border-line py-3">
+        <div className="border-b border-line py-3 last:border-b-0">
           <Fold
             summary="Publishing extras"
             state="Thumbnail, YouTube description, Shorts, posts"

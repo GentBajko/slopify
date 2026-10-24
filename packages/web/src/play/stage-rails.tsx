@@ -282,7 +282,7 @@ export function ImagesAndCuts({
   return (
     <section
       aria-label="Images and cuts"
-      className="flex min-w-0 flex-col gap-4 border-b border-line py-4"
+      className="flex min-w-0 flex-col gap-4 border-b border-line py-4 last:border-b-0"
       {...helpScope}
     >
       <h4 className="m-0 text-body font-semibold">Images and cuts</h4>
