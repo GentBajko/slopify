@@ -84,6 +84,18 @@ describe("fuzzy matching", () => {
     const list = [command("a", "Open settings"), command("b", "Approve", { context: "Cleopatra" })];
     expect(matchCommands(list, "").map((c) => c.id)).toEqual(["b", "a"]);
   });
+
+  it("orders an empty palette by rank after the screen's own commands, whenever each was registered", () => {
+    const list = [
+      command("late", "New prompt"),
+      command("go", "Open home", { rank: -1 }),
+      command("screen", "Approve", { context: "Cleopatra" }),
+      command("create", "Create a video", { rank: -2 }),
+    ];
+    expect(matchCommands(list, "").map((c) => c.id)).toEqual(["screen", "create", "go", "late"]);
+    // Typing ranks by the match alone.
+    expect(matchCommands(list, "new prompt")[0]?.id).toBe("late");
+  });
 });
 
 describe("the registry", () => {
