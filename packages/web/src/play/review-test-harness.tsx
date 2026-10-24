@@ -6,7 +6,7 @@ import { PlayForm } from "@/routes/play";
 import { type Answer, renderRouted, testDeps } from "@/test-app";
 import { PlayDraftProvider, type PlaySession, usePlaySession } from "./draft-context";
 import { freshDraftDocument } from "./draft-state";
-import { playRoutes } from "./play-test-fixture";
+import { playRoutes, trackSession } from "./play-test-fixture";
 
 export const suppliedDocument: PlayDraftDocument = {
   ...freshDraftDocument,
@@ -30,8 +30,6 @@ export function reviewHarness(
     response,
   ) => response,
   overrides: Readonly<Record<string, Answer>> = {},
-  // Mounts Create as its route does: template, topic and Start, with More settings.
-  form: { readonly simpleByDefault?: boolean } = {},
 ): {
   readonly send: typeof fetch;
   readonly requests: readonly Request[];
@@ -47,7 +45,7 @@ export function reviewHarness(
   let mounted: RenderResult;
   function Capture(): ReactElement {
     captured = usePlaySession();
-    return <PlayForm onCreated={created} {...form} />;
+    return <PlayForm onCreated={created} />;
   }
   const session = (): PlaySession => {
     if (!captured) throw new Error("Session not mounted");
@@ -73,6 +71,7 @@ export function reviewHarness(
     );
   };
   mount();
+  trackSession(session);
   return {
     requests,
     send: deps.api.fetch,

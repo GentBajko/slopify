@@ -12,6 +12,7 @@ import { keys } from "@/queries";
 import { type DraftRefusal, readPlayDraft, reviewPlayDraft, startPlayDraft } from "./draft-api";
 import { refreshDraftChoices, rememberDraft } from "./draft-restore";
 import type { DraftSessionState } from "./draft-save";
+import { type OutputKind, outputCount, outputKindOf } from "./output-kind";
 import { ambientUploadOn, shortsOn } from "./state";
 
 export interface ReviewedGeneration {
@@ -195,7 +196,7 @@ export function createReviewOwner({
           publish({
             receipt: null,
             valid: false,
-            error: `The saved draft has ${videos(reply.value.runs.length)}, but this page shows ${shown}. Slopify saved this page again. Press Refresh review, then start.`,
+            error: `The saved draft has ${videos(reply.value.runs.length)}, but this page shows ${shown}. Slopify saved this page again. Press Check again, then make them.`,
           });
           resave();
           return;
@@ -208,15 +209,15 @@ export function createReviewOwner({
             error:
               error instanceof Error
                 ? error.message
-                : "This setup couldn't be checked. Press Refresh review to try again.",
+                : "This setup couldn't be checked. Press Check again to try again.",
           });
       } finally {
         if (selected === reviewSequence) publish({ pending: false });
       }
     },
     start: async () => {
-      // The Play key sits beside the review in the right rail, so Start no longer waits for a
-      // Review step to be open; a valid review of exactly these videos is what it needs.
+      // The Make button sits beside the review in the right rail, so it never waits for the
+      // summary to be open; a valid review of exactly these videos is what it needs.
       if (state.starting || state.created) return;
       if (
         !attempt &&
@@ -275,15 +276,25 @@ export function pageVideos(document: PlayDraftDocument): number {
 function videos(count: number): string {
   return count === 1 ? "1 video" : `${count} videos`;
 }
-// What the Start button offers. A valid review only exists while its receipt starts exactly
-// the page's videos, so the button and Start count the same runs.
+// What the Make button says, named for what it makes: "Make the video", "Make the podcast",
+// "Make 3 videos", or "Queue 3 videos" when they run one after another. A valid review only
+// exists while its receipt starts exactly the page's videos, so the button and Start count the
+// same runs.
 export function startLabel(review: ReviewState, document: PlayDraftDocument): string {
   if (review.starting) return "Starting…";
   if (review.uncertain) return "Check whether it started";
   const count = review.valid && review.receipt ? review.receipt.runs.length : pageVideos(document);
-  if (count === 1) return "Start run";
-  return queued(document) ? `Queue ${count} videos` : `Start ${count} videos`;
+  const kind = outputKindOf(document.form);
+  if (count === 1) return `Make the ${singular[kind]}`;
+  return `${queued(document) ? "Queue" : "Make"} ${outputCount(kind, count)}`;
 }
+const singular: Readonly<Record<OutputKind, string>> = {
+  video: "video",
+  article: "article",
+  audiobook: "audiobook",
+  podcast: "podcast",
+  images: "images",
+};
 // Several videos run one after another unless the page turned Queue off.
 export function queued(document: PlayDraftDocument): boolean {
   return document.queue !== false;

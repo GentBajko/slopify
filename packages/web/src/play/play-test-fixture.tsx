@@ -13,7 +13,12 @@ import { vi } from "vitest";
 import { CommandPaletteProvider } from "@/components/kit/command-palette";
 import { PlayForm } from "@/routes/play";
 import { type Answer, jsonAnswer, renderApp, renderRouted, testDeps } from "@/test-app";
-import { PlayDraftProvider, type PlaySession, usePlaySession } from "./draft-context";
+import {
+  PlayDraftProvider,
+  type PlaySection,
+  type PlaySession,
+  usePlaySession,
+} from "./draft-context";
 import { freshDraftDocument } from "./draft-state";
 import { legacyFixtureStart, reviewFixture } from "./review-test-fixture";
 
@@ -368,6 +373,7 @@ export async function mountPlay(
       },
     },
   );
+  trackSession(session);
   await screen.findByRole("option", { name: "Dossier" });
   if (start !== undefined)
     await act(async () => {
@@ -431,24 +437,47 @@ export async function fill(element: HTMLElement, text: string): Promise<void> {
   await userEvent.paste(text);
 }
 
-// Play folds its settings into summary rows; a test opens the row that holds a control with
-// its Change button, as a person would. A row already open is left open.
+// The session of the Create page a fixture mounted last: a test opens a whole section the way
+// the guided tour does (navigate), which opens every row the section holds at once.
+let mountedSession: (() => PlaySession) | undefined;
+export function trackSession(get: (() => PlaySession) | undefined): void {
+  mountedSession = get;
+}
+
+// Create folds its settings into rows; a test opens the row that holds a control with its
+// Change (or Fix) button, as a person would. A row already open is left open; opening one
+// folds the others.
 export async function openRow(label: string): Promise<void> {
-  const change = screen.queryByRole("button", { name: `Change ${label.toLowerCase()}` });
+  const name = new RegExp(`^(Change|Fix) ${literal(label.toLowerCase())}$`);
+  const change = screen.queryByRole("button", { name });
   if (change && change.getAttribute("aria-expanded") === "false") await userEvent.click(change);
+}
+function literal(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 // The rows that hold what the Content, Outputs and Style tabs held before the rows, and the
-// side panel for Review.
+// summary drawer for Review.
+const sectionIds: Readonly<Record<string, PlaySection>> = {
+  Content: "content",
+  Outputs: "outputs",
+  Style: "style",
+};
 const sectionRows: Readonly<Record<string, readonly string[]>> = {
-  Content: ["Title and keywords", "Article", "Channel"],
-  Outputs: ["Narration", "Images", "Video and style", "Outputs"],
+  Content: ["Keywords", "Article", "Channel"],
+  Outputs: ["Narration", "Images", "Video and style", "Extras"],
   Style: ["Video and style"],
 };
-// Like the tabs did, going to a section closes the Review panel, and going to Review opens it
+export const summaryTitle = "Everything this run will do";
+// The field at the top of Create, asked in the words of what is being made.
+export const topicLabel =
+  /^What('s| are) the (video|article|audiobook|episode|images) (about|of)\?$/;
+// The Make button, whatever it makes: "Make the video", "Make 3 videos", "Queue 3 videos".
+export const makeKey = /^(Make the \w+|Make \d+ [\w ]+|Queue \d+ [\w ]+)$/;
+// Like the tabs did, going to a section closes the summary drawer, and going to Review opens it
 // afresh (which asks the server for a new review).
 export async function openSection(name: string): Promise<void> {
-  const panel = screen.queryByRole("dialog", { name: "Review" });
+  const panel = screen.queryByRole("dialog", { name: summaryTitle });
   if (panel)
     await userEvent.click(
       Array.from(panel.querySelectorAll("button")).find(
@@ -456,7 +485,15 @@ export async function openSection(name: string): Promise<void> {
       ) ?? panel,
     );
   if (name === "Review") {
-    await userEvent.click(screen.getByRole("button", { name: "Review the whole setup" }));
+    await userEvent.click(screen.getByRole("button", { name: "See everything this run will do" }));
+    return;
+  }
+  const section = sectionIds[name];
+  const session = mountedSession;
+  if (section !== undefined && session !== undefined) {
+    await act(async () => {
+      await session().navigate(section);
+    });
     return;
   }
   for (const label of sectionRows[name] ?? []) await openRow(label);

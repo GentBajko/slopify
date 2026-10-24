@@ -7,7 +7,6 @@ import { KeywordList } from "@/components/keyword-list";
 import { Button, ButtonRow } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
 import { Field, Input } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Chip } from "@/components/kit/status";
 import { usePlaySession } from "./draft-context";
 import { headingOf, outputKindOf, outputNoun } from "./output-kind";
@@ -17,8 +16,10 @@ export const moreVideosMax = 49;
 
 export { TemplateField } from "./template-field";
 
-// What the video is about. A title that names keywords ("History: {{Topic}}") asks for those
-// keywords here, with the title they make beneath; a title without keywords is typed itself.
+// What the video is about: one full-width field, asked in the words of what is being made
+// ("What's the video about?"). A title that names keywords ("History: {{Topic}}") asks for
+// them instead, with "Title will be: …" under the field once it differs from what was typed;
+// a title without keywords is typed itself.
 export function TopicFields({
   topics,
   problem,
@@ -29,6 +30,7 @@ export function TopicFields({
   const session = usePlaySession();
   const { document } = session;
   const { form } = document;
+  const question = headingOf(outputKindOf(form));
   const setForm = (next: typeof form): void => {
     session.edit({ ...document, form: next });
     session.invalidateReview(true);
@@ -42,57 +44,62 @@ export function TopicFields({
   };
   if (topics.length === 0)
     return (
-      <Field label="Title" tip="play.title" error={problem("title")} help={forYoutube(form.title)}>
+      <Field label={question} error={problem("title")} help={forYoutube(form.title)}>
         <Input
           data-play-field="title"
           className="!h-11 text-[17px]"
           value={form.title}
           spellCheck
           maxLength={titleMax}
-          placeholder={headingOf(outputKindOf(form))}
           aria-invalid={problem("title") !== undefined}
           onChange={(event) => setForm({ ...form, title: event.target.value })}
         />
       </Field>
     );
   const title = render(form.title, form.values);
-  const youtubeNote = forYoutube(title);
+  const resolved = topics.every((name) => (form.values[name] ?? "").trim() !== "");
+  const youtubeNote = resolved ? forYoutube(title) : undefined;
+  const typedOnly =
+    topics.length === 1 && title.trim() === (form.values[topics[0] ?? ""] ?? "").trim();
   return (
     <div className="grid min-w-0 gap-4">
-      {topics.map((name, index) => (
-        <Field
-          key={name}
-          label={name}
-          tip="play.topic"
-          help={
-            index === topics.length - 1 ? (
-              <>
-                Title: <b className="font-semibold text-ink">{title}</b>
-                {youtubeNote === undefined ? null : (
-                  <span className="block text-waiting">{youtubeNote}</span>
-                )}
-              </>
-            ) : undefined
-          }
-          error={
-            problem(`values.${name}`) ??
-            (index === topics.length - 1 ? problem("title") : undefined)
-          }
-        >
-          <Input
-            data-play-field={`values.${name}`}
-            className="!h-11 text-[17px]"
-            value={form.values[name] ?? ""}
-            maxLength={valueMax}
-            // A topic is words ("The Library of Alexandria"), so spelling is checked.
-            spellCheck
-            aria-invalid={problem(`values.${name}`) !== undefined}
-            onChange={(event) =>
-              setForm({ ...form, values: { ...form.values, [name]: event.target.value } })
-            }
-          />
-        </Field>
-      ))}
+      {topics.map((name, index) => {
+        const last = index === topics.length - 1;
+        const help =
+          last && resolved && (!typedOnly || youtubeNote !== undefined) ? (
+            <>
+              {typedOnly ? null : (
+                <>
+                  Title will be: <b className="font-semibold text-ink">{title}</b>
+                </>
+              )}
+              {youtubeNote === undefined ? null : (
+                <span className="block text-waiting">{youtubeNote}</span>
+              )}
+            </>
+          ) : undefined;
+        return (
+          <Field
+            key={name}
+            label={topics.length === 1 ? question : name}
+            help={help}
+            error={problem(`values.${name}`) ?? (last ? problem("title") : undefined)}
+          >
+            <Input
+              data-play-field={`values.${name}`}
+              className="!h-11 text-[17px]"
+              value={form.values[name] ?? ""}
+              maxLength={valueMax}
+              // A topic is words ("The Library of Alexandria"), so spelling is checked.
+              spellCheck
+              aria-invalid={problem(`values.${name}`) !== undefined}
+              onChange={(event) =>
+                setForm({ ...form, values: { ...form.values, [name]: event.target.value } })
+              }
+            />
+          </Field>
+        );
+      })}
     </div>
   );
 }
@@ -151,11 +158,7 @@ export function MoreVideos({
   const opened = variants.findIndex((variant) => variant.id === open);
   const variant = opened === -1 ? undefined : variants[opened];
   return (
-    <section aria-label="More videos from the same setup" className="min-w-0" {...helpScope}>
-      <div className="mb-2 flex items-center gap-1">
-        <span className="sl-kicker">More videos from the same setup</span>
-        <InfoTip id="play.more-videos" className="-my-1" />
-      </div>
+    <section aria-label="More videos from the same setup" className="min-w-0">
       <ButtonRow className="flex-wrap">
         {variants.map((one, index) => {
           const name = labelOf(one) || `Video ${String(index + 2)}`;
@@ -233,7 +236,7 @@ export function MoreVideos({
             onClick={() => onAdding(true)}
           >
             <PlusIcon aria-hidden="true" strokeWidth={1.75} />
-            Add topic
+            Another topic
           </Button>
         )}
       </ButtonRow>

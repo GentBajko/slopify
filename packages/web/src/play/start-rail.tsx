@@ -1,68 +1,82 @@
-import type { FieldError } from "@app/slices/admission/rules.js";
-import { PlayIcon } from "lucide-react";
-import { type ReactElement, type ReactNode, useEffect } from "react";
-import { Button, ButtonRow, PlayKey } from "@/components/kit/button";
+import { ArrowRightIcon, PencilIcon, PlayIcon } from "lucide-react";
+import {
+  type ReactElement,
+  type ReactNode,
+  useEffect,
+  useId,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import { Button, PlayKey } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { ariaKeyShortcuts } from "@/components/kit/command-palette";
+import { Dialog } from "@/components/kit/dialog";
 import { Field, Input } from "@/components/kit/field";
-import { InfoTip } from "@/components/kit/info-tip";
-import { SectionHead } from "@/components/kit/section-head";
 import { Switch } from "@/components/kit/switch";
 import { shortcuts } from "@/lib/shortcuts";
-import type { Blocker } from "./admission";
 import { usePlaySession } from "./draft-context";
-import { outputCount, outputKindOf, outputNoun } from "./output-kind";
+import { outputCount, outputKindOf } from "./output-kind";
 import { PlanAllowance } from "./plan-allowance";
+import type { SetupProblem } from "./problems";
 import { pageVideos, pendingReviewUpload, queued, startLabel } from "./review-state";
 import { RunReview } from "./run-review";
 
-// Why the Play key can't start right now, in the order it would be fixed, with the field to
-// jump to when there is one. Undefined while it can start.
+// One spoken minute is about this many words, so the expected length reads in minutes.
+export const wordsPerMinute = 150;
+
+export type StartReason =
+  | { readonly kind: "problem"; readonly text: string; readonly problem: SetupProblem }
+  | { readonly kind: "error"; readonly text: string }
+  | { readonly kind: "wait"; readonly text: string };
+
+// Why the Make button can't start right now, as the next thing to do. Undefined while it can.
 export function startReason({
   review,
-  blocker,
-  errors,
+  problems,
   pendingUpload,
 }: {
   readonly review: ReturnType<typeof usePlaySession>["review"];
-  readonly blocker: Blocker | undefined;
-  readonly errors: readonly FieldError[];
+  readonly problems: readonly SetupProblem[];
   readonly pendingUpload: string | undefined;
-}): { readonly text: string; readonly field?: string } | undefined {
+}): StartReason | undefined {
   if (review.starting) return undefined;
   if (review.uncertain)
     return {
+      kind: "wait",
       text: "Slopify didn't confirm the last start. Press Check whether it started to find out before starting again.",
     };
-  if (blocker) return { text: blocker.hint, field: blocker.field };
-  const refused = errors[0];
-  if (refused) return { text: refused.message, field: refused.field };
-  if (pendingUpload)
-    return { text: "Wait for uploads to finish before Start", field: pendingUpload };
-  if (review.error) return { text: review.error };
-  if (review.pending) return { text: "Checking your setup and the estimate…" };
-  if (!review.valid) return { text: "Checking your setup and the estimate…" };
+  const next = problems[0];
+  if (next !== undefined) return { kind: "problem", text: next.hint, problem: next };
+  if (pendingUpload) return { kind: "wait", text: "Wait for the uploads to finish first" };
+  if (review.error) return { kind: "error", text: review.error };
+  if (review.pending || !review.valid)
+    return { kind: "wait", text: "Checking your setup and the estimate…" };
   return undefined;
 }
 
-// The right rail of Play: the review of what Start will do (videos, cost, limits), always
-// current, and the Play key with the reason it can't start right under it.
+// The right rail of Create, top to bottom: how many it makes, how long, what it costs, the
+// Make button with the one next thing to do under it, the whole summary, and the style
+// preview. On a phone it follows the form, the button first.
 export function StartRail({
-  errors,
-  blocker,
+  problems,
   saveProblem,
-  onReveal,
+  onStart,
+  onFix,
   onWholeSetup,
-  onSaveTemplate,
   preview,
+  previewLine,
 }: {
-  readonly errors: readonly FieldError[];
-  readonly blocker: Blocker | undefined;
+  readonly problems: readonly SetupProblem[];
   readonly saveProblem: string | undefined;
-  readonly onReveal: (field: string) => void;
+  // Starts the run.
+  readonly onStart: () => void;
+  // Opens the row (or field) that holds the problem.
+  readonly onFix: (problem: SetupProblem) => void;
   readonly onWholeSetup: () => void;
-  readonly onSaveTemplate: () => void;
+  // The style preview, shown in a dialog on demand; undefined when nothing is drawn.
   readonly preview?: ReactNode;
+  // What the preview shows, in words: "Captions: Barlow 48, at the bottom".
+  readonly previewLine?: string | undefined;
 }): ReactElement {
   const session = usePlaySession();
   const { document, review } = session;
@@ -71,16 +85,28 @@ export function StartRail({
   useEffect(() => {
     void session.reviewDraft();
   }, [session.reviewDraft]);
+  // A prompt edited in another tab or in Prompts is read again when the person comes back.
+  useEffect(() => {
+    const page = window.document;
+    const again = () => {
+      if (page.visibilityState === "visible") void session.reviewDraft();
+    };
+    window.addEventListener("focus", again);
+    page.addEventListener("visibilitychange", again);
+    return () => {
+      window.removeEventListener("focus", again);
+      page.removeEventListener("visibilitychange", again);
+    };
+  }, [session.reviewDraft]);
   // Every edit leaves the review stale; it is checked again once typing pauses, so the
-  // estimate and the key are always about what is on screen.
+  // estimate and the button are always about what is on screen.
   const stale =
     !review.valid &&
     !review.pending &&
     !review.starting &&
     !review.uncertain &&
     review.error === null &&
-    errors.length === 0 &&
-    blocker === undefined &&
+    problems.length === 0 &&
     !pendingUpload &&
     session.activeId !== null;
   // biome-ignore lint/correctness/useExhaustiveDependencies: each edit restarts the pause.
@@ -90,128 +116,233 @@ export function StartRail({
     return () => clearTimeout(timer);
   }, [stale, document, session.reviewDraft]);
   const count = review.valid && review.receipt ? review.receipt.runs.length : pageVideos(document);
-  const reason = startReason({ review, blocker, errors, pendingUpload });
-  const disabled =
-    review.starting ||
-    (!review.uncertain &&
-      (!review.valid || review.pending || errors.length > 0 || Boolean(pendingUpload)));
+  const kind = outputKindOf(document.form);
   return (
     <>
-      {preview}
-      <section aria-label="Start" className="flex min-w-0 flex-col gap-4 border-t border-line pt-5">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-ink-2">{outputCount(outputKindOf(document.form), count)}</span>
+      <section aria-label="Start" className="flex min-w-0 flex-col gap-3">
+        <div className="flex min-h-8 flex-wrap items-center justify-between gap-x-3 gap-y-1">
+          <span className="font-semibold">{outputCount(kind, count)}</span>
           {count > 1 ? (
             <Switch
-              label="Queue"
-              tip="play.batch-queue"
+              label="One after another"
+              help={
+                queued(document)
+                  ? "Each starts when the one before finishes."
+                  : "Off: they all start at once."
+              }
               checked={queued(document)}
               disabled={locked}
               onChange={(next) => session.edit({ ...document, queue: next })}
             />
-          ) : (
-            <span className="text-small text-ink-3">One run</span>
-          )}
+          ) : null}
         </div>
+        {document.form.sources.article === "generate" ? (
+          <ExpectedLength narrated={document.form.sources.audio !== "off"} locked={locked} />
+        ) : null}
         <div className="flex min-w-0 flex-col gap-2">
-          <SectionHead title="Estimated cost" info="play.estimate" size="small" className="pb-0" />
           {review.valid && review.receipt ? (
             <RunReview estimates={review.receipt.estimates} />
           ) : (
             <p role="status" className="m-0 text-small text-ink-2">
               {review.pending
-                ? "Calculating the estimate…"
-                : "The estimate appears once the setup is complete."}
+                ? "Estimated cost: calculating…"
+                : "Estimated cost: shown once nothing is missing."}
             </p>
           )}
           <PlanAllowance form={document.form} />
-          <Field
-            label={`Expected article words per ${outputNoun(outputKindOf(document.form))}`}
-            tip="play.expected-words"
-            className="mt-2"
-          >
-            <Input
-              data-play-field="expectedWords"
-              type="number"
-              min={1}
-              max={100000}
-              value={document.expectedWords}
-              disabled={locked}
-              onChange={(event) => session.edit({ ...document, expectedWords: event.target.value })}
-            />
-          </Field>
         </div>
         {saveProblem ? <Callout tone="danger" title={saveProblem} /> : null}
-        <PlayKey
-          data-tour="play-start"
-          disabled={disabled}
-          aria-describedby={reason ? "play-start-reason" : undefined}
-          onClick={() => {
-            void session.startRun();
-          }}
+        <MakeButton problems={problems} onStart={onStart} onFix={onFix} tour />
+        <Button
+          variant="quiet"
+          size="small"
+          className="self-center"
+          aria-keyshortcuts={ariaKeyShortcuts(shortcuts.reviewSetup)}
+          onClick={onWholeSetup}
         >
-          <PlayIcon aria-hidden="true" strokeWidth={1.75} />
-          {startLabel(review, document)}
-        </PlayKey>
-        <div id="play-start-reason" className="min-h-5 text-center text-small">
-          {reason === undefined ? (
-            <span className="text-ink-3">
-              {count === 1
-                ? "Nothing starts until you press it."
-                : queued(document)
-                  ? "They run one after another. Nothing starts until you press it."
-                  : "They all run at once. Nothing starts until you press it."}
-            </span>
-          ) : reason.field === undefined ? (
-            <span
-              role={review.error ? "alert" : "status"}
-              className={review.error ? "text-danger" : "text-ink-2"}
-            >
+          See everything this run will do
+        </Button>
+      </section>
+      {preview === undefined ? null : (
+        <StylePreviewEntry line={previewLine}>{preview}</StylePreviewEntry>
+      )}
+    </>
+  );
+}
+
+// The Make button, and under it the one next thing to do as a button that goes there (or why
+// it waits). The rail shows it; so does the summary drawer's foot where the drawer covers the
+// rail.
+export function MakeButton({
+  problems,
+  onStart,
+  onFix,
+  tour = false,
+}: {
+  readonly problems: readonly SetupProblem[];
+  readonly onStart: () => void;
+  readonly onFix: (problem: SetupProblem) => void;
+  // The guided tour points at the rail's button only.
+  readonly tour?: boolean;
+}): ReactElement {
+  const session = usePlaySession();
+  const { document, review } = session;
+  const pendingUpload = pendingReviewUpload(document, session.view);
+  const locked = review.starting || review.uncertain;
+  const reason = startReason({ review, problems, pendingUpload });
+  const disabled =
+    review.starting ||
+    (!review.uncertain &&
+      (!review.valid || review.pending || problems.length > 0 || Boolean(pendingUpload)));
+  const reasonId = useId();
+  return (
+    <div className="flex min-w-0 flex-1 flex-col gap-2">
+      <PlayKey
+        {...(tour ? { "data-tour": "play-start" } : {})}
+        disabled={disabled}
+        aria-describedby={reason ? reasonId : undefined}
+        onClick={onStart}
+      >
+        <PlayIcon aria-hidden="true" strokeWidth={1.75} />
+        {startLabel(review, document)}
+      </PlayKey>
+      <div id={reasonId} className="flex min-w-0 flex-col items-center text-small">
+        {reason === undefined ? null : reason.kind === "problem" ? (
+          <Button
+            variant="quiet"
+            size="small"
+            className="h-auto min-h-8 whitespace-normal text-waiting"
+            onClick={() => onFix(reason.problem)}
+          >
+            {reason.text}
+            <ArrowRightIcon aria-hidden="true" strokeWidth={1.75} />
+          </Button>
+        ) : reason.kind === "error" ? (
+          <>
+            <span role="alert" className="text-center text-danger">
               {reason.text}
             </span>
-          ) : (
-            <span className="inline-flex flex-wrap items-center justify-center gap-x-1">
-              <span id="play-start-field" className="text-waiting">
-                {reason.text}
-              </span>
-              <Button
-                variant="quiet"
-                size="small"
-                aria-describedby="play-start-field"
-                onClick={() => onReveal(reason.field ?? "")}
-              >
-                Go to the field
-              </Button>
-            </span>
-          )}
-        </div>
-        <ButtonRow className="justify-center">
-          <span className="inline-flex items-center">
             <Button
               variant="quiet"
               size="small"
-              disabled={review.pending || locked || Boolean(pendingUpload)}
+              disabled={review.pending || locked}
               onClick={() => {
                 void session.reviewDraft();
               }}
             >
-              Refresh review
+              Check again
             </Button>
-            <InfoTip id="play.refresh-review" />
+          </>
+        ) : (
+          <span role="status" className="text-center text-ink-2">
+            {reason.text}
           </span>
-          <Button
-            variant="quiet"
-            size="small"
-            aria-keyshortcuts={ariaKeyShortcuts(shortcuts.reviewSetup)}
-            onClick={onWholeSetup}
-          >
-            Review the whole setup
-          </Button>
-          <Button variant="quiet" size="small" onClick={onSaveTemplate}>
-            Save as template
-          </Button>
-        </ButtonRow>
-      </section>
-    </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Below 900px the summary drawer covers the whole window, rail and all.
+const narrowQuery = "(max-width: 899px)";
+function subscribeNarrow(listener: () => void): () => void {
+  if (typeof window.matchMedia !== "function") return () => {};
+  const query = window.matchMedia(narrowQuery);
+  query.addEventListener("change", listener);
+  return () => query.removeEventListener("change", listener);
+}
+function isNarrow(): boolean {
+  return typeof window.matchMedia === "function" && window.matchMedia(narrowQuery).matches;
+}
+export function useNarrow(): boolean {
+  return useSyncExternalStore(subscribeNarrow, isNarrow, () => false);
+}
+
+// "Expected length: about 10 min · 1,500 words", and the pencil to change the words. It only
+// feeds the estimate and how many images a long video gets; the article prompt decides the
+// real length.
+function ExpectedLength({
+  narrated,
+  locked,
+}: {
+  readonly narrated: boolean;
+  readonly locked: boolean;
+}): ReactElement {
+  const session = usePlaySession();
+  const { document } = session;
+  const [editing, setEditing] = useState(false);
+  const words = Number(document.expectedWords);
+  const known = Number.isFinite(words) && words > 0;
+  const minutes = known ? Math.round(words / wordsPerMinute) : 0;
+  const length = !known
+    ? "not set"
+    : `about ${narrated ? `${minutes < 1 ? "under a minute" : `${String(minutes)} min`} · ` : ""}${words.toLocaleString("en-US")} words`;
+  if (editing)
+    return (
+      <div className="flex min-w-0 items-end gap-2">
+        <Field
+          label="Words per video"
+          help="About 150 words is one minute. The article prompt decides the real length."
+          className="min-w-0 flex-1"
+        >
+          <Input
+            data-play-field="expectedWords"
+            type="number"
+            min={1}
+            max={100000}
+            autoFocus
+            value={document.expectedWords}
+            disabled={locked}
+            onChange={(event) => session.edit({ ...document, expectedWords: event.target.value })}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === "Escape") setEditing(false);
+            }}
+          />
+        </Field>
+        <Button variant="quiet" size="small" className="mb-7" onClick={() => setEditing(false)}>
+          Done
+        </Button>
+      </div>
+    );
+  return (
+    <p className="m-0 flex min-w-0 flex-wrap items-center gap-x-1 text-small text-ink-2">
+      <span>Expected length: {length}</span>
+      <Button
+        variant="quiet"
+        size="small"
+        disabled={locked}
+        aria-label="Change the expected length"
+        onClick={() => setEditing(true)}
+      >
+        <PencilIcon aria-hidden="true" strokeWidth={1.75} />
+        Change
+      </Button>
+    </p>
+  );
+}
+
+// The style preview on demand: what it shows in words, and a button that renders six seconds
+// of the sample with these captions and this look, in a dialog with its own player.
+function StylePreviewEntry({
+  line,
+  children,
+}: {
+  readonly line: string | undefined;
+  readonly children: ReactNode;
+}): ReactElement {
+  const [open, setOpen] = useState(false);
+  return (
+    <section
+      aria-label="Style preview"
+      className="flex min-h-10 min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-line pt-3 text-small"
+    >
+      <span className="min-w-0 text-ink-2">{line}</span>
+      <Button variant="quiet" size="small" onClick={() => setOpen(true)}>
+        Watch a 6-second preview
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen} title="Style preview">
+        {open ? children : null}
+      </Dialog>
+    </section>
   );
 }

@@ -12,7 +12,7 @@ export type OutputKind = (typeof outputKinds)[number];
 export const outputKindInfo: Readonly<
   Record<OutputKind, { readonly label: string; readonly line: string }>
 > = {
-  video: { label: "Video", line: "Narration over images, with captions" },
+  video: { label: "Video", line: "Narration over images" },
   article: { label: "Article", line: "Written text, also as a PDF" },
   audiobook: { label: "Audiobook", line: "A text read aloud by a narrator" },
   podcast: { label: "Podcast", line: "A conversation between speakers" },
