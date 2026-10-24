@@ -17,7 +17,7 @@ import { kindAbout, kindLabel, kindNoun, kindSentence } from "@/lib/prompt-kinds
 import { LibraryBulkBar, SelectionArea } from "@/library/bulk-bar";
 import { HistoryDrawer } from "@/library/history-drawer";
 import { LibraryItemDetail } from "@/library/item-detail";
-import { ListSkeleton, LoadError, libraryListDetail, libraryRow } from "@/library/list-states";
+import { ListSkeleton, LoadError, libraryListDetail, promptRow } from "@/library/list-states";
 import { useLibraryItem } from "@/library/list-url";
 import { PromptRowMeta, PromptsFrame, PromptsListHead } from "@/library/prompts-frame";
 import { LibraryRowActions } from "@/library/row-actions";
@@ -195,7 +195,7 @@ export function PromptsRoute({
                   {listed.map((prompt) => (
                     <ListRow
                       key={prompt.id}
-                      className={libraryRow}
+                      className={promptRow}
                       lead={
                         <RowCheck selection={selection} value={prompt.id} label={prompt.name} />
                       }

@@ -17,7 +17,7 @@ import { plural } from "@/lib/format";
 import { LibraryBulkBar, SelectionArea } from "@/library/bulk-bar";
 import { HistoryDrawer } from "@/library/history-drawer";
 import { LibraryItemDetail } from "@/library/item-detail";
-import { ListSkeleton, LoadError, libraryListDetail, libraryRow } from "@/library/list-states";
+import { ListSkeleton, LoadError, libraryListDetail, promptRow } from "@/library/list-states";
 import { useLibraryItem } from "@/library/list-url";
 import { PromptRowMeta, PromptsFrame, PromptsListHead } from "@/library/prompts-frame";
 import { LibraryRowActions } from "@/library/row-actions";
@@ -200,7 +200,7 @@ export function EntriesRoute({
                   {listed.map((entry) => (
                     <ListRow
                       key={entry.id}
-                      className={libraryRow}
+                      className={promptRow}
                       lead={<RowCheck selection={selection} value={entry.id} label={entry.name} />}
                       title={entry.name}
                       onSelect={() => setSelectedId(entry.id)}

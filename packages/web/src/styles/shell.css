@@ -889,6 +889,37 @@
       grid-template-columns: minmax(0, 1fr);
     }
   }
+  /* A prompt row (library/list-states `promptRow`): the name with its actions on the first
+     line, then what it asks for and its first words across the whole row, under the actions
+     too, so the words are not cut to a few letters beside the buttons. A list narrower than
+     400px keeps the kit's stack: name, words, then the actions. */
+  @container (min-width: 400px) {
+    .sl-row.sl-row--prompt {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      column-gap: var(--space-3);
+      row-gap: 2px;
+    }
+    .sl-row--prompt > .sl-row__lead,
+    .sl-row--prompt > .sl-row__lead > .sl-row__text {
+      display: contents;
+    }
+    .sl-row--prompt > .sl-row__lead > [data-slot="row-check"] {
+      grid-row: 1 / span 2;
+      grid-column: 1;
+    }
+    .sl-row--prompt .sl-row__title {
+      grid-row: 1;
+      grid-column: 2;
+    }
+    .sl-row--prompt > .sl-row__actions {
+      grid-row: 1;
+      grid-column: 3;
+    }
+    .sl-row--prompt .sl-row__meta {
+      grid-row: 2;
+      grid-column: 2 / -1;
+    }
+  }
   /* Help → Tutorials: the wiki's groups beside the page, scrolling on their own so the list
      stays in reach however long the page is. */
   .sl-workspace.sl-workspace--tutorials {
