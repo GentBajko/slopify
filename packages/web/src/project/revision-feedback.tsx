@@ -1,14 +1,16 @@
 import { AlertTriangleIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { LinkedText } from "@/components/linked-text";
+import { stageWords } from "@/lib/stage-words";
 import type { RevisionRefusal } from "./revision-api.js";
 
+// What each refused field belongs to, in the stage names the rest of the project page uses.
 const labels: Readonly<Record<string, string>> = {
   llm: "Text generation",
-  image: "Images",
-  images: "Images",
-  tts: "Audio",
-  audio: "Audio",
+  image: stageWords.images,
+  images: stageWords.images,
+  tts: stageWords.audio,
+  audio: stageWords.audio,
 };
 
 export function RevisionFeedback({

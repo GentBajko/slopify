@@ -83,7 +83,7 @@ export const playHelp = {
     tutorial: { page: "Play-Video-and-Style", anchor: "choose-whether-to-render-a-video" },
   },
   "play.source.document": {
-    title: "Document source",
+    title: "PDF source",
     body: "Generate lays out a PDF of the article and title on this computer, in the theme you pick. It needs no provider and costs nothing. Default: Off.",
     tutorial: { page: "PDF-Documents", anchor: "make-a-pdf" },
   },
