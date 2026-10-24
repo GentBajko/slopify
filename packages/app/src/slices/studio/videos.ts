@@ -1,7 +1,13 @@
 import type { DatabaseSync } from "node:sqlite";
+import { markUploaded, type UploadMarkResult } from "../uploads/repo.js";
 
 // The YouTube video each upload became, and its A/B test
 // (`0045-youtube-videos.sql`). `short` is null for the long video, as in the fill queue.
+//
+// The long video on YouTube and the project's "uploaded" mark (`uploads/repo.ts`, which
+// Projects, Home and the calendar read) are one fact: recording the long video as done marks
+// the project uploaded, and forgetting it takes the mark back off. A short has no mark of its
+// own; the long video stands for the project.
 
 export type AbState = "none" | "waiting" | "started" | "failed";
 export type TaskState = "none" | "waiting" | "done" | "failed";
@@ -88,6 +94,8 @@ export function recordVideo(
          ELSE excluded.upload_state END,
        video_id=excluded.video_id, recorded_at=excluded.recorded_at`,
   ).run(projectId, slot(short), videoId, at, state);
+  if (short === null && videoOf(db, projectId, null)?.uploadState === "done")
+    markUploaded(db, projectId, true, at);
 }
 
 // Studio said the upload was scheduled or published. False when no such upload was filled.
@@ -96,21 +104,40 @@ export function confirmUpload(
   projectId: string,
   short: number | null,
   videoId: string,
+  at: string,
 ): boolean {
-  return (
+  const confirmed =
     db
       .prepare(
         "UPDATE youtube_videos SET upload_state='done' WHERE project_id=? AND short=? AND video_id=?",
       )
-      .run(projectId, slot(short), videoId).changes > 0
-  );
+      .run(projectId, slot(short), videoId).changes > 0;
+  if (confirmed && short === null) markUploaded(db, projectId, true, at);
+  return confirmed;
 }
 
-export function forgetVideo(db: DatabaseSync, projectId: string, short: number | null): void {
+// Forgets the video an upload became (deleted on YouTube, or a wrong link). Forgetting a long
+// video that was on YouTube takes the project's uploaded mark off with it; an upload only
+// filled in Studio never set the mark, so forgetting it leaves a mark made by hand.
+export function forgetVideo(
+  db: DatabaseSync,
+  projectId: string,
+  short: number | null,
+  at: string,
+): void {
+  const was = videoOf(db, projectId, short);
   db.prepare("DELETE FROM youtube_videos WHERE project_id=? AND short=?").run(
     projectId,
     slot(short),
   );
+  if (short === null && was?.uploadState === "done") markUploaded(db, projectId, false, at);
+}
+
+// "Mark not uploaded" (Home, Projects): the long video's link goes with the mark, so the two
+// never disagree. An upload only filled in Studio is not on YouTube and stays.
+export function markNotUploaded(db: DatabaseSync, projectId: string, at: string): UploadMarkResult {
+  if (videoOf(db, projectId, null)?.uploadState === "done") forgetVideo(db, projectId, null, at);
+  return markUploaded(db, projectId, false, at);
 }
 
 export function projectVideos(db: DatabaseSync, projectId: string): readonly YoutubeVideo[] {

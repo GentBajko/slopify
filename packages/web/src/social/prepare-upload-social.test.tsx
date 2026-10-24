@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StudioSettingsBody } from "@/api";
 import { PrepareUpload } from "@/studio/prepare-upload";
-import { type Answer, jsonAnswer, renderApp, testDeps } from "@/test-app";
+import { type Answer, jsonAnswer, renderRouted, testDeps } from "@/test-app";
 import { packs, xPack } from "./post.fake";
 
 afterEach(() => {
@@ -53,13 +53,13 @@ function routes(social: Readonly<Record<string, Answer>>) {
 
 async function openDrawer() {
   const user = userEvent.setup();
-  await user.click(screen.getByRole("button", { name: "Prepare upload" }));
-  return { user, drawer: await screen.findByRole("dialog", { name: "Prepare upload" }) };
+  await user.click(await screen.findByRole("button", { name: "Copy for YouTube Studio" }));
+  return { user, drawer: await screen.findByRole("dialog", { name: "Copy for YouTube Studio" }) };
 }
 
-describe("Prepare upload's other sites", () => {
+describe("Copy for YouTube Studio's other sites", () => {
   it("is YouTube's alone for a project that posts nowhere", async () => {
-    renderApp(
+    renderRouted(
       <PrepareUpload projectId="p1" ready />,
       routes({ "GET /api/social/packs/p1": jsonAnswer(packs([])) }),
     );
@@ -70,7 +70,7 @@ describe("Prepare upload's other sites", () => {
   });
 
   it("is YouTube's alone when Slopify has no posting routes", async () => {
-    renderApp(<PrepareUpload projectId="p1" ready />, routes({}));
+    renderRouted(<PrepareUpload projectId="p1" ready />, routes({}));
     const { drawer } = await openDrawer();
     await within(drawer).findByText("In the order Studio asks");
     expect(within(drawer).queryByRole("group", { name: "Where" })).toBeNull();
@@ -80,7 +80,7 @@ describe("Prepare upload's other sites", () => {
     const opened = vi.spyOn(window, "open").mockReturnValue(null);
     const filled: string[] = [];
     const saved: unknown[] = [];
-    renderApp(
+    renderRouted(
       <PrepareUpload projectId="p1" ready />,
       routes({
         "GET /api/social/packs/p1": jsonAnswer(packs([xPack])),
@@ -133,7 +133,7 @@ describe("Prepare upload's other sites", () => {
   });
 
   it("says why Fill can't be pressed while the site isn't allowed in the extension", async () => {
-    renderApp(
+    renderRouted(
       <PrepareUpload projectId="p1" ready />,
       routes({ "GET /api/social/packs/p1": jsonAnswer(packs([xPack], [])) }),
     );
@@ -148,7 +148,7 @@ describe("Prepare upload's other sites", () => {
 
   it("takes a pasted link only when it is the site's own post link", async () => {
     const sent: unknown[] = [];
-    renderApp(
+    renderRouted(
       <PrepareUpload projectId="p1" ready />,
       routes({
         "GET /api/social/packs/p1": jsonAnswer(packs([xPack])),
@@ -203,7 +203,7 @@ describe("Prepare upload's other sites", () => {
       warnings: [],
       reddit: { subreddit: "", title: "The Fox", flair: "", kind: "link" },
     };
-    renderApp(
+    renderRouted(
       <PrepareUpload projectId="p1" ready />,
       routes({
         "GET /api/social/packs/p1": jsonAnswer(packs([reddit], ["reddit"])),
@@ -228,7 +228,7 @@ describe("Prepare upload's other sites", () => {
   it("picks the project's designs for a post", async () => {
     const choices: unknown[] = [];
     const design = (id: string, name: string) => ({ id, name, projectId: "p1", steps: [] });
-    renderApp(
+    renderRouted(
       <PrepareUpload projectId="p1" ready />,
       routes({
         "GET /api/social/packs/p1": jsonAnswer(packs([xPack])),
@@ -259,7 +259,7 @@ describe("Prepare upload's other sites", () => {
   });
 
   it("says where to make a design when the project has none", async () => {
-    renderApp(
+    renderRouted(
       <PrepareUpload projectId="p1" ready />,
       routes({
         "GET /api/social/packs/p1": jsonAnswer(packs([xPack])),

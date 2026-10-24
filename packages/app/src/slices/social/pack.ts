@@ -133,7 +133,7 @@ function buildPack(
     warnings.push({
       code: "link-missing",
       sentence:
-        "The YouTube link isn't known yet, so the post goes without it. It is added once the video is on YouTube (Prepare upload → Fill in YouTube Studio, or paste the video's link there).",
+        "The YouTube link isn't known yet, so the post goes without it. It is added once the video is on YouTube (Copy for YouTube Studio → Fill in YouTube Studio, or paste the video's link there).",
     });
   const hashtags = hashtagsFor(
     [sources.tags, sources.shortHashtags],

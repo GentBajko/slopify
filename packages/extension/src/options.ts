@@ -38,7 +38,7 @@ form.addEventListener("submit", (event) => {
     if (answer.ok) {
       token.value = "";
       say(
-        `Paired with Slopify at ${answer.value}. In Slopify, open a finished project, press Prepare upload, then Fill in YouTube Studio.`,
+        `Paired with Slopify at ${answer.value}. In Slopify, open a finished project, press Copy for YouTube Studio, then Fill in YouTube Studio.`,
         "ok",
       );
     } else say(answer.message, "error");

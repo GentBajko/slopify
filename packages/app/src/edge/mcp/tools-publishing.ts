@@ -43,35 +43,35 @@ const uploadPrep: readonly RouteTool[] = [
     route: "GET /api/studio/packs/:projectId",
     title: "Read the upload pack",
     description:
-      "Prepare upload: the title, description, tags, thumbnails, playlists and release time of each upload (the video and each short), and the plan's free slots. The agent's work ends here, at Ready to upload: uploading is the person's.",
+      "Copy for YouTube Studio: the title, description, tags, thumbnails, playlists and release time of each upload (the video and each short), and the plan's free slots. The agent's work ends here, at Ready to upload: uploading is the person's.",
   },
   {
     name: "set_pack_slot",
     route: "PUT /api/studio/packs/:projectId/slot",
     title: "Choose the release slot",
     description:
-      "Prepare upload's slot picker: one of the free slots get_upload_pack lists, or none. Body: {slot: {row, longAt} | null}.",
+      "Copy for YouTube Studio's release picker: one of the free slots get_upload_pack lists, or none. Body: {slot: {row, longAt} | null}.",
   },
   {
     name: "set_pack_real_footage",
     route: "PUT /api/studio/packs/:projectId/real-footage",
     title: "Set the altered-content answer",
     description:
-      "Prepare upload's AI use tick: the project's uploaded clips are real footage. Body: {realFootage: true | false}.",
+      "Copy for YouTube Studio's AI use tick: the project's uploaded clips are real footage. Body: {realFootage: true | false}.",
   },
   {
     name: "set_pack_pick",
     route: "PUT /api/studio/packs/:projectId/pick",
     title: "Pick the title and thumbnail",
     description:
-      "Prepare upload's pick: which title and thumbnail the upload carries (the A/B test tries the others once the video is public). Body: {title: 0-9, thumbnail: 0-9}.",
+      "Copy for YouTube Studio's pick: which title and thumbnail the upload carries (the A/B test tries the others once the video is public). Body: {title: 0-9, thumbnail: 0-9}.",
   },
   {
     name: "set_pack_playlists",
     route: "PUT /api/studio/packs/:projectId/playlists",
     title: "Set the pack's playlists",
     description:
-      "Prepare upload's playlist ticks. Body: {playlists: [names] | null for the channel's defaults}.",
+      "Copy for YouTube Studio's playlist ticks. Body: {playlists: [names] | null for the channel's defaults}.",
   },
   {
     name: "get_fill_queue",

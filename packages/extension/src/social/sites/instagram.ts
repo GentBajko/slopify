@@ -133,7 +133,7 @@ async function fill(context: FillContext): Promise<SiteReport> {
         {
           ok: false,
           message:
-            "An Instagram post needs pictures or a video, and this one has none. Pick pictures or the short for Instagram in Slopify's Prepare upload, then press Fill in Instagram again.",
+            "An Instagram post needs pictures or a video, and this one has none. Pick pictures or the short for Instagram in Slopify's Copy for YouTube Studio, then press Fill in Instagram again.",
         },
       ],
     };

@@ -53,8 +53,8 @@ export function StudioSettings() {
 const everyChannel = "";
 
 // Each channel's playlists: a list of names, each ticked by default or not. Every upload of a
-// project on that channel goes into the ticked ones; Prepare upload can change them for one
-// project. A channel with no list of its own uses the default list.
+// project on that channel goes into the ticked ones; Copy for YouTube Studio can change them for
+// one project. A channel with no list of its own uses the default list.
 function Playlists() {
   const { api } = useApp();
   const queryClient = useQueryClient();
@@ -103,10 +103,10 @@ function Playlists() {
       tip="settings.studio.playlist"
       help={
         channel === everyChannel
-          ? "The playlists upload packs offer, for every channel without its own. Ticked ones are on for every project; Prepare upload changes them for one project."
+          ? "The playlists upload packs offer, for every channel without its own. Ticked ones are on for every project; Copy for YouTube Studio changes them for one project."
           : own === undefined && fallback.length > 0
             ? `This channel uses the default list (${names(fallback)}) until you add its own.`
-            : "This channel's own playlists. Ticked ones are on for every project; Prepare upload changes them for one project."
+            : "This channel's own playlists. Ticked ones are on for every project; Copy for YouTube Studio changes them for one project."
       }
     >
       {/* A form so Enter in a name saves the list, as Save playlists does. */}

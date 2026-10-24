@@ -13,7 +13,7 @@ const personal = "the person's own tutorial, notices and reading state";
 const retired = "retired: answers revision-required; edits go through save_revision";
 const extension = "only the paired Slopify Studio extension calls these";
 const youtube =
-  "acts on YouTube: agents stop at Ready to upload, and uploading is the person's (the extension's queue is filled only from Prepare upload)";
+  "acts on YouTube: agents stop at Ready to upload, and uploading is the person's (the extension's queue is filled only from Copy for YouTube Studio)";
 const posting =
   "acts on X, LinkedIn, Instagram, TikTok, Reddit or Bluesky: agents stop at Ready to post, and filling a site's form and posting are the person's";
 const cleanup =

@@ -94,7 +94,7 @@ export function createReshaper(deps: ReshapeDeps): Reshaper {
           return {
             ok: false,
             sentence:
-              "The picture isn't on disk any more. Reload Prepare upload; if it is still missing, make the project's images again.",
+              "The picture isn't on disk any more. Close Copy for YouTube Studio and open it again; if it is still missing, make the project's images again.",
           };
         const key = createHash("sha256")
           .update(JSON.stringify([reshapeVersion, source, stat.size, stat.mtimeMs, shape]))
@@ -128,7 +128,7 @@ export function createReshaper(deps: ReshapeDeps): Reshaper {
           });
           return {
             ok: false,
-            sentence: `The picture couldn't be cut to ${shape} because ffmpeg stopped with an error. Reload Prepare upload to try again; if it fails again, use Download diagnostics in Settings and report it.`,
+            sentence: `The picture couldn't be cut to ${shape} because ffmpeg stopped with an error. Close Copy for YouTube Studio and open it again to try again; if it fails again, use Download diagnostics in Settings and report it.`,
           };
         } finally {
           rmSync(work, { recursive: true, force: true });

@@ -293,7 +293,7 @@ describe("the post's files", () => {
     expect(await postFiles([video], { viaFrame: blocked, viaWorker })).toHaveLength(1);
     await expect(
       postFiles([{ ...video, bytes: workerMax + 1 }], { viaFrame: blocked, viaWorker }),
-    ).rejects.toThrow("Download it from Slopify's Prepare upload");
+    ).rejects.toThrow("Download it from Slopify's Copy for YouTube Studio");
   });
 
   it("picks the adapter by the page's host", () => {

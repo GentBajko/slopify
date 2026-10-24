@@ -62,7 +62,7 @@ export interface PackItem {
   // The first of them, for an extension from before several playlists: it ticks one.
   readonly playlist: string | null;
   // The long video's titles and thumbnails in the project's own order, and which of them the
-  // upload uses (Prepare upload's pick, `pick.ts`): `title` and `thumbnails[0]` above are the
+  // upload uses (Copy for YouTube Studio's pick, `pick.ts`): `title` and `thumbnails[0]` above are the
   // picked ones. Absent for a short.
   readonly pickable?:
     | {
@@ -102,7 +102,7 @@ export interface UploadPack {
   readonly schedule?: import("./releases.js").Schedule | undefined;
   // The project's series (`plan-model.ts` `seriesOf`): which posting-plan lines it may take.
   readonly series: string;
-  // The channel's playlists, each ticked as this project's uploads go into it; Prepare upload
+  // The channel's playlists, each ticked as this project's uploads go into it; Copy for YouTube Studio
   // changes the ticks for this project.
   readonly playlistChoices: readonly { readonly name: string; readonly chosen: boolean }[];
 }
@@ -113,7 +113,7 @@ export interface ActivePack {
   readonly item: PackItem;
 }
 
-// The steps in Studio's order, as the Prepare upload view lists them.
+// The steps in Studio's order, as Copy for YouTube Studio lists them.
 export const studioSteps = [
   "video",
   "title",
@@ -133,7 +133,7 @@ export function tagsLine(tags: readonly string[]): string {
   return tags.join(", ");
 }
 
-// One item waiting for the extension, as Prepare upload lists it (`queue.ts`).
+// One item waiting for the extension, as Copy for YouTube Studio lists it (`queue.ts`).
 export interface FillQueueItem {
   readonly projectId: string;
   readonly projectTitle: string;

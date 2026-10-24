@@ -189,7 +189,7 @@ export async function fillStudio(
     field: "thumbnails",
     ok: false,
     message:
-      "Couldn't find the Thumbnail upload — press Upload file under Thumbnail and pick the thumbnail from the project folder (Slopify → Prepare upload → Open folder).",
+      "Couldn't find the Thumbnail upload — press Upload file under Thumbnail and pick the thumbnail from the project folder (Slopify → Copy for YouTube Studio → Open folder).",
   };
   // Other titles (Slopify's A/B titles) go into A/B Testing too, beside the video's title.
   const later = options.abTestLater === true;
@@ -346,7 +346,7 @@ async function fillAbTest(
   const mode =
     testsPictures && testsTitles ? abBothText : testsTitles ? abTitleOnlyText : abThumbnailOnlyText;
   const field: FieldName = testsPictures ? "thumbnails" : "titles";
-  const folder = "the project folder (Slopify → Prepare upload → Open folder)";
+  const folder = "the project folder (Slopify → Copy for YouTube Studio → Open folder)";
   const asked = [
     ...(testsPictures ? [files.length === 2 ? "thumbnail 2" : "thumbnails 2 and 3"] : []),
     ...(testsTitles ? [titles.length === 1 ? "the other title" : "the other titles"] : []),

@@ -19,7 +19,7 @@ import {
 //   was closed is still filled, up to 12 hours late (Slopify says which), flagged late;
 // - opens the profile page of each filled or scheduled post whose link Slopify doesn't have yet,
 //   where the page finds the post by its first characters and reports its link;
-// - tells Slopify which sites it may post on, for Prepare upload's Fill buttons.
+// - tells Slopify which sites it may post on, for Copy for YouTube Studio's Fill buttons.
 // Nothing here runs on a site the person hasn't allowed in the options. A Slopify from before
 // posting answers 404 to all of it, and the worker then does nothing.
 

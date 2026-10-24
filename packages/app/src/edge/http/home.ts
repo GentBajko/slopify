@@ -1,10 +1,12 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
+import { transact } from "../../kernel/db/tx.js";
 import { snoozeDays } from "../../slices/autopilot/model.js";
 import { setWeeklyNotify, snoozeWarning, weeklyNotifyOf } from "../../slices/autopilot/repo.js";
 import { autopilotView } from "../../slices/autopilot/signals.js";
 import { weekSummary } from "../../slices/run-cost/week.js";
+import { markNotUploaded } from "../../slices/studio/videos.js";
 import { notReadySentence, runnableTemplate } from "../../slices/template-studio/schedule-gate.js";
 import { markUploaded, setAside } from "../../slices/uploads/repo.js";
 import type { AppDeps } from "./app.js";
@@ -95,12 +97,13 @@ export function uploadedRoutes(deps: Pick<AppDeps, "db" | "clock">) {
         zValidator("param", idParam, onInvalid),
         zValidator("json", z.object({ uploaded: z.boolean() }).strict(), onInvalid),
         (c) => {
-          const result = markUploaded(
-            deps.db,
-            c.req.valid("param").id,
-            c.req.valid("json").uploaded,
-            deps.clock.now().toISOString(),
-          );
+          const { id } = c.req.valid("param");
+          const at = deps.clock.now().toISOString();
+          // The long video's YouTube link and the mark are one fact (`studio/videos.ts`):
+          // Mark not uploaded forgets the link too.
+          const result = c.req.valid("json").uploaded
+            ? markUploaded(deps.db, id, true, at)
+            : transact(deps.db, () => markNotUploaded(deps.db, id, at));
           if (!result.ok)
             return problem(c, {
               status: 404,

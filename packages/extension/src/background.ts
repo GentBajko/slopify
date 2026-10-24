@@ -336,7 +336,7 @@ async function filled(projectId: string, short: number | null): Promise<number> 
     });
   } catch {
     throw new Error(
-      `Couldn't reach Slopify at ${current.base} to mark this upload as filled, so the next upload dialog may be filled with it again. Remove it under Waiting for Studio in Slopify's Prepare upload.`,
+      `Couldn't reach Slopify at ${current.base} to mark this upload as filled, so the next upload dialog may be filled with it again. Remove it under Waiting for Studio in Slopify's Copy for YouTube Studio.`,
     );
   }
   if (!response.ok) throw new Error(await failure(response, "marking the upload as filled"));

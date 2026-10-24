@@ -7,8 +7,10 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { selfExplanatory, stageEditors, unexplainedControls } from "@/help/coverage";
+import { YoutubeBlock } from "@/project/body-youtube";
 import { RebuildReview } from "@/project/rebuild-review";
 import { revisionView } from "@/project/revision-fixture";
+import { RevisionMedia } from "@/project/revision-media";
 import { ProjectRoute } from "@/routes/project";
 import { body, deps, finished, output, stage } from "@/routes/project-fixtures";
 import { revisionRouteFixture } from "@/routes/project-revision.fake";
@@ -20,13 +22,12 @@ import {
   openEditSection,
   openProjectEditor,
   openProjectSection,
-  renderApp,
   renderRouted,
   testDeps,
 } from "@/test-app";
 
 // Every control a person meets on the project page, in Edit project, the rebuild review and
-// Prepare upload is explained beside it, by a visible help line or an info button
+// Copy for YouTube Studio is explained beside it, by a visible help line or an info button
 // (help/coverage.ts).
 
 afterEach(cleanup);
@@ -34,9 +35,6 @@ afterEach(cleanup);
 const allow: readonly (string | RegExp)[] = [
   // The project's own name; the label says all there is to it.
   "Project title",
-  // Prepare upload's per-step ticks are a note to self in this browser, one per row; the
-  // "In the order Studio asks" heading's tip explains them.
-  / done$/,
   // Projects' Show filter only narrows the list on screen.
   "Show",
 ];
@@ -355,7 +353,7 @@ describe("Edit project", () => {
   });
 });
 
-describe("Prepare upload and the project list", () => {
+describe("Copy for YouTube Studio, the YouTube section and the project list", () => {
   it("explains the upload pack's choices", async () => {
     const file = (asset: string, filename: string) => ({
       url: `/files/p1/${asset}`,
@@ -401,15 +399,15 @@ describe("Prepare upload and the project list", () => {
         },
       ],
     };
-    renderApp(
+    renderRouted(
       <PrepareUpload projectId="p1" ready />,
       testDeps({
         "GET /api/studio/packs/p1": jsonAnswer(pack),
         "GET /api/social/packs/p1": jsonAnswer(packs([xPack, redditPack])),
       }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Prepare upload" }));
-    const drawer = await screen.findByRole("dialog", { name: "Prepare upload" });
+    await userEvent.click(await screen.findByRole("button", { name: "Copy for YouTube Studio" }));
+    const drawer = await screen.findByRole("dialog", { name: "Copy for YouTube Studio" });
     await within(drawer).findByText("fox.mp4");
     expect(unexplained()).toEqual([]);
     // Each other site's post: its words, settings, link and, for Reddit, its own fields.
@@ -418,6 +416,68 @@ describe("Prepare upload and the project list", () => {
     expect(unexplained()).toEqual([]);
     await userEvent.click(within(drawer).getByRole("button", { name: "Reddit" }));
     await within(drawer).findByLabelText("Subreddit");
+    expect(unexplained()).toEqual([]);
+  });
+
+  it("explains the YouTube section's dates, links and editors", async () => {
+    const video = stage("video", "done");
+    const outputs = [output("youtube_description", "video"), output("youtube_tags", "video")];
+    const project = {
+      ...body({ status: "done", stages: [video], outputs }).project,
+      format: "16:9" as const,
+      config: { ...revisionView().revision.config, youtubeDescription: true },
+    };
+    const view = {
+      ...revisionView(),
+      outputs: outputs.map((one) => ({
+        recordId: one.role,
+        publicationId: null,
+        selected: true,
+        available: true,
+        slot: `video:${one.role}`,
+        workKey: "youtube:description",
+        assetId: one.id,
+        output: one,
+        fingerprint: "youtube",
+        state: "ready" as const,
+      })),
+    };
+    renderRouted(
+      <RevisionMedia projectId="p1" revisionId="r1">
+        <YoutubeBlock stage={video} project={project} outputs={outputs} />
+      </RevisionMedia>,
+      testDeps({
+        "GET /api/projects/p1/revisions/r1": jsonAnswer({ view }),
+        "GET /files/p1/revisions/r1/youtube_description": () =>
+          new Response("Rope.\n\n0:00 A\n0:20 B\n0:40 C\n\n#Rope"),
+        "GET /files/p1/revisions/r1/youtube_tags": () => new Response("rope"),
+        "GET /api/projects/p1/youtube-edits": jsonAnswer({ fields: {}, links: [] }),
+        "GET /api/projects/p1/channel-links": jsonAnswer({ channelId: "c1", links: [] }),
+        "GET /api/studio/videos/p1": jsonAnswer({ videos: [] }),
+        "GET /api/studio/releases": jsonAnswer({
+          entries: [{ at: "2036-10-11T18:00:00.000Z", project: { id: "p2", title: "Two" } }],
+        }),
+        "GET /api/studio/releases/p1": jsonAnswer({
+          leadHours: 24,
+          items: [
+            {
+              short: 0,
+              title: "Rope",
+              at: "2036-10-10T18:00:00.000Z",
+              uploadBy: "2036-10-09T18:00:00.000Z",
+              onYoutube: false,
+            },
+          ],
+          free: [{ row: "line-1", longAt: "2036-10-12T18:00:00.000Z" }],
+        }),
+      }),
+    );
+    await screen.findByLabelText("Video release date");
+    await screen.findByRole("textbox", { name: "Video link" });
+    const plan = screen.getByText("Posting plan").closest("details");
+    if (plan !== null) plan.open = true;
+    expect(unexplained()).toEqual([]);
+    await userEvent.click(await screen.findByRole("button", { name: "Edit summary" }));
     expect(unexplained()).toEqual([]);
   });
 

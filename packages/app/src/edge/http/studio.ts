@@ -8,6 +8,7 @@ import { transact } from "../../kernel/db/tx.js";
 import { derive } from "../../kernel/runner/graph.js";
 import { listProjects, projectById, stagesOf } from "../../slices/admission/repo.js";
 import { channelById, projectChannels } from "../../slices/channels/repo.js";
+import { isSampleProject } from "../../slices/onboarding/sample.js";
 import { scheduleById, scheduleRunOfProject } from "../../slices/schedules/repo.js";
 import { readSetting, writeSetting } from "../../slices/settings/repo.js";
 import { findDownload } from "../../slices/storage/downloads.js";
@@ -195,6 +196,18 @@ export function studioRoutes(deps: AppDeps) {
     });
   };
   const { allowOrigin, refused, allowed: extAllowed } = extensionAuth(deps.db);
+  // The bundled samples are read-only and never go to YouTube, so nothing here writes a
+  // release, a link, a pick or a fill for one, as the project routes refuse its writes
+  // (`app.ts`). Reading them stays open: the sample's page shows what a finished video offers.
+  const sampleRefused = (c: Context, ...projectIds: readonly string[]): Response | undefined =>
+    projectIds.some((one) => isSampleProject(deps.db, one))
+      ? problem(c, {
+          status: 409,
+          detail:
+            "This is a sample project, which is read-only: it isn't on YouTube and can't be. Press Make my own copy at the top of its page to post your own.",
+          extensions: { reason: "sample-read-only" },
+        })
+      : undefined;
 
   // A project's place in the plan: its series, and the schedule and run day that made it.
   const whoOf = (projectId: string, series: string): PlanWho => {
@@ -210,7 +223,9 @@ export function studioRoutes(deps: AppDeps) {
   // A project ready to upload gets its release times from the posting plan when its upload is
   // prepared (`releases.ts`).
   // A long video already on YouTube keeps when it went up; its shorts still get times.
+  // A sample never gets a time: it isn't going to YouTube.
   const planned = (projectId: string): void => {
+    if (isSampleProject(deps.db, projectId)) return;
     const long = videoOf(deps.db, projectId, null);
     const out = long?.uploadState === "done" ? long.recordedAt : undefined;
     const result = uploadPack(deps, projectId);
@@ -237,12 +252,13 @@ export function studioRoutes(deps: AppDeps) {
   });
   const slotChoices = (projectId: string, series: string) =>
     freeSlots(deps.db, readPlan(deps.db), whoOf(projectId, series), deps.clock.now(), 9);
-  // Finished projects not marked uploaded: the popup's list and the calendar's candidates.
+  // Finished projects not marked uploaded: the popup's list and the calendar's candidates. The
+  // samples are never among them.
   const finishedProjects = () => {
     const uploads = uploadedProjects(deps.db);
     const aside = setAsideProjects(deps.db);
     return listProjects(deps.db).filter((project) => {
-      if (uploads.has(project.id)) return false;
+      if (uploads.has(project.id) || isSampleProject(deps.db, project.id)) return false;
       const state = derive(stagesOf(deps.db, project.id), project.paused === true);
       return (
         state === "done" || state === "partial" || (state === "pending" && aside.has(project.id))
@@ -330,6 +346,9 @@ export function studioRoutes(deps: AppDeps) {
         if (!pack.ok) return unknownProject(c);
         const leadMs = readLeadHours(deps.db) * 3_600_000;
         const releases = releasesOf(deps.db, projectId);
+        // The long video is on YouTube once its link is known or the project is marked
+        // uploaded (one fact, `videos.ts`); a short only by its own link.
+        const uploaded = uploadedProjects(deps.db).has(projectId);
         return c.json({
           leadHours: readLeadHours(deps.db),
           // The zone its times are read in: its line's schedule's, else the plan's.
@@ -347,7 +366,9 @@ export function studioRoutes(deps: AppDeps) {
                 title: item.title,
                 at: at === "" ? null : at,
                 uploadBy: at === "" ? null : new Date(Date.parse(at) - leadMs).toISOString(),
-                onYoutube: videoOf(deps.db, projectId, item.short ?? null)?.uploadState === "done",
+                onYoutube:
+                  videoOf(deps.db, projectId, item.short ?? null)?.uploadState === "done" ||
+                  (item.kind === "video" && uploaded),
               };
             }),
           free: slotChoices(projectId, pack.pack.series),
@@ -363,6 +384,8 @@ export function studioRoutes(deps: AppDeps) {
           if (denied !== undefined) return denied;
           const { projectId } = c.req.valid("param");
           const other = c.req.valid("json").with;
+          const sample = sampleRefused(c, projectId, other);
+          if (sample !== undefined) return sample;
           const swapped = transact(deps.db, () =>
             swapReleases(deps.db, projectId, other, deps.clock.now()),
           );
@@ -397,6 +420,8 @@ export function studioRoutes(deps: AppDeps) {
           const denied = samePage(c);
           if (denied !== undefined) return denied;
           const { projectId } = c.req.valid("param");
+          const sample = sampleRefused(c, projectId);
+          if (sample !== undefined) return sample;
           if (uploadPack(deps, projectId).ok === false) return unknownProject(c);
           const { short, at, line } = c.req.valid("json");
           setRelease(deps.db, projectId, short, at ?? "", line ?? null, deps.clock.now());
@@ -438,7 +463,7 @@ export function studioRoutes(deps: AppDeps) {
         if (!result.ok) return unknownProject(c);
         return c.json({ ...result.pack, slotChoices: slotChoices(projectId, result.pack.series) });
       })
-      // Prepare upload's slot picker: another free slot of the plan, or none.
+      // Copy for YouTube Studio's Release picker: another free time of the plan, or none.
       .put(
         "/packs/:projectId/slot",
         zValidator("param", projectParam, onInvalid),
@@ -447,6 +472,8 @@ export function studioRoutes(deps: AppDeps) {
           const denied = samePage(c);
           if (denied !== undefined) return denied;
           const { projectId } = c.req.valid("param");
+          const sample = sampleRefused(c, projectId);
+          if (sample !== undefined) return sample;
           const wanted = c.req.valid("json").slot;
           const before = uploadPack(deps, projectId);
           if (!before.ok) return unknownProject(c);
@@ -459,7 +486,7 @@ export function studioRoutes(deps: AppDeps) {
               return problem(c, {
                 status: 409,
                 detail:
-                  "That slot is taken or past. Reload Prepare upload and choose one of the slots it lists.",
+                  "That time is taken or past. Close Copy for YouTube Studio, open it again and choose one of the times it lists.",
               });
             setRelease(deps.db, projectId, 0, wanted.longAt, wanted.row, deps.clock.now());
           }
@@ -470,7 +497,7 @@ export function studioRoutes(deps: AppDeps) {
             : unknownProject(c);
         },
       )
-      // Prepare upload's AI use tick: the project's uploaded clips are real footage.
+      // Copy for YouTube Studio's AI use tick: the project's uploaded clips are real footage.
       .put(
         "/packs/:projectId/real-footage",
         zValidator("param", projectParam, onInvalid),
@@ -479,13 +506,15 @@ export function studioRoutes(deps: AppDeps) {
           const denied = samePage(c);
           if (denied !== undefined) return denied;
           const { projectId } = c.req.valid("param");
+          const sample = sampleRefused(c, projectId);
+          if (sample !== undefined) return sample;
           if (!uploadPack(deps, projectId).ok) return unknownProject(c);
           saveRealFootage(deps.db, projectId, c.req.valid("json").realFootage);
           const result = uploadPack(deps, projectId);
           return result.ok ? c.json(result.pack) : unknownProject(c);
         },
       )
-      // Prepare upload's pick: which title and thumbnail the upload carries; the A/B test tries
+      // Copy for YouTube Studio's pick: which title and thumbnail the upload carries; the A/B test tries
       // the others once the video is public.
       .put(
         "/packs/:projectId/pick",
@@ -495,13 +524,16 @@ export function studioRoutes(deps: AppDeps) {
           const denied = samePage(c);
           if (denied !== undefined) return denied;
           const { projectId } = c.req.valid("param");
+          const sample = sampleRefused(c, projectId);
+          if (sample !== undefined) return sample;
           if (!uploadPack(deps, projectId).ok) return unknownProject(c);
           writeUploadPick(deps.db, projectId, c.req.valid("json"));
           const result = uploadPack(deps, projectId);
           return result.ok ? c.json(result.pack) : unknownProject(c);
         },
       )
-      // Prepare upload's playlist ticks: which of the channel's playlists this project goes into.
+      // Copy for YouTube Studio's playlist ticks: which of the channel's playlists this project
+      // goes into.
       .put(
         "/packs/:projectId/playlists",
         zValidator("param", projectParam, onInvalid),
@@ -510,6 +542,8 @@ export function studioRoutes(deps: AppDeps) {
           const denied = samePage(c);
           if (denied !== undefined) return denied;
           const { projectId } = c.req.valid("param");
+          const sample = sampleRefused(c, projectId);
+          if (sample !== undefined) return sample;
           if (!uploadPack(deps, projectId).ok) return unknownProject(c);
           saveProjectPlaylists(deps.db, projectId, c.req.valid("json").playlists);
           const result = uploadPack(deps, projectId);
@@ -524,13 +558,15 @@ export function studioRoutes(deps: AppDeps) {
           const denied = samePage(c);
           if (denied !== undefined) return denied;
           const { projectId } = c.req.valid("param");
+          const sample = sampleRefused(c, projectId);
+          if (sample !== undefined) return sample;
           const { short } = c.req.valid("json");
           const result = uploadPack(deps, projectId);
           if (!result.ok) return unknownProject(c);
           if (packItem(result.pack, short) === undefined)
             return problem(c, {
               status: 404,
-              detail: `This project has no short ${String(short)}. Reload the project page and press Prepare upload again.`,
+              detail: `This project has no short ${String(short)}. Reload the project page and press Copy for YouTube Studio again.`,
             });
           const queue = enqueueFill(deps.db, projectId, short ?? null, deps.clock.now());
           return c.json({ chosen: { projectId, short: short ?? null }, queue: queueView(queue) });
@@ -544,7 +580,8 @@ export function studioRoutes(deps: AppDeps) {
         c.json({ videos: projectVideos(deps.db, c.req.valid("param").projectId) }),
       )
       // A video's link pasted in Slopify, for an upload made without the extension; an empty
-      // link forgets it.
+      // link forgets it. The long video's link marks the project uploaded, and forgetting it
+      // takes the mark off (`videos.ts`).
       .put(
         "/videos/:projectId",
         zValidator("param", projectParam, onInvalid),
@@ -553,9 +590,11 @@ export function studioRoutes(deps: AppDeps) {
           const wrong = samePage(c);
           if (wrong !== undefined) return wrong;
           const { projectId } = c.req.valid("param");
+          const sample = sampleRefused(c, projectId);
+          if (sample !== undefined) return sample;
           const { short, link } = c.req.valid("json");
           if (link.trim() === "") {
-            forgetVideo(deps.db, projectId, short ?? null);
+            forgetVideo(deps.db, projectId, short ?? null, deps.clock.now().toISOString());
             return c.json({ videos: projectVideos(deps.db, projectId) });
           }
           const videoId = videoIdOf(link);
@@ -582,7 +621,7 @@ export function studioRoutes(deps: AppDeps) {
           queue: queueView(removeFill(deps.db, projectId, short ?? null, deps.clock.now())),
         });
       })
-      // The extension's own zips, for Settings' and Prepare upload's Download.
+      // The extension's own zips, for Settings' and Copy for YouTube Studio's Download.
       .get("/extension/:file", zValidator("param", extensionParam, onInvalid), (c) => {
         const { file } = c.req.valid("param");
         const name = extensionFiles[file] ?? "";
@@ -651,8 +690,8 @@ export function studioRoutes(deps: AppDeps) {
           status: 404,
           detail:
             gone > 0
-              ? "The project chosen to fill in is gone. In Slopify, open the project again, press Prepare upload, then Fill in YouTube Studio."
-              : "Nothing is waiting to be filled in. In Slopify, open the project, press Prepare upload, then Fill in YouTube Studio.",
+              ? "The project chosen to fill in is gone. In Slopify, open the project again, press Copy for YouTube Studio, then Fill in YouTube Studio."
+              : "Nothing is waiting to be filled in. In Slopify, open the project, press Copy for YouTube Studio, then Fill in YouTube Studio.",
         });
       })
       // The extension filled an item: it leaves the queue, so the next upload dialog takes the
@@ -719,6 +758,8 @@ export function studioRoutes(deps: AppDeps) {
         allowOrigin(c, false);
         if (!extAllowed(c)) return refused(c);
         const { projectId, short } = c.req.valid("json");
+        const sample = sampleRefused(c, projectId);
+        if (sample !== undefined) return sample;
         const result = uploadPack(deps, projectId);
         if (!result.ok || packItem(result.pack, short ?? undefined) === undefined)
           return problem(c, {
@@ -735,6 +776,8 @@ export function studioRoutes(deps: AppDeps) {
         allowOrigin(c, false);
         if (!extAllowed(c)) return refused(c);
         const { projectId } = c.req.valid("json");
+        const sample = sampleRefused(c, projectId);
+        if (sample !== undefined) return sample;
         planned(projectId);
         const result = uploadPack(deps, projectId);
         if (!result.ok) return unknownProject(c);
@@ -845,7 +888,7 @@ export function studioRoutes(deps: AppDeps) {
         let forgotten = 0;
         for (const { projectId, short, videoId } of body.videos) {
           if (videoOf(deps.db, projectId, short ?? null)?.videoId !== videoId) continue;
-          forgetVideo(deps.db, projectId, short ?? null);
+          forgetVideo(deps.db, projectId, short ?? null, deps.clock.now().toISOString());
           deps.hub.emit(projectId, { type: "project.updated", projectId });
           forgotten++;
         }
@@ -943,8 +986,9 @@ function confirmVideoUpload(
   videoId: string,
   captionsAdded = false,
 ): void {
-  if (!confirmUpload(deps.db, projectId, short, videoId))
-    recordVideo(deps.db, projectId, short, videoId, deps.clock.now().toISOString());
+  const at = deps.clock.now().toISOString();
+  if (!confirmUpload(deps.db, projectId, short, videoId, at))
+    recordVideo(deps.db, projectId, short, videoId, at);
   const confirmedPack = uploadPack(deps, projectId);
   const confirmedItem = confirmedPack.ok
     ? packItem(confirmedPack.pack, short ?? undefined)

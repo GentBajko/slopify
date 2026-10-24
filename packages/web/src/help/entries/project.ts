@@ -138,41 +138,6 @@ export const projectHelp = {
     body: "Checks every caption (text present, times in order, inside the narration) and puts your edits into the project draft. Nothing is saved until you press Save changes, and the video is rendered again only when you remake outdated outputs.",
     tutorial: { page: "Editing-a-Project", anchor: "edit-captions" },
   },
-  "project.youtube.summary": {
-    title: "Summary",
-    body: "The opening of the YouTube description, written by the text model from the article. Edit changes it in place and keeps your text as yours: when the description is written again, your summary stays and the new one waits beside it with Use it, Keep mine and View diff. Use generated goes back to the model's text.",
-    tutorial: { page: "YouTube-Description", anchor: "edit-a-part" },
-  },
-  "project.youtube.chapters": {
-    title: "Chapters",
-    body: "Timestamped chapter lines at the narration's real times, which YouTube turns into chapters. YouTube needs the first at 0:00, at least three, each at least 10 seconds long. Edit changes them in place and your edit survives the next rewrite; Use generated goes back.",
-    tutorial: { page: "YouTube-Description", anchor: "chapters-follow-youtubes-rules" },
-  },
-  "project.youtube.hashtags": {
-    title: "Hashtags",
-    body: "The hashtags at the end of the description; YouTube shows the first three above the title. Edit changes them in place and your edit survives the next rewrite, with the new ones offered beside it. Use generated goes back to the model's.",
-    tutorial: { page: "YouTube-Description", anchor: "edit-a-part" },
-  },
-  "project.youtube.tags": {
-    title: "Tags",
-    body: "Search tags for YouTube's Tags field, which allows 500 characters in all, commas included. They are not shown to viewers. Edit changes them in place and your edit survives the next rewrite; Copy gives them comma-separated, ready to paste.",
-    tutorial: { page: "YouTube-Description", anchor: "edit-a-part" },
-  },
-  "project.youtube.pinned-comment": {
-    title: "Pinned comment",
-    body: "A comment to pin under the video, written with the description: a line or two asking viewers a question about the subject and what to cover next. Your Description prompt can shape it. YouTube pins comments only on a published video: post it from your channel, then choose Pin in its menu. Your edits survive the next rewrite.",
-    tutorial: { page: "YouTube-Description", anchor: "edit-a-part" },
-  },
-  "project.youtube.titles": {
-    title: "Other titles",
-    body: "Two more titles for this video, written with the description, each a different angle. YouTube's A/B Testing, beside the title in Studio, shows up to three titles to viewers and keeps the one watched most. Edit them one per line; your edits survive the next rewrite.",
-    tutorial: { page: "YouTube-Description", anchor: "edit-a-part" },
-  },
-  "project.youtube.previous-video": {
-    title: "Previous video for this project",
-    body: "The link that {{Previous video}} fills in this project's description, ahead of the one on its channel's Brand tab. Paste the video this one follows on from. It changes only what is shown and copied, with no text call. Save links keeps it.",
-    tutorial: { page: "YouTube-Description", anchor: "previous-video" },
-  },
   "project.live.writing": {
     title: "Live writing",
     body: "The text model's words as they arrive, so you can see the article or research taking shape. When a stage makes several calls, the list picks which one to watch. Follow output keeps the newest text in view; untick it to read back. Watching costs nothing extra; the full text is saved when the stage finishes.",
@@ -187,36 +152,6 @@ export const projectHelp = {
     title: "Unknown cost estimates",
     body: "Some steps use a model with no published price, so their cost cannot be estimated and is left out of the total shown. Tick to start anyway; the real cost is recorded under Cost once they run. The button that makes it again stays off until you tick it.",
     tutorial: { page: "Editing-a-Project", anchor: "choose-what-to-remake" },
-  },
-  "project.upload.item": {
-    title: "What to upload",
-    body: "Switches the list between the long video and each short, since each is uploaded to YouTube on its own with its own title, description and tags. The ticks and the Fill in YouTube Studio button follow the one you pick.",
-    tutorial: { page: "Publishing-to-YouTube", anchor: "upload-a-video" },
-  },
-  "project.upload.real-footage": {
-    title: "Real footage",
-    body: "Turn this on when the video clips you uploaded are filmed footage, not made by AI. The AI use answer then checks them: laying a Look atmosphere such as fog over real footage makes it Yes, while colour, vignette or grain count as minor edits and keep it No. It is saved with the project and changes nothing in the video.",
-    tutorial: { page: "Publishing-to-YouTube", anchor: "ai-use-disclosure" },
-  },
-  "project.upload.slot": {
-    title: "Release time",
-    body: "When this video goes out. It takes the next free time of a posting-plan line for its series (Settings → YouTube Studio and posting); each short follows at its own times. Pick another free time, or Not scheduled to set it in Studio yourself. Calendar → Releases shows and moves every time. Upload it before its upload-by time so YouTube's checks finish while it is private.",
-    tutorial: { page: "Publishing-to-YouTube", anchor: "upload-a-video" },
-  },
-  "project.upload.steps": {
-    title: "Upload steps",
-    body: "Everything YouTube Studio asks for, in the order it asks: file, title, description, thumbnail, playlist, audience, AI use, tags and the schedule. Copy puts each value on the clipboard. The tick box beside each step is only a note to yourself, remembered in this browser; it changes nothing in the project.",
-    tutorial: { page: "Publishing-to-YouTube", anchor: "upload-a-video" },
-  },
-  "project.upload.fill-studio": {
-    title: "Fill in YouTube Studio",
-    body: "Opens Studio's upload page and adds this item to what waits for the Slopify Studio extension, which must be installed and paired (Settings, YouTube Studio). Each upload dialog you start is filled with the first waiting item. If Studio's dialog lacks a field, nothing is filled and the whole pack is copied instead. You check it and press Publish; Slopify never uploads or publishes.",
-    tutorial: { page: "Studio-Extension", anchor: "fill-in-an-upload" },
-  },
-  "project.upload.queue": {
-    title: "Waiting for Studio",
-    body: "The videos and shorts Fill in YouTube Studio added, oldest first, from every project. Each new upload dialog in Studio is filled with the first, which then leaves the list. It survives restarting Slopify; an item waits up to 24 hours, and a new pairing token clears the list. Remove takes an item out without filling it.",
-    tutorial: { page: "Studio-Extension", anchor: "upload-several-one-after-another" },
   },
   "project.free-space": {
     title: "Free space",

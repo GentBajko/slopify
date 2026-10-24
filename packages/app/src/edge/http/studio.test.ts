@@ -9,11 +9,13 @@ import type { Log } from "../../kernel/log.js";
 import { ensureDirs, layout } from "../../kernel/paths.js";
 import type { RunConfig } from "../../slices/admission/model.js";
 import { insertProject } from "../../slices/admission/repo.js";
+import { writeSampleRecord } from "../../slices/onboarding/state.js";
 import { writeSetting } from "../../slices/settings/repo.js";
 import { outputPath } from "../../slices/storage/layout.js";
 import type { Output, OutputMeta, OutputRole } from "../../slices/storage/model.js";
 import { insertOutput } from "../../slices/storage/repo.js";
 import type { UploadPack } from "../../slices/studio/model.js";
+import { uploadedProjects } from "../../slices/uploads/repo.js";
 import { createHub } from "../events/hub.js";
 import { createApp } from "./app.js";
 
@@ -155,8 +157,8 @@ function finished(output: ReturnType<typeof harness>["output"]): void {
   output("short_video", "shorts/short-01.mp4", "short", { short: 1, sentences: [2, 5] });
 }
 
-const json = (body: unknown): RequestInit => ({
-  method: "POST",
+const json = (body: unknown, method = "POST"): RequestInit => ({
+  method,
   headers: { "content-type": "application/json" },
   body: JSON.stringify(body),
 });
@@ -370,7 +372,9 @@ describe("pairing and CORS", () => {
       headers: { authorization: `Bearer ${token}`, origin: extension },
     });
     expect(before.status).toBe(404);
-    expect(((await before.json()) as { detail: string }).detail).toContain("Prepare upload");
+    expect(((await before.json()) as { detail: string }).detail).toContain(
+      "press Copy for YouTube Studio",
+    );
     expect((await h.call("/packs/p1/choose", json({}))).status).toBe(200);
     const pack = await h.call("/ext/pack", {
       headers: { authorization: `Bearer ${token}`, origin: extension },
@@ -904,15 +908,90 @@ describe("YouTube videos and their A/B tests", () => {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ short: null, link }),
       });
+    const onYoutube = async () =>
+      ((await (await h.call("/releases/p1")).json()) as { items: { onYoutube: boolean }[] })
+        .items[0]?.onYoutube;
     expect((await put("not a link")).status).toBe(400);
     expect(await (await put("https://youtu.be/6tRcYUoxyQo")).json()).toMatchObject({
       videos: [{ videoId: "6tRcYUoxyQo", uploadState: "done" }],
     });
+    // The long video's link and Mark uploaded are one fact: the project is uploaded now.
+    expect(uploadedProjects(h.db).get("p1")).toBe("2026-09-27T10:00:00.000Z");
+    expect(await onYoutube()).toBe(true);
+    // Forgetting the link takes the mark off again.
     expect(await (await put("")).json()).toEqual({ videos: [] });
+    expect(uploadedProjects(h.db).has("p1")).toBe(false);
+    expect(await onYoutube()).toBe(false);
+  });
+
+  it("marks the project uploaded once Studio confirms the long video, not when it is only filled", async () => {
+    const h = harness();
+    finished(h.output);
+    const token = await paired(h);
+    const upload = { projectId: "p1", short: null, videoId: "lKS3FAjekpI" };
+    await h.call("/ext/video", ext(token, upload));
+    expect(uploadedProjects(h.db).has("p1")).toBe(false);
+    await h.call("/ext/video/done", ext(token, upload));
+    expect(uploadedProjects(h.db).has("p1")).toBe(true);
+    // A short on YouTube doesn't stand for the project.
+    const other = harness();
+    finished(other.output);
+    await other.call("/videos/p1", json({ short: 1, link: "https://youtu.be/6tRcYUoxyQo" }, "PUT"));
+    expect(uploadedProjects(other.db).has("p1")).toBe(false);
+  });
+
+  it("counts a project marked uploaded as on YouTube in its Release rows", async () => {
+    const h = harness();
+    finished(h.output);
+    h.db
+      .prepare("INSERT INTO project_uploads(project_id, uploaded_at) VALUES (?, ?)")
+      .run("p1", "2026-09-27T09:00:00.000Z");
+    const items = (
+      (await (await h.call("/releases/p1")).json()) as {
+        items: { short: number; onYoutube: boolean }[];
+      }
+    ).items;
+    expect(items.map((item) => [item.short, item.onYoutube])).toEqual([
+      [0, true],
+      [1, false],
+    ]);
   });
 });
 
-it("keeps Prepare upload's pick: the upload's thumbnail first, every one still in the pack", async () => {
+describe("a sample project", () => {
+  it("is read-only here too: no release, link, pick or fill is saved for it", async () => {
+    const h = harness();
+    finished(h.output);
+    writeSampleRecord(h.db, { projectId: "p1", seededAt: "2026-09-27T09:00:00.000Z" });
+    const refused = [
+      await h.call("/releases/p1", json({ short: 0, at: "2030-01-06T20:00:00.000Z" }, "PUT")),
+      await h.call("/releases/p1/swap", json({ with: "p2" })),
+      await h.call(
+        "/videos/p1",
+        json({ short: null, link: "https://youtu.be/6tRcYUoxyQo" }, "PUT"),
+      ),
+      await h.call("/packs/p1/slot", json({ slot: null }, "PUT")),
+      await h.call("/packs/p1/pick", json({ title: 0, thumbnail: 1 }, "PUT")),
+      await h.call("/packs/p1/real-footage", json({ realFootage: true }, "PUT")),
+      await h.call("/packs/p1/playlists", json({ playlists: null }, "PUT")),
+      await h.call("/packs/p1/choose", json({})),
+    ];
+    for (const response of refused) {
+      expect(response.status).toBe(409);
+      expect(await response.json()).toMatchObject({ reason: "sample-read-only" });
+    }
+    expect(await (await h.call("/videos/p1")).json()).toEqual({ videos: [] });
+    // Reading it still works, and it never gets a release time.
+    const own = (await (await h.call("/releases/p1")).json()) as { items: { at: unknown }[] };
+    expect(own.items.every((item) => item.at === null)).toBe(true);
+    expect((await h.call("/packs/p1")).status).toBe(200);
+    // Nor is it a finished project waiting for a time on the calendar.
+    const calendar = (await (await h.call("/releases")).json()) as { candidates: unknown[] };
+    expect(calendar.candidates).toEqual([]);
+  });
+});
+
+it("keeps Copy for YouTube Studio's pick: the upload's thumbnail first, every one still in the pack", async () => {
   const h = harness();
   finished(h.output);
   const response = await h.call("/packs/p1/pick", {

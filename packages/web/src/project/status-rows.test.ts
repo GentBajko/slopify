@@ -108,7 +108,7 @@ describe("the status list", () => {
     expect(rows.find((row) => row.id === "images")?.detail).toBe("3 outdated");
   });
 
-  it("lists Shorts and YouTube text as the video stands, then what they hold", () => {
+  it("lists Shorts and YouTube as the video stands, then what they hold", () => {
     const shorts = [1, 2].map((short) =>
       output("short_video", "video", { id: `short-${String(short)}`, meta: { short } }),
     );
@@ -121,7 +121,7 @@ describe("the status list", () => {
     );
     expect(line(done).slice(4, 6)).toEqual([
       "Shorts | Done | 2 shorts",
-      "YouTube text | Done | description and tags",
+      "YouTube | Done | description and tags",
     ]);
     const rendering = statusRows(
       input({
@@ -134,7 +134,7 @@ describe("the status list", () => {
     );
     expect(line(rendering).filter((row) => /^(Shorts|YouTube)/.test(row))).toEqual([
       "Shorts | Running",
-      "YouTube text | Running",
+      "YouTube | Running",
     ]);
     // A finished video that made no shorts says so.
     expect(line(statusRows(input({ shorts: true }))).find((row) => row.startsWith("Shorts"))).toBe(

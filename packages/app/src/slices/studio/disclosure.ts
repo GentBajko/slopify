@@ -16,7 +16,7 @@
 // So the automatic answer is Yes only when one of the three cases applies, and No otherwise:
 // 1. a saved voice marked "Imitates a real person" (Settings → Voices) narrates it: an AI
 //    voice cloned from, or made to sound like, a real person, so that person seems to say it;
-// 2. uploaded clips the person marked as real footage (the project's Prepare upload) get the
+// 2. uploaded clips the person marked as real footage (the project's Copy for YouTube Studio) get the
 //    Look's atmosphere overlay (embers, dust or fog), which adds to a real scene what wasn't
 //    there. A colour grade, vignette or grain alone is one of YouTube's minor edits;
 // 3. an AI image model draws its pictures from an Image prompt marked "Draws photorealistic
@@ -50,7 +50,7 @@ export interface AiDisclosure {
 }
 
 // What the answer is worked out from, already resolved from the project, the saved voices,
-// the Library and the Prepare upload marks (`pack.ts`).
+// the Library and the Copy for YouTube Studio marks (`pack.ts`).
 export interface DisclosureInput {
   readonly setting: AiDisclosureSetting;
   readonly kind: "video" | "short";

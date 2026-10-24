@@ -174,7 +174,7 @@ export function statusRows(input: StatusInput): readonly StatusRow[] {
   }
   if (input.youtube) {
     const written = outputs.filter((output) => output.role === "youtube_description").length;
-    rows.push(made("youtube", "YouTube text", written, "description and tags"));
+    rows.push(made("youtube", "YouTube", written, "description and tags"));
   }
 
   rows.push(...row("document", "PDF", ["document"], doneOf("document")));

@@ -118,7 +118,7 @@ const sectionTitles: Readonly<Record<SectionId, string>> = {
   images: "Images",
   video: "Video",
   shorts: "Shorts",
-  youtube: "YouTube text",
+  youtube: "YouTube",
   document: "PDF",
   cost: "Cost",
   live: "Progress",
@@ -770,7 +770,7 @@ function ProjectWorkspace({
                     {videoStage === undefined || !youtubeShown ? null : (
                       <StageSection
                         id="youtube"
-                        title="YouTube text"
+                        title="YouTube"
                         stages={[]}
                         active={selected === "youtube"}
                         {...sectionProps}

@@ -22,7 +22,7 @@ import { type PlanSlot, type PostingPlan, postingPlanSchema, seriesOf } from "./
 export const postingPlanKey = "studio.postingPlan";
 const key = postingPlanKey;
 
-// No plan until one is made: nothing is scheduled, and Prepare upload says so.
+// No plan until one is made: nothing is scheduled, and Copy for YouTube Studio says so.
 export function emptyPlan(timeZone: string): PostingPlan {
   return { timeZone, rows: [] };
 }

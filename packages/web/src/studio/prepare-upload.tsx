@@ -28,28 +28,33 @@ import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { Drawer } from "@/components/kit/drawer";
-import { Checkbox, Select } from "@/components/kit/field";
+import { Checkbox, HelpLine, Select } from "@/components/kit/field";
 import { Fold } from "@/components/kit/fold";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
-import { FileLink } from "@/components/kit/link";
+import { helpScope } from "@/components/kit/info-tip";
+import { FileLink, TextLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { Lightbox, MediaFrame, MediaGrid } from "@/components/kit/media";
 import { SectionHead } from "@/components/kit/section-head";
 import { Segmented, Switch } from "@/components/kit/switch";
 import { OpenFolder } from "@/project/open-folder";
+import { projectReleasesKey } from "@/project/release-times";
+import { useSampleProject } from "@/project/youtube-sample";
+import { keys } from "@/queries";
 import { readPostPacks, socialPacksKey } from "@/social/api";
 import { PostFillButton, PostPanel } from "@/social/post-panel";
 import { fillBlocked } from "@/social/words";
 import { ExtensionInstall } from "./extension-install";
 import { studioSettingsKey } from "./settings-panel";
+import { UploadDone } from "./upload-done";
 
 export const studioQueueKey = ["studio", "queue"] as const;
 
-// Prepare upload: everything YouTube Studio asks for, in the order it asks, for the video and
-// each short: one row per step with a done tick and a small quiet action (Copy, Open folder,
-// Download), the thumbnails under the list. Fill in YouTube Studio adds the chosen item to what
-// waits for the paired Slopify Studio extension and opens Studio's upload page; unpaired, the
-// drawer shows how to install it and the list is the whole flow. Slopify never publishes.
+// Copy for YouTube Studio: everything YouTube Studio asks for, in the order it asks, for the
+// video and each short: one row per step with a done tick and a small quiet action (Copy, Open
+// folder, Download), the thumbnails under the list, and last "I've uploaded it". Fill in
+// YouTube Studio adds the chosen item to what waits for the paired Slopify Studio extension and
+// opens Studio's upload page; unpaired, the drawer shows how to install it and the list is the
+// whole flow. Slopify never uploads. On a bundled sample it only reads: nothing is saved.
 export function PrepareUpload({
   projectId,
   ready,
@@ -73,7 +78,7 @@ export function PrepareUpload({
         disabledReason="Available once the video has been made"
         onClick={() => setOpen(true)}
       >
-        Prepare upload
+        Copy for YouTube Studio
       </Button>
       {open ? <PrepareUploadDrawer projectId={projectId} onClose={() => setOpen(false)} /> : null}
     </>
@@ -89,7 +94,7 @@ const stepLabels: Readonly<Record<StudioStep, string>> = {
   audience: "Audience",
   altered: "AI use (under Show more)",
   tags: "Tags (under Show more)",
-  schedule: "Schedule (Visibility)",
+  schedule: "Release (Visibility step)",
 };
 
 // "Sun 5 Oct, 20:00" in this browser's time zone, as Studio's schedule shows it to you.
@@ -118,6 +123,8 @@ export function PrepareUploadDrawer({
   const client = useQueryClient();
   const packKey = ["studio", "pack", projectId];
   const pack = useQuery({ queryKey: packKey, queryFn: () => readUploadPack(api, projectId) });
+  // The bundled samples read only: their pack is shown and copied, nothing is saved or filled.
+  const readOnly = useSampleProject(projectId);
   const [chosen, setChosen] = useState("video");
   const [status, setStatus] = useState<{ text: string; tone: StatusTone } | undefined>();
   // The other sites this project posts to (`slices/social`). A project that posts nowhere, or a
@@ -196,11 +203,14 @@ export function PrepareUploadDrawer({
     mutationFn: (next: Slot | null) => saveUploadSlot(api, projectId, next),
     onSuccess: (saved) => {
       client.setQueryData(packKey, saved);
-      setStatus({ text: "Saved when this project goes out.", tone: "success" });
+      // The same date the YouTube section's Release block and Calendar → Releases show.
+      void client.invalidateQueries({ queryKey: projectReleasesKey(projectId) });
+      void client.invalidateQueries({ queryKey: keys.studioReleases });
+      setStatus({ text: "Saved the release date.", tone: "success" });
     },
     onError: (error) =>
       setStatus({
-        text: `Couldn't change the slot: ${error.message} Choose it again.`,
+        text: `Couldn't change the release date: ${error.message} Choose it again.`,
         tone: "error",
       }),
   });
@@ -234,7 +244,7 @@ export function PrepareUploadDrawer({
   return (
     <Drawer
       open
-      title="Prepare upload"
+      title="Copy for YouTube Studio"
       onClose={onClose}
       footer={
         post !== undefined && social.data !== undefined ? (
@@ -248,7 +258,7 @@ export function PrepareUploadDrawer({
         ) : (
           <>
             <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
-            {paired === false ? (
+            {paired === false && !readOnly ? (
               <FileLink
                 href={studioUploadUrl}
                 target="_blank"
@@ -258,30 +268,37 @@ export function PrepareUploadDrawer({
                 Open YouTube Studio
               </FileLink>
             ) : null}
-            <Button
-              variant={paired === false ? "secondary" : "primary"}
-              disabled={item === undefined || fill.isPending || paired !== true}
-              disabledReason={
-                paired === false
-                  ? "Install and pair the Slopify Studio extension first (steps above)"
-                  : settings.error !== null
-                    ? `Couldn't check whether the extension is paired: ${settings.error.message} Close Prepare upload and open it again.`
+            {/* Unpaired, there is nothing to fill with: the install fold says how to get it. */}
+            {readOnly || paired === false ? null : (
+              <Button
+                variant="primary"
+                disabled={item === undefined || fill.isPending || paired !== true}
+                disabledReason={
+                  settings.error !== null
+                    ? `Couldn't check whether the extension is paired: ${settings.error.message} Close Copy for YouTube Studio and open it again.`
                     : "Wait for the upload pack to load"
-              }
-              onClick={() => {
-                if (item === undefined) return;
-                // Opened now, inside the click, so the browser doesn't block the new tab.
-                window.open(studioUploadUrl, "_blank", "noopener");
-                fill.mutate(item);
-              }}
-            >
-              Fill in YouTube Studio
-            </Button>
-            <InfoTip id="project.upload.fill-studio" />
+                }
+                onClick={() => {
+                  if (item === undefined) return;
+                  // Opened now, inside the click, so the browser doesn't block the new tab.
+                  window.open(studioUploadUrl, "_blank", "noopener");
+                  fill.mutate(item);
+                }}
+              >
+                Fill in YouTube Studio
+              </Button>
+            )}
           </>
         )
       }
     >
+      <p className="m-0 mb-4 max-w-[var(--measure)] text-ink">
+        {readOnly
+          ? "Slopify never uploads. This is the read-only sample: copy from it to see how it works, and make your own copy to post your own."
+          : paired === true
+            ? "Slopify never uploads. It copies each field in the order YouTube Studio asks for them; Fill in YouTube Studio types them in for you with the Slopify Studio extension. You check it and press Publish."
+            : "Slopify never uploads. It copies each field in the order YouTube Studio asks for them. You paste them into Studio's upload dialog, check it and press Publish."}
+      </p>
       {posts.length === 0 ? null : (
         <Segmented
           label="Where"
@@ -290,7 +307,7 @@ export function PrepareUploadDrawer({
             setWhere(next);
             setStatus(undefined);
           }}
-          tip="social.where"
+          help="Each site has its own post: its words, pictures or video, and its Fill button."
           options={[
             { value: "youtube" as const, label: "YouTube" },
             ...posts.map((one) => ({ value: one.platform, label: platformLabels[one.platform] })),
@@ -308,30 +325,22 @@ export function PrepareUploadDrawer({
       )}
       {post !== undefined || pack.error === null ? null : (
         <Callout tone="danger" title="The upload pack couldn't be read.">
-          {`${pack.error.message} Close Prepare upload and open it again.`}
+          {`${pack.error.message} Close Copy for YouTube Studio and open it again.`}
         </Callout>
       )}
       {post !== undefined || pack.data === undefined ? null : (
         <div className="flex flex-col gap-5">
-          {paired === false ? (
-            <Callout tone="waiting" title="The Slopify Studio extension isn't paired.">
-              <div className="flex flex-col gap-3">
-                <p className="m-0">
-                  Without it, the steps below are the upload pack: copy each into Studio's upload
-                  dialog. To have Studio filled in for you, install the extension.
-                </p>
-                <Fold summary="Install the extension">
-                  <ExtensionInstall />
-                </Fold>
-              </div>
-            </Callout>
+          {paired === false && !readOnly ? (
+            <Fold summary="Install the Slopify Studio extension" state="fills Studio in for you">
+              <ExtensionInstall />
+            </Fold>
           ) : null}
           {items.length > 1 ? (
             <Segmented
               label="What to upload"
               value={item === undefined ? "" : itemKey(item)}
               onChange={setChosen}
-              tip="project.upload.item"
+              help="Each one is uploaded on its own, with its own title, description and tags."
               options={items.map((one) => ({
                 value: itemKey(one),
                 label: one.kind === "video" ? "Video" : `Short ${String(one.short)}`,
@@ -340,7 +349,7 @@ export function PrepareUploadDrawer({
             />
           ) : null}
           {pack.data.missing.length === 0 ? null : (
-            <Callout tone="waiting" title="Some of it isn't made yet.">
+            <Callout tone="waiting" title="Before you upload">
               <ul className="m-0 flex list-none flex-col gap-1 p-0">
                 {pack.data.missing.map((line) => (
                   <li key={line}>{line}</li>
@@ -354,18 +363,18 @@ export function PrepareUploadDrawer({
               projectId={projectId}
               item={item}
               footageSwitch={
-                item.kind === "video" && pack.data.footage !== undefined ? (
+                item.kind === "video" && pack.data.footage !== undefined && !readOnly ? (
                   <Switch
                     checked={footage.isPending ? footage.variables : pack.data.footage.real}
                     disabled={footage.isPending}
                     onChange={(next) => footage.mutate(next)}
-                    tip="project.upload.real-footage"
+                    help="Changes the AI use answer above; nothing in the video changes."
                     label={`The ${pack.data.footage.clips === 1 ? "uploaded clip is" : `${String(pack.data.footage.clips)} uploaded clips are`} real footage (filmed, not made by AI)`}
                   />
                 ) : undefined
               }
               playlistPicker={
-                pack.data.playlistChoices.length > 1 ? (
+                pack.data.playlistChoices.length > 1 && !readOnly ? (
                   <span className="flex flex-col gap-1">
                     {pack.data.playlistChoices.map((choice) => (
                       <label key={choice.name} className="flex min-h-8 items-center gap-2">
@@ -388,12 +397,25 @@ export function PrepareUploadDrawer({
                 ) : undefined
               }
               copy={copy}
-              onPick={(next) => pick.mutate(next)}
+              {...(readOnly ? {} : { onPick: (next) => pick.mutate(next) })}
+              releaseLink={
+                <TextLink
+                  to="/projects/$projectId"
+                  params={{ projectId }}
+                  search={{ section: "youtube" }}
+                  onClick={onClose}
+                >
+                  Release in the project's YouTube section
+                </TextLink>
+              }
               slotPicker={
-                item.kind !== "video" ? undefined : (
-                  <span className="flex items-center gap-1" {...helpScope}>
+                item.kind !== "video" ||
+                readOnly ||
+                ((pack.data.slotChoices ?? []).length === 0 &&
+                  pack.data.schedule === undefined) ? undefined : (
+                  <span className="flex items-center gap-1">
                     <Select
-                      aria-label="Posting plan slot"
+                      aria-label="Release date"
                       value={
                         pack.data.schedule === undefined
                           ? ""
@@ -407,7 +429,7 @@ export function PrepareUploadDrawer({
                         );
                       }}
                       options={[
-                        { value: "", label: "Not scheduled (set it in Studio yourself)" },
+                        { value: "", label: "No date (set it in Studio yourself)" },
                         ...(pack.data.schedule === undefined
                           ? []
                           : [
@@ -422,7 +444,6 @@ export function PrepareUploadDrawer({
                         })),
                       ]}
                     />
-                    <InfoTip id="project.upload.slot" />
                   </span>
                 )
               }
@@ -430,12 +451,20 @@ export function PrepareUploadDrawer({
               doneKey={`slopify.upload.${projectId}.${itemKey(item)}`}
             />
           )}
+          {item === undefined || readOnly ? null : (
+            <UploadDone
+              key={`uploaded-${itemKey(item)}`}
+              projectId={projectId}
+              short={item.kind === "video" ? null : (item.short ?? null)}
+            />
+          )}
           {(queue.data ?? []).length === 0 ? null : (
             <section aria-label="Waiting for Studio">
-              <div className="mb-2 flex items-center gap-1">
-                <div className="sl-kicker">Waiting for Studio</div>
-                <InfoTip id="project.upload.queue" className="-my-1" />
-              </div>
+              <div className="sl-kicker">Waiting for Studio</div>
+              <HelpLine className="mb-2">
+                Each upload dialog you open in Studio is filled with the first one, which then
+                leaves the list.
+              </HelpLine>
               <List label="Waiting to be filled">
                 {(queue.data ?? []).map((entry, index) => {
                   const what = entry.short === null ? "Video" : `Short ${String(entry.short)}`;
@@ -465,11 +494,6 @@ export function PrepareUploadDrawer({
               </List>
             </section>
           )}
-          <Callout title="Slopify never publishes.">
-            {paired === false
-              ? "Copy each step into Studio's upload dialog (Open YouTube Studio), check it and press Publish yourself."
-              : "Fill in YouTube Studio hands this to the Slopify Studio extension, which puts the video into Studio's upload dialog and fills in the details. You check it and press Publish."}
-          </Callout>
         </div>
       )}
     </Drawer>
@@ -510,6 +534,7 @@ function Steps({
   onPick,
   picking,
   slotPicker,
+  releaseLink,
   doneKey,
 }: {
   readonly projectId: string;
@@ -519,11 +544,14 @@ function Steps({
   // The channel's playlists to tick for this project, when it has more than one.
   readonly playlistPicker?: ReactNode;
   readonly copy: (text: string, what: string) => void;
-  // Which title and thumbnail the upload carries (indexes in the project's own order).
-  readonly onPick: (pick: { readonly title: number; readonly thumbnail: number }) => void;
+  // Which title and thumbnail the upload carries (indexes in the project's own order); absent
+  // where nothing may be saved (the sample), which shows the pick without changing it.
+  readonly onPick?: (pick: { readonly title: number; readonly thumbnail: number }) => void;
   readonly picking: boolean;
-  // The posting plan's slot for the video (the shorts follow it).
+  // The posting plan's free times for the video's release (the shorts follow it).
   readonly slotPicker?: ReactNode;
+  // Where the release date is set when it has none: the project's YouTube section.
+  readonly releaseLink: ReactNode;
   // Where this browser remembers the ticks; a tick is a note to self, not project state.
   readonly doneKey: string;
 }) {
@@ -543,14 +571,14 @@ function Steps({
   // Shorts have no thumbnail step: Studio picks a frame of a short.
   const steps = studioSteps.filter((step) => step !== "thumbnails" || item.kind === "video");
   const ticked = steps.filter((step) => done.includes(step)).length;
+  // Copy only where there is something to copy; the row says when there isn't.
   const copyAction = (step: StudioStep) => {
     const text = copyTextOf(item, step);
+    if (text === "") return undefined;
     return (
       <Button
         variant="quiet"
         size="small"
-        disabled={text === ""}
-        disabledReason="Nothing to copy yet"
         aria-label={`Copy ${stepLabels[step].toLowerCase()}`}
         onClick={() => copy(text, stepLabels[step].toLowerCase())}
       >
@@ -618,7 +646,7 @@ function Steps({
           actions: copyAction(step),
         };
       case "title":
-        return item.titles.length === 0 || item.pickable === undefined
+        return item.titles.length === 0 || item.pickable === undefined || onPick === undefined
           ? {
               value: (
                 <span className="flex flex-col gap-1">
@@ -680,9 +708,11 @@ function Steps({
             <span className="flex flex-col gap-1">
               {slotPicker}
               <span className="text-ink-2">
-                {item.scheduleAt === undefined
-                  ? "Not scheduled: Slopify has no slot for it. Set the date in Studio's Visibility step."
-                  : `${slotTime(item.scheduleAt)}, your time. The extension types it into Studio's Visibility step; you press Schedule.`}
+                {item.scheduleAt === undefined ? (
+                  <>No date yet. Set one under {releaseLink}, or pick it in Studio yourself.</>
+                ) : (
+                  `Goes public ${slotTime(item.scheduleAt)}, your time. In Studio's Visibility step pick Schedule and enter it; the Slopify Studio extension types it in for you.`
+                )}
               </span>
             </span>
           ),
@@ -707,10 +737,9 @@ function Steps({
   };
   return (
     <div className="flex flex-col gap-5">
-      <section aria-label="In the order Studio asks">
-        <div className="mb-2 flex items-center gap-1">
+      <section aria-label="In the order Studio asks" {...helpScope}>
+        <div className="flex items-center gap-1">
           <div className="sl-kicker">In the order Studio asks</div>
-          <InfoTip id="project.upload.steps" className="-my-1" />
           <span className="flex-1" />
           <label className="flex min-h-8 cursor-pointer items-center gap-2 text-small text-ink-2">
             <Checkbox
@@ -724,6 +753,9 @@ function Steps({
             Select all
           </label>
         </div>
+        <HelpLine className="mb-2">
+          Tick each step as you go. The ticks are a note to yourself, kept in this browser only.
+        </HelpLine>
         <List label="Upload steps" className="sl-list--wrap-actions">
           {steps.map((step) => {
             const { value, actions } = contentOf(step);
@@ -777,7 +809,7 @@ function Steps({
                   openLabel={`Open thumbnail ${letterOf(index)} full size`}
                   actions={
                     <>
-                      {chosen || item.pickable === undefined ? null : (
+                      {chosen || item.pickable === undefined || onPick === undefined ? null : (
                         <Button
                           variant="quiet"
                           size="small"
@@ -843,7 +875,7 @@ function TitleProblem({ title }: { readonly title: string }): ReactNode {
   const problem = youtubeTitleProblem(title);
   return problem === undefined ? null : (
     <span role="alert" className="text-danger">
-      {`${problem} Change it in the project's YouTube section (Video), then open Prepare upload again.`}
+      {`${problem} Change it under Other titles in the project's YouTube section, or rename the project, then open Copy for YouTube Studio again.`}
     </span>
   );
 }
