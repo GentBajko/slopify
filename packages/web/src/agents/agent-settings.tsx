@@ -6,15 +6,15 @@ import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { helpScope } from "@/components/kit/info-tip";
 import { LoadingBlock, QueryState } from "@/components/kit/query-state";
-import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
 import { copyText } from "@/fixes/fix-actions";
+import { helpEntry } from "@/help/catalog";
 import { startedAt } from "@/lib/utils";
 import { Stamp } from "@/library/time";
 import { readRemoteAccess, remoteAccessKey } from "@/remote-access/api";
 import { agentConnectionQueryKey, readAgentConnection } from "./api";
 
-// Settings → Connections → Agents (MCP): where an agent on this computer connects, the two
+// Settings → AI agents: what an agent on this computer may do, where it connects (MCP), the two
 // setup lines, whether one has connected, and what agents changed lately.
 export function AgentSettings(): ReactElement {
   const { api } = useApp();
@@ -47,9 +47,9 @@ export function AgentSettings(): ReactElement {
   };
   return (
     <div className="flex max-w-prose flex-col gap-4" {...helpScope}>
-      <SectionHead title="Agents (MCP)" info="settings.agents" />
+      <p className="m-0 text-small text-ink-2">{helpEntry("settings.agents").body}</p>
       <div className="flex flex-col gap-1">
-        <span className="text-small font-semibold">MCP address</span>
+        <span className="text-small font-semibold">Address for agents (MCP)</span>
         <code className="sl-code py-2 select-all">{url}</code>
         {throughTailnet ? (
           <p className="m-0 text-small text-ink-2">

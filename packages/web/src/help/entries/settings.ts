@@ -264,13 +264,6 @@ export const settingsHelp = {
     tutorial: { page: "Where-Your-Files-Live", anchor: "move-your-files-to-another-folder" },
   },
 
-  // Trash
-  "settings.trash": {
-    title: "Trash",
-    body: "Deleted projects, prompts, intros and outros, templates and schedules stay here for 30 days, then are removed for good along with a project's files. Restore puts one back; if its name was taken meanwhile it comes back renamed, and a schedule comes back paused. Delete now frees the space at once. Channels, cast members, PDF themes and episode summaries never come here: deleting one removes it permanently.",
-    tutorial: { page: "Trash" },
-  },
-
   // About
   "settings.patch-notes": {
     title: "Patch notes",
