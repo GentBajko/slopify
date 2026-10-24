@@ -58,17 +58,18 @@ it("sets transitions, the Look, chapter cards and animated images, and saves the
   await userEvent.click(screen.getByText("Look"));
   await userEvent.selectOptions(screen.getByRole("combobox", { name: "Transition" }), "crossfade");
   await userEvent.selectOptions(screen.getByRole("combobox", { name: "Transition length" }), "0.8");
-  await userEvent.selectOptions(screen.getByRole("combobox", { name: "Colour grade" }), "warm");
+  await userEvent.selectOptions(screen.getByRole("combobox", { name: "Color grade" }), "warm");
   await userEvent.selectOptions(screen.getByRole("combobox", { name: "Vignette" }), "subtle");
   await userEvent.selectOptions(screen.getByRole("combobox", { name: "Film grain" }), "strong");
   await userEvent.selectOptions(screen.getByRole("combobox", { name: "Atmosphere" }), "embers");
   await userEvent.click(screen.getByRole("checkbox", { name: "Chapter cards" }));
+  // How often and with which model appear only once images are animated.
+  expect(screen.queryByRole("combobox", { name: "Animate every how many images" })).toBeNull();
+  expect(screen.queryByRole("combobox", { name: "Image-to-video model" })).toBeNull();
+  await userEvent.selectOptions(screen.getByRole("combobox", { name: "Animate images" }), "every");
   const every = screen.getByRole<HTMLSelectElement>("combobox", {
     name: "Animate every how many images",
   });
-  expect(every.disabled).toBe(true);
-  await userEvent.selectOptions(screen.getByRole("combobox", { name: "Animate images" }), "every");
-  expect(every.disabled).toBe(false);
   await userEvent.selectOptions(every, "4");
   const model = screen.getByRole<HTMLSelectElement>("combobox", { name: "Image-to-video model" });
   await screen.findByRole("option", { name: "Kling 2.5 Turbo Pro (image to video)" });
@@ -126,12 +127,13 @@ it("cuts every N seconds when the channel's language has no word timing and the 
   expect(screen.getByText(/Word timing isn't available for Romanian yet/)).not.toBeNull();
 });
 
-it("keeps the transition length off while the transition is a cut", async () => {
+it("asks for the transition length only once the transition is not a cut", async () => {
   await mountPlay();
   await openRow("Video and style");
   await userEvent.click(screen.getByText("Look"));
+  expect(screen.queryByRole("combobox", { name: "Transition length" })).toBeNull();
+  await userEvent.selectOptions(screen.getByRole("combobox", { name: "Transition" }), "crossfade");
   const length = screen.getByRole<HTMLSelectElement>("combobox", { name: "Transition length" });
-  expect(length.disabled).toBe(true);
   expect(length.value).toBe("0.6");
 });
 

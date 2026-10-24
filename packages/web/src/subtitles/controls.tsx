@@ -167,15 +167,16 @@ export function SubtitleControls({
                         ? `Changed · default ${String(defaultSubtitles.fontSize)}`
                         : "Default size"}
                     </span>
-                    <Button
-                      variant="quiet"
-                      size="small"
-                      disabled={!sizeChanged}
-                      aria-label={`Reset caption size to ${String(defaultSubtitles.fontSize)}`}
-                      onClick={resetSize}
-                    >
-                      Reset
-                    </Button>
+                    {sizeChanged ? (
+                      <Button
+                        variant="quiet"
+                        size="small"
+                        aria-label={`Reset caption size to ${String(defaultSubtitles.fontSize)}`}
+                        onClick={resetSize}
+                      >
+                        Reset
+                      </Button>
+                    ) : null}
                   </div>
                   {!validSubtitleStyle(value) || sizeProblem ? (
                     <p role="alert" className="mt-1 text-label text-danger">
@@ -315,7 +316,7 @@ export function SubtitleControls({
               ? "Files to upload beside the video; the video itself shows none."
               : value.mode === "burn-in"
                 ? "Also saved as .srt and .vtt files for YouTube."
-                : "Show captions in the video also saves .srt and .vtt files for YouTube."}
+                : "Captions shown in the video are also saved as .srt and .vtt files for YouTube."}
       </HelpLine>
     </section>
   );

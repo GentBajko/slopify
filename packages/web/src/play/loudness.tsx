@@ -13,8 +13,9 @@ import {
   SoftenSSwitch,
 } from "@/video/pause-controls";
 
-// Play's pauses between sentences, Soften breaths, Soften S sounds and Level the volume, on the Export rail under the ambient
-// sound. A draft that never touched the volume follows Settings → General (on at the
+// Create's pauses between sentences, Soften breaths, Soften S sounds and Level the volume, in the
+// Sound polish fold of the Video and style row; a run with no video is asked only the audio
+// files' volume. A draft that never touched the volume follows Settings → General (on at the
 // recommended volumes unless changed there); the first change writes the whole choice onto the
 // draft. The pauses start at their defaults.
 export function PlayLoudness({
@@ -60,6 +61,7 @@ export function PlayLoudness({
           audioFilesLufs: chosen?.audioFilesLufs ?? fallback.audioFilesLufs,
         }}
         defaults={fallback}
+        video={form.sources.video === "generate" && form.sources.images !== "off"}
         problem={(field) => problem(`loudness.${field}`)}
         onChange={(next) => update({ loudness: next })}
       />

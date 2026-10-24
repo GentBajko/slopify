@@ -71,6 +71,18 @@ describe("LoudnessControls", () => {
     expect(onChange).not.toHaveBeenCalledWith(expect.objectContaining({ audioFilesLufs: -9 }));
   });
 
+  it("asks only the audio files' volume for a run that makes no video", () => {
+    render(
+      <LoudnessControls
+        value={{ enabled: true, videoLufs: -14, audioFilesLufs: -18 }}
+        video={false}
+        onChange={() => undefined}
+      />,
+    );
+    expect(screen.queryByRole("textbox", { name: "Video volume" })).toBeNull();
+    expect(screen.getByRole("textbox", { name: "Audio files volume" })).toBeTruthy();
+  });
+
   it("hides the volumes while levelling is off", async () => {
     const onChange = vi.fn();
     render(<Harness onChange={onChange} />);
@@ -82,13 +94,13 @@ describe("LoudnessControls", () => {
   it("says when a volume left its default and resets it", async () => {
     const onChange = vi.fn();
     render(<Harness onChange={onChange} />);
-    const reset = screen.getByRole("button", { name: "Reset video volume to 0 dB" });
-    expect(reset).toHaveProperty("disabled", true);
+    // Nothing to reset at the default, so no Reset is drawn until the volume changes.
+    expect(screen.queryByRole("button", { name: "Reset video volume to 0 dB" })).toBeNull();
     const db = screen.getByRole("textbox", { name: "Video volume" });
     await userEvent.clear(db);
     await userEvent.type(db, "-3");
     expect(screen.getByText("Changed · default 0 dB")).toBeTruthy();
-    await userEvent.click(reset);
+    await userEvent.click(screen.getByRole("button", { name: "Reset video volume to 0 dB" }));
     expect(onChange).toHaveBeenLastCalledWith({
       enabled: true,
       videoLufs: -14,

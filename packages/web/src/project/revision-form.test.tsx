@@ -723,7 +723,7 @@ it("shows an old project's video as it was, and writes edit settings only once o
   expect(screen.getByText("Plain cuts, no effects")).not.toBeNull();
   expect(latest.config.videoEdit).toBeUndefined();
   await user.click(screen.getByText("Look"));
-  await user.selectOptions(screen.getByRole("combobox", { name: "Colour grade" }), "sepia");
+  await user.selectOptions(screen.getByRole("combobox", { name: "Color grade" }), "sepia");
   expect(latest.config.videoEdit).toMatchObject({ cuts: "interval", grade: "sepia" });
   expect(screen.getByText("Look").nextElementSibling?.textContent).toBe("Sepia");
 });

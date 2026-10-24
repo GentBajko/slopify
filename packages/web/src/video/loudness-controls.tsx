@@ -35,6 +35,7 @@ export function LoudnessControls({
   switchTip = "project.loudness",
   switchLabel = "Level the volume",
   defaults = defaultLoudness,
+  video = true,
 }: {
   readonly value: LoudnessValue;
   readonly onChange: (next: LoudnessValue) => void;
@@ -44,6 +45,9 @@ export function LoudnessControls({
   readonly switchLabel?: string;
   // What Reset puts each volume back to: the recommended levels, or on Play the Settings ones.
   readonly defaults?: Pick<LoudnessValue, "videoLufs" | "audioFilesLufs">;
+  // False for a run that makes no video (sound only): its video volume cannot apply, so only
+  // the audio files' volume is asked.
+  readonly video?: boolean;
 }): ReactElement {
   return (
     <div className="grid min-w-0 grid-cols-1 gap-3">
@@ -55,15 +59,17 @@ export function LoudnessControls({
       />
       {value.enabled ? (
         <div className="sl-fields">
-          <VolumeField
-            target="video"
-            label="Video volume"
-            tip="project.loudness.video"
-            lufs={value.videoLufs}
-            defaultLufs={defaults.videoLufs}
-            error={problem?.("videoLufs")}
-            onChange={(videoLufs) => onChange({ ...value, videoLufs })}
-          />
+          {video || problem?.("videoLufs") !== undefined ? (
+            <VolumeField
+              target="video"
+              label="Video volume"
+              tip="project.loudness.video"
+              lufs={value.videoLufs}
+              defaultLufs={defaults.videoLufs}
+              error={problem?.("videoLufs")}
+              onChange={(videoLufs) => onChange({ ...value, videoLufs })}
+            />
+          ) : null}
           <VolumeField
             target="audioFiles"
             label="Audio files volume"

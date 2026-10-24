@@ -140,23 +140,24 @@ export function useVideoEditControls({
               </option>
             ))}
           </Picker>
-          <Picker
-            aria-label="Transition length"
-            data-play-field={`${fieldPrefix}.transitionSeconds`}
-            aria-invalid={issue("transitionSeconds") !== undefined}
-            className="w-24 flex-none"
-            disabled={edit.transition === "cut"}
-            value={String(edit.transitionSeconds)}
-            onChange={(event) => set({ transitionSeconds: Number(event.target.value) })}
-          >
-            {transitionSecondsSteps.map((seconds) => (
-              <option key={seconds} value={String(seconds)}>
-                {seconds} s
-              </option>
-            ))}
-          </Picker>
+          {edit.transition === "cut" && issue("transitionSeconds") === undefined ? null : (
+            <Picker
+              aria-label="Transition length"
+              data-play-field={`${fieldPrefix}.transitionSeconds`}
+              aria-invalid={issue("transitionSeconds") !== undefined}
+              className="w-24 flex-none"
+              value={String(edit.transitionSeconds)}
+              onChange={(event) => set({ transitionSeconds: Number(event.target.value) })}
+            >
+              {transitionSecondsSteps.map((seconds) => (
+                <option key={seconds} value={String(seconds)}>
+                  {seconds} s
+                </option>
+              ))}
+            </Picker>
+          )}
         </Row>
-        <Row id={`${id}-grade`} label="Colour grade">
+        <Row id={`${id}-grade`} label="Color grade">
           <Choice
             id={`${id}-grade`}
             field={`${fieldPrefix}.grade`}
@@ -220,49 +221,51 @@ export function useVideoEditControls({
               </option>
             ))}
           </Picker>
-          <Picker
-            aria-label="Animate every how many images"
-            data-play-field={`${fieldPrefix}.animateEvery`}
-            aria-invalid={issue("animateEvery") !== undefined}
-            className="w-24 flex-none"
-            disabled={edit.animate !== "every"}
-            value={String(edit.animateEvery)}
-            onChange={(event) => set({ animateEvery: Number(event.target.value) })}
-          >
-            {Array.from(
-              { length: animateEveryMax - animateEveryMin + 1 },
-              (_value, at) => at + animateEveryMin,
-            ).map((every) => (
-              <option key={every} value={String(every)}>
-                every {every}
-              </option>
-            ))}
-          </Picker>
-          <Picker
-            aria-label="Image-to-video model"
-            data-play-field={`${fieldPrefix}.animateModel`}
-            aria-invalid={issue("animateModel") !== undefined}
-            className="min-w-0"
-            disabled={edit.animate === "off"}
-            value={edit.animateModel}
-            onChange={(event) => set({ animateModel: event.target.value })}
-          >
-            <option value="">Choose a model</option>
-            {savedModel ? (
-              <option value={edit.animateModel}>{edit.animateModel} (saved choice)</option>
-            ) : null}
-            {offered.map((one) => (
-              <option key={one.id} value={one.id}>
-                {videoBadge(one.name, models.data?.standings?.[one.id])}
-              </option>
-            ))}
-          </Picker>
+          {edit.animate === "every" || issue("animateEvery") !== undefined ? (
+            <Picker
+              aria-label="Animate every how many images"
+              data-play-field={`${fieldPrefix}.animateEvery`}
+              aria-invalid={issue("animateEvery") !== undefined}
+              className="w-24 flex-none"
+              value={String(edit.animateEvery)}
+              onChange={(event) => set({ animateEvery: Number(event.target.value) })}
+            >
+              {Array.from(
+                { length: animateEveryMax - animateEveryMin + 1 },
+                (_value, at) => at + animateEveryMin,
+              ).map((every) => (
+                <option key={every} value={String(every)}>
+                  every {every}
+                </option>
+              ))}
+            </Picker>
+          ) : null}
+          {edit.animate === "off" && issue("animateModel") === undefined ? null : (
+            <Picker
+              aria-label="Image-to-video model"
+              data-play-field={`${fieldPrefix}.animateModel`}
+              aria-invalid={issue("animateModel") !== undefined}
+              className="min-w-0"
+              value={edit.animateModel}
+              onChange={(event) => set({ animateModel: event.target.value })}
+            >
+              <option value="">Choose a model</option>
+              {savedModel ? (
+                <option value={edit.animateModel}>{edit.animateModel} (saved choice)</option>
+              ) : null}
+              {offered.map((one) => (
+                <option key={one.id} value={one.id}>
+                  {videoBadge(one.name, models.data?.standings?.[one.id])}
+                </option>
+              ))}
+            </Picker>
+          )}
         </Row>
         {problems.length > 0 ? (
           <p className="col-span-full text-small text-danger">{problems[0]}</p>
         ) : edit.animate !== "off" && models.isSuccess && offered.length === 0 ? (
           <p className="col-span-full text-label text-ink-3">
-            This image provider has no image-to-video models. Choose fal.ai or Replicate for images
+            This image service has no image-to-video models. Pick fal.ai or Replicate under Images
             to animate them.
           </p>
         ) : null}
