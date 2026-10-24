@@ -54,7 +54,7 @@ const needNames: Readonly<Record<Need, string>> = {
 };
 
 // "Claude Code CLI" is "Claude Code" to a person: the tool, not how Slopify talks to it.
-const plainName = (name: string): string => name.replace(/ CLI$/, "");
+export const plainName = (name: string): string => name.replace(/ CLI$/, "");
 
 // Who does a part that is ready, in a sentence.
 function readyLine(need: Need, part: FirstRunView["needs"]["text"]): string {

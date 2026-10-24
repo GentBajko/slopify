@@ -21,7 +21,7 @@ import { PageHeader } from "@/components/kit/layout";
 import { ButtonLink, TextLink } from "@/components/kit/link";
 import { hitTarget, List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
-import { SetupChecklist } from "@/components/welcome";
+import { plainName, SetupChecklist } from "@/components/welcome";
 import {
   dismissFirstRun,
   type FirstRunView,
@@ -179,7 +179,7 @@ function StepPanel({
 // "History style: Claude Code writes it, OpenAI reads it aloud, Codex makes the images. About
 // five minutes."
 function plan(packName: string, needs: FirstRunView["needs"] | undefined): string {
-  const name = (part: { readonly by: string | null }) => (part.by ?? "").replace(/ CLI$/, "");
+  const name = (part: { readonly by: string | null }) => plainName(part.by ?? "");
   const clauses = [
     needs?.text.by == null ? undefined : `${name(needs.text)} writes it`,
     needs?.voice.by == null
