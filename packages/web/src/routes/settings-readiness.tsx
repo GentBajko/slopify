@@ -75,17 +75,16 @@ export function readinessLines(
       (provider) => provider.family === family && readinessIsUsable(provider.readiness),
     );
     const picked = pickedFor(family, usable, defaults);
-    const names = usable.map((provider) => provider.displayName).join(", ");
+    // The one Create picks is named first and marked; the others follow.
+    const names = [
+      ...(picked === undefined ? [] : [`${picked} (Create picks it)`]),
+      ...usable.map((provider) => provider.displayName).filter((name) => name !== picked),
+    ].join(", ");
     return {
       family,
       label,
       ready: usable.length > 0,
-      text:
-        usable.length === 0
-          ? lacking
-          : picked === undefined
-            ? names
-            : `${names} · Create picks ${picked}`,
+      text: usable.length === 0 ? lacking : names,
       action: usable.length === 0 ? setUp : show,
     };
   });

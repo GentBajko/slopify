@@ -138,8 +138,10 @@ export function SettingsRoute({
                   key={item.id}
                   current={item.id === section}
                   onClick={() => onSection(item.id)}
-                  // A little space where one run of pages ends and the next begins.
+                  // 36px rows whose whole name shows (a long one wraps rather than being cut),
+                  // and a little space where one run of pages ends and the next begins.
                   className={cn(
+                    "h-auto min-h-9 py-1.5 [&>.truncate]:whitespace-normal",
                     index > 0 && settingsSections[index - 1]?.run !== item.run && "mt-3",
                   )}
                 >

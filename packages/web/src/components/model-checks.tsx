@@ -157,7 +157,7 @@ export function ModelChecksSettings(): ReactElement {
           help="Checks that cost nothing or well under a tenth of a cent run when a key is added and once a week. Images are never checked by themselves."
         >
           <Select
-            className="self-start"
+            className="max-w-[420px] self-start"
             value={overview.data?.auto ?? "free"}
             disabled={overview.data === undefined || auto.isPending}
             options={autoOptions}

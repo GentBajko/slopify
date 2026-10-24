@@ -40,7 +40,7 @@ export const settingsSections = [
   {
     id: "studio",
     label: "YouTube Studio and posting",
-    formerly: ["Channel links"],
+    formerly: ["YouTube Studio", "Channel links"],
     meta: "The browser extension that fills YouTube Studio, release times and playlists.",
     run: 1,
   },

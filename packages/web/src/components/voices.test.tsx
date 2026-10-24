@@ -428,6 +428,30 @@ describe("the voice list", () => {
     });
   });
 
+  it("with no service able to speak, starts Add a voice on the service the saved voices use", async () => {
+    renderRouted(
+      <Voices />,
+      testDeps({
+        "GET /api/providers": jsonAnswer({
+          providers: [
+            { ...tts[1], readiness: { kind: "keyed", hasKey: false } },
+            {
+              id: "openai-tts",
+              family: "tts",
+              displayName: "OpenAI",
+              readiness: { kind: "keyed", hasKey: false },
+            },
+          ],
+        }),
+        "GET /api/settings/voices": jsonAnswer({
+          voices: [{ id: "v1", provider: "openai-tts", name: "Storyteller", voiceId: "fable" }],
+        }),
+      }),
+    );
+    const service = (await screen.findByLabelText("Voice service")) as HTMLSelectElement;
+    await waitFor(() => expect(service.value).toBe("openai-tts"));
+  });
+
   it("says where an ElevenLabs voice ID comes from, and that a keyless service can't narrate yet", async () => {
     const user = userEvent.setup();
     renderRouted(<Voices />, deps([]));

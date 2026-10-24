@@ -140,7 +140,12 @@ export function ProductionDefaults(): ReactElement {
           <span className="text-small text-ink-2">seconds</span>
           <Button
             variant="primary"
-            disabled={problem !== undefined || save.isPending}
+            disabled={
+              problem !== undefined ||
+              save.isPending ||
+              Number(gap.trim()) === current.silenceGapSeconds
+            }
+            disabledReason={problem ?? "Nothing changed since the last save."}
             onClick={() => {
               setSaved(false);
               save.mutate(

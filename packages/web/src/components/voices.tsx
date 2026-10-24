@@ -279,7 +279,7 @@ export function Voices() {
 
       <div>
         <SectionHead title="Add a voice" />
-        <AddVoiceRow tts={tts} />
+        <AddVoiceRow tts={tts} needed={(listed ?? []).map((voice) => voice.provider)} />
       </div>
 
       <ConfirmDialog
@@ -357,7 +357,14 @@ function ListenButton({ voice }: { readonly voice: Voice }): ReactElement {
   );
 }
 
-function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
+function AddVoiceRow({
+  tts,
+  needed,
+}: {
+  readonly tts: readonly ProviderStatus[];
+  // The services the saved voices use, the likeliest one to add another voice of.
+  readonly needed: readonly ProviderId[];
+}) {
   const { api } = useApp();
   const queryClient = useQueryClient();
 
@@ -368,8 +375,10 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
   const [picked, setPicked] = useState<ProviderId | undefined>(undefined);
   const [refusal, setRefusal] = useState<VoiceRefusal | undefined>(undefined);
 
-  // The first service that can speak now; a voice for one without a key could not narrate.
-  const provider = picked ?? (tts.find(usable) ?? tts[0])?.id;
+  // The first service that can speak now (a voice for one without a key could not narrate),
+  // else the one the saved voices use.
+  const provider =
+    picked ?? (tts.find(usable) ?? tts.find((option) => needed.includes(option.id)) ?? tts[0])?.id;
   const service = tts.find((option) => option.id === provider);
 
   const add = useMutation({
