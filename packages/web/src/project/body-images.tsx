@@ -45,8 +45,10 @@ export function frameAspect(format: Format): Aspect {
   return format === "9:16" ? "portrait" : format === "1:1" ? "square" : "landscape";
 }
 
-// Four tiles across a project's main column at 1440 pixels: 200 pixels at the least.
-const gridColumns = "[grid-template-columns:repeat(auto-fill,minmax(200px,1fr))] gap-x-3 gap-y-4";
+// Four tiles across a project's main column at 1440 pixels (200 pixels at the least), and two
+// across a phone.
+const gridColumns =
+  "[grid-template-columns:repeat(auto-fill,minmax(min(200px,calc(50%_-_6px)),1fr))] gap-x-3 gap-y-4";
 
 export function ImagesBody({ stage, companion, project, outputs, actions, busy }: BodyProps) {
   const reviews = useReviews(project.id);
