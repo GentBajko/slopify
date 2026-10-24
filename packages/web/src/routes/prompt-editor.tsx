@@ -246,7 +246,7 @@ export function PromptEditorRoute({
         className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]"
       >
         <div className={`${editorSurface} flex min-w-0 flex-col gap-4`}>
-          <div className="flex max-w-[80ch] flex-wrap items-end gap-4">
+          <div className="flex max-w-[80ch] flex-wrap items-start gap-4">
             <div data-tour="prompt-name" className="min-w-[min(100%,240px)] flex-1">
               <Field
                 label="Name"
@@ -329,7 +329,8 @@ export function PromptEditorRoute({
                 </Menu>
               )}
             </div>
-            <HelpLine className="mb-1">{kindAbout(draft.kind)}</HelpLine>
+            {/* The open kind choice says the same under it. */}
+            {kindOpen ? null : <HelpLine className="mb-1">{kindAbout(draft.kind)}</HelpLine>}
             <KeywordInsertBar
               place={draft.kind}
               targetId={bodyId}
