@@ -522,6 +522,12 @@ interface SettingsSearch {
   readonly section?: SettingsSection;
   // Settings → Patch notes: the note open in the reading view.
   readonly note?: string;
+  // A fix opened from the first-run checklist: the service family and the service to open
+  // ("tts", "openai-tts"), and the screen and step to go back to.
+  readonly family?: "llm" | "tts" | "image";
+  readonly provider?: string;
+  readonly return?: "welcome" | "play";
+  readonly step?: string;
 }
 
 function settingsSearchOf(search: Record<string, unknown>): SettingsSearch {
@@ -532,9 +538,23 @@ function settingsSearchOf(search: Record<string, unknown>): SettingsSearch {
     /^[0-9A-Za-z][0-9A-Za-z.-]{0,63}$/.test(search.note)
       ? search.note
       : undefined;
+  const family = (["llm", "tts", "image"] as const).find((one) => one === search.family);
+  const provider =
+    typeof search.provider === "string" && /^[a-z0-9-]{1,40}$/.test(search.provider)
+      ? search.provider
+      : undefined;
+  const back = (["welcome", "play"] as const).find((one) => one === search.return);
+  const step =
+    back !== undefined && typeof search.step === "string" && /^[a-z-]{1,20}$/.test(search.step)
+      ? search.step
+      : undefined;
   return {
     ...(section === undefined ? {} : { section }),
     ...(note === undefined ? {} : { note }),
+    ...(family === undefined ? {} : { family }),
+    ...(provider === undefined ? {} : { provider }),
+    ...(back === undefined ? {} : { return: back }),
+    ...(step === undefined ? {} : { step }),
   };
 }
 
