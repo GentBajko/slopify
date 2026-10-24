@@ -9,7 +9,7 @@ import { keys } from "@/queries";
 import { instantiateProjectTemplate, type TemplateSummary, templatesQuery } from "@/templates/api";
 import { usePlaySession } from "./draft-context";
 import { rememberedDraft } from "./draft-restore";
-import { withProviderDefaults } from "./draft-state";
+import { templateProviderDefaults, withProviderDefaults } from "./draft-state";
 import { outputKindOf, outputNoun } from "./output-kind";
 
 // A person who picked "A blank setup" keeps it for the rest of this tab's visit: Create does
@@ -132,10 +132,10 @@ export function TemplateField({
       );
       if (Object.keys(carried).length > 0)
         session.edit(
-          withProviderDefaults({
-            ...made,
-            form: { ...made.form, values: { ...made.form.values, ...carried } },
-          }),
+          withProviderDefaults(
+            { ...made, form: { ...made.form, values: { ...made.form.values, ...carried } } },
+            templateProviderDefaults(),
+          ),
         );
     } catch (error) {
       if (!auto)

@@ -110,8 +110,12 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   });
   const cast = useDraftCast();
   const session = usePlaySession();
-  const defaultsSettled = useFirstRunDefaults(session);
   const { document } = session;
+  const starter = useStarterTemplate();
+  const defaultsSettled = useFirstRunDefaults(
+    session,
+    document.templateSource !== undefined || (!choseBlank() && starter.starter !== undefined),
+  );
   const kind = outputKindOf(form);
   const sidebarChannel = useCurrentChannel().channelId;
   const { adoptChannel } = session;
@@ -314,7 +318,6 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     [providers, prompts, entries, voices, settings].every(
       (query) => query.isSuccess || query.isError,
     );
-  const starter = useStarterTemplate();
   const paused = tutorial?.active === true || leaving.current;
   const starterComing =
     !paused &&
@@ -341,6 +344,14 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     null,
   );
   const generation = session.generation();
+  // Which draft the person (or a reveal) already opened a row in: the arrival choice leaves
+  // that alone, however late the lists it waits for arrive.
+  const rowsChosen = useRef<{ readonly generation: number; readonly id: string | null } | null>(
+    null,
+  );
+  const chooseRows = (): void => {
+    rowsChosen.current = { generation: session.generation(), id: session.activeId };
+  };
   // biome-ignore lint/correctness/useExhaustiveDependencies: decided once per opened draft.
   useEffect(() => {
     if (!loaded || starterComing) return;
@@ -357,6 +368,13 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     // A frame later, so what this draft's opening filled in by itself (the first-run defaults)
     // is already counted.
     requestAnimationFrame(() => {
+      const chosen = rowsChosen.current;
+      if (
+        chosen !== null &&
+        chosen.generation === generation &&
+        (chosen.id === session.activeId || chosen.id === null)
+      )
+        return;
       const first = firstProblemRow.current();
       setOpen(new Set(first === undefined ? [] : [first]));
       if (first !== undefined) showRow(first);
@@ -388,6 +406,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
       const owner = field ? rowOf(field, llmRow) : undefined;
       const rows = owner === undefined ? rowsOfSection(reveal.section) : [owner];
       if (rows.some((row) => !open.has(row))) {
+        chooseRows();
         setOpen(owner === undefined ? new Set([...open, ...rows]) : new Set<SetupRowId>([owner]));
         return;
       }
@@ -549,6 +568,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   }));
   // One row open at a time: opening a row folds the others, and it comes into view.
   const setRow = (row: SetupRowId, next: boolean): void => {
+    chooseRows();
     setOpen((current) => {
       if (next) return new Set<SetupRowId>([row]);
       const changed = new Set(current);

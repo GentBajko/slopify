@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { defaultChannelId } from "@/channels/api";
 import { type Answer, jsonAnswer, testVersion } from "@/test-app";
-import { freshDraftDocument, setFreshProviderDefaults } from "./draft-state";
+import { freshDraftDocument, setFreshProviderDefaults, setReadyServices } from "./draft-state";
 import {
   draftView,
   generatedRun,
@@ -26,6 +26,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   setFreshProviderDefaults({});
+  setReadyServices({});
 });
 
 const templateId = "33333333-3333-4333-8333-333333333333";
@@ -193,6 +194,27 @@ describe("what Create starts from", () => {
     const saved = (await saves.at(-1)?.clone().json()) as { document: PlayDraftDocument };
     expect(saved.document.form.llm.provider).toBe("claude-code");
     // Nothing on the screen needs fixing.
+    expect(
+      within(screen.getByRole("list", { name: "Setup" })).queryByRole("button", { name: /^Fix / }),
+    ).toBeNull();
+  });
+
+  it("takes the image service whose key is saved when the first launch found none", async () => {
+    const { session } = await mountStarter({
+      "GET /api/providers": providers(true),
+      "GET /api/providers/first-run": jsonAnswer({
+        firstRun: false,
+        detected: [],
+        defaults: { llm: { provider: "claude-code", model: "sonnet" } },
+        message: null,
+        detail: null,
+      }),
+    });
+    await waitFor(() => expect(startFrom().value).toBe(templateId));
+    await waitFor(() =>
+      expect(session().document.form.images).toEqual({ provider: "fal", model: "fal-ai/flux-2" }),
+    );
+    expect(session().document.form.llm).toEqual({ provider: "claude-code", model: "sonnet" });
     expect(
       within(screen.getByRole("list", { name: "Setup" })).queryByRole("button", { name: /^Fix / }),
     ).toBeNull();

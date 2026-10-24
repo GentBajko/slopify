@@ -5,6 +5,9 @@ import {
   normalizePlayForm,
   parseDraftDocument,
   serializeDraftDocument,
+  setFreshProviderDefaults,
+  setReadyServices,
+  templateProviderDefaults,
   withProviderDefaults,
 } from "./draft-state";
 
@@ -201,5 +204,20 @@ describe("the services a new or template-made draft starts with", () => {
     };
     expect(withProviderDefaults(picked, defaults)).toBe(picked);
     expect(withProviderDefaults(freshDraftDocument, {})).toBe(freshDraftDocument);
+  });
+  it("gives a template-made draft what the first launch found, else the service whose key is saved", () => {
+    const keyed = {
+      llm: { provider: "openrouter", model: "google/gemini-3.8-flash" },
+      images: { provider: "fal", model: "fal-ai/flux-2" },
+    };
+    setReadyServices(keyed);
+    setFreshProviderDefaults({ llm: defaults.llm });
+    try {
+      expect(templateProviderDefaults()).toEqual({ llm: defaults.llm, images: keyed.images });
+      expect(templateProviderDefaults(defaults)).toEqual(defaults);
+    } finally {
+      setReadyServices({});
+      setFreshProviderDefaults({});
+    }
   });
 });

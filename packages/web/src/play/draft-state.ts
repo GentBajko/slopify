@@ -76,6 +76,20 @@ let providerDefaults: FreshProviderDefaults = {};
 export function setFreshProviderDefaults(defaults: FreshProviderDefaults): void {
   providerDefaults = defaults;
 }
+// The first writer and image service that answers (a key saved, a tool installed), each with
+// its first listed model: what a draft made from a template takes for a kind the first launch
+// found nothing of, so keys entered in Settings count as found too.
+let readyServices: FreshProviderDefaults = {};
+export function setReadyServices(ready: FreshProviderDefaults): void {
+  readyServices = ready;
+}
+// What a draft made from a template takes where the template names no writer or image
+// service: what the first launch found, else the ready service of that kind.
+export function templateProviderDefaults(
+  found: FreshProviderDefaults = providerDefaults,
+): FreshProviderDefaults {
+  return { llm: found.llm ?? readyServices.llm, images: found.images ?? readyServices.images };
+}
 // A writer or image service nobody has picked takes the default; one already picked is left
 // alone, and so is a document with nothing to fill (the same object comes back).
 export function withProviderDefaults(

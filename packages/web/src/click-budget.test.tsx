@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { CommandPaletteProvider } from "@/components/kit/command-palette";
 import { ToastProvider } from "@/components/kit/toast";
 import { PlayDraftProvider } from "@/play/draft-context";
+import { setFreshProviderDefaults, setReadyServices } from "@/play/draft-state";
 import {
   draftView,
   generatedRun,
@@ -44,6 +45,8 @@ vi.mock("@/tutorial/context", async (importOriginal) => ({
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  setFreshProviderDefaults({});
+  setReadyServices({});
 });
 
 // A person, counting their own clicks.
@@ -157,13 +160,11 @@ describe("clicks from the landing screen to done", () => {
             models: [{ id: pack.voice.model, name: "GPT-4o mini TTS" }],
             allowsCustom: true,
           }),
+          // The first launch found Claude Code; fal.ai draws because its key is saved.
           "GET /api/providers/first-run": jsonAnswer({
             firstRun: false,
             detected: [],
-            defaults: {
-              llm: { provider: "claude-code", model: "sonnet" },
-              images: { provider: "fal", model: "fal-ai/flux-2" },
-            },
+            defaults: { llm: { provider: "claude-code", model: "sonnet" } },
             message: null,
             detail: null,
           }),
