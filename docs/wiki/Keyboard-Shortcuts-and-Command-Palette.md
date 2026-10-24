@@ -2,12 +2,12 @@
 
 The command palette lets you reach every screen, every project and the frequent actions by typing, without hunting for buttons. Keyboard shortcuts cover the most common moves. This page lists both.
 
-**Where to find it:** press `Ctrl+K` (`Cmd+K` on a Mac) anywhere, or choose **Search or run a command** at the top of the sidebar. Press `?` for the list of keyboard shortcuts.
+**Where to find it:** press `Ctrl+K` (`Cmd+K` on a Mac) anywhere, or press **Search** at the foot of the rail. **Help → Keyboard shortcuts** lists the shortcuts too. Press `?` for the list of keyboard shortcuts.
 
 ## Use the command palette
 
 1. Press `Ctrl+K`.
-2. Type a few letters of what you want, such as `set` for **Open settings** or `back` for **Back up now**. Letters only need to appear in order, so `crt` finds **Create**. Commands also match other words, for example `keys` finds **Open settings**. Several words match in any order across the command's name, the project it acts on and its other words: `cleopatra regenerate image 3` finds **Regenerate image 3 in Cleopatra**.
+2. Type a few letters of what you want, such as `set` for **Open settings** or `back` for **Back up now**. Letters only need to appear in order, so `crt` finds **Create a video**. Commands also match other words, for example `keys` finds **Open settings**. Several words match in any order across the command's name, the project it acts on and its other words: `cleopatra make image 3 again` finds **Make image 3 again in Cleopatra**.
 3. Use `Up` and `Down` to move through the list, `Home` and `End` to jump to the first or last, and `Enter` to run the highlighted command. You can also click a command.
 4. Press `Esc` (or `Ctrl+K` again) to close the palette without running anything.
 
@@ -17,18 +17,19 @@ A command that has a shortcut shows its keys beside it.
 
 ## Keyboard shortcuts
 
-Press `?` anywhere (outside a text field) to see **Keyboard shortcuts**: every key that works on the screen you are on. `Ctrl` works as `Cmd` on a Mac. Keys without `Ctrl` wait while you type in a field, so typing a `c` into a title never opens Play. Two keys like `G` then `H` are pressed one after the other.
+Press `?` anywhere (outside a text field) to see **Keyboard shortcuts**: every key that works on the screen you are on. `Ctrl` works as `Cmd` on a Mac. Keys without `Ctrl` wait while you type in a field, so typing a `c` into a title never opens Create. Two keys like `G` then `H` are pressed one after the other.
 
 | Keys | Where | What it does |
 |---|---|---|
 | `Ctrl+K` / `Cmd+K` | Anywhere | Opens or closes the command palette. |
 | `?` | Anywhere | Shows the keyboard shortcuts. |
-| `C` | Anywhere | **Create** (opens Play). |
+| `C` | Anywhere | **Create a video** (opens Create). |
 | `G` then `H` | Anywhere | Go to Home. |
 | `G` then `P` | Anywhere | Go to Projects. |
 | `G` then `C` | Anywhere | Go to the Calendar. |
 | `G` then `S` | Anywhere | Go to Schedules. |
-| `G` then `L` | Anywhere | Go to the Library. |
+| `G` then `L` | Anywhere | Go to Prompts. |
+| `G` then `T` | Anywhere | Go to Templates. |
 | `G` then `K` | Anywhere | Go to Channels. |
 | `G` then `,` | Anywhere | Go to Settings. |
 | `/` | Projects, Library → Prompts, Library → Intros & outros | Puts the cursor in the list's search box. |
@@ -56,23 +57,28 @@ Commands are grouped under headings in the palette. Group names below are the he
 
 | Command | What it does |
 |---|---|
-| **Open home** | Goes to Home. |
-| **Open projects** | Goes to Projects. |
-| **Open channels** | Goes to Channels. |
-| **Open schedules** | Goes to Schedules. |
-| **Open calendar** | Goes to the Calendar. |
-| **Open library** | Goes to the Library (Prompts). |
-| **Open settings** | Goes to Settings. |
-| **Open usage and costs** | Goes to Settings → Usage. |
+An empty palette opens on **Create a video**, then these, in the rail's order:
+
+| Command | What it does |
+|---|---|
+| **Open Home** | Goes to Home. |
+| **Open Projects** | Goes to Projects. |
+| **Open Prompts** | Goes to Prompts. |
+| **Open Templates** | Goes to Templates. |
+| **Open Calendar** | Goes to the Calendar. |
+| **Open Channels** | Goes to Channels. Listed once you have two or more channels; found by typing otherwise. |
+| **Open Settings** | Goes to Settings. |
 | **Show patch notes** | Goes to Settings → Patch notes. |
+| **Open schedules** | Goes to the Calendar's Schedules (found by typing). |
+| **Open usage and costs** | Goes to Settings → Usage (found by typing). |
 
 ### Create and Channel (everywhere)
 
 | Command | What it does |
 |---|---|
-| **Create** (`C`) | Opens Play to make a new project. |
-| **Show all channels** | Shows every channel's projects, schedules and costs. |
-| **Switch to <channel>** | Shows one channel only. There is one command per channel. |
+| **Create a video** (`C`) | Opens Create to make a new video. |
+| **Show all channels** | Shows every channel's projects, schedules and costs. Offered with two or more channels. |
+| **Switch to <channel>** | Shows one channel only. There is one command per channel, with two or more channels. |
 
 ### From anywhere
 
@@ -81,14 +87,14 @@ These are found once you type, from any screen:
 | Command | What it does |
 |---|---|
 | **Open <project>** | Opens any project by name, for example `hypatia` finds **Open Hypatia of Alexandria**. |
-| **Regenerate image N in <project>** | Type the project, the words and the number, for example `cleopatra regenerate image 3`. It opens that project on its Images and asks before redrawing, as the Regenerate button does. |
+| **Make image N again in <project>** | Type the project, the words and the number, for example `cleopatra make image 3 again` (`regenerate` works too). It opens that project on its Images and asks before redrawing. |
 | **New schedule** | Opens Schedules with a new schedule started. |
 | **Add to calendar** | Opens the Calendar with the Add to calendar form. |
 | **Show keyboard shortcuts** (`?`) | Lists every shortcut that works here. |
 
 ### Open a tutorial page
 
-These tutorial pages are also inside Slopify, under **Help → Tutorials**. Type `tutorial` and a few words of a page's name, then pick **Open tutorial: <page>**, for example **Open tutorial: Install** or **Open tutorial: Shorts**. It opens that page at `/help/tutorials/<Page>`, where a search box finds any page. **Open tutorials** (under Go to) opens the tutorials' home page, and on the tutorials page `/` puts the cursor in that search box.
+These tutorial pages are also inside Slopify, under **Help → Tutorials**. Type `tutorial` and a few words of a page's name, then pick **Open tutorial: <page>**, for example **Open tutorial: Install** or **Open tutorial: Shorts**. It opens that page at `/help/tutorials/<Page>`, where a search box finds any page. **Open tutorials** (under Help, found by typing) and **Help → Tutorials** at the foot of the rail open the tutorials' home page, and on the tutorials page `/` puts the cursor in that search box.
 
 ### Play
 

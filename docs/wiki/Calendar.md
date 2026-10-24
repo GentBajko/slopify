@@ -2,7 +2,7 @@
 
 The calendar shows the coming four weeks on one screen: what needs you, every scheduled run with the topic and title it will use, the projects running or finished on their day, and the batch queue. You can drag a topic to another day, move it to another schedule, add topics, and accept or reject topics Slopify suggested.
 
-**Where to find it:** **Calendar** in the sidebar. It has two tabs: **Coming weeks**, described here, and **Schedules**, where you create, edit, pause and resume the schedules themselves (see [Schedules](Schedules)).
+**Where to find it:** **Calendar** in the rail. It has two tabs: **Coming weeks**, described here, and **Schedules**, where you create, edit, pause and resume the schedules themselves (see [Schedules](Schedules)).
 
 ## What the calendar shows
 
@@ -14,7 +14,7 @@ The calendar starts on this week's Monday and shows four weeks, Monday to Sunday
 - **Batch queue**: projects waiting to start (see below).
 - **Suggested topics**, beside the weeks, for schedules that hold generated topics for approval.
 
-The calendar follows the channel picked in the sidebar, or shows every channel. See [Channels](Channels).
+The calendar follows the channel picked under **Showing:** in the page header, or shows every channel. See [Channels](Channels).
 
 Each queued run has **Prepare**, which makes its video ahead of the day and leaves only the render for the day; a prepared run shows **Prepared** and **Open**. See [Schedules](Schedules#prepare-a-video-ahead).
 

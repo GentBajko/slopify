@@ -2,26 +2,26 @@
 
 Slopify checks for new versions by itself and updates with one click or one command. An update waits for running work, keeps a copy to go back to, and puts the previous version back if the new one doesn't start. After an update, the new version's patch notes open once.
 
-**Where to find it:** the circular-arrows button at the foot of the sidebar. Patch notes are in Settings → **Patch notes**; Settings → **About** has **What's new in this version**.
+**Where to find it:** **Help → Check for updates** at the foot of the rail, and **Update ready** in the rail when a new version is ready. Patch notes are in **Help → What's new** (Settings → **Patch notes**); Settings → **About** has **What's new in this version**.
 
-## The updates button
+## Where updates show
 
-The circular-arrows button at the foot of the sidebar (in the top bar on a phone) shows the update state. Hover it (or read it with a screen reader) to see `Your version: … · Newest: …` and what a click does. The version you are running is also shown beside the Slopify logo at the top of the sidebar.
+**Help** at the foot of the rail ends with the update row: a line with the version you are running (`You have Slopify …`, or `Your version: … · Newest: …`) and the one thing to do. While there is something new, the rail also shows an item for it, in words, above **Search**. On a phone the update stays inside **Help**, which turns lime-ink while an update is ready.
 
-| What you see | Meaning | Click does |
+| What you see | Meaning | The row does |
 | --- | --- | --- |
-| No dot | You have the newest version, as of the last check. | Checks again now. |
-| A dot on the button | An update is ready. | Downloads and installs it. |
-| Spinning | Checking, or updating. | Nothing; wait. |
-| Label says **Update to X will install when 'Title' finishes.** | The update is waiting for running work. | Cancels the waiting update. |
-| Amber | The last check or update had a problem. The label says what. | Checks again. |
+| No item in the rail; Help says **Check for updates** | You have the newest version, as of the last check. | Checks again now. |
+| **Update ready** in the rail; its menu says what installing does | An update is ready. | **Install update X** downloads and installs it. |
+| **Checking for updates…** or **Updating…** | Checking, or updating. | Nothing; wait. |
+| **Update waiting**, and the line **Update to X will install when 'Title' finishes.** | The update is waiting for running work. | **Cancel the update** drops the waiting update. |
+| **Update failed**, and the line says what | The last update had a problem. | **Install update X** tries again. |
 
 Slopify checks every 15 minutes and whenever you come back to the tab.
 
 ## Update from the app
 
-1. Click the circular-arrows button when it shows a dot.
-2. If a video is being made, the update waits. A message says **Update to X will install when 'Title' finishes.** Click the button again to cancel the waiting update; nothing has changed yet.
+1. Press **Update ready** in the rail (or **Help**), then **Install update X**. The menu says first that installing restarts Slopify and that anything running finishes first.
+2. If a video is being made, the update waits. A message says **Update to X will install when 'Title' finishes.** **Cancel the update** in the same menu drops it; nothing has changed yet.
 3. When nothing is running, Slopify installs the new version, stops, and starts the new one.
 4. The page reconnects by itself. If another open tab was loaded before the update, it shows **Slopify was updated** with **Reload**.
 
@@ -33,7 +33,7 @@ Run:
 npx @gentbajko/slopify@latest update
 ```
 
-It asks the running Slopify to update itself, exactly as the button does, and follows it until it is done:
+It asks the running Slopify to update itself, exactly as **Install update** does, and follows it until it is done:
 
 - `Slopify X is already the newest version.` when there is nothing to do.
 - `Slopify is generating right now. Waiting for running work to finish before updating (press Ctrl+C to cancel; nothing has been changed yet)...` while work runs.
@@ -58,9 +58,9 @@ Later starts of Slopify, including an older `npx` or a global `slopify` command,
 
 For Docker, the installer does the update from the host with a recovery copy of the whole data volume. See [Docker](Docker#update-the-docker-install).
 
-## When the button can't update
+## When the app can't update
 
-The button's label says why:
+The line above the update row says why:
 
 | Message | What to do |
 | --- | --- |
@@ -68,7 +68,7 @@ The button's label says why:
 | Run Slopify from its installed package to use in-app updates. | You are running from source or a copy without its package files. Start it with `npx @gentbajko/slopify@latest`. |
 | npm was not found, so in-app updates are off. | Install Node.js with npm from nodejs.org, or update from the terminal with `npx @gentbajko/slopify@latest`. |
 | An update is already in progress. | Wait for it to finish. |
-| An update is already waiting for running work to finish. | Wait, or click the button to cancel it. |
+| An update is already waiting for running work to finish. | Wait, or press **Cancel the update**. |
 
 If an update didn't finish, Slopify keeps or puts back the previous version. `logs/updates.log` in the data folder says why.
 
@@ -106,8 +106,8 @@ To open the notes for the version you are running, go to Settings → **About** 
 
 ## Tips
 
-- Keep Slopify running overnight? Updates wait for running work, so you can press the button at any time and it installs when the current video is done.
-- Settings → **About** has the same explanation of the updates button, and links to GitHub, Patreon and Buy Me a Coffee.
+- Keep Slopify running overnight? Updates wait for running work, so you can press **Install update** at any time and it installs when the current video is done.
+- Settings → **About** has the same explanation of updates. GitHub, Patreon and Buy Me a Coffee are under **Support** at the foot of the rail.
 - Updating doesn't touch your projects folder. For extra safety before a big update, use **Export everything** or turn on [Backups](Backups).
 
 ## Related pages

@@ -2,7 +2,7 @@
 
 A channel is one series: its brand kit, series brief, cast, templates and schedules. Every template belongs to one channel, and every run from it uses that channel's look, cast and language. Use channels when you make more than one kind of video, so each series keeps its own look and its own topic ideas.
 
-**Where to find it:** **Channels** in the sidebar. On Play, the **Channel** picker sits under the title. The channel picker in the sidebar filters what Home, Projects and the Calendar show.
+**Where to find it:** **Channels** in the rail, once you have two or more channels; with one, Ctrl+K → **Open Channels**. On Create, the **Channel** picker sits under the title. With two or more channels, **Showing:** in the page header of Home, Projects and the Calendar filters what they show.
 
 ## The default channel
 
@@ -29,7 +29,7 @@ To rename a channel, press **Rename** on it, change the name and press **Rename 
 
 ## Show one channel's work
 
-The channel picker in the sidebar (**Current channel**) makes Home, Projects and the Calendar show only that channel's work. **All channels** shows everything. It only filters what you see; projects and schedules of other channels keep running. This browser remembers your choice.
+**Showing:** in the page header of Home, Projects and the Calendar makes them show only that channel's work. **All channels** shows everything. It only filters what you see; projects and schedules of other channels keep running. This browser remembers your choice.
 
 ## The channel's tabs
 

@@ -120,7 +120,7 @@ See [Where Your Files Live](Where-Your-Files-Live).
 | AI CLIs | Run directly with your logins | Run on the host through a small helper, `slopify-cli-bridge.service`, with your existing logins. Check it with `systemctl --user status slopify-cli-bridge.service`. Without it, Settings shows the CLIs as unavailable. |
 | **Open folder** | Opens your file manager | Opens it through the host helper; without the helper you get the path to copy, and "run the Docker launcher again ... so it sets up the host helper" |
 | Start at login | Settings → General → **Start Slopify when I log in** | Slopify starts whenever Docker does; Settings only shows Docker's own setting (with Docker Desktop, its **Start Docker Desktop when you sign in**) |
-| Updating | The updates button at the foot of the sidebar, or `npx @gentbajko/slopify@latest update` while Slopify is running | `npx @gentbajko/slopify@latest update` from the terminal. It keeps a recovery copy of your data in a Docker volume and puts the previous version back if the new one does not start. |
+| Updating | **Help → Check for updates** at the foot of the rail, or `npx @gentbajko/slopify@latest update` while Slopify is running | `npx @gentbajko/slopify@latest update` from the terminal. It keeps a recovery copy of your data in a Docker volume and puts the previous version back if the new one does not start. |
 
 If an install or update fails, the message names what failed and, in Docker, the volume that holds the recovery copy of your data. Do not delete that volume; fix the problem and run the same command again. See [Docker](Docker) and [Updating and Patch Notes](Updating-and-Patch-Notes).
 

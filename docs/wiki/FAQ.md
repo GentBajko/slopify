@@ -118,7 +118,7 @@ Slopify is meant to be used on the computer it runs on. You can change the addre
 
 ### How do I update?
 
-Press the circular-arrows button at the foot of the sidebar, or run `npx @gentbajko/slopify@latest update` while Slopify is running. It waits for running work, keeps a copy to go back to, and puts the previous version back if the new one does not start. See [Updating and Patch Notes](Updating-and-Patch-Notes).
+Press **Update ready** in the rail (or **Help → Check for updates**), or run `npx @gentbajko/slopify@latest update` while Slopify is running. It waits for running work, keeps a copy to go back to, and puts the previous version back if the new one does not start. See [Updating and Patch Notes](Updating-and-Patch-Notes).
 
 ### Something is broken. What should I send?
 

@@ -31,7 +31,7 @@ These pages cover Slopify 3.0: every screen, every setting and every workflow, s
 | [Docker](Docker) | Running Slopify in Docker with the compose file and the CLI helper |
 | [First launch and welcome](First-Launch-and-Welcome) | The three-step first run, the three samples, Make my own copy, starter packs |
 | [Your first short](Your-First-Short) | A 60-second short from topic to finished video |
-| [Home and Projects](Home-and-Projects) | The sidebar, the Home dashboard and the Projects list |
+| [Home and Projects](Home-and-Projects) | The rail, the Home dashboard and the Projects list |
 | [Where your files live](Where-Your-Files-Live) | Documents/Slopify, the data folder and moving your files |
 | [Start at login](Start-at-Login) | Starting Slopify when you log in |
 | [Updating and patch notes](Updating-and-Patch-Notes) | Updating, going back, and reading patch notes |
@@ -115,6 +115,6 @@ These pages cover Slopify 3.0: every screen, every setting and every workflow, s
 
 ## Getting help inside the app
 
-Every setting in Slopify has an info button beside it that explains what it does. If something goes wrong, the project page shows a button that names the fix. The question-mark button at the foot of the sidebar starts the interactive tutorial.
+Every setting in Slopify has an info button beside it that explains what it does. If something goes wrong, the project page shows a button that names the fix. **Help → Start the tour** at the foot of the rail starts the interactive tutorial.
 
-These pages ship inside Slopify too, so they work offline and match the version you run: the book button beside the question mark opens **Help → Tutorials**, with the same groups as this wiki's sidebar and a search across every page. Many info buttons end in **Learn more**, which opens the matching section there, and `Ctrl+K` → **Open tutorial: <page>** opens any page. See [Troubleshooting](Troubleshooting) for the rest.
+These pages ship inside Slopify too, so they work offline and match the version you run: **Help → Tutorials** at the foot of the rail opens them, with the same groups as this wiki's sidebar and a search across every page. Many info buttons end in **Learn more**, which opens the matching section there, and `Ctrl+K` → **Open tutorial: <page>** opens any page. See [Troubleshooting](Troubleshooting) for the rest.

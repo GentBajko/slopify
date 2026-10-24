@@ -2,7 +2,7 @@
 
 Every section of Settings, what each control does and its default. Sections with a page of their own are summarised here and linked for the details.
 
-**Where to find it:** **Settings** in the sidebar, or press `Ctrl+K` and run **Open settings** (or **Open Settings: <section>** for one section). Settings opens on **Connections → Providers**. The rail on the left has seven groups; a group with more than one section shows them as tabs across the top. On a phone the rail is a row of tabs you can scroll sideways. An old link to a section (`?section=backups`, for example) still opens where it went.
+**Where to find it:** **Settings** in the rail, or press `Ctrl+K` and run **Open Settings** (or **Open Settings: <section>** for one section). Settings opens on **Connections → Providers**. The rail on the left has seven groups; a group with more than one section shows them as tabs across the top. On a phone the rail is a row of tabs you can scroll sideways. An old link to a section (`?section=backups`, for example) still opens where it went.
 
 ## Sections at a glance
 
@@ -307,7 +307,7 @@ The notes ship with the app, so they work offline. After an update, the new vers
 
 | Control | What it does |
 |---|---|
-| **Updates** | Points to the circular-arrows button (at the foot of the sidebar), which checks for a newer Slopify and installs it. A dot on it means an update is ready. If a video is being made, the update waits until it finishes, and you can cancel it meanwhile. Slopify restarts itself and the page reconnects. |
+| **Updates** | Points to **Help → Check for updates** at the foot of the rail, which checks for a newer Slopify and installs it. **Update ready** shows in the rail while one is ready. If a video is being made, the update waits until it finishes, and you can cancel it meanwhile. Slopify restarts itself and the page reconnects. |
 | **What's new in this version** | Opens the patch notes for the version you are running. When this version has no notes of its own, it opens the newest ones. |
 | Links | GitHub (code, issues, releases), Patreon, Buy Me a Coffee, and "How I run a channel with it". |
 
