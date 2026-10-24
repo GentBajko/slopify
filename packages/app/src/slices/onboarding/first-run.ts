@@ -1,10 +1,12 @@
 import type { DatabaseSync } from "node:sqlite";
-import { readinessIsUsable } from "../../kernel/ports/model.js";
+import type { SpeechInstall } from "../../kernel/ports/system-speech.js";
 import { templateById } from "../project-templates/repo.js";
 import type { ProviderStatus } from "../settings/model.js";
+import { listVoices } from "../settings/repo.js";
 import { notTemplateSample } from "../template-studio/repo.js";
 import type { FirstRunView } from "./model.js";
-import { starterPacks } from "./packs.js";
+import { starterPacks, starterSet } from "./packs.js";
+import { shortReadiness } from "./quick-short.js";
 import { sampleProjectIds } from "./sample.js";
 import { firstRunDismissed, readPackRecords } from "./state.js";
 
@@ -12,7 +14,12 @@ import { firstRunDismissed, readPackRecords } from "./state.js";
 // project (anything but the samples and the template studio's hidden projects) exists. Reading it writes nothing: a real project that
 // exists before the screen was recorded as done is reported as `settle`, and the client
 // records it with POST /dismiss, so deleting every project later does not bring it back.
-export function firstRunView(db: DatabaseSync, statuses: readonly ProviderStatus[]): FirstRunView {
+export function firstRunView(
+  db: DatabaseSync,
+  statuses: readonly ProviderStatus[],
+  // How to install the computer's voice here, for the checklist's voice line.
+  install?: SpeechInstall,
+): FirstRunView {
   const samples = sampleProjectIds(db);
   const real =
     db
@@ -25,10 +32,15 @@ export function firstRunView(db: DatabaseSync, statuses: readonly ProviderStatus
   return {
     show: !real && !dismissed,
     settle: real && !dismissed,
-    voice: firstVoice(statuses),
+    // Every starter pack suggests the same voice, so the starter set's stands for all of them.
+    needs: shortReadiness({
+      statuses,
+      voices: listVoices(db),
+      suggested: starterSet.voice,
+      install,
+    }),
     sampleProjectId: samples.library,
     samples,
-    clis: detectedClis(statuses),
     // A pack counts as added only with its template: the first short adds a pack's prompts and
     // voice but no template, and Add pack must still be able to add that template later (or
     // again, after it was deleted).
@@ -44,42 +56,4 @@ export function firstRunView(db: DatabaseSync, statuses: readonly ProviderStatus
       };
     }),
   };
-}
-
-// Who would narrate a first short: a keyed voice provider when one has a key, else the
-// computer's own voice when a speech program was found.
-export function firstVoice(statuses: readonly ProviderStatus[]): FirstRunView["voice"] {
-  const keyed = statuses.find(
-    (row) =>
-      row.family === "tts" && row.readiness.kind === "keyed" && readinessIsUsable(row.readiness),
-  );
-  const system = statuses.find((row) => row.readiness.kind === "local")?.readiness;
-  const local = system?.kind === "local" ? system : undefined;
-  return {
-    keyed: keyed?.displayName ?? null,
-    system: {
-      available: local?.available === true,
-      engine: local?.engine ?? null,
-      issue: local?.issue ?? null,
-    },
-  };
-}
-
-// What this machine can make without a key: each agent CLI Slopify found, and whether it
-// answers (installed, a supported version, signed in as far as the probe can tell).
-export function detectedClis(statuses: readonly ProviderStatus[]): FirstRunView["clis"] {
-  return (["claude-code", "codex", "gemini"] as const).map((id) => {
-    const status = statuses.find((row) => row.id === id);
-    const readiness = status?.readiness;
-    const cli = readiness?.kind === "cli" ? readiness : undefined;
-    return {
-      id,
-      name: status?.displayName ?? id,
-      installed: cli?.installed === true,
-      ready: cli?.installed === true && cli.issue === undefined,
-      version: cli?.version ?? null,
-      issue: cli?.issue ?? null,
-      draws: id === "codex",
-    };
-  });
 }

@@ -73,8 +73,36 @@ const picoVoices: readonly SpeechVoice[] = [
   { id: "it-IT", name: "Italian", language: "it-IT" },
 ];
 
+// OpenAI is named alone: the voices the starter packs set up are OpenAI voices, so its key
+// narrates at once, while ElevenLabs, Cartesia and Inworld also need a voice saved first.
 export const noSpeechFix =
-  "or add an ElevenLabs or OpenAI key in Settings → Providers for a better voice.";
+  "or add an OpenAI key in Settings → Providers: its voices work at once and sound better.";
+
+export interface SpeechInstall {
+  // What the commands do, as a lead-in: "Install espeak-ng with one of these:".
+  readonly text: string;
+  readonly commands: readonly string[];
+}
+
+// How to get a speech program onto this computer from a terminal, for a screen that lists the
+// commands apart from the sentence (the first-run checklist), or undefined where none is
+// installed that way: macOS and Windows have their own, which only a broken setup lacks.
+export function speechInstall(host: SpeechHost): SpeechInstall | undefined {
+  if (host.platform === "darwin" || host.platform === "win32") return undefined;
+  return host.env.SLOPIFY_CONTAINER === "1"
+    ? {
+        text: "Update Slopify's Docker image, which has one built in:",
+        commands: ["docker compose pull", "docker compose up -d"],
+      }
+    : {
+        text: "Install espeak-ng with one of these:",
+        commands: [
+          "sudo apt install espeak-ng",
+          "sudo pacman -S espeak-ng",
+          "sudo dnf install espeak-ng",
+        ],
+      };
+}
 
 export async function detectSpeech(given: SpeechProbe, host: SpeechHost): Promise<DetectedSpeech> {
   // A probe that throws (a host bridge that cannot run local programs) found nothing.
@@ -128,7 +156,7 @@ export async function detectSpeech(given: SpeechProbe, host: SpeechHost): Promis
     issue:
       host.env.SLOPIFY_CONTAINER === "1"
         ? `Slopify runs in Docker and this image has no speech program, so the system voice can't narrate. Update the image (docker compose pull, then docker compose up -d), ${noSpeechFix}`
-        : `No speech program was found on this computer, so the system voice can't narrate. Install espeak-ng (for example sudo apt install espeak-ng, sudo pacman -S espeak-ng or sudo dnf install espeak-ng) and reload Settings → Providers, ${noSpeechFix}`,
+        : `No speech program was found on this computer, so the system voice can't narrate. Install espeak-ng (for example sudo apt install espeak-ng, sudo pacman -S espeak-ng or sudo dnf install espeak-ng), ${noSpeechFix}`,
   };
 }
 
@@ -239,6 +267,12 @@ const cached = new WeakMap<
   SpeechProbe,
   Map<string, { readonly at: number; readonly found: Promise<DetectedSpeech> }>
 >();
+
+// "Check again" after installing a speech program: the next look runs the programs again
+// instead of answering from the last minute's.
+export function forgetDetectedSpeech(probe: SpeechProbe): void {
+  cached.delete(probe);
+}
 
 export function detectSpeechCached(probe: SpeechProbe, host: SpeechHost): Promise<DetectedSpeech> {
   const now = performance.now();

@@ -16,7 +16,8 @@ import { projectById } from "../../slices/admission/repo.js";
 import { seedSamples } from "../../slices/onboarding/sample.js";
 import { readPackRecords } from "../../slices/onboarding/state.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
-import { upsertKey } from "../../slices/settings/repo.js";
+import { readSetting, upsertKey } from "../../slices/settings/repo.js";
+import { autostartAnsweredKey } from "../autostart/model.js";
 import { createHub } from "../events/hub.js";
 import { createApp } from "./app.js";
 
@@ -35,7 +36,7 @@ afterEach(() => {
   for (const done of cleanup.splice(0)) done();
 });
 
-function harness(installed: readonly string[] = ["claude", "codex"]): {
+function harness(installed: string[] = ["claude", "codex"]): {
   readonly app: ReturnType<typeof createApp>;
   readonly db: DatabaseSync;
   readonly paths: ReturnType<typeof layout>;
@@ -101,25 +102,86 @@ async function json(response: Response): Promise<Record<string, unknown>> {
 }
 
 describe("the first-run screen", () => {
-  it("shows on a fresh install with what this machine can already do", async () => {
+  it("shows on a fresh install with what a short needs and who would do each part", async () => {
     const h = harness();
     const view = await json(await h.app.request("/api/onboarding"));
     expect(view).toMatchObject({
       show: true,
       sampleProjectId: null,
-      clis: [
-        { id: "claude-code", installed: true, ready: true, version: "2.1.300", draws: false },
-        { id: "codex", installed: true, ready: true, version: "0.160.0", draws: true },
-        { id: "gemini", installed: false, ready: false },
-      ],
+      needs: {
+        text: { by: "Claude Code CLI", how: "sign-in" },
+        images: { by: "Codex CLI", how: "sign-in" },
+        voice: { by: null, how: null },
+        gaps: [
+          {
+            need: "voice",
+            fix: "key",
+            install: {
+              text: "Install espeak-ng with one of these:",
+              commands: [
+                "sudo apt install espeak-ng",
+                "sudo pacman -S espeak-ng",
+                "sudo dnf install espeak-ng",
+              ],
+            },
+          },
+        ],
+      },
     });
     expect((view.packs as unknown[]).length).toBe(4);
   });
 
-  it("is never shown again once it is skipped", async () => {
+  it("names OpenAI as the voice key that works at once, and asks for a saved voice after an ElevenLabs key", async () => {
+    const h = harness();
+    const before = (await json(await h.app.request("/api/onboarding"))).needs as {
+      gaps: { need: string; message: string; fix: string }[];
+    };
+    expect(before.gaps[0]?.message).toMatch(/an OpenAI key works at once/);
+    upsertKey(h.db, "elevenlabs", "el-test", clock.now().toISOString());
+    const after = (await json(await h.app.request("/api/onboarding"))).needs as {
+      voice: { by: string | null };
+      gaps: { need: string; message: string; fix: string }[];
+    };
+    expect(after.voice.by).toBeNull();
+    expect(after.gaps).toEqual([
+      expect.objectContaining({
+        need: "voice",
+        fix: "saved-voice",
+        message: expect.stringMatching(/^ElevenLabs has a key but no voice saved yet\./),
+      }),
+    ]);
+    upsertKey(h.db, "openai-tts", "sk-test", clock.now().toISOString());
+    expect((await json(await h.app.request("/api/onboarding"))).needs).toMatchObject({
+      voice: { by: "OpenAI", how: "key" },
+      gaps: [],
+    });
+  });
+
+  it("finds a speech program installed a moment ago on Check again", async () => {
+    const installed = ["claude", "codex"];
+    const h = harness(installed);
+    expect((await json(await h.app.request("/api/onboarding"))).needs).toMatchObject({
+      voice: { by: null },
+    });
+    installed.push("espeak-ng");
+    // A plain read answers from the last minute's look; Check again looks afresh.
+    expect((await json(await h.app.request("/api/onboarding"))).needs).toMatchObject({
+      voice: { by: null },
+    });
+    const checked = await h.app.request("/api/onboarding/check", { method: "POST" });
+    expect(checked.status).toBe(200);
+    expect((await json(checked)).needs).toMatchObject({
+      voice: { by: "eSpeak NG", how: "computer" },
+      gaps: [],
+    });
+  });
+
+  it("is never shown again once it is skipped, and Skip answers starting at login", async () => {
     const h = harness();
     expect((await h.app.request("/api/onboarding/dismiss", { method: "POST" })).status).toBe(200);
     expect(await json(await h.app.request("/api/onboarding"))).toMatchObject({ show: false });
+    // A fresh install is never asked about starting at login in a dialog over Home.
+    expect(readSetting(h.db, autostartAnsweredKey)).toBe("1");
   });
 
   it("still shows beside the sample, and never again once a real project exists", async () => {
@@ -143,6 +205,7 @@ describe("the first-run screen", () => {
     });
     expect(made.status).toBe(201);
     expect(await json(await h.app.request("/api/onboarding"))).toMatchObject({ show: false });
+    expect(readSetting(h.db, autostartAnsweredKey)).toBe("1");
     const { projectId } = (await made.json()) as { projectId: string };
     await h.app.request(`/api/projects/${projectId}`, { method: "DELETE" });
     expect(await json(await h.app.request("/api/onboarding"))).toMatchObject({ show: false });
@@ -233,7 +296,7 @@ describe("Make a 60-second short", () => {
     expect(h.ticked).toEqual([projectId]);
   });
 
-  it("says what is missing, and where to fix it, when no voice or text model is ready", async () => {
+  it("says what is missing and what fixes it, in the checklist's own words", async () => {
     const h = harness([]);
     const refused = await h.app.request("/api/onboarding/short", {
       method: "POST",
@@ -247,18 +310,19 @@ describe("Make a 60-second short", () => {
       "images",
       "voice",
     ]);
-    expect(body.detail).toContain("Settings → Providers");
-    expect(body.detail).toContain("Install espeak-ng");
+    expect(body.detail).toContain("add an OpenRouter key");
+    expect(body.detail).toContain("Add an image key");
+    expect(body.detail).toContain("an OpenAI key works at once");
+    // The first-run checklist reads the same gaps before anything is pressed.
+    const view = await json(await h.app.request("/api/onboarding"));
+    expect((view.needs as { gaps: unknown }).gaps).toEqual(body.gaps);
     expect(h.db.prepare("SELECT count(*) AS n FROM projects").get()).toEqual({ n: 0 });
   });
 
   it("narrates with the computer's own voice when no voice key is saved, and saves that voice", async () => {
     const h = harness(["claude", "codex", "espeak-ng"]);
     const view = await json(await h.app.request("/api/onboarding"));
-    expect(view.voice).toEqual({
-      keyed: null,
-      system: { available: true, engine: "eSpeak NG", issue: null },
-    });
+    expect((view.needs as { voice: unknown }).voice).toEqual({ by: "eSpeak NG", how: "computer" });
     const made = await h.app.request("/api/onboarding/short", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -282,8 +346,8 @@ describe("Make a 60-second short", () => {
   it("prefers a voice key over the computer's voice", async () => {
     const h = harness(["claude", "codex", "espeak-ng"]);
     upsertKey(h.db, "openai-tts", "sk-test", clock.now().toISOString());
-    expect((await json(await h.app.request("/api/onboarding"))).voice).toMatchObject({
-      keyed: "OpenAI",
+    expect((await json(await h.app.request("/api/onboarding"))).needs).toMatchObject({
+      voice: { by: "OpenAI", how: "key" },
     });
     const made = await h.app.request("/api/onboarding/short", {
       method: "POST",

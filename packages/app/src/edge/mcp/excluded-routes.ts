@@ -89,6 +89,7 @@ export const excludedRoutes: Readonly<Record<string, string>> = {
   "GET /api/providers/first-run": personal,
   "POST /api/providers/first-run/dismiss": personal,
   "POST /api/onboarding/dismiss": personal,
+  "POST /api/onboarding/check": personal,
   "GET /api/settings/autostart": hostSetup,
   "PUT /api/settings/autostart": hostSetup,
   "PUT /api/settings/remote-access": remoteAccess,

@@ -51,7 +51,7 @@ import {
 } from "@/routes/settings";
 import { TemplatesRoute } from "@/routes/templates";
 import { TutorialsRoute } from "@/routes/tutorials";
-import { WelcomeRoute } from "@/routes/welcome";
+import { WelcomeRoute, type WelcomeStep, welcomeSteps } from "@/routes/welcome";
 import { TemplateStudioPage } from "@/template-studio/page";
 
 // A code-based route tree: a handful of screens need no file convention, and the
@@ -156,12 +156,37 @@ function ProjectsPage() {
   );
 }
 
-// The first-run screen; Projects sends a fresh install here once (`routes/projects.tsx`).
+// The first-run screen; Home sends a fresh install here once (`routes/home.tsx`). The step is
+// in the address, so a detour to Settings for a key comes back to it (`?step=make`).
+interface WelcomeSearch {
+  readonly step?: WelcomeStep;
+}
+
+function welcomeSearchOf(search: Record<string, unknown>): WelcomeSearch {
+  const step = welcomeSteps.find((one) => one === search.step);
+  return step === undefined || step === "found" ? {} : { step };
+}
+
 const welcomeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "welcome",
-  component: WelcomeRoute,
+  validateSearch: welcomeSearchOf,
+  component: WelcomePage,
 });
+
+function WelcomePage() {
+  const { step } = welcomeRoute.useSearch();
+  const navigate = useNavigate();
+  return (
+    <WelcomeRoute
+      step={step ?? "found"}
+      onStep={(next) => {
+        // A step is part of one page, not a place of its own: Back leaves the welcome.
+        void navigate({ to: "/welcome", search: welcomeSearchOf({ step: next }), replace: true });
+      }}
+    />
+  );
+}
 
 const playRoute = createRoute({
   getParentRoute: () => rootRoute,
