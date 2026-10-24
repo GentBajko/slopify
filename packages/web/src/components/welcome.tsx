@@ -163,10 +163,10 @@ function NeedRow({
           {status}
         </span>
       }
-      meta={<span className="block pl-[76px] max-sm:pl-0">{line}</span>}
+      meta={<span className="block pl-19 max-sm:pl-0">{line}</span>}
       actions={action}
     >
-      {more === undefined ? null : <div className="pl-[76px] max-sm:pl-0">{more}</div>}
+      {more === undefined ? null : <div className="pl-19 max-sm:pl-0">{more}</div>}
     </ListRow>
   );
 }
