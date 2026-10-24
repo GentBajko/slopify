@@ -70,35 +70,30 @@ function mount({
   return project;
 }
 
-it("shows the description in its parts with placeholders filled, and copies it filled", async () => {
+const pasted = () => screen.getByRole("region", { name: "The description as it is pasted" });
+
+it("shows the description as it is pasted, with the tags beside it, and copies each filled", async () => {
   const writeText = vi.fn(async () => undefined);
   vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
   mount();
-  const summary = await screen.findByRole("region", { name: "Summary" });
   await waitFor(() =>
-    expect(summary.textContent).toBe("How rope holds. Support: https://patreon.com/rope"),
+    expect(pasted().textContent).toBe(
+      "How rope holds. Support: https://patreon.com/rope\n\n0:00 Opening\n0:20 Knots\n0:40 Close\n\n#Rope #Knots",
+    ),
   );
-  expect(screen.getByRole("region", { name: "Chapters" }).textContent).toBe(
-    "0:00 Opening\n0:20 Knots\n0:40 Close",
-  );
-  expect(screen.getByRole("region", { name: "Hashtags" }).textContent).toBe("#Rope #Knots");
-  // The parts fold, one open at a time: Tags opens from its head.
-  await userEvent.click(screen.getByRole("button", { name: "Tags" }));
+  // Every part is in view at once: no part folds another away.
   expect(
     within(screen.getByRole("region", { name: "Tags" }))
       .getAllByRole("listitem")
       .map((tag) => tag.textContent),
   ).toEqual(["rope", "knots", "sailing knots"]);
+  expect(screen.getByText("2 hashtags; the first 2 show above the title.")).not.toBeNull();
 
   await userEvent.click(screen.getByRole("button", { name: "Copy description" }));
   expect(writeText).toHaveBeenLastCalledWith(
     "How rope holds. Support: https://patreon.com/rope\n\n0:00 Opening\n0:20 Knots\n0:40 Close\n\n#Rope #Knots",
   );
-  await waitFor(() =>
-    expect(screen.getAllByRole("status").map((one) => one.textContent)).toContain(
-      "Copied the description.",
-    ),
-  );
+  expect(await screen.findByText("Copied the description.")).not.toBeNull();
   await userEvent.click(screen.getByRole("button", { name: "Copy tags" }));
   expect(writeText).toHaveBeenLastCalledWith("rope, knots, sailing knots");
 });
@@ -107,8 +102,7 @@ it("marks a placeholder with no link and keeps it in the copy", async () => {
   const writeText = vi.fn(async () => undefined);
   vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
   mount({ links: [] });
-  const summary = await screen.findByRole("region", { name: "Summary" });
-  await waitFor(() => expect(within(summary).getByText("{{Patreon}}").tagName).toBe("MARK"));
+  await waitFor(() => expect(within(pasted()).getByText("{{Patreon}}").tagName).toBe("MARK"));
   expect(screen.getByText(/No link is saved for \{\{Patreon\}\}/u)).not.toBeNull();
   // The links are the project's channel's: the note leads to its Brand tab.
   expect(screen.getByRole("link", { name: "the channel's Brand tab" }).getAttribute("href")).toBe(
@@ -118,7 +112,7 @@ it("marks a placeholder with no link and keeps it in the copy", async () => {
   expect(writeText).toHaveBeenLastCalledWith(expect.stringContaining("Support: {{Patreon}}"));
 });
 
-it("saves an edit in place with the generated text it was made from", async () => {
+it("edits one part of the description in place and keeps it as the person's own", async () => {
   let sent: unknown;
   mount({
     extra: {
@@ -136,6 +130,8 @@ it("saves an edit in place with the generated text it was made from", async () =
   const box = screen.getByRole("textbox", { name: "Summary" });
   await userEvent.clear(box);
   await userEvent.type(box, "My own summary.");
+  // The description as it is pasted follows the typing.
+  expect(pasted().textContent).toContain("My own summary.\n\n0:00 Opening");
   await userEvent.click(screen.getByRole("button", { name: "Save summary" }));
   await waitFor(() =>
     expect(sent).toEqual({
@@ -143,11 +139,13 @@ it("saves an edit in place with the generated text it was made from", async () =
       base: "How rope holds. Support: {{Patreon}}",
     }),
   );
-  expect(await screen.findByText("My own summary.")).not.toBeNull();
-  expect(screen.getByText("Your edit")).not.toBeNull();
+  expect(
+    await screen.findByText("Summary: your own text, kept when the description is written again."),
+  ).not.toBeNull();
+  expect(pasted().textContent).toContain("My own summary.");
 });
 
-it("offers the new generated text beside an edit instead of overwriting it", async () => {
+it("offers the newly written text beside an edit instead of overwriting it", async () => {
   let dropped = false;
   mount({
     edits: {
@@ -163,18 +161,16 @@ it("offers the new generated text beside an edit instead of overwriting it", asy
       },
     },
   });
-  expect(await screen.findByText("New generated version available.")).not.toBeNull();
-  expect(screen.getByRole("region", { name: "Chapters" }).textContent).toBe(
-    "0:00 Mine\n0:20 Knots\n0:40 End",
-  );
-  await userEvent.click(screen.getByRole("button", { name: "View the chapters diff" }));
-  expect(screen.getByRole("region", { name: "New generated" })).not.toBeNull();
-  await userEvent.click(screen.getByRole("button", { name: "Use the new generated chapters" }));
+  expect(
+    await screen.findByText("Chapters written again. Yours stays until you choose."),
+  ).not.toBeNull();
+  expect(pasted().textContent).toContain("0:00 Mine\n0:20 Knots\n0:40 End");
+  await userEvent.click(screen.getByRole("button", { name: "Show what changed in the chapters" }));
+  expect(screen.getByRole("region", { name: "New" })).not.toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "Use the new chapters" }));
   await waitFor(() => expect(dropped).toBe(true));
   await waitFor(() =>
-    expect(screen.getByRole("region", { name: "Chapters" }).textContent).toBe(
-      "0:00 Opening\n0:20 Knots\n0:40 Close",
-    ),
+    expect(pasted().textContent).toContain("0:00 Opening\n0:20 Knots\n0:40 Close"),
   );
 });
 
@@ -189,9 +185,7 @@ it("fits hand-edited chapters to YouTube's rules when shown and copied, and says
     },
   });
   await waitFor(() =>
-    expect(screen.getByRole("region", { name: "Chapters" }).textContent).toBe(
-      "0:00 Opening\n0:26 Blink\n0:40 Close",
-    ),
+    expect(pasted().textContent).toContain("\n\n0:00 Opening\n0:26 Blink\n0:40 Close\n\n"),
   );
   expect(
     screen.getByText(
@@ -202,7 +196,7 @@ it("fits hand-edited chapters to YouTube's rules when shown and copied, and says
   expect(writeText).toHaveBeenLastCalledWith(
     expect.stringContaining("\n\n0:00 Opening\n0:26 Blink\n0:40 Close\n\n"),
   );
-  // Editing starts from the user's own text, not the fitted one.
+  // Editing starts from the person's own text, not the fitted one.
   await userEvent.click(screen.getByRole("button", { name: "Edit chapters" }));
   expect((screen.getByRole("textbox", { name: "Chapters" }) as HTMLTextAreaElement).value).toBe(
     mine,
@@ -218,26 +212,24 @@ it("leaves out a chapter list YouTube would ignore", async () => {
       links: [],
     },
   });
-  expect(await screen.findByText("Left out; see the note below.")).not.toBeNull();
+  await waitFor(() =>
+    expect(pasted().textContent).toBe(
+      "How rope holds. Support: https://patreon.com/rope\n\n#Rope #Knots",
+    ),
+  );
   expect(
     screen.getByText(/left the chapter list out, since YouTube needs at least 3/u),
   ).not.toBeNull();
 });
 
-it("keeps the block in place with Copy and Edit disabled until the step has written", async () => {
+it("says the text is not written yet, with nothing to copy or edit until it is", async () => {
   mount({ outputs: [] });
-  const block = await screen.findByRole("region", { name: "YouTube" });
-  // A part of the stage body under a rule, not a bordered box inside the stage's own card.
-  expect(block.className).not.toContain("rounded");
-  expect(screen.getByRole("region", { name: "Summary" }).textContent).toBe(
-    "Not written yet. It is made with the video.",
+  await waitFor(() =>
+    expect(pasted().textContent).toBe("Not written yet. It is made with the video."),
   );
-  expect(
-    (screen.getByRole("button", { name: "Copy description" }) as HTMLButtonElement).disabled,
-  ).toBe(true);
-  expect((screen.getByRole("button", { name: "Edit summary" }) as HTMLButtonElement).disabled).toBe(
-    true,
-  );
+  expect(screen.queryByRole("button", { name: "Copy description" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Edit summary" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Write the description again/u })).toBeNull();
 });
 
 it("shows the pinned comment with its links filled, and copies it", async () => {
@@ -250,8 +242,7 @@ it("shows the pinned comment with its links filled, and copies it", async () => 
       output("youtube_pinned_comment", "video"),
     ],
   });
-  await userEvent.click(await screen.findByRole("button", { name: "Pinned comment" }));
-  const comment = await screen.findByRole("region", { name: "Pinned comment" });
+  const comment = await screen.findByRole("region", { name: "The pinned comment" });
   await waitFor(() =>
     expect(comment.textContent).toBe("Thanks for tying along. Support: https://patreon.com/rope"),
   );
@@ -261,18 +252,19 @@ it("shows the pinned comment with its links filled, and copies it", async () => 
   );
 });
 
-it("says a description written before pinned comments has none, and writes it again on request", async () => {
+it("writes every part again from one button that says its cost, never from a part's head", async () => {
   const regenerateNow = vi.fn();
   mount({ regenerateNow });
   await screen.findByText(/How rope holds/u);
   expect(screen.getByText(/Written before pinned comments existed/u)).not.toBeNull();
-  expect(screen.getByRole("button", { name: "Copy pinned comment" }).hasAttribute("disabled")).toBe(
-    true,
-  );
-  await userEvent.click(screen.getByRole("button", { name: "Write the pinned comment again" }));
+  expect(screen.queryByRole("button", { name: "Copy pinned comment" })).toBeNull();
+  const again = screen.getAllByRole("button", { name: /again/u });
+  expect(again.map((one) => one.textContent)).toEqual(["Write the description again · 1 AI call"]);
+  expect(screen.getByText(/Rewrites every part above/u)).not.toBeNull();
+  await userEvent.click(again[0] ?? document.body);
   const dialog = await screen.findByRole("dialog");
-  expect(dialog.textContent).toContain("A field you edited keeps your text");
-  await userEvent.click(within(dialog).getByRole("button", { name: "Write again" }));
+  expect(dialog.textContent).toContain("A part you edited keeps your text");
+  await userEvent.click(within(dialog).getByRole("button", { name: "Write it again · 1 AI call" }));
   expect(regenerateNow).toHaveBeenCalledWith(["youtube:description"]);
 });
 
@@ -286,8 +278,7 @@ it("shows the other titles for YouTube's A/B test and copies them one per line",
       output("youtube_titles", "video"),
     ],
   });
-  await userEvent.click(await screen.findByRole("button", { name: "Other titles" }));
-  const titles = await screen.findByRole("region", { name: "Other titles" });
+  const titles = await screen.findByRole("region", { name: "The other titles" });
   await waitFor(() => expect(titles.textContent).toBe("Rope That Holds\nThe Knot Sailors Trust"));
   expect(screen.getByText("3 titles to test")).not.toBeNull();
   await userEvent.click(screen.getByRole("button", { name: "Copy other titles" }));
@@ -304,12 +295,13 @@ it("counts the description as it is typed and checks it against YouTube's rules"
   await userEvent.type(box, " <b>");
   expect(count()).not.toBe(before);
   expect(
-    screen.getByText("YouTube doesn't allow < or > in a description. Remove them."),
-  ).not.toBeNull();
-  expect(screen.getByText("2 hashtags; the first 2 show above the title.")).not.toBeNull();
+    screen.getAllByText("YouTube doesn't allow < or > in a description. Remove them."),
+  ).toHaveLength(1);
+  // Where hashtags show is said once, under the description.
+  expect(screen.getAllByText("2 hashtags; the first 2 show above the title.")).toHaveLength(1);
 });
 
-it("holds Use it while an edit is open, and Use generated offers Undo", async () => {
+it("keeps Use the new one out of reach while an edit is open, and the way back offers Undo", async () => {
   const saved: unknown[] = [];
   mount({
     edits: {
@@ -327,16 +319,35 @@ it("holds Use it while an edit is open, and Use generated offers Undo", async ()
       },
     },
   });
-  expect(await screen.findByText("New generated version available.")).not.toBeNull();
+  await screen.findByText("Chapters written again. Yours stays until you choose.");
   await userEvent.click(screen.getByRole("button", { name: "Edit chapters" }));
-  const useIt = screen.getByRole("button", { name: "Use the new generated chapters" });
-  expect(useIt.hasAttribute("disabled")).toBe(true);
+  expect(screen.queryByRole("button", { name: "Use the new chapters" })).toBeNull();
   await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
-  await userEvent.click(useIt);
+  await userEvent.click(screen.getByRole("button", { name: "Use the new chapters" }));
   await userEvent.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() =>
     expect(saved).toEqual([
       { text: "0:00 Mine\n0:20 Knots\n0:40 End", base: "0:00 Old\n0:30 Older" },
     ]),
   );
+});
+
+it("on the read-only sample, copies the text and says in one sentence that it can't be posted", async () => {
+  const regenerateNow = vi.fn();
+  mount({
+    regenerateNow,
+    extra: {
+      "GET /api/onboarding/sample": jsonAnswer({
+        projectId: "p1",
+        samples: { library: "p1", audiobook: null, podcast: null },
+      }),
+    },
+  });
+  expect(await screen.findByText(/This sample isn't on YouTube and can't be/u)).not.toBeNull();
+  expect(screen.getByRole("button", { name: "Make my own copy" })).not.toBeNull();
+  expect(await screen.findByRole("button", { name: "Copy description" })).not.toBeNull();
+  // Nothing on it edits, writes again, takes a date or a link.
+  expect(screen.queryByRole("button", { name: /^Edit /u })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Write the description again/u })).toBeNull();
+  expect(screen.queryByRole("textbox")).toBeNull();
 });

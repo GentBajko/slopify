@@ -1,16 +1,11 @@
 import type { HelpEntry } from "../entry.js";
 
-// Posting to X, LinkedIn, Instagram, TikTok, Reddit and Bluesky: Prepare upload's post panel,
-// the post settings on Play and in Template Studio, and the channel's accounts.
+// Posting to X, LinkedIn, Instagram, TikTok, Reddit and Bluesky: Copy for YouTube Studio's post
+// panel, the post settings on Play and in Template Studio, and the channel's accounts.
 
 const posting = (anchor: string) => ({ page: "Posting-to-Social-Sites", anchor });
 
 export const socialHelp = {
-  "social.where": {
-    title: "Where",
-    body: "Switches Prepare upload between YouTube and each other site this project posts to. Each site has its own post: its words, pictures or video, warnings and Fill button. The sites come from the template's Upload pack (Template Studio) or Play's Outputs.",
-    tutorial: posting("the-post-in-prepare-upload"),
-  },
   "social.platforms": {
     title: "Post to",
     body: "The sites this template's projects post to besides YouTube. Each site you turn on gets a post with the owner's defaults: the summary with the video on X and LinkedIn, a 4:5 picture carousel on Instagram, the first short on TikTok, up to four pictures on Bluesky, a link post on Reddit. Nothing is ever posted for you: you press Post.",

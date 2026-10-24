@@ -1,109 +1,143 @@
 import type { ResolvedField } from "@app/slices/youtube/edits.js";
 import { type ChannelLink, placeholderParts } from "@app/slices/youtube/placeholders.js";
-import { PencilIcon } from "lucide-react";
+import { CopyIcon, PencilIcon } from "lucide-react";
 import { type ReactElement, type ReactNode, useId, useState } from "react";
 import { Button } from "@/components/kit/button";
-import { Input, Textarea } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
-import type { HelpId } from "@/help/catalog";
+import { HelpLine, Input, Textarea } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { cn } from "@/lib/utils";
 import { DiffColumns } from "@/library/diff-view";
 
-// The YouTube part's fields: one text shown as it reads, with Edit, Your edit, Use generated
-// and the waiting new version; the placeholders filled as links; the tags as chips.
+// The YouTube text's pieces: a part's head (its name, its count and Copy), the editor a part
+// opens in place with Save and Cancel, what an edit of the person's own and a newly written
+// version waiting beside it say, the placeholders filled as links, and the tags as chips.
 
-// One field shown as text, with Edit to change it in place. The user's text is marked as theirs
-// with a way back to the generated one, and a regenerated text the user has not seen yet waits
-// beside it instead of replacing it.
-export function EditableField({
+// One part's head: "Tags  248 / 500 characters  [Copy tags] [Edit tags]".
+export function PartHead({
+  id,
   label,
-  tip,
+  count,
+  over,
+  children,
+}: {
+  readonly id: string;
+  readonly label: string;
+  // "342 / 5000 characters"; undefined until there is text.
+  readonly count: string | undefined;
+  readonly over: boolean;
+  // The part's Copy and Edit, in that order.
+  readonly children?: ReactNode;
+}): ReactElement {
+  return (
+    <div className="flex min-h-8 flex-wrap items-center gap-x-3 gap-y-1 border-b border-line pb-1.5">
+      <h3 id={id} className="m-0 text-title-3 font-semibold text-ink">
+        {label}
+      </h3>
+      {count === undefined ? null : (
+        <span className={cn("text-small tabular-nums", over ? "text-danger" : "text-ink-2")}>
+          {over ? `${count}, over YouTube's limit` : count}
+        </span>
+      )}
+      <span className="flex-1" />
+      {children}
+    </div>
+  );
+}
+
+// "Copy description": what the part is, on the button, so it reads alone.
+export function CopyButton({
+  what,
+  onCopy,
+  keyshortcuts,
+}: {
+  // "description", "tags", "pinned comment".
+  readonly what: string;
+  readonly onCopy: () => void;
+  readonly keyshortcuts?: string | undefined;
+}): ReactElement {
+  return (
+    <Button type="button" size="small" aria-keyshortcuts={keyshortcuts} onClick={onCopy}>
+      <CopyIcon aria-hidden="true" strokeWidth={1.75} />
+      {`Copy ${what}`}
+    </Button>
+  );
+}
+
+// "Edit summary": opens the part's editor below, starting from the text as it is now.
+export function EditButton({
+  what,
+  onEdit,
+}: {
+  readonly what: string;
+  readonly onEdit: () => void;
+}): ReactElement {
+  return (
+    <Button type="button" variant="quiet" size="small" onClick={onEdit}>
+      <PencilIcon aria-hidden="true" strokeWidth={1.75} />
+      {`Edit ${what}`}
+    </Button>
+  );
+}
+
+// What a part has beyond its text: its editor while it is open, the person's own text marked
+// as theirs with a way back to the written one, and a newly written version waiting beside
+// it instead of replacing it. Nothing when none of these applies.
+export function FieldEditor({
+  label,
   value,
   draft,
   onDraft,
   note,
-  links,
   disabled,
   multiline,
-  placeholder,
-  render,
+  rows = 5,
   onSave,
   onUseGenerated,
   onKeepMine,
 }: {
+  // "Summary": the editor's name and, lower-cased, the object of its buttons.
   readonly label: string;
-  readonly tip?: HelpId | undefined;
+  readonly value: ResolvedField;
   // The text being typed, held by the section so its counts follow it; undefined when the
-  // field is not open for editing.
+  // editor is closed.
   readonly draft: string | undefined;
   readonly onDraft: (draft: string | undefined) => void;
-  // A line under the field about YouTube's rules for what is in it now, typed or saved.
+  // A line under the editor about YouTube's rules for what is typed.
   readonly note?: { readonly text: string; readonly warn: boolean } | undefined;
-  readonly value: ResolvedField;
-  readonly links: readonly ChannelLink[];
   readonly disabled: boolean;
   readonly multiline: boolean;
-  readonly placeholder: string;
-  readonly render?: ((text: string) => ReactNode) | undefined;
+  readonly rows?: number;
   readonly onSave: (text: string) => void;
   readonly onUseGenerated: () => void;
   readonly onKeepMine: (text: string, next: string) => void;
-}): ReactElement {
+}): ReactElement | null {
   const id = useId();
-  const setDraft = onDraft;
   const [diff, setDiff] = useState(false);
   const editing = draft !== undefined;
   const lower = label.toLowerCase();
+  if (!editing && !value.edited && value.pending === undefined) return null;
   return (
-    <div className="flex min-w-0 flex-col gap-1" {...helpScope}>
-      <div className="flex min-h-8 flex-wrap items-center gap-2">
-        <span className="inline-flex items-center gap-1">
-          <h5 id={`${id}-label`} className="sl-kicker text-ink-3">
-            {label}
-          </h5>
-          {tip === undefined ? null : <InfoTip id={tip} label={lower} className="-my-1" />}
-        </span>
-        {value.edited ? <span className="text-small text-ink-2">Your edit</span> : null}
-        <span className="flex-1" />
-        {value.edited && !editing ? (
-          <Button
-            type="button"
-            variant="quiet"
-            size="small"
-            disabled={disabled}
-            aria-label={`Use the generated ${lower}`}
-            onClick={onUseGenerated}
-          >
-            Use generated
-          </Button>
-        ) : null}
-        <Button
-          type="button"
-          variant="quiet"
-          size="small"
-          disabled={disabled || editing}
-          aria-label={`Edit ${lower}`}
-          onClick={() => setDraft(value.text)}
-        >
-          <PencilIcon aria-hidden="true" strokeWidth={1.75} />
-          Edit
-        </Button>
-      </div>
+    <div className="flex min-w-0 flex-col gap-2">
       {value.pending === undefined ? null : (
         <div className="flex flex-col gap-2 border-l-2 border-waiting pl-3">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-small text-ink">New generated version available.</p>
+            <p className="m-0 text-small text-ink">
+              {`${label} written again. Yours stays until you choose.`}
+            </p>
+            {editing ? null : (
+              <Button
+                type="button"
+                size="small"
+                disabled={disabled}
+                aria-label={`Use the new ${lower}`}
+                onClick={onUseGenerated}
+              >
+                Use the new one
+              </Button>
+            )}
             <Button
               type="button"
-              disabled={disabled || editing}
-              disabledReason={`Save or cancel your ${lower} edit first, so your typing isn't lost.`}
-              aria-label={`Use the new generated ${lower}`}
-              onClick={onUseGenerated}
-            >
-              Use it
-            </Button>
-            <Button
-              type="button"
+              size="small"
               disabled={disabled}
               aria-label={`Keep my ${lower}`}
               onClick={() => onKeepMine(value.text, value.pending ?? "")}
@@ -113,11 +147,12 @@ export function EditableField({
             <Button
               type="button"
               variant="quiet"
+              size="small"
               aria-expanded={diff}
-              aria-label={`${diff ? "Hide" : "View"} the ${lower} diff`}
+              aria-label={`${diff ? "Hide" : "Show"} what changed in the ${lower}`}
               onClick={() => setDiff((now) => !now)}
             >
-              {diff ? "Hide diff" : "View diff"}
+              {diff ? "Hide the changes" : "Show the changes"}
             </Button>
           </div>
           {diff ? (
@@ -125,77 +160,71 @@ export function EditableField({
               before={value.text}
               after={value.pending}
               beforeLabel="Yours"
-              afterLabel="New generated"
+              afterLabel="New"
             />
           ) : null}
         </div>
       )}
       {editing ? (
-        <div className="flex flex-col gap-2">
-          <label htmlFor={`${id}-edit`} className="sr-only">
+        <div className="flex flex-col gap-2" {...helpScope}>
+          <label htmlFor={`${id}-edit`} className="text-small font-semibold text-ink">
             {label}
           </label>
           {multiline ? (
             <Textarea
               id={`${id}-edit`}
-              rows={label === "Chapters" ? 8 : 5}
+              rows={rows}
               value={draft}
-              onChange={(event) => setDraft(event.currentTarget.value)}
+              onChange={(event) => onDraft(event.currentTarget.value)}
             />
           ) : (
             <Input
               id={`${id}-edit`}
               value={draft}
-              onChange={(event) => setDraft(event.currentTarget.value)}
+              onChange={(event) => onDraft(event.currentTarget.value)}
             />
           )}
-          {note === undefined ? null : <FieldNote note={note} />}
+          {note === undefined ? null : (
+            <p className={cn("m-0 text-small", note.warn ? "text-danger" : "text-ink-2")}>
+              {note.text}
+            </p>
+          )}
+          <HelpLine>Saved as your own text: writing the description again keeps it.</HelpLine>
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
               variant="primary"
+              size="small"
               disabled={disabled}
               onClick={() => {
                 onSave(draft);
-                setDraft(undefined);
+                onDraft(undefined);
               }}
             >
-              Save {lower}
+              {`Save ${lower}`}
             </Button>
-            <Button type="button" variant="secondary" onClick={() => setDraft(undefined)}>
+            <Button type="button" size="small" onClick={() => onDraft(undefined)}>
               Cancel
             </Button>
           </div>
         </div>
-      ) : (
-        <section
-          aria-labelledby={`${id}-label`}
-          className={cn(
-            "min-w-0 whitespace-pre-wrap break-words text-small",
-            value.text === "" ? "text-ink-3" : "text-ink",
-          )}
-        >
-          {value.text === "" ? (
-            placeholder
-          ) : render === undefined ? (
-            <Filled text={value.text} links={links} />
-          ) : (
-            render(value.text)
-          )}
-        </section>
-      )}
-      {editing || note === undefined ? null : <FieldNote note={note} />}
+      ) : value.edited ? (
+        <p className="m-0 flex flex-wrap items-center gap-x-2 text-small text-ink-2">
+          {`${label}: your own text, kept when the description is written again.`}
+          {value.pending === undefined ? (
+            <Button
+              type="button"
+              variant="quiet"
+              size="small"
+              disabled={disabled}
+              onClick={onUseGenerated}
+            >
+              {`Use the written ${lower}`}
+            </Button>
+          ) : null}
+        </p>
+      ) : null}
     </div>
-  );
-}
-
-function FieldNote({
-  note,
-}: {
-  readonly note: { readonly text: string; readonly warn: boolean };
-}): ReactElement {
-  return (
-    <p className={cn("m-0 text-small", note.warn ? "text-danger" : "text-ink-3")}>{note.text}</p>
   );
 }
 
@@ -254,7 +283,7 @@ export function TagChips({
   readonly links: readonly ChannelLink[];
 }): ReactElement {
   return (
-    <ul className="flex flex-wrap gap-2 whitespace-normal">
+    <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0 whitespace-normal">
       {splitTags(text).map((tag, index) => (
         <li
           // biome-ignore lint/suspicious/noArrayIndexKey: a tag can repeat, and the list never reorders

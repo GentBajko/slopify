@@ -3,7 +3,8 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StudioSettingsBody } from "@/api";
-import { jsonAnswer, renderApp, testDeps } from "@/test-app";
+import { ReleaseTimes } from "@/project/release-times";
+import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
 import { PrepareUpload } from "./prepare-upload.js";
 
 afterEach(() => {
@@ -76,13 +77,13 @@ const studioRoutes = (settings = pairedSettings, queue: unknown[] = []) => ({
   "GET /api/studio/queue": jsonAnswer({ queue }),
 });
 
-describe("Prepare upload", () => {
+describe("Copy for YouTube Studio", () => {
   it("says when YouTube would refuse the title the upload carries, and where to change it", async () => {
     const user = userEvent.setup();
     const long = "A".repeat(120);
     const first = pack.items[0];
     if (first === undefined) throw new Error("The pack has a long video.");
-    renderApp(
+    renderRouted(
       <PrepareUpload projectId="p1" ready />,
       testDeps({
         ...studioRoutes(),
@@ -92,18 +93,20 @@ describe("Prepare upload", () => {
         }),
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Prepare upload" }));
-    const drawer = await screen.findByRole("dialog", { name: "Prepare upload" });
+    await user.click(await screen.findByRole("button", { name: "Copy for YouTube Studio" }));
+    const drawer = await screen.findByRole("dialog", { name: "Copy for YouTube Studio" });
     expect(
       (await within(drawer).findByText(/YouTube takes titles of up to 100 characters/)).textContent,
-    ).toContain("this one has 120. Shorten it. Change it in the project's YouTube section");
+    ).toContain(
+      "this one has 120. Shorten it. Change it under Other titles in the project's YouTube section",
+    );
   });
 
   it("lists Studio's steps in order and hands the chosen item to the extension", async () => {
     const user = userEvent.setup();
     const opened = vi.spyOn(window, "open").mockReturnValue(null);
     const chosen: unknown[] = [];
-    renderApp(
+    renderRouted(
       <PrepareUpload projectId="p1" ready />,
       testDeps({
         ...studioRoutes(),
@@ -117,8 +120,8 @@ describe("Prepare upload", () => {
         },
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Prepare upload" }));
-    const drawer = await screen.findByRole("dialog", { name: "Prepare upload" });
+    await user.click(await screen.findByRole("button", { name: "Copy for YouTube Studio" }));
+    const drawer = await screen.findByRole("dialog", { name: "Copy for YouTube Studio" });
     await within(drawer).findByText("the-fox-video.mp4");
     const all = within(drawer).getByRole("checkbox", { name: "Select all" });
     const boxes = within(drawer)
@@ -134,8 +137,12 @@ describe("Prepare upload", () => {
       "Audience done",
       "AI use (under Show more) done",
       "Tags (under Show more) done",
-      "Schedule (Visibility) done",
+      "Release (Visibility step) done",
     ]);
+    // What it is for comes first: Slopify never uploads.
+    expect(
+      within(drawer).getByText(/^Slopify never uploads\. It copies each field/u),
+    ).not.toBeNull();
     // Select all ticks every step and clears them again.
     await user.click(all);
     expect(boxes.every((box) => (box as HTMLInputElement).checked)).toBe(true);
@@ -206,7 +213,7 @@ describe("Prepare upload", () => {
         playlist: "Fox tales",
       })),
     };
-    renderApp(
+    renderRouted(
       <PrepareUpload projectId="p1" ready />,
       testDeps({
         ...studioRoutes(),
@@ -217,8 +224,8 @@ describe("Prepare upload", () => {
         },
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Prepare upload" }));
-    const drawer = await screen.findByRole("dialog", { name: "Prepare upload" });
+    await user.click(await screen.findByRole("button", { name: "Copy for YouTube Studio" }));
+    const drawer = await screen.findByRole("dialog", { name: "Copy for YouTube Studio" });
     const cliff = await within(drawer).findByRole<HTMLInputElement>("checkbox", {
       name: "Cliff series",
     });
@@ -242,7 +249,7 @@ describe("Prepare upload", () => {
           : one,
       ),
     };
-    renderApp(
+    renderRouted(
       <PrepareUpload projectId="p1" ready />,
       testDeps({
         ...studioRoutes(),
@@ -253,8 +260,8 @@ describe("Prepare upload", () => {
         },
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Prepare upload" }));
-    const drawer = await screen.findByRole("dialog", { name: "Prepare upload" });
+    await user.click(await screen.findByRole("button", { name: "Copy for YouTube Studio" }));
+    const drawer = await screen.findByRole("dialog", { name: "Copy for YouTube Studio" });
     const toggle = await within(drawer).findByRole("switch", {
       name: "The 2 uploaded clips are real footage (filmed, not made by AI)",
     });
@@ -271,20 +278,21 @@ describe("Prepare upload", () => {
   it("shows how to install and pair the extension when none is paired, instead of filling", async () => {
     const user = userEvent.setup();
     const opened = vi.spyOn(window, "open").mockReturnValue(null);
-    renderApp(
+    renderRouted(
       <PrepareUpload projectId="p1" ready />,
       testDeps({
         ...studioRoutes(unpairedSettings),
         "GET /api/studio/packs/p1": jsonAnswer(pack),
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Prepare upload" }));
-    const drawer = await screen.findByRole("dialog", { name: "Prepare upload" });
-    await within(drawer).findByText("The Slopify Studio extension isn't paired.");
-    // The checklist comes first: how to install the extension is folded under the notice.
-    const fold = within(drawer).getByText("Install the extension").closest("details");
+    await user.click(await screen.findByRole("button", { name: "Copy for YouTube Studio" }));
+    const drawer = await screen.findByRole("dialog", { name: "Copy for YouTube Studio" });
+    // The checklist comes first: how to install the extension is folded above it.
+    const fold = (await within(drawer).findByText("Install the Slopify Studio extension")).closest(
+      "details",
+    );
     expect(fold?.open).toBe(false);
-    await user.click(within(drawer).getByText("Install the extension"));
+    await user.click(within(drawer).getByText("Install the Slopify Studio extension"));
     const steps = within(drawer).getByRole("list", { name: "Install steps" });
     expect(within(steps).getAllByRole("listitem")).toHaveLength(3);
     expect(
@@ -313,7 +321,7 @@ describe("Prepare upload", () => {
       { projectId: "p1", projectTitle: "The Fox", short: 1, at: "2026-09-27T10:00:00.000Z" },
       { projectId: "p2", projectTitle: "The Owl", short: null, at: "2026-09-27T10:01:00.000Z" },
     ];
-    renderApp(
+    renderRouted(
       <PrepareUpload projectId="p1" ready />,
       testDeps({
         ...studioRoutes(pairedSettings, waiting),
@@ -324,13 +332,13 @@ describe("Prepare upload", () => {
         },
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Prepare upload" }));
-    const drawer = await screen.findByRole("dialog", { name: "Prepare upload" });
+    await user.click(await screen.findByRole("button", { name: "Copy for YouTube Studio" }));
+    const drawer = await screen.findByRole("dialog", { name: "Copy for YouTube Studio" });
     const list = await within(drawer).findByRole("list", { name: "Waiting to be filled" });
     expect(within(list).getByText("The Fox · Short 1")).not.toBeNull();
     expect(within(list).getByText(/Next: filled in the next upload dialog/)).not.toBeNull();
     expect(within(list).getByText("The Owl · Video")).not.toBeNull();
-    expect(within(drawer).queryByText("The Slopify Studio extension isn't paired.")).toBeNull();
+    expect(within(drawer).queryByText("Install the Slopify Studio extension")).toBeNull();
     await user.click(
       within(list).getByRole("button", {
         name: "Remove The Fox short 1 from Waiting for Studio",
@@ -341,10 +349,120 @@ describe("Prepare upload", () => {
     expect(within(drawer).queryByText("The Fox · Short 1")).toBeNull();
   });
 
-  it("is disabled until the video is made", () => {
-    renderApp(<PrepareUpload projectId="p1" ready={false} />, testDeps({}));
-    expect(screen.getByRole("button", { name: "Prepare upload" }).hasAttribute("disabled")).toBe(
-      true,
+  it("points a release with no date to the project's YouTube section", async () => {
+    const user = userEvent.setup();
+    renderRouted(
+      <PrepareUpload projectId="p1" ready />,
+      testDeps({ ...studioRoutes(), "GET /api/studio/packs/p1": jsonAnswer(pack) }),
     );
+    await user.click(await screen.findByRole("button", { name: "Copy for YouTube Studio" }));
+    const drawer = await screen.findByRole("dialog", { name: "Copy for YouTube Studio" });
+    await within(drawer).findByText("the-fox-video.mp4");
+    expect(within(drawer).getByText(/^No date yet\. Set one under/u)).not.toBeNull();
+    expect(
+      within(drawer)
+        .getByRole("link", { name: "Release in the project's YouTube section" })
+        .getAttribute("href"),
+    ).toBe("/projects/p1?section=youtube");
+    // Without a posting plan there is no picker of free times.
+    expect(within(drawer).queryByLabelText("Release date")).toBeNull();
+  });
+
+  it("changes the release date the YouTube section's Release block shows", async () => {
+    const user = userEvent.setup();
+    let reads = 0;
+    const slot = { row: "line-1", longAt: "2036-10-12T18:00:00.000Z" };
+    const planned = { ...pack, slotChoices: [slot] };
+    renderRouted(
+      <>
+        <ReleaseTimes projectId="p1" />
+        <PrepareUpload projectId="p1" ready />
+      </>,
+      testDeps({
+        ...studioRoutes(),
+        "GET /api/studio/packs/p1": jsonAnswer(planned),
+        "PUT /api/studio/packs/p1/slot": jsonAnswer(planned),
+        "GET /api/studio/releases": jsonAnswer({ entries: [] }),
+        "GET /api/studio/releases/p1": (request) => {
+          reads += 1;
+          return jsonAnswer({ leadHours: 24, items: [], free: [] })(request);
+        },
+      }),
+    );
+    await user.click(await screen.findByRole("button", { name: "Copy for YouTube Studio" }));
+    const drawer = await screen.findByRole("dialog", { name: "Copy for YouTube Studio" });
+    const picker = await within(drawer).findByLabelText("Release date");
+    await waitFor(() => expect(reads).toBe(1));
+    await user.selectOptions(picker, `${slot.row}|${slot.longAt}`);
+    await waitFor(() => expect(reads).toBe(2));
+  });
+
+  it("ends with I've uploaded it, which keeps the link when there is one", async () => {
+    const user = userEvent.setup();
+    const sent: string[] = [];
+    renderRouted(
+      <PrepareUpload projectId="p1" ready />,
+      testDeps({
+        ...studioRoutes(),
+        "GET /api/studio/packs/p1": jsonAnswer(pack),
+        "GET /api/studio/videos/p1": jsonAnswer({ videos: [] }),
+        "GET /api/projects": jsonAnswer({ projects: [{ id: "p1", uploadedAt: null }] }),
+        "PUT /api/projects/p1/uploaded": async (request) => {
+          sent.push(`uploaded ${await request.text()}`);
+          return jsonAnswer({ uploadedAt: "2026-10-04T00:48:00.000Z" })(request);
+        },
+        "PUT /api/studio/videos/p1": async (request) => {
+          sent.push(`link ${await request.text()}`);
+          return jsonAnswer({ videos: [] })(request);
+        },
+      }),
+    );
+    await user.click(await screen.findByRole("button", { name: "Copy for YouTube Studio" }));
+    const drawer = await screen.findByRole("dialog", { name: "Copy for YouTube Studio" });
+    const done = await within(drawer).findByRole("button", { name: "I've uploaded it" });
+    expect(within(drawer).getByText(/Takes it off Ready to upload/u)).not.toBeNull();
+    await user.click(done);
+    await waitFor(() => expect(sent).toEqual(['uploaded {"uploaded":true}']));
+    await user.type(
+      within(drawer).getByRole("textbox", { name: "Video link (optional)" }),
+      "https://youtu.be/6tRcYUoxyQo",
+    );
+    await user.click(within(drawer).getByRole("button", { name: "I've uploaded it" }));
+    await waitFor(() =>
+      expect(sent[1]).toBe('link {"short":null,"link":"https://youtu.be/6tRcYUoxyQo"}'),
+    );
+  });
+
+  it("only reads the sample: nothing in it saves or fills", async () => {
+    const user = userEvent.setup();
+    renderRouted(
+      <PrepareUpload projectId="p1" ready />,
+      testDeps({
+        ...studioRoutes(),
+        "GET /api/studio/packs/p1": jsonAnswer(pack),
+        "GET /api/onboarding/sample": jsonAnswer({
+          projectId: "p1",
+          samples: { library: "p1", audiobook: null, podcast: null },
+        }),
+      }),
+    );
+    await user.click(await screen.findByRole("button", { name: "Copy for YouTube Studio" }));
+    const drawer = await screen.findByRole("dialog", { name: "Copy for YouTube Studio" });
+    expect(await within(drawer).findByText(/This is the read-only sample/u)).not.toBeNull();
+    await within(drawer).findByText("the-fox-video.mp4");
+    expect(within(drawer).getByRole("button", { name: "Copy title" })).not.toBeNull();
+    expect(within(drawer).queryByRole("button", { name: "Fill in YouTube Studio" })).toBeNull();
+    expect(within(drawer).queryByRole("button", { name: "I've uploaded it" })).toBeNull();
+    expect(within(drawer).queryByRole("radiogroup")).toBeNull();
+    expect(within(drawer).queryByRole("button", { name: "Use for upload" })).toBeNull();
+  });
+
+  it("is disabled until the video is made", async () => {
+    renderRouted(<PrepareUpload projectId="p1" ready={false} />, testDeps({}));
+    expect(
+      (await screen.findByRole("button", { name: "Copy for YouTube Studio" })).hasAttribute(
+        "disabled",
+      ),
+    ).toBe(true);
   });
 });
