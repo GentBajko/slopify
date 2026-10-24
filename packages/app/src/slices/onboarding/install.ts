@@ -6,6 +6,7 @@ import { insertPrompt, promptById, promptByName } from "../library/repo.js";
 import type { TemplateDeps } from "../project-templates/model.js";
 import { templateById, templateSummaries } from "../project-templates/repo.js";
 import { createTemplate } from "../project-templates/service.js";
+import { readProviderDefaults } from "../settings/first-run.js";
 import { insertVoice, listVoices } from "../settings/repo.js";
 import { type PackPromptKey, packById, type StarterPack } from "./packs.js";
 import { type PackRecord, readPackRecords, writePackRecord } from "./state.js";
@@ -67,7 +68,7 @@ export function installPack(
       const created = createTemplate(deps, {
         id,
         name: freeTemplateName(deps, `${pack.name} starter`),
-        document: packTemplate(pack, names, voice.voiceId),
+        document: packTemplate(pack, names, voice.voiceId, readProviderDefaults(deps.db)),
       });
       if (!created.ok)
         throw new Error(

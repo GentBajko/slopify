@@ -10,7 +10,8 @@ import { ensureDirs, layout } from "../../kernel/paths.js";
 import { insertPrompt, listPrompts, replacePrompt } from "../library/repo.js";
 import { templateById, templateSummaries } from "../project-templates/repo.js";
 import { createTemplate } from "../project-templates/service.js";
-import { insertVoice, listVoices } from "../settings/repo.js";
+import { providerDefaultsKey } from "../settings/first-run.js";
+import { insertVoice, listVoices, writeSetting } from "../settings/repo.js";
 import { installPack, type PackInstallDeps } from "./install.js";
 import { starterPacks } from "./packs.js";
 import { packTemplate } from "./template.js";
@@ -159,6 +160,30 @@ describe("installPack", () => {
     const again = installPack(deps, "history", { template: false });
     expect(again).toMatchObject({ ok: true, value: { added: false } });
     expect(listPrompts(deps.db)).toHaveLength(6);
+  });
+
+  it("picks the writer and image service this machine's first launch found, and leaves the rest", () => {
+    const deps = fixture();
+    writeSetting(
+      deps.db,
+      providerDefaultsKey,
+      JSON.stringify({ llm: { provider: "claude-code", model: "sonnet" } }),
+    );
+    const installed = installPack(deps, "history");
+    if (!installed.ok) throw new Error("not installed");
+    const form = templateById(deps.db, installed.value.templateId ?? "")?.document.form;
+    expect(form?.llm).toEqual({ provider: "claude-code", model: "sonnet" });
+    expect(form?.images).toEqual({ provider: "", model: "" });
+    const pack = starterPacks[0];
+    if (pack === undefined) throw new Error("no packs");
+    const both = packTemplate(pack, {}, "sage", {
+      llm: { provider: "codex", model: "gpt" },
+      images: { provider: "codex-image", model: "image" },
+    }).form;
+    expect([both.llm, both.images]).toEqual([
+      { provider: "codex", model: "gpt" },
+      { provider: "codex-image", model: "image" },
+    ]);
   });
 
   it("refuses a pack it does not know", () => {
