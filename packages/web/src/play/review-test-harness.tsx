@@ -84,7 +84,9 @@ export function reviewHarness(
       await Promise.resolve();
     },
     prepare: async (document = suppliedDocument) => {
-      await screen.findByRole("option", { name: "Dossier" });
+      // The prompts arrive with the first queries; on a busy machine that can take past the
+      // default second.
+      await screen.findByRole("option", { name: "Dossier" }, { timeout: 5000 });
       await act(async () => {
         session().edit(document);
         await session().navigate("review");

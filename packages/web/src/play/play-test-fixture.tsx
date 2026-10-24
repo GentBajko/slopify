@@ -337,7 +337,10 @@ export const generatedRun: PlayDraftDocument = {
 export async function mountPlay(
   overrides: Readonly<Record<string, Answer>> = {},
   start?: PlayDraftDocument,
-  ready: () => Promise<unknown> = () => screen.findByRole("option", { name: "Dossier" }),
+  // The prompts arrive with the first queries; on a busy machine that can take past the
+  // default second.
+  ready: () => Promise<unknown> = () =>
+    screen.findByRole("option", { name: "Dossier" }, { timeout: 5000 }),
 ): Promise<{
   readonly created: ReturnType<typeof vi.fn>;
   readonly requests: readonly Request[];
