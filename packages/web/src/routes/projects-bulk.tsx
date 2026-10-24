@@ -17,9 +17,9 @@ import { RemakeOutdated } from "./projects-remake-review.js";
 
 // The Projects list's selection bar, whose actions appear once a row is ticked, each only when
 // it applies to a ticked row: Mark uploaded (a finished video), Mark not uploaded, Move to a
-// channel, Remake outdated (a project an edit left outdated; it checks the ticked projects and
-// opens one scope and cost review first, projects-remake-review.tsx), and Delete last. Each is
-// announced in a toast with Undo where it can be taken back.
+// channel, Make outdated parts again (a project an edit left outdated; it checks the ticked
+// projects and opens one scope and cost review first, projects-remake-review.tsx), and Delete
+// last. Each is announced in a toast with Undo where it can be taken back.
 
 type Notify = ReturnType<typeof useToast>;
 
@@ -82,7 +82,7 @@ export function ProjectsBulkBar({
   const deletable = chosen.filter((one) => one.status !== "running");
   const ready = chosen.filter(isReadyToUpload);
   const uploaded = chosen.filter((one) => one.uploadedAt !== null);
-  // The bundled samples, which Remake outdated leaves out.
+  // The bundled samples, which Make outdated parts again leaves out.
   const samples = new Set(rows.filter((one) => one.sample === true).map((one) => one.id));
   const outdated = chosen.some((one) => one.outdated === true);
 

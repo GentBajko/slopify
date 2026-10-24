@@ -280,7 +280,7 @@ describe("needs you", () => {
   });
 
   // A run parked on an agent's review goes on by itself: it is among the running ones, as on
-  // Home's Running now.
+  // Home's Running.
   it("counts a run waiting for the agent as running", () => {
     const parked = listing("p1", "Agent one", "pending", { progress: 0.5, waitingForAgent: true });
     expect(matches(parked, "running")).toBe(true);

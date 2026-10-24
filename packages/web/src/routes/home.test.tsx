@@ -268,7 +268,7 @@ describe("home", () => {
     expect(within(running).getByText("Waiting for the agent")).not.toBeNull();
   });
 
-  // A step failed while images wait for the agent: the run goes on, under Running now, and the
+  // A step failed while images wait for the agent: the run goes on, under Running, and the
   // failure is listed under Needs you with its fix.
   it("lists a failed step beside a run waiting for the agent as a failure", async () => {
     const parked = body({
@@ -304,8 +304,8 @@ describe("home", () => {
   });
 
   // Parked on an agent's review before anything was made: it goes on by itself once the agent
-  // answers, so it is listed once, under Running now, and not as queued.
-  it("lists a run waiting for the agent at its start once, under Running now", async () => {
+  // answers, so it is listed once, under Running, and not as queued.
+  it("lists a run waiting for the agent at its start once, under Running", async () => {
     renderRouted(
       <HomeRoute />,
       deps({
@@ -573,7 +573,7 @@ describe("home", () => {
     expect(screen.queryByRole("link", { name: "Ashurbanipal" })).toBeNull();
   });
 
-  it("says under Running now when a run waits for a CLI's limits", async () => {
+  it("says under Running when a run waits for a CLI's limits", async () => {
     const resetsAt = new Date();
     resetsAt.setHours(14, 0, 0, 0);
     renderRouted(
@@ -629,7 +629,7 @@ describe("home", () => {
   });
 
   // Kept as is wins over waiting for the agent, as in its state word: nothing of it runs.
-  it("leaves a run Kept as is out of Running now while an agent's review waits", async () => {
+  it("leaves a run Kept as is out of Running while an agent's review waits", async () => {
     renderRouted(
       <HomeRoute />,
       deps({
@@ -650,7 +650,7 @@ describe("home", () => {
     expect(within(running).queryByText("Hatshepsut")).toBeNull();
   });
 
-  it("lists a paused run under Needs you, not Running now", async () => {
+  it("lists a paused run under Needs you, not Running", async () => {
     renderRouted(
       <HomeRoute />,
       deps({
@@ -662,7 +662,7 @@ describe("home", () => {
     const needs = await screen.findByRole("region", { name: "Needs you" });
     expect(await within(needs).findByText("Paused")).not.toBeNull();
     expect(within(needs).getByRole("link", { name: "Open to continue" })).not.toBeNull();
-    // Nothing runs, so there is no Running now section at all.
+    // Nothing runs, so there is no Running section at all.
     expect(screen.queryByRole("region", { name: "Running" })).toBeNull();
   });
 
@@ -716,7 +716,7 @@ describe("home", () => {
     expect(projects.filter((one) => matches(one, filter))).toHaveLength(5);
   });
 
-  it("lists a run stopped at its start under Needs you, not as queued under Running now", async () => {
+  it("lists a run stopped at its start under Needs you, not as queued under Running", async () => {
     renderRouted(
       <HomeRoute />,
       deps({
@@ -727,7 +727,7 @@ describe("home", () => {
     );
     const needs = await screen.findByRole("region", { name: "Needs you" });
     expect(await within(needs).findByText("Hypatia")).not.toBeNull();
-    // Nothing runs or waits its turn, so Running now has nothing to show.
+    // Nothing runs or waits its turn, so Running has nothing to show.
     expect(screen.queryByRole("region", { name: "Running" })).toBeNull();
   });
 
