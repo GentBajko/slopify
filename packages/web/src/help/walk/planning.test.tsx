@@ -17,7 +17,9 @@ afterEach(cleanup);
 
 // Schedules, the calendar and channels: every control a person meets there is explained beside
 // it, by a visible help line or an info button (help/coverage.ts). The walk opens each form,
-// mode, tab, editor and dialog the way a person would.
+// mode, tab, editor and dialog the way a person would. The same check finds jargon in a label,
+// an info button beside a button, a heading or a row (or a field's second one), and a second
+// lime button in one area.
 const planningAllow: readonly (string | RegExp)[] = [
   // Grid or List: its two answers say what each draws.
   "Show the weeks as",

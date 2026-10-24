@@ -12,7 +12,9 @@ afterEach(cleanup);
 // Templates → Edit template: every control in every section, in the topic and Compare models
 // drawers, and beside compared models, is explained beside it, by a visible help line or an
 // info button (help/coverage.ts), or says what it does by its name alone (below). The walk
-// opens each one the way a person would.
+// opens each one the way a person would. The same check finds jargon in a label, an info
+// button beside a button, a heading or a row (or a field's second one), and a second lime
+// button in one area.
 const studioAllow: readonly (string | RegExp)[] = [
   // Names that say what they set: the template's own name, and presets whose options name
   // every choice ("Landscape 16:9", "On the video", "Zoom").

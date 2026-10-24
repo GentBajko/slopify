@@ -24,6 +24,7 @@ function ButtonAnchor({
   return (
     <a
       data-slot="button-link"
+      data-variant={variant}
       className={cn(buttonClass({ variant, size }), className)}
       {...props}
     />

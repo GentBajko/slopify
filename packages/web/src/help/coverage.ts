@@ -6,6 +6,11 @@
 // (kit Field's `help`, kit HelpLine) or a `data-help-id` info button. A control with no scope
 // around it counts as unexplained; one whose label alone says what it does is named in the
 // walk's allow list instead.
+//
+// The same pass holds three more rules on what a walk renders, each reported as one entry: no
+// control's name uses jargon (TTS, LLM, STT, ASR, Chunking); an info button sits beside a
+// field's label, never after a button, a heading or a list row's title, and one to a field;
+// and each area of the screen has at most one enabled primary (lime) button.
 
 const controlSelector = [
   "input:not([type=hidden])",
@@ -87,12 +92,101 @@ export function unexplainedControls(
     if (skipped(control)) continue;
     const name = accessibleName(control);
     if (name === "") continue;
+    if (jargon.test(name)) {
+      missing.push({ name: `Jargon in a label: ${name}`, html: control.outerHTML.slice(0, 160) });
+      continue;
+    }
     if (allow.some((rule) => (typeof rule === "string" ? rule === name : rule.test(name))))
       continue;
     if (explained(control.closest("[data-help-scope]"))) continue;
     missing.push({ name, html: control.outerHTML.slice(0, 160) });
   }
-  return missing;
+  return [...missing, ...misplacedTips(root), ...extraPrimaries(root)];
+}
+
+// Words a person who doesn't build software can't read, in a control's name. Say "voice",
+// "writer" and "split into parts" instead. PDF and AI are words people know.
+const jargon = /\b(TTS|LLM|STT|ASR)\b|\bChunking\b/;
+
+function shown(element: Element): boolean {
+  return element.closest("[hidden],[aria-hidden=true],[inert]") === null;
+}
+
+// The kit's buttons, button-looking links and Play key, by the marks the kit puts on them
+// (components/kit/button.tsx, link.tsx); their classes are the kit's own to write.
+const kitButton = "[data-slot=button], [data-slot=button-link], [data-slot=play-key]";
+const kitPrimary = [
+  "[data-slot=button][data-variant=primary]",
+  "[data-slot=button-link][data-variant=primary]",
+  "[data-slot=play-key]",
+].join(",");
+
+// An info button sits beside a field's label, where the question comes up, and alone: never
+// after a button (the button's name says what it does), a heading or a list row's title, and
+// never a second one in the same field.
+function misplacedTips(root: Element): UnexplainedControl[] {
+  const found: UnexplainedControl[] = [];
+  const perScope = new Map<Element, number>();
+  for (const tip of root.querySelectorAll("[data-help-id]")) {
+    if (!shown(tip)) continue;
+    const name = tip.getAttribute("aria-label") ?? tip.getAttribute("data-help-id") ?? "";
+    const before = tip.previousElementSibling;
+    const after =
+      before === null
+        ? undefined
+        : before.matches(kitButton)
+          ? "a button"
+          : before.matches("h2, h3, h4, h5")
+            ? "a heading"
+            : before.matches(".sl-row__title")
+              ? "a row's title"
+              : undefined;
+    if (tip.parentElement?.closest("h2, h3, h4, h5") != null) {
+      found.push({
+        name: `Info button inside a heading: ${name}`,
+        html: tip.outerHTML.slice(0, 160),
+      });
+    } else if (after !== undefined) {
+      found.push({
+        name: `Info button after ${after}: ${name}`,
+        html: tip.outerHTML.slice(0, 160),
+      });
+    }
+    const scope = tip.closest("[data-help-scope]");
+    if (scope === null) continue;
+    const count = (perScope.get(scope) ?? 0) + 1;
+    perScope.set(scope, count);
+    if (count === 2)
+      found.push({
+        name: `Two info buttons in one field: ${name}`,
+        html: scope.outerHTML.slice(0, 160),
+      });
+  }
+  return found;
+}
+
+// The lime marks the one thing to do next, so an area has one: the page itself, each rail,
+// the shell's navigation, each dialog, and each card or row of a list (its own next step). A
+// disabled primary wears no lime and doesn't count.
+function extraPrimaries(root: Element): UnexplainedControl[] {
+  const found: UnexplainedControl[] = [];
+  const seen = new Map<Element | null, string>();
+  for (const key of root.querySelectorAll(kitPrimary)) {
+    if (!shown(key)) continue;
+    if (key.matches(":disabled, [aria-disabled=true]")) continue;
+    const area = key.closest(
+      "[role=dialog], [role=alertdialog], nav, aside, li, article, [data-area]",
+    );
+    const name = (key.getAttribute("aria-label") ?? key.textContent ?? "").trim();
+    const first = seen.get(area);
+    if (first === undefined) seen.set(area, name);
+    else
+      found.push({
+        name: `Second primary in one area: ${name} (after ${first})`,
+        html: key.outerHTML.slice(0, 160),
+      });
+  }
+  return found;
 }
 
 // Self-explanatory controls every screen may carry without a help line or a tip. "Showing:" is

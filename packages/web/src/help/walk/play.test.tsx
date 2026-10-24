@@ -21,6 +21,8 @@ afterEach(cleanup);
 // button (help/coverage.ts): every setup row's editor with each source switched to what shows
 // the most controls, the summary drawer, another video's keywords, the drafts list and Save as
 // template. Only the controls whose label says all there is to say are allowed without one.
+// The same check finds jargon in a label, an info button beside a button, a heading or a row
+// (or a field's second one), and a second lime button in one area.
 const areaAllow: readonly (string | RegExp)[] = [
   ...stageEditors,
   // The field at the top asks its own question: "What's the video about?".

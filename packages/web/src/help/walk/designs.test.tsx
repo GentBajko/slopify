@@ -18,7 +18,9 @@ afterEach(() => {
 
 // Library → Designs: every control on a design's page and in the design template editor is
 // explained beside it, by a visible help line or an info button (help/coverage.ts). The walk
-// opens each tab and section the way a person would.
+// opens each tab and section the way a person would. The same check finds jargon in a label,
+// an info button beside a button, a heading or a row (or a field's second one), and a second
+// lime button in one area.
 function expectExplained(): void {
   expect(unexplainedControls(document.body, [...selfExplanatory])).toEqual([]);
 }

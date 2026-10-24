@@ -19,7 +19,8 @@ afterEach(cleanup);
 
 // Every labelled control on Settings, Home and the first-run screen is explained beside it, by
 // a visible help line or an info button (help/coverage.ts). Nothing on these screens is allowed
-// without one.
+// without one. The same check finds jargon in a label, an info button beside a button, a
+// heading or a row (or a field's second one), and a second lime button in one area.
 const areaAllow: readonly (string | RegExp)[] = [
   // The phone's page picker: it names the Settings page it shows, like a section list.
   "Settings page",

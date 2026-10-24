@@ -28,7 +28,8 @@ import {
 
 // Every control a person meets on the project page, in Edit project, the rebuild review and
 // Copy for YouTube Studio is explained beside it, by a visible help line or an info button
-// (help/coverage.ts).
+// (help/coverage.ts). The same check finds jargon in a label, an info button beside a button,
+// a heading or a row (or a field's second one), and a second lime button in one area.
 
 afterEach(cleanup);
 

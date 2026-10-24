@@ -1,7 +1,8 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { Button, PlayKey } from "@/components/kit/button";
 import { Field, HelpLine, Input } from "@/components/kit/field";
-import { helpScope } from "@/components/kit/info-tip";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Segmented, Switch } from "@/components/kit/switch";
 import { LabelledSwitch } from "@/components/labelled-switch";
 import { catalog, type HelpId } from "./catalog.js";
@@ -10,7 +11,8 @@ import { unexplainedControls } from "./coverage.js";
 afterEach(cleanup);
 
 const tip = Object.keys(catalog)[0] as HelpId;
-const names = (root: Element) => unexplainedControls(root).map((control) => control.name);
+const names = (root: Element, allow: readonly (string | RegExp)[] = []) =>
+  unexplainedControls(root, allow).map((control) => control.name);
 
 describe("a visible help line explains its control", () => {
   it("in a field, a switch, a segmented choice and a labelled switch", () => {
@@ -149,5 +151,119 @@ describe("a help line does not explain its control", () => {
       "Bare",
       "Bare switch",
     ]);
+  });
+});
+
+describe("a walk also names", () => {
+  it("jargon in a control's name, even when the walk allows the control", () => {
+    const { container } = render(
+      <div>
+        <Field label="TTS model" help="Reads the article aloud.">
+          <Input />
+        </Field>
+        <Field label="Chunking" help="How the text is split.">
+          <Input />
+        </Field>
+        <Field label="Voice model" help="Reads the article aloud.">
+          <Input />
+        </Field>
+      </div>,
+    );
+    expect(names(container, ["TTS model"])).toEqual([
+      "Jargon in a label: TTS model",
+      "Jargon in a label: Chunking",
+    ]);
+  });
+
+  it("an info button after a button, a heading or a row's title, or inside a heading", () => {
+    const { container } = render(
+      <div>
+        <div>
+          <Button>Apply</Button>
+          <InfoTip id={tip} label="Apply" />
+        </div>
+        <div>
+          <h3>Rows</h3>
+          <InfoTip id={tip} label="Rows" />
+        </div>
+        <div>
+          <span className="sl-row__title">Cleopatra</span>
+          <InfoTip id={tip} label="Cleopatra" />
+        </div>
+        <h2>
+          Voices <InfoTip id={tip} label="Voices" />
+        </h2>
+        {/* Beside a field's label is where it belongs, and a hidden one is never met. */}
+        <Field label="Spend ceiling" tip={tip}>
+          <Input />
+        </Field>
+        <div hidden>
+          <Button>Hidden</Button>
+          <InfoTip id={tip} label="Hidden" />
+        </div>
+      </div>,
+    );
+    expect(names(container)).toEqual([
+      "Info button after a button: About Apply",
+      "Info button after a heading: About Rows",
+      "Info button after a row's title: About Cleopatra",
+      "Info button inside a heading: About Voices",
+    ]);
+  });
+
+  it("a second info button in one field", () => {
+    const { container } = render(
+      <div {...helpScope}>
+        <input aria-label="Start" />
+        <span>
+          <InfoTip id={tip} label="Start" />
+        </span>
+        <span>
+          <InfoTip id={tip} label="End" />
+        </span>
+      </div>,
+    );
+    expect(names(container)).toEqual(["Two info buttons in one field: About End"]);
+  });
+
+  it("a second enabled primary in one area; a dialog, an aside, a list item or a marked area is its own", () => {
+    const { container } = render(
+      <div>
+        <PlayKey>Make the video</PlayKey>
+        <Button variant="primary">Save</Button>
+        <Button variant="primary" disabled>
+          Queue 3 videos
+        </Button>
+        <Button
+          variant="primary"
+          disabled
+          disabledReason="Type a topic first"
+          focusableWhenDisabled
+        >
+          Make 3 videos
+        </Button>
+        <aside>
+          <Button variant="primary">Save draft</Button>
+        </aside>
+        <ul>
+          <li>
+            <Button variant="primary">Approve</Button>
+          </li>
+          <li>
+            <Button variant="primary">Approve</Button>
+          </li>
+        </ul>
+        <div data-area="">
+          <Button variant="primary">Add titles</Button>
+        </div>
+        <div role="dialog" aria-label="Rename">
+          <Button variant="primary">Rename</Button>
+        </div>
+        <div hidden>
+          <Button variant="primary">Hidden</Button>
+        </div>
+      </div>,
+    );
+    expect(names(container)).toEqual(["Second primary in one area: Save (after Make the video)"]);
   });
 });
