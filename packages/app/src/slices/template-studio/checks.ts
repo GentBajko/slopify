@@ -83,14 +83,17 @@ const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Frida
 const agentWindowMs = 7 * 24 * 60 * 60 * 1000;
 
 // The checks in order. Providers is one line per missing thing, each with its own fix, so the
-// count of lines to fix is the count of things to fix.
+// count of lines to fix is the count of things to fix. A run that can't start can't be priced
+// either: while a line above says why, the monthly cost's line would only say it again, so it
+// waits until they are fixed.
 export function freeChecks(input: FreeCheckInput): readonly Check[] {
+  const start = [keywordsCheck(input), ...providersChecks(input), voiceCheck(input)];
+  const blocked = start.some((check) => !check.ok);
+  const cost = monthlyCostCheck(input);
   return [
-    keywordsCheck(input),
-    ...providersChecks(input),
-    voiceCheck(input),
+    ...start,
     releaseSlotsCheck(input),
-    monthlyCostCheck(input),
+    ...(blocked && !cost.ok ? [] : [cost]),
     answerersCheck(input),
   ];
 }

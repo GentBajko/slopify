@@ -357,6 +357,22 @@ describe("freeChecks", () => {
         fix: { href: "/templates/t1?section=schedule" },
       });
     });
+
+    it("doesn't repeat a missing service as an unknown cost: the line waits until it is fixed", () => {
+      const unchosen = {
+        document: { ...document, form: { ...document.form, images: { provider: "", model: "" } } },
+      };
+      const unpriced = {
+        monthlyCost: { high: 0, unknown: 1, problem: "Daily's runs couldn't be priced: x." },
+      };
+      expect(check({ ...unchosen, ...unpriced }, "monthly-cost")).toBeUndefined();
+      expect(
+        freeChecks({ ...input, ...unchosen, ...unpriced }).filter((one) => !one.ok),
+      ).toHaveLength(1);
+      expect(
+        check({ ...unchosen, monthlyCost: { high: 3, unknown: 0 } }, "monthly-cost"),
+      ).toMatchObject({ ok: true });
+    });
   });
 
   describe("voice", () => {
