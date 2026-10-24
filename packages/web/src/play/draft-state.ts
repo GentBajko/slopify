@@ -76,20 +76,22 @@ let providerDefaults: FreshProviderDefaults = {};
 export function setFreshProviderDefaults(defaults: FreshProviderDefaults): void {
   providerDefaults = defaults;
 }
-// A document nobody has picked a provider in gets the defaults; anything else is left alone.
+// A writer or image service nobody has picked takes the default; one already picked is left
+// alone, and so is a document with nothing to fill (the same object comes back).
 export function withProviderDefaults(
   document: PlayDraftDocument,
   defaults: FreshProviderDefaults = providerDefaults,
 ): PlayDraftDocument {
   const { form } = document;
-  if (form.llm.provider !== "" || form.images.provider !== "") return document;
-  if (defaults.llm === undefined && defaults.images === undefined) return document;
+  const llm = form.llm.provider === "" ? defaults.llm : undefined;
+  const images = form.images.provider === "" ? defaults.images : undefined;
+  if (llm === undefined && images === undefined) return document;
   return {
     ...document,
     form: {
       ...form,
-      ...(defaults.llm === undefined ? {} : { llm: { ...defaults.llm } }),
-      ...(defaults.images === undefined ? {} : { images: { ...defaults.images } }),
+      ...(llm === undefined ? {} : { llm: { ...llm } }),
+      ...(images === undefined ? {} : { images: { ...images } }),
     },
   };
 }

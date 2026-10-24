@@ -1,7 +1,8 @@
 import type { DraftView, PlayDraftDocument } from "@app/slices/play-drafts/model.js";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useReducer, useRef } from "react";
 import { useApp } from "@/app-context";
+import { readFirstRun, upkeepKeys } from "@/components/provider-upkeep-api";
 import { keys } from "@/queries";
 import type { DraftReply } from "./draft-api";
 import {
@@ -21,7 +22,11 @@ import {
   remapForkEdits,
   retainUploadSettlements,
 } from "./draft-save";
-import { type FreshProviderDefaults, withProviderDefaults } from "./draft-state";
+import {
+  type FreshProviderDefaults,
+  setFreshProviderDefaults,
+  withProviderDefaults,
+} from "./draft-state";
 import { createReviewOwner } from "./review-state";
 import { useDraftUploads } from "./use-draft-uploads";
 import { useReviewChoices } from "./use-review-choices";
@@ -189,6 +194,16 @@ export function useDraftSession(): PlaySession {
           void flush();
         }, 500);
     };
+    // A draft just made from a template (still its first saved version, untouched here) gets
+    // the writer and image service the first launch found where the template names none, and
+    // keeps them: the defaults are saved with it.
+    const fillTemplateProviders = (defaults?: FreshProviderDefaults) => {
+      const current = state.current;
+      if (current.document.templateSource === undefined) return;
+      if (current.view?.draft.version !== 1 || current.clock.edited > 0) return;
+      const document = withProviderDefaults(current.document, defaults);
+      if (document !== current.document) edit(document);
+    };
     const open = async (id: string, isCurrent: () => boolean = () => true): Promise<boolean> => {
       if (review.state().starting || review.state().uncertain || review.state().created)
         return false;
@@ -208,6 +223,7 @@ export function useDraftSession(): PlaySession {
         }
         fork = null;
         install(reply.value);
+        fillTemplateProviders();
         await refreshDraftChoices(api, queryClient);
         return isCurrent();
       } catch (error) {
@@ -334,10 +350,15 @@ export function useDraftSession(): PlaySession {
       open,
       newDraft,
       // Defaults that arrive after Play opened fill a draft nobody has touched yet, without
-      // saving it: it is still the fresh form, only with the found providers picked.
+      // saving it: it is still the fresh form, only with the found providers picked. A draft
+      // just made from a template gets them too, saved.
       adoptDefaults: (defaults: FreshProviderDefaults) => {
         const current = state.current;
-        if (current.id !== null || current.clock.edited > 0 || current.view !== null) return;
+        if (current.clock.edited > 0) return;
+        if (current.id !== null || current.view !== null) {
+          fillTemplateProviders(defaults);
+          return;
+        }
         const document = withProviderDefaults(current.document, defaults);
         if (document !== current.document) publish({ document });
       },
@@ -409,4 +430,25 @@ export function useDraftSession(): PlaySession {
     navigate: owner.navigate,
     activeId: current.id ?? current.recoveryId,
   };
+}
+
+// The writer and image service this machine's first launch found, read once and handed to the
+// session: a fresh draft and a draft just made from a template start with them picked. True
+// once the answer (or a failure) has arrived.
+export function useFirstRunDefaults(session: Pick<PlaySession, "adoptDefaults">): boolean {
+  const { api } = useApp();
+  const status = useQuery({
+    queryKey: upkeepKeys.firstRun,
+    queryFn: () => readFirstRun(api),
+    retry: false,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  const defaults = status.data?.defaults;
+  const { adoptDefaults } = session;
+  useEffect(() => {
+    if (defaults === undefined) return;
+    setFreshProviderDefaults(defaults);
+    adoptDefaults?.(defaults);
+  }, [defaults, adoptDefaults]);
+  return status.isSuccess || status.isError;
 }
