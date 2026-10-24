@@ -135,6 +135,7 @@ function DesignGallery(): ReactElement {
                 void navigate({ to: "/designs/$designId", params: { designId: design.id } })
               }
               openLabel={`Open ${design.name}`}
+              openText="Open"
               actionsShown
               actions={
                 <IconButton
