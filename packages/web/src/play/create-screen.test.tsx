@@ -92,7 +92,12 @@ function starterRoutes(): Readonly<Record<string, Answer>> {
         ...draftView(id),
         draft: {
           ...draftView(id).draft,
-          document: { ...starter, templateSource: { id: templateId, version: 1 } },
+          // In the template's channel, as the server makes it.
+          document: {
+            ...starter,
+            channelId: defaultChannelId,
+            templateSource: { id: templateId, version: 1 },
+          },
         },
       };
       made.set(id, view);
@@ -325,5 +330,29 @@ describe("the channel", () => {
       document.querySelector('[data-setup-row="channel"] [data-row-summary]')?.textContent,
     ).toBe("For Second, with its brand kit (fonts, intro, outro and sounds).");
     expect(screen.queryByRole("dialog", { name: summaryTitle })).toBeNull();
+  });
+
+  it("says a template-made draft in the template's own channel is still the template's", async () => {
+    await mountStarter({
+      "GET /api/channels": jsonAnswer({
+        channels: [channel(defaultChannelId, "Main"), channel(second, "Second")],
+      }),
+      // The saved template names no channel: it is listed in the default one, and the server
+      // puts the draft made from it there.
+      [`GET /api/project-templates/${templateId}`]: jsonAnswer({
+        id: templateId,
+        name: "Lore starter",
+        version: 1,
+        updatedAt: "2026-09-13T00:00:00.000Z",
+        document: starter,
+      }),
+    });
+    await waitFor(() => expect(startFrom().value).toBe(templateId));
+    const origin = await waitFor(() => {
+      const line = document.querySelector('[data-setup-row="channel"] [data-row-origin]');
+      if (line === null) throw new Error("The Channel row says nothing about where it comes from.");
+      return line;
+    });
+    expect(origin.textContent).toBe("From Lore starter");
   });
 });
