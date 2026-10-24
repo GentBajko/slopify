@@ -186,10 +186,10 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
           />
         </Field>
       </div>
-      <section aria-label="Look" className="flex flex-col gap-3 border-t border-line pt-4">
+      <section aria-label="Brand kit" className="flex flex-col gap-3 border-t border-line pt-4">
         <SectionHead
-          title="Look"
-          meta="A template that leaves one of these at its default takes the channel's. Not set leaves the template's own."
+          title="Brand kit"
+          meta="The look every video of this channel gets wherever its template leaves a setting at its default. Not set leaves the template's own."
           className="mb-0"
         />
         <div className="grid grid-cols-1 items-start gap-6 min-[1100px]:grid-cols-[minmax(0,1fr)_360px]">

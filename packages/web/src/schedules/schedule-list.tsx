@@ -72,7 +72,7 @@ export function ScheduleList({
           {channelFiltered
             ? "Pick All channels to see the others, or make one from this channel's templates."
             : deleted.length === 0
-              ? "Your first one can make a single video at a set time, or a new one every week."
+              ? "Pick a template, the days and a time; each run then makes a new video by itself while Slopify is open."
               : "Make a new one, or look through the deleted ones below."}
         </EmptyState>
       ) : null}

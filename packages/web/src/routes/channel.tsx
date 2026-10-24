@@ -140,6 +140,10 @@ export function ChannelRoute({
       </div>
     );
   const onCast = tab === "cast";
+  // The tab's own next step wears the accent where it has one: Save channel on Name and look
+  // (its action bar), Add to cast on Cast, New schedule on Schedules. Elsewhere it is Make a
+  // video.
+  const makeIsNext = tab !== "cast" && tab !== "brand" && tab !== "schedules";
   return (
     <div>
       <PageHeader
@@ -167,7 +171,7 @@ export function ChannelRoute({
             {actions}
             <ButtonLink
               to="/play"
-              variant={onCast ? "secondary" : "primary"}
+              variant={makeIsNext ? "primary" : "secondary"}
               onClick={make.inChannel}
             >
               Make a video
@@ -214,9 +218,7 @@ export function ChannelRoute({
             />
           </TabPanel>
           <TabPanel idPrefix="channel" id="projects" active={tab === "projects"}>
-            {tab === "projects" ? (
-              <ProjectsTab channelId={channel.id} onMake={make.inChannel} />
-            ) : null}
+            {tab === "projects" ? <ProjectsTab channelId={channel.id} /> : null}
           </TabPanel>
           <TabPanel idPrefix="channel" id="templates" active={tab === "templates"}>
             {tab === "templates" ? (

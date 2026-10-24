@@ -60,8 +60,7 @@ export function calendarTabOf(value: unknown): CalendarTab {
 // One line under the tabs saying what the open one is for: making (the weeks, the schedules)
 // or publishing (the releases).
 export const calendarTabLines: Readonly<Record<CalendarTab, string>> = {
-  weeks:
-    "The videos your schedules will make, day by day. A schedule makes a video on its days; a topic is what one of those videos is about.",
+  weeks: "The videos your schedules will make, day by day.",
   releases:
     "When each finished video goes public on YouTube. You upload it; the calendar keeps the day and time.",
   schedules:
@@ -279,7 +278,14 @@ export function CalendarRoute({
         idPrefix="calendar"
         className="mb-2"
       />
-      <p className="m-0 mb-4 max-w-[90ch] text-small text-ink-2">{calendarTabLines[tab]}</p>
+      <p className="m-0 mb-4 max-w-[90ch] text-small text-ink-2">
+        {calendarTabLines[tab]}
+        {/* Once schedules exist, the two words the weeks are made of; with none, the empty
+            state says what a schedule is. */}
+        {tab === "weeks" && liveSchedules.length > 0
+          ? " A schedule makes a video on each of its days; a topic is what one of those videos is about."
+          : null}
+      </p>
       <TabPanel idPrefix="calendar" id="releases" active={tab === "releases"}>
         {tab === "releases" ? <ReleasesView /> : null}
       </TabPanel>

@@ -26,20 +26,21 @@ export function channelOfTemplate(template: { readonly channelId?: string | unde
 }
 
 // New schedule from a channel's page: the calendar's Schedules tab, on its form.
+// "row" is the small one among a template row's buttons.
 function NewScheduleLink({
   variant = "secondary",
 }: {
-  readonly variant?: "primary" | "secondary" | "quiet";
+  readonly variant?: "primary" | "secondary" | "row";
 }): ReactElement {
   return (
     <ButtonLink
       to="/calendar"
       search={{ tab: "schedules" }}
-      variant={variant}
-      size={variant === "quiet" ? "small" : "default"}
+      variant={variant === "row" ? "secondary" : variant}
+      size={variant === "row" ? "small" : "default"}
       onClick={() => requestIntent(intents.newSchedule)}
     >
-      {variant === "quiet" ? null : <PlusIcon aria-hidden="true" strokeWidth={1.75} />}
+      {variant === "row" ? null : <PlusIcon aria-hidden="true" strokeWidth={1.75} />}
       New schedule
     </ButtonLink>
   );
@@ -114,15 +115,8 @@ export function TemplatesTab({
         {problem ?? move.error?.message ?? templates.error?.message}
       </StatusSlot>
       {templates.data && own.length === 0 ? (
-        <EmptyState
-          title="No templates in this channel"
-          actions={
-            <ButtonLink to="/play" variant="primary">
-              Make a video
-            </ButtonLink>
-          }
-        >
-          A template is a saved setup for one kind of video. Make a video, then choose Save as
+        <EmptyState title="No templates in this channel">
+          A template is a saved setup for one kind of video. Press Make a video, then choose Save as
           template{others.length === 0 ? "" : ", or move one here from another channel"}.
         </EmptyState>
       ) : null}
@@ -156,7 +150,7 @@ export function TemplatesTab({
                         {making === template.id ? "Opening…" : "Make a video"}
                       </Button>
                     )}
-                    <NewScheduleLink variant="quiet" />
+                    <NewScheduleLink variant="row" />
                     {others.length === 0 ? null : (
                       <Select
                         aria-label={`Move ${template.name} to`}
@@ -224,7 +218,7 @@ export function SchedulesTab({ channelId }: { readonly channelId: string }): Rea
             <p className="m-0 text-small text-ink-2">
               Each one makes a video from this channel's templates at its times.
             </p>
-            <NewScheduleLink />
+            <NewScheduleLink variant="primary" />
           </div>
           <List label="Channel schedules">
             {own.map((schedule) => (

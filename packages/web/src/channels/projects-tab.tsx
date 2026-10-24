@@ -4,7 +4,6 @@ import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
 import { WatchLink } from "@/calendar/recent";
 import { EmptyState } from "@/components/kit/empty-state";
-import { ButtonLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { LoadFailed, LoadingBlock } from "@/components/kit/query-state";
 import { Status } from "@/components/kit/status";
@@ -16,14 +15,7 @@ import { ShowMore, useBounded } from "./bounded-list";
 
 // The Projects tab: what this channel made, newest first, each with its picture, what it is,
 // when it finished (or started), where it stands in words, and Watch once it is done.
-export function ProjectsTab({
-  channelId,
-  onMake,
-}: {
-  readonly channelId: string;
-  // Create, opened on this channel; absent outside the shell.
-  readonly onMake: (() => void) | undefined;
-}): ReactElement {
+export function ProjectsTab({ channelId }: { readonly channelId: string }): ReactElement {
   const { api } = useApp();
   const projects = useQuery(projectsQuery(api));
   const own = (projects.data?.projects ?? [])
@@ -41,17 +33,12 @@ export function ProjectsTab({
         retrying={projects.isFetching}
       />
     );
+  // Make a video sits in the page header, one press away; the empty list says so.
   if (own.length === 0)
     return (
-      <EmptyState
-        title="No projects in this channel yet"
-        actions={
-          <ButtonLink to="/play" variant="primary" onClick={onMake}>
-            Make a video
-          </ButtonLink>
-        }
-      >
-        Every video, audiobook or article made in this channel lands here, newest first.
+      <EmptyState title="No projects in this channel yet">
+        Every video, audiobook or article made in this channel lands here, newest first. Press Make
+        a video to start the first one.
       </EmptyState>
     );
   return (
@@ -77,7 +64,9 @@ export function ProjectsTab({
               meta={`${project.format} · ${finished ? "finished" : "started"} ${shortDate(finished ? project.updatedAt : project.createdAt)}`}
               actions={
                 <>
-                  <Status tone={state.tone}>{state.word}</Status>
+                  <Status tone={state.tone} className="mr-3 self-center">
+                    {state.word}
+                  </Status>
                   {finished ? <WatchLink project={project} /> : null}
                 </>
               }

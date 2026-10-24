@@ -59,7 +59,7 @@ export function RecentlyFinished({
       <h2 id="calendar-recent" className="sl-section-head__title m-0 text-title-3">
         Recently finished
       </h2>
-      <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4 p-0">
+      <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-4 p-0">
         {projects.map((project) => (
           <li key={project.id} className={`flex min-w-0 items-start gap-3 ${hitArea}`}>
             <ProjectThumb projectId={project.id} className="w-[112px] shrink-0" />
