@@ -97,9 +97,13 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
 
   const [form, setForm] = usePlayDraft();
   // The picked services' model lists, so a row names a model as its service does ("Sonnet 5.5",
-  // not "sonnet"). Read once here; the pickers keep them fresh while a row is open.
+  // not "sonnet"). Read once here; the pickers keep them fresh while a row is open. Each service
+  // once, and none before one is picked.
+  const pickedServices = [
+    ...new Set([form.llm.provider, form.audio.provider, form.images.provider]),
+  ].filter((provider) => provider !== "");
   useQueries({
-    queries: [form.llm.provider, form.audio.provider, form.images.provider].map((provider) => ({
+    queries: pickedServices.map((provider) => ({
       ...modelsQuery(api, provider),
       refetchInterval: false as const,
     })),

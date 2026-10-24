@@ -34,12 +34,12 @@ export function CheckpointReview({
         ))
       ) : (
         <p>
-          Selected: {selected.map((stage) => `Before ${label(stage)}`).join(", ")}. Refresh review
-          to confirm dependent steps.
+          Selected: {selected.map((stage) => `Before ${label(stage)}`).join(", ")}. Check again to
+          see which steps each pause holds.
         </p>
       )}
       <p className="text-small text-ink-2">
-        Approval required on the project page. Starting this run does not approve these checkpoints.
+        Approval required on the project page. Starting this run does not approve these pauses.
       </p>
     </div>
   );
