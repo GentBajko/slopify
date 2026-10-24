@@ -20,14 +20,14 @@ const upToDate = {
   status: "idle",
 };
 
-function mount(channels = [channel("c1", "My channel")], at = "/nowhere") {
+function mount(channels = [channel("c1", "My channel")], at = "/nowhere", update = upToDate) {
   const router = createAppRouter();
   router.update({ history: createMemoryHistory({ initialEntries: [at] }) });
   renderApp(
     <RouterProvider router={router} />,
     testDeps({
       "GET /api/channels": jsonAnswer({ channels }),
-      "GET /api/update": jsonAnswer(upToDate),
+      "GET /api/update": jsonAnswer(update),
       "GET /api/projects": jsonAnswer({ projects: [] }),
     }),
   );
@@ -129,6 +129,32 @@ describe("the rail", () => {
     const links = within(menu).getAllByRole("menuitem");
     expect(names(links)).toEqual(["GitHub", "Patreon", "Buy Me a Coffee"]);
     for (const link of links) expect(link.getAttribute("target")).toBe("_blank");
+  });
+});
+
+describe("an update", () => {
+  const ready = { ...upToDate, latestVersion: "4.1.0", available: true, canUpdate: true };
+
+  it("shows in the rail in words only while there is one", async () => {
+    const user = userEvent.setup();
+    mount(undefined, undefined, ready);
+    const rail = await screen.findByRole("complementary", { name: "App" });
+    await user.click(await within(rail).findByRole("button", { name: "Update ready" }));
+    const menu = await screen.findByRole("menu", { name: "Update ready" });
+    expect(within(menu).getByRole("menuitem", { name: "Install update 4.1.0" })).not.toBeNull();
+  });
+
+  it("stays inside Help on a phone, which says so in the accent's ink", async () => {
+    phone();
+    const user = userEvent.setup();
+    mount(undefined, undefined, ready);
+    await screen.findByRole("navigation", { name: "Main navigation (phone)" });
+    const help = screen.getByRole("button", { name: "Help" });
+    await waitFor(() => expect(help.className).toContain("sl-topbar__item--news"));
+    expect(screen.queryByRole("button", { name: "Update ready" })).toBeNull();
+    await user.click(help);
+    const menu = await screen.findByRole("menu", { name: "Help" });
+    expect(within(menu).getByRole("menuitem", { name: "Install update 4.1.0" })).not.toBeNull();
   });
 });
 

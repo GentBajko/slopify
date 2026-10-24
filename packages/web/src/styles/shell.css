@@ -712,6 +712,9 @@
     height: 18px;
     flex: none;
   }
+  .sl-topbar__item--news {
+    color: var(--color-accent-ink);
+  }
   .sl-topbar__running {
     padding: 0 4px;
     color: var(--color-accent-ink);

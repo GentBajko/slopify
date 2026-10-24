@@ -63,7 +63,7 @@ import { keys } from "@/queries";
 import { TutorialProvider, useTutorial } from "@/tutorial/context";
 import { TutorialCommands } from "@/tutorials/commands";
 import { type UpdateView, useUpdate } from "@/updates/use-update";
-import { UpdateMenuRows, UpdateWidget } from "@/updates/widget";
+import { UpdateMenuRows, UpdateWidget, updateWords } from "@/updates/widget";
 import { WhatsNewTour } from "@/whats-new/tour";
 
 // The shell (docs/design-system.md, Shell). From 768px up: a --rail-width (76px) rail of icons
@@ -431,12 +431,19 @@ function TopBar({
         <RunningLink running={running} className="sl-topbar__running" />
       </div>
       <div className="flex shrink-0 items-center gap-1">
-        <UpdateWidget update={update} side="bottom" className="sl-topbar__item" />
+        <UpdateWidget update={update} item={false} />
         <button type="button" className="sl-topbar__item" onClick={() => palette.setOpen(true)}>
           <SearchIcon {...iconProps} />
           <span>Search</span>
         </button>
-        <HelpMenu update={update} phone onAssistant={onAssistant} className="sl-topbar__item" />
+        {/* An update to install shows in Help's own words, in the accent's ink, rather than as a
+            third button the bar has no room for. */}
+        <HelpMenu
+          update={update}
+          phone
+          onAssistant={onAssistant}
+          className={cn("sl-topbar__item", updateWords(update).news && "sl-topbar__item--news")}
+        />
       </div>
     </header>
   );

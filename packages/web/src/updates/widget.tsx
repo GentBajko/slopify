@@ -116,17 +116,17 @@ export function UpdateMenuRows({ update }: { readonly update: UpdateView }): Rea
   );
 }
 
-// The item that appears while there is news, with its live region (always mounted, so a
-// failure or a wait is announced wherever the person is). `className` draws it as a rail item
-// or as a top-bar button.
+// The rail item that appears while there is news, with its live region (always mounted, so a
+// failure or a wait is announced wherever the person is). On a phone (`item={false}`) the news
+// stays in the Help menu, and only the live region and the toast are here.
 export function UpdateWidget({
   update,
   className,
-  side = "right",
+  item = true,
 }: {
   readonly update: UpdateView;
   readonly className?: string;
-  readonly side?: "right" | "bottom";
+  readonly item?: boolean;
 }): ReactElement {
   const words = updateWords(update);
   // Said once when the update starts waiting; the item keeps saying it after.
@@ -142,7 +142,7 @@ export function UpdateWidget({
   }, [waiting, notify]);
   return (
     <>
-      {words.news ? (
+      {item && words.news ? (
         <Menu modal={false}>
           <MenuTrigger asChild>
             <button type="button" className={className}>
@@ -150,7 +150,7 @@ export function UpdateWidget({
               <span>{words.state}</span>
             </button>
           </MenuTrigger>
-          <MenuContent side={side} align="end">
+          <MenuContent side="right" align="end">
             <UpdateMenuRows update={update} />
           </MenuContent>
         </Menu>
