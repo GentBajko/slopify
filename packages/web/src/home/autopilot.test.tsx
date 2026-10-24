@@ -68,6 +68,8 @@ describe("Autopilot", () => {
     );
     expect(await screen.findByText(/^9 days of content ready/)).toBeTruthy();
     expect(screen.getByText(disk.text)).toBeTruthy();
+    // Its lamp comes with its word.
+    expect(screen.getByText("Problem").closest("[data-slot=status]")).not.toBeNull();
     expect(screen.getByRole("link", { name: "Open Backup & storage" }).getAttribute("href")).toBe(
       "/settings?section=storage",
     );
@@ -97,6 +99,7 @@ describe("Autopilot", () => {
     expect(
       (await screen.findByRole("link", { name: "Open the schedule" })).getAttribute("href"),
     ).toBe("/schedules/s1");
+    expect(screen.getByText("Warning").closest("[data-slot=status]")).not.toBeNull();
   });
 
   it("says when the check didn't load, instead of reading as fine", async () => {

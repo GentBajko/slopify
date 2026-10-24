@@ -12,7 +12,7 @@ import { Fold } from "@/components/kit/fold";
 import { ButtonLink, TextLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { LoadingBlock, QueryState } from "@/components/kit/query-state";
-import { Lamp } from "@/components/kit/status";
+import { Status } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
 import { usd } from "@/lib/format";
 import { autopilotKey, autopilotQuery, hideWarning } from "./api.js";
@@ -84,7 +84,17 @@ function Warnings({
       {warnings.map((warning) => (
         <ListRow
           key={warning.key}
-          lead={<Lamp tone={warning.severity === "problem" ? "failed" : "waiting"} />}
+          lead={
+            warning.severity === "problem" ? (
+              <Status tone="failed" className="shrink-0">
+                Problem
+              </Status>
+            ) : (
+              <Status tone="waiting" className="shrink-0">
+                Warning
+              </Status>
+            )
+          }
           title={warning.text}
           actions={
             <>

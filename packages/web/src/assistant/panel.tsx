@@ -18,7 +18,7 @@ import { Drawer } from "@/components/kit/drawer";
 import { Field, Select, Textarea } from "@/components/kit/field";
 import { ButtonLink } from "@/components/kit/link";
 import { LoadingBlock } from "@/components/kit/query-state";
-import { Lamp } from "@/components/kit/status";
+import { Status } from "@/components/kit/status";
 import { subscribeAssistant } from "@/events";
 import { cn } from "@/lib/utils";
 import {
@@ -382,10 +382,7 @@ export function AssistantPanel({
           {running ? (
             <li className="mr-4 flex flex-col gap-1">
               {writing === "" ? null : <span className="whitespace-pre-wrap">{writing}</span>}
-              <span className="flex items-center gap-2 text-label text-ink-3">
-                <Lamp tone="running" />
-                Working…
-              </span>
+              <Status tone="running">Working…</Status>
             </li>
           ) : null}
           <li ref={bottom} aria-hidden="true" />
