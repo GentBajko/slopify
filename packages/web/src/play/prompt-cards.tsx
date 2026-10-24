@@ -175,9 +175,7 @@ export function PromptCards({
             })}
           </div>
           {problem === undefined ? null : <p className="sl-field__error m-0">{problem}</p>}
-          <HelpLine>
-            The prompt tells the AI what to write: the subject, the length and the tone. {newPrompt}
-          </HelpLine>
+          <HelpLine>A prompt tells the AI what to write, and at what length. {newPrompt}</HelpLine>
         </>
       )}
       {picked === undefined ? null : (

@@ -228,16 +228,16 @@ export function timingOf(
 // The Video stage's switch and the one sentence that says what the picked choice makes.
 export function VideoRail({ form, update, titled }: Pick<RailProps, "form" | "update" | "titled">) {
   const narrated = form.sources.audio !== "off";
-  const note =
-    form.sources.images === "off"
-      ? "The video needs images: under Images, pick Made by AI or My own images."
-      : form.sources.video === "generate"
-        ? narrated
-          ? "The narration over the images, put together on this computer · free."
-          : "A silent video, each image shown once, put together on this computer · free."
-        : narrated
-          ? "Sound only: the narration as one audio file."
-          : "Each finished stage downloads on its own.";
+  const made =
+    form.sources.video === "generate" && form.sources.images !== "off"
+      ? narrated
+        ? "The narration over the images, put together on this computer · free."
+        : "A silent video, each image shown once, put together on this computer · free."
+      : narrated
+        ? "Sound only: the narration as one audio file."
+        : "Each finished stage downloads on its own.";
+  // Make the video is greyed while there are no images; the line says why.
+  const note = form.sources.images === "off" ? `${made} A video needs images first.` : made;
   return (
     <StageRail
       kind="video"

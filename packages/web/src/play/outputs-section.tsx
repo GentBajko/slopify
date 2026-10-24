@@ -185,7 +185,12 @@ function SoundPolish({
     .replace(/^./, (first) => first.toUpperCase());
   return (
     <section aria-label="Sound polish" className="border-b border-line py-3">
-      <Fold summary="Sound polish" state={state} defaultOpen={spoken}>
+      <Fold
+        key={spoken ? "spoken" : "video"}
+        summary="Sound polish"
+        state={state}
+        defaultOpen={spoken}
+      >
         <div className="flex min-w-0 flex-col gap-4 pt-2 pb-3">
           <PlayLoudness form={form} problem={problem} update={update} />
           <div className="sl-fields">
