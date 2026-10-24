@@ -28,9 +28,11 @@ interface Draft {
   readonly values: DocumentTheme;
 }
 
-// One document theme: its name and every setting of the PDF, grouped, beside a live preview
-// of a sample article laid out with the values as they are typed. The preview is the
-// server's own renderer, so it is exactly the PDF a project would get.
+// One PDF theme: its name and every setting of the PDF in sections, listed down the left like
+// Settings, beside a live preview of a sample article laid out with the values as they are
+// typed. The preview is the server's own renderer, so it is exactly the PDF a project would
+// get. A new theme starts from Plain under a name of its own ("My theme"); a copy is named for
+// what it copies.
 export function DocumentThemeEditorRoute({
   themeId,
   from,
@@ -38,7 +40,7 @@ export function DocumentThemeEditorRoute({
 }: {
   // Undefined for a new theme.
   readonly themeId: string | undefined;
-  // What a new theme starts from: a built-in's name or a saved theme's id.
+  // What a new theme starts from: a built-in's name or a saved theme's id. Left out, Plain.
   readonly from: string | undefined;
   readonly onLeave: () => void;
 }) {
@@ -51,6 +53,7 @@ export function DocumentThemeEditorRoute({
   const [refused, setRefused] = useState<readonly FieldError[]>([]);
   const [saved, setSaved] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [section, setSection] = useState<string | undefined>(undefined);
 
   const data = listing.data;
   const found =
@@ -68,7 +71,12 @@ export function DocumentThemeEditorRoute({
           name:
             themeId !== undefined
               ? source.name
-              : `${"label" in source ? source.label : source.name} copy`,
+              : from === undefined
+                ? freeName(
+                    "My theme",
+                    (data?.themes ?? []).map((theme) => theme.name),
+                  )
+                : `${"label" in source ? source.label : source.name} copy`,
           values: source.values,
         };
   const draft = edited ?? base;
@@ -147,17 +155,30 @@ export function DocumentThemeEditorRoute({
       <PageHeader
         crumb={
           <EditorCrumb>
-            <Link to="/document-themes">Documents</Link>
+            <Link to="/document-themes">PDF themes</Link>
           </EditorCrumb>
         }
         title={themeId === undefined ? "New PDF theme" : "Edit PDF theme"}
-        meta="How a project's PDF looks"
       />
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,440px)]">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[180px_minmax(0,1fr)_minmax(300px,400px)]">
+        <div className="hidden lg:sticky lg:top-4 lg:block">
+          <GroupJumps
+            groups={groupStates}
+            current={section}
+            onJump={(title) => {
+              setSection(title);
+              const group = document.getElementById(groupId(title));
+              if (group instanceof HTMLDetailsElement) {
+                group.open = true;
+                group.scrollIntoView?.({ block: "start", behavior: "smooth" });
+                group.querySelector("summary")?.focus();
+              }
+            }}
+          />
+        </div>
         <div className={`${editorSurface} flex min-w-0 flex-col gap-4`}>
           <Field
             label="Name"
-            tip="library.theme.name"
             {...(named.length === 0
               ? {}
               : { error: named.map((problem) => problem.message).join(" ") })}
@@ -170,18 +191,6 @@ export function DocumentThemeEditorRoute({
             />
           </Field>
 
-          <GroupJumps
-            groups={groupStates}
-            onJump={(title) => {
-              const group = document.getElementById(groupId(title));
-              if (group instanceof HTMLDetailsElement) {
-                group.open = true;
-                group.scrollIntoView?.({ block: "start", behavior: "smooth" });
-                group.querySelector("summary")?.focus();
-              }
-            }}
-          />
-
           {themeGroups.map((group, index) => {
             const state = groupStates[index];
             return (
@@ -189,7 +198,7 @@ export function DocumentThemeEditorRoute({
                 key={group.title}
                 id={groupId(group.title)}
                 open={index < 2 || (state?.problems ?? 0) > 0}
-                className="group border-t border-line"
+                className="group scroll-mt-4 border-t border-line"
               >
                 {/* biome-ignore lint/a11y/noStaticElementInteractions: a summary is the native toggle (keyboard included); this only follows its click. */}
                 <summary
@@ -275,11 +284,12 @@ export function DocumentThemeEditorRoute({
 }
 
 // The sample article as a PDF, redrawn a moment after the typing stops. The last good pages
-// stay up while new ones are made, and while a value is out of range.
+// stay up while new ones are made, and while a value is out of range. A PDF the server could
+// not make says why; one this browser cannot draw points at Full size, which opens it.
 function Preview({ values }: { readonly values: DocumentTheme | undefined }) {
   const { api } = useApp();
   const [pdf, setPdf] = useState<{ readonly bytes: Uint8Array; readonly url: string }>();
-  const [state, setState] = useState<"idle" | "busy" | "failed">("busy");
+  const [state, setState] = useState<"idle" | "busy" | "failed" | "undrawn">("busy");
   const [failure, setFailure] = useState<string | undefined>(undefined);
   const key = values === undefined ? undefined : JSON.stringify(values);
 
@@ -317,12 +327,7 @@ function Preview({ values }: { readonly values: DocumentTheme | undefined }) {
   );
 
   const drawn = useCallback((error: Error | undefined) => {
-    if (error === undefined) {
-      setState("idle");
-      return;
-    }
-    setFailure(error.message);
-    setState("failed");
+    setState(error === undefined ? "idle" : "undrawn");
   }, []);
 
   const status =
@@ -331,12 +336,14 @@ function Preview({ values }: { readonly values: DocumentTheme | undefined }) {
       : state === "busy"
         ? "Updating…"
         : state === "failed"
-          ? `The preview couldn't be made: ${failure ?? "unknown error"}`
-          : "A sample article with this theme. Your projects use their own text and thumbnail.";
+          ? `The preview couldn't be made: ${failure ?? "Slopify didn't answer."} Change a setting to try again.`
+          : state === "undrawn"
+            ? "The preview can't be drawn in this browser. Full size opens the same PDF in a new tab."
+            : "A sample article with this theme. Your projects use their own text and thumbnail.";
 
   return (
     <div className={editorAside}>
-      <SectionHead title="Preview" info="library.theme.preview" size="small" className="pb-0">
+      <SectionHead title="Preview" size="small" className="pb-0">
         {pdf === undefined ? null : (
           <FileLink
             href={pdf.url}
@@ -346,7 +353,7 @@ function Preview({ values }: { readonly values: DocumentTheme | undefined }) {
             size="small"
           >
             <ExternalLinkIcon aria-hidden="true" strokeWidth={1.75} />
-            Open full size
+            Full size
           </FileLink>
         )}
       </SectionHead>
@@ -359,7 +366,11 @@ function Preview({ values }: { readonly values: DocumentTheme | undefined }) {
       </div>
       <p
         role="status"
-        className={state === "failed" ? "m-0 text-small text-danger" : "m-0 text-small text-ink-2"}
+        className={
+          state === "failed" || state === "undrawn"
+            ? "m-0 text-small text-danger"
+            : "m-0 text-small text-ink-2"
+        }
       >
         {status}
       </p>
@@ -369,8 +380,17 @@ function Preview({ values }: { readonly values: DocumentTheme | undefined }) {
 
 function Notice({ children }: { readonly children: string }) {
   return (
-    <EditorProblem back={<Link to="/document-themes">Back to Documents</Link>}>
+    <EditorProblem back={<Link to="/document-themes">Back to PDF themes</Link>}>
       {children}
     </EditorProblem>
   );
+}
+
+// "My theme", or "My theme 2" when that is taken: a new theme's name until it gets its own.
+function freeName(wanted: string, taken: readonly string[]): string {
+  const used = new Set(taken.map((name) => name.toLowerCase()));
+  if (!used.has(wanted.toLowerCase())) return wanted;
+  let number = 2;
+  while (used.has(`${wanted} ${String(number)}`.toLowerCase())) number += 1;
+  return `${wanted} ${String(number)}`;
 }

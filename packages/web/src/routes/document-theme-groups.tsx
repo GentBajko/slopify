@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { Button } from "@/components/kit/button";
+import { Rail, RailButton } from "@/components/kit/rail";
 import { Badge } from "@/components/kit/status";
 
 export interface GroupState {
@@ -30,34 +30,44 @@ export function GroupMarks({
   );
 }
 
-// The theme's groups in one row above them: a press opens the group and brings it into view,
-// and each names how many settings in it changed or need fixing.
+// The theme's sections down the left, as Settings lists its own: a press opens the section and
+// brings it into view. A section with settings to fix says how many in red beside its name, and
+// one with changes says how many changed.
 export function GroupJumps({
   groups,
+  current,
   onJump,
 }: {
   readonly groups: readonly GroupState[];
+  readonly current: string | undefined;
   readonly onJump: (title: string) => void;
 }): ReactElement {
   return (
-    <nav aria-label="Theme groups" className="flex flex-wrap gap-1 border-t border-line pt-3">
+    <Rail label="Theme sections">
       {groups.map((group) => {
-        const marks = [
-          group.problems === 0 ? "" : `${String(group.problems)} to fix`,
-          group.changed === 0 ? "" : `${String(group.changed)} changed`,
-        ].filter((one) => one !== "");
-        return (
-          <Button
+        const changed = group.changed === 0 ? undefined : `${String(group.changed)} changed`;
+        return group.problems === 0 ? (
+          <RailButton
             key={group.title}
-            variant="quiet"
-            size="small"
-            className={group.problems === 0 ? undefined : "text-danger"}
+            current={group.title === current}
+            meta={changed}
             onClick={() => onJump(group.title)}
           >
-            {marks.length === 0 ? group.title : `${group.title} · ${marks.join(" · ")}`}
-          </Button>
+            {group.title}
+          </RailButton>
+        ) : (
+          <RailButton
+            key={group.title}
+            current={group.title === current}
+            tone="failed"
+            state={`${String(group.problems)} to fix`}
+            meta={changed}
+            onClick={() => onJump(group.title)}
+          >
+            {group.title}
+          </RailButton>
         );
       })}
-    </nav>
+    </Rail>
   );
 }

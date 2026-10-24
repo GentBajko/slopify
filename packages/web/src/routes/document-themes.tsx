@@ -1,17 +1,20 @@
 import { documentThemeNameMax, type SavedDocumentTheme } from "@app/slices/document/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { removeDocumentTheme, saveDocumentTheme } from "@/api";
 import { useApp } from "@/app-context";
 import { Callout } from "@/components/kit/callout";
 import { ConfirmDialog } from "@/components/kit/dialog";
-import { ListDetail } from "@/components/kit/layout";
+import { HelpLine } from "@/components/kit/field";
+import { ListDetail, PageHeader } from "@/components/kit/layout";
 import { ButtonLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { counted, RowCheck, useSelection } from "@/components/selection";
 import { LibraryBulkBar, SelectionArea } from "@/library/bulk-bar";
 import { Swatches, ThemeDetail, themeMeta } from "@/library/document-theme-parts";
+import { EditorCrumb } from "@/library/editor-frame";
 import { ListSkeleton, LoadError, libraryListDetail, libraryRow } from "@/library/list-states";
 import { useLibraryItem } from "@/library/list-url";
 import { LibraryRowActions } from "@/library/row-actions";
@@ -22,11 +25,11 @@ import { TransferMenu } from "@/library/transfer-menu";
 import { refusalOf, useLibraryBulk } from "@/library/use-library-bulk";
 import { useLibraryTransfer } from "@/library/use-library-transfer";
 import { documentThemesQuery, keys } from "@/queries";
-import { LibraryToolbar } from "@/routes/library";
 
-// Library → Documents: the looks a project's PDF can take, beside the selected one's colours,
-// fonts and page. The built-ins can't be changed, only copied; a saved theme is edited here
-// and chosen on the Document row of Play or in Edit project, which each keep their own copy.
+// PDF themes: the looks a project's PDF can take, beside the selected one's colours, fonts and
+// page. Reached from Create's PDF choice and Settings → Production defaults. The built-ins
+// can't be changed, only copied; a saved theme is edited here and picked when a video is
+// created or in its settings, which each keep their own copy.
 export function DocumentThemesRoute() {
   const { api } = useApp();
   const queryClient = useQueryClient();
@@ -83,8 +86,17 @@ export function DocumentThemesRoute() {
 
   return (
     <div>
-      <LibraryToolbar
-        action={
+      <PageHeader
+        crumb={
+          <EditorCrumb>
+            <Link to="/settings" search={{ section: "playback" }}>
+              Settings
+            </Link>
+          </EditorCrumb>
+        }
+        title="PDF themes"
+        meta="How a project's PDF looks"
+        actions={
           <>
             <TransferMenu
               what="PDF themes"
@@ -99,16 +111,12 @@ export function DocumentThemesRoute() {
               accept=".json,application/json"
               onFile={transfer.importFile}
             />
-            <ButtonLink to="/document-themes/new" search={{ from: "plain" }} variant="primary">
+            <ButtonLink to="/document-themes/new" search={{}} variant="primary">
               New theme
             </ButtonLink>
           </>
         }
-      >
-        <p className="m-0 text-small text-ink-2">
-          How a project's PDF looks. Pick one on the Document row in Play or in Edit project.
-        </p>
-      </LibraryToolbar>
+      />
 
       {listing.error === null ? null : (
         <LoadError
@@ -126,18 +134,17 @@ export function DocumentThemesRoute() {
         <ListDetail
           className={libraryListDetail}
           list={
-            <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-6">
               <section className="flex flex-col gap-2">
-                <SectionHead
-                  title="Your themes"
-                  as="h3"
-                  className="pb-0"
-                  info="library.themes.yours"
-                >
+                <SectionHead title="Your themes" as="h3" className="pb-0">
                   {yours.length > 1 ? (
                     <SortMenu what="your themes" sort={sort} onSort={setSort} />
                   ) : null}
                 </SectionHead>
+                <HelpLine>
+                  Pick one when you create a video with a PDF, or in a project's settings. A project
+                  keeps its own copy, so a change here never alters a PDF already made.
+                </HelpLine>
                 {data.themes.length === 0 ? (
                   <p className="m-0 text-small text-ink-2">
                     No themes of your own yet. Copy a built-in below to start one.
@@ -209,12 +216,8 @@ export function DocumentThemesRoute() {
               </section>
 
               <section className="flex flex-col gap-2">
-                <SectionHead
-                  title="Built in"
-                  as="h3"
-                  className="pb-0"
-                  info="library.themes.built-in"
-                />
+                <SectionHead title="Built in" as="h3" className="pb-0" />
+                <HelpLine>These can't be changed. Copy one to make a theme of your own.</HelpLine>
                 <List label="Built-in themes">
                   {data.builtIns.map((theme) => (
                     <ListRow

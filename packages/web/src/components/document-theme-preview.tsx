@@ -21,7 +21,7 @@ export function DocumentThemePreview({
 }): ReactElement | null {
   const { api } = useApp();
   const [pdf, setPdf] = useState<Uint8Array | undefined>(undefined);
-  const [state, setState] = useState<"busy" | "idle" | "failed">("busy");
+  const [state, setState] = useState<"busy" | "idle" | "failed" | "undrawn">("busy");
   const [failure, setFailure] = useState<string | undefined>(undefined);
   const [pages, setPages] = useState<number | undefined>(undefined);
   const holder = useRef<HTMLDivElement>(null);
@@ -49,8 +49,7 @@ export function DocumentThemePreview({
 
   const drawn = useCallback((error: Error | undefined) => {
     if (error !== undefined) {
-      setFailure(error.message);
-      setState("failed");
+      setState("undrawn");
       return;
     }
     setPages(holder.current?.querySelectorAll("canvas").length);
@@ -63,15 +62,19 @@ export function DocumentThemePreview({
       : state === "busy"
         ? "Laying out the sample article…"
         : state === "failed"
-          ? `The preview couldn't be made: ${failure ?? "unknown error"}. Close and press Preview again.`
-          : `The sample article takes ${String(pages ?? 0)} page${pages === 1 ? "" : "s"} with this theme. Your project uses its own text, so its count differs.`;
+          ? `The preview couldn't be made: ${failure ?? "Slopify didn't answer."} Close and press Preview again.`
+          : state === "undrawn"
+            ? "The preview can't be drawn in this browser. The theme still makes the PDF as usual."
+            : `The sample article takes ${String(pages ?? 0)} page${pages === 1 ? "" : "s"} with this theme. Your project uses its own text, so its count differs.`;
 
   return (
     <Drawer open={open} title={`Preview: ${name}`} onClose={onClose}>
       <p
         role="status"
         className={
-          state === "failed" ? "m-0 mb-3 text-small text-danger" : "m-0 mb-3 text-small text-ink-2"
+          state === "failed" || state === "undrawn"
+            ? "m-0 mb-3 text-small text-danger"
+            : "m-0 mb-3 text-small text-ink-2"
         }
       >
         {status}
