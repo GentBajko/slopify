@@ -7,12 +7,14 @@ usual. It uses your own account's start-up list, so it needs no administrator pa
 
 You are asked once:
 
-- on the first-run screen (**Start when I log in** or **No thanks**);
+- on the first-run screen, in one line on step 3 (**Start when I log in** or **No thanks**);
+  leaving the first-run screen (Skip, Done, the first short, or a first project made in Create)
+  answers it as No thanks, so a fresh install never meets the dialog below;
 - in the terminal, the first time `npx @gentbajko/slopify` starts on an interactive terminal:
   `Start Slopify when you log in? (Y/n)`. Enter means yes;
 - after an update, when neither of those asked (the first-run screen is for new installs, and an
   update started without a terminal can't ask): a one-time dialog in the app, **Start when I
-  log in** or **No thanks**. Closing it counts as No thanks.
+  log in** or **No thanks**, with focus on No thanks. Closing it counts as No thanks.
 
 Answering in either place, or using the switch, ends the question for good (the settings row
 `autostart.answered`). Without a terminal, for scripts, use `--autostart` or `--no-autostart`;
@@ -84,9 +86,9 @@ and leaves the answer, with the system and whether it is Docker Desktop, in the 
 `activation/login-start.json`, which the container reads read-only as
 `/opt/slopify-install/login-start.json`.
 
-Settings → General and the first-run screen then show **Starts with Docker: yes / no /
-unknown**, when the installer last looked, and where to change it (nothing to switch: the first
-run only informs). Run `npx @gentbajko/slopify --docker` again to check again
+Settings → General then shows **Starts with Docker: yes / no / unknown**, when the installer
+last looked, and where to change it (nothing to switch; the first-run screen asks nothing in
+Docker). Run `npx @gentbajko/slopify --docker` again to check again
 after changing Docker's setting. A compose file run by hand has no such record, so the screen
 says it can't know and points to Docker Desktop → Settings → General → Start Docker Desktop when
 you sign in (or `sudo systemctl enable docker` for Docker Engine).
