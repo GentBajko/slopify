@@ -553,15 +553,25 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     ),
     channel: <BrandKitControls />,
   };
+  // A template's own channel is where it is listed, not a field of its setup: a draft made from
+  // it starts in that channel, which is the template's, not a change made here.
+  const templateSetup =
+    origin === undefined
+      ? undefined
+      : {
+          ...origin,
+          channelId:
+            origin.channelId ?? (template === undefined ? undefined : channelOfTemplate(template)),
+        };
   const rows: readonly SetupListRow[] = visibleRows.map((row) => ({
     id: row.id,
     label: rowLabel(row.id, kind),
     summary: rowSummary(row.id, form, summaryContext),
     problem: rowProblem(row.id)?.text,
     origin:
-      origin === undefined
+      templateSetup === undefined
         ? undefined
-        : rowOrigin(row.id, document, origin) === "template"
+        : rowOrigin(row.id, document, templateSetup) === "template"
           ? `From ${template?.name ?? "the template"}`
           : "Changed here",
     editor: editors[row.id],
