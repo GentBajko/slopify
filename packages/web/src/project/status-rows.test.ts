@@ -174,4 +174,14 @@ describe("the time left", () => {
     expect(timeLeft([running, stage("video", "pending")], now)).toBe("this step: about 1 min left");
     expect(timeLeft([stage("video", "done")], now)).toBeUndefined();
   });
+
+  it("says nothing when the running step has no estimate, rather than 'time left unknown'", () => {
+    const now = Date.parse("2026-09-03T00:10:00.000Z");
+    const rendering = stage("video", "running", {
+      startedAt: "2026-09-03T00:09:00.000Z",
+      progressCurrent: null,
+      progressTotal: null,
+    });
+    expect(timeLeft([rendering, stage("document", "pending")], now)).toBeUndefined();
+  });
 });

@@ -183,7 +183,8 @@ export function statusRows(input: StatusInput): readonly StatusRow[] {
 }
 
 // "about 6 min left": the running steps' time left and, when finished runs say how long each
-// step still to come takes, theirs too. Undefined when nothing runs.
+// step still to come takes, theirs too. Undefined when nothing runs, or when nothing gives the
+// running step a time.
 export function timeLeft(stages: readonly Stage[], now: number): string | undefined {
   const running = stages.filter((stage) => stage.state === "running");
   if (running.length === 0) return undefined;
@@ -197,6 +198,9 @@ export function timeLeft(stages: readonly Stage[], now: number): string | undefi
       waiting.reduce((sum, stage) => sum + (stage.typicalSeconds ?? 0), 0);
     return etaLabel({ basis: "progress", seconds });
   }
+  // A step with no estimate says so on its own row; the headline then leaves the time out.
   const first = etas[0];
-  return first === undefined ? undefined : `this step: ${etaLabel(first)}`;
+  return first === undefined || first.basis === "unknown"
+    ? undefined
+    : `this step: ${etaLabel(first)}`;
 }
