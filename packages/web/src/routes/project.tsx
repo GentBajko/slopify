@@ -677,7 +677,8 @@ function ProjectWorkspace({
                       primary={<NextActionButton state={next} />}
                       editing={settingsTab !== undefined}
                       unsaved={controller.unsaved}
-                      onEdit={() => setChosen("settings")}
+                      // Pressed again, it closes the settings onto the section the page opens on.
+                      onEdit={() => setChosen(settingsTab === undefined ? "settings" : suggested)}
                       more={more}
                       clock={
                         <RunClock
