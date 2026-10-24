@@ -118,7 +118,7 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
   const video = outputs.find((output) => output.role === "video");
   if (video === undefined)
     missing.push(
-      "The video isn't made yet. Let the Video stage finish (or use Continue the run on the project page), then open Prepare upload again.",
+      "The video isn't made yet. Let the Video stage finish (or use Continue the run on the project page), then open Copy for YouTube Studio again.",
     );
   const written = text(outputs.find((output) => output.role === "youtube_description"));
   const writtenTags = text(outputs.find((output) => output.role === "youtube_tags"));
@@ -155,7 +155,7 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
     missing.push(
       config.sources.thumbnail === "off"
         ? "This project makes no thumbnail, so YouTube will pick a frame. Set Thumbnail in Edit project to make or upload one."
-        : "The thumbnail isn't made yet. Let the Thumbnail stage finish, then open Prepare upload again.",
+        : "The thumbnail isn't made yet. Let the Thumbnail stage finish, then open Copy for YouTube Studio again.",
     );
   else if (thumbnails.length < count)
     missing.push(
@@ -237,7 +237,7 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
     const render = exact ?? mine.at(-1);
     if (render === undefined)
       missing.push(
-        `Short ${String(clip.number)} isn't rendered yet. Let the Video stage finish, then open Prepare upload again.`,
+        `Short ${String(clip.number)} isn't rendered yet. Let the Video stage finish, then open Copy for YouTube Studio again.`,
       );
     items.push({
       kind: "short",

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { readJsonSetting, writeSetting } from "../settings/repo.js";
 import type { PackFile } from "./model.js";
 
-// Which of the video's titles and thumbnails go into the upload (Prepare upload's choice).
+// Which of the video's titles and thumbnails go into the upload (Copy for YouTube Studio's choice).
 // Its A/B test starts once the video is public, so the upload carries one title and one
 // thumbnail, and the test then tries the others beside them. Indexes into the project's own
 // order: title 0 is the project's title, 1 and 2 its other titles; thumbnail 0 is A.

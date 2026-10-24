@@ -99,7 +99,7 @@ export function youtubeEditRoutes(deps: AppDeps) {
           if (refused !== undefined)
             return problem(c, {
               status: 400,
-              detail: `This project's links weren't saved: ${refused} Then press Save links under YouTube on the Video section.`,
+              detail: `This project's links weren't saved: ${refused} Then press Save beside Previous episode, under YouTube links in the project's YouTube section.`,
             });
           const saved = transact(deps.db, () => {
             const next = { ...readDescriptionEdits(deps.db, id), links };

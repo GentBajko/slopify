@@ -114,7 +114,7 @@ describe("/api/projects/:id/youtube-edits", () => {
     });
     expect(refused.status).toBe(400);
     expect(((await refused.json()) as { detail: string }).detail).toMatch(
-      /not a web address.*Save links/u,
+      /not a web address.*Save beside Previous episode/u,
     );
   });
 

@@ -29,7 +29,7 @@ const pairingSchema = z.object({
 
 // A channel's own playlists are a row of their own, `studio.playlist.<channelId>`; a channel
 // without one uses the default list above. Each playlist is ticked by default or not; a
-// project's Prepare upload can change which it goes into. A row saved before lists existed
+// project's Copy for YouTube Studio can change which it goes into. A row saved before lists existed
 // holds one name, read as one playlist ticked by default.
 export const studioChannelPlaylistPrefix = `${studioPlaylistKey}.`;
 
@@ -123,7 +123,7 @@ export function saveStudioPlaylists(
   return value;
 }
 
-// The playlists a project's uploads go into, when its Prepare upload changed them from the
+// The playlists a project's uploads go into, when its Copy for YouTube Studio changed them from the
 // channel's defaults: one row, project id to names.
 export const studioProjectPlaylistsKey = "studio.projectPlaylists";
 export const storedProjectPlaylistsSchema = z.record(
@@ -166,7 +166,7 @@ export function saveProjectPlaylists(
 }
 
 // The projects whose uploaded clips are real footage (filmed, not generated): ticked in the
-// project's Prepare upload, under AI use. One row holding their ids; YouTube's second AI use
+// project's Copy for YouTube Studio, under AI use. One row holding their ids; YouTube's second AI use
 // case is footage of a real event or place altered by AI (`disclosure.ts`).
 export const studioRealFootageKey = "studio.realFootage";
 // "on" or "off": whether the extension posts and pins each video's comment once it is public.

@@ -92,7 +92,7 @@ export function readChannelLinksFor(db: DatabaseSync, channelId: string): readon
 // the generated text, the chapters fitted to YouTube's rules (`chapters.ts`; the last one's
 // length only checked when the video's length is given), placeholders filled from the
 // project's and its channel's links (one with no link stays as typed). For anything that hands
-// the description on, such as Prepare upload and the downloads. `chapterNotice` says what the
+// the description on, such as Copy for YouTube Studio and the downloads. `chapterNotice` says what the
 // fitting changed.
 export function effectiveDescription(
   db: DatabaseSync,
