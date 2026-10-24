@@ -55,8 +55,9 @@ export function knownVideoLink(videos: readonly YoutubeVideo[] | undefined): str
   return own === undefined ? undefined : `https://youtu.be/${own.videoId}`;
 }
 
-// The id of the long video's link box: the Shorts section's "Add the link" goes to it.
-export const videoLinkBoxId = "on-youtube-video";
+// The id of the long video's link box: the Shorts section's "Add the link" goes to it
+// (`?section=youtube#on-youtube-video`), so it stays as it is.
+const videoLinkBoxId = "on-youtube-video";
 
 // What the Studio extension did after the upload, in a sentence; nothing for a link pasted
 // by hand.
