@@ -325,7 +325,7 @@ function CreateKey({ className }: { readonly className: string }): ReactElement 
   );
 }
 
-// "2 running": the lamp beside its word, to Home's Running list.
+// "● 2 running", to Home's Running list. In the rail the lamp and the count sit over the word.
 function RunningLink({
   running,
   className,
@@ -336,8 +336,11 @@ function RunningLink({
   if (running === 0) return null;
   return (
     <Link to="/" hash="running" className={className}>
-      <Lamp tone="running" />
-      <span>{`${String(running)} running`}</span>
+      <span className="sl-running__count">
+        <Lamp tone="running" />
+        {String(running)}
+      </span>
+      <span>running</span>
     </Link>
   );
 }

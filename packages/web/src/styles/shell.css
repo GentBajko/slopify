@@ -611,13 +611,13 @@
   .sl-navrail__item--news {
     color: var(--color-accent-ink);
   }
-  /* "2 running": the lamp beside its word, under the destinations. */
+  /* "● 2 running" under the destinations: the lamp and the count over the word. */
   .sl-navrail__running {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px 6px;
+    gap: 2px;
     padding: 6px 2px;
     border-radius: var(--radius-control);
     font: 600 12px / 15px var(--font-sans);
@@ -627,6 +627,17 @@
   }
   .sl-navrail__running:hover {
     background: var(--color-raised);
+  }
+  .sl-running__count {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    line-height: 18px;
+  }
+  .sl-topbar__running .sl-running__count {
+    font-size: inherit;
+    line-height: inherit;
   }
   .sl-app__foot {
     margin-top: auto;
