@@ -228,6 +228,26 @@ describe("step 3: make the first short", () => {
     ).not.toBeNull();
   });
 
+  it("arrives from Next on the step, not on a refused empty topic", async () => {
+    const user = userEvent.setup();
+    const made = vi.fn(jsonAnswer({ projectId: "p9", replayed: false }, 201));
+    renderRouted(
+      <WelcomeRoute step="style" />,
+      testDeps({ "GET /api/onboarding": jsonAnswer(ready), "POST /api/onboarding/short": made }),
+    );
+    // Make takes Next's place in the bar. In a browser the click's default action runs after
+    // the step has changed, so Make must be a new button, not Next turned into a submit button,
+    // or the press that moved here would also press Make with an empty topic.
+    const next = await screen.findByRole("button", { name: "Next: Make your first short" });
+    await user.click(next);
+    const make = await screen.findByRole("button", { name: "Make a 60-second short" });
+    expect(make).not.toBe(next);
+    expect(next.isConnected).toBe(false);
+    await waitFor(() => expect(document.activeElement?.id).toBe("welcome-step-make"));
+    expect(screen.queryByText("Type a topic first.")).toBeNull();
+    expect(made).not.toHaveBeenCalled();
+  });
+
   it("names what is still missing above the topic, with its fix, before anything is pressed", async () => {
     renderRouted(
       <WelcomeRoute step="make" onStep={() => undefined} />,

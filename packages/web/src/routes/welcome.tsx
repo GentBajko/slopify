@@ -405,14 +405,18 @@ export function WelcomeRoute({
       >
         {step === "make" ? null : <TextLink to="/play">Make a long video instead</TextLink>}
         {back === undefined ? null : <Button onClick={() => go(back)}>Back</Button>}
+        {/* Each forward button has its own key: a browser runs a click's default action after
+            the step has changed, so Next must not become Make's submit button in place, or the
+            press that opens step 3 would also send its empty topic. */}
         {next !== undefined ? (
-          <Button variant="primary" onClick={() => go(next)}>
+          <Button key={`next-${next}`} variant="primary" onClick={() => go(next)}>
             {`Next: ${stepNames[next]}`}
           </Button>
         ) : made === undefined ? (
           // Pressable while something is missing (the refusal says what), but not in lime: the
           // fixes above come first.
           <Button
+            key="make"
             type="submit"
             form="welcome-short"
             variant={(data?.needs.gaps.length ?? 0) > 0 ? "secondary" : "primary"}
