@@ -120,6 +120,29 @@ describe("the rail", () => {
     expect(await screen.findByRole("dialog", { name: "Keyboard shortcuts" })).not.toBeNull();
   });
 
+  it("opens Search on Create a video, then Go to in the rail's words and nothing else", async () => {
+    const user = userEvent.setup();
+    mount();
+    const rail = await screen.findByRole("complementary", { name: "App" });
+    await user.click(within(rail).getByRole("button", { name: "Search" }));
+    const dialog = await screen.findByRole("dialog", { name: "Command palette" });
+    // An option's title, without its keys.
+    const titles = (name: string) =>
+      within(within(dialog).getByRole("group", { name }))
+        .getAllByRole("option")
+        .map((option) => option.querySelector(".truncate")?.textContent);
+    await waitFor(() => expect(titles("Create")).toEqual(["Create a video"]));
+    expect(within(dialog).getAllByRole("group")[0]?.getAttribute("aria-label")).toBe("Create");
+    expect(titles("Go to")).toEqual([
+      "Open Home",
+      "Open Projects",
+      "Open Prompts",
+      "Open Templates",
+      "Open Calendar",
+      "Open Settings",
+    ]);
+  });
+
   it("opens Support on the three links, each in a new tab", async () => {
     const user = userEvent.setup();
     mount();
