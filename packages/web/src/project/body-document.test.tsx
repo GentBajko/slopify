@@ -8,7 +8,7 @@ import { revisionView } from "./revision-fixture.js";
 import { RevisionMedia } from "./revision-media.js";
 
 afterEach(cleanup);
-it("downloads the retained PDF and opens the same record inline in a new tab", async () => {
+it("shows the PDF on the page, downloads it and opens the same record in a new tab", async () => {
   const document = stage("document", "done");
   const pdf = output("document_pdf", "document");
   const config = {
@@ -61,11 +61,12 @@ it("downloads the retained PDF and opens the same record inline in a new tab", a
   await waitFor(() =>
     expect(screen.getByRole("link", { name: "Download PDF" }).getAttribute("href")).toBe(url),
   );
-  const open = screen.getByRole("link", { name: "Open PDF" });
+  const open = screen.getByRole("link", { name: "Open in a new tab" });
   expect(open.getAttribute("href")).toBe(`${url}?inline=1`);
   expect(open.getAttribute("target")).toBe("_blank");
   expect(open.getAttribute("rel")).toContain("noopener");
-  expect(screen.getByRole("button", { name: "Open folder" })).not.toBeNull();
-  expect(screen.getByText("Theme")).not.toBeNull();
-  expect(screen.getByText("Plain")).not.toBeNull();
+  // The document itself, its first page in view, not only buttons that lead to it.
+  expect(screen.getByTitle("The PDF of Rope Tricks").getAttribute("src")).toBe(`${url}?inline=1`);
+  expect(screen.getAllByRole("button", { name: "Open folder" })).toHaveLength(1);
+  expect(screen.getByText("Plain theme", { exact: false })).not.toBeNull();
 });
