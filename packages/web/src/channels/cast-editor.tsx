@@ -6,8 +6,8 @@ import { type ReactElement, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { StatusSlot } from "@/components/kit/action-bar";
 import { Button, ButtonRow } from "@/components/kit/button";
-import { Field, Input, Select, Textarea } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { Field, HelpLine, Input, Select, Textarea } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { Rule } from "@/components/kit/layout";
 import { FileLink } from "@/components/kit/link";
 import { Lightbox, MediaFrame, MediaGrid } from "@/components/kit/media";
@@ -281,8 +281,7 @@ function Pictures({
       <SectionHead
         as="h3"
         title="Reference pictures"
-        meta={`Sent with every image whose brief, or the video's title, names ${member.name}.`}
-        info="planning.cast.pictures"
+        meta={`Up to 4. Sent with every image whose brief, or the video's title, names ${member.name}.`}
       />
       {member.images.length > 0 ? (
         <MediaGrid list density="compact" label={`Pictures of ${member.name}`} className="mt-3">
@@ -373,10 +372,11 @@ function Pictures({
       </div>
       <div className="mt-4 flex flex-col gap-4">
         <div className="flex flex-col gap-2" {...helpScope}>
-          <p className="sl-kicker m-0 flex items-center gap-1">
-            Make a picture
-            <InfoTip id="planning.cast.generate" className="-my-1" />
-          </p>
+          <p className="sl-kicker m-0">Make a picture</p>
+          <HelpLine>
+            Each press of Generate a picture is one image call on the service you pick. A plain
+            background with the whole figure in view makes the best reference.
+          </HelpLine>
           <div className="grid grid-cols-1 gap-4 min-[600px]:grid-cols-2">
             <ProviderPicker
               label="Image provider"
@@ -460,13 +460,11 @@ function CastVoiceFields({
       className="m-0 flex flex-col gap-3 border-0 border-t border-line p-0 pt-4"
       {...helpScope}
     >
-      <legend className="sl-kicker flex items-center gap-1">
-        Voice
-        <InfoTip id="planning.cast.voice" label="Cast voice" className="-my-1" />
-      </legend>
-      <p className="text-small text-ink-2">
-        For multi-voice runs: pick this member under Speakers on Play.
-      </p>
+      <legend className="sl-kicker">Voice</legend>
+      <HelpLine>
+        For videos with several voices: pick this member under Speakers on Create, and it reads with
+        this voice in every video.
+      </HelpLine>
       <div className="grid grid-cols-1 gap-3 min-[600px]:grid-cols-2">
         <ProviderPicker
           label="Voice provider"

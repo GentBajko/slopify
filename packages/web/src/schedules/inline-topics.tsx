@@ -2,6 +2,7 @@ import type { ScheduleSummary } from "@app/slices/schedules/model.js";
 import { queueMax } from "@app/slices/schedules/schema.js";
 import { type ReactElement, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/kit/button";
+import { HelpLine } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
@@ -52,7 +53,6 @@ export function InlineTopics({ schedule }: { readonly schedule: ScheduleSummary 
       <SectionHead
         as="h3"
         title={`Queued topics · ${String(items.length)}`}
-        info="planning.schedule.inline-topics"
         meta={[
           schedule.topicKeyword === null
             ? "Each topic becomes the next project's title."
@@ -68,6 +68,10 @@ export function InlineTopics({ schedule }: { readonly schedule: ScheduleSummary 
           />
         )}
       </SectionHead>
+      <HelpLine>
+        Type a topic and press Enter to add it; rename one in its box, move it with the arrows. Each
+        change saves at once.
+      </HelpLine>
       {queue.error === null ? null : (
         <p role="alert" className="m-0 mt-2 text-small text-danger">
           {queue.error}

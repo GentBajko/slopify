@@ -54,16 +54,6 @@ export const planningHelp = {
     body: "The most one run may cost, in US dollars, such as 5 or 2.50. Before each run Slopify estimates the project's cost; when the high estimate is over this, or a cost can't be estimated, the run fails instead of starting. Leave it empty for no ceiling. Default: empty.",
     tutorial: { page: "Schedules", anchor: "when-it-runs" },
   },
-  "planning.schedule.topics": {
-    title: "Topics",
-    body: "Each run takes the first topic, starts one project with it and removes it from the list. The schedule completes when the list is empty, unless topic generation is on. With no topics and generation off, every run uses the template as saved. Up to 500 topics.",
-    tutorial: { page: "Schedules", anchor: "topics" },
-  },
-  "planning.schedule.inline-topics": {
-    title: "Queued topics",
-    body: "Change the queue right here: type a topic and press Enter to add it, edit one in its field and press Enter to rename it, use the arrows to move it and the cross to remove it. Each change saves at once and changes only the queue; Undo on the notice puts it back. For a topic's own keyword values, press Edit.",
-    tutorial: { page: "Schedules", anchor: "edit-the-queued-topics-in-place" },
-  },
   "planning.schedule.topic-format": {
     title: "How to write the topics",
     body: "Three ways to write the same list; switching keeps everything. One per line fills only the topic keyword. Table adds a column for each keyword a topic sets itself, such as its word count. YAML / JSON holds the same as text, for pasting or keeping in a file.",
@@ -79,11 +69,6 @@ export const planningHelp = {
     body: 'A list such as "- Cleopatra", or one map per topic such as "- Topic: Cleopatra" with a line for each keyword it sets, like "Min. Word Count: 12000". A JSON array works too. A keyword a topic leaves out uses its every-run value. The schedule saves only once the list reads.',
     tutorial: { page: "Schedules", anchor: "three-ways-to-write-the-list" },
   },
-  "planning.schedule.topic-table": {
-    title: "Topic table",
-    body: "One row per run, in order. The first column fills the topic keyword; each extra column sets that keyword for that topic's run only, and a blank cell uses the every-run value. Set a keyword per topic adds a column; the x in a column's header drops it. Project title shows the result.",
-    tutorial: { page: "Schedules", anchor: "three-ways-to-write-the-list" },
-  },
   "planning.schedule.topic-keyword": {
     title: "Each topic fills",
     body: "The template keyword, such as {{Topic}}, that each queued topic replaces. Default: the keyword the template's project title uses, else the first one. When the title doesn't use it, every project gets the same title.",
@@ -93,11 +78,6 @@ export const planningHelp = {
     title: "Every-run value",
     body: "The value this keyword gets on every run, such as a word count. Default: the template's own value. A topic that sets the keyword itself, in Table or YAML / JSON, overrides it for that one run.",
     tutorial: { page: "Schedules", anchor: "which-keyword-a-topic-fills" },
-  },
-  "planning.schedule.generation": {
-    title: "Topic generation",
-    body: "When the queue holds fewer topics than you ask for, Slopify asks an LLM for more: one call for what is missing plus 5 spare, at most 50. It sends the series brief and every title this schedule, your projects and the channel's existing videos already have, and drops near duplicates.",
-    tutorial: { page: "Schedules", anchor: "topics-that-find-themselves" },
   },
   "planning.schedule.brief": {
     title: "Series brief",
@@ -124,19 +104,9 @@ export const planningHelp = {
     body: "The text model that suggests topics. Ticked, it uses the provider and model the template writes with. Untick to pick another, such as a cheaper model. Either way each generation is one call on that provider. Default: the template's LLM.",
     tutorial: { page: "Schedules", anchor: "topics-that-find-themselves" },
   },
-  "planning.schedule.generate-now": {
-    title: "Generate topics now",
-    body: "Asks the LLM for new topics right away, at least 5, even when the queue is full and even during the 5 minutes Slopify waits after a failed try. One LLM call. When holding for approval they wait for you; otherwise they join the queue.",
-    tutorial: { page: "Schedules", anchor: "generate-topics-now" },
-  },
   "planning.schedule.held-keywords": {
     title: "Keywords of a waiting topic",
     body: "The template's other keywords, set for this one topic's run, the same as a column in the queue's table. Leave one empty to use the schedule's every-run value (shown greyed). They go with the topic into the queue when you approve it.",
-    tutorial: { page: "Schedules", anchor: "approve-held-topics" },
-  },
-  "planning.schedule.held": {
-    title: "Topics waiting",
-    body: "Topics the LLM suggested, waiting for you. Approve adds one to the end of the queue; Edit changes its words first; Reject drops it for good, so it is never suggested again. Approve all queues every one in order. Waiting topics count toward Keep at least.",
     tutorial: { page: "Schedules", anchor: "approve-held-topics" },
   },
 
@@ -178,25 +148,10 @@ export const planningHelp = {
     body: "What the member looks like, in a sentence. It goes to the image model with the member's reference pictures for every image that names it, and starts the prompt of a generated picture. Up to 2,000 characters.",
     tutorial: { page: "Cast-Library", anchor: "fields" },
   },
-  "planning.cast.voice": {
-    title: "Cast voice",
-    body: "How this member speaks in multi-voice runs: pick them under Speakers on Play and they read with this voice, model and pace in every episode. The list shows voices that speak the channel's language. Leave the provider empty for no voice. A run keeps the voice it started with.",
-    tutorial: { page: "Cast-Library", anchor: "give-a-cast-member-a-voice" },
-  },
   "planning.cast.host": {
     title: "Channel host",
     body: "A recurring voice of this channel. When you pick Podcast or Interview on Play, the draft starts with the channel's hosts that have a voice as its hosts, so you don't add them every episode. You can still remove or add speakers on the draft. Projects already made are unchanged.",
     tutorial: { page: "Cast-Library", anchor: "make-a-member-one-of-the-channels-hosts" },
-  },
-  "planning.cast.pictures": {
-    title: "Reference pictures",
-    body: "Up to 4 pictures per member, sent with every image whose brief, or the video's title, names it, so it looks the same each time. Upload a PNG or JPEG up to 10 MB, or generate one below. Videos already made keep the pictures they started with.",
-    tutorial: { page: "Cast-Library", anchor: "add-reference-pictures" },
-  },
-  "planning.cast.generate": {
-    title: "Make a reference picture",
-    body: "Pick an image provider and model, describe the picture, then press Generate a picture. Each press is one image call on that provider, billed at its price for one image. A plain background with the whole figure in view makes the best reference.",
-    tutorial: { page: "Cast-Library", anchor: "generate-a-picture" },
   },
   "planning.cast.picture-prompt": {
     title: "Picture to make",

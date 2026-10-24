@@ -554,10 +554,13 @@ function GenerationFields({
   const own = generation.llm;
   return (
     <fieldset className="m-0 flex min-w-0 flex-col gap-3 border-0 border-t border-line p-0 pt-5 min-[700px]:col-span-2">
-      <legend className="float-left mb-1 flex w-full items-center gap-1 text-title-3 font-semibold">
+      <legend className="float-left mb-1 w-full text-title-3 font-semibold">
         Topic generation
-        <InfoTip id="planning.schedule.generation" />
       </legend>
+      <p className="m-0 text-small text-ink-2">
+        When the queue runs low, one AI call suggests more topics from the series brief, skipping
+        titles already made or listed under the channel's Titles to avoid.
+      </p>
       <Field
         label="Series brief (optional)"
         id="schedule-brief"
