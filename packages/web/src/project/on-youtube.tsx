@@ -284,6 +284,7 @@ function UploadRow({
           <Button
             type="button"
             size="small"
+            className="min-w-[76px]"
             disabled={save.isPending}
             onClick={() =>
               shown.trim() === ""
@@ -373,6 +374,7 @@ function PreviousEpisode({ projectId }: { readonly projectId: string }): ReactEl
         <Button
           type="button"
           size="small"
+          className="min-w-[76px]"
           disabled={save.isPending || edits.data === undefined}
           onClick={() =>
             shown.trim() === "" && saved === ""

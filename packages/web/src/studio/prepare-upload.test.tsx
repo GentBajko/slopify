@@ -308,9 +308,8 @@ describe("Copy for YouTube Studio", () => {
     expect(studio.getAttribute("href")).toBe("https://www.youtube.com/upload");
     // Without the extension, opening Studio to paste the steps is the thing to do next.
     expect(studio.className).toContain("sl-btn--primary");
-    const fill = within(drawer).getByRole("button", { name: "Fill in YouTube Studio" });
-    expect(fill.getAttribute("aria-disabled") ?? fill.getAttribute("disabled")).not.toBeNull();
-    await user.click(fill);
+    // Nothing to fill with yet, so no Fill button.
+    expect(within(drawer).queryByRole("button", { name: "Fill in YouTube Studio" })).toBeNull();
     expect(opened).not.toHaveBeenCalled();
   });
 

@@ -310,9 +310,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
   );
   // A part written before that part existed: what to press to have one.
   const missing = (what: string, name: DescriptionField) =>
-    sample
-      ? `Written before ${what} existed.`
-      : `Written before ${what} existed. Write the description again to have them written, or press Edit ${labels[name].toLowerCase()} to write your own.`;
+    `Written before ${what} existed. Write the description again to have them written, or press Edit ${labels[name].toLowerCase()} to write your own.`;
 
   return (
     <div className="@container min-w-0">
@@ -407,77 +405,82 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
             )}
             {editor("tags")}
           </section>
-          <section aria-labelledby={`${id}-pinned`} className="flex min-w-0 flex-col gap-2">
-            <PartHead
-              id={`${id}-pinned`}
-              label="Pinned comment"
-              count={
-                written && commented
-                  ? `${String(filledComment.text.length)} / ${String(pinnedCommentMaxCharacters)} characters`
-                  : undefined
-              }
-              over={filledComment.text.length > pinnedCommentMaxCharacters}
-            >
-              {written && commented ? (
-                <CopyButton
-                  what="pinned comment"
-                  onCopy={() => copy(filledComment.text, "pinned comment")}
-                />
-              ) : null}
-              {edit("pinnedComment")}
-            </PartHead>
-            <Pasted label="The pinned comment" empty={!commented}>
+          {sample && written && !commented ? null : (
+            <section aria-labelledby={`${id}-pinned`} className="flex min-w-0 flex-col gap-2">
+              <PartHead
+                id={`${id}-pinned`}
+                label="Pinned comment"
+                count={
+                  written && commented
+                    ? `${String(filledComment.text.length)} / ${String(pinnedCommentMaxCharacters)} characters`
+                    : undefined
+                }
+                over={filledComment.text.length > pinnedCommentMaxCharacters}
+              >
+                {written && commented ? (
+                  <CopyButton
+                    what="pinned comment"
+                    onCopy={() => copy(filledComment.text, "pinned comment")}
+                  />
+                ) : null}
+                {edit("pinnedComment")}
+              </PartHead>
               {commented ? (
-                <Filled text={filledComment.text} links={links} />
-              ) : written ? (
-                missing("pinned comments", "pinnedComment")
+                <Pasted label="The pinned comment">
+                  <Filled text={filledComment.text} links={links} />
+                </Pasted>
               ) : (
-                waiting
+                <p className="m-0 text-small text-ink-2">
+                  {written ? missing("pinned comments", "pinnedComment") : waiting}
+                </p>
               )}
-            </Pasted>
-            {commented ? (
-              <p className="m-0 text-small text-ink-2">
-                Post it under the video once it is published, then choose Pin in the comment's menu.
-              </p>
-            ) : null}
-            {editor("pinnedComment")}
-          </section>
-          <section aria-labelledby={`${id}-titles`} className="flex min-w-0 flex-col gap-2">
-            <PartHead
-              id={`${id}-titles`}
-              label="Other titles"
-              count={
-                written && titleList.length > 0
-                  ? `${String(titleList.length + 1)} titles to test`
-                  : undefined
-              }
-              over={titleList.some((one) => one.length > titleMaxCharacters)}
-            >
-              {written && titleList.length > 0 ? (
-                <CopyButton
-                  what="other titles"
-                  onCopy={() => copy(titleList.join("\n"), "other titles")}
-                />
+              {commented ? (
+                <p className="m-0 text-small text-ink-2">
+                  Post it under the video once it is published, then choose Pin in the comment's
+                  menu.
+                </p>
               ) : null}
-              {edit("titles")}
-            </PartHead>
-            <Pasted label="The other titles" empty={titleList.length === 0}>
-              {titleList.length > 0
-                ? titleList.join("\n")
-                : written
-                  ? missing("other titles", "titles")
-                  : waiting}
-            </Pasted>
-            {titleList.length > 0 ? (
-              <p className="m-0 text-small text-ink-2">
-                {`For YouTube's A/B Testing beside the title, with this project's own title "${project.title}".`}
-              </p>
-            ) : null}
-            {titleProblem === undefined || drafts.titles !== undefined ? null : (
-              <p className="m-0 text-small text-danger">{titleProblem}</p>
-            )}
-            {editor("titles")}
-          </section>
+              {editor("pinnedComment")}
+            </section>
+          )}
+          {sample && written && titleList.length === 0 ? null : (
+            <section aria-labelledby={`${id}-titles`} className="flex min-w-0 flex-col gap-2">
+              <PartHead
+                id={`${id}-titles`}
+                label="Other titles"
+                count={
+                  written && titleList.length > 0
+                    ? `${String(titleList.length + 1)} titles to test`
+                    : undefined
+                }
+                over={titleList.some((one) => one.length > titleMaxCharacters)}
+              >
+                {written && titleList.length > 0 ? (
+                  <CopyButton
+                    what="other titles"
+                    onCopy={() => copy(titleList.join("\n"), "other titles")}
+                  />
+                ) : null}
+                {edit("titles")}
+              </PartHead>
+              {titleList.length > 0 ? (
+                <Pasted label="The other titles">{titleList.join("\n")}</Pasted>
+              ) : (
+                <p className="m-0 text-small text-ink-2">
+                  {written ? missing("other titles", "titles") : waiting}
+                </p>
+              )}
+              {titleList.length > 0 ? (
+                <p className="m-0 text-small text-ink-2">
+                  {`For YouTube's A/B Testing beside the title, with this project's own title "${project.title}".`}
+                </p>
+              ) : null}
+              {titleProblem === undefined || drafts.titles !== undefined ? null : (
+                <p className="m-0 text-small text-danger">{titleProblem}</p>
+              )}
+              {editor("titles")}
+            </section>
+          )}
           {again === undefined ? null : (
             <div className="flex flex-col items-start gap-1" {...helpScope}>
               <Button type="button" onClick={again}>
@@ -526,11 +529,12 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
 // A part's text as it goes into YouTube, in a well so it reads as the thing to paste.
 function Pasted({
   label,
-  empty,
+  empty = false,
   children,
 }: {
   readonly label: string;
-  readonly empty: boolean;
+  // Not written yet: the well holds the sentence saying so.
+  readonly empty?: boolean;
   readonly children: ReactNode;
 }): ReactElement {
   return (

@@ -258,7 +258,7 @@ export function PrepareUploadDrawer({
         ) : (
           <>
             <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
-            {paired === false ? (
+            {paired === false && !readOnly ? (
               <FileLink
                 href={studioUploadUrl}
                 target="_blank"
@@ -268,16 +268,15 @@ export function PrepareUploadDrawer({
                 Open YouTube Studio
               </FileLink>
             ) : null}
-            {readOnly ? null : (
+            {/* Unpaired, there is nothing to fill with: the install fold says how to get it. */}
+            {readOnly || paired === false ? null : (
               <Button
-                variant={paired === false ? "secondary" : "primary"}
+                variant="primary"
                 disabled={item === undefined || fill.isPending || paired !== true}
                 disabledReason={
-                  paired === false
-                    ? "Install and pair the Slopify Studio extension first (steps above)"
-                    : settings.error !== null
-                      ? `Couldn't check whether the extension is paired: ${settings.error.message} Close Copy for YouTube Studio and open it again.`
-                      : "Wait for the upload pack to load"
+                  settings.error !== null
+                    ? `Couldn't check whether the extension is paired: ${settings.error.message} Close Copy for YouTube Studio and open it again.`
+                    : "Wait for the upload pack to load"
                 }
                 onClick={() => {
                   if (item === undefined) return;
@@ -572,14 +571,14 @@ function Steps({
   // Shorts have no thumbnail step: Studio picks a frame of a short.
   const steps = studioSteps.filter((step) => step !== "thumbnails" || item.kind === "video");
   const ticked = steps.filter((step) => done.includes(step)).length;
+  // Copy only where there is something to copy; the row says when there isn't.
   const copyAction = (step: StudioStep) => {
     const text = copyTextOf(item, step);
+    if (text === "") return undefined;
     return (
       <Button
         variant="quiet"
         size="small"
-        disabled={text === ""}
-        disabledReason="Nothing to copy yet"
         aria-label={`Copy ${stepLabels[step].toLowerCase()}`}
         onClick={() => copy(text, stepLabels[step].toLowerCase())}
       >
