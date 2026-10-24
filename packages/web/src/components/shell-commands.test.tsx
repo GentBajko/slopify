@@ -26,7 +26,9 @@ it("lands a Settings section's name on that section, not on Settings' first one"
   const registry = await mount();
   expect(matchCommands(registry.list(), "appearance")[0]?.id).toBe("settings.section.general");
   expect(matchCommands(registry.list(), "trash")[0]?.title).toBe("Open Settings: Trash");
-  expect(matchCommands(registry.list(), "api keys")[0]?.title).toBe("Open Settings: Providers");
+  expect(matchCommands(registry.list(), "api keys")[0]?.title).toBe(
+    "Open Settings: Keys & services",
+  );
 });
 
 it("reopens the welcome screen and offers the interactive tutorial", async () => {
