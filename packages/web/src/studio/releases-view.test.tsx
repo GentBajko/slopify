@@ -146,6 +146,22 @@ it("lists finished videos with no release time and gives one a time", async () =
     testDeps({
       "GET /api/studio/releases": jsonAnswer({ ...calendar, entries: [] }),
       "GET /api/schedules": jsonAnswer({ schedules: [] }),
+      "GET /api/projects": jsonAnswer({
+        projects: [
+          {
+            id: "p2",
+            title: "The Harbour | Stories To Sleep To",
+            status: "done",
+            progress: 1,
+            format: "16:9",
+            channelId: "00000000-0000-4000-8000-000000000001",
+            uploadedAt: null,
+            config: { sources: { video: "generate" } },
+            createdAt: "2026-09-27T09:00:00.000Z",
+            updatedAt: "2026-09-27T10:00:00.000Z",
+          },
+        ],
+      }),
       "PUT /api/studio/releases/p2": async (request) => {
         puts.push(await request.json());
         return jsonAnswer({ releases: [] })(request);
@@ -162,6 +178,10 @@ it("lists finished videos with no release time and gives one a time", async () =
   const list = screen.getByRole("list", { name: "Finished, no release time yet" });
   expect(
     within(list).getByRole("link", { name: "The Harbour | Stories To Sleep To" }),
+  ).toBeTruthy();
+  // Its series, what it is and when it finished.
+  expect(
+    await within(list).findByText(/^Stories To Sleep To · 16:9 · finished Sep 27/),
   ).toBeTruthy();
   await user.click(
     within(list).getByRole("button", {

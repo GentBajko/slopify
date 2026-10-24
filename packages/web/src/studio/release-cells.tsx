@@ -1,5 +1,5 @@
 import type { CalendarEntry, CalendarItem, ReleaseCalendar } from "@app/slices/studio/calendar.js";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { type ReactElement, useState } from "react";
 import { saveRelease } from "@/api";
@@ -12,7 +12,8 @@ import { Badge, type BadgeTone } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
 import { ProjectThumb } from "@/home/project-thumb";
 import { browserZone, zoneDiffers, zonedFormat, zonedTime, zoneName } from "@/lib/zoned";
-import { keys } from "@/queries";
+import { shortDate } from "@/lib/utils";
+import { keys, projectsQuery } from "@/queries";
 import { localScheduleTime, scheduleInstant } from "@/schedules/time";
 
 // The pieces of Calendar → Releases: a release time and its state, its editor, a free time of
@@ -275,8 +276,8 @@ export function FreeTime({
   );
 }
 
-// Finished videos with no release time yet, each with its picture and a way to give it one; a
-// time saved moves it up into its week.
+// Finished videos with no release time yet, each with its picture, what it is and when it
+// finished, and a way to give it one; a time saved moves it up into its week.
 export function Unscheduled({
   candidates,
   zone,
@@ -288,6 +289,10 @@ export function Unscheduled({
   readonly editing: Editing | undefined;
   readonly onEdit: (next: Editing | undefined) => void;
 }): ReactElement | null {
+  const { api } = useApp();
+  // The calendar has the list already; it adds the shape and the day each one finished.
+  const projects = useQuery(projectsQuery(api));
+  const listed = new Map((projects.data?.projects ?? []).map((one) => [one.id, one]));
   if (candidates.length === 0) return null;
   return (
     <section aria-label="Finished, no release time yet" className="flex flex-col gap-2">
@@ -306,7 +311,7 @@ export function Unscheduled({
                 {candidate.title}
               </Link>
             }
-            {...(candidate.series === "" ? {} : { meta: candidate.series })}
+            meta={meta(candidate.series, listed.get(candidate.id))}
             actions={
               editing?.projectId === candidate.id ? (
                 <TimeEditor
@@ -331,4 +336,16 @@ export function Unscheduled({
       </List>
     </section>
   );
+}
+
+// "Sleep lore · 16:9 · finished Sep 27": the series when it has one, then what it is and when.
+function meta(
+  series: string,
+  project: { readonly format: string; readonly updatedAt: string } | undefined,
+): string | undefined {
+  const parts = [
+    series === "" ? undefined : series,
+    project === undefined ? undefined : `${project.format} · finished ${shortDate(project.updatedAt)}`,
+  ].filter((part) => part !== undefined);
+  return parts.length === 0 ? undefined : parts.join(" · ");
 }

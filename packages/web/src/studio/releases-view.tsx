@@ -66,7 +66,7 @@ export function ReleasesView(): ReactElement {
   }
   const hasSchedule = (schedules.data ?? []).some((one) => one.deletedAt === null);
   // Release times come from a schedule's own Release times; with none, the first step is one.
-  // A finished video waiting below is the nearer thing to do, so it keeps the accent then.
+  // With finished videos waiting below, giving one a time is nearer, so this steps back then.
   const setUp = (
     <ButtonLink
       to="/calendar"
