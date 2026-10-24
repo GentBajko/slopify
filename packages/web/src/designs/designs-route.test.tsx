@@ -146,7 +146,9 @@ describe("Create's way to start from a picture", () => {
         },
       }),
     );
-    await userEvent.click(await screen.findByRole("button", { name: "Design a poster" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Design a poster (opens the design editor)" }),
+    );
     await waitFor(() =>
       expect(made).toMatchObject({
         kind: "design",
@@ -155,7 +157,9 @@ describe("Create's way to start from a picture", () => {
       }),
     );
     expect(made?.projectId).toBeUndefined();
-    expect(screen.getByRole("button", { name: "Edit a picture" })).not.toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Edit a picture (opens the design editor)" }),
+    ).not.toBeNull();
   });
 });
 
