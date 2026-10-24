@@ -15,6 +15,7 @@ const available = (session: AssistantSession | null): AssistantView => ({
   reason: null,
   fix: null,
   preference: "auto",
+  ready: ["claude-code"],
   session,
 });
 
@@ -61,12 +62,43 @@ function mount(routes: Record<string, Answer>, events = liveEvents()) {
 }
 
 describe("AssistantPanel", () => {
-  it("says what it runs on, and that it only has Slopify's tools", async () => {
+  it("says first what it does, then what it runs on, with no choice to make and nothing to start over", async () => {
     mount({ "GET /api/assistant": jsonAnswer(available(null)) });
-    expect(
-      await screen.findByText("Runs on your Claude Code plan · only Slopify's tools and guide"),
-    ).toBeTruthy();
+    const runs = await screen.findByText(
+      "Runs on your Claude Code plan · it uses only Slopify's tools and guide",
+    );
+    const what = screen.getByText(/^Ask how something in Slopify works/);
+    expect(what.textContent).toContain(
+      "It asks you first before anything that costs money or removes something.",
+    );
+    expect(what.compareDocumentPosition(runs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // One CLI ready: nothing to choose. No chat yet: nothing to start over.
+    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(screen.queryByRole("button", { name: "New chat" })).toBeNull();
     expect(screen.getByRole("button", { name: "Send" })).toHaveProperty("disabled", true);
+  });
+
+  it("offers Answer with, labelled and explained, when Claude Code and Codex are both ready", async () => {
+    const picked: unknown[] = [];
+    mount({
+      "GET /api/assistant": jsonAnswer({ ...available(null), ready: ["claude-code", "codex"] }),
+      "PUT /api/assistant/cli": async (request) => {
+        picked.push(await request.json());
+        return jsonAnswer({ preference: "codex" })(request);
+      },
+    });
+    const select = await screen.findByRole("combobox", { name: "Answer with" });
+    expect(select.getAttribute("aria-describedby")).not.toBeNull();
+    expect(screen.getByText(/^Auto uses Claude Code when it is ready, else Codex/)).toBeTruthy();
+    await userEvent.selectOptions(select, "codex");
+    await waitFor(() => expect(picked).toEqual([{ preference: "codex" }]));
+  });
+
+  it("keeps Answer with while the saved choice can't answer, so Auto is one pick away", async () => {
+    mount({
+      "GET /api/assistant": jsonAnswer({ ...available(null), preference: "codex" }),
+    });
+    expect(await screen.findByRole("combobox", { name: "Answer with" })).toBeTruthy();
   });
 
   it("explains why it can't start, with the fix, and can't be sent to", async () => {
@@ -128,6 +160,8 @@ describe("AssistantPanel", () => {
       },
     });
     expect(await screen.findByText("Used list_templates")).toBeTruthy();
+    // An answer is being written: nothing to start over from yet.
+    expect(screen.queryByRole("button", { name: "New chat" })).toBeNull();
     act(() =>
       events.emit({ type: "assistant.delta", sessionId: "s1", turnId: "t1", text: "You have two" }),
     );
@@ -223,5 +257,7 @@ describe("AssistantPanel", () => {
     expect(screen.getByText("Weekly").tagName).toBe("LI");
     expect(screen.queryByRole("button", { name: "Allow" })).toBeNull();
     expect(screen.getByRole("alert").textContent).toContain("claude auth login");
+    // A chat to start over from.
+    expect(screen.getByRole("button", { name: "New chat" })).toBeTruthy();
   });
 });

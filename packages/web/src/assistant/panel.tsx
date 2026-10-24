@@ -170,6 +170,15 @@ function runsOn(view: AssistantView | undefined): string {
   return `Runs on your ${assistantCliNames[view.cli]} plan`;
 }
 
+// "Answer with" is a choice only when two CLIs could answer, or when the saved choice is one
+// that can't, so the person can go back to Auto.
+function choosable(view: AssistantView | undefined): boolean {
+  if (view === undefined) return false;
+  return (
+    view.ready.length > 1 || (view.preference !== "auto" && !view.ready.includes(view.preference))
+  );
+}
+
 export function AssistantPanel({
   open,
   onClose,
@@ -316,11 +325,20 @@ export function AssistantPanel({
       }
     >
       <div className="flex min-h-full flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="m-0 min-w-0 flex-1 text-label text-ink-3">
-            {`${runsOn(view.data)} · only Slopify's tools and guide`}
+        <div className="flex flex-col gap-1">
+          <p className="m-0">
+            Ask how something in Slopify works, or ask it to do something on this screen. It asks
+            you first before anything that costs money or removes something.
           </p>
-          <Field label={<span className="sr-only">Runs on</span>} className="w-auto">
+          <p className="m-0 text-label text-ink-3">
+            {`${runsOn(view.data)} · it uses only Slopify's tools and guide`}
+          </p>
+        </div>
+        {choosable(view.data) ? (
+          <Field
+            label="Answer with"
+            help="Auto uses Claude Code when it is ready, else Codex. Either runs on your own plan, never on a project's cost."
+          >
             <Select
               value={view.data?.preference ?? "auto"}
               disabled={pick.isPending}
@@ -331,15 +349,7 @@ export function AssistantPanel({
               <option value="codex">Codex</option>
             </Select>
           </Field>
-          <Button
-            variant="quiet"
-            size="small"
-            disabled={running || fresh.isPending || session === null}
-            onClick={() => fresh.mutate()}
-          >
-            New chat
-          </Button>
-        </div>
+        ) : null}
         {view.data !== undefined && !view.data.available && view.data.reason !== null ? (
           <Callout
             tone="waiting"
@@ -358,11 +368,6 @@ export function AssistantPanel({
           {view.isPending ? (
             <li>
               <LoadingBlock label="Opening the chat…" rows={2} rowClassName="h-10" />
-            </li>
-          ) : session === null || session.messages.length === 0 ? (
-            <li className="text-ink-3">
-              Ask how something in Slopify works, or ask it to do something on this screen. It asks
-              you first before anything that costs money or removes something.
             </li>
           ) : null}
           {session?.messages.map((message) => (
@@ -389,6 +394,19 @@ export function AssistantPanel({
           <p className="m-0 text-label text-danger" role="alert">
             {failure}
           </p>
+        )}
+        {/* Starting over is offered once there is a chat to start over from, and not while an
+            answer is being written. */}
+        {session === null || session.messages.length === 0 || running ? null : (
+          <Button
+            variant="quiet"
+            size="small"
+            className="self-start"
+            disabled={fresh.isPending}
+            onClick={() => fresh.mutate()}
+          >
+            New chat
+          </Button>
         )}
       </div>
     </Drawer>
