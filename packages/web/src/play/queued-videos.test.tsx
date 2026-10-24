@@ -1,5 +1,5 @@
 import type { PlayReview } from "@app/slices/play-drafts/model.js";
-import { act, cleanup, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { reviewHarness, reviewStorage, suppliedDocument } from "./review-test-harness";
@@ -45,8 +45,8 @@ it("never offers to queue more videos than the reviewed draft will start", async
 
   // The page shows three videos; the review covers one. Start must not be offered for it.
   expect(harness.session().review.valid).toBe(false);
-  expect(screen.queryByRole("button", { name: "Start run" })).toBeNull();
-  const queue = screen.getByRole("button", { name: "Queue 3 videos" }) as HTMLButtonElement;
+  expect(screen.queryByRole("button", { name: "Make the article" })).toBeNull();
+  const queue = screen.getByRole("button", { name: "Queue 3 articles" }) as HTMLButtonElement;
   expect(queue.disabled).toBe(true);
   expect(screen.getByRole("alert").textContent).toMatch(
     /saved draft has 1 video, but this page shows 3/,
@@ -65,12 +65,16 @@ it("never offers to queue more videos than the reviewed draft will start", async
     document: { variants: readonly unknown[] };
   };
   expect(last.document.variants).toHaveLength(2);
-  await userEvent.click(screen.getByRole("button", { name: "Refresh review" }));
+  await userEvent.click(
+    within(screen.getByRole("region", { name: "Start" })).getByRole("button", {
+      name: "Check again",
+    }),
+  );
   await waitFor(() => expect(harness.session().review.valid).toBe(true));
   const receipt = harness.session().review.receipt;
   expect(receipt?.runs).toHaveLength(3);
   await act(async () => {
-    await userEvent.click(screen.getByRole("button", { name: "Queue 3 videos" }));
+    await userEvent.click(screen.getByRole("button", { name: "Queue 3 articles" }));
   });
   await waitFor(() => expect(harness.created).toHaveBeenCalledTimes(1));
   const started = harness.requests.find((request) => request.url.endsWith("/start"));

@@ -5,17 +5,31 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 import { defaultChannelId } from "@/channels/api";
 import { selfExplanatory, unexplainedControls } from "@/help/coverage";
-import { generatedRun, mountPlay, openRow, openSection } from "@/play/play-test-fixture";
+import {
+  generatedRun,
+  mountPlay,
+  openRow,
+  openSection,
+  summaryTitle,
+} from "@/play/play-test-fixture";
 import { freshShorts } from "@/play/shorts";
 import { jsonAnswer } from "@/test-app";
 
 afterEach(cleanup);
 
-// Every labelled control on Play is explained beside it, by a visible help line or an info
+// Every labelled control on Create is explained beside it, by a visible help line or an info
 // button (help/coverage.ts): every setup row's editor with each source switched to what shows
-// the most controls, the Review panel, another video's keywords, the drafts list and Save as
-// template. Nothing on Play is allowed without one.
-const areaAllow: readonly (string | RegExp)[] = [];
+// the most controls, the summary drawer, another video's keywords, the drafts list and Save as
+// template. Only the controls whose label says all there is to say are allowed without one.
+const areaAllow: readonly (string | RegExp)[] = [
+  // The field at the top asks its own question: "What's the video about?".
+  /^What('s| are) the .* (about|of)\?$/,
+  // "Start from History starter" and "For My channel": what the draft starts from and is for.
+  "Start from",
+  "For channel",
+  // The box Another topic opens: "Topic of another video".
+  / of another (video|article|audiobook|episode|image set)$/,
+];
 
 function expectExplained(): void {
   expect(unexplainedControls(document.body, [...selfExplanatory, ...areaAllow])).toEqual([]);
@@ -33,8 +47,14 @@ const channel = {
   updatedAt: "a",
 };
 
+// Two channels, so the channel this video is for is asked, and the Channel row is there.
 const routes = {
-  "GET /api/channels": jsonAnswer({ channels: [{ ...channel, templates: 0, cast: 0 }] }),
+  "GET /api/channels": jsonAnswer({
+    channels: [
+      { ...channel, templates: 0, cast: 0 },
+      { ...channel, id: "c-2", name: "Second", isDefault: false, templates: 0, cast: 0 },
+    ],
+  }),
   [`GET /api/channels/${defaultChannelId}`]: jsonAnswer({ channel, cast: [] }),
   // A voice listed for German only, so the English run hides it and offers Show all voices.
   "GET /api/settings/voices": jsonAnswer({
@@ -51,12 +71,29 @@ const routes = {
   }),
 };
 
-const rows = ["Title and keywords", "Article", "Narration", "Images", "Video and style", "Outputs"];
+const rows = [
+  "Keywords",
+  "Article",
+  "Narration",
+  "Images",
+  "Video and style",
+  "Extras",
+  "Pauses and checks",
+  "Channel",
+];
 
-async function openEverything(): Promise<void> {
-  for (const row of [...rows, "Channel"]) await openRow(row);
-  for (const summary of document.querySelectorAll("details:not([open]) > summary"))
-    await userEvent.click(summary as HTMLElement);
+// One row at a time, as Create opens them, each with every fold inside it open.
+async function walkEveryRow(): Promise<readonly string[]> {
+  const walked: string[] = [];
+  for (const row of rows) {
+    await openRow(row);
+    if (screen.queryByRole("button", { name: `Close ${row.toLowerCase()}` }) === null) continue;
+    for (const summary of document.querySelectorAll("details:not([open]) > summary"))
+      await userEvent.click(summary as HTMLElement);
+    expectExplained();
+    walked.push(row);
+  }
+  return walked;
 }
 
 // Everything generated, every optional step on.
@@ -104,15 +141,15 @@ const provided: PlayDraftDocument = {
 
 it("explains every control of every setup row with everything generated", async () => {
   const { session } = await mountPlay(routes, generated);
-  await openEverything();
-  await screen.findByRole("radio", { name: "Whole" });
-  // The walk reached the far rows: the speakers, the shorts and the PDF theme.
-  for (const name of ["Speaker name", "How many shorts", "Theme", "Establishing prompt"])
-    expect(screen.getAllByLabelText(name).length).toBeGreaterThan(0);
   expectExplained();
-  // The character count, then every stage that can be Off set to Off.
+  expect(await walkEveryRow()).toEqual(rows);
+  // The character count, inside More audio settings.
+  await openRow("Narration");
+  for (const summary of document.querySelectorAll("details:not([open]) > summary"))
+    await userEvent.click(summary as HTMLElement);
   await userEvent.click(screen.getByRole("radio", { name: /Every .* characters/ }));
   expectExplained();
+  // Then every stage that can be Off set to Off.
   const off = {
     research: "off",
     article: "generate",
@@ -125,18 +162,17 @@ it("explains every control of every setup row with everything generated", async 
   await act(async () => {
     session().edit({ ...generated, form: { ...generated.form, sources: off } });
   });
-  await openEverything();
-  expectExplained();
+  await walkEveryRow();
 });
 
-it("explains the Review panel, another video's keywords, the drafts and Save as template", async () => {
+it("explains the summary, another video's keywords, the drafts and Save as template", async () => {
   await mountPlay(routes, generated);
   await openSection("Review");
-  await screen.findByRole("group", { name: /Review checkpoints/ });
+  await screen.findByRole("dialog", { name: summaryTitle });
   expectExplained();
   await openSection("Content");
 
-  await userEvent.click(screen.getByRole("button", { name: "Add topic" }));
+  await userEvent.click(screen.getByRole("button", { name: "Another topic" }));
   await userEvent.type(screen.getByLabelText("Topic of another video"), "splices{Enter}");
   expectExplained();
   await userEvent.click(screen.getByRole("button", { name: "Change the keywords of splices" }));
@@ -146,7 +182,7 @@ it("explains the Review panel, another video's keywords, the drafts and Save as 
     within(screen.getByRole("dialog", { name: /Video 2/ })).getByRole("button", { name: "Done" }),
   );
 
-  await userEvent.click(screen.getByRole("button", { name: "Drafts" }));
+  await userEvent.click(screen.getByRole("button", { name: /^Draft: / }));
   expectExplained();
   await userEvent.keyboard("{Escape}");
 
@@ -157,6 +193,5 @@ it("explains the Review panel, another video's keywords, the drafts and Save as 
 
 it("explains the provided sources' controls", async () => {
   await mountPlay(routes, provided);
-  await openEverything();
-  expectExplained();
+  await walkEveryRow();
 });

@@ -26,8 +26,7 @@ it("uploads the shorts' background music as a draft attachment from More shorts 
       return response({ ...ready(sent), name: "bed.mp3" });
     },
   });
-  await openRow("Narration");
-  await openRow("Outputs");
+  await openRow("Extras");
   const music = screen.getByLabelText(/^Background music/);
   // Kept on screen with Shorts off, but not pickable.
   expect(music.hasAttribute("disabled")).toBe(true);
@@ -46,8 +45,8 @@ it("uploads the shorts' background music as a draft attachment from More shorts 
     attachmentId,
     name: "bed.mp3",
   });
-  // Staged beside the narration file it sits under.
-  await waitFor(() => expect(screen.getAllByText("Staged")).toHaveLength(2));
+  // Staged like the narration file, which sits in its own row.
+  await waitFor(() => expect(screen.getAllByText("Staged")).toHaveLength(1));
   expect(screen.getByText(/More shorts options · .*Music: bed\.mp3/)).not.toBeNull();
 
   await userEvent.click(screen.getByRole("button", { name: "Remove bed.mp3" }));

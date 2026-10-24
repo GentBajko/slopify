@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { jsonAnswer, problemAnswer } from "@/test-app";
 import { sqliteSessionFixture } from "./draft-sqlite-fixture";
-import { deferred, openSection } from "./play-test-fixture";
+import { deferred, makeKey, openSection, summaryTitle } from "./play-test-fixture";
 import { reviewHarness, reviewStorage, suppliedDocument } from "./review-test-harness";
 
 beforeEach(() =>
@@ -91,12 +91,13 @@ it.each(cases)(
       }
       await openSection("Review");
       if (reload) await harness.restart();
-      const link = await screen.findByRole("button", {
-        name: "Wait for the font upload to finish or choose another font.",
+      const summary = await screen.findByRole("dialog", { name: summaryTitle });
+      const link = await within(summary).findByRole("button", {
+        name: /Wait for the font upload to finish or choose another font\./,
       });
-      expect(
-        (screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled,
-      ).toBe(true);
+      expect((screen.getByRole("button", { name: makeKey }) as HTMLButtonElement).disabled).toBe(
+        true,
+      );
       expect(harness.session().document.fontUpload?.name).toBe("broken.ttf");
       await userEvent.click(link);
       const recovery = await screen.findByRole("button", { name: "Keep current font" });
@@ -147,14 +148,11 @@ it("keeps an inactive in-flight font locked until explicit recovery and ignores 
   );
   await openSection("Review");
   expect(harness.session().fontUploading).toBe(true);
-  expect((screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled).toBe(
-    true,
-  );
-  // The reason under the Play key says what it waits for and goes to it.
+  expect((screen.getByRole("button", { name: makeKey }) as HTMLButtonElement).disabled).toBe(true);
+  // The hint under the Make button says what it waits for and goes to it.
   await userEvent.click(
     within(screen.getByRole("region", { name: "Start" })).getByRole("button", {
-      name: "Go to the field",
-      description: "Wait for the subtitle font upload to finish to play",
+      name: "Wait for the caption font to finish uploading first",
     }),
   );
   await waitFor(() =>
@@ -164,8 +162,7 @@ it("keeps an inactive in-flight font locked until explicit recovery and ignores 
   await openSection("Outputs");
   await userEvent.click(
     within(screen.getByRole("region", { name: "Start" })).getByRole("button", {
-      name: "Go to the field",
-      description: "Wait for the subtitle font upload to finish to play",
+      name: "Wait for the caption font to finish uploading first",
     }),
   );
   await waitFor(() =>

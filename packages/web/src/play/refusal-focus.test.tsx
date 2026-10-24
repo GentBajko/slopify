@@ -1,13 +1,20 @@
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { freshDraftDocument } from "./draft-state";
+import { summaryTitle } from "./play-test-fixture";
 import { reviewHarness, reviewStorage, suppliedDocument } from "./review-test-harness";
 
 beforeEach(() =>
   Object.defineProperty(window, "localStorage", { configurable: true, value: reviewStorage() }),
 );
 afterEach(cleanup);
+
+// The refusal in the summary's list of what is missing, which goes to the field.
+async function correct(): Promise<HTMLElement> {
+  const summary = await screen.findByRole("dialog", { name: summaryTitle });
+  return within(summary).findByRole("button", { name: /Correct this field/ });
+}
 
 it.each(["title", "values.topic"])(
   "reveals the stable variation control for variants.0.%s",
@@ -19,7 +26,7 @@ it.each(["title", "values.topic"])(
       form: { ...freshDraftDocument.form, articlePrompt: "Dossier" },
       variants: [{ id, title: "", values: {} }],
     });
-    await userEvent.click(await screen.findByRole("button", { name: "Correct this field" }));
+    await userEvent.click(await correct());
     const input = document.querySelector(`[data-play-field="items.${id}.${suffix}"]`);
     await waitFor(() => expect(document.activeElement).toBe(input));
     // The other video's title and keywords open in their own side panel.
@@ -37,7 +44,7 @@ it("reveals the font upload in Style for a persisted fontUpload refusal", async 
       subtitles: { ...freshDraftDocument.form.subtitles, mode: "files" },
     },
   });
-  await userEvent.click(await screen.findByRole("button", { name: "Correct this field" }));
+  await userEvent.click(await correct());
   await waitFor(() =>
     expect(document.activeElement).toBe(screen.getByLabelText("Upload font (.ttf or .otf)")),
   );
@@ -57,7 +64,7 @@ it("focuses the supplied images group for an indexed attachment refusal", async 
       },
     },
   });
-  await userEvent.click(await screen.findByRole("button", { name: "Correct this field" }));
+  await userEvent.click(await correct());
   await waitFor(() =>
     expect(document.activeElement?.getAttribute("data-play-field")).toBe("provided.images"),
   );

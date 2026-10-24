@@ -1,6 +1,7 @@
 import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it } from "vitest";
+import { makeKey, openRow } from "./play-test-fixture";
 import { reviewHarness, reviewStorage, suppliedDocument } from "./review-test-harness";
 
 beforeEach(() =>
@@ -29,7 +30,7 @@ it("keeps checkpoint Save, Review, Start and project approval as separate action
       values: { era: "Ancient" },
     },
   });
-  await act(() => h.session().navigate("review"));
+  await openRow("Pauses and checks");
   for (const name of ["Before Narration", "Before Images", "Before Video"])
     await userEvent.click(screen.getByRole("checkbox", { name }));
   await act(() => h.session().flush());
@@ -38,10 +39,10 @@ it("keeps checkpoint Save, Review, Start and project approval as separate action
   expect(h.requests.filter((request) => request.url.endsWith("/start"))).toHaveLength(0);
   await act(() => h.restart());
   await waitFor(() => expect(h.session().status).toBe("saved"));
-  await act(() => h.session().navigate("review"));
+  await openRow("Pauses and checks");
   await userEvent.click(screen.getByRole("checkbox", { name: "Before Images" }));
   await userEvent.click(screen.getByRole("checkbox", { name: "Before Images" }));
-  // Changing a checkpoint invalidates the estimate; reopening Review asks again.
+  // Changing a pause invalidates the estimate; opening the summary asks again.
   await act(() => h.session().navigate("outputs"));
   await act(() => h.session().navigate("review"));
   await waitFor(() => expect(h.session().review.valid).toBe(true));
@@ -51,7 +52,7 @@ it("keeps checkpoint Save, Review, Start and project approval as separate action
     "images",
   ]);
   expect(h.requests.filter((request) => request.url.endsWith("/start"))).toHaveLength(0);
-  await userEvent.click(screen.getByRole("button", { name: "Start run" }));
+  await userEvent.click(screen.getByRole("button", { name: makeKey }));
   await waitFor(() => expect(h.created).toHaveBeenCalledTimes(1));
   expect(h.requests.filter((request) => request.url.endsWith("/start"))).toHaveLength(1);
   expect(h.requests.filter((request) => request.url.endsWith("/approve"))).toHaveLength(0);

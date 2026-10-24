@@ -3,6 +3,7 @@ import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { freshDraftDocument } from "./draft-state";
+import { openRow, topicLabel } from "./play-test-fixture";
 import { reviewHarness, reviewStorage, suppliedDocument } from "./review-test-harness";
 
 beforeEach(() => {
@@ -19,15 +20,15 @@ const choices = ["Before Narration", "Before Images", "Before Video"] as const;
 it("selects each checkpoint and preserves it through saves, unrelated edits and reload", async () => {
   const h = reviewHarness();
   await h.prepare(generated);
-  await act(() => h.session().navigate("review"));
+  await openRow("Pauses and checks");
   for (const name of choices) await userEvent.click(screen.getByRole("checkbox", { name }));
   await act(() => h.session().navigate("content"));
-  await userEvent.type(screen.getByLabelText("Title"), " changed");
+  await userEvent.type(screen.getByLabelText(topicLabel), " changed");
   await act(() => h.session().flush());
   expect(h.session().view?.draft.document.form.checkpoints).toEqual(["audio", "images", "video"]);
   await act(() => h.restart());
   await waitFor(() => expect(h.session().status).toBe("saved"));
-  await act(() => h.session().navigate("review"));
+  await openRow("Pauses and checks");
   for (const name of choices)
     expect((screen.getByRole("checkbox", { name }) as HTMLInputElement).checked).toBe(true);
   expect(h.requests.some((r) => r.url.endsWith("/start") || r.url.endsWith("/approve"))).toBe(
@@ -38,7 +39,7 @@ it("selects each checkpoint and preserves it through saves, unrelated edits and 
 it("disables unavailable generated stages and keeps audio-only export selectable", async () => {
   const h = reviewHarness();
   await h.prepare(suppliedDocument);
-  await act(() => h.session().navigate("review"));
+  await openRow("Pauses and checks");
   for (const name of choices)
     expect((screen.getByRole("checkbox", { name }) as HTMLInputElement).disabled).toBe(true);
   await act(async () => {
@@ -62,7 +63,7 @@ it("lets users remove a saved checkpoint after its stage is disabled", async () 
     ...suppliedDocument,
     form: { ...suppliedDocument.form, checkpoints: ["audio"] },
   });
-  await act(() => h.session().navigate("review"));
+  await openRow("Pauses and checks");
   await userEvent.click(screen.getByRole("checkbox", { name: "Before Narration" }));
   expect(h.session().document.form.checkpoints).toEqual([]);
 });
@@ -86,11 +87,12 @@ it("shows reviewed dependency closure and pending approval, then invalidates cha
     });
   });
   await h.prepare({ ...generated, form: { ...generated.form, checkpoints: ["audio"] } });
-  const summary = await screen.findByRole("region", { name: "Checkpoints summary" });
+  const summary = await screen.findByRole("region", { name: "Pauses and checks summary" });
   await waitFor(() => expect(within(summary).getByText(/Also holds: Video/)).not.toBeNull());
   expect(within(summary).getByText(/Approval required on the project page/)).not.toBeNull();
-  await userEvent.click(within(summary).getByRole("button", { name: "Edit checkpoints" }));
-  expect(h.session().section).toBe("review");
+  await userEvent.click(within(summary).getByRole("button", { name: "Change pauses and checks" }));
+  // The pauses open in their own row on the form, like every other part of the run.
+  expect(h.session().section).toBe("content");
   await userEvent.click(screen.getByRole("checkbox", { name: "Before Images" }));
   expect(h.session().review.valid).toBe(false);
 });
@@ -113,12 +115,12 @@ it.each(["checkpoints.audio", "checkpoints.0"])(
     );
     await h.prepare({ ...generated, form: { ...generated.form, checkpoints: ["audio"] } });
     await userEvent.click(
-      await screen.findByRole("button", { name: "Review the Audio checkpoint" }),
+      await screen.findByRole("button", { name: /Review the Audio checkpoint/ }),
     );
     await waitFor(() =>
       expect(document.activeElement?.getAttribute("data-play-field")).toBe("checkpoints.audio"),
     );
-    expect(h.session().section).toBe("review");
+    expect(h.session().section).toBe("content");
     expect(document.activeElement?.getAttribute("aria-invalid")).toBe("true");
   },
 );

@@ -6,7 +6,7 @@ import type {
 } from "@app/slices/play-drafts/model.js";
 import { createDraftInputSchema, saveDraftInputSchema } from "@app/slices/play-drafts/schema.js";
 import type { ProviderStatus, Voice } from "@app/slices/settings/model.js";
-import { act, type RenderResult, screen } from "@testing-library/react";
+import { act, type RenderResult, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { vi } from "vitest";
@@ -449,7 +449,8 @@ export function trackSession(get: (() => PlaySession) | undefined): void {
 // folds the others.
 export async function openRow(label: string): Promise<void> {
   const name = new RegExp(`^(Change|Fix) ${literal(label.toLowerCase())}$`);
-  const change = screen.queryByRole("button", { name });
+  const setup = screen.queryByRole("list", { name: "Setup" });
+  const change = setup === null ? null : within(setup).queryByRole("button", { name });
   if (change && change.getAttribute("aria-expanded") === "false") await userEvent.click(change);
 }
 function literal(text: string): string {

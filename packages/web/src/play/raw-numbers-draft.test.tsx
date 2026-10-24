@@ -109,7 +109,8 @@ it("offers seconds per image only for a video and the edge silence only with nar
       sources: { ...freshDraftDocument.form.sources, images: "off", video: "off" },
     },
   });
-  await openRow("Video and style");
+  // Narration without pictures is an audiobook: the row holds its sound and captions.
+  await openRow("Sound and captions");
   expect(screen.queryByLabelText("Seconds per image")).toBeNull();
   expect(screen.queryByLabelText("Zoom (%)")).toBeNull();
   expect(screen.queryByLabelText("Motion")).toBeNull();

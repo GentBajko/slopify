@@ -2,7 +2,7 @@ import type { PlayReview } from "@app/slices/play-drafts/model.js";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { deferred } from "./play-test-fixture";
+import { deferred, makeKey, summaryTitle } from "./play-test-fixture";
 import { sameReviewedGeneration } from "./review-state";
 import { reviewHarness, reviewStorage, suppliedDocument } from "./review-test-harness";
 
@@ -53,13 +53,17 @@ describe("bound review identity", () => {
         if (held) pending.resolve(held);
       });
       await waitFor(() => expect(harness.session().review.pending).toBe(false));
-      expect(
-        (screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled,
-      ).toBe(true);
-      await userEvent.click(screen.getByRole("button", { name: "Refresh review" }));
+      expect((screen.getByRole("button", { name: makeKey }) as HTMLButtonElement).disabled).toBe(
+        true,
+      );
+      await userEvent.click(
+        within(screen.getByRole("dialog", { name: summaryTitle })).getByRole("button", {
+          name: "Check again",
+        }),
+      );
       await waitFor(() => expect(harness.session().review.valid).toBe(true));
       const receipt = harness.session().review.receipt;
-      await userEvent.click(screen.getByRole("button", { name: "Start run" }));
+      await userEvent.click(screen.getByRole("button", { name: makeKey }));
       await waitFor(() => expect(harness.created).toHaveBeenCalledTimes(1));
       const sent = harness.requests.find((request) => request.url.endsWith("/start"));
       expect(await sent?.json()).toEqual({
@@ -78,11 +82,11 @@ describe("bound review identity", () => {
     await harness.prepare();
     await waitFor(() => expect(harness.session().review.valid).toBe(true));
     act(() => window.dispatchEvent(new Event("focus")));
-    expect((screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled).toBe(
+    expect((screen.getByRole("button", { name: makeKey }) as HTMLButtonElement).disabled).toBe(
       true,
     );
   });
-  it("checks the setup again by itself after an edit, without Refresh review", async () => {
+  it("checks the setup again by itself after an edit, without Check again", async () => {
     const harness = reviewHarness();
     await harness.prepare();
     await waitFor(() => expect(harness.session().review.valid).toBe(true));
@@ -102,7 +106,7 @@ describe("bound review identity", () => {
     }
     await waitFor(() => expect(harness.session().review.valid).toBe(true));
     expect(reviews().length).toBe(before + 1);
-    expect((screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled).toBe(
+    expect((screen.getByRole("button", { name: makeKey }) as HTMLButtonElement).disabled).toBe(
       false,
     );
   });
@@ -122,9 +126,9 @@ describe("bound review identity", () => {
     await waitFor(() => expect(harness.session().document.variants).toEqual(variants));
     expect(harness.session().document.expectedWords).toBe("");
     // Fifty videos is the most one Start queues: no more topics can be added.
-    expect((screen.getByRole("button", { name: "Add topic" }) as HTMLButtonElement).disabled).toBe(
-      true,
-    );
+    expect(
+      (screen.getByRole("button", { name: "Another topic" }) as HTMLButtonElement).disabled,
+    ).toBe(true);
   });
 });
 
@@ -167,14 +171,12 @@ it("shows costs and resolved text from one receipt without treating unknown char
   expect(screen.getByText("Unknown")).not.toBeNull();
   expect(screen.getByText(/Plus 1 stage charge/)).not.toBeNull();
   expect(screen.getByText(/Catalogue verified 2026-09-13/)).not.toBeNull();
-  await userEvent.click(screen.getByRole("button", { name: "About Estimated cost" }));
-  expect(await screen.findByText(/does not cap spending/)).not.toBeNull();
   expect(screen.queryByText("Keep dormant")).toBeNull();
-  await userEvent.click(screen.getByText("Read the supplied article and resolved prompts"));
+  await userEvent.click(screen.getByText("Your article and the prompts as they will be sent"));
   expect(screen.getByText("The exact reviewed prompt.")).not.toBeNull();
   // The editor behind the drawer holds the same text; read the drawer's copy.
   expect(
-    within(screen.getByRole("dialog", { name: "Review" })).getByText("The supplied article."),
+    within(screen.getByRole("dialog", { name: summaryTitle })).getByText("The supplied article."),
   ).not.toBeNull();
   // The rail shows the total; the stages and their assumptions fold away under it.
   const breakdown = screen.getByText("Cost by stage · 2 stages").closest("details");

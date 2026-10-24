@@ -3,7 +3,14 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { problemAnswer } from "@/test-app";
 import { mountSupplied, ready, response } from "./draft-upload-test-fixture";
-import { deferred, fill, openSection } from "./play-test-fixture";
+import {
+  deferred,
+  fill,
+  makeKey,
+  openSection,
+  summaryTitle,
+  topicLabel,
+} from "./play-test-fixture";
 
 afterEach(() => {
   cleanup();
@@ -50,11 +57,11 @@ it.each(["remove", "replace"] as const)(
     await act(async () => {
       if (request) pending.resolve(response(ready(request)));
     });
-    await fill(screen.getByLabelText("Title"), "Next autosave");
+    await fill(screen.getByLabelText(topicLabel), "Next autosave");
     await act(async () => {
       await session().flush();
     });
-    expect(screen.getByText("Saved")).not.toBeNull();
+    expect(session().status).toBe("saved");
     expect(await saves().at(-1)?.clone().text()).not.toContain(old);
     await openSection("Outputs");
     expect(screen.queryByText("old.wav")).toBeNull();
@@ -90,9 +97,15 @@ it("keeps the font upload lock after leaving Style and preserves concurrent styl
   await userEvent.type(screen.getByLabelText("Subtitle font size"), "64");
   await userEvent.click(screen.getByRole("radio", { name: "center" }));
   await openSection("Review");
-  expect(screen.queryByRole("list", { name: "Setup errors" })).toBeNull();
+  // The only thing missing is the font upload itself; the size and position typed meanwhile
+  // are fine.
   expect(
-    String((screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled),
+    within(screen.getByRole("list", { name: "What is missing" }))
+      .getAllByRole("listitem")
+      .map((item) => item.textContent),
+  ).toEqual(["Setup: Wait for the caption font to finish uploading first"]);
+  expect(
+    String((screen.getByRole("button", { name: makeKey }) as HTMLButtonElement).disabled),
   ).toBe("true");
   await act(async () =>
     pending.resolve(
@@ -101,15 +114,15 @@ it("keeps the font upload lock after leaving Style and preserves concurrent styl
       }),
     ),
   );
+  const checkAgain = () =>
+    within(screen.getByRole("dialog", { name: summaryTitle })).getByRole("button", {
+      name: "Check again",
+    }) as HTMLButtonElement;
+  await waitFor(() => expect(checkAgain().disabled).toBe(false));
+  await userEvent.click(checkAgain());
   await waitFor(() =>
     expect(
-      (screen.getByRole("button", { name: "Refresh review" }) as HTMLButtonElement).disabled,
-    ).toBe(false),
-  );
-  await userEvent.click(screen.getByRole("button", { name: "Refresh review" }));
-  await waitFor(() =>
-    expect(
-      String((screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled),
+      String((screen.getByRole("button", { name: makeKey }) as HTMLButtonElement).disabled),
     ).toBe("false"),
   );
   await openSection("Style");
@@ -135,7 +148,7 @@ it("keeps pending media across Outputs, Style, Content and binds its success onc
   expect((screen.getByLabelText("Narration file") as HTMLInputElement).value).toBe("");
   for (const name of ["Style", "Content", "Review"]) await openSection(name);
   expect(
-    String((screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled),
+    String((screen.getByRole("button", { name: makeKey }) as HTMLButtonElement).disabled),
   ).toBe("true");
   await openSection("Outputs");
   expect(
@@ -146,10 +159,15 @@ it("keeps pending media across Outputs, Style, Content and binds its success onc
   });
   await screen.findByText("Staged");
   // The review refused while the file was copying; asking again finds it ready.
-  await userEvent.click(screen.getByRole("button", { name: "Refresh review" }));
+  await openSection("Review");
+  await userEvent.click(
+    within(screen.getByRole("dialog", { name: summaryTitle })).getByRole("button", {
+      name: "Check again",
+    }),
+  );
   await waitFor(() =>
     expect(
-      String((screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled),
+      String((screen.getByRole("button", { name: makeKey }) as HTMLButtonElement).disabled),
     ).toBe("false"),
   );
   expect(
@@ -196,7 +214,7 @@ it("shows a failed font after revisiting Style and recovers by selecting a font"
     pending.resolve(await problemAnswer("Invalid font")(new Request("http://test"))),
   );
   expect(
-    String((screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled),
+    String((screen.getByRole("button", { name: makeKey }) as HTMLButtonElement).disabled),
   ).toBe("true");
   await openSection("Style");
   expect(screen.getByText("Invalid font")).not.toBeNull();
@@ -205,7 +223,7 @@ it("shows a failed font after revisiting Style and recovers by selecting a font"
   await openSection("Review");
   await waitFor(() =>
     expect(
-      String((screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled),
+      String((screen.getByRole("button", { name: makeKey }) as HTMLButtonElement).disabled),
     ).toBe("false"),
   );
 });
@@ -221,10 +239,10 @@ it("ignores dormant missing narration after Audio is turned Off", async () => {
   );
   await openSection("Review");
   await waitFor(() =>
-    expect((screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled).toBe(
+    expect((screen.getByRole("button", { name: makeKey }) as HTMLButtonElement).disabled).toBe(
       false,
     ),
   );
-  await userEvent.click(screen.getByRole("button", { name: "Start run" }));
+  await userEvent.click(screen.getByRole("button", { name: makeKey }));
   await waitFor(() => expect(created).toHaveBeenCalledTimes(1));
 });

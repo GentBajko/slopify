@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { jsonAnswer } from "@/test-app";
 import { freshDraftDocument } from "./draft-state";
+import { openRow, summaryTitle } from "./play-test-fixture";
 import { reviewHarness, reviewStorage, suppliedDocument } from "./review-test-harness";
 
 beforeEach(() => {
@@ -37,71 +38,66 @@ const generated: PlayDraftDocument = {
   },
 };
 
-it("summarizes active generated choices with raw counts and exact edit destinations", async () => {
+const region = (name: string) => screen.getByRole("region", { name: `${name} summary` });
+
+it("summarizes the run in the rows' own groups, with one Change per group", async () => {
   const harness = reviewHarness();
   await harness.prepare(generated);
-  const readiness = screen.getByRole("region", { name: "Run readiness summary" });
-  expect(within(readiness).getAllByText("Ready")).toHaveLength(3);
-  const outputs = screen.getByRole("region", { name: "Outputs summary" });
-  // The Narration and Images rows open on Play load their model lists, so the summary names the
-  // models once they have arrived, and their ids until then.
-  for (const text of [/^(eleven_multilingual_v2|Multilingual v2)$/, /^(fal-ai\/flux-2|FLUX\.2)$/])
-    expect(within(outputs).getByText(text)).not.toBeNull();
-  for (const text of [
-    "ElevenLabs",
-    "Narrator M",
-    "Every 03000 characters",
-    "Cold open",
-    "Sting",
-    "fal.ai",
-    "Oils · 02 images",
-    "Maps · 3 images",
-    "Title card",
-  ])
-    expect(within(outputs).getByText(text)).not.toBeNull();
-  const content = screen.getByRole("region", { name: "Content summary" });
-  expect(within(content).getByText("Claude Code CLI")).not.toBeNull();
-  expect(within(content).getByText("high")).not.toBeNull();
-  const style = screen.getByRole("region", { name: "Style summary" });
+  const narration = region("Narration");
+  // The Narration and Images rows open on Create load their model lists, so the summary names
+  // the models once they have arrived, and their ids until then.
+  expect(within(narration).getByText(/^(eleven_multilingual_v2|Multilingual v2)$/)).not.toBeNull();
+  for (const text of ["ElevenLabs", "Narrator M", "Every 03000 characters", "Cold open", "Sting"])
+    expect(within(narration).getByText(text)).not.toBeNull();
+  const images = region("Images");
+  expect(within(images).getByText(/^(fal-ai\/flux-2|FLUX\.2)$/)).not.toBeNull();
+  for (const text of ["fal.ai", "02 images", "3 images"])
+    expect(within(images).getByText(text)).not.toBeNull();
+  expect(within(region("Extras")).getByText("Title card")).not.toBeNull();
+  const article = region("Article");
+  expect(within(article).getByText("Claude Code CLI")).not.toBeNull();
+  expect(within(article).getByText("high")).not.toBeNull();
+  const style = region("Video and style");
   expect(within(style).getByText("048 px")).not.toBeNull();
   expect(within(style).getByText("upper-middle")).not.toBeNull();
-  for (const [label, field] of [
-    ["Audio model", "audio.model"],
-    ["Chunking", "chunking.characters"],
-    ["Oils", "imagePrompts.Oils.number"],
-    ["Subtitle position", "subtitles.position"],
-    ["Thinking", "llm.thinking"],
-  ]) {
-    await userEvent.click(screen.getByRole("button", { name: `Edit ${label}` }));
+  // One Change per group, each opening its row on the form and closing the summary.
+  for (const [name, field] of [
+    ["Change article", "sources.article"],
+    ["Change narration", "sources.audio"],
+    ["Change images", "sources.images"],
+    ["Change video and style", "format"],
+  ] as const) {
+    const summary = screen.getByRole("dialog", { name: summaryTitle });
+    await userEvent.click(within(summary).getByRole("button", { name }));
     expect(document.activeElement?.getAttribute("data-play-field")).toBe(field);
+    expect(screen.queryByRole("dialog", { name: summaryTitle })).toBeNull();
     await act(async () => {
       await harness.session().navigate("review");
     });
   }
 });
 
-it("explains when a run only uses supplied content", async () => {
+it("says nothing is missing when a run only uses supplied content", async () => {
   const harness = reviewHarness();
   await harness.prepare(suppliedDocument);
-  expect(
-    within(screen.getByRole("region", { name: "Run readiness summary" })).getByText(
-      "No generated providers required. Supplied content is ready for processing.",
-    ),
-  ).not.toBeNull();
+  const missing = screen.getByRole("region", { name: "Before you can start" });
+  expect(within(missing).getByRole("heading", { name: "Nothing is missing" })).not.toBeNull();
+  expect(within(missing).queryByRole("list")).toBeNull();
 });
 
-it("links a missing CLI back to the provider control", async () => {
+it("lists a picked service that will not answer, and goes to its control", async () => {
   const harness = reviewHarness();
   await harness.prepare({
     ...generated,
     form: { ...generated.form, llm: { provider: "codex", model: "gpt-5" } },
   });
-  const readiness = within(screen.getByRole("region", { name: "Run readiness summary" }));
-  expect(readiness.getByText("CLI not found")).not.toBeNull();
-  expect(readiness.getByRole("button", { name: "Edit ↗" })).not.toBeNull();
+  const missing = within(screen.getByRole("region", { name: "Before you can start" }));
+  const fix = missing.getByRole("button", { name: /Codex CLI isn't installed on this computer/ });
+  await userEvent.click(fix);
+  expect(document.activeElement?.getAttribute("data-play-field")).toBe("llm.provider");
 });
 
-it("shows actionable guidance for an installed but incompatible CLI", async () => {
+it("says what is wrong with an installed but incompatible CLI, in its own words", async () => {
   const issue =
     "Codex CLI 0.149.1 or newer is required; version 0.148.0 is installed. Update Codex CLI and try again.";
   const harness = reviewHarness(undefined, {
@@ -133,9 +129,10 @@ it("shows actionable guidance for an installed but incompatible CLI", async () =
     form: { ...generated.form, llm: { provider: "codex", model: "gpt-5" } },
   });
 
-  const readiness = within(screen.getByRole("region", { name: "Run readiness summary" }));
-  expect(readiness.getByText(issue)).not.toBeNull();
-  expect(readiness.getByRole("button", { name: "Edit ↗" })).not.toBeNull();
+  const missing = within(screen.getByRole("region", { name: "Before you can start" }));
+  expect(
+    missing.getByRole("button", { name: new RegExp(issue.replace(/[.()]/g, "\\$&")) }),
+  ).not.toBeNull();
 });
 
 it("shows supplied filenames in order and hides dormant generation choices", async () => {
@@ -164,28 +161,27 @@ it("shows supplied filenames in order and hides dormant generation choices", asy
       },
     },
   });
-  const outputs = screen.getByRole("region", { name: "Outputs summary" });
-  expect(within(outputs).getByText("narration.wav")).not.toBeNull();
-  expect(within(outputs).getByText("cover.png")).not.toBeNull();
+  expect(within(region("Narration")).getByText("narration.wav")).not.toBeNull();
+  expect(within(region("Extras")).getByText("cover.png")).not.toBeNull();
   expect(
-    within(outputs)
+    within(region("Images"))
       .getAllByRole("listitem")
       .map((item) => item.textContent),
   ).toEqual(["second.png", "first.png"]);
   for (const label of [
-    "Audio model",
+    "Voice model",
     "Image model",
-    "Chunking",
+    "Split the narration",
     "Intro",
     "Outro",
     "Thumbnail prompt",
-    "Text model",
+    "Model",
     "Thinking",
   ])
-    expect(screen.queryByRole("button", { name: `Edit ${label}` })).toBeNull();
+    expect(screen.queryByText(label, { selector: "dt" })).toBeNull();
 });
 
-it("includes text generation for LLM entries and image generation for thumbnails alone", async () => {
+it("includes the writer for AI-written entries and the image service for thumbnails alone", async () => {
   const harness = reviewHarness();
   await harness.prepare({
     ...generated,
@@ -194,9 +190,9 @@ it("includes text generation for LLM entries and image generation for thumbnails
       sources: { ...suppliedDocument.form.sources, audio: "generate", thumbnail: "prompt_by_llm" },
     },
   });
-  expect(screen.getByRole("button", { name: "Edit Text model" })).not.toBeNull();
-  expect(screen.getByRole("button", { name: "Edit Image model" })).not.toBeNull();
-  expect(screen.queryByRole("button", { name: "Edit Oils" })).toBeNull();
+  expect(within(region("Article")).getByText("Written by", { selector: "dt" })).not.toBeNull();
+  expect(within(region("Images")).getByText("Image model", { selector: "dt" })).not.toBeNull();
+  expect(within(region("Images")).queryByText("Oils", { selector: "dt" })).toBeNull();
   await act(async () => {
     const document = harness.session().document;
     harness.session().edit({
@@ -204,15 +200,15 @@ it("includes text generation for LLM entries and image generation for thumbnails
       form: { ...document.form, sources: { ...document.form.sources, thumbnail: "off" } },
     });
   });
-  expect(screen.getByRole("button", { name: "Edit Text model" })).not.toBeNull();
-  expect(screen.queryByRole("button", { name: "Edit Image model" })).toBeNull();
+  expect(within(region("Article")).getByText("Written by", { selector: "dt" })).not.toBeNull();
+  expect(within(region("Images")).queryByText("Image model", { selector: "dt" })).toBeNull();
 });
 
 it.each([
-  ["whole", "Whole text", "chunking.mode"],
-  ["paragraph", "Paragraph", "chunking.mode"],
-  ["words", "Every (not entered) words", "chunking.words"],
-] as const)("keeps %s chunking truthful and editable", async (mode, text, field) => {
+  ["whole", "Read as one piece"],
+  ["paragraph", "By paragraph"],
+  ["words", "Every (not entered) words"],
+] as const)("keeps %s chunking truthful", async (mode, text) => {
   const harness = reviewHarness();
   await harness.prepare({
     ...generated,
@@ -222,18 +218,20 @@ it.each([
       imagePrompts: [{ name: "Oils", number: "" }],
     },
   });
-  const outputs = screen.getByRole("region", { name: "Outputs summary" });
-  expect(within(outputs).getByText(text)).not.toBeNull();
-  expect(within(outputs).getByText("Oils · (not entered) images")).not.toBeNull();
-  await userEvent.click(screen.getByRole("button", { name: "Edit Chunking" }));
-  expect(document.activeElement?.getAttribute("data-play-field")).toBe(field);
+  expect(within(region("Narration")).getByText(text)).not.toBeNull();
+  expect(within(region("Images")).getByText("(not entered) images")).not.toBeNull();
 });
 
 it("uses loaded names while preserving the existing review catalogue refresh", async () => {
   const harness = reviewHarness();
   await harness.prepare(generated);
-  await userEvent.click(screen.getByRole("button", { name: "Edit Audio model" }));
+  await userEvent.click(
+    within(screen.getByRole("dialog", { name: summaryTitle })).getByRole("button", {
+      name: "Change narration",
+    }),
+  );
   await screen.findByRole("option", { name: "Multilingual v2" });
+  await openRow("Images");
   await screen.findByRole("option", { name: "FLUX.2" });
   await act(async () => {
     await harness.session().navigate("style");
@@ -243,12 +241,9 @@ it("uses loaded names while preserving the existing review catalogue refresh", a
   await act(async () => {
     await harness.session().navigate("review");
   });
-  const outputs = within(screen.getByRole("region", { name: "Outputs summary" }));
-  expect(outputs.getByText("Multilingual v2")).not.toBeNull();
-  expect(outputs.getByText("FLUX.2")).not.toBeNull();
-  expect(
-    within(screen.getByRole("region", { name: "Style summary" })).getByText("Default"),
-  ).not.toBeNull();
+  expect(within(region("Narration")).getByText("Multilingual v2")).not.toBeNull();
+  expect(within(region("Images")).getByText("FLUX.2")).not.toBeNull();
+  expect(within(region("Video and style")).getByText("Default")).not.toBeNull();
   const refreshed = harness.requests
     .slice(requests)
     .map((request) => new URL(request.url).pathname)
@@ -259,7 +254,7 @@ it("uses loaded names while preserving the existing review catalogue refresh", a
 });
 
 it.each([
-  ["a draft saved without the Document stage", generated, "Off"],
+  ["a draft saved without the PDF stage", generated, "No"],
   [
     "a generated Document",
     {
@@ -270,22 +265,21 @@ it.each([
         document: { theme: "plain" as const },
       },
     },
-    "PDF · Plain theme",
+    "Plain look",
   ],
-])("names the Document for %s", async (_name, document, expected) => {
+])("names the PDF for %s", async (_name, document, expected) => {
   const harness = reviewHarness();
   await harness.prepare(document);
-  const outputs = screen.getByRole("region", { name: "Outputs summary" });
-  const label = within(outputs).getByText("Document");
+  const label = within(region("Extras")).getByText("PDF");
   expect(label.nextElementSibling?.textContent).toBe(expected);
 });
 
 it.each([
-  ["a draft saved without the YouTube description", generated, "Off"],
+  ["a draft saved without the YouTube description", generated, "No"],
   [
     "the built-in prompt",
     { ...generated, form: { ...generated.form, youtubeDescription: true } },
-    "Built-in prompt · One LLM call after subtitle timing",
+    "Built-in prompt · one AI call after the captions are timed",
   ],
   [
     "a picked prompt",
@@ -293,13 +287,12 @@ it.each([
       ...generated,
       form: { ...generated.form, youtubeDescription: true, descriptionPrompt: "Hooky" },
     },
-    "Hooky prompt · One LLM call after subtitle timing",
+    "Hooky prompt · one AI call after the captions are timed",
   ],
 ])("names the YouTube description for %s", async (_name, document, expected) => {
   const harness = reviewHarness();
   await harness.prepare(document);
-  const outputs = screen.getByRole("region", { name: "Outputs summary" });
-  const label = within(outputs).getByText("YouTube description");
+  const label = within(region("Extras")).getByText("YouTube description");
   expect(label.nextElementSibling?.textContent).toBe(expected);
 });
 
@@ -313,11 +306,11 @@ const shorts = {
 };
 
 it.each([
-  ["a draft saved without Shorts", generated, "Off"],
+  ["a draft saved without Shorts", generated, "No"],
   [
     "the built-in prompts",
     { ...generated, form: { ...generated.form, shorts } },
-    "3 shorts of 60-120 s · Built-in prompt · Built-in image style · Vertical images and renders after subtitle timing",
+    "3 shorts of 60-120 s · Built-in prompt · Built-in image prompt · Portrait images, made after the captions are timed",
   ],
   [
     "picked prompts",
@@ -325,7 +318,7 @@ it.each([
       ...generated,
       form: { ...generated.form, shorts: { ...shorts, prompt: "Hooks", imagePrompt: "Maps" } },
     },
-    "3 shorts of 60-120 s · Hooks prompt · Maps image style · Vertical images and renders after subtitle timing",
+    "3 shorts of 60-120 s · Hooks prompt · Maps image prompt · Portrait images, made after the captions are timed",
   ],
   [
     "the more options",
@@ -342,7 +335,7 @@ it.each([
         },
       },
     },
-    "3 shorts of 60-120 s · Built-in prompt · Built-in image style · Title on screen · 1.10× speed · Music at 20% once added in Edit project · Links https://youtu.be/x · Vertical images and renders after subtitle timing",
+    "3 shorts of 60-120 s · Built-in prompt · Built-in image prompt · Title on screen · 1.10× speed · Music at 20% once added in Edit project · Links https://youtu.be/x · Portrait images, made after the captions are timed",
   ],
   [
     "attached background music",
@@ -357,12 +350,11 @@ it.each([
         },
       },
     },
-    "3 shorts of 60-120 s · Built-in prompt · Built-in image style · Music: bed.mp3 at 15% · Vertical images and renders after subtitle timing",
+    "3 shorts of 60-120 s · Built-in prompt · Built-in image prompt · Music: bed.mp3 at 15% · Portrait images, made after the captions are timed",
   ],
 ])("names the Shorts for %s", async (_name, document, expected) => {
   const harness = reviewHarness();
   await harness.prepare(document);
-  const outputs = screen.getByRole("region", { name: "Outputs summary" });
-  const label = within(outputs).getByText("Shorts");
+  const label = within(region("Extras")).getByText("Shorts");
   expect(label.nextElementSibling?.textContent).toBe(expected);
 });
