@@ -660,12 +660,14 @@ describe("a stage's state is a word beside its lamp", () => {
           { id: "i", name: "Images", tone: "done", state: "Done", detail: "4 images" },
           { id: "v", name: "Video", tone: "off", state: "Not started" },
           { id: "a", name: "Article", tone: "done", state: "Provided", detail: "Provided" },
+          { id: "r", name: "Research", tone: "off", state: "Not yet", detail: "" },
         ]}
       />,
     );
-    const [images, video, article] = screen.getAllByRole("listitem");
-    // A detail that only repeats the state is said once.
+    const [images, video, article, research] = screen.getAllByRole("listitem");
+    // A detail that only repeats the state is said once, and an empty one adds no dot.
     expect(article?.querySelector(".sl-step__detail")?.textContent).toBe("Provided");
+    expect(research?.querySelector(".sl-step__detail")?.textContent).toBe("Not yet");
     expect(images?.querySelector(".sl-lamp")).not.toBeNull();
     expect(images?.querySelector(".sl-step__detail")?.textContent).toBe("Done · 4 images");
     expect(video?.querySelector(".sl-step__detail")?.textContent).toBe("Not started");

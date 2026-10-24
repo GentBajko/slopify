@@ -33,8 +33,12 @@ export function Steps({
       className={cn("sl-steps m-0 list-none p-0", dense && "sl-steps--dense", className)}
     >
       {steps.map((step) => {
-        // A detail that only repeats the state ("Provided · Provided") is said once.
-        const detail = step.detail === step.state ? undefined : step.detail;
+        // A detail that only repeats the state ("Provided · Provided") is said once, and an
+        // empty one leaves no dot behind.
+        const detail =
+          step.detail === step.state || step.detail === "" || step.detail === null
+            ? undefined
+            : step.detail;
         return (
           <li key={step.id} className="sl-step" data-tone={step.tone}>
             <Lamp tone={step.tone} />
