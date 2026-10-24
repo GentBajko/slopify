@@ -8,8 +8,8 @@ import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { EmptyState } from "@/components/kit/empty-state";
 import { ButtonLink } from "@/components/kit/link";
-import { intents, requestIntent } from "@/lib/intents";
 import { schedulesQuery } from "@/schedules/api";
+import { requestNewSchedule } from "@/schedules/new-from";
 import {
   day,
   type Editing,
@@ -72,7 +72,7 @@ export function ReleasesView(): ReactElement {
       to="/calendar"
       search={{ tab: "schedules" }}
       variant={data.candidates.length === 0 ? "primary" : "secondary"}
-      onClick={hasSchedule ? undefined : () => requestIntent(intents.newSchedule)}
+      onClick={hasSchedule ? undefined : () => requestNewSchedule()}
     >
       {hasSchedule ? null : <PlusIcon aria-hidden="true" strokeWidth={1.75} />}
       {hasSchedule ? "Set release times in a schedule" : "New schedule"}

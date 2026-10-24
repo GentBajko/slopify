@@ -12,10 +12,10 @@ import { helpScope } from "@/components/kit/info-tip";
 import { ButtonLink, TextLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { Status } from "@/components/kit/status";
-import { intents, requestIntent } from "@/lib/intents";
 import { scheduleStatusLook } from "@/lib/state-words";
 import { shortDate } from "@/lib/utils";
 import { schedulesQuery } from "@/schedules/api";
+import { requestNewSchedule } from "@/schedules/new-from";
 import { formatScheduleDate } from "@/schedules/time";
 import { type TemplateSummary, templatesKey, templatesQuery } from "@/templates/api";
 import { channelsKey, channelsQuery, defaultChannelId, moveTemplate } from "./api";
@@ -26,11 +26,13 @@ export function channelOfTemplate(template: { readonly channelId?: string | unde
 }
 
 // New schedule from a channel's page: the calendar's Schedules tab, on its form.
-// "row" is the small one among a template row's buttons.
+// "row" is the small one among a template row's buttons, whose form starts on that template.
 function NewScheduleLink({
   variant = "secondary",
+  template,
 }: {
   readonly variant?: "primary" | "secondary" | "row";
+  readonly template?: TemplateSummary;
 }): ReactElement {
   return (
     <ButtonLink
@@ -38,7 +40,8 @@ function NewScheduleLink({
       search={{ tab: "schedules" }}
       variant={variant === "row" ? "secondary" : variant}
       size={variant === "row" ? "small" : "default"}
-      onClick={() => requestIntent(intents.newSchedule)}
+      {...(template === undefined ? {} : { "aria-label": `New schedule from ${template.name}` })}
+      onClick={() => requestNewSchedule(template?.id)}
     >
       {variant === "row" ? null : <PlusIcon aria-hidden="true" strokeWidth={1.75} />}
       New schedule
@@ -150,7 +153,7 @@ export function TemplatesTab({
                         {making === template.id ? "Opening…" : "Make a video"}
                       </Button>
                     )}
-                    <NewScheduleLink variant="row" />
+                    <NewScheduleLink variant="row" template={template} />
                     {others.length === 0 ? null : (
                       <Select
                         aria-label={`Move ${template.name} to`}

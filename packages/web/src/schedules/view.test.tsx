@@ -5,6 +5,7 @@ import { CommandPaletteProvider, CommandRegistry } from "@/components/kit/comman
 import { ToastProvider } from "@/components/kit/toast";
 import { freshDraftDocument } from "@/play/draft-state";
 import { jsonAnswer, renderRouted, testDeps } from "../test-app";
+import { requestNewSchedule } from "./new-from";
 import { SchedulesView } from "./view";
 
 afterEach(cleanup);
@@ -373,4 +374,32 @@ it("shows a gated template's schedule running an older version while a newer one
     ),
   ).toBeTruthy();
   expect(within(detail).queryByText(/Its runs are skipped/)).toBeNull();
+});
+
+it("opens New schedule on the template a channel's template row named", async () => {
+  const otherTemplate = "33333333-3333-4333-8333-333333333333";
+  requestNewSchedule(otherTemplate);
+  renderRouted(
+    <SchedulesView />,
+    testDeps({
+      "GET /api/schedules": jsonAnswer({ schedules: [summary] }),
+      "GET /api/project-templates": jsonAnswer({
+        templates: [
+          { id: templateId, name: "Stories", version: 1, updatedAt: summary.updatedAt },
+          { id: otherTemplate, name: "Sleep lore", version: 2, updatedAt: summary.updatedAt },
+        ],
+      }),
+      [`GET /api/project-templates/${otherTemplate}`]: jsonAnswer({
+        template: {
+          id: otherTemplate,
+          name: "Sleep lore",
+          version: 2,
+          updatedAt: summary.updatedAt,
+          document: freshDraftDocument,
+        },
+      }),
+    }),
+  );
+  const form = await screen.findByRole("region", { name: "New schedule" });
+  expect((within(form).getByLabelText("Template") as HTMLSelectElement).value).toBe(otherTemplate);
 });

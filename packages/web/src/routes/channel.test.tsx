@@ -407,9 +407,11 @@ describe("Channels", () => {
       `/templates/${templateId}`,
     );
     expect(within(list).getByText(/· No schedule$/)).not.toBeNull();
-    expect(within(list).getByRole("link", { name: "New schedule" }).getAttribute("href")).toBe(
-      "/calendar?tab=schedules",
-    );
+    expect(
+      within(list)
+        .getByRole("link", { name: "New schedule from History starter" })
+        .getAttribute("href"),
+    ).toBe("/calendar?tab=schedules");
     // With one channel there is nowhere to move it.
     expect(within(list).queryByRole("combobox")).toBeNull();
     await user.click(

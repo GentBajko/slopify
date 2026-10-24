@@ -37,9 +37,10 @@ import { Status } from "@/components/kit/status";
 import { Segmented } from "@/components/kit/switch";
 import { TabPanel, Tabs } from "@/components/kit/tabs";
 import { fullDay } from "@/lib/format";
-import { intents, requestIntent, useIntent } from "@/lib/intents";
+import { intents, useIntent } from "@/lib/intents";
 import { projectsQuery } from "@/queries";
 import { calendarQuery, schedulesQuery } from "@/schedules/api";
+import { requestNewSchedule } from "@/schedules/new-from";
 import { SchedulesView } from "@/schedules/view";
 import { ReleasesView } from "@/studio/releases-view";
 import { templatesQuery } from "@/templates/api";
@@ -201,7 +202,7 @@ export function CalendarRoute({
   };
   // New schedule from the weeks: the Schedules tab, with its form open.
   const newSchedule = () => {
-    requestIntent(intents.newSchedule);
+    requestNewSchedule();
     chooseTab("schedules");
   };
 

@@ -34,6 +34,7 @@ import {
   ScheduleListTools,
   type ScheduleSort,
 } from "./list-tools";
+import { takeNewScheduleTemplate } from "./new-from";
 import { ScheduleDetail } from "./schedule-detail";
 import { ScheduleList } from "./schedule-list";
 import type { Act, Reply } from "./schedule-row";
@@ -142,8 +143,11 @@ export function SchedulesView({
     setError(null);
   };
   const noTemplates = templates.data?.length === 0;
-  const startNew = () => {
+  // The template a New schedule asked for elsewhere starts on (`new-from.ts`).
+  const [startTemplate, setStartTemplate] = useState<string | undefined>();
+  const startNew = (templateId?: string) => {
     if (formOpen || noTemplates) return;
+    setStartTemplate(templateId);
     setEditing(null);
     setCreating(true);
     setError(null);
@@ -178,7 +182,7 @@ export function SchedulesView({
     title: "New schedule",
     group: "Schedules",
     keywords: ["calendar", "recurring"],
-    run: startNew,
+    run: () => startNew(),
   });
   // "New schedule" run from another screen lands here (`components/global-commands.tsx`).
   useIntent(
@@ -189,7 +193,7 @@ export function SchedulesView({
           "A schedule runs a project template, and there is none yet. Open a project, choose Save as template, then run New schedule again.",
           "error",
         );
-      else startNew();
+      else startNew(takeNewScheduleTemplate());
     },
     templates.data !== undefined,
   );
@@ -246,7 +250,7 @@ export function SchedulesView({
               </Select>
             ) : null}
             {showNew ? (
-              <Button variant="primary" onClick={startNew}>
+              <Button variant="primary" onClick={() => startNew()}>
                 <PlusIcon aria-hidden="true" className="size-4" strokeWidth={1.75} />
                 New schedule
               </Button>
@@ -271,7 +275,7 @@ export function SchedulesView({
             hiddenBySearch={listTools ? channelSchedules.length - liveSchedules.length : 0}
             channelFiltered={channelFilter !== ""}
             deleted={deletedSchedules}
-            {...(canStart ? { onNew: startNew } : {})}
+            {...(canStart ? { onNew: () => startNew() } : {})}
             selectedId={formOpen ? undefined : selected?.id}
             pending={rowPending}
             nextTitles={nextTitles}
@@ -293,6 +297,7 @@ export function SchedulesView({
                 onBusy={setFormBusy}
                 key={editing?.id ?? "new"}
                 editing={editing}
+                {...(editing === null && startTemplate !== undefined ? { startTemplate } : {})}
                 onCancel={() => {
                   if (!formBusy) closeForm();
                 }}

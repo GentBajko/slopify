@@ -57,6 +57,7 @@ export function ScheduleForm({
   onCancel,
   error,
   onBusy,
+  startTemplate,
 }: {
   readonly templates: readonly {
     readonly id: string;
@@ -71,10 +72,15 @@ export function ScheduleForm({
   // The last refusal, shown at the top of the form it belongs to.
   readonly error?: string | null;
   readonly onBusy: (busy: boolean) => void;
+  // A new schedule's template, picked already (New schedule on a template's row).
+  readonly startTemplate?: string;
 }): ReactElement {
   const { api } = useApp();
   const [name, setName] = useState(editing?.name ?? "");
-  const [templateId, setTemplateId] = useState(editing?.templateId ?? "");
+  const [templateId, setTemplateId] = useState(
+    editing?.templateId ??
+      (templates.some((one) => one.id === startTemplate) ? (startTemplate ?? "") : ""),
+  );
   // Design schedules (Ahead of each date) are made in their design template's editor.
   const [kind, setKind] = useState<Exclude<Cadence["kind"], "by-date">>(
     editing === null || editing.cadence.kind === "by-date" ? "daily" : editing.cadence.kind,

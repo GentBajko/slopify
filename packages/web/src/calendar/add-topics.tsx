@@ -8,8 +8,8 @@ import { Dialog } from "@/components/kit/dialog";
 import { Field, Select, Textarea } from "@/components/kit/field";
 import { TextLink } from "@/components/kit/link";
 import { useToast } from "@/components/kit/toast";
-import { intents, requestIntent } from "@/lib/intents";
 import { calendarKey, schedulesKey, updateSchedule } from "@/schedules/api";
+import { requestNewSchedule } from "@/schedules/new-from";
 
 // "Add topics to a schedule": topics typed or pasted one per line join the end of a schedule's
 // queue, so they take the next free runs of that schedule. A batch is just this.
@@ -135,7 +135,7 @@ export function AddTopics({
             search={{ tab: "schedules" }}
             onClick={() => {
               // Lands on the New schedule form itself, not just the Schedules tab.
-              requestIntent(intents.newSchedule);
+              requestNewSchedule();
               onOpenChange(false);
             }}
           >
