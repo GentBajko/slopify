@@ -64,17 +64,18 @@ write in visible text.
 | The stages | Research, Article, Narration, Images, Thumbnail, Video, PDF (`lib/stage-words.ts`); Audio export for a sound-only export; Audiobook, Radio drama or Episode for a listening project's last stage | Audio, Document, Export, Speech, TTS |
 | Who does a stage | A group named for the role, over two selects, Service and Model: Written by, Read by, Images by, Drawn by, Checked by. In a sentence: the voice service, the image service | LLM, Text model, TTS model, Speech provider, Provider on its own |
 | Who reads the narration | Voice | TTS voice |
+| The pictures a run makes | Images; the image service | Pictures in a label for them |
 | On-screen text over the video | Captions (the `.srt` and `.vtt` files are Subtitles (.srt) and Subtitles (.vtt)) | Subtitles for the on-screen text |
 | `{{Topic}}` and friends | keyword: "Asks for: Topic", "Asks you for" | slot, field |
 | A saved setup | template; starter templates for the bundled ones | setup (as the saved thing), pack, studio |
 | Editing a template | Edit template | Open studio, Template Studio |
-| Doing paid work again | Make <object> again, with count and cost where known: "Make all 4 images again · 4 image calls", "Make this image again", "Write the description again · 1 AI call" | Regenerate, Remake, Redo, Write again on its own |
+| Doing paid work again | Make <object> again, with count and cost where known: "Make all 4 images again · 4 image calls", "Make this image again", "Write the description again · 1 AI call" | Regenerate, Remake, Redo, Record again, Write again on its own |
 | Making something again on this computer | "Make the video again (free)", "Make the PDF again (free)" | Render as a button's verb |
-| Getting it onto YouTube | Copy for YouTube Studio (its last row is I've uploaded it); the states Ready to upload and Uploaded | Prepare upload, On YouTube, Marked uploaded |
+| Getting it onto YouTube | Copy for YouTube Studio (its last row is I've uploaded it); the states Ready to upload and Uploaded | Prepare upload; On YouTube or Marked uploaded as a state (a toast may say "Marked uploaded: <title>.") |
 | A project's views | All files, Progress (only while the run goes or is paused), Versions, Pauses and checks | Outputs, Live, History, Revision, Checkpoints, Reviews |
 | Pausing a run for approval | "Pause after <step> (before <stage>)": "Pause after the images (before the video)". It waits under Home → Needs you | Before Audio, checkpoint in a label |
 | A saved state of a project's settings | version | revision |
-| A YouTube date | Release; Clear the date; No date yet | Schedule (Visibility), Release time |
+| A video's YouTube date | Release; Clear the date; No date yet | Schedule (Visibility), Release time (a schedule's Release times are its times of day, a different thing) |
 | The uploads of one project | Video, Short 1, Short 2 | |
 | Home's list of finished work | Finished | Ready (Ready is a service's or a part's readiness) |
 | The pages that were Library | Prompts, Templates | Library |
@@ -90,21 +91,35 @@ only in an info popover. A link that leaves the page ends in "↗" and names a d
 not obvious ("New narration prompt ↗ (opens Prompts)"); two links on one screen never share a
 name.
 
-A few strings are not in these words yet. Don't copy them; move them when you touch them: the
-outdated next action and its palette commands ("Remake 3 outdated images", "Remake everything
-outdated", More's "Choose what to remake…"), the style preview's "Render again", the failed-key
-fix "Open Settings → Providers → <service>" (the page is now Keys & services), and help entries
-that still say Library, LLM, text model or TTS.
+Some strings are not in these words yet. Don't copy them; move them when you touch them:
+
+- Remake, Render, Redo: the outdated next action and its palette commands ("Remake 3 outdated
+  images", "Remake outdated outputs", "Remake everything outdated", "Choose what to remake" in
+  More and Ctrl+K), the style preview's "Render again", an AI check's "Redo", Edit settings'
+  "press Remake" for new shorts music, and Settings' "Render priority".
+- Library, Play, revision: Edit settings' "Update from Library", "Library → Narration aliases",
+  "the Library version" and "Library wording" (`project/revision-providers.tsx`,
+  `revision-prompts.tsx`, `revision-form.tsx`), Save as template's "Save this revision's setup
+  for a fresh Play draft", the tour's "Play is where you configure one project", the backup
+  count "Play drafts", and help entries that still say Library, LLM, text model or TTS.
+- Subtitles for the on-screen text: the Video section's "Subtitles and fonts" fold and "Passages
+  left out of the subtitles".
+- Places that moved: the failed-key fix "Open Settings → Providers → <service>" (the page is now
+  Keys & services), and What worked on YouTube's empty line "(On YouTube → A/B test)" (the fold
+  is "Test other titles and thumbnails" under YouTube).
+- A prompt row's ⋯ says History where a template card's says Versions.
 
 ## Components
 
-`kit/button` (Button: primary, secondary, quiet, destructive, icon; small; `disabledReason`;
-`focusableWhenDisabled` for a reason the person needs to go on ("Cancel the run first, then
-delete it."): the button stays in the tab order with `aria-disabled`, refuses presses, and its
-reason is its description and the kit's tooltip on hover and keyboard focus; IconButton, whose
-`label` is its name and tooltip; PlayKey, the lime key: the rail's Create key and Create's Make
-button; ButtonRow) · `kit/link` (ButtonLink and TextLink for router links, FileLink and
-IconFileLink for a download or a file opened in a new tab; see Links and buttons) · `kit/field`
+`kit/button` (Button: primary, secondary, quiet, destructive, icon; small; `disabledReason`,
+the reason as the button's tooltip, beside the visible line that says it; `focusableWhenDisabled`
+for a reason the person needs to go on ("Cancel the run first, then delete it."): the button
+stays in the tab order with `aria-disabled`, refuses presses, and its reason is also its
+description and the kit's tooltip on hover and keyboard focus; IconButton, whose `label` is its
+name and tooltip, only for the few controls Links and buttons names; PlayKey, the lime key: the
+rail's Create key and Create's Make button; ButtonRow) · `kit/link` (ButtonLink and TextLink
+for router links, FileLink for a download or a file opened in a new tab, named for its file;
+see Links and buttons. The kit's IconFileLink is used nowhere; don't start) · `kit/field`
 (Field wires label, `help`, `error` and `tip` into its control's `id`, `aria-describedby` and
 `aria-invalid`; HelpLine, the same one visible sentence for a row that lays out its own control;
 Input, Checkbox, Select, Textarea, Code) · `kit/switch` (Switch and Segmented, both with `help`
@@ -114,7 +129,10 @@ and `tip`) · `kit/fold` (Fold, see Folds) · `kit/info-tip` (InfoTip, reading t
 catalogue; `helpScope` for a hand-laid-out row) · `kit/tabs` (Tabs and TabPanel, roving focus:
 arrows, Home, End) · `kit/section-head` (kicker, title, meta, a status beside the title,
 `size="small"` for a sub-head, `row` to put the meta beside the title, `id` for
-`aria-labelledby`, actions as children) · `kit/status` (Lamp, Status, Badge, Chip) · `kit/steps`
+`aria-labelledby`, actions as children; its `info` prop puts an info button right after the
+heading, which the rules below forbid: four heads still use it, Notifications' "Browser and
+phone", the poster template editor's Rows, Free space and the style preview, and each should
+become a line under the heading) · `kit/status` (Lamp, Status, Badge, Chip) · `kit/steps`
 (Steps: lamp, name, time, then the state word before one detail, "Done · 4 images") ·
 `kit/media` (MediaFrame, MediaGrid, Lightbox; see Media) · `kit/player` (Player) and
 `kit/audio-player` (AudioPlayer, `compact`, `waveform`) · `kit/rail` (Rail, RailLink with
@@ -150,6 +168,14 @@ A button does something; a link goes somewhere. The kit holds the line:
 
 - **Buttons** are `Button`, `IconButton` or `PlayKey` from `kit/button`, named for their result.
   A button never navigates, and `Button` has no `asChild`.
+- **An action says its word.** An icon alone (`IconButton`, the `icon` kind) is kept for the
+  few controls whose icon everyone reads: a player's own controls, Close ×, the Lightbox's
+  Previous, Next and zoom, a search's previous and next match, Show or Hide on a secret field,
+  and the ⋯ that opens a row's More menu ("More for <name>"). Every other action is a worded
+  button. Icon-only actions still in the code, to be given their words: Delete on a Create
+  draft, Reset on a PDF theme setting, Remove on a table's row, line or alias and on a topic,
+  Move up and Move down on topics, Move earlier and Move later in the calendar's list, Reject on
+  a suggested topic, and "Use the every-run value for all topics".
 - **A link wears a button's look only through `kit/link`**, and only when it is the main call to
   action of its item or area (New prompt, Watch, the fix a Needs you item names, a step's Open in
   the tour), or one of a row of buttons it sits in (a prompt row's Edit, an editor's Cancel
@@ -160,7 +186,8 @@ A button does something; a link goes somewhere. The kit holds the line:
   they never read as grey text.
 - **Actions sit top right of their section**, through `SectionHead`'s children, in the order
   primary, secondary, quiet, then a worded "More ▾" for the rare ones. A heading is a
-  `SectionHead`, never a hand-set `h2`.
+  `SectionHead`, never a hand-set `h2` (Prompts' list head, the calendar's Recent, the
+  Releases weeks and the project's view titles still set its class on an `h2` by hand).
 - **A row or tile is one target.** A ListRow with `onSelect` or a title link is picked or opened
   by a press anywhere on it: the title's button or link stretches over the row (`::after`), and
   the row's own buttons, links and fields sit above it. It stays one tab stop, with the focus
@@ -228,13 +255,13 @@ with words in it, not hidden, `aria-hidden`, inert, `display: none` or `.sr-only
 button. Controls in a hidden branch, file inputs and a player's own controls are skipped. A
 control whose label says it all goes in an allow list with a reason: every screen allows
 Search…, Filter…, Sort…, Select all and Select row, and "Showing:" (`selfExplanatory`);
-Create's and Edit template's stage editors allow a stage's switch named for its stage, a service
-group's Service and Model ("Read by Service"), and the Voice select (`stageEditors`). The same
-pass fails on jargon in a name, an info button in the wrong place or a second one in a field,
-and a second lime button in one area (see The lime). `help/catalog.test.ts` fails on an id used
-but missing, an entry used nowhere, a title left empty, a body under 8 or over 75 words, an
-exclamation mark or an "I" in a body, and a Learn more link to a tutorial page or heading that
-doesn't exist.
+the stage editors of Create, Edit template and Edit settings allow a stage's switch named for
+its stage, a service group's Service and Model ("Read by Service"), and the Voice select
+(`stageEditors`). The same pass fails on jargon in a name, an info button in the wrong place or
+a second one in a field, and a second lime button in one area (see The lime).
+`help/catalog.test.ts` fails on an id used but missing, an entry used nowhere, a title left
+empty, a body under 8 or over 75 words, an exclamation mark or an "I" in a body, and a Learn
+more link to a tutorial page or heading that doesn't exist.
 
 ### The lime
 
@@ -246,20 +273,23 @@ disabled primary Button is transparent with a hairline. Downloads are secondary 
 
 - A forward action that will be refused stays pressable, so the refusal can explain why, but
   wears no lime until nothing is missing; the lime stays with the step's real next action
-  (Next, Make). The welcome's Make your first short does this.
+  (Next, Make). The welcome's "Make a 60-second short" does this.
 - An empty list's only lime is "New <thing>" in its empty state; the header does not repeat it.
 - Home's main column has one lime: the first decision's action, else the newest video's Watch.
   A project page has one: its next action.
 
 `help/coverage.ts` counts them in every walk; `project/section-rules.test.tsx` counts the
-project page.
+project page. Neither counts the kit Player's big play key, which is drawn in the player's own
+lime (`.sl-player__big`): before a video starts it is a second lime beside the page's next
+action. It is a known break of this rule, not a pattern to copy.
 
 ### Status
 
 A lamp never appears without its word ("● Done"), in lists, rails, run steps and headers.
 `Status` is the lamp with its word; a bare `Lamp` is only for a place where the word sits beside
 it in the same row (the rail item's state, the "● 2 running" count). State words are visible, so
-they are sentence case.
+they are sentence case. Home's autopilot warnings still lead each row with a bare lamp for its
+severity; give it its word when you touch them.
 
 One word per state everywhere, the MCP tools included (`slices/admission/state-words.ts`, read
 by `lib/state-words.ts`):
@@ -284,12 +314,15 @@ by `lib/state-words.ts`):
   Signed out, Needs fixing, and Not installed for the computer's own voice without its program;
   the health check adds May need fixing and Not set up. Where Create, Edit template and the
   project page say why a service can't be picked (`lib/provider-status.ts`), the words are No
-  key, Not found, Signed out, Needs an update and Needs attention. A readiness line names the
-  stage it serves (Article, Narration, Images) and what the video lacks without it.
+  key, Not found, Signed out, Host helper unavailable, Needs an update and Needs attention. A
+  readiness line names the stage it serves (Article, Narration, Images) and what the video
+  lacks without it.
 - **A schedule**: Active, Paused, Completed, Canceled.
 
-Running and done read in accent-ink, waiting in the waiting colour, failed in danger, off in
-ink-2. Status colours always come with a word.
+A state word reads in its colour only when it moves, waits or failed: Running in accent-ink,
+waiting in the waiting colour, failed in danger, info in the info colour. Done, Not started and
+Off stay quiet in ink-2, so a finished run is not a column of lime. Status colours always come
+with a word.
 
 ### Media
 
@@ -304,8 +337,9 @@ square, tall 4:5) so grids never jump, a caption line under it, a status badge i
   own page); `openLabel` is its accessible name, and a press on the picture does the same. On a
   compact grid it is 24px in 12px type, without its icon.
 - **One gallery grid**, MediaGrid: 220px columns, `shorts` for 9:16 tiles (240px; 180px inside a
-  project), `density="compact"` at 140px for a drawer, a side panel or a Home card, `list` for
-  `<li>` tiles. A project's Images tiles are at least 200px wide, two across a phone.
+  project on a window wider than 1180px), `density="compact"` at 140px for a drawer, a side
+  panel or a Home card, `list` for `<li>` tiles. A project's Images tiles are at least 200px
+  wide, two across a phone.
 - **The Lightbox** pages with the arrows, closes on Esc, and carries the shown picture's actions
   in words on its bar (Make this image again, Download).
 - **Video plays in the kit Player** with its poster, sound in the AudioPlayer; see The project
@@ -344,7 +378,8 @@ with one channel nothing is filtered and a stored pick is ignored.
 
 A control that stays disabled says why in visible text: the row's line, the action bar's status,
 or the menu row's own label ("Read-only sample. Press Make my own copy first."). `disabledReason`
-puts the same words on the button as its tooltip and description. The reason names what would
+puts the same words on the button as its tooltip, and with `focusableWhenDisabled` as its
+description too; a tooltip alone is not the visible reason. The reason names what would
 make it work ("Only Inworld TTS-2 voices read it"), not "this provider". A control that cannot
 act on a paused item is hidden, and the item's state word (Paused) is the reason shown. A commit
 button that stays on screen (Save link) may instead say in its state line what is missing when
@@ -359,11 +394,14 @@ section ("Change it in Images").
 
 - **Save never spends money.** Paid work has its own button with its price ("· about $0.40",
   "· free", "· plan usage", never "$0").
-- **Save waits for a change.** An editor's Save bar (Prompts, Edit template, poster templates) shows
-  once something changed; until then the list's add action is the lime. A Save that stays on screen
-  (a Settings group, a project's Save changes) is disabled until something changed, and its line or
-  its reason says so ("Nothing to save yet: change a setting first.", "Nothing changed since the
-  last save.").
+- **Save waits for a change.** Edit template's Save bar and Pronunciation's appear once something
+  changed, and the poster template editor's bar shows its Save only then; until then the page's
+  own next step keeps the lime. A Save that stays on screen (a Settings group, a project's Save
+  changes) is disabled until something changed, and its line or its reason says so ("Nothing to
+  save yet: change a setting first.", "Nothing changed since the last save.").
+- **The prompt, intro and outro, and PDF theme editors** (`components/editor-actions.tsx`) keep
+  Save on screen and lime; it holds only while the form has a problem, with the problem said
+  beside it in the bar's status ("Enter the text.").
 - **A switch saves the moment it moves.** Fields that matter only while a switch is on show only
   while it is on, with their own Save.
 - **A value shown in place saves at once** (a project's Release dates): when its box loses focus
@@ -466,10 +504,10 @@ image 3 again in Cleopatra". A `numbered` command takes the number typed with it
 From anywhere (`components/global-commands.tsx`, searched only): Open <project>, Make image N
 again in <project> (opens the project on Images and asks to make that image again, as its button
 does), New schedule and Add topics to a schedule. By name (`components/entity-commands.tsx`):
-Open template <name> (Templates with it marked, `?item=`), Edit prompt <name>, Edit intro or
-outro <name>, Edit PDF theme <name>, Open schedule <name>, Open channel <name>. A command that
-finishes on another screen goes there and leaves an intent that screen takes once loaded
-(`lib/intents.ts`).
+Open template <name> (Templates with it marked, `?item=`), Edit prompt <name>, Edit intro
+<name>, Edit outro <name>, Edit PDF theme <name>, Open schedule <name>, Open channel <name>. A
+command that finishes on another screen goes there and leaves an intent that screen takes once
+loaded (`lib/intents.ts`).
 
 ### Keyboard shortcuts
 
@@ -526,8 +564,8 @@ a 12px word. Top to bottom: the logo (goes Home); the lime Create key, 60px tall
 channels) and Settings; "● 2 running" while runs are active (the lamp and count over the word,
 to Home's Running); then, after a hairline at the foot, the update item (only while an update is
 ready, waiting, installing or failed, in words), Search (opens Ctrl+K), Assistant, Help (a menu)
-and Support (a menu). Nothing else goes in the rail, and nothing in it is a bare icon. The page
-fills the rest, up to 1680px.
+and Support (a menu). Nothing else goes in the rail, and nothing in it but the logo is a bare
+icon. The page fills the rest, up to 1680px.
 
 Below 760px tall the rail closes up (42px items, an 18px icon, a 48px Create key), and its foot
 stays pinned to the bottom, so Help is always in view; in a window shorter still the
@@ -537,8 +575,10 @@ A destination stays lit on its other addresses: Prompts on `/prompts`, `/entries
 Templates on `/templates`, `/designs`, `/design-templates`; Calendar on `/calendar`,
 `/schedules`; Channels on `/channels`, `/ab-results` (with one channel these light Settings);
 Settings on `/settings`, `/usage`, `/document-themes`, `/narration-aliases`. Help shows as
-current on `/help/*`. Old addresses redirect: `/library` to Prompts, `/designs` to Templates'
-poster tab, `/schedules` to the calendar's Schedules tab, `/usage` to Settings → Usage.
+current on `/help/*`. Old addresses redirect: `/library` to Prompts, `/designs?tab=templates`
+to Templates' poster tab, `/schedules` to the calendar's Schedules tab, `/usage` to Settings →
+Usage. `/designs` itself is still the Designs page (the pictures and posters made), linked from
+Templates and lit as Templates.
 
 **Help** holds Start the tour, Tutorials, Keyboard shortcuts (desktop only), What's new, a
 separator, then the update sentence and its one row (Check for updates, or Install update after
@@ -622,7 +662,7 @@ the field is touched or the main button is pressed.
 The 340px rail, top to bottom: how many it makes; "Expected length: about 10 min · 1,500 words"
 (150 words a minute, edited in place); the estimate; the main button; its one hint; See everything
 this run will do, which opens the drawer "Everything this run will do" beside the rail; the
-preview line ("Captions: Barlow 48, at the bottom") with Watch a 6-second preview. Where the
+preview line ("Captions: Barlow 48, bottom") with Watch a 6-second preview. Where the
 drawer covers the rail's button (always below 900px), its foot carries the button and the hint.
 On a phone the rail follows the form, the button first.
 
@@ -665,7 +705,9 @@ Pronunciation from Settings → Voices, What worked on YouTube from the channel 
 start with "Library ›".
 
 **The three setup editors** (Create, Edit template, a project's Edit settings) list the setup in
-the order a run makes it and keep their own data models. Their names today:
+the order a run makes it and keep their own data models. Their section names are meant to be
+one shared list in one vocabulary; today they differ, so move a name towards the others when you
+touch it and don't add a fourth. Their names today:
 
 | Create's rows | Edit settings | Edit template |
 | --- | --- | --- |
@@ -703,16 +745,17 @@ diagnostics lives on About under "Something wrong?".
 
 ### Welcome
 
-`/welcome` is three steps in order (What a short needs, Pick a style, Make your first short), drawn
-as `kit/steps` with the step in the address (`?step=style`) and the typed topic and style kept for
-the tab, so a detour to Settings comes back to it. A step's header is one line, the title with "Step
-1 of 3" as meta; only the current step is mounted; the ActionBar pins to the bottom. The readiness
-list comes from the same server check that refuses the short, one row per part: "Script · ● Ready ·
-Claude Code writes it with your sign-in.", or the gap with a secondary fix named verb and object
-("Add a voice key", "Add an image key", "Save a voice"). Leaving the welcome (Skip, Done, the first
+`/welcome` is three steps in order (What a short needs, Pick a style, Make your first short),
+with the step in the address (`?step=style`) and the typed topic and style kept for the tab, so
+a detour to Settings comes back to it. A step's header is one SectionHead line, the title with
+"Step 1 of 3" as meta; only the current step is mounted; the ActionBar pins to the bottom with
+Back, "Next: <step>" and, on the last step, "Make a 60-second short". The readiness list comes
+from the same server check that refuses the short, one row per part: "Script · ● Ready · Claude
+Code writes it with your sign-in.", or the gap with a secondary fix named verb and object ("Add
+a voice key", "Add an image key", "Save a voice"). Leaving the welcome (Skip, Done, the first
 project) answers the one-time questions such as start at login, so no dialog follows a fresh
-install. After it is skipped it stays reachable from Help → Tutorials and Ctrl+K (Open the welcome
-screen).
+install. After it is skipped it stays reachable from Help → Tutorials and Ctrl+K (Open the
+welcome screen).
 
 ## The project page
 
@@ -786,8 +829,9 @@ section that was open, with "Saved as a new version. Nothing is made again until
 in the action bar's status; only a discard of real changes leaves it shut, with Undo. Versions
 shows one line while there is one version; with several, one row each, newest first, and Restore
 (confirmed) on earlier rows. A paid or consequential button in settings carries one visible line
-under it with its cost and when it happens. All files lists one row per file with one picture
-frame size, the name linking to its section and "● State · made <date>"; a next-step link appears
+under it with its cost and when it happens. All files lists one row per output, its other files
+as worded links under it and its main file as a secondary download, with one picture frame size,
+the name linking to its section and "● State · made <date>"; a next-step link appears
 only when the output is not current ("Open PDF to make it again, or keep this version").
 
 **The read-only sample**: controls that would spend or save are disabled with "Read-only sample.
@@ -795,9 +839,9 @@ Press Make my own copy first.", per-tile paid actions are hidden, and the page's
 it. Its settings stay readable section by section with their fields disabled.
 
 **Player.** Every video that plays uses `kit/player`, never the browser's own controls (a muted
-preview inside a MediaFrame may stay plain). Before it starts: the poster and a big lime play key
-in the middle. Then a bar on a dark gradient: play/pause, current / total time in tabular
-numerals, the lime track (buffered range behind, chapter marks with their title on hover, a time
+preview inside a MediaFrame may stay plain). Before it starts: the poster and a big play key in
+the middle (drawn lime today, a second lime beside the page's next action: see The lime). Then a
+bar on a dark gradient: play/pause, current / total time in tabular numerals, the lime track (buffered range behind, chapter marks with their title on hover, a time
 tip under the pointer, click or drag to seek, touch too), mute and volume, playback speed 0.75–2×
 in its own menu, captions (only when there is a text track), picture in picture (when the browser
 has it) and full screen on the whole player. The bar hides while the video plays and nobody
@@ -881,14 +925,15 @@ be undone.
 
 - **Labels.** A control's label says what it does, with a verb and its object; where that is not
   enough, one visible sentence under it. The info button only for a consequence that needs a
-  paragraph, beside a field's label, never beside a button, a heading or a row's title.
+  paragraph, beside a field's label, never beside a button, a heading or a row's title, and
+  never two in one field.
 - **Words.** One word per thing (Words). Action buttons are named for their result, with their
   object and, when they spend, their cost: "Make all 4 images again · 4 image calls", "Make the
   video again (free)". A stopped run is Continue the run; a schedule is Pause and Resume.
   *Delete* sends a thing to the trash or removes it for good (the dialog says which); *Remove*
   takes an item out of a list or an unsaved form; *Discard* throws away unsaved edits.
 - **The lime.** One primary control per area, for the next thing to do. Downloads are secondary.
-  A control that cannot act wears no lime.
+  A control that cannot act wears no lime. The Player's big lime play key is a known break.
 - **Status.** A lamp never appears without its word. One word per state, from `state-words.ts`.
 - **Hide, don't grey.** A control that cannot apply is not drawn; one that stays disabled says
   why in visible text.
@@ -901,7 +946,8 @@ be undone.
 - **Empty states** say what the thing is for in one sentence and offer one button that makes the
   first one.
 - **Saving.** Save never spends; a switch saves as it moves; a value shown in place saves at once
-  with Undo; Save appears, or lights, only when something changed.
+  with Undo; Save appears, or lights, only when something changed, except in the prompt, intro
+  and outro, and PDF theme editors, where it holds only for a problem it names beside it.
 - **Dates.** `startedAt` (clock time today, the date otherwise, the year when not this year) and
   `shortDate` from `lib/utils`; a short or relative time carries `exactTime` as its title. Errors
   say what failed, why, and the one thing that fixes it, with the fix as the button.
@@ -915,13 +961,16 @@ be undone.
 - **Layout.** Use the width. Workspace, List and detail, Board. A column lays out by its own
   width. Nothing scrolls sideways. Labels above fields, groups in `.sl-fields`. Section heads
   carry their actions on the right: primary, secondary, quiet, More.
-- **Actions.** Five button kinds, one meaning each; the lime key is the rail's Create and
-  Create's Make. Actions are buttons, links go somewhere. A project shows exactly one primary
-  action for its situation (the next action). Row actions are visible, in words. Every frequent
-  action is in the palette.
+- **Actions.** Five button kinds, one meaning each (the icon kind only for the few controls
+  named under Links and buttons); the lime key is the rail's Create and Create's Make. Actions
+  are buttons, links go somewhere. A project shows exactly one primary action for its situation
+  (the next action). Row actions are visible, in words. Every frequent action is in the palette.
 - **States and motion.** Hover lifts to `raised`, focus draws a 2px ring offset 2px. 120ms for
   hover and toggles, 200ms for things entering; reduced motion stops the pulse and the slides.
-  Elevation is only `shadow-pop` and `shadow-dialog`.
+  Elevation is only `shadow-pop` and `shadow-dialog` (the lime key's edge is its own
+  `shadow-key`).
 - **Icons.** Lucide at 16px (20px in the app rail), 1.75 stroke. An icon never replaces a word:
-  the rail has a word under every icon, and an icon button always has an `aria-label` and the
-  kit's tooltip.
+  the rail has a word under every icon, and an icon-only button is kept only for the few
+  controls Links and buttons names (a player's controls, Close, the Lightbox's paging and zoom,
+  a search's matches, Show or Hide on a secret, ⋯ for a row's More), always with an
+  `aria-label` and the kit's tooltip.
