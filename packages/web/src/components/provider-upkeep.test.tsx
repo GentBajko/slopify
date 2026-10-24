@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { freshDraftDocument, withProviderDefaults } from "@/play/draft-state";
 import { emptyAnswer, jsonAnswer, renderApp, testDeps } from "@/test-app";
-import { CatalogueSettings } from "./catalogue.js";
+import { CatalogueSettings, RetiredModelsInUse } from "./catalogue.js";
 import { ProviderHealthCheck } from "./provider-health.js";
 import { ProviderKeys } from "./provider-keys.js";
 import { Welcome } from "./welcome.js";
@@ -52,20 +52,22 @@ describe("key setup", () => {
         },
       }),
     );
+    // Ready, so nothing opens by itself: its line opens it.
+    await userEvent.click(await screen.findByRole("button", { name: "OpenRouter" }));
     await userEvent.click(await screen.findByText("Where to get a key"));
     expect(
       (await screen.findByRole("link", { name: "openrouter.ai/settings/keys" })).getAttribute(
         "href",
       ),
     ).toBe("https://openrouter.ai/settings/keys");
-    await userEvent.click(screen.getByRole("button", { name: "Test OpenRouter key" }));
+    await userEvent.click(screen.getByRole("button", { name: "Test the key (free)" }));
     expect((await screen.findByRole("alert")).textContent).toBe(
       "OpenRouter did not accept this key (HTTP 401).",
     );
     expect(tested).toBe(1);
   });
 
-  it("tests a pasted key before it is saved, and is off with nothing to test", async () => {
+  it("tests a pasted key before it is saved, and offers no Test with nothing to test", async () => {
     const sent: unknown[] = [];
     let saved = 0;
     renderApp(
@@ -97,11 +99,10 @@ describe("key setup", () => {
         },
       }),
     );
-    const test = await screen.findByRole("button", { name: "Test fal.ai key" });
-    expect(test.hasAttribute("disabled")).toBe(true);
-    await userEvent.type(screen.getByLabelText("fal.ai API key"), " fal-pasted ");
-    expect(test.hasAttribute("disabled")).toBe(false);
-    await userEvent.click(test);
+    const field = await screen.findByLabelText("fal.ai API key");
+    expect(screen.queryByRole("button", { name: "Test the key (free)" })).toBeNull();
+    await userEvent.type(field, " fal-pasted ");
+    await userEvent.click(screen.getByRole("button", { name: "Test the key (free)" }));
     expect((await screen.findByRole("status")).textContent).toMatch(/not saved yet/u);
     expect(sent).toEqual([{ key: "fal-pasted" }]);
     expect(saved).toBe(0);
@@ -109,7 +110,7 @@ describe("key setup", () => {
 });
 
 describe("the health check", () => {
-  it("runs on Check all and lists each provider's checks with fixes", async () => {
+  it("runs on Check every service and lists each one's checks with fixes", async () => {
     renderApp(
       <ProviderHealthCheck />,
       testDeps({
@@ -135,10 +136,11 @@ describe("the health check", () => {
         }),
       }),
     );
-    expect(screen.getByText("Not checked yet.")).not.toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "Check all" }));
+    expect(screen.getByText("Last checked: not yet.")).not.toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Check every service" }));
     expect(await screen.findByText("Needs fixing")).not.toBeNull();
     expect(screen.getByText(/Run "codex login"/)).not.toBeNull();
+    expect(screen.getByText(/^Last checked at /)).not.toBeNull();
     expect(screen.getByText("Not set up and not used anywhere: fal.ai.")).not.toBeNull();
   });
 
@@ -168,7 +170,7 @@ describe("the health check", () => {
         },
       }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Check all" }));
+    await userEvent.click(screen.getByRole("button", { name: "Check every service" }));
     expect(await screen.findByText("Needs fixing")).not.toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Check Codex CLI again" }));
     expect(await screen.findByText("Ready")).not.toBeNull();
@@ -178,11 +180,30 @@ describe("the health check", () => {
 });
 
 describe("retired models", () => {
+  it("draws nothing while nothing uses a retired model", async () => {
+    let asked = 0;
+    const { container } = renderApp(
+      <RetiredModelsInUse />,
+      testDeps({
+        "GET /api/providers/catalogue/retired": (request) => {
+          asked += 1;
+          return jsonAnswer({ usages: [] })(request);
+        },
+      }),
+    );
+    await waitFor(() => expect(asked).toBe(1));
+    expect(container.textContent).toBe("");
+    expect(screen.queryByRole("button", { name: /^Switch/ })).toBeNull();
+  });
+
   it("lists each use with a one-click switch to the named replacement, and Switch all", async () => {
     const sent: unknown[] = [];
     let all = 0;
     renderApp(
-      <CatalogueSettings />,
+      <>
+        <RetiredModelsInUse />
+        <CatalogueSettings />
+      </>,
       testDeps({
         "GET /api/providers/catalogue": jsonAnswer({
           updatedAt: "2026-09-26",
@@ -205,6 +226,7 @@ describe("retired models", () => {
         "GET /api/providers/catalogue/retired": jsonAnswer({
           usages: [
             usage,
+            { ...usage, key: "schedule:s1:llm", kind: "schedule", id: "s1", name: "Nightly" },
             {
               ...usage,
               key: "project:p1:llm",
@@ -227,8 +249,13 @@ describe("retired models", () => {
     );
     expect(await screen.findByText(/1 new, 1 retired/)).not.toBeNull();
     expect(screen.getByText("Retired: Old Model")).not.toBeNull();
+    // The catalogue's file and date are folded under the list's name.
+    const file = screen.getByText("Catalogue file").closest("details");
+    expect(file?.open).toBe(false);
+    expect(screen.getByText("Published 2026-09-26")).not.toBeNull();
+    // A use that can't switch yet says why and offers no button.
     const buttons = await screen.findAllByRole("button", { name: "Switch to New Model" });
-    expect(buttons.map((button) => button.hasAttribute("disabled"))).toEqual([false, true]);
+    expect(buttons).toHaveLength(2);
     expect(screen.getByText(/This project is running/)).not.toBeNull();
     await userEvent.click(buttons[0] as HTMLElement);
     await waitFor(() => {
@@ -242,7 +269,7 @@ describe("retired models", () => {
         },
       ]);
     });
-    await userEvent.click(screen.getByRole("button", { name: "Switch all" }));
+    await userEvent.click(screen.getByRole("button", { name: "Switch all 2" }));
     await waitFor(() => {
       expect(all).toBe(1);
     });

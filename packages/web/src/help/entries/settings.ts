@@ -22,16 +22,6 @@ export const settingsHelp = {
   },
 
   // Providers
-  "settings.providers.api-key": {
-    title: "API key",
-    body: "The key that lets Slopify call this provider on your account; the provider bills you for what it makes. It is stored on this computer only, sent only to that provider, and never put in a backup or export. Paste a new key and Save to replace the old one.",
-    tutorial: { page: "Providers-and-Keys", anchor: "add-a-key" },
-  },
-  "settings.providers.test-key": {
-    title: "Test",
-    body: "Asks the provider whether the key works, with the cheapest harmless call it allows. A key pasted in the field is tested before you save it; with the field empty, the saved key is. Nothing is generated, billed or stored. When it fails, the answer says why: a rejected key, missing permission, no credit, or the provider being down.",
-    tutorial: { page: "Providers-and-Keys", anchor: "test-a-key" },
-  },
   "settings.provider.openrouter": {
     title: "OpenRouter",
     body: "Writes the text (research, script, article, titles, descriptions) with hundreds of models from many companies through one key. Each call is charged per token from the credit you buy on OpenRouter; prices follow the model catalogue. Choose it when you want a model the command-line tools do not offer.",
@@ -106,21 +96,6 @@ export const settingsHelp = {
     title: "Google images",
     body: "Draws the images and thumbnails with Google's Gemini image models, charged per image. Use a key made in Google AI Studio on a project with billing set up; Gemini image models are not on the free tier.",
     tutorial: { page: "Providers-and-Keys", anchor: "google" },
-  },
-  "settings.cli.path": {
-    title: "Executable path",
-    body: "Where the command-line tool is on this computer. Leave it blank and Slopify finds it on PATH, the list of folders your terminal searches. Set an absolute path, without quotes or arguments, when the tool is installed somewhere else or you have more than one copy. Save checks the tool answers.",
-    tutorial: { page: "AI-CLIs", anchor: "set-the-executable-path" },
-  },
-  "settings.cli.managed-on-host": {
-    title: "Managed on host",
-    body: "Slopify runs in Docker, so this tool runs on your computer outside the container, with the sign-in it already has there. Its path cannot be changed here. After you install, update or remove a command-line tool, run the Docker launcher again so Slopify sees the change.",
-    tutorial: { page: "AI-CLIs", anchor: "in-docker-the-host-helper" },
-  },
-  "settings.health": {
-    title: "Health check",
-    body: "Asks each command-line tool whether it is signed in, makes the cheapest harmless call each saved key allows (nothing is generated or billed), and checks that the models your templates, schedules, drafts and projects use are still offered and answer for your key. Run it after changing a key or when a run stops at a provider; Check again on a provider's row checks that one alone.",
-    tutorial: { page: "Providers-and-Keys", anchor: "check-all-providers" },
   },
 
   // Playback & appearance
