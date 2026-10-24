@@ -2,7 +2,6 @@ import type { ProjectListing } from "@app/slices/admission/model.js";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { pausedPrepareReason } from "@/calendar/day-cell";
 import { type Answer, jsonAnswer, problemAnswer, renderRouted, testDeps } from "../test-app";
 import { CalendarRoute, calendarTabLines } from "./calendar";
 
@@ -192,8 +191,7 @@ describe("the calendar", () => {
     expect(screen.getByRole("combobox", { name: "Move Cleopatra to…" })).not.toBeNull();
   });
 
-  it("keeps Prepare off a paused schedule's run and says why", async () => {
-    const user = userEvent.setup();
+  it("leaves Prepare off a paused schedule's run, which says Paused", async () => {
     const prepare = vi.fn(jsonAnswer({ projectId: "p", title: "x" }, 201));
     renderRouted(
       <CalendarRoute />,
@@ -209,10 +207,8 @@ describe("the calendar", () => {
       }),
     );
     const chip = await screen.findByRole("article", { name: /^Cleopatra,/ });
-    const button = within(chip).getByRole("button", { name: "Prepare" });
-    expect(button.getAttribute("aria-disabled")).toBe("true");
-    expect(button.getAttribute("data-tip")).toBe(pausedPrepareReason);
-    await user.click(button);
+    expect(within(chip).getByText("Paused")).not.toBeNull();
+    expect(within(chip).queryByRole("button", { name: "Prepare" })).toBeNull();
     expect(prepare).not.toHaveBeenCalled();
   });
 
@@ -733,6 +729,18 @@ describe("the Schedules tab", () => {
     await screen.findByRole("region", { name: "Lore detail" });
     await user.click(screen.getByRole("tab", { name: "Coming weeks" }));
     expect(screen.getByRole("button", { name: "Add topics to a schedule" })).not.toBeNull();
+  });
+
+  it("offers New schedule beside Add topics on the weeks, opening the Schedules tab's form", async () => {
+    const user = userEvent.setup();
+    renderRouted(<CalendarRoute />, tabDeps());
+    await screen.findByRole("article", { name: /^Cleopatra,/ });
+    expect(screen.getByRole("button", { name: "Add topics to a schedule" })).not.toBeNull();
+    await user.click(await screen.findByRole("button", { name: "New schedule" }));
+    expect(screen.getByRole("tab", { name: /^Schedules/ }).getAttribute("aria-selected")).toBe(
+      "true",
+    );
+    expect(await screen.findByRole("region", { name: "New schedule" })).not.toBeNull();
   });
 
   it("opens on the schedule the address names and reports a new pick", async () => {

@@ -254,6 +254,13 @@ export function CalendarRoute({
         actions={
           <>
             <ChannelPicker variant="header" />
+            {/* With nothing scheduled, the empty state below offers New schedule itself. */}
+            {tab === "weeks" && !nothingScheduled && (templates.data?.length ?? 0) > 0 ? (
+              <Button onClick={newSchedule}>
+                <PlusIcon aria-hidden="true" strokeWidth={1.75} />
+                New schedule
+              </Button>
+            ) : null}
             {tab === "weeks" && targets.length > 0 ? (
               <Button variant="primary" onClick={() => setAdding(true)}>
                 <PlusIcon aria-hidden="true" strokeWidth={1.75} />
@@ -341,7 +348,7 @@ export function CalendarRoute({
                 }
               >
                 A schedule makes a new video from one of your templates at a time you pick, once or
-                every week. Its videos then appear here, day by day.
+                every week.
               </EmptyState>
             ) : null}
             <RecentlyFinished projects={recent} />
