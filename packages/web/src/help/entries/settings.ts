@@ -233,11 +233,6 @@ export const settingsHelp = {
   },
 
   // About
-  "settings.patch-notes": {
-    title: "Patch notes",
-    body: "What changed in each version of Slopify. The newest notes are open here; older versions are folded under Earlier versions, and each opens when you pick it. They ship with the app, so they work offline. After an update, the new version's notes open by themselves once; a fresh install skips that. On a major update the What's new tour shows instead and links here.",
-    tutorial: { page: "Updating-and-Patch-Notes", anchor: "read-the-patch-notes" },
-  },
   "settings.whats-new": {
     title: "What's new in this version",
     body: "Opens the patch notes for the version you are running, in Settings, Patch notes. When this version has no notes of its own, it opens the newest ones instead.",
