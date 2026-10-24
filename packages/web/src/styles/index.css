@@ -56,8 +56,8 @@
      in the kit classes `.sl-display`, `.sl-title-1`, `.sl-kicker` and `.sl-stat__value`. */
   --text-display: 44px;
   --text-display--line-height: 46px;
-  --text-title-1: 30px;
-  --text-title-1--line-height: 34px;
+  --text-title-1: 24px;
+  --text-title-1--line-height: 30px;
   --text-title-2: 20px;
   --text-title-2--line-height: 26px;
   --text-title-3: 16px;

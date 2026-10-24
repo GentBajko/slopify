@@ -241,7 +241,7 @@
   .sl-fields {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
-    column-gap: var(--space-6);
+    column-gap: var(--space-5);
     row-gap: var(--space-4);
     align-items: start;
     min-width: 0;
@@ -473,7 +473,7 @@
     align-items: flex-end;
     justify-content: space-between;
     gap: var(--space-4);
-    padding-bottom: var(--space-4);
+    padding-bottom: var(--space-3);
   }
   /* The title and its summary keep a readable width; the actions wrap below them first. */
   .sl-section-head > div:first-child {
@@ -490,9 +490,10 @@
     line-height: 19px;
     color: var(--color-ink-2);
   }
+  /* The page title, once per page, in the one-line page header. */
   .sl-title-1 {
     margin: 0;
-    font: 700 30px / 34px var(--font-condensed);
+    font: 700 24px / 30px var(--font-condensed);
     color: var(--color-ink);
   }
   .sl-display {
@@ -504,7 +505,7 @@
     height: 1px;
     border: 0;
     background: var(--color-line);
-    margin: var(--space-6) 0;
+    margin: var(--space-4) 0;
   }
 
   /* Lamp and badge */
@@ -1522,7 +1523,7 @@
     flex-direction: column;
     align-items: flex-start;
     gap: var(--space-3);
-    padding: var(--space-7) 0;
+    padding: var(--space-5) 0;
     max-width: 520px;
   }
   .sl-empty p {

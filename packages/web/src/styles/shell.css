@@ -653,8 +653,43 @@
     min-width: 0;
   }
   .sl-page {
-    padding: 24px 40px 40px;
+    padding: var(--space-4) var(--space-5) var(--space-6);
     min-width: 0;
+  }
+  /* The page header (kit PageHeader): one line, the title with its crumb and meta on the left,
+     the actions on the right; about 40px, then 16px to the content. */
+  .sl-page-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    column-gap: var(--space-4);
+    row-gap: var(--space-2);
+    min-height: 40px;
+    margin-bottom: var(--space-4);
+  }
+  .sl-page-header__lead {
+    display: flex;
+    flex: 1 1 20rem;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: var(--space-3);
+    row-gap: 2px;
+    min-width: 0;
+  }
+  .sl-page-header__lead > h1 {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .sl-page-header__meta {
+    margin: 0;
+    min-width: 0;
+    font-size: 13px;
+    line-height: 19px;
+    color: var(--color-ink-2);
+  }
+  .sl-page-header__actions {
+    margin-left: auto;
   }
   /* A page with an action bar of its own is a column the bar ends: short or long, the bar is
      on the window's bottom edge, with no gap under it. */
@@ -720,13 +755,13 @@
     top: var(--space-5);
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-4);
     min-width: 0;
   }
   .sl-workspace__main {
     display: flex;
     flex-direction: column;
-    gap: 28px;
+    gap: var(--space-4);
     min-width: 0;
   }
   /* A project: the page itself doesn't scroll. The header stays put and each column (the
@@ -1017,7 +1052,7 @@
   /* Board (Home, calendar): full-width columns of sections, stacked below 1024px. */
   .sl-board {
     display: grid;
-    gap: var(--space-6);
+    gap: var(--space-5);
     align-items: start;
   }
   .sl-board--main-side {
@@ -1033,7 +1068,7 @@
   .sl-board__column {
     display: flex;
     flex-direction: column;
-    gap: var(--space-6);
+    gap: var(--space-4);
     min-width: 0;
   }
   @media (max-width: 1023px) {
@@ -1043,7 +1078,7 @@
     .sl-board--even {
       grid-template-columns: minmax(0, 1fr);
       grid-auto-flow: row;
-      gap: var(--space-5);
+      gap: var(--space-4);
     }
   }
 

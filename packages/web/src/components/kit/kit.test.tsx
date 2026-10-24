@@ -8,6 +8,7 @@ import { Button, IconButton } from "./button.js";
 import { ConfirmDialog } from "./dialog.js";
 import { Checkbox, Field, Input, Select, Textarea } from "./field.js";
 import { Fold } from "./fold.js";
+import { PageHeader } from "./layout.js";
 import { hitArea, hitTarget, List, ListRow } from "./list-row.js";
 import { Lightbox, type LightboxItem, MediaFrame, MediaGrid } from "./media.js";
 import { foldPeaks } from "./media-controls.js";
@@ -159,6 +160,32 @@ describe("switch and segmented", () => {
     await user.keyboard("{ArrowRight}");
     expect(screen.getByRole("button", { name: "9:16" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByRole("button", { name: "16:9" }).getAttribute("aria-pressed")).toBe("false");
+  });
+});
+
+describe("the page header", () => {
+  it("is one line: the crumb, the title and its meta together, the actions after them", () => {
+    render(
+      <PageHeader
+        crumb="Projects"
+        title="The Library of Alexandria"
+        meta="16:9 · started Sep 27"
+        actions={<Button>Edit settings</Button>}
+      />,
+    );
+    const title = screen.getByRole("heading", { level: 1, name: "The Library of Alexandria" });
+    expect(title.className).toBe("sl-title-1");
+    const lead = title.parentElement;
+    expect(lead?.className).toBe("sl-page-header__lead");
+    expect(lead?.textContent).toBe("ProjectsThe Library of Alexandria16:9 · started Sep 27");
+    expect(screen.getByRole("button", { name: "Edit settings" }).parentElement?.parentElement).toBe(
+      lead?.parentElement,
+    );
+    const css = readFileSync(join(import.meta.dirname, "..", "..", "styles", "shell.css"), "utf8");
+    expect(css).toMatch(/\.sl-page-header \{[^}]*flex-wrap: wrap;[^}]*min-height: 40px;/);
+    expect(css).toMatch(
+      /\.sl-page \{\s*padding: var\(--space-4\) var\(--space-5\) var\(--space-6\);/,
+    );
   });
 });
 
