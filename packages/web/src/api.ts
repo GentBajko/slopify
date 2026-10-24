@@ -500,7 +500,8 @@ export async function saveAppSettings(api: Api, settings: AppSettings): Promise<
 export interface VideoEncodersBody {
   readonly nvidia:
     | { readonly available: true }
-    | { readonly available: false; readonly reason: string };
+    // `reason` in plain words; `detail` what the test printed, shown folded.
+    | { readonly available: false; readonly reason: string; readonly detail?: string };
 }
 
 export async function readVideoEncoders(api: Api): Promise<VideoEncodersBody> {

@@ -87,14 +87,23 @@ export function codecArgs(
   ];
 }
 
+// Unavailable: `reason` is one plain sentence for a person, `detail` what the test printed (for
+// a bug report, shown folded in Settings).
 export type NvencStatus =
   | { readonly available: true; readonly bin: string }
-  | { readonly available: false; readonly reason: string };
+  | { readonly available: false; readonly reason: string; readonly detail?: string };
 
 // Runs a program to its end and answers what it printed on stdout; throws when it fails.
 export type NvencExec = (bin: string, args: readonly string[]) => Promise<string>;
 
-export const noNvenc = "No NVIDIA encoder found on this computer.";
+export const noNvenc = "No NVIDIA graphics card encoder was found on this computer.";
+export const failedNvenc =
+  "This computer's NVIDIA graphics card encoder did not pass its test, so it is not used.";
+
+// The reason with the test's output, for the log and a run's notice.
+export function nvencWhy(status: { readonly reason: string; readonly detail?: string }): string {
+  return status.detail === undefined ? status.reason : `${status.reason} (${status.detail})`;
+}
 
 // The renders' own settings on a tiny picture: a driver or card that refuses any of them fails
 // here rather than in a render. NVENC refuses anything under about 145 pixels across.
@@ -130,7 +139,8 @@ export function createNvencProbe(deps: {
   return () => {
     answer ??= probe(deps).catch((error: unknown) => ({
       available: false as const,
-      reason: `${noNvenc} (${errorText(error)})`,
+      reason: noNvenc,
+      detail: errorText(error),
     }));
     return answer;
   };
@@ -163,7 +173,7 @@ async function probe(deps: {
   }
   if (failed !== undefined) {
     deps.log.write("info", "video.encoder", { detail: failed });
-    return { available: false, reason: `${noNvenc} (${failed})` };
+    return { available: false, reason: failedNvenc, detail: failed };
   }
   return { available: false, reason: noNvenc };
 }
@@ -190,11 +200,11 @@ export async function renderMachine(deps: {
     };
   deps.log.write("warn", "video.encoder", {
     projectId: deps.projectId,
-    detail: `NVIDIA encoder chosen but unavailable; encoding on the processor. ${status.reason}`,
+    detail: `NVIDIA encoder chosen but unavailable; encoding on the processor. ${nvencWhy(status)}`,
   });
   return {
     machine: { encode: cpu, priority: settings.renderPriority },
-    notice: nvencFallbackNotice(status.reason),
+    notice: nvencFallbackNotice(nvencWhy(status)),
   };
 }
 

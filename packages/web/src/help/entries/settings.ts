@@ -201,11 +201,6 @@ export const settingsHelp = {
     body: "Background runs every ffmpeg of a video, short or audio export below normal priority, and that of Template Studio's free samples, the style preview, designs and posts' pictures too, so your other programs come first and the render takes the processor time they leave; on an idle computer it is as fast. Normal competes with them as an equal. The finished video is the same either way. Default: Background.",
     tutorial: { page: "Settings-Reference", anchor: "rendering" },
   },
-  "settings.appearance": {
-    title: "Appearance",
-    body: "Light or dark colours for Slopify on this computer. System follows your operating system's setting and changes with it. Default: System. It changes at once and does not affect your videos.",
-    tutorial: { page: "Settings-Reference", anchor: "appearance" },
-  },
 
   // Notifications
   "settings.notifications": {

@@ -7,7 +7,8 @@ import { saveAppSettings } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Field, Input, Select } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { Fold } from "@/components/kit/fold";
+import { helpScope } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { Segmented } from "@/components/kit/switch";
 import { SavedTick, savedTickMs } from "@/components/saved-tick";
@@ -225,8 +226,10 @@ function RenderSettings({
       : nvidia.available
         ? "The graphics card takes most of the work off the processor, for a slightly softer picture than x264."
         : encoder === "nvidia"
-          ? `Videos are encoded on the processor until this is fixed: ${nvidia.reason}`
-          : nvidia.reason;
+          ? `Videos are encoded on the processor until this is fixed. ${nvidia.reason}`
+          : `${nvidia.reason} Videos are encoded on the processor.`;
+  // What the card's test printed, folded under the field: for a bug report, not for reading.
+  const encoderDetail = nvidia?.available === false ? nvidia.detail : undefined;
   const failed = (field: keyof AppSettings, label: string): string | undefined =>
     save.error && save.variables?.[field] !== current[field]
       ? `The ${label} wasn't saved. ${save.error.message}`
@@ -239,22 +242,31 @@ function RenderSettings({
         meta="How this computer encodes videos and shorts. Changing these never marks anything outdated."
       />
       <div className="grid items-start gap-6 md:grid-cols-3">
-        <Field
-          label="Video encoder"
-          tip="settings.video-encoder"
-          help={encoderHelp}
-          error={failed("videoEncoder", "video encoder")}
-        >
-          <Select
-            className="self-start"
-            value={encoder}
-            options={offered}
-            onChange={(event) => {
-              const picked = videoEncoderChoices.find((one) => one.value === event.target.value);
-              if (picked !== undefined) save.mutate({ ...current, videoEncoder: picked.value });
-            }}
-          />
-        </Field>
+        <div className="flex min-w-0 flex-col gap-1">
+          <Field
+            label="Video encoder"
+            tip="settings.video-encoder"
+            help={encoderHelp}
+            error={failed("videoEncoder", "video encoder")}
+          >
+            <Select
+              className="self-start"
+              value={encoder}
+              options={offered}
+              onChange={(event) => {
+                const picked = videoEncoderChoices.find((one) => one.value === event.target.value);
+                if (picked !== undefined) save.mutate({ ...current, videoEncoder: picked.value });
+              }}
+            />
+          </Field>
+          {encoderDetail === undefined ? null : (
+            <Fold summary="Details">
+              <p className="m-0 pt-1 font-mono text-small break-words text-ink-2">
+                {encoderDetail}
+              </p>
+            </Fold>
+          )}
+        </div>
         <Field
           label="Clip encoding"
           tip="settings.clip-encoding"
@@ -303,13 +315,11 @@ export function AppearanceSetting(): ReactElement {
   if (data === undefined) return view ?? <span />;
   const current = data;
   return (
-    <div className="sl-field" {...helpScope}>
-      <div className="flex min-w-0 items-center gap-1">
-        <span className="sl-field__label">Appearance</span>
-        <InfoTip id="settings.appearance" className="-my-1" />
-      </div>
+    <div className="sl-field">
+      <span className="sl-field__label">Appearance</span>
       <Segmented
         label="Appearance"
+        help="System follows your computer's light or dark setting. Your videos are not affected."
         value={current.appearance}
         options={appearances}
         className="self-start"
