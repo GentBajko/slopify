@@ -5,7 +5,8 @@ import { fontUrl } from "@/subtitles/api";
 
 // A video frame drawn with the channel's look as it is being edited: a caption in the caption
 // font, colour and outline, and the end screen text in the title font and colour, so "Caption
-// outline" or "Title colour" can be seen before any video is made. A setting left Not set draws
+// outline" or "Title colour" can be seen before any video is made. The caption is drawn larger
+// than a video's, so its font and outline read on a small frame. A setting left Not set draws
 // the usual white text with a dark outline, which a template may change.
 
 const frameWidth = 1920;
@@ -66,10 +67,10 @@ export function BrandPreview({
     width: "86%",
     transform: "translateX(-50%)",
     fontFamily: fontOf(captionFamily),
-    fontSize: `${(64 / frameWidth) * 100}cqw`,
+    fontSize: `${(104 / frameWidth) * 100}cqw`,
     lineHeight: 1.2,
     color: parseHex(captionColor) ?? "#FFFFFF",
-    WebkitTextStroke: `${(4 / frameWidth) * 100}cqw ${parseHex(captionOutlineColor) ?? "#101010"}`,
+    WebkitTextStroke: `${(14 / frameWidth) * 100}cqw ${parseHex(captionOutlineColor) ?? "#101010"}`,
     paintOrder: "stroke fill",
   };
   const title: CSSProperties = {

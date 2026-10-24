@@ -50,14 +50,20 @@ export function PostingBlock({
 }): ReactElement {
   return (
     <section aria-label="Posting" className="flex flex-col gap-4">
-      <Segmented
+      {/* The group's name shows above it: Free, Premium and Premium+ alone could be anything. */}
+      <Field
         label="X subscription"
         tip="planning.channel.x-tier"
         help="Only changes which warnings a post on X gets."
-        value={value.xTier}
-        options={xTiers.map((tier) => ({ value: tier, label: xTierLabels[tier] }))}
-        onChange={(xTier) => onChange({ ...value, xTier })}
-      />
+      >
+        <Segmented
+          label="X subscription"
+          value={value.xTier}
+          options={xTiers.map((tier) => ({ value: tier, label: xTierLabels[tier] }))}
+          onChange={(xTier) => onChange({ ...value, xTier })}
+          className="self-start"
+        />
+      </Field>
       <div className="flex flex-col gap-2" {...helpScope}>
         <div className="sl-fields">
           {socialPlatforms.map((platform) => {

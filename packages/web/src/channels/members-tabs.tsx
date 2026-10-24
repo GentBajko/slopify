@@ -114,9 +114,6 @@ export function TemplatesTab({
   };
   return (
     <div {...helpScope} className="flex flex-col gap-3">
-      <StatusSlot tone="error">
-        {problem ?? move.error?.message ?? templates.error?.message}
-      </StatusSlot>
       {templates.data && own.length === 0 ? (
         <EmptyState title="No templates in this channel">
           A template is a saved setup for one kind of video. Press Make a video, then choose Save as
@@ -157,7 +154,7 @@ export function TemplatesTab({
                     {others.length === 0 ? null : (
                       <Select
                         aria-label={`Move ${template.name} to`}
-                        className="w-auto"
+                        className="sl-select--compact"
                         value=""
                         disabled={move.isPending}
                         onChange={(event) => {
@@ -184,6 +181,10 @@ export function TemplatesTab({
           channel's look and cast.
         </HelpLine>
       ) : null}
+      {/* Last, so while it is empty it adds no gap above the list. */}
+      <StatusSlot tone="error">
+        {problem ?? move.error?.message ?? templates.error?.message}
+      </StatusSlot>
     </div>
   );
 }
@@ -204,7 +205,6 @@ export function SchedulesTab({ channelId }: { readonly channelId: string }): Rea
   );
   return (
     <div className="flex flex-col gap-3">
-      <StatusSlot tone="error">{schedules.error?.message}</StatusSlot>
       {schedules.data && own.length === 0 ? (
         <EmptyState
           title="No schedules for this channel yet"
@@ -247,6 +247,7 @@ export function SchedulesTab({ channelId }: { readonly channelId: string }): Rea
           </List>
         </>
       ) : null}
+      <StatusSlot tone="error">{schedules.error?.message}</StatusSlot>
     </div>
   );
 }
