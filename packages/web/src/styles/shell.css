@@ -15,9 +15,17 @@
   .sl-key:hover {
     background: var(--color-accent-strong);
   }
-  .sl-key[disabled] {
-    opacity: 0.45;
+  /* A key that cannot start yet is an outline with grey words, never a faded lime: the lime is
+     for the one thing that works next. Its reason is the line under it. */
+  .sl-key:is([disabled], [aria-disabled="true"]),
+  .sl-key:is([disabled], [aria-disabled="true"]):hover,
+  .sl-key:is([disabled], [aria-disabled="true"]):active {
+    opacity: 1;
     cursor: not-allowed;
+    background: transparent;
+    color: var(--color-ink-2);
+    box-shadow: inset 0 0 0 1px var(--color-line-strong);
+    transform: none;
   }
   .sl-key svg {
     width: 18px;

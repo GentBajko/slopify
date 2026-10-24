@@ -688,6 +688,20 @@ describe("buttons", () => {
     expect(submit).not.toHaveBeenCalled();
   });
 
+  it("draws a Play key that cannot start yet as an outline with grey words, not a faded lime", () => {
+    const shell = readFileSync(
+      join(import.meta.dirname, "..", "..", "styles", "shell.css"),
+      "utf8",
+    );
+    const rule = /\.sl-key:is\(\[disabled\], \[aria-disabled="true"\]\),[^{]*\{([^}]*)\}/.exec(
+      shell,
+    )?.[1];
+    expect(rule).toContain("background: transparent;");
+    expect(rule).toContain("color: var(--color-ink-2);");
+    expect(rule).toContain("box-shadow: inset 0 0 0 1px var(--color-line-strong);");
+    expect(rule).toContain("opacity: 1;");
+  });
+
   it("shows an icon button's name as the kit's tooltip, which keyboard focus shows too", () => {
     render(
       <IconButton label="More project actions">
