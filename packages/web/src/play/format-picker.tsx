@@ -29,7 +29,9 @@ export function FormatPicker({
         type="single"
         value={value}
         aria-labelledby={id}
-        className="w-full max-w-[720px] gap-3 overflow-visible border-0"
+        // As many tiles to a line as fit, so a narrow column stacks them rather than cutting
+        // their words.
+        className="grid w-full max-w-[720px] grid-cols-[repeat(auto-fit,minmax(min(100%,11rem),1fr))] gap-3 overflow-visible border-0"
         onValueChange={(next) => {
           const picked = formats.find((format) => format === next);
           if (picked !== undefined) onPick(picked);
@@ -41,7 +43,7 @@ export function FormatPicker({
             value={format}
             data-play-field={value === format ? "format" : undefined}
             aria-label={`${format} ${shapes[format].name}`}
-            className="flex h-16 min-w-0 flex-1 items-center justify-start gap-3 rounded-control border border-line-strong bg-surface px-3 py-2 last:border-r data-[state=on]:border-focus data-[state=on]:shadow-none"
+            className="flex min-h-16 min-w-0 items-center justify-start gap-3 rounded-control border border-line-strong bg-surface px-3 py-2 last:border-r data-[state=on]:border-focus data-[state=on]:shadow-none"
           >
             <span
               className="flex h-10 w-12 shrink-0 items-center justify-center"
@@ -58,7 +60,7 @@ export function FormatPicker({
             </span>
             <span className="min-w-0 text-left">
               <span className="block text-body font-semibold">{shapes[format].name}</span>
-              <span className="block truncate text-label text-ink-2">
+              <span className="block text-label text-ink-2">
                 {format} · {shapes[format].use}
               </span>
             </span>
