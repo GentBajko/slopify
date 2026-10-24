@@ -30,14 +30,6 @@ export function useDraftCast(): readonly CastMember[] {
   return cast.data?.cast ?? [];
 }
 
-// How many channels there are, once known: with one there is nothing to choose, and Create
-// shows no channel control at all.
-export function useChannelCount(): number {
-  const { api } = useApp();
-  const channels = useQuery(channelsQuery(api));
-  return channels.data?.length ?? 0;
-}
-
 // "For My channel ▾", beside Start from, with two or more channels: the channel this video is
 // made for. Nothing with one.
 export function ChannelFor({

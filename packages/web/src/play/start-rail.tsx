@@ -22,7 +22,7 @@ import { pageVideos, pendingReviewUpload, queued, startLabel } from "./review-st
 import { RunReview } from "./run-review";
 
 // One spoken minute is about this many words, so the expected length reads in minutes.
-export const wordsPerMinute = 150;
+const wordsPerMinute = 150;
 
 export type StartReason =
   | { readonly kind: "problem"; readonly text: string; readonly problem: SetupProblem }
