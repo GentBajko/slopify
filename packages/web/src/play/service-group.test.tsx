@@ -10,7 +10,7 @@ import { VoicePicker } from "./voice-picker";
 
 afterEach(cleanup);
 
-const keyed = (id: string, displayName: string, hasKey: boolean): ProviderStatus => ({
+const keyed = (id: ProviderStatus["id"], displayName: string, hasKey: boolean): ProviderStatus => ({
   id,
   family: "tts",
   displayName,
