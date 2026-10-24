@@ -758,7 +758,8 @@ describe("the title row's More", () => {
     expect(removed).not.toHaveBeenCalled();
     await userEvent.click(within(dialog).getByRole("button", { name: "Delete project" }));
     await waitFor(() => expect(removed).toHaveBeenCalledOnce());
-  });
+    // ceiling: opens the settings and two menus; alone 1.9 s, past 5 s under a loaded suite.
+  }, 20_000);
 
   it("marks a finished video uploaded from More, with Undo, and says so in the title row", async () => {
     const marked: unknown[] = [];
@@ -796,7 +797,9 @@ describe("the title row's More", () => {
     await statusList();
     await userEvent.click(screen.getByRole("button", { name: "More" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Mark uploaded" }));
-    await waitFor(() => expect(marked).toEqual([{ uploaded: true }]));
-    expect(await screen.findByText(/^uploaded /)).not.toBeNull();
-  });
+    await waitFor(() => expect(marked).toEqual([{ uploaded: true }]), { timeout: 5_000 });
+    expect(await screen.findByText(/^uploaded /, {}, { timeout: 5_000 })).not.toBeNull();
+    // ceiling: the list's row arrives before More offers Mark uploaded; under a loaded suite
+    // that has taken over 2 s.
+  }, 20_000);
 });

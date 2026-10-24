@@ -636,11 +636,23 @@ function ProjectWorkspace({
   const written = outputs.some((output) => output.role === "youtube_description");
   const copies = written ? (
     <>
-      <Button onClick={() => youtubeCopy.current.description?.()}>
+      <Button
+        onClick={() =>
+          youtubeCopy.current.description === undefined
+            ? notify("The description is still loading. Press Copy description again.", "info")
+            : youtubeCopy.current.description()
+        }
+      >
         <CopyIcon aria-hidden="true" strokeWidth={1.75} />
         Copy description
       </Button>
-      <Button onClick={() => youtubeCopy.current.tags?.()}>
+      <Button
+        onClick={() =>
+          youtubeCopy.current.tags === undefined
+            ? notify("The tags are still loading. Press Copy tags again.", "info")
+            : youtubeCopy.current.tags()
+        }
+      >
         <CopyIcon aria-hidden="true" strokeWidth={1.75} />
         Copy tags
       </Button>
