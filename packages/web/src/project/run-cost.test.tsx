@@ -187,12 +187,45 @@ describe("the Run cost tab", () => {
       name: "Share of the weekly Codex limit this run used",
     });
     expect(meter.getAttribute("aria-valuenow")).toBe("18");
-    const byStage = screen.getByRole("table", { name: "Run cost by stage" });
+    const byStage = screen.getByRole("table", { name: "Run cost by step" });
     expect(within(byStage).getByText("~$1.50")).toBeTruthy();
+    expect(within(byStage).getByRole("columnheader", { name: "Via API" })).toBeTruthy();
     expect(within(byStage).getByText("6 min 0 s")).toBeTruthy();
     const byModel = screen.getByRole("table", { name: "Run cost by model" });
     expect(within(byModel).getByText("codex · gpt-5")).toBeTruthy();
     expect(within(byModel).getByText("$0 on plan")).toBeTruthy();
+  });
+
+  it("drops the Via API column when no call has such a figure, and says what the Video step drew", async () => {
+    const plain = { ...line, apiEquivalent: null };
+    const paid: RunCost = {
+      ...cost,
+      apiEquivalent: null,
+      byStage: [
+        { ...plain, stage: "audio", wallMs: 3000 },
+        { ...plain, stage: "video", images: 4, wallMs: 1000 },
+      ],
+      byModel: [
+        { ...plain, provider: "fal", model: "flux", kind: "image", onPlan: false, apiModel: null },
+      ],
+      plans: [],
+    };
+    renderApp(
+      <RunCostPanel projectId="p1" />,
+      testDeps({ "GET /api/projects/p1/run-cost": jsonAnswer(paid) }),
+    );
+    const byStage = await screen.findByRole("table", { name: "Run cost by step" });
+    expect(within(byStage).queryByRole("columnheader", { name: "Via API" })).toBeNull();
+    expect(
+      within(screen.getByRole("table", { name: "Run cost by model" })).queryByRole("columnheader", {
+        name: "Via API",
+      }),
+    ).toBeNull();
+    // The shared names: Narration, not Audio.
+    expect(within(byStage).getByText("Narration")).toBeTruthy();
+    expect(within(byStage).getByText(/4 images for the shorts/)).toBeTruthy();
+    // What the tables mean is said in words under their heads, not behind an info button.
+    expect(screen.queryByRole("button", { name: /About/ })).toBeNull();
   });
 
   it("calls a sample's stand-in models free rather than unknown", async () => {
