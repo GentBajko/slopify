@@ -251,13 +251,13 @@ export function StepContent({
       return (
         <>
           <p>
-            Review the enabled outputs, costs and readiness in Review. If anything is missing, use
-            Back to fix the highlighted section.
+            <strong>See everything this run will do</strong> lists what the run makes, what it costs
+            and anything still missing. If something is missing, use Back to fix its row.
           </p>
           <p>
-            When ready, press the real <strong>Start run</strong> or <strong>Queue N</strong>{" "}
-            button. This creates a project and sends generation requests to your chosen providers,
-            which may charge your account.
+            When ready, press the real <strong>Make the video</strong> button (
+            <strong>Queue 3 videos</strong> with more topics). This creates a project and sends
+            requests to the services you picked, which may charge your account.
           </p>
           <p>
             The tour will follow you to the project. You can also skip generating and go on to the

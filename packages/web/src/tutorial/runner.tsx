@@ -202,7 +202,7 @@ export function TutorialRunner({
         waitingForSave
           ? "Use Save in the editor"
           : step.id === "play-start"
-            ? "Use Start run / Queue N on the page"
+            ? "Press Make the video on the page"
             : last
               ? "Finish tutorial"
               : "Next"
