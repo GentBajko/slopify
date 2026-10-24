@@ -121,8 +121,8 @@ it("prices the audition, then speaks the speaker's first line only on the click"
   );
   const [alex, sam] = rows;
   if (alex === undefined || sam === undefined) throw new Error("Two speakers expected");
-  expect(within(sam).getByRole("button", { name: /^Audition/ })).toHaveProperty("disabled", true);
-  const button = await within(alex).findByRole("button", { name: "Audition · about $0.0004" });
+  expect(within(sam).getByRole("button", { name: /^Hear Sam/ })).toHaveProperty("disabled", true);
+  const button = await within(alex).findByRole("button", { name: "Hear Alex · about $0.0004" });
   expect(spoken).toEqual([]);
   await user.click(button);
   expect(await within(alex).findByText("Playing the audition.")).toBeTruthy();

@@ -11,7 +11,7 @@ beforeEach(() =>
 afterEach(cleanup);
 
 it.each([
-  ["images", "Number for Maps", "imagePrompts.0.number", ["", "-", "1.5", "21"]],
+  ["images", "How many images for Maps", "imagePrompts.0.number", ["", "-", "1.5", "21"]],
   ["words", "Words", "chunking.words", ["", "-", "1.5", "10001"]],
   ["characters", "Characters", "chunking.characters", ["", "1e", "1.5", "1000001"]],
 ] as const)(
@@ -33,7 +33,7 @@ it.each([
     // Only the row that holds the count is opened; the rest of Play stays folded.
     const open = async () => {
       await openRow(kind === "images" ? "Images" : "Narration");
-      if (kind !== "images") await userEvent.click(screen.getByText(/More audio settings/));
+      if (kind !== "images") await userEvent.click(screen.getByText("More narration settings"));
     };
     await open();
     for (const value of values) {

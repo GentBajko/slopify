@@ -36,26 +36,26 @@ it("shows shared text generation for a provided article and preserves preparatio
     };
     return (
       <>
-        <ContentSection {...props} entries={[]} onLibrary={() => {}} />
-        <TextGenerationIn {...props} section="narration" entries={[]} onSettings={() => {}} />
+        <ContentSection {...props} entries={[]} />
+        <TextGenerationIn {...props} section="narration" entries={[]} />
         <AudioRail {...props} />
       </>
     );
   }
   renderRouted(<Subject />, testDeps({}));
-  await screen.findByLabelText("LLM");
+  await screen.findByLabelText("Written by Service");
   expect((screen.getByLabelText("Narration Preparation") as HTMLSelectElement).value).toBe(
     "Delivery",
   );
-  const audio = screen.getByRole("radiogroup", { name: "audio source" });
-  for (const inactive of ["Off", "Provide"]) {
+  const audio = screen.getByRole("radiogroup", { name: "Narration" });
+  for (const inactive of ["Off", "My own audio file"]) {
     await user.click(within(audio).getByRole("radio", { name: inactive }));
     expect(screen.queryByLabelText("Narration Preparation")).toBeNull();
-    expect(screen.queryByLabelText("LLM")).toBeNull();
-    await user.click(within(audio).getByRole("radio", { name: "Generate" }));
+    expect(screen.queryByLabelText("Written by Service")).toBeNull();
+    await user.click(within(audio).getByRole("radio", { name: "AI voice (paid per character)" }));
     expect((screen.getByLabelText("Narration Preparation") as HTMLSelectElement).value).toBe(
       "Delivery",
     );
-    expect(screen.getByLabelText("LLM")).not.toBeNull();
+    expect(screen.getByLabelText("Written by Service")).not.toBeNull();
   }
 });

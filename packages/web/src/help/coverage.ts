@@ -105,3 +105,15 @@ export const selfExplanatory: readonly (string | RegExp)[] = [
   /^Select (all|row|\S+ for)/i,
   /^Showing:$/,
 ];
+
+// Create's stage editors (play/), and Edit template's, which draw the same ones. A stage's
+// switch is named for its stage and says in words what each choice makes and what it costs
+// ("Narration: Off | AI voice (paid per character) | My own audio file"). A service group's
+// Service and Model are named by the group ("Read by Service"), and its line under them says
+// what the picked model's state is once there is one; the Voice select says what to do next in
+// its first entry.
+export const stageEditors: readonly (string | RegExp)[] = [
+  /^(Research|Article|Narration|Images|Video)$/,
+  /^(.+ is read|Read|Intro and outro read|Written|Images|Drawn|Checked) by (Service|Model)$/,
+  /^(Voice|Intro and outro voice)$/,
+];

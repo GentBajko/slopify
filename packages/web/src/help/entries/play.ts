@@ -53,8 +53,8 @@ export const playHelp = {
 
   // Sources, one switch per stage
   "play.source.research": {
-    title: "Research source",
-    body: "Generate has the text model plan chapters, research each one on the web and combine the notes before the article is written: one call to plan, one per chapter and one to combine. Provide uses notes you paste. Off, the default, writes from the prompt alone.",
+    title: "Research",
+    body: "Let the AI research has the AI plan chapters, look each one up on the web and combine the notes before the article is written: one call to plan, one per chapter and one to combine. Paste my notes uses notes you paste. Off, the default, writes from the prompt alone.",
     tutorial: { page: "Play-Title-and-Article", anchor: "research" },
   },
   "play.source.article": {
@@ -63,37 +63,32 @@ export const playHelp = {
     tutorial: { page: "Play-Title-and-Article", anchor: "choose-where-the-article-comes-from" },
   },
   "play.source.audio": {
-    title: "Narration source",
-    body: "Generate reads the article aloud with a text-to-speech voice, charged by the provider per character. Provide uses an audio file you upload, as it is. Off makes a silent video with no captions, YouTube description or shorts. Default: Generate.",
+    title: "Narration",
+    body: "AI voice reads the article aloud with the voice you pick, charged by the voice service per character. My own audio file uses a file you upload, as it is. Off makes a silent video with no captions, YouTube description or shorts. Default: AI voice.",
     tutorial: { page: "Play-Narration", anchor: "choose-where-the-narration-comes-from" },
   },
   "play.source.images": {
-    title: "Images source",
-    body: "Generate draws images from the ticked image prompts, one image-model call each. Provide uses your own PNG, JPEG or WebP files in the order you pick them. Off turns off the video too. Default: Generate.",
+    title: "Images",
+    body: "Made by AI draws images from the ticked image prompts, one paid image call each. My own images uses your PNG, JPEG or WebP files in the order you pick them. None turns the video off too. Default: Made by AI.",
     tutorial: { page: "Play-Images", anchor: "choose-where-the-images-come-from" },
   },
   "play.source.thumbnail": {
-    title: "Thumbnail source",
-    body: "From prompt draws the thumbnail straight from the thumbnail prompt, one image call. Prompt by LLM first has the text model write the image prompt from yours, the title and the article, then draws it. Provide uses your own image. Default: Off.",
+    title: "Thumbnail",
+    body: "From my thumbnail prompt draws it straight from your thumbnail prompt, one image call. Let the AI write the prompt first has the AI write the image prompt from yours, the title and the article, then draws it. Upload mine uses your own picture. Default: None.",
     tutorial: { page: "Play-Outputs", anchor: "thumbnail" },
   },
   "play.source.video": {
-    title: "Video source",
-    body: "Generate renders the slideshow video on this computer from the images and narration; it costs no provider money, only time. Off leaves each finished stage to download on its own. It needs images, so it is Off while Images is Off. Default: Generate.",
+    title: "Video",
+    body: "Make the video puts the slideshow together on this computer from the images and narration; it costs no provider money, only time. Off (sound only) keeps the narration as one audio file and leaves each other stage to download on its own. It needs images. Default: Make the video.",
     tutorial: { page: "Play-Video-and-Style", anchor: "choose-whether-to-render-a-video" },
   },
   "play.source.document": {
-    title: "PDF source",
-    body: "Generate lays out a PDF of the article and title on this computer, in the theme you pick. It needs no provider and costs nothing. Default: Off.",
+    title: "PDF of the article",
+    body: "Make a PDF lays out the article and title on this computer, in the theme you pick. It needs no provider and costs nothing. Default: Off.",
     tutorial: { page: "PDF-Documents", anchor: "make-a-pdf" },
   },
 
   // Article row
-  "play.article-prompt": {
-    title: "Article prompt",
-    body: "The Library prompt the text model is sent to write the article, with its keywords filled in. A Script prompt, used when several speakers read, asks for speaker turns instead. Write or change prompts on Prompts; View prompt shows the text.",
-    tutorial: { page: "Play-Title-and-Article", anchor: "generate-an-article-from-a-prompt" },
-  },
   "play.provided.article": {
     title: "Article text",
     body: "The article you paste is narrated word for word, and no text model writes one. Include everything that should be read, headings too. The count under it helps you judge the length: about 150 words is one minute of narration.",
@@ -104,19 +99,14 @@ export const playHelp = {
     body: "Notes you paste are given to the text model with the article prompt, in place of web research. Paste facts, sources and quotes the article should draw on. Nothing is looked up.",
     tutorial: { page: "Play-Title-and-Article", anchor: "give-your-own-research-notes" },
   },
-  "play.text-generation": {
-    title: "Text generation",
-    body: "One text model writes everything this run needs in words: the article, research, the thumbnail's image prompt, entries set to LLM, Narration Preparation, the YouTube description and picking shorts. Each is a separate call, counted in usage. Set the default under Settings.",
-    tutorial: { page: "Play-Title-and-Article", anchor: "text-generation" },
-  },
   "play.llm.provider": {
-    title: "LLM",
-    body: "Who runs the text model: a command-line tool you are signed in to, such as Claude Code or Codex, or a keyed service such as OpenRouter, billed per token. A greyed provider says why it cannot be used; fix it under Settings.",
+    title: "Written by",
+    body: "Who writes: a command-line tool you are signed in to, such as Claude Code or Codex, or a keyed service such as OpenRouter, billed per token. A greyed service says why it cannot be used; fix it under Settings.",
     tutorial: { page: "Play-Title-and-Article", anchor: "text-generation" },
   },
   "play.llm.model": {
-    title: "Text model",
-    body: "The model the provider runs for every text step. Bigger models write better and cost more per token. Refresh asks the provider for its current list; Custom ID lets you type a model the list does not show.",
+    title: "Writing model",
+    body: "The model the service runs for every writing step. Bigger models write better and cost more per token. Settings → Models refreshes the list and checks whether a model works for your key.",
     tutorial: { page: "Play-Title-and-Article", anchor: "text-generation" },
   },
   "play.llm.thinking": {
@@ -127,18 +117,18 @@ export const playHelp = {
 
   // Narration row
   "play.tts.provider": {
-    title: "TTS",
-    body: "The text-to-speech service that reads the narration, charged by the provider per character of text. A greyed provider says why it cannot be used; add its key under Settings. Changing it clears the model and voice.",
+    title: "Voice service",
+    body: "The service that reads the narration aloud, charged per character of text. A greyed service says why it cannot be used; add its key under Settings. Changing it clears the model and voice.",
     tutorial: { page: "Play-Narration", anchor: "pick-a-voice" },
   },
   "play.tts.model": {
-    title: "TTS model",
-    body: "The provider's speech model. Models differ in quality, languages, speed and price per character. Some features need a particular model: Narration Preparation needs Inworld TTS-2. Refresh asks the provider for its current list.",
+    title: "Voice model",
+    body: "The voice service's speech model. Models differ in quality, languages, speed and price per character. Some features need a particular model: delivery cues need Inworld TTS-2. Settings → Models refreshes the list.",
     tutorial: { page: "Play-Narration", anchor: "pick-a-voice" },
   },
   "play.voice": {
     title: "Voice",
-    body: "Who reads the narration. The list holds the voices you added under Settings → Voices for this provider, filtered to the project's language. With several speakers, this voice reads the intro and outro.",
+    body: "Who reads the narration. The list holds the voices you added under Settings → Voices for this voice service, filtered to the project's language. With several speakers, this voice reads the intro and outro.",
     tutorial: { page: "Play-Narration", anchor: "pick-a-voice" },
   },
   "play.voice-sample": {
@@ -162,13 +152,13 @@ export const playHelp = {
     tutorial: { page: "Play-Narration", anchor: "intro-and-outro" },
   },
   "play.chunking": {
-    title: "Chunking",
-    body: "How the narration is split into text-to-speech requests. Whole sends it in one request; Paragraph sends one per paragraph; Every N words or characters ends each at a sentence end. Split when a provider refuses long text. Default: Whole. It changes the number of requests, not the characters charged.",
+    title: "Split the narration by",
+    body: "How the narration is sent to the voice service. Nothing sends it in one request; Paragraph sends one per paragraph; Every N words or characters ends each at a sentence end. Split when a voice service refuses long text. Default: Nothing. It changes the number of requests, not the characters charged.",
     tutorial: { page: "Play-Narration", anchor: "chunking" },
   },
   "play.chunking.count": {
-    title: "Chunk size",
-    body: "How long each text-to-speech request may be. Each request ends at the last whole sentence that fits, so a single longer sentence stays whole. Defaults: 500 words or 3000 characters, spaces included.",
+    title: "Piece size",
+    body: "How long each request to the voice service may be. Each request ends at the last whole sentence that fits, so a single longer sentence stays whole. Defaults: 500 words or 3000 characters, spaces included.",
     tutorial: { page: "Play-Narration", anchor: "chunking" },
   },
   "play.narration-preparation": {
@@ -268,21 +258,6 @@ export const playHelp = {
     body: "What this speaker does in the format: narrator, host, guest or character. The text model is told each speaker's role when it writes or splits the script.",
     tutorial: { page: "Multiple-Voices", anchor: "speaker-options" },
   },
-  "play.speaker.provider": {
-    title: "Voice provider",
-    body: "The text-to-speech service for this speaker, charged per character of their lines. Speakers may use different providers. Changing it clears the model and voice.",
-    tutorial: { page: "Multiple-Voices", anchor: "speaker-options" },
-  },
-  "play.speaker.model": {
-    title: "Voice model",
-    body: "The provider's speech model for this speaker. Models differ in quality, languages and price per character. Pronunciations need an Inworld TTS-2 model.",
-    tutorial: { page: "Multiple-Voices", anchor: "speaker-options" },
-  },
-  "play.speaker.voice": {
-    title: "Speaker voice",
-    body: "This speaker's voice, from the voices you added under Settings → Voices for their provider, filtered to the project's language. Press Audition to hear it read their first line.",
-    tutorial: { page: "Multiple-Voices", anchor: "speaker-options" },
-  },
   "play.speaker.pace": {
     title: "Pace",
     body: "How fast this speaker talks, from 0.8× to 1.2× of the voice's own speed. Default: Normal.",
@@ -301,39 +276,19 @@ export const playHelp = {
 
   // Images row
   "play.images.provider": {
-    title: "Image provider",
-    body: "Who draws the images, the thumbnail and the shorts' pictures: a keyed service such as fal.ai, billed per image, or a command-line tool you are signed in to. A greyed provider says why it cannot be used; fix it under Settings.",
+    title: "Image service",
+    body: "Who draws the images, the thumbnail and the shorts' pictures: a keyed service such as fal.ai, billed per image, or a command-line tool you are signed in to. A greyed service says why it cannot be used; fix it under Settings.",
     tutorial: { page: "Play-Images", anchor: "pick-the-image-provider-and-model" },
   },
   "play.images.model": {
     title: "Image model",
-    body: "The provider's image model. Models differ in quality, speed and price per image; the estimate in the right rail shows what this run costs. Refresh asks the provider for its current list.",
+    body: "The image service's model. Models differ in quality, speed and price per image; the estimate in the right rail shows what this run costs. Settings → Models refreshes the list.",
     tutorial: { page: "Play-Images", anchor: "pick-the-image-provider-and-model" },
   },
   "play.images.effort": {
     title: "Effort",
     body: "How long an image agent, such as the Codex CLI, reasons before it draws. Higher effort can follow the prompt more closely but takes longer and uses more tokens. Model default leaves it to the provider.",
     tutorial: { page: "Play-Images", anchor: "drawing-with-the-codex-cli" },
-  },
-  "play.image-prompts": {
-    title: "Image prompts",
-    body: "Tick the Library prompts that draw the video's images, and give each a number: how many images it makes, 1 to 20. A run makes at most 60 this way. Each image is one image-model call. The images play in the order you ticked the prompts.",
-    tutorial: { page: "Play-Images", anchor: "pick-the-image-prompts" },
-  },
-  "play.reference": {
-    title: "Establishing image",
-    body: "Made first and never shown in the video. Every other image, the shorts' and, if ticked, the thumbnail is drawn with it as a reference, so characters, style and palette stay the same. From a prompt costs one more image; Upload uses yours. Changing it marks those images outdated. Default: Off.",
-    tutorial: { page: "Play-Images", anchor: "establishing-image" },
-  },
-  "play.reference.prompt": {
-    title: "Establishing prompt",
-    body: "The Library image prompt that draws the establishing image, its keywords filled like the others. Describe the characters, setting and style every other image should share.",
-    tutorial: { page: "Play-Images", anchor: "establishing-image" },
-  },
-  "play.reference.thumbnail": {
-    title: "Thumbnail from the establishing image",
-    body: "Draws the thumbnail with the establishing image as a reference too, so it matches the video. Untick it for a thumbnail drawn on its own. Default: on.",
-    tutorial: { page: "Play-Images", anchor: "establishing-image" },
   },
   "play.image-scale": {
     title: "More images for long videos",
@@ -391,11 +346,6 @@ export const playHelp = {
     title: "Frame format",
     body: "16:9 is a landscape video for YouTube and screens. 9:16 is a portrait video for phones. 1:1 is square, for posts and feeds. Images are drawn in this shape and captions are placed for it; shorts stay 9:16 and the thumbnail stays 16:9 for YouTube. Default: 16:9.",
     tutorial: { page: "Play-Video-and-Style", anchor: "frame-format" },
-  },
-  "play.preview-text": {
-    title: "Preview text",
-    body: "The sample sentence the style preview shows in your caption font, size and position. It is only for the preview and never reaches the video; real captions come from the narration.",
-    tutorial: { page: "Play-Video-and-Style", anchor: "style-preview" },
   },
 
   // Outputs row
@@ -475,30 +425,10 @@ export const playHelp = {
     tutorial: { page: "PDF-Documents", anchor: "options" },
   },
 
-  // Reviews panel
-  "play.checkpoints": {
-    title: "Review checkpoints",
-    body: "Holds the run before a step so you can check and edit what came before it. Steps that do not depend on it carry on. Approve each checkpoint on the project page to continue. A step must be generated to have a checkpoint.",
-    tutorial: { page: "Reviews-and-Checkpoints", anchor: "add-a-checkpoint-on-play" },
-  },
-  "play.reviews": {
-    title: "Automatic reviews",
-    body: "A reviewer model checks each finished item and saves its verdict and reasons on the project page. Flag only marks a failed item; Flag and redo makes it again, up to the redos per item, then keeps and flags it. Each review is a text-model call, counted in usage. Default: Off.",
-    tutorial: { page: "Reviews-and-Checkpoints", anchor: "set-up-automatic-reviews" },
-  },
+  // Pauses and checks row
   "play.reviews.reviewer": {
     title: "Who reviews",
     body: "Model: Slopify asks the reviewer model below, one paid call per item. External agent (MCP): an agent connected in Settings → Connections → Agents (MCP) answers each review instead, at no API cost. A review nobody answers within 2 hours passes on its own, and a notification says so.",
-    tutorial: { page: "Reviews-and-Checkpoints", anchor: "set-up-automatic-reviews" },
-  },
-  "play.reviews.provider": {
-    title: "Reviewer",
-    body: "Who runs the review model. Picture reviews, for images, the thumbnail and shorts, need Claude Code or Codex, which can look at images; other providers review text only.",
-    tutorial: { page: "Reviews-and-Checkpoints", anchor: "set-up-automatic-reviews" },
-  },
-  "play.reviews.model": {
-    title: "Reviewer model",
-    body: "The model that judges each item. A stronger model catches more but costs more per review. It can differ from the model that wrote the text.",
     tutorial: { page: "Reviews-and-Checkpoints", anchor: "set-up-automatic-reviews" },
   },
   "play.reviews.promise": {

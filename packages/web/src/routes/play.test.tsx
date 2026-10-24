@@ -1,6 +1,8 @@
+import type { StageKind } from "@app/kernel/pipeline.js";
+import type { StageSource } from "@app/slices/admission/model.js";
 import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import { subtitleConfigSchema } from "@app/slices/subtitles/model.js";
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -10,7 +12,9 @@ import {
   mountPlay,
   openRow,
   openSection,
+  pickArticlePrompt,
 } from "@/play/play-test-fixture";
+import { sourceLabel } from "@/play/state";
 import { type Answer, jsonAnswer, testVersion } from "@/test-app";
 
 const tutorial = vi.hoisted(() => ({
@@ -73,34 +77,52 @@ function held(): boolean {
 // renders less.
 const rowOfPicker: Readonly<Record<string, string>> = {
   "Article prompt": "Article",
-  LLM: "Article",
-  "Text model": "Article",
-  TTS: "Narration",
-  "TTS model": "Narration",
+  "Written by Service": "Article",
+  "Written by Model": "Article",
+  "Read by Service": "Narration",
+  "Read by Model": "Narration",
   Voice: "Narration",
   Intro: "Narration",
   Outro: "Narration",
-  Provider: "Images",
-  Model: "Images",
+  "Images by Service": "Images",
+  "Images by Model": "Images",
   "Thumbnail prompt": "Outputs",
 };
 async function pick(label: string, value: string): Promise<void> {
   if (screen.queryByRole("dialog", { name: "Review" })) await section("Content");
   await openRow(rowOfPicker[label] ?? "Outputs");
+  if (label === "Article prompt") return pickArticlePrompt(value);
   return userEvent.selectOptions(screen.getByLabelText(label), value);
 }
 
-// One stage's segmented switch, scoped to its own rail: "Provide" is a segment of four
-// of them.
-function segment(stage: string, name: string): HTMLElement {
-  return within(screen.getByRole("radiogroup", { name: `${stage} source` })).getByRole("radio", {
-    name,
+// One stage's switch, scoped to its own rail and named for its stage; the choices are asked
+// for by what the rule calls them and found by the words the stage says them in. The
+// thumbnail's None is its Outputs tick, which a choice of how to make it ticks first.
+const stageNames: Readonly<Record<StageKind, string>> = {
+  research: "Research",
+  article: "Article",
+  audio: "Narration",
+  images: "Images",
+  thumbnail: "Thumbnail",
+  video: "Video",
+  document: "PDF of the article",
+};
+function segment(stage: StageKind, source: StageSource | string): HTMLElement {
+  const tick = screen.queryByRole("checkbox", { name: stageNames[stage] });
+  if (tick instanceof HTMLInputElement && !tick.checked && source !== "off") fireEvent.click(tick);
+  const words =
+    stage === "article"
+      ? source
+      : stage === "video" && source === "off"
+        ? /^Off/
+        : sourceLabel(stage, source as StageSource);
+  return within(screen.getByRole("radiogroup", { name: stageNames[stage] })).getByRole("radio", {
+    name: words,
   });
 }
 
-// The images rail draws a Model above the cue sheet's LLM Model, in that order.
-function modelPickers(): readonly HTMLElement[] {
-  return screen.getAllByLabelText("Model");
+function imageModel(): HTMLElement {
+  return screen.getByLabelText(/^(Images|Drawn) by Model$/);
 }
 
 // Mounts Play on a fresh draft, or on `start` (a complete generated run is `generatedRun`).
@@ -115,17 +137,14 @@ async function mount(
 // tests about what comes after start from `generatedRun` instead.
 async function fillGeneratedRun(): Promise<void> {
   await pick("Article prompt", "Dossier");
-  await pick("TTS", "elevenlabs");
-  await pick("TTS model", "eleven_multilingual_v2");
+  await pick("Read by Service", "elevenlabs");
+  await pick("Read by Model", "eleven_multilingual_v2");
   await pick("Voice", "eleven-narrator");
-  await pick("Provider", "fal");
-  const [imageModel] = modelPickers();
-  if (imageModel !== undefined) {
-    await userEvent.selectOptions(imageModel, "fal-ai/flux-2");
-  }
+  await pick("Images by Service", "fal");
+  await userEvent.selectOptions(imageModel(), "fal-ai/flux-2");
   await userEvent.click(screen.getByRole("checkbox", { name: "Oils" }));
-  await pick("LLM", "claude-code");
-  await pick("Text model", "sonnet");
+  await pick("Written by Service", "claude-code");
+  await pick("Written by Model", "sonnet");
   await fill(screen.getByLabelText("Title"), "Rope Tricks");
   await openRow("Title and keywords");
   await fill(screen.getByLabelText("topic"), "rope");
@@ -234,8 +253,8 @@ describe("the Play key and its hint", () => {
     await pick("Article prompt", "Dossier");
     expect(screen.getByText("Pick a narration provider to play")).not.toBeNull();
 
-    await pick("TTS", "elevenlabs");
-    await pick("TTS model", "eleven_multilingual_v2");
+    await pick("Read by Service", "elevenlabs");
+    await pick("Read by Model", "eleven_multilingual_v2");
     expect(screen.getByText("Pick a voice to play")).not.toBeNull();
 
     await pick("Voice", "eleven-narrator");
@@ -313,8 +332,8 @@ describe("the providers a run may use", () => {
   it("offers only the voices of the picked narration provider", async () => {
     await mount();
 
-    await pick("TTS", "elevenlabs");
-    await pick("TTS model", "eleven_multilingual_v2");
+    await pick("Read by Service", "elevenlabs");
+    await pick("Read by Model", "eleven_multilingual_v2");
     expect(screen.getByRole("option", { name: "Narrator M" })).not.toBeNull();
     expect(screen.queryByRole("option", { name: "Other" })).toBeNull();
   });
@@ -324,36 +343,39 @@ describe("the source switches", () => {
   it("offers each stage only the sources the rule allows it", async () => {
     await mount();
 
-    expect(screen.getByRole("radiogroup", { name: "research source" }).textContent).toBe(
-      "OffGenerateProvide",
+    // Each stage says its choices in its own words, and the paid one says that it is paid.
+    expect(screen.getByRole("radiogroup", { name: "Research" }).textContent).toBe(
+      "OffLet the AI researchPaste my notes",
     );
     // The article's source is said as the task: write it, read the person's text as written,
     // or adapt that text with the article prompt.
-    expect(screen.getByRole("radiogroup", { name: "article source" }).textContent).toBe(
+    expect(screen.getByRole("radiogroup", { name: "Article" }).textContent).toBe(
       "Write it for meUse my text as writtenAdapt my textNo text",
     );
     await section("Outputs");
-    expect(screen.getByRole("radiogroup", { name: "thumbnail source" }).textContent).toBe(
-      "OffFrom promptPrompt by LLMProvide",
+    expect(screen.getByRole("radiogroup", { name: "Narration" }).textContent).toBe(
+      "OffAI voice (paid per character)My own audio file",
     );
-    for (const kind of ["audio", "images"]) {
-      expect(screen.getByRole("radiogroup", { name: `${kind} source` }).textContent).toBe(
-        "OffGenerateProvide",
-      );
-    }
-    expect(screen.getByRole("radiogroup", { name: "video source" }).textContent).toBe(
-      "OffGenerate",
+    expect(screen.getByRole("radiogroup", { name: "Images" }).textContent).toBe(
+      "NoneMade by AI (paid)My own images",
     );
-    expect(screen.getByRole("radiogroup", { name: "document source" }).textContent).toBe(
-      "OffGenerate",
+    expect(screen.getByRole("radiogroup", { name: "Video" }).textContent).toBe(
+      "Off (sound only)Make the video",
     );
+    // The thumbnail and the PDF are ticks; ticked, the thumbnail says how it is made.
+    expect(screen.queryByRole("radiogroup", { name: "Thumbnail" })).toBeNull();
+    await userEvent.click(screen.getByRole("checkbox", { name: "Thumbnail" }));
+    expect(screen.getByRole("radiogroup", { name: "Thumbnail" }).textContent).toBe(
+      "From my thumbnail promptLet the AI write the promptUpload mine",
+    );
+    expect(screen.getByRole("checkbox", { name: "PDF of the article" })).not.toBeNull();
   });
 
   it("swaps a stage's controls for its paste area, and hides research behind a provided article", async () => {
     await mount();
 
     expect(screen.getByLabelText("Article prompt")).not.toBeNull();
-    expect(screen.getByRole("radiogroup", { name: "research source" })).not.toBeNull();
+    expect(screen.getByRole("radiogroup", { name: "Research" })).not.toBeNull();
 
     await section("Content");
     await userEvent.click(segment("article", "Use my text as written"));
@@ -361,7 +383,7 @@ describe("the source switches", () => {
     expect(screen.queryByLabelText("Article prompt")).toBeNull();
     expect(screen.getByLabelText("Article text")).not.toBeNull();
     // Research only feeds article writing.
-    expect(screen.queryByRole("radiogroup", { name: "research source" })).toBeNull();
+    expect(screen.queryByRole("radiogroup", { name: "Research" })).toBeNull();
   });
 
   it("takes away what reads the article when the article is Off", async () => {
@@ -369,12 +391,13 @@ describe("the source switches", () => {
     await section("Content");
     await userEvent.click(segment("article", "No text"));
 
-    expect(screen.queryByRole("radiogroup", { name: "research source" })).toBeNull();
-    expect(screen.queryByRole("radiogroup", { name: "audio source" })).toBeNull();
-    expect(screen.queryByRole("radiogroup", { name: "document source" })).toBeNull();
+    expect(screen.queryByRole("radiogroup", { name: "Research" })).toBeNull();
+    expect(screen.queryByRole("radiogroup", { name: "Narration" })).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: "PDF of the article" })).toBeNull();
     await section("Outputs");
-    expect(screen.getByRole("radiogroup", { name: "thumbnail source" }).textContent).toBe(
-      "OffFrom promptProvide",
+    await userEvent.click(screen.getByRole("checkbox", { name: "Thumbnail" }));
+    expect(screen.getByRole("radiogroup", { name: "Thumbnail" }).textContent).toBe(
+      "From my thumbnail promptUpload mine",
     );
   });
 });
@@ -412,15 +435,13 @@ describe("optional stages", () => {
     await section("Content");
     await fill(screen.getByLabelText("Article text"), "The full article.");
     await section("Outputs");
-    await userEvent.click(segment("audio", "Provide"));
+    await userEvent.click(segment("audio", "provide"));
     expect(screen.queryByLabelText("Intro")).toBeNull();
     expect(screen.queryByLabelText("Outro")).toBeNull();
     expect(screen.queryByLabelText("unused")).toBeNull();
-    expect(screen.queryByLabelText("LLM")).toBeNull();
+    expect(screen.queryByLabelText("Written by Service")).toBeNull();
     expect(
-      screen.getByText(
-        "Uploaded narration is used as-is; include any intro and outro in that file.",
-      ),
+      screen.getByText("Your file is used as it is; include any intro and outro in it."),
     ).not.toBeNull();
     await userEvent.upload(
       screen.getByLabelText("Narration file"),
@@ -428,7 +449,7 @@ describe("optional stages", () => {
     );
     await screen.findByText("Staged");
     await section("Outputs");
-    await userEvent.click(segment("images", "Off"));
+    await userEvent.click(segment("images", "off"));
     await section("Content");
     await fill(screen.getByLabelText("Title"), "Uploaded audio");
     expect(held()).toBe(false);
@@ -461,15 +482,15 @@ describe("optional stages", () => {
     await section("Content");
     await fill(screen.getByLabelText("Article text"), "My finished article.");
     await section("Outputs");
-    await userEvent.click(segment("audio", "Off"));
+    await userEvent.click(segment("audio", "off"));
     await section("Outputs");
-    await userEvent.click(segment("images", "Off"));
+    await userEvent.click(segment("images", "off"));
     expect(screen.queryByLabelText("Intro")).toBeNull();
     expect(screen.queryByLabelText("Outro")).toBeNull();
     expect(screen.queryByLabelText("unused")).toBeNull();
-    expect(screen.queryByLabelText("LLM")).toBeNull();
-    expect(segment("video", "Off").getAttribute("aria-checked")).toBe("true");
-    expect((segment("video", "Generate") as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByLabelText("Written by Service")).toBeNull();
+    expect(segment("video", "off").getAttribute("aria-checked")).toBe("true");
+    expect((segment("video", "generate") as HTMLButtonElement).disabled).toBe(true);
     await section("Content");
     await fill(screen.getByLabelText("Title"), "Article only");
     expect(held()).toBe(false);
@@ -488,16 +509,16 @@ describe("optional stages", () => {
   it("keeps silent video available without a TTS provider or voice", async () => {
     await mount({}, generatedRun);
     await section("Outputs");
-    await userEvent.click(segment("audio", "Off"));
-    expect(screen.getByText("Silent video · each image shown once")).not.toBeNull();
-    expect(screen.queryByLabelText("TTS")).toBeNull();
+    await userEvent.click(segment("audio", "off"));
+    expect(screen.getByText(/^A silent video, each image shown once/)).not.toBeNull();
+    expect(screen.queryByLabelText("Read by Service")).toBeNull();
     expect(held()).toBe(false);
     await section("Outputs");
-    await userEvent.click(segment("video", "Off"));
-    expect(screen.getByText("Download each enabled stage separately")).not.toBeNull();
+    await userEvent.click(segment("video", "off"));
+    expect(screen.getByText("Each finished stage downloads on its own.")).not.toBeNull();
     await section("Outputs");
-    await userEvent.click(segment("audio", "Generate"));
-    expect(screen.getByText("Combined WAV export with narration and segment gaps")).not.toBeNull();
+    await userEvent.click(segment("audio", "generate"));
+    expect(screen.getByText("Sound only: the narration as one audio file.")).not.toBeNull();
     expect(held()).toBe(false);
   });
 
@@ -508,25 +529,25 @@ describe("optional stages", () => {
     await section("Content");
     await fill(screen.getByLabelText("Article text"), "Ready article.");
     await section("Outputs");
-    await userEvent.click(segment("audio", "Off"));
+    await userEvent.click(segment("audio", "off"));
     await section("Outputs");
-    await userEvent.click(segment("images", "Off"));
+    await userEvent.click(segment("images", "off"));
     await section("Outputs");
-    await userEvent.click(segment("thumbnail", "From prompt"));
+    await userEvent.click(segment("thumbnail", "from_prompt"));
     await pick("Thumbnail prompt", "Title card");
-    await pick("Provider", "fal");
-    await pick("Model", "fal-ai/flux-2");
+    await userEvent.selectOptions(screen.getByLabelText("Drawn by Service"), "fal");
+    await userEvent.selectOptions(imageModel(), "fal-ai/flux-2");
     await section("Content");
     await fill(screen.getByLabelText("topic"), "Albania");
     await section("Content");
     await fill(screen.getByLabelText("Title"), "Thumbnail run");
     expect(held()).toBe(false);
     await section("Outputs");
-    await userEvent.click(segment("images", "Provide"));
-    expect(screen.getByLabelText("Provider")).not.toBeNull();
-    expect(screen.getByLabelText("Model")).not.toBeNull();
-    expect(segment("video", "Off").getAttribute("aria-checked")).toBe("true");
-    expect((segment("video", "Generate") as HTMLButtonElement).disabled).toBe(false);
+    await userEvent.click(segment("images", "provide"));
+    expect(screen.getByLabelText("Drawn by Service")).not.toBeNull();
+    expect(imageModel()).not.toBeNull();
+    expect(segment("video", "off").getAttribute("aria-checked")).toBe("true");
+    expect((segment("video", "generate") as HTMLButtonElement).disabled).toBe(false);
   });
 });
 
@@ -537,7 +558,7 @@ describe("the thumbnail's two generate modes", () => {
     expect(screen.queryByLabelText("Thumbnail prompt")).toBeNull();
 
     await section("Outputs");
-    await userEvent.click(segment("thumbnail", "From prompt"));
+    await userEvent.click(segment("thumbnail", "from_prompt"));
     expect(screen.getByLabelText("Thumbnail prompt")).not.toBeNull();
     await pick("Thumbnail prompt", "Title card");
 
@@ -546,7 +567,7 @@ describe("the thumbnail's two generate modes", () => {
     });
 
     await section("Outputs");
-    await userEvent.click(segment("thumbnail", "Prompt by LLM"));
+    await userEvent.click(segment("thumbnail", "prompt_by_llm"));
     // Still one prompt, and still admissible: the LLM row was already answered.
     expect((screen.getByLabelText("Thumbnail prompt") as HTMLSelectElement).value).toBe(
       "Title card",
@@ -561,13 +582,13 @@ describe("the thumbnail's two generate modes", () => {
 
     await pick("Article prompt", "Dossier");
     await section("Outputs");
-    await userEvent.click(segment("thumbnail", "Prompt by LLM"));
+    await userEvent.click(segment("thumbnail", "prompt_by_llm"));
     await pick("Thumbnail prompt", "Title card");
     await section("Content");
     await userEvent.click(segment("article", "Use my text as written"));
 
     // The article is provided now, so nothing but the thumbnail asks for an LLM.
-    expect(screen.getByLabelText("LLM")).not.toBeNull();
+    expect(screen.getByLabelText("Written by Service")).not.toBeNull();
   });
 });
 
@@ -668,24 +689,23 @@ describe("a run the server refuses", () => {
 
 describe("subtitles on Play", () => {
   const fonts = [{ id: "default", name: "Default", family: "Arial", source: "bundled" }];
-  const mode = () =>
-    screen.getByLabelText("Subtitles", { selector: "select" }) as HTMLSelectElement;
+  const mode = () => screen.getByLabelText("Captions", { selector: "select" }) as HTMLSelectElement;
 
   it("converts burn-in to files when Video turns Off, then clears captions when Audio turns Off", async () => {
     await mount({ "GET /api/fonts": jsonAnswer({ fonts }) });
     await section("Style");
     await userEvent.selectOptions(mode(), "burn-in");
     await section("Outputs");
-    await userEvent.click(segment("images", "Off"));
+    await userEvent.click(segment("images", "off"));
     await section("Style");
     expect(mode().value).toBe("files");
     await section("Outputs");
-    await userEvent.click(segment("audio", "Off"));
+    await userEvent.click(segment("audio", "off"));
     await section("Style");
-    expect(mode().value).toBe("off");
-    expect(mode().closest("fieldset")?.disabled).toBe(true);
+    // With nothing to time them from, captions are not asked about at all.
+    expect(screen.queryByLabelText("Captions", { selector: "select" })).toBeNull();
     await section("Outputs");
-    await userEvent.click(segment("audio", "Generate"));
+    await userEvent.click(segment("audio", "generate"));
     await section("Style");
     expect(mode().value).toBe("off");
   });
@@ -729,7 +749,7 @@ describe("subtitles on Play", () => {
     );
     await screen.findByText("Uploading font…");
     expect(held()).toBe(true);
-    const size = screen.getByLabelText("Subtitle font size");
+    const size = screen.getByLabelText("Caption size");
     await userEvent.clear(size);
     await userEvent.type(size, "64");
     await userEvent.click(screen.getByRole("radio", { name: "top" }));
@@ -739,7 +759,7 @@ describe("subtitles on Play", () => {
       }),
     );
     await waitFor(() => expect(held()).toBe(false));
-    expect((screen.getByLabelText("Subtitle font") as HTMLSelectElement).value).toBe(
+    expect((screen.getByLabelText("Caption font") as HTMLSelectElement).value).toBe(
       "uploaded-font",
     );
     expect((size as HTMLInputElement).value).toBe("64");
@@ -775,15 +795,15 @@ describe("subtitles on Play", () => {
       );
       await section("Style");
       await userEvent.selectOptions(mode(), "burn-in");
-      await userEvent.clear(screen.getByLabelText("Subtitle font size"));
-      if (size) await userEvent.type(screen.getByLabelText("Subtitle font size"), size);
+      await userEvent.clear(screen.getByLabelText("Caption size"));
+      if (size) await userEvent.type(screen.getByLabelText("Caption size"), size);
       expect(held()).toBe(true);
       if (off === "audio") {
         await section("Outputs");
-        await userEvent.click(segment("audio", "Off"));
+        await userEvent.click(segment("audio", "off"));
       } else await userEvent.selectOptions(mode(), "off");
       expect(held()).toBe(false);
-      expect(screen.queryByLabelText("Subtitle font size")).toBeNull();
+      expect(screen.queryByLabelText("Caption size")).toBeNull();
       await openCosts();
       await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
       await waitFor(() => expect(created).toHaveBeenCalledTimes(1));
@@ -826,7 +846,7 @@ describe("explicit review error navigation", () => {
     await waitFor(() =>
       expect(document.activeElement?.getAttribute("data-play-field")).toBe("chunking.mode"),
     );
-    expect(screen.getByText(/More audio settings/).closest("details")?.open).toBe(true);
+    expect(screen.getByText("More narration settings").closest("details")?.open).toBe(true);
   });
   it("keeps unknown failures visible and focuses the Review heading", async () => {
     await mount(

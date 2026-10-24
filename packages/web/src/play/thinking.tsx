@@ -58,11 +58,6 @@ export function ThinkingPicker({
           onChange(thinking === undefined ? rest : { ...rest, thinking });
         }}
       />
-      {label === "Thinking" && modes.length && !modes.includes("off") ? (
-        <p className="mt-1 text-small text-ink-3">
-          This model does not support turning thinking off.
-        </p>
-      ) : null}
     </div>
   );
 }

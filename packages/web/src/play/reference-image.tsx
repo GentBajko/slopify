@@ -1,7 +1,8 @@
 import type { ReferenceSource } from "@app/slices/admission/model.js";
 import type { Prompt } from "@app/slices/library/model.js";
 import { type ReactElement, type ReactNode, useId } from "react";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { Checkbox, HelpLine } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { OptionPicker } from "@/play/pickers";
 
 // The setting as both editors hold it: Off, From a prompt (an image prompt from the library,
@@ -15,18 +16,22 @@ export const referenceOff: ReferenceChoice = { source: "off", prompt: "", thumbn
 
 // The picker's empty choice reads Off.
 const sources = [
-  { value: "prompt", label: "From a prompt" },
-  { value: "provide", label: "Upload" },
+  { value: "prompt", label: "Drawn from an image prompt" },
+  { value: "provide", label: "Upload mine" },
 ] as const;
 
-// Play's Images rail and Edit project → Images draw the same row. `upload` is the file pick,
-// shown for Upload; `prompt` replaces the library picker where the prompt is edited in place.
+// Play's Images rail and Edit project → Images draw the same row: the choice, then (once it is
+// on) the prompt or the file, and the tick that lets the thumbnail use it as a reference too.
+// `upload` is the file pick, shown for Upload; `prompt` replaces the library picker where the
+// prompt is edited in place. The tick is only drawn while there is a thumbnail to draw:
+// `thumbnailOn` is Outputs → Thumbnail.
 export function ReferenceImage({
   value,
   prompts,
   problem,
   upload,
   prompt,
+  thumbnailOn = true,
   onChange,
 }: {
   readonly value: ReferenceChoice;
@@ -34,6 +39,7 @@ export function ReferenceImage({
   readonly problem?: ((field: string) => string | undefined) | undefined;
   readonly upload?: ReactNode;
   readonly prompt?: ReactNode;
+  readonly thumbnailOn?: boolean | undefined;
   readonly onChange: (next: ReferenceChoice) => void;
 }): ReactElement {
   const thumbnailId = useId();
@@ -42,12 +48,11 @@ export function ReferenceImage({
     .filter((one) => one.kind === "image")
     .map((one) => ({ value: one.name, label: one.name }));
   return (
-    <div className="col-span-full sl-fields">
+    <div className="col-span-full sl-fields" {...helpScope}>
       <div className="min-w-0">
         <OptionPicker
           field="reference.source"
-          label="Establishing image"
-          tip="play.reference"
+          label="Establishing image (keeps characters and style the same)"
           value={off ? "" : value.source}
           placeholder="Off"
           options={sources}
@@ -60,40 +65,45 @@ export function ReferenceImage({
           }
         />
       </div>
-      {value.source === "provide" ? (
+      {off ? null : value.source === "provide" ? (
         <div className="min-w-0">{upload}</div>
       ) : (
         (prompt ?? (
           <OptionPicker
             field="reference.prompt"
             label="Establishing prompt"
-            tip="play.reference.prompt"
             value={value.prompt}
-            placeholder={off ? "Off" : "Pick an image prompt"}
+            placeholder="Pick an image prompt"
             options={names}
-            disabled={off}
             problem={problem?.("reference.prompt")}
             onPick={(name) => onChange({ ...value, prompt: name })}
           />
         ))
       )}
-      <div className="col-span-full flex min-h-9 items-center gap-1" {...helpScope}>
-        <label
-          htmlFor={thumbnailId}
-          className="flex cursor-pointer items-center gap-2 text-small text-ink-2"
-        >
-          <input
-            id={thumbnailId}
-            type="checkbox"
-            data-play-field="reference.thumbnail"
-            checked={value.thumbnail}
-            disabled={off}
-            onChange={(event) => onChange({ ...value, thumbnail: event.target.checked })}
-          />
-          Draw the thumbnail from it too
-        </label>
-        <InfoTip id="play.reference.thumbnail" />
-      </div>
+      <HelpLine className="sl-fields__wide">
+        {off
+          ? "Off: each image is drawn on its own."
+          : value.source === "prompt"
+            ? "Drawn first and never shown; every other image copies its characters and style · one more image call."
+            : "Never shown; every other image copies its characters and style."}
+      </HelpLine>
+      {off || !thumbnailOn ? null : (
+        <div className="sl-fields__wide flex min-w-0 flex-col gap-1">
+          <label
+            htmlFor={thumbnailId}
+            className="flex min-h-9 cursor-pointer items-center gap-3 text-small"
+          >
+            <Checkbox
+              id={thumbnailId}
+              data-play-field="reference.thumbnail"
+              checked={value.thumbnail}
+              onChange={(event) => onChange({ ...value, thumbnail: event.target.checked })}
+            />
+            Use it as a reference for the thumbnail too
+          </label>
+          <HelpLine className="pl-7">The thumbnail itself is switched on under Outputs.</HelpLine>
+        </div>
+      )}
     </div>
   );
 }

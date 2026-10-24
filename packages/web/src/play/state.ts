@@ -203,11 +203,42 @@ export const sourceLabels: Readonly<Record<StageSource, string>> = {
   prompt_by_llm: "Prompt by LLM",
 };
 
+// What each stage's switch says, in the stage's own words: what the choice makes, from what,
+// and, on the choice that spends money, that it does. "Off" stays the literal word where the
+// stage can be left out; pictures and the thumbnail are "None".
+const stageSourceWords: Readonly<
+  Record<StageKind, Readonly<Partial<Record<StageSource, string>>>>
+> = {
+  research: { off: "Off", generate: "Let the AI research", provide: "Paste my notes" },
+  article: { off: "No text", generate: "Write it for me", provide: "Use my text as written" },
+  audio: { off: "Off", generate: "AI voice (paid per character)", provide: "My own audio file" },
+  images: { off: "None", generate: "Made by AI (paid)", provide: "My own images" },
+  thumbnail: {
+    off: "None",
+    from_prompt: "From my thumbnail prompt",
+    prompt_by_llm: "Let the AI write the prompt",
+    provide: "Upload mine",
+  },
+  video: { off: "Off (sound only)", generate: "Make the video" },
+  document: { off: "Off", generate: "Make a PDF" },
+};
+
+// One stage's choice in words. A video that is Off with no narration is just Off: there is
+// no sound to keep.
+export function sourceLabel(kind: StageKind, source: StageSource, narrated = true): string {
+  if (kind === "video" && source === "off" && !narrated) return "Off";
+  return stageSourceWords[kind][source] ?? sourceLabels[source];
+}
+
 // The switch a stage draws, straight from the rule that will judge it.
 export function sourceOptions(
   kind: StageKind,
+  narrated = true,
 ): readonly { readonly value: StageSource; readonly label: string }[] {
-  return allowedSources[kind].map((value) => ({ value, label: sourceLabels[value] }));
+  return allowedSources[kind].map((value) => ({
+    value,
+    label: sourceLabel(kind, value, narrated),
+  }));
 }
 
 // The LLM-row rule, said in the form's own vocabulary so the cue sheet can hide the row

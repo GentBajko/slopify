@@ -4,7 +4,7 @@ import { act, cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 import { defaultChannelId } from "@/channels/api";
-import { selfExplanatory, unexplainedControls } from "@/help/coverage";
+import { selfExplanatory, stageEditors, unexplainedControls } from "@/help/coverage";
 import { generatedRun, mountPlay, openRow, openSection } from "@/play/play-test-fixture";
 import { freshShorts } from "@/play/shorts";
 import { jsonAnswer } from "@/test-app";
@@ -15,7 +15,7 @@ afterEach(cleanup);
 // button (help/coverage.ts): every setup row's editor with each source switched to what shows
 // the most controls, the Review panel, another video's keywords, the drafts list and Save as
 // template. Nothing on Play is allowed without one.
-const areaAllow: readonly (string | RegExp)[] = [];
+const areaAllow: readonly (string | RegExp)[] = [...stageEditors];
 
 function expectExplained(): void {
   expect(unexplainedControls(document.body, [...selfExplanatory, ...areaAllow])).toEqual([]);
@@ -105,7 +105,7 @@ const provided: PlayDraftDocument = {
 it("explains every control of every setup row with everything generated", async () => {
   const { session } = await mountPlay(routes, generated);
   await openEverything();
-  await screen.findByRole("radio", { name: "Whole" });
+  await screen.findByRole("radio", { name: "Nothing (one piece)" });
   // The walk reached the far rows: the speakers, the shorts and the PDF theme.
   for (const name of ["Speaker name", "How many shorts", "Theme", "Establishing prompt"])
     expect(screen.getAllByLabelText(name).length).toBeGreaterThan(0);
@@ -132,7 +132,7 @@ it("explains every control of every setup row with everything generated", async 
 it("explains the Review panel, another video's keywords, the drafts and Save as template", async () => {
   await mountPlay(routes, generated);
   await openSection("Review");
-  await screen.findByRole("group", { name: /Review checkpoints/ });
+  await screen.findByRole("group", { name: "Pause for my approval" });
   expectExplained();
   await openSection("Content");
 

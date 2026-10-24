@@ -6,7 +6,8 @@ import { RefreshCw } from "lucide-react";
 import { useId, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
-import { Input, Select } from "@/components/kit/field";
+import { HelpLine, Input, Select } from "@/components/kit/field";
+import { TextLink } from "@/components/kit/link";
 import { estimateChecks } from "@/lib/model-checks";
 import { modelOptionLabel } from "@/lib/model-label";
 import { customModelFallback, listProviderModels, modelsKey, modelsQuery } from "@/lib/models";
@@ -25,10 +26,37 @@ function statusOf(view: ModelStandingView | undefined, fallback: boolean, now: D
   return view === undefined ? "" : badgeOf(view, now);
 }
 
+// The same, said as a plain phrase for the quiet picker's one line: "Works · checked 18 min
+// ago", "Not on your plan", "Not checked yet".
+export function modelStatusWords(
+  view: ModelStandingView | undefined,
+  fallback: boolean,
+  now: Date,
+): string {
+  const badge = statusOf(view, fallback, now)
+    .replace(/^[✓?✕⚠]\s*/u, "")
+    .replace(/\.$/, "")
+    .replace(/^not checked$/, "not checked yet");
+  return badge === "" ? "" : `${badge.charAt(0).toUpperCase()}${badge.slice(1)}`;
+}
+
 // More models than this and a filter box shows above the list (OpenRouter's live list).
 const filterFrom = 12;
 
-export function ModelPicker(props: FieldProps & { readonly provider: string }) {
+// The two entries a quiet picker's list ends with, standing in for the buttons the full one
+// draws: they change the list, they are never a model.
+const showMore = "::show-all";
+const typeId = "::type-id";
+
+export function ModelPicker(
+  props: FieldProps & {
+    readonly provider: string;
+    // Create's one-line form: the select, then one line with the chosen model's state and a
+    // link to Settings → Models, where Refresh and Check live. Show all and typing a model id
+    // are the list's last two entries. Without it every upkeep button sits under the select.
+    readonly quiet?: boolean | undefined;
+  },
+) {
   return <ProviderModelPicker key={props.provider} {...props} />;
 }
 
@@ -39,8 +67,10 @@ function ProviderModelPicker({
   value,
   problem,
   tip,
+  group,
+  quiet = false,
   onPick,
-}: FieldProps & { readonly provider: string }) {
+}: FieldProps & { readonly provider: string; readonly quiet?: boolean | undefined }) {
   const { api } = useApp();
   const client = useQueryClient();
   const catalogue = useQuery(modelsQuery(api, provider));
@@ -61,7 +91,9 @@ function ProviderModelPicker({
   const now = new Date();
   const labelOf = (model: ModelInfo): string => {
     const label = modelOptionLabel(model);
-    return standings === undefined ? label : `${label} · ${badgeOf(standings[model.id], now)}`;
+    return standings === undefined || quiet
+      ? label
+      : `${label} · ${badgeOf(standings[model.id], now)}`;
   };
   const checks = useCheckModels(provider, "");
   const checkOne = standings !== undefined && value !== "" && !shown.fallback;
@@ -69,7 +101,7 @@ function ProviderModelPicker({
   const estimate = useQuery({
     queryKey: ["model-check-estimate", provider, value],
     queryFn: ({ signal }) => estimateChecks(api, provider, [value], signal),
-    enabled: checkOne,
+    enabled: checkOne && !quiet,
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
@@ -91,16 +123,25 @@ function ProviderModelPicker({
   const refreshing = catalogue.isFetching || refresh.isPending;
   const warning = refresh.error?.message ?? catalogue.error?.message ?? catalogue.data?.warning;
   const selectedMissing = value !== "" && !every.some((model) => model.id === value);
+  const status =
+    standings === undefined || value === ""
+      ? ""
+      : [
+          modelStatusWords(chosenView, shown.fallback, now),
+          chosenView?.standing === "no-access" ? (chosenView.sentence ?? undefined) : undefined,
+        ]
+          .filter((part) => part !== undefined && part !== "")
+          .join(". ");
 
   return (
     <div className="min-w-0 max-w-full">
-      <LabelledField field={field} label={label} problem={problem} tip={tip}>
-        {({ id, describedBy }) => {
+      <LabelledField field={field} label={label} problem={problem} tip={tip} group={group}>
+        {({ id, describedBy, labelledBy }) => {
           const described =
             [
               describedBy,
               warning ? noteId : undefined,
-              catalogue.data?.notice ? noticeId : undefined,
+              catalogue.data?.notice && !quiet ? noticeId : undefined,
             ]
               .filter(Boolean)
               .join(" ") || undefined;
@@ -123,6 +164,7 @@ function ProviderModelPicker({
                   value={value}
                   spellCheck={false}
                   placeholder="Type the model id"
+                  aria-labelledby={labelledBy}
                   aria-invalid={problem !== undefined}
                   aria-describedby={described}
                   onChange={(event) => onPick(event.target.value)}
@@ -133,13 +175,21 @@ function ProviderModelPicker({
                   data-play-field={field}
                   value={value}
                   disabled={provider === ""}
+                  aria-labelledby={labelledBy}
                   aria-invalid={problem !== undefined}
                   aria-describedby={described}
-                  onChange={(event) => onPick(event.target.value)}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    if (next === showMore) setShowAll(true);
+                    else if (next === typeId) setCustom(true);
+                    else onPick(next);
+                  }}
                 >
                   <option value="">
                     {provider === ""
-                      ? "Pick a provider first"
+                      ? quiet
+                        ? "Pick a service first"
+                        : "Pick a provider first"
                       : catalogue.isPending
                         ? "Loading models…"
                         : "Pick a model"}
@@ -163,6 +213,12 @@ function ProviderModelPicker({
                         ))}
                     </optgroup>
                   ))}
+                  {quiet && !showAll && shown.hidden > 0 ? (
+                    <option value={showMore}>{`Show ${String(shown.hidden)} more models…`}</option>
+                  ) : null}
+                  {quiet && allowsCustom && provider !== "" ? (
+                    <option value={typeId}>Type a model ID…</option>
+                  ) : null}
                 </Select>
               )}
               {!typing && noMatch ? (
@@ -172,86 +228,114 @@ function ProviderModelPicker({
           );
         }}
       </LabelledField>
-      {provider !== "" ? (
-        <div className="mt-1 flex flex-wrap items-center gap-1">
-          <Button
-            type="button"
-            variant="quiet"
-            className="px-2 text-label"
-            aria-label={`Refresh ${label} list`}
-            title="Refresh models"
-            disabled={refreshing}
-            onClick={() => refresh.mutate()}
-          >
-            <RefreshCw
-              aria-hidden="true"
-              className={cn("size-3", refreshing && "animate-spin motion-reduce:animate-none")}
-            />
-            Refresh
-          </Button>
+      {quiet ? (
+        <>
+          {typing ? (
+            <Button
+              type="button"
+              variant="quiet"
+              size="small"
+              className="mt-1"
+              onClick={() => setCustom(false)}
+            >
+              Pick from the list
+            </Button>
+          ) : null}
+          {provider === "" ? null : (
+            <HelpLine className="mt-1">
+              {status === "" ? null : <>{status} · </>}
+              <TextLink to="/settings" search={{ section: "models" }}>
+                Manage models ↗
+              </TextLink>
+            </HelpLine>
+          )}
+        </>
+      ) : (
+        <>
+          {provider !== "" ? (
+            <div className="mt-1 flex flex-wrap items-center gap-1">
+              <Button
+                type="button"
+                variant="quiet"
+                className="px-2 text-label"
+                aria-label={`Refresh ${label} list`}
+                title="Refresh models"
+                disabled={refreshing}
+                onClick={() => refresh.mutate()}
+              >
+                <RefreshCw
+                  aria-hidden="true"
+                  className={cn("size-3", refreshing && "animate-spin motion-reduce:animate-none")}
+                />
+                Refresh
+              </Button>
+              {standings !== undefined ? (
+                <Button
+                  type="button"
+                  variant="quiet"
+                  className="px-2 text-label"
+                  aria-label={
+                    showAll
+                      ? `Show only working models for ${label}`
+                      : `Show all models for ${label}`
+                  }
+                  aria-pressed={showAll}
+                  disabled={!showAll && shown.hidden === 0}
+                  onClick={() => setShowAll(!showAll)}
+                >
+                  {showAll
+                    ? "Show fewer"
+                    : shown.hidden === 0
+                      ? "Show all"
+                      : `Show all (${String(shown.hidden)} more)`}
+                </Button>
+              ) : null}
+              {allowsCustom ? (
+                <Button
+                  type="button"
+                  variant="quiet"
+                  className="px-2 text-label"
+                  aria-label={typing ? `Choose ${label} from list` : `Enter ${label} ID`}
+                  onClick={() => setCustom(!typing)}
+                >
+                  {typing ? "Use list" : "Custom ID"}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
           {standings !== undefined ? (
-            <Button
-              type="button"
-              variant="quiet"
-              className="px-2 text-label"
-              aria-label={
-                showAll ? `Show only working models for ${label}` : `Show all models for ${label}`
-              }
-              aria-pressed={showAll}
-              disabled={!showAll && shown.hidden === 0}
-              onClick={() => setShowAll(!showAll)}
+            <p
+              className="m-0 mt-1 flex min-h-6 max-w-[360px] flex-wrap items-center gap-1 text-label text-ink-3"
+              role="status"
             >
-              {showAll
-                ? "Show fewer"
-                : shown.hidden === 0
-                  ? "Show all"
-                  : `Show all (${String(shown.hidden)} more)`}
-            </Button>
+              <span>{statusOf(chosenView, shown.fallback, now)}</span>
+              {chosenView?.standing === "no-access" && chosenView.sentence !== null ? (
+                <span>{chosenView.sentence}</span>
+              ) : null}
+              <Button
+                type="button"
+                variant="quiet"
+                className="px-2 text-label"
+                disabled={checks.pending || (value === "" && every.length === 0)}
+                onClick={() => checks.check(checkOne ? [value] : undefined)}
+              >
+                {!checkOne
+                  ? "Check models"
+                  : estimate.data === undefined
+                    ? "Check"
+                    : `Check · ${estimate.data.text}`}
+              </Button>
+              {checks.message === undefined ? null : <span>{checks.message}</span>}
+            </p>
           ) : null}
-          {allowsCustom ? (
-            <Button
-              type="button"
-              variant="quiet"
-              className="px-2 text-label"
-              aria-label={typing ? `Choose ${label} from list` : `Enter ${label} ID`}
-              onClick={() => setCustom(!typing)}
-            >
-              {typing ? "Use list" : "Custom ID"}
-            </Button>
+          {checks.dialog}
+          {catalogue.data?.notice ? (
+            <p id={noticeId} className="mt-1 max-w-[360px] text-label text-ink-3">
+              {catalogue.data.notice}
+            </p>
           ) : null}
-        </div>
-      ) : null}
-      {standings !== undefined ? (
-        <p
-          className="m-0 mt-1 flex min-h-6 max-w-[360px] flex-wrap items-center gap-1 text-label text-ink-3"
-          role="status"
-        >
-          <span>{statusOf(chosenView, shown.fallback, now)}</span>
-          {chosenView?.standing === "no-access" && chosenView.sentence !== null ? (
-            <span>{chosenView.sentence}</span>
-          ) : null}
-          <Button
-            type="button"
-            variant="quiet"
-            className="px-2 text-label"
-            disabled={checks.pending || (value === "" && every.length === 0)}
-            onClick={() => checks.check(checkOne ? [value] : undefined)}
-          >
-            {!checkOne
-              ? "Check models"
-              : estimate.data === undefined
-                ? "Check"
-                : `Check · ${estimate.data.text}`}
-          </Button>
-          {checks.message === undefined ? null : <span>{checks.message}</span>}
-        </p>
-      ) : null}
-      {checks.dialog}
-      {catalogue.data?.notice ? (
-        <p id={noticeId} className="mt-1 max-w-[360px] text-label text-ink-3">
-          {catalogue.data.notice}
-        </p>
-      ) : null}
+        </>
+      )}
       {warning ? (
         <p id={noteId} className="mt-1 max-w-[360px] text-label text-ink-3" role="status">
           {warning}

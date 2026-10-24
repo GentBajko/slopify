@@ -16,7 +16,9 @@ describe("the chunking control", () => {
   it("offers the four ways the narration is cut", () => {
     control({ mode: "whole" });
 
-    expect(screen.getByRole("radio", { name: "Whole" }).getAttribute("data-state")).toBe("on");
+    expect(
+      screen.getByRole("radio", { name: "Nothing (one piece)" }).getAttribute("data-state"),
+    ).toBe("on");
     expect(screen.getByRole("radio", { name: "Paragraph" })).not.toBeNull();
     expect(screen.getByRole("radio", { name: "Every 500 words" })).not.toBeNull();
     expect(screen.getByRole("radio", { name: "Every 3000 characters" })).not.toBeNull();

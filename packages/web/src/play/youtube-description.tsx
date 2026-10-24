@@ -1,14 +1,13 @@
 import type { Prompt } from "@app/slices/library/model.js";
 import { defaultDescriptionPromptName } from "@app/slices/youtube/model.js";
 import { type ReactElement, useId } from "react";
-import { Checkbox } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Picker } from "@/components/ui/picker";
 import { GridField } from "./grid-field";
+import { OutputTick } from "./output-tick";
 
-// The Video stage's optional step, on Play and in Edit project. Both controls stay mounted:
-// without narration the switch is disabled rather than removed, and so is the prompt while the
-// switch is off.
+// The Video stage's optional step, on Play's Outputs checklist and in Edit project: a tick, and
+// the prompt once it is ticked. Without narration there is nothing to describe, so the tick is
+// greyed with the reason under it.
 export function YoutubeDescription({
   enabled,
   prompt,
@@ -33,55 +32,43 @@ export function YoutubeDescription({
   const saved = prompt !== "" && !choices.some((one) => one.name === prompt);
   const issue = problem?.("youtubeDescription") ?? problem?.("descriptionPrompt");
   return (
-    <div className="col-span-full sl-fields">
-      <span className="flex items-center gap-1 self-end" {...helpScope}>
-        <label
-          htmlFor={`${id}-switch`}
-          className="flex min-h-10 items-center gap-3 text-small font-semibold max-[1099px]:min-h-11"
+    <OutputTick
+      field="youtubeDescription"
+      label="YouTube description"
+      help={
+        narrated || enabled
+          ? "The AI writes it from the narration, with chapters at their real times and tags · 1 AI call."
+          : "Needs narration."
+      }
+      checked={enabled}
+      disabled={!narrated && !enabled}
+      onChange={(checked) => onChange({ youtubeDescription: checked, descriptionPrompt: prompt })}
+    >
+      <div className="sl-fields">
+        <GridField
+          htmlFor={`${id}-prompt`}
+          label="Description prompt"
+          tip="play.description-prompt"
         >
-          <Checkbox
-            id={`${id}-switch`}
-            data-play-field="youtubeDescription"
-            checked={enabled}
-            disabled={!narrated && !enabled}
-            aria-describedby={issue ? `${id}-error` : undefined}
+          <Picker
+            id={`${id}-prompt`}
+            data-play-field="descriptionPrompt"
+            value={prompt}
             onChange={(event) =>
-              onChange({
-                youtubeDescription: event.currentTarget.checked,
-                descriptionPrompt: prompt,
-              })
+              onChange({ youtubeDescription: enabled, descriptionPrompt: event.target.value })
             }
-          />
-          YouTube description
-        </label>
-        <InfoTip id="play.youtube-description" />
-      </span>
-      <GridField htmlFor={`${id}-prompt`} label="Description prompt" tip="play.description-prompt">
-        <Picker
-          id={`${id}-prompt`}
-          data-play-field="descriptionPrompt"
-          value={prompt}
-          disabled={!enabled}
-          onChange={(event) =>
-            onChange({ youtubeDescription: enabled, descriptionPrompt: event.target.value })
-          }
-        >
-          <option value="">{defaultDescriptionPromptName}</option>
-          {saved ? <option value={prompt}>{prompt} (saved choice)</option> : null}
-          {choices.map((one) => (
-            <option key={one.id} value={one.name}>
-              {one.name}
-            </option>
-          ))}
-        </Picker>
-      </GridField>
-      {issue ? (
-        <p id={`${id}-error`} className="sl-fields__wide m-0 text-small text-danger">
-          {issue}
-        </p>
-      ) : !narrated ? (
-        <p className="sl-fields__wide m-0 text-label text-ink-3">Needs narration.</p>
-      ) : null}
-    </div>
+          >
+            <option value="">{defaultDescriptionPromptName}</option>
+            {saved ? <option value={prompt}>{prompt} (saved choice)</option> : null}
+            {choices.map((one) => (
+              <option key={one.id} value={one.name}>
+                {one.name}
+              </option>
+            ))}
+          </Picker>
+        </GridField>
+      </div>
+      {issue ? <p className="m-0 text-small text-danger">{issue}</p> : null}
+    </OutputTick>
   );
 }

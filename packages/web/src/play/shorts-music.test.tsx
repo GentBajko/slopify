@@ -28,11 +28,11 @@ it("uploads the shorts' background music as a draft attachment from More shorts 
   });
   await openRow("Narration");
   await openRow("Outputs");
-  const music = screen.getByLabelText(/^Background music/);
-  // Kept on screen with Shorts off, but not pickable.
-  expect(music.hasAttribute("disabled")).toBe(true);
+  // Asked for only once Shorts is ticked, under More shorts options.
+  expect(screen.queryByLabelText(/^Background music/)).toBeNull();
   await userEvent.click(screen.getByRole("checkbox", { name: /^Shorts/ }));
-  await userEvent.click(screen.getByText(/^More shorts options/));
+  await userEvent.click(screen.getByText("More shorts options"));
+  const music = screen.getByLabelText(/^Background music/);
   await userEvent.upload(music, new File(["mp3"], "bed.mp3", { type: "audio/mpeg" }));
   await waitFor(() => expect(uploads).toHaveLength(1));
   const attachmentId = new URL(uploads[0]?.url ?? "").pathname.split("/")[5];
@@ -48,7 +48,10 @@ it("uploads the shorts' background music as a draft attachment from More shorts 
   });
   // Staged beside the narration file it sits under.
   await waitFor(() => expect(screen.getAllByText("Staged")).toHaveLength(2));
-  expect(screen.getByText(/More shorts options · .*Music: bed\.mp3/)).not.toBeNull();
+  // The fold's line names the music while it is closed too.
+  expect(screen.getByText(/Music: bed\.mp3/).closest("summary")?.textContent).toMatch(
+    /^More shorts options.*Music: bed\.mp3/,
+  );
 
   await userEvent.click(screen.getByRole("button", { name: "Remove bed.mp3" }));
   await save();

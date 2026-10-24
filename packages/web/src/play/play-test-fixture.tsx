@@ -368,7 +368,7 @@ export async function mountPlay(
       },
     },
   );
-  await screen.findByRole("option", { name: "Dossier" });
+  await screen.findByRole("radio", { name: /^Dossier/ });
   if (start !== undefined)
     await act(async () => {
       session().edit(start);
@@ -429,6 +429,17 @@ export function mountSession(
 export async function fill(element: HTMLElement, text: string): Promise<void> {
   await userEvent.click(element);
   await userEvent.paste(text);
+}
+
+// The article prompt is a card per prompt; a test picks one by its name, as a person would.
+export function articlePromptCard(name: string): HTMLElement {
+  return screen.getByRole("radio", {
+    name: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`),
+  });
+}
+
+export async function pickArticlePrompt(name: string): Promise<void> {
+  await userEvent.click(articlePromptCard(name));
 }
 
 // Play folds its settings into summary rows; a test opens the row that holds a control with

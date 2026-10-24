@@ -3,6 +3,7 @@ import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import { defaultChoices } from "@app/slices/social/defaults.js";
 import { socialPlatforms } from "@app/slices/social/model.js";
 import { defaultVoicesSettings } from "@app/slices/voices/model.js";
+import { freshImageCount } from "./image-prompts";
 import { emptyReviews } from "./reviews";
 import type { PlaySection } from "./sections";
 import { freshShorts } from "./shorts";
@@ -37,7 +38,18 @@ export function pickInPlay(document: PlayDraftDocument, item: Prompt | Entry): U
     case "image": {
       const picked = form.imagePrompts.some((one) => one.name === item.name)
         ? form.imagePrompts
-        : [...form.imagePrompts, { name: item.name, number: "1" }];
+        : [
+            ...form.imagePrompts,
+            {
+              name: item.name,
+              number: String(
+                freshImageCount(
+                  form,
+                  form.imagePrompts.reduce((sum, one) => sum + (Number(one.number) || 0), 0),
+                ),
+              ),
+            },
+          ];
       return next(
         { imagePrompts: picked, sources: { ...form.sources, images: "generate" } },
         "outputs",

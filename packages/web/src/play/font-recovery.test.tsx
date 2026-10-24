@@ -78,13 +78,13 @@ it.each(cases)(
       await screen.findByText("Reattach broken.ttf, or select a font.");
       if (mode === "subtitles-off")
         await userEvent.selectOptions(
-          screen.getByLabelText("Subtitles", { selector: "select" }),
+          screen.getByLabelText("Captions", { selector: "select" }),
           "off",
         );
       else {
         await openSection("Outputs");
         await userEvent.click(
-          within(screen.getByRole("radiogroup", { name: "audio source" })).getByRole("radio", {
+          within(screen.getByRole("radiogroup", { name: "Narration" })).getByRole("radio", {
             name: "Off",
           }),
         );
@@ -141,7 +141,7 @@ it("keeps an inactive in-flight font locked until explicit recovery and ignores 
   );
   await openSection("Outputs");
   await userEvent.click(
-    within(screen.getByRole("radiogroup", { name: "audio source" })).getByRole("radio", {
+    within(screen.getByRole("radiogroup", { name: "Narration" })).getByRole("radio", {
       name: "Off",
     }),
   );

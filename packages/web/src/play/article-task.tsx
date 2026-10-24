@@ -6,7 +6,7 @@ import { type ReactElement, useMemo } from "react";
 import { useApp } from "@/app-context";
 import { Fold } from "@/components/kit/fold";
 import { narrationAliasesQuery } from "@/queries";
-import { articleOff } from "./rail-frame";
+import { articleOff, switchWrap, useRailName } from "./rail-frame";
 import type { PlayFormState } from "./state";
 import { InlineSwitch } from "./switches";
 
@@ -63,13 +63,13 @@ export function ArticleTaskSwitch({
   readonly form: PlayFormState;
   readonly update: (patch: Partial<PlayFormState>) => void;
 }): ReactElement {
+  const labelledBy = useRailName();
   return (
     <InlineSwitch<ArticleTask>
       field="sources.article"
-      label="article source"
-      hideLabel
-      tip="play.source.article"
-      className="max-[700px]:col-span-3 max-[700px]:justify-self-start [&_[data-slot=toggle-group]]:flex-wrap"
+      label="Article"
+      labelledBy={labelledBy}
+      className={switchWrap}
       value={articleTaskOf(form)}
       options={(["write", "as-written", "adapt", "none"] as const).map((value) => ({
         value,
@@ -119,7 +119,7 @@ export function SpokenText({ form }: { readonly form: PlayFormState }): ReactEle
       : undefined,
   ].filter((note) => note !== undefined);
   return (
-    <Fold className="mt-3" summary={<>Show the text that will be spoken</>}>
+    <Fold className="mt-3" summary="Text that will be spoken">
       <div className="pb-3">
         <p className="m-0 py-2 text-small text-ink-2">
           Read word for word; nothing is rewritten. {notes.join(" ")}

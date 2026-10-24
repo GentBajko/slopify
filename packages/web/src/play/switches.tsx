@@ -1,6 +1,5 @@
 import { useId } from "react";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
-import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { HelpId } from "@/help/catalog";
 import { cn } from "@/lib/utils";
@@ -13,8 +12,8 @@ import { cn } from "@/lib/utils";
 // guards the union lives here and the callback only ever sees a listed value.
 export function InlineSwitch<T extends string>({
   label,
+  labelledBy,
   field,
-  hideLabel = false,
   value,
   options,
   className,
@@ -22,12 +21,12 @@ export function InlineSwitch<T extends string>({
   onPick,
 }: {
   readonly label: string;
+  // The id of a visible name drawn elsewhere (a stage rail's own name): the strip is labelled
+  // by it and draws no label of its own.
+  readonly labelledBy?: string | undefined;
   // The info button after the strip, from the help catalogue.
   readonly tip?: HelpId | undefined;
   readonly field?: string | undefined;
-  // The stage rails name the stage in the row already, so repeating it beside the strip
-  // would say it twice; the label stays in the accessibility tree either way.
-  readonly hideLabel?: boolean | undefined;
   readonly value: T;
   readonly options: readonly {
     readonly value: T;
@@ -45,13 +44,15 @@ export function InlineSwitch<T extends string>({
       className={cn("inline-flex items-center gap-3", className)}
       {...(tip === undefined ? {} : helpScope)}
     >
-      <Label id={labelId} className={hideLabel ? "sr-only" : "shrink-0"}>
-        {label}
-      </Label>
+      {labelledBy === undefined ? (
+        <span id={labelId} className="sl-field__label block shrink-0">
+          {label}
+        </span>
+      ) : null}
       <ToggleGroup
         type="single"
         value={value}
-        aria-labelledby={labelId}
+        aria-labelledby={labelledBy ?? labelId}
         onValueChange={(next) => {
           const picked = options.find((option) => option.value === next);
           if (picked !== undefined && picked.disabled !== true) {

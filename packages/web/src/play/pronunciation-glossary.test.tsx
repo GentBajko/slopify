@@ -95,8 +95,8 @@ function PlaySubject({
   };
   return (
     <>
-      <ContentSection {...props} entries={[]} onLibrary={() => {}} />
-      <TextGenerationIn {...props} section="narration" entries={[]} onSettings={() => {}} />
+      <ContentSection {...props} entries={[]} />
+      <TextGenerationIn {...props} section="narration" entries={[]} />
       <AudioRail {...props} />
       <output aria-label="Saved audio">{JSON.stringify(form.audio)}</output>
     </>
@@ -132,7 +132,12 @@ function ProjectSubject({
 }
 
 const surfaces = [
-  { name: "Play", Subject: PlaySubject, providerLabel: "TTS", modelLabel: "TTS model" },
+  {
+    name: "Play",
+    Subject: PlaySubject,
+    providerLabel: "Read by Service",
+    modelLabel: "Read by Model",
+  },
   {
     name: "Project",
     Subject: ProjectSubject,
@@ -239,7 +244,7 @@ for (const surface of surfaces) {
           usePronunciationGlossary: preference === true,
         }),
       );
-      expect(screen.queryByRole("combobox", { name: "LLM" })).toBeNull();
+      expect(screen.queryByRole("combobox", { name: "Written by Service" })).toBeNull();
       expect(screen.queryByRole("combobox", { name: "Text provider" })).toBeNull();
       if (surface.name === "Play") {
         expect(
@@ -264,24 +269,24 @@ it("changes pronunciation and Narration Preparation independently", async () => 
   expect(preparation.value).toBe("Delivery");
   await user.selectOptions(preparation, "");
   expect(checkbox.checked).toBe(true);
-  expect(screen.queryByRole("combobox", { name: "LLM" })).toBeNull();
+  expect(screen.queryByRole("combobox", { name: "Written by Service" })).toBeNull();
   await user.selectOptions(preparation, "Delivery");
   await user.click(checkbox);
   expect(checkbox.checked).toBe(false);
   expect(preparation.value).toBe("Delivery");
-  expect(screen.getByRole("combobox", { name: "LLM" })).not.toBeNull();
+  expect(screen.getByRole("combobox", { name: "Written by Service" })).not.toBeNull();
 });
 
 it("retains Play's preference when Audio is Off or Provide and restores it on Generate", async () => {
   const user = userEvent.setup();
   renderRouted(<PlaySubject preference={true} />, deps());
   await screen.findByRole("checkbox", { name: "Use Pronunciation Glossary" });
-  const sources = screen.getByRole("radiogroup", { name: "audio source" });
-  for (const source of ["Off", "Provide"]) {
+  const sources = screen.getByRole("radiogroup", { name: "Narration" });
+  for (const source of ["Off", "My own audio file"]) {
     await user.click(within(sources).getByRole("radio", { name: source }));
     expect(screen.queryByRole("checkbox", { name: "Use Pronunciation Glossary" })).toBeNull();
     expect(screen.getByLabelText("Saved audio").textContent).toBe(JSON.stringify(audioFor(true)));
-    await user.click(within(sources).getByRole("radio", { name: "Generate" }));
+    await user.click(within(sources).getByRole("radio", { name: "AI voice (paid per character)" }));
     expect(
       screen.getByRole<HTMLInputElement>("checkbox", { name: "Use Pronunciation Glossary" })
         .checked,

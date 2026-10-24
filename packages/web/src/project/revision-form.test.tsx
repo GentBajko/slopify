@@ -31,16 +31,16 @@ it("offers Article Off and pairs Images Off with Video Off", async () => {
     }),
   );
   const article = screen.getByRole("combobox", { name: "Article source" });
-  expect(within(article).queryByRole("option", { name: "Off" })).not.toBeNull();
+  expect(within(article).queryByRole("option", { name: "No text" })).not.toBeNull();
   await user.selectOptions(screen.getByRole("combobox", { name: "Images source" }), "generate");
   await user.selectOptions(screen.getByRole("combobox", { name: "Video source" }), "generate");
   await user.selectOptions(screen.getByRole("combobox", { name: "Images source" }), "off");
   const video = screen.getByRole("combobox", { name: "Video source" });
   if (!(video instanceof HTMLSelectElement)) throw new Error("Expected video source select.");
   expect(video.value).toBe("off");
-  expect(within(video).getByRole<HTMLOptionElement>("option", { name: "Generate" }).disabled).toBe(
-    true,
-  );
+  expect(
+    within(video).getByRole<HTMLOptionElement>("option", { name: "Make the video" }).disabled,
+  ).toBe(true);
   const gap = screen.getByRole<HTMLInputElement>("spinbutton", { name: "Silence gap (seconds)" });
   await user.clear(gap);
   expect(gap.value).toBe("0");
@@ -469,11 +469,11 @@ it("switches the YouTube description on in Prompts and freezes or drops its prom
   );
   await openEditSection("Prompts");
   const on = screen.getByRole<HTMLInputElement>("checkbox", { name: /YouTube description/ });
-  const prompt = screen.getByRole<HTMLSelectElement>("combobox", { name: "Description prompt" });
   expect(on.checked).toBe(false);
-  expect(prompt.disabled).toBe(true);
+  expect(screen.queryByRole("combobox", { name: "Description prompt" })).toBeNull();
   await user.click(on);
   expect(latest.config.youtubeDescription).toBe(true);
+  const prompt = screen.getByRole<HTMLSelectElement>("combobox", { name: "Description prompt" });
   await screen.findByRole("option", { name: "Hooky" });
   await user.selectOptions(prompt, "Hooky");
   expect(latest.config.descriptionPrompt).toBe("Hooky");
@@ -597,8 +597,9 @@ it("sets the Shorts in their own section: numbers, prompts and the more options"
   expect(state.latest.config.shorts?.prompt).toBe("Hooks");
   expect(state.latest.content.promptTemplates.shorts).toBe("Pick the boldest claims.");
   // A project saved before the title, speed, music and link reads as all of them unset.
-  const more = screen.getByText(/More shorts options/);
-  expect(more.textContent).toBe("More shorts options · No title on screen");
+  const more = screen.getByText("More shorts options");
+  const foldState = () => more.closest("summary")?.querySelector(".sl-fold__state")?.textContent;
+  expect(foldState()).toBe("No title on screen");
   await user.click(more);
   await user.click(screen.getByRole("checkbox", { name: /Title on screen/ }));
   await user.selectOptions(screen.getByRole("combobox", { name: "Speed" }), "1.15");
@@ -614,9 +615,7 @@ it("sets the Shorts in their own section: numbers, prompts and the more options"
     musicVolume: 30,
     fullVideoLink: "https://youtu.be/full",
   });
-  expect(more.textContent).toBe(
-    "More shorts options · Title on screen · 1.15× · Music at 30% · Full video linked",
-  );
+  expect(foldState()).toBe("Title on screen · 1.15× · Music at 30% · Full video linked");
   await user.click(screen.getByRole("checkbox", { name: /^Shorts/ }));
   expect(state.latest.config.shorts).toMatchObject({ enabled: false, count: 5, prompt: "Hooks" });
 });

@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ImagePrompts } from "@/play/image-prompts";
+import { freshImageCount, ImagePrompts } from "@/play/image-prompts";
 
 afterEach(cleanup);
 
@@ -29,7 +29,7 @@ function list(picked: readonly ImagePromptChoice[], onPick = vi.fn()) {
 }
 
 function numberFor(name: string): HTMLInputElement {
-  const found = screen.getByLabelText(`Number for ${name}`);
+  const found = screen.getByLabelText(`How many images for ${name}`);
   if (!(found instanceof HTMLInputElement)) {
     throw new Error("the Number control is not an input");
   }
@@ -69,12 +69,30 @@ describe("the image prompt tick list", () => {
     expect(onPick).toHaveBeenCalledWith([{ name: "Maps", number: 4 }]);
   });
 
-  it("leaves the Number of an unticked prompt empty and out of reach", () => {
+  it("asks how many images only once a prompt is ticked", () => {
     list([{ name: "Oils", number: 8 }]);
 
-    expect(numberFor("Portraits").value).toBe("");
-    expect(numberFor("Portraits").disabled).toBe(true);
+    expect(screen.queryByLabelText("How many images for Portraits")).toBeNull();
     expect(numberFor("Oils").value).toBe("8");
+    expect(screen.getByText("How many images")).not.toBeNull();
+    expect(screen.getByText("Which image style?")).not.toBeNull();
+  });
+
+  it("starts a newly ticked prompt where the editor says", async () => {
+    const onPick = vi.fn();
+    render(
+      <ImagePrompts
+        prompts={prompts}
+        picked={[]}
+        startAt={16}
+        problem={() => undefined}
+        onPick={onPick}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Maps" }));
+
+    expect(onPick).toHaveBeenCalledWith([{ name: "Maps", number: 16 }]);
   });
 
   it("carries the bounds the rule enforces onto the control itself", () => {
@@ -108,10 +126,10 @@ describe("the image prompt tick list", () => {
     }
     render(<Harness />);
 
-    expect(screen.getByText("8 of 60 images")).not.toBeNull();
+    expect(screen.getByText(/^8 of at most 60 images/)).not.toBeNull();
 
     await userEvent.click(screen.getByRole("checkbox", { name: "Maps" }));
-    expect(screen.getByText("9 of 60 images")).not.toBeNull();
+    expect(screen.getByText(/^9 of at most 60 images/)).not.toBeNull();
   });
 
   it("puts the refusal beside the Number the rule named", () => {
@@ -133,7 +151,7 @@ describe("the image prompt tick list", () => {
   it("says so when the library holds no image prompt at all", () => {
     render(<ImagePrompts prompts={[]} picked={[]} problem={() => undefined} onPick={vi.fn()} />);
 
-    expect(screen.getByText("No image prompts saved. Write one on Prompts.")).not.toBeNull();
+    expect(screen.getByText(/^No image prompts yet\./)).not.toBeNull();
   });
 });
 
@@ -150,10 +168,22 @@ it.each([{ available: prompts }, { available: [] }])(
       />,
     );
     expect(screen.getByText("Deleted")).not.toBeNull();
-    expect(screen.getByText(/Missing template/)).not.toBeNull();
+    expect(screen.getByText(/No longer in Prompts/)).not.toBeNull();
     expect(numberFor("Deleted").value).toBe("3");
     expect(onPick).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("checkbox", { name: "Deleted" }));
     expect(onPick).toHaveBeenCalledWith([]);
   },
 );
+
+describe("how many images a fresh tick asks for", () => {
+  it("is enough for a video, and a few for pictures alone", () => {
+    expect(freshImageCount({ sources: { video: "generate" } }, 0)).toBe(16);
+    expect(freshImageCount({ sources: { video: "off" } }, 0)).toBe(4);
+  });
+
+  it("never asks for more than the run has left, nor less than one", () => {
+    expect(freshImageCount({ sources: { video: "generate" } }, 50)).toBe(10);
+    expect(freshImageCount({ sources: { video: "generate" } }, 60)).toBe(1);
+  });
+});

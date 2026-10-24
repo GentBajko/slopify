@@ -14,12 +14,14 @@ import {
 } from "@app/slices/shorts/model.js";
 import { type ReactElement, type ReactNode, useId, useState } from "react";
 import { Checkbox, Input } from "@/components/kit/field";
+import { Fold } from "@/components/kit/fold";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Picker } from "@/components/ui/picker";
 import type { HelpId } from "@/help/catalog";
 import type { ShortsForm } from "@/play/state";
 import type { StylePreviewSettings } from "@/video/style-preview";
 import { GridField } from "./grid-field";
+import { OutputTick } from "./output-tick";
 
 // The Shorts settings as a form edits them: the draft's own shape, numbers as typed. A new
 // form starts with the title on screen.
@@ -57,12 +59,11 @@ const speeds = Array.from(
 
 const moreFields = ["titleOnScreen", "speed", "musicVolume", "fullVideoLink"] as const;
 
-// The Video stage's Shorts step, on Play and in Edit project, beside the YouTube description.
-// Every control stays mounted: without narration the switch is disabled rather than removed,
-// and so is the rest while the switch is off. The title, speed, music and link sit in a
-// "More shorts options" disclosure whose summary names what differs from the defaults, so the
-// row stays one line; `music` is the music file's control: Play's draft attachment, or Edit
-// project's upload.
+// The Video stage's Shorts step, on Play's Outputs checklist and in Edit project, beside the
+// YouTube description: a tick, and its settings once it is ticked. Without narration there is
+// nothing to cut, so the tick is greyed with the reason under it. The title, speed, music and
+// link sit in a "More shorts options" fold whose state names what differs from the defaults;
+// `music` is the music file's control: Play's draft attachment, or Edit project's upload.
 export function Shorts({
   value,
   prompts,
@@ -112,7 +113,6 @@ export function Shorts({
       aria-describedby={issue ? `${id}-error` : undefined}
       title={`${String(min)}-${String(max)}`}
       className="sl-input--number"
-      disabled={!on}
       value={value[field]}
       onChange={(event) => onChange({ ...value, [field]: event.target.value })}
     />
@@ -131,70 +131,60 @@ export function Shorts({
     .filter((part) => part !== undefined)
     .join(" · ");
   return (
-    <div className="col-span-full sl-fields">
-      <span className="sl-fields__wide flex items-center gap-1" {...helpScope}>
-        <label
-          htmlFor={`${id}-switch`}
-          className="flex min-h-10 items-center gap-3 text-small font-semibold max-[1099px]:min-h-11"
-        >
-          <Checkbox
-            id={`${id}-switch`}
-            data-play-field="shorts.enabled"
-            checked={on}
-            disabled={!narrated && !on}
-            aria-describedby={issue ? `${id}-error` : undefined}
-            onChange={(event) => onChange({ ...value, enabled: event.currentTarget.checked })}
-          />
-          Shorts
-        </label>
-        <InfoTip id="play.shorts" />
-      </span>
-      <GridField htmlFor={`${id}-count`} label="How many" tip="play.shorts.count">
-        {number("count", "How many shorts", shortsCountMin, shortsCountMax)}
-      </GridField>
-      <GridField htmlFor={`${id}-minSeconds`} label="Length" tip="play.shorts.length">
-        {number("minSeconds", "Shortest short, in seconds", shortsSecondsMin, shortsSecondsMax)}
-        <span aria-hidden="true">to</span>
-        {number("maxSeconds", "Longest short, in seconds", shortsSecondsMin, shortsSecondsMax)}
-        <span className="text-ink-3">seconds</span>
-      </GridField>
-      <PromptPicker
-        id={`${id}-prompt`}
-        field="shorts.prompt"
-        label="Shorts prompt"
-        tip="play.shorts.prompt"
-        kind="shorts"
-        value={value.prompt}
-        prompts={prompts}
-        disabled={!on}
-        onChange={(prompt) => onChange({ ...value, prompt })}
-      />
-      <PromptPicker
-        id={`${id}-image`}
-        field="shorts.imagePrompt"
-        label="Image style"
-        tip="play.shorts.image-style"
-        kind="image"
-        value={value.imagePrompt}
-        prompts={prompts}
-        disabled={!on}
-        onChange={(imagePrompt) => onChange({ ...value, imagePrompt })}
-      />
-      {issue ? (
-        <p id={`${id}-error`} className="sl-fields__wide m-0 text-small text-danger">
-          {issue}
-        </p>
-      ) : !narrated ? (
-        <p className="sl-fields__wide m-0 text-label text-ink-3">Needs narration.</p>
-      ) : null}
-      <details
-        className="sl-fields__wide rounded-control border border-line px-3"
+    <OutputTick
+      field="shorts.enabled"
+      label="Shorts"
+      help={
+        narrated || on
+          ? "Vertical clips cut from the narration, each with new images (paid per image)."
+          : "Needs narration."
+      }
+      checked={on}
+      disabled={!narrated && !on}
+      onChange={(enabled) => onChange({ ...value, enabled })}
+    >
+      <div className="sl-fields">
+        <GridField htmlFor={`${id}-count`} label="How many" tip="play.shorts.count">
+          {number("count", "How many shorts", shortsCountMin, shortsCountMax)}
+        </GridField>
+        <GridField htmlFor={`${id}-minSeconds`} label="Length" tip="play.shorts.length">
+          {number("minSeconds", "Shortest short, in seconds", shortsSecondsMin, shortsSecondsMax)}
+          <span aria-hidden="true">to</span>
+          {number("maxSeconds", "Longest short, in seconds", shortsSecondsMin, shortsSecondsMax)}
+          <span className="text-ink-3">seconds</span>
+        </GridField>
+        <PromptPicker
+          id={`${id}-prompt`}
+          field="shorts.prompt"
+          label="Shorts prompt"
+          tip="play.shorts.prompt"
+          kind="shorts"
+          value={value.prompt}
+          prompts={prompts}
+          onChange={(prompt) => onChange({ ...value, prompt })}
+        />
+        <PromptPicker
+          id={`${id}-image`}
+          field="shorts.imagePrompt"
+          label="Image prompt"
+          tip="play.shorts.image-style"
+          kind="image"
+          value={value.imagePrompt}
+          prompts={prompts}
+          onChange={(imagePrompt) => onChange({ ...value, imagePrompt })}
+        />
+        {issue ? (
+          <p id={`${id}-error`} className="sl-fields__wide m-0 text-small text-danger">
+            {issue}
+          </p>
+        ) : null}
+      </div>
+      <Fold
+        summary="More shorts options"
+        state={summary}
         open={open || moreIssue !== undefined || musicIssue !== undefined}
-        onToggle={(event) => setOpen(event.currentTarget.open)}
+        onToggle={setOpen}
       >
-        <summary className="flex min-h-9 cursor-pointer items-center text-small text-ink-2">
-          More shorts options · {summary}
-        </summary>
         <div className="sl-fields pt-2 pb-3">
           <span className="flex items-center gap-1" {...helpScope}>
             <label htmlFor={`${id}-title`} className="flex min-h-9 items-center gap-2 text-small">
@@ -202,7 +192,6 @@ export function Shorts({
                 id={`${id}-title`}
                 data-play-field="shorts.titleOnScreen"
                 checked={value.titleOnScreen === true}
-                disabled={!on}
                 onChange={(event) =>
                   onChange({ ...value, titleOnScreen: event.currentTarget.checked })
                 }
@@ -217,7 +206,6 @@ export function Shorts({
               data-play-field="shorts.speed"
               value={speeds.includes(speed ?? "") ? speed : ""}
               aria-invalid={problem?.("shorts.speed") !== undefined}
-              disabled={!on}
               onChange={(event) => onChange({ ...value, speed: event.target.value })}
             >
               {speeds.includes(speed ?? "") ? null : <option value="">Choose a speed</option>}
@@ -238,7 +226,6 @@ export function Shorts({
               placeholder={String(defaultMusicVolume)}
               aria-invalid={problem?.("shorts.musicVolume") !== undefined}
               className="sl-input--number"
-              disabled={!on}
               value={volume}
               onChange={(event) => onChange({ ...value, musicVolume: event.target.value })}
             />
@@ -257,23 +244,20 @@ export function Shorts({
               maxLength={fullVideoLinkMax}
               placeholder="https://youtu.be/…"
               aria-invalid={problem?.("shorts.fullVideoLink") !== undefined}
-              disabled={!on}
               value={value.fullVideoLink ?? ""}
               onChange={(event) => onChange({ ...value, fullVideoLink: event.target.value })}
             />
           </GridField>
           <div className="sl-fields__wide">{music}</div>
-          {open && on && preview !== undefined ? (
-            <div className="sl-fields__wide">{preview}</div>
-          ) : null}
+          {open && preview !== undefined ? <div className="sl-fields__wide">{preview}</div> : null}
           {moreIssue ? (
             <p role="alert" className="sl-fields__wide m-0 text-small text-danger">
               {moreIssue}
             </p>
           ) : null}
         </div>
-      </details>
-    </div>
+      </Fold>
+    </OutputTick>
   );
 }
 
@@ -287,7 +271,6 @@ function PromptPicker({
   kind,
   value,
   prompts,
-  disabled,
   onChange,
 }: {
   readonly id: string;
@@ -297,7 +280,6 @@ function PromptPicker({
   readonly kind: PromptKind;
   readonly value: string;
   readonly prompts: readonly Prompt[];
-  readonly disabled: boolean;
   readonly onChange: (name: string) => void;
 }): ReactElement {
   const choices = prompts.filter((one) => one.kind === kind);
@@ -308,7 +290,6 @@ function PromptPicker({
         id={id}
         data-play-field={field}
         value={value}
-        disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
       >
         <option value="">{defaultShortsPromptName}</option>

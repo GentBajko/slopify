@@ -2,7 +2,7 @@ import { templateSections } from "@app/slices/template-studio/model.js";
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-import { selfExplanatory, unexplainedControls } from "@/help/coverage";
+import { selfExplanatory, stageEditors, unexplainedControls } from "@/help/coverage";
 import { TemplateStudioPage } from "@/template-studio/page";
 import { routes, templateId, view } from "@/template-studio/studio.fake";
 import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
@@ -13,7 +13,7 @@ afterEach(cleanup);
 // models drawers, and beside compared models, is explained beside it, by a visible help line
 // or an info button (help/coverage.ts). The walk opens each one the way a person would.
 function expectExplained(): void {
-  expect(unexplainedControls(document.body, [...selfExplanatory])).toEqual([]);
+  expect(unexplainedControls(document.body, [...selfExplanatory, ...stageEditors])).toEqual([]);
 }
 
 const madeSample = {

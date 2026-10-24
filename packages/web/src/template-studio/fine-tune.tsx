@@ -17,7 +17,6 @@ import type { RailProps } from "@/play/rail-frame";
 import { PlayReviews } from "@/play/reviews";
 import { DocumentRail, ThumbnailRail, VideoExtras } from "@/play/stage-rails";
 import type { PlayFormState } from "@/play/state";
-import { StyleSection } from "@/play/style-section";
 import { templateLibrary } from "@/play/template-library";
 import { entriesQuery, promptsQuery, providersQuery, settingsQuery, voicesQuery } from "@/queries";
 import { subtitlesFor } from "@/subtitles/config";
@@ -95,25 +94,15 @@ export function FineTune({
         </div>
       );
     case "script":
-      return <ContentSection {...controls} entries={choices.entries} onLibrary={() => undefined} />;
+      return <ContentSection {...controls} entries={choices.entries} />;
     case "voice":
       return (
-        <NarrationSection
-          {...controls}
-          entries={choices.entries}
-          onKeyword={() => undefined}
-          onSettings={() => undefined}
-        />
+        <NarrationSection {...controls} entries={choices.entries} onKeyword={() => undefined} />
       );
     case "pictures":
       return <ImagesSection {...controls} />;
     case "video":
-      return (
-        <>
-          <VideoSection {...controls} problemOf={problem} />
-          <StyleSection problem={problem} />
-        </>
-      );
+      return <VideoSection {...controls} problemOf={problem} />;
     case "thumbnail":
       return <ThumbnailRail {...controls} />;
     case "shorts":

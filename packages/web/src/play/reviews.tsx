@@ -1,3 +1,4 @@
+import type { ProviderChoice } from "@app/slices/admission/model.js";
 import type { Prompt } from "@app/slices/library/model.js";
 import {
   defaultReviewRetries,
@@ -8,7 +9,6 @@ import {
   type ReviewStage,
   reviewerLabels,
   reviewers,
-  reviewModeLabels,
   reviewModes,
   reviewStageLabels,
   reviewStagesInRunOrder,
@@ -19,16 +19,25 @@ import type { ProviderStatus } from "@app/slices/settings/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { type ReactElement, useId } from "react";
 import { useApp } from "@/app-context";
-import { Input } from "@/components/kit/field";
+import { HelpLine, Input } from "@/components/kit/field";
+import { Fold } from "@/components/kit/fold";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Segmented } from "@/components/kit/switch";
 import { Picker } from "@/components/ui/picker";
-import { ModelPicker, ProviderPicker } from "@/play/pickers";
 import { promptsQuery, providersQuery } from "@/queries";
 import { usePlaySession } from "./draft-context";
+import { ServiceGroup } from "./service-group";
 import { shortsOn } from "./state";
 
-// Play's Review step: the draft's reviews, saved with the draft like every other choice.
+// What each choice does, said as what the person gets.
+const modeWords: Readonly<Record<ReviewMode, string>> = {
+  off: "Off",
+  flag: "Flag problems",
+  redo: "Flag and redo",
+};
+
+// Play's Pauses and checks row: the draft's AI checks, saved with the draft like every other
+// choice.
 export function PlayReviews({
   problem,
 }: {
@@ -45,6 +54,7 @@ export function PlayReviews({
       value={form.reviews ?? emptyReviews}
       providers={providers.data?.providers ?? []}
       prompts={prompts.data?.prompts ?? []}
+      writer={form.llm}
       makes={(stage) =>
         stageMakesItems(
           { sources: form.sources, shorts: shortsOn(form) ? { enabled: true } : undefined },
@@ -68,13 +78,29 @@ export const emptyReviews: ReviewSettingsForm = {
   stages: {},
 };
 
-// Automatic reviews, on Play's Review step and in Edit project → Reviews. Every control stays
-// mounted: a stage that makes nothing has its row disabled, and so is a prompt while its
-// review is Off.
+// The one choice most people make, over every stage this run makes something for: the mode
+// they all share, or undefined while the stages differ.
+export function overallMode(
+  value: ReviewSettingsForm,
+  makes: (stage: ReviewStage) => boolean,
+): ReviewMode | undefined {
+  const modes = new Set(
+    reviewStagesInRunOrder
+      .filter((stage) => makes(stage) && stage !== "promise")
+      .map((stage) => value.stages[stage]?.mode ?? "off"),
+  );
+  if (modes.size === 0) return "off";
+  return modes.size === 1 ? [...modes][0] : undefined;
+}
+
+// AI checks, on Play's Pauses and checks row and in Edit project → Reviews: one choice for the
+// whole run, and under Advanced who checks, how many redos, and each stage's own mode and
+// prompt. A stage this run makes nothing for has its row greyed with the reason.
 export function ReviewSettings({
   value,
   providers,
   prompts,
+  writer,
   makes,
   problem,
   disabled = false,
@@ -83,6 +109,8 @@ export function ReviewSettings({
   readonly value: ReviewSettingsForm;
   readonly providers: readonly ProviderStatus[];
   readonly prompts: readonly Prompt[];
+  // The run's own writer, which checks too until another is picked.
+  readonly writer?: ProviderChoice | undefined;
   // Whether the run makes items for this stage to review.
   readonly makes: (stage: ReviewStage) => boolean;
   readonly problem: (field: string) => string | undefined;
@@ -101,156 +129,195 @@ export function ReviewSettings({
     pictures.length > 0 &&
     value.provider !== "" &&
     !imageReviewers.includes(value.provider);
+  const overall = overallMode(value, makes);
+  // One choice for every stage this run makes something for; the promise check stays as it is
+  // set under Advanced. Turning checks on with no checker picked uses the run's writer.
+  const setAll = (mode: ReviewMode): void => {
+    const stages = { ...value.stages };
+    for (const stage of reviewStagesInRunOrder) {
+      if (stage === "promise" || (mode !== "off" && !makes(stage))) continue;
+      stages[stage] = { mode, prompt: value.stages[stage]?.prompt ?? "" };
+    }
+    const checker =
+      mode !== "off" && value.provider === "" && writer !== undefined && writer.provider !== ""
+        ? { provider: writer.provider, model: writer.model }
+        : {};
+    onChange({ ...value, ...checker, stages });
+  };
+  const on = reviewStagesInRunOrder.filter((stage) => modeOf(stage) !== "off");
+  const advancedState = [
+    byAgent ? reviewerLabels.agent : value.provider === "" ? undefined : value.provider,
+    on.length === 0
+      ? undefined
+      : `${String(on.length)} ${on.length === 1 ? "stage" : "stages"} checked`,
+  ]
+    .filter((part) => part !== undefined)
+    .join(", ");
   return (
     <fieldset
       data-play-field="reviews"
       tabIndex={-1}
       disabled={disabled}
-      className="min-w-0 rounded-media border border-line px-3 pt-1 pb-3"
-      {...helpScope}
+      className="m-0 flex min-w-0 flex-col gap-3 border-0 p-0"
     >
-      <legend className="flex items-center gap-1 px-1 font-semibold">
-        Automatic reviews
-        <InfoTip id="play.reviews" />
-      </legend>
-      <div className="sl-fields">
-        <div className="block text-small">
-          <Segmented<Reviewer>
-            label="Who reviews"
-            tip="play.reviews.reviewer"
-            value={value.reviewer ?? "model"}
-            options={reviewers.map((one) => ({ value: one, label: reviewerLabels[one] }))}
-            onChange={(reviewer) => onChange({ ...value, reviewer })}
-          />
-        </div>
-        {/* The agent needs no model: the pickers stay, disabled, so nothing shifts. */}
-        <fieldset className="contents" disabled={byAgent}>
-          <ProviderPicker
-            field="reviews.provider"
-            label="Reviewer"
-            tip="play.reviews.provider"
-            family="llm"
-            providers={providers}
-            value={value.provider}
-            problem={problem("reviews.provider")}
-            onPick={(provider) => onChange({ ...value, provider, model: "" })}
-          />
-          <ModelPicker
-            field="reviews.model"
-            label="Reviewer model"
-            tip="play.reviews.model"
-            provider={value.provider}
-            value={value.model}
-            problem={problem("reviews.model")}
-            onPick={(model) => onChange({ ...value, model })}
-          />
-        </fieldset>
-        <div className="block space-y-1 text-small" {...helpScope}>
-          <span className="flex items-center gap-1">
-            <label htmlFor={`${id}-retries`}>Redos per item</label>
-            <InfoTip id="play.reviews.retries" className="-my-1" />
-          </span>
-          <Input
-            id={`${id}-retries`}
-            data-play-field="reviews.retries"
-            inputMode="numeric"
-            placeholder={String(defaultReviewRetries)}
-            value={value.retries}
-            aria-invalid={problem("reviews.retries") !== undefined}
-            onChange={(event) => onChange({ ...value, retries: event.target.value })}
-          />
-          {problem("reviews.retries") ? (
-            <span className="block text-danger">{problem("reviews.retries")}</span>
-          ) : null}
-        </div>
-      </div>
-      {blind ? (
-        <p className="mt-2 text-small text-danger">
-          Picture reviews need Claude Code or Codex as the reviewer: Slopify can't show pictures to
-          this one.
-        </p>
-      ) : (
-        <p className="mt-2 text-label text-ink-3">
-          {byAgent
-            ? "The external agent answers through MCP and is shown the pictures; no API fee."
-            : "Pictures (images, thumbnail, shorts) need Claude Code or Codex as the reviewer."}
-        </p>
-      )}
-      {/* The two pickers share a cell and wrap under each other in a narrow drawer, so neither
-          ever cuts its words short. */}
-      <table className="mt-3 w-full text-small">
-        <thead className="sr-only">
-          <tr>
-            <th>Stage</th>
-            <th>Review and its prompt</th>
-          </tr>
-        </thead>
-        <tbody>
-          {reviewStagesInRunOrder.map((stage) => {
-            const mode = modeOf(stage);
-            const prompt = value.stages[stage]?.prompt ?? "";
-            const available = makes(stage);
-            const saved = prompt !== "" && !choices.some((one) => one.name === prompt);
-            return (
-              <tr key={stage} className="border-t border-line">
-                <th scope="row" className="w-[28%] py-2 pr-3 text-left align-top font-medium">
-                  <span className="inline-flex items-center gap-1">
-                    {reviewStageLabels[stage]}
-                    {stage === "promise" ? (
-                      <InfoTip id="play.reviews.promise" className="-my-1" />
-                    ) : null}
-                  </span>
-                </th>
-                <td className="py-2">
-                  <div className="flex flex-wrap gap-2">
-                    <Picker
-                      className="w-[9.5rem] shrink-0"
-                      aria-label={`${reviewStageLabels[stage]} review`}
-                      data-play-field={`reviews.stages.${stage}.mode`}
-                      value={mode}
-                      disabled={!available && mode === "off"}
-                      onChange={(event) =>
-                        setStage(stage, event.target.value as ReviewMode, prompt)
-                      }
-                    >
-                      {reviewModes.map((one) => (
-                        <option key={one} value={one}>
-                          {reviewModeLabels[one]}
-                        </option>
-                      ))}
-                    </Picker>
-                    <Picker
-                      className="w-auto min-w-[12rem] flex-1"
-                      aria-label={`${reviewStageLabels[stage]} review prompt`}
-                      data-play-field={`reviews.stages.${stage}.prompt`}
-                      value={prompt}
-                      disabled={mode === "off"}
-                      onChange={(event) => setStage(stage, mode, event.target.value)}
-                    >
-                      <option value="">Built-in</option>
-                      {saved ? <option value={prompt}>{prompt} (saved choice)</option> : null}
-                      {choices.map((one) => (
-                        <option key={one.id} value={one.name}>
-                          {one.name}
-                        </option>
-                      ))}
-                    </Picker>
-                  </div>
-                  {problem(`reviews.stages.${stage}.prompt`) ? (
-                    <p className="text-danger">{problem(`reviews.stages.${stage}.prompt`)}</p>
-                  ) : !available && stage === "promise" ? (
-                    <p className="text-ink-3">
-                      Needs an article a model writes: set Article to Generate to use it.
-                    </p>
-                  ) : !available && mode !== "off" ? (
-                    <p className="text-ink-3">This stage makes nothing to review in this run.</p>
-                  ) : null}
-                </td>
+      <p className="m-0 mb-1 text-body font-semibold" aria-hidden="true">
+        Have an AI check the results
+      </p>
+      <Segmented<ReviewMode | "mixed">
+        label="Have an AI check the results"
+        value={overall ?? "mixed"}
+        options={reviewModes.map((mode) => ({ value: mode, label: modeWords[mode] }))}
+        help={
+          overall === undefined
+            ? "Each stage is set on its own under Advanced."
+            : "Each check is one more AI call per item; a redo makes the item again, at its price."
+        }
+        onChange={(mode) => {
+          if (mode !== "mixed") setAll(mode);
+        }}
+      />
+      <Fold summary="Advanced" state={advancedState === "" ? undefined : advancedState}>
+        <div className="flex min-w-0 flex-col gap-4 pt-2 pb-3" {...helpScope}>
+          <HelpLine>
+            Who checks, how often a failed item is made again, and each stage's own check and Review
+            prompt.
+          </HelpLine>
+          <div className="sl-fields">
+            <div className="block text-small">
+              <Segmented<Reviewer>
+                label="Who checks"
+                tip="play.reviews.reviewer"
+                value={value.reviewer ?? "model"}
+                options={reviewers.map((one) => ({ value: one, label: reviewerLabels[one] }))}
+                onChange={(reviewer) => onChange({ ...value, reviewer })}
+              />
+            </div>
+            <div className="block space-y-1 text-small" {...helpScope}>
+              <span className="flex items-center gap-1">
+                <label htmlFor={`${id}-retries`}>Redos per item</label>
+                <InfoTip id="play.reviews.retries" className="-my-1" />
+              </span>
+              <Input
+                id={`${id}-retries`}
+                data-play-field="reviews.retries"
+                inputMode="numeric"
+                placeholder={String(defaultReviewRetries)}
+                value={value.retries}
+                aria-invalid={problem("reviews.retries") !== undefined}
+                onChange={(event) => onChange({ ...value, retries: event.target.value })}
+              />
+              {problem("reviews.retries") ? (
+                <span className="block text-danger">{problem("reviews.retries")}</span>
+              ) : null}
+            </div>
+          </div>
+          {byAgent ? (
+            <p className="m-0 text-small text-ink-2">
+              The external agent answers through MCP and is shown the pictures; no API fee.
+            </p>
+          ) : (
+            <ServiceGroup
+              family="llm"
+              label="Checked by"
+              providers={providers}
+              provider={value.provider}
+              model={value.model}
+              serviceField="reviews.provider"
+              modelField="reviews.model"
+              serviceProblem={problem("reviews.provider")}
+              modelProblem={problem("reviews.model")}
+              onService={(provider) => onChange({ ...value, provider, model: "" })}
+              onModel={(model) => onChange({ ...value, model })}
+            />
+          )}
+          {blind ? (
+            <p className="m-0 text-small text-danger">
+              Picture checks need Claude Code or Codex as the checker: Slopify can't show pictures
+              to this one.
+            </p>
+          ) : byAgent ? null : (
+            <p className="m-0 text-label text-ink-3">
+              Pictures (images, thumbnail, shorts) need Claude Code or Codex as the checker.
+            </p>
+          )}
+          {/* The two pickers share a cell and wrap under each other in a narrow drawer, so
+              neither ever cuts its words short. */}
+          <table className="w-full text-small">
+            <thead>
+              <tr className="text-left text-label text-ink-2">
+                <th className="w-[28%] pb-1 pr-3 font-semibold">Stage</th>
+                <th className="pb-1 font-semibold">Check, and the prompt it uses</th>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
+            </thead>
+            <tbody>
+              {reviewStagesInRunOrder.map((stage) => {
+                const mode = modeOf(stage);
+                const prompt = value.stages[stage]?.prompt ?? "";
+                const available = makes(stage);
+                const saved = prompt !== "" && !choices.some((one) => one.name === prompt);
+                return (
+                  <tr key={stage} className="border-t border-line">
+                    <th scope="row" className="py-2 pr-3 text-left align-top font-medium">
+                      <span className="inline-flex items-center gap-1">
+                        {reviewStageLabels[stage]}
+                        {stage === "promise" ? (
+                          <InfoTip id="play.reviews.promise" className="-my-1" />
+                        ) : null}
+                      </span>
+                    </th>
+                    <td className="py-2">
+                      <div className="flex flex-wrap gap-2">
+                        <Picker
+                          className="w-[10.5rem] shrink-0"
+                          aria-label={`${reviewStageLabels[stage]}: check`}
+                          data-play-field={`reviews.stages.${stage}.mode`}
+                          value={mode}
+                          disabled={!available && mode === "off"}
+                          onChange={(event) =>
+                            setStage(stage, event.target.value as ReviewMode, prompt)
+                          }
+                        >
+                          {reviewModes.map((one) => (
+                            <option key={one} value={one}>
+                              {modeWords[one]}
+                            </option>
+                          ))}
+                        </Picker>
+                        {mode === "off" ? null : (
+                          <Picker
+                            className="w-auto min-w-[12rem] flex-1"
+                            aria-label={`${reviewStageLabels[stage]}: prompt`}
+                            data-play-field={`reviews.stages.${stage}.prompt`}
+                            value={prompt}
+                            onChange={(event) => setStage(stage, mode, event.target.value)}
+                          >
+                            <option value="">Built-in prompt</option>
+                            {saved ? <option value={prompt}>{prompt} (saved choice)</option> : null}
+                            {choices.map((one) => (
+                              <option key={one.id} value={one.name}>
+                                {one.name}
+                              </option>
+                            ))}
+                          </Picker>
+                        )}
+                      </div>
+                      {problem(`reviews.stages.${stage}.prompt`) ? (
+                        <p className="m-0 text-danger">
+                          {problem(`reviews.stages.${stage}.prompt`)}
+                        </p>
+                      ) : !available && stage === "promise" ? (
+                        <p className="m-0 text-ink-3">Needs an article the AI writes.</p>
+                      ) : !available ? (
+                        <p className="m-0 text-ink-3">This run makes nothing here to check.</p>
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Fold>
     </fieldset>
   );
 }
