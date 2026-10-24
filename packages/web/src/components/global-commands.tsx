@@ -59,9 +59,9 @@ function AddToCalendarCommand(): null {
   const navigate = useNavigate();
   useCommand({
     id: "global.calendar.add",
-    title: "Add to calendar",
+    title: "Add topics to a schedule",
     group: "Create",
-    keywords: ["schedule", "topics", "batch", "queue", "plan"],
+    keywords: ["schedule", "topics", "batch", "queue", "plan", "calendar"],
     searchOnly: true,
     run: () => {
       requestIntent(intents.addToCalendar);
