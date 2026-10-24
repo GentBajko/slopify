@@ -18,6 +18,18 @@ import { keys } from "@/queries";
 import { type AddedOutputPreview, addProjectOutput, previewAddedOutput } from "./output-api.js";
 import type { EditSection, RevisionController } from "./revision-controller.js";
 
+// The outputs a project does not make yet, each with the reason it cannot be added when it
+// cannot: what the dialog lists, and what the button counts.
+export function addableChoices(
+  config: RunConfig,
+): readonly { readonly kind: AddableOutput; readonly refusal: string | undefined }[] {
+  return addableOutputs.flatMap((kind) => {
+    const plan = planAddedOutput(config, kind);
+    if (!plan.ok && plan.reason === "already") return [];
+    return [{ kind, refusal: plan.ok ? undefined : plan.message }];
+  });
+}
+
 // Add another output: the same project's brief, sources and accepted text made into one more
 // kind of result. The dialog says what is reused as it is, what is made, how the text is used
 // and the estimated extra cost before anything is saved; Add saves a new version of the
@@ -37,11 +49,7 @@ export function AddOutputDialog({
 }): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
-  const choices = addableOutputs.flatMap((kind) => {
-    const plan = planAddedOutput(config, kind);
-    if (!plan.ok && plan.reason === "already") return [];
-    return [{ kind, refusal: plan.ok ? undefined : plan.message }];
-  });
+  const choices = addableChoices(config);
   const [kind, setKind] = useState<AddableOutput | undefined>(
     choices.find((one) => one.refusal === undefined)?.kind,
   );
@@ -104,7 +112,7 @@ export function AddOutputDialog({
       onOpenChange={(next) => {
         if (!next && !adding) onClose();
       }}
-      title="Add another output"
+      title="Add an output"
       description="Made from this project's brief, sources and accepted text. What it already has stays as it is."
       footer={
         <>

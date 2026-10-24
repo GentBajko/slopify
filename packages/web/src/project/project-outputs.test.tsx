@@ -91,7 +91,8 @@ it("adds narration after showing what is reused, made and charged, then starts o
     }),
   );
   expect(await screen.findByText("Article")).not.toBeNull();
-  await userEvent.click(screen.getByRole("button", { name: "Add another output" }));
+  // Named with how many outputs it can add: every kind this project does not make yet.
+  await userEvent.click(screen.getByRole("button", { name: "Add an output (6 possible)" }));
   expect(await screen.findByText("Accepted article text", { exact: false })).not.toBeNull();
   expect(screen.getByText("Narration of the text", { exact: false })).not.toBeNull();
   expect(screen.getByText("About $0.12.")).not.toBeNull();
@@ -115,35 +116,44 @@ it("adds narration after showing what is reused, made and charged, then starts o
   );
 });
 
-it("lists the files of a set before its zip downloads, and zips only the ones still ticked", async () => {
+it("downloads a set as one zip at once, and lists its files first once one is outdated", async () => {
   const images = [1, 2].map((index) => output("image", "images", { meta: { index } }));
-  renderRouted(
-    <RevisionMedia projectId="p1" revisionId="r1">
-      <ProjectOutputs
-        projectId="p1"
-        revisionId="r1"
-        config={{ ...config, sources: { ...config.sources, images: "generate" } }}
-        stages={[stage("article", "provided"), stage("images", "done")]}
-        outputs={[article, ...images]}
-        controller={{ review: vi.fn(), requestEdit: vi.fn(), busy: false }}
-      />
-    </RevisionMedia>,
-    testDeps({
-      "GET /api/projects/p1/revisions/r1": jsonAnswer({
-        view: {
-          ...view,
-          outputs: [
-            record(article, "rec-article", "article:md"),
-            record(images[0] ?? article, "rec-1", "image:a"),
-            record(images[1] ?? article, "rec-2", "image:b"),
-          ],
-        },
+  const mount = (second: "ready" | "outdated") =>
+    renderRouted(
+      <RevisionMedia projectId="p1" revisionId="r1">
+        <ProjectOutputs
+          projectId="p1"
+          revisionId="r1"
+          config={{ ...config, sources: { ...config.sources, images: "generate" } }}
+          stages={[stage("article", "provided"), stage("images", "done")]}
+          outputs={[article, ...images]}
+          controller={{ review: vi.fn(), requestEdit: vi.fn(), busy: false }}
+        />
+      </RevisionMedia>,
+      testDeps({
+        "GET /api/projects/p1/revisions/r1": jsonAnswer({
+          view: {
+            ...view,
+            outputs: [
+              record(article, "rec-article", "article:md"),
+              record(images[0] ?? article, "rec-1", "image:a"),
+              { ...record(images[1] ?? article, "rec-2", "image:b"), state: second },
+            ],
+          },
+        }),
       }),
-    }),
-  );
-  await userEvent.click(await screen.findByRole("button", { name: "Download all images" }));
-  expect(await screen.findByText(/From the version saved/)).not.toBeNull();
+    );
   const zip = `${testOrigin}/files/p1/revisions/r1/images.zip`;
+  // Every file current: a plain download that says what it holds.
+  const { unmount } = mount("ready");
+  expect(
+    (await screen.findByRole("link", { name: "Download both images (.zip)" })).getAttribute("href"),
+  ).toBe(zip);
+  unmount();
+  // One made before the last change: the files are listed first, to tick.
+  mount("outdated");
+  await userEvent.click(await screen.findByRole("button", { name: "Choose images to download…" }));
+  expect(await screen.findByText(/From the version saved/)).not.toBeNull();
   expect(screen.getByRole("link", { name: /Download zip \(2 files\)/ }).getAttribute("href")).toBe(
     zip,
   );
