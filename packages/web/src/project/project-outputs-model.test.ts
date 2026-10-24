@@ -63,7 +63,7 @@ describe("projectOutputs", () => {
     expect(older?.state).toBe("older");
     expect(older?.stateWords).toMatch(/previous/i);
     expect(older?.version).toMatch(/before the current text/);
-    expect(older?.next).toMatch(/Update it from Narration, or keep this version/);
+    expect(older?.next).toMatch(/Open Narration to make it again, or keep this version/);
   });
 
   it("offers an audiobook as chaptered M4B first and a podcast as its MP3 episode with a transcript", () => {

@@ -804,8 +804,10 @@
     white-space: nowrap;
     overflow-wrap: normal;
   }
+  /* The meta gives way before the title does, down to room for its state word. */
   .sl-project__header .sl-page-header__meta {
-    flex: 0 1 auto;
+    flex: 0 4 auto;
+    min-width: 8rem;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;

@@ -73,9 +73,9 @@ export function nextWords(state: OutputState, section: OutputSection): string {
     case "waiting":
       return `Made when the run reaches it; see ${name}`;
     case "missing":
-      return `Make it again from ${name}`;
+      return `Open ${name} to make it again`;
     case "older":
-      return `Update it from ${name}, or keep this version`;
+      return `Open ${name} to make it again, or keep this version`;
     case "current":
       // The download is the button beside it; the link goes to where the output is reviewed.
       return `Review it in ${name}`;
