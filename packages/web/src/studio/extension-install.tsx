@@ -21,9 +21,10 @@ function thisBrowser(): StudioExtensionBrowser {
     : "chrome";
 }
 
-// The extension's Download and its three install steps, for the browser picked (this one at
-// first). The zips ship inside Slopify, so nothing is fetched from anywhere else. The last step
-// is the pairing, done with the token in Settings → YouTube Studio.
+// The extension's install steps for the browser picked (this one at first). Chrome, Edge and
+// Brave load it from the folder Slopify keeps current, so there is nothing to download; Firefox
+// (or a Chrome without that folder) loads the zip that ships inside Slopify. The last step is
+// the pairing, done with the token on this page.
 export function ExtensionInstall(): ReactElement {
   const { api } = useApp();
   const notify = useToast();
@@ -34,60 +35,53 @@ export function ExtensionInstall(): ReactElement {
     queryKey: ["studio", "settings"],
     queryFn: () => readStudioSettings(api),
   }).data?.unpacked;
+  const folder = browser === "chrome" ? unpacked?.path : undefined;
+  const copy = (text: string, what: string): void => {
+    void navigator.clipboard
+      .writeText(text)
+      .then(() => notify(`${what} copied.`, "success"))
+      .catch(() =>
+        notify(`Couldn't copy the ${what.toLowerCase()}. Select it and copy it.`, "error"),
+      );
+  };
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <Segmented
-          label="Browser"
-          value={browser}
-          onChange={setBrowser}
-          tip="settings.studio.install"
-          options={(["chrome", "firefox"] as const).map((value) => ({
-            value,
-            label: browserLabels[value],
-          }))}
-        />
-        <FileLink href={studioExtensionUrl(api, browser)} download={filename}>
-          <DownloadIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.75} />
-          {`Download for ${browser === "chrome" ? "Chrome" : "Firefox"}`}
-        </FileLink>
-      </div>
-      <ol aria-label="Install steps" className="m-0 flex list-decimal flex-col gap-1 pl-5">
-        {browser === "chrome" && unpacked !== undefined && unpacked !== null ? (
+      <Segmented
+        label="Browser"
+        help="The browser you open YouTube Studio in."
+        value={browser}
+        onChange={setBrowser}
+        options={(["chrome", "firefox"] as const).map((value) => ({
+          value,
+          label: browserLabels[value],
+        }))}
+      />
+      <ol aria-label="Install steps" className="m-0 flex list-decimal flex-col gap-2 pl-5">
+        {folder !== undefined ? (
           <>
             <li>
-              Open <Code>chrome://extensions</Code> (Edge: <Code>edge://extensions</Code>), turn on
-              Developer mode, press Load unpacked and pick this folder:{" "}
-              <span className="inline-flex flex-wrap items-center gap-2">
-                <Code>{unpacked.path}</Code>
-                <Button
-                  variant="quiet"
-                  size="small"
-                  onClick={() => {
-                    void navigator.clipboard
-                      .writeText(unpacked.path)
-                      .then(() => notify("Folder path copied.", "success"))
-                      .catch(() =>
-                        notify("Couldn't copy the folder path. Select it and copy it.", "error"),
-                      );
-                  }}
-                >
-                  <CopyIcon aria-hidden="true" className="size-4" strokeWidth={1.75} />
-                  Copy
-                </Button>
-              </span>
+              Open <Code>chrome://extensions</Code> (Edge: <Code>edge://extensions</Code>) and turn
+              on Developer mode.
             </li>
             <li>
-              Nothing to download: Slopify puts each new version of the extension in that folder
-              when it updates, and the extension switches to it by itself once you haven't used it
-              for 45 minutes.
+              Press Load unpacked and pick this folder:
+              <span className="mt-1 flex flex-wrap items-center gap-2">
+                <Code className="min-w-0 break-all">{folder}</Code>
+                <Button variant="quiet" size="small" onClick={() => copy(folder, "Folder path")}>
+                  <CopyIcon aria-hidden="true" className="size-4" strokeWidth={1.75} />
+                  Copy folder path
+                </Button>
+              </span>
             </li>
           </>
         ) : browser === "chrome" ? (
           <>
-            <li>
-              Press Download for Chrome, then unzip <Code>{filename}</Code> into a folder you keep:
-              the browser loads the extension from there.
+            <li className="flex flex-wrap items-center gap-2">
+              <span>Download the extension and unzip it into a folder you keep.</span>
+              <FileLink href={studioExtensionUrl(api, browser)} download={filename} size="small">
+                <DownloadIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.75} />
+                Download the zip
+              </FileLink>
             </li>
             <li>
               Open <Code>chrome://extensions</Code> (Edge: <Code>edge://extensions</Code>), turn on
@@ -96,22 +90,31 @@ export function ExtensionInstall(): ReactElement {
           </>
         ) : (
           <>
-            <li>
-              Press Download for Firefox. It needs Firefox 128 or newer; keep the zip, you pick it
-              in the next step.
+            <li className="flex flex-wrap items-center gap-2">
+              <span>Download the extension (Firefox 128 or newer) and keep the zip.</span>
+              <FileLink href={studioExtensionUrl(api, browser)} download={filename} size="small">
+                <DownloadIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.75} />
+                Download the zip
+              </FileLink>
             </li>
             <li>
               Open <Code>about:debugging#/runtime/this-firefox</Code>, press Load Temporary Add-on
-              and pick <Code>{filename}</Code>. Firefox removes it when it restarts; load it again
+              and pick <Code>{filename}</Code>. Firefox forgets it when it restarts; load it again
               then.
             </li>
           </>
         )}
         <li>
-          Pair it: press Copy beside the pairing token in Settings → YouTube Studio and posting,
-          click the Slopify extension's toolbar button, paste the token and press Pair.
+          Pair it: press Copy beside the pairing token on this page, click the Slopify extension's
+          toolbar button, paste the token and press Pair.
         </li>
       </ol>
+      {folder !== undefined ? (
+        <p className="m-0 text-small text-ink-2">
+          Updates arrive in that folder by themselves; the extension switches to a new version once
+          you haven't used it for 45 minutes.
+        </p>
+      ) : null}
     </div>
   );
 }

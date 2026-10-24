@@ -8,14 +8,13 @@ import { type Api, speakAudition } from "@/api";
 import { useApp } from "@/app-context";
 import { Button, ButtonRow } from "@/components/kit/button";
 import { Input, Select } from "@/components/kit/field";
-import { InfoTip } from "@/components/kit/info-tip";
 import { ButtonLink } from "@/components/kit/link";
-import { Lamp } from "@/components/kit/status";
-import { providerTips } from "@/components/provider-cli";
+import { Status } from "@/components/kit/status";
+import { ServiceAbout } from "@/components/provider-cli";
 import { read } from "@/http";
 
 // The system voice's speech programs and their voices (`GET /api/providers/system-voice/voices`):
-// Settings → Providers shows what was found, Settings → Voices offers the voices to add.
+// Keys & services shows what was found, Voices offers the voices to add.
 
 export interface SystemVoices {
   readonly engines: readonly {
@@ -44,11 +43,13 @@ export function localState(readiness: LocalReadiness): {
   readonly tone: "done" | "off";
   readonly word: string;
 } {
-  return readiness.available ? { tone: "done", word: "Ready" } : { tone: "off", word: "Not found" };
+  return readiness.available
+    ? { tone: "done", word: "Ready" }
+    : { tone: "off", word: "Not installed" };
 }
 
-// Settings → Providers' detail column for the system voice: the program found and how many
-// voices it has, or why none can speak and the fix.
+// The system voice's setup on Keys & services: the program found and how many voices it has,
+// or why none can speak and the fix.
 export function SystemVoiceDetail({
   provider,
   readiness,
@@ -63,22 +64,20 @@ export function SystemVoiceDetail({
     <section
       aria-labelledby={headingId}
       data-ready={readiness.available}
-      className="flex min-w-0 flex-col gap-5"
+      className="flex min-w-0 flex-col gap-4"
     >
       <div>
-        <div className="flex items-center gap-2">
-          <h3 id={headingId} className="sl-section-head__title">
-            {provider.displayName}
-          </h3>
-          <InfoTip id={providerTips[provider.id]} label={provider.displayName} />
-        </div>
-        <p className="sl-section-head__meta">Speech · built into this computer, no key needed</p>
+        <h3 id={headingId} className="sl-section-head__title">
+          {provider.displayName}
+        </h3>
+        <p className="sl-section-head__meta">Voice service · built into this computer, no key</p>
       </div>
-      <p className="m-0 flex min-w-0 items-center gap-2" aria-live="polite">
-        <Lamp tone={localState(readiness).tone} />
-        <span className="min-w-0 break-words">
+      <ServiceAbout provider={provider} />
+      <p className="m-0 flex min-w-0 flex-wrap items-center gap-x-2" aria-live="polite">
+        <Status tone={localState(readiness).tone}>{localState(readiness).word}</Status>
+        <span className="min-w-0 break-words text-ink-2">
           {readiness.available
-            ? `Found ${readiness.engine ?? "a speech program"}. Narration with it is free; a keyed voice (ElevenLabs, OpenAI) sounds better.`
+            ? `Found ${readiness.engine ?? "a speech program"}. Narration with it is free; a voice service with a key sounds better.`
             : (readiness.issue ?? "No speech program was found on this computer.")}
         </span>
       </p>
@@ -212,4 +211,5 @@ export function SystemVoicePicker({
   );
 }
 
-const sampleLine = "This is how your narration will sound in this voice.";
+// The sentence Listen speaks, here and on Voices.
+export const sampleLine = "This is how your narration will sound in this voice.";

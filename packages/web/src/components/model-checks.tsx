@@ -6,10 +6,10 @@ import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
 import { StatusSlot } from "@/components/kit/action-bar";
 import { Button, ButtonRow } from "@/components/kit/button";
-import { Select } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { Field, Select } from "@/components/kit/field";
 import { TextLink } from "@/components/kit/link";
 import { SectionHead } from "@/components/kit/section-head";
+import { LinkedText } from "@/components/linked-text";
 import {
   dismissNotices,
   modelChecksKey,
@@ -125,51 +125,60 @@ export function ModelChecksSettings(): ReactElement {
   const problem = overview.error?.message ?? auto.error?.message ?? dismiss.error?.message ?? null;
   return (
     <>
-      <section aria-label="Models that work for you">
-        <SectionHead title="Models that work for you" info="settings.models.checks">
-          <span className="inline-flex items-center gap-1" {...helpScope}>
-            <Select
-              aria-label="Automatic checks"
-              value={overview.data?.auto ?? "free"}
-              disabled={overview.data === undefined || auto.isPending}
-              options={autoOptions}
-              onChange={(event) => auto.mutate(event.target.value === "off" ? "off" : "free")}
-            />
-            <InfoTip id="settings.models.auto-checks" />
-          </span>
-        </SectionHead>
-        {problem === null ? null : (
-          <p role="alert" className="m-0 mb-2 text-body text-danger">
-            {problem}
-          </p>
-        )}
-        {rows.length === 0 ? (
-          <p className="m-0 text-small text-ink-2">
-            {overview.isPending || providers.isPending
-              ? "Looking…"
-              : "No provider is set up yet. Add a key or a CLI in Settings → Providers."}
-          </p>
-        ) : (
-          <ul aria-label="Model checks by provider" className="sl-list m-0 list-none p-0">
-            {rows.map((state) => (
-              <ProviderChecks key={state.provider} state={state} name={nameOf(state.provider)} />
-            ))}
-          </ul>
-        )}
+      <section aria-label="Models that work for you" className="flex flex-col gap-4">
+        <div>
+          <SectionHead
+            title="Models that work for you"
+            meta="Checked with each saved key and sign-in. Pickers show working models first."
+          />
+          {problem === null ? null : (
+            <p role="alert" className="m-0 mb-2 text-body text-danger">
+              {problem}
+            </p>
+          )}
+          {rows.length === 0 ? (
+            <p className="m-0 text-small text-ink-2">
+              {overview.isPending || providers.isPending ? (
+                "Looking…"
+              ) : (
+                <LinkedText text="No service is set up yet. Add a key or sign in on Settings → Keys & services." />
+              )}
+            </p>
+          ) : (
+            <ul aria-label="Model checks by service" className="sl-list m-0 list-none p-0">
+              {rows.map((state) => (
+                <ProviderChecks key={state.provider} state={state} name={nameOf(state.provider)} />
+              ))}
+            </ul>
+          )}
+        </div>
+        <Field
+          label="Automatic checks"
+          help="Checks that cost nothing or well under a tenth of a cent run when a key is added and once a week. Images are never checked by themselves."
+        >
+          <Select
+            className="max-w-[420px] self-start"
+            value={overview.data?.auto ?? "free"}
+            disabled={overview.data === undefined || auto.isPending}
+            options={autoOptions}
+            onChange={(event) => auto.mutate(event.target.value === "off" ? "off" : "free")}
+          />
+        </Field>
       </section>
-      <section aria-label="New for you">
-        <SectionHead title="New for you" info="settings.models.new-for-you">
-          <Button
-            variant="quiet"
-            disabled={fresh.length === 0 || dismiss.isPending}
-            onClick={() => dismiss.mutate(fresh)}
+      {fresh.length === 0 ? null : (
+        <section aria-label="New for you">
+          <SectionHead
+            title="New for you"
+            meta="Models that started working for your keys since you last looked."
           >
-            Dismiss all
-          </Button>
-        </SectionHead>
-        {fresh.length === 0 ? (
-          <p className="m-0 text-small text-ink-2">No new models since you last looked.</p>
-        ) : (
+            <Button
+              variant="quiet"
+              disabled={dismiss.isPending}
+              onClick={() => dismiss.mutate(fresh)}
+            >
+              Dismiss all
+            </Button>
+          </SectionHead>
           <ul aria-label="New models that work for you" className="sl-list m-0 list-none p-0">
             {fresh.map((model) => (
               <li
@@ -197,8 +206,8 @@ export function ModelChecksSettings(): ReactElement {
               </li>
             ))}
           </ul>
-        )}
-      </section>
+        </section>
+      )}
     </>
   );
 }

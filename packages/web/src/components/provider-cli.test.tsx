@@ -17,8 +17,14 @@ function codex(configured: string | null, installed: boolean): ProviderStatus {
   };
 }
 
+// A tool's setup opens from its line in the list, as a person would open it.
+async function openRow(name: string): Promise<void> {
+  await userEvent.click(await screen.findByRole("button", { name }));
+}
+
 // The path form sits behind "Change path", so a row stays one line until it is asked for.
 async function openPath(name: string): Promise<HTMLElement> {
+  await openRow(name);
   await userEvent.click(await screen.findByRole("button", { name: "Change path" }));
   return screen.getByRole("textbox", { name: `${name} Executable path` });
 }
@@ -50,11 +56,14 @@ describe("CLI executable settings", () => {
           }),
         }),
       );
+      await openRow("Codex CLI");
       expect(await screen.findByText("/host/bin/codex")).not.toBeNull();
-      expect(screen.getByText("Managed on host")).not.toBeNull();
       expect(screen.queryByRole("button", { name: "Change path" })).toBeNull();
-      await userEvent.click(screen.getByRole("button", { name: "About Managed on host" }));
-      expect(await screen.findByText(/run the Docker launcher again/)).not.toBeNull();
+      // Why the path can't change here, said on the page rather than behind a button.
+      expect(
+        screen.getByText(/runs on your computer with the sign-in it has there/),
+      ).not.toBeNull();
+      expect(screen.getByText(/run the Docker launcher again/)).not.toBeNull();
       expect(screen.queryByRole("textbox")).toBeNull();
       expect(screen.queryByRole("button", { name: /Save.*path/ })).toBeNull();
       if (kind !== "ready") expect(screen.getByText(`Host ${kind} guidance`)).not.toBeNull();
@@ -92,8 +101,9 @@ describe("CLI executable settings", () => {
       expect(field.getAttribute("placeholder")).toBe(command);
       expect(screen.getByRole("button", { name: `Save ${name} path` })).not.toBeNull();
       expect(screen.getByText(/Leave blank to find/).textContent).toContain("PATH");
-      await userEvent.click(screen.getByRole("button", { name: `About ${name}` }));
-      expect(await screen.findByText(/sign-in/)).not.toBeNull();
+      // What the tool does is in words beside it, with no info button.
+      expect(screen.queryByRole("button", { name: `About ${name}` })).toBeNull();
+      expect(screen.getAllByText(/sign-in/).length).toBeGreaterThan(0);
       expect(screen.queryByLabelText(`${name} API key`)).toBeNull();
     },
   );
@@ -173,6 +183,7 @@ describe("CLI executable settings", () => {
         "GET /api/providers": jsonAnswer({ providers: [codex("/removed/codex", false)] }),
       }),
     );
+    await openRow("Codex CLI");
     expect(await screen.findByText("Not found at the saved path")).not.toBeNull();
     expect(screen.queryByText("Not found in the folders your terminal searches (PATH)")).toBeNull();
     expect(screen.getByText("/removed/codex")).not.toBeNull();

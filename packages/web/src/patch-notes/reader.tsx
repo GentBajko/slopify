@@ -11,9 +11,12 @@ import { patchNoteQuery } from "./api.js";
 // show it.
 export function PatchNoteReader({
   id,
+  untitled = false,
   className,
 }: {
   readonly id: string;
+  // Leaves out the notes' own "# Slopify 4.0.0" title where the page already names the version.
+  readonly untitled?: boolean;
   readonly className?: string;
 }): ReactElement {
   const { api } = useApp();
@@ -30,7 +33,7 @@ export function PatchNoteReader({
     );
   return (
     <ReadingView
-      markdown={note.data ?? ""}
+      markdown={untitled ? withoutTitle(note.data ?? "") : (note.data ?? "")}
       label="Patch notes"
       anchorPrefix={`patch-${id}-`}
       {...(className === undefined ? {} : { className })}
@@ -38,4 +41,9 @@ export function PatchNoteReader({
       <p className="m-0 text-ink-3">Loading the patch notes…</p>
     </ReadingView>
   );
+}
+
+// The text after a leading "# Title" line.
+export function withoutTitle(markdown: string): string {
+  return markdown.replace(/^\s*# [^\n]*\n+/, "");
 }

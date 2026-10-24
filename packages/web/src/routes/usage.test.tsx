@@ -58,7 +58,9 @@ describe("the usage screen", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Usage" })).not.toBeNull();
     // One short line, so it sits under the title rather than behind an info button.
     expect(
-      screen.getByText("This machine only. The same counters, anonymised, feed slopify.stream."),
+      screen.getByText(
+        "What this computer made. Slopify always adds these counts, anonymously, to slopify.stream's totals; there is no switch.",
+      ),
     ).not.toBeNull();
   });
 
@@ -84,8 +86,8 @@ describe("the usage screen", () => {
     const videos = await screen.findByText("Videos made");
     expect(videos.parentElement?.textContent).toBe("Videos made42");
     // The API answers in seconds; the hours are this screen's arithmetic.
-    expect(screen.getByText("Hours of audio").parentElement?.textContent).toBe(
-      "Hours of audio15.3",
+    expect(screen.getByText("Hours of narration").parentElement?.textContent).toBe(
+      "Hours of narration15.3",
     );
     expect(screen.getByText("Images made").parentElement?.textContent).toBe("Images made612");
     expect(screen.getByText("Tokens used").parentElement?.textContent).toBe("Tokens used8.4M");

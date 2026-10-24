@@ -12,6 +12,7 @@ import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
 import { UnsavedStatus } from "@/components/save-state";
 import { SecretText } from "@/components/secret-input";
+import { helpEntry } from "@/help/catalog";
 import { ExtensionInstall } from "./extension-install";
 import { PostingPlanSettings } from "./posting-plan";
 
@@ -27,7 +28,9 @@ export function StudioSettings() {
   });
   return (
     <div>
-      <SectionHead title="Upload pack and extension" info="settings.studio.extension" />
+      <p className="m-0 mb-4 max-w-[var(--measure)] text-small text-ink-2">
+        {helpEntry("settings.studio.extension").body}
+      </p>
       <div className="flex flex-col gap-8">
         <Playlists />
         <PostingPlanSettings autoComment={settings.data?.autoComment ?? false} />

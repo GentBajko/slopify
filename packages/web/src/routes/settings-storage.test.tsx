@@ -2,7 +2,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { StorageUsage } from "@/api";
-import { jsonAnswer, renderApp, testDeps } from "@/test-app";
+import { jsonAnswer, renderApp, renderRouted, testDeps } from "@/test-app";
 import { ProjectStorageList } from "./settings-storage.js";
 
 afterEach(cleanup);
@@ -52,7 +52,7 @@ it("spells out the trade-off before removing working files, then says what it fr
   expect(await screen.findByText(/Freed 2 MB from "Cleopatra"/)).not.toBeNull();
 });
 
-it("offers nothing on a project that has not finished or has nothing left to remove", () => {
+it("draws no clean-up that would free nothing, and says why a project has none", () => {
   renderApp(
     <ProjectStorageList
       projects={[
@@ -63,8 +63,27 @@ it("offers nothing on a project that has not finished or has nothing left to rem
     />,
     testDeps({}),
   );
-  for (const button of screen.getAllByRole("button", { name: "Keep outputs only" }))
-    expect(button.hasAttribute("disabled")).toBe(true);
+  // No greyed buttons: what cannot apply is left out, and the row says why.
+  expect(screen.queryByRole("button", { name: "Keep outputs only" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Delete all old versions/ })).toBeNull();
+  expect(screen.getByText(/not finished yet/)).not.toBeNull();
+});
+
+it("marks the bundled samples in the one list and leaves their files alone", async () => {
+  renderRouted(
+    <ProjectStorageList
+      projects={[project({ id: "sample-1", title: "The Library of Alexandria" })]}
+      samples={new Set(["sample-1"])}
+      queryKey={["storage-usage"]}
+    />,
+    testDeps({}),
+  );
+  const row = (await screen.findByText("The Library of Alexandria")).closest("li") as HTMLElement;
+  expect(within(row).getByText(/^Sample · /)).not.toBeNull();
+  expect(within(row).getByRole("link", { name: "Open" }).getAttribute("href")).toBe(
+    "/projects/sample-1",
+  );
+  expect(within(row).queryByRole("button", { name: "Keep outputs only" })).toBeNull();
 });
 
 it("deletes one project's old versions after asking, and offers both clean-ups for every project", async () => {

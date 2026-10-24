@@ -121,7 +121,11 @@ export function settingsRoutes(deps: AppDeps) {
         return c.json({
           nvidia: status.available
             ? { available: true as const }
-            : { available: false as const, reason: status.reason },
+            : {
+                available: false as const,
+                reason: status.reason,
+                ...(status.detail === undefined ? {} : { detail: status.detail }),
+              },
         });
       })
       // The named links `{{Name}}` placeholders in YouTube descriptions fill from

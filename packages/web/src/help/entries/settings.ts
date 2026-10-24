@@ -5,7 +5,7 @@ export const settingsHelp = {
   // Settings page
   "settings.diagnostics": {
     title: "Download diagnostics",
-    body: "Saves slopify-diagnostics.json: the Slopify version, your system and Node version, which providers are set up or found, the project count and the model catalogue's state. It never holds your keys, prompts or project content. Attach it to a bug report so the problem can be found faster.",
+    body: "Saves slopify-diagnostics.json: the Slopify version, your system and Node version, which services are set up or found, the project count and the state of the model list. It never holds your keys, prompts or project content. Attach it to a bug report so the problem can be found faster.",
     tutorial: { page: "Troubleshooting", anchor: "download-diagnostics" },
   },
 
@@ -17,19 +17,9 @@ export const settingsHelp = {
   },
 
   // Providers
-  "settings.providers.api-key": {
-    title: "API key",
-    body: "The key that lets Slopify call this provider on your account; the provider bills you for what it makes. It is stored on this computer only, sent only to that provider, and never put in a backup or export. Paste a new key and Save to replace the old one.",
-    tutorial: { page: "Providers-and-Keys", anchor: "add-a-key" },
-  },
-  "settings.providers.test-key": {
-    title: "Test",
-    body: "Asks the provider whether the key works, with the cheapest harmless call it allows. A key pasted in the field is tested before you save it; with the field empty, the saved key is. Nothing is generated, billed or stored. When it fails, the answer says why: a rejected key, missing permission, no credit, or the provider being down.",
-    tutorial: { page: "Providers-and-Keys", anchor: "test-a-key" },
-  },
   "settings.provider.openrouter": {
     title: "OpenRouter",
-    body: "Writes the text (research, script, article, titles, descriptions) with hundreds of models from many companies through one key. Each call is charged per token from the credit you buy on OpenRouter; prices follow the model catalogue. Choose it when you want a model the command-line tools do not offer.",
+    body: "Writes the text (research, script, article, titles, descriptions) with hundreds of models from many companies through one key. Each call is charged per token from the credit you buy on OpenRouter; prices follow the model list. Choose it when you want a model the command-line tools do not offer.",
     tutorial: { page: "Providers-and-Keys", anchor: "openrouter" },
   },
   "settings.provider.claude-code": {
@@ -79,7 +69,7 @@ export const settingsHelp = {
   },
   "settings.provider.google-tts": {
     title: "Google Gemini voices",
-    body: "Narrates with Gemini's 30 prebuilt voices, billed to your Gemini API key per text and audio token. It uses the key saved for Google images unless you save one here. Two speakers' consecutive turns can go in one request (see Speakers on Play).",
+    body: "Narrates with Gemini's 30 prebuilt voices, billed to your Gemini API key per text and audio token. It uses the key saved for Google images unless you save one here. Two speakers' consecutive turns can go in one request (see Speakers on Create).",
     tutorial: { page: "Providers-and-Keys", anchor: "google-gemini-speech" },
   },
   "settings.provider.fal": {
@@ -102,58 +92,11 @@ export const settingsHelp = {
     body: "Draws the images and thumbnails with Google's Gemini image models, charged per image. Use a key made in Google AI Studio on a project with billing set up; Gemini image models are not on the free tier.",
     tutorial: { page: "Providers-and-Keys", anchor: "google" },
   },
-  "settings.cli.path": {
-    title: "Executable path",
-    body: "Where the command-line tool is on this computer. Leave it blank and Slopify finds it on PATH, the list of folders your terminal searches. Set an absolute path, without quotes or arguments, when the tool is installed somewhere else or you have more than one copy. Save checks the tool answers.",
-    tutorial: { page: "AI-CLIs", anchor: "set-the-executable-path" },
-  },
-  "settings.cli.managed-on-host": {
-    title: "Managed on host",
-    body: "Slopify runs in Docker, so this tool runs on your computer outside the container, with the sign-in it already has there. Its path cannot be changed here. After you install, update or remove a command-line tool, run the Docker launcher again so Slopify sees the change.",
-    tutorial: { page: "AI-CLIs", anchor: "in-docker-the-host-helper" },
-  },
-  "settings.health": {
-    title: "Health check",
-    body: "Asks each command-line tool whether it is signed in, makes the cheapest harmless call each saved key allows (nothing is generated or billed), and checks that the models your templates, schedules, drafts and projects use are still offered and answer for your key. Run it after changing a key or when a run stops at a provider; Check again on a provider's row checks that one alone.",
-    tutorial: { page: "Providers-and-Keys", anchor: "check-all-providers" },
-  },
-
-  // Models
-  "settings.models.catalogue": {
-    title: "Model catalogue",
-    body: "The list of models, prices and retirements the pickers and cost estimates use. Slopify checks the published catalogue and OpenRouter's live list when it starts and once a day; Check now does it at once. New models appear and prices update; nothing you made changes. Your own edits to the local file are kept.",
-    tutorial: { page: "Models", anchor: "what-the-catalogue-covers" },
-  },
-  "settings.models.replace": {
-    title: "Replace with published file",
-    body: "Overwrites the local catalogue file with the published one, dropping any edits you made to it. The previous file is saved beside it first, so you can copy your edits back. Use it when the local file is broken or you want the published list exactly.",
-    tutorial: { page: "Models", anchor: "replace-the-local-file-with-the-published-one" },
-  },
-  "settings.models.retired": {
-    title: "Retired models in use",
-    body: "Templates, schedules, drafts and projects with steps still to run that pick a model the provider no longer offers. A run that reaches one stops and says so. Switch replaces only that one model choice with the suggestion shown; Switch all does every one that has a suggestion.",
-    tutorial: { page: "Models", anchor: "switch-away-from-a-retired-model" },
-  },
-  "settings.models.checks": {
-    title: "Models that work for you",
-    body: "What each saved key or CLI can really use. Listed: the key's own model list names it. Works: a check or a real run succeeded. Not on your plan: the provider said so. Check models sends each model one tiny request and shows the price first when it costs anything, and counts a check that failed mid-request at that price. Pickers show working models first; nothing here stops a run.",
-    tutorial: { page: "Models", anchor: "models-that-work-for-you" },
-  },
-  "settings.models.auto-checks": {
-    title: "Automatic checks",
-    body: "When a key or CLI is added, and once a week, Slopify reads each key's model list and checks the models you use, ones that already worked and newly listed ones, if a check is free or costs well under a tenth of a cent. Images are never checked by themselves. Off leaves checks to Check models.",
-    tutorial: { page: "Models", anchor: "automatic-checks" },
-  },
-  "settings.models.new-for-you": {
-    title: "New for you",
-    body: "Models that started working for your key or CLI since the first check, newest first. Choose one in a picker to try it, or Dismiss it. Home shows a line while any are waiting here.",
-    tutorial: { page: "Models", anchor: "new-for-you" },
-  },
 
   // Playback & appearance
   "settings.playback.silence-gap": {
     title: "Silence between segments",
-    body: "Seconds of quiet between the intro and the narration, and between the narration and the outro, in every new video, unless Play sets a different gap for one video. It only matters when an intro or outro is set; 0 runs them together. Default: 3 seconds, from 0 to 30. Videos already started keep their own gap.",
+    body: "Seconds of quiet between the intro and the narration, and between the narration and the outro, in every new video, unless Create sets a different gap for one video. It only matters when an intro or outro is set; 0 runs them together. Default: 3 seconds, from 0 to 30. Videos already started keep their own gap.",
     tutorial: { page: "Settings-Reference", anchor: "silence-between-segments" },
   },
   "settings.template-studio.budget": {
@@ -173,12 +116,12 @@ export const settingsHelp = {
   },
   "settings.loudness": {
     title: "Level the volume for new runs",
-    body: "Whether a new run on Play (and a template or quick short) starts with Level the volume on, and at which volumes. On evens out every narration piece and sets the video to about -14 LUFS, the loudness YouTube plays at, and the audio files to -18 LUFS. A project keeps what it started with; change it there in Edit project. Default: on.",
+    body: "Whether a new video on Create (and a template or quick short) starts with Level the volume on, and at which volumes. On evens out every narration piece and sets the video to about -14 LUFS, the loudness YouTube plays at, and the audio files to -18 LUFS. A project keeps what it started with; change it there in Edit project. Default: on.",
     tutorial: { page: "Settings-Reference", anchor: "level-the-volume-for-new-runs" },
   },
   "settings.subtitle-model": {
-    title: "Subtitle timing model",
-    body: "The speech model that times English captions on this computer. Most accurate (378 MB) hears the narration best and on most computers runs faster too; Smallest (95 MB) can mishear a line and stop the run. The chosen model downloads once, on first use; switching back reuses one already downloaded. Changing it never marks subtitles outdated. Default: Most accurate.",
+    title: "Caption timing model",
+    body: "The speech model that times English captions on this computer. Most accurate (378 MB) hears the narration best and on most computers runs faster too; Smallest (95 MB) can mishear a line and stop the run. The chosen model downloads once, on first use; switching back reuses one already downloaded. Changing it never marks captions outdated. Default: Most accurate.",
     tutorial: { page: "Settings-Reference", anchor: "subtitle-timing-model" },
   },
   "settings.video-encoder": {
@@ -195,11 +138,6 @@ export const settingsHelp = {
     title: "Render priority",
     body: "Background runs every ffmpeg of a video, short or audio export below normal priority, and that of Template Studio's free samples, the style preview, designs and posts' pictures too, so your other programs come first and the render takes the processor time they leave; on an idle computer it is as fast. Normal competes with them as an equal. The finished video is the same either way. Default: Background.",
     tutorial: { page: "Settings-Reference", anchor: "rendering" },
-  },
-  "settings.appearance": {
-    title: "Appearance",
-    body: "Light or dark colours for Slopify on this computer. System follows your operating system's setting and changes with it. Default: System. It changes at once and does not affect your videos.",
-    tutorial: { page: "Settings-Reference", anchor: "appearance" },
   },
 
   // Notifications
@@ -236,117 +174,25 @@ export const settingsHelp = {
 
   // YouTube Studio
   "settings.studio.extension": {
-    title: "Upload pack and extension",
-    body: "Slopify never uploads or publishes. A finished project's Prepare upload lists everything Studio asks for, with Copy buttons. The optional Slopify Studio browser extension fills Studio's upload dialog from that pack; you still press Publish. Install it from Install the Studio extension below: Download, three steps, then pair it with the token.",
+    title: "YouTube Studio extension",
+    body: "Slopify never uploads or publishes. A finished project's Copy for YouTube Studio lists everything Studio asks for, with Copy buttons. The optional Slopify Studio browser extension fills Studio's upload dialog for you; you still press Publish. Install it below, then pair it with the token.",
     tutorial: { page: "Studio-Extension", anchor: "get-the-extension" },
   },
   "settings.studio.playlist": {
     title: "Playlists",
-    body: "The YouTube playlists upload packs offer, typed exactly as Studio names them. Pick Every channel for the default list, or a channel to give it its own. Ticked On by default means every project goes into it; Prepare upload changes the ticks for one project. The extension ticks each one in Studio. Default: none.",
+    body: "The YouTube playlists Copy for YouTube Studio offers, typed exactly as Studio names them. Pick Every channel for the default list, or a channel to give it its own. Ticked On by default means every project goes into it; Copy for YouTube Studio changes the ticks for one project. The extension ticks each one in Studio. Default: none.",
     tutorial: { page: "Studio-Extension", anchor: "settings--youtube-studio" },
-  },
-  "settings.studio.install": {
-    title: "Install the Studio extension",
-    body: "The extension comes with Slopify, nothing is fetched from a store. Chrome, Edge and Brave load it once with Load unpacked (Developer mode) from the folder shown here: Slopify puts each new version there when it updates, and the extension switches to it by itself after 45 minutes without use. Firefox 128 or newer loads the downloaded zip as a temporary add-on, which it forgets on restart. Then pair it with the token above.",
-    tutorial: { page: "Studio-Extension", anchor: "get-the-extension" },
   },
   "settings.studio.pairing": {
     title: "Extension pairing token",
-    body: "A secret the Slopify Studio extension needs before it may read your upload packs, so no other page can. Copy it into the extension's options and press Pair. New pairing token makes a fresh one and unpairs the extension until you paste the new token.",
+    body: "A secret the Slopify Studio extension needs before it may read what your projects are ready to upload, so no other page can. Copy it into the extension's options and press Pair. New pairing token makes a fresh one and unpairs the extension until you paste the new token.",
     tutorial: { page: "Studio-Extension", anchor: "pair-it-with-slopify" },
   },
 
-  // Backup & storage
-  "settings.storage.export": {
-    title: "Export and import",
-    body: "Export everything saves every project with its files and history, your library, templates, schedules, Play drafts, fonts, settings and usage in one .tar file; never provider keys. Import adds to this install and replaces nothing: projects already here are skipped, taken names arrive as “(imported)” and schedules arrive paused. Running projects must finish or pause first.",
-    tutorial: { page: "Where-Your-Files-Live", anchor: "export-and-import" },
-  },
-  "settings.storage.clean": {
-    title: "Clear leftover files",
-    body: "Deletes files in the projects folder that no project records any more, and uploaded files that no draft, template or project uses. Your projects, outputs and library are never touched. Slopify also does this each time it starts; use it after a crash or to free space now.",
-    tutorial: { page: "Where-Your-Files-Live", anchor: "clear-leftover-files" },
-  },
-  "settings.storage.disk": {
-    title: "Disk space",
-    body: "What Slopify stores on this computer: project files (outputs plus the working files they were made from), staged uploads, and deleted projects still in the trash. Deleted projects free their space when the trash removes them after 30 days, or when you choose Delete now.",
-    tutorial: { page: "Where-Your-Files-Live", anchor: "disk-space" },
-  },
-  "settings.storage.keep-outputs": {
-    title: "Free disk space",
-    body: "Delete old versions removes a project's History folder (earlier renders and narration). Keep outputs only removes a finished project's working files (narration parts, timing, render settings). Clean up everything does both for every project; running or unfinished ones keep everything. The current video, shorts, their images, thumbnail, documents and your uploads always stay. Remaking a project or going back to an old version makes the files again.",
-    tutorial: { page: "Where-Your-Files-Live", anchor: "keep-outputs-only" },
-  },
-  "settings.sample.restore": {
-    title: "Sample projects",
-    body: "The finished examples that come with Slopify: a narrated video, an audiobook and a podcast, which you can look through without spending anything. Restore samples adds back any that were deleted and replaces the others with the originals. Your own copies of them are not touched.",
-    tutorial: { page: "Where-Your-Files-Live", anchor: "sample-projects" },
-  },
-
-  "settings.files": {
-    title: "Your files",
-    body: "Your projects, automatic backups and exports live here; new installs use Documents/Slopify. The database, settings, keys and logs stay in Slopify's hidden data folder. Moving copies every file, checks each copy by size and checksum, then switches, and keeps the old folder until you delete it. It takes as long as copying your projects and cannot start while a project is being made.",
-    tutorial: { page: "Where-Your-Files-Live", anchor: "see-your-files" },
-  },
-  "settings.files.docker": {
-    title: "Your files",
-    body: "Your projects and backups are in the folders Docker shares with this computer. The container cannot move its own folders, so run the command shown on the computer running Docker: the installer waits for running work, copies your projects, checks the copy and remounts the new folder.",
-    tutorial: { page: "Where-Your-Files-Live", anchor: "see-your-files" },
-  },
   "settings.files.new-folder": {
     title: "New folder",
     body: "The full path of the folder your files move to, on another disk or a synced folder for example. Slopify makes Projects and Backups inside it. It must be empty or not exist yet. The move needs as much free space there as your projects take now.",
     tutorial: { page: "Where-Your-Files-Live", anchor: "move-your-files-to-another-folder" },
-  },
-  // Backups
-  "settings.backups": {
-    title: "Daily backup",
-    body: "Once a day Slopify writes the file Export everything makes into the backup folder and deletes its own oldest backups beyond the number you keep. Nothing else there is touched. A backup waits while projects are being made; if Slopify was off at the time, it backs up a couple of minutes after it starts. Each backup can be many gigabytes.",
-    tutorial: { page: "Backups", anchor: "turn-on-daily-backups" },
-  },
-  "settings.backups.auto": {
-    title: "Back up automatically",
-    body: "Turns the daily backup on or off. Default: off, because each backup holds every project's video and can fill a disk. Back up now works either way. Press Save after changing it.",
-    tutorial: { page: "Backups", anchor: "turn-on-daily-backups" },
-  },
-  "settings.backups.time": {
-    title: "Time of day",
-    body: "When the daily backup runs, in this browser's time zone. Pick a time the computer is usually on and idle; a backup waits for running projects. Default: 03:00.",
-    tutorial: { page: "Backups", anchor: "when-the-daily-backup-runs" },
-  },
-  "settings.backups.keep": {
-    title: "Keep last",
-    body: "How many of Slopify's own backups stay in the folder; after a new one is written, the oldest beyond this number are deleted. Each holds everything, so disk use grows with this number. Default: 5, from 1 to 30.",
-    tutorial: { page: "Backups", anchor: "turn-on-daily-backups" },
-  },
-  "settings.backups.folder": {
-    title: "Backup folder",
-    body: "Where backups are written. Leave it empty to use the Backups folder beside your projects (Documents/Slopify/Backups on a new install), which moves with them. Point it at another disk or a synced folder to keep copies away from this disk. Slopify only ever deletes its own backup files there.",
-    tutorial: { page: "Backups", anchor: "where-the-files-go-and-what-they-are-called" },
-  },
-
-  // Trash
-  "settings.trash": {
-    title: "Trash",
-    body: "Deleted projects, prompts, intros and outros, templates and schedules stay here for 30 days, then are removed for good along with a project's files. Restore puts one back; if its name was taken meanwhile it comes back renamed, and a schedule comes back paused. Delete now frees the space at once. Channels, cast members, PDF themes and episode summaries never come here: deleting one removes it permanently.",
-    tutorial: { page: "Trash" },
-  },
-
-  // About
-  "settings.patch-notes": {
-    title: "Patch notes",
-    body: "What changed in each version of Slopify. The newest notes are open here; older versions are folded under Earlier versions, and each opens when you pick it. They ship with the app, so they work offline. After an update, the new version's notes open by themselves once; a fresh install skips that. On a major update the What's new tour shows instead and links here.",
-    tutorial: { page: "Updating-and-Patch-Notes", anchor: "read-the-patch-notes" },
-  },
-  "settings.whats-new": {
-    title: "What's new in this version",
-    body: "Opens the patch notes for the version you are running, in Settings, Patch notes. When this version has no notes of its own, it opens the newest ones instead.",
-    tutorial: { page: "Updating-and-Patch-Notes", anchor: "whats-new-tour-on-a-major-update" },
-  },
-  "settings.updates": {
-    title: "Updates",
-    body: "The circular-arrows button at the foot of the sidebar (at the top on a phone) checks for a newer Slopify and installs it. A dot on it means an update is ready. If a video is being made, the update waits until it finishes, and you can cancel it meanwhile. Slopify restarts itself and this page reconnects.",
-    tutorial: { page: "Updating-and-Patch-Notes", anchor: "update-from-the-app" },
   },
 
   // First run

@@ -2,12 +2,11 @@ import type { TrashItem, TrashKind } from "@app/slices/trash/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { type ReactElement, useMemo, useState } from "react";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/kit/button";
+import { Button, ButtonRow } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
 import { List, ListRow } from "@/components/kit/list-row";
 import { LoadFailed } from "@/components/kit/query-state";
-import { SectionHead } from "@/components/kit/section-head";
 import { Segmented } from "@/components/kit/switch";
 import { counted, RowCheck, SelectionBar, useSelection } from "@/components/selection";
 import { readTrash, trashKey } from "./api";
@@ -25,7 +24,7 @@ import { useTrashActions } from "./use-trash-actions";
 
 export { daysLeftText, kindOf } from "./kinds";
 
-// Settings → Trash: what was deleted in the last 30 days (projects, Library prompts and
+// Settings → Trash, its own page: what was deleted in the last 30 days (projects, Library prompts and
 // intros/outros, templates, schedules), each with Restore and Delete now; a filter by kind,
 // selection for Restore selected / Delete selected, and Restore all / Empty trash for the lot.
 
@@ -70,35 +69,40 @@ export function TrashSettings(): ReactElement {
 
   return (
     <div>
-      <SectionHead
-        title="Trash"
-        info="settings.trash"
-        meta={items.length === 0 ? undefined : `${whatComesHere} ${whatDoesNot}`}
-      >
-        <Button
-          size="small"
-          disabled={busy || items.length === 0}
-          disabledReason={items.length === 0 ? "The trash is empty" : "Working on it"}
-          onClick={() => restore.mutate(items, { onSuccess: selection.clear })}
-        >
-          Restore all
-        </Button>
-        <Button
-          size="small"
-          variant="destructive"
-          disabled={busy || items.length === 0}
-          disabledReason={items.length === 0 ? "The trash is empty" : "Working on it"}
-          onClick={() =>
-            askDelete(
-              `Empty the trash: delete all ${counted(items.length, "item", "items")} for good?`,
-              "Empty trash",
-              items,
-            )
-          }
-        >
-          Empty trash
-        </Button>
-      </SectionHead>
+      {/* The page's title says Trash; this line says what comes here, and the two actions on
+          the lot show only while there is something to act on. */}
+      {items.length === 0 ? null : (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <p className="m-0 min-w-0 flex-1 text-small text-ink-2">
+            {`${whatComesHere} ${whatDoesNot}`}
+          </p>
+          <ButtonRow>
+            <Button
+              size="small"
+              disabled={busy}
+              disabledReason="Working on it"
+              onClick={() => restore.mutate(items, { onSuccess: selection.clear })}
+            >
+              Restore all
+            </Button>
+            <Button
+              size="small"
+              variant="destructive"
+              disabled={busy}
+              disabledReason="Working on it"
+              onClick={() =>
+                askDelete(
+                  `Empty the trash: delete all ${counted(items.length, "item", "items")} for good?`,
+                  "Empty trash",
+                  items,
+                )
+              }
+            >
+              Empty trash
+            </Button>
+          </ButtonRow>
+        </div>
+      )}
       {trash.isPending ? (
         <p className="text-small text-ink-3">Loading the trash…</p>
       ) : trash.error ? (

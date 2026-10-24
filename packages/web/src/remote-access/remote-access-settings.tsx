@@ -5,9 +5,7 @@ import { useApp } from "@/app-context";
 import { CommandText } from "@/components/command-text";
 import { Button } from "@/components/kit/button";
 import { Callout, type CalloutTone } from "@/components/kit/callout";
-import { helpScope } from "@/components/kit/info-tip";
 import { FileLink } from "@/components/kit/link";
-import { SectionHead } from "@/components/kit/section-head";
 import { Switch } from "@/components/kit/switch";
 import { useToast } from "@/components/kit/toast";
 import { copyText } from "@/fixes/fix-actions";
@@ -25,7 +23,7 @@ const tones: Partial<Record<RemoteAccessView["state"], CalloutTone>> = {
 const linkLabel = (link: string): string =>
   link.includes("admin") ? "Open the Tailscale admin console" : "Download Tailscale";
 
-// Settings → General → Remote access: one switch that has Tailscale serve Slopify's page on the
+// Settings → Remote access: one switch that has Tailscale serve Slopify's page on the
 // person's tailnet, the address with a copy button and a QR code, and each problem with its fix.
 export function RemoteAccessSettings(): ReactElement {
   const { api } = useApp();
@@ -49,8 +47,7 @@ export function RemoteAccessSettings(): ReactElement {
   const busy = change.isPending;
   const problem = data !== undefined && data.fix !== null && data.state !== "docker";
   return (
-    <section className="flex max-w-prose flex-col gap-3" {...helpScope}>
-      <SectionHead title="Remote access" info="settings.remote-access" />
+    <section className="flex max-w-prose flex-col gap-3">
       {view.error === null ? null : (
         <p role="alert" className="m-0 text-body text-danger">
           Remote access couldn't be checked: {view.error.message}
@@ -66,6 +63,7 @@ export function RemoteAccessSettings(): ReactElement {
         <>
           <Switch
             label={title}
+            tip="settings.remote-access"
             checked={data.enabled}
             disabled={!data.available || !data.changeable || busy}
             describedBy="remote-access-summary"

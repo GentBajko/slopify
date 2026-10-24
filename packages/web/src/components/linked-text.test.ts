@@ -16,6 +16,18 @@ describe("settingsLinkParts", () => {
     ]);
   });
 
+  it("links a page by the name older messages use, and by its own", () => {
+    expect(
+      settingsLinkParts("Add one in Settings → Providers or Settings → Keys & services."),
+    ).toEqual([
+      "Add one in ",
+      { label: "Settings → Providers", section: "providers" },
+      " or ",
+      { label: "Settings → Keys & services", section: "providers" },
+      ".",
+    ]);
+  });
+
   it("leaves a sentence without a Settings page as it is", () => {
     expect(settingsLinkParts("Try again.")).toEqual(["Try again."]);
   });

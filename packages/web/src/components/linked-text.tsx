@@ -9,11 +9,19 @@ interface SettingsPart {
   readonly section: SectionId;
 }
 
+// Every name a Settings page goes by: its own, and the ones older messages still use
+// ("Settings → Providers" for Keys & services).
+const names = settingsSections.flatMap((section) =>
+  ["formerly" in section ? section.formerly : [], [section.label]]
+    .flat()
+    .map((label) => ({ label, section })),
+);
+
 // A message that names a Settings page ("Settings → Providers") with that name as a link to it,
 // so an error that says where the fix is also takes you there.
 const pattern = new RegExp(
-  `Settings → (${settingsSections
-    .map((section) => section.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+  `Settings → (${names
+    .map((name) => name.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
     .toSorted((a, b) => b.length - a.length)
     .join("|")})`,
   "g",
@@ -24,7 +32,7 @@ export function settingsLinkParts(text: string): readonly (string | SettingsPart
   let last = 0;
   for (const match of text.matchAll(pattern)) {
     const label = match[1];
-    const section = settingsSections.find((one) => one.label === label);
+    const section = names.find((one) => one.label === label)?.section;
     if (section === undefined || match.index === undefined) continue;
     if (match.index > last) parts.push(text.slice(last, match.index));
     parts.push({ label: match[0], section: section.id });

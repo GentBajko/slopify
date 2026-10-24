@@ -7,7 +7,6 @@ import { SettingsRoute } from "@/routes/settings";
 import { type Answer, jsonAnswer, problemAnswer, renderRouted, testDeps } from "@/test-app";
 import type { PatchNotesView } from "./api.js";
 import { PatchNotesCommand } from "./popup.js";
-import { noteDate } from "./settings-panel.js";
 
 afterEach(cleanup);
 
@@ -30,47 +29,42 @@ function routes(extra: Readonly<Record<string, Answer>> = {}) {
         headers: { "content-type": "text/markdown" },
       }),
     "GET /api/patch-notes/2.0-to-3.0": () =>
-      new Response("# Slopify 2.0 to 3.0\n\n## Highlights\n\n- Shorts.\n\n## Fixes\n\n- Fewer.\n", {
-        headers: { "content-type": "text/markdown" },
-      }),
+      new Response(
+        "# Slopify 2.0 to 3.0\n\nVersions 2.0.1 to 3.0.0, released 27 September 2026.\n\n## Highlights\n\n- Shorts.\n\n## Fixes\n\n- Fewer.\n",
+        { headers: { "content-type": "text/markdown" } },
+      ),
     ...extra,
   });
 }
 
-describe("Settings → Patch notes", () => {
-  it("opens the newest notes at the top and folds every older version", async () => {
+describe("Settings → What's new", () => {
+  it("opens the newest notes, with every version in one select", async () => {
     const onNote = vi.fn();
     renderRouted(<SettingsRoute section="patch-notes" onNote={onNote} />, routes());
-    const rail = await screen.findByRole("navigation", { name: "Settings sections" });
-    expect(within(rail).getByRole("button", { name: "About" }).getAttribute("aria-current")).toBe(
-      "true",
-    );
-    expect(screen.getByRole("tab", { name: "Patch notes" }).getAttribute("aria-selected")).toBe(
-      "true",
-    );
+    const rail = await screen.findByRole("navigation", { name: "Settings pages" });
+    expect(
+      within(rail).getByRole("button", { name: "What's new" }).getAttribute("aria-current"),
+    ).toBe("true");
+    expect(screen.getByRole("heading", { level: 1, name: "What's new" })).not.toBeNull();
     expect(await screen.findByRole("heading", { name: "Everything that changed" })).not.toBeNull();
-    expect(screen.getByRole("heading", { name: "Latest version" })).not.toBeNull();
+    // One h1 on the page: the notes' own title is the select's choice, not a second heading.
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getByText(/The version you are running\./)).not.toBeNull();
     expect(screen.getByRole("searchbox", { name: "Search the patch notes" })).not.toBeNull();
 
-    const earlier = screen.getByText("Earlier versions (2)").closest("details");
-    expect(earlier?.open).toBe(false);
-    await userEvent.click(screen.getByText("Earlier versions (2)"));
-    expect(earlier?.open).toBe(true);
-    const rows = within(screen.getByRole("list", { name: "Earlier versions" })).getAllByRole(
-      "listitem",
-    );
-    expect(rows.map((row) => row.querySelector(".sl-row__title")?.textContent)).toEqual([
+    const version = screen.getByLabelText("Version") as HTMLSelectElement;
+    expect([...version.options].map((option) => option.text)).toEqual([
+      "Slopify 3.0.0 (yours)",
       "Slopify 2.0 to 3.0",
       "Slopify 1.0 to 2.0",
     ]);
-    expect(rows[0]?.textContent).toContain("Versions 2.0.1 to 3.0.0, released 27 September 2026.");
-
-    await userEvent.click(screen.getByRole("button", { name: "Read Slopify 2.0 to 3.0" }));
+    // No list of every release's buttons.
+    expect(screen.queryByRole("list", { name: "Earlier versions" })).toBeNull();
+    await userEvent.selectOptions(version, "2.0-to-3.0");
     expect(onNote).toHaveBeenCalledWith("2.0-to-3.0");
   });
 
-  it("opens an earlier version on its own in the reading view, with contents and search", async () => {
+  it("opens an earlier version in the reading view, with contents and search", async () => {
     const onNote = vi.fn();
     renderRouted(
       <SettingsRoute section="patch-notes" note="2.0-to-3.0" onNote={onNote} />,
@@ -78,6 +72,9 @@ describe("Settings → Patch notes", () => {
     );
     expect(await screen.findByRole("heading", { name: "Highlights" })).not.toBeNull();
     expect(screen.queryByRole("heading", { name: "Everything that changed" })).toBeNull();
+    // The notes say their versions and date once; the select adds nothing for an older note.
+    expect(screen.getAllByText(/released 27 September 2026/)).toHaveLength(1);
+    expect(screen.queryByText("The version you are running.")).toBeNull();
     const contents = screen.getByRole("navigation", { name: "Patch notes contents" });
     expect(
       within(contents)
@@ -90,7 +87,7 @@ describe("Settings → Patch notes", () => {
     );
     expect(await screen.findByText("1 match")).not.toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: "Back to the latest patch notes" }));
+    await userEvent.selectOptions(screen.getByLabelText("Version"), "3.0.0");
     expect(onNote).toHaveBeenCalledWith(undefined);
   });
 
@@ -115,17 +112,10 @@ describe("Settings → Patch notes", () => {
   it("opens this version's notes from About", async () => {
     const onNote = vi.fn();
     renderRouted(<SettingsRoute section="about" onNote={onNote} />, routes());
-    await userEvent.click(
-      await screen.findByRole("button", { name: "What's new in this version" }),
-    );
+    await userEvent.click(await screen.findByRole("button", { name: "Read what's new" }));
     await waitFor(() => {
       expect(onNote).toHaveBeenCalledWith("3.0.0");
     });
-  });
-
-  it("writes dates the way the notes do", () => {
-    expect(noteDate("2026-09-27")).toBe("27 September 2026");
-    expect(noteDate("not a date")).toBe("not a date");
   });
 });
 
@@ -134,8 +124,8 @@ function Location() {
   return <output aria-label="Location">{href}</output>;
 }
 
-describe("Ctrl+K → Show patch notes", () => {
-  it("opens Settings → Patch notes", async () => {
+describe("Ctrl+K → What's new", () => {
+  it("opens Settings → What's new, found by its old name too", async () => {
     const user = userEvent.setup();
     renderRouted(
       <CommandPaletteProvider>

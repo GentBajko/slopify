@@ -45,9 +45,9 @@ it("says so when the trash is empty, and what never comes here", async () => {
   expect(
     screen.getByText(/Channels, cast members, PDF themes and episode summaries/),
   ).not.toBeNull();
-  expect((screen.getByRole("button", { name: "Empty trash" }) as HTMLButtonElement).disabled).toBe(
-    true,
-  );
+  // Nothing to restore or empty, so neither button is drawn.
+  expect(screen.queryByRole("button", { name: "Empty trash" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Restore all" })).toBeNull();
 });
 
 it("shows the exact deletion time and filters by kind", async () => {

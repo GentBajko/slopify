@@ -2,10 +2,11 @@ import type { CatalogueChanges } from "@app/catalog/merge.js";
 import type { RetiredUsage } from "@app/slices/model-upkeep/model.js";
 import { slotLabels } from "@app/slices/model-upkeep/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
 import { Button, ButtonRow } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
-import { InfoTip } from "@/components/kit/info-tip";
+import { Fold } from "@/components/kit/fold";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
 import {
@@ -38,7 +39,110 @@ function changeSummary(changes: CatalogueChanges): string {
   return parts.length === 0 ? "No changes" : parts.join(", ");
 }
 
-export function CatalogueSettings() {
+// Models: what a model choice still needs, and the list of models itself. Two parts, drawn in
+// that order on the page: retired models still in use first (only while there are some), the
+// catalogue last, its file and dates folded away.
+function useSwitched(): () => Promise<void> {
+  const cache = useQueryClient();
+  // A switch changes a template, schedule, draft or project, so those lists reload too.
+  return async () => {
+    await Promise.all([
+      cache.invalidateQueries({ queryKey: upkeepKeys.retired }),
+      cache.invalidateQueries({ queryKey: templatesKey }),
+      cache.invalidateQueries({ queryKey: schedulesKey }),
+      cache.invalidateQueries({ queryKey: keys.playDrafts }),
+      cache.invalidateQueries({ queryKey: ["projects"] }),
+      cache.invalidateQueries({ queryKey: ["project"] }),
+    ]);
+  };
+}
+
+// Templates, schedules, drafts and projects still picking a model the provider retired, each
+// with its switch, and Switch all when more than one can switch. Nothing shows while nothing
+// uses a retired model.
+export function RetiredModelsInUse(): ReactElement | null {
+  const { api } = useApp();
+  const notify = useToast();
+  const switched = useSwitched();
+  const retired = useQuery({ queryKey: upkeepKeys.retired, queryFn: () => readRetired(api) });
+  const one = useMutation({
+    mutationFn: (usage: RetiredUsage) => switchRetired(api, usage),
+    onSuccess: switched,
+  });
+  const all = useMutation({
+    mutationFn: () => switchAllRetired(api),
+    onSuccess: async (result) => {
+      notify(
+        result.failed.length === 0
+          ? `Switched ${result.switched} ${result.switched === 1 ? "use" : "uses"}.`
+          : `Switched ${result.switched}; ${result.failed.length} could not be switched: ${result.failed[0]?.message ?? ""}`,
+        result.failed.length === 0 ? "success" : "error",
+      );
+      await switched();
+    },
+  });
+  const usages = retired.data ?? [];
+  const switchable = usages.filter((usage) => usage.blocked === null && usage.replacement !== null);
+  if (retired.error !== null)
+    return (
+      <p role="alert" className="m-0 text-body text-danger">
+        {retired.error.message}
+      </p>
+    );
+  if (usages.length === 0) return null;
+  return (
+    <section aria-label="Retired models in use">
+      <SectionHead
+        title="Retired models in use"
+        meta="A run that reaches one of these stops. Switch picks the suggested model instead."
+      >
+        {switchable.length > 1 ? (
+          <Button variant="primary" disabled={all.isPending} onClick={() => all.mutate()}>
+            {all.isPending ? "Switching…" : `Switch all ${String(switchable.length)}`}
+          </Button>
+        ) : null}
+      </SectionHead>
+      {one.error ? (
+        <p role="alert" className="m-0 mb-2 text-body text-danger">
+          {one.error.message}
+        </p>
+      ) : null}
+      <ul aria-label="Retired models in use" className="sl-list m-0 list-none p-0">
+        {usages.map((usage) => (
+          <li key={usage.key} className="sl-row max-sm:grid-cols-1">
+            <div className="min-w-0">
+              <p className="m-0">
+                <span className="sl-kicker">{kindLabels[usage.kind]}</span>{" "}
+                <span className="font-semibold">{usage.name}</span>
+              </p>
+              <p className="m-0 text-small text-ink-2">
+                {slotLabels[usage.slot]}: {usage.model} (
+                {usage.why === "retired" ? "retired" : "no longer listed"})
+              </p>
+              {usage.blocked === null ? null : (
+                <p className="m-0 text-small text-waiting">{usage.blocked}</p>
+              )}
+              {usage.replacement === null ? (
+                <p className="m-0 text-small text-ink-2">
+                  No replacement is suggested: pick another model in its {usage.kind}.
+                </p>
+              ) : null}
+            </div>
+            {usage.replacement === null || usage.blocked !== null ? null : (
+              <ButtonRow>
+                <Button size="small" disabled={one.isPending} onClick={() => one.mutate(usage)}>
+                  {`Switch to ${usage.replacement.name}`}
+                </Button>
+              </ButtonRow>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+export function CatalogueSettings(): ReactElement {
   const { api } = useApp();
   const cache = useQueryClient();
   const notify = useToast();
@@ -47,7 +151,6 @@ export function CatalogueSettings() {
     queryFn: () => readCatalogue(api),
     refetchInterval: 30000,
   });
-  const retired = useQuery({ queryKey: upkeepKeys.retired, queryFn: () => readRetired(api) });
   const refreshed = async (): Promise<void> => {
     await Promise.all([
       cache.invalidateQueries({ queryKey: keys.providerModels }),
@@ -69,41 +172,12 @@ export function CatalogueSettings() {
   const replace = useMutation({
     mutationFn: () => refreshCatalogue(api),
     onSuccess: async (data) => {
-      notify("Catalogue replaced with the published file.", "success");
+      notify("The model list was replaced with the published one.", "success");
       cache.setQueryData(upkeepKeys.catalogue, data);
       await refreshed();
     },
   });
-  // A switch changes a template, schedule, draft or project, so those lists reload too.
-  const switched = async (): Promise<void> => {
-    await Promise.all([
-      cache.invalidateQueries({ queryKey: upkeepKeys.retired }),
-      cache.invalidateQueries({ queryKey: templatesKey }),
-      cache.invalidateQueries({ queryKey: schedulesKey }),
-      cache.invalidateQueries({ queryKey: keys.playDrafts }),
-      cache.invalidateQueries({ queryKey: ["projects"] }),
-      cache.invalidateQueries({ queryKey: ["project"] }),
-    ]);
-  };
-  const one = useMutation({
-    mutationFn: (usage: RetiredUsage) => switchRetired(api, usage),
-    onSuccess: switched,
-  });
-  const all = useMutation({
-    mutationFn: () => switchAllRetired(api),
-    onSuccess: async (result) => {
-      notify(
-        result.failed.length === 0
-          ? `Switched ${result.switched} ${result.switched === 1 ? "use" : "uses"}.`
-          : `Switched ${result.switched}; ${result.failed.length} could not be switched: ${result.failed[0]?.message ?? ""}`,
-        result.failed.length === 0 ? "success" : "error",
-      );
-      await switched();
-    },
-  });
   const sync = status.data?.sync;
-  const usages = retired.data ?? [];
-  const switchable = usages.filter((usage) => usage.blocked === null && usage.replacement !== null);
   const problem =
     check.error?.message ??
     replace.error?.message ??
@@ -116,125 +190,65 @@ export function CatalogueSettings() {
     title: "Check for new models",
     group: "Settings",
     context: "Models",
-    keywords: ["catalogue", "prices", "retired"],
+    keywords: ["catalog", "catalogue", "prices", "retired"],
     run: () => {
       if (!check.isPending && status.data?.path) check.mutate();
     },
   });
   return (
-    <>
-      <div>
-        <SectionHead title="Model catalogue" info="settings.models.catalogue">
-          <Button disabled={check.isPending || !status.data?.path} onClick={() => check.mutate()}>
-            {check.isPending ? "Checking…" : "Check now"}
+    <section aria-label="Model list">
+      <SectionHead
+        title="Model list"
+        meta={
+          sync?.checkedAt
+            ? `New models, prices and retirements, checked once a day. Last checked ${startedAt(sync.checkedAt)}: ${changeSummary(sync.changes).toLowerCase()}.`
+            : "New models, prices and retirements, checked once a day."
+        }
+      >
+        {status.data?.path === undefined ? null : (
+          <Button disabled={check.isPending} onClick={() => check.mutate()}>
+            {check.isPending ? "Checking…" : "Check for new models"}
           </Button>
-          <span className="inline-flex items-center gap-1">
-            <Button
-              variant="quiet"
-              disabled={replace.isPending || !status.data?.path}
-              onClick={() => replace.mutate()}
-            >
-              {replace.isPending ? "Replacing…" : "Replace with published file"}
-            </Button>
-            <InfoTip id="settings.models.replace" />
-          </span>
-        </SectionHead>
-        <dl className="m-0 grid gap-x-6 border-t border-line text-small sm:grid-cols-[160px_minmax(0,1fr)]">
-          <dt className="pt-3 font-semibold text-ink sm:border-b sm:border-line sm:pb-3">
-            Catalogue file
-          </dt>
-          <dd className="m-0 min-w-0 border-b border-line pb-3 break-all font-mono text-ink-2 sm:pt-3">
-            {status.data?.path ?? "Not available"}
-          </dd>
-          <dt className="pt-3 font-semibold text-ink sm:border-b sm:border-line sm:pb-3">
-            Verified
-          </dt>
-          <dd className="m-0 border-b border-line pb-3 text-ink-2 sm:pt-3">
-            {status.data?.updatedAt ?? "date unavailable"}
-          </dd>
-          <dt className="pt-3 font-semibold text-ink sm:border-b sm:border-line sm:pb-3">
-            Last checked
-          </dt>
-          <dd className="m-0 border-b border-line pb-3 text-ink-2 sm:pt-3">
-            {sync?.checkedAt
-              ? `${startedAt(sync.checkedAt)} · ${changeSummary(sync.changes)}`
-              : "Not checked yet"}
-          </dd>
-        </dl>
-        {sync !== undefined && sync.changes.retired.length + sync.changes.added.length > 0 ? (
-          <div className="mt-3 flex flex-col gap-1 text-small text-ink-2">
-            {sync.changes.added.length > 0 ? (
-              <span>New: {sync.changes.added.map((row) => row.name).join(", ")}</span>
-            ) : null}
-            {sync.changes.retired.length > 0 ? (
-              <span>Retired: {sync.changes.retired.map((row) => row.name).join(", ")}</span>
-            ) : null}
-          </div>
-        ) : null}
-        {problem === null ? null : (
-          <p role="alert" className="m-0 mt-3 text-body text-danger">
-            {problem}
-          </p>
         )}
-      </div>
-      <section aria-label="Retired models in use">
-        <SectionHead title="Retired models in use" info="settings.models.retired">
-          <Button
-            variant="primary"
-            disabled={all.isPending || switchable.length === 0}
-            onClick={() => all.mutate()}
-          >
-            {all.isPending ? "Switching…" : "Switch all"}
-          </Button>
-        </SectionHead>
-        {retired.error ? (
-          <p role="alert" className="m-0 mb-2 text-body text-danger">
-            {retired.error.message}
+      </SectionHead>
+      {sync !== undefined && sync.changes.retired.length + sync.changes.added.length > 0 ? (
+        <div className="mb-3 flex flex-col gap-1 text-small text-ink-2">
+          {sync.changes.added.length > 0 ? (
+            <span>New: {sync.changes.added.map((row) => row.name).join(", ")}</span>
+          ) : null}
+          {sync.changes.retired.length > 0 ? (
+            <span>Retired: {sync.changes.retired.map((row) => row.name).join(", ")}</span>
+          ) : null}
+        </div>
+      ) : null}
+      {problem === null ? null : (
+        <p role="alert" className="m-0 mb-3 text-body text-danger">
+          {problem}
+        </p>
+      )}
+      <Fold
+        summary="Catalog file"
+        state={
+          status.data?.updatedAt === undefined ? undefined : `Published ${status.data.updatedAt}`
+        }
+      >
+        <div className="flex flex-col gap-3 pt-2 text-small text-ink-2">
+          <p className="m-0 min-w-0 break-all font-mono">{status.data?.path ?? "Not available"}</p>
+          <p className="m-0">
+            The local copy of the published list the pickers and cost estimates use. Your own edits
+            to it are kept when it is checked.
           </p>
-        ) : null}
-        {one.error ? (
-          <p role="alert" className="m-0 mb-2 text-body text-danger">
-            {one.error.message}
-          </p>
-        ) : null}
-        {usages.length === 0 ? (
-          <p className="m-0 text-small text-ink-2">
-            {retired.isPending ? "Looking…" : "Nothing uses a retired model."}
-          </p>
-        ) : (
-          <ul aria-label="Retired models in use" className="sl-list m-0 list-none p-0">
-            {usages.map((usage) => (
-              <li key={usage.key} className="sl-row max-sm:grid-cols-1">
-                <div className="min-w-0">
-                  <p className="m-0">
-                    <span className="sl-kicker">{kindLabels[usage.kind]}</span>{" "}
-                    <span className="font-semibold">{usage.name}</span>
-                  </p>
-                  <p className="m-0 text-small text-ink-2">
-                    {slotLabels[usage.slot]}: {usage.model} (
-                    {usage.why === "retired" ? "retired" : "no longer listed"})
-                  </p>
-                  {usage.blocked === null ? null : (
-                    <p className="m-0 text-small text-waiting">{usage.blocked}</p>
-                  )}
-                </div>
-                <ButtonRow>
-                  <Button
-                    size="small"
-                    disabled={usage.blocked !== null || usage.replacement === null || one.isPending}
-                    onClick={() => one.mutate(usage)}
-                  >
-                    {usage.replacement === null
-                      ? "No replacement"
-                      : `Switch to ${usage.replacement.name}`}
-                  </Button>
-                </ButtonRow>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </>
+          {status.data?.path === undefined ? null : (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="quiet" disabled={replace.isPending} onClick={() => replace.mutate()}>
+                {replace.isPending ? "Replacing…" : "Replace with the published file"}
+              </Button>
+              <span>Drops your edits; the old file is kept beside it.</span>
+            </div>
+          )}
+        </div>
+      </Fold>
+    </section>
   );
 }
 

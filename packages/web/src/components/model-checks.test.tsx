@@ -248,10 +248,11 @@ describe("Settings → Models: models that work for you", () => {
       }),
     );
     await screen.findByText(
-      "No provider is set up yet. Add a key or a CLI in Settings → Providers.",
+      "No service is set up yet. Add a key or sign in on Settings → Keys & services.",
     );
-    expect(screen.getByText("No new models since you last looked.")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Dismiss all" }).hasAttribute("disabled")).toBe(true);
+    // Nothing new: the section and its Dismiss all are not drawn.
+    expect(screen.queryByRole("region", { name: "New for you" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Dismiss all" })).toBeNull();
   });
 });
 

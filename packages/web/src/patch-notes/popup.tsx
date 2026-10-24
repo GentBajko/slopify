@@ -80,19 +80,19 @@ export function PatchNotesPopup(): ReactElement | null {
   );
 }
 
-// Ctrl+K → Show patch notes: every release's notes, in Settings → Patch notes. Searched, not
-// listed: an empty palette's Go to is the rail's destinations, and Help → What's new opens these.
+// Ctrl+K → What's new: every release's notes, in Settings → What's new. Searched, not listed:
+// an empty palette's Go to is the rail's destinations, and Help → What's new opens these.
 export function PatchNotesCommand(): null {
   const navigate = useNavigate();
   useCommand({
     id: "nav.patch-notes",
-    title: "Show patch notes",
+    title: "What's new",
     group: "Go to",
     searchOnly: true,
     run: () => {
       void navigate({ to: "/settings", search: { section: "patch-notes" } });
     },
-    keywords: ["what's new", "changelog", "release notes", "version"],
+    keywords: ["patch notes", "changelog", "release notes", "version"],
   });
   return null;
 }

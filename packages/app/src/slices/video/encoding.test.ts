@@ -4,9 +4,11 @@ import { describe, expect, it } from "vitest";
 import {
   codecArgs,
   createNvencProbe,
+  failedNvenc,
   type NvencExec,
   noNvenc,
   nvencQuality,
+  nvencWhy,
   renderMachine,
   setRenderPriority,
 } from "./encoding.js";
@@ -132,7 +134,7 @@ describe("createNvencProbe", () => {
     expect(await probe()).toEqual({ available: false, reason: noNvenc });
   });
 
-  it("is unavailable when NVENC is listed but its test encode fails, naming why", async () => {
+  it("is unavailable when NVENC is listed but its test encode fails, in plain words with the test's output apart", async () => {
     const logged = log();
     const probe = createNvencProbe({
       candidates: ["/usr/bin/ffmpeg"],
@@ -140,8 +142,11 @@ describe("createNvencProbe", () => {
       log: logged,
     });
     const status = await probe();
-    expect(status.available).toBe(false);
-    expect(status.available ? "" : status.reason).toMatch(/test encode failed.*OpenEncodeSession/);
+    if (status.available) throw new Error("expected NVENC to be unavailable");
+    expect(status.reason).toBe(failedNvenc);
+    expect(status.reason).not.toMatch(/ffmpeg|Error/);
+    expect(status.detail).toMatch(/test encode failed.*OpenEncodeSession/);
+    expect(nvencWhy(status)).toBe(`${failedNvenc} (${status.detail ?? ""})`);
   });
 });
 

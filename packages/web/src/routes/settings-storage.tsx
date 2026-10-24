@@ -11,7 +11,7 @@ import {
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
-import { InfoTip } from "@/components/kit/info-tip";
+import { TextLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { useToast } from "@/components/kit/toast";
 
@@ -29,9 +29,12 @@ type Asking =
 
 export function ProjectStorageList({
   projects,
+  samples = new Set(),
   queryKey,
 }: {
   readonly projects: readonly ProjectUsage[];
+  // The bundled samples' ids: they are marked, and keep their files (they are read-only).
+  readonly samples?: ReadonlySet<string>;
   readonly queryKey: readonly unknown[];
 }) {
   const { api } = useApp();
@@ -92,75 +95,89 @@ export function ProjectStorageList({
     (id === undefined || ("project" in run.variables && run.variables.project.id === id));
   return (
     <>
+      {/* Each clean-up shows only while it would free something. */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <Button
-          variant="secondary"
-          size="small"
-          disabled={history === 0 || busy}
-          disabledReason={history === 0 ? "No older versions to delete." : "Working…"}
-          onClick={() => setAsking({ kind: "all-old" })}
-        >
-          {pendingOn("all-old") ? "Deleting…" : `Delete all old versions (${fileSize(history)})`}
-        </Button>
-        <Button
-          variant="secondary"
-          size="small"
-          disabled={history + working === 0 || busy}
-          disabledReason={history + working === 0 ? "Nothing to clean up." : "Working…"}
-          onClick={() => setAsking({ kind: "cleanup" })}
-        >
-          {pendingOn("cleanup")
-            ? "Cleaning up…"
-            : `Clean up everything (${fileSize(history + working)})`}
-        </Button>
-        <InfoTip id="settings.storage.keep-outputs" />
+        {history === 0 ? null : (
+          <Button
+            variant="secondary"
+            size="small"
+            disabled={busy}
+            onClick={() => setAsking({ kind: "all-old" })}
+          >
+            {pendingOn("all-old") ? "Deleting…" : `Delete all old versions (${fileSize(history)})`}
+          </Button>
+        )}
+        {history + working === 0 ? (
+          <span className="text-small text-ink-2">Nothing to clean up.</span>
+        ) : (
+          <Button
+            variant="secondary"
+            size="small"
+            disabled={busy}
+            onClick={() => setAsking({ kind: "cleanup" })}
+          >
+            {pendingOn("cleanup")
+              ? "Cleaning up…"
+              : `Clean up everything (${fileSize(history + working)})`}
+          </Button>
+        )}
       </div>
       <List label="Storage by project">
-        {sorted.map((project) => (
-          <ListRow
-            key={project.id}
-            title={project.title}
-            meta={
-              <span className="tabular-nums">
-                {fileSize(project.bytes)} · outputs {fileSize(project.outputsBytes)} · working files{" "}
-                {fileSize(project.workingBytes)}
-                {project.historyBytes > 0
-                  ? ` · old versions ${fileSize(project.historyBytes)}`
-                  : ""}
-              </span>
-            }
-            actions={
-              <>
-                {project.historyBytes > 0 ? (
-                  <Button
-                    variant="quiet"
-                    size="small"
-                    disabled={busy}
-                    title={`Frees ${fileSize(project.historyBytes)}.`}
-                    onClick={() => setAsking({ kind: "old", project })}
-                  >
-                    {pendingOn("old", project.id) ? "Deleting…" : "Delete old versions"}
-                  </Button>
-                ) : null}
-                <Button
-                  variant="quiet"
-                  size="small"
-                  disabled={!project.finished || project.removableBytes === 0 || busy}
-                  title={
-                    !project.finished
-                      ? "Available once the project has finished."
-                      : project.removableBytes === 0
-                        ? "No working files left to remove."
-                        : `Frees ${fileSize(project.removableBytes)}.`
-                  }
-                  onClick={() => setAsking({ kind: "trim", project })}
-                >
-                  {pendingOn("trim", project.id) ? "Removing…" : "Keep outputs only"}
-                </Button>
-              </>
-            }
-          />
-        ))}
+        {sorted.map((project) => {
+          const sample = samples.has(project.id);
+          return (
+            <ListRow
+              key={project.id}
+              title={project.title}
+              meta={
+                <span className="tabular-nums">
+                  {sample ? "Sample · " : ""}
+                  {fileSize(project.bytes)} · outputs {fileSize(project.outputsBytes)} · working
+                  files {fileSize(project.workingBytes)}
+                  {project.historyBytes > 0
+                    ? ` · old versions ${fileSize(project.historyBytes)}`
+                    : ""}
+                  {!sample && !project.finished ? " · not finished yet" : ""}
+                </span>
+              }
+              actions={
+                <>
+                  {sample ? (
+                    <TextLink
+                      to="/projects/$projectId"
+                      params={{ projectId: project.id }}
+                      className="text-small"
+                    >
+                      Open
+                    </TextLink>
+                  ) : null}
+                  {project.historyBytes > 0 && !sample ? (
+                    <Button
+                      variant="quiet"
+                      size="small"
+                      disabled={busy}
+                      title={`Frees ${fileSize(project.historyBytes)}.`}
+                      onClick={() => setAsking({ kind: "old", project })}
+                    >
+                      {pendingOn("old", project.id) ? "Deleting…" : "Delete old versions"}
+                    </Button>
+                  ) : null}
+                  {sample || !project.finished || project.removableBytes === 0 ? null : (
+                    <Button
+                      variant="quiet"
+                      size="small"
+                      disabled={busy}
+                      title={`Frees ${fileSize(project.removableBytes)}.`}
+                      onClick={() => setAsking({ kind: "trim", project })}
+                    >
+                      {pendingOn("trim", project.id) ? "Removing…" : "Keep outputs only"}
+                    </Button>
+                  )}
+                </>
+              }
+            />
+          );
+        })}
       </List>
       {error === undefined ? null : (
         <p role="alert" className="m-0 mt-2 text-small text-danger">
@@ -213,5 +230,5 @@ export function ProjectStorageList({
 // What Keep outputs only removes and what it costs later, asked before it runs here and on
 // the project page.
 export function keepOutputsConsequence(files: number, bytes: number): string {
-  return `This removes ${String(files)} working file(s) and frees ${fileSize(bytes)}: the narration parts, subtitle timing and render settings the project was made from. The video, shorts, their images, thumbnail, article, description and document stay, and so does anything you uploaded. If you change this project later (a caption style or the narration, or re-render), Slopify has to make those files again first, which takes time and uses provider credits.`;
+  return `This removes ${String(files)} working file(s) and frees ${fileSize(bytes)}: the narration parts, caption timing and render settings the project was made from. The video, shorts, their images, thumbnail, article, description and document stay, and so does anything you uploaded. If you change this project later (a caption style or the narration, or re-render), Slopify has to make those files again first, which takes time and may cost money again.`;
 }

@@ -288,11 +288,11 @@ describe("Prepare upload", () => {
     const steps = within(drawer).getByRole("list", { name: "Install steps" });
     expect(within(steps).getAllByRole("listitem")).toHaveLength(3);
     expect(
-      within(drawer).getByRole("link", { name: "Download for Chrome" }).getAttribute("href"),
+      within(drawer).getByRole("link", { name: "Download the zip" }).getAttribute("href"),
     ).toBe("http://slopify.test/api/studio/extension/chrome.zip");
     await user.click(within(drawer).getByRole("button", { name: "Firefox" }));
     expect(
-      within(drawer).getByRole("link", { name: "Download for Firefox" }).getAttribute("href"),
+      within(drawer).getByRole("link", { name: "Download the zip" }).getAttribute("href"),
     ).toBe("http://slopify.test/api/studio/extension/firefox.zip");
     // The copy steps stay: they are the upload pack without the extension.
     expect(within(drawer).getByRole("button", { name: "Copy title" })).not.toBeNull();

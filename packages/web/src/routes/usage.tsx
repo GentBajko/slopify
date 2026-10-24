@@ -44,7 +44,7 @@ export function UsageBoard() {
 
 const stageColumns: readonly Column<StageTokens>[] = [
   { id: "stage", header: "Stage", cell: (row) => stageWords[row.stage] },
-  { id: "model", header: "Provider · model", cell: (row) => namedBy(row) },
+  { id: "model", header: "Service · model", cell: (row) => namedBy(row) },
   { id: "in", header: "Tokens in", numeric: true, cell: (row) => wholeNumber.format(row.tokensIn) },
   {
     id: "out",
@@ -110,7 +110,7 @@ function countersOf(usage: Usage): readonly { readonly label: string; readonly v
   const counters = usage.counters;
   return [
     { label: "Videos made", value: wholeNumber.format(counters.videosMade) },
-    { label: "Hours of audio", value: tenths.format(counters.audioSeconds / 3600) },
+    { label: "Hours of narration", value: tenths.format(counters.audioSeconds / 3600) },
     { label: "Images made", value: wholeNumber.format(counters.imagesMade) },
     {
       label: "Tokens used",

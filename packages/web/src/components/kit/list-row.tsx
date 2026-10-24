@@ -81,16 +81,20 @@ export function ListRow({
 // row still picks it.
 export function RowSelect({
   onSelect,
+  expanded,
   className,
   children,
 }: {
   readonly onSelect: () => void;
+  // For a row whose details open under it rather than beside the list: whether they are open.
+  readonly expanded?: boolean | undefined;
   readonly className?: string;
   readonly children: ReactNode;
 }): ReactElement {
   return (
     <button
       type="button"
+      aria-expanded={expanded}
       onClick={onSelect}
       className={cn(
         "sl-row__title border-0 bg-transparent p-0 text-left font-[inherit] text-ink",

@@ -75,8 +75,11 @@ export function FilesFolder({
       <div>
         <SectionHead
           title="Your files"
-          meta={view.folder ?? "The Docker project folder isn't set up."}
-          info="settings.files.docker"
+          meta={
+            view.folder === null
+              ? "The Docker project folder isn't set up."
+              : "Where your projects, backups and exports are kept."
+          }
         >
           <Button disabled={view.folder === null || open.isPending} onClick={() => open.mutate()}>
             Open folder
@@ -87,8 +90,9 @@ export function FilesFolder({
           {view.dockerCommand === null ? null : (
             <div className="flex flex-col gap-2">
               <p className="m-0">
-                To move your projects to Documents/Slopify, run this on the computer running Docker
-                (or use <Code>--projects-dir &lt;folder&gt;</Code> for another folder):
+                Slopify runs in Docker, which can't move its own folders. To move your projects to
+                Documents/Slopify, run this on the computer running Docker (or use{" "}
+                <Code>--projects-dir &lt;folder&gt;</Code> for another folder):
               </p>
               <div className="flex flex-wrap items-center gap-2">
                 <Code className="min-w-0 break-all">{view.dockerCommand}</Code>
@@ -120,10 +124,10 @@ export function FilesFolder({
   const resumable = phase === "failed" || phase === "interrupted";
   return (
     <div>
-      <SectionHead title="Your files" meta={view.folder} info="settings.files">
+      <SectionHead title="Your files" meta="Where your projects, backups and exports are kept.">
         {view.inDocuments || view.documentsRoot === null ? null : (
           <Button
-            variant="primary"
+            variant="secondary"
             disabled={running || move.isPending}
             onClick={() => move.mutate("documents")}
           >
@@ -146,6 +150,10 @@ export function FilesFolder({
       </SectionHead>
       <div className="flex flex-col gap-3 text-small text-ink-2">
         <FolderLines view={view} />
+        <p className="m-0">
+          Your keys, settings and the database stay in Slopify's own folder. A move copies every
+          file and checks it before switching, and keeps the old folder until you delete it.
+        </p>
         {choosing ? (
           <form
             className="flex flex-wrap items-end gap-2"

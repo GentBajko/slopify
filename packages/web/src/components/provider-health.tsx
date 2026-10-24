@@ -4,14 +4,14 @@ import { type UseMutationResult, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
-import { SectionHead } from "@/components/kit/section-head";
 import { Status, type Tone } from "@/components/kit/status";
 import { checkHealth } from "@/components/provider-upkeep-api";
 import { cn } from "@/lib/utils";
 
+// The same words the service lists use: a warning may stop a run, a problem will.
 const stateWords: Readonly<Record<ProviderHealth["state"], string>> = {
   ok: "Ready",
-  warning: "Check",
+  warning: "May need fixing",
   problem: "Needs fixing",
   unused: "Not set up",
 };
@@ -30,15 +30,14 @@ const checkTone: Readonly<Record<HealthCheck["state"], string>> = {
 
 export type HealthRun = UseMutationResult<HealthReport, Error, void>;
 
-// Check all, held by whoever shows its button: Settings keeps it in the page header, so the
-// report stays while the person moves between sections.
+// Check every service, held by the page that shows it, so Ctrl+K can start it too.
 export function useProviderHealth(): HealthRun {
   const { api } = useApp();
   return useMutation({ mutationFn: () => checkHealth(api) });
 }
 
-// One provider checked again from its own row, after fixing what the report said. The answer
-// replaces that row until the next Check all.
+// One service checked again from its own row, after fixing what the report said. The answer
+// replaces that row until the next check of every service.
 function useRecheck(checkedAt: string | undefined) {
   const { api } = useApp();
   const [rows, setRows] = useState<{
@@ -60,10 +59,11 @@ function useRecheck(checkedAt: string | undefined) {
   return { one, latest };
 }
 
-// Check all: every command-line tool found and signed in, every saved key accepted, every
-// chosen model still offered. Providers neither set up nor chosen anywhere are summed up in
-// one line rather than listed. Handed a `run`, the button is the caller's; alone, it shows
-// its own.
+// Check every service: every command-line tool found and signed in, every saved key accepted,
+// every chosen model still offered. It sits under the readiness lines on Keys & services, with
+// when it last ran; the report lands right under it. Providers neither set up nor chosen
+// anywhere are summed up in one line rather than listed. Handed a `run`, the check is the
+// caller's (so Ctrl+K can start it too); alone, it holds its own.
 export function ProviderHealthCheck({ run: given }: { readonly run?: HealthRun } = {}) {
   const own = useProviderHealth();
   const run = given ?? own;
@@ -72,38 +72,43 @@ export function ProviderHealthCheck({ run: given }: { readonly run?: HealthRun }
   const shown = report?.providers.filter((row) => row.state !== "unused").map(recheck.latest) ?? [];
   const unused = report?.providers.filter((row) => row.state === "unused") ?? [];
   return (
-    <section aria-label="Health check">
-      <SectionHead title="Health check" info="settings.health">
-        {given === undefined ? (
-          <Button
-            disabled={run.isPending}
-            onClick={() => {
-              run.mutate();
-            }}
-          >
-            {run.isPending ? "Checking…" : "Check all"}
-          </Button>
-        ) : undefined}
-      </SectionHead>
+    <section aria-label="Check every service" className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-small">
+        <span className="text-ink-2" aria-live="polite">
+          {run.isPending
+            ? "Checking every service…"
+            : report === undefined
+              ? "Last checked: not yet."
+              : `Last checked at ${new Date(report.checkedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.`}
+        </span>
+        <Button
+          size="small"
+          disabled={run.isPending}
+          onClick={() => {
+            run.mutate();
+          }}
+        >
+          {run.isPending ? "Checking…" : "Check every service"}
+        </Button>
+        <span className="text-ink-2">
+          Asks each tool whether you are signed in and tries each saved key with a free call.
+        </span>
+      </div>
       {run.error === null ? null : (
-        <p role="alert" className="m-0 mb-2 text-body text-danger">
-          The health check didn't finish: {run.error.message} Press Check all to try again.
+        <p role="alert" className="m-0 text-body text-danger">
+          The check didn't finish: {run.error.message} Press Check every service to try again.
         </p>
       )}
       {recheck.one.error === null ? null : (
-        <p role="alert" className="m-0 mb-2 text-body text-danger">
-          {`The check didn't finish: ${recheck.one.error.message} Press Check again on the provider to try again.`}
+        <p role="alert" className="m-0 text-body text-danger">
+          {`The check didn't finish: ${recheck.one.error.message} Press Check again on the service to try again.`}
         </p>
       )}
-      {report === undefined ? (
-        <p className="m-0 text-small text-ink-2">
-          {run.isPending ? "Checking every provider…" : "Not checked yet."}
-        </p>
-      ) : (
+      {report === undefined ? null : (
         <>
-          <ul aria-label="Health by provider" className="sl-list m-0 list-none p-0">
+          <ul aria-label="Check by service" className="sl-list m-0 list-none p-0">
             {shown.map((row) => (
-              <li key={row.id} className="sl-row grid-cols-1 gap-1">
+              <li key={row.id} className="sl-row grid-cols-1 gap-1 py-2">
                 <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
                   <span className="sl-row__title">{row.displayName}</span>
                   <span className="flex items-center gap-2">
@@ -133,11 +138,11 @@ export function ProviderHealthCheck({ run: given }: { readonly run?: HealthRun }
               </li>
             ))}
           </ul>
-          <p className="m-0 mt-3 text-small text-ink-2">
-            {unused.length === 0
-              ? `Checked at ${new Date(report.checkedAt).toLocaleTimeString()}.`
-              : `Not set up and not used anywhere: ${unused.map((row) => row.displayName).join(", ")}.`}
-          </p>
+          {unused.length === 0 ? null : (
+            <p className="m-0 text-small text-ink-2">
+              {`Not set up and not used anywhere: ${unused.map((row) => row.displayName).join(", ")}.`}
+            </p>
+          )}
         </>
       )}
     </section>

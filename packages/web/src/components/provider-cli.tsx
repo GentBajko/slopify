@@ -6,14 +6,13 @@ import { type ProviderListBody, saveProviderPath } from "@/api";
 import { useApp } from "@/app-context";
 import { Button, ButtonRow } from "@/components/kit/button";
 import { Code, Field, Input } from "@/components/kit/field";
-import { InfoTip } from "@/components/kit/info-tip";
-import { Lamp } from "@/components/kit/status";
+import { Status } from "@/components/kit/status";
 import { SavedTick, savedTickMs } from "@/components/saved-tick";
-import type { HelpId } from "@/help/catalog";
+import { type HelpId, helpEntry } from "@/help/catalog";
 import { keys } from "@/queries";
 
-// What each provider does and costs, behind the info button beside its name.
-export const providerTips = {
+// What each service does and costs, in words under its name in its setup (ServiceAbout).
+const providerTips = {
   openrouter: "settings.provider.openrouter",
   "claude-code": "settings.provider.claude-code",
   codex: "settings.provider.codex",
@@ -31,19 +30,30 @@ export const providerTips = {
   "codex-image": "settings.provider.codex-image",
 } as const satisfies Readonly<Record<ProviderId, HelpId>>;
 
+// What the service does and what it costs, from the help catalogue, in words under its name.
+export function ServiceAbout({ provider }: { readonly provider: ProviderStatus }): ReactElement {
+  return (
+    <p className="m-0 max-w-[var(--measure)] text-small text-ink-2">
+      {helpEntry(providerTips[provider.id]).body}
+    </p>
+  );
+}
+
 type CliReadiness = Extract<ProviderStatus["readiness"], { readonly kind: "cli" }>;
 
-// The list's word for a command-line provider: ready, found but not usable, or not found.
+// The list's word for a command-line tool: ready, found but signed out, found but not usable
+// (too old, or its bridge to Docker's host is down), or not found.
 export function cliState(readiness: CliReadiness): {
-  readonly tone: "done" | "waiting" | "off";
+  readonly tone: "done" | "waiting" | "failed" | "off";
   readonly word: string;
 } {
   if (readinessIsUsable(readiness)) return { tone: "done", word: "Ready" };
-  if (readiness.installed) return { tone: "waiting", word: "Needs attention" };
-  return { tone: "off", word: "Not found" };
+  if (!readiness.installed) return { tone: "off", word: "Not found" };
+  if (readiness.issueKind === "login") return { tone: "waiting", word: "Signed out" };
+  return { tone: "failed", word: "Needs fixing" };
 }
 
-// The detail column for a command-line provider: what was found, the command Slopify runs,
+// The setup of a command-line tool: what it does, what was found, the command Slopify runs,
 // and the executable path behind Change path.
 export function CliProviderDetail({
   provider,
@@ -52,7 +62,7 @@ export function CliProviderDetail({
 }: {
   readonly provider: ProviderStatus;
   readonly readiness: CliReadiness;
-  // "Text" or "Images": which list the provider sits in.
+  // "Writing service" or "Image service": which list the tool sits in.
   readonly kind: string;
 }): ReactElement {
   const { api } = useApp();
@@ -109,19 +119,17 @@ export function CliProviderDetail({
       className="flex min-w-0 flex-col gap-5"
     >
       <div>
-        <div className="flex items-center gap-2">
-          <h3 id={headingId} className="sl-section-head__title">
-            {provider.displayName}
-          </h3>
-          <InfoTip id={providerTips[provider.id]} label={provider.displayName} />
-        </div>
-        <p className="sl-section-head__meta">{kind} · command line, no key needed</p>
+        <h3 id={headingId} className="sl-section-head__title">
+          {provider.displayName}
+        </h3>
+        <p className="sl-section-head__meta">{kind} · runs on this computer with your sign-in</p>
       </div>
+      <ServiceAbout provider={provider} />
 
       <div className="flex flex-col gap-2">
-        <p className="m-0 flex min-w-0 items-center gap-2" aria-live="polite">
-          <Lamp tone={cliState(readiness).tone} />
-          <span className="min-w-0 break-words">{statusOf(readiness, configured)}</span>
+        <p className="m-0 flex min-w-0 flex-wrap items-center gap-x-2" aria-live="polite">
+          <Status tone={cliState(readiness).tone}>{cliState(readiness).word}</Status>
+          <span className="min-w-0 break-words text-ink-2">{statusOf(readiness, configured)}</span>
         </p>
         <p className="m-0 flex min-w-0 items-center gap-2 text-small text-ink-2">
           <span>Command</span>
@@ -133,9 +141,9 @@ export function CliProviderDetail({
 
       <ButtonRow>
         {onHost ? (
-          <span className="inline-flex items-center gap-1 text-small text-ink-2">
-            Managed on host
-            <InfoTip id="settings.cli.managed-on-host" />
+          <span className="text-small text-ink-2">
+            Slopify runs in Docker, so this tool runs on your computer with the sign-in it has
+            there. After installing or updating it, run the Docker launcher again.
           </span>
         ) : (
           <Button
@@ -159,7 +167,6 @@ export function CliProviderDetail({
         >
           <Field
             label="Executable path"
-            tip="settings.cli.path"
             help={
               <>
                 Leave blank to find <Code>{defaultCommand}</Code> on PATH. Use an absolute path

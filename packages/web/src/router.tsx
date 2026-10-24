@@ -674,7 +674,7 @@ const usageRoute = createRoute({
 });
 
 function SettingsPage() {
-  const { section, note } = settingsRoute.useSearch();
+  const { section, note, family, provider, return: back, step } = settingsRoute.useSearch();
   const navigate = useNavigate();
   const shown = settingsSections.find((one) => one.id === (section ?? "providers"));
   useDocumentTitle(shown === undefined ? "Settings" : `Settings · ${shown.label}`);
@@ -682,9 +682,21 @@ function SettingsPage() {
     <SettingsRoute
       section={section ?? "providers"}
       note={note}
+      family={family}
+      provider={provider}
+      back={back === undefined ? undefined : { to: back, step }}
       onSection={(next) => {
-        // A section is a place: Back returns to the one before.
-        void navigate({ to: "/settings", search: { section: next }, resetScroll: false });
+        // A section is a place: Back returns to the one before. The way back to the welcome or
+        // Create stays while the person moves between Keys & services and Voices.
+        void navigate({
+          to: "/settings",
+          search: {
+            section: next,
+            ...(back === undefined ? {} : { return: back }),
+            ...(step === undefined ? {} : { step }),
+          },
+          resetScroll: false,
+        });
       }}
       onNote={(next) => {
         // Opening a note is a step a reader goes Back from.
