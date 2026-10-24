@@ -32,22 +32,26 @@ export function Steps({
       aria-label={label}
       className={cn("sl-steps m-0 list-none p-0", dense && "sl-steps--dense", className)}
     >
-      {steps.map((step) => (
-        <li key={step.id} className="sl-step" data-tone={step.tone}>
-          <Lamp tone={step.tone} />
-          <span className="sl-step__name">{step.name}</span>
-          <span className="sl-step__time">{step.time ?? "—"}</span>
-          <span className="sl-step__detail">
-            <span className="sl-step__state">{step.state}</span>
-            {step.detail === undefined ? null : (
-              <>
-                <span className="sl-step__dot"> · </span>
-                <span>{step.detail}</span>
-              </>
-            )}
-          </span>
-        </li>
-      ))}
+      {steps.map((step) => {
+        // A detail that only repeats the state ("Provided · Provided") is said once.
+        const detail = step.detail === step.state ? undefined : step.detail;
+        return (
+          <li key={step.id} className="sl-step" data-tone={step.tone}>
+            <Lamp tone={step.tone} />
+            <span className="sl-step__name">{step.name}</span>
+            <span className="sl-step__time">{step.time ?? "—"}</span>
+            <span className="sl-step__detail">
+              <span className="sl-step__state">{step.state}</span>
+              {detail === undefined ? null : (
+                <>
+                  <span className="sl-step__dot"> · </span>
+                  <span>{detail}</span>
+                </>
+              )}
+            </span>
+          </li>
+        );
+      })}
     </ol>
   );
 }
