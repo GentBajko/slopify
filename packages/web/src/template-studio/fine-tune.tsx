@@ -16,7 +16,7 @@ import { FilePick } from "@/play/provided";
 import type { RailProps } from "@/play/rail-frame";
 import { PlayReviews } from "@/play/reviews";
 import { freshShorts, Shorts, shortsPreviewOf } from "@/play/shorts";
-import { DocumentRail, ThumbnailRail } from "@/play/stage-rails";
+import { ThumbnailRail } from "@/play/stage-rails";
 import { type PlayFormState, shortsOn } from "@/play/state";
 import { StyleSection } from "@/play/style-section";
 import { templateLibrary } from "@/play/template-library";
@@ -187,8 +187,6 @@ export function FineTune({
       ) : (
         <NeedsArticle what="The description and the posts are written from the article" />
       );
-    case "document":
-      return <DocumentRail {...controls} />;
     case "reviews":
       return (
         <div className="flex min-w-0 flex-col gap-4">
@@ -196,6 +194,9 @@ export function FineTune({
           <PlayReviews problem={problem} />
         </div>
       );
+    // PDF's two settings and Schedule's runs are on the section itself (visible.tsx,
+    // schedule-section.tsx).
+    case "document":
     case "schedule":
       return null;
   }

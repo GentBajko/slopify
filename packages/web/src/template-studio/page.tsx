@@ -49,6 +49,11 @@ type Pane = "sections" | "settings" | "sample";
 // settings, and every one of them matters (the shorts, each pause and AI check, the
 // description and each site's post).
 const unfolded: readonly TemplateSection[] = ["shorts", "reviews", "upload"];
+// Topic & title's other settings (the language, a keyword the title doesn't fill) follow its
+// lead ones with no fold: a fold of one or two settings hides more than it tidies. PDF has no
+// others: whether to make it and its look are both lead settings.
+const followed: readonly TemplateSection[] = ["subject"];
+const leadOnly: readonly TemplateSection[] = ["document", "schedule"];
 
 // Templates → Edit template: a template set up section by section, in run order, each
 // section's sample beside its settings.
@@ -275,6 +280,7 @@ function Studio({
               />
               {pickerShown ? null : (
                 <MadeWith
+                  templateId={view.template.id}
                   section={current.id}
                   document={document}
                   onChange={() => setFineTune((n) => n + 1)}
@@ -301,7 +307,10 @@ function Studio({
               />
             </>
           )}
-          {current.id === "schedule" || unfolded.includes(current.id) ? null : (
+          {leadOnly.includes(current.id) ||
+          unfolded.includes(current.id) ? null : followed.includes(current.id) ? (
+            <FineTune section={current.id} onFiles={onFiles} />
+          ) : (
             <AllSettings
               key={`${current.id}:${String(fineTune)}`}
               label={current.label}
@@ -327,9 +336,12 @@ const settingSelector = [
   "[role=switch]",
   "[role=checkbox]",
   "[role=combobox]",
+  "[role=radiogroup]",
   "[role=group]",
 ].join(",");
 
+// A row of choices is one setting: the kit's Segmented (pressed buttons in a group) or a toggle
+// group (radios in a radiogroup), never each of its buttons.
 function isSetting(control: Element): boolean {
   if (control.closest("[data-slot=player], [data-slot=audio-player]") !== null) return false;
   return (

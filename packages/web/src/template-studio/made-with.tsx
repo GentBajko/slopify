@@ -3,11 +3,12 @@ import {
   type ProviderChoices,
   withProviderDefaults,
 } from "@app/slices/project-templates/provider-defaults.js";
-import type { TemplateSection } from "@app/slices/template-studio/model.js";
+import { sectionLabel, type TemplateSection } from "@app/slices/template-studio/model.js";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
+import { TextLink } from "@/components/kit/link";
 import { readFirstRun, upkeepKeys } from "@/components/provider-upkeep-api";
 import { providerUnavailableLabel } from "@/lib/provider-status";
 import { cn } from "@/lib/utils";
@@ -43,12 +44,15 @@ const missingWhat: Partial<Readonly<Record<TemplateSection, string>>> = {
 
 // "Written by Claude Code CLI · sonnet (your default) · Change": who makes a section, in one
 // line, its change under All … settings. Nothing chosen is said in red, in the words the
-// checks use, so the section and the list agree.
+// checks use, so the section and the list agree. The thumbnail is drawn by the images' service
+// while the video has images of its own: that one is changed in Images, so the line links there.
 export function MadeWith({
+  templateId,
   section,
   document,
   onChange,
 }: {
+  readonly templateId: string;
   readonly section: TemplateSection;
   readonly document: PlayDraftDocument;
   readonly onChange: () => void;
@@ -69,6 +73,7 @@ export function MadeWith({
     (part): part is string => part !== undefined && part !== "",
   );
   const none = choice.provider === "";
+  const inImages = section === "thumbnail" && document.form.sources.images === "generate";
   return (
     <p
       className={cn(
@@ -79,9 +84,20 @@ export function MadeWith({
       {none
         ? `No ${missingWhat[section] ?? "service"} is chosen, so a run can't start.`
         : `${lead[section] ?? "Made with"} ${parts.join(" · ")}${byDefault ? " (your default)" : ""}${unusable === undefined ? "" : ` (${name}: ${unusable.toLowerCase()})`}`}
-      <Button variant="quiet" size="small" onClick={onChange}>
-        {none ? "Choose one" : "Change"}
-      </Button>
+      {inImages ? (
+        <TextLink
+          to="/templates/$templateId"
+          params={{ templateId }}
+          search={{ section: "pictures" }}
+          className="text-small"
+        >
+          {`${none ? "Choose one" : "Change it"} in ${sectionLabel.pictures}`}
+        </TextLink>
+      ) : (
+        <Button variant="quiet" size="small" onClick={onChange}>
+          {none ? "Choose one" : "Change"}
+        </Button>
+      )}
     </p>
   );
 }

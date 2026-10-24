@@ -102,6 +102,73 @@ it("folds each section's whole editor under its lead settings, as a disclosure w
   expect(panel.querySelector("details")?.open).toBe(false);
 });
 
+it("counts a row of choices once, whichever control draws it", async () => {
+  open("thumbnail", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({
+      ...view,
+      template: {
+        ...view.template,
+        document: {
+          ...view.template.document,
+          form: {
+            ...view.template.document.form,
+            sources: { ...view.template.document.form.sources, thumbnail: "from_prompt" },
+          },
+        },
+      },
+    }),
+  });
+  const panel = await screen.findByRole("region", { name: "Thumbnail settings" });
+  // Its source, its prompt and how many: two rows of choices and a select.
+  await waitFor(() =>
+    expect(panel.querySelector("details > summary")?.textContent).toBe(
+      "All Thumbnail settings (3)",
+    ),
+  );
+});
+
+it("shows Topic & title's language with its lead settings, under no fold", async () => {
+  open("subject");
+  const panel = await screen.findByRole("region", { name: "Topic & title settings" });
+  expect(await within(panel).findByRole("combobox", { name: "Language" })).not.toBeNull();
+  expect(panel.querySelector("details")).toBeNull();
+});
+
+it("leads PDF with whether to make it and, once on, its look, with nothing folded", async () => {
+  const user = userEvent.setup();
+  open("document");
+  const panel = await screen.findByRole("region", { name: "PDF settings" });
+  expect(within(panel).queryByRole("combobox", { name: "PDF look" })).toBeNull();
+  await user.click(within(panel).getByRole("button", { name: "Make a PDF of the article" }));
+  expect(within(panel).getByRole("combobox", { name: "PDF look" })).not.toBeNull();
+  expect(within(panel).getByRole("link", { name: "Edit PDF looks" }).getAttribute("href")).toBe(
+    "/document-themes",
+  );
+  expect(panel.querySelector("details > summary")?.textContent ?? "").not.toMatch(/^All /);
+});
+
+it("sends a thumbnail drawn by the images' service to Images to change it", async () => {
+  open("thumbnail", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({
+      ...view,
+      template: {
+        ...view.template,
+        document: {
+          ...view.template.document,
+          form: {
+            ...view.template.document.form,
+            sources: { ...view.template.document.form.sources, thumbnail: "from_prompt" },
+          },
+        },
+      },
+    }),
+  });
+  const panel = await screen.findByRole("region", { name: "Thumbnail settings" });
+  const link = await within(panel).findByRole("link", { name: /in Images$/ });
+  expect(link.getAttribute("href")).toBe(`/templates/${templateId}?section=pictures`);
+  expect(within(panel).queryByRole("button", { name: "Change" })).toBeNull();
+});
+
 it.each(["shorts", "reviews", "upload"] as const)(
   "shows the whole of %s at once, under no All … settings fold",
   async (section) => {

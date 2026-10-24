@@ -2,8 +2,10 @@ import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import { templateNameMax } from "@app/slices/project-templates/schema.js";
 import type { ProviderStatus } from "@app/slices/settings/model.js";
 import type { TemplateSection } from "@app/slices/template-studio/model.js";
-import type { ReactElement, ReactNode } from "react";
+import { type ReactElement, type ReactNode, useId } from "react";
+import { DocumentThemePicker } from "@/components/document-theme-picker";
 import { Field, Input } from "@/components/kit/field";
+import { TextLink } from "@/components/kit/link";
 import { Segmented, type SegmentedOption, Switch } from "@/components/kit/switch";
 import { ModelPicker, ProviderPicker } from "@/play/pickers";
 
@@ -246,6 +248,9 @@ export function VisibleControls({
             ]}
             onChange={(document) => edit(sources({ document }))}
           />
+          {form.sources.document === "generate" ? (
+            <PdfLook value={form.document} onChange={(next) => edit({ ...form, document: next })} />
+          ) : null}
         </Controls>
       );
     default:
@@ -299,6 +304,33 @@ function ServicePicker({
         />
       </div>
     </fieldset>
+  );
+}
+
+// The look the PDF is drawn in, with a way to the looks themselves.
+function PdfLook({
+  value,
+  onChange,
+}: {
+  readonly value: Form["document"];
+  readonly onChange: (next: NonNullable<Form["document"]>) => void;
+}): ReactElement {
+  const id = useId();
+  return (
+    <Field id={id} label="PDF look">
+      <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+        <DocumentThemePicker
+          id={id}
+          field="document.theme"
+          value={value}
+          disabled={false}
+          onChange={onChange}
+        />
+        <TextLink to="/document-themes" className="text-small">
+          Edit PDF looks
+        </TextLink>
+      </span>
+    </Field>
   );
 }
 
