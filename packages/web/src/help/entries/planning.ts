@@ -173,11 +173,6 @@ export const planningHelp = {
     body: "A channel is one series: its brand kit, series brief, cast, templates and schedules. Every template belongs to one channel, and each run from it uses that channel's look and cast. The default channel holds everything made before channels and can't be deleted.",
     tutorial: { page: "Channels", anchor: "the-channels-page" },
   },
-  "planning.channel.current": {
-    title: "Current channel",
-    body: "Home, Projects and the calendar show only this channel's work. All channels shows everything. It only filters what you see; every project and schedule keeps its own channel. This browser remembers your choice, and every Slopify tab open in it follows the same pick.",
-    tutorial: { page: "Channels", anchor: "show-one-channels-work" },
-  },
   "planning.channel.name": {
     title: "Channel name",
     body: "The name you see in the channel picker, on Play and on the calendar. It stays inside Slopify and doesn't have to match your YouTube channel. Up to 200 characters.",
