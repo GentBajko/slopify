@@ -93,6 +93,8 @@ interface PaletteContextValue {
   readonly registry: CommandRegistry;
   readonly open: boolean;
   readonly setOpen: (open: boolean) => void;
+  // The "?" sheet of every key that works here, for a Help menu's Keyboard shortcuts.
+  readonly showShortcuts: () => void;
 }
 
 const PaletteContext = createContext<PaletteContextValue | undefined>(undefined);
@@ -152,9 +154,10 @@ export function useSearchShortcut(
 export function useCommandPalette(): {
   readonly open: boolean;
   readonly setOpen: (open: boolean) => void;
+  readonly showShortcuts: () => void;
 } {
   const context = useContext(PaletteContext);
-  return context ?? { open: false, setOpen: noop };
+  return context ?? { open: false, setOpen: noop, showShortcuts: noop };
 }
 
 function noop(): void {}
@@ -469,7 +472,10 @@ export function CommandPaletteProvider({
     return () => window.removeEventListener("keydown", onKey);
   }, [registry]);
 
-  const value = useMemo(() => ({ registry, open, setOpen }), [registry, open]);
+  const value = useMemo(
+    () => ({ registry, open, setOpen, showShortcuts: () => setHelp(true) }),
+    [registry, open],
+  );
   return (
     <PaletteContext.Provider value={value}>
       {children}

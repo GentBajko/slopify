@@ -49,6 +49,20 @@ export function MenuItem({
   );
 }
 
+// A heading over a group of rows ("Support Slopify"), not itself a row.
+export function MenuLabel({
+  className,
+  ...props
+}: ComponentProps<typeof MenuPrimitive.Label>): ReactElement {
+  return (
+    <MenuPrimitive.Label
+      data-slot="menu-label"
+      className={cn("px-[10px] pt-[6px] pb-1 text-caption font-semibold text-ink-2", className)}
+      {...props}
+    />
+  );
+}
+
 export function MenuSeparator({ className }: { readonly className?: string }): ReactElement {
   return <MenuPrimitive.Separator className={cn("my-1 h-px bg-line", className)} />;
 }
