@@ -205,6 +205,24 @@ describe("the reminder for someone who updated", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  it("asks the server afresh once due, so a question leaving the welcome answered never opens", async () => {
+    let reads = 0;
+    renderRouted(
+      <AutostartReminder />,
+      testDeps({
+        ...settled,
+        // The page read the offer on the welcome; Skip has answered it since.
+        "GET /api/settings/autostart": (request) => {
+          reads += 1;
+          return jsonAnswer(native(false, reads === 1))(request);
+        },
+      }),
+    );
+    await waitFor(() => expect(reads).toBe(2));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
   it("stays away while a first project made elsewhere is being settled, which answers it", async () => {
     renderRouted(
       <AutostartReminder />,

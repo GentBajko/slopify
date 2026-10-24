@@ -6,6 +6,7 @@ import { Button } from "@/components/kit/button";
 import { Dialog } from "@/components/kit/dialog";
 import { onboardingKey, readFirstRun } from "@/onboarding/api";
 import { noticeQuery } from "@/queries";
+import { autostartKey, readAutostart } from "./api.js";
 import { useAutostart } from "./autostart-settings.js";
 
 // "Start Slopify when I log in", asked once of someone who updated rather than installed: they
@@ -21,12 +22,20 @@ export function AutostartReminder(): ReactElement | null {
   const { view, turn, decline } = useAutostart();
   const notice = useQuery(noticeQuery(api));
   const firstRun = useQuery({ queryKey: onboardingKey, queryFn: () => readFirstRun(api) });
-  const open =
-    view.data?.offer === true &&
+  const due =
     notice.data?.seen === true &&
     firstRun.data?.show === false &&
     firstRun.data.settle === false &&
     pathname !== "/welcome";
+  // Asked afresh once it is due: the view the page read earlier (on the welcome, say) still
+  // offers the question that leaving the welcome has since answered.
+  const asked = useQuery({
+    queryKey: [...autostartKey, "reminder"],
+    queryFn: () => readAutostart(api),
+    enabled: due,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  const open = due && asked.data?.offer === true && view.data?.offer !== false;
   const busy = turn.isPending || decline.isPending;
   const error = turn.error ?? decline.error;
   return (
