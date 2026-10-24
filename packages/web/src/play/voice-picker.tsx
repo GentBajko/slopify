@@ -7,7 +7,7 @@ import { OptionPicker } from "./pickers";
 
 // Settings → Voices opened at a service, once that page reads it; until then it opens on
 // Voices.
-export function voicesSearch(provider: string) {
+function voicesSearch(provider: string) {
   const search = { section: "voices" as const, ...(provider === "" ? {} : { provider }) };
   return search;
 }

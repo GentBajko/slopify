@@ -21,14 +21,10 @@ const words: Readonly<
   image: { group: "Images by", key: "Add an image key", none: "None of these has a key yet" },
 };
 
-// Settings → Providers opened at a family (and a service), once that page reads them; until
-// then it opens on Providers.
-export function keysSearch(family: ProviderFamily, provider?: string) {
-  const search = {
-    section: "providers" as const,
-    family,
-    ...(provider === undefined || provider === "" ? {} : { provider }),
-  };
+// Settings → Providers opened at a family, once that page reads it; until then it opens on
+// Providers.
+function keysSearch(family: ProviderFamily) {
+  const search = { section: "providers" as const, family };
   return search;
 }
 

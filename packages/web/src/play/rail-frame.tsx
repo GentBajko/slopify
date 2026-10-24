@@ -12,10 +12,6 @@ import type { PlayFormState, UploadSlot } from "@/play/state";
 import { sourceOptions } from "@/play/state";
 import { InlineSwitch } from "@/play/switches";
 
-// A section's fields: the kit's field grid (`.sl-fields`, labels above, equal columns).
-export const railControls = "min-w-0 sl-fields";
-export const railBeneath = "min-w-0";
-
 export interface RailProps {
   readonly form: PlayFormState;
   readonly providers: readonly ProviderStatus[];
