@@ -245,11 +245,6 @@ export const settingsHelp = {
     body: "The YouTube playlists upload packs offer, typed exactly as Studio names them. Pick Every channel for the default list, or a channel to give it its own. Ticked On by default means every project goes into it; Prepare upload changes the ticks for one project. The extension ticks each one in Studio. Default: none.",
     tutorial: { page: "Studio-Extension", anchor: "settings--youtube-studio" },
   },
-  "settings.studio.install": {
-    title: "Install the Studio extension",
-    body: "The extension comes with Slopify, nothing is fetched from a store. Chrome, Edge and Brave load it once with Load unpacked (Developer mode) from the folder shown here: Slopify puts each new version there when it updates, and the extension switches to it by itself after 45 minutes without use. Firefox 128 or newer loads the downloaded zip as a temporary add-on, which it forgets on restart. Then pair it with the token above.",
-    tutorial: { page: "Studio-Extension", anchor: "get-the-extension" },
-  },
   "settings.studio.pairing": {
     title: "Extension pairing token",
     body: "A secret the Slopify Studio extension needs before it may read your upload packs, so no other page can. Copy it into the extension's options and press Pair. New pairing token makes a fresh one and unpairs the extension until you paste the new token.",

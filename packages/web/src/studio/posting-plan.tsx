@@ -1,17 +1,18 @@
 import type { PostingPlan } from "@app/slices/studio/plan-model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import { type ReactElement, useEffect, useState } from "react";
 import { readPostingPlan, saveAutoComment, saveLeadHours, savePostingPlan } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
-import { Input } from "@/components/kit/field";
+import { Field, Input } from "@/components/kit/field";
 import { TextLink } from "@/components/kit/link";
 import { LoadFailed, LoadingBlock } from "@/components/kit/query-state";
 import { SectionHead } from "@/components/kit/section-head";
 import { Switch } from "@/components/kit/switch";
 import { useToast } from "@/components/kit/toast";
+import { SavedTick, savedTickMs } from "@/components/saved-tick";
 import { keys } from "@/queries";
 import { schedulesQuery } from "@/schedules/api";
 
@@ -50,12 +51,7 @@ export function PostingPlanSettings({
     onSuccess: (body) => {
       client.setQueryData(planKey, body);
       void client.invalidateQueries({ queryKey: keys.studioReleases });
-      notify(
-        `Each upload is now due ${String(body.leadHours)} hours before its release.`,
-        "success",
-      );
     },
-    onError: (error: Error) => notify(`The lead time wasn't saved: ${error.message}`, "error"),
   });
   const comment = useMutation({
     mutationFn: (on: boolean) => saveAutoComment(api, on),
@@ -85,12 +81,11 @@ export function PostingPlanSettings({
     <section aria-label="Release times" className="flex flex-col gap-3">
       <SectionHead as="h3" title="Release times" />
       <p className="m-0 text-small text-ink-2">
-        Each schedule sets when its videos and shorts go out, one line for each day it runs, with a
-        time for every short its template makes:{" "}
+        Each schedule sets when its videos and shorts go out:{" "}
         <Link to="/calendar" search={{ tab: "schedules" }}>
           Calendar → Schedules
         </Link>{" "}
-        → Edit → Release times. See and move them in Calendar → Releases.
+        → Edit → Release times.
       </p>
       {live.length === 0 ? null : (
         <p className="m-0 flex flex-wrap gap-x-3 gap-y-1 text-small">
@@ -120,29 +115,12 @@ export function PostingPlanSettings({
           </p>
         </Callout>
       ) : null}
-      <div className="flex flex-wrap items-center gap-2 text-small text-ink-2">
-        Upload and schedule each video and short at least
-        <Input
-          aria-label="Hours before release"
-          type="number"
-          min={1}
-          max={168}
-          className="w-[72px]"
-          defaultValue={saved.data?.leadHours ?? 24}
-          key={saved.data?.leadHours ?? 24}
-          onBlur={(event) => {
-            const hours = Number(event.currentTarget.value);
-            if (
-              Number.isInteger(hours) &&
-              hours >= 1 &&
-              hours <= 168 &&
-              hours !== saved.data?.leadHours
-            )
-              lead.mutate(hours);
-          }}
-        />
-        hours before its release, so YouTube's copyright and ad checks finish while it is private.
-      </div>
+      <LeadTime
+        stored={saved.data.leadHours}
+        pending={lead.isPending}
+        error={lead.error?.message}
+        onSave={(hours, done) => lead.mutate(hours, { onSuccess: done })}
+      />
       <Switch
         checked={autoComment === true}
         disabled={comment.isPending || autoComment === undefined}
@@ -150,5 +128,74 @@ export function PostingPlanSettings({
         label="Post and pin each video's comment once it is public (the extension posts it in your name)"
       />
     </section>
+  );
+}
+
+// Upload lead time: a number with its Save and the saved tick, like the other numbers in
+// Settings. What is typed stays until saved.
+function LeadTime({
+  stored,
+  pending,
+  error,
+  onSave,
+}: {
+  readonly stored: number;
+  readonly pending: boolean;
+  readonly error: string | undefined;
+  readonly onSave: (hours: number, done: () => void) => void;
+}): ReactElement {
+  const [typed, setTyped] = useState<string | undefined>(undefined);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    if (!saved) return;
+    const timer = setTimeout(() => setSaved(false), savedTickMs);
+    return () => clearTimeout(timer);
+  }, [saved]);
+  const value = typed ?? String(stored);
+  const hours = Number(value.trim());
+  const problem =
+    Number.isInteger(hours) && hours >= 1 && hours <= 168
+      ? undefined
+      : "A whole number of hours from 1 to 168.";
+  return (
+    <Field
+      label="Upload lead time"
+      help="So YouTube's copyright and ad checks finish while the video is still private."
+      error={problem ?? (error === undefined ? undefined : `The lead time wasn't saved: ${error}`)}
+    >
+      <form
+        className="flex flex-wrap items-center gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (problem !== undefined || pending) return;
+          setSaved(false);
+          onSave(hours, () => {
+            setTyped(undefined);
+            setSaved(true);
+          });
+        }}
+      >
+        <Input
+          aria-label="Hours before release"
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={168}
+          step={1}
+          className="w-[88px] tabular-nums"
+          value={value}
+          onChange={(event) => setTyped(event.target.value)}
+        />
+        <span className="text-small text-ink-2">hours before release</span>
+        <Button
+          type="submit"
+          disabled={problem !== undefined || pending || hours === stored}
+          disabledReason={problem ?? "Nothing changed since the last save."}
+        >
+          Save
+        </Button>
+        <span className="inline-flex w-[52px]">{saved ? <SavedTick /> : null}</span>
+      </form>
+    </Field>
   );
 }
