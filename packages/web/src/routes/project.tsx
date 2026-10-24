@@ -811,16 +811,7 @@ function ProjectWorkspace({
                         stages={[]}
                         active={selected === "youtube"}
                         {...sectionProps}
-                        // Copy for YouTube Studio opens from here too, beside the rows it reads.
-                        {...(uploadReady
-                          ? {
-                              extra: (
-                                <Button variant="secondary" onClick={() => setUploadOpen(true)}>
-                                  Copy for YouTube Studio
-                                </Button>
-                              ),
-                            }
-                          : {})}
+                        {...(studio === null ? {} : { extra: studio })}
                       >
                         <YoutubeBlock stage={videoStage} project={summary} outputs={outputs} />
                       </StageSection>
