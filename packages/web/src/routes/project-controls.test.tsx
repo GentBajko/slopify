@@ -264,7 +264,7 @@ describe("project pause and provider changes", () => {
     );
     await openProjectTab("Pauses and checks");
     // Paused: continuing comes first, and the held review cannot be approved yet.
-    const approval = await screen.findByRole("button", { name: "Approve Narration checkpoint" });
+    const approval = await screen.findByRole("button", { name: "Approve and make the narration" });
     expect(approval.hasAttribute("disabled")).toBe(true);
     const next = screen.getByRole("heading", { level: 1 }).closest("header") as HTMLElement;
     const button = within(next).getByRole("button", { name: "Continue the run" });
@@ -277,13 +277,14 @@ describe("project pause and provider changes", () => {
     // Once it runs, the review it waits on is the next action, and Pauses and checks offers
     // the same approval where the person is looking.
     expect(
-      await within(next).findByRole("button", { name: "Approve and render the video" }),
+      await within(next).findByRole("button", { name: "Approve and make the narration" }),
     ).not.toBeNull();
     await waitFor(() =>
       expect(
         screen
-          .getByRole("button", { name: "Approve Narration checkpoint" })
-          .hasAttribute("disabled"),
+          .getAllByRole("button", { name: "Approve and make the narration" })
+          .find((button) => button.closest("header") === null)
+          ?.hasAttribute("disabled"),
       ).toBe(false),
     );
     await openProjectTab("Edit");
@@ -307,20 +308,23 @@ describe("project pause and provider changes", () => {
       }),
     );
     await openProjectEditor();
-    await openEditSection("Providers");
-    await user.selectOptions(await screen.findByLabelText("Text provider"), "claude-code");
-    await user.click(screen.getByRole("button", { name: "Enter Text model ID" }));
-    await user.type(screen.getByRole("textbox", { name: "Text model" }), "sonnet");
-    await user.selectOptions(screen.getByLabelText("Narration provider"), "cartesia");
-    await user.click(screen.getByRole("button", { name: "Enter Narration model ID" }));
-    await user.type(screen.getByRole("textbox", { name: "Narration model" }), "sonic-3");
-    await user.selectOptions(screen.getByLabelText("Narration voice"), "new-voice");
-    await user.selectOptions(screen.getByLabelText("Image provider"), "google-image");
-    await user.click(screen.getByRole("button", { name: "Enter Image model ID" }));
-    await user.type(screen.getByRole("textbox", { name: "Image model" }), "image-model");
+    // Each stage's service sits in that stage's section, in Create's words.
+    await openEditSection("Article");
+    await user.selectOptions(await screen.findByLabelText("Service"), "claude-code");
+    await user.click(screen.getByRole("button", { name: "Enter Model ID" }));
+    await user.type(screen.getByRole("textbox", { name: "Model" }), "sonnet");
+    await openEditSection("Narration");
+    await user.selectOptions(screen.getByLabelText("Voice service"), "cartesia");
+    await user.click(screen.getByRole("button", { name: "Enter Voice model ID" }));
+    await user.type(screen.getByRole("textbox", { name: "Voice model" }), "sonic-3");
+    await user.selectOptions(screen.getByLabelText("Voice"), "new-voice");
     await user.click(screen.getByRole("radio", { name: "Every 3000 characters" }));
     await user.clear(screen.getByLabelText("Characters"));
     await user.type(screen.getByLabelText("Characters"), "1800");
+    await openEditSection("Images");
+    await user.selectOptions(screen.getByLabelText("Image service"), "google-image");
+    await user.click(screen.getByRole("button", { name: "Enter Image model ID" }));
+    await user.type(screen.getByRole("textbox", { name: "Image model" }), "image-model");
     expect(screen.queryByRole("button", { name: "Run settings" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Save providers" })).toBeNull();
     await user.click(screen.getByRole("button", { name: "Save changes" }));

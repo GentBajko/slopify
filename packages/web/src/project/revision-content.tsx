@@ -193,10 +193,38 @@ export function RevisionContentEditors({
   }
   const captions = edit.content.subtitleCues;
   const shows = (part: EditSection) => section === undefined || section === part;
+  // A file the person supplied for a stage, replaced in that stage's section.
+  const provided = (stage: "audio" | "thumbnail") =>
+    edit.config.sources[stage] !== "provide" ? null : (
+      <RevisionUpload
+        label={stage === "audio" ? "Replace provided narration" : "Replace provided thumbnail"}
+        kind={stage}
+        onPending={(active) => mark(`provided:${stage}`, active)}
+        onReady={(file) => {
+          const current = latest.current;
+          if (current.edit.config.sources[stage] !== "provide") return;
+          if (stage === "thumbnail") {
+            // Checked against where it goes: YouTube Studio's thumbnail field.
+            const refused = thumbnailProblem(file.bytes);
+            setThumbnailRefused(refused);
+            if (refused !== undefined) return;
+          }
+          emit({
+            ...current.edit,
+            uploads: [
+              ...(current.edit.uploads ?? []).filter(
+                (one) => one.destination.kind !== "provided" || one.destination.stage !== stage,
+              ),
+              { stagedFileId: file.id, destination: { kind: "provided", stage } },
+            ],
+          });
+        }}
+      />
+    );
   return (
     <div className="space-y-5">
       {audition.element}
-      <section aria-label="Images" hidden={!shows("images")} className="space-y-6">
+      <section aria-label="Image list" hidden={!shows("images")} className="space-y-6">
         <EditImagePrompts
           edit={edit}
           saved={view.revision.config.imagePrompts}
@@ -224,6 +252,27 @@ export function RevisionContentEditors({
           onChange={emit}
           onPending={(active) => mark("provided:reference", active)}
         />
+        <ImageEditor
+          getEdit={() => latest.current.edit}
+          view={view}
+          edit={edit}
+          onChange={emit}
+          onPending={mark}
+        />
+      </section>
+      <section aria-label="Narration text" hidden={!shows("narration")} className="space-y-5">
+        {provided("audio")}
+        {edit.config.sources.audio === "generate" ? (
+          <NarrationEditor
+            getEdit={() => latest.current.edit}
+            view={view}
+            edit={edit}
+            onChange={emit}
+            onPending={mark}
+          />
+        ) : null}
+      </section>
+      <section aria-label="Thumbnail files" hidden={!shows("outputs")} className="space-y-5">
         {edit.config.sources.thumbnail === "from_prompt" ||
         edit.config.sources.thumbnail === "prompt_by_llm" ? (
           // One leaves the setting out, so a project that never had it keeps its config.
@@ -244,66 +293,19 @@ export function RevisionContentEditors({
           onChange={emit}
           onPending={mark}
         />
-        {(["audio", "thumbnail"] as const).map((stage) =>
-          edit.config.sources[stage] !== "provide" ? null : (
-            <RevisionUpload
-              key={stage}
-              label={`Replace provided ${stage}`}
-              kind={stage}
-              onPending={(active) => mark(`provided:${stage}`, active)}
-              onReady={(file) => {
-                const current = latest.current;
-                if (current.edit.config.sources[stage] !== "provide") return;
-                if (stage === "thumbnail") {
-                  // Checked against where it goes: YouTube Studio's thumbnail field.
-                  const refused = thumbnailProblem(file.bytes);
-                  setThumbnailRefused(refused);
-                  if (refused !== undefined) return;
-                }
-                emit({
-                  ...current.edit,
-                  uploads: [
-                    ...(current.edit.uploads ?? []).filter(
-                      (one) =>
-                        one.destination.kind !== "provided" || one.destination.stage !== stage,
-                    ),
-                    { stagedFileId: file.id, destination: { kind: "provided", stage } },
-                  ],
-                });
-              }}
-            />
-          ),
-        )}
+        {provided("thumbnail")}
         {thumbnailRefused === undefined ? null : (
           <p role="alert" className="text-small text-danger">
             {thumbnailRefused}
           </p>
         )}
-        <ImageEditor
-          getEdit={() => latest.current.edit}
-          view={view}
-          edit={edit}
-          onChange={emit}
-          onPending={mark}
-        />
-      </section>
-      <section aria-label="Narration" hidden={!shows("narration")} className="space-y-5">
-        {edit.config.sources.audio === "generate" ? (
-          <NarrationEditor
-            getEdit={() => latest.current.edit}
-            view={view}
-            edit={edit}
-            onChange={emit}
-            onPending={mark}
-          />
-        ) : null}
       </section>
       {error === undefined ? null : (
         <p role="alert" className="text-danger">
           {error}
         </p>
       )}
-      <section aria-label="Captions" hidden={!shows("captions")} className="space-y-5">
+      <section aria-label="Caption text" hidden={!shows("captions")} className="space-y-5">
         {!ready ? (
           <p>
             Captions can be edited once the current narration has finished and its subtitle timing

@@ -14,7 +14,7 @@ import type { EditorProps } from "./revision-workspace.js";
 // "14:05" today, "3 Oct 14:05" on another day, with the year once it is not this year's.
 const when = (iso: string): string => startedAt(iso);
 
-// The draft's status line: what happened to the draft itself, or the newer revision beside it.
+// The draft's status line: what happened to the draft itself, or the newer version beside it.
 function DraftStatus({ c }: { readonly c: RevisionController }): ReactElement {
   const line = (tone: StatusTone, text: string, actions?: ReactNode) => (
     <StatusSlot tone={tone}>
@@ -42,7 +42,7 @@ function DraftStatus({ c }: { readonly c: RevisionController }): ReactElement {
   if (notice?.kind === "reapplied")
     return line(
       "info",
-      "Your edit is laid over the latest revision. Check it, then press Save changes.",
+      "Your edit is laid over the latest version. Check it, then press Save changes.",
     );
   if (notice?.kind === "copied")
     return notice.ok
@@ -54,7 +54,7 @@ function DraftStatus({ c }: { readonly c: RevisionController }): ReactElement {
   if (c.remoteChanged)
     return line(
       "warning",
-      "A newer revision is available. Your unsaved changes are kept below and in this browser.",
+      "A newer version is available. Your unsaved changes are kept below and in this browser.",
     );
   return <StatusSlot />;
 }
@@ -85,7 +85,7 @@ export function RevisionEditPanel({
         {guard}
         {intro ?? (
           <>
-            <SectionHead title="Saved revision" info="project.saved-revision" />
+            <SectionHead title="Saved version" info="project.saved-revision" />
             {c.saved.error === null ? null : (
               <p role="alert" className="m-0 text-small text-danger">
                 {c.saved.error.message}
@@ -124,7 +124,7 @@ export function RevisionEditPanel({
         >
           {c.refusal?.reason === "conflict" && active ? (
             <Button disabled={c.pending} onClick={c.reloadCurrent}>
-              Reload current revision
+              Reload the current version
             </Button>
           ) : null}
           <span className="inline-flex items-center gap-1">

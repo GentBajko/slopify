@@ -28,9 +28,11 @@ async function showHistory(pieces: RevisionView["pieces"]): Promise<HTMLElement>
       "GET /api/projects/p1/revisions/r1": jsonAnswer({ view }),
     }),
   );
-  fireEvent.click(await screen.findByRole("button", { name: /Saved ·/ }));
-  await screen.findByRole("button", { name: "Restore this revision" });
-  const parts = screen.getByRole("list", { name: "Retained text parts" });
+  // One version: one line saying so, its files a press away, and nothing to restore.
+  expect(await screen.findByText(/^One version, saved/)).not.toBeNull();
+  expect(screen.queryByRole("button", { name: /^Restore/ })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Show its files" }));
+  const parts = await screen.findByRole("list", { name: "Retained text parts" });
   for (const summary of parts.querySelectorAll("summary")) fireEvent.click(summary);
   return parts;
 }
@@ -151,7 +153,7 @@ it("marks a version an agent saved and lists what agents did", async () => {
       }),
     }),
   );
-  expect(await screen.findByRole("button", { name: /· by agent/ })).toBeTruthy();
+  expect((await screen.findByText(/^One version, saved/)).textContent).toMatch(/ · by agent\./);
   expect(screen.getByText(/Continue the run · by agent/)).toBeTruthy();
 });
 
@@ -197,9 +199,50 @@ it("marks what the in-app assistant saved and did as the assistant's", async () 
       }),
     }),
   );
-  expect(await screen.findByRole("button", { name: /· by assistant/ })).toBeTruthy();
-  expect(screen.queryByRole("button", { name: /· by agent/ })).toBeNull();
+  const line = await screen.findByText(/^One version, saved/);
+  expect(line.textContent).toMatch(/ · by assistant\./);
+  expect(line.textContent).not.toMatch(/by agent/);
   expect(screen.getByText(/Start a draft · by assistant/)).toBeTruthy();
   expect(screen.getByText(/Continue the run · by agent/)).toBeTruthy();
   expect(screen.getByRole("region", { name: "Done by agents and the assistant" })).toBeTruthy();
+});
+
+it("numbers several versions newest first and offers Restore only on an earlier one, after asking", async () => {
+  const restored: string[] = [];
+  const at = (day: number) => `2026-09-${String(day).padStart(2, "0")}T10:00:00.000Z`;
+  const summary = (id: string, day: number, current: boolean) => ({
+    id,
+    parentId: null,
+    restoredFromId: null,
+    title: "Rope Tricks",
+    createdAt: at(day),
+    current,
+  });
+  renderApp(
+    <RevisionHistory
+      projectId="p1"
+      pending={false}
+      onRestore={(id) => {
+        restored.push(id);
+      }}
+    />,
+    testDeps({
+      "GET /api/projects/p1/revisions": jsonAnswer({
+        revisions: [summary("r2", 12, true), summary("r1", 10, false)],
+      }),
+    }),
+  );
+  const list = await screen.findByRole("list", { name: "Versions" });
+  const rows = within(list).getAllByRole("listitem");
+  expect(rows.map((row) => row.querySelector(".sl-row__title")?.textContent)).toEqual([
+    "Version 2",
+    "Version 1",
+  ]);
+  expect(rows[0]?.textContent).toContain("· Current");
+  expect(within(rows[0] as HTMLElement).queryByRole("button", { name: "Restore" })).toBeNull();
+  fireEvent.click(within(rows[1] as HTMLElement).getByRole("button", { name: "Restore" }));
+  const dialog = await screen.findByRole("dialog", { name: "Restore version 1?" });
+  expect(restored).toEqual([]);
+  fireEvent.click(within(dialog).getByRole("button", { name: "Restore version 1" }));
+  expect(restored).toEqual(["r1"]);
 });

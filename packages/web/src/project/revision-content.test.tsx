@@ -244,7 +244,7 @@ it("merges simultaneous provided uploads into the latest draft", async () => {
       "POST /api/staging/thumbnail": () => thumbnail.promise,
     }),
   );
-  fireEvent.change(screen.getByLabelText("Replace provided audio"), {
+  fireEvent.change(screen.getByLabelText("Replace provided narration"), {
     target: { files: [new File(["mp3"], "voice.mp3", { type: "audio/mpeg" })] },
   });
   fireEvent.change(screen.getByLabelText("Replace provided thumbnail"), {

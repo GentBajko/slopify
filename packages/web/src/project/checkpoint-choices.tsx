@@ -2,9 +2,9 @@ import type { Stage } from "@app/slices/admission/model.js";
 import { type ReactElement, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { HelpLine } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { sentence } from "@/http";
-import { stageWords } from "@/lib/stage-words";
 import {
   type CheckpointChange,
   type CheckpointGate,
@@ -16,10 +16,11 @@ type Outcome = {
   readonly kind: "success" | "transport" | "refused";
   readonly message: string;
 } | null;
+// Each pause is named for what is ready to look at when it holds the run, and what waits.
 const choices = [
-  { stage: "audio", name: stageWords.audio },
-  { stage: "images", name: stageWords.images },
-  { stage: "video", name: stageWords.video },
+  { stage: "audio", name: "Pause after the article (before the narration)" },
+  { stage: "images", name: "Pause after the narration (before the images)" },
+  { stage: "video", name: "Pause after the images (before the video)" },
 ] as const;
 export function CheckpointChoices({
   projectId,
@@ -61,7 +62,7 @@ export function CheckpointChoices({
     ? {
         kind: "refused",
         message:
-          "Checkpoint choices changed elsewhere. Press Reload checkpoint choices before saving, then make your change again.",
+          "The pauses changed elsewhere. Press Load the pauses again before saving, then make your change again.",
       }
     : outcome;
   useEffect(() => {
@@ -88,18 +89,18 @@ export function CheckpointChoices({
         setOutcome({
           kind: "refused",
           message:
-            "The project was edited elsewhere. Press Reload checkpoint choices to see its current choices.",
+            "The project was edited elsewhere. Press Load the pauses again to see its current ones.",
         });
       else {
         saved(result.value);
         setDraft(null);
-        setOutcome({ kind: "success", message: "Checkpoint choices saved." });
+        setOutcome({ kind: "success", message: "Pauses saved." });
       }
     } catch (error) {
       if (mounted.current)
         setOutcome({
           kind: "transport",
-          message: `${sentence(error instanceof Error ? error.message : "Slopify didn't confirm the change")} It may or may not have saved. Press Reload checkpoint choices before changing anything else.`,
+          message: `${sentence(error instanceof Error ? error.message : "Slopify didn't confirm the change")} It may or may not have saved. Press Load the pauses again before changing anything else.`,
         });
     } finally {
       active.current = false;
@@ -122,22 +123,31 @@ export function CheckpointChoices({
       if (mounted.current) setPending(false);
     }
   }
+  const enabledOf = (stage: (typeof choices)[number]["stage"]): boolean => {
+    const current = stages.find((one) => one.kind === stage);
+    return (
+      current?.state === "pending" &&
+      (stage === "video"
+        ? current.source !== "off" ||
+          stages.some(
+            (one) => one.kind === "audio" && one.source !== "off" && one.state !== "skipped",
+          )
+        : (current.source ?? "generate") === "generate")
+    );
+  };
+  // Nothing is left to pause: every step it could hold has run.
+  const finished = choices.every(({ stage }) => !enabledOf(stage));
   return (
     <div className="space-y-2">
-      <fieldset ref={group} tabIndex={-1} className="space-y-2" {...helpScope}>
-        <legend className="float-left mr-1">Checkpoint choices</legend>
-        <InfoTip id="project.checkpoints.choices" className="-my-1" />
-        <div className="clear-both" />
+      <fieldset ref={group} tabIndex={-1} className="space-y-1" {...helpScope}>
+        <legend className="font-semibold">Pauses for this run</legend>
+        <HelpLine>
+          {finished
+            ? "The run has finished; pauses apply when the project is made again."
+            : "The run waits under Home → Needs you until you approve what it made."}
+        </HelpLine>
         {choices.map(({ stage, name }) => {
-          const current = stages.find((one) => one.kind === stage);
-          const enabled =
-            current?.state === "pending" &&
-            (stage === "video"
-              ? current.source !== "off" ||
-                stages.some(
-                  (one) => one.kind === "audio" && one.source !== "off" && one.state !== "skipped",
-                )
-              : (current.source ?? "generate") === "generate");
+          const enabled = enabledOf(stage);
           return (
             <label key={stage} className="flex min-h-10 items-center gap-3">
               <input
@@ -154,7 +164,7 @@ export function CheckpointChoices({
                   setOutcome(null);
                 }}
               />
-              Before {name}
+              {name}
             </label>
           );
         })}
@@ -164,12 +174,15 @@ export function CheckpointChoices({
           {notice.message}
         </p>
       ) : null}
-      <Button type="button" disabled={!dirty || pending || refused} onClick={() => void save()}>
-        {pending ? "Saving…" : "Save checkpoints"}
-      </Button>
+      {/* Save appears once a pause is ticked or unticked; nothing waits to be saved before. */}
+      {dirty ? (
+        <Button type="button" disabled={pending || refused} onClick={() => void save()}>
+          {pending ? "Saving…" : "Save pauses"}
+        </Button>
+      ) : null}
       {refused ? (
         <Button type="button" disabled={pending} onClick={() => void refresh()}>
-          Reload checkpoint choices
+          Load the pauses again
         </Button>
       ) : null}
     </div>

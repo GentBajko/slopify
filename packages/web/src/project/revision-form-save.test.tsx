@@ -141,7 +141,7 @@ it.each([
     });
     await user.click(screen.getByRole("button", { name: "Edit project" }));
     await user.selectOptions(await screen.findByLabelText(`${stageWords[source]} source`), "off");
-    await openEditSection("Subtitles");
+    await openEditSection("Captions");
     expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "Subtitles" }).value).toBe(
       after,
     );

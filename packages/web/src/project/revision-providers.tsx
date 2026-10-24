@@ -146,19 +146,24 @@ function useAliases(edit: RevisionEdit, onChange: (edit: RevisionEdit) => void) 
   };
 }
 
+// Who makes each stage, in the settings section of that stage, in Create's words: the article
+// is "Written by" a service and model, the narration is read by a voice service, its model
+// and voice, and the images come from an image service.
 export function RevisionProviders({
+  part,
   projectId,
   edit,
   providers,
   voices,
   onChange,
 }: {
+  readonly part: "text" | "voice" | "images";
   readonly projectId: string;
   readonly edit: RevisionEdit;
   readonly providers: readonly ProviderStatus[];
   readonly voices: readonly Voice[];
   readonly onChange: (edit: RevisionEdit) => void;
-}): import("react").ReactElement {
+}): import("react").ReactElement | null {
   const { config } = edit;
   const llm = config.llm ?? { provider: "", model: "" };
   const audio = config.audio ?? { provider: "", model: "", voice: "" };
@@ -184,12 +189,17 @@ export function RevisionProviders({
   const voiceOptions = voices
     .filter((voice) => voice.provider === audio.provider)
     .map((voice) => ({ value: voice.voiceId, label: voice.name }));
+  if (part === "text" && !textNeeded) return null;
+  if (part === "voice" && config.sources.audio !== "generate") return null;
+  if (part === "images" && !imagesNeeded) return null;
+  const title = part === "text" ? "Written by" : part === "voice" ? "Read by" : "Images by";
   return (
-    <section aria-label="Generation providers" className="grid min-w-0 gap-3 sm:grid-cols-2">
-      {textNeeded ? (
+    <section aria-label={title} className="grid min-w-0 gap-3 sm:grid-cols-2">
+      <h3 className="col-span-full m-0 text-title-3">{title}</h3>
+      {part === "text" ? (
         <>
           <ProviderPicker
-            label="Text provider"
+            label="Service"
             tip="play.llm.provider"
             family="llm"
             providers={providers}
@@ -200,7 +210,7 @@ export function RevisionProviders({
             }
           />
           <ModelPicker
-            label="Text model"
+            label="Model"
             tip="play.llm.model"
             provider={llm.provider}
             value={llm.model}
@@ -213,7 +223,7 @@ export function RevisionProviders({
           />
         </>
       ) : null}
-      {config.sources.audio === "generate" ? (
+      {part === "voice" ? (
         <>
           {/* With several speakers, each has its own voice (Speakers), and this one reads only
               the intro and outro; with neither it reads nothing, so it isn't offered. */}
@@ -229,7 +239,7 @@ export function RevisionProviders({
               )}
               <ProviderPicker
                 label={
-                  config.voices === undefined ? "Narration provider" : "Intro and outro provider"
+                  config.voices === undefined ? "Voice service" : "Intro and outro voice service"
                 }
                 tip="play.tts.provider"
                 family="tts"
@@ -244,7 +254,7 @@ export function RevisionProviders({
                 }
               />
               <ModelPicker
-                label={config.voices === undefined ? "Narration model" : "Intro and outro model"}
+                label={config.voices === undefined ? "Voice model" : "Intro and outro voice model"}
                 tip="play.tts.model"
                 provider={audio.provider}
                 value={audio.model}
@@ -254,7 +264,7 @@ export function RevisionProviders({
                 }
               />
               <OptionPicker
-                label={config.voices === undefined ? "Narration voice" : "Intro and outro voice"}
+                label={config.voices === undefined ? "Voice" : "Intro and outro voice"}
                 tip="play.voice"
                 value={audio.voice}
                 problem={undefined}
@@ -334,10 +344,10 @@ export function RevisionProviders({
           </section>
         </>
       ) : null}
-      {imagesNeeded ? (
+      {part === "images" ? (
         <>
           <ProviderPicker
-            label="Image provider"
+            label="Image service"
             tip="play.images.provider"
             family="image"
             providers={providers}

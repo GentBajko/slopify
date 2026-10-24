@@ -264,24 +264,28 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
       why: "Nothing to do: the run carries on once the agent answers, and a review no agent answers passes by itself 2 hours after it was asked.",
     };
 
+  // A pause holds its own stage and everything made from it (`slices/checkpoints`): what is
+  // ready to look at is the step before it, and approving makes the held stage.
   const held = input.held[0];
   if (held !== undefined) {
+    const before = reviewedBefore(held.stage);
     const heldName = name(held.stage);
     const prepared = input.project.prepared === true && held.stage === "video";
+    const after = held.dependents.filter((kind) => kind !== held.stage);
     return {
       situation: "held",
       tone: "waiting",
       status: heldStateWord(input.project),
       title: prepared
         ? "Everything but the video is made; its schedule renders the video on its day."
-        : `The ${lower(heldName)} ${isAre(heldName)} ready for your review.`,
+        : `The ${lower(name(before))} ${isAre(name(before))} ready for your review.`,
       why: prepared
         ? "Approving now renders it before its day."
-        : held.dependents.length === 0
-          ? "Approving marks it reviewed."
-          : `Approving lets ${list(held.dependents.map((kind) => lower(plural(name(kind)))))} run. Nothing after it runs until you do.`,
+        : after.length === 0
+          ? `Approving makes the ${lower(heldName)}. Nothing after it runs until you do.`
+          : `Approving makes the ${lower(heldName)}, then ${list(after.map((kind) => lower(plural(name(kind)))))}. Nothing after it runs until you do.`,
       action: { label: approveLabel(held, name), intent: { kind: "approve", gate: held } },
-      section: sectionForStage(held.stage),
+      section: prepared ? "video" : sectionForStage(before),
     };
   }
 
@@ -419,13 +423,26 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
   return undefined;
 }
 
+// Named for what approving makes: the held stage itself.
 function approveLabel(gate: HeldGate, name: (kind: StageKind) => string): string {
-  if (gate.dependents.includes("video")) return "Approve and render the video";
-  if (gate.dependents.includes("images")) return "Approve and make the images";
-  if (gate.dependents.includes("audio")) return "Approve and record the narration";
-  const first = gate.dependents[0];
-  if (first !== undefined) return `Approve and make the ${lower(name(first))}`;
-  return `Approve the ${lower(name(gate.stage))}`;
+  return `Approve and make the ${lower(name(gate.stage))}`;
+}
+
+// The step a pause before this stage holds up for review: the one made just before it.
+function reviewedBefore(stage: StageKind): StageKind {
+  switch (stage) {
+    case "audio":
+      return "article";
+    case "images":
+    case "thumbnail":
+      return "audio";
+    case "video":
+      return "images";
+    case "document":
+      return "article";
+    default:
+      return stage;
+  }
 }
 
 // " · rendering the video (45%)" when the server named the step, else " · 3 of 8" in whole

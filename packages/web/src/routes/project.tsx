@@ -828,7 +828,7 @@ function ProjectWorkspace({
                     <SettingsView
                       shown={settingsTab !== undefined}
                       tab={settingsTab ?? "settings"}
-                      opening={selected === "checkpoints" ? "reviews" : undefined}
+                      opening={selected === "checkpoints" ? "checks" : undefined}
                       onTab={(tab) => setChosen(sectionOfSettingsTab[tab])}
                       controller={controller}
                       projectId={projectId}

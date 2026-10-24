@@ -118,7 +118,7 @@ it("discards an upload that settles after regeneration without undoing the saved
   fireEvent.change(await screen.findByLabelText("Replace narration chunk 1"), {
     target: { files: [new File(["audio"], "replacement.mp3", { type: "audio/mpeg" })] },
   });
-  await within(screen.getByRole("region", { name: "Narration" })).findByRole("status");
+  await within(screen.getByRole("region", { name: "Narration text" })).findByRole("status");
   await user.click(
     screen.getByRole("button", { name: "Regenerate narration chunk 1 after review" }),
   );

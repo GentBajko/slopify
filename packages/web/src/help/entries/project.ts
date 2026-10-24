@@ -2,11 +2,6 @@ import type { HelpEntry } from "../entry.js";
 
 // The project page, Edit project and the video, caption and upload screens it opens.
 export const projectHelp = {
-  "project.next-chapter": {
-    title: "Make the next chapter",
-    body: "Opens a new draft on Play for this book's next chapter: the same speakers and voices, channel and cast, prompts and settings, with the chapter number one higher. Write or paste the new chapter's text there, then start it. The MP3 and M4B carry the book as their album and the chapter as their track. An audiobook that is not a book yet becomes one, named after it, starting at chapter 2.",
-    tutorial: { page: "Multiple-Voices", anchor: "make-the-next-chapter" },
-  },
   // Video edit: cuts and the Look (video/edit-controls.tsx), shared by Play and Edit project.
   "project.video.cuts": {
     title: "Cuts",
@@ -139,13 +134,13 @@ export const projectHelp = {
     tutorial: { page: "Editing-a-Project", anchor: "change-the-article-text" },
   },
   "project.edit.regenerate-article": {
-    title: "Regenerate article after review",
-    body: "Marks the article to be written again by the text model, which is one or more paid text calls. Nothing runs yet: the rebuild review lists it with the narration, images and video it outdates, and you start it there. It replaces any edits you made to the article.",
+    title: "Write the article again after review",
+    body: "Marks the article to be written again by the article's writing model, which is one or more paid text calls. Nothing runs yet: the rebuild review lists it with the narration, images and video it outdates, and you start it there. It replaces any edits you made to the article.",
     tutorial: { page: "Editing-a-Project", anchor: "regenerate-the-article" },
   },
   "project.saved-revision": {
-    title: "Saved revision",
-    body: "Every save of Edit project is a revision: a snapshot of the settings and content. Continuing a run always uses the current one. Saving never starts work; outputs the change affects turn outdated and keep their old version until remade. Remaking is offered as the next action, and History lets you go back.",
+    title: "Saved version",
+    body: "Every save of Edit settings is a version: a snapshot of the settings and content. Continuing a run always uses the current one. Saving never starts work; outputs the change affects turn outdated and keep their old file until remade. Remaking is offered as the next action, and Versions lets you go back.",
     tutorial: { page: "Editing-a-Project", anchor: "history-and-saved-revisions" },
   },
   "project.choose-remake": {
@@ -272,11 +267,6 @@ export const projectHelp = {
     title: "Live writing",
     body: "The text model's words as they arrive, so you can see the article or research taking shape. When a stage makes several calls, the list picks which one to watch. Follow output keeps the newest text in view; untick it to read back. Watching costs nothing extra; the full text is saved when the stage finishes.",
     tutorial: { page: "Project-Page", anchor: "live" },
-  },
-  "project.checkpoints.choices": {
-    title: "Checkpoint choices",
-    body: "A checkpoint holds the run before a step so you can check and edit what came before it. Tick a step that has not started to add one; untick to remove it, and work already admitted for that step carries on when ready. Pausing the project still applies. Only generated steps can have one. Save checkpoints applies the change.",
-    tutorial: { page: "Project-Page", anchor: "checkpoints" },
   },
   "project.rebuild.keep-provided": {
     title: "Keep the provided content",

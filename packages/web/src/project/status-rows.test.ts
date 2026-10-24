@@ -61,7 +61,11 @@ describe("the status list", () => {
       outputs: [output("article_md", "article")],
     });
     const rows = statusRows(
-      input({ stages: going.stages, outputs: going.outputs, project: going.project }),
+      input({
+        stages: going.stages,
+        outputs: going.outputs,
+        project: going.project as ProjectSummary,
+      }),
     );
     expect(rows[0]).toMatchObject({
       id: "live",

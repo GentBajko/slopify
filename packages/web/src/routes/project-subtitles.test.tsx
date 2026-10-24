@@ -55,7 +55,7 @@ describe("existing project subtitles", () => {
     const fixture = revisionRouteFixture(project());
     renderRouted(<ProjectRoute projectId="p1" />, deps({ ...fixture.routes, ...fontRoute }));
     await openProjectEditor();
-    await openEditSection("Subtitles");
+    await openEditSection("Captions");
     await screen.findByLabelText("Subtitles", { selector: "select" });
     await user.selectOptions(subtitleMode(), "burn-in");
     await screen.findByRole("option", { name: "Custom font · uploaded" });
@@ -75,7 +75,7 @@ describe("existing project subtitles", () => {
       position: "upper-middle",
     });
     await openProjectEditor();
-    await openEditSection("Subtitles");
+    await openEditSection("Captions");
     expect(((await screen.findByLabelText("Subtitle font size")) as HTMLInputElement).value).toBe(
       "64",
     );
@@ -106,7 +106,7 @@ describe("existing project subtitles", () => {
       deps({ ...fixture.routes, ...fontRoute, "POST /api/projects/p1/revisions": refusal }),
     );
     await openProjectEditor();
-    await openEditSection("Subtitles");
+    await openEditSection("Captions");
     await screen.findByLabelText("Subtitles", { selector: "select" });
     await user.selectOptions(subtitleMode(), "files");
     await user.clear(screen.getByLabelText("Subtitle font size"));
@@ -125,7 +125,7 @@ describe("existing project subtitles", () => {
     );
     renderRouted(<ProjectRoute projectId="p1" />, deps({ ...fixture.routes, ...fontRoute }));
     await openProjectEditor();
-    await openEditSection("Subtitles");
+    await openEditSection("Captions");
     await screen.findByLabelText("Subtitles", { selector: "select" });
     expect(subtitleMode().closest("fieldset")?.disabled).toBe(false);
     await user.selectOptions(subtitleMode(), "off");

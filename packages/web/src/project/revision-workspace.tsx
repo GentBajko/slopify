@@ -55,7 +55,7 @@ export function RevisionHistoryPanel({
           <RevisionFeedback error={c.error} refusal={c.refusal} />
           {c.edit === undefined && c.refusal?.reason === "conflict" ? (
             <Button disabled={c.pending} onClick={c.reloadCurrent} className="self-start">
-              Reload current revision
+              Reload the current version
             </Button>
           ) : null}
         </div>

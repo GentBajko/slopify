@@ -19,7 +19,20 @@ import { reapplyEdit } from "./draft-merge.js";
 import { KeywordFactsRefresh } from "./keyword-facts-refresh.js";
 import { RawPromptField } from "./raw-prompt-field.js";
 import { editOfForm, setPrompt } from "./revision-form-state.js";
+// Which settings section a prompt is edited in: each sits with the stage it writes for, the
+// keywords with the title, as Create lays them out.
+export type PromptPart = "keywords" | "article" | "narration" | "images" | "outputs" | "checks";
+
+function partOf(key: string): PromptPart {
+  if (key === "article") return "article";
+  if (key === "narration" || key === "intro" || key === "outro") return "narration";
+  if (key === "referencePrompt" || imageIndex(key) !== undefined) return "images";
+  if (key.startsWith("review.")) return "checks";
+  return "outputs";
+}
+
 export function RevisionPrompts({
+  part,
   edit,
   saved = edit.config.imagePrompts,
   prompts,
@@ -27,6 +40,7 @@ export function RevisionPrompts({
   projectId,
   onChange,
 }: {
+  readonly part: PromptPart;
   readonly edit: RevisionEdit;
   // The image prompts the project was saved with. Until saving, the image prompts' wording is
   // kept under their saved numbering (`imagePrompts.N`), whatever Images → Image prompts has
@@ -37,7 +51,7 @@ export function RevisionPrompts({
   // The project, for Refresh keyword facts.
   readonly projectId?: string | undefined;
   readonly onChange: (edit: RevisionEdit) => void;
-}): import("react").ReactElement {
+}): import("react").ReactElement | null {
   const formId = useId();
   const notify = useToast();
   const latest = useRef(edit);
@@ -76,6 +90,7 @@ export function RevisionPrompts({
       ...(edit.config.outro === undefined ? [] : ["outro"]),
     ]),
   ].filter((key) => {
+    if (part === "keywords" || partOf(key) !== part) return false;
     // An image prompt unticked under Images goes when the change is saved.
     const index = imageIndex(key);
     if (index === undefined) return true;
@@ -104,8 +119,44 @@ export function RevisionPrompts({
     ),
   ];
   const topics = detectSlots(edit.config.title).names;
+  if (part === "keywords")
+    return (
+      <>
+        {projectId === undefined ? null : (
+          <KeywordFactsRefresh
+            projectId={projectId}
+            edit={edit}
+            getEdit={() => latest.current}
+            onChange={onChange}
+          />
+        )}
+        {slots.length ? (
+          <section aria-label="Keywords" className="space-y-3">
+            <h3 className="m-0 text-title-3">Keywords</h3>
+            <KeywordList
+              fieldPrefix="config.values"
+              keywords={slots.map((name) => ({
+                name,
+                value: edit.config.values[name] ?? "",
+                feeds: feeds(name),
+                topic: topics.includes(name),
+              }))}
+              onChange={(name, value) =>
+                onChange(
+                  editOfForm({
+                    ...edit,
+                    config: { ...edit.config, values: { ...edit.config.values, [name]: value } },
+                  }),
+                )
+              }
+            />
+          </section>
+        ) : null}
+      </>
+    );
+  if (keys.length === 0 && (part !== "images" || added.length === 0)) return null;
   return (
-    <section aria-label="Prompt snapshots" className="space-y-6">
+    <section aria-label={`${partNames[part]} prompts`} className="space-y-6">
       {keys.map((key) => {
         const name = label(key);
         const raw = edit.content.promptTemplates[key] ?? null;
@@ -232,46 +283,25 @@ export function RevisionPrompts({
           </div>
         );
       })}
-      {added.length === 0 ? null : (
+      {part !== "images" || added.length === 0 ? null : (
         <p className="m-0 text-small text-ink-2">
           {added.map((one) => `"${one.name}"`).join(", ")}{" "}
           {added.length === 1 ? "uses its" : "use their"} Library wording. Save, then change it
           here.
         </p>
       )}
-      {projectId === undefined ? null : (
-        <KeywordFactsRefresh
-          projectId={projectId}
-          edit={edit}
-          getEdit={() => latest.current}
-          onChange={onChange}
-        />
-      )}
-      {slots.length ? (
-        <section aria-label="Keywords" className="space-y-3 pt-3">
-          <h3 className="m-0 text-title-3">Keywords</h3>
-          <KeywordList
-            fieldPrefix="config.values"
-            keywords={slots.map((name) => ({
-              name,
-              value: edit.config.values[name] ?? "",
-              feeds: feeds(name),
-              topic: topics.includes(name),
-            }))}
-            onChange={(name, value) =>
-              onChange(
-                editOfForm({
-                  ...edit,
-                  config: { ...edit.config, values: { ...edit.config.values, [name]: value } },
-                }),
-              )
-            }
-          />
-        </section>
-      ) : null}
     </section>
   );
 }
+
+const partNames: Readonly<Record<PromptPart, string>> = {
+  keywords: "Keyword",
+  article: "Article",
+  narration: "Narration",
+  images: "Image",
+  outputs: "Output",
+  checks: "Check",
+};
 
 // The Library prompt (or, for the intro and outro, the Library entry) this snapshot was copied
 // from, found by the name the project saved.

@@ -5,17 +5,18 @@ import type { RebuildConsent } from "./rebuild-review.js";
 import type { EditRequest } from "./revision-action-context.js";
 import type { RevisionRefusal } from "./revision-api.js";
 
+// The settings' sections, in Create's order and words: Title and keywords, Article, Narration,
+// Images, Video and style, Captions, Outputs, Pauses and checks, Channel.
 export type EditSection =
-  | "inputs"
+  | "title"
   | "article"
-  | "providers"
-  | "prompts"
-  | "reviews"
-  | "shorts"
-  | "subtitles"
-  | "images"
   | "narration"
-  | "captions";
+  | "images"
+  | "video"
+  | "captions"
+  | "outputs"
+  | "checks"
+  | "channel";
 
 // What the draft's status line says after something happened to the draft itself.
 export type DraftNotice =

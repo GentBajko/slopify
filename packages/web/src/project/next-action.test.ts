@@ -235,7 +235,7 @@ describe("the next action", () => {
     expect(next).toMatchObject({
       situation: "held",
       status: "Waiting for your review",
-      title: "The images are ready for your review.",
+      title: "The narration is ready for your review.",
     });
   });
 
@@ -271,7 +271,8 @@ describe("the next action", () => {
     expect(next).toMatchObject({ situation: "done", status: "Kept as is" });
   });
 
-  it("approves a held checkpoint, named for what runs next", () => {
+  // A pause holds its own stage: what is ready is the step before it, and approving makes it.
+  it("approves a held pause, named for what approving makes", () => {
     const gate = { checkpointId: "c1", stage: "images" as const, dependents: ["video" as const] };
     const next = nextActionFor(
       input({
@@ -283,17 +284,19 @@ describe("the next action", () => {
     expect(next).toMatchObject({
       situation: "held",
       status: "Waiting for your review",
-      title: "The images are ready for your review.",
-      section: "images",
-      action: { label: "Approve and render the video", intent: { kind: "approve", gate } },
+      title: "The narration is ready for your review.",
+      why: "Approving makes the images, then the video. Nothing after it runs until you do.",
+      section: "narration",
+      action: { label: "Approve and make the images", intent: { kind: "approve", gate } },
     });
     const narration = nextActionFor(
       input({
-        held: [{ checkpointId: "c2", stage: "audio", dependents: ["images"] }],
+        held: [{ checkpointId: "c2", stage: "audio", dependents: ["audio", "images"] }],
       }),
     );
-    expect(narration?.title).toBe("The narration is ready for your review.");
-    expect(narration?.action?.label).toBe("Approve and make the images");
+    expect(narration?.title).toBe("The article is ready for your review.");
+    expect(narration?.section).toBe("article");
+    expect(narration?.action?.label).toBe("Approve and make the narration");
   });
 
   it("shows no button while waiting for plan limits, only the reason", () => {
