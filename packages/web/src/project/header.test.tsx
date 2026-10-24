@@ -29,7 +29,7 @@ const ran = [
   }),
 ];
 
-it("says a finished project's state, when it finished, how long it took and its channel", async () => {
+it("says a finished project's state, what it is, when it finished, how long it took and its channel", async () => {
   renderRouted(
     <ProjectHeader
       project={chapter}
@@ -46,10 +46,33 @@ it("says a finished project's state, when it finished, how long it took and its 
   const meta = await screen.findByText(/^Sea Tales · Chapter 3$/);
   const line = meta.closest(".sl-project__meta");
   expect(line?.textContent).toMatch(
-    /^DoneProject: Done· Sea Tales · Chapter 3· finished .+, 3 min· Sea stories· uploaded .+$/,
+    /^DoneProject: Done· Audiobook· Sea Tales · Chapter 3· finished .+, 3 min· Sea stories· uploaded .+$/,
   );
   // The whole title is there on hover when the row cuts it short.
   expect(screen.getByTitle("Rope Tricks").textContent).toBe("Rope Tricks");
+});
+
+it("names a podcast as an episode, and a video by nothing more", async () => {
+  const podcast: ProjectSummary = {
+    ...plain,
+    config: { ...plain.config, voices: defaultVoicesSettings("podcast") },
+  };
+  const header = (project: ProjectSummary) => (
+    <ProjectHeader
+      project={project}
+      stages={ran}
+      editing={false}
+      onEdit={() => {}}
+      more={[]}
+      progress={1}
+    />
+  );
+  const { unmount } = renderRouted(header(podcast), testDeps({}));
+  expect(await screen.findByText("Podcast episode")).not.toBeNull();
+  unmount();
+  renderRouted(header(plain), testDeps({}));
+  const line = (await screen.findByText(/^finished /)).closest(".sl-project__meta");
+  expect(line?.textContent).toMatch(/^DoneProject: Done· finished /);
 });
 
 it("names the run's start until it finishes", async () => {
