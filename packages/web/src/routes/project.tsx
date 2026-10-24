@@ -119,7 +119,7 @@ const sectionTitles: Readonly<Record<SectionId, string>> = {
   images: "Images",
   video: "Video",
   shorts: "Shorts",
-  youtube: "YouTube text",
+  youtube: "YouTube",
   document: "PDF",
   cost: "Cost",
   live: "Progress",
@@ -807,11 +807,20 @@ function ProjectWorkspace({
                     {videoStage === undefined || !youtubeShown ? null : (
                       <StageSection
                         id="youtube"
-                        title="YouTube text"
+                        title="YouTube"
                         stages={[]}
                         active={selected === "youtube"}
                         {...sectionProps}
-                        {...(studio === null ? {} : { extra: studio })}
+                        // Copy for YouTube Studio opens from here too, beside the rows it reads.
+                        {...(uploadReady
+                          ? {
+                              extra: (
+                                <Button variant="secondary" onClick={() => setUploadOpen(true)}>
+                                  Copy for YouTube Studio
+                                </Button>
+                              ),
+                            }
+                          : {})}
                       >
                         <YoutubeBlock stage={videoStage} project={summary} outputs={outputs} />
                       </StageSection>

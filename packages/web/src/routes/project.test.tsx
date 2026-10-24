@@ -82,7 +82,7 @@ describe("the project workspace", () => {
     expect(document.querySelector(".sl-next")).toBeNull();
   });
 
-  it("gives Shorts and the YouTube text their own sections, each opened by its address", async () => {
+  it("gives Shorts and YouTube their own sections, each opened by its address", async () => {
     const youtube = {
       ...finished,
       project: {
@@ -108,12 +108,12 @@ describe("the project workspace", () => {
       within(rail)
         .getAllByRole("link")
         .map((item) => item.querySelector(".truncate")?.textContent),
-    ).toEqual(["Article", "Narration", "Images", "Video", "Shorts", "YouTube text", "All files"]);
+    ).toEqual(["Article", "Narration", "Images", "Video", "Shorts", "YouTube", "All files"]);
     expect(within(rail).getByRole("link", { name: /^Shorts/ }).textContent).toBe(
       "Shorts, Done · 1 short",
     );
-    await userEvent.click(within(rail).getByRole("link", { name: /^YouTube text/ }));
-    const text = await screen.findByRole("region", { name: "YouTube text" });
+    await userEvent.click(within(rail).getByRole("link", { name: /^YouTube/ }));
+    const text = await screen.findByRole("region", { name: "YouTube" });
     expect(text.hidden).toBe(false);
     expect(document.querySelector<HTMLElement>('section[aria-label="Video"]')?.hidden).toBe(true);
   });

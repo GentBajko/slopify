@@ -522,7 +522,7 @@ describe("home", () => {
     expect(within(ready).getByText("Ready to upload")).not.toBeNull();
     // Marked uploaded: not listed.
     expect(within(ready).queryByRole("link", { name: "Hypatia" })).toBeNull();
-    expect(within(ready).getByRole("button", { name: "Prepare upload" })).not.toBeNull();
+    expect(within(ready).getByRole("button", { name: "Copy for YouTube Studio" })).not.toBeNull();
     // The week's totals are on request.
     const week = screen.getByRole("region", { name: "This week" });
     expect(within(week).queryByText("$9.40")).toBeNull();
