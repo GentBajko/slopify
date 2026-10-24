@@ -681,6 +681,10 @@
     min-width: 0;
     overflow-wrap: anywhere;
   }
+  .sl-page-header--display .sl-page-header__lead {
+    flex-direction: column;
+    align-items: flex-start;
+  }
   .sl-page-header__meta {
     margin: 0;
     min-width: 0;

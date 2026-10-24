@@ -21,14 +21,18 @@ export function PageHeader({
   readonly crumb?: ReactNode;
   readonly meta?: ReactNode;
   readonly actions?: ReactNode;
-  // The home greeting: the `display` size, once per screen at most.
+  // The home greeting: the `display` size, once per screen at most, with the crumb above it
+  // and the meta under it.
   readonly display?: boolean;
   /** @deprecated Every page header is one row now; this does nothing. Drop it from the call. */
   readonly row?: boolean;
   readonly className?: string;
 }): ReactElement {
   return (
-    <header className={cn("sl-page-header", className)} data-slot="page-header">
+    <header
+      className={cn("sl-page-header", display && "sl-page-header--display", className)}
+      data-slot="page-header"
+    >
       <div className="sl-page-header__lead">
         {crumb === undefined ? null : <div className="sl-crumb">{crumb}</div>}
         <h1 className={display ? "sl-display" : "sl-title-1"}>{title}</h1>
