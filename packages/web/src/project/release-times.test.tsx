@@ -1,4 +1,4 @@
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
@@ -12,15 +12,16 @@ const releases = {
     {
       short: 0,
       title: "One",
-      at: "2026-10-10T18:00:00.000Z",
-      uploadBy: "2026-10-09T18:00:00.000Z",
+      at: "2036-10-10T18:00:00.000Z",
+      uploadBy: "2036-10-09T18:00:00.000Z",
       onYoutube: false,
     },
+    { short: 1, title: "One, short", at: null, uploadBy: null, onYoutube: false },
   ],
-  free: [{ row: "line-1", longAt: "2026-10-12T18:00:00.000Z" }],
+  free: [{ row: "line-1", longAt: "2036-10-12T18:00:00.000Z" }],
 };
 const calendar = {
-  entries: [{ at: "2026-10-11T18:00:00.000Z", project: { id: "p2", title: "Two | Series" } }],
+  entries: [{ at: "2036-10-11T18:00:00.000Z", project: { id: "p2", title: "Two | Series" } }],
 };
 
 function setup(own: Record<string, unknown> = releases) {
@@ -42,32 +43,63 @@ function setup(own: Record<string, unknown> = releases) {
 }
 
 describe("ReleaseTimes", () => {
-  it("reads and saves the times in the schedule's zone, naming it when it isn't the browser's", async () => {
+  it("says what a release is and where each one stands, in the same names as the links", async () => {
+    setup();
+    expect(await screen.findByText(/The day each one goes public on YouTube/u)).not.toBeNull();
+    expect(screen.getByText(/you set it in YouTube Studio's Visibility step/u)).not.toBeNull();
+    expect(screen.getByLabelText("Video release date")).not.toBeNull();
+    expect(screen.getByLabelText("Short 1 release date")).not.toBeNull();
+    expect(screen.getByText(/^Goes public .* · upload by /u)).not.toBeNull();
+    expect(screen.getByText("No date yet")).not.toBeNull();
+    // Only a row with a date can be cleared.
+    expect(screen.getAllByRole("button", { name: "Clear the time" })).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "Calendar → Releases" }).getAttribute("href")).toBe(
+      "/calendar?tab=releases",
+    );
+  });
+
+  it("saves a date when its box is left, in the schedule's zone, and Undo puts the old one back", async () => {
     const zone =
       Intl.DateTimeFormat().resolvedOptions().timeZone === "Pacific/Kiritimati"
         ? "Pacific/Pago_Pago"
         : "Pacific/Kiritimati";
     const calls = setup({ ...releases, timeZone: zone });
-    const input = (await screen.findByLabelText("Long video: release")) as HTMLInputElement;
+    const input = (await screen.findByLabelText("Video release date")) as HTMLInputElement;
     // 18:00 UTC is 08:00 the next day on Kiritimati (UTC+14), 07:00 the same day in Pago Pago.
     expect(input.value).toBe(
-      zone === "Pacific/Kiritimati" ? "2026-10-11T08:00" : "2026-10-10T07:00",
+      zone === "Pacific/Kiritimati" ? "2036-10-11T08:00" : "2036-10-10T07:00",
     );
     expect(screen.getByText(`${zone.split("/")[1]?.replaceAll("_", " ") ?? ""} time`)).toBeTruthy();
-    await userEvent.clear(input);
-    await userEvent.type(
-      input,
-      zone === "Pacific/Kiritimati" ? "2026-10-11T09:00" : "2026-10-10T08:00",
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    fireEvent.change(input, {
+      target: { value: zone === "Pacific/Kiritimati" ? "2036-10-11T09:00" : "2036-10-10T08:00" },
+    });
+    // Typing alone saves nothing; leaving the box does.
+    expect(calls).toEqual([]);
+    fireEvent.blur(input);
     await waitFor(() => expect(calls).toHaveLength(1));
-    expect(calls[0]).toContain('"at":"2026-10-10T19:00:00.000Z"');
+    expect(calls[0]).toContain('"at":"2036-10-10T19:00:00.000Z"');
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+    await userEvent.click(await screen.findByRole("button", { name: "Undo" }));
+    await waitFor(() => expect(calls).toHaveLength(2));
+    expect(calls[1]).toContain('"at":"2036-10-10T18:00:00.000Z"');
+  });
+
+  it("leaves a half-typed date as it was instead of clearing it", async () => {
+    const calls = setup();
+    const input = (await screen.findByLabelText("Video release date")) as HTMLInputElement;
+    // A browser reports a date-time box it can't read yet as empty.
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.blur(input);
+    expect(calls).toEqual([]);
+    await userEvent.click(screen.getByRole("button", { name: "Clear the time" }));
+    await waitFor(() => expect(calls).toEqual(['put {"short":0,"at":null}']));
   });
 
   it("takes a free plan time only after Take this time, not on picking it", async () => {
     const calls = setup();
-    const free = await screen.findByLabelText("Take a free time of the posting plan");
-    await userEvent.selectOptions(free, "2026-10-12T18:00:00.000Z");
+    await userEvent.click(await screen.findByText("Posting plan"));
+    const free = screen.getByLabelText("Free time in the posting plan");
+    await userEvent.selectOptions(free, "2036-10-12T18:00:00.000Z");
     expect(calls).toEqual([]);
     await userEvent.click(screen.getByRole("button", { name: "Take this time" }));
     await waitFor(() => expect(calls).toHaveLength(1));
@@ -76,12 +108,38 @@ describe("ReleaseTimes", () => {
 
   it("swaps only after Swap and offers Undo, which swaps back", async () => {
     const calls = setup();
-    const other = await screen.findByLabelText("Swap release times with another video");
+    await userEvent.click(await screen.findByText("Posting plan"));
+    const other = screen.getByLabelText("Swap release dates with another video");
     await waitFor(() => expect(screen.getAllByRole("option", { name: /^Two ·/ })).toHaveLength(1));
     await userEvent.selectOptions(other, "p2");
     expect(calls).toEqual([]);
     await userEvent.click(screen.getByRole("button", { name: "Swap" }));
     await userEvent.click(await screen.findByRole("button", { name: "Undo" }));
     await waitFor(() => expect(calls).toEqual(['swap {"with":"p2"}', 'swap {"with":"p2"}']));
+  });
+
+  it("says when an upload is late, and when it is on YouTube", async () => {
+    setup({
+      ...releases,
+      items: [
+        {
+          short: 0,
+          title: "One",
+          at: "2026-01-02T18:00:00.000Z",
+          uploadBy: "2026-01-01T18:00:00.000Z",
+          onYoutube: false,
+        },
+        {
+          short: 1,
+          title: "One, short",
+          at: "2026-01-03T18:00:00.000Z",
+          uploadBy: "2026-01-02T18:00:00.000Z",
+          onYoutube: true,
+        },
+      ],
+    });
+    expect(await screen.findByText("Late")).not.toBeNull();
+    expect(screen.getByText(/Upload it now, or pick a later date\./u)).not.toBeNull();
+    expect(screen.getByText("On YouTube")).not.toBeNull();
   });
 });
