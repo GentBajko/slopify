@@ -239,8 +239,8 @@ export function HomeRoute({
                     </ButtonLink>
                   }
                 >
-                  Finished videos show here with Watch and Download, and anything that needs you
-                  comes first.
+                  Finished videos show here with Watch and Download, and so does anything that needs
+                  you.
                 </EmptyState>
               )}
             </>

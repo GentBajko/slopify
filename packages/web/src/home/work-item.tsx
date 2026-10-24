@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 
 // One row of a Home list: the picture, the title, then one line with the state in words and
 // what the row is about, and the actions on the right. Rows sit between hairlines, dense enough
-// to show eight or more in a screen. The list is a size container (`sl-home-list`), so a narrow
-// column moves the actions under the text instead of squeezing it to a word per line.
+// to show eight or more in a screen. Where the column is too narrow for the text and the
+// actions side by side, the actions wrap under the text instead of squeezing it.
 export function WorkItem({
   lead,
   status,
@@ -24,14 +24,16 @@ export function WorkItem({
   return (
     <li className={cn("sl-home-item", hitArea)}>
       {lead}
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <div className="sl-row__title">{title}</div>
-        <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5 text-small text-ink-2">
-          {status}
-          {detail === undefined ? null : <span className="min-w-0">{detail}</span>}
+      <div className="sl-home-item__body">
+        <div className="sl-home-item__text flex flex-col gap-0.5">
+          <div className="sl-row__title">{title}</div>
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5 text-small text-ink-2">
+            {status}
+            {detail === undefined ? null : <span className="min-w-0">{detail}</span>}
+          </div>
         </div>
+        <ButtonRow className="sl-home-item__action">{action}</ButtonRow>
       </div>
-      <ButtonRow className="sl-home-item__action">{action}</ButtonRow>
     </li>
   );
 }
