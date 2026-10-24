@@ -4,11 +4,6 @@ import type { HelpEntry } from "../entry.js";
 // named links YouTube descriptions fill from.
 export const planningHelp = {
   // Schedules
-  "planning.schedules": {
-    title: "Schedules",
-    body: "A schedule starts a new project from a saved template at a local time, while Slopify is open on this machine. Each run makes a fresh project, so changing the template later never rewrites an old run. It uses the template version you picked and never includes uploaded media. Each run costs what that template's project costs.",
-    tutorial: { page: "Schedules" },
-  },
   "planning.schedule.name": {
     title: "Schedule name",
     body: "A name to tell this schedule apart in the list, on the calendar and on the channel page. It never appears in the videos. Up to 200 characters.",
@@ -143,28 +138,6 @@ export const planningHelp = {
     title: "Topics waiting",
     body: "Topics the LLM suggested, waiting for you. Approve adds one to the end of the queue; Edit changes its words first; Reject drops it for good, so it is never suggested again. Approve all queues every one in order. Waiting topics count toward Keep at least.",
     tutorial: { page: "Schedules", anchor: "approve-held-topics" },
-  },
-
-  // Calendar
-  "planning.calendar.view": {
-    title: "Calendar view",
-    body: "Weeks shows the coming 4 weeks as a grid: drag a topic to another day or onto another schedule's run, or focus it and press Alt+arrow keys. List shows the same runs day by day, with buttons to move each topic. This browser remembers your choice.",
-    tutorial: { page: "Calendar", anchor: "switch-between-weeks-and-a-list" },
-  },
-  "planning.calendar.move": {
-    title: "Moving topics",
-    body: "Earlier and later swap a topic with its neighbour in the same schedule's queue, so it takes the other's run. Move to puts it at the end of another schedule's queue, so it takes that schedule's next free run. No schedule runs outside its own times.",
-    tutorial: { page: "Calendar", anchor: "move-a-topic-to-another-day" },
-  },
-  "planning.calendar.add-schedule": {
-    title: "Schedule",
-    body: "The schedule the topics join. They go to the end of its queue, after the topics already there (the count beside each name), so they take its next free runs. Only active and paused schedules are listed.",
-    tutorial: { page: "Calendar", anchor: "add-topics" },
-  },
-  "planning.calendar.add-topics": {
-    title: "Topics, one per line",
-    body: "Each line becomes one topic, in order; blank lines are skipped. A topic fills the schedule's topic keyword, and every other keyword keeps its every-run value. To give topics their own values, edit the schedule's topics as a table under Schedules.",
-    tutorial: { page: "Calendar", anchor: "add-topics" },
   },
 
   // Channels

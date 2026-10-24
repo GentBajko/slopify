@@ -18,7 +18,10 @@ afterEach(cleanup);
 // Schedules, the calendar and channels: every control a person meets there is explained beside
 // it, by a visible help line or an info button (help/coverage.ts). The walk opens each form,
 // mode, tab, editor and dialog the way a person would.
-const planningAllow: readonly (string | RegExp)[] = [];
+const planningAllow: readonly (string | RegExp)[] = [
+  // Grid or List: its two answers say what each draws.
+  "Show the weeks as",
+];
 
 function expectExplained(): void {
   expect(unexplainedControls(document.body, [...selfExplanatory, ...planningAllow])).toEqual([]);
@@ -225,7 +228,7 @@ describe("the planning screens explain every control", () => {
     expectExplained();
   });
 
-  it("walks the Calendar: weeks, the list, suggestions and Add to calendar", async () => {
+  it("walks the Calendar: weeks, the list, suggestions and Add topics to a schedule", async () => {
     const user = userEvent.setup();
     renderRouted(<CalendarRoute />, testDeps(planningRoutes));
     await screen.findByRole("article", { name: /^Cleopatra,/ });
@@ -233,7 +236,7 @@ describe("the planning screens explain every control", () => {
     await user.click(screen.getByRole("button", { name: "List" }));
     await screen.findByLabelText("Move Cleopatra to…");
     expectExplained();
-    await user.click(screen.getByRole("button", { name: "Add to calendar" }));
+    await user.click(screen.getByRole("button", { name: "Add topics to a schedule" }));
     await screen.findByLabelText("Topics, one per line");
     expectExplained();
   });

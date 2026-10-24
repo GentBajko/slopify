@@ -1,18 +1,23 @@
 import type { CalendarEntry, CalendarItem, ReleaseCalendar } from "@app/slices/studio/calendar.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { type ReactElement, useState } from "react";
 import { saveRelease } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Input, Select } from "@/components/kit/field";
+import { List, ListRow } from "@/components/kit/list-row";
+import { SectionHead } from "@/components/kit/section-head";
 import { Badge, type BadgeTone } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
+import { ProjectThumb } from "@/home/project-thumb";
 import { browserZone, zoneDiffers, zonedFormat, zonedTime, zoneName } from "@/lib/zoned";
 import { keys } from "@/queries";
 import { localScheduleTime, scheduleInstant } from "@/schedules/time";
 
-// The pieces of Calendar → Releases: a release time and its state, its editor, and a free time
-// of the posting plan offering the finished projects of its series.
+// The pieces of Calendar → Releases: a release time and its state, its editor, a free time of
+// the posting plan offering the finished projects of its series, and the finished projects
+// that have no time yet.
 
 export const releasesKey = keys.studioReleases;
 
@@ -71,16 +76,19 @@ export interface Editing {
   readonly short: number;
 }
 
-function TimeEditor({
+export function TimeEditor({
   item,
   projectId,
   zone,
   onDone,
+  unschedule = true,
 }: {
-  readonly item: CalendarItem;
+  readonly item: Pick<CalendarItem, "short" | "at">;
   readonly projectId: string;
   readonly zone: string;
   readonly onDone: () => void;
+  // "Not scheduled" for a long video that has a time to take back.
+  readonly unschedule?: boolean;
 }): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
@@ -124,7 +132,7 @@ function TimeEditor({
       >
         Save
       </Button>
-      {item.short === 0 ? (
+      {item.short === 0 && unschedule ? (
         <Button
           type="button"
           size="small"
@@ -185,7 +193,7 @@ export function ItemCell({
           aria-label={`${label}: move from ${item.at === null ? "no time" : when(item.at, zone)}`}
           onClick={() => onEdit({ projectId, short: item.short })}
         >
-          {item.at === null ? "Set a time" : when(item.at, zone)}
+          {item.at === null ? "Set a release time" : when(item.at, zone)}
         </Button>
       )}
       <Badge tone={state.tone}>{state.word}</Badge>
@@ -264,5 +272,63 @@ export function FreeTime({
         Put it here
       </Button>
     </span>
+  );
+}
+
+// Finished videos with no release time yet, each with its picture and a way to give it one; a
+// time saved moves it up into its week.
+export function Unscheduled({
+  candidates,
+  zone,
+  editing,
+  onEdit,
+}: {
+  readonly candidates: ReleaseCalendar["candidates"];
+  readonly zone: string;
+  readonly editing: Editing | undefined;
+  readonly onEdit: (next: Editing | undefined) => void;
+}): ReactElement | null {
+  if (candidates.length === 0) return null;
+  return (
+    <section aria-label="Finished, no release time yet" className="flex flex-col gap-2">
+      <SectionHead
+        title="Finished, no release time yet"
+        meta={`${String(candidates.length)} ${candidates.length === 1 ? "video" : "videos"} · pick when each goes public`}
+        className="mb-0"
+      />
+      <List label="Finished, no release time yet">
+        {candidates.map((candidate) => (
+          <ListRow
+            key={candidate.id}
+            lead={<ProjectThumb projectId={candidate.id} className="w-[96px] shrink-0" />}
+            title={
+              <Link to="/projects/$projectId" params={{ projectId: candidate.id }}>
+                {candidate.title}
+              </Link>
+            }
+            {...(candidate.series === "" ? {} : { meta: candidate.series })}
+            actions={
+              editing?.projectId === candidate.id ? (
+                <TimeEditor
+                  item={{ short: 0, at: null }}
+                  projectId={candidate.id}
+                  zone={zone}
+                  unschedule={false}
+                  onDone={() => onEdit(undefined)}
+                />
+              ) : (
+                <Button
+                  size="small"
+                  aria-label={`Set a release time for ${candidate.title}`}
+                  onClick={() => onEdit({ projectId: candidate.id, short: 0 })}
+                >
+                  Set a release time
+                </Button>
+              )
+            }
+          />
+        ))}
+      </List>
+    </section>
   );
 }
