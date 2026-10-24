@@ -265,7 +265,7 @@ describe("the project page", () => {
       }),
     );
     await openProjectSection("Pauses and checks");
-    await screen.findByRole("group", { name: "Checkpoint choices" });
+    await screen.findByRole("group", { name: "Pauses for this run" });
     expect(unexplained()).toEqual([]);
   });
 });
@@ -278,27 +278,29 @@ describe("Edit project", () => {
     const sections = within(nav)
       .getAllByRole("button")
       .map((button) => button.firstChild?.textContent ?? "");
+    // Create's sections, in Create's order and words.
     expect(sections).toEqual([
-      "Inputs",
+      "Title and keywords",
       "Article",
-      "Providers",
-      "Prompts",
-      "Pauses and checks",
-      "Shorts",
-      "Subtitles",
-      "Images",
       "Narration",
+      "Images",
+      "Video and style",
       "Captions",
+      "Outputs",
+      "Pauses and checks",
+      "Channel",
     ]);
     const found: Record<string, readonly string[]> = {};
     for (const section of sections) {
       await openEditSection(section);
-      if (section === "Inputs") {
-        // The Look opens to the rest of the video edit.
-        const look = screen.getByText("Look").closest("details");
-        if (look !== null) look.open = true;
+      if (section === "Video and style") {
+        // The Look and Sound polish open to the rest of the video edit.
+        for (const name of ["Look", "Sound polish"]) {
+          const fold = screen.getByText(name).closest("details");
+          if (fold !== null) fold.open = true;
+        }
       }
-      if (section === "Shorts")
+      if (section === "Outputs")
         await userEvent.click(
           screen.getAllByRole("button", { name: "Use my own range" })[0] ?? document.body,
         );

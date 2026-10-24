@@ -120,6 +120,7 @@ function ProjectSubject({
   return (
     <>
       <RevisionProviders
+        part="voice"
         projectId="p1"
         edit={edit}
         providers={providers}
@@ -136,8 +137,8 @@ const surfaces = [
   {
     name: "Project",
     Subject: ProjectSubject,
-    providerLabel: "Narration provider",
-    modelLabel: "Narration model",
+    providerLabel: "Voice service",
+    modelLabel: "Voice model",
   },
 ] as const;
 
