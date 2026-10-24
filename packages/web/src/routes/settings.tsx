@@ -159,7 +159,7 @@ export function SettingsRoute({
           </>
         }
       >
-        <section aria-label={current.label} className="flex min-w-0 flex-col gap-6">
+        <section aria-label={current.label} className="flex min-w-0 flex-col gap-4">
           {section === "providers" ? (
             <KeysAndServices family={family} provider={provider} back={back} health={health} />
           ) : null}
@@ -176,7 +176,7 @@ export function SettingsRoute({
               <ProductionDefaults />
               <SectionHead
                 title="PDF look"
-                meta="The fonts, colours and page layout of the PDFs Slopify makes."
+                meta="The fonts, colors and page layout of the PDFs Slopify makes."
               >
                 <ButtonLink to="/document-themes">Edit PDF looks</ButtonLink>
               </SectionHead>

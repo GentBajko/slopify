@@ -250,7 +250,7 @@ describe("retired models", () => {
     expect(await screen.findByText(/1 new, 1 retired/)).not.toBeNull();
     expect(screen.getByText("Retired: Old Model")).not.toBeNull();
     // The catalogue's file and date are folded under the list's name.
-    const file = screen.getByText("Catalogue file").closest("details");
+    const file = screen.getByText("Catalog file").closest("details");
     expect(file?.open).toBe(false);
     expect(screen.getByText("Published 2026-09-26")).not.toBeNull();
     // A use that can't switch yet says why and offers no button.

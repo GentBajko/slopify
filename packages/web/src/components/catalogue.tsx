@@ -190,7 +190,7 @@ export function CatalogueSettings(): ReactElement {
     title: "Check for new models",
     group: "Settings",
     context: "Models",
-    keywords: ["catalogue", "prices", "retired"],
+    keywords: ["catalog", "catalogue", "prices", "retired"],
     run: () => {
       if (!check.isPending && status.data?.path) check.mutate();
     },
@@ -227,7 +227,7 @@ export function CatalogueSettings(): ReactElement {
         </p>
       )}
       <Fold
-        summary="Catalogue file"
+        summary="Catalog file"
         state={
           status.data?.updatedAt === undefined ? undefined : `Published ${status.data.updatedAt}`
         }
