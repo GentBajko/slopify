@@ -1,6 +1,7 @@
 import type { Stage } from "@app/slices/admission/model.js";
 import type { Output } from "@app/slices/storage/model.js";
 import type { Tone } from "@/components/kit/status";
+import { startedAt } from "@/lib/utils";
 import { outdatedWords } from "./output-status.js";
 import type { OutputSection, OutputState, OutputsInput } from "./project-outputs-model.js";
 
@@ -11,6 +12,7 @@ const sectionNames: Readonly<Record<OutputSection, string>> = {
   narration: "Narration",
   images: "Images",
   video: "Video",
+  shorts: "Shorts",
   document: "PDF",
 };
 
@@ -31,7 +33,7 @@ export function stateOf(
           : "The last attempt failed; the file shown is the one before it",
     };
   if (stages.some((one) => one.state === "running"))
-    return { state: "working", tone: "running", stateWords: "In progress" };
+    return { state: "working", tone: "running", stateWords: "Running" };
   if (main === undefined) return { state: "waiting", tone: "waiting", stateWords: "Not made yet" };
   const word = (output: Output) => states?.get(output.id);
   if (members.some((one) => word(one) === "missing"))
@@ -43,22 +45,22 @@ export function stateOf(
   const older = members.find((one) => word(one) === "outdated");
   if (older !== undefined)
     return { state: "older", tone: "waiting", stateWords: outdatedWords(older.role) };
-  return { state: "current", tone: "done", stateWords: "Current" };
+  // The lamp and "Done" say it is the current file; nothing more is needed.
+  return { state: "current", tone: "done", stateWords: "Done" };
 }
 
-// When this file was made, and from which version of its source, so a person can tell which
-// text a narration reads or which narration a video plays.
+// When this file was made, and, once its source has changed since, that it reads the earlier
+// one: a narration of the text before the edit, a video of the narration before the remake.
 export function versionLine(
   main: Output | undefined,
   state: OutputState,
   source: { readonly name: string; readonly output: Output | undefined } | undefined,
 ): string | undefined {
   if (main === undefined) return undefined;
-  const made = `Made ${when(main.createdAt)}`;
-  if (source?.output === undefined) return made;
-  return state === "older"
+  const made = `made ${when(main.createdAt)}`;
+  return state === "older" && source?.output !== undefined
     ? `${made}, before the current ${source.name}`
-    : `${made} from the ${source.name} of ${when(source.output.createdAt)}`;
+    : made;
 }
 
 export function nextWords(state: OutputState, section: OutputSection): string {
@@ -80,14 +82,10 @@ export function nextWords(state: OutputState, section: OutputSection): string {
   }
 }
 
-// "4 Oct, 14:05" in the reader's own time zone.
+// "Oct 4 14:05", or "14:05" today, in the reader's own time zone: the one date style the
+// project page uses for when anything happened (`startedAt`).
 export function when(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
+  return startedAt(iso);
 }
