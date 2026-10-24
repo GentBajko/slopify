@@ -3,7 +3,6 @@ import {
   CopyIcon,
   DownloadIcon,
   FolderOpenIcon,
-  Maximize2Icon,
   PlayIcon,
   RefreshCwIcon,
   SparklesIcon,
@@ -17,7 +16,9 @@ import { Callout } from "@/components/kit/callout";
 import { useCommand, useCommandPalette } from "@/components/kit/command-palette";
 import { ConfirmDialog, Dialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
-import { Code, Field, Input, Select, Textarea } from "@/components/kit/field";
+import { Checkbox, Code, Field, HelpLine, Input, Select, Textarea } from "@/components/kit/field";
+import { Fold } from "@/components/kit/fold";
+import { helpScope } from "@/components/kit/info-tip";
 import { ListDetail, PageHeader, Rule, Workspace } from "@/components/kit/layout";
 import { List, ListRow } from "@/components/kit/list-row";
 import { Lightbox, type LightboxItem, MediaFrame, MediaGrid } from "@/components/kit/media";
@@ -190,12 +191,12 @@ export function DesignRoute(): ReactElement {
 
       <Specimen
         title="Buttons"
-        meta="primary, secondary, quiet, destructive, icon; small; disabled; the Play key"
+        meta="primary, secondary, quiet, destructive, icon; small; disabled; the Play key, ready and not ready"
       >
         <ButtonRow>
           <Button variant="primary">
             <SparklesIcon aria-hidden="true" strokeWidth={1.75} />
-            Remake 3 outdated images
+            Make 3 images again · 3 image calls
           </Button>
           <Button>Edit settings</Button>
           <Button variant="quiet">
@@ -226,24 +227,37 @@ export function DesignRoute(): ReactElement {
             disabled
             disabledReason="Codex is signed out. Sign in to Codex first."
           >
-            Start the run
+            Make the video
           </Button>
           <Button disabled disabledReason="Nothing changed yet">
             Save
           </Button>
         </ButtonRow>
-        <div className="max-w-[320px]">
+        <div className="grid max-w-[680px] gap-4 md:grid-cols-2">
           <PlayKey>
             <PlayIcon aria-hidden="true" strokeWidth={1.75} />
             Make the video
           </PlayKey>
+          <div className="flex flex-col gap-2">
+            <PlayKey disabled>
+              <PlayIcon aria-hidden="true" strokeWidth={1.75} />
+              Make the video
+            </PlayKey>
+            <p className="m-0 text-center text-small text-ink-2">Pick an article prompt first</p>
+          </div>
         </div>
       </Specimen>
 
-      <Specimen title="Fields" meta="label, help, error; input, select, textarea">
+      <Specimen
+        title="Fields"
+        meta="label, the one visible help line, error; input, select, textarea"
+      >
         <div className="grid gap-5 md:grid-cols-2">
           <Field label="Title" help="Shown on YouTube and in the library.">
             <Input defaultValue="History: Cleopatra" />
+          </Field>
+          <Field label="Article length (words)" help="About 150 words is one minute.">
+            <Input type="number" className="sl-input--number" defaultValue="1500" />
           </Field>
           <Field
             label="Topic"
@@ -263,15 +277,28 @@ export function DesignRoute(): ReactElement {
           <Field label="Notes" help="One short line at most.">
             <Textarea placeholder="Anything the article should mention" />
           </Field>
+          <div className="flex flex-col gap-1" {...helpScope}>
+            <label className="flex items-center gap-2">
+              <Checkbox defaultChecked />
+              Upload captions
+            </label>
+            <HelpLine>
+              A row that lays out its own control puts its help line in its scope.
+            </HelpLine>
+          </div>
         </div>
       </Specimen>
 
-      <Specimen title="Switch and segmented">
-        <Switch checked={switchOn} onChange={setSwitchOn} label="Review images before export" />
+      <Specimen title="Switch and segmented" meta="each with its one visible help line">
+        <Switch
+          checked={switchOn}
+          onChange={setSwitchOn}
+          label="Pause after the images (before the video)"
+          help="The run waits under Home → Needs you until you approve the images."
+        />
         <Switch checked={false} onChange={() => {}} label="Upload captions" disabled />
         <Segmented
-          label="Aspect"
-          className="self-start"
+          label="Shape"
           value={seg}
           onChange={setSeg}
           options={[
@@ -279,7 +306,20 @@ export function DesignRoute(): ReactElement {
             { value: "9:16", label: "9:16" },
             { value: "1:1", label: "1:1" },
           ]}
+          help="9:16 is for shorts and phones."
         />
+      </Specimen>
+
+      <Specimen
+        title="Fold"
+        meta="a disclosure: chevron, name, its state in words, Show or Hide; never a box"
+      >
+        <Fold summary="More narration settings" state="Split by chapter, 2 voices">
+          <p className="m-0 py-2 text-small text-ink-2">The occasional settings.</p>
+        </Fold>
+        <Fold summary="Earlier samples" state="3" defaultOpen>
+          <p className="m-0 py-2 text-small text-ink-2">Version 3 · Done</p>
+        </Fold>
       </Specimen>
 
       <Specimen title="Tabs" meta="arrow keys, Home and End move">
@@ -307,10 +347,9 @@ export function DesignRoute(): ReactElement {
           kicker="Reference · not in the video"
           title="Establishing image"
           meta="Every image below follows it for Cleopatra's look, palette and style"
-          info="play.reference"
         >
-          <Button variant="primary">Regenerate</Button>
-          <Button variant="quiet">Replace with upload</Button>
+          <Button variant="primary">Make this image again</Button>
+          <Button variant="quiet">Replace with my file</Button>
         </SectionHead>
       </Specimen>
 
@@ -340,7 +379,7 @@ export function DesignRoute(): ReactElement {
 
       <Specimen
         title="Media"
-        meta="aspect boxes, captions, badges, hover and focus actions, generating; click opens the lightbox"
+        meta="aspect boxes, captions, badges, actions at rest under the caption, generating; Full size opens the lightbox"
       >
         <MediaGrid label="Images">
           {images.map((image, index) => (
@@ -356,15 +395,12 @@ export function DesignRoute(): ReactElement {
                 <>
                   <Button size="small">
                     <RefreshCwIcon aria-hidden="true" strokeWidth={1.75} />
-                    Regenerate
+                    Make this image again
                   </Button>
-                  <IconButton
-                    label="Open full size"
-                    size="small"
-                    onClick={() => setLightbox(index)}
-                  >
-                    <Maximize2Icon aria-hidden="true" strokeWidth={1.75} />
-                  </IconButton>
+                  <Button size="small" variant="quiet">
+                    <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
+                    Download
+                  </Button>
                 </>
               }
             />
@@ -386,11 +422,11 @@ export function DesignRoute(): ReactElement {
               alt={`Short ${String(i + 1)}`}
               title={`Short ${String(i + 1)}`}
               meta="1:04"
-              actionsShown={i === 0}
               actions={
-                <IconButton label="Download" size="small">
+                <Button size="small" variant="quiet">
                   <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
-                </IconButton>
+                  Download short
+                </Button>
               }
             />
           ))}
@@ -455,14 +491,26 @@ export function DesignRoute(): ReactElement {
         <Workspace
           sections={
             <Rail label="Sections">
-              {["article", "narration", "images", "video", "shorts"].map((id) => (
+              <RailButton current={section === "files"} onClick={() => setSection("files")}>
+                All files
+              </RailButton>
+              {(
+                [
+                  ["article", "Article", "done", "Done"],
+                  ["narration", "Narration", "done", "Done"],
+                  ["images", "Images", "running", "Running"],
+                  ["video", "Video", "off", "Not started"],
+                ] as const
+              ).map(([id, name, tone, word]) => (
                 <RailButton
                   key={id}
                   current={section === id}
                   onClick={() => setSection(id)}
-                  {...(id === "images" ? { meta: "9" } : {})}
+                  tone={tone}
+                  state={word}
+                  {...(id === "images" ? { meta: "8 of 9" } : {})}
                 >
-                  {id.charAt(0).toUpperCase() + id.slice(1)}
+                  {name}
                 </RailButton>
               ))}
             </Rail>
@@ -472,9 +520,9 @@ export function DesignRoute(): ReactElement {
               <NextAction
                 tone="waiting"
                 status={heldWord}
-                title="The review before the export is ready."
-                why="Approve to render the 2 h video and 3 shorts. About 25 min."
-                action={<Button variant="primary">Approve and render</Button>}
+                title="The images are ready for your review."
+                why="Approve them to make the 2 h video and 3 shorts. About 25 min."
+                action={<Button variant="primary">Approve the images</Button>}
               />
               <div>
                 <div className="sl-kicker mb-2">Run</div>
@@ -510,7 +558,7 @@ export function DesignRoute(): ReactElement {
                       name: "Review",
                       tone: "waiting",
                       state: heldWord,
-                      detail: "Held for you",
+                      detail: "9 images to look at",
                     },
                     { id: "v", name: "Video", tone: "off", state: "Not started" },
                   ]}
@@ -535,8 +583,8 @@ export function DesignRoute(): ReactElement {
         <Callout tone="waiting" title="Waiting for Codex limits.">
           Your weekly limit resets Tuesday 09:00. The run continues by itself.
         </Callout>
-        <Callout title="Regenerating it marks 9 images outdated.">
-          They keep their current version until you remake them.
+        <Callout title="Making it again marks 9 images outdated.">
+          They keep their current version until you make them again.
         </Callout>
       </Specimen>
 
@@ -679,9 +727,9 @@ export function DesignRoute(): ReactElement {
       <Specimen title="Empty state">
         <EmptyState
           title="No projects yet"
-          actions={<Button variant="primary">New project</Button>}
+          actions={<Button variant="primary">Make your first video</Button>}
         >
-          A project appears here when you start a run from Play.
+          Every video, audiobook or article you make is kept here.
         </EmptyState>
       </Specimen>
 
