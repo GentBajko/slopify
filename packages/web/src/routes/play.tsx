@@ -149,6 +149,28 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   const leaving = useRef(false);
   const routerNavigate = useNavigate();
   const narrow = useNarrow();
+  // Whether the open summary drawer covers the rail's Make button: a window too narrow for
+  // both side by side. Then the drawer carries the button in its foot, as on a phone.
+  const summaryOpen = session.section === "review";
+  const [coversKey, setCoversKey] = useState(false);
+  useLayoutEffect(() => {
+    if (!summaryOpen) return;
+    const measure = (): void => {
+      const drawer = reviewHeading.current?.closest('[data-slot="drawer"]');
+      const key = root.current?.querySelector('[data-tour="play-start"]');
+      const panel = drawer?.getBoundingClientRect();
+      const button = key?.getBoundingClientRect();
+      setCoversKey(
+        panel !== undefined &&
+          button !== undefined &&
+          panel.left < button.right &&
+          panel.right > button.left,
+      );
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [summaryOpen]);
   // Whether the Make button was pressed for this draft: only then does what the server refused
   // about the topic turn the topic field red.
   const [pressed, setPressed] = useState(false);
@@ -746,17 +768,17 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
         <StartFromPicture />
       </Workspace>
       <Drawer
-        open={session.section === "review"}
+        open={summaryOpen}
         title="Everything this run will do"
         headingRef={reviewHeading}
         // Beside the rail where there is room, so the Make button and the estimate stay in
-        // view (styles/shell.css places it); over everything on narrow screens, with the button
-        // in its foot.
+        // view (styles/shell.css places it); where it covers the button (narrow windows), with
+        // the button in its foot.
         className="min-[900px]:right-[var(--play-drawer-right)]"
         onClose={() => {
           void session.navigate("content" satisfies PlaySection);
         }}
-        {...(narrow
+        {...(narrow || coversKey
           ? { footer: <MakeButton problems={problems} onStart={start} onFix={onFix} /> }
           : {})}
       >

@@ -1,7 +1,7 @@
 import type { DraftView, PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultChannelId } from "@/channels/api";
 import { type Answer, jsonAnswer, testVersion } from "@/test-app";
 import { freshDraftDocument, setFreshProviderDefaults, setReadyServices } from "./draft-state";
@@ -280,6 +280,34 @@ describe("the rail", () => {
     expect(start.getByText(/^Expected length:/).textContent).toBe(
       "Expected length: about 20 min · 3,000 words",
     );
+  });
+
+  it("puts the Make button in the summary's foot when the summary covers the rail's", async () => {
+    // A window too narrow for the summary beside the rail: the drawer spans the button.
+    const box = (left: number, right: number): DOMRect =>
+      ({ left, right, top: 0, bottom: 40, width: right - left, height: 40 }) as DOMRect;
+    const measured = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        if (this.dataset.slot === "drawer") return box(232, 792);
+        if (this.dataset.tour === "play-start") return box(660, 1000);
+        return box(0, 0);
+      });
+    try {
+      await mountPlay({}, generatedRun);
+      await openSection("Review");
+      const summary = screen.getByRole("dialog", { name: summaryTitle });
+      expect(within(summary).getByRole("button", { name: makeKey })).not.toBeNull();
+    } finally {
+      measured.mockRestore();
+    }
+  });
+
+  it("leaves the Make button to the rail when the summary opens beside it", async () => {
+    await mountPlay({}, generatedRun);
+    await openSection("Review");
+    const summary = screen.getByRole("dialog", { name: summaryTitle });
+    expect(within(summary).queryByRole("button", { name: makeKey })).toBeNull();
   });
 
   it("checks the setup again when the person comes back to the window", async () => {
