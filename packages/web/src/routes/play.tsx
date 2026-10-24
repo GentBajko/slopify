@@ -32,6 +32,7 @@ import {
   NarrationSection,
   VideoSection,
 } from "@/play/outputs-section";
+import { PausesAndChecks } from "@/play/pauses-and-checks";
 import { previewImageOf } from "@/play/preview-image";
 import { ReviewSection } from "@/play/review-section";
 import { pendingReviewUpload, startLabel } from "@/play/review-state";
@@ -440,7 +441,7 @@ export function PlayForm({
     images: <ImagesSection {...controls} />,
     video: <VideoSection {...controls} problemOf={problem} />,
     outputs: <ExtrasSection {...controls} publishing={publishes(kind)} entries={choices.entries} />,
-    reviews: undefined,
+    reviews: <PausesAndChecks problem={problem} />,
     channel: (
       <div className="flex min-w-0 flex-col gap-4 py-4">
         <ChannelPicker />
@@ -472,10 +473,6 @@ export function PlayForm({
     editor: editors[row.id],
   }));
   const setRow = (row: SetupRowId, next: boolean): void => {
-    if (row === "reviews") {
-      openReview();
-      return;
-    }
     setOpen((current) => {
       const changed = new Set(current);
       if (next) changed.add(row);
