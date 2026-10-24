@@ -133,12 +133,18 @@ it("keeps a heading the narration reads out apart from the sentences around it",
     line("d", "Alexandria set out to gather books.", 6.1, 8),
     line("e", "Collecting everything", 8.6, 10),
     line("f", "Nobody knows how many scrolls it held.", 10.8, 13),
+    // A heading the captions cut at a pause keeps both its parts.
+    line("g", "How it", 14, 15),
+    line("h", "disappeared", 15.9, 17),
+    line("i", "Slowly.", 17.9, 19),
   ]);
   expect(paragraphs.map((paragraph) => paragraph.map((one) => one.key).join(""))).toEqual([
     "a",
     "bcd",
     "e",
     "f",
+    "gh",
+    "i",
   ]);
 });
 

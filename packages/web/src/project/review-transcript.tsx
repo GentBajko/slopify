@@ -201,27 +201,44 @@ const lead = 20;
 export function paragraphsOf(lines: readonly TranscriptLine[]): readonly TranscriptLine[][] {
   const paragraphs: TranscriptLine[][] = [];
   let current: TranscriptLine[] = [];
+  const close = (upTo: number) => {
+    const done = current.slice(0, upTo);
+    if (done.length > 0) paragraphs.push(done);
+    current = current.slice(upTo);
+  };
   let afterHeading = false;
   for (const [index, line] of lines.entries()) {
     const last = current.at(-1);
     const heading = isHeading(line, lines[index + 1]);
-    if (
+    if (heading) close(headingStart(current, line));
+    else if (
       last !== undefined &&
-      (heading ||
-        afterHeading ||
+      (afterHeading ||
         line.speaker?.name !== last.speaker?.name ||
         line.media !== last.media ||
         line.start - last.end > 1.5 ||
         (current.length >= 4 && /[.!?…]["”’)]?$/u.test(last.text.trim())))
-    ) {
-      paragraphs.push(current);
-      current = [];
-    }
+    )
+      close(current.length);
     current.push(line);
     afterHeading = heading;
   }
-  if (current.length > 0) paragraphs.push(current);
+  close(current.length);
   return paragraphs;
+}
+
+// A heading the captions cut in two ("Collecting", a pause, "everything") starts one line
+// earlier: the line before it, when that line opens a phrase in the same voice.
+function headingStart(current: readonly TranscriptLine[], heading: TranscriptLine): number {
+  const last = current.at(-1);
+  const before = current.at(-2);
+  return last !== undefined &&
+    last.media === heading.media &&
+    last.speaker?.name === heading.speaker?.name &&
+    !endsPhrase(last.text) &&
+    (before === undefined || endsPhrase(before.text))
+    ? current.length - 1
+    : current.length;
 }
 
 // A line read as a heading: no closing punctuation, then a pause and a new capitalised line by
@@ -261,7 +278,7 @@ const Paragraph = memo(function Paragraph({
   const first = lines[0];
   if (first === undefined) return null;
   // A heading read out stands alone and reads as one.
-  const heading = lines.length === 1 && !endsPhrase(first.text);
+  const heading = lines.length <= 2 && lines.every((line) => !endsPhrase(line.text));
   const fixing = onFix === undefined ? undefined : lines.find((line) => line.key === active);
   const pressed = (event: MouseEvent<HTMLButtonElement>) => {
     const key =
