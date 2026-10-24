@@ -119,12 +119,11 @@ export function useDesignStarts(options: { readonly projectId?: string } = {}): 
 export function StartFromPicture(): ReactElement {
   const starts = useDesignStarts();
   return (
-    <p className="m-0 flex flex-wrap items-center gap-x-1 text-small text-ink-2">
+    <p className="m-0 flex flex-wrap items-center gap-x-2 gap-y-1 text-small text-ink-2">
       <span>A picture instead?</span>
       <Button variant="quiet" size="small" disabled={starts.busy} onClick={starts.startPoster}>
         Design a poster (opens the design editor)
       </Button>
-      <span aria-hidden="true">·</span>
       <Button variant="quiet" size="small" disabled={starts.busy} onClick={starts.pickPicture}>
         Edit a picture (opens the design editor)
       </Button>
