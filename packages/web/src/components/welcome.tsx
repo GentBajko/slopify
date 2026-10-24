@@ -2,16 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, type ReactNode, useEffect } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
-import { Callout } from "@/components/kit/callout";
 import { Fold } from "@/components/kit/fold";
 import { ButtonLink, TextLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { Status } from "@/components/kit/status";
-import {
-  dismissWelcome,
-  readFirstRun as readProviderFirstRun,
-  upkeepKeys,
-} from "@/components/provider-upkeep-api";
+import { readFirstRun as readProviderFirstRun, upkeepKeys } from "@/components/provider-upkeep-api";
 import { cn } from "@/lib/utils";
 import {
   checkFirstRun,
@@ -245,45 +240,5 @@ export function SetupChecklist({
         </p>
       )}
     </div>
-  );
-}
-
-// The old first-launch callout, until Create and Settings stop mounting it.
-export function Welcome({
-  onDefaults,
-}: {
-  readonly onDefaults?: ((defaults: FreshProviderDefaults) => void) | undefined;
-}) {
-  const { api } = useApp();
-  const cache = useQueryClient();
-  const status = useQuery({
-    queryKey: upkeepKeys.firstRun,
-    queryFn: () => readProviderFirstRun(api),
-    retry: false,
-    staleTime: Number.POSITIVE_INFINITY,
-  });
-  useFreshProviderDefaults(onDefaults);
-  const dismiss = useMutation({
-    mutationFn: () => dismissWelcome(api),
-    onSuccess: () => cache.invalidateQueries({ queryKey: upkeepKeys.firstRun }),
-  });
-  const data = status.data;
-  if (data === undefined || !data.firstRun || data.message === null) return null;
-  return (
-    <Callout
-      title={data.message}
-      actions={
-        <Button
-          variant="quiet"
-          size="small"
-          disabled={dismiss.isPending}
-          onClick={() => dismiss.mutate()}
-        >
-          Got it
-        </Button>
-      }
-    >
-      {data.detail === null ? null : <p className="m-0">{data.detail}</p>}
-    </Callout>
   );
 }
