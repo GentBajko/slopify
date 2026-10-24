@@ -19,7 +19,7 @@ const settled = new Set(["current", "off", "provided"]);
 
 // What to do before this version can be approved for schedules, said to follow "first"
 // ("fix 1 check"), or undefined when it can be approved now.
-export function readyBlocker(
+function readyBlocker(
   view: StudioView,
   dirty: boolean,
   failing: number | undefined,

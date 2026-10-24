@@ -302,7 +302,7 @@ function ServicePicker({
   );
 }
 
-export function TitlePattern({
+function TitlePattern({
   value,
   onChange,
 }: {

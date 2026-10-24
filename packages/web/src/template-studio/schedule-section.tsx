@@ -70,7 +70,7 @@ export function ScheduleSection({ view }: { readonly view: StudioView }): ReactE
 
 // What the schedules cost a month: the active ones now, and the paused ones once resumed (a
 // paused schedule still uses the template, and the calendar lists its runs).
-export function costWords(cost: NonNullable<StudioView["schedule"]["cost"]>): string {
+function costWords(cost: NonNullable<StudioView["schedule"]["cost"]>): string {
   const active = `About ${usd(cost.high)} a month at most, for about ${String(cost.runs)} runs.`;
   const { paused } = cost;
   if (paused.schedules === 0) return active;

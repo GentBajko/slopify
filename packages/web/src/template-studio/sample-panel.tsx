@@ -230,7 +230,7 @@ const lufs = (value: number | null): string | undefined =>
 
 // A level that lands more than half a LU off its target says why: the limiter held the peaks
 // under the ceiling (Slopify's levelling stops adding gain past 6 dB more than the plain one).
-export function heldBack(loudness: StudioView["free"]["loudness"]): string {
+function heldBack(loudness: StudioView["free"]["loudness"]): string {
   const { afterLufs, targetLufs, ceiling } = loudness;
   if (afterLufs === null || targetLufs === null || ceiling === null) return "";
   const short = targetLufs - afterLufs;

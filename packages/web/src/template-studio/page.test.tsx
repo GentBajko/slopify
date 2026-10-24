@@ -1,4 +1,4 @@
-import { setupSectionNames } from "@app/slices/project-templates/setup-sections.js";
+import { setupSectionNames, setupSections } from "@app/slices/project-templates/setup-sections.js";
 import { setupSectionOf, templateSections } from "@app/slices/template-studio/model.js";
 import type { SampleQuoteView, StudioView } from "@app/slices/template-studio/schema.js";
 import { useLocation } from "@tanstack/react-router";
@@ -46,6 +46,7 @@ const quote = (over: Partial<SampleQuoteView> = {}): SampleQuoteView => ({
 const passing = { version: 3, checks: checks.checks.map((check) => ({ ...check, ok: true })) };
 
 it("names its sections from the one list Create and a project share, in run order", () => {
+  expect(templateSections.map((id) => setupSectionOf[id])).toEqual(setupSections);
   expect(templateSections.map((id) => setupSectionNames[setupSectionOf[id]])).toEqual(labels);
 });
 
