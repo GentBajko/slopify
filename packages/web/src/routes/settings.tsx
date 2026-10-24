@@ -163,7 +163,7 @@ export function SettingsRoute({
           {section === "providers" ? (
             <KeysAndServices family={family} provider={provider} back={back} health={health} />
           ) : null}
-          {section === "voices" ? <Voices /> : null}
+          {section === "voices" ? <Voices back={back} /> : null}
           {section === "models" ? (
             <>
               <ModelChecksSettings />

@@ -20,6 +20,7 @@ import { ButtonLink, TextLink } from "@/components/kit/link";
 import { SectionHead } from "@/components/kit/section-head";
 import { Status } from "@/components/kit/status";
 import { Switch } from "@/components/kit/switch";
+import { articleOf } from "@/components/provider-keys";
 import { SystemVoicePicker, sampleLine, useSystemVoices } from "@/components/system-voices";
 import {
   languagesOfText,
@@ -28,6 +29,7 @@ import {
 } from "@/language/voice-languages-cell";
 import { listProviderModels } from "@/lib/models";
 import { keys, providersQuery, voicesQuery } from "@/queries";
+import { backSearch, type SettingsBack } from "@/routes/settings-back";
 
 // OpenAI speaks a fixed set of voices by name, so they are picked rather than typed; a voice
 // cloned in the OpenAI account (`voice_…`) is still pasted as an ID.
@@ -58,24 +60,30 @@ function usable(provider: ProviderStatus | undefined): boolean {
   return provider !== undefined && readinessIsUsable(provider.readiness);
 }
 
-// The fix for a service that cannot speak yet, opened at that service on Keys & services.
+// What a voice service that cannot speak lacks, in the one list of states: a key, or for the
+// computer's own voice its speech program.
+function missingWord(provider: ProviderStatus): "No key" | "Not installed" {
+  return provider.readiness.kind === "local" ? "Not installed" : "No key";
+}
+
+// The fix for a service that cannot speak yet, opened at that service on Keys & services. A way
+// back to the welcome or Create goes along.
 function AddKeyLink({
   provider,
-  variant = "secondary",
+  back,
 }: {
   readonly provider: ProviderStatus;
-  readonly variant?: "secondary" | "quiet";
+  readonly back: SettingsBack | undefined;
 }): ReactElement {
   return (
     <ButtonLink
-      variant={variant}
       size="small"
       to="/settings"
-      search={{ section: "providers", family: "tts", provider: provider.id }}
+      search={{ section: "providers", family: "tts", provider: provider.id, ...backSearch(back) }}
     >
       {provider.readiness.kind === "local"
         ? "Set up the system voice"
-        : `Add ${/^[aeiou]/i.test(provider.displayName) ? "an" : "a"} ${provider.displayName} key`}
+        : `Add ${articleOf(provider.displayName)} ${provider.displayName} key`}
     </ButtonLink>
   );
 }
@@ -83,7 +91,12 @@ function AddKeyLink({
 // The voices narration can be read in, each with whether its service can speak now, a Listen
 // that plays one sentence in it, and the form that adds one. A wrong voice ID is still only
 // found when narration uses it; the only rule the form knows is the one the server enforces.
-export function Voices() {
+export function Voices({
+  back,
+}: {
+  // The screen the person came to Settings from, kept on the links to Keys & services.
+  readonly back?: SettingsBack | undefined;
+} = {}) {
   const { api } = useApp();
   const queryClient = useQueryClient();
   const voices = useQuery(voicesQuery(api));
@@ -139,13 +152,11 @@ export function Voices() {
             key={provider.id}
             className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-control bg-raised px-3 py-2"
           >
-            <Status tone="waiting">
-              {provider.readiness.kind === "local" ? "Not installed" : "No key"}
-            </Status>
+            <Status tone="waiting">{missingWord(provider)}</Status>
             <span className="min-w-0 flex-1 text-small text-ink">
               {`${provider.readiness.kind === "local" ? `The ${provider.displayName.toLowerCase()} isn't installed` : `${provider.displayName} has no key yet`}, so ${count === 1 ? "its voice" : `its ${String(count)} voices`} can't narrate.`}
             </span>
-            <AddKeyLink provider={provider} />
+            <AddKeyLink provider={provider} back={back} />
           </div>
         );
       })}
@@ -206,9 +217,7 @@ export function Voices() {
                         {service === undefined || providers.data === undefined ? null : canSpeak ? (
                           <Status tone="done">Ready</Status>
                         ) : (
-                          <Status tone="off">
-                            {service.readiness.kind === "local" ? "Not installed" : "No key"}
-                          </Status>
+                          <Status tone="off">{missingWord(service)}</Status>
                         )}
                       </td>
                       <td className="pr-4">
@@ -279,7 +288,13 @@ export function Voices() {
 
       <div>
         <SectionHead title="Add a voice" />
-        <AddVoiceRow tts={tts} needed={(listed ?? []).map((voice) => voice.provider)} />
+        <AddVoiceRow
+          tts={tts}
+          needed={(listed ?? []).map((voice) => voice.provider)}
+          // A service already named above the list is not offered a second time.
+          said={silent.map((provider) => provider.id)}
+          back={back}
+        />
       </div>
 
       <ConfirmDialog
@@ -360,10 +375,15 @@ function ListenButton({ voice }: { readonly voice: Voice }): ReactElement {
 function AddVoiceRow({
   tts,
   needed,
+  said,
+  back,
 }: {
   readonly tts: readonly ProviderStatus[];
   // The services the saved voices use, the likeliest one to add another voice of.
   readonly needed: readonly ProviderId[];
+  // The services the page already offers to set up, above the list.
+  readonly said: readonly ProviderId[];
+  readonly back: SettingsBack | undefined;
 }) {
   const { api } = useApp();
   const queryClient = useQueryClient();
@@ -475,7 +495,9 @@ function AddVoiceRow({
             {tts.length === 0 ? <option value="">No voice service</option> : null}
             {tts.map((option) => (
               <option key={option.id} value={option.id}>
-                {usable(option) ? option.displayName : `${option.displayName} (no key)`}
+                {usable(option)
+                  ? option.displayName
+                  : `${option.displayName} (${missingWord(option).toLowerCase()})`}
               </option>
             ))}
           </Select>
@@ -594,8 +616,8 @@ function AddVoiceRow({
         <p className="m-0 flex flex-wrap items-center gap-2 text-small text-ink-2">
           {service.readiness.kind === "local"
             ? "The system voice isn't installed on this computer yet."
-            : `${service.displayName} has no key yet: the voice is saved, but it can't narrate until you add one.`}
-          <AddKeyLink provider={service} variant="quiet" />
+            : `${service.displayName} has no key yet: you can add the voice now, but it can't narrate until the key is saved.`}
+          {said.includes(service.id) ? null : <AddKeyLink provider={service} back={back} />}
         </p>
       )}
       {add.error === null ? null : (

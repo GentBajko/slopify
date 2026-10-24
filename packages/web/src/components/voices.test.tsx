@@ -460,6 +460,47 @@ describe("the voice list", () => {
     ).toBe("https://elevenlabs.io/app/voice-library");
     await user.selectOptions(screen.getByLabelText("Voice service"), "cartesia");
     expect(screen.getByRole("link", { name: "Cartesia voice library" })).not.toBeNull();
-    expect(screen.getByText(/Cartesia has no key yet: the voice is saved/)).not.toBeNull();
+    expect(
+      screen.getByText(/Cartesia has no key yet: you can add the voice now, but it can't narrate/),
+    ).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Add a Cartesia key" })).not.toBeNull();
+  });
+
+  it("offers a missing key once, keeps the way back on it, and says a system voice is not installed", async () => {
+    renderRouted(
+      <Voices back={{ to: "welcome", step: "found" }} />,
+      testDeps({
+        "GET /api/providers": jsonAnswer({
+          providers: [
+            {
+              id: "openai-tts",
+              family: "tts",
+              displayName: "OpenAI",
+              readiness: { kind: "keyed", hasKey: false },
+            },
+            {
+              id: "system-voice",
+              family: "tts",
+              displayName: "System voice",
+              readiness: { kind: "local", available: false },
+            },
+          ],
+        }),
+        "GET /api/settings/voices": jsonAnswer({
+          voices: [{ id: "v1", provider: "openai-tts", name: "Storyteller", voiceId: "fable" }],
+        }),
+      }),
+    );
+    expect(
+      await screen.findByText("OpenAI has no key yet, so its voice can't narrate."),
+    ).not.toBeNull();
+    // Add a voice starts on OpenAI too, and says it can't narrate, without a second button.
+    expect(screen.getByText(/OpenAI has no key yet: you can add the voice now/)).not.toBeNull();
+    const links = screen.getAllByRole("link", { name: "Add an OpenAI key" });
+    expect(links).toHaveLength(1);
+    expect(links[0]?.getAttribute("href")).toBe(
+      "/settings?section=providers&family=tts&provider=openai-tts&return=welcome&step=found",
+    );
+    expect(screen.getByRole("option", { name: "System voice (not installed)" })).not.toBeNull();
   });
 });
