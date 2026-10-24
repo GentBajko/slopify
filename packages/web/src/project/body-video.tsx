@@ -287,7 +287,7 @@ export function VideoBody({ stage, project, outputs, subtitleControls }: BodyPro
           not be made. */}
       {video?.meta.warnings?.length ? (
         <ul
-          aria-label="Render notes"
+          aria-label="Notes from making the video"
           className="m-0 flex flex-col gap-1 pl-5 text-small text-ink-2"
         >
           {video.meta.warnings.map((warning) => (
