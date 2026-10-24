@@ -23,6 +23,7 @@ import { modelsKey, type ProviderModels } from "@/lib/models";
 import { entriesQuery, providersQuery, voicesQuery } from "@/queries";
 import { type FontSummary, fontsKey } from "@/subtitles/api";
 import { usePlaySession } from "./draft-context";
+import { draftName } from "./draft-list";
 import { outputKindOf } from "./output-kind";
 import { requiredProviders } from "./problems";
 import { CheckpointReview } from "./run-review";
@@ -107,15 +108,13 @@ export function ReviewSummary({
   const generatedThumbnail = ["from_prompt", "prompt_by_llm"].includes(form.sources.thumbnail);
   const providerName = (id: string) =>
     providers?.providers.find((provider) => provider.id === id)?.displayName ?? id;
-  const row = (label: string, value: ReactNode) => (
+  const row = (label: string, value: ReactNode, empty = "Not picked yet") => (
     <div
       key={label}
       className="grid min-w-0 grid-cols-[110px_minmax(0,1fr)] items-start gap-x-3 sm:grid-cols-[150px_minmax(0,1fr)]"
     >
       <dt className="break-words py-1 text-ink-2">{label}</dt>
-      <dd className="m-0 min-w-0 whitespace-pre-wrap break-words py-1">
-        {value || "Not picked yet"}
-      </dd>
+      <dd className="m-0 min-w-0 whitespace-pre-wrap break-words py-1">{value || empty}</dd>
     </div>
   );
   const group = (id: SetupRowId, field: string, body: ReactNode) => {
@@ -138,8 +137,8 @@ export function ReviewSummary({
     <>
       <SummaryGroup name="Topic" change="Change the topic" onChange={() => onReveal(topicField)}>
         <dl className="m-0 text-body">
-          {row("Title", form.title || "Untitled")}
-          {fields.map(({ name }) => row(name, form.values[name] ?? ""))}
+          {row("Title", draftName(form))}
+          {fields.map(({ name }) => row(name, form.values[name] ?? "", "Not filled in yet"))}
         </dl>
         {children}
       </SummaryGroup>

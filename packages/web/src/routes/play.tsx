@@ -1,5 +1,5 @@
 import { topicKeywords } from "@app/slices/project-templates/one-off.js";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
@@ -15,7 +15,7 @@ import { PageHeader, Workspace } from "@/components/kit/layout";
 import { StartFromPicture } from "@/designs/start";
 import { PlayLanguage } from "@/language/play-language";
 import { usePlayDraft } from "@/lib/form-drafts";
-import { modelsKey, type ProviderModels } from "@/lib/models";
+import { modelsKey, modelsQuery, type ProviderModels } from "@/lib/models";
 import { shortcuts } from "@/lib/shortcuts";
 import { admission, keywordOrigins } from "@/play/admission";
 import { BrandKitControls, ChannelFor, useDraftCast } from "@/play/channel-picker";
@@ -96,6 +96,14 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   const fonts = useQuery({ queryKey: fontsKey, queryFn: () => listFonts(api), staleTime: 60_000 });
 
   const [form, setForm] = usePlayDraft();
+  // The picked services' model lists, so a row names a model as its service does ("Sonnet 5.5",
+  // not "sonnet"). Read once here; the pickers keep them fresh while a row is open.
+  useQueries({
+    queries: [form.llm.provider, form.audio.provider, form.images.provider].map((provider) => ({
+      ...modelsQuery(api, provider),
+      refetchInterval: false as const,
+    })),
+  });
   const cast = useDraftCast();
   const session = usePlaySession();
   const defaultsSettled = useFirstRunDefaults(session);
@@ -708,8 +716,9 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
         title="Everything this run will do"
         headingRef={reviewHeading}
         // Beside the rail where there is room, so the Make button and the estimate stay in
-        // view; over everything on narrow screens, with the button in its foot.
-        className="min-[900px]:right-[376px]"
+        // view (styles/shell.css places it); over everything on narrow screens, with the button
+        // in its foot.
+        className="min-[900px]:right-[var(--play-drawer-right)]"
         onClose={() => {
           void session.navigate("content" satisfies PlaySection);
         }}
