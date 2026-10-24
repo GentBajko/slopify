@@ -135,6 +135,25 @@ describe("the kit's action rules", () => {
     ).toEqual([]);
   });
 
+  // A status lamp never stands without its word ("● Done"): `Status` draws the two together.
+  // A bare Lamp is allowed only where its word is drawn beside it some other way.
+  it("draws no bare Lamp outside the kit: a lamp comes with its word, through Status", () => {
+    const allowed: Readonly<Record<string, string>> = {
+      "components/shell.tsx": 'the rail\'s running count, whose word follows it: "● 2 running"',
+      "routes/design.tsx": "the design reference page, which lays out every lamp tone side by side",
+    };
+    expect(
+      offenders((text) => openingTags(text, "Lamp")).filter(
+        (line) => !(line.slice(0, line.indexOf(":")) in allowed),
+      ),
+    ).toEqual([]);
+    // Each one allowed still draws one, so the list can't outlive its reason.
+    for (const file of Object.keys(allowed))
+      expect(openingTags(screens.find((one) => one.file === file)?.text ?? "", "Lamp")).not.toEqual(
+        [],
+      );
+  });
+
   it("reads whole tags, arrows and nested braces included", () => {
     expect(openingTags('<a href="x" onClick={() => go({ a: 1 })}>go</a>', "a")).toEqual([
       '<a href="x" onClick={() => go({ a: 1 })}>',
