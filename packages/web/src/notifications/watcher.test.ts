@@ -1,12 +1,14 @@
 import type { ProjectState } from "@app/kernel/pipeline.js";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { claimOnce, storedTold } from "./browser.js";
+import { runEndToast } from "./use-run-notifications.js";
 import {
   createRunWatcher,
   type RunWatcherDeps,
   type ShownNotice,
   type ShownReviewNotice,
   type ShownStartNotice,
+  type ShownToast,
   type ShownTopicsNotice,
 } from "./watcher.js";
 
@@ -319,6 +321,60 @@ describe("createRunWatcher", () => {
     watcher.observe({ projectId: "p1", state: "done" });
     await watcher.settled();
     expect(shown).toEqual([]);
+  });
+
+  // The person who waits on the page learns the video is done in words, whether or not they
+  // turned on browser notifications: one toast per run end, in the tab that claims it.
+  it("says a run's end in a toast whatever the browser-notification switch says", async () => {
+    const toasts: ShownToast[] = [];
+    const claimed: string[] = [];
+    const watcher = createRunWatcher({
+      enabled: () => false,
+      seed: () => Promise.resolve([]),
+      subject: (projectId) =>
+        Promise.resolve({ title: `Project ${projectId}`, makesVideo: projectId !== "audio" }),
+      claim: (key) => {
+        claimed.push(key);
+        return Promise.resolve(!key.startsWith("other"));
+      },
+      show: () => {
+        throw new Error("no browser notification while turned off");
+      },
+      toast: (notice) => {
+        toasts.push(notice);
+      },
+      report: (error) => {
+        throw error;
+      },
+    });
+    for (const [projectId, end] of [
+      ["p1", "done"],
+      ["audio", "done"],
+      ["p2", "failed"],
+      ["p3", "pending"],
+      ["other", "done"],
+    ] as const) {
+      watcher.observe({ projectId, state: "running" });
+      watcher.observe({ projectId, state: end });
+    }
+    await watcher.settled();
+    expect(toasts.map((one) => [one.kind, one.text.headline, one.makesVideo])).toEqual([
+      ["ready", "Video ready: Project p1", true],
+      ["ready", "Run finished: Project audio", false],
+      ["failed", "Run failed: Project p2", true],
+    ]);
+    // Stopping to wait is Home's Needs you, not a toast; another tab claimed "other".
+    expect(claimed).toContain("other:done");
+    expect(runEndToast(toasts[0] as ShownToast)).toEqual({
+      message: "Video ready: Project p1",
+      tone: "success",
+      action: { label: "Watch", section: "video" },
+    });
+    expect(runEndToast(toasts[1] as ShownToast).action).toEqual({ label: "Open" });
+    expect(runEndToast(toasts[2] as ShownToast)).toMatchObject({
+      tone: "error",
+      action: { label: "Open" },
+    });
   });
 
   it("skips a deleted project and reports one it couldn't read, without throwing", async () => {

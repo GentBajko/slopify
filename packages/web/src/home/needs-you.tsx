@@ -97,7 +97,7 @@ export function StoppedItem({
 }
 
 // A run the person paused: nothing more happens until they continue it on the project, so it
-// waits here rather than under Running now.
+// waits here rather than under Running.
 export function PausedItem({
   project,
   primary,

@@ -18,6 +18,7 @@ import type {
 } from "../../slices/admission/model.js";
 import { defaultChannelId } from "../../slices/channels/model.js";
 import { createCastMember } from "../../slices/channels/service.js";
+import { writeSampleRecord } from "../../slices/onboarding/state.js";
 import { defaultVoicesSettings } from "../../slices/voices/model.js";
 import { createHub } from "../events/hub.js";
 import { createApp } from "./app.js";
@@ -772,6 +773,127 @@ describe("GET /api/projects", () => {
       channelId: "00000000-0000-4000-8000-000000000001",
       uploadedAt: null,
     });
+  });
+
+  // A finished row says what it made, how long the video runs and when it finished, so thirty
+  // finished projects can be told apart without opening one; a run that made its video but lost
+  // a step names the step; the bundled samples say they are samples.
+  it("says what a finished run made, how long and when, which step failed, and which are samples", async () => {
+    const { app, db } = harness();
+    const config = (title: string) =>
+      JSON.stringify({
+        title,
+        format: "16:9",
+        sources: {
+          research: "off",
+          article: "provide",
+          audio: "provide",
+          images: "provide",
+          thumbnail: "off",
+          video: "generate",
+          document: "generate",
+        },
+        imagePrompts: [],
+        values: {},
+        provided: {},
+        silenceGapSeconds: 3,
+        rendered: {},
+      });
+    for (const [id, title, at] of [
+      ["p1", "Done", "2026-09-01"],
+      ["p2", "Partial", "2026-09-02"],
+      ["p3", "Running", "2026-09-03"],
+    ] as const)
+      db.prepare(
+        "INSERT INTO projects (id, title, format, config, created_at, updated_at) VALUES (?,?,'16:9',?,?,?)",
+      ).run(id, title, config(title), at, at);
+    const stageRow = db.prepare(
+      "INSERT INTO stages (id, project_id, kind, source, state, finished_at) VALUES (?,?,?,?,?,?)",
+    );
+    stageRow.run("a1", "p1", "audio", "generate", "done", "2026-09-27T17:18:00.000Z");
+    stageRow.run("a2", "p1", "video", "generate", "done", "2026-09-27T17:22:21.000Z");
+    stageRow.run("a3", "p1", "document", "generate", "done", "2026-09-27T17:20:00.000Z");
+    stageRow.run("b1", "p2", "video", "generate", "done", "2026-09-28T09:00:00.000Z");
+    stageRow.run("b2", "p2", "document", "generate", "failed", "2026-09-28T09:05:00.000Z");
+    stageRow.run("c1", "p3", "audio", "generate", "done", "2026-09-29T09:00:00.000Z");
+    stageRow.run("c2", "p3", "video", "generate", "running", null);
+    const outputRow = db.prepare(
+      "INSERT INTO outputs (id, project_id, stage_kind, role, path, bytes, duration_ms, created_at) VALUES (?,?,?,?,?,1,?,'t')",
+    );
+    outputRow.run("o1", "p1", "video", "video", "video.mp4", 185_233);
+    outputRow.run("o2", "p1", "video", "short_video", "short-1.mp4", 44_200);
+    outputRow.run("o3", "p1", "video", "short_video", "short-2.mp4", 40_100);
+    outputRow.run("o4", "p1", "document", "document_pdf", "article.pdf", null);
+    outputRow.run("o5", "p2", "video", "video", "video.mp4", 61_000);
+    outputRow.run("o6", "p2", "audio", "audio_mp3", "narration.mp3", 61_000);
+    writeSampleRecord(db, { projectId: "p1", seededAt: "2026-09-27T17:00:00.000Z" }, "library");
+
+    const body = (await (await app.request("/api/projects")).json()) as {
+      projects: ProjectListing[];
+    };
+    const row = (id: string) => body.projects.find((one) => one.id === id);
+
+    expect(row("p1")).toMatchObject({
+      status: "done",
+      sample: true,
+      finishedAt: "2026-09-27T17:22:21.000Z",
+      durationSeconds: 185,
+      outputs: { video: true, shorts: 2, pdf: true, audio: false },
+    });
+    expect(row("p1")).not.toHaveProperty("failedSteps");
+    expect(row("p2")).toMatchObject({
+      status: "partial",
+      finishedAt: "2026-09-28T09:05:00.000Z",
+      durationSeconds: 61,
+      outputs: { video: true, shorts: 0, pdf: false, audio: true },
+      failedSteps: ["document"],
+    });
+    expect(row("p2")).not.toHaveProperty("sample");
+    // Still running: nothing finished to date it by.
+    expect(row("p3")?.status).toBe("running");
+    expect(row("p3")).not.toHaveProperty("finishedAt");
+    expect(row("p3")).not.toHaveProperty("outputs");
+  });
+
+  // Remake outdated on the list has something to remake only where an edit left the current
+  // version's output outdated.
+  it("says which projects hold an outdated output in their current version", async () => {
+    const { app, db } = harness();
+    for (const id of ["p1", "p2"])
+      db.prepare(
+        "INSERT INTO projects (id, title, format, config, created_at, updated_at) VALUES (?,?,'16:9',?,'2026-09-01','2026-09-01')",
+      ).run(
+        id,
+        id,
+        '{"title":"First","format":"16:9","sources":{"research":"off","article":"provide","audio":"provide","images":"provide","thumbnail":"off","video":"generate"},"imagePrompts":[],"values":{},"provided":{},"silenceGapSeconds":3,"rendered":{}}',
+      );
+    db.exec("PRAGMA foreign_keys=OFF");
+    for (const [project, revision] of [
+      ["p1", "r1"],
+      ["p2", "r2"],
+    ] as const) {
+      db.prepare(
+        "INSERT INTO project_revisions (id, project_id, config, content, fingerprints, created_at) VALUES (?,?,'{}','{}','{}','t')",
+      ).run(revision, project);
+      db.prepare("INSERT INTO project_heads (project_id, revision_id) VALUES (?,?)").run(
+        project,
+        revision,
+      );
+    }
+    const outputRow = db.prepare(
+      "INSERT INTO revision_outputs (id, project_id, revision_id, slot, work_key, asset_id, fingerprint, state, descriptor, selected, created_at) VALUES (?,?,?,'video','video','a','f',?,'{}',?,'t')",
+    );
+    outputRow.run("x1", "p1", "r1", "outdated", 1);
+    // An older output no longer selected says nothing.
+    outputRow.run("x2", "p2", "r2", "outdated", 0);
+    db.exec("PRAGMA foreign_keys=ON");
+
+    const body = (await (await app.request("/api/projects")).json()) as {
+      projects: ProjectListing[];
+    };
+
+    expect(body.projects.find((one) => one.id === "p1")?.outdated).toBe(true);
+    expect(body.projects.find((one) => one.id === "p2")).not.toHaveProperty("outdated");
   });
 
   // The list once sent every project's whole configuration, rendered prompts and provided

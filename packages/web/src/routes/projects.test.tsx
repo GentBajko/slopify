@@ -2,7 +2,7 @@ import type { ProjectState } from "@app/kernel/pipeline.js";
 import type { ProjectListing } from "@app/slices/admission/model.js";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/kit/toast";
 import { projectStateOf } from "@/lib/state-words";
 import { startedAt } from "@/lib/utils";
@@ -10,7 +10,7 @@ import { projectsSearchOf } from "@/router";
 import type { Answer } from "@/test-app";
 import { emptyAnswer, jsonAnswer, problemAnswer, renderRouted, testDeps } from "@/test-app";
 import { ProjectsRoute, projectFilterOf, projectSortOf } from "./projects.js";
-import { matches, sortProjects } from "./projects-order.js";
+import { inQueueOrder, matches, sortProjects } from "./projects-order.js";
 
 afterEach(cleanup);
 
@@ -77,7 +77,12 @@ describe("the projects list", () => {
     expect(row.getAttribute("href")).toBe("/projects/p1");
     const list = screen.getByRole("list", { name: "Projects" });
     expect(within(list).getByText("Running")).not.toBeNull();
-    expect(within(list).getByText("Done")).not.toBeNull();
+    // A finished video says the same word as its filter and Home: Ready to upload.
+    expect(within(list).getByText("Ready to upload")).not.toBeNull();
+    // Open is in words on every row, not only behind the title.
+    expect(within(list).getByRole("link", { name: "Open Knots" }).getAttribute("href")).toBe(
+      "/projects/p2",
+    );
   });
 
   it("says a run waits for a CLI's limits, and when they reset", async () => {
@@ -103,14 +108,38 @@ describe("the projects list", () => {
     expect(within(list).getByText(`Waiting for Codex limits (resets at ${time})`)).not.toBeNull();
   });
 
-  it("says what the run was made of and when it started", async () => {
-    renderRouted(<ProjectsRoute />, deps([listing("p1", "Rope Tricks", "done")]));
+  it("says what an unfinished run was made of and when it started", async () => {
+    renderRouted(<ProjectsRoute />, deps([listing("p1", "Rope Tricks", "failed")]));
     // The clock is the machine's, so the expectation is built the same way the row is.
     expect(
       await screen.findByText(
         `Documentary dossier · 16:9 · started ${startedAt("2026-09-02T19:14:00.000Z")}`,
       ),
     ).not.toBeNull();
+  });
+
+  // Thirty finished projects told apart without opening one: the picture, the length, what was
+  // made and when it finished, with Download video beside Open.
+  it("says what a finished run made, its length and when it finished, with Download video", async () => {
+    renderRouted(
+      <ProjectsRoute />,
+      deps([
+        listing("p1", "Rope Tricks", "done", {
+          finishedAt: "2026-09-27T17:22:21.000Z",
+          durationSeconds: 185,
+          outputs: { video: true, shorts: 2, pdf: true, audio: false },
+        }),
+      ]),
+    );
+    const row = (await screen.findByRole("link", { name: "Rope Tricks" })).closest("li");
+    if (row === null) throw new Error("no row");
+    expect(
+      within(row).getByText(/^3:05 · 16:9 · video \+ 2 shorts \+ PDF · finished /),
+    ).not.toBeNull();
+    const download = within(row).getByRole("link", { name: "Download video: Rope Tricks" });
+    expect(download.getAttribute("href")).toMatch(/\/files\/p1\/video$/);
+    expect(download.textContent).toBe("Download video");
+    expect(row.querySelector("img")?.getAttribute("src")).toMatch(/\/files\/p1\/thumbnail$/);
   });
 
   it("carries a progress bar on a running row at the share the server averaged, and none otherwise", async () => {
@@ -146,13 +175,6 @@ describe("the projects list", () => {
     expect(screen.queryByText("Waiting for you")).toBeNull();
   });
 
-  it("offers a new video", async () => {
-    renderRouted(<ProjectsRoute />, deps([]));
-    expect((await screen.findByRole("link", { name: "Create" })).getAttribute("href")).toBe(
-      "/play",
-    );
-  });
-
   it("names the problem when the list cannot be read", async () => {
     renderRouted(
       <ProjectsRoute />,
@@ -172,11 +194,11 @@ describe("the projects list", () => {
       ]),
     );
     await screen.findByRole("link", { name: "Rope Tricks" });
-    await user.click(screen.getByRole("button", { name: "Ready to upload" }));
+    await user.click(screen.getByRole("button", { name: "Ready to upload 1" }));
     expect(screen.queryByRole("link", { name: "Rope Tricks" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Sailing" })).toBeNull();
     expect(screen.getByRole("link", { name: "Knots" })).not.toBeNull();
-    await user.click(screen.getByRole("button", { name: "All" }));
+    await user.click(screen.getByRole("button", { name: "All 3" }));
     await user.type(screen.getByRole("searchbox", { name: "Search projects" }), "sail");
     expect(screen.getByRole("link", { name: "Sailing" })).not.toBeNull();
     expect(screen.queryByRole("link", { name: "Knots" })).toBeNull();
@@ -245,25 +267,20 @@ describe("needs you", () => {
       ]),
     );
     const show = await screen.findByRole("group", { name: "Show" });
+    // The counts sit on the filters themselves, and a filter with nothing in it is not offered.
     expect(
       within(show)
         .getAllByRole("button")
         .map((one) => one.textContent),
-    ).toEqual(["All", "Running", "Queued", "Needs you", "Ready to upload", "Failed"]);
-    const glance = screen.getByRole("complementary", { name: "Projects at a glance" });
-    expect(
-      within(glance)
-        .getAllByRole("term")
-        .map((one) => one.textContent),
-    ).toEqual(["Running", "Queued", "Needs you", "Ready to upload", "Failed"]);
-    expect(within(glance).getByText("Running").nextElementSibling?.textContent).toBe("2");
+    ).toEqual(["All 3", "Running 2", "Needs you 1"]);
+    expect(screen.queryByRole("complementary")).toBeNull();
     expect(matches(listing("p3", "Paused one", "paused", { progress: 0.5 }), "running")).toBe(
       false,
     );
   });
 
   // A run parked on an agent's review goes on by itself: it is among the running ones, as on
-  // Home's Running now.
+  // Home's Running.
   it("counts a run waiting for the agent as running", () => {
     const parked = listing("p1", "Agent one", "pending", { progress: 0.5, waitingForAgent: true });
     expect(matches(parked, "running")).toBe(true);
@@ -276,7 +293,8 @@ describe("needs you", () => {
   });
 
   // A step failed beside another that still waits: the run reads by that wait (Running for the
-  // agent's, Needs you for the person's) and is listed under Failed too.
+  // agent's, Needs you for the person's) and is listed under Failed too. A run that made its
+  // video and lost another step reads Done with problems and is ready to upload, not failed.
   it("lists a run whose step failed beside a wait by that wait and under Failed", () => {
     const agent = listing("p1", "Agent one", "pending", {
       waitingForAgent: true,
@@ -292,6 +310,9 @@ describe("needs you", () => {
     expect(matches(person, "queued")).toBe(false);
     expect(matches(person, "failed")).toBe(true);
     expect(matches(listing("p3", "Held two", "pending", { progress: 0.4 }), "failed")).toBe(false);
+    const partial = listing("p4", "Partly", "partial", { failedSteps: ["document"] });
+    expect(matches(partial, "failed")).toBe(false);
+    expect(matches(partial, "ready")).toBe(true);
   });
 
   // Parked on an agent's review before anything was made: it waits for the agent, not its turn.
@@ -338,12 +359,12 @@ describe("marking uploaded", () => {
       ),
     );
     const list = await screen.findByRole("list", { name: "Projects" });
-    await user.click(within(list).getByRole("button", { name: "Mark uploaded" }));
+    await user.click(within(list).getByRole("button", { name: "Mark uploaded: Rope Tricks" }));
     await waitFor(() => expect(sent).toEqual([{ uploaded: true }]));
     expect(screen.getAllByText("Uploaded")).toHaveLength(2);
     await user.click(screen.getByRole("button", { name: "Undo upload mark: Knots" }));
     await waitFor(() => expect(sent).toEqual([{ uploaded: true }, { uploaded: false }]));
-    // Marked weeks ago: the badge stays, the row no longer offers to take it back.
+    // Marked weeks ago: the state stays, the row no longer offers to take it back.
     expect(screen.queryByRole("button", { name: "Undo upload mark: Sailing" })).toBeNull();
   });
 });
@@ -400,11 +421,11 @@ describe("deleting a project", () => {
     expect(deleted).toBeUndefined();
   });
 
-  it("refuses while the run is going, and says what to do first", async () => {
+  // The server refuses a delete while the run is going, so a running row offers none.
+  it("offers no Delete while the run is going", async () => {
     renderRouted(<ProjectsRoute />, deps([listing("p1", "Rope Tricks", "running")]));
-    const button = await screen.findByRole("button", { name: "Delete Rope Tricks" });
-    expect(button.getAttribute("aria-disabled")).toBe("true");
-    expect(button.getAttribute("data-tip")).toBe("Cancel the run first, then delete it.");
+    await screen.findByRole("link", { name: "Rope Tricks" });
+    expect(screen.queryByRole("button", { name: "Delete Rope Tricks" })).toBeNull();
   });
 
   it("names the problem when the server refuses the delete", async () => {
@@ -450,9 +471,11 @@ describe("ordering and paging", () => {
         }),
       ]),
     );
+    // Each row's title link carries the whole name as its tooltip.
     const names = (): string[] =>
       within(screen.getByRole("list", { name: "Projects" }))
         .getAllByRole("link")
+        .filter((link) => link.hasAttribute("title"))
         .map((link) => link.textContent ?? "");
     await screen.findByRole("link", { name: "Beta" });
     expect(names()).toEqual(["Beta", "Gamma", "alpha"]);
@@ -528,12 +551,15 @@ describe("selected projects", () => {
     await screen.findByRole("link", { name: "Rope Tricks" });
     const bar = document.querySelector<HTMLElement>("[data-slot='selection-bar']");
     if (bar === null) throw new Error("no selection bar");
-    const remove = within(bar).getByRole("button", { name: "Delete" });
-    expect(remove.hasAttribute("disabled")).toBe(true);
+    // Nothing ticked: no bulk action above the list.
+    expect(within(bar).queryByRole("button")).toBeNull();
 
     await user.click(within(bar).getByRole("checkbox", { name: "Select all" }));
     expect(within(bar).getByText("3 of 3 projects selected")).not.toBeNull();
-    await user.click(remove);
+    // The destructive one last.
+    const actions = within(bar).getAllByRole("button");
+    expect(actions.at(-1)?.textContent).toBe("Delete");
+    await user.click(within(bar).getByRole("button", { name: "Delete" }));
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText("Delete 2 projects?")).not.toBeNull();
     expect(within(dialog).getByText(/1 project still running stays/)).not.toBeNull();
@@ -586,5 +612,127 @@ describe("selected projects", () => {
     renderRouted(<ProjectsRoute />, deps([listing("p1", "Rope Tricks", "done")]));
     const box = await screen.findByRole("checkbox", { name: "Select row: Rope Tricks" });
     expect(box.closest("label")?.className).toContain("size-6");
+  });
+});
+
+describe("the samples", () => {
+  // Read-only and never uploaded: no count, filter or button calls them ready to upload, and the
+  // one thing a person does with one is copy it.
+  it("never counts a sample as ready to upload, and offers Make my own copy on its row", async () => {
+    const user = userEvent.setup();
+    let copied = false;
+    renderRouted(
+      <ProjectsRoute />,
+      deps(
+        [
+          listing("s1", "The Library of Alexandria", "done", { sample: true }),
+          listing("p1", "Rope Tricks", "done"),
+        ],
+        {
+          "POST /api/onboarding/sample/copy": (request) => {
+            copied = true;
+            return jsonAnswer({ projectId: "p9" })(request);
+          },
+        },
+      ),
+    );
+    const row = (await screen.findByRole("link", { name: "The Library of Alexandria" })).closest(
+      "li",
+    );
+    if (row === null) throw new Error("no row");
+    expect(within(row).getByText("Sample")).not.toBeNull();
+    expect(within(row).getByText("Done")).not.toBeNull();
+    expect(within(row).queryByRole("button", { name: /^Mark uploaded/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "Ready to upload 1" })).not.toBeNull();
+    expect(matches(listing("s1", "Sample", "done", { sample: true }), "ready")).toBe(false);
+    await user.click(
+      within(row).getByRole("button", { name: "Make my own copy of The Library of Alexandria" }),
+    );
+    await waitFor(() => expect(copied).toBe(true));
+  });
+});
+
+describe("finished first and the queue", () => {
+  it("sorts by when each run finished, unfinished ones after", () => {
+    const projects = [
+      listing("p1", "Older", "done", { finishedAt: "2026-09-20T10:00:00.000Z" }),
+      listing("p2", "Going", "running"),
+      listing("p3", "Newer", "done", { finishedAt: "2026-09-27T10:00:00.000Z" }),
+    ];
+    expect(sortProjects(projects, "finished").map((one) => one.title)).toEqual([
+      "Newer",
+      "Older",
+      "Going",
+    ]);
+    expect(projectSortOf("finished")).toBe("finished");
+  });
+
+  // "Queue 3 videos": the Queued filter is the order they start in, and each waiting row moves
+  // Earlier or Later in words.
+  it("lists the queued videos in the order they start, each with Earlier and Later", async () => {
+    renderRouted(
+      <ProjectsRoute initialFilter="queued" />,
+      deps(
+        [
+          listing("q1", "Bea", "pending", { createdAt: "2026-09-02T10:00:00.000Z" }),
+          listing("q2", "Cal", "pending", { createdAt: "2026-09-03T10:00:00.000Z" }),
+        ],
+        {
+          "GET /api/projects/queue": jsonAnswer({
+            queue: [
+              { projectId: "a", batchId: "b", position: 0, state: "active" },
+              { projectId: "q1", batchId: "b", position: 1, state: "queued" },
+              { projectId: "q2", batchId: "b", position: 2, state: "queued" },
+            ],
+          }),
+        },
+      ),
+    );
+    await screen.findByRole("button", { name: "Move Bea later in the queue" });
+    const titles = within(screen.getByRole("list", { name: "Projects" }))
+      .getAllByRole("link")
+      .filter((link) => link.hasAttribute("title"))
+      .map((link) => link.textContent);
+    expect(titles).toEqual(["Bea", "Cal"]);
+    expect(screen.getByRole("button", { name: "Move Cal earlier in the queue" })).not.toBeNull();
+    expect(
+      inQueueOrder([listing("x", "X", "pending"), listing("q2", "Cal", "pending")], ["q2"]).map(
+        (one) => one.id,
+      ),
+    ).toEqual(["q2", "x"]);
+  });
+});
+
+describe("on a phone", () => {
+  // A row of chips wrapped and clipped there ("Ready / to"); one select keeps every label whole.
+  it("picks what to show from one select with the counts", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "matchMedia",
+      (query: string) =>
+        ({
+          matches: query === "(max-width: 767px)",
+          media: query,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+        }) as unknown as MediaQueryList,
+    );
+    try {
+      renderRouted(
+        <ProjectsRoute />,
+        deps([listing("p1", "Rope Tricks", "failed"), listing("p2", "Knots", "done")]),
+      );
+      const show = await screen.findByRole("combobox", { name: "Show" });
+      expect([...(show as HTMLSelectElement).options].map((option) => option.textContent)).toEqual([
+        "All (2)",
+        "Ready to upload (1)",
+        "Failed (1)",
+      ]);
+      expect(screen.queryByRole("group", { name: "Show" })).toBeNull();
+      await user.selectOptions(show, "failed");
+      expect(screen.queryByRole("link", { name: "Knots" })).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

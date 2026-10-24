@@ -5,9 +5,9 @@ import { useToast } from "@/components/kit/toast";
 import { keys } from "@/queries";
 import { markUploaded } from "./api.js";
 
-// Mark uploaded (and Mark not uploaded) for several projects at once, shared by the Projects
-// list's selection bar and Home's Ready to upload rows: each project on its own, so one
-// refusal leaves the rest done, announced in one toast with Undo.
+// Mark uploaded (and Mark not uploaded) for several projects at once, from the Projects list's
+// selection bar: each project on its own, so one refusal leaves the rest done, announced in one
+// toast with Undo.
 
 export interface Each {
   readonly done: readonly ProjectListing[];
@@ -37,13 +37,10 @@ export function videosWord(count: number, noun: readonly [string, string]): stri
 
 export function useBulkMarkUploaded({
   noun,
-  offWords,
   onSettled,
 }: {
-  // ["project", "projects"] on Projects, ["video", "videos"] on Home.
+  // ["project", "projects"].
   readonly noun: readonly [string, string];
-  // Where a marked video goes off, said after "Marked 2 videos uploaded.".
-  readonly offWords?: (count: number) => string;
   readonly onSettled?: () => void;
 }) {
   const { api } = useApp();
@@ -56,7 +53,7 @@ export function useBulkMarkUploaded({
       if (done.length > 0)
         notify(
           input.on
-            ? `Marked ${videosWord(done.length, noun)} uploaded.${offWords === undefined ? "" : ` ${offWords(done.length)}`}`
+            ? `Marked ${videosWord(done.length, noun)} uploaded.`
             : `${videosWord(done.length, noun)} back on Ready to upload.`,
           "success",
           { label: "Undo", run: () => mark.mutate({ list: done, on: !input.on }) },

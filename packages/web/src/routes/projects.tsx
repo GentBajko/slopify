@@ -1,32 +1,40 @@
 import type { ProjectListing } from "@app/slices/admission/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PlusIcon, SearchIcon } from "lucide-react";
-import { type ReactElement, useEffect, useMemo, useRef, useState } from "react";
+import { SearchIcon } from "lucide-react";
+import {
+  type ReactElement,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { removeProject } from "@/api";
 import { useApp } from "@/app-context";
 import { useAssistantSelection } from "@/assistant/screen";
-import { useCurrentChannel } from "@/channels/current";
-import { Board, BoardColumn } from "@/components/kit/board";
+import { ChannelPicker, useCurrentChannel } from "@/channels/current";
+import { useBatchQueue, waitingOf } from "@/components/batch-queue";
 import { Button } from "@/components/kit/button";
 import { ariaKeyShortcuts, useCommand, useSearchShortcut } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
 import { Select } from "@/components/kit/field";
 import { PageHeader } from "@/components/kit/layout";
-import { ButtonLink, TextLink } from "@/components/kit/link";
+import { ButtonLink } from "@/components/kit/link";
 import { List } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
-import { Stat, Stats } from "@/components/kit/stats";
 import { Segmented } from "@/components/kit/switch";
 import { useToast } from "@/components/kit/toast";
 import { RowCheck, useSelection } from "@/components/selection";
 import { markUploaded } from "@/home/api";
-import { onboardingKey, readFirstRun } from "@/onboarding/api";
+import { plural } from "@/lib/format";
 import { keys, projectsQuery } from "@/queries";
 import { TutorialInvite } from "@/tutorial/launcher";
 import { ProjectsBulkBar, restoreProjects } from "./projects-bulk";
 import {
+  filterCounts,
   filters,
+  inQueueOrder,
   matches,
   type ProjectFilter,
   type ProjectSort,
@@ -36,11 +44,11 @@ import {
 } from "./projects-order";
 import { ProjectRow, SkeletonRows } from "./projects-row";
 
-// Every run ever started, newest first unless another order is picked, for the channel picked
-// in the rail. Each row says what the run was made of, when it started and where it stands,
-// with its actions visible on it; ticked rows share a selection bar (projects-bulk.tsx).
-// Beside the list on a desktop: the counts per state, and where the video queue is (the
-// calendar, which shows it once for every screen).
+// Every run ever started, newest first unless another order is picked, for the channel shown.
+// The list takes the page's width: each row has its picture, what it made, when it finished,
+// its state in words and its actions (Open, Download video, Mark uploaded, Delete). The filters
+// carry their counts; a filter with nothing in it is not offered. Ticked rows share a selection
+// bar (projects-bulk.tsx) that offers its actions only once something is ticked.
 
 export {
   type ProjectFilter,
@@ -48,6 +56,19 @@ export {
   projectFilterOf,
   projectSortOf,
 } from "./projects-order";
+
+// On a phone the filters are one select with their counts: a row of chips wrapped and clipped
+// its labels there ("Ready / to").
+const phoneQuery = "(max-width: 767px)";
+function subscribePhone(listener: () => void): () => void {
+  if (typeof window.matchMedia !== "function") return () => {};
+  const query = window.matchMedia(phoneQuery);
+  query.addEventListener("change", listener);
+  return () => query.removeEventListener("change", listener);
+}
+function isPhone(): boolean {
+  return typeof window.matchMedia === "function" && window.matchMedia(phoneQuery).matches;
+}
 
 export function ProjectsRoute({
   initialFilter = "all",
@@ -73,6 +94,8 @@ export function ProjectsRoute({
   const notify = useToast();
   const current = useCurrentChannel();
   const projects = useQuery(projectsQuery(api));
+  const queue = useBatchQueue();
+  const phone = useSyncExternalStore(subscribePhone, isPhone, () => false);
   const [deleting, setDeleting] = useState<ProjectListing | undefined>(undefined);
   const [ownFilter, setOwnFilter] = useState<ProjectFilter>(initialFilter);
   const filter = shownFilter ?? ownFilter;
@@ -80,11 +103,6 @@ export function ProjectsRoute({
     setOwnFilter(next);
     onFilter?.(next);
   };
-  // The bundled sample projects carry a Sample badge.
-  const firstRun = useQuery({ queryKey: onboardingKey, queryFn: () => readFirstRun(api) });
-  const samples = new Set(
-    Object.values(firstRun.data?.samples ?? {}).filter((id): id is string => id !== null),
-  );
   // Typed here at once; the address follows a moment later, so it is not rewritten per key.
   const [search, setOwnSearch] = useState(query ?? "");
   const queryTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -165,13 +183,17 @@ export function ProjectsRoute({
   const inChannel = (projects.data?.projects ?? []).filter((one) =>
     current.includes(one.channelId),
   );
+  const counts = filterCounts(inChannel);
+  // The video queue's waiting projects, in the order they start.
+  const waiting = waitingOf(queue.data?.queue).map((entry) => entry.projectId);
   const needle = search.trim().toLowerCase();
-  const matching = sortProjects(
+  const found = sortProjects(
     inChannel.filter(
       (one) => matches(one, filter) && (needle === "" || one.title.toLowerCase().includes(needle)),
     ),
     sort,
   );
+  const matching = filter === "queued" ? inQueueOrder(found, waiting) : found;
   // A new filter, search or order starts from the first page again.
   // biome-ignore lint/correctness/useExhaustiveDependencies: the reset is keyed on what changed, not read inside.
   useEffect(() => setLimit(projectsPage), [filter, needle, sort]);
@@ -184,22 +206,19 @@ export function ProjectsRoute({
     "project",
     shown.filter((one) => selection.has(one.id)).map((one) => ({ id: one.id, label: one.title })),
   );
+  // A filter with nothing in it is not offered, but the one in use stays so it can be left.
+  const offered = filters.filter(
+    (one) => one.value === "all" || one.value === filter || counts[one.value] > 0,
+  );
 
   return (
     <div>
       <PageHeader
         title="Projects"
         meta={
-          projects.data === undefined
-            ? undefined
-            : `${String(inChannel.length)} ${inChannel.length === 1 ? "project" : "projects"} · ${current.channel?.name ?? "every channel"}`
+          projects.data === undefined ? undefined : plural(inChannel.length, "project", "projects")
         }
-        actions={
-          <ButtonLink to="/play" variant="primary">
-            <PlusIcon aria-hidden="true" strokeWidth={1.75} />
-            Create
-          </ButtonLink>
-        }
+        actions={<ChannelPicker />}
       />
 
       {projects.data?.projects.length === 0 ? <TutorialInvite /> : null}
@@ -223,152 +242,155 @@ export function ProjectsRoute({
             </ButtonLink>
           }
         >
-          Set up a run on Play: pick a template, type a topic and start.
+          Every video you make is kept here with its files.
         </EmptyState>
       ) : (
-        <Board split="aside">
-          <BoardColumn label="Project list">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative w-full max-w-[320px]">
-                <SearchIcon
-                  aria-hidden="true"
-                  strokeWidth={1.75}
-                  className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-3"
-                />
-                <input
-                  type="search"
-                  ref={searchBox}
-                  aria-label="Search projects"
-                  aria-keyshortcuts={ariaKeyShortcuts(searchKeys)}
-                  placeholder="Search projects"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  className="sl-input pl-9"
-                />
-              </div>
+        <section aria-label="Project list" className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative w-full max-w-[320px] max-md:max-w-none">
+              <SearchIcon
+                aria-hidden="true"
+                strokeWidth={1.75}
+                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-3"
+              />
+              <input
+                type="search"
+                ref={searchBox}
+                aria-label="Search projects"
+                aria-keyshortcuts={ariaKeyShortcuts(searchKeys)}
+                placeholder="Search projects"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                className="sl-input pl-9"
+              />
+            </div>
+            {offered.length < 2 ? null : phone ? (
+              <Select
+                aria-label="Show"
+                className="w-auto min-w-0 flex-1"
+                value={filter}
+                onChange={(event) => {
+                  const next = filters.find((one) => one.value === event.currentTarget.value);
+                  if (next !== undefined) setFilter(next.value);
+                }}
+                options={offered.map((one) => ({
+                  value: one.value,
+                  label: `${one.label} (${String(counts[one.value])})`,
+                }))}
+              />
+            ) : (
               <Segmented
                 label="Show"
                 value={filter}
-                options={filters}
+                options={offered.map((one) => ({
+                  value: one.value,
+                  label: (
+                    <>
+                      {one.label}{" "}
+                      <span className="sl-tab__count ml-0 tabular-nums">
+                        {String(counts[one.value])}
+                      </span>
+                    </>
+                  ),
+                }))}
                 onChange={setFilter}
                 className="max-w-full overflow-x-auto"
               />
-              <Select
-                aria-label="Sort projects"
-                className="w-auto"
-                value={sort}
-                onChange={(event) => {
-                  const next = sortOptions.find((one) => one.value === event.currentTarget.value);
-                  if (next !== undefined) setSort(next.value);
-                }}
-                options={sortOptions}
-              />
-            </div>
-            {shown.length === 0 ? (
-              <p className="m-0 text-ink-2">
-                {inChannel.length === 0
-                  ? `No projects in ${current.channel?.name ?? "this channel"} yet. Pick All channels in the rail to see the others.`
-                  : "No project matches. Clear the search or pick All."}
-              </p>
-            ) : (
-              <>
-                {/* biome-ignore lint/a11y/noStaticElementInteractions: Esc clears the selection anywhere in the list; each row keeps its own controls. */}
-                <div onKeyDown={selection.onKeyDown} className="flex flex-col gap-4">
-                  <ProjectsBulkBar
-                    selection={selection}
-                    rows={shown}
-                    samples={samples}
-                    {...(shown.length < inChannel.length
-                      ? { scope: `Select all ${String(shown.length)} shown` }
-                      : {})}
-                  />
-                  {(current.channel === undefined && current.channels.length > 1
-                    ? current.channels
-                        .map((channel) => ({
-                          channel,
-                          projects: shown.filter(
-                            (one) => (one.channelId ?? current.channels[0]?.id) === channel.id,
-                          ),
-                        }))
-                        .filter((group) => group.projects.length > 0)
-                    : [{ channel: undefined, projects: shown }]
-                  ).map((group) => (
-                    <section
-                      key={group.channel?.id ?? "all"}
-                      aria-label={group.channel?.name ?? "Projects"}
-                      className="flex flex-col gap-2"
-                    >
-                      {group.channel === undefined ? null : (
-                        <SectionHead
-                          as="h3"
-                          size="small"
-                          title={group.channel.name}
-                          meta={`${String(group.projects.length)} ${group.projects.length === 1 ? "project" : "projects"}`}
-                        />
-                      )}
-                      <List label={group.channel?.name ?? "Projects"}>
-                        {group.projects.map((project) => (
-                          <ProjectRow
-                            key={project.id}
-                            project={project}
-                            sample={samples.has(project.id)}
-                            check={
-                              <RowCheck
-                                selection={selection}
-                                value={project.id}
-                                label={project.title}
-                              />
-                            }
-                            onDelete={() => setDeleting(project)}
-                            onUploaded={(next) => uploaded.mutate({ project, uploaded: next })}
-                            busy={uploaded.isPending}
-                          />
-                        ))}
-                      </List>
-                    </section>
-                  ))}
-                </div>
-                {matching.length > shown.length ? (
-                  <div className="flex flex-wrap items-center gap-3">
-                    <Button size="small" onClick={() => setLimit((now) => now + projectsPage)}>
-                      {`Show ${String(Math.min(projectsPage, matching.length - shown.length))} more`}
-                    </Button>
-                    <span className="text-small text-ink-2 tabular-nums">
-                      {`${String(shown.length)} of ${String(matching.length)} shown`}
-                    </span>
-                  </div>
-                ) : null}
-              </>
             )}
-          </BoardColumn>
-          <BoardColumn as="aside" label="Projects at a glance">
-            <section>
-              <SectionHead title="At a glance" />
-              <Stats>
-                {filters
-                  .filter((one) => one.value !== "all")
-                  .map((one) => (
-                    <Stat
-                      key={one.value}
-                      label={one.label}
-                      value={String(
-                        inChannel.filter((project) => matches(project, one.value)).length,
-                      )}
-                    />
-                  ))}
-              </Stats>
-            </section>
-            <section aria-label="Video queue" className="flex flex-col gap-2">
-              <SectionHead title="Video queue" info="play.queue" />
-              <p className="m-0 text-small text-ink-2">
-                Videos started together, in the order they run, are on the calendar.
-              </p>
-              <div>
-                <TextLink to="/calendar">Open calendar</TextLink>
+            <Select
+              aria-label="Sort projects"
+              className="w-auto"
+              value={sort}
+              onChange={(event) => {
+                const next = sortOptions.find((one) => one.value === event.currentTarget.value);
+                if (next !== undefined) setSort(next.value);
+              }}
+              options={sortOptions}
+            />
+          </div>
+          {shown.length === 0 ? (
+            <p className="m-0 text-ink-2">
+              {inChannel.length === 0
+                ? `No projects in ${current.channel?.name ?? "this channel"} yet. Show all channels to see the others.`
+                : "No project matches. Clear the search or pick All."}
+            </p>
+          ) : (
+            <>
+              {/* biome-ignore lint/a11y/noStaticElementInteractions: Esc clears the selection anywhere in the list; each row keeps its own controls. */}
+              <div onKeyDown={selection.onKeyDown} className="flex flex-col gap-2">
+                <ProjectsBulkBar
+                  selection={selection}
+                  rows={shown}
+                  {...(shown.length < inChannel.length
+                    ? { scope: `Select all ${String(shown.length)} shown` }
+                    : {})}
+                />
+                {(current.channel === undefined && current.channels.length > 1
+                  ? current.channels
+                      .map((channel) => ({
+                        channel,
+                        projects: shown.filter(
+                          (one) => (one.channelId ?? current.channels[0]?.id) === channel.id,
+                        ),
+                      }))
+                      .filter((group) => group.projects.length > 0)
+                  : [{ channel: undefined, projects: shown }]
+                ).map((group) => (
+                  <section
+                    key={group.channel?.id ?? "all"}
+                    aria-label={group.channel?.name ?? "Projects"}
+                    className="flex flex-col gap-2"
+                  >
+                    {group.channel === undefined ? null : (
+                      <SectionHead
+                        as="h3"
+                        size="small"
+                        title={group.channel.name}
+                        meta={plural(group.projects.length, "project", "projects")}
+                      />
+                    )}
+                    <List label={group.channel?.name ?? "Projects"} className="sl-projects">
+                      {group.projects.map((project) => (
+                        <ProjectRow
+                          key={project.id}
+                          project={project}
+                          {...(waiting.includes(project.id)
+                            ? {
+                                queue: {
+                                  place: waiting.indexOf(project.id),
+                                  waiting: waiting.length,
+                                },
+                              }
+                            : {})}
+                          check={
+                            <RowCheck
+                              selection={selection}
+                              value={project.id}
+                              label={project.title}
+                            />
+                          }
+                          onDelete={() => setDeleting(project)}
+                          onUploaded={(next) => uploaded.mutate({ project, uploaded: next })}
+                          busy={uploaded.isPending}
+                        />
+                      ))}
+                    </List>
+                  </section>
+                ))}
               </div>
-            </section>
-          </BoardColumn>
-        </Board>
+              {matching.length > shown.length ? (
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button size="small" onClick={() => setLimit((now) => now + projectsPage)}>
+                    {`Show ${String(Math.min(projectsPage, matching.length - shown.length))} more`}
+                  </Button>
+                  <span className="text-small text-ink-2 tabular-nums">
+                    {`${String(shown.length)} of ${String(matching.length)} shown`}
+                  </span>
+                </div>
+              ) : null}
+            </>
+          )}
+        </section>
       )}
 
       {remove.error === null ? null : (

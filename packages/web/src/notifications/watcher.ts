@@ -16,7 +16,8 @@ import {
 // per transition, and a failed step's `stage.state` frame into Step failed while another step
 // waits. The rule is the server's own (`slices/notifications/rules.ts`): only a run seen running
 // or waiting can finish, fail or stop to wait, so a project that was already done when the page
-// loaded says nothing.
+// loaded says nothing. The end of a run is also said on the page itself, in a toast, whatever
+// the browser-notification switch: "Video ready: Title [Watch]".
 
 export interface ShownNotice {
   readonly projectId: string;
@@ -53,6 +54,14 @@ export interface AutoPassEvent {
   readonly stage: string;
   readonly item?: string | undefined;
 }
+
+// The end of a run, said in a toast on the page: whether it made a video decides Watch or Open.
+export interface ShownToast extends ShownNotice {
+  readonly makesVideo: boolean;
+}
+
+// The transitions a toast tells: the run ended, one way or another.
+const toastKinds: ReadonlySet<RunNotice> = new Set(["ready", "partial", "failed"]);
 
 // "Started: Title": a run began.
 export interface ShownStartNotice {
@@ -107,6 +116,8 @@ export interface RunWatcherDeps {
   // One tab of many wins each transition.
   readonly claim: (key: string) => Promise<boolean>;
   readonly show: (notice: ShownNotice) => void;
+  // The end of a run on the page, in the tab that claimed it, whatever `enabled` says.
+  readonly toast?: (notice: ShownToast) => void;
   readonly showTopics?: (notice: ShownTopicsNotice) => void;
   readonly showReview?: (notice: ShownReviewNotice) => void;
   readonly report: (error: unknown) => void;
@@ -185,13 +196,13 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
       )
         notices.push(one);
     if (notices.length > 0 && sounding()) deps.play?.("end");
-    if (deps.enabled())
-      for (const one of notices)
-        deps.show({
-          projectId,
-          kind: one.kind,
-          text: noticeText(one.kind, { ...subject, reason: one.reason }),
-        });
+    const enabled = deps.enabled();
+    for (const one of notices) {
+      const text = noticeText(one.kind, { ...subject, reason: one.reason });
+      if (enabled) deps.show({ projectId, kind: one.kind, text });
+      if (toastKinds.has(one.kind))
+        deps.toast?.({ projectId, kind: one.kind, text, makesVideo: subject.makesVideo });
+    }
   };
   const announceStart = async (projectId: string) => {
     const subject = await deps.subject(projectId);
@@ -221,7 +232,9 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
       }
       if (ends.has(event.state)) started.delete(event.projectId);
       const kind = noticeOf(previous, event.state);
-      if (kind === undefined || !on) return;
+      if (kind === undefined) return;
+      // The end of a run is said on the page whatever the switches say.
+      if (!on && !(deps.toast !== undefined && toastKinds.has(kind))) return;
       track(announce(event.projectId, { kind, state: event.state }));
     },
     observeStage: (event) => {

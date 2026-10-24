@@ -29,6 +29,10 @@ An ordinary run tells you once, at its end: "Run failed" or "Video ready with pr
 
 Each failure is told once. A restart neither repeats a message already sent nor loses one: what was told is saved. A step that fails again after **Try again** is a new failure and is told again. If the run later ends **Failed** on failures already told, no second "Run failed" goes out.
 
+### On the page, always
+
+The end of a run is also said on the page itself, whatever the switches below say: while a Slopify tab is open, a notice in the corner reads "Video ready: *title*" with **Watch** (the project's Video section), "Run finished: *title*" with **Open** for a run without a video, or "Run failed: *title* — *reason*" with **Open**, which stays until you close it. With several tabs open, one of them shows it.
+
 ### While you were away
 
 When you come back to a Slopify tab after more than two minutes away (or open one after closing it), one notice sums up what happened meanwhile, for example "While you were away: 2 runs finished, 1 step failed beside a wait, 1 run waits for you.", with **Open Home**. It counts runs that finished, runs that failed, steps that failed beside a wait, and runs that started waiting for you. Runs waiting for an agent or for their day are not counted as waiting for you. It works from this browser's own memory of what it last saw, with no setting.

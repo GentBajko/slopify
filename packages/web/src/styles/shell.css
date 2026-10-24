@@ -1256,40 +1256,42 @@
   .sl-listdetail__detail {
     min-width: 0;
   }
-  /* Home's items: one surface each on the ground, never a box inside a box. */
+  /* Home's items: rows between hairlines, a 96x54 picture, the title over one line of state
+     and detail, the actions on the right; eight or more fit in a screen. The text and the
+     actions share a wrapping line: where the column is too narrow for both (the two-column
+     board around 1024-1280px, a phone), the actions go under the text instead of squeezing it
+     to a word per line, however many actions the row has. */
   .sl-home-item {
     display: grid;
-    grid-template-columns: 168px minmax(0, 1fr) auto;
-    gap: 20px;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: var(--space-4);
     align-items: center;
-    padding: 14px;
-    border-radius: var(--radius-media);
-    background: var(--color-surface);
-    border: 1px solid var(--color-line);
+    padding: 8px 0;
+    border-bottom: 1px solid var(--color-line);
   }
   .sl-home-item > .sl-media__frame {
-    border-radius: 8px;
+    border-radius: 6px;
   }
-  /* Home's work list sizes its rows by its own width, not the window's: in a narrow column
-     (the two-column board around 1024-1280px, or a stacked one beside the rail) the actions go
-     under the text instead of squeezing it to a word per line. */
+  .sl-home-item__body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-4);
+    min-width: 0;
+  }
+  .sl-home-item__text {
+    flex: 1 1 15rem;
+    min-width: 0;
+  }
+  .sl-home-item__action {
+    flex: 0 0 auto;
+  }
   .sl-home-list {
-    container-type: inline-size;
+    border-top: 1px solid var(--color-line);
   }
-  @container (max-width: 640px) {
-    .sl-home-item {
-      grid-template-columns: 120px minmax(0, 1fr);
-      gap: var(--space-3) var(--space-4);
-      align-items: start;
-    }
-    .sl-home-item__action {
-      grid-column: 1 / -1;
-    }
-  }
-  @container (max-width: 420px) {
-    .sl-home-item {
-      grid-template-columns: 96px minmax(0, 1fr);
-    }
+  /* A row with no picture (Start from a template): the name and its line, the action beside. */
+  .sl-home-item--plain {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
   .sl-home-run {
     display: grid;
@@ -1306,16 +1308,39 @@
     }
   }
   @media (max-width: 767px) {
-    .sl-home-item {
-      grid-template-columns: 96px minmax(0, 1fr);
-      gap: var(--space-3);
-      align-items: start;
-    }
-    .sl-home-item__action {
-      grid-column: 1 / -1;
-    }
     .sl-home-run {
       padding: var(--space-4);
+    }
+  }
+
+  /* The Projects list: rows about 56px tall with a 64x36 picture after the checkbox, so a
+     screen holds a dozen; the state word starts the line under the name, so it lines up. */
+  .sl-projects > .sl-row {
+    padding-block: 8px;
+  }
+  .sl-projects__thumb {
+    width: 64px;
+    flex-shrink: 0;
+    border-radius: 4px;
+  }
+  .sl-projects__thumb svg {
+    width: 16px;
+    height: 16px;
+  }
+  .sl-projects .sl-row__actions {
+    align-items: center;
+    gap: var(--space-1) var(--space-2);
+  }
+  /* A list too narrow for the name and four actions side by side (a 1024px window) puts the
+     actions under the text, in line with it after the checkbox and the picture, instead of
+     cutting the name to a few words. A phone's list does the same from the edge (kit .sl-row). */
+  @container (min-width: 521px) and (max-width: 860px) {
+    .sl-projects > .sl-row {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-2);
+    }
+    .sl-projects .sl-row__actions {
+      padding-left: 104px;
     }
   }
 

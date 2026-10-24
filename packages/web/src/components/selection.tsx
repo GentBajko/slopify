@@ -156,9 +156,11 @@ export function SelectAllBox<K extends string>({
   );
 }
 
-// The bar above a list: Select all, the count and scope ("2 of 14 selected"), the bulk actions
-// and Clear. The actions stay in place and disable while nothing is selected (pass
-// `disabled={selection.count === 0}`), so nothing jumps when the first box is ticked.
+// The bar above a list: Select all and the count ("14 topics"), then once a box is ticked the
+// scope ("2 of 14 topics selected"), Clear selection and the bulk actions. The actions are
+// absent until something is ticked, so nothing reads as a page action that applies to nothing;
+// the bar keeps its one-line height either way, so nothing jumps when the first box is ticked.
+// A destructive action goes last.
 export function SelectionBar<K extends string>({
   selection,
   total,
@@ -191,19 +193,15 @@ export function SelectionBar<K extends string>({
           ? `${String(total)} ${total === 1 ? noun[0] : noun[1]}`
           : `${String(count)} of ${String(total)} ${total === 1 ? noun[0] : noun[1]} selected`}
       </span>
-      <span className="flex-1" />
-      <div className="flex flex-wrap items-center gap-2">
-        {actions}
-        <Button
-          size="small"
-          variant="quiet"
-          disabled={count === 0}
-          disabledReason="Nothing is selected"
-          onClick={selection.clear}
-        >
-          Clear selection
-        </Button>
-      </div>
+      {count === 0 ? null : (
+        <>
+          <Button size="small" variant="quiet" onClick={selection.clear}>
+            Clear selection
+          </Button>
+          <span className="flex-1" />
+          <div className="flex flex-wrap items-center gap-2">{actions}</div>
+        </>
+      )}
     </div>
   );
 }

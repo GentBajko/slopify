@@ -14,8 +14,15 @@ afterEach(cleanup);
 
 const channel = "00000000-0000-4000-8000-000000000001";
 
-function listing(id: string, title: string, status: ProjectState): ProjectListing {
+// An edit left each one outdated, unless said otherwise: that is what the bulk action is for.
+function listing(
+  id: string,
+  title: string,
+  status: ProjectState,
+  over: Partial<ProjectListing> = {},
+): ProjectListing {
   return {
+    outdated: true,
     id,
     title,
     status,
@@ -35,6 +42,7 @@ function listing(id: string, title: string, status: ProjectState): ProjectListin
     },
     createdAt: "2026-09-02T19:14:00.000Z",
     updatedAt: "2026-09-02T19:14:00.000Z",
+    ...over,
   };
 }
 
@@ -119,17 +127,7 @@ function render(projects: readonly ProjectListing[], routes: Record<string, Answ
     <ToastProvider>
       <ProjectsRoute />
     </ToastProvider>,
-    testDeps({
-      "GET /api/projects": jsonAnswer({ projects }),
-      "GET /api/onboarding": jsonAnswer({
-        show: false,
-        sampleProjectId: "p4",
-        samples: { library: "p4", audiobook: null, podcast: null },
-        clis: [],
-        packs: [],
-      }),
-      ...routes,
-    }),
+    testDeps({ "GET /api/projects": jsonAnswer({ projects }), ...routes }),
   );
 }
 
@@ -145,7 +143,21 @@ function drawer(): HTMLElement {
   return found;
 }
 
-describe("Remake outdated for the ticked projects", () => {
+describe("Make outdated parts again for the ticked projects", () => {
+  // The action names a state: it is offered only once a ticked row is in it, and the row says so.
+  it("is offered only when a ticked project is outdated, which its row shows", async () => {
+    const user = userEvent.setup();
+    const { outdated: _, ...current } = listing("p1", "Rope Tricks", "done");
+    render([current, listing("p2", "Knots", "done")], {});
+    const row = (await screen.findByRole("link", { name: "Knots" })).closest("li");
+    if (row === null) throw new Error("no row");
+    expect(within(row).getByText("Outdated")).not.toBeNull();
+    await user.click(screen.getByRole("checkbox", { name: "Select row: Rope Tricks" }));
+    expect(within(bar()).queryByRole("button", { name: "Make outdated parts again" })).toBeNull();
+    await user.click(screen.getByRole("checkbox", { name: "Select row: Knots" }));
+    expect(within(bar()).getByRole("button", { name: "Make outdated parts again" })).not.toBeNull();
+  });
+
   it("reviews every project's scope and cost, says which are left out and why, then starts them with one press", async () => {
     const user = userEvent.setup();
     const started: Started[] = [];
@@ -154,7 +166,7 @@ describe("Remake outdated for the ticked projects", () => {
         listing("p1", "Rope Tricks", "done"),
         listing("p2", "Knots", "done"),
         listing("p3", "Sailing", "running"),
-        listing("p4", "Sample Tour", "done"),
+        listing("p4", "Sample Tour", "done", { sample: true }),
         listing("p5", "Anchors", "done"),
       ],
       routesFor(
@@ -170,15 +182,14 @@ describe("Remake outdated for the ticked projects", () => {
       ),
     );
     await screen.findByRole("link", { name: "Rope Tricks" });
-    // The Sample badge: which projects are samples has loaded.
-    expect(await screen.findByText("Sample")).not.toBeNull();
+    expect(screen.getByText("Sample")).not.toBeNull();
     await user.click(within(bar()).getByRole("checkbox", { name: "Select all" }));
-    await user.click(within(bar()).getByRole("button", { name: "Remake outdated" }));
+    await user.click(within(bar()).getByRole("button", { name: "Make outdated parts again" }));
 
     const review = await waitFor(drawer);
-    const total = within(review).getByRole("region", { name: "What the remakes cost" });
+    const total = within(review).getByRole("region", { name: "What it costs" });
     expect(within(total).getByText("About $0.04–$0.06")).not.toBeNull();
-    const toMake = within(review).getByRole("list", { name: "Projects to remake" });
+    const toMake = within(review).getByRole("list", { name: "Projects to make again" });
     expect(within(toMake).getByText("Made again: Image request.")).not.toBeNull();
     expect(
       within(toMake).getByText("Then rebuilt on this computer, free: Video export."),
@@ -192,7 +203,7 @@ describe("Remake outdated for the ticked projects", () => {
     expect(within(left).getByText(/Nothing in it is outdated/)).not.toBeNull();
     expect(started).toEqual([]);
 
-    await user.click(within(review).getByRole("button", { name: "Remake 2 projects" }));
+    await user.click(within(review).getByRole("button", { name: "Make 2 projects again" }));
     await waitFor(() => expect(started.map((one) => one.project)).toEqual(["p1", "p2"]));
     expect(started[0]?.body).toMatchObject({
       baseRevisionId: "r1",
@@ -200,7 +211,9 @@ describe("Remake outdated for the ticked projects", () => {
       acknowledgeUnknownCosts: false,
       confirmedProvidedWorkKeys: [],
     });
-    expect(await screen.findByText(/Started the remake of 2 projects/)).not.toBeNull();
+    expect(
+      await screen.findByText(/Started making the outdated parts of 2 projects again/),
+    ).not.toBeNull();
   });
 
   it("names a project that didn't start on its row and tries only that one again, with the same request", async () => {
@@ -225,11 +238,11 @@ describe("Remake outdated for the ticked projects", () => {
     );
     await screen.findByRole("link", { name: "Rope Tricks" });
     await user.click(within(bar()).getByRole("checkbox", { name: "Select all" }));
-    await user.click(within(bar()).getByRole("button", { name: "Remake outdated" }));
+    await user.click(within(bar()).getByRole("button", { name: "Make outdated parts again" }));
     const review = await waitFor(drawer);
-    const total = within(review).getByRole("region", { name: "What the remakes cost" });
+    const total = within(review).getByRole("region", { name: "What it costs" });
     expect(within(total).getByText("About $0.10")).not.toBeNull();
-    await user.click(within(review).getByRole("button", { name: "Remake 2 projects" }));
+    await user.click(within(review).getByRole("button", { name: "Make 2 projects again" }));
 
     expect(
       await within(review).findByText("Didn't start: Slopify cannot run this rebuild yet."),
@@ -252,9 +265,9 @@ describe("Remake outdated for the ticked projects", () => {
       ),
     );
     await user.click(await screen.findByRole("checkbox", { name: "Select row: Rope Tricks" }));
-    await user.click(within(bar()).getByRole("button", { name: "Remake outdated" }));
+    await user.click(within(bar()).getByRole("button", { name: "Make outdated parts again" }));
     const review = await waitFor(drawer);
-    const go = within(review).getByRole("button", { name: "Remake 1 project" });
+    const go = within(review).getByRole("button", { name: "Make 1 project again" });
     expect(go.hasAttribute("disabled")).toBe(true);
     await user.click(
       within(review).getByRole("checkbox", {
@@ -280,10 +293,12 @@ describe("Remake outdated for the ticked projects", () => {
     );
     await screen.findByRole("link", { name: "Rope Tricks" });
     await user.click(within(bar()).getByRole("checkbox", { name: "Select all" }));
-    await user.click(within(bar()).getByRole("button", { name: "Remake outdated" }));
+    await user.click(within(bar()).getByRole("button", { name: "Make outdated parts again" }));
     await waitFor(() => expect(started.map((one) => one.project)).toEqual(["p1", "p2"]));
     expect(document.querySelector("[data-slot='drawer']")).toBeNull();
-    expect(await screen.findByText(/Started the remake of 2 projects/)).not.toBeNull();
+    expect(
+      await screen.findByText(/Started making the outdated parts of 2 projects again/),
+    ).not.toBeNull();
   });
 });
 

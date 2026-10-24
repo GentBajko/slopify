@@ -1,54 +1,58 @@
 import type { QueueEntry } from "@app/slices/batch/index.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowDownIcon, ArrowUpIcon, ListVideoIcon, XIcon } from "lucide-react";
 import type { ReactElement } from "react";
 import { type Api, type ProjectListing, removeProject } from "@/api";
 import { useApp } from "@/app-context";
-import { Button, IconButton } from "@/components/kit/button";
+import { Button } from "@/components/kit/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/kit/popover";
 import { QueryState } from "@/components/kit/query-state";
+import { Status } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
 import { helpEntry } from "@/help/catalog";
 import { read } from "@/http";
+import { plural } from "@/lib/format";
 import { keys, projectsQuery } from "@/queries";
 import { restoreTrashItem } from "@/trash/api";
 
 const queueKey = ["batch-queue"] as const;
 
-// The queue as a count, for the project page bar: the list opens in a popover, so the page
-// under it never moves when a batch starts or drains.
-export function BatchQueueCount() {
+// The video queue: videos started together ("Queue 3 videos" in Create) run one at a time, in
+// this order. Home lists the waiting ones under Running, the Projects list sorts its Queued
+// filter by it, and a project page says how many wait.
+export function useBatchQueue() {
   const { api } = useApp();
-  const queue = useQuery({
+  return useQuery({
     queryKey: queueKey,
     queryFn: async () =>
       read<{ queue: QueueEntry[] }>(await api.fetch(`${api.origin}/api/projects/queue`)),
     refetchInterval: 2000,
     retry: false,
   });
+}
+
+// The waiting videos, in the order they start.
+export function waitingOf(queue: readonly QueueEntry[] | undefined): readonly QueueEntry[] {
+  return (queue ?? []).filter((entry) => entry.state === "queued");
+}
+
+// For a project page: "2 videos waiting in the queue", opening the list with its order and
+// Earlier, Later and Remove. Nothing at all while nothing waits, so a finished project carries
+// no queue it has no part in.
+export function BatchQueueCount(): ReactElement | null {
+  const { api } = useApp();
+  const queue = useBatchQueue();
   const projects = useQuery(projectsQuery(api));
-  const count = queue.data?.queue.length;
-  // Unknown is not zero: before the queue answers, or when it can't, the count says so and the
-  // popover opens on the reason and Retry.
-  const shown = count === undefined ? (queue.error === null ? "…" : "?") : String(count);
+  const waiting = waitingOf(queue.data?.queue);
+  // Unknown is not zero: when the queue can't be read the button says so and opens on Retry.
+  if (queue.error === null && waiting.length === 0) return null;
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button
-          variant="quiet"
-          disabled={count === 0 && queue.error === null}
-          disabledReason="Nothing is queued"
-          aria-label={
-            count === undefined
-              ? queue.error === null
-                ? "Video queue: loading"
-                : "Video queue: didn't load"
-              : `Video queue: ${String(count)} remaining`
-          }
-        >
-          <ListVideoIcon aria-hidden="true" className="size-4" />
-          <span className="tabular-nums">Queue · {shown}</span>
+        <Button variant="quiet">
+          {queue.error === null
+            ? `${plural(waiting.length, "video", "videos")} waiting in the queue`
+            : "The video queue didn't load"}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="p-0">
@@ -60,51 +64,54 @@ export function BatchQueueCount() {
             {() => null}
           </QueryState>
         </div>
-        <QueueList queue={queue.data?.queue ?? []} projects={projects.data?.projects} />
+        <QueueList waiting={waiting} projects={projects.data?.projects} className="px-3 py-2" />
       </PopoverContent>
     </Popover>
   );
 }
 
-function QueueList({
-  queue,
+// The waiting videos in their order, each with its place, a link to it, and Earlier, Later and
+// Remove.
+export function QueueList({
+  waiting,
   projects,
+  className,
 }: {
-  readonly queue: readonly QueueEntry[];
+  readonly waiting: readonly QueueEntry[];
   readonly projects: readonly ProjectListing[] | undefined;
-}) {
-  const waiting = queue.filter((entry) => entry.state === "queued");
+  readonly className?: string;
+}): ReactElement {
   return (
-    <ol className="max-h-60 overflow-y-auto px-4 py-2">
-      {queue.map((entry, i) => {
-        const project = projects?.find((p) => p.id === entry.projectId);
-        const title = project?.title ?? "Video";
+    <ol
+      aria-label="Waiting to start"
+      className={`m-0 flex list-none flex-col p-0 ${className ?? ""}`}
+    >
+      {waiting.map((entry, place) => {
+        const project = projects?.find((one) => one.id === entry.projectId);
+        const title = project?.title.trim() || "Untitled project";
         return (
           <li
             key={entry.projectId}
-            className="flex items-center justify-between gap-2 py-1 text-small"
+            className="flex min-h-9 flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-line py-1 text-small last:border-b-0"
           >
-            <Link
-              className="min-w-0 truncate"
-              to="/projects/$projectId"
-              params={{ projectId: entry.projectId }}
-            >
-              {i + 1}. {title}
-            </Link>
-            <span className="flex shrink-0 items-center gap-1 text-ink-2">
-              {project?.status === "paused"
-                ? "Paused"
-                : entry.state === "active"
-                  ? "Active"
-                  : "Queued"}
-              {entry.state === "queued" ? (
-                <QueueItemActions
-                  projectId={entry.projectId}
-                  title={title}
-                  place={waiting.indexOf(entry)}
-                  waiting={waiting.length}
-                />
-              ) : null}
+            <span className="flex min-w-0 items-baseline gap-2">
+              <span className="text-ink-3 tabular-nums">{`${String(place + 1)}.`}</span>
+              <Link
+                className="min-w-0 truncate font-medium text-ink"
+                to="/projects/$projectId"
+                params={{ projectId: entry.projectId }}
+              >
+                {title}
+              </Link>
+              <Status tone="off">{project?.status === "paused" ? "Paused" : "Queued"}</Status>
+            </span>
+            <span className="flex shrink-0 items-center gap-1">
+              <QueueItemActions
+                projectId={entry.projectId}
+                title={title}
+                place={place}
+                waiting={waiting.length}
+              />
             </span>
           </li>
         );
@@ -113,8 +120,9 @@ function QueueList({
   );
 }
 
-// Up, Down and Remove for a video still waiting its turn in the batch queue (here and on
-// Calendar). One already started keeps its place and is stopped from its own page.
+// Earlier, Later and Remove for a video still waiting its turn in the batch queue (here, on Home
+// and on Calendar). One already started keeps its place and is stopped from its own page. The
+// first has no Earlier and the last no Later.
 export function QueueItemActions({
   projectId,
   title,
@@ -165,30 +173,37 @@ export function QueueItemActions({
   const busy = move.isPending || remove.isPending;
   return (
     <>
-      <IconButton
+      {place <= 0 ? null : (
+        <Button
+          size="small"
+          variant="quiet"
+          aria-label={`Move ${title} earlier in the queue`}
+          disabled={busy}
+          onClick={() => move.mutate(-1)}
+        >
+          Earlier
+        </Button>
+      )}
+      {place >= waiting - 1 ? null : (
+        <Button
+          size="small"
+          variant="quiet"
+          aria-label={`Move ${title} later in the queue`}
+          disabled={busy}
+          onClick={() => move.mutate(1)}
+        >
+          Later
+        </Button>
+      )}
+      <Button
         size="small"
-        label={`Move ${title} earlier in the queue`}
-        disabled={busy || place <= 0}
-        onClick={() => move.mutate(-1)}
-      >
-        <ArrowUpIcon aria-hidden="true" strokeWidth={1.75} />
-      </IconButton>
-      <IconButton
-        size="small"
-        label={`Move ${title} later in the queue`}
-        disabled={busy || place >= waiting - 1}
-        onClick={() => move.mutate(1)}
-      >
-        <ArrowDownIcon aria-hidden="true" strokeWidth={1.75} />
-      </IconButton>
-      <IconButton
-        size="small"
-        label={`Remove ${title} from the queue`}
+        variant="quiet"
+        aria-label={`Remove ${title} from the queue`}
         disabled={busy}
         onClick={() => remove.mutate()}
       >
-        <XIcon aria-hidden="true" strokeWidth={1.75} />
-      </IconButton>
+        Remove
+      </Button>
     </>
   );
 }

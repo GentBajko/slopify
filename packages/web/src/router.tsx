@@ -91,8 +91,32 @@ interface NewEntrySearch extends CategorySearch {
 const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
-  component: HomeRoute,
+  component: HomePage,
 });
+
+// Home's Start from a template hands the template to Create the way Templates does: the open
+// draft is saved first, then Create opens on the new draft.
+function HomePage(): import("react").ReactElement {
+  const session = usePlaySession();
+  const navigate = useNavigate();
+  return (
+    <HomeRoute
+      startFrom={{
+        getGeneration: session.generation,
+        blocked:
+          session.review.starting || session.review.uncertain || session.review.created !== null,
+        beforeApply: session.flush,
+        onApplied: async (draftId, isCurrent) => {
+          if (!isCurrent()) return false;
+          if (!(await session.open(draftId, isCurrent))) return false;
+          if (!isCurrent()) return false;
+          await navigate({ to: "/play" });
+          return isCurrent();
+        },
+      }}
+    />
+  );
+}
 
 // The filter and the search words are in the address, so Back from a project, a reload and a
 // new tab all return to the same list. Changing them replaces the entry: a filter is not a

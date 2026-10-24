@@ -258,11 +258,6 @@ export const projectHelp = {
     body: "Once a project has finished, Free drops the working files it was made from (narration parts, timing, render settings) and keeps what gets published, the video's and shorts' images and anything you uploaded. Delete old versions removes its History folder (earlier renders and narration). Each button says how much it frees. Changing the project or going back to an old version makes those files again.",
     tutorial: { page: "Project-Page", anchor: "free-space" },
   },
-  "project.mark-uploaded": {
-    title: "Mark uploaded",
-    body: "Records that you uploaded this finished video to YouTube yourself, so it leaves the ready-to-upload lists on Home and here and shows an Uploaded badge. Slopify does not upload anything or check YouTube. Undo takes the mark off.",
-    tutorial: { page: "Publishing-to-YouTube", anchor: "mark-a-video-uploaded" },
-  },
   "project.edit.show-figures": {
     title: "Show tables and figures on screen",
     body: "Shows each described table, figure, equation and code block in the video while its description is spoken, as the article's picture or a card drawn on this computer at no cost. Turning it on or off renders the video again, and any Shorts that include a card; the narration is kept. The cards appear under Images, From the article, and can be made again there.",

@@ -390,12 +390,12 @@ it("removes the ticked speakers together and Undo puts them back in place", asyn
   await user.click(screen.getByRole("button", { name: "Add speaker" }));
   await user.click(screen.getByRole("button", { name: "Add speaker" }));
   expect(names()).toEqual(["Alex", "Sam", "Speaker 3", "Speaker 4"]);
-  const remove = screen.getByRole("button", { name: "Remove selected" });
-  expect(remove.hasAttribute("disabled")).toBe(true);
+  // Nothing ticked: the bulk Remove is not offered yet.
+  expect(screen.queryByRole("button", { name: "Remove selected" })).toBeNull();
   await user.click(screen.getByRole("checkbox", { name: "Select row: Alex" }));
   await user.click(screen.getByRole("checkbox", { name: "Select row: Speaker 3" }));
   expect(screen.getByText("2 of 4 speakers selected")).toBeTruthy();
-  await user.click(remove);
+  await user.click(screen.getByRole("button", { name: "Remove selected" }));
   expect(names()).toEqual(["Sam", "Speaker 4"]);
   const toast = await screen.findByText("Removed 2 speakers.");
   await user.click(

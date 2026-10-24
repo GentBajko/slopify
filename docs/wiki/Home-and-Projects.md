@@ -1,6 +1,6 @@
 # Home and Projects
 
-Home is Slopify's front page: what needs you, what is running, what is coming up, what is ready to upload and what this week cost, on one screen. Projects is the full list of every run you ever started, with search and filters.
+Home is Slopify's front page: your finished videos with Watch and Download, what needs you, what is running and waiting to start, what is coming up and what this week cost, on one screen. Projects is the full list of every run you ever started, with search and filters.
 
 **Where to find it:** the rail → **Home** (the Slopify logo also goes there) and **Projects**. On a phone, the bottom bar.
 
@@ -44,13 +44,29 @@ With two or more channels, Home, Projects and the Calendar show **Showing: All c
 
 **Where to find it:** the rail → **Home**.
 
-The page title is the channel you picked (or **Home**), under today's date. At the top right are **Open calendar** and **New project**.
+One line at the top: today's date and **Home**, then **Showing:** (the channel picker, only with two or more channels) and **Open calendar** (only once a schedule exists). **Create** is in the rail and the phone's bottom bar.
 
 On a fresh install, Home sends you to the first-run screen once. See [First Launch and Welcome](First-Launch-and-Welcome).
 
+### Before your first video
+
+Until you have a project of your own, Home shows:
+
+- **Your first video**: what a video needs on this computer (Script, Voice, Images), each with its state (**Ready** or **Not connected**) and the button that fixes it, the same list as the first-run screen. **Make your first video** opens Create; it is lime once nothing is missing.
+- **Finished samples**: the bundled samples, each with its picture, its length, what it made and **Watch**. They stay on Home until you have finished a video of your own.
+
+### Finished
+
+What your runs made, newest finished first, up to 6 (**See all N finished in Projects** opens Projects with the most recently finished first). The heading counts them and says how many are still to upload, for example **4 videos · 2 ready to upload**. Each row has the thumbnail, the title, the state in words (**Ready to upload**, **Uploaded**, **Done with problems**, or **Done** for a run that made no video) and one line such as `3:05 · 16:9 · video + 2 shorts + PDF · finished Sep 27`, then:
+
+- **Watch** opens the project on its Video section (**Open**, for an audiobook or anything else without a video).
+- **Download video** saves the video file.
+
+A video that was made but lost another step reads **Done with problems** and names the step, for example **PDF failed**, with **See what failed** opening that section of the project. Marking a video uploaded (on Projects, or in the project's upload pack) changes its word to **Uploaded**; it stays here. The bundled samples are never here: they have their own **Finished samples** until you have finished work of your own.
+
 ### Needs you
 
-One work list: the things that don't move on until you act, then the finished videos ready to upload.
+The things that don't move on until you act:
 
 | Item | Status | Button |
 | --- | --- | --- |
@@ -61,24 +77,30 @@ One work list: the things that don't move on until you act, then the finished vi
 | Topics a schedule suggested | **N new topics** | **Review topics**, on the calendar: queue the ones you want and reject the rest. |
 | A failed run | **Failed · <step>**, with a short reason | The fix to try: a button to Settings → Providers or Backup & storage when that is the fix, otherwise **Open to retry**. |
 | A run that failed because a CLI is signed out | **Failed · <step>** | **Copy sign-in command** copies the command (`claude auth login`, `codex login` or `agy`). Run it in a terminal on the computer running Slopify, then **Open to retry** and press **Check again** on the project. |
-| A finished video you have not marked uploaded | **Ready to upload** | **Prepare upload** lists everything YouTube Studio asks for, with Copy buttons (Slopify never uploads for you; see [Publishing to YouTube](Publishing-to-YouTube)). **Mark uploaded** takes it off the list, with **Undo** in the notice; Projects still has it. |
 
-A held run also offers **Keep as is**, which takes it off Needs you and leaves the rest unmade (with **Undo**); editing the project brings it back. A run waiting for an [agent's review](Agents-MCP#the-external-agent-reviewer) is not here: it goes on by itself, so it shows under Running now. A step that failed while the run waits on something else shows here as a failed item.
+A held run also offers **Keep as is**, which takes it off Needs you and leaves the rest unmade (with **Undo**); editing the project brings it back. A run waiting for an [agent's review](Agents-MCP#the-external-agent-reviewer) is not here: it goes on by itself, so it shows under Running. A step that failed while the run waits on something else shows here as a failed item. Up to 4 failed runs show; **See all N failed** opens Projects filtered to them.
 
-Up to 4 failed runs and 4 videos ready to upload show here; **See all N ready to upload** opens Projects filtered to them. The bundled samples never show as ready to upload. Only the first item's button is lime; the rest are plain buttons. The heading says how many decisions are waiting and how many videos are ready to upload. With nothing waiting and nothing running, Home says **Nothing needs you and nothing is running**. See [Reviews and Checkpoints](Reviews-and-Checkpoints), [Schedules](Schedules) and [Recovery and Retries](Recovery-and-Retries).
+Only one button in the column is lime: the first decision's when there is one, otherwise **Watch** on the newest video. With nothing finished, waiting or running, Home says so, with **Make a video**. See [Reviews and Checkpoints](Reviews-and-Checkpoints), [Schedules](Schedules) and [Recovery and Retries](Recovery-and-Retries).
 
-### Running now
+### Running
 
-Videos being made, and runs **Waiting for the agent** (an External agent reviews what they made; they carry on once it answers or after 2 hours), up to 3. Paused runs are under Needs you. Each shows the step it is on, how long each step has taken, the running step's time left (for example `2 of 8 · about 4 min left`), the last few images as they land (with a tile for the one being drawn) and **Images N of M** while drawing. A run waiting for a CLI plan says so instead of the step, for example **Waiting for Codex limits (resets at 14:00)**. Open one to follow it live, pause it or cancel it. With nothing running it says **Start the next video**.
+Videos being made, and runs **Waiting for the agent** (an External agent reviews what they made; they carry on once it answers or after 2 hours), up to 3. Paused runs are under Needs you. Each shows:
 
-- With more than three running, **See all N running** opens Projects filtered to running.
-- Queued runs show as one line under them, for example "Queued, waiting to start (2): Hypatia, Cleopatra", with **See queued** (Projects filtered to queued).
+- **Running** beside the title, and where the whole run stands, for example `Step 2 of 4 · Narration · about 4 min left on this step`.
+- Each step with its state, how long it took, and the running step's time left (for example `2 of 8 · about 4 min left`).
+- The last few images as they land, with a tile for the one being drawn.
 
-Time left comes from the step's own pace once it has counted something, otherwise from how long the same kind of step took in your finished runs. Past that it says **taking longer than usual**, and with nothing to go by **time left unknown**.
+A run waiting for a CLI plan says so instead, for example **Waiting for Codex limits (resets at 14:00)**. With more than three running, **See all N running** opens Projects filtered to running.
+
+Under them, **Waiting to start** lists the videos queued behind them (for example after **Queue 3 videos** in Create), numbered in the order they will start. **Earlier** and **Later** change the order; **Remove** takes one out of the queue and puts it in the trash, with **Undo**. Pausing a project holds the queue; when one fails or is canceled, the next one starts.
+
+Time left comes from the step's own pace once it has counted something, otherwise from how long the same kind of step took in your finished runs. Past that it says **taking longer than usual**; with nothing to go by the time is left out.
+
+When a run ends, a notice in the corner says so on whatever page is open, for example **Video ready: The history of the lighthouse** with **Watch**, whether or not browser notifications are on. See [Notifications](Notifications).
 
 ### Coming up
 
-The schedule runs due in the next 7 days, with the template and topic each will use, up to 6. Paused schedules show too. **Calendar** opens the calendar to plan or move runs. With none it says **No scheduled runs this week. Plan some on the calendar.** See [Calendar](Calendar).
+Shown once you have a schedule: the schedule runs due in the next 7 days, with the template and topic each will use, up to 6. Paused schedules show too. With none it says **No scheduled runs in the next 7 days.** See [Calendar](Calendar).
 
 ### Autopilot
 
@@ -101,52 +123,45 @@ Sign-ins, the OpenRouter key and the disk are checked hourly, the first time 30 
 
 ### This week
 
-Since Monday, for the picked channel:
+Since Monday, for the channel shown, in one line: the videos made and what their provider calls cost, for example `3 videos · $9.40 spent · ~$31.00 via API`. Calls billed to a command-line plan cost nothing per call; **~$X via API** says what they would have cost with API keys. Calls with no known price are counted separately (**N calls without a price**). Under it, a bar per command-line plan shows how much of its weekly limit is used, from the tool's last reading; it turns amber at 80%. Nothing shows before anything was made or spent this week. See [Costs and Run Cost](Costs-and-Run-Cost).
 
-| Figure | Meaning |
-| --- | --- |
-| **videos made** | Videos finished since Monday. |
-| **spent** | What their provider calls cost. Calls billed to a command-line plan cost nothing per call; **~$X via API** says what they would have cost with API keys. Calls with no known price are counted separately (**N calls without a price**). |
-| **weekly <plan> limit** | How much of each command-line plan's weekly limit is used, from the tool's last reading. The bar turns amber at 80%. |
+### Start from a template
 
-See [Costs and Run Cost](Costs-and-Run-Cost).
+Your four most recently changed templates, each with **Make a video**, which opens Create with that template picked so only the topic is left to type. **See all N** opens Templates.
 
 ## Projects
 
 **Where to find it:** the rail → **Projects**.
 
-Every run ever started, newest first unless you pick another order, for the channel picked under **Showing:** (with two or more channels). The heading says how many projects there are and for which channel. **New project** opens Play.
+Every run ever started, newest first unless you pick another order, for the channel picked under **Showing:** (with two or more channels). The heading says how many projects there are. **Create** is in the rail.
 
 ### Search and filter
 
 1. Type in **Search projects** to match titles.
-2. Pick a filter under **Show**:
+2. Pick a filter under **Show**. Each says how many it holds, for example **Ready to upload 3**; a filter with nothing in it is not offered. On a phone the filters are one list, for example **Ready to upload (3)**.
 
 | Filter | Shows |
 | --- | --- |
 | **All** | Everything. |
 | **Running** | Projects running, and those **Waiting for the agent**: the same runs Home's **See all N running** counts. |
-| **Queued** | Projects waiting for their turn in the video queue. |
+| **Queued** | Projects waiting for their turn in the video queue, in the order they will start, each with **Earlier**, **Later** and **Remove**. |
 | **Needs you** | Projects waiting for you: at a review or held step, paused, or **Stopped**. |
-| **Ready to upload** | Finished videos not marked uploaded. |
-| **Failed** | Failed projects, those **Done with problems**, and runs with a failed step that still wait on something else. |
+| **Ready to upload** | Finished videos not marked uploaded, including those **Done with problems**. Never a sample. |
+| **Failed** | Failed projects, and runs with a failed step that still wait on something else. |
 
-3. Pick an order beside the filter: **Newest first**, **Recently changed**, **Name (A–Z)** or **Status** (waiting for you first, then running, queued, failed and finished).
+3. Pick an order beside the filter: **Newest first**, **Finished first**, **Recently changed**, **Name (A–Z)** or **Status** (waiting for you first, then running, queued, failed and finished).
 
-The search, the filter and the order are part of the address, so Back from a project, a reload or a link opens Projects the same way: `/projects?show=running` (`queued`, `waiting` for Needs you, `ready` or `failed`), `?q=` for the search words and `?sort=changed`, `name` or `status`. The list draws 50 projects at a time; **Show N more** under it adds the next ones. Press `/` to jump to the search box. The command palette has shortcuts: **Show projects that need you**, **Show videos ready to upload** and **Show failed projects**.
-
-On a wide screen, **At a glance** beside the list counts the projects under each filter.
+The search, the filter and the order are part of the address, so Back from a project, a reload or a link opens Projects the same way: `/projects?show=running` (`queued`, `waiting` for Needs you, `ready` or `failed`), `?q=` for the search words and `?sort=finished`, `changed`, `name` or `status`. The list draws 50 projects at a time; **Show N more** under it adds the next ones. Press `/` to jump to the search box. The command palette has shortcuts: **Show projects that need you**, **Show videos ready to upload** and **Show failed projects**.
 
 If nothing matches, the list says **No project matches. Clear the search or pick All.** If the picked channel has no projects, pick **All channels** under **Showing:**.
 
 ### What each row shows
 
 - A checkbox to select it (see [Work on several projects at once](#work-on-several-projects-at-once)).
-- The title, with a **Sample** badge on the bundled samples. A press anywhere on the row opens the project. A long title is cut short; hover it to read all of it.
-- For an audiobook that is a chapter of a book, **Book · Chapter N**.
-- What it was made of and when: the article prompt and format, for example `Documentary dossier · 16:9 · started …`.
+- Its thumbnail.
+- The title, with a **Sample** badge on the bundled samples and an **Outdated** badge when an edit left part of it outdated. A press anywhere on the row opens the project. A long title is cut short; hover it to read all of it.
+- Its state in words, then what it is: once finished, its length, shape, what it made and when it finished, for example `3:05 · 16:9 · video + 2 shorts + PDF · finished Sep 27`; before that, what it was made of and when it started, for example `Documentary dossier · 16:9 · started …`. A run that made its video but lost a step names the step (**PDF failed**) with **See what failed**.
 - A progress bar with **N% done** while it runs.
-- Its state:
 
 | State | Meaning |
 | --- | --- |
@@ -158,45 +173,53 @@ If nothing matches, the list says **No project matches. Clear the search or pick
 | **Prepared** | Made ahead by its schedule; only the video is left, for its day. |
 | **Stopped** | Stopped before it finished, for example by a restart. Open it and press **Continue the run**. |
 | **Kept as is** | What is left was set aside with **Keep as is**. |
-| **Done** | Finished. |
-| **Done with problems** | Finished, but part of it failed. |
+| **Ready to upload** | A finished video you have not marked uploaded. |
+| **Uploaded** | A finished video you marked uploaded. |
+| **Done** | Finished: a sample, or a run that made no video. |
+| **Done with problems** | The video was made, but another step failed. |
 | **Failed** | Stopped with an error. |
 | **Canceled** | You canceled it. |
 
-- **Mark uploaded** on a finished video; once marked, an **Uploaded** badge. For a day after marking, **Undo upload mark** puts it back on Ready to upload; after that, select it and press **Mark not uploaded**.
-- The delete button (bin icon).
+Then its actions, in words:
+
+- **Open** opens the project.
+- **Download video** saves the finished video.
+- **Mark uploaded** on a finished video of yours. For a day after marking, **Undo upload mark** puts it back on Ready to upload; after that, select it and press **Mark not uploaded**.
+- **Make my own copy** on a sample: an ordinary project you can edit and make again; the sample stays as it came.
+- **Delete** (not while it runs: cancel the run first). A queued video has **Earlier**, **Later** and **Remove** instead. On a phone the row keeps one line of actions: tick it and press **Delete** in the bar above the list.
 
 ### Work on several projects at once
 
-Tick the checkbox on each row you want, or **Select all** above the list (it covers the rows shown: a search, a filter or Show more changes which). Shift+click ticks every row between two; Esc clears the selection. The bar above the list says how many are selected and offers:
+Tick the checkbox on each row you want, or **Select all** above the list (it covers the rows shown: a search, a filter or Show more changes which). Shift+click ticks every row between two; Esc clears the selection. Once something is ticked, the bar above the list says how many are selected and offers what applies to them:
 
 | Button | Does |
 | --- | --- |
-| **Mark uploaded** | Marks the selected finished videos uploaded. The others are left as they are. |
+| **Clear selection** | Unticks everything. |
+| **Mark uploaded** | Shown when a selected project is a finished video; marks the selected finished videos uploaded. |
 | **Mark not uploaded** | Shown when a selected video is marked uploaded; puts it back on Ready to upload. |
 | **Move to channel…** then **Move to <channel>** | Moves the selected projects to another channel (with more than one channel). |
+| **Make outdated parts again** | Shown when a selected project is **Outdated**. It checks each one, then shows what each makes again and what it costs before anything starts. |
 | **Delete** | Asks first, then moves the selected projects to the trash. Running projects stay: cancel the run first. |
-| **Clear selection** | Unticks everything. |
 
-Each one says what it did in a notice with **Undo**: Undo after a delete restores the projects from the trash; after a move it sends each project back to its channel. There is no way to re-run several projects at once: each run costs money and is started from its own project page.
+Each one says what it did in a notice with **Undo**: Undo after a delete restores the projects from the trash; after a move it sends each project back to its channel.
 
 ### Delete a project
 
-1. Press the bin icon on its row. While the project is running it is disabled: cancel the run first.
+1. Press **Delete** on its row.
 2. Confirm with **Delete project** (or **Keep it** to back out).
 3. The project goes to the trash for 30 days. The notice that says so has **Undo**; later, restore it or delete it for good in Settings → **Backup & storage** → **Trash**. See [Trash](Trash).
 
 ### The video queue
 
-Videos started together (a batch from Play, for example) run one at a time. The queue itself is on the Calendar, under **Batch queue**, numbered in the order they run (see [Calendar](Calendar#the-batch-queue)); Projects only links to it (**Video queue** → **Open calendar**) and has the **Queued** filter. Pausing a project holds the queue; when one fails or is canceled, the next one starts. The project page has the same list behind a **Queue · N** button in its right rail. See [Templates](Templates) and [Schedules](Schedules) for batches.
+Videos started together (**Queue 3 videos** in Create, for example) run one at a time. Home lists the ones waiting under **Running**, and the **Queued** filter here lists them in the order they start, each with **Earlier**, **Later** and **Remove**; the calendar has the same list under **Batch queue** (see [Calendar](Calendar#the-batch-queue)). A project page says how many videos wait while any do. Pausing a project holds the queue; when one fails or is canceled, the next one starts.
 
 ### When there are no projects
 
-Projects shows **No projects yet** with **Make your first video** (opens Create), and an invitation to the interactive tutorial with **Start the tour**.
+Projects shows **No projects yet**, "Every video you make is kept here with its files.", **Make your first video** (opens Create), and an invitation to the interactive tutorial with **Start the tour**.
 
 ## Tips
 
-- The rail's **N running** link jumps straight to Running now on Home.
+- The rail's **N running** link jumps straight to Running on Home.
 - Home and Projects follow the Channel picker. If a project seems missing, switch to **All channels**.
 - Updates wait for running work. See [Updating and Patch Notes](Updating-and-Patch-Notes).
 

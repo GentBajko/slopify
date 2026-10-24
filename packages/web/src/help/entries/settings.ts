@@ -349,28 +349,6 @@ export const settingsHelp = {
     tutorial: { page: "Updating-and-Patch-Notes", anchor: "update-from-the-app" },
   },
 
-  // Home
-  "home.needs-you": {
-    title: "Needs you",
-    body: "Runs held at a review before a step, paused runs, topics a schedule suggested for you to accept or reject, and runs that failed with the fix to try; then finished videos you have not marked uploaded. Nothing here moves on until you act: approving a review from here lets that run continue, and Mark uploaded takes a finished video off the list (Projects still has it).",
-    tutorial: { page: "Home-and-Projects", anchor: "needs-you" },
-  },
-  "home.running": {
-    title: "Running now",
-    body: "Videos being made, and runs Waiting for the agent: an External agent reviews something they made, and they carry on once it answers or after 2 hours. Each shows the step it is on and how long it has taken. Up to 3 show here; Projects lists them all. Open one to follow it live, pause it or cancel it.",
-    tutorial: { page: "Home-and-Projects", anchor: "running-now" },
-  },
-  "home.coming-up": {
-    title: "Coming up",
-    body: "The schedule runs due in the next 7 days, with the template and topic each will use. Paused schedules show too. Plan or move runs on the calendar.",
-    tutorial: { page: "Home-and-Projects", anchor: "coming-up" },
-  },
-  "home.this-week": {
-    title: "This week",
-    body: "Videos made since Monday and what their provider calls cost. Calls billed to a command-line plan cost nothing per call, so the API figure says what they would have cost with API keys. The bars show how much of each plan's weekly limit is used, from the tool's last reading.",
-    tutorial: { page: "Home-and-Projects", anchor: "this-week" },
-  },
-
   // First run
   "welcome.packs": {
     title: "Starter packs",

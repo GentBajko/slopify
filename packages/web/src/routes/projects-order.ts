@@ -16,6 +16,10 @@ export function projectFilterOf(value: unknown): ProjectFilter | undefined {
   return filterValues.find((one) => one === value);
 }
 
+// The same words as Home's sections and each row's state: Needs you holds decisions, Ready to
+// upload the finished videos not marked uploaded (never a sample), Failed the runs that stopped
+// on an error. A video that lost a step but was made reads Done with problems and is under
+// Ready to upload only, so no run is counted twice.
 export const filters: readonly { readonly value: ProjectFilter; readonly label: string }[] = [
   { value: "all", label: "All" },
   { value: "running", label: "Running" },
@@ -29,7 +33,7 @@ export function matches(project: ProjectListing, filter: ProjectFilter): boolean
   switch (filter) {
     case "all":
       return true;
-    // Home's Running now: a paused run waits for the person, under Needs you.
+    // Home's Running: a paused run waits for the person, under Needs you.
     case "running":
       return runningNow(project);
     case "queued":
@@ -39,13 +43,26 @@ export function matches(project: ProjectListing, filter: ProjectFilter): boolean
     case "ready":
       return isReadyToUpload(project);
     case "failed":
-      return failedRun(project) || project.status === "partial";
+      return failedRun(project);
   }
+}
+
+// How many projects each filter holds, for the counts on the filter chips.
+export function filterCounts(
+  projects: readonly ProjectListing[],
+): Readonly<Record<ProjectFilter, number>> {
+  const counts = Object.fromEntries(filterValues.map((value) => [value, 0])) as Record<
+    ProjectFilter,
+    number
+  >;
+  for (const project of projects)
+    for (const value of filterValues) if (matches(project, value)) counts[value] += 1;
+  return counts;
 }
 
 // The order of the Projects list (`?sort=` in the address). Newest started is the default and
 // is left out of the address.
-const sortValues = ["newest", "changed", "name", "status"] as const;
+const sortValues = ["newest", "finished", "changed", "name", "status"] as const;
 export type ProjectSort = (typeof sortValues)[number];
 
 export function projectSortOf(value: unknown): ProjectSort | undefined {
@@ -54,6 +71,7 @@ export function projectSortOf(value: unknown): ProjectSort | undefined {
 
 export const sortOptions: readonly { readonly value: ProjectSort; readonly label: string }[] = [
   { value: "newest", label: "Newest first" },
+  { value: "finished", label: "Finished first" },
   { value: "changed", label: "Recently changed" },
   { value: "name", label: "Name (A–Z)" },
   { value: "status", label: "Status" },
@@ -83,6 +101,8 @@ export function sortProjects(
 ): readonly ProjectListing[] {
   const order: Readonly<Record<ProjectSort, (a: ProjectListing, b: ProjectListing) => number>> = {
     newest: newestFirst,
+    // Finished most recently first; what has not finished follows, newest started first.
+    finished: (a, b) => (b.finishedAt ?? "").localeCompare(a.finishedAt ?? "") || newestFirst(a, b),
     changed: (a, b) => b.updatedAt.localeCompare(a.updatedAt) || newestFirst(a, b),
     name: (a, b) =>
       a.title.localeCompare(b.title, undefined, { sensitivity: "base", numeric: true }) ||
@@ -90,6 +110,20 @@ export function sortProjects(
     status: (a, b) => rankOf(a) - rankOf(b) || newestFirst(a, b),
   };
   return [...projects].sort(order[sort]);
+}
+
+// The Queued filter in the order the video queue starts them (`queue`: the waiting projects in
+// their order, `components/batch-queue.tsx`), whatever the sort; one the queue does not hold
+// goes last.
+export function inQueueOrder(
+  projects: readonly ProjectListing[],
+  queue: readonly string[],
+): readonly ProjectListing[] {
+  const place = (project: ProjectListing): number => {
+    const at = queue.indexOf(project.id);
+    return at === -1 ? queue.length : at;
+  };
+  return [...projects].sort((a, b) => place(a) - place(b));
 }
 
 // Rows drawn at once; "Show more" adds the next page.

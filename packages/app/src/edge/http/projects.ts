@@ -4,6 +4,7 @@ import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
 import { derive, progressOf } from "../../kernel/runner/graph.js";
 import { listProjectHeads } from "../../slices/admission/heads.js";
+import { listingFacts } from "../../slices/admission/listing-facts.js";
 import type { Project, ProjectListing, ProjectSummary } from "../../slices/admission/model.js";
 import {
   projectById,
@@ -22,6 +23,7 @@ import { defaultChannelId } from "../../slices/channels/model.js";
 import { channelById, projectChannels, setProjectChannel } from "../../slices/channels/repo.js";
 import { withProjectControl } from "../../slices/control/lock.js";
 import { stagesWithEta } from "../../slices/eta/view.js";
+import { sampleProjectIds } from "../../slices/onboarding/sample.js";
 import { videoActivity } from "../../slices/rebuild/activity.js";
 import { projectHolds } from "../../slices/reviews/holds.js";
 import { adoptBaseline } from "../../slices/revisions/adopt.js";
@@ -95,11 +97,15 @@ export function projectRoutes(deps: AppDeps) {
         const holds = projectHolds(deps.db, { standings, settled });
         const waits = limitWaitsByProject(deps.db);
         const failures = stepFailuresByProject(deps.db);
+        const samples = new Set(Object.values(sampleProjectIds(deps.db)));
+        const facts = listingFacts(deps.db);
         const projects: ProjectListing[] = listProjectHeads(deps.db).map((project) => {
           const stages = standings.get(project.id) ?? [];
           const waiting = waits.get(project.id);
           const holding = holds.holding.get(project.id);
           const status = settledStatus(derive(stages, project.paused), settled.has(project.id));
+          const made = facts.get(project.id);
+          const finished = status === "done" || status === "partial";
           return {
             ...project,
             status,
@@ -116,6 +122,16 @@ export function projectRoutes(deps: AppDeps) {
               : {}),
             ...(holding === undefined ? {} : { holding }),
             ...(waiting === undefined ? {} : { limitWaits: waiting.map(listingWait) }),
+            ...(samples.has(project.id) ? { sample: true as const } : {}),
+            ...(finished && made?.finishedAt !== undefined ? { finishedAt: made.finishedAt } : {}),
+            ...(made?.durationSeconds === undefined
+              ? {}
+              : { durationSeconds: made.durationSeconds }),
+            ...(made?.outputs === undefined ? {} : { outputs: made.outputs }),
+            ...(status === "partial" && made?.failedSteps !== undefined
+              ? { failedSteps: made.failedSteps }
+              : {}),
+            ...(made?.outdated === true ? { outdated: true as const } : {}),
           };
         });
         return c.json({ projects });

@@ -331,11 +331,11 @@ describe("Home", () => {
         }),
       }),
     );
-    await screen.findByRole("region", { name: "Needs you" });
+    await screen.findByRole("region", { name: "Finished" });
     expect(await screen.findByLabelText("Showing:")).not.toBeNull();
-    // Coming up shows once there are schedules; there are none here.
-    for (const name of ["Needs you", "Running now", "This week"])
-      expect(screen.getByRole("button", { name: `About ${name}` })).not.toBeNull();
+    await screen.findByRole("region", { name: "This week" });
+    // Every section says what it holds by its name and its rows: no info button beside a heading.
+    expect(screen.queryByRole("button", { name: /^About / })).toBeNull();
     expectExplained();
   });
 });

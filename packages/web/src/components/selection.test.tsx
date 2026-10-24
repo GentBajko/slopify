@@ -17,7 +17,7 @@ function Harness(): ReactElement {
         selection={selection}
         total={rows.length}
         noun={["row", "rows"]}
-        actions={null}
+        actions={<button type="button">Delete selected</button>}
       />
       {rows.map((row) => (
         <RowCheck key={row} selection={selection} value={row} label={row.toUpperCase()} />
@@ -51,6 +51,20 @@ it("toggles with Space and clears with Esc", async () => {
   await userEvent.keyboard("{Escape}");
   expect(box("A").checked).toBe(false);
   expect(screen.getByText("4 rows")).not.toBeNull();
+});
+
+// A bulk action with nothing ticked reads as a page action that applies to nothing (a red
+// Delete above every list), so the actions and Clear appear only once a box is ticked.
+it("shows the bulk actions and Clear only while something is ticked", async () => {
+  const user = userEvent.setup();
+  render(<Harness />);
+  expect(screen.getByText("4 rows")).not.toBeNull();
+  expect(screen.queryByRole("button", { name: "Delete selected" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Clear selection" })).toBeNull();
+  await user.click(box("C"));
+  expect(screen.getByRole("button", { name: "Delete selected" })).not.toBeNull();
+  await user.click(screen.getByRole("button", { name: "Clear selection" }));
+  expect(screen.queryByRole("button", { name: "Delete selected" })).toBeNull();
 });
 
 it("selects and clears everything from Select all", async () => {
