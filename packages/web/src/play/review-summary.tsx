@@ -417,7 +417,15 @@ export function ReviewSummary({
                   form.reference.source === "prompt"
                     ? form.reference.prompt || "(no prompt picked)"
                     : (form.provided.reference?.name ?? "(no file attached)")
-                }${form.reference.thumbnail ? " · thumbnail too" : ""}`,
+                }${
+                  form.reference.thumbnail &&
+                  (
+                    form.sources.thumbnail === "from_prompt" ||
+                      form.sources.thumbnail === "prompt_by_llm"
+                  )
+                    ? " · thumbnail too"
+                    : ""
+                }`,
               )
             : null}
           {form.sources.images === "generate"
