@@ -331,7 +331,8 @@ it("deletes a template and teaches what a template is for once none is left", as
   );
   await screen.findByRole("heading", { name: "No templates yet" });
   expect(screen.getByText(/A template keeps a whole setup/)).not.toBeNull();
-  expect(screen.getAllByRole("button", { name: "Add starter templates" }).length).toBe(2);
+  // The empty list teaches with its own button; the header doesn't repeat it.
+  expect(screen.getAllByRole("button", { name: "Add starter templates" })).toHaveLength(1);
   expect(remove).toHaveBeenCalledOnce();
 });
 

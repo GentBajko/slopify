@@ -43,7 +43,7 @@ function BudgetField(): ReactElement {
   if (settings.error)
     return (
       <p role="alert" className="m-0 text-body text-danger">
-        {`The template studio's settings didn't load: ${settings.error.message} Reload the page to try again.`}
+        {`The template samples' settings didn't load: ${settings.error.message} Reload the page to try again.`}
       </p>
     );
   const data = settings.data;
@@ -74,7 +74,7 @@ function BudgetField(): ReactElement {
         label="Designed pieces: daily sample budget"
         tip="settings.template-studio.design-budget"
         saveLabel="Save designed pieces' budget"
-        help={`The most the samples of designed-piece templates (Library → Designs) may spend in one day, in US dollars; at $0.00 no sample spends money.${data.designToday === undefined ? "" : ` Spent today: ${usd(data.designToday.spent)}; left: ${usd(data.designToday.left)}.`}`}
+        help={`The most the samples of poster templates (Templates → Poster templates) may spend in one day, in US dollars; at $0.00 no sample spends money.${data.designToday === undefined ? "" : ` Spent today: ${usd(data.designToday.spent)}; left: ${usd(data.designToday.left)}.`}`}
         stored={data.designDailyBudget}
         pending={save.isPending}
         error={
@@ -173,7 +173,7 @@ function SamplesForAll(): ReactElement {
       if (reply.ok)
         setNote({
           error: false,
-          text: `Queued ${String(reply.queued)} ${reply.queued === 1 ? "sample" : "samples"}${reply.held > 0 ? `; ${String(reply.held)} wait, as each template's studio says` : ""}. They are made one at a time in the background.`,
+          text: `Queued ${String(reply.queued)} ${reply.queued === 1 ? "sample" : "samples"}${reply.held > 0 ? `; ${String(reply.held)} wait, as each template's Edit template page says` : ""}. They are made one at a time in the background.`,
         });
       else {
         setNote({ error: true, text: reply.message });

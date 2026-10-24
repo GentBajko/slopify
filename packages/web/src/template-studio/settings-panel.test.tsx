@@ -48,7 +48,7 @@ it("shows the total first and makes the samples for all at that total", async ()
   expect(sent).toEqual({ acknowledgedTotal: 0.9, acknowledgedUnknown: false });
   expect(
     await screen.findByText(
-      "Queued 1 sample; 1 wait, as each template's studio says. They are made one at a time in the background.",
+      "Queued 1 sample; 1 wait, as each template's Edit template page says. They are made one at a time in the background.",
     ),
   ).toBeTruthy();
 });

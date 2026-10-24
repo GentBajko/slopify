@@ -18,6 +18,7 @@ import { Badge } from "@/components/kit/status";
 import { Tabs } from "@/components/kit/tabs";
 import { useToast } from "@/components/kit/toast";
 import { RetiredModelRow } from "@/components/retired-models";
+import { designTemplatesQuery } from "@/designs/api";
 import { DesignTemplateList } from "@/designs/designs-route";
 import { useDesignStarts } from "@/designs/start";
 import { sortLibrary, useLibrarySort } from "@/library/sort";
@@ -81,6 +82,8 @@ export function TemplatesRoute({
     run: () => setAdding(true),
   });
   const count = templates.data?.length;
+  const posters = useQuery(designTemplatesQuery(api));
+  // An empty list teaches with its own button; the header doesn't repeat it.
   return (
     <div>
       <PageHeader
@@ -89,9 +92,11 @@ export function TemplatesRoute({
         actions={
           current === "videos" ? (
             <>
-              <Button onClick={() => setAdding(true)} aria-expanded={adding}>
-                Add starter templates
-              </Button>
+              {count === 0 ? null : (
+                <Button onClick={() => setAdding(true)} aria-expanded={adding}>
+                  Add starter templates
+                </Button>
+              )}
               <Menu>
                 <MenuTrigger asChild>
                   <Button aria-label="More ways to add templates" disabled={importing.busy}>
@@ -104,7 +109,7 @@ export function TemplatesRoute({
                 </MenuContent>
               </Menu>
             </>
-          ) : (
+          ) : posters.data?.length === 0 ? undefined : (
             <Button disabled={designs.busy} onClick={designs.startTemplate}>
               New poster template
             </Button>
