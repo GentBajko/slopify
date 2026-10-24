@@ -2,9 +2,10 @@ import type { StageState } from "@app/kernel/pipeline.js";
 import type { Output } from "@app/slices/storage/model.js";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { body, output, stage } from "@/routes/project-fixtures";
-import { jsonAnswer, renderApp, testDeps, testOrigin } from "@/test-app";
+import { jsonAnswer, renderRouted, testDeps, testOrigin } from "@/test-app";
 import { ShortsBlock } from "./body-shorts.js";
 import {
   type EditRequest,
@@ -68,6 +69,7 @@ function mount(
   options: {
     readonly fullVideoLink?: string;
     readonly requestEdit?: (request: EditRequest) => void;
+    readonly beside?: ReactNode;
   } = {},
 ) {
   const video = stage("video", state, { failureReason: failureReason ?? null });
@@ -102,11 +104,12 @@ function mount(
       state: "ready" as const,
     })),
   };
-  renderApp(
+  renderRouted(
     <RevisionMedia projectId="p1" revisionId="r1">
       <RevisionControlContext value>
         <EditRequestContext value={options.requestEdit}>
           <ShortsBlock stage={video} project={project} outputs={outputs} />
+          {options.beside}
         </EditRequestContext>
       </RevisionControlContext>
     </RevisionMedia>,
@@ -117,14 +120,12 @@ function mount(
   );
 }
 
-it("shows each short as a small vertical player with its title, length, Copy and download", async () => {
+it("shows each short as a small vertical player with its title, length, and its actions in words", async () => {
   const writeText = vi.fn(async () => undefined);
   vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
   mount([pick, first]);
-  const block = screen.getByRole("region", { name: "Shorts" });
-  // A part of the stage body under a rule, not a bordered box inside the stage's own card.
-  expect(block.className).not.toContain("rounded");
-  const cards = await within(block).findAllByRole("listitem");
+  const grid = await screen.findByRole("list", { name: "Shorts" });
+  const cards = await within(grid).findAllByRole("listitem");
   expect(cards.map((card) => within(card).getByRole("heading").textContent)).toEqual([
     "Why rope holds",
     "The knot sailors trust",
@@ -136,49 +137,47 @@ it("shows each short as a small vertical player with its title, length, Copy and
   expect(player.closest(".sl-player--portrait")).not.toBeNull();
   expect(within(one).getByText("01:01")).not.toBeNull();
   expect(within(one).getByText("#Rope #Knots #Friction")).not.toBeNull();
-  // The only short rendered: the section's Download the short fetches it, so the card has none.
-  expect(within(one).queryByRole("link", { name: "Download short 1" })).toBeNull();
-  // With no full-video link saved, the card marks it as needed rather than showing the raw
-  // placeholder Copy leaves for pasting over.
-  expect(within(one).getByText("Link needed")).not.toBeNull();
-  expect(within(one).queryByText(/PASTE THE FULL VIDEO LINK/)).toBeNull();
-  // The section's own Download is the main action.
-  expect(within(block).getByRole("link", { name: "Download the short" }).className).toContain(
-    "sl-btn--primary",
-  );
+  // Every rendered short has its own Download, in words, secondary: never a lime one.
+  const download = within(one).getByRole("link", { name: "Download short 1 (.mp4)" });
+  expect(download.getAttribute("href")).toBe(`${testOrigin}/files/p1/revisions/r1/o-short-1`);
+  expect(download.className).not.toContain("sl-btn--primary");
+  // No zip for one file.
+  expect(screen.queryByRole("link", { name: /\.zip/ })).toBeNull();
+  // With no full-video link saved, one neutral sentence says so once, not a chip per card.
+  expect(
+    screen.getByText(
+      "Each short's description ends with a link to the full video, once you add it.",
+    ),
+  ).not.toBeNull();
+  expect(screen.queryByText("Link needed")).toBeNull();
+  expect(screen.queryByText(/PASTE THE FULL VIDEO LINK/)).toBeNull();
   // Not rendered yet, and the stage is not running: it says so where the player will be.
   expect(within(two).getByText("Not made yet. It is made with the video.")).not.toBeNull();
   expect(within(two).queryByRole("link", { name: /^Download/ })).toBeNull();
 
-  await userEvent.click(
-    within(two).getByRole("button", {
-      name: "Copy short 2's title, description and hashtags",
-    }),
-  );
+  await userEvent.click(within(two).getByRole("button", { name: "Copy short 2 for YouTube" }));
   expect(writeText).toHaveBeenLastCalledWith(
     "The knot sailors trust\n\nOne knot, every boat.\nWatch the full video: [PASTE THE FULL VIDEO LINK HERE]\n\n#Sailing #Bowline #Knots",
   );
-  await waitFor(() => expect(screen.getByRole("status").textContent).toBe("Copied short 2."));
+  // Copy says what is still missing from what it copied.
+  await waitFor(() =>
+    expect(screen.getByRole("status").textContent).toBe(
+      "Copied short 2. Its last line reads [PASTE THE FULL VIDEO LINK HERE] until you add the full video's link.",
+    ),
+  );
 });
 
-it("gives each card its own Download as an icon with a tooltip once there are several", async () => {
+it("downloads every short as one zip once there are several, beside each card's own", async () => {
   mount([pick, first, second]);
-  const block = screen.getByRole("region", { name: "Shorts" });
-  const cards = await within(block).findAllByRole("listitem");
+  const grid = await screen.findByRole("list", { name: "Shorts" });
+  const cards = await within(grid).findAllByRole("listitem");
   const [one, two] = cards;
   if (one === undefined || two === undefined) throw new Error("Expected two shorts");
-  expect(within(block).getByRole("button", { name: "Download" })).not.toBeNull();
-  const download = within(one).getByRole("link", { name: "Download short 1" });
-  expect(download.getAttribute("href")).toBe(`${testOrigin}/files/p1/revisions/r1/o-short-1`);
-  expect(download.className).toContain("sl-btn--icon");
-  expect(download.getAttribute("data-tip")).toBe("Download");
-  expect(within(two).getByRole("link", { name: "Download short 2" })).not.toBeNull();
-  // Download, Copy and More share one row.
-  const copy = within(one).getByRole("button", {
-    name: "Copy short 1's title, description and hashtags",
-  });
-  expect(copy.getAttribute("data-tip")).toBe("Copy title, description and hashtags");
-  expect(copy.parentElement).toBe(download.parentElement);
+  const zip = await screen.findByRole("link", { name: "Download both shorts (.zip)" });
+  expect(zip.getAttribute("href")).toBe(`${testOrigin}/files/p1/revisions/r1/shorts.zip`);
+  expect(within(one).getByRole("link", { name: "Download short 1 (.mp4)" })).not.toBeNull();
+  expect(within(two).getByRole("link", { name: "Download short 2 (.mp4)" })).not.toBeNull();
+  expect(screen.getAllByRole("button", { name: "Open folder" })).toHaveLength(1);
 });
 
 it("says how far each short got while the stage runs, and which one failed", async () => {
@@ -209,22 +208,20 @@ it("does not show a video made before the current pick under the new clip", asyn
   expect(screen.getAllByText("Not made yet. It is made with the video.")).toHaveLength(2);
 });
 
-it("says the clips come after the subtitle timing before they are picked", () => {
+it("says the clips come after the subtitle timing before they are picked", async () => {
   mount([], "running");
-  expect(screen.getByText("The clips are picked after the subtitle timing.")).not.toBeNull();
+  expect(await screen.findByText("The clips are picked after the subtitle timing.")).not.toBeNull();
 });
 
 it("ends the copied description with the project's link to the full video", async () => {
   const writeText = vi.fn(async () => undefined);
   vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
   mount([pick, first], "done", undefined, { fullVideoLink: "https://youtu.be/rope" });
-  const cards = await screen.findAllByRole("listitem");
-  expect(within(cards[0] as HTMLElement).getByText("Watch the full video:")).not.toBeNull();
-  expect(within(cards[0] as HTMLElement).getByText("https://youtu.be/rope")).not.toBeNull();
-  expect(within(cards[0] as HTMLElement).queryByText("Link needed")).toBeNull();
-  await userEvent.click(
-    screen.getByRole("button", { name: "Copy short 1's title, description and hashtags" }),
-  );
+  await screen.findAllByRole("listitem");
+  // Said once over the shorts, with the link itself.
+  expect(screen.getByText("Watch the full video: https://youtu.be/rope")).not.toBeNull();
+  expect(screen.queryByRole("button", { name: "Add the link" })).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "Copy short 1 for YouTube" }));
   expect(writeText).toHaveBeenLastCalledWith(
     "Why rope holds\n\nFriction does the work.\nWatch the full video: https://youtu.be/rope\n\n#Rope #Knots #Friction",
   );
@@ -243,12 +240,11 @@ it("opens Edit project to make one short again, or to pick different moments", a
   const requests: EditRequest[] = [];
   mount([pick, first], "done", undefined, { requestEdit: (request) => requests.push(request) });
   const cards = await screen.findAllByRole("listitem");
-  // Make again is the rare one, under the card's More menu.
+  // Make again is the rare one: quiet, in words, under the card's other actions.
   await userEvent.click(
-    within(cards[1] as HTMLElement).getByRole("button", { name: "More for short 2" }),
+    within(cards[1] as HTMLElement).getByRole("button", { name: "Make short 2 again" }),
   );
-  await userEvent.click(await screen.findByRole("menuitem", { name: "Make short 2 again" }));
-  await userEvent.click(screen.getByRole("button", { name: "Pick different moments" }));
+  await userEvent.click(screen.getByRole("button", { name: "Pick different moments · 1 AI call" }));
   const view = revisionView();
   const edit = {
     config: view.revision.config,
@@ -285,17 +281,35 @@ it("lays the shorts out in the shorts media grid, each player showing its first 
 it("offers no remake outside a project that has versions", async () => {
   mount([pick, first]);
   await screen.findAllByRole("listitem");
-  expect(screen.queryByRole("button", { name: "Pick different moments" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Pick different moments/ })).toBeNull();
   expect(screen.queryByRole("button", { name: /again/ })).toBeNull();
 });
 
 it("shades where YouTube's buttons and text cover a short, on request", async () => {
   mount([pick, first]);
-  const block = screen.getByRole("region", { name: "Shorts" });
-  await within(block).findByLabelText("Short 1");
+  await screen.findByLabelText("Short 1");
   expect(screen.queryByText("Title and channel")).toBeNull();
   await userEvent.click(
     screen.getByRole("switch", { name: "Show what YouTube covers on a phone" }),
   );
   expect(screen.getByText("Title and channel")).toBeDefined();
+});
+
+it("takes Add the link to the full video's link box under YouTube text", async () => {
+  const description = output("youtube_description", "video", { id: "o-description" });
+  mount([pick, first, description], "done", undefined, {
+    // The YouTube text section's box for the long video's link.
+    beside: <input id="on-youtube-video" aria-label="Video link" />,
+  });
+  await userEvent.click(await screen.findByRole("button", { name: "Add the link" }));
+  await waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "Video link" })),
+  );
+});
+
+it("opens the settings' Outputs for the link when the project writes no YouTube text", async () => {
+  const requests: EditRequest[] = [];
+  mount([pick, first], "done", undefined, { requestEdit: (request) => requests.push(request) });
+  await userEvent.click(await screen.findByRole("button", { name: "Add the link" }));
+  expect(requests.map((request) => request.section)).toEqual(["outputs"]);
 });

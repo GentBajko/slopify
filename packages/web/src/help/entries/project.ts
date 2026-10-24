@@ -153,11 +153,6 @@ export const projectHelp = {
     body: "The first and last sentence of this short, from the narration's timed sentences. The clip must stay between the shortest and longest length you set for shorts and must not overlap another clip; the line under the clip says what to change. Back to the AI's choice restores its pick.",
     tutorial: { page: "Shorts", anchor: "change-the-picked-moments" },
   },
-  "project.shorts.pick-again": {
-    title: "Pick different moments",
-    body: "Asks the text model to pick new moments when you save and continue the run, one text call. Ranges you set by hand are dropped. A new clip on the same sentences as an old one keeps its images; any other clip gets new images, one image call each, and is rendered again.",
-    tutorial: { page: "Shorts", anchor: "pick-new-moments-or-remake-one-short" },
-  },
   "project.images.editor": {
     title: "Edit images",
     body: "Every image of the video in the order it is shown. You can edit a drawn image's prompt, replace any image with your own file, move it earlier or later, delete it, or add a drawn image, your own picture or a video clip. A clip plays muted in an image's place, trimmed, slowed or looped to fit. Changes apply after you save.",
@@ -247,16 +242,6 @@ export const projectHelp = {
     title: "Unknown cost estimates",
     body: "Some steps use a model with no published price, so their cost cannot be estimated and is left out of the total shown. Tick to start anyway; the real cost is recorded under Cost once they run. Remake stays off until you tick it.",
     tutorial: { page: "Editing-a-Project", anchor: "choose-what-to-remake" },
-  },
-  "project.cost.by-stage": {
-    title: "Cost by stage",
-    body: "What each stage of this project has cost so far, from every provider call it made, retries and remakes included, priced from the model catalogue when each call finished. Failed calls are not charged here, and taxes and included credits are not counted. Working time is how long the stage's steps were running, over every run.",
-    tutorial: { page: "Costs-and-Run-Cost", anchor: "after-a-run-the-run-cost-tab" },
-  },
-  "project.cost.by-model": {
-    title: "Cost by model",
-    body: "The same spending split by provider and model. Cost is what you paid the provider. Calls through a signed-in command-line tool such as Claude Code or Codex cost $0 on your plan; Via API shows what the same work would cost through the provider's API, for comparison only.",
-    tutorial: { page: "Costs-and-Run-Cost", anchor: "after-a-run-the-run-cost-tab" },
   },
   "project.upload.item": {
     title: "What to upload",
