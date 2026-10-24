@@ -181,7 +181,9 @@ describe("editing the article", () => {
     expect(((await screen.findByLabelText("Article text")) as HTMLTextAreaElement).value).toBe(
       "Rewritten.",
     );
-  });
+    // ceiling: types a sentence, saves and waits for the settings to open again; alone about
+    // 1.5 s, past the 5 s default under a loaded full suite.
+  }, 20_000);
 
   it("keeps the typing when the revision save is refused", async () => {
     const fixture = revisionRouteFixture(finished);

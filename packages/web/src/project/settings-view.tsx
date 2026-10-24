@@ -72,6 +72,9 @@ export function SettingsView({
           controller={controller}
           projectId={projectId}
           active={shown && tab === "settings"}
+          // Shut only after a discard (with its Undo) or while it opens: no list of files here,
+          // All files has them.
+          intro={<p className="m-0 text-small text-ink-2">The settings are as last saved.</p>}
           renderEditor={(props) => (
             <RevisionForm
               {...props}
