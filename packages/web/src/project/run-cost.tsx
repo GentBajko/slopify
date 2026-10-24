@@ -128,26 +128,42 @@ export function RunClock({
   );
 }
 
-const stageColumns: readonly Column<StageCost>[] = [
-  { id: "stage", header: "Stage", cell: (row) => <strong>{stageWords[row.stage]}</strong> },
-  { id: "cost", header: "Cost", numeric: true, cell: lineCost },
-  { id: "api", header: "Via API", numeric: true, cell: apiCost },
-  { id: "usage", header: "Usage", numeric: true, cell: (row) => usage(row) || "—" },
-  {
-    id: "time",
-    header: "Working time",
-    numeric: true,
-    cell: (row) => (row.wallMs === null ? "—" : workDuration(row.wallMs)),
-  },
-];
+// The tables' columns. "Via API" (what a CLI plan's calls would cost through the provider's
+// API) only when some row has such a figure; a column of dashes says nothing.
+function stageColumns(api: boolean): readonly Column<StageCost>[] {
+  return [
+    { id: "stage", header: "Step", cell: (row) => <strong>{stageWords[row.stage]}</strong> },
+    { id: "cost", header: "Cost", numeric: true, cell: lineCost },
+    ...(api ? [{ id: "api", header: "Via API", numeric: true, cell: apiCost }] : []),
+    { id: "usage", header: "Usage", numeric: true, cell: stageUsage },
+    {
+      id: "time",
+      header: "Working time",
+      numeric: true,
+      cell: (row) => (row.wallMs === null ? "—" : workDuration(row.wallMs)),
+    },
+  ];
+}
 
-const modelColumns: readonly Column<ModelCost>[] = [
-  { id: "model", header: "Provider · model", cell: (row) => <strong>{modelName(row)}</strong> },
-  { id: "cost", header: "Cost", numeric: true, cell: lineCost },
-  { id: "api", header: "Via API", numeric: true, cell: apiCost },
-  { id: "usage", header: "Usage", numeric: true, cell: (row) => usage(row) || "—" },
-  { id: "calls", header: "Calls", numeric: true, cell: (row) => wholeNumber.format(row.calls) },
-];
+function modelColumns(api: boolean): readonly Column<ModelCost>[] {
+  return [
+    { id: "model", header: "Service · model", cell: (row) => <strong>{modelName(row)}</strong> },
+    { id: "cost", header: "Cost", numeric: true, cell: lineCost },
+    ...(api ? [{ id: "api", header: "Via API", numeric: true, cell: apiCost }] : []),
+    { id: "usage", header: "Usage", numeric: true, cell: (row) => usage(row) || "—" },
+    { id: "calls", header: "Calls", numeric: true, cell: (row) => wholeNumber.format(row.calls) },
+  ];
+}
+
+// The Video step draws the shorts' own pictures: said so, so it does not read as the video
+// drawing its images again.
+function stageUsage(row: StageCost): string {
+  const said = usage(row);
+  if (said === "") return "—";
+  return row.stage === "video" && row.images > 0
+    ? said.replace(count(row.images, "image"), `${count(row.images, "image")} for the shorts`)
+    : said;
+}
 
 function Panel({ cost }: { readonly cost: RunCost }): ReactElement {
   if (cost.calls === 0 && cost.byStage.length === 0)
@@ -157,13 +173,16 @@ function Panel({ cost }: { readonly cost: RunCost }): ReactElement {
       </p>
     );
   const onPlan = cost.byModel.some((row) => row.onPlan);
+  const viaApi =
+    cost.byStage.some((row) => row.apiEquivalent !== null) ||
+    cost.byModel.some((row) => row.apiEquivalent !== null);
   const meters = cost.plans.flatMap((plan) =>
     plan.reported ? plan.windows.map((window) => ({ plan, window })) : [],
   );
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex max-w-[860px] flex-col gap-6">
       <section aria-label="Run cost summary" className="flex flex-col gap-3">
-        <Stats>
+        <Stats className="[grid-template-columns:repeat(auto-fit,minmax(140px,max-content))] gap-x-12">
           <Stat
             value={usd(cost.cost)}
             label={cost.unpriced > 0 ? "known cost, paid to providers" : "paid to providers"}
@@ -208,24 +227,38 @@ function Panel({ cost }: { readonly cost: RunCost }): ReactElement {
         </div>
       </section>
 
-      <section aria-label="By stage">
-        <SectionHead title="By stage" info="project.cost.by-stage" className="mb-3" />
+      <section aria-label="By step" className="flex flex-col gap-2">
+        <SectionHead
+          as="h3"
+          title="By step"
+          meta="What each step has cost so far, retries and remakes included; working time is how long its work ran, over every run."
+          className="pb-0"
+        />
         <div className="overflow-x-auto">
           <DataTable
-            caption="Run cost by stage"
-            columns={stageColumns}
+            caption="Run cost by step"
+            columns={stageColumns(viaApi)}
             rows={cost.byStage}
             rowKey={(row) => row.stage}
           />
         </div>
       </section>
 
-      <section aria-label="By model">
-        <SectionHead title="By model" info="project.cost.by-model" className="mb-3" />
+      <section aria-label="By model" className="flex flex-col gap-2">
+        <SectionHead
+          as="h3"
+          title="By model"
+          meta={
+            viaApi
+              ? "Cost is what you paid each service. A signed-in tool such as Claude Code costs $0 on its plan; Via API is what the same work would cost through the service's API."
+              : "Cost is what you paid each service for its calls."
+          }
+          className="pb-0"
+        />
         <div className="overflow-x-auto">
           <DataTable
             caption="Run cost by model"
-            columns={modelColumns}
+            columns={modelColumns(viaApi)}
             rows={cost.byModel}
             rowKey={(row) => `${row.provider}/${row.model}/${row.kind}`}
           />

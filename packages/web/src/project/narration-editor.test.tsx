@@ -75,7 +75,7 @@ it("edits full logical text once across split physical requests and suppresses a
   expect(screen.getAllByRole("textbox")).toHaveLength(1);
   expect(screen.getByText("2 audio parts in this narration chunk.")).toBeTruthy();
   await user.click(
-    screen.getByRole("button", { name: "Regenerate narration chunk 1 after review" }),
+    screen.getByRole("button", { name: "Make narration chunk 1 again · voice call" }),
   );
   expect(changed.mock.lastCall?.[0].regenerate).toEqual(["audio:body:chunk1"]);
   expect(narrationGroups(narrationView(["Hello", "Different", "Hello"]))).toEqual({
@@ -158,14 +158,14 @@ it("shows a chunk queued for regeneration and can take it back", async () => {
   }
   renderApp(<Harness />, testDeps({}));
   await user.click(
-    screen.getByRole("button", { name: "Regenerate narration chunk 1 after review" }),
+    screen.getByRole("button", { name: "Make narration chunk 1 again · voice call" }),
   );
   expect(
-    screen.getByText("Narration chunk 1 will be regenerated after you save and press Remake."),
+    screen.getByText("Narration chunk 1 is spoken again once you save and remake."),
   ).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Keep narration chunk 1" }));
   expect(
-    screen.getByRole("button", { name: "Regenerate narration chunk 1 after review" }),
+    screen.getByRole("button", { name: "Make narration chunk 1 again · voice call" }),
   ).toBeTruthy();
 });
 

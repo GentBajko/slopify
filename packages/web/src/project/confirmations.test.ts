@@ -22,9 +22,9 @@ describe("the dialog in front of a destructive action", () => {
     });
   });
 
-  it("uses the design chapter's own sentence for a deleted image", () => {
+  it("says a deleted image leaves the video, made again without it", () => {
     expect(confirmationFor({ kind: "delete-image", outputId: "o1" }).consequence).toBe(
-      "Removes the image and re-renders video when enabled.",
+      "Removes the image; the video is made again without it when the video is on.",
     );
   });
 
@@ -34,20 +34,46 @@ describe("the dialog in front of a destructive action", () => {
       outputId: "o1",
       thumbnail: true,
     });
-    expect(thumbnail.title).toBe("Regenerate this thumbnail?");
-    expect(thumbnail.consequence).toContain("The video and shorts are not touched");
+    expect(thumbnail.title).toBe("Make the thumbnail again?");
+    expect(thumbnail.verb).toBe("Make it again");
+    expect(thumbnail.consequence).toContain("the video and shorts are not touched");
     expect(confirmationFor({ kind: "regenerate-image", outputId: "o1" }).consequence).toContain(
-      "re-renders video",
+      "makes the video again with it",
     );
   });
 
-  it("names each re-run's dependency consequences and keeps History", () => {
+  it("names each remake's consequence in plain words, and keeps Versions", () => {
     expect(confirmationFor({ kind: "rerun", stage: "images" }).consequence).toBe(
-      "Regenerates generated images and affected video, keeping supplied images and narration; previous outputs stay in History.",
+      "Draws every image made from a prompt again, then makes the video again with them; pictures you supplied stay as they are.",
     );
     expect(confirmationFor({ kind: "rerun", stage: "video" }).consequence).toBe(
-      "Rebuilds local exports from saved media without regenerating narration or images; previous outputs stay in History.",
+      "Makes the video file again from the narration and images you already have; nothing is drawn or recorded again.",
     );
+    expect(confirmationFor({ kind: "rerun", stage: "audio" }).consequence).toContain(
+      "stays under Versions",
+    );
+    for (const stage of stageKinds)
+      expect(confirmationFor({ kind: "rerun", stage }).consequence).not.toMatch(
+        /History|Regenerat|export|cue/u,
+      );
+  });
+
+  it("leads with the price where it is known", () => {
+    expect(
+      confirmationFor({
+        kind: "rerun",
+        stage: "video",
+        price: "No charge: it runs on this computer.",
+      }).consequence,
+    ).toMatch(/^No charge: it runs on this computer\. Makes the video file again/u);
+    expect(
+      confirmationFor({
+        kind: "regenerate-image",
+        outputId: "o1",
+        now: true,
+        price: "About $0.04.",
+      }).consequence,
+    ).toMatch(/^About \$0\.04\. Draws a new image/u);
   });
 
   it("never names the way out the same thing as the action", () => {

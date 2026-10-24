@@ -253,19 +253,28 @@ export async function openProjectEditor(): Promise<void> {
 
 // One file from a stage's Download menu (project/parts.tsx), opening the menu when it is shut.
 export async function downloadItem(name: string): Promise<HTMLElement> {
-  // A stage with several files lists them behind its Download button; a stage with one file
-  // downloads it straight away, the file named in the link's tooltip.
+  // A stage with several files lists them behind a Download button named for what it holds; a
+  // stage with one file downloads it straight away, the file named in the link's tooltip. A
+  // section with two menus (Narration's recordings and text) is tried menu by menu.
   const found = await waitFor(() => {
-    const shown =
+    const link =
       screen.queryByRole("menuitem", { name }) ??
       screen
         .queryAllByRole("link", { name: /^Download/ })
-        .find((link) => link.getAttribute("title") === name) ??
-      screen.queryByRole("button", { name: "Download" });
-    if (shown === null || shown === undefined) throw new Error(`No download of ${name} is shown.`);
-    return shown;
+        .find((one) => one.getAttribute("title") === name);
+    const menus = screen
+      .queryAllByRole("button", { name: /^Download/ })
+      .filter((one) => one.getAttribute("aria-haspopup") === "menu");
+    if ((link === null || link === undefined) && menus.length === 0)
+      throw new Error(`No download of ${name} is shown.`);
+    return { link, menus };
   });
-  if (found.tagName === "A") return found;
-  await userEvent.click(found);
-  return await screen.findByRole("menuitem", { name });
+  if (found.link !== null && found.link !== undefined) return found.link;
+  for (const menu of found.menus) {
+    await userEvent.click(menu);
+    const item = screen.queryByRole("menuitem", { name });
+    if (item !== null) return item;
+    await userEvent.keyboard("{Escape}");
+  }
+  throw new Error(`No download of ${name} is in any Download menu.`);
 }

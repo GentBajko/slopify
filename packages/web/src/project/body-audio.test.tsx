@@ -1,5 +1,5 @@
 import type { Output } from "@app/slices/storage/model.js";
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { stubMedia } from "@/components/kit/media-stub";
@@ -66,21 +66,22 @@ it("plays the new narration beside a levelled one an edit outdated, and says why
   mount({ "o-levelled": "outdated" });
   expect(
     await screen.findByText(
-      /Outdated: this is the levelled narration from before your last change/,
+      /Made before your last change: this is the evened-out narration from before it/,
     ),
   ).toBeDefined();
-  // The one the video plays until the run levels the new one, then the new one as spoken.
-  expect(screen.getByRole("group", { name: "Body narration controls" })).toBeDefined();
+  // The one the video plays until the run evens out the new one, then the new one as spoken.
+  // A narration in one piece has no part names.
+  expect(screen.getByRole("group", { name: "Narration controls" })).toBeDefined();
   expect(
-    screen.getByRole("group", { name: "Body narration, new, before levelling controls" }),
+    screen.getByRole("group", { name: "Narration, new, before evening out controls" }),
   ).toBeDefined();
 });
 
 it("plays only the levelled narration while it is current", async () => {
   mount({});
-  expect(await screen.findByRole("group", { name: "Body narration controls" })).toBeDefined();
-  expect(screen.queryByText(/Outdated:/)).toBeNull();
-  expect(screen.queryByRole("group", { name: /new, before levelling/ })).toBeNull();
+  expect(await screen.findByRole("group", { name: "Narration controls" })).toBeDefined();
+  expect(screen.queryByText(/Made before your last change/)).toBeNull();
+  expect(screen.queryByRole("group", { name: /new, before evening out/ })).toBeNull();
 });
 
 it("reads the narration as a transcript in step with its player once the caption timing is current", async () => {
@@ -138,12 +139,16 @@ it("reads the narration as a transcript in step with its player once the caption
       }),
     }),
   );
-  const line = await screen.findByRole("button", { name: "Welcome back." });
-  const player = screen.getByLabelText("Body narration");
-  if (!(player instanceof HTMLAudioElement)) throw new Error("Expected the body player.");
+  // The words run as one paragraph at the reading measure, its time before it.
+  const paragraph = await screen.findByRole("button", { name: "0:02 Hello there. Welcome back." });
+  const player = screen.getByLabelText("Narration");
+  if (!(player instanceof HTMLAudioElement)) throw new Error("Expected the narration player.");
   stubMedia(player);
-  await user.click(line);
+  await user.click(within(paragraph).getByText("Welcome back."));
   // 4 s on the narration timeline is 3 s into the body file, after the 1 s lead-in.
   expect(player.currentTime).toBe(3);
-  expect(screen.getByRole("button", { name: "Play from 0:04" })).toBeDefined();
+  // The text is searched and copied here, not behind a fold.
+  expect(screen.getByRole("searchbox", { name: "Search the narration" })).toBeDefined();
+  expect(screen.getByRole("button", { name: "Copy the text" })).toBeDefined();
+  expect(screen.queryByText("Read, search or copy the text")).toBeNull();
 });

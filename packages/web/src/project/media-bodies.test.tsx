@@ -1,11 +1,12 @@
 import { assetOf } from "@app/slices/storage/asset-name.js";
 import type { Output } from "@app/slices/storage/model.js";
+import { defaultVoicesSettings } from "@app/slices/voices/model.js";
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { stubMedia } from "@/components/kit/media-stub";
 import { body, output, stage } from "@/routes/project-fixtures";
-import { jsonAnswer, renderApp, testDeps, testOrigin } from "@/test-app";
+import { jsonAnswer, renderApp, renderRouted, testDeps, testOrigin } from "@/test-app";
 import type { BodyProps } from "./body.js";
 import { ImagesBody } from "./body-images.js";
 import { playerChapters, VideoBody } from "./body-video.js";
@@ -72,7 +73,7 @@ it("names each image by its own scene, not the prompt's shared opening", () => {
     }),
   );
   renderApp(<ImagesBody {...props(scened).props} />, testDeps({}));
-  const grid = screen.getByRole("region", { name: "Slideshow images" });
+  const grid = screen.getByRole("region", { name: "Images × 2" });
   expect(within(grid).getByText("A priestess before a rift.")).toBeTruthy();
   expect(within(grid).getByText("Islands over a sea.")).toBeTruthy();
 });
@@ -95,30 +96,73 @@ it("says an image's prompt once in its lightbox: its scene on the bar, the promp
   expect(within(lightbox).getAllByText(prompt("A priestess before a rift."))).toHaveLength(1);
 });
 
-it("shows the images in the media grid, and offers Regenerate and Download at full size", async () => {
+it("shows the images in one grid, each with its actions in words at rest and at full size", async () => {
   const { props: given, run } = props(pictures);
   renderApp(<ImagesBody {...given} />, testDeps({}));
   const grid = screen
-    .getByRole("region", { name: "Slideshow images" })
+    .getByRole("region", { name: "Images × 2" })
     .querySelector("[data-slot='media-grid']");
   expect(grid?.querySelectorAll("[data-slot='media-frame']")).toHaveLength(2);
+  // At rest, in words: no hover is needed to find them.
+  const tile = grid?.querySelectorAll("[data-slot='media-frame']")[1] as HTMLElement;
+  expect(
+    within(tile).getByRole("button", { name: "Make this image again for image 2" }),
+  ).toBeTruthy();
+  expect(within(tile).getByRole("link", { name: "Download image 2" }).textContent).toBe(
+    "Download image 2",
+  );
+  expect(within(tile).getByRole("button", { name: "More for image 2" })).toBeTruthy();
+  expect(within(tile).getByRole("button", { name: "Open image 2 full size" }).textContent).toBe(
+    "Full size",
+  );
 
   await userEvent.click(screen.getByRole("button", { name: "Open image 2 full size" }));
   const lightbox = await screen.findByRole("dialog", { name: /2 of 2/u });
   expect(
     within(lightbox).getByRole("link", { name: "Download image 2" }).getAttribute("href"),
   ).toBe(url(pictures[1] as Output));
-  await userEvent.click(within(lightbox).getByRole("button", { name: "Regenerate image 2" }));
-  // A project without saved versions asks first, then regenerates the picture shown.
-  await userEvent.click(await screen.findByRole("button", { name: "Regenerate it" }));
+  await userEvent.click(
+    within(lightbox).getByRole("button", { name: "Make this image again for image 2" }),
+  );
+  // A project without saved versions asks first, price first, then makes the picture shown.
+  const dialog = await screen.findByRole("dialog", { name: "Make this image again?" });
+  expect(dialog.textContent).toContain("one paid image call");
+  await userEvent.click(within(dialog).getByRole("button", { name: "Make it again" }));
   expect(run).toHaveBeenCalledWith({ kind: "regenerate-image", outputId: "o-image-2" });
+});
+
+it("deletes an image from its More menu, after asking", async () => {
+  const { props: given, run } = props(pictures);
+  renderApp(<ImagesBody {...given} />, testDeps({}));
+  await userEvent.click(screen.getByRole("button", { name: "More for image 1" }));
+  await userEvent.click(await screen.findByRole("menuitem", { name: "Delete image 1" }));
+  const dialog = await screen.findByRole("dialog", { name: "Delete this image?" });
+  await userEvent.click(within(dialog).getByRole("button", { name: "Delete the image" }));
+  expect(run).toHaveBeenCalledWith({ kind: "delete-image", outputId: "o-image-1" });
 });
 
 function mountRevisioned(regenerateNow: (workKeys: readonly string[]) => void) {
   const requests: EditRequest[] = [];
   const { props: given, run } = props(pictures);
+  const base = revisionView();
   const view = {
-    ...revisionView(),
+    ...base,
+    // Images drawn from prompts, so the stage can be made again as well as each picture.
+    revision: {
+      ...base.revision,
+      config: {
+        ...base.revision.config,
+        sources: { ...base.revision.config.sources, images: "generate" as const },
+      },
+      content: {
+        ...base.revision.content,
+        imageOrder: ["key-1", "key-2"],
+        imageDefinitions: {
+          "key-1": { source: "generate" as const, prompt: "Scene 1", assetId: null },
+          "key-2": { source: "generate" as const, prompt: "Scene 2", assetId: null },
+        },
+      },
+    },
     outputs: pictures.map((one, index) => ({
       recordId: one.id,
       publicationId: null,
@@ -147,14 +191,28 @@ function mountRevisioned(regenerateNow: (workKeys: readonly string[]) => void) {
   return { requests, run };
 }
 
-it("makes every image again at once from Regenerate all, after asking", async () => {
+it("makes every image again from the head's one button, with or without the video", async () => {
   const regenerateNow = vi.fn();
-  const { requests } = mountRevisioned(regenerateNow);
-  await userEvent.click(await screen.findByRole("button", { name: "Regenerate all" }));
-  const dialog = await screen.findByRole("dialog", { name: "Regenerate all 2 images?" });
-  expect(dialog.textContent).toContain("one paid image call each");
+  const { requests, run } = mountRevisioned(regenerateNow);
+  const again = await screen.findByRole("button", {
+    name: "Make all 2 images again · 2 image calls",
+  });
+  // Ticked by default: the images and then the video, the stage made again.
+  await userEvent.click(again);
+  let dialog = await screen.findByRole("dialog", { name: "Make all 2 images again?" });
+  const tick = within(dialog).getByRole("checkbox", {
+    name: "Also make the video again with them (free)",
+  });
+  expect((tick as HTMLInputElement).checked).toBe(true);
+  await userEvent.click(within(dialog).getByRole("button", { name: "Make all 2 images again" }));
+  expect(run).toHaveBeenCalledWith({ kind: "rerun", stage: "images" });
   expect(regenerateNow).not.toHaveBeenCalled();
-  await userEvent.click(within(dialog).getByRole("button", { name: "Regenerate them" }));
+  // Unticked: the pictures now, the video left as it is until it is made again.
+  await userEvent.click(again);
+  dialog = await screen.findByRole("dialog", { name: "Make all 2 images again?" });
+  await userEvent.click(within(dialog).getByRole("checkbox"));
+  expect(dialog.textContent).toContain("the video keeps the current pictures");
+  await userEvent.click(within(dialog).getByRole("button", { name: "Make all 2 images again" }));
   expect(regenerateNow).toHaveBeenCalledWith(["image:key-1", "image:key-2"], {
     approvedUpTo: undefined,
   });
@@ -165,17 +223,19 @@ it("makes every image again at once from Regenerate all, after asking", async ()
 it("makes one image again at once on a project with saved versions, leaving the video", async () => {
   const regenerateNow = vi.fn();
   const { requests, run } = mountRevisioned(regenerateNow);
-  await screen.findByRole("button", { name: "Regenerate all" });
-  await userEvent.click(screen.getByRole("button", { name: "Regenerate image 2" }));
-  const dialog = await screen.findByRole("dialog", { name: "Regenerate this image?" });
-  expect(dialog.textContent).toContain("The video keeps the current one until you remake it");
-  await userEvent.click(within(dialog).getByRole("button", { name: "Regenerate the image" }));
+  await screen.findByRole("button", { name: /^Make all 2 images again/ });
+  await userEvent.click(screen.getByRole("button", { name: "Make this image again for image 2" }));
+  const dialog = await screen.findByRole("dialog", { name: "Make this image again?" });
+  expect(dialog.textContent).toContain(
+    "the video keeps the current one until the video is made again",
+  );
+  await userEvent.click(within(dialog).getByRole("button", { name: "Make it again" }));
   expect(regenerateNow).toHaveBeenCalledWith(["image:key-2"], { approvedUpTo: undefined });
   expect(run).not.toHaveBeenCalled();
   expect(requests).toEqual([]);
 });
 
-it("offers the thumbnail's Regenerate and Download in its lightbox too", async () => {
+it("leads the grid with the thumbnail, badged, with its own actions in its lightbox too", async () => {
   const thumbnail = output("thumbnail", "thumbnail", {
     id: "o-thumb",
     path: "thumbnail.png",
@@ -185,17 +245,32 @@ it("offers the thumbnail's Regenerate and Download in its lightbox too", async (
     companion: stage("thumbnail", "done"),
   });
   renderApp(<ImagesBody {...given} />, testDeps({}));
+  const frames = screen
+    .getByRole("region", { name: "Images × 2" })
+    .querySelectorAll("[data-slot='media-frame']");
+  expect(frames).toHaveLength(3);
+  expect(within(frames[0] as HTMLElement).getByText("Thumbnail")).toBeTruthy();
+  // The images' zip holds the images only; the thumbnail has its own Download.
+  expect(screen.getByRole("link", { name: "Download both images (.zip)" })).toBeTruthy();
+  expect(screen.getByText("2 in the video + thumbnail")).toBeTruthy();
+  // How YouTube shows it, in sight on the tile.
+  await userEvent.click(
+    within(frames[0] as HTMLElement).getByRole("button", { name: "See it as YouTube shows it" }),
+  );
+  const preview = await screen.findByRole("dialog", { name: "The thumbnail on YouTube" });
+  await userEvent.click(within(preview).getByRole("button", { name: "Close" }));
   await userEvent.click(screen.getByRole("button", { name: "Open the thumbnail full size" }));
-  const lightbox = await screen.findByRole("dialog", { name: /1 of 1/u });
+  const lightbox = await screen.findByRole("dialog", { name: /1 of 3/u });
   expect(
     within(lightbox).getByRole("link", { name: "Download the thumbnail" }).getAttribute("href"),
   ).toBe(url(thumbnail));
-  await userEvent.click(within(lightbox).getByRole("button", { name: "Regenerate the thumbnail" }));
-  await userEvent.click(await screen.findByRole("button", { name: "Regenerate it" }));
+  await userEvent.click(within(lightbox).getByRole("button", { name: "Make the thumbnail again" }));
+  const dialog = await screen.findByRole("dialog", { name: "Make the thumbnail again?" });
+  await userEvent.click(within(dialog).getByRole("button", { name: "Make it again" }));
   expect(run).toHaveBeenCalledWith({ kind: "regenerate-image", outputId: "o-thumb" });
 });
 
-it("plays the final video with the first thumbnail as its poster", () => {
+it("plays the final video with the first thumbnail as its poster", async () => {
   const video = output("video", "video", { id: "o-video", path: "video.mp4" });
   const thumbnails = [2, 1].map((index) =>
     output("thumbnail", "thumbnail", {
@@ -205,8 +280,8 @@ it("plays the final video with the first thumbnail as its poster", () => {
     }),
   );
   const { props: given } = props([video, ...thumbnails]);
-  renderApp(<VideoBody {...given} stage={stage("video", "done")} />, testDeps({}));
-  const player = screen.getByLabelText("Generated video", { selector: "video" });
+  renderRouted(<VideoBody {...given} stage={stage("video", "done")} />, testDeps({}));
+  const player = await screen.findByLabelText("Generated video", { selector: "video" });
   expect(player.getAttribute("poster")).toBe(url(thumbnails[1] as Output));
 });
 
@@ -226,11 +301,35 @@ it("plays the video from a passage the captions left out when its time is presse
     meta: { subtitleOmissions: [{ start: 75, text: "A line the aligner lost." }] },
   });
   const { props: given } = props([video]);
-  renderApp(<VideoBody {...given} stage={stage("video", "done")} />, testDeps({}));
-  const player = screen.getByLabelText("Generated video", { selector: "video" });
+  renderRouted(<VideoBody {...given} stage={stage("video", "done")} />, testDeps({}));
+  const player = await screen.findByLabelText("Generated video", { selector: "video" });
   if (!(player instanceof HTMLVideoElement)) throw new Error("Expected the video element.");
   stubMedia(player);
-  await userEvent.click(screen.getByText(/Subtitles recovered after missing narration/));
+  await userEvent.click(screen.getByText("Passages left out of the subtitles"));
   await userEvent.click(screen.getByRole("button", { name: "Play from 1:15" }));
   expect(player.currentTime).toBe(75);
+});
+
+it("leads an audiobook with its chaptered file, the video beside it and the other format quiet", async () => {
+  const video = output("video", "video", { id: "o-video", path: "video.mp4" });
+  const m4b = output("audio_m4b", "video", { id: "o-m4b", path: "audiobook.m4b" });
+  const mp3 = output("audio_mp3", "video", { id: "o-mp3", path: "narration.mp3" });
+  const { props: given } = props([video, m4b, mp3]);
+  const book = {
+    ...given.project,
+    config: { ...given.project.config, voices: defaultVoicesSettings("audiobook") },
+  };
+  renderRouted(
+    <VideoBody {...given} project={book} stage={stage("video", "done")} />,
+    testDeps({}),
+  );
+  const links = (await screen.findAllByRole("link", { name: /^Download/ })).map(
+    (one) => one.textContent,
+  );
+  expect(links.slice(0, 2)).toEqual(["Download audiobook (.m4b)", "Download video (.mp4)"]);
+  expect(
+    screen.getByRole("link", { name: "Download audio with chapters (.mp3)" }).textContent,
+  ).toBe(".mp3 with chapters");
+  // Neither is a menu: each names the one file it fetches.
+  expect(screen.queryByRole("button", { name: /^Download/ })).toBeNull();
 });

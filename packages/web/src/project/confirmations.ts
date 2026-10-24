@@ -36,25 +36,25 @@ export interface Confirmation {
   readonly dismiss: string;
 }
 
+// What making a whole stage again does, in one sentence. The price, where it is known, comes
+// first (`withPrice`), so the dialog leads with what it costs.
 const rerunConsequence: Readonly<Record<StageKind, string>> = {
   research:
-    "Generates fresh research and affected article, narration, entries, thumbnail and exports; previous outputs stay in History.",
+    "Researches the topic again, then writes again the article, narration and files that follow from it; the current ones stay under Versions.",
   article:
-    "Generates a fresh article and affected narration, entries, thumbnail and exports; previous outputs stay in History.",
+    "Writes the article again, then makes again the narration and files that follow from it; the current ones stay under Versions.",
   audio:
-    "Regenerates narration and affected exports, keeping compatible cue preparation; previous outputs stay in History.",
+    "Records the narration again with the same voice, then makes the video again with it; the current one stays under Versions.",
   images:
-    "Regenerates generated images and affected video, keeping supplied images and narration; previous outputs stay in History.",
-  thumbnail:
-    "Regenerates the thumbnail without changing the main video; previous outputs stay in History.",
+    "Draws every image made from a prompt again, then makes the video again with them; pictures you supplied stay as they are.",
+  thumbnail: "Draws the thumbnail again; the video and shorts are not touched.",
   video:
-    "Rebuilds local exports from saved media without regenerating narration or images; previous outputs stay in History.",
-  document:
-    "Renders the PDF again from the saved article and title without regenerating anything else; previous outputs stay in History.",
+    "Makes the video file again from the narration and images you already have; nothing is drawn or recorded again.",
+  document: "Makes the PDF again from the saved article and title; nothing else is made again.",
 };
 
 function withPrice(consequence: string, price: string | undefined): string {
-  return price === undefined ? consequence : `${consequence} ${price}`;
+  return price === undefined ? consequence : `${price} ${consequence}`;
 }
 
 export function confirmationFor(action: Destructive): Confirmation {
@@ -68,7 +68,7 @@ export function confirmationFor(action: Destructive): Confirmation {
       };
     case "rerun":
       return {
-        title: "Make this stage again?",
+        title: "Make this step again?",
         consequence: withPrice(rerunConsequence[action.stage], action.price),
         verb: "Make it again",
         dismiss: "Keep what is there",
@@ -76,30 +76,30 @@ export function confirmationFor(action: Destructive): Confirmation {
     case "delete-image":
       return {
         title: "Delete this image?",
-        consequence: "Removes the image and re-renders video when enabled.",
+        consequence: "Removes the image; the video is made again without it when the video is on.",
         verb: "Delete image",
         dismiss: "Keep it",
       };
     case "regenerate-image":
       if (action.thumbnail)
         return {
-          title: "Regenerate this thumbnail?",
+          title: "Make the thumbnail again?",
           consequence: withPrice(
-            "Makes a new thumbnail, one paid image call. The video and shorts are not touched; the PDF's cover follows the first thumbnail. The old one stays in History.",
+            "Draws a new thumbnail from its prompt, one paid image call; the video and shorts are not touched, and the old one stays under Versions.",
             action.price,
           ),
-          verb: "Regenerate",
+          verb: "Make it again",
           dismiss: "Keep it",
         };
       return {
-        title: "Regenerate this image?",
+        title: "Make this image again?",
         consequence: withPrice(
           action.now
-            ? "Makes a new image now, one paid image call. The video keeps the current one until you remake it; the old image stays in History."
-            : "Replaces the image with a new one and re-renders video when enabled.",
+            ? "Draws a new image from its prompt, one paid image call; the video keeps the current one until the video is made again."
+            : "Draws a new image from its prompt, one paid image call, and makes the video again with it when the video is on.",
           action.price,
         ),
-        verb: "Regenerate",
+        verb: "Make it again",
         dismiss: "Keep it",
       };
     case "save-article":

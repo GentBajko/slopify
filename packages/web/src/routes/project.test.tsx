@@ -173,7 +173,7 @@ describe("the project workspace", () => {
       }),
     );
     const pdf = await selectProjectStage("Document");
-    expect(within(pdf).getByText("DiceMaster theme")).not.toBeNull();
+    expect(within(pdf).getByText(/DiceMaster theme/)).not.toBeNull();
     expect(within(pdf).getByRole("link", { name: "Download PDF" }).getAttribute("href")).toBe(
       `${testOrigin}/files/p1/document-pdf`,
     );
@@ -210,15 +210,12 @@ describe("the next action", () => {
     expect(
       within(nextAction()).getByRole("button", { name: "Copy for YouTube Studio" }),
     ).not.toBeNull();
-    // The project's next step and the open section's own Download; the YouTube text is a
-    // section of its own, not more of the Video section.
+    // The project's next step is the page's one lime button: the downloads are secondary,
+    // and the YouTube text is a section of its own, not more of the Video section.
     const shown = [...document.querySelectorAll(".sl-btn--primary")].filter(
       (button) => button.closest("[hidden]") === null,
     );
-    expect(shown.map((button) => button.textContent?.trim()).sort()).toEqual([
-      "Copy for YouTube Studio",
-      "Download",
-    ]);
+    expect(shown.map((button) => button.textContent?.trim())).toEqual(["Copy for YouTube Studio"]);
     const article = await selectProjectStage("Article");
     expect(await within(article).findByText(/A long finished article/)).not.toBeNull();
   });
@@ -482,41 +479,37 @@ describe("the stage bodies", () => {
       `${testOrigin}/files/p1/audio-body`,
       `${testOrigin}/files/p1/audio-outro`,
     ]);
-    expect(screen.getByLabelText("Body narration")).not.toBeNull();
-    expect(await within(workspace).findByText("Narrator M")).not.toBeNull();
-    // Voice and Chunking are facts, label beside value, not words in a sentence.
-    const facts = workspace.querySelector<HTMLElement>('dl[aria-label="How it was recorded"]');
-    if (facts === null) throw new Error("The narration's facts are not a definition list.");
-    expect(within(facts).getByText("Chunking")).not.toBeNull();
-    expect(within(facts).getByText("Every 500 words")).not.toBeNull();
+    // A narration in parts names each part, in plain words.
+    expect(screen.getByLabelText("Main part narration")).not.toBeNull();
+    // One line of facts in plain words; how it was sent to the voice is a technical detail.
+    expect(
+      await within(workspace).findByText("Voice Narrator M · 1 min 12 s", { exact: false }),
+    ).not.toBeNull();
+    expect(within(workspace).queryByText("Chunking")).toBeNull();
+    await userEvent.click(within(workspace).getByText("Technical details"));
+    expect(within(workspace).getByText("Sent to the voice every 500 words.")).not.toBeNull();
   });
 
   it("draws the image grid from the run's own prompt groups, opening each full size", async () => {
     renderRouted(<ProjectRoute projectId="p1" />, deps());
     const images = await selectProjectStage("Images");
-    const slideshow = within(images).getByRole("region", { name: "Slideshow images" });
-    expect(
-      within(slideshow).getByRole("region", { name: "Oil painting scenes × 2" }),
-    ).not.toBeNull();
-    const tiles = [...slideshow.querySelectorAll("figure img")];
+    const group = within(images).getByRole("region", { name: "Oil painting scenes × 2" });
+    // One grid: the thumbnail leads, then the images at the same size.
+    const tiles = [...group.querySelectorAll("figure img")];
     expect(tiles.map((tile) => tile.getAttribute("src"))).toEqual([
+      `${testOrigin}/files/p1/thumbnail`,
       `${testOrigin}/files/p1/image-1`,
       `${testOrigin}/files/p1/image-2`,
     ]);
-    // Download all lists the files first; the zip link is in that dialog.
-    await userEvent.click(screen.getByRole("button", { name: "Download all images" }));
-    const files = await screen.findByRole("dialog", { name: "Download images" });
+    // Every file current: Download all is a download, named with what the zip holds.
     expect(
-      within(files)
-        .getByRole("link", { name: /^Download zip/ })
+      within(images)
+        .getByRole("link", { name: "Download both images (.zip)" })
         .getAttribute("href"),
     ).toBe(`${testOrigin}/files/p1/images.zip`);
-    await userEvent.click(within(files).getByRole("button", { name: "Cancel" }));
-    await userEvent.click(
-      within(slideshow).getByRole("button", { name: "Open image 2 full size" }),
-    );
+    await userEvent.click(within(group).getByRole("button", { name: "Open image 2 full size" }));
     const lightbox = await screen.findByRole("dialog");
-    expect(within(lightbox).getByText(/^2 of 2/)).not.toBeNull();
+    expect(within(lightbox).getByText(/^3 of 3/)).not.toBeNull();
   });
 
   it("plays the video in a real player and offers the mp4", async () => {
@@ -546,24 +539,23 @@ describe("the stage bodies", () => {
     );
   });
 
-  it("shows the thumbnail above the slideshow images, without its prompt", async () => {
+  it("leads the images with the thumbnail, badged, without its prompt", async () => {
     renderRouted(<ProjectRoute projectId="p1" />, deps());
     const images = await selectProjectStage("Images");
-    const thumbnail = within(images).getByRole("region", { name: "Thumbnail" });
+    const thumbnail = within(images)
+      .getByRole("img", { name: "Thumbnail for Rope Tricks" })
+      .closest("figure");
+    if (thumbnail === null) throw new Error("The thumbnail is not a tile.");
+    expect(within(thumbnail).getByText("Thumbnail")).not.toBeNull();
     expect(
-      within(thumbnail).getByRole("img", { name: "Thumbnail for Rope Tricks" }),
-    ).not.toBeNull();
-    expect(
-      within(thumbnail).getByRole("button", { name: "Regenerate the thumbnail" }),
+      within(thumbnail).getByRole("button", { name: "Make the thumbnail again" }),
     ).not.toBeNull();
     expect(
       within(thumbnail).getByRole("link", { name: "Download the thumbnail" }).getAttribute("href"),
     ).toBe(`${testOrigin}/files/p1/thumbnail`);
     expect(screen.queryByText("A cracked skull with gemstone eyes")).toBeNull();
-    const regions = within(images)
-      .getAllByRole("region")
-      .map((one) => one.getAttribute("aria-label"));
-    expect(regions.indexOf("Thumbnail")).toBeLessThan(regions.indexOf("Slideshow images"));
+    const pictures = [...images.querySelectorAll("figure img")];
+    expect(pictures[0]?.getAttribute("alt")).toBe("Thumbnail for Rope Tricks");
   });
 
   it("opens on Article for a research failure, with the Research tab open", async () => {

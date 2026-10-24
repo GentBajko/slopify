@@ -13,10 +13,43 @@ export function imageTitles(
     prompt === undefined ? undefined : labelled.exec(prompt)?.[1]?.trim(),
   );
   const byLines = differingLines(prompts);
+  const byWords = differingWords(prompts);
   return prompts.map((prompt, index) => {
     const scene = scenes[index];
     if (scene !== undefined && scene !== "") return scene;
-    return byLines[index] ?? prompt;
+    // A line diff that kept the whole prompt found nothing shared; the words may have.
+    const line = byLines[index];
+    return (line === prompt?.trim() ? undefined : line) ?? byWords[index] ?? prompt;
+  });
+}
+
+// A one-line prompt that opens and closes with the same words as the others ("Painterly
+// documentary illustration, …: a ruined colonnade … No text."): the words between, which are
+// its own. The closing words are compared without case, and the name starts with a capital.
+function differingWords(prompts: readonly (string | undefined)[]): readonly (string | undefined)[] {
+  const words = prompts.map((prompt) => prompt?.trim().split(/\s+/u));
+  const known = words.filter((each): each is string[] => each !== undefined);
+  if (known.length < 2) return prompts.map(() => undefined);
+  const first = known[0] ?? [];
+  const shortest = Math.min(...known.map((each) => each.length));
+  let head = 0;
+  while (head < shortest && known.every((each) => each[head] === first[head])) head += 1;
+  const fromEnd = (each: readonly string[], at: number) =>
+    each[each.length - 1 - at]?.toLowerCase();
+  let tail = 0;
+  while (
+    tail < shortest - head &&
+    known.every((each) => fromEnd(each, tail) === fromEnd(first, tail))
+  )
+    tail += 1;
+  // Too little in common to be a shared frame: each prompt names itself.
+  if (head < 3) return prompts.map(() => undefined);
+  return words.map((each) => {
+    const own = each
+      ?.slice(head, each.length - tail)
+      .join(" ")
+      .replace(/^[\s:;,.–—-]+|[\s:;,–—-]+$/gu, "");
+    return own === undefined || own === "" ? undefined : own.charAt(0).toUpperCase() + own.slice(1);
   });
 }
 

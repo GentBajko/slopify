@@ -179,7 +179,9 @@ export function projectOutputs(input: OutputsInput): readonly ProjectOutput[] {
       set:
         images.length === 0
           ? undefined
-          : { set: "images", members: [...images, ...thumbnails].sort(byIndex) },
+          : // The thumbnails have their own row and their own download, so the images' zip
+            // holds the images only.
+            { set: "images", members: [...images].sort(byIndex) },
       members: images,
       alternatives: [],
       source: { name: "text", output: article },

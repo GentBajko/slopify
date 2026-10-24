@@ -244,7 +244,7 @@ it("shows persisted missing narration notes alongside downloadable subtitles", a
     <ProjectRoute projectId="p1" />,
     deps({ ...fontRoute, "GET /api/projects/p1": jsonAnswer(value) }),
   );
-  await screen.findByText(/Subtitles recovered after missing narration/);
+  await userEvent.click(await screen.findByText("Passages left out of the subtitles"));
   expect(screen.getByText(/The missing transcript passage\./)).not.toBeNull();
   expect(screen.getByRole("button", { name: "Play from 2:41" })).not.toBeNull();
   expect(await downloadItem("Subtitles (.srt)")).not.toBeNull();

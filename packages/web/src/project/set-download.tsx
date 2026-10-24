@@ -1,3 +1,5 @@
+import { thumbnailCountOf } from "@app/slices/admission/model.js";
+import type { RevisionView } from "@app/slices/revisions/model.js";
 import type { Output } from "@app/slices/storage/model.js";
 import { DownloadIcon } from "lucide-react";
 import { type ReactElement, useState } from "react";
@@ -9,7 +11,7 @@ import { setZipUrl, type ZipSet } from "./output-api.js";
 import { outputLabel } from "./output-label.js";
 import { outdatedWords } from "./output-status.js";
 import { when } from "./project-outputs-model.js";
-import { useCurrentRevisionView } from "./revision-media.js";
+import { useCurrentRevisionView, useOutputMediaList } from "./revision-media.js";
 
 const setNames: Readonly<Record<ZipSet, string>> = {
   images: "images",
@@ -17,33 +19,105 @@ const setNames: Readonly<Record<ZipSet, string>> = {
   shorts: "shorts",
 };
 
-// Download all for a set of files (images, thumbnails, shorts), with the files listed first:
-// which version of the project they come from, which are older versions, and a tick for each
-// so the zip holds exactly the files picked. Nothing downloads until Download zip.
+// "Download all 4 images (.zip)", "Download both shorts (.zip)": what the zip holds, counted.
+export function setDownloadWords(set: ZipSet, count: number): string {
+  return count === 2
+    ? `Download both ${setNames[set]} (.zip)`
+    : `Download all ${String(count)} ${setNames[set]} (.zip)`;
+}
+
+interface SetRow {
+  readonly output: Output;
+  readonly recordId: string | undefined;
+  readonly older: boolean;
+}
+
+// The members the saved version still holds, each with its record and whether an edit made
+// it the previous version.
+function setRows(view: RevisionView | undefined, members: readonly Output[]): readonly SetRow[] {
+  return members.flatMap((output) => {
+    const row = view?.outputs.find((one) => one.selected && one.output.id === output.id);
+    if (view !== undefined && (row === undefined || !row.available)) return [];
+    return [{ output, recordId: row?.recordId, older: row?.state === "outdated" }];
+  });
+}
+
+// The records the server's zip of this set would hold on its own (the images zip holds the
+// thumbnails too), so a zip of fewer names exactly the ones it should.
+function wholeSet(view: RevisionView, set: ZipSet): ReadonlySet<string> {
+  const thumbnails = thumbnailCountOf(view.revision.config);
+  const thumbnail = (output: Output) =>
+    output.role === "thumbnail" && (output.meta.index ?? 1) <= thumbnails;
+  return new Set(
+    view.outputs
+      .filter(
+        (row) =>
+          row.selected &&
+          (set === "images"
+            ? row.output.role === "image" || thumbnail(row.output)
+            : set === "thumbnails"
+              ? thumbnail(row.output)
+              : row.output.role === "short_video"),
+      )
+      .map((row) => row.recordId),
+  );
+}
+
+function zipOf(
+  view: RevisionView | undefined,
+  set: ZipSet,
+  rows: readonly SetRow[],
+): readonly string[] | undefined {
+  if (view === undefined) return undefined;
+  const picked = rows.flatMap((row) => (row.recordId === undefined ? [] : [row.recordId]));
+  const whole = wholeSet(view, set);
+  return picked.length === whole.size && picked.every((id) => whole.has(id)) ? undefined : picked;
+}
+
+// Download all for a set of files (images, thumbnails, shorts) as one zip, named with what it
+// holds. A direct download while every file is current; once an edit made some of them the
+// previous version, the files are listed first, each with a tick, so the zip holds exactly
+// the ones picked.
 export function SetDownload({
   projectId,
   set,
   members,
-  variant = "primary",
+  variant = "secondary",
 }: {
   readonly projectId: string;
   readonly set: ZipSet;
   readonly members: readonly Output[];
   readonly variant?: "primary" | "secondary";
 }): ReactElement | null {
+  const { api } = useApp();
+  const view = useCurrentRevisionView();
   const [open, setOpen] = useState(false);
-  if (members.length === 0) return null;
+  // Nothing until the files can be fetched: a saved version's files once it has loaded.
+  const files = useOutputMediaList(members);
+  const rows = setRows(view, members);
+  if (rows.length === 0 || files.size === 0) return null;
+  if (!rows.some((row) => row.older))
+    return (
+      <FileLink
+        href={setZipUrl(api, projectId, view?.revision.id ?? null, set, zipOf(view, set, rows))}
+        download
+        variant={variant}
+      >
+        <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
+        {setDownloadWords(set, rows.length)}
+      </FileLink>
+    );
   return (
     <>
       <Button variant={variant} onClick={() => setOpen(true)}>
         <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
-        {`Download all ${setNames[set]}`}
+        {`Choose ${setNames[set]} to download…`}
       </Button>
       {open ? (
         <SetDownloadDialog
           projectId={projectId}
           set={set}
-          members={members}
+          rows={rows}
           onClose={() => setOpen(false)}
         />
       ) : null}
@@ -54,26 +128,20 @@ export function SetDownload({
 function SetDownloadDialog({
   projectId,
   set,
-  members,
+  rows,
   onClose,
 }: {
   readonly projectId: string;
   readonly set: ZipSet;
-  readonly members: readonly Output[];
+  readonly rows: readonly SetRow[];
   readonly onClose: () => void;
 }): ReactElement {
   const { api } = useApp();
   const view = useCurrentRevisionView();
-  const rows = members.flatMap((output) => {
-    const row = view?.outputs.find((one) => one.selected && one.output.id === output.id);
-    if (view !== undefined && (row === undefined || !row.available)) return [];
-    return [{ output, recordId: row?.recordId, older: row?.state === "outdated" }];
-  });
   const [picked, setPicked] = useState<ReadonlySet<string>>(
     () => new Set(rows.map((row) => row.output.id)),
   );
   const chosen = rows.filter((row) => picked.has(row.output.id));
-  const all = chosen.length === rows.length;
   // A project without saved versions zips everything; picking needs the version's records.
   const pickable = view !== undefined;
   const href = setZipUrl(
@@ -81,9 +149,7 @@ function SetDownloadDialog({
     projectId,
     view?.revision.id ?? null,
     set,
-    all || !pickable
-      ? undefined
-      : chosen.flatMap((row) => (row.recordId === undefined ? [] : [row.recordId])),
+    pickable ? zipOf(view, set, chosen) : undefined,
   );
   const version =
     view === undefined
@@ -95,7 +161,7 @@ function SetDownloadDialog({
       onOpenChange={(next) => {
         if (!next) onClose();
       }}
-      title={`Download ${setNames[set]}`}
+      title={`Choose ${setNames[set]} to download`}
       description={version}
       footer={
         <>

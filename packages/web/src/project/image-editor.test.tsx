@@ -85,7 +85,7 @@ it("does not adopt lost raw wording until explicitly chosen and deduplicates reg
     screen.getByRole("button", { name: "Use saved wording as template for image 1" }),
   );
   expect(changed.mock.lastCall?.[0].content.promptTemplates["image:i1"]).toBe("Saved scene");
-  await user.click(screen.getByRole("button", { name: "Regenerate image 1" }));
+  await user.click(screen.getByRole("button", { name: "Make image 1 again · 1 image call" }));
   expect(changed.mock.lastCall?.[0].regenerate).toEqual(["image:i1"]);
   // Marked, the image says so and the press offers to take the mark off again.
   expect(
@@ -93,7 +93,7 @@ it("does not adopt lost raw wording until explicitly chosen and deduplicates reg
   ).toBeDefined();
   await user.click(screen.getByRole("button", { name: "Keep image 1" }));
   expect(changed.mock.lastCall?.[0].regenerate).toEqual([]);
-  await user.click(screen.getByRole("button", { name: "Regenerate image 1" }));
+  await user.click(screen.getByRole("button", { name: "Make image 1 again · 1 image call" }));
   expect(changed.mock.lastCall?.[0].regenerate).toEqual(["image:i1"]);
 });
 it("keeps replacement identity and latest unrelated edits after real staging completes", async () => {

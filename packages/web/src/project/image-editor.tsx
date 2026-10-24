@@ -3,7 +3,7 @@ import type { RevisionEdit, RevisionView } from "@app/slices/revisions/model.js"
 import { Fragment, useId, useRef, useState } from "react";
 import type { StagedFile } from "@/api";
 import { Button } from "@/components/kit/button";
-import { Textarea } from "@/components/kit/field";
+import { HelpLine, Textarea } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { ImagePreview } from "./image-preview.js";
 import { ImageFieldset, type RemovedImage, removeImage, restoreImage } from "./image-removal.js";
@@ -145,9 +145,12 @@ export function ImageEditor({
     );
   return (
     <section aria-label="Edit images" className="space-y-3">
-      <div className="flex items-center gap-1">
+      <div className="flex flex-col gap-1">
         <h3>Images</h3>
-        <InfoTip id="project.images.editor" />
+        <HelpLine>
+          Change an image's prompt, replace it with your own picture or clip, move it, delete it, or
+          mark it to be made again. Nothing is made until you save and choose what to remake.
+        </HelpLine>
       </div>
       {content.imageOrder.map((key, index) => {
         const image = content.imageDefinitions[key];
@@ -288,10 +291,9 @@ export function ImageEditor({
                         })
                       }
                     >
-                      Regenerate image {index + 1}
+                      Make image {index + 1} again · 1 image call
                     </Button>
                   )}
-                  <InfoTip id="project.images.regenerate" />
                 </span>
               ) : null}
             </ImageFieldset>

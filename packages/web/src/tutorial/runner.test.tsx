@@ -337,7 +337,7 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
         expect(guide().getByText(/Audio and Video are Off/)).not.toBeNull();
         // The guide's interaction boundary allows the Article download, proving the
         // final spotlight moved off the skipped Video stage.
-        const download = screen.getByRole("link", { name: "Download" });
+        const download = screen.getByRole("link", { name: /^Download article/ });
         expect(download.getAttribute("href")).toContain("/article-md");
         const clicked = vi.fn((event: Event) => event.preventDefault());
         download.addEventListener("click", clicked);

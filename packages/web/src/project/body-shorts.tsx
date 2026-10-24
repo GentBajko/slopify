@@ -1,27 +1,32 @@
-import { shortImageCount, shortUploadText } from "@app/slices/shorts/model.js";
+import {
+  fullVideoLine,
+  fullVideoPlaceholder,
+  shortImageCount,
+  shortUploadText,
+} from "@app/slices/shorts/model.js";
 import type { Output } from "@app/slices/storage/model.js";
-import { CopyIcon, DownloadIcon, EllipsisIcon, LinkIcon, RefreshCwIcon } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import { CopyIcon, DownloadIcon } from "lucide-react";
 import { use, useId, useState } from "react";
 import { z } from "zod";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
-import { Button, ButtonRow, IconButton } from "@/components/kit/button";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
-import { IconFileLink } from "@/components/kit/link";
+import { Button, ButtonRow } from "@/components/kit/button";
+import { FileLink } from "@/components/kit/link";
 import { MediaFrame, MediaGrid } from "@/components/kit/media";
-import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/kit/menu";
 import { Player } from "@/components/kit/player";
-import { Badge } from "@/components/kit/status";
 import { Switch } from "@/components/kit/switch";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { knownVideoLink, useProjectVideos } from "./on-youtube.js";
-import { StageFiles, useOutputText } from "./parts.js";
+import { OutputFolder, useOutputText } from "./parts.js";
+import { useReadOnlySample } from "./read-only.js";
 import type { Review } from "./review-api.js";
 import { ShortsSafeZone } from "./review-safe-zone.js";
 import { ReviewVerdict, reviewFor, useReviews } from "./review-verdict.js";
 import { EditRequestContext, RevisionControlContext } from "./revision-action-context.js";
 import { useOutputMedia } from "./revision-media.js";
 import { pickAgain, remakeShort } from "./revision-shorts.js";
+import { SetDownload } from "./set-download.js";
 import { duration } from "./summary.js";
 
 // What `shorts.json` holds for each picked clip.
@@ -41,30 +46,50 @@ const listSchema = z.object({
 });
 type Clip = z.infer<typeof listSchema>["shorts"][number];
 
-// The Video stage's Shorts part, below the YouTube one and set off the same way: a rule and a
-// heading, no box of its own. The clips sit in a grid of vertical players 240 to 280 pixels
-// wide, two to four across as the page allows, each with its title, length, a Copy for what
-// goes with the upload, and its download (unless it is the only short rendered, which the
-// section's Download the short already fetches). While the stage runs, a clip not rendered yet says how far it got. "Make this
-// short again" and "Pick different moments" open Edit project → Shorts with the change made,
-// to review and save like any other edit.
+// The Shorts section: one row of 9:16 tiles, each with its title, length, text and, at rest,
+// its own Download (.mp4) and Copy for YouTube in words, with Make again under them. Above the
+// tiles: every short as one zip, the stage's one Open folder and Pick different moments, then
+// one sentence about the link each short's description ends with and the button that fills it
+// in. While the stage runs, a clip not rendered yet says how far it got. Make again and Pick
+// different moments open the settings' Outputs with the change made, to review and save.
 export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "actions" | "busy">) {
-  const id = useId();
   const own = outputsOf(outputs, stage);
   const list = roleOf(own, "shorts");
   const clips = useShortClips(own);
   const reviews = useReviews(project.id);
+  const navigate = useNavigate();
   const [status, setStatus] = useState<{ text: string; tone: StatusTone } | undefined>();
   const [safeZone, setSafeZone] = useState(false);
   const videos = currentShorts(own, "short_video", clips);
   const settings = project.config.shorts;
+  const sample = useReadOnlySample(project.id);
   // The link set in the project, else the long video's once Slopify knows it on YouTube.
   const youtube = useProjectVideos(project.id);
   const fullVideoLink = settings?.fullVideoLink ?? knownVideoLink(youtube.data);
+  const linked = (fullVideoLink?.trim() ?? "") !== "";
   const revisions = use(RevisionControlContext);
   const requestEdit = use(EditRequestContext);
   if (settings?.enabled !== true && list === undefined && videos.length === 0) return null;
-  const editable = revisions && requestEdit !== undefined && settings?.enabled === true;
+  const editable = revisions && requestEdit !== undefined && settings?.enabled === true && !sample;
+  // The long video's link box is under YouTube text when the project writes one; without it,
+  // the shorts' own Full video link in the settings' Outputs.
+  const youtubeText =
+    project.config.youtubeDescription === true ||
+    outputs.some((output) => output.role === "youtube_description");
+  const addLink = sample
+    ? undefined
+    : youtubeText
+      ? () =>
+          void navigate({
+            to: "/projects/$projectId",
+            params: { projectId: project.id },
+            search: { section: "youtube" },
+            hash: linkBox,
+            resetScroll: false,
+          }).then(() => focusWhenShown(linkBox))
+      : editable
+        ? () => requestEdit({ section: "outputs", change: (edit) => edit })
+        : undefined;
   const copy = (clip: Clip) => {
     const text = shortUploadText(clip, fullVideoLink);
     const failed = {
@@ -76,35 +101,35 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
       return;
     }
     void navigator.clipboard.writeText(text).then(
-      () => setStatus({ text: `Copied short ${String(clip.number)}.`, tone: "success" }),
+      () =>
+        setStatus(
+          linked
+            ? { text: `Copied short ${String(clip.number)} for YouTube.`, tone: "success" }
+            : {
+                text: `Copied short ${String(clip.number)}. Its last line reads ${fullVideoPlaceholder} until you add the full video's link.`,
+                tone: "warning",
+              },
+        ),
       () => setStatus(failed),
     );
   };
   return (
-    <section aria-labelledby={`${id}-title`} className="flex min-w-0 flex-col gap-4">
-      <h3 id={`${id}-title`} className="sl-kicker m-0">
-        {clips.length === 0
-          ? "Shorts"
-          : `${String(clips.length)} short${clips.length === 1 ? "" : "s"} · 9:16`}
-      </h3>
-      {/* Every short behind one Download, the stage's one Open folder, then picking again. */}
-      <StageFiles
-        files={clips.map((clip) => ({
-          output: videos.find((output) => ofClip(output, clip)),
-          label: `Short ${String(clip.number)}: ${clip.title} (.mp4)`,
-        }))}
-        label={videos.length === 1 ? "Download the short" : "Download"}
-        zip={{ set: "shorts", members: videos }}
-      >
-        {editable && clips.length > 0 ? (
-          <span className="inline-flex items-center gap-1" {...helpScope}>
+    <div className="flex min-w-0 flex-col gap-3">
+      {/* Every short as one zip (each tile has its own Download), the stage's one Open folder,
+          then picking again. */}
+      {videos.length === 0 && !(editable && clips.length > 0) ? null : (
+        <ButtonRow>
+          {videos.length > 1 ? (
+            <SetDownload projectId={project.id} set="shorts" members={videos} />
+          ) : null}
+          <OutputFolder output={videos[0]} />
+          {editable && clips.length > 0 ? (
             <Button onClick={() => requestEdit({ section: "outputs", change: pickAgain })}>
-              Pick different moments
+              Pick different moments · 1 AI call
             </Button>
-            <InfoTip id="project.shorts.pick-again" />
-          </span>
-        ) : null}
-      </StageFiles>
+          ) : null}
+        </ButtonRow>
+      )}
       {clips.length === 0 ? (
         <p className="m-0 text-small text-ink-2">
           {stage.state === "running"
@@ -113,6 +138,23 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
         </p>
       ) : (
         <>
+          <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-small text-ink-2">
+            {linked ? (
+              <span className="min-w-0 break-all">
+                {"Each short's description ends with "}
+                <span className="text-ink">{fullVideoLine(fullVideoLink)}</span>
+              </span>
+            ) : (
+              <span>
+                Each short's description ends with a link to the full video, once you add it.
+              </span>
+            )}
+            {linked || addLink === undefined ? null : (
+              <Button size="small" onClick={addLink}>
+                Add the link
+              </Button>
+            )}
+          </p>
           {videos.length === 0 ? null : (
             <Switch
               checked={safeZone}
@@ -121,7 +163,7 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
               className="self-start"
             />
           )}
-          <MediaGrid shorts list label="Shorts" className="gap-y-7">
+          <MediaGrid shorts list label="Shorts" className="gap-y-5">
             {clips.map((clip) => (
               <ShortCard
                 key={clip.number}
@@ -132,11 +174,9 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
                 stills={currentShorts(own, "short_image", clips)
                   .filter((output) => ofClip(output, clip))
                   .toSorted((left, right) => (left.meta.index ?? 0) - (right.meta.index ?? 0))}
-                link={fullVideoLink}
                 wanted={shortImageCount(clip.end - clip.start, project.config.imageSeconds)}
                 state={stage.state}
                 failed={failedHere(stage.failureReason, clip.number)}
-                ownDownload={videos.length > 1}
                 onCopy={() => copy(clip)}
                 safeZone={safeZone}
                 {...(editable
@@ -153,9 +193,26 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
           </MediaGrid>
         </>
       )}
-      <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
-    </section>
+      <StatusSlot tone={status?.tone ?? "info"} wrap>
+        {status?.text}
+      </StatusSlot>
+    </div>
   );
+}
+
+// The long video's link box under YouTube text (`on-youtube.tsx`).
+const linkBox = "on-youtube-video";
+
+// Focuses an element once the section holding it is shown, so the press that opened the
+// section lands the caret in the box it named.
+function focusWhenShown(id: string, tries = 20): void {
+  const element = document.getElementById(id);
+  if (element !== null && element.closest("[hidden]") === null) {
+    element.scrollIntoView?.({ block: "center" });
+    element.focus();
+    return;
+  }
+  if (tries > 0) requestAnimationFrame(() => focusWhenShown(id, tries - 1));
 }
 
 function ShortCard({
@@ -167,8 +224,6 @@ function ShortCard({
   wanted,
   state,
   failed,
-  link,
-  ownDownload,
   onCopy,
   onRemake,
   safeZone,
@@ -185,10 +240,6 @@ function ShortCard({
   readonly wanted: number;
   readonly state: BodyProps["stage"]["state"];
   readonly failed: boolean;
-  readonly link: string | undefined;
-  // False when this is the only short rendered: the section's primary Download the short
-  // already fetches it.
-  readonly ownDownload: boolean;
   readonly onCopy: () => void;
   readonly onRemake?: (() => void) | undefined;
 }) {
@@ -196,13 +247,14 @@ function ShortCard({
   const media = useOutputMedia(video);
   const poster = useOutputMedia(stills[0]);
   const images = stills.length;
+  const number = String(clip.number);
   const progress = failed
     ? "Couldn't make this short. Open Error details in the Video section to see why."
     : state !== "running"
       ? "Not made yet. It is made with the video."
       : images < wanted
         ? `Making images · ${String(images)} of ${String(wanted)}`
-        : "Rendering";
+        : "Making the short";
   return (
     <li aria-labelledby={`${id}-title`} className="flex min-w-0 flex-col gap-2">
       {video !== undefined && media !== undefined ? (
@@ -210,7 +262,7 @@ function ShortCard({
           <Player
             key={video.id}
             src={media.url}
-            label={`Short ${String(clip.number)}`}
+            label={`Short ${number}`}
             portrait
             {...(poster === undefined ? {} : { poster: poster.url })}
           />
@@ -225,7 +277,7 @@ function ShortCard({
           </p>
         </div>
       ) : (
-        <MediaFrame alt={`Short ${String(clip.number)}`} aspect="portrait" generating={progress} />
+        <MediaFrame alt={`Short ${number}`} aspect="portrait" generating={progress} />
       )}
       <h4 id={`${id}-title`} className="m-0 min-w-0 break-words text-small font-semibold text-ink">
         {clip.title}
@@ -234,71 +286,33 @@ function ShortCard({
         {duration(video?.durationMs ?? Math.round((clip.end - clip.start) * 1000))}
       </p>
       <p className="m-0 break-words text-small text-ink-2">{clip.description}</p>
-      <FullVideoLine link={link} />
       <p className="m-0 break-words text-small text-ink-2">{clip.hashtags.join(" ")}</p>
       <ReviewVerdict review={review} projectId={projectId} busy={state === "running"} />
-      {/* One row under the text. A card is too narrow for three worded buttons, so these are
-          icons with the kit's tooltip, and Make again, the rare one, waits under More. The
-          section's Download is the lime one; the folder is the stage's one Open folder. */}
-      <ButtonRow className="mt-1 flex-nowrap gap-1">
-        {ownDownload && video !== undefined && media !== undefined ? (
-          <IconFileLink
-            href={media.url}
-            download
-            size="small"
-            label={`Download short ${String(clip.number)}`}
-            tip="Download"
-          >
+      {/* The tile's actions in words, at rest: its file, and what goes with its upload. */}
+      <ButtonRow className="mt-1 gap-1">
+        {video !== undefined && media !== undefined ? (
+          <FileLink href={media.url} download size="small">
             <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
-          </IconFileLink>
+            <span>
+              Download<span className="sr-only"> short {number}</span> (.mp4)
+            </span>
+          </FileLink>
         ) : null}
-        <IconButton
-          size="small"
-          tip="Copy title, description and hashtags"
-          label={`Copy short ${String(clip.number)}'s title, description and hashtags`}
-          onClick={onCopy}
-        >
+        <Button size="small" onClick={onCopy}>
           <CopyIcon aria-hidden="true" strokeWidth={1.75} />
-        </IconButton>
-        {onRemake === undefined ? null : (
-          <Menu>
-            <MenuTrigger asChild>
-              <IconButton size="small" tip="More" label={`More for short ${String(clip.number)}`}>
-                <EllipsisIcon aria-hidden="true" strokeWidth={1.75} />
-              </IconButton>
-            </MenuTrigger>
-            <MenuContent align="start">
-              <MenuItem onSelect={onRemake}>
-                <RefreshCwIcon aria-hidden="true" strokeWidth={1.75} className="size-4" />
-                Make short {String(clip.number)} again
-              </MenuItem>
-            </MenuContent>
-          </Menu>
-        )}
+          <span>
+            Copy<span className="sr-only"> short {number}</span> for YouTube
+          </span>
+        </Button>
       </ButtonRow>
-    </li>
-  );
-}
-
-// The line every short's description ends with. Until the full video's link is saved it says
-// so with a marker, not the raw placeholder Copy puts on the clipboard for pasting over.
-function FullVideoLine({ link }: { readonly link: string | undefined }) {
-  const trimmed = link?.trim() ?? "";
-  return (
-    <p className="m-0 flex flex-wrap items-center gap-x-2 gap-y-1 break-words text-small text-ink-2">
-      <span>Watch the full video:</span>
-      {trimmed === "" ? (
-        <Badge
-          tone="waiting"
-          title="No link to the full video is saved. Copy leaves a placeholder to paste it over; to fill it in for every short, add the link under Edit settings → Shorts."
-        >
-          <LinkIcon aria-hidden="true" strokeWidth={1.75} className="size-3" />
-          Link needed
-        </Badge>
-      ) : (
-        <span className="min-w-0 break-all text-ink">{trimmed}</span>
+      {onRemake === undefined ? null : (
+        <Button variant="quiet" size="small" className="self-start" onClick={onRemake}>
+          <span>
+            Make<span className="sr-only"> short {number}</span> again
+          </span>
+        </Button>
       )}
-    </p>
+    </li>
   );
 }
 
@@ -306,7 +320,7 @@ function FullVideoLine({ link }: { readonly link: string | undefined }) {
 // when they were cut from the same sentences as its clip: a pick made again keeps the work of
 // a clip it chose again. Anything else is a clip picked earlier, whose file would otherwise
 // sit under the new clip's title until it is rendered again.
-export function currentShorts(
+function currentShorts(
   outputs: readonly Output[],
   role: "short_video" | "short_image",
   clips: readonly Clip[],
@@ -330,9 +344,8 @@ function ofClip(output: Output, clip: Clip): boolean {
   return output.meta.short === clip.number;
 }
 
-// The clips the stage's `shorts.json` lists, read once and shared by the Shorts part and the
-// stage's Download menu.
-export function useShortClips(outputs: readonly Output[]): readonly Clip[] {
+// The clips the stage's `shorts.json` lists.
+function useShortClips(outputs: readonly Output[]): readonly Clip[] {
   return clipsOf(useOutputText(roleOf(outputs, "shorts")).data);
 }
 

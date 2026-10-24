@@ -1,19 +1,26 @@
 import type { Output } from "@app/slices/storage/model.js";
 import type { ReactElement } from "react";
+import { Button } from "@/components/kit/button";
+import { Dialog } from "@/components/kit/dialog";
 import { playerTime } from "@/components/kit/player";
 import { thumbnailProblem } from "./review-thumbnail.js";
 import { useOutputMediaList } from "./revision-media.js";
 
-// The thumbnails the size YouTube shows them: a home-feed card (about 360 pixels wide, rounded,
-// the length in the corner, the title under it) and a suggested-video row beside a watched
-// video (168 pixels, the title beside it). Text and faces that read at 168 pixels read
-// everywhere. The channel line is a placeholder; only the picture and the title are the video's.
+// The thumbnails the size YouTube shows them, opened from a thumbnail's "See it as YouTube shows
+// it": a home-feed card (about 360 pixels wide, rounded, the length in the corner, the title
+// under it) and a suggested-video row beside a watched video (168 pixels, the title beside
+// it). Text and faces that read at 168 pixels read everywhere. The channel line is a
+// placeholder; only the picture and the title are the video's.
 export function YouTubePreview({
+  open,
+  onClose,
   thumbnails,
   title,
   durationMs,
   portrait,
 }: {
+  readonly open: boolean;
+  readonly onClose: () => void;
   readonly thumbnails: readonly Output[];
   readonly title: string;
   readonly durationMs: number | null;
@@ -24,22 +31,26 @@ export function YouTubePreview({
   if (thumbnails.length === 0) return null;
   const length = durationMs === null || durationMs <= 0 ? undefined : playerTime(durationMs / 1000);
   return (
-    <details className="border-t border-line pt-3">
-      <summary className="cursor-pointer text-small font-semibold">
-        See {thumbnails.length === 1 ? "it" : "them"} as YouTube shows{" "}
-        {thumbnails.length === 1 ? "it" : "them"}
-      </summary>
-      {portrait ? (
-        <p className="m-0 mt-2 text-small text-ink-2">
-          YouTube crops a long video&apos;s thumbnail to 16:9, as shown here.
-        </p>
-      ) : null}
-      <ul className="m-0 mt-3 flex list-none flex-col gap-5 p-0">
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+      title={thumbnails.length === 1 ? "The thumbnail on YouTube" : "The thumbnails on YouTube"}
+      description={
+        portrait
+          ? "YouTube crops a long video's thumbnail to 16:9, as shown here."
+          : "In the home feed, and beside a video someone is watching."
+      }
+      className="max-w-[min(860px,calc(100vw-32px))]"
+      footer={<Button onClick={onClose}>Close</Button>}
+    >
+      <ul className="m-0 flex list-none flex-col gap-5 p-0">
         {thumbnails.map((output) => {
           const src = files.get(output.id)?.url;
           const problem = thumbnailProblem(
             output.bytes,
-            "Press Regenerate on it, or save a smaller copy and upload it in Edit project → Images.",
+            "Press Make the thumbnail again, or save a smaller copy and choose More, then Replace with my file.",
           );
           const name =
             thumbnails.length === 1 ? "Thumbnail" : `Thumbnail ${String(output.meta.index ?? 1)}`;
@@ -91,7 +102,7 @@ export function YouTubePreview({
           );
         })}
       </ul>
-    </details>
+    </Dialog>
   );
 }
 

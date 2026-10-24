@@ -125,10 +125,10 @@ it("makes a whole stage again from the section's own button, confirmed, by keybo
     );
   }
   renderApp(<Control />, deps);
-  const again = await screen.findByRole("button", { name: "Make all images again" });
+  const again = await screen.findByRole("button", { name: "Make all images again · image calls" });
   await user.click(again);
-  const dialog = await screen.findByRole("dialog");
-  expect(dialog.textContent).toMatch(/generated images.*video.*History/i);
+  const dialog = await screen.findByRole("dialog", { name: "Make all images again?" });
+  expect(dialog.textContent).toMatch(/Draws every image made from a prompt again.*video/i);
   expect(within(dialog).queryByRole("checkbox")).toBeNull();
   await user.keyboard("{Escape}");
   expect(run).not.toHaveBeenCalled();

@@ -8,6 +8,7 @@ import { startedAt } from "@/lib/utils";
 import { DraftLeaveGuard } from "./draft-leave-guard.js";
 import { outputLabel } from "./output-label.js";
 import { outputStateWords } from "./output-status.js";
+import { sampleReason, useReadOnlySample } from "./read-only.js";
 import type { RevisionController } from "./revision-controller.js";
 import { RevisionFeedback } from "./revision-feedback.js";
 import type { EditorProps } from "./revision-workspace.js";
@@ -59,6 +60,7 @@ function DraftStatus({ c }: { readonly c: RevisionController }): ReactElement {
       "warning",
       "A newer version is available. Your unsaved changes are kept below and in this browser.",
     );
+  if (!c.unsaved) return line("info", "Nothing to save yet: change a setting first.");
   return <StatusSlot />;
 }
 
@@ -80,6 +82,8 @@ export function RevisionEditPanel({
   readonly projectId?: string;
 }): ReactElement {
   const c = controller;
+  // A bundled sample's settings are shown, never saved: the server refuses every change to it.
+  const sample = useReadOnlySample(projectId ?? c.view?.revision.projectId ?? "");
   const guard =
     projectId === undefined ? null : <DraftLeaveGuard projectId={projectId} dirty={c.unsaved} />;
   if (c.view === undefined || c.edit === undefined)
@@ -158,6 +162,7 @@ export function RevisionEditPanel({
       }}
     >
       {guard}
+      {sample ? <p className="m-0 mb-3 text-small text-ink-2">{sampleReason}</p> : null}
       <fieldset disabled={c.pending} className="m-0 min-w-0 border-0 p-0">
         {renderEditor({
           view: c.view,
@@ -165,11 +170,12 @@ export function RevisionEditPanel({
           fields: c.refusal?.fields ?? [],
           onChange: c.setEdit,
           onPending: c.setUploading,
+          readOnly: sample,
           ...(c.focus === undefined ? {} : { focus: c.focus }),
         })}
       </fieldset>
       {c.preview === undefined ? <RevisionFeedback error={c.error} refusal={c.refusal} /> : null}
-      <ActionBar status={<DraftStatus c={c} />}>
+      <ActionBar status={sample ? undefined : <DraftStatus c={c} />}>
         {conflict ? (
           <>
             <Button variant="quiet" disabled={c.pending} onClick={c.copyEdit}>
@@ -180,10 +186,17 @@ export function RevisionEditPanel({
             </Button>
           </>
         ) : null}
-        <Button variant="quiet" disabled={c.pending || c.uploading} onClick={c.discard}>
+        <Button variant="quiet" disabled={c.pending || c.uploading || sample} onClick={c.discard}>
           Discard changes
         </Button>
-        <Button variant="primary" type="submit" disabled={c.pending || c.uploading}>
+        {/* Lit only with something to save; a sample says why it never is. */}
+        <Button
+          variant="primary"
+          type="submit"
+          disabled={c.pending || c.uploading || sample || !c.unsaved}
+          focusableWhenDisabled={sample || !c.unsaved}
+          disabledReason={sample ? sampleReason : "Change a setting first"}
+        >
           Save changes
         </Button>
       </ActionBar>

@@ -23,10 +23,21 @@ export function finalOutput(config: RunConfig): "video" | "audio" | "article" {
 }
 
 // A stage's name on this project: a Video stage that only exports the narration is its Audio
-// export; every other stage keeps its one name (lib/stage-words.ts).
+// export, and an audiobook's or a podcast's is the book or the episode it makes; every other
+// stage keeps its one name (lib/stage-words.ts).
 export function stageName(kind: StageKind, config: RunConfig): string {
-  return kind === "video" && finalOutput(config) === "audio" ? "Audio export" : stageWords[kind];
+  if (kind !== "video") return stageWords[kind];
+  if (finalOutput(config) === "audio") return "Audio export";
+  const format = config.voices?.format;
+  return format === undefined ? stageWords[kind] : listeningNames[format];
 }
+
+const listeningNames: Readonly<Record<NonNullable<RunConfig["voices"]>["format"], string>> = {
+  audiobook: "Audiobook",
+  drama: "Radio drama",
+  podcast: "Episode",
+  interview: "Episode",
+};
 
 export function preparingSubtitles(stage: Stage, config: RunConfig): boolean {
   return (

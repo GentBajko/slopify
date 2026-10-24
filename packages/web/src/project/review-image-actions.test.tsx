@@ -6,7 +6,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { output } from "@/routes/project-fixtures";
 import { jsonAnswer, renderApp, testDeps } from "@/test-app";
 import { ClipAudition } from "./review-clip-audition.js";
-import { ImageReviewActions } from "./review-image-actions.js";
+import { TileMore } from "./review-image-actions.js";
 import { YouTubePreview } from "./review-youtube-preview.js";
 import { EditRequestContext } from "./revision-action-context.js";
 import { revisionView } from "./revision-fixture.js";
@@ -43,12 +43,13 @@ function mount(requestEdit = vi.fn()) {
   renderApp(
     <RevisionMedia projectId="p1" revisionId="r2">
       <EditRequestContext value={requestEdit}>
-        <ImageReviewActions
+        <TileMore
           output={now}
           name="image 1"
           aspect="landscape"
           replaceable
           disabled={false}
+          onDelete={() => undefined}
         />
       </EditRequestContext>
     </RevisionMedia>,
@@ -60,11 +61,14 @@ function mount(requestEdit = vi.fn()) {
   return requestEdit;
 }
 
+async function choose(item: string, name = "image 1"): Promise<void> {
+  await userEvent.click(await screen.findByRole("button", { name: `More for ${name}` }));
+  await userEvent.click(await screen.findByRole("menuitem", { name: item }));
+}
+
 it("shows an image beside the version it replaced, each with its prompt", async () => {
   mount();
-  await userEvent.click(
-    await screen.findByRole("button", { name: "Compare image 1 with its previous version" }),
-  );
+  await choose("Compare with previous");
   const dialog = await screen.findByRole("dialog", { name: "Image 1: before and now" });
   expect(await within(dialog).findByText("Prompt: A door")).toBeDefined();
   expect(within(dialog).getByText("Prompt: A red door")).toBeDefined();
@@ -73,9 +77,7 @@ it("shows an image beside the version it replaced, each with its prompt", async 
 
 it("opens Edit project at the image to replace it with a file", async () => {
   const requestEdit = mount();
-  await userEvent.click(
-    await screen.findByRole("button", { name: "Replace image 1 with my file" }),
-  );
+  await choose("Replace with my file");
   expect(requestEdit).toHaveBeenCalledWith(expect.objectContaining({ section: "images" }));
 });
 
@@ -103,7 +105,7 @@ it("opens Edit project at a drawn thumbnail's own field to replace it with a fil
   renderApp(
     <RevisionMedia projectId="p1" revisionId="r2">
       <EditRequestContext value={requestEdit}>
-        <ImageReviewActions
+        <TileMore
           output={thumbnail}
           name="thumbnail 2"
           aspect="landscape"
@@ -114,9 +116,7 @@ it("opens Edit project at a drawn thumbnail's own field to replace it with a fil
     </RevisionMedia>,
     testDeps({ "GET /api/projects/p1/revisions/r2": jsonAnswer({ view }) }),
   );
-  await userEvent.click(
-    await screen.findByRole("button", { name: "Replace thumbnail 2 with my file" }),
-  );
+  await choose("Replace with my file", "thumbnail 2");
   expect(requestEdit).toHaveBeenCalledWith(expect.objectContaining({ section: "images" }));
 });
 
@@ -143,6 +143,8 @@ it("shows a thumbnail the size YouTube shows it, with the length and title, and 
   });
   renderApp(
     <YouTubePreview
+      open
+      onClose={() => undefined}
       thumbnails={[big]}
       title="Why rope holds"
       durationMs={754_000}
@@ -150,7 +152,7 @@ it("shows a thumbnail the size YouTube shows it, with the length and title, and 
     />,
     testDeps({}),
   );
-  await userEvent.click(screen.getByText("See it as YouTube shows it"));
+  await screen.findByRole("dialog", { name: "The thumbnail on YouTube" });
   expect(screen.getAllByText("Why rope holds")).toHaveLength(2);
   expect(screen.getAllByText("12:34")).toHaveLength(2);
   expect(screen.getByRole("alert").textContent).toContain("up to 50 MB");

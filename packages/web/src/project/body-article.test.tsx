@@ -73,9 +73,9 @@ it.each([false, true])(
     );
     const expected = hasMarkdown ? "article_md" : "article_txt";
     await waitFor(() =>
-      expect(screen.getByRole("link", { name: "Download" }).getAttribute("href")).toBe(
-        `${testOrigin}/files/p1/revisions/r1/${expected}`,
-      ),
+      expect(
+        screen.getByRole("link", { name: "Download article (.bin)" }).getAttribute("href"),
+      ).toBe(`${testOrigin}/files/p1/revisions/r1/${expected}`),
     );
     expect(requests).toEqual([hasMarkdown ? "markdown" : "text"]);
   },

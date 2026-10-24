@@ -18,13 +18,14 @@ import { List, ListRow } from "@/components/kit/list-row";
 import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/kit/menu";
 import { Status } from "@/components/kit/status";
 import { cn } from "@/lib/utils";
-import { AddOutputDialog } from "./add-output.js";
+import { AddOutputDialog, addableChoices } from "./add-output.js";
 import {
   type ExportFile,
   type OutputKind,
   type ProjectOutput,
   projectOutputs,
 } from "./project-outputs-model.js";
+import { useReadOnlySample } from "./read-only.js";
 import type { RevisionController } from "./revision-controller.js";
 import { useCurrentRevisionView, useOutputMedia } from "./revision-media.js";
 import { SetDownload } from "./set-download.js";
@@ -56,6 +57,8 @@ export function ProjectOutputs({
       .map((row) => [row.output.id, row.available ? row.state : ("missing" as const)] as const),
   );
   const rows = projectOutputs({ config, stages, outputs, states });
+  const sample = useReadOnlySample(projectId);
+  const addable = addableChoices(config).filter((choice) => choice.refusal === undefined).length;
   // The video's poster is its first thumbnail; a short's, its first picture.
   const poster = (kind: OutputKind): Output | undefined =>
     kind === "video"
@@ -70,19 +73,22 @@ export function ProjectOutputs({
         <p className="m-0 text-small text-ink-2">
           What this project makes, with each file's state and its downloads.
         </p>
-        <Button
-          variant="secondary"
-          disabled={revisionId === null || controller.busy}
-          disabledReason={
-            revisionId === null
-              ? "This project has no saved version yet; wait for its first step to start"
-              : "Finish or close the open edit or remake first"
-          }
-          onClick={() => setAdding(true)}
-        >
-          <PlusIcon aria-hidden="true" strokeWidth={1.75} />
-          Add another output
-        </Button>
+        {/* Only what can be added is counted; a sample adds nothing, and says so at its top. */}
+        {sample || addable === 0 ? null : (
+          <Button
+            variant="secondary"
+            disabled={revisionId === null || controller.busy}
+            disabledReason={
+              revisionId === null
+                ? "This project has no saved version yet; wait for its first step to start"
+                : "Finish or close the open edit or remake first"
+            }
+            onClick={() => setAdding(true)}
+          >
+            <PlusIcon aria-hidden="true" strokeWidth={1.75} />
+            {`Add an output (${String(addable)} possible)`}
+          </Button>
+        )}
       </div>
       <List label="All files" className="sl-list--wrap-actions sl-list--wrap-meta">
         {rows.map((row) => (

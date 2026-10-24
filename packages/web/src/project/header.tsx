@@ -168,8 +168,9 @@ function MenuItemWithApart({
   );
 }
 
-// "Sea Tales, chapter 3", "finished Sep 27 17:18, 3 min", "My channel", "uploaded Sep 28": what
-// a person checks on a project each morning, after its state.
+// "Audiobook", "Sea Tales, chapter 3", "finished Sep 27 17:18, 3 min", "My channel", "uploaded
+// Sep 28": what a person checks on a project each morning, after its state. An audiobook or a
+// podcast says first what it is, since its page otherwise reads like a video's.
 function facts(
   project: ProjectSummary,
   stages: readonly Stage[],
@@ -181,6 +182,7 @@ function facts(
   const end = finishedAt(stages);
   const took = runLength(stages);
   return [
+    project.config.voices === undefined ? undefined : listeningKinds[project.config.voices.format],
     book === undefined ? undefined : bookLabel(book),
     finished && end !== undefined
       ? `finished ${startedAt(end)}${took === undefined ? "" : `, ${took}`}`
@@ -191,6 +193,15 @@ function facts(
       : `uploaded ${startedAt(uploadedAt)}`,
   ].filter((fact): fact is string => fact !== undefined && fact !== "");
 }
+
+const listeningKinds: Readonly<
+  Record<NonNullable<ProjectSummary["config"]["voices"]>["format"], string>
+> = {
+  audiobook: "Audiobook",
+  drama: "Radio drama",
+  podcast: "Podcast episode",
+  interview: "Podcast episode",
+};
 
 const timeOf = (iso: string | null): number | undefined => {
   if (iso === null) return undefined;

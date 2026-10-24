@@ -310,7 +310,9 @@ export function RevisionForm(
           ))}
         </ul>
       </nav>
-      <div className="min-w-0 space-y-6">
+      {/* A read-only project's settings are read, section by section, never changed: the
+          sections stay pressable, the fields do not. */}
+      <fieldset disabled={props.readOnly === true} className="m-0 min-w-0 space-y-6 border-0 p-0">
         {Object.entries({
           providers: providers.error,
           voices: voices.error,
@@ -711,7 +713,7 @@ export function RevisionForm(
           onPending: markContent,
           section: current,
         })}
-      </div>
+      </fieldset>
     </div>
   );
 }

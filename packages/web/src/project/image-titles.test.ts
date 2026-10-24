@@ -41,3 +41,19 @@ it("falls back to the whole prompt when there is no scene and nothing differs", 
   expect(imageTitles(["Same prompt", "Same prompt"])).toEqual(["Same prompt", "Same prompt"]);
   expect(imageTitles([undefined, "A prompt"])).toEqual([undefined, "A prompt"]);
 });
+
+it("names one-line prompts with a shared opening and close by the words between", () => {
+  const frame = (scene: string, close = "No text.") =>
+    `Painterly documentary illustration, oil on canvas, soft cinematic light: ${scene} ${close}`;
+  expect(
+    imageTitles([
+      frame("a ruined colonnade against an orange sky."),
+      frame("the harbor of ancient Alexandria at dusk. Warm sky, deep blue sea,", "no text."),
+    ]),
+  ).toEqual([
+    "A ruined colonnade against an orange sky.",
+    "The harbor of ancient Alexandria at dusk. Warm sky, deep blue sea",
+  ]);
+  // Prompts that share only a word or two are each their own name.
+  expect(imageTitles(["A red door.", "A blue window."])).toEqual(["A red door.", "A blue window."]);
+});

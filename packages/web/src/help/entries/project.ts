@@ -118,39 +118,14 @@ export const projectHelp = {
     body: "The first and last sentence of this short, from the narration's timed sentences. The clip must stay between the shortest and longest length you set for shorts and must not overlap another clip; the line under the clip says what to change. Back to the AI's choice restores its pick.",
     tutorial: { page: "Shorts", anchor: "change-the-picked-moments" },
   },
-  "project.shorts.pick-again": {
-    title: "Pick different moments",
-    body: "Asks the text model to pick new moments when you save and continue the run, one text call. Ranges you set by hand are dropped. A new clip on the same sentences as an old one keeps its images; any other clip gets new images, one image call each, and is rendered again.",
-    tutorial: { page: "Shorts", anchor: "pick-new-moments-or-remake-one-short" },
-  },
-  "project.images.editor": {
-    title: "Edit images",
-    body: "Every image of the video in the order it is shown. You can edit a drawn image's prompt, replace any image with your own file, move it earlier or later, delete it, or add a drawn image, your own picture or a video clip. A clip plays muted in an image's place, trimmed, slowed or looped to fit. Changes apply after you save.",
-    tutorial: { page: "Editing-a-Project", anchor: "edit-images" },
-  },
   "project.images.prompt": {
     title: "Image prompt",
     body: "The words this one image is drawn from, with keywords in double braces filled in from the project. Editing it outdates only this image and the video; it is drawn again, one image call, when you remake outdated outputs. Use saved wording as template copies the prompt as sent so you can edit it.",
     tutorial: { page: "Editing-a-Project", anchor: "edit-images" },
   },
-  "project.images.regenerate": {
-    title: "Regenerate image",
-    body: "Marks this image to be drawn again from its prompt, one paid image call, with a new result. Nothing runs yet: the image says it is marked, and Keep takes the mark off. Press Save changes, and the rebuild review lists it with the video it outdates. The current image stays until the new one is made.",
-    tutorial: { page: "Editing-a-Project", anchor: "edit-images" },
-  },
-  "project.narration.editor": {
-    title: "Edit narration",
-    body: "The narration split into the chunks it was spoken in. Edit a chunk's text, replace its audio with your own file, or have it spoken again. Only the chunks you touch are made again, paid per character, and the video is rendered again with them. Changes apply after you save.",
-    tutorial: { page: "Editing-a-Project", anchor: "edit-narration" },
-  },
   "project.narration.chunk-text": {
     title: "Narration chunk text",
     body: "What the narrator says in this chunk. Editing it has this chunk spoken again by your voice provider, paid per character of the chunk, when you remake outdated outputs; the other chunks keep their audio. Captions and the video follow. It does not change the article.",
-    tutorial: { page: "Editing-a-Project", anchor: "edit-narration" },
-  },
-  "project.narration.regenerate": {
-    title: "Regenerate narration chunk after review",
-    body: "Marks this chunk to be spoken again with the same text and voice, paid per character of the chunk, for a new take when a word came out wrong. Nothing runs yet: save, and it is made again when you continue the run. The current audio stays until then.",
     tutorial: { page: "Editing-a-Project", anchor: "edit-narration" },
   },
   "project.captions.editor": {
@@ -205,23 +180,13 @@ export const projectHelp = {
   },
   "project.rebuild.keep-provided": {
     title: "Keep the provided content",
-    body: "This output uses a file or text you supplied, and something it depends on, such as the narration, has changed since. Tick to confirm it still fits and keep it as it is. To use something else, cancel and replace the file in Edit project first. Remake stays off until you tick it.",
+    body: "This output uses a file or text you supplied, and something it depends on, such as the narration, has changed since. Tick to confirm it still fits and keep it as it is. To use something else, cancel and replace the file in Edit project first. The button that makes it again stays off until you tick it.",
     tutorial: { page: "Editing-a-Project", anchor: "choose-what-to-remake" },
   },
   "project.rebuild.unknown-costs": {
     title: "Unknown cost estimates",
-    body: "Some steps use a model with no published price, so their cost cannot be estimated and is left out of the total shown. Tick to start anyway; the real cost is recorded under Cost once they run. Remake stays off until you tick it.",
+    body: "Some steps use a model with no published price, so their cost cannot be estimated and is left out of the total shown. Tick to start anyway; the real cost is recorded under Cost once they run. The button that makes it again stays off until you tick it.",
     tutorial: { page: "Editing-a-Project", anchor: "choose-what-to-remake" },
-  },
-  "project.cost.by-stage": {
-    title: "Cost by stage",
-    body: "What each stage of this project has cost so far, from every provider call it made, retries and remakes included, priced from the model catalogue when each call finished. Failed calls are not charged here, and taxes and included credits are not counted. Working time is how long the stage's steps were running, over every run.",
-    tutorial: { page: "Costs-and-Run-Cost", anchor: "after-a-run-the-run-cost-tab" },
-  },
-  "project.cost.by-model": {
-    title: "Cost by model",
-    body: "The same spending split by provider and model. Cost is what you paid the provider. Calls through a signed-in command-line tool such as Claude Code or Codex cost $0 on your plan; Via API shows what the same work would cost through the provider's API, for comparison only.",
-    tutorial: { page: "Costs-and-Run-Cost", anchor: "after-a-run-the-run-cost-tab" },
   },
   "project.upload.item": {
     title: "What to upload",
