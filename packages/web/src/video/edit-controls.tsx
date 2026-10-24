@@ -30,14 +30,15 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactElement, type ReactNode, useId } from "react";
 import { useApp } from "@/app-context";
 import { Checkbox } from "@/components/kit/field";
+import { Fold } from "@/components/kit/fold";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Picker } from "@/components/ui/picker";
 import type { HelpId } from "@/help/catalog";
 import { videoModelsQuery } from "@/lib/models";
 import { cn } from "@/lib/utils";
 
-// The Video stage's edit settings, as Play's Export rail and Edit project draw them: a Cuts
-// picker beside Motion, and one "Look" row that opens to the rest. A project without the
+// The Video stage's edit settings, as Create's Video and style row and Edit project draw them: a
+// Cuts picker beside Motion, and one "Look" fold that opens to the rest. A project without the
 // settings shows today's slideshow (`legacyVideoEdit`) and only gets settings once one is
 // changed, so an untouched old project saves exactly what it had.
 
@@ -117,14 +118,11 @@ export function useVideoEditControls({
   );
 
   const look = (
-    <details className="group min-w-0 rounded-control border border-line-strong">
-      <summary className="flex min-h-10 cursor-pointer items-center gap-3 px-3 text-small max-[1099px]:min-h-11">
-        <span className="font-semibold">Look</span>
-        <span className="min-w-0 truncate text-ink-3">
-          {summary.length === 0 ? "Plain cuts, no effects" : summary.join(" · ")}
-        </span>
-      </summary>
-      <div className="sl-fields border-line-strong border-t p-3">
+    <Fold
+      summary="Look"
+      state={summary.length === 0 ? "Plain cuts, no effects" : summary.join(" · ")}
+    >
+      <div className="sl-fields pt-2 pb-3">
         <Row id={`${id}-transition`} label="Transition" tip="project.video.transition">
           <Picker
             id={`${id}-transition`}
@@ -266,7 +264,7 @@ export function useVideoEditControls({
           </p>
         ) : null}
       </div>
-    </details>
+    </Fold>
   );
   return { cuts, look };
 }

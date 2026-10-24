@@ -142,9 +142,7 @@ it.each([
     await user.click(screen.getByRole("button", { name: "Edit project" }));
     await user.selectOptions(await screen.findByLabelText(`${stageWords[source]} source`), "off");
     await openEditSection("Subtitles");
-    expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "Subtitles" }).value).toBe(
-      after,
-    );
+    expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "Captions" }).value).toBe(after);
     await user.click(screen.getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(saves).toHaveLength(1));
     expect(saves[0]?.config.subtitles).toEqual({ ...subtitles, mode: after });

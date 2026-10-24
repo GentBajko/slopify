@@ -62,7 +62,7 @@ it("keeps a pending font upload active when the guide advances to Review", async
     }),
   });
   await at("play-subtitles");
-  await user.selectOptions(screen.getByLabelText("Subtitles", { selector: "select" }), "files");
+  await user.selectOptions(screen.getByLabelText("Captions", { selector: "select" }), "files");
   await user.upload(
     screen.getByLabelText("Upload font (.ttf or .otf)"),
     new File(["font"], "guide.ttf", { type: "font/ttf" }),
@@ -78,6 +78,6 @@ it("keeps a pending font upload active when the guide advances to Review", async
     })(new Request("http://slopify.test")),
   );
   await waitFor(() =>
-    expect((screen.getByLabelText("Subtitle font") as HTMLSelectElement).value).toBe("guide-font"),
+    expect((screen.getByLabelText("Caption font") as HTMLSelectElement).value).toBe("guide-font"),
   );
 });

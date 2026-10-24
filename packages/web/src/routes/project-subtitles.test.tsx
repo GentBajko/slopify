@@ -46,7 +46,7 @@ function project(
 }
 
 function subtitleMode() {
-  return screen.getByLabelText("Subtitles", { selector: "select" }) as HTMLSelectElement;
+  return screen.getByLabelText("Captions", { selector: "select" }) as HTMLSelectElement;
 }
 
 describe("existing project subtitles", () => {
@@ -56,13 +56,13 @@ describe("existing project subtitles", () => {
     renderRouted(<ProjectRoute projectId="p1" />, deps({ ...fixture.routes, ...fontRoute }));
     await openProjectEditor();
     await openEditSection("Subtitles");
-    await screen.findByLabelText("Subtitles", { selector: "select" });
+    await screen.findByLabelText("Captions", { selector: "select" });
     await user.selectOptions(subtitleMode(), "burn-in");
     await screen.findByRole("option", { name: "Custom font · uploaded" });
-    await user.selectOptions(screen.getByLabelText("Subtitle font"), "custom");
-    await user.clear(screen.getByLabelText("Subtitle font size"));
-    await user.type(screen.getByLabelText("Subtitle font size"), "64");
-    await user.selectOptions(screen.getByLabelText("Subtitle position"), "upper-middle");
+    await user.selectOptions(screen.getByLabelText("Caption font"), "custom");
+    await user.clear(screen.getByLabelText("Caption size"));
+    await user.type(screen.getByLabelText("Caption size"), "64");
+    await user.selectOptions(screen.getByLabelText("Caption position"), "upper-middle");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(screen.queryByLabelText("Project title")).toBeNull());
     expect(fixture.save).toHaveBeenCalledOnce();
@@ -76,10 +76,8 @@ describe("existing project subtitles", () => {
     });
     await openProjectEditor();
     await openEditSection("Subtitles");
-    expect(((await screen.findByLabelText("Subtitle font size")) as HTMLInputElement).value).toBe(
-      "64",
-    );
-    expect((screen.getByLabelText("Subtitle position") as HTMLSelectElement).value).toBe(
+    expect(((await screen.findByLabelText("Caption size")) as HTMLInputElement).value).toBe("64");
+    expect((screen.getByLabelText("Caption position") as HTMLSelectElement).value).toBe(
       "upper-middle",
     );
     expect(screen.queryByRole("button", { name: "Save subtitles" })).toBeNull();
@@ -107,14 +105,14 @@ describe("existing project subtitles", () => {
     );
     await openProjectEditor();
     await openEditSection("Subtitles");
-    await screen.findByLabelText("Subtitles", { selector: "select" });
+    await screen.findByLabelText("Captions", { selector: "select" });
     await user.selectOptions(subtitleMode(), "files");
-    await user.clear(screen.getByLabelText("Subtitle font size"));
-    await user.type(screen.getByLabelText("Subtitle font size"), "64");
+    await user.clear(screen.getByLabelText("Caption size"));
+    await user.type(screen.getByLabelText("Caption size"), "64");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
     // In the list above the settings, and under the field the server's path names.
     expect(await screen.findAllByText("Use a size from 16 to 120.")).toHaveLength(2);
-    expect((screen.getByLabelText("Subtitle font size") as HTMLInputElement).value).toBe("64");
+    expect((screen.getByLabelText("Caption size") as HTMLInputElement).value).toBe("64");
     expect(fixture.start).not.toHaveBeenCalled();
   });
 
@@ -126,7 +124,7 @@ describe("existing project subtitles", () => {
     renderRouted(<ProjectRoute projectId="p1" />, deps({ ...fixture.routes, ...fontRoute }));
     await openProjectEditor();
     await openEditSection("Subtitles");
-    await screen.findByLabelText("Subtitles", { selector: "select" });
+    await screen.findByLabelText("Captions", { selector: "select" });
     expect(subtitleMode().closest("fieldset")?.disabled).toBe(false);
     await user.selectOptions(subtitleMode(), "off");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
@@ -222,7 +220,7 @@ describe("subtitle downloads and playback", () => {
     );
     await screen.findByLabelText("Combined narration");
     expect(await downloadItem("Subtitles (.srt)")).not.toBeNull();
-    expect(screen.queryByLabelText("Subtitles", { selector: "select" })).toBeNull();
+    expect(screen.queryByLabelText("Captions", { selector: "select" })).toBeNull();
     expect(screen.queryByLabelText("Generated video")).toBeNull();
   });
 });

@@ -43,11 +43,11 @@ it.each([
     const { requests } = await mountPlay();
     await openRow("Video and style");
     const { settle } = pausedTimers();
-    fireEvent.change(screen.getByLabelText("Subtitles", { selector: "select" }), {
+    fireEvent.change(screen.getByLabelText("Captions", { selector: "select" }), {
       target: { value: "burn-in" },
     });
     fireEvent.click(screen.getByRole("radio", { name: position }));
-    fireEvent.click(screen.getByRole("radio", { name: format }));
+    fireEvent.click(screen.getByRole("radio", { name: new RegExp(`^${format} `) }));
     const rail = screen.getByRole("complementary", { name: "Review and start" });
     expect(within(rail).getByRole("heading", { name: "Style preview" })).not.toBeNull();
     await settle();
@@ -136,16 +136,18 @@ it("keeps the sample and a raw invalid size, and says what to fix", async () => 
   await mountPlay();
   await openRow("Video and style");
   await userEvent.selectOptions(
-    screen.getByLabelText("Subtitles", { selector: "select" }),
+    screen.getByLabelText("Captions", { selector: "select" }),
     "burn-in",
   );
-  await userEvent.clear(screen.getByLabelText("Preview text"));
-  await userEvent.type(screen.getByLabelText("Preview text"), "Only a sample");
-  await userEvent.clear(screen.getByLabelText("Subtitle font size"));
-  expect((screen.getByLabelText("Subtitle font size") as HTMLInputElement).value).toBe("");
+  await userEvent.clear(screen.getByLabelText("Preview sentence"));
+  await userEvent.type(screen.getByLabelText("Preview sentence"), "Only a sample");
+  await userEvent.clear(screen.getByLabelText("Caption size"));
+  expect((screen.getByLabelText("Caption size") as HTMLInputElement).value).toBe("");
   await openSection("Review");
   expect(screen.getByRole("list", { name: "Setup errors" }).textContent).toMatch(/font size/i);
-  expect((screen.getByLabelText("Preview text") as HTMLInputElement).value).toBe("Only a sample");
+  expect((screen.getByLabelText("Preview sentence") as HTMLInputElement).value).toBe(
+    "Only a sample",
+  );
 });
 
 it("draws no style preview while the run makes no video", async () => {

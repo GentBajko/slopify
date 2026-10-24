@@ -109,23 +109,23 @@ export const projectHelp = {
     tutorial: { page: "Video-Editing", anchor: "ambient-sound" },
   },
   "project.subtitles.mode": {
-    title: "Subtitles",
-    body: "Off makes none. Subtitle files gives you .srt and .vtt files to upload beside the video. Burn into video draws the captions into the picture and also makes the files; it needs Video on. Captions are timed from your narration on this computer, with no paid API; the first use downloads a speech model of about 378 MB (Settings → Production defaults → Subtitle timing model offers smaller ones). Default: Off.",
+    title: "Captions",
+    body: "Off makes none. Show captions in the video draws them into the picture and also makes .srt and .vtt files; it needs a video. Caption files only gives you the files to upload beside the video. Captions are timed from your narration on this computer, with no paid API; the first use downloads a speech model of about 378 MB (Settings → Production defaults offers smaller ones). Default: Off.",
     tutorial: { page: "Video-Editing", anchor: "subtitles" },
   },
   "project.subtitles.font": {
-    title: "Subtitle font",
-    body: "The typeface of burned-in captions and chapter cards. Pick a bundled font or one you uploaded (.ttf or .otf); uploaded fonts stay available to every project. Subtitle files carry no font, since players style them. Changing it remakes only the video. Default: the bundled font.",
+    title: "Caption font",
+    body: "The typeface of captions shown in the video and of chapter cards. Pick a bundled font or one you uploaded (.ttf or .otf); uploaded fonts stay available to every project. Caption files carry no font, since players style them. Changing it remakes only the video. Default: the bundled font.",
     tutorial: { page: "Video-Editing", anchor: "subtitles" },
   },
   "project.subtitles.size": {
-    title: "Subtitle font size",
-    body: "How big burned-in captions are, from 16 to 120. Larger is easier to read on phones but covers more of the picture. Default: 48.",
+    title: "Caption size",
+    body: "How big captions shown in the video are, from 16 to 120. Larger is easier to read on phones but covers more of the picture. Default: 48.",
     tutorial: { page: "Video-Editing", anchor: "subtitles" },
   },
   "project.subtitles.position": {
-    title: "Subtitle position",
-    body: "Where burned-in captions sit on the frame: Top, Upper-middle, Center, Lower-middle or Bottom. Move them up when the pictures have important detail near the bottom. Subtitle files ignore it. Default: Bottom.",
+    title: "Caption position",
+    body: "Where captions shown in the video sit on the frame: Top, Upper-middle, Center, Lower-middle or Bottom. Move them up when the pictures have important detail near the bottom. Caption files ignore it. Default: Bottom.",
     tutorial: { page: "Video-Editing", anchor: "subtitles" },
   },
   "project.video.style-preview": {
