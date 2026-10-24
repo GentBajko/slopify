@@ -1,17 +1,21 @@
 import { defaultEdgeSilenceSeconds } from "../admission/rules.js";
 import { type PlayDraftDocument, playDraftDocumentSchema } from "../play-drafts/schema.js";
+import type { ProviderDefaults } from "../settings/first-run.js";
 import type { PackPromptKey, StarterPack } from "./packs.js";
 
 // A pack's Play template: its prompts ticked, its voice picked, its style set, and the text and
-// image providers left for the user to choose, since which of them is installed or keyed
-// differs per machine.
+// image providers this machine's first launch found (Claude Code, Codex), since which of them
+// is installed or keyed differs per machine. One it did not find is left for the user to pick.
 export function packTemplate(
   pack: StarterPack,
   names: Readonly<Partial<Record<PackPromptKey, string>>>,
   voiceId: string,
+  providers: ProviderDefaults = {},
 ): PlayDraftDocument {
   const { style } = pack;
   const name = (key: PackPromptKey): string => names[key] ?? "";
+  const chosen = (choice: ProviderDefaults["llm"]) =>
+    choice === undefined ? { provider: "", model: "" } : { ...choice };
   return playDraftDocumentSchema.parse({
     schemaVersion: 1,
     form: {
@@ -27,7 +31,7 @@ export function packTemplate(
         video: "generate",
         document: "off",
       },
-      llm: { provider: "", model: "" },
+      llm: chosen(providers.llm),
       audio: {
         provider: pack.voice.provider,
         model: pack.voice.model,
@@ -36,7 +40,7 @@ export function packTemplate(
         shareGlossary: true,
         describeFigures: true,
       },
-      images: { provider: "", model: "" },
+      images: chosen(providers.images),
       articlePrompt: name("article"),
       narrationPrompt: "",
       youtubeDescription: name("description") !== "",
