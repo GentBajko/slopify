@@ -23,8 +23,8 @@ import {
   startsAtOnce,
 } from "./projects-remake.js";
 
-// The Projects selection bar's Remake outdated: it checks each selected project first, then
-// opens one review with what each remakes, what each is estimated to cost, the total, and
+// The Projects selection bar's Make outdated parts again: it checks each selected project
+// first, then opens one review with what each makes again, what each is estimated to cost, the total, and
 // which projects are left out and why. One press starts them all; a project that fails to
 // start says why on its row and can be tried again without starting the others twice.
 
@@ -76,7 +76,7 @@ export function RemakeOutdated({
       setFailures(result.failed);
       if (result.started.length > 0)
         notify(
-          `Started the remake of ${projectsWord(result.started.length)}. Each project's page shows its progress.`,
+          `Started making the outdated parts of ${projectsWord(result.started.length)} again. Each project's page shows its progress.`,
           "success",
         );
       return result;
@@ -125,11 +125,11 @@ export function RemakeOutdated({
         }
         onClick={() => void check()}
       >
-        {checking ? `Checking ${projectsWord(chosen.length)}…` : "Remake outdated"}
+        {checking ? `Checking ${projectsWord(chosen.length)}…` : "Make outdated parts again"}
       </Button>
       <Drawer
         open={review !== undefined}
-        title={`Remake outdated: ${projectsWord(plans.length + (review?.skipped.length ?? 0))}`}
+        title={`Make outdated parts again: ${projectsWord(plans.length + (review?.skipped.length ?? 0))}`}
         onClose={() => {
           if (allStarted) onDone();
           close();
@@ -163,7 +163,7 @@ export function RemakeOutdated({
                   ? "Starting…"
                   : retry
                     ? `Try ${projectsWord(pendingPlans.length)} again`
-                    : `Remake ${projectsWord(pendingPlans.length)}`}
+                    : `Make ${projectsWord(pendingPlans.length)} again`}
               </Button>
             )}
             {allStarted ? null : (
@@ -176,20 +176,20 @@ export function RemakeOutdated({
       >
         {review === undefined ? null : (
           <div className="flex flex-col gap-5">
-            <section aria-label="What the remakes cost" className="flex flex-col gap-1">
+            <section aria-label="What it costs" className="flex flex-col gap-1">
               <p className="m-0 font-condensed text-title-2 tabular-nums">
                 {pendingPlans.length === 0
                   ? "Nothing to start"
                   : costWords(pendingPlans.map((plan) => plan.preview.costs))}
               </p>
               <p className="m-0 text-small text-ink-2">
-                {`${projectsWord(plans.length)} to remake${review.skipped.length === 0 ? "" : `, ${String(review.skipped.length)} left out`}. If a step fails, that project keeps its current version.`}
+                {`${projectsWord(plans.length)} to make again${review.skipped.length === 0 ? "" : `, ${String(review.skipped.length)} left out`}. If a step fails, that project keeps its current version.`}
               </p>
             </section>
             {plans.length === 0 ? null : (
-              <section aria-label="Projects to remake" className="flex flex-col gap-2">
-                <SectionHead as="h3" size="small" title="To remake" />
-                <List label="Projects to remake">
+              <section aria-label="Projects to make again" className="flex flex-col gap-2">
+                <SectionHead as="h3" size="small" title="To make again" />
+                <List label="Projects to make again">
                   {plans.map((plan) => (
                     <PlanRow
                       key={plan.project.id}

@@ -15,10 +15,11 @@ import { keys } from "@/queries";
 import { restoreTrashItems, trashKey } from "@/trash/api";
 import { RemakeOutdated } from "./projects-remake-review.js";
 
-// The Projects list's selection bar: Mark uploaded, Mark not uploaded, Move to a channel and
-// Delete for the ticked rows, each announced in a toast with Undo where it can be taken back.
-// Remake outdated checks the ticked projects and opens one scope and cost review first
-// (projects-remake-review.tsx).
+// The Projects list's selection bar, whose actions appear once a row is ticked, each only when
+// it applies to a ticked row: Mark uploaded (a finished video), Mark not uploaded, Move to a
+// channel, Remake outdated (a project an edit left outdated; it checks the ticked projects and
+// opens one scope and cost review first, projects-remake-review.tsx), and Delete last. Each is
+// announced in a toast with Undo where it can be taken back.
 
 type Notify = ReturnType<typeof useToast>;
 
@@ -64,11 +65,8 @@ export function ProjectsBulkBar({
   selection,
   rows,
   scope,
-  samples,
 }: {
   readonly selection: Selection<string>;
-  // The bundled sample projects, which Remake outdated leaves out.
-  readonly samples: ReadonlySet<string>;
   // The rows the list draws, in order; Select all covers these.
   readonly rows: readonly ProjectListing[];
   // "Select all 12 shown" when a filter, a search or Show more leaves rows out.
@@ -84,6 +82,9 @@ export function ProjectsBulkBar({
   const deletable = chosen.filter((one) => one.status !== "running");
   const ready = chosen.filter(isReadyToUpload);
   const uploaded = chosen.filter((one) => one.uploadedAt !== null);
+  // The bundled samples, which Remake outdated leaves out.
+  const samples = new Set(rows.filter((one) => one.sample === true).map((one) => one.id));
+  const outdated = chosen.some((one) => one.outdated === true);
 
   const report = (
     failed: readonly { readonly project: ProjectListing; readonly reason: string }[],
@@ -160,9 +161,6 @@ export function ProjectsBulkBar({
   });
 
   const busy = remove.isPending || mark.isPending || move.isPending;
-  const none = selection.count === 0;
-  const reason = (empty: string): string =>
-    none ? "Nothing is selected" : busy ? "Working on it" : empty;
   const running = chosen.length - deletable.length;
   const channelName = current.channels.find((one) => one.id === target)?.name ?? "";
 
@@ -175,14 +173,16 @@ export function ProjectsBulkBar({
         {...(scope === undefined ? {} : { scope })}
         actions={
           <>
-            <Button
-              size="small"
-              disabled={busy || ready.length === 0}
-              disabledReason={reason("None of the selected projects is ready to upload")}
-              onClick={() => mark.mutate({ list: ready, on: true })}
-            >
-              Mark uploaded
-            </Button>
+            {ready.length === 0 ? null : (
+              <Button
+                size="small"
+                disabled={busy}
+                disabledReason="Working on it"
+                onClick={() => mark.mutate({ list: ready, on: true })}
+              >
+                Mark uploaded
+              </Button>
+            )}
             {uploaded.length === 0 ? null : (
               <Button
                 size="small"
@@ -208,29 +208,33 @@ export function ProjectsBulkBar({
                 />
                 <Button
                   size="small"
-                  disabled={busy || none || target === ""}
-                  disabledReason={reason("Pick the channel to move them to")}
+                  disabled={busy || target === ""}
+                  disabledReason={busy ? "Working on it" : "Pick the channel to move them to"}
                   onClick={() => move.mutate({ list: chosen, to: target })}
                 >
                   {channelName === "" ? "Move" : `Move to ${channelName}`}
                 </Button>
               </span>
             )}
-            <RemakeOutdated
-              chosen={chosen}
-              samples={samples}
-              busy={busy}
-              onDone={selection.clear}
-            />
-            <Button
-              size="small"
-              variant="destructive"
-              disabled={busy || deletable.length === 0}
-              disabledReason={reason("Running projects can't be deleted. Cancel the run first.")}
-              onClick={() => setConfirming(true)}
-            >
-              Delete
-            </Button>
+            {outdated ? (
+              <RemakeOutdated
+                chosen={chosen}
+                samples={samples}
+                busy={busy}
+                onDone={selection.clear}
+              />
+            ) : null}
+            {deletable.length === 0 ? null : (
+              <Button
+                size="small"
+                variant="destructive"
+                disabled={busy}
+                disabledReason="Working on it"
+                onClick={() => setConfirming(true)}
+              >
+                Delete
+              </Button>
+            )}
           </>
         }
       />

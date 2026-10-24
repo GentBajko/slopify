@@ -12,7 +12,7 @@ import {
   startProjectRebuild,
 } from "@/project/revision-api";
 
-// Remake outdated for several projects: each selected project gets the same preview a single
+// Make outdated parts again for several projects: each selected project gets the same preview a single
 // project's Choose what to remake asks for (every outdated output), and each start goes to the
 // same idempotent endpoint with that preview. Projects that cannot be remade from a list say
 // why and are left out; nothing starts before the combined review, unless every one of them
@@ -67,7 +67,7 @@ async function planOne(
   } catch (error) {
     return {
       project,
-      reason: `It couldn't be checked: ${message(error)} Press Remake outdated again.`,
+      reason: `It couldn't be checked: ${message(error)} Tick it and press Make outdated parts again.`,
     };
   }
 }
@@ -120,7 +120,7 @@ export async function startRemakes(
           plan,
           reason:
             answer.reason === "stale-preview" || answer.reason === "conflict"
-              ? "It changed since this review was opened. Close the review and press Remake outdated again."
+              ? "It changed since this review was opened. Close the review and press Make outdated parts again."
               : `${answer.message}`,
         });
     } catch (error) {
