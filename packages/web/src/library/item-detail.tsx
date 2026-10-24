@@ -177,7 +177,7 @@ function usedByTotal(usedBy: UsedBy): number {
 }
 
 // "not used yet", "used by History starter", "used by 2 templates and 1 project".
-export function usedBySummary(usedBy: UsedBy): string {
+function usedBySummary(usedBy: UsedBy): string {
   const names = [
     ...usedBy.templates.map((one) => one.name),
     ...usedBy.schedules.map((one) => one.name),

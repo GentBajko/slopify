@@ -110,7 +110,11 @@ export function PromptEditorRoute({
       : promptId === undefined
         ? { kind: found.kind, name: `${found.name} copy`, body: found.body }
         : { kind: found.kind, name: found.name, body: found.body };
-  const draft = edited ?? savedPrompt ?? base;
+  const savedDraft: PromptDraft | undefined =
+    savedPrompt === undefined
+      ? undefined
+      : { kind: savedPrompt.kind, name: savedPrompt.name, body: savedPrompt.body };
+  const draft = edited ?? savedDraft ?? base;
 
   const save = useMutation({
     mutationFn: (next: PromptDraft) => savePrompt(api, next, promptId),

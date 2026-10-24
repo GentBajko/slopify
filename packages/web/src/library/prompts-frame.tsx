@@ -13,7 +13,7 @@ import { entriesQuery, promptsQuery } from "@/queries";
 // What the Prompts page is showing: one kind of prompt, or the intros or the outros (saved apart
 // from prompts, with a category instead of a kind). A search spans every kind but stays on the
 // page of the kind it was typed on, so that kind stays lit.
-export type PromptsShown = { readonly kind: PromptKind } | { readonly category: EntryCategory };
+type PromptsShown = { readonly kind: PromptKind } | { readonly category: EntryCategory };
 
 // The Prompts page: its title and actions on one line, every kind of prompt down the left with
 // how many are saved, and the list of the one picked beside it. Intros and outros sit at the
@@ -127,7 +127,7 @@ export function PromptRowMeta({
 }
 
 // The first words of a prompt, on one line.
-export function bodyExcerpt(body: string, length = 90): string {
+function bodyExcerpt(body: string, length = 90): string {
   const flat = body.replace(/\s+/g, " ").trim();
   return flat.length <= length ? flat : `${flat.slice(0, length).trimEnd()}…`;
 }
