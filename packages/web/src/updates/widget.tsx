@@ -144,11 +144,9 @@ export function UpdateWidget({
     <>
       {item && words.news ? (
         <Menu modal={false}>
-          <MenuTrigger asChild>
-            <button type="button" className={className}>
-              <CircleArrowUpIcon aria-hidden="true" strokeWidth={1.75} />
-              <span>{words.state}</span>
-            </button>
+          <MenuTrigger className={className}>
+            <CircleArrowUpIcon aria-hidden="true" strokeWidth={1.75} />
+            <span>{words.state}</span>
           </MenuTrigger>
           <MenuContent side="right" align="end">
             <UpdateMenuRows update={update} />

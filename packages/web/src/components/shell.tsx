@@ -243,11 +243,9 @@ function HelpMenu({
   const onHelp = useLocation({ select: (location) => location.pathname.startsWith("/help") });
   return (
     <Menu modal={false}>
-      <MenuTrigger asChild>
-        <button type="button" className={className} aria-current={onHelp ? "page" : undefined}>
-          <CircleHelpIcon {...iconProps} />
-          <span>Help</span>
-        </button>
+      <MenuTrigger className={className} aria-current={onHelp ? "page" : undefined}>
+        <CircleHelpIcon {...iconProps} />
+        <span>Help</span>
       </MenuTrigger>
       <MenuContent side={phone ? "bottom" : "right"} align="end" className="min-w-[220px]">
         {tutorial === undefined || tutorial.active ? null : (
@@ -296,11 +294,9 @@ function HelpMenu({
 function SupportMenu(): ReactElement {
   return (
     <Menu modal={false}>
-      <MenuTrigger asChild>
-        <button type="button" className="sl-navrail__item">
-          <HandHeartIcon {...iconProps} />
-          <span>Support</span>
-        </button>
+      <MenuTrigger className="sl-navrail__item">
+        <HandHeartIcon {...iconProps} />
+        <span>Support</span>
       </MenuTrigger>
       <MenuContent side="right" align="end">
         <SupportRows />
@@ -476,15 +472,12 @@ function BottomBar(): ReactElement {
       <CreateKey className="sl-bottomnav__create" />
       {bar.slice(2).map(item)}
       <Menu modal={false}>
-        <MenuTrigger asChild>
-          <button
-            type="button"
-            className="sl-bottomnav__item"
-            aria-current={more.some((one) => one.id === lit) ? "true" : undefined}
-          >
-            <EllipsisIcon {...iconProps} />
-            <span>More</span>
-          </button>
+        <MenuTrigger
+          className="sl-bottomnav__item"
+          aria-current={more.some((one) => one.id === lit) ? "true" : undefined}
+        >
+          <EllipsisIcon {...iconProps} />
+          <span>More</span>
         </MenuTrigger>
         <MenuContent side="top" align="end" className="min-w-[200px]">
           {more.map((destination) => (
