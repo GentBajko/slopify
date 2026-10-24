@@ -909,6 +909,7 @@
       white-space: normal;
     }
     .sl-project__header .sl-page-header__actions {
+      flex: 1 1 100%;
       flex-wrap: wrap;
       margin-left: 0;
     }

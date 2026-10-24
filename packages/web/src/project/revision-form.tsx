@@ -11,7 +11,15 @@ import {
 } from "@app/slices/admission/rules.js";
 import { defaultSubtitles } from "@app/slices/subtitles/model.js";
 import { useQuery } from "@tanstack/react-query";
-import { type ReactElement, type ReactNode, useCallback, useEffect, useId, useState } from "react";
+import {
+  type ReactElement,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import type { Entry } from "@/api";
 import { useApp } from "@/app-context";
 import { channelQuery, defaultChannelId } from "@/channels/api";
@@ -93,10 +101,19 @@ export function RevisionForm(
   const [section, setSection] = useState<EditSection>(
     props.focus?.section ?? props.opening ?? "title",
   );
-  // A change asked for from the project page opens the section it belongs to.
+  // A change asked for from the project page opens the section it belongs to; Rename puts
+  // the cursor in the title.
+  const titleField = useRef<HTMLInputElement>(null);
+  const [renaming, setRenaming] = useState(0);
   useEffect(() => {
-    if (props.focus !== undefined) setSection(props.focus.section);
+    if (props.focus === undefined) return;
+    setSection(props.focus.section);
+    if (props.focus.section === "title") setRenaming((count) => count + 1);
   }, [props.focus]);
+  // Once the title's section is on screen.
+  useEffect(() => {
+    if (renaming > 0) titleField.current?.focus();
+  }, [renaming]);
   useEffect(() => {
     if (props.opening !== undefined) setSection(props.opening);
   }, [props.opening]);
@@ -316,6 +333,7 @@ export function RevisionForm(
         >
           <Field label="Project title" error={problem("title")}>
             <Input
+              ref={titleField}
               value={config.title}
               maxLength={titleMax}
               onChange={(event) =>

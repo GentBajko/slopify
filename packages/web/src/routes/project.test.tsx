@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { revisionView } from "@/project/revision-fixture";
 import {
   downloadItem,
+  emptyAnswer,
   jsonAnswer,
   openProjectTab,
   problemAnswer,
@@ -21,6 +22,7 @@ import {
   selectProjectStage,
   stage,
 } from "./project-fixtures.js";
+import { revisionRouteFixture } from "./project-revision.fake.js";
 
 afterEach(cleanup);
 
@@ -721,5 +723,40 @@ describe("Progress", () => {
         .getByRole("link", { name: /^Video/ })
         .getAttribute("aria-current"),
     ).toBe("page");
+  });
+});
+
+describe("the title row's More", () => {
+  it("renames from the settings' title, and deletes after asking, with Undo", async () => {
+    const removed = vi.fn();
+    const fixture = revisionRouteFixture(finished);
+    renderRouted(
+      <ProjectRoute projectId="p1" />,
+      deps({
+        ...fixture.routes,
+        "DELETE /api/projects/p1": (request) => {
+          removed();
+          return emptyAnswer()(request);
+        },
+      }),
+    );
+    await statusList();
+    await userEvent.click(screen.getByRole("button", { name: "More" }));
+    expect((await screen.findAllByRole("menuitem")).map((item) => item.textContent)).toEqual([
+      "Rename…",
+      "Save as template…",
+      "Posters & pictures…",
+      "Delete project…",
+    ]);
+    await userEvent.click(screen.getByRole("menuitem", { name: "Rename…" }));
+    const title = await screen.findByLabelText("Project title");
+    await waitFor(() => expect(document.activeElement).toBe(title));
+    await userEvent.click(screen.getByRole("button", { name: "More" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Delete project…" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText('Delete "Rope Tricks"?')).not.toBeNull();
+    expect(removed).not.toHaveBeenCalled();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Delete project" }));
+    await waitFor(() => expect(removed).toHaveBeenCalledOnce());
   });
 });

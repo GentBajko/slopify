@@ -2,7 +2,7 @@ import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
 import { bookLabel } from "@app/slices/voices/model.js";
 import { Link } from "@tanstack/react-router";
 import { ChevronDownIcon, ChevronLeftIcon, SlidersHorizontalIcon } from "lucide-react";
-import type { ReactElement, ReactNode } from "react";
+import { type ReactElement, type ReactNode, useRef } from "react";
 import { cameFrom } from "@/components/came-from";
 import { Button } from "@/components/kit/button";
 import { PageHeader } from "@/components/kit/layout";
@@ -22,6 +22,8 @@ export interface MoreAction {
   readonly disabled?: boolean;
   // A line above it in the menu: destructive actions sit apart.
   readonly apart?: boolean;
+  // It puts the cursor somewhere else (Rename), so the menu does not take it back on close.
+  readonly movesFocus?: boolean;
 }
 
 export function ProjectHeader({
@@ -59,6 +61,7 @@ export function ProjectHeader({
   readonly clock?: ReactNode;
 }): ReactElement {
   const state = projectStateOf({ ...project, progress });
+  const moved = useRef(false);
   // The way back goes where the project was opened from: Projects as it was filtered, Home,
   // the calendar or the channel.
   const origin = cameFrom();
@@ -110,9 +113,20 @@ export function ProjectHeader({
                   <ChevronDownIcon aria-hidden="true" strokeWidth={1.75} />
                 </Button>
               </MenuTrigger>
-              <MenuContent>
+              <MenuContent
+                onCloseAutoFocus={(event) => {
+                  if (moved.current) event.preventDefault();
+                  moved.current = false;
+                }}
+              >
                 {more.map((item) => (
-                  <MenuItemWithApart key={item.id} item={item} />
+                  <MenuItemWithApart
+                    key={item.id}
+                    item={item}
+                    onPick={() => {
+                      moved.current = item.movesFocus === true;
+                    }}
+                  />
                 ))}
               </MenuContent>
             </Menu>
@@ -131,11 +145,23 @@ export function finishedAudiobook(project: ProjectSummary): boolean {
   );
 }
 
-function MenuItemWithApart({ item }: { readonly item: MoreAction }): ReactElement {
+function MenuItemWithApart({
+  item,
+  onPick,
+}: {
+  readonly item: MoreAction;
+  readonly onPick: () => void;
+}): ReactElement {
   return (
     <>
       {item.apart ? <MenuSeparator /> : null}
-      <MenuItem {...(item.disabled ? { disabled: true } : {})} onSelect={() => item.run()}>
+      <MenuItem
+        {...(item.disabled ? { disabled: true } : {})}
+        onSelect={() => {
+          onPick();
+          item.run();
+        }}
+      >
         {item.label}
       </MenuItem>
     </>

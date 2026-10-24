@@ -561,6 +561,14 @@ function ProjectWorkspace({
           },
         ]
       : [
+          // The title is the first setting: Rename opens the settings there, the field in focus.
+          {
+            id: "rename",
+            label: "Rename…",
+            run: () => controller.requestEdit({ section: "title", change: (edit) => edit }),
+            disabled: revisionId === null,
+            movesFocus: true,
+          },
           {
             id: "template",
             label: "Save as template…",
