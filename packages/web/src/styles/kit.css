@@ -159,6 +159,15 @@
     opacity: 0.45;
     cursor: not-allowed;
   }
+  /* A primary that cannot be pressed yet gives up its lime, as one that explains itself does
+     (above): a faded lime still reads as the next thing to do. */
+  .sl-btn--primary[disabled],
+  .sl-btn--primary[disabled]:hover {
+    opacity: 1;
+    border-color: var(--color-line);
+    background: transparent;
+    color: color-mix(in srgb, var(--color-ink) 42%, transparent);
+  }
   .sl-key {
     display: flex;
     align-items: center;
@@ -1137,6 +1146,15 @@
     font-size: 13px;
     color: var(--color-ink-3);
     font-weight: 500;
+  }
+  /* A stage keeps its whole name; its word and count give way first, the word staying in view. */
+  .sl-rail__item:has(.sl-rail__state) > .truncate {
+    flex-shrink: 0;
+  }
+  .sl-rail__item:has(.sl-rail__state) > .sl-rail__meta {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
   }
   /* A rail of stages: an item without a lamp keeps the lamp's column, so names line up. */
