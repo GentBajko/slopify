@@ -97,12 +97,22 @@ it("shows reviewed dependency closure and pending approval, then invalidates cha
   await h.prepare({ ...generated, form: { ...generated.form, checkpoints: ["audio"] } });
   const summary = await screen.findByRole("region", { name: "Pauses and checks summary" });
   await waitFor(() => expect(within(summary).getByText(/Also holds: Video/)).not.toBeNull());
+  // Named as the row names it.
+  expect(within(summary).getByText(`Run 1 · ${choices[0]}`)).not.toBeNull();
   expect(within(summary).getByText(/Approval required on the project page/)).not.toBeNull();
   await userEvent.click(within(summary).getByRole("button", { name: "Change pauses and checks" }));
   // The pauses open in their own row on the form, like every other part of the run.
   expect(h.session().section).toBe("content");
   await userEvent.click(screen.getByRole("checkbox", { name: choices[1] }));
   expect(h.session().review.valid).toBe(false);
+});
+
+it("says in the summary that a run with no pauses goes straight through", async () => {
+  const h = reviewHarness();
+  await h.prepare(generated);
+  const summary = await screen.findByRole("region", { name: "Pauses and checks summary" });
+  expect(within(summary).getByText("No pauses for your approval.")).not.toBeNull();
+  expect(within(summary).queryByText(/checkpoint/i)).toBeNull();
 });
 
 it.each(["checkpoints.audio", "checkpoints.0"])(

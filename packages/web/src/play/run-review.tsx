@@ -5,25 +5,37 @@ import type { ReactElement } from "react";
 import { Fold } from "@/components/kit/fold";
 import { usd } from "@/lib/format";
 import { stageWords } from "@/lib/stage-words";
+import { checkpointOptions, pauseLabel } from "./checkpoints";
 import type { PlayFormState } from "./state";
 
+type PauseStage = Parameters<typeof pauseLabel>[0];
+type PauseSources = Parameters<typeof pauseLabel>[1]["sources"];
+const pausable = (stage: StageKind): stage is PauseStage =>
+  checkpointOptions.some((option) => option.stage === stage);
+
+// The pauses this run makes, named as the Pauses and checks row names them ("Pause after the
+// article (before the narration)"); once checked, each says which later steps it holds too.
 export function CheckpointReview({
   selected,
   reviewed,
+  sources,
 }: {
   readonly selected: PlayFormState["checkpoints"];
   readonly reviewed: PlayReview["checkpointSet"];
+  readonly sources: PauseSources;
 }): ReactElement {
   const label = (stage: StageKind) => stageWords[stage];
+  const pause = (stage: StageKind) =>
+    pausable(stage) ? pauseLabel(stage, { sources }) : `Pause before ${label(stage)}`;
   if (!selected?.length)
-    return <p className="text-body text-ink-2">No review checkpoints selected.</p>;
+    return <p className="text-body text-ink-2">No pauses for your approval.</p>;
   return (
     <div className="space-y-3 text-body">
       {reviewed?.length ? (
         reviewed.map((gate) => (
           <div key={`${gate.runIndex}-${gate.checkpointId}`}>
             <p className="font-medium">
-              Run {gate.runIndex + 1} · Before {label(gate.stage)}
+              Run {gate.runIndex + 1} · {pause(gate.stage)}
             </p>
             <p className="text-small text-ink-2">
               {gate.dependents.length
@@ -33,10 +45,7 @@ export function CheckpointReview({
           </div>
         ))
       ) : (
-        <p>
-          Selected: {selected.map((stage) => `Before ${label(stage)}`).join(", ")}. Check again to
-          see which steps each pause holds.
-        </p>
+        <p>{selected.map(pause).join("; ")}. Check again to see which steps each pause holds.</p>
       )}
       <p className="text-small text-ink-2">
         Approval required on the project page. Starting this run does not approve these pauses.

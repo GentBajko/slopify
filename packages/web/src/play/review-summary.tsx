@@ -364,6 +364,7 @@ export function ReviewSummary({
         onChange={() => onReveal("checkpoints")}
       >
         <CheckpointReview
+          sources={form.sources}
           selected={form.checkpoints}
           reviewed={review.valid ? review.receipt?.checkpointSet : undefined}
         />
