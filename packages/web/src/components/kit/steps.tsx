@@ -6,13 +6,14 @@ export interface Step {
   readonly id: string;
   readonly name: ReactNode;
   readonly tone: Tone;
-  // The state in words, read by screen readers after the name: "Running", "Held for you".
+  // The state in words, shown beside the lamp: "Done", "Running", "Waiting for your review".
   readonly state: string;
   readonly time?: ReactNode;
   readonly detail?: ReactNode;
 }
 
-// A run's stages, top to bottom: lamp, name, time, and one detail line.
+// A run's stages, top to bottom: lamp, name, time, then the state in words before one detail
+// line ("Done · 4 images"), so the lamp is never the only sign of how a stage stands.
 export function Steps({
   steps,
   label,
@@ -21,7 +22,8 @@ export function Steps({
 }: {
   readonly steps: readonly Step[];
   readonly label: string;
-  // One line per step, the detail beside the name: a rail that shows the whole run at a glance.
+  // One line per step, the state and detail beside the name: a rail that shows the whole run
+  // at a glance.
   readonly dense?: boolean;
   readonly className?: string;
 }): ReactElement {
@@ -33,14 +35,17 @@ export function Steps({
       {steps.map((step) => (
         <li key={step.id} className="sl-step" data-tone={step.tone}>
           <Lamp tone={step.tone} />
-          <span className="sl-step__name">
-            {step.name}
-            <span className="sr-only">{`, ${step.state}`}</span>
-          </span>
+          <span className="sl-step__name">{step.name}</span>
           <span className="sl-step__time">{step.time ?? "—"}</span>
-          {step.detail === undefined ? null : (
-            <span className="sl-step__detail">{step.detail}</span>
-          )}
+          <span className="sl-step__detail">
+            <span className="sl-step__state">{step.state}</span>
+            {step.detail === undefined ? null : (
+              <>
+                <span className="sl-step__dot"> · </span>
+                <span>{step.detail}</span>
+              </>
+            )}
+          </span>
         </li>
       ))}
     </ol>

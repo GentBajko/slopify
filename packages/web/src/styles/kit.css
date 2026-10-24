@@ -1126,6 +1126,32 @@
     font-size: 13px;
     color: var(--color-ink-3);
     font-weight: 500;
+    white-space: nowrap;
+  }
+  /* A rail of stages: an item without a lamp keeps the lamp's column, so names line up. */
+  .sl-rail:has(.sl-rail__lamp) .sl-rail__item:not(:has(> .sl-rail__lamp, > svg))::before {
+    content: "";
+    width: 8px;
+    flex: none;
+  }
+  /* A stage's word: what moves, waits or failed in its status colour; Done in ink-2. */
+  .sl-rail__state {
+    color: var(--color-ink-2);
+  }
+  .sl-rail__state[data-tone="running"] {
+    color: var(--color-accent-ink);
+  }
+  .sl-rail__state[data-tone="waiting"] {
+    color: var(--color-waiting);
+  }
+  .sl-rail__state[data-tone="failed"] {
+    color: var(--color-danger);
+  }
+  .sl-rail__state[data-tone="info"] {
+    color: var(--color-info);
+  }
+  .sl-rail__state[data-tone="off"] {
+    color: var(--color-ink-3);
   }
   .sl-steps {
     display: flex;
@@ -1150,6 +1176,26 @@
     font-size: 13px;
     line-height: 19px;
     color: var(--color-ink-2);
+  }
+  /* The state word: what moves, waits or failed in its status colour; Done and Not started
+     stay quiet, so a finished run is not a column of lime. */
+  .sl-step__state {
+    font-weight: 600;
+  }
+  .sl-step[data-tone="running"] .sl-step__state {
+    color: var(--color-accent-ink);
+  }
+  .sl-step[data-tone="waiting"] .sl-step__state {
+    color: var(--color-waiting);
+  }
+  .sl-step[data-tone="failed"] .sl-step__state {
+    color: var(--color-danger);
+  }
+  .sl-step[data-tone="info"] .sl-step__state {
+    color: var(--color-info);
+  }
+  .sl-step__dot {
+    color: var(--color-ink-3);
   }
   .sl-step__time {
     font-size: 13px;

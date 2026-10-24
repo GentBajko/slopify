@@ -1,10 +1,13 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactElement, ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { Lamp, type Tone } from "./status.js";
 
 // A vertical list of places: the app's main navigation, a project's sections. Items are links
 // (they go somewhere); the current one is marked with aria-current, which is also what lights
-// it. Icons are 18px here.
+// it. Icons are 18px here. An item with a `tone` is a stage: its lamp sits in the icon column
+// and its state word on the right, and in a rail where some items have a lamp the others keep
+// the lamp's column empty, so every name starts at the same place (kit.css).
 export function Rail({
   label,
   className,
@@ -21,20 +24,43 @@ export function Rail({
   );
 }
 
+// A stage's standing on a rail item: the lamp and, always beside it, its word ("Done", "Running",
+// "Not started"). Neither comes without the other.
+type Standing =
+  | { readonly tone: Tone; readonly state: string }
+  | { readonly tone?: undefined; readonly state?: undefined };
+
 function Inner({
   icon,
   meta,
+  tone,
+  state,
   children,
 }: {
-  icon?: ReactNode;
-  meta?: ReactNode;
-  children: ReactNode;
+  readonly icon?: ReactNode;
+  readonly meta?: ReactNode;
+  readonly tone?: Tone | undefined;
+  readonly state?: string | undefined;
+  readonly children: ReactNode;
 }) {
   return (
     <>
-      {icon}
+      {tone === undefined ? icon : <Lamp tone={tone} className="sl-rail__lamp" />}
       <span className="min-w-0 truncate">{children}</span>
-      {meta === undefined ? null : <span className="sl-rail__meta">{meta}</span>}
+      {state === undefined && meta === undefined ? null : (
+        <span className="sl-rail__meta">
+          {state === undefined ? null : (
+            <>
+              <span className="sr-only">, </span>
+              <span className="sl-rail__state" data-tone={tone}>
+                {state}
+              </span>
+            </>
+          )}
+          {state === undefined || meta === undefined ? null : " · "}
+          {meta}
+        </span>
+      )}
     </>
   );
 }
@@ -44,6 +70,8 @@ export function RailLink({
   search,
   icon,
   meta,
+  tone,
+  state,
   current,
   exact = false,
   resetScroll,
@@ -58,14 +86,14 @@ export function RailLink({
   // The interactive tutorial's target name.
   readonly "data-tour"?: string;
   readonly icon?: ReactNode;
-  // A count or state on the right: "14", "2 wait".
+  // A count on the right: "14", "2 outdated". After the state word when there is one.
   readonly meta?: ReactNode;
   // Forces the mark; left out, the router decides from the URL.
   readonly current?: boolean | "page" | "step";
   readonly exact?: boolean;
   readonly className?: string;
   readonly children: ReactNode;
-}): ReactElement {
+} & Standing): ReactElement {
   const forced =
     current === undefined
       ? undefined
@@ -88,7 +116,7 @@ export function RailLink({
           }
         : { "aria-current": forced })}
     >
-      <Inner icon={icon} meta={meta}>
+      <Inner icon={icon} meta={meta} tone={tone} state={state}>
         {children}
       </Inner>
     </Link>
@@ -100,6 +128,8 @@ export function RailLink({
 export function RailButton({
   icon,
   meta,
+  tone,
+  state,
   current = false,
   onClick,
   className,
@@ -114,7 +144,7 @@ export function RailButton({
   readonly children: ReactNode;
   // The interactive tutorial's target name.
   readonly "data-tour"?: string;
-}): ReactElement {
+} & Standing): ReactElement {
   return (
     <button
       type="button"
@@ -127,7 +157,7 @@ export function RailButton({
         className,
       )}
     >
-      <Inner icon={icon} meta={meta}>
+      <Inner icon={icon} meta={meta} tone={tone} state={state}>
         {children}
       </Inner>
     </button>

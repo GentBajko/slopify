@@ -11,7 +11,9 @@ import { Fold } from "./fold.js";
 import { hitArea, hitTarget, List, ListRow } from "./list-row.js";
 import { Lightbox, type LightboxItem, MediaFrame, MediaGrid } from "./media.js";
 import { foldPeaks } from "./media-controls.js";
+import { Rail, RailButton } from "./rail.js";
 import { ReadingView, splitSections } from "./reading-view.js";
+import { Steps } from "./steps.js";
 import { Segmented, Switch } from "./switch.js";
 import { Tabs } from "./tabs.js";
 
@@ -591,6 +593,52 @@ Again.
       true,
     );
     expect(screen.queryByRole("button", { name: "Copy all" })).toBeNull();
+  });
+});
+
+describe("a stage's state is a word beside its lamp", () => {
+  it("in a run's steps, before the detail", () => {
+    render(
+      <Steps
+        label="Run steps"
+        dense
+        steps={[
+          { id: "i", name: "Images", tone: "done", state: "Done", detail: "4 images" },
+          { id: "v", name: "Video", tone: "off", state: "Not started" },
+        ]}
+      />,
+    );
+    const [images, video] = screen.getAllByRole("listitem");
+    expect(images?.querySelector(".sl-lamp")).not.toBeNull();
+    expect(images?.querySelector(".sl-step__detail")?.textContent).toBe("Done · 4 images");
+    expect(video?.querySelector(".sl-step__detail")?.textContent).toBe("Not started");
+    expect(screen.queryByText(/^, /)).toBeNull();
+  });
+
+  it("in a rail, where items without a lamp keep its column", () => {
+    const css = readFileSync(join(import.meta.dirname, "..", "..", "styles", "kit.css"), "utf8");
+    render(
+      <Rail label="Project sections">
+        <RailButton onClick={() => {}}>Outputs</RailButton>
+        <RailButton onClick={() => {}} tone="done" state="Done" meta="2 outdated">
+          Images
+        </RailButton>
+        <RailButton onClick={() => {}} tone="failed" state="Failed">
+          Video
+        </RailButton>
+      </Rail>,
+    );
+    const images = screen.getByRole("button", { name: /^Images/ });
+    expect(images.querySelector(".sl-lamp")).not.toBeNull();
+    expect(images.querySelector(".sl-rail__meta")?.textContent).toBe(", Done · 2 outdated");
+    expect(within(images).getByText("Done").getAttribute("data-tone")).toBe("done");
+    expect(
+      within(screen.getByRole("button", { name: /^Video/ })).getByText("Failed"),
+    ).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Outputs" }).querySelector(".sl-lamp")).toBeNull();
+    expect(css).toMatch(
+      /\.sl-rail:has\(\.sl-rail__lamp\) \.sl-rail__item:not\(:has\(> \.sl-rail__lamp, > svg\)\)::before \{\s*content: "";\s*width: 8px;/,
+    );
   });
 });
 
