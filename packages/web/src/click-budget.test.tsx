@@ -1,10 +1,24 @@
+import { detectSlots } from "@app/slices/admission/substitute.js";
+import { starterPacks } from "@app/slices/onboarding/packs.js";
+import { packTemplate } from "@app/slices/onboarding/template.js";
 import type { DraftView } from "@app/slices/play-drafts/model.js";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { type ReactElement, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { CommandPaletteProvider } from "@/components/kit/command-palette";
 import { ToastProvider } from "@/components/kit/toast";
-import { draftView, generatedRun, mountPlay } from "@/play/play-test-fixture";
+import { PlayDraftProvider } from "@/play/draft-context";
+import {
+  draftView,
+  generatedRun,
+  makeKey,
+  mountPlay,
+  playRoutes,
+  topicLabel,
+} from "@/play/play-test-fixture";
 import { revisionView } from "@/project/revision-fixture";
+import { PlayForm } from "@/routes/play";
 import { ProjectRoute } from "@/routes/project";
 import { body, finished, output, deps as projectDeps } from "@/routes/project-fixtures";
 import { PromptEditorRoute } from "@/routes/prompt-editor";
@@ -63,6 +77,8 @@ function person() {
 // The most clicks each task may take. The table in docs/design-system.md says what each took
 // before; where the old path still exists beside the new one, it is measured here too.
 const clickBudget = {
+  // The owner's acceptance test: from Home with keys entered, Create, the topic, Make the video.
+  makeVideo: 3,
   queueVideo: 4,
   regenerateImage: 3,
   copyDescription: 1,
@@ -73,8 +89,156 @@ const clickBudget = {
 const templateId = "11111111-1111-4111-8111-111111111111";
 const scheduleId = "22222222-2222-4222-8222-222222222222";
 
+// Home as far as this task goes: the rail's Create key, which opens Create.
+function HomeThenCreate({
+  onCreated,
+}: {
+  readonly onCreated: (projectId: string) => void;
+}): ReactElement {
+  const [creating, setCreating] = useState(false);
+  return creating ? (
+    <PlayForm onCreated={onCreated} />
+  ) : (
+    <button type="button" onClick={() => setCreating(true)}>
+      Create
+    </button>
+  );
+}
+
 describe("clicks from the landing screen to done", () => {
-  it("queues a video: pick the template, type the topic, press Start", async () => {
+  it("makes a video from Home with keys entered: Create, type the topic, Make the video", async () => {
+    // The first starter pack as the server installs it: its own prompts and voice, and the
+    // writer and image service left empty, as on a machine whose first launch had not run yet.
+    const pack = starterPacks[0];
+    if (pack === undefined) throw new Error("no starter packs");
+    const names = Object.fromEntries(pack.prompts.map((one) => [one.key, one.name]));
+    const shipped = packTemplate(pack, names, pack.voice.voiceId);
+    expect([shipped.form.llm.provider, shipped.form.images.provider]).toEqual(["", ""]);
+    const template = {
+      id: templateId,
+      name: `${pack.name} starter`,
+      version: 1,
+      updatedAt: "2026-09-13T00:00:00.000Z",
+    };
+    const made = new Map<string, DraftView>();
+    const created = vi.fn();
+    renderRouted(
+      <CommandPaletteProvider>
+        <PlayDraftProvider>
+          <HomeThenCreate onCreated={created} />
+        </PlayDraftProvider>
+      </CommandPaletteProvider>,
+      testDeps(
+        playRoutes({
+          // Keys entered: OpenAI reads, Claude Code writes, fal.ai draws.
+          "GET /api/providers": jsonAnswer({
+            providers: [
+              {
+                id: "claude-code",
+                family: "llm",
+                displayName: "Claude Code CLI",
+                readiness: { kind: "cli", installed: true, version: "2.1.258" },
+              },
+              {
+                id: "openai-tts",
+                family: "tts",
+                displayName: "OpenAI",
+                readiness: { kind: "keyed", hasKey: true },
+              },
+              {
+                id: "fal",
+                family: "image",
+                displayName: "fal.ai",
+                readiness: { kind: "keyed", hasKey: true },
+              },
+            ],
+          }),
+          "GET /api/providers/openai-tts/models": jsonAnswer({
+            models: [{ id: pack.voice.model, name: "GPT-4o mini TTS" }],
+            allowsCustom: true,
+          }),
+          "GET /api/providers/first-run": jsonAnswer({
+            firstRun: false,
+            detected: [],
+            defaults: {
+              llm: { provider: "claude-code", model: "sonnet" },
+              images: { provider: "fal", model: "fal-ai/flux-2" },
+            },
+            message: null,
+            detail: null,
+          }),
+          "GET /api/onboarding": jsonAnswer({
+            packs: [
+              { id: pack.id, name: pack.name, summary: pack.summary, installed: true, templateId },
+            ],
+          }),
+          "GET /api/settings/voices": jsonAnswer({
+            voices: [
+              {
+                id: "v1",
+                provider: "openai-tts",
+                name: pack.voice.name,
+                voiceId: pack.voice.voiceId,
+              },
+            ],
+          }),
+          "GET /api/prompts": jsonAnswer({
+            prompts: pack.prompts.map((one) => ({
+              id: one.key,
+              kind: one.kind,
+              name: one.name,
+              body: one.body,
+              slots: detectSlots(one.body).names,
+              updatedAt: "2026-09-13T00:00:00.000Z",
+            })),
+          }),
+          "GET /api/project-templates": jsonAnswer({ templates: [template] }),
+          [`POST /api/project-templates/${templateId}/instantiate`]: async (request) => {
+            const { id } = (await request.json()) as { id: string };
+            const view: DraftView = {
+              ...draftView(id),
+              draft: {
+                ...draftView(id).draft,
+                document: { ...shipped, templateSource: { id: templateId, version: 1 } },
+              },
+            };
+            made.set(id, view);
+            return jsonAnswer(view, 201)(request);
+          },
+          "GET /api/drafts/:id": (request) => {
+            const id = new URL(request.url).pathname.split("/")[3] ?? "";
+            return jsonAnswer(made.get(id) ?? draftView(id))(request);
+          },
+        }),
+      ),
+    );
+    const you = person();
+
+    await you.click(await screen.findByRole("button", { name: "Create" }));
+    // Create starts from the starter template by itself, with the services the first launch
+    // found filled in where the template names none.
+    await waitFor(
+      () =>
+        expect((screen.getByLabelText("Start from") as HTMLSelectElement).value).toBe(templateId),
+      { timeout: 4000 },
+    );
+    await you.type(await screen.findByLabelText("What's the video about?"), "The lighthouse");
+    const make = await screen.findByRole("button", { name: "Make the video" });
+    await waitFor(() => expect((make as HTMLButtonElement).disabled).toBe(false), {
+      timeout: 6000,
+    });
+    // Nothing on the way needed fixing: no row says Fix.
+    expect(
+      within(screen.getByRole("list", { name: "Setup" })).queryByRole("button", { name: /^Fix / }),
+    ).toBeNull();
+    await you.click(make);
+    await waitFor(() => expect(created).toHaveBeenCalledWith("p1"));
+
+    expect(you.clicks()).toBeLessThanOrEqual(clickBudget.makeVideo);
+    expect(you.clicks()).toBe(3);
+  });
+
+  it("queues a video from another template: pick it, type the topic, press Make", async () => {
     const template = {
       id: templateId,
       name: "Rope lore",
@@ -110,10 +274,14 @@ describe("clicks from the landing screen to done", () => {
     const you = person();
 
     await screen.findByRole("option", { name: "Rope lore" });
-    await you.pick(screen.getByRole("combobox", { name: "Template" }), templateId);
-    const topic = await screen.findByRole("textbox", { name: "topic" });
-    await you.type(topic, "Bowlines");
-    const start = await screen.findByRole("button", { name: "Start run" });
+    await you.pick(screen.getByRole("combobox", { name: "Start from" }), templateId);
+    await waitFor(() =>
+      expect(screen.getByLabelText(topicLabel).getAttribute("data-play-field")).toBe(
+        "values.topic",
+      ),
+    );
+    await you.type(screen.getByLabelText(topicLabel), "Bowlines");
+    const start = await screen.findByRole("button", { name: makeKey });
     await waitFor(() => expect((start as HTMLButtonElement).disabled).toBe(false), {
       timeout: 4000,
     });
