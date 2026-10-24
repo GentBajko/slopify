@@ -34,11 +34,14 @@ describe("the destructive actions", () => {
     );
 
     await selectProjectStage("Images");
-    await userEvent.click(screen.getByRole("button", { name: "Delete image 1" }));
+    await userEvent.click(screen.getByRole("button", { name: "More for image 1" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Delete image 1" }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Delete this image?")).not.toBeNull();
     expect(
-      within(dialog).getByText("Removes the image and re-renders video when enabled."),
+      within(dialog).getByText(
+        "Removes the image; the video is made again without it when the video is on.",
+      ),
     ).not.toBeNull();
     expect(deleted).not.toHaveBeenCalled();
 
@@ -56,7 +59,8 @@ describe("the destructive actions", () => {
     );
 
     await selectProjectStage("Images");
-    await userEvent.click(screen.getByRole("button", { name: "Delete image 1" }));
+    await userEvent.click(screen.getByRole("button", { name: "More for image 1" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Delete image 1" }));
     await userEvent.click(
       within(await screen.findByRole("dialog")).getByRole("button", { name: "Delete the image" }),
     );
@@ -82,11 +86,13 @@ describe("the destructive actions", () => {
     );
 
     await selectProjectStage("Images");
-    await userEvent.click(screen.getByRole("button", { name: "Regenerate image 1" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Make this image again for image 1" }),
+    );
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("Regenerate this image?")).not.toBeNull();
+    expect(within(dialog).getByText("Make this image again?")).not.toBeNull();
     expect(made).not.toHaveBeenCalled();
-    await userEvent.click(within(dialog).getByRole("button", { name: "Regenerate the image" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Make it again" }));
     await waitFor(() => {
       expect(made).toHaveBeenCalledTimes(1);
     });
@@ -108,9 +114,9 @@ describe("the destructive actions", () => {
     );
 
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("Regenerate this image?")).not.toBeNull();
+    expect(within(dialog).getByText("Make this image again?")).not.toBeNull();
     expect(made).not.toHaveBeenCalled();
-    await userEvent.click(within(dialog).getByRole("button", { name: "Regenerate the image" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Make it again" }));
     await waitFor(() => {
       expect(made).toHaveBeenCalledTimes(1);
     });
@@ -128,11 +134,12 @@ describe("the destructive actions", () => {
     await waitFor(() =>
       expect(registry.list().some((one) => one.id === "project.image.regenerate")).toBe(true),
     );
+    // The old verb still finds it; the command says the new one.
     const [found] = matchCommands(registry.list(), "regenerate image 1");
-    expect(found?.title).toBe("Regenerate image 1");
+    expect(found?.title).toBe("Make image 1 again");
     void found?.run();
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("Regenerate this image?")).not.toBeNull();
+    expect(within(dialog).getByText("Make this image again?")).not.toBeNull();
   });
 
   it("confirms before making a whole stage again, from the section's More", async () => {
@@ -148,15 +155,18 @@ describe("the destructive actions", () => {
     );
 
     const video = await screen.findByRole("region", { name: "Video" });
-    await userEvent.click(within(video).getByRole("button", { name: "Render the video again" }));
-    const dialog = await screen.findByRole("dialog");
+    await userEvent.click(
+      within(video).getByRole("button", { name: "Make the video again (free)" }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Make the video again?" });
+    // The price first, then what it does.
     expect(
       within(dialog).getByText(
-        "Rebuilds local exports from saved media without regenerating narration or images; previous outputs stay in History. No charge: it runs on this computer.",
+        "No charge: it runs on this computer. Makes the video file again from the narration and images you already have; nothing is drawn or recorded again.",
       ),
     ).not.toBeNull();
     expect(rerun).not.toHaveBeenCalled();
-    await userEvent.click(within(dialog).getByRole("button", { name: "Render the video again" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Make the video again" }));
     await waitFor(() => {
       expect(rerun).toHaveBeenCalledTimes(1);
     });

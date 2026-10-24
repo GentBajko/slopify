@@ -124,7 +124,7 @@ describe("clicks from the landing screen to done", () => {
     expect(you.clicks()).toBe(4);
   });
 
-  it("regenerates an image: open Images, press Regenerate on the image, confirm", async () => {
+  it("makes an image again: open Images, press Make this image again on it, confirm", async () => {
     const regenerated = vi.fn();
     renderRouted(
       <ProjectRoute projectId="p1" />,
@@ -139,10 +139,13 @@ describe("clicks from the landing screen to done", () => {
 
     const rail = await screen.findByRole("navigation", { name: "Project sections" });
     await you.click(within(rail).getByRole("link", { name: /^Images/ }));
-    await you.click(await screen.findByRole("button", { name: "Regenerate image 1" }));
-    // Regenerating spends money on a paid model, so the one confirmation stays.
+    // At rest on the tile, in words: no hover, no menu.
+    await you.click(
+      await screen.findByRole("button", { name: "Make this image again for image 1" }),
+    );
+    // Making it again spends money on a paid model, so the one confirmation stays.
     const dialog = await screen.findByRole("dialog");
-    await you.click(within(dialog).getByRole("button", { name: "Regenerate the image" }));
+    await you.click(within(dialog).getByRole("button", { name: "Make it again" }));
     await waitFor(() => expect(regenerated).toHaveBeenCalledOnce());
 
     expect(you.clicks()).toBeLessThanOrEqual(clickBudget.regenerateImage);

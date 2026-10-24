@@ -459,7 +459,7 @@ describe("project pause and provider changes", () => {
         }),
       }),
     );
-    await screen.findByText("Original voice");
+    await screen.findByText(/Voice Original voice/);
     const audio = within(document.querySelector('[data-tour="project-audio"]') as HTMLElement);
     expect(audio.queryByText("New voice")).toBeNull();
   });
@@ -491,7 +491,9 @@ describe("audio-only final export", () => {
     const section = screen.getByRole("region", { name: "Audio export" });
     expect(within(section).getByLabelText("Combined narration").tagName).toBe("AUDIO");
     expect(screen.queryByRole("menuitem", { name: "Video (.mp4)" })).toBeNull();
-    // In plain sight in the section's head, named for what it makes.
-    expect(within(section).getByRole("button", { name: "Export the audio again" })).not.toBeNull();
+    // In plain sight in the section's head, named for what it makes and what it costs.
+    expect(
+      within(section).getByRole("button", { name: "Make the audio file again (free)" }),
+    ).not.toBeNull();
   });
 });
