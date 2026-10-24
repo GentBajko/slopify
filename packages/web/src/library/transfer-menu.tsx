@@ -1,4 +1,4 @@
-import { ArrowDownUpIcon, DownloadIcon, UploadIcon } from "lucide-react";
+import { ArrowRightLeftIcon, DownloadIcon, UploadIcon } from "lucide-react";
 import { type ReactElement, useRef } from "react";
 import { Button } from "@/components/kit/button";
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/components/kit/menu";
@@ -9,8 +9,9 @@ export interface TransferExport {
   readonly disabled?: boolean;
 }
 
-// Import or export: an occasional pair, so one quiet button in the tab's toolbar opens both
-// rather than two more buttons beside New. Export selected sits in the selection bar instead.
+// Import or export: an occasional pair, so one quiet button beside New opens both rather than
+// two more buttons. Its own icon, so it never reads as the Sort menu. Export selected sits in
+// the selection bar instead.
 export function TransferMenu({
   what,
   exports,
@@ -31,7 +32,7 @@ export function TransferMenu({
       <Menu>
         <MenuTrigger asChild>
           <Button variant="quiet" disabled={disabled} disabledReason="Still loading">
-            <ArrowDownUpIcon aria-hidden="true" className="size-[14px]" />
+            <ArrowRightLeftIcon aria-hidden="true" className="size-[14px]" />
             Import or export
           </Button>
         </MenuTrigger>

@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { useId, useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { DetectedSlots, offsetOf } from "./detected-slots";
-import { bodyLines, caretPosition, SlotBody } from "./slot-body";
+import { bodyLines, SlotBody } from "./slot-body";
 
 afterEach(cleanup);
 
@@ -29,21 +29,26 @@ function Editor({ start }: { readonly start: string }) {
 }
 
 describe("prompt body", () => {
-  it("numbers each line and keeps the marks at their offsets", () => {
+  it("cuts the text at each line break and keeps the marks at their offsets", () => {
     const lines = bodyLines("One {{Topic}}\n\nThree {{ open");
-    expect(lines.map((line) => line.number)).toEqual([1, 2, 3]);
+    expect(lines).toHaveLength(3);
     expect(lines[1]?.pieces).toEqual([]);
     expect(lines[2]?.pieces.find((piece) => piece.marked)?.start).toBe(21);
-    expect(caretPosition("ab\ncd", 4)).toBe("Line 2, column 2");
   });
 
-  it("counts against the 100,000 characters and says where the caret is", () => {
-    render(<Editor start={"Hello\nworld"} />);
-    expect(screen.getByText("11 of 100,000 characters")).not.toBeNull();
+  it("sets the text as prose with spell check, and counts the characters only near the limit", () => {
+    const { container } = render(<Editor start={"Hello\nworld"} />);
     const box = screen.getByRole("textbox") as HTMLTextAreaElement;
-    box.setSelectionRange(8, 8);
-    fireEvent.select(box);
-    expect(screen.getByText("Line 2, column 3")).not.toBeNull();
+    expect(box.getAttribute("spellcheck")).toBe("true");
+    expect(box.className).toContain("font-sans");
+    expect(box.className).not.toContain("font-mono");
+    // No line numbers beside the text, and no count while far from the limit.
+    expect(container.querySelector("[data-slot=lint-overlay]")?.textContent).toBe("Helloworld");
+    expect(screen.queryByText(/of 100,000 characters/u)).toBeNull();
+    cleanup();
+
+    render(<Editor start={"a".repeat(95_000)} />);
+    expect(screen.getByText("95,000 of 100,000 characters")).not.toBeNull();
   });
 
   it("jumps from a lint sentence to the marked brace", async () => {

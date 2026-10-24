@@ -871,6 +871,24 @@
       grid-template-columns: minmax(0, 1fr);
     }
   }
+  /* Prompts: every kind down the left with its count, beside the list of the one picked. A
+     kind's whole name shows ("Narration preparation"): it wraps in the rail instead of being
+     cut. Phones keep the one sideways row. */
+  .sl-workspace.sl-workspace--prompts {
+    grid-template-columns: 196px minmax(0, 1fr);
+  }
+  @media (min-width: 768px) {
+    .sl-workspace--prompts .sl-workspace__sections .sl-rail__item {
+      height: auto;
+      min-height: 34px;
+      padding-block: 6px;
+    }
+  }
+  @media (max-width: 767px) {
+    .sl-workspace.sl-workspace--prompts {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
   /* Help → Tutorials: the wiki's groups beside the page, scrolling on their own so the list
      stays in reach however long the page is. */
   .sl-workspace.sl-workspace--tutorials {
@@ -1223,6 +1241,17 @@
 @layer utilities {
   @media (min-width: 768px) {
     .sl-workspace--studio .sl-workspace__sections .sl-rail__item > .truncate {
+      white-space: normal;
+      overflow: visible;
+      text-overflow: clip;
+    }
+  }
+}
+
+/* The Prompts rail's kind names wrap (above), as the studio's do. */
+@layer utilities {
+  @media (min-width: 768px) {
+    .sl-workspace--prompts .sl-workspace__sections .sl-rail__item > .truncate {
       white-space: normal;
       overflow: visible;
       text-overflow: clip;

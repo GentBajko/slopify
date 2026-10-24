@@ -11,16 +11,15 @@ import { Input } from "@/components/kit/field";
 import { ListDetail } from "@/components/kit/layout";
 import { ButtonLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
-import { Segmented } from "@/components/kit/switch";
 import { RowCheck, useSelection } from "@/components/selection";
-import { categoryLabel, categoryOptions, modeLabel } from "@/lib/entry-options";
+import { categoryAbout, categoryLabel, modeLabel } from "@/lib/entry-options";
 import { plural } from "@/lib/format";
 import { LibraryBulkBar, SelectionArea } from "@/library/bulk-bar";
 import { HistoryDrawer } from "@/library/history-drawer";
-import { InlineName, refusedName } from "@/library/inline-name";
 import { LibraryItemDetail } from "@/library/item-detail";
 import { ListSkeleton, LoadError, libraryListDetail, libraryRow } from "@/library/list-states";
 import { useLibraryItem } from "@/library/list-url";
+import { PromptRowMeta, PromptsFrame, PromptsListHead } from "@/library/prompts-frame";
 import { LibraryRowActions } from "@/library/row-actions";
 import { sortLibrary, useLibrarySort } from "@/library/sort";
 import { SortMenu } from "@/library/sort-menu";
@@ -29,28 +28,27 @@ import { TransferMenu } from "@/library/transfer-menu";
 import { refusalOf, useLibraryBulk } from "@/library/use-library-bulk";
 import { useLibraryTransfer } from "@/library/use-library-transfer";
 import { entriesQuery, keys } from "@/queries";
-import { LibraryToolbar } from "@/routes/library";
 
-// Every saved entry of one category, by name or last change, beside the selected one's text,
-// what uses it and its latest change; the selected row is `?item=` in the URL. The category lives in the URL, so switching
-// it is handed up to router.tsx rather than reaching for a router here - the same division
+// Prompts → Intros or Outros: the saved intros (or outros), by name or last change, beside the
+// selected one's words. They sit in the Prompts page's list of kinds; a search looks through
+// intros and outros both. The category and the selected row live in the URL, the same division
 // Prompts makes.
 export function EntriesRoute({
   category,
-  onCategory,
-  onUseInPlay,
-  playBlocked,
+  onMakeVideo,
+  makeBlocked,
 }: {
   readonly category: EntryCategory;
-  readonly onCategory: (next: EntryCategory) => void;
-  // Opens Play with the entry picked (router.tsx wires the Play draft in).
-  readonly onUseInPlay?: ((entry: Entry) => void) | undefined;
-  readonly playBlocked?: string | undefined;
+  // Opens Create with the intro or outro picked (router.tsx wires the Create draft in).
+  readonly onMakeVideo?: ((entry: Entry) => void) | undefined;
+  readonly makeBlocked?: string | undefined;
 }) {
   const { api } = useApp();
   const queryClient = useQueryClient();
   const entries = useQuery(entriesQuery(api));
-  const [query, setQuery] = useState("");
+  // The words typed belong to the list they were typed on: picking another clears them.
+  const [typed, setTyped] = useState({ category, text: "" });
+  const query = typed.category === category ? typed.text : "";
   const search = useRef<HTMLInputElement>(null);
   const searchKeys = useSearchShortcut(search, "intros and outros");
   const [selectedId, setSelectedId] = useLibraryItem();
@@ -66,32 +64,22 @@ export function EntriesRoute({
     },
   });
 
-  // A rename from the list: the same save as the editor's, with the text as it is.
-  const rename = async (entry: Entry, name: string): Promise<string | null> => {
-    const reply = await saveEntry(
-      api,
-      { category: entry.category, mode: entry.mode, name, body: entry.body },
-      entry.id,
-    );
-    await queryClient.invalidateQueries({ queryKey: keys.entries });
-    return reply.ok ? null : refusedName(reply.fields);
-  };
-
+  const all = entries.data?.entries ?? [];
   const ofCategory = entries.data?.entries.filter((entry) => entry.category === category);
   const needle = query.trim().toLowerCase();
-  const matching =
-    needle === ""
-      ? ofCategory
-      : ofCategory?.filter(
-          (entry) =>
-            entry.name.toLowerCase().includes(needle) || entry.body.toLowerCase().includes(needle),
-        );
+  const searching = needle !== "";
+  // A search looks through intros and outros both, by name and by words.
+  const matching = searching
+    ? entries.data?.entries.filter(
+        (entry) =>
+          entry.name.toLowerCase().includes(needle) || entry.body.toLowerCase().includes(needle),
+      )
+    : ofCategory;
   const listed = matching === undefined ? undefined : sortLibrary(matching, sort);
   const selected = listed?.find((entry) => entry.id === selectedId) ?? listed?.[0];
-  const all = entries.data?.entries ?? [];
   const selection = useSelection(listed?.map((entry) => entry.id) ?? []);
   const chosen = listed?.filter((entry) => selection.has(entry.id)) ?? [];
-  const noun = [category, `${category}s`] as const;
+  const noun = searching ? (["intro or outro", "intros and outros"] as const) : nounOf(category);
   const bulk = useLibraryBulk({
     noun,
     listKey: keys.entries,
@@ -122,50 +110,54 @@ export function EntriesRoute({
     nameMax,
     save: (entry) => saveEntry(api, entry, undefined),
   });
+  const empty = ofCategory !== undefined && ofCategory.length === 0 && !searching;
 
   return (
-    <div>
-      <LibraryToolbar
-        action={
+    <PromptsFrame
+      shown={searching ? null : { category }}
+      actions={
+        <>
+          <TransferMenu
+            what="intros and outros"
+            disabled={entries.data === undefined || transfer.importing}
+            exports={[
+              {
+                label: `Export all ${plural(all.length, "intro or outro", "intros and outros")}`,
+                run: () => transfer.exportItems(all),
+                disabled: all.length === 0,
+              },
+            ]}
+            accept=".json,application/json"
+            onFile={transfer.importFile}
+          />
+          {/* An empty list offers its first one in its own empty state instead. */}
+          {empty ? null : <NewEntryButton category={category} />}
+        </>
+      }
+    >
+      <PromptsListHead
+        title={
+          searching
+            ? `${plural(listed?.length ?? 0, "intro or outro", "intros and outros")} match “${query.trim()}”`
+            : `${categoryLabel(category)}s`
+        }
+        about={searching ? "Found in intros and outros." : categoryAbout(category)}
+        tools={
           <>
-            <TransferMenu
-              what="intros and outros"
-              disabled={entries.data === undefined || transfer.importing}
-              exports={[
-                {
-                  label: `Export all ${String(all.length)} intros and outros`,
-                  run: () => transfer.exportItems(all),
-                  disabled: all.length === 0,
-                },
-              ]}
-              accept=".json,application/json"
-              onFile={transfer.importFile}
+            <Input
+              type="search"
+              ref={search}
+              aria-label="Search intros and outros"
+              aria-keyshortcuts={ariaKeyShortcuts(searchKeys)}
+              placeholder="Search intros and outros"
+              value={query}
+              className="w-full min-w-0 sm:w-56"
+              onChange={(event) => setTyped({ category, text: event.target.value })}
             />
-            <ButtonLink to="/entries/new" search={{ category }} variant="primary">
-              New intro or outro
-            </ButtonLink>
+            <SortMenu what="intros and outros" sort={sort} onSort={setSort} />
           </>
         }
-      >
-        <Input
-          type="search"
-          ref={search}
-          aria-label="Search intros and outros"
-          aria-keyshortcuts={ariaKeyShortcuts(searchKeys)}
-          placeholder="Search intros and outros"
-          value={query}
-          className="w-full min-w-0 sm:w-64"
-          onChange={(event) => setQuery(event.target.value)}
-        />
-        <Segmented
-          label="Entry category"
-          value={category}
-          options={categoryOptions.map((option) => ({ ...option, label: `${option.label}s` }))}
-          onChange={onCategory}
-          tip="library.entry.category"
-        />
-        <SortMenu what="intros and outros" sort={sort} onSort={setSort} />
-      </LibraryToolbar>
+      />
 
       {entries.error === null ? null : (
         <LoadError
@@ -175,44 +167,47 @@ export function EntriesRoute({
         />
       )}
 
-      {listed === undefined || ofCategory === undefined ? (
+      {listed === undefined ? (
         entries.error === null ? (
           <ListSkeleton label="Intros and outros" />
         ) : null
-      ) : ofCategory.length === 0 ? (
-        <EmptyCategory category={category} />
+      ) : empty ? (
+        <EmptyState title={`No ${category}s yet`} actions={<NewEntryButton category={category} />}>
+          {categoryAbout(category)}
+        </EmptyState>
       ) : (
         <ListDetail
           className={libraryListDetail}
           list={
             listed.length === 0 ? (
-              <p className="m-0 py-3 text-small text-ink-2">{`No ${category}s match "${query.trim()}".`}</p>
+              <p className="m-0 py-3 text-small text-ink-2">{`No intro or outro has “${query.trim()}” in its name or words.`}</p>
             ) : (
               <SelectionArea selection={selection}>
                 <LibraryBulkBar
                   selection={selection}
                   total={listed.length}
                   noun={noun}
-                  scope={needle === "" ? undefined : `Select all ${String(listed.length)} shown`}
+                  scope={searching ? `Select all ${String(listed.length)} shown` : undefined}
                   busy={bulk.busy}
                   onDuplicate={() => bulk.duplicate(chosen)}
                   onExport={() => transfer.exportItems(chosen)}
                   onDelete={() => bulk.remove(chosen)}
                 />
-                <List label={`${categoryLabel(category)}s`}>
+                <List label={searching ? "Intros and outros" : `${categoryLabel(category)}s`}>
                   {listed.map((entry) => (
                     <ListRow
                       key={entry.id}
                       className={libraryRow}
                       lead={<RowCheck selection={selection} value={entry.id} label={entry.name} />}
-                      title={
-                        <InlineName
-                          name={entry.name}
-                          onSelect={() => setSelectedId(entry.id)}
-                          onRename={(name) => rename(entry, name)}
+                      title={entry.name}
+                      onSelect={() => setSelectedId(entry.id)}
+                      meta={
+                        <PromptRowMeta
+                          kind={searching ? categoryLabel(entry.category) : undefined}
+                          body={entry.body}
+                          slots={entry.slots}
                         />
                       }
-                      meta={entryMeta(entry)}
                       selected={entry.id === selected?.id}
                       actions={
                         <LibraryRowActions
@@ -242,8 +237,8 @@ export function EntriesRoute({
                             </ButtonLink>
                           }
                           play={{
-                            run: onUseInPlay === undefined ? undefined : () => onUseInPlay(entry),
-                            blocked: playBlocked,
+                            run: onMakeVideo === undefined ? undefined : () => onMakeVideo(entry),
+                            blocked: makeBlocked,
                           }}
                           onHistory={() => setHistory(entry)}
                           onDelete={() => setDeleting(entry)}
@@ -272,7 +267,7 @@ export function EntriesRoute({
                 slots={selected.slots}
                 actions={
                   <ButtonLink to="/entries/$entryId" params={{ entryId: selected.id }} size="small">
-                    {`Edit ${selected.category}`}
+                    Edit
                   </ButtonLink>
                 }
                 onOpenHistory={() => setHistory(selected)}
@@ -283,7 +278,7 @@ export function EntriesRoute({
       )}
 
       {remove.error === null ? null : (
-        <Callout tone="danger" title={`The ${category} wasn't deleted.`} className="mt-4">
+        <Callout tone="danger" title={`The ${deleting?.category ?? category} wasn't deleted.`}>
           {remove.error.message}
         </Callout>
       )}
@@ -311,27 +306,18 @@ export function EntriesRoute({
         }}
         onCancel={() => setDeleting(undefined)}
       />
-    </div>
+    </PromptsFrame>
   );
 }
 
-// Mode first: it says what the row does with its body (narrated as written, or an
-// instruction whose answer is narrated).
-function entryMeta(entry: Entry): ReactElement {
-  return (
-    <>
-      {`${modeLabel(entry.mode)} · ${plural(entry.slots.length, "keyword")} · updated `}
-      <Stamp iso={entry.updatedAt} />
-    </>
-  );
+function nounOf(category: EntryCategory): readonly [string, string] {
+  return [category, `${category}s`];
 }
 
-// An empty category teaches what the thing is and where it lands in the run.
-function EmptyCategory({ category }: { readonly category: EntryCategory }) {
-  const where = category === "intro" ? "before" : "after";
+function NewEntryButton({ category }: { readonly category: EntryCategory }): ReactElement {
   return (
-    <EmptyState title={`No ${category}s yet`}>
-      {`An ${category} is narrated ${where} the body in the run's voice.`}
-    </EmptyState>
+    <ButtonLink to="/entries/new" search={{ category }} variant="primary">
+      {`New ${category}`}
+    </ButtonLink>
   );
 }

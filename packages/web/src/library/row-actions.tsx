@@ -4,10 +4,11 @@ import { Button, IconButton } from "@/components/kit/button";
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/components/kit/menu";
 import { cn } from "@/lib/utils";
 
-// The actions of one Library row, in the same order on every Library tab. What a row is for
-// stays on it: Edit (a link to the editor) and Use in Play. The occasional ones (Duplicate,
-// History, Delete) sit behind one More button, so a long list doesn't repeat five controls on
-// every line. A tab leaves out what its rows can't do (a document theme has no Play or History).
+// The actions of one list row, in the same order on every list. What a row is for stays on it:
+// Edit (a link to the editor) and Make a video (opens Create with it picked). The occasional
+// ones (Duplicate, History, Delete) sit behind one More button, so a long list doesn't repeat
+// five controls on every line. A list leaves out what its rows can't do (a PDF theme makes no
+// video and keeps no history).
 export function LibraryRowActions({
   name,
   edit,
@@ -21,7 +22,7 @@ export function LibraryRowActions({
   // The Edit and Duplicate links: a small quiet `Button asChild` around a router `Link`.
   readonly edit: ReactNode;
   readonly duplicate: ReactNode;
-  // Use in Play: `run` is undefined while the screen has no Play to hand to, and `blocked`
+  // Make a video: `run` is undefined while the screen has no Create to hand to, and `blocked`
   // says why it is unavailable right now (shown as the button's title).
   readonly play?:
     | { readonly run: (() => void) | undefined; readonly blocked?: string | undefined }
@@ -42,12 +43,12 @@ export function LibraryRowActions({
         <Button
           variant="quiet"
           size="small"
-          aria-label={`Use ${name} in Play`}
-          title={play.blocked}
+          aria-label={`Make a video with ${name}`}
+          disabledReason={play.blocked}
           disabled={play.run === undefined || play.blocked !== undefined}
           onClick={play.run}
         >
-          Use in Play
+          Make a video
         </Button>
       )}
       <Menu>

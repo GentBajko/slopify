@@ -169,8 +169,9 @@ const playRoute = createRoute({
   component: PlayRoute,
 });
 
-// Prompts, Intros & Outros, Templates and Documents are one destination. The layout is
-// pathless, so each keeps its own URL and every existing link still lands.
+// Prompts (with intros and outros), Templates, Designs, PDF themes, pronunciation aliases and
+// A/B results share one pathless layout for their Ctrl+K commands; each keeps its own URL and
+// header, so every existing link still lands.
 const libraryRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "_library",
@@ -636,24 +637,14 @@ function ProjectPage() {
 
 function PromptsPage() {
   const { kind } = promptsRoute.useSearch();
-  const navigate = useNavigate();
-  const play = useUseInPlay();
-  return (
-    <PromptsRoute
-      kind={kind}
-      onKind={(next) => {
-        void navigate({ to: "/prompts", search: { kind: next }, replace: true });
-      }}
-      onUseInPlay={play.use}
-      playBlocked={play.blocked}
-    />
-  );
+  const make = useMakeVideo();
+  return <PromptsRoute kind={kind} onMakeVideo={make.use} makeBlocked={make.blocked} />;
 }
 
-// Library → Use in Play: picks the prompt or intro/outro in the open Play draft and opens Play
-// on the field that shows it. While a run is being started from the draft, the draft is not
-// the user's to change, the same rule Templates' Use follows.
-function useUseInPlay(): {
+// Prompts → Make a video: picks the prompt or intro/outro in the open Create draft and opens
+// Create on the field that shows it. While a video is being started from the draft, the draft is
+// not the user's to change, the same rule a template's Make a video follows.
+function useMakeVideo(): {
   readonly use: (item: Prompt | Entry) => void;
   readonly blocked: string | undefined;
 } {
@@ -661,7 +652,7 @@ function useUseInPlay(): {
   const navigate = useNavigate();
   const blocked =
     session.review.starting || session.review.uncertain || session.review.created !== null
-      ? "Play is starting a run from its draft. Wait for it to start, then try again."
+      ? "Create is starting a video from its draft. Wait for it to start, then try again."
       : undefined;
   return {
     blocked,
@@ -676,6 +667,7 @@ function useUseInPlay(): {
 function NewPromptPage() {
   const { kind, from } = newPromptRoute.useSearch();
   const leave = useLeave();
+  const make = useMakeVideo();
   return (
     <PromptEditorRoute
       key={`${kind}:${from ?? "new"}`}
@@ -683,6 +675,7 @@ function NewPromptPage() {
       kind={kind}
       from={from}
       onLeave={leave}
+      onMakeVideo={make.blocked === undefined ? make.use : undefined}
     />
   );
 }
@@ -690,15 +683,17 @@ function NewPromptPage() {
 function PromptPage() {
   const { promptId } = promptRoute.useParams();
   const leave = useLeave();
+  const make = useMakeVideo();
   return (
     <PromptEditorRoute
       key={promptId}
       promptId={promptId}
-      // The row the editor loads carries the kind; the tab is only a default for a prompt
-      // that does not exist yet.
+      // The row the editor loads carries the kind; the list's kind is only a default for a
+      // prompt that does not exist yet.
       kind="article"
       from={undefined}
       onLeave={leave}
+      onMakeVideo={make.blocked === undefined ? make.use : undefined}
     />
   );
 }
@@ -713,18 +708,8 @@ function useLeave(): (kind: PromptKind) => void {
 
 function EntriesPage() {
   const { category } = entriesRoute.useSearch();
-  const navigate = useNavigate();
-  const play = useUseInPlay();
-  return (
-    <EntriesRoute
-      category={category}
-      onCategory={(next) => {
-        void navigate({ to: "/entries", search: { category: next }, replace: true });
-      }}
-      onUseInPlay={play.use}
-      playBlocked={play.blocked}
-    />
-  );
+  const make = useMakeVideo();
+  return <EntriesRoute category={category} onMakeVideo={make.use} makeBlocked={make.blocked} />;
 }
 
 function NewEntryPage() {

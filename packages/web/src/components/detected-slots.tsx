@@ -1,17 +1,19 @@
 import type { KeywordPlace } from "@app/slices/keywords/model.js";
+import { keywordOf } from "@app/slices/keywords/specs.js";
 import type { FieldError } from "@/api";
+import { keywordLabel } from "@/components/keyword-insert-bar";
 import { Button } from "@/components/kit/button";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { OldKeywordNames } from "@/components/old-keyword-names";
 import { SlotChip } from "@/components/slot-chip";
 import { keywordSlots } from "@/lib/draft-lint";
 
-// The editor's right-hand panel: every `{{name}}` the body holds (the person's own fields apart
-// from the keywords Slopify fills), Update to new names for an old keyword name, and beneath
-// them the warnings Save lets through and the lint the shared rule found. The lint is text, not
-// a colour: the red mark in the body is the same problem said twice, and `lintId` is what the
-// textarea points its `aria-describedby` at.
+// The editor's right-hand panel: what the text asks you for each time (every `{{keyword}}` of
+// your own, which becomes a question on Create), apart from the keywords Slopify fills, Update
+// to new names for an old keyword name, and beneath them the warnings Save lets through and the
+// errors the shared rule found. The errors are text, not a colour: the red mark in the text is
+// the same problem said twice, and `lintId` is what the textarea points its `aria-describedby`
+// at.
 export function DetectedSlots({
   slots,
   body,
@@ -21,19 +23,18 @@ export function DetectedSlots({
   place,
   bodyId,
   onChange,
-  // What a body with no slots does instead. A prompt runs as written; an intro is
-  // narrated or instructs, so 09 hands its own sentence in rather than calling a
-  // narrated opener a prompt.
-  noSlots = "No slots. This prompt runs as written.",
+  // What a text with no keywords does instead. A prompt runs as written; an intro is narrated
+  // or instructs, so its editor hands its own sentence in.
+  noSlots = "It asks you for nothing: it runs as written.",
 }: {
   readonly slots: readonly string[];
   readonly body: string;
   readonly lint: readonly FieldError[];
   readonly lintId: string;
   readonly noSlots?: string;
-  // What Save lets through but Play refuses: a keyword where it can't be filled.
+  // What Save lets through but Create refuses: a keyword where it can't be filled.
   readonly warnings?: readonly FieldError[];
-  // Where the body runs and how to change it, for Update to new names.
+  // Where the text runs and how to change it, for Update to new names.
   readonly place?: KeywordPlace;
   // The textarea a Go to button puts the caret in.
   readonly bodyId?: string;
@@ -43,39 +44,48 @@ export function DetectedSlots({
   const go = (at: number) => showInBody(lintId, at, bodyId);
   return (
     <>
-      <SectionHead title="Detected slots" info="library.slots" size="small" className="pb-0" />
+      <SectionHead title="Asks you for" size="small" className="pb-0" />
 
       {own.length > 0 ? (
-        <ul aria-label="Your keywords" className="m-0 flex list-none flex-wrap gap-2 p-0">
-          {own.map((slot) => (
-            <li key={slot} className="flex">
-              <SlotChip name={slot} className="px-2 py-1" />
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul aria-label="Your keywords" className="m-0 flex list-none flex-wrap gap-2 p-0">
+            {own.map((slot) => (
+              <li key={slot} className="flex">
+                <SlotChip name={slot} className="px-2 py-1 text-ink" />
+              </li>
+            ))}
+          </ul>
+          <p className="m-0 text-small text-ink-2">
+            Each keyword becomes a question on Create, answered each time you make a video.
+          </p>
+        </>
       ) : body.trim() === "" ? (
-        <p className="m-0 text-small text-ink-3">{"Slots appear here as you type {{name}}."}</p>
+        <p className="m-0 text-small text-ink-2">
+          {
+            "Type {{Topic}} where the video's subject goes. Each keyword becomes a question on Create."
+          }
+        </p>
       ) : filled.length > 0 ? (
         <p className="m-0 text-small text-ink-2">
-          No fields to fill: Slopify fills every keyword here.
+          It asks you for nothing: Slopify fills every keyword here.
         </p>
       ) : (
         <p className="m-0 text-small text-ink-2">{noSlots}</p>
       )}
 
       {filled.length === 0 ? null : (
-        <div className="flex flex-col gap-2" {...helpScope}>
-          <span className="flex items-center gap-1">
-            <span className="sl-kicker">Keywords Slopify fills</span>
-            <InfoTip id="library.slots.filled" label="Keywords Slopify fills" className="-my-1" />
-          </span>
+        <div className="flex flex-col gap-2">
+          <span className="sl-kicker">Slopify fills in</span>
           <ul
             aria-label="Keywords Slopify fills"
             className="m-0 flex list-none flex-wrap gap-2 p-0"
           >
             {filled.map((slot) => (
               <li key={slot} className="flex">
-                <SlotChip name={slot} className="px-2 py-1 text-accent-ink" />
+                <SlotChip
+                  name={keywordLabel(keywordOf(slot)?.name ?? slot)}
+                  className="px-2 py-1 font-sans text-accent-ink"
+                />
               </li>
             ))}
           </ul>
@@ -102,7 +112,7 @@ export function DetectedSlots({
       {lint.length === 0 ? null : (
         <div id={lintId} className="flex flex-col gap-2 border-t border-line pt-3">
           <span className="sl-kicker text-danger">
-            {lint.length === 1 ? "1 slot error" : `${String(lint.length)} slot errors`}
+            {lint.length === 1 ? "1 keyword error" : `${String(lint.length)} keyword errors`}
           </span>
           {lint.map((problem) => (
             <Problem

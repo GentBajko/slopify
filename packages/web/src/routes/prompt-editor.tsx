@@ -1,10 +1,11 @@
-import type { PromptDraft, PromptKind } from "@app/slices/library/model.js";
+import type { Prompt, PromptDraft, PromptKind } from "@app/slices/library/model.js";
 import { defaultShortsPrompt } from "@app/slices/shorts/model.js";
 import { defaultPostPrompt } from "@app/slices/social/post-prompt.js";
 import { defaultDescriptionPrompt } from "@app/slices/youtube/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useId, useState } from "react";
+import { ChevronDownIcon } from "lucide-react";
+import { useId, useRef, useState } from "react";
 import type { FieldError } from "@/api";
 import { removePrompt, savePrompt, setPromptPhotorealistic } from "@/api";
 import { useApp } from "@/app-context";
@@ -14,10 +15,11 @@ import { EditorSkeleton } from "@/components/editor-states";
 import { KeywordInsertBar } from "@/components/keyword-insert-bar";
 import { Button } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
-import { Field, Input } from "@/components/kit/field";
+import { Field, HelpLine, Input } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
 import { ButtonLink } from "@/components/kit/link";
+import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/kit/menu";
 import { Switch } from "@/components/kit/switch";
 import { LabelledSwitch } from "@/components/labelled-switch";
 import { useLeaveWhenSaved } from "@/components/saved-tick";
@@ -33,25 +35,44 @@ import {
 } from "@/lib/draft-lint";
 import { usePromptDraft } from "@/lib/form-drafts";
 import { narrationStarter } from "@/lib/narration-starter";
-import { kindLabel, kindOptions } from "@/lib/prompt-kinds";
+import {
+  kindAbout,
+  kindLabel,
+  kindNoun,
+  kindOptions,
+  kindPlaceholder,
+  kindSentence,
+} from "@/lib/prompt-kinds";
 import { EditorCrumb, EditorProblem, editorAside, editorSurface } from "@/library/editor-frame";
 import { promptsQuery } from "@/queries";
 import { useTutorialEvent, useTutorialProgress } from "@/tutorial/context";
 
-// One prompt: a name, a kind and a body whose `{{slots}}` are shown as they are typed. Every
-// rule the Save obeys is the shared lint of `@/lib/draft-lint`, so the editor refuses exactly
-// what the server would and says the same sentence about it.
+// A text the body can start from: a saved prompt of the same kind, or the built-in wording.
+interface Example {
+  readonly key: string;
+  readonly name: string;
+  readonly body: string;
+}
+
+// One prompt: a name, its kind on one line (changed on request), and its instructions, whose
+// `{{keywords}}` are listed beside them as they are typed. Every rule the Save obeys is the
+// shared lint of `@/lib/draft-lint`, so the editor refuses exactly what the server would and
+// says the same sentence about it; a missing name or text is said once the person left the name
+// empty or pressed Save, not on arrival.
 export function PromptEditorRoute({
   promptId,
   kind,
   from,
   onLeave,
+  onMakeVideo,
 }: {
   readonly promptId: string | undefined;
   readonly kind: PromptKind;
   // The prompt this one is a copy of, when Duplicate opened the editor.
   readonly from: string | undefined;
   readonly onLeave: (kind: PromptKind) => void;
+  // Opens Create with the saved prompt picked: Save and make a video.
+  readonly onMakeVideo?: ((prompt: Prompt) => void) | undefined;
 }) {
   const { api } = useApp();
   const queryClient = useQueryClient();
@@ -60,16 +81,24 @@ export function PromptEditorRoute({
   const bodyId = useId();
   const lintId = useId();
   const hintId = useId();
+  const nameBox = useRef<HTMLInputElement>(null);
 
   const draftKey = JSON.stringify(
     promptId === undefined ? ["new", kind, from ?? null] : ["prompt", promptId],
   );
   const [edited, setEdited] = usePromptDraft(draftKey);
   const [refused, setRefused] = useState<readonly FieldError[]>([]);
-  const [savedDraft, setSavedDraft] = useState<PromptDraft | undefined>(undefined);
-  const saved = savedDraft !== undefined;
+  const [savedPrompt, setSavedPrompt] = useState<Prompt | undefined>(undefined);
+  const saved = savedPrompt !== undefined;
+  // Where a successful save goes: back to the list, or on to Create with the prompt picked.
+  const [then, setThen] = useState<"leave" | "make">("leave");
   const [deleting, setDeleting] = useState(false);
-  const [replacingBody, setReplacingBody] = useState(false);
+  const [replacing, setReplacing] = useState<Example | undefined>(undefined);
+  const [kindOpen, setKindOpen] = useState(false);
+  // A missing name or text is said only once it matters: after the name was left empty, or
+  // after a press of Save.
+  const [nameLeft, setNameLeft] = useState(false);
+  const [tried, setTried] = useState(false);
 
   const rows = prompts.data?.prompts;
   const wanted = promptId ?? from;
@@ -80,7 +109,7 @@ export function PromptEditorRoute({
       : promptId === undefined
         ? { kind: found.kind, name: `${found.name} copy`, body: found.body }
         : { kind: found.kind, name: found.name, body: found.body };
-  const draft = edited ?? savedDraft ?? base;
+  const draft = edited ?? savedPrompt ?? base;
 
   const save = useMutation({
     mutationFn: (next: PromptDraft) => savePrompt(api, next, promptId),
@@ -89,7 +118,7 @@ export function PromptEditorRoute({
         setRefused(result.fields);
         return;
       }
-      setSavedDraft(result.value);
+      setSavedPrompt(result.value);
       // A successful save clears its reusable draft without discarding edits made
       // after the request began. Keep the saved snapshot visible during its tick.
       setEdited((current) => (current === submitted ? undefined : current));
@@ -108,8 +137,8 @@ export function PromptEditorRoute({
     },
   });
 
-  // Applies at once, apart from Save: whether Prepare upload counts this Image prompt's
-  // pictures as realistic-looking (YouTube's third AI use case).
+  // Applies at once, apart from Save: whether Copy for YouTube Studio counts this Image
+  // prompt's pictures as realistic-looking (YouTube's third AI use case).
   const photorealistic = useMutation({
     mutationFn: ({ id, on }: { id: string; on: boolean }) => setPromptPhotorealistic(api, id, on),
     onSettled: async () => {
@@ -118,7 +147,9 @@ export function PromptEditorRoute({
   });
 
   useLeaveWhenSaved(saved, () => {
-    onLeave(draft.kind);
+    if (then === "make" && savedPrompt !== undefined && onMakeVideo !== undefined)
+      onMakeVideo(savedPrompt);
+    else onLeave(draft.kind);
   });
 
   // A refusal names its field and stands until that field is edited, which is how a
@@ -128,27 +159,49 @@ export function PromptEditorRoute({
     setRefused((current) => current.filter((problem) => problem.field !== field));
   };
 
-  // The stored prompt's own slot names, which its save lets through, as the server does.
+  // The stored prompt's own keyword names, which its save lets through, as the server does.
   const grandfathered = promptId !== undefined && found !== undefined ? found.slots : [];
   const problems = draftProblems(draft, refused, grandfathered);
-  const blocked = firstProblem(problems);
+  const nameEmpty = draft.name.trim() === "";
+  const bodyEmpty = draft.body.trim() === "";
+  // What is said now: an empty name once it was left empty, an empty text once Save was
+  // pressed, and every other problem as soon as it is typed.
+  const said = problems.filter(
+    (problem) =>
+      tried ||
+      !(
+        (problem.field === "name" && nameEmpty && !nameLeft) ||
+        (problem.field === "body" && bodyEmpty)
+      ),
+  );
+  const blocked = firstProblem(said);
   const slots = slotNames(draft.body);
-  // An untouched body is not an error on the page: its "A body is required." is the sentence
-  // beside Save, not a red mark on a field nobody has typed in yet. ceiling: a body past
-  // `bodyMax` lands in this list too, under a heading that counts slot errors. It takes 100 000
-  // characters to see; the upgrade is a second list.
-  const lint = draft.body.trim() === "" ? [] : bodyProblems(problems);
-  const named = draft.name.trim() === "" ? [] : nameProblems(problems);
-  const warnings = draft.body.trim() === "" ? [] : draftWarnings(draft);
+  // An untouched text is not an error in the box: its "Enter the text." is the sentence beside
+  // Save, not a red mark on a field nobody has typed in yet.
+  const lint = bodyEmpty ? [] : bodyProblems(problems);
+  const named = nameProblems(said);
+  const warnings = bodyEmpty ? [] : draftWarnings(draft);
   useTutorialProgress({
-    promptNamed: draft.name.trim() !== "" && named.length === 0,
-    promptBodyReady: draft.body.trim() !== "" && lint.length === 0,
+    promptNamed: !nameEmpty && nameProblems(problems).length === 0,
+    promptBodyReady: !bodyEmpty && lint.length === 0,
     promptHasKeywords: slots.length > 0 && lint.length === 0,
-    promptSaveReady: blocked === undefined && !save.isPending && !saved,
+    promptSaveReady: firstProblem(problems) === undefined && !save.isPending && !saved,
     promptSaving: save.isPending || saved,
     promptIsArticle: draft.kind === "article",
     promptIsImage: draft.kind === "image",
   });
+
+  // Save, or say what stops it: the first problem goes beside Save and a missing name is
+  // marked on its field, which gets the cursor.
+  const attempt = (next: "leave" | "make"): void => {
+    if (problems.length > 0) {
+      setTried(true);
+      if (nameProblems(problems).length > 0) nameBox.current?.focus();
+      return;
+    }
+    setThen(next);
+    save.mutate(draft);
+  };
 
   if (prompts.error !== null) {
     return <Notice kind={draft.kind}>{prompts.error.message}</Notice>;
@@ -162,6 +215,18 @@ export function PromptEditorRoute({
     );
   }
 
+  const starter = starterOf(draft.kind);
+  const examples: readonly Example[] = [
+    ...(starter === undefined ? [] : [{ key: "starter", name: starter.label, body: starter.body }]),
+    ...(rows ?? [])
+      .filter((prompt) => prompt.kind === draft.kind && prompt.id !== promptId)
+      .map((prompt) => ({ key: prompt.id, name: prompt.name, body: prompt.body })),
+  ];
+  const pickExample = (example: Example): void => {
+    if (draft.body.trim() !== "" && draft.body !== example.body) setReplacing(example);
+    else edit({ ...draft, body: example.body }, "body");
+  };
+
   return (
     <div>
       <PageHeader
@@ -172,77 +237,98 @@ export function PromptEditorRoute({
             </Link>
           </EditorCrumb>
         }
-        title={promptId === undefined ? "New prompt" : "Edit prompt"}
-        meta={`${kindLabel(draft.kind)} prompt`}
+        title={`${promptId === undefined ? "New" : "Edit"} ${kindNoun(draft.kind)} prompt`}
       />
 
       <div
         data-tour="prompt-editor"
-        className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]"
+        className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]"
       >
         <div className={`${editorSurface} flex min-w-0 flex-col gap-4`}>
-          <div className="flex flex-wrap items-end gap-4">
+          <div className="flex max-w-[80ch] flex-wrap items-end gap-4">
             <div data-tour="prompt-name" className="min-w-[min(100%,240px)] flex-1">
               <Field
                 label="Name"
-                tip="library.prompt.name"
                 {...(named.length === 0
                   ? {}
                   : { error: named.map((problem) => problem.message).join(" ") })}
               >
                 <Input
+                  ref={nameBox}
                   value={draft.name}
+                  placeholder="History documentary"
                   onChange={(event) => {
                     edit({ ...draft, name: event.target.value }, "name");
+                  }}
+                  onBlur={() => {
+                    if (nameEmpty) setNameLeft(true);
                   }}
                 />
               </Field>
             </div>
-            {/* The kind may change after creation, and a name is only taken
-                within its own kind, so a collision under the old one is moot. */}
+            {kindOpen ? null : (
+              <div className="flex flex-col gap-1">
+                <span className="sl-field__label">Kind</span>
+                <span className="flex min-h-[38px] items-center gap-2 text-body text-ink">
+                  {`${kindLabel(draft.kind)} prompt`}
+                  <Button variant="quiet" size="small" onClick={() => setKindOpen(true)}>
+                    Change kind
+                  </Button>
+                </span>
+              </div>
+            )}
+          </div>
+          {/* The kind may change after creation, and a name is only taken within its own
+              kind, so a collision under the old one is moot. */}
+          {kindOpen ? (
             <LabelledSwitch
               label="Kind"
               value={draft.kind}
               options={kindOptions}
-              tip="library.prompt.kind"
+              help={
+                promptId === undefined
+                  ? kindSentence(draft.kind)
+                  : `${kindSentence(draft.kind)} Saving moves it to the ${kindNoun(draft.kind)} list.`
+              }
               onPick={(next) => {
                 edit({ ...draft, kind: next }, "name");
               }}
             />
-          </div>
+          ) : null}
 
-          <div data-tour="prompt-body" {...helpScope}>
-            {/* The starter sits on the label's own row, so switching Kind never moves the
-                body up or down. */}
-            <div className="mb-1 flex min-h-8 items-end justify-between gap-3">
+          <div data-tour="prompt-body" className="flex flex-col gap-1" {...helpScope}>
+            {/* The examples sit on the label's own row, so opening them never moves the text
+                up or down. */}
+            <div className="flex min-h-8 max-w-[80ch] flex-wrap items-end justify-between gap-3">
               <span className="flex items-center gap-1">
                 <label htmlFor={bodyId} className="sl-field__label">
-                  Body
+                  Instructions
                 </label>
                 <InfoTip
                   id={bodyTips[draft.kind]}
-                  label={`${kindLabel(draft.kind)} prompt body`}
+                  label={`${kindLabel(draft.kind)} prompt instructions`}
                   className="-my-1"
                 />
               </span>
-              {starterOf(draft.kind) ? (
-                <span className="flex items-center gap-1">
-                  <Button
-                    variant="quiet"
-                    size="small"
-                    onClick={() => {
-                      const starter = starterOf(draft.kind);
-                      if (starter === undefined) return;
-                      if (draft.body.trim() !== "") setReplacingBody(true);
-                      else edit({ ...draft, body: starter.body }, "body");
-                    }}
-                  >
-                    {starterOf(draft.kind)?.label}
-                  </Button>
-                  <InfoTip id="library.prompt.starter" label={starterOf(draft.kind)?.label} />
-                </span>
-              ) : null}
+              {examples.length === 0 ? null : (
+                <Menu>
+                  <MenuTrigger asChild>
+                    <Button variant="quiet" size="small">
+                      Start from an example
+                      <ChevronDownIcon aria-hidden="true" />
+                    </Button>
+                  </MenuTrigger>
+                  <MenuContent align="end">
+                    {examples.map((example) => (
+                      <MenuItem key={example.key} onSelect={() => pickExample(example)}>
+                        {example.name}
+                      </MenuItem>
+                    ))}
+                  </MenuContent>
+                </Menu>
+              )}
             </div>
+            <HelpLine className="mb-1">{kindAbout(draft.kind)}</HelpLine>
             <KeywordInsertBar
               place={draft.kind}
               targetId={bodyId}
@@ -256,6 +342,7 @@ export function PromptEditorRoute({
               value={draft.body}
               place={draft.kind}
               grandfathered={grandfathered}
+              placeholder={kindPlaceholder(draft.kind)}
               invalid={lint.length > 0}
               describedBy={lint.length === 0 ? undefined : lintId}
               onChange={(next) => {
@@ -293,39 +380,41 @@ export function PromptEditorRoute({
             </div>
           ) : null}
 
-          <div data-tour="prompt-save">
-            <EditorActions
-              onDelete={
-                promptId === undefined
-                  ? undefined
-                  : () => {
-                      setDeleting(true);
-                    }
-              }
-              blocked={blocked}
-              blockedId={hintId}
-              pending={save.isPending}
-              saved={saved}
-              cancel={
-                <ButtonLink
-                  to="/prompts"
-                  search={{ kind: draft.kind }}
-                  onClick={() => {
-                    setEdited(undefined);
-                  }}
-                  variant="secondary"
-                >
-                  Cancel
-                </ButtonLink>
-              }
-              errors={[save.error, remove.error].flatMap((error) =>
-                error === null ? [] : [error.message],
-              )}
-              onSave={() => {
-                save.mutate(draft);
-              }}
-            />
-          </div>
+          <EditorActions
+            data-tour="prompt-save"
+            onDelete={
+              promptId === undefined
+                ? undefined
+                : () => {
+                    setDeleting(true);
+                  }
+            }
+            blocked={blocked}
+            blockedId={hintId}
+            pending={save.isPending}
+            saved={saved}
+            cancel={
+              <ButtonLink
+                to="/prompts"
+                search={{ kind: draft.kind }}
+                onClick={() => {
+                  setEdited(undefined);
+                }}
+                variant="secondary"
+              >
+                Cancel
+              </ButtonLink>
+            }
+            also={
+              onMakeVideo === undefined
+                ? undefined
+                : { label: "Save and make a video", run: () => attempt("make") }
+            }
+            errors={[save.error, remove.error].flatMap((error) =>
+              error === null ? [] : [error.message],
+            )}
+            onSave={() => attempt("leave")}
+          />
         </div>
 
         <div data-tour="prompt-slots" className={editorAside}>
@@ -345,17 +434,16 @@ export function PromptEditorRoute({
       </div>
 
       <ConfirmDialog
-        open={replacingBody}
-        title="Replace this prompt body?"
-        consequence="The starter replaces the text in this editor. Nothing is saved until you choose Save."
-        confirmLabel="Use starter"
+        open={replacing !== undefined}
+        title={`Replace the text with “${replacing?.name ?? ""}”?`}
+        consequence="The example replaces the text in this editor. Nothing is saved until you press Save."
+        confirmLabel="Replace the text"
         tone="primary"
         onConfirm={() => {
-          const starter = starterOf(draft.kind);
-          if (starter !== undefined) edit({ ...draft, body: starter.body }, "body");
-          setReplacingBody(false);
+          if (replacing !== undefined) edit({ ...draft, body: replacing.body }, "body");
+          setReplacing(undefined);
         }}
-        onCancel={() => setReplacingBody(false)}
+        onCancel={() => setReplacing(undefined)}
       />
       <ConfirmDialog
         open={deleting}
@@ -376,7 +464,7 @@ export function PromptEditorRoute({
   );
 }
 
-// What the body of each kind is for: the info button beside Body.
+// What each kind's instructions cost and how they are used: the info button beside them.
 const bodyTips = {
   article: "library.prompt.body.article",
   image: "library.prompt.body.image",
@@ -389,16 +477,16 @@ const bodyTips = {
   post: "library.prompt.body.post",
 } as const satisfies Record<PromptKind, HelpId>;
 
-// The kinds with a starting text: the documentary delivery cues, and the wording the YouTube
-// description, the shorts and the posts use when a project picks no prompt.
+// The kinds with a built-in text to start from: the documentary delivery cues, and the wording
+// the YouTube description, the shorts and the posts use when a project picks no prompt.
 function starterOf(
   kind: PromptKind,
 ): { readonly label: string; readonly body: string } | undefined {
-  if (kind === "narration") return { label: "Use Documentary Starter", body: narrationStarter };
-  if (kind === "description")
-    return { label: "Use Built-in Starter", body: defaultDescriptionPrompt };
-  if (kind === "shorts") return { label: "Use Built-in Starter", body: defaultShortsPrompt };
-  if (kind === "post") return { label: "Use Built-in Starter", body: defaultPostPrompt };
+  if (kind === "narration")
+    return { label: "Documentary delivery (built in)", body: narrationStarter };
+  if (kind === "description") return { label: "Built-in wording", body: defaultDescriptionPrompt };
+  if (kind === "shorts") return { label: "Built-in wording", body: defaultShortsPrompt };
+  if (kind === "post") return { label: "Built-in wording", body: defaultPostPrompt };
   return undefined;
 }
 

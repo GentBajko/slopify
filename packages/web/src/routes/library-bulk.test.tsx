@@ -69,7 +69,7 @@ const box = (name: string) => screen.findByRole("checkbox", { name: `Select row:
 describe("selecting prompts", () => {
   it("keeps the bar away until a row is ticked, and Esc clears the selection", async () => {
     const user = userEvent.setup();
-    renderRouted(withToasts(<PromptsRoute kind="article" onKind={() => {}} />), promptDeps());
+    renderRouted(withToasts(<PromptsRoute kind="article" />), promptDeps());
     await user.click(await box("Dossier"));
     expect(screen.queryByText("1 of 2 prompts selected")).not.toBeNull();
     const all = screen.getByRole("checkbox", { name: "Select all" }) as HTMLInputElement;
@@ -84,7 +84,7 @@ describe("selecting prompts", () => {
     const user = userEvent.setup();
     const seen = recorder();
     renderRouted(
-      withToasts(<PromptsRoute kind="article" onKind={() => {}} />),
+      withToasts(<PromptsRoute kind="article" />),
       promptDeps({
         "DELETE /api/prompts/p1": seen.record(emptyAnswer()),
         "DELETE /api/prompts/p2": seen.record(emptyAnswer()),
@@ -111,7 +111,7 @@ describe("selecting prompts", () => {
     const user = userEvent.setup();
     const seen = recorder();
     renderRouted(
-      withToasts(<PromptsRoute kind="article" onKind={() => {}} />),
+      withToasts(<PromptsRoute kind="article" />),
       promptDeps({ "POST /api/prompts": seen.record(jsonAnswer(dossier, 201)) }),
     );
     await user.click(await box("Dossier"));
@@ -130,7 +130,7 @@ describe("selecting prompts", () => {
       return "blob:x";
     });
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
-    renderRouted(withToasts(<PromptsRoute kind="article" onKind={() => {}} />), promptDeps());
+    renderRouted(withToasts(<PromptsRoute kind="article" />), promptDeps());
     await user.click(await box("Essay"));
     await user.click(screen.getByRole("button", { name: /Export selected/u }));
     const file = JSON.parse(await (blobs[0] as Blob).text()) as { prompts: unknown[] };
@@ -142,7 +142,7 @@ describe("importing prompts", () => {
   it("renames a clash, skips what doesn't fit and says so", async () => {
     const seen = recorder();
     renderRouted(
-      withToasts(<PromptsRoute kind="article" onKind={() => {}} />),
+      withToasts(<PromptsRoute kind="article" />),
       promptDeps({ "POST /api/prompts": seen.record(jsonAnswer(dossier, 201)) }),
     );
     await box("Dossier");
@@ -170,7 +170,7 @@ describe("importing prompts", () => {
   });
 
   it("refuses a file that isn't a library file, saying what to pick", async () => {
-    renderRouted(withToasts(<PromptsRoute kind="article" onKind={() => {}} />), promptDeps());
+    renderRouted(withToasts(<PromptsRoute kind="article" />), promptDeps());
     await box("Dossier");
     fireEvent.change(screen.getByLabelText("Import prompts from a file"), {
       target: { files: [new File(['{"a":1}'], "other.json")] },

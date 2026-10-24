@@ -35,8 +35,8 @@ function Panel({
 
 const now = () => screen.getByLabelText("Body now").textContent;
 
-describe("the detected slots panel", () => {
-  it("lists the keywords Slopify fills apart from the person's own fields", () => {
+describe("the Asks you for panel", () => {
+  it("lists the keywords Slopify fills apart from the person's own", () => {
     render(<Panel start="{{Topic}} {{Slopify_Title}} {{Slopify_Mood}} {{Era}}" />);
     const own = screen.getByRole("list", { name: "Your keywords" });
     expect(
@@ -49,14 +49,21 @@ describe("the detected slots panel", () => {
       within(filled)
         .getAllByRole("listitem")
         .map((one) => one.textContent),
-    ).toEqual(["Slopify_Title", "Slopify_Mood"]);
-    expect(screen.getByRole("button", { name: "About Keywords Slopify fills" })).not.toBeNull();
+    ).toEqual(["Title", "Mood"]);
+    expect(screen.getByText("Slopify fills in")).not.toBeNull();
+    expect(
+      screen.getByText(
+        "Each keyword becomes a question on Create, answered each time you make a video.",
+      ),
+    ).not.toBeNull();
   });
 
-  it("says a body of keywords Slopify fills alone asks for no field", () => {
+  it("says a text of keywords Slopify fills alone asks you for nothing", () => {
     render(<Panel start="By {{Slopify_Channel}}" />);
     expect(screen.queryByRole("list", { name: "Your keywords" })).toBeNull();
-    expect(screen.getByText("No fields to fill: Slopify fills every keyword here.")).not.toBeNull();
+    expect(
+      screen.getByText("It asks you for nothing: Slopify fills every keyword here."),
+    ).not.toBeNull();
   });
 
   it("warns about a keyword where it can't be filled, which Save lets through", async () => {

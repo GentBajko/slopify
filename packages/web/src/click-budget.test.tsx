@@ -231,7 +231,7 @@ describe("clicks from the landing screen to done", () => {
         return jsonAnswer({ ...dossier, ...draft })(request);
       },
     };
-    renderRouted(<PromptsRoute kind="article" onKind={() => undefined} />, testDeps(routes));
+    renderRouted(<PromptsRoute kind="article" />, testDeps(routes));
     const you = person();
 
     const edit = await screen.findByRole("link", { name: "Edit Documentary dossier" });
@@ -244,7 +244,7 @@ describe("clicks from the landing screen to done", () => {
       <PromptEditorRoute promptId="p1" kind="article" from={undefined} onLeave={left} />,
       testDeps(routes),
     );
-    const text = await screen.findByLabelText("Body");
+    const text = await screen.findByLabelText("Instructions");
     await waitFor(() =>
       expect((text as HTMLTextAreaElement).value).toBe("Compose a dossier on {{topic}}."),
     );

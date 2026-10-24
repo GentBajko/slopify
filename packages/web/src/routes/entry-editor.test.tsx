@@ -57,12 +57,20 @@ function saveSpy(taken: readonly Entry[]) {
 
 // `{` opens a key descriptor in user-event, and a body is mostly braces, so a body is
 // pasted into the focused field instead of typed. React sees the same change event.
-async function fill(user: UserEvent, label: string, text: string): Promise<void> {
+async function fill(user: UserEvent, label: string | RegExp, text: string): Promise<void> {
   const field = screen.getByLabelText(label);
   await user.clear(field);
   await user.click(field);
   await user.paste(text);
 }
+
+// The text box is named for what the narrator reads: the words, or the AI's instructions.
+const body = /^(Words to say|Instructions for the AI)$/u;
+const bodyBox = () => screen.getByLabelText(body) as HTMLTextAreaElement;
+const outro = { name: "Outro, after the video" } as const;
+const intro = { name: "Intro, before the video" } as const;
+const words = { name: "Say these exact words" } as const;
+const ai = { name: "Let the AI write it from these instructions" } as const;
 
 async function newEditor(extra: Readonly<Record<string, Answer>> = {}, onLeave = vi.fn()) {
   const rendered = renderRouted(
@@ -73,16 +81,16 @@ async function newEditor(extra: Readonly<Record<string, Answer>> = {}, onLeave =
   return { ...rendered, onLeave };
 }
 
-describe("the entry editor's two switches", () => {
+describe("the intro and outro editor's two choices", () => {
   it("saves the category and the mode that are on", async () => {
     const user = userEvent.setup();
     const spy = saveSpy([]);
     const { onLeave } = await newEditor({ "POST /api/entries": spy.answer });
 
     await user.type(screen.getByLabelText("Name"), "Sign-off");
-    await fill(user, "Body", "Thanks for watching.");
-    await user.click(screen.getByRole("radio", { name: "Outro" }));
-    await user.click(screen.getByRole("radio", { name: "LLM" }));
+    await fill(user, body, "Thanks for watching.");
+    await user.click(screen.getByRole("radio", outro));
+    await user.click(screen.getByRole("radio", ai));
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
@@ -113,7 +121,7 @@ describe("the entry editor's two switches", () => {
       "Control+S Meta+S",
     );
     await user.type(screen.getByLabelText("Name"), "Sign-off");
-    await fill(user, "Body", "Thanks for watching.");
+    await fill(user, body, "Thanks for watching.");
     await user.keyboard("{Control>}s{/Control}");
     await waitFor(() => {
       expect(spy.sent).toHaveLength(1);
@@ -125,11 +133,11 @@ describe("the entry editor's two switches", () => {
     const user = userEvent.setup();
     await newEditor({ "POST /api/entries": spy.answer });
 
-    expect(screen.getByRole("radio", { name: "Intro" }).getAttribute("aria-checked")).toBe("true");
-    expect(screen.getByRole("radio", { name: "Text" }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByRole("radio", intro).getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByRole("radio", words).getAttribute("aria-checked")).toBe("true");
 
     await user.type(screen.getByLabelText("Name"), "Cold open");
-    await fill(user, "Body", "Today on the channel.");
+    await fill(user, body, "Today on the channel.");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
@@ -143,75 +151,86 @@ describe("the entry editor's two switches", () => {
   });
 });
 
-describe("what the mode asks of the body", () => {
-  // A text-mode entry is narrated as it stands, an LLM-mode one is an
-  // instruction the article stage runs and the answer is what gets narrated.
-  it("says what the body is for, and says something else in the other mode", async () => {
+describe("what the narrator reads", () => {
+  // Exact words are narrated as they stand; instructions are run by the article stage and the
+  // answer is what gets narrated.
+  it("says what each choice does, and names the text box for it", async () => {
     const user = userEvent.setup();
     await newEditor();
 
-    const mode = screen.getByRole("radiogroup", { name: "Mode" });
+    expect(screen.getByRole("heading", { level: 1, name: "New intro" })).not.toBeNull();
+    const mode = screen.getByRole("radiogroup", { name: "What the narrator reads" });
     const said = () => document.getElementById(mode.getAttribute("aria-describedby") ?? "");
-    expect(said()?.textContent).toBe("Text is narrated as written.");
+    expect(said()?.textContent).toBe("Narrated exactly as written, with the keywords filled in.");
+    expect(screen.getByLabelText("Words to say")).not.toBeNull();
 
-    await user.click(screen.getByRole("radio", { name: "LLM" }));
-    expect(said()?.textContent).toBe("LLM is an instruction whose answer is narrated.");
+    await user.click(screen.getByRole("radio", ai));
+    expect(said()?.textContent).toBe(
+      "The AI writes the intro from these instructions, then it is narrated: one AI call per video.",
+    );
+    expect(screen.getByLabelText("Instructions for the AI")).not.toBeNull();
   });
 
-  it("says what a body with no slots does, in the mode's own words", async () => {
+  it("says what a text with no keywords does, in the choice's own words", async () => {
     const user = userEvent.setup();
     await newEditor();
 
-    await fill(user, "Body", "Thanks for watching.");
-    expect(screen.getByText("No slots. This text is narrated as written.")).not.toBeNull();
+    await fill(user, body, "Thanks for watching.");
+    expect(screen.getByText("It asks you for nothing: it is narrated as written.")).not.toBeNull();
 
-    await user.click(screen.getByRole("radio", { name: "LLM" }));
-    expect(screen.getByText("No slots. This instruction runs as written.")).not.toBeNull();
+    await user.click(screen.getByRole("radio", ai));
+    expect(
+      screen.getByText("It asks you for nothing: the AI gets these instructions as written."),
+    ).not.toBeNull();
   });
 });
 
-describe("the entry editor's slots", () => {
-  it("lists an LLM body's slots as chips, exactly as a prompt's", async () => {
+describe("the intro and outro editor's keywords", () => {
+  it("lists an AI-written one's keywords as chips, exactly as a prompt's", async () => {
     const user = userEvent.setup();
     await newEditor();
 
-    expect(screen.getByText("Slots appear here as you type {{name}}.")).not.toBeNull();
+    expect(
+      screen.getByText(
+        "Type {{Topic}} where the video's subject goes. Each keyword becomes a question on Create.",
+      ),
+    ).not.toBeNull();
 
-    await user.click(screen.getByRole("radio", { name: "LLM" }));
-    await fill(user, "Body", "Write a sign-off about {{topic}} for {{channel}}.");
+    await user.click(screen.getByRole("radio", ai));
+    await fill(user, body, "Write a sign-off about {{topic}} for {{channel}}.");
     expect(screen.getByText("topic").getAttribute("data-slot-chip")).toBe("topic");
     expect(screen.getByText("channel").getAttribute("data-slot-chip")).toBe("channel");
   });
 
   // A text-mode entry is stored as rendered, and the fields of the picked intro and outro
   // are collected whatever their mode, so a narrated body carries slots too.
-  it("lists a text body's slots as well, because a text entry is rendered too", async () => {
+  it("lists the keywords of exact words as well, because those are filled in too", async () => {
     const user = userEvent.setup();
     await newEditor();
 
-    await fill(user, "Body", "Today on the channel: {{topic}}.");
-    expect(screen.getByRole("radio", { name: "Text" }).getAttribute("aria-checked")).toBe("true");
+    await fill(user, body, "Today on the channel: {{topic}}.");
+    expect(screen.getByRole("radio", words).getAttribute("aria-checked")).toBe("true");
     expect(screen.getByText("topic").getAttribute("data-slot-chip")).toBe("topic");
   });
 
-  it("holds Save on a malformed slot with the server's own sentence, in either mode", async () => {
+  it("holds Save on a malformed keyword with the server's own sentence, in either mode", async () => {
     const user = userEvent.setup();
     const { container } = await newEditor();
 
     await user.type(screen.getByLabelText("Name"), "Cold open");
-    await fill(user, "Body", "Line one.\nThen {{bad");
+    await fill(user, body, "Line one.\nThen {{bad");
 
     const marks = container.querySelectorAll("[data-lint-mark]");
     expect(marks).toHaveLength(1);
     expect(marks[0]?.getAttribute("data-lint-mark")).toBe("15");
-    expect(screen.getByText("1 slot error")).not.toBeNull();
+    expect(screen.getByText("1 keyword error")).not.toBeNull();
     // Once in the slots panel, once beside the Save it is holding.
     expect(
       screen.getAllByText(
         "The `{{` at line 2, column 6 is never closed. Add `}}` after the keyword name.",
       ),
     ).toHaveLength(2);
-    expect(screen.getByLabelText("Body").getAttribute("aria-invalid")).toBe("true");
+    expect(bodyBox().getAttribute("aria-invalid")).toBe("true");
 
     const save = screen.getByRole("button", { name: "Save" });
     expect(save.getAttribute("aria-disabled")).toBe("true");
@@ -220,7 +239,7 @@ describe("the entry editor's slots", () => {
       "The `{{` at line 2, column 6 is never closed. Add `}}` after the keyword name.",
     );
 
-    await user.click(screen.getByRole("radio", { name: "LLM" }));
+    await user.click(screen.getByRole("radio", ai));
     expect(screen.getByRole("button", { name: "Save" }).getAttribute("aria-disabled")).toBe("true");
     expect(
       screen.getAllByText(
@@ -228,18 +247,24 @@ describe("the entry editor's slots", () => {
       ),
     ).toHaveLength(2);
 
-    await fill(user, "Body", "Line one.\nThen {{good}}");
+    await fill(user, body, "Line one.\nThen {{good}}");
     expect(screen.getByRole("button", { name: "Save" }).getAttribute("aria-disabled")).toBe(
       "false",
     );
   });
 
-  it("holds until there is a name, then until there is a body", async () => {
+  it("says nothing on arrival, then once Save is pressed holds for a name, then for the text", async () => {
     const user = userEvent.setup();
     await newEditor();
 
-    expect(screen.getByRole("button", { name: "Save" }).getAttribute("aria-disabled")).toBe("true");
-    expect(screen.getByText("Enter a name.")).not.toBeNull();
+    const save = screen.getByRole("button", { name: "Save" });
+    expect(save.getAttribute("aria-disabled")).toBe("false");
+    expect(screen.queryByText("Enter a name.")).toBeNull();
+
+    await user.click(save);
+    expect(save.getAttribute("aria-disabled")).toBe("true");
+    expect(screen.getAllByText("Enter a name.")).toHaveLength(2);
+    expect(document.activeElement).toBe(screen.getByLabelText("Name"));
 
     await user.type(screen.getByLabelText("Name"), "Cold open");
     expect(screen.getByText("Enter the text.")).not.toBeNull();
@@ -253,7 +278,7 @@ describe("a name another entry already has", () => {
     await newEditor({ "POST /api/entries": spy.answer });
 
     await user.type(screen.getByLabelText("Name"), "cold OPEN");
-    await fill(user, "Body", "Anything.");
+    await fill(user, body, "Anything.");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     const name = screen.getByLabelText("Name");
@@ -276,8 +301,8 @@ describe("a name another entry already has", () => {
     await newEditor({ "POST /api/entries": spy.answer });
 
     await user.type(screen.getByLabelText("Name"), "Cold open");
-    await fill(user, "Body", "Anything.");
-    await user.click(screen.getByRole("radio", { name: "Outro" }));
+    await fill(user, body, "Anything.");
+    await user.click(screen.getByRole("radio", outro));
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(await screen.findByText("Saved")).not.toBeNull();
@@ -305,12 +330,10 @@ describe("an existing entry", () => {
 
     const name = await screen.findByLabelText("Name");
     expect((name as HTMLInputElement).value).toBe("Cold open");
-    expect((screen.getByLabelText("Body") as HTMLTextAreaElement).value).toBe(
-      "Today on the channel: {{topic}}.",
-    );
+    expect(bodyBox().value).toBe("Today on the channel: {{topic}}.");
     // The row it loaded carries the category, whatever tab the link came from.
-    expect(screen.getByRole("radio", { name: "Intro" }).getAttribute("aria-checked")).toBe("true");
-    expect(screen.getByRole("radio", { name: "Text" }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByRole("radio", intro).getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByRole("radio", words).getAttribute("aria-checked")).toBe("true");
 
     await user.click(screen.getByRole("button", { name: "Delete" }));
     const dialog = await screen.findByRole("dialog");
@@ -334,7 +357,7 @@ describe("an existing entry", () => {
     );
 
     expect(
-      await screen.findByText("That entry is gone. It may have been deleted in another tab."),
+      await screen.findByText("That intro is gone. It may have been deleted in another tab."),
     ).not.toBeNull();
   });
 
@@ -346,9 +369,7 @@ describe("an existing entry", () => {
 
     const name = await screen.findByLabelText("Name");
     expect((name as HTMLInputElement).value).toBe("Cold open copy");
-    expect((screen.getByLabelText("Body") as HTMLTextAreaElement).value).toBe(
-      "Today on the channel: {{topic}}.",
-    );
+    expect(bodyBox().value).toBe("Today on the channel: {{topic}}.");
   });
 
   it("says what went wrong when the list cannot be read", async () => {
@@ -362,13 +383,13 @@ describe("an existing entry", () => {
 });
 
 describe("the entry editor's keywords Slopify fills", () => {
-  it("offers the keywords an intro can use above the body and puts one at the caret", async () => {
+  it("offers the keywords an intro can use above the text and puts one at the caret", async () => {
     const user = userEvent.setup();
     await newEditor();
     const bar = screen.getByRole("toolbar", { name: "Insert a keyword Slopify fills" });
     expect(within(bar).queryByRole("button", { name: "Insert Scene" })).toBeNull();
-    await fill(user, "Body", "Welcome to .");
-    const box = screen.getByLabelText("Body") as HTMLTextAreaElement;
+    await fill(user, body, "Welcome to .");
+    const box = bodyBox() as HTMLTextAreaElement;
     box.setSelectionRange(11, 11);
     await user.click(within(bar).getByRole("button", { name: "Insert Channel" }));
     expect(box.value).toBe("Welcome to {{Slopify_Channel}}.");
