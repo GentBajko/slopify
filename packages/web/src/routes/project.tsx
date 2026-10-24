@@ -2,7 +2,6 @@ import { progressOf } from "@app/kernel/runner/graph.js";
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "@tanstack/react-router";
-import { CopyIcon } from "lucide-react";
 import { type ReactElement, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { removeProject } from "@/api";
 import { useApp } from "@/app-context";
@@ -644,33 +643,6 @@ function ProjectWorkspace({
         Copy for YouTube Studio
       </Button>
     ) : null;
-  // The YouTube text's two copies, beside the video they go with.
-  const written = outputs.some((output) => output.role === "youtube_description");
-  const copies = written ? (
-    <>
-      <Button
-        onClick={() =>
-          youtubeCopy.current.description === undefined
-            ? notify("The description is still loading. Press Copy description again.", "info")
-            : youtubeCopy.current.description()
-        }
-      >
-        <CopyIcon aria-hidden="true" strokeWidth={1.75} />
-        Copy description
-      </Button>
-      <Button
-        onClick={() =>
-          youtubeCopy.current.tags === undefined
-            ? notify("The tags are still loading. Press Copy tags again.", "info")
-            : youtubeCopy.current.tags()
-        }
-      >
-        <CopyIcon aria-hidden="true" strokeWidth={1.75} />
-        Copy tags
-      </Button>
-    </>
-  ) : null;
-
   return (
     <RevisionMedia projectId={projectId} revisionId={revisionId}>
       <RevisionControlContext value={revisionId !== null}>
@@ -780,16 +752,7 @@ function ProjectWorkspace({
                       stages={[videoStage].filter(isStage)}
                       active={selected === "video"}
                       {...sectionProps}
-                      {...(copies === null && (studio === null || youtubeShown)
-                        ? {}
-                        : {
-                            extra: (
-                              <>
-                                {copies}
-                                {youtubeShown ? null : studio}
-                              </>
-                            ),
-                          })}
+                      {...(studio === null || youtubeShown ? {} : { extra: studio })}
                     >
                       {body(videoStage)}
                     </StageSection>
