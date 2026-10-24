@@ -47,10 +47,10 @@ export function uploadUndoable(project: ProjectListing, now: number = Date.now()
 const finished = (project: ProjectListing): boolean =>
   project.status === "done" || project.status === "partial";
 
-// One project on the Projects list: its picture, its name, what it is ("3:05 · 16:9 · video +
-// 2 shorts + PDF · finished Sep 27" once finished, what it is made from and when it started
-// before), its state in words, and its actions in words: Open, Download video, Mark uploaded
-// (Make my own copy on a sample), Delete.
+// One project on the Projects list: its picture, its name, then its state in words and what it
+// is ("Ready to upload · 3:05 · 16:9 · video + 2 shorts + PDF · finished Sep 27" once finished,
+// what it is made from and when it started before), and its actions in words: Open, Download
+// video, Mark uploaded (Make my own copy on a sample), Delete.
 export function ProjectRow({
   project,
   queue,
@@ -102,14 +102,22 @@ export function ProjectRow({
       }
       meta={
         <span className="flex flex-col gap-1">
-          <span className="truncate" title={meta}>
-            {meta}
-            {project.status === "partial" ? (
-              <>
-                {" · "}
-                <FailedStep project={project} />
-              </>
-            ) : null}
+          <span className="flex min-w-0 items-baseline gap-2">
+            <Status tone={state.tone} className="shrink-0">
+              {state.word}
+              <span className="sr-only" role="status" aria-live="polite">
+                {`${project.title}: ${state.word}`}
+              </span>
+            </Status>
+            <span className="min-w-0 truncate" title={meta}>
+              {meta}
+              {project.status === "partial" ? (
+                <>
+                  {" · "}
+                  <FailedStep project={project} />
+                </>
+              ) : null}
+            </span>
           </span>
           {running ? (
             <Meter
@@ -124,12 +132,6 @@ export function ProjectRow({
       }
       actions={
         <>
-          <Status tone={state.tone} className="sl-projects__state">
-            {state.word}
-            <span className="sr-only" role="status" aria-live="polite">
-              {`${project.title}: ${state.word}`}
-            </span>
-          </Status>
           <TextLink
             to="/projects/$projectId"
             params={{ projectId: project.id }}

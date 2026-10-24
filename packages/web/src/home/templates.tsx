@@ -1,7 +1,6 @@
 import { type ReactElement, useState } from "react";
 import { Button } from "@/components/kit/button";
 import { TextLink } from "@/components/kit/link";
-import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
 import { shortDate } from "@/lib/utils";
@@ -58,30 +57,29 @@ export function StartFromTemplate({
           <TextLink to="/templates">{`See all ${String(templates.length)}`}</TextLink>
         ) : null}
       </SectionHead>
-      <List label="Templates">
+      <ul aria-label="Templates" className="sl-home-list m-0 list-none p-0">
         {shown.map((template) => (
-          <ListRow
-            key={template.id}
-            title={template.name}
-            {...(Number.isNaN(Date.parse(template.updatedAt))
-              ? {}
-              : { meta: `Changed ${shortDate(template.updatedAt)}` })}
-            actions={
-              <Button
-                size="small"
-                aria-label={`Make a video with ${template.name}`}
-                disabled={start.blocked || opening !== undefined}
-                disabledReason={
-                  start.blocked ? "Create is starting a run. Wait for it to start." : "Opening…"
-                }
-                onClick={() => void make(template)}
-              >
-                {opening === template.id ? "Opening…" : "Make a video"}
-              </Button>
-            }
-          />
+          <li key={template.id} className="sl-home-item sl-home-item--plain">
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span className="sl-row__title">{template.name}</span>
+              {Number.isNaN(Date.parse(template.updatedAt)) ? null : (
+                <span className="text-small text-ink-2">{`Changed ${shortDate(template.updatedAt)}`}</span>
+              )}
+            </div>
+            <Button
+              size="small"
+              aria-label={`Make a video with ${template.name}`}
+              disabled={start.blocked || opening !== undefined}
+              disabledReason={
+                start.blocked ? "Create is starting a run. Wait for it to start." : "Opening…"
+              }
+              onClick={() => void make(template)}
+            >
+              {opening === template.id ? "Opening…" : "Make a video"}
+            </Button>
+          </li>
         ))}
-      </List>
+      </ul>
     </section>
   );
 }

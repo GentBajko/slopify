@@ -20,7 +20,7 @@ import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
 import { Select } from "@/components/kit/field";
 import { PageHeader } from "@/components/kit/layout";
-import { ButtonLink, TextLink } from "@/components/kit/link";
+import { ButtonLink } from "@/components/kit/link";
 import { List } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { Segmented } from "@/components/kit/switch";
@@ -210,7 +210,6 @@ export function ProjectsRoute({
   const offered = filters.filter(
     (one) => one.value === "all" || one.value === filter || counts[one.value] > 0,
   );
-  const queuedHere = inChannel.filter((one) => waiting.includes(one.id)).length;
 
   return (
     <div>
@@ -219,16 +218,7 @@ export function ProjectsRoute({
         meta={
           projects.data === undefined ? undefined : plural(inChannel.length, "project", "projects")
         }
-        actions={
-          <>
-            <ChannelPicker variant="header" />
-            {queuedHere === 0 || filter === "queued" ? null : (
-              <TextLink to="/projects" search={{ show: "queued" }}>
-                {`${String(queuedHere)} waiting to start · See the queue`}
-              </TextLink>
-            )}
-          </>
-        }
+        actions={<ChannelPicker variant="header" />}
       />
 
       {projects.data?.projects.length === 0 ? <TutorialInvite /> : null}

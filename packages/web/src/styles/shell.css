@@ -935,7 +935,7 @@
     container-type: inline-size;
     border-top: 1px solid var(--color-line);
   }
-  @container (max-width: 560px) {
+  @container (max-width: 400px) {
     .sl-home-item {
       grid-template-columns: 96px minmax(0, 1fr);
       gap: var(--space-2) var(--space-3);
@@ -943,6 +943,10 @@
     .sl-home-item__action {
       grid-column: 2 / -1;
     }
+  }
+  /* A row with no picture (Start from a template): the name and its line, the action beside. */
+  .sl-home-item--plain {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
   .sl-home-run {
     display: grid;
@@ -965,7 +969,7 @@
   }
 
   /* The Projects list: rows about 56px tall with a 64x36 picture after the checkbox, so a
-     screen holds a dozen; the state words line up in their own column. */
+     screen holds a dozen; the state word starts the line under the name, so it lines up. */
   .sl-projects > .sl-row {
     padding-block: 8px;
   }
@@ -981,14 +985,6 @@
   .sl-projects .sl-row__actions {
     align-items: center;
     gap: var(--space-1) var(--space-2);
-  }
-  .sl-projects__state {
-    min-width: 128px;
-  }
-  @container (max-width: 520px) {
-    .sl-projects__state {
-      min-width: 0;
-    }
   }
 
   /* The calendar's weeks: one surface per week, seven day columns split by hairlines. */
