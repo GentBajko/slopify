@@ -105,7 +105,11 @@ export function MediaFrame({
               aria-label={openLabel ?? `Open ${alt} full size`}
               onClick={onOpen}
             >
-              <Maximize2Icon aria-hidden="true" strokeWidth={1.75} />
+              <Maximize2Icon
+                aria-hidden="true"
+                strokeWidth={1.75}
+                className="sl-media__open-icon"
+              />
               {openText}
             </Button>
           </>

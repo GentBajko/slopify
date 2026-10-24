@@ -451,6 +451,20 @@ describe("rows and tiles are one target", () => {
     expect(css).not.toMatch(/\.sl-media__actions[^{]*\{[^}]*opacity: 0/);
   });
 
+  it("keeps the Full size words on a compact gallery's small tiles, dropping only the icon", () => {
+    const kitCss = readFileSync(join(import.meta.dirname, "..", "..", "styles", "kit.css"), "utf8");
+    render(
+      <MediaGrid density="compact" label="Images">
+        <MediaFrame src="/a.png" alt="Hypatia" onOpen={() => {}} />
+      </MediaGrid>,
+    );
+    expect(screen.getByRole("button", { name: "Open Hypatia full size" }).textContent).toBe(
+      "Full size",
+    );
+    expect(kitCss).toMatch(/\.sl-grid--compact \.sl-media__open \{[^}]*height: 24px;/);
+    expect(kitCss).toMatch(/\.sl-grid--compact \.sl-media__open-icon \{\s*display: none;/);
+  });
+
   it("says nothing opens while the picture is still being made", () => {
     render(<MediaFrame alt="Next" generating="Drawing" onOpen={() => {}} />);
     expect(screen.queryByRole("button")).toBeNull();

@@ -687,6 +687,16 @@
     background: rgba(8, 8, 10, 0.9);
     color: #fff;
   }
+  /* On a compact gallery's 140px tiles (a Home card, a drawer) the words stay, smaller, so the
+     button covers a corner and not the picture. */
+  .sl-grid--compact .sl-media__open {
+    height: 24px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+  .sl-grid--compact .sl-media__open-icon {
+    display: none;
+  }
   .sl-media__caption {
     display: flex;
     justify-content: space-between;
