@@ -112,7 +112,7 @@ it("applies a template as a fresh draft and preserves its identity after a lost 
     <TemplatesRoute onApplied={applied} />,
     testDeps({ ...routes, [`POST /api/project-templates/${templateId}/instantiate`]: apply }),
   );
-  const button = await screen.findByRole("button", { name: `Use ${template.name} in Play` });
+  const button = await screen.findByRole("button", { name: `Make a video with ${template.name}` });
   await user.click(button);
   expect(await screen.findByRole("alert")).toHaveProperty(
     "textContent",
@@ -133,7 +133,9 @@ it("applies a template under StrictMode effect replay", async () => {
     </StrictMode>,
     testDeps({ ...routes, [`POST /api/project-templates/${templateId}/instantiate`]: apply }),
   );
-  await user.click(await screen.findByRole("button", { name: `Use ${template.name} in Play` }));
+  await user.click(
+    await screen.findByRole("button", { name: `Make a video with ${template.name}` }),
+  );
   await waitFor(() => expect(apply).toHaveBeenCalledOnce());
 });
 
@@ -168,7 +170,7 @@ it("opens an applied template through the real Play session", async () => {
     }),
   );
   await user.click(
-    await screen.findByRole("button", { name: `Use ${template.name} in Play` }, playSession),
+    await screen.findByRole("button", { name: `Make a video with ${template.name}` }, playSession),
   );
   await waitFor(() => expect(opened).toBe(true), playSession);
 }, 20_000);
@@ -207,7 +209,7 @@ it("does not install a template after the route unmounts during draft loading", 
     }),
   );
   await user.click(
-    await screen.findByRole("button", { name: `Use ${template.name} in Play` }, playSession),
+    await screen.findByRole("button", { name: `Make a video with ${template.name}` }, playSession),
   );
   await screen.findByRole("button", { name: "Refresh templates" }, playSession);
   // Inside act, so the route's unmount effects (its `mounted` flag) have run, not only its DOM
@@ -259,7 +261,7 @@ it("retains the created draft identity when opening the new draft fails", async 
     <TemplatesRoute onApplied={opened} />,
     testDeps({ ...routes, [`POST /api/project-templates/${templateId}/instantiate`]: apply }),
   );
-  const button = await screen.findByRole("button", { name: `Use ${template.name} in Play` });
+  const button = await screen.findByRole("button", { name: `Make a video with ${template.name}` });
   await user.click(button);
   await screen.findByRole("alert");
   await user.click(button);
@@ -280,7 +282,9 @@ it("does not apply a delayed template after the Play session generation changes"
       [`POST /api/project-templates/${templateId}/instantiate`]: () => response.promise,
     }),
   );
-  await user.click(await screen.findByRole("button", { name: `Use ${template.name} in Play` }));
+  await user.click(
+    await screen.findByRole("button", { name: `Make a video with ${template.name}` }),
+  );
   generation = 1;
   response.resolve(Response.json({ draft: draftView }));
   await waitFor(() => expect(opened).not.toHaveBeenCalled());
@@ -292,7 +296,9 @@ it("keeps an unsaved or uncertain Play session authoritative before applying", a
     <TemplatesRoute onApplied={vi.fn()} beforeApply={async () => false} />,
     testDeps({ ...routes, [`POST /api/project-templates/${templateId}/instantiate`]: apply }),
   );
-  fireEvent.click(await screen.findByRole("button", { name: `Use ${template.name} in Play` }));
+  fireEvent.click(
+    await screen.findByRole("button", { name: `Make a video with ${template.name}` }),
+  );
   expect(await screen.findByRole("alert")).toHaveProperty(
     "textContent",
     expect.stringContaining("Save or discard the draft open in Play"),
@@ -342,7 +348,7 @@ it("shows the Library row actions on the row itself and offers Save a setup in t
     [...actions.querySelectorAll("a, button")].map((one) => one.getAttribute("aria-label")),
   ).toEqual([
     `Open the studio of ${template.name}`,
-    `Use ${template.name} in Play`,
+    `Make a video with ${template.name}`,
     `More actions for ${template.name}`,
   ]);
   expect(

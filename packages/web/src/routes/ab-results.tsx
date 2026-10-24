@@ -1,17 +1,21 @@
 import type { AbResult } from "@app/slices/studio/stats.js";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { CopyIcon } from "lucide-react";
 import type { ReactElement } from "react";
 import { readAbResults } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
+import { PageHeader } from "@/components/kit/layout";
 import { LoadingBlock, QueryState } from "@/components/kit/query-state";
 import { useToast } from "@/components/kit/toast";
+import { EditorCrumb } from "@/library/editor-frame";
 
-// Library → A/B results: every finished A/B test the extension read from Studio, the winner
-// first, with each variant's share of watch time. Copy as prompt notes turns them into a short
-// summary to paste into the Library prompts that write titles and thumbnails; nothing changes a
-// prompt by itself.
+// What worked on YouTube (a channel's page links here): every finished A/B test the extension
+// read from Studio, the winner first, with each variant's share of watch time. Copy as prompt
+// notes turns them into a short summary to paste into the prompts that write titles and
+// thumbnails; nothing changes a prompt by itself. With no finished test there is nothing to
+// copy, so the button is not drawn.
 
 type Result = AbResult & { readonly projectTitle: string };
 
@@ -78,36 +82,40 @@ export function AbResultsRoute(): ReactElement {
   });
   const list = results.data ?? [];
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <p className="m-0 flex-1 text-small text-ink-2">
-          Finished A/B tests, as the Slopify Studio extension read them from YouTube Studio once a
-          day. The winner is listed first.
-        </p>
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={list.length === 0}
-          disabledReason={
-            results.data === undefined
-              ? "The A/B results haven't loaded"
-              : "No finished A/B tests yet"
-          }
-          onClick={() =>
-            void navigator.clipboard?.writeText(notesOf(list)).then(
-              () =>
-                notify(
-                  "Copied the notes. Paste them into the prompt that writes titles.",
-                  "success",
-                ),
-              () => notify("Couldn't copy the notes. Select them and copy by hand.", "error"),
-            )
-          }
-        >
-          <CopyIcon aria-hidden="true" strokeWidth={1.75} />
-          Copy as prompt notes
-        </Button>
-      </div>
+    <div>
+      <PageHeader
+        crumb={
+          <EditorCrumb>
+            <Link to="/channels">Channels</Link>
+          </EditorCrumb>
+        }
+        title="What worked on YouTube"
+        meta="Finished A/B tests, the winner first"
+        actions={
+          list.length === 0 ? undefined : (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() =>
+                void navigator.clipboard?.writeText(notesOf(list)).then(
+                  () =>
+                    notify(
+                      "Copied the notes. Paste them into the prompt that writes titles.",
+                      "success",
+                    ),
+                  () => notify("Couldn't copy the notes. Select them and copy by hand.", "error"),
+                )
+              }
+            >
+              <CopyIcon aria-hidden="true" strokeWidth={1.75} />
+              Copy as prompt notes
+            </Button>
+          )
+        }
+      />
+      <p className="m-0 mb-3 max-w-[var(--measure)] text-small text-ink-2">
+        The Slopify Studio extension reads these from YouTube Studio once a day.
+      </p>
       <QueryState
         query={results}
         what="The A/B results"
@@ -115,9 +123,9 @@ export function AbResultsRoute(): ReactElement {
       >
         {(loaded) =>
           loaded.length === 0 ? (
-            <p className="m-0 text-small text-ink-3">
+            <p className="m-0 text-small text-ink-2">
               No finished A/B tests yet. Start one from a project's Video section (On YouTube → A/B
-              test) or the extension; its result shows here once Studio has one.
+              test); its result shows here once YouTube Studio has one.
             </p>
           ) : (
             <ResultList results={loaded} />

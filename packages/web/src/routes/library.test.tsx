@@ -1,4 +1,4 @@
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { CommandPaletteProvider, CommandRegistry } from "@/components/kit/command-palette";
 import { renderRouted, testDeps } from "@/test-app";
@@ -6,32 +6,8 @@ import { LibraryLayout } from "./library.js";
 
 afterEach(cleanup);
 
-describe("the Library layout", () => {
-  it("titles the page and groups its tabs: setups, building blocks, results", async () => {
-    renderRouted(
-      <CommandPaletteProvider>
-        <LibraryLayout />
-      </CommandPaletteProvider>,
-      testDeps({}),
-    );
-
-    expect(await screen.findByRole("heading", { level: 1, name: "Library" })).not.toBeNull();
-    const group = (name: string) =>
-      within(screen.getByRole("navigation", { name }))
-        .getAllByRole("link")
-        .map((link) => link.textContent);
-    expect(group("Setups")).toEqual(["Templates", "Designs"]);
-    // PDF themes, not "Documents"; aliases named for what they change.
-    expect(group("Building blocks")).toEqual([
-      "Prompts",
-      "Intros & outros",
-      "PDF themes",
-      "Narration aliases",
-    ]);
-    expect(group("Results")).toEqual(["A/B results"]);
-  });
-
-  it("registers the Library's frequent actions in the command palette", async () => {
+describe("the layout around Prompts, Templates, PDF themes and Pronunciation", () => {
+  it("is no page of its own: no Library title and no tab bar over the page", async () => {
     const registry = new CommandRegistry();
     renderRouted(
       <CommandPaletteProvider registry={registry}>
@@ -40,16 +16,35 @@ describe("the Library layout", () => {
       testDeps({}),
     );
 
-    await screen.findByRole("heading", { level: 1, name: "Library" });
-    const library = registry.list().filter((command) => command.group === "Library");
-    expect(library.map((command) => command.title)).toEqual([
+    await waitFor(() => expect(registry.list().length).toBeGreaterThan(0));
+    expect(screen.queryByRole("heading", { name: "Library" })).toBeNull();
+    expect(screen.queryByRole("navigation")).toBeNull();
+    expect(screen.queryByText("Library")).toBeNull();
+  });
+
+  it("registers the frequent actions in the command palette, under the pages they open", async () => {
+    const registry = new CommandRegistry();
+    renderRouted(
+      <CommandPaletteProvider registry={registry}>
+        <LibraryLayout />
+      </CommandPaletteProvider>,
+      testDeps({}),
+    );
+
+    await waitFor(() => expect(registry.list().length).toBeGreaterThan(0));
+    const titles = (group: string) =>
+      registry
+        .list()
+        .filter((command) => command.group === group)
+        .map((command) => command.title);
+    expect(titles("Prompts")).toEqual([
       "New prompt",
-      "New intro or outro",
-      "New PDF theme",
+      "New intro",
       "Open prompts",
       "Open intros and outros",
-      "Open templates",
-      "Open PDF themes",
     ]);
+    expect(titles("PDF themes")).toEqual(["New PDF theme", "Open PDF themes"]);
+    expect(titles("Templates")).toEqual(["Open templates"]);
+    expect(titles("Library")).toEqual([]);
   });
 });

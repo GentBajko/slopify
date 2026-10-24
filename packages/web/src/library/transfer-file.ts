@@ -36,7 +36,7 @@ export async function fileText(file: File): Promise<FileText> {
   if (file.size > libraryFileMaxBytes)
     return {
       ok: false,
-      message: `it is larger than ${String(libraryFileMaxBytes / 1024 / 1024)} MB, far more than a Library export. Pick the .json file Export made.`,
+      message: `it is larger than ${String(libraryFileMaxBytes / 1024 / 1024)} MB, far more than any export Slopify makes. Pick the .json file Export made.`,
     };
   try {
     return { ok: true, text: await file.text() };

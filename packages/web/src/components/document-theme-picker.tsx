@@ -14,10 +14,10 @@ import { Button } from "@/components/kit/button";
 import { Picker } from "@/components/ui/picker";
 import { documentThemesQuery } from "@/queries";
 
-// The theme a project's PDF is drawn with: a built-in or a theme from Library → Documents.
-// Picking a Library theme copies its values into the project, as a prompt's text is copied,
+// The theme a project's PDF is drawn with: a built-in or one of the saved PDF themes.
+// Picking a saved theme copies its values into the project, as a prompt's text is copied,
 // so editing the theme later leaves this project alone until it is picked again. A project
-// whose copy no longer matches the Library (or whose theme was deleted) keeps an option for
+// whose copy no longer matches the saved theme (or whose theme was deleted) keeps an option for
 // the copy it has. Likewise a project saved with the retired DiceMaster built-in keeps an option
 // for it while it is the current choice; it is never offered otherwise.
 export function DocumentThemePicker({

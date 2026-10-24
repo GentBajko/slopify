@@ -41,9 +41,11 @@ describe("the Insert bar", () => {
       .map((button) => button.getAttribute("data-keyword"));
     expect(names).toEqual(keywordsFor("article").map((spec) => spec.name));
     expect(names).not.toContain("Slopify_Summary");
-    expect(
-      screen.getByRole("button", { name: "About Keywords Slopify fills in Article prompts" }),
-    ).not.toBeNull();
+    // Said in words before the chips, in the colour those keywords take in the text.
+    expect(screen.getByText("Slopify fills these in:")).not.toBeNull();
+    expect(within(bar).getByRole("button", { name: "Insert Title" }).className).toContain(
+      "text-accent-ink",
+    );
   });
 
   // A sideways scroll hid the last chips with no cue; every chip is on screen instead, and the

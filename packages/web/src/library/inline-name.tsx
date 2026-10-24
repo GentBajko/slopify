@@ -7,16 +7,9 @@ import { RowSelect } from "@/components/kit/list-row";
 import { useToast } from "@/components/kit/toast";
 import type { HelpId } from "@/help/catalog";
 
-// The sentence for a rename the server refused, from the fields it named (a name already taken
-// in this kind, one too long).
-export function refusedName(fields: readonly { readonly message: string }[]): string {
-  const said = fields.map((field) => field.message).join(" ");
-  return `The name wasn't saved. ${said === "" ? "Pick another name and press Save name again." : said}`;
-}
-
-// The name cell of a Library row (prompts, intros and outros, templates), renamed where it is
-// shown instead of in the full editor: Rename turns the name into a field, Enter or Save name
-// saves it, Escape or Cancel leaves it. The toast after a rename carries Undo.
+// The name cell of a list row (templates), renamed where it is shown instead of in the full
+// editor: Rename turns the name into a field, Enter or Save name saves it, Escape or Cancel
+// leaves it. The toast after a rename carries Undo.
 export function InlineName({
   name,
   onSelect,

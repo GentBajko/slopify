@@ -10,37 +10,22 @@ import {
   useState,
 } from "react";
 import { Button } from "@/components/kit/button";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
-import type { HelpId } from "@/help/catalog";
 import { KeywordPopover, type ShownKeyword } from "./keyword-card";
 
 // The places an editor body can be: every prompt kind and both entry categories.
 export type BodyKeywordPlace = Exclude<KeywordPlace, "title">;
-
-// The tip beside each bar, listing what that kind can use.
-const keywordTips = {
-  article: "library.keywords.article",
-  script: "library.keywords.script",
-  narration: "library.keywords.narration",
-  image: "library.keywords.image",
-  thumbnail: "library.keywords.thumbnail",
-  description: "library.keywords.description",
-  shorts: "library.keywords.shorts",
-  review: "library.keywords.review",
-  post: "library.keywords.post",
-  intro: "library.keywords.intro",
-  outro: "library.keywords.outro",
-} as const satisfies Record<BodyKeywordPlace, HelpId>;
 
 // "Thumbnail Text" for {{Slopify_Thumbnail_Text}}: the chip's short name.
 export function keywordLabel(name: string): string {
   return name.slice(reservedPrefix.length).replaceAll("_", " ");
 }
 
-// The keywords Slopify fills that this body can use, above the text. The chips wrap onto more
-// lines rather than scroll out of sight, and the bar is no wider than the editor (80ch). A
-// press puts `{{Slopify_X}}` where the caret is, over the selection, and hands the caret back
-// after it. The row is one tab stop; the arrow keys, Home and End move along it.
+// The keywords Slopify fills that this body can use, above the text, under the words "Slopify
+// fills these in". Each chip is in the colour that keyword takes in the text, so what you write
+// and what Slopify writes read as two things. The chips wrap onto more lines rather than scroll
+// out of sight, and the bar is no wider than the editor (80ch). A press puts `{{Slopify_X}}`
+// where the caret is, over the selection, and hands the caret back after it; pointing at a chip
+// shows what it fills in. The row is one tab stop; the arrow keys, Home and End move along it.
 export function KeywordInsertBar({
   place,
   targetId,
@@ -107,11 +92,8 @@ export function KeywordInsertBar({
   const hide = (name: string): void => setShown((now) => (now?.name === name ? undefined : now));
 
   return (
-    <div className="mb-1 flex min-w-0 max-w-[80ch] items-start gap-2" {...helpScope}>
-      <span className="flex shrink-0 items-center gap-2 py-1">
-        <span className="sl-field__label">Insert</span>
-        <InfoTip id={keywordTips[place]} className="-my-1" />
-      </span>
+    <div className="mb-1 flex min-w-0 max-w-[80ch] items-start gap-2">
+      <span className="shrink-0 py-1 text-small text-ink-2">Slopify fills these in:</span>
       <div
         ref={row}
         role="toolbar"
@@ -128,7 +110,7 @@ export function KeywordInsertBar({
             aria-label={`Insert ${keywordLabel(spec.name)}`}
             aria-describedby={shown?.name === spec.name ? cardId : undefined}
             tabIndex={index === focusAt ? 0 : -1}
-            className="shrink-0 font-mono"
+            className="shrink-0 text-accent-ink"
             onClick={() => insert(spec.name)}
             onPointerEnter={(event) => show(spec.name, event.currentTarget)}
             onPointerLeave={() => hide(spec.name)}

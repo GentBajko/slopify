@@ -38,10 +38,10 @@ describe("document theme editor", () => {
     await user.clear(text);
     await user.type(text, "#12");
     expect((text as HTMLInputElement).value).toBe("#12");
-    const jumps = screen.getByRole("navigation", { name: "Theme groups" });
-    expect(
-      within(jumps).getByRole("button", { name: /^Colours · 1 to fix · 1 changed$/ }),
-    ).not.toBeNull();
+    const sections = screen.getByRole("navigation", { name: "Theme sections" });
+    expect(within(sections).getByRole("button", { name: /^Colours/ }).textContent).toBe(
+      "Colours, 1 to fix · 1 changed",
+    );
     expect(screen.getAllByText(/in Colours\./).length).toBeGreaterThan(0);
   });
 
@@ -60,5 +60,42 @@ describe("document theme editor", () => {
     await user.click(screen.getByRole("button", { name: `Reset Body text to ${before}` }));
     expect((text as HTMLInputElement).value).toBe(before);
     expect(screen.queryByText(/Hard to read on the page colour/)).toBeNull();
+  });
+
+  it("lists the theme's sections down the left, and a press opens the section", async () => {
+    const user = userEvent.setup();
+    renderRouted(
+      <DocumentThemeEditorRoute themeId="d1" from={undefined} onLeave={vi.fn()} />,
+      deps(),
+    );
+    await screen.findByDisplayValue("Night reading");
+    const sections = screen.getByRole("navigation", { name: "Theme sections" });
+    const fonts = document.getElementById("theme-group-fonts") as HTMLDetailsElement;
+    expect(fonts.open).toBe(false);
+    await user.click(within(sections).getByRole("button", { name: /^Fonts/ }));
+    expect(fonts.open).toBe(true);
+    expect(
+      within(sections)
+        .getByRole("button", { name: /^Fonts/ })
+        .getAttribute("aria-current"),
+    ).toBe("true");
+  });
+
+  it("starts a new theme under a name of its own, and a copy under the name of what it copies", async () => {
+    renderRouted(
+      <DocumentThemeEditorRoute themeId={undefined} from={undefined} onLeave={vi.fn()} />,
+      deps(),
+    );
+    expect(await screen.findByDisplayValue("My theme")).not.toBeNull();
+    expect(screen.getByRole("link", { name: "PDF themes" }).getAttribute("href")).toBe(
+      "/document-themes",
+    );
+    cleanup();
+
+    renderRouted(
+      <DocumentThemeEditorRoute themeId={undefined} from="plain" onLeave={vi.fn()} />,
+      deps(),
+    );
+    expect(await screen.findByDisplayValue("Plain copy")).not.toBeNull();
   });
 });

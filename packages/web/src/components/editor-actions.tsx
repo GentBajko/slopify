@@ -6,13 +6,15 @@ import { useToast } from "@/components/kit/toast";
 import { SavedTick } from "@/components/saved-tick";
 import { shortcuts } from "@/lib/shortcuts";
 
-// The bar under an editor's form, pinned to the bottom of the viewport: Delete at the left
-// (its place kept even before there is a row to delete), then one status slot for the error,
-// the Saved tick or the reason Save is holding, then Cancel and Save. Both editors draw it - prompts and intros/outros - so the
-// refusal affordance is written once and cannot drift between them.
+// The bar under an editor's form, pinned to the bottom of the window: Delete at the left (its
+// place kept even before there is a row to delete), then one status slot for the error, the
+// Saved tick or the reason Save is holding, then Cancel, an optional second way to save and
+// Save. The prompt, intro/outro and PDF theme editors draw it, so the refusal affordance is
+// written once and cannot drift between them. It is a direct child of the editor's form column:
+// a wrapper around it would be its sticky box and keep it from pinning.
 //
-// `cancel` is a node rather than a route, because the two editors return to two different
-// lists and neither of them belongs in here.
+// `cancel` is a node rather than a route, because the editors return to different lists and
+// none of them belongs in here.
 export function EditorActions({
   onDelete,
   blocked,
@@ -20,8 +22,10 @@ export function EditorActions({
   pending,
   saved,
   cancel,
+  also,
   errors,
   onSave,
+  "data-tour": tour,
 }: {
   // Undefined while the template has no row yet: there is nothing to delete.
   readonly onDelete: (() => void) | undefined;
@@ -30,8 +34,12 @@ export function EditorActions({
   readonly pending: boolean;
   readonly saved: boolean;
   readonly cancel: ReactNode;
+  // A secondary save that goes on somewhere else ("Save and make a video"): held with Save.
+  readonly also?: { readonly label: string; readonly run: () => void } | undefined;
   readonly errors: readonly string[];
   readonly onSave: () => void;
+  // The interactive tutorial's target name.
+  readonly "data-tour"?: string;
 }) {
   const held = blocked !== undefined || pending || saved;
   const notify = useToast();
@@ -53,6 +61,7 @@ export function EditorActions({
   return (
     <div
       data-slot="editor-actions"
+      data-tour={tour}
       className="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border-t border-line bg-ground py-3 max-md:bottom-[calc(48px+max(12px,env(safe-area-inset-bottom)))]"
     >
       <Button
@@ -69,6 +78,17 @@ export function EditorActions({
         {failure ? failure : saved ? <SavedTick /> : blocked}
       </StatusSlot>
       {cancel}
+      {also === undefined ? null : (
+        <Button
+          aria-disabled={held}
+          aria-describedby={blocked === undefined ? undefined : blockedId}
+          onClick={() => {
+            if (!held) also.run();
+          }}
+        >
+          {also.label}
+        </Button>
+      )}
       <Button
         variant="primary"
         aria-disabled={held}

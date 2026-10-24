@@ -2,10 +2,16 @@ import type { ReactElement } from "react";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 
-// The list column and its rows: two equal columns from 1180 px so a row's actions sit beside
-// its title on a wide screen and under it on a narrower one.
+// The list column and its rows: two equal columns from 1180 px. A row is two lines, its name
+// and what it does, with its actions beside it once the list is 400 px wide (the list is a
+// size container, kit.css) and under it in a narrower one.
 export const libraryListDetail = "min-[1180px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]";
-export const libraryRow = "grid-cols-1 2xl:grid-cols-[minmax(0,1fr)_auto]";
+export const libraryRow = "py-2.5 @min-[400px]:grid-cols-[minmax(0,1fr)_auto] @min-[400px]:gap-3";
+// Prompts and intros/outros sit beside the kinds, so their columns follow the width left to
+// them rather than the window's (shell.css). A row's second line (what it asks for and its
+// first words) runs under the actions too, so the words get the row's width.
+export const promptListDetail = "sl-listdetail--prompts";
+export const promptRow = "sl-row--prompt py-2.5";
 
 // The outline of a Library list while it loads: the same rows, title and meta line, so the
 // list does not jump when it arrives.

@@ -4,16 +4,13 @@ import type { Entry, EntryCategory, Prompt, PromptKind } from "@app/slices/libra
 import { promptKinds } from "@app/slices/library/model.js";
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CommandPaletteProvider } from "@/components/kit/command-palette";
 import { themeGroups } from "@/lib/document-theme-fields";
 import { kindLabel } from "@/lib/prompt-kinds";
 import { DocumentThemeEditorRoute } from "@/routes/document-theme-editor";
 import { DocumentThemesRoute } from "@/routes/document-themes";
 import { EntriesRoute } from "@/routes/entries";
 import { EntryEditorRoute } from "@/routes/entry-editor";
-import { LibraryLayout } from "@/routes/library";
 import { NarrationAliasesRoute } from "@/routes/narration-aliases";
 import { PromptEditorRoute } from "@/routes/prompt-editor";
 import { PromptsRoute } from "@/routes/prompts";
@@ -23,8 +20,17 @@ import { selfExplanatory, unexplainedControls } from "../coverage.js";
 
 afterEach(cleanup);
 
-// What the Library may show with neither a help line nor an info button beside it.
-const libraryAllow: readonly (string | RegExp)[] = [];
+// What Prompts, Templates, PDF themes and Pronunciation may show with neither a help line nor
+// an info button beside it, each because its label says what it does.
+const libraryAllow: readonly (string | RegExp)[] = [
+  // A name field: what the thing is called. A taken name is said under it as an error.
+  "Name",
+  // History's two versions to compare, under the heading "Compare two versions".
+  "Older",
+  "Newer",
+  // The intro and outro editor's choice, whose options say where each is spoken.
+  "Intro or outro",
+];
 
 function expectExplained(): void {
   expect(unexplainedControls(document.body, [...selfExplanatory, ...libraryAllow])).toEqual([]);
@@ -96,37 +102,26 @@ function libraryRoutes(): Record<string, Answer> {
   return routes;
 }
 
-function PromptsScreen() {
-  const [kind, setKind] = useState<PromptKind>("article");
-  return <PromptsRoute kind={kind} onKind={setKind} />;
+function PromptsScreen({ kind }: { readonly kind: PromptKind }) {
+  return <PromptsRoute kind={kind} />;
 }
 
-function EntriesScreen() {
-  const [category, setCategory] = useState<EntryCategory>("intro");
-  return <EntriesRoute category={category} onCategory={setCategory} />;
+function EntriesScreen({ category }: { readonly category: EntryCategory }) {
+  return <EntriesRoute category={category} />;
 }
 
-describe("every Library control is explained", () => {
-  it("on the Library tabs", async () => {
-    renderRouted(
-      <CommandPaletteProvider>
-        <LibraryLayout />
-      </CommandPaletteProvider>,
-      testDeps({}),
-    );
-    await screen.findByRole("heading", { level: 1, name: "Library" });
-    expectExplained();
-  });
-
+describe("every control on Prompts, Templates, PDF themes and Pronunciation is explained", () => {
   it("on the prompt list of every kind, its detail and its History drawer", async () => {
     const user = userEvent.setup();
-    renderRouted(<PromptsScreen />, testDeps(libraryRoutes()));
     for (const prompt of prompts) {
-      await user.selectOptions(await screen.findByLabelText("Prompt kind"), prompt.kind);
+      renderRouted(<PromptsScreen kind={prompt.kind} />, testDeps(libraryRoutes()));
       await screen.findByRole("region", { name: `${prompt.name} details` });
       expectExplained();
+      cleanup();
     }
     const last = prompts.at(-1) as Prompt;
+    renderRouted(<PromptsScreen kind={last.kind} />, testDeps(libraryRoutes()));
+    await screen.findByRole("region", { name: `${last.name} details` });
     await user.click(screen.getByRole("button", { name: `More actions for ${last.name}` }));
     await user.click(await screen.findByRole("menuitem", { name: `History of ${last.name}` }));
     const drawer = await screen.findByRole("dialog", { name: `History of ${last.name}` });
@@ -146,6 +141,9 @@ describe("every Library control is explained", () => {
         testDeps(libraryRoutes()),
       );
       await screen.findByLabelText("Name");
+      expectExplained();
+      // The full choice of kind, opened.
+      await userEvent.click(screen.getByRole("button", { name: "Change kind" }));
       expectExplained();
       cleanup();
 
@@ -170,10 +168,11 @@ describe("every Library control is explained", () => {
 
   it("on the intros and outros list, and in the entry editor of each category", async () => {
     const user = userEvent.setup();
-    renderRouted(<EntriesScreen />, testDeps(libraryRoutes()));
+    renderRouted(<EntriesScreen category="intro" />, testDeps(libraryRoutes()));
     await screen.findByRole("region", { name: "Cold open details" });
     expectExplained();
-    await user.click(screen.getByRole("button", { name: "Outros" }));
+    cleanup();
+    renderRouted(<EntriesScreen category="outro" />, testDeps(libraryRoutes()));
     await screen.findByRole("region", { name: "Sign-off details" });
     await user.click(screen.getByRole("button", { name: "More actions for Sign-off" }));
     await user.click(await screen.findByRole("menuitem", { name: "History of Sign-off" }));
@@ -216,6 +215,15 @@ describe("every Library control is explained", () => {
     await screen.findByRole("list", { name: "Narration aliases" });
     await user.click(screen.getByRole("button", { name: "Add alias" }));
     expectExplained();
+    cleanup();
+
+    // An empty list: no search until there is something to search.
+    renderRouted(
+      <NarrationAliasesRoute />,
+      testDeps({ "GET /api/pronunciations/aliases": jsonAnswer({ aliases: [] }) }),
+    );
+    await screen.findByText("No aliases yet");
+    expectExplained();
   });
 
   const plain = builtInTheme("plain");
@@ -249,10 +257,11 @@ describe("every Library control is explained", () => {
       themes(),
     );
     await screen.findByDisplayValue("Night reading");
-    // Every group's settings, whether or not its section starts open.
+    // Every group's settings, whether or not its section starts open. The name and the
+    // preview's heading carry none: neither needs a paragraph.
     const buttons = document.querySelectorAll("[data-help-id]").length;
     const settings = themeGroups.flatMap((group) => group.fields).length;
-    expect(buttons).toBeGreaterThanOrEqual(settings + 2);
+    expect(buttons).toBeGreaterThanOrEqual(settings);
     expect(screen.getByLabelText("Link address")).not.toBeNull();
     expect(screen.getByLabelText("Body font")).not.toBeNull();
     expectExplained();

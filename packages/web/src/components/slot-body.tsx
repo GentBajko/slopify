@@ -1,3 +1,4 @@
+import { keywordOf } from "@app/slices/keywords/specs.js";
 import { bodyMax } from "@app/slices/library/model.js";
 import { type ReactElement, useId, useRef, useState } from "react";
 import { Textarea } from "@/components/kit/field";
@@ -6,22 +7,24 @@ import { limitCount } from "@/lib/limit-count";
 import { cn } from "@/lib/utils";
 import { KeywordPopover, type ShownKeyword } from "./keyword-card";
 
-// The prompt body, with every malformed `{{` marked where it stands and each line numbered in
-// a gutter, in the monospace face prompts and keywords read best in. A textarea cannot style a
-// range of its own value, so the text is painted by a mirror behind it and the textarea's own
-// glyphs are made transparent; the caret keeps its colour. Both layers carry the identical
-// metrics below, which is why they are one constant and not two class lists. The gutter is the
-// mirror's left padding, and a wrapped line keeps one number, at its start.
+// The prompt body, set as the prose it is: the reading face at body size in full ink, spell
+// check on, growing with the text from about twelve lines. Every malformed `{{` is underlined
+// where it stands and each keyword is coloured, which a textarea cannot do to its own value, so
+// the text is painted by a mirror behind it and the textarea's own glyphs are made transparent;
+// the caret keeps its colour. Both layers carry the identical metrics below, which is why they
+// are one constant and not two class lists.
 //
-// The mark is never colour alone: the same errors are listed as sentences beside the field, and
-// `describedBy` points the textarea at them. Under the field: the count against the 100,000
-// characters a prompt may hold, and the line and column of the caret, which the lint names.
+// The mark is never colour alone: the same errors are listed as sentences beside the field, each
+// with a Go to button that puts the caret on it, and `describedBy` points the textarea at them.
+// The count against the 100,000 characters a prompt may hold shows only near the limit.
 //
 // With a `place`, each keyword Slopify fills is marked too: one usable here, a misuse (with the
 // lint's sentence), an old name. The textarea is on top, so pointing at a keyword is found by
 // measuring the mirror's spans; the caret inside one shows the same card for the keyboard.
-const metrics =
-  "py-3 pr-3 pl-12 font-mono text-small leading-[1.6] break-words [scrollbar-gutter:stable]";
+const metrics = "px-3 py-2.5 font-sans text-body font-normal break-words [scrollbar-gutter:stable]";
+
+// The count appears from this share of the limit.
+const countFrom = 0.9;
 
 interface Line {
   readonly number: number;
@@ -34,7 +37,34 @@ const keywordLooks: Readonly<Record<KeywordMark, string>> = {
   legacy: "underline decoration-dotted decoration-waiting decoration-2 underline-offset-[3px]",
 };
 
-// The pieces cut at each line break, so each line can carry its number.
+// A keyword of your own (`{{Topic}}`), the question you answer on Create, is highlighted
+// behind its letters, apart from the accent-ink letters of a keyword Slopify fills. Only a
+// background and a ring are drawn (neither takes room), so the mirror's glyphs stay exactly
+// where the textarea's are. The prompt's detail and the "Asks you for" chips wear the same
+// highlight.
+export const ownKeywordLook = "rounded-[3px] bg-accent-tint text-ink ring-1 ring-accent/40";
+
+const wellFormed = /\{\{([^{}\n]*)\}\}/g;
+
+// Plain text cut at each keyword of your own: one with a name that Slopify does not fill.
+export function ownKeywordParts(
+  text: string,
+): readonly { readonly at: number; readonly text: string; readonly own: boolean }[] {
+  const parts: { at: number; text: string; own: boolean }[] = [];
+  let cursor = 0;
+  for (const match of text.matchAll(wellFormed)) {
+    const name = (match[1] ?? "").trim();
+    if (name === "" || keywordOf(name) !== undefined) continue;
+    if (match.index > cursor)
+      parts.push({ at: cursor, text: text.slice(cursor, match.index), own: false });
+    parts.push({ at: match.index, text: match[0], own: true });
+    cursor = match.index + match[0].length;
+  }
+  if (cursor < text.length) parts.push({ at: cursor, text: text.slice(cursor), own: false });
+  return parts;
+}
+
+// The pieces cut at each line break, so the mirror draws the lines the textarea holds.
 export function bodyLines(body: string, where?: BodyPlace): readonly Line[] {
   const lines: { number: number; pieces: BodyPiece[] }[] = [{ number: 1, pieces: [] }];
   for (const piece of bodyPieces(body, where)) {
@@ -50,14 +80,6 @@ export function bodyLines(body: string, where?: BodyPlace): readonly Line[] {
   return lines;
 }
 
-// "Line 3, column 12" for a caret offset, counted as the lint counts.
-export function caretPosition(body: string, at: number): string {
-  const before = body.slice(0, at);
-  const line = before.split("\n").length;
-  const column = at - before.lastIndexOf("\n");
-  return `Line ${String(line)}, column ${String(column)}`;
-}
-
 export function SlotBody({
   id,
   value,
@@ -65,6 +87,7 @@ export function SlotBody({
   describedBy,
   place,
   grandfathered,
+  placeholder,
   onChange,
 }: {
   readonly id: string;
@@ -74,10 +97,10 @@ export function SlotBody({
   // Where the body runs, to mark its keywords; the stored prompt's own slot names.
   readonly place?: BodyPlace["place"] | undefined;
   readonly grandfathered?: readonly string[] | undefined;
+  readonly placeholder?: string | undefined;
   readonly onChange: (next: string) => void;
 }): ReactElement {
   const mirror = useRef<HTMLDivElement | null>(null);
-  const [caret, setCaret] = useState<number | undefined>(undefined);
   const [shown, setShown] = useState<ShownKeyword | undefined>(undefined);
   const countId = `${id}-count`;
   const cardId = useId();
@@ -86,6 +109,7 @@ export function SlotBody({
     place === undefined ? undefined : { place, grandfathered: grandfathered ?? [] },
   );
   const keywords = lines.flatMap((line) => line.pieces.filter((piece) => piece.keyword));
+  const nearLimit = value.length >= bodyMax * countFrom;
 
   const showFor = (piece: BodyPiece | undefined): void => {
     const span =
@@ -131,10 +155,7 @@ export function SlotBody({
           )}
         >
           {lines.map((line) => (
-            <div key={line.number} className="relative">
-              <span className="absolute -left-11 w-8 text-right text-ink-3 tabular-nums select-none">
-                {line.number}
-              </span>
+            <div key={line.number}>
               {line.pieces.map((piece) => (
                 <span
                   key={piece.start}
@@ -152,7 +173,17 @@ export function SlotBody({
                         : keywordLooks[piece.keyword.kind]
                   }
                 >
-                  {piece.text}
+                  {piece.marked || piece.keyword !== undefined
+                    ? piece.text
+                    : ownKeywordParts(piece.text).map((part) =>
+                        part.own ? (
+                          <span key={part.at} data-own-keyword="" className={ownKeywordLook}>
+                            {part.text}
+                          </span>
+                        ) : (
+                          part.text
+                        ),
+                      )}
                 </span>
               ))}
               {/* An empty line still takes its height, as it does in the textarea. */}
@@ -163,11 +194,16 @@ export function SlotBody({
 
         <Textarea
           id={id}
-          rows={24}
+          rows={12}
           value={value}
-          spellCheck={false}
+          spellCheck
+          placeholder={placeholder}
           aria-invalid={invalid}
-          aria-describedby={[describedBy, countId, shown === undefined ? undefined : cardId]
+          aria-describedby={[
+            describedBy,
+            nearLimit ? countId : undefined,
+            shown === undefined ? undefined : cardId,
+          ]
             .filter(Boolean)
             .join(" ")}
           className={cn(
@@ -175,14 +211,13 @@ export function SlotBody({
             // `block` and not the textarea's inline default: inline leaves a descender gap
             // under it, and the wrapper the overlay is stretched to would be taller than
             // the field it has to sit behind.
-            "relative block min-h-[520px] resize-y border-line-strong overflow-auto bg-transparent text-transparent caret-ink",
+            "relative block resize-y border-line-strong overflow-auto bg-transparent text-transparent caret-ink placeholder:text-ink-3",
           )}
           onChange={(event) => {
             onChange(event.target.value);
           }}
           onSelect={(event) => {
             const at = event.currentTarget.selectionStart;
-            setCaret(at);
             if (event.currentTarget.selectionEnd === at) caretAt(at);
             else setShown(undefined);
           }}
@@ -198,18 +233,17 @@ export function SlotBody({
         />
         <KeywordPopover id={cardId} shown={shown} onDismiss={() => setShown(undefined)} />
       </div>
-      <p
-        id={countId}
-        className={cn(
-          "m-0 mt-1 flex flex-wrap justify-between gap-x-4 text-small tabular-nums",
-          value.length > bodyMax ? "text-danger" : "text-ink-3",
-        )}
-      >
-        <span>{limitCount(value.length, bodyMax, "characters")}</span>
-        <span aria-live="off">
-          {caret === undefined ? "" : caretPosition(value, Math.min(caret, value.length))}
-        </span>
-      </p>
+      {nearLimit ? (
+        <p
+          id={countId}
+          className={cn(
+            "m-0 mt-1 text-small tabular-nums",
+            value.length > bodyMax ? "text-danger" : "text-ink-2",
+          )}
+        >
+          {limitCount(value.length, bodyMax, "characters")}
+        </p>
+      ) : null}
     </div>
   );
 }

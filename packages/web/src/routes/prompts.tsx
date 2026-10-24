@@ -7,20 +7,19 @@ import { Callout } from "@/components/kit/callout";
 import { ariaKeyShortcuts, useSearchShortcut } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
-import { Input, Select } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { Input } from "@/components/kit/field";
 import { ListDetail } from "@/components/kit/layout";
 import { ButtonLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { RowCheck, useSelection } from "@/components/selection";
 import { plural } from "@/lib/format";
-import { kindLabel, kindOptions } from "@/lib/prompt-kinds";
+import { kindAbout, kindLabel, kindNoun, kindSentence } from "@/lib/prompt-kinds";
 import { LibraryBulkBar, SelectionArea } from "@/library/bulk-bar";
 import { HistoryDrawer } from "@/library/history-drawer";
-import { InlineName, refusedName } from "@/library/inline-name";
 import { LibraryItemDetail } from "@/library/item-detail";
-import { ListSkeleton, LoadError, libraryListDetail, libraryRow } from "@/library/list-states";
+import { ListSkeleton, LoadError, promptListDetail, promptRow } from "@/library/list-states";
 import { useLibraryItem } from "@/library/list-url";
+import { PromptRowMeta, PromptsFrame, PromptsListHead } from "@/library/prompts-frame";
 import { LibraryRowActions } from "@/library/row-actions";
 import { sortLibrary, useLibrarySort } from "@/library/sort";
 import { SortMenu } from "@/library/sort-menu";
@@ -29,27 +28,27 @@ import { TransferMenu } from "@/library/transfer-menu";
 import { refusalOf, useLibraryBulk } from "@/library/use-library-bulk";
 import { useLibraryTransfer } from "@/library/use-library-transfer";
 import { keys, promptsQuery } from "@/queries";
-import { LibraryToolbar } from "@/routes/library";
 
-// Every saved prompt of one kind, by name or last change, beside the selected one's text,
-// what uses it and its latest change; the selected row is `?item=` in the URL. The kind lives in the URL, so switching it
-// is handed up to router.tsx instead of reaching for a router here.
+// Prompts: every kind down the left with its count, the saved prompts of the one picked (by
+// name or last change) beside the selected one's text. A search looks through every kind at
+// once and says each hit's kind. The kind and the selected row live in the URL (`?kind=`,
+// `?item=`), so a link opens the same list on the same prompt.
 export function PromptsRoute({
   kind,
-  onKind,
-  onUseInPlay,
-  playBlocked,
+  onMakeVideo,
+  makeBlocked,
 }: {
   readonly kind: PromptKind;
-  readonly onKind: (next: PromptKind) => void;
-  // Opens Play with the prompt picked (router.tsx wires the Play draft in).
-  readonly onUseInPlay?: ((prompt: Prompt) => void) | undefined;
-  readonly playBlocked?: string | undefined;
+  // Opens Create with the prompt picked (router.tsx wires the Create draft in).
+  readonly onMakeVideo?: ((prompt: Prompt) => void) | undefined;
+  readonly makeBlocked?: string | undefined;
 }) {
   const { api } = useApp();
   const queryClient = useQueryClient();
   const prompts = useQuery(promptsQuery(api));
-  const [query, setQuery] = useState("");
+  // The words typed belong to the kind they were typed on: picking another kind clears them.
+  const [typed, setTyped] = useState({ kind, text: "" });
+  const query = typed.kind === kind ? typed.text : "";
   const search = useRef<HTMLInputElement>(null);
   const searchKeys = useSearchShortcut(search, "prompts");
   const [selectedId, setSelectedId] = useLibraryItem();
@@ -65,26 +64,19 @@ export function PromptsRoute({
     },
   });
 
-  // A rename from the list: the same save as the editor's, with the text as it is.
-  const rename = async (prompt: Prompt, name: string): Promise<string | null> => {
-    const reply = await savePrompt(api, { kind: prompt.kind, name, body: prompt.body }, prompt.id);
-    await queryClient.invalidateQueries({ queryKey: keys.prompts });
-    return reply.ok ? null : refusedName(reply.fields);
-  };
-
+  const all = prompts.data?.prompts ?? [];
   const ofKind = prompts.data?.prompts.filter((prompt) => prompt.kind === kind);
   const needle = query.trim().toLowerCase();
-  const matching =
-    needle === ""
-      ? ofKind
-      : ofKind?.filter(
-          (prompt) =>
-            prompt.name.toLowerCase().includes(needle) ||
-            prompt.body.toLowerCase().includes(needle),
-        );
+  const searching = needle !== "";
+  // A search looks through every kind, by name and by text.
+  const matching = searching
+    ? prompts.data?.prompts.filter(
+        (prompt) =>
+          prompt.name.toLowerCase().includes(needle) || prompt.body.toLowerCase().includes(needle),
+      )
+    : ofKind;
   const listed = matching === undefined ? undefined : sortLibrary(matching, sort);
   const selected = listed?.find((prompt) => prompt.id === selectedId) ?? listed?.[0];
-  const all = prompts.data?.prompts ?? [];
   const selection = useSelection(listed?.map((prompt) => prompt.id) ?? []);
   const chosen = listed?.filter((prompt) => selection.has(prompt.id)) ?? [];
   const bulk = useLibraryBulk({
@@ -112,54 +104,55 @@ export function PromptsRoute({
     nameMax,
     save: (prompt) => savePrompt(api, prompt, undefined),
   });
+  const empty = ofKind !== undefined && ofKind.length === 0 && !searching;
 
   return (
-    <div>
-      <LibraryToolbar
-        action={
+    <PromptsFrame
+      shown={{ kind }}
+      actions={
+        <>
+          <TransferMenu
+            what="prompts"
+            disabled={prompts.data === undefined || transfer.importing}
+            exports={[
+              {
+                label: `Export all ${plural(all.length, "prompt")}`,
+                run: () => transfer.exportItems(all),
+                disabled: all.length === 0,
+              },
+            ]}
+            accept=".json,application/json"
+            onFile={transfer.importFile}
+          />
+          {/* An empty kind offers its first prompt in its own empty state instead. */}
+          {empty ? null : <NewPromptButton kind={kind} />}
+        </>
+      }
+    >
+      <PromptsListHead
+        title={
+          searching
+            ? `${plural(listed?.length ?? 0, "prompt")} match “${query.trim()}”`
+            : `${kindLabel(kind)} prompts`
+        }
+        about={searching ? "Found in every kind." : empty ? undefined : kindAbout(kind)}
+        tools={
           <>
-            <TransferMenu
-              what="prompts"
-              disabled={prompts.data === undefined || transfer.importing}
-              exports={[
-                {
-                  label: `Export all ${plural(all.length, "prompt")}`,
-                  run: () => transfer.exportItems(all),
-                  disabled: all.length === 0,
-                },
-              ]}
-              accept=".json,application/json"
-              onFile={transfer.importFile}
+            <Input
+              type="search"
+              ref={search}
+              aria-label="Search prompts"
+              aria-keyshortcuts={ariaKeyShortcuts(searchKeys)}
+              placeholder="Search all prompts"
+              value={query}
+              className="w-full min-w-0 sm:w-56"
+              onChange={(event) => setTyped({ kind, text: event.target.value })}
             />
-            <NewPromptButton kind={kind} />
+            {/* Nothing to order in an empty list. */}
+            {empty ? null : <SortMenu what="prompts" sort={sort} onSort={setSort} />}
           </>
         }
-      >
-        <Input
-          type="search"
-          ref={search}
-          aria-label="Search prompts"
-          aria-keyshortcuts={ariaKeyShortcuts(searchKeys)}
-          placeholder="Search prompts"
-          value={query}
-          className="w-full min-w-0 sm:w-64"
-          onChange={(event) => setQuery(event.target.value)}
-        />
-        <span className="flex w-full items-center gap-1 sm:w-auto" {...helpScope}>
-          <Select
-            aria-label="Prompt kind"
-            value={kind}
-            className="w-full sm:w-56"
-            options={kindOptions}
-            onChange={(event) => {
-              const picked = kindOptions.find((option) => option.value === event.target.value);
-              if (picked !== undefined) onKind(picked.value);
-            }}
-          />
-          <InfoTip id="library.prompt.kind" />
-        </span>
-        <SortMenu what="prompts" sort={sort} onSort={setSort} />
-      </LibraryToolbar>
+      />
 
       {prompts.error === null ? null : (
         <LoadError
@@ -169,27 +162,30 @@ export function PromptsRoute({
         />
       )}
 
-      {listed === undefined || ofKind === undefined ? (
+      {listed === undefined ? (
         prompts.error === null ? (
           <ListSkeleton label="Prompts" />
         ) : null
-      ) : ofKind.length === 0 ? (
-        <EmptyState title={`No ${kindLabel(kind).toLowerCase()} prompts yet`}>
-          A prompt is text with {"{{keywords}}"}; each keyword becomes a field on Play.
+      ) : empty ? (
+        <EmptyState
+          title={`No ${kindNoun(kind)} prompts yet`}
+          actions={<NewPromptButton kind={kind} />}
+        >
+          {kindSentence(kind)}
         </EmptyState>
       ) : (
         <ListDetail
-          className={libraryListDetail}
+          className={promptListDetail}
           list={
             listed.length === 0 ? (
-              <p className="m-0 py-3 text-small text-ink-2">{`No ${kindLabel(kind).toLowerCase()} prompts match "${query.trim()}".`}</p>
+              <p className="m-0 py-3 text-small text-ink-2">{`No prompt of any kind has “${query.trim()}” in its name or text.`}</p>
             ) : (
               <SelectionArea selection={selection}>
                 <LibraryBulkBar
                   selection={selection}
                   total={listed.length}
                   noun={["prompt", "prompts"]}
-                  scope={needle === "" ? undefined : `Select all ${String(listed.length)} shown`}
+                  scope={searching ? `Select all ${String(listed.length)} shown` : undefined}
                   busy={bulk.busy}
                   onDuplicate={() => bulk.duplicate(chosen)}
                   onExport={() => transfer.exportItems(chosen)}
@@ -199,18 +195,19 @@ export function PromptsRoute({
                   {listed.map((prompt) => (
                     <ListRow
                       key={prompt.id}
-                      className={libraryRow}
+                      className={promptRow}
                       lead={
                         <RowCheck selection={selection} value={prompt.id} label={prompt.name} />
                       }
-                      title={
-                        <InlineName
-                          name={prompt.name}
-                          onSelect={() => setSelectedId(prompt.id)}
-                          onRename={(name) => rename(prompt, name)}
+                      title={prompt.name}
+                      onSelect={() => setSelectedId(prompt.id)}
+                      meta={
+                        <PromptRowMeta
+                          kind={searching ? kindLabel(prompt.kind) : undefined}
+                          body={prompt.body}
+                          slots={prompt.slots}
                         />
                       }
-                      meta={promptMeta(prompt)}
                       selected={prompt.id === selected?.id}
                       actions={
                         <LibraryRowActions
@@ -240,8 +237,8 @@ export function PromptsRoute({
                             </ButtonLink>
                           }
                           play={{
-                            run: onUseInPlay === undefined ? undefined : () => onUseInPlay(prompt),
-                            blocked: playBlocked,
+                            run: onMakeVideo === undefined ? undefined : () => onMakeVideo(prompt),
+                            blocked: makeBlocked,
                           }}
                           onHistory={() => setHistory(prompt)}
                           onDelete={() => setDeleting(prompt)}
@@ -274,7 +271,7 @@ export function PromptsRoute({
                     params={{ promptId: selected.id }}
                     size="small"
                   >
-                    Edit prompt
+                    Edit
                   </ButtonLink>
                 }
                 onOpenHistory={() => setHistory(selected)}
@@ -285,7 +282,7 @@ export function PromptsRoute({
       )}
 
       {remove.error === null ? null : (
-        <Callout tone="danger" title="The prompt wasn't deleted." className="mt-4">
+        <Callout tone="danger" title="The prompt wasn't deleted.">
           {remove.error.message}
         </Callout>
       )}
@@ -313,23 +310,14 @@ export function PromptsRoute({
         }}
         onCancel={() => setDeleting(undefined)}
       />
-    </div>
+    </PromptsFrame>
   );
 }
 
-function promptMeta(prompt: Prompt): ReactElement {
-  return (
-    <>
-      {`${kindLabel(prompt.kind)} · ${plural(prompt.slots.length, "keyword")} · updated `}
-      <Stamp iso={prompt.updatedAt} />
-    </>
-  );
-}
-
-function NewPromptButton({ kind }: { readonly kind: PromptKind }) {
+function NewPromptButton({ kind }: { readonly kind: PromptKind }): ReactElement {
   return (
     <ButtonLink to="/prompts/new" search={{ kind }} variant="primary">
-      New prompt
+      {`New ${kindNoun(kind)} prompt`}
     </ButtonLink>
   );
 }

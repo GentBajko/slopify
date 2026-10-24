@@ -11,7 +11,7 @@ import { useApp } from "@/app-context";
 import { StatusSlot } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
-import { Field, Select } from "@/components/kit/field";
+import { Field, HelpLine, Select } from "@/components/kit/field";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { keys } from "@/queries";
@@ -22,8 +22,8 @@ export const historyKeys = {
   usedBy: (item: LibraryItemKind, id: string) => ["library-used-by", item, id] as const,
 };
 
-// The saved versions of one prompt or intro/outro, newest first. The Library detail and the
-// History drawer share the one query, so opening the drawer never refetches.
+// The saved versions of one prompt or intro/outro, newest first. The detail beside the list and
+// the History drawer share the one query, so opening the drawer never refetches.
 export function useLibraryHistory(item: LibraryItemKind, id: string) {
   const { api } = useApp();
   return useQuery({
@@ -40,7 +40,7 @@ export function useLibraryUsedBy(item: LibraryItemKind, id: string) {
   });
 }
 
-// Library → History: every saved version of one prompt or intro/outro, any two of them side by
+// Prompts → History: every saved version of one prompt or intro/outro, any two of them side by
 // side with the changed words marked, and Restore for an older one. A drawer, so the list it
 // was opened from stays in view; what uses the item is in the detail beside the list.
 export function HistoryDrawer({
@@ -94,9 +94,9 @@ export function HistoryDrawer({
           </p>
         )}
         <section className="flex flex-col gap-3">
-          <SectionHead title="Compare" as="h3" />
+          <SectionHead title="Compare two versions" as="h3" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Older" tip="library.history.compare">
+            <Field label="Older">
               <Select
                 value={before === undefined ? "" : String(before)}
                 disabled={versions.length === 0}
@@ -111,7 +111,7 @@ export function HistoryDrawer({
                 ))}
               </Select>
             </Field>
-            <Field label="Newer" tip="library.history.compare">
+            <Field label="Newer">
               <Select
                 value={after === undefined ? "" : String(after)}
                 disabled={versions.length === 0}
@@ -147,7 +147,11 @@ export function HistoryDrawer({
         </section>
 
         <section className="flex flex-col gap-2">
-          <SectionHead title="Versions" as="h3" info="library.history.versions" />
+          <SectionHead title="Versions" as="h3" />
+          <HelpLine>
+            Restore saves an older version again as the newest, so nothing after it is lost.
+            Projects already made keep their text.
+          </HelpLine>
           <List label={`Versions of ${name}`}>
             {versions.map((one) => (
               <ListRow

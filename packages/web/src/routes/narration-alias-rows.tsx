@@ -2,8 +2,8 @@ import type { NarrationAlias } from "@app/kernel/ports/narration-aliases.js";
 import { Trash2Icon } from "lucide-react";
 import type { ReactElement } from "react";
 import { IconButton } from "@/components/kit/button";
-import { Checkbox } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { Checkbox, HelpLine } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { RowCheck, type Selection } from "@/components/selection";
 import { Input } from "@/components/ui/input";
@@ -37,26 +37,11 @@ export function AliasRows({
   readonly selection: Selection<string>;
 }): ReactElement {
   return (
-    // One info button per column, once above the rows rather than on every row.
+    // What the two ticks do, said once above the rows rather than on every row.
     <div {...helpScope}>
-      <p className="m-0 flex flex-wrap items-center gap-x-4 gap-y-1 pb-2 text-small text-ink-2">
-        <span className="flex items-center gap-1">
-          Written
-          <InfoTip id="library.aliases.written" />
-        </span>
-        <span className="flex items-center gap-1">
-          Say it as
-          <InfoTip id="library.aliases.spoken" />
-        </span>
-        <span className="flex items-center gap-1">
-          Whole word
-          <InfoTip id="library.aliases.whole-word" />
-        </span>
-        <span className="flex items-center gap-1">
-          Match case
-          <InfoTip id="library.aliases.match-case" />
-        </span>
-      </p>
+      <HelpLine className="pb-2">
+        Whole word skips matches inside longer words. Match case only matches the same capitals.
+      </HelpLine>
       <List label="Narration aliases">
         {rows.map(({ row, index }) => {
           const id = `${idPrefix}-${row.key}`;

@@ -988,6 +988,72 @@
       grid-template-columns: minmax(0, 1fr);
     }
   }
+  /* Prompts: every kind down the left with its count, beside the list of the one picked. A
+     kind's whole name shows ("Narration preparation"): it wraps in the rail instead of being
+     cut. Phones keep the one sideways row. */
+  .sl-workspace.sl-workspace--prompts {
+    grid-template-columns: 196px minmax(0, 1fr);
+  }
+  @media (min-width: 768px) {
+    .sl-workspace--prompts .sl-workspace__sections .sl-rail__item {
+      height: auto;
+      min-height: 34px;
+      padding-block: 6px;
+    }
+  }
+  @media (max-width: 767px) {
+    .sl-workspace.sl-workspace--prompts {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  /* Beside the kinds, the list and the selected prompt share what width is left: two equal
+     columns once both can be read, the kit's slim list beside the text below that, and one
+     under the other when even that would squeeze the text to a few words a line. */
+  .sl-workspace--prompts > .sl-workspace__main {
+    container-type: inline-size;
+    container-name: prompts;
+  }
+  @container prompts (min-width: 860px) {
+    .sl-listdetail.sl-listdetail--prompts {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+  }
+  @container prompts (max-width: 619px) {
+    .sl-listdetail.sl-listdetail--prompts {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  /* A prompt row (library/list-states `promptRow`): the name with its actions on the first
+     line, then what it asks for and its first words across the whole row, under the actions
+     too, so the words are not cut to a few letters beside the buttons. A list narrower than
+     400px keeps the kit's stack: name, words, then the actions. */
+  @container (min-width: 400px) {
+    .sl-row.sl-row--prompt {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      column-gap: var(--space-3);
+      row-gap: 2px;
+    }
+    .sl-row--prompt > .sl-row__lead,
+    .sl-row--prompt > .sl-row__lead > .sl-row__text {
+      display: contents;
+    }
+    .sl-row--prompt > .sl-row__lead > [data-slot="row-check"] {
+      grid-row: 1 / span 2;
+      grid-column: 1;
+    }
+    .sl-row--prompt .sl-row__title {
+      grid-row: 1;
+      grid-column: 2;
+    }
+    .sl-row--prompt > .sl-row__actions {
+      grid-row: 1;
+      grid-column: 3;
+    }
+    .sl-row--prompt .sl-row__meta {
+      grid-row: 2;
+      grid-column: 2 / -1;
+    }
+  }
   /* Help → Tutorials: the wiki's groups beside the page, scrolling on their own so the list
      stays in reach however long the page is. */
   .sl-workspace.sl-workspace--tutorials {
@@ -1378,6 +1444,17 @@
     }
     html:has([data-slot="usage-notice"]) .sl-toasts {
       bottom: calc(56px + max(12px, env(safe-area-inset-bottom)) + var(--usage-notice-height, 0px));
+    }
+  }
+}
+
+/* The Prompts rail's kind names wrap (above), as the studio's do. */
+@layer utilities {
+  @media (min-width: 768px) {
+    .sl-workspace--prompts .sl-workspace__sections .sl-rail__item > .truncate {
+      white-space: normal;
+      overflow: visible;
+      text-overflow: clip;
     }
   }
 }

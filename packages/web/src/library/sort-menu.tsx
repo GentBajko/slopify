@@ -1,10 +1,10 @@
-import { ArrowDownUpIcon, CheckIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon } from "lucide-react";
 import type { ReactElement } from "react";
 import { Button } from "@/components/kit/button";
 import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/kit/menu";
 import { type LibrarySort, librarySorts } from "./sort";
 
-// The order of a Library list, one small button in its toolbar: the current order on its face,
+// The order of a list, one small button in its toolbar that reads as a menu: "Sort: Name ▾",
 // the choices behind it.
 export function SortMenu({
   what,
@@ -20,8 +20,8 @@ export function SortMenu({
     <Menu>
       <MenuTrigger asChild>
         <Button variant="quiet" size="small" aria-label={`Sort ${what}: ${current}`}>
-          <ArrowDownUpIcon aria-hidden="true" />
-          {current}
+          {`Sort: ${current}`}
+          <ChevronDownIcon aria-hidden="true" />
         </Button>
       </MenuTrigger>
       <MenuContent align="start">

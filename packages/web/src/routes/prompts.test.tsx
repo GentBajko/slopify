@@ -2,7 +2,6 @@ import type { Prompt } from "@app/slices/library/model.js";
 import { type AnyRouter, useLocation, useRouter } from "@tanstack/react-router";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { PromptKind } from "@/api";
 import type { Answer } from "@/test-app";
@@ -58,13 +57,16 @@ const card: Prompt = {
 };
 
 function deps(prompts: readonly Prompt[], extra: Readonly<Record<string, Answer>> = {}) {
-  return testDeps({ "GET /api/prompts": jsonAnswer({ prompts }), ...extra });
+  return testDeps({
+    "GET /api/prompts": jsonAnswer({ prompts }),
+    "GET /api/entries": jsonAnswer({ entries: [] }),
+    ...extra,
+  });
 }
 
-// The tab lives in the URL, so router.tsx owns the move; this stands in for it.
+// The kind lives in the URL (router.tsx reads it); a test names it.
 function Screen({ start = "article" as PromptKind }) {
-  const [kind, setKind] = useState<PromptKind>(start);
-  return <PromptsRoute kind={kind} onKind={setKind} />;
+  return <PromptsRoute kind={start} />;
 }
 
 // A row is found by its title, which is the button that shows it in the detail column.
@@ -75,56 +77,69 @@ async function findRow(name: string): Promise<HTMLElement> {
   return row;
 }
 
+const one = (versions = 1) => ({
+  versions: Array.from({ length: versions }, (_, at) => ({
+    version: versions - at,
+    kind: "article",
+    mode: null,
+    name: "Documentary dossier",
+    body: `Version ${String(versions - at)}.`,
+    author: "you",
+    restoredFrom: null,
+    createdAt: "2026-09-01T10:00:00.000Z",
+  })),
+});
+const unused = { templates: [], schedules: [], projects: [] };
+
 describe("the prompts list", () => {
-  it("offers every kind and shows only the one that is on", async () => {
-    const user = userEvent.setup();
+  it("lists every kind down the left with how many are saved, and shows the one picked", async () => {
     renderRouted(<Screen />, deps([dossier, oil, card]));
 
     expect(await findRow("Documentary dossier")).not.toBeNull();
     expect(screen.queryByText("Oil painting scenes")).toBeNull();
-    expect(screen.queryByText("Bold title card")).toBeNull();
+    const kinds = screen.getByRole("navigation", { name: "Kinds of prompt" });
+    const link = (name: RegExp) => within(kinds).getByRole("link", { name });
+    await waitFor(() => expect(link(/^Intros/u).textContent).toBe("Intros, 0"));
+    expect(
+      within(kinds)
+        .getAllByRole("link")
+        .map((one) => one.textContent),
+    ).toEqual([
+      "Article, 1",
+      "Image, 1",
+      "Thumbnail, 1",
+      "Narration preparation, 0",
+      "YouTube description, 0",
+      "Shorts, 0",
+      "Review, 0",
+      "Script (speakers), 0",
+      "Post, 0",
+      "Intros, 0",
+      "Outros, 0",
+    ]);
+    expect(link(/^Article/u).getAttribute("aria-current")).toBe("page");
+    expect(link(/^Image/u).getAttribute("aria-current")).toBeNull();
+    expect(link(/^Image/u).getAttribute("href")).toBe("/prompts?kind=image");
+    expect(link(/^Intros/u).getAttribute("href")).toBe("/entries?category=intro");
+  });
 
-    const kinds = screen.getByRole("combobox", { name: "Prompt kind" });
-    await user.selectOptions(kinds, "Image");
+  it("says what the kind on show makes, above its list", async () => {
+    renderRouted(<Screen start="image" />, deps([oil]));
+    expect(await screen.findByRole("heading", { name: "Image prompts" })).not.toBeNull();
+    expect(screen.getByText("Describes the pictures shown during the video.")).not.toBeNull();
     expect(await findRow("Oil painting scenes")).not.toBeNull();
-    expect(screen.queryByText("Documentary dossier")).toBeNull();
-
-    await user.selectOptions(kinds, "Thumbnail");
-    expect(await findRow("Bold title card")).not.toBeNull();
-    expect(screen.queryByText("Oil painting scenes")).toBeNull();
   });
 
-  it("offers YouTube Description as its own kind", async () => {
-    const user = userEvent.setup();
-    const hook: Prompt = {
-      id: "p4",
-      kind: "description",
-      name: "Hooky chapters",
-      body: "Hook {{topic}} fans.",
-      slots: ["topic"],
-      updatedAt: "2026-09-01T10:00:00.000Z",
-    };
-    renderRouted(<Screen />, deps([dossier, hook]));
-    await findRow("Documentary dossier");
-    expect(screen.queryByText("Hooky chapters")).toBeNull();
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "Prompt kind" }),
-      "YouTube Description",
-    );
-    expect(await findRow("Hooky chapters")).not.toBeNull();
-    expect(screen.queryByText("Documentary dossier")).toBeNull();
-  });
-
-  it("says each row's kind and keyword count on its meta line", async () => {
-    renderRouted(<Screen />, deps([dossier]));
+  it("says on each row what it asks for and how its text starts", async () => {
+    renderRouted(<Screen />, deps([dossier, { ...dossier, id: "p8", name: "Plain", slots: [] }]));
 
     const row = await findRow("Documentary dossier");
-    const meta = row.querySelector(".sl-row__meta");
-    expect(meta?.textContent).toMatch(/^Article · 2 keywords · updated /u);
-    // The short date shows the whole moment on hover.
-    const stamp = meta?.querySelector("time");
-    expect(stamp?.getAttribute("dateTime")).toBe(dossier.updatedAt);
-    expect(stamp?.getAttribute("title")).toMatch(/2026/u);
+    expect(row.querySelector(".sl-row__meta")?.textContent).toBe(
+      "Asks for: minWords, topic ·Compose a {{minWords}} word dossier on {{topic}}.",
+    );
+    expect((await findRow("Plain")).querySelector(".sl-row__meta")?.textContent).toBe(
+      "Compose a {{minWords}} word dossier on {{topic}}.",
+    );
   });
 
   it("sorts by name, or by last change from the Sort menu, and remembers it", async () => {
@@ -137,10 +152,12 @@ describe("the prompts list", () => {
         .getAllByRole("listitem")
         .map((row) => row.querySelector(".sl-row__title")?.textContent ?? "");
 
-    expect((await names()).map((name) => name.slice(0, 4))).toEqual(["Alph", "Zulu"]);
-    await user.click(screen.getByRole("button", { name: "Sort prompts: Name" }));
+    expect(await names()).toEqual(["Alpha", "Zulu"]);
+    const sort = screen.getByRole("button", { name: "Sort prompts: Name" });
+    expect(sort.textContent).toBe("Sort: Name");
+    await user.click(sort);
     await user.click(await screen.findByRole("menuitem", { name: /^Sort by last changed/u }));
-    expect((await names()).map((name) => name.slice(0, 4))).toEqual(["Zulu", "Alph"]);
+    expect(await names()).toEqual(["Zulu", "Alpha"]);
     expect(stored.get("slopify.library.sort.prompt")).toBe("changed");
   });
 
@@ -169,14 +186,14 @@ describe("the prompts list", () => {
     ).not.toBeNull();
   });
 
-  it("shows the selected prompt's text and keywords beside the list", async () => {
+  it("shows the selected prompt's text and what it asks you for beside the list", async () => {
     const user = userEvent.setup();
     const second: Prompt = {
       ...dossier,
       id: "p5",
       name: "Short dossier",
-      body: "Brief {{era}}.",
-      slots: ["era"],
+      body: "Brief {{era}} by {{Slopify_Channel}}.",
+      slots: ["era", "Slopify_Channel"],
     };
     renderRouted(<Screen />, deps([dossier, second]));
 
@@ -184,59 +201,80 @@ describe("the prompts list", () => {
     const first = await findRow("Documentary dossier");
     expect(first.getAttribute("aria-current")).toBe("true");
     const detail = screen.getByRole("region", { name: "Documentary dossier details" });
-    expect(within(detail).getByText(dossier.body)).not.toBeNull();
-    expect(within(detail).getByText("{{minWords}}")).not.toBeNull();
-    expect(within(detail).getByText("{{topic}}")).not.toBeNull();
-    expect(within(detail).getByRole("link", { name: "Edit prompt" }).getAttribute("href")).toBe(
+    expect(detail.querySelector("[data-slot=prompt-text]")?.textContent).toBe(dossier.body);
+    const asks = within(detail).getByRole("region", { name: "Asks you for" });
+    expect(
+      within(within(asks).getByRole("list", { name: "Keywords" }))
+        .getAllByRole("listitem")
+        .map((one) => one.textContent),
+    ).toEqual(["minWords", "topic"]);
+    expect(
+      within(asks).getByText("You answer these each time you make a video with it."),
+    ).not.toBeNull();
+    expect(within(detail).getByRole("link", { name: "Edit" }).getAttribute("href")).toBe(
       "/prompts/p1",
     );
 
     await user.click(screen.getByRole("button", { name: "Short dossier" }));
     const next = await screen.findByRole("region", { name: "Short dossier details" });
-    expect(within(next).getByText("Brief {{era}}.")).not.toBeNull();
+    expect(next.querySelector("[data-slot=prompt-text]")?.textContent).toBe(second.body);
+    // Your own keyword is highlighted as the editor highlights it; Slopify's is not.
+    expect(
+      [...next.querySelectorAll("[data-slot=prompt-text] [data-own-keyword]")].map(
+        (one) => one.textContent,
+      ),
+    ).toEqual(["{{era}}"]);
+    expect(within(next).getByText("Slopify fills in: Channel.")).not.toBeNull();
     expect((await findRow("Short dossier")).getAttribute("aria-current")).toBe("true");
     expect(first.getAttribute("aria-current")).toBeNull();
   });
 
-  it("narrows the list to the prompts whose name or text matches the search", async () => {
+  it("searches every kind by name and text, and says each hit's kind", async () => {
     const user = userEvent.setup();
-    const second: Prompt = { ...dossier, id: "p5", name: "Short dossier", body: "Brief {{era}}." };
-    renderRouted(<Screen />, deps([dossier, second]));
+    renderRouted(<Screen />, deps([dossier, oil, card]));
 
     await findRow("Documentary dossier");
     const search = screen.getByRole("searchbox", { name: "Search prompts" });
-    await user.type(search, "brief");
+    await user.type(search, "painting");
     expect(screen.queryByRole("button", { name: "Documentary dossier" })).toBeNull();
-    expect(await findRow("Short dossier")).not.toBeNull();
+    const hit = await findRow("Oil painting scenes");
+    expect(hit.querySelector(".sl-row__meta")?.textContent).toMatch(/^Image · Asks for: /u);
+    expect(screen.getByRole("heading", { name: "1 prompt match “painting”" })).not.toBeNull();
+    expect(screen.getByText("Found in every kind.")).not.toBeNull();
 
     await user.clear(search);
     await user.type(search, "nothing like it");
-    expect(await screen.findByText('No article prompts match "nothing like it".')).not.toBeNull();
+    expect(
+      await screen.findByText("No prompt of any kind has “nothing like it” in its name or text."),
+    ).not.toBeNull();
   });
 
-  it("teaches what a prompt is when the kind is empty, with the one action in the toolbar", async () => {
+  it("teaches what an empty kind is for, with the one button that makes the first", async () => {
     renderRouted(<Screen start="image" />, deps([dossier]));
 
-    expect(await screen.findByRole("heading", { name: "No image prompts yet" })).not.toBeNull();
+    const empty = await screen.findByRole("heading", { name: "No image prompts yet" });
     expect(
-      screen.getByText("A prompt is text with {{keywords}}; each keyword becomes a field on Play."),
+      screen.getByText("An image prompt describes the pictures shown during the video."),
     ).not.toBeNull();
-    expect(screen.getAllByRole("link", { name: "New prompt" })).toHaveLength(1);
+    const news = screen.getAllByRole("link", { name: "New image prompt" });
+    expect(news).toHaveLength(1);
+    expect(empty.parentElement?.contains(news[0] as HTMLElement)).toBe(true);
+    expect(news[0]?.getAttribute("href")).toBe("/prompts/new?kind=image");
   });
 
-  it("points New prompt and Edit at the editor, carrying the tab that is on", async () => {
-    renderRouted(<Screen />, deps([dossier]));
+  it("points New and Edit at the editor, carrying the kind on show", async () => {
+    renderRouted(<Screen start="description" />, deps([{ ...dossier, kind: "description" }]));
 
     await findRow("Documentary dossier");
-    expect(screen.getByRole("link", { name: "New prompt" }).getAttribute("href")).toBe(
-      "/prompts/new?kind=article",
-    );
+    expect(
+      screen.getByRole("link", { name: "New YouTube description prompt" }).getAttribute("href"),
+    ).toBe("/prompts/new?kind=description");
     expect(
       screen.getByRole("link", { name: "Edit Documentary dossier" }).getAttribute("href"),
     ).toBe("/prompts/p1");
   });
 
-  it("shows every row action on the row, Duplicate as a copy opened for editing, and Delete behind a confirmation", async () => {
+  it("shows Edit and Make a video on the row, Duplicate as a copy opened for editing, and Delete behind a confirmation", async () => {
     const user = userEvent.setup();
     let deleted: string | undefined;
     renderRouted(
@@ -256,12 +294,11 @@ describe("the prompts list", () => {
       [...actions.querySelectorAll("a, button")].map((one) => one.getAttribute("aria-label")),
     ).toEqual([
       "Edit Documentary dossier",
-      "Use Documentary dossier in Play",
+      "Make a video with Documentary dossier",
       "More actions for Documentary dossier",
     ]);
-    expect(
-      within(actions).getByRole("link", { name: "Edit Documentary dossier" }).getAttribute("href"),
-    ).toBe("/prompts/p1");
+    // Renaming is done in the editor's Name field: the row has no pencil.
+    expect(screen.queryByRole("button", { name: "Rename Documentary dossier" })).toBeNull();
     await user.click(
       within(actions).getByRole("button", { name: "More actions for Documentary dossier" }),
     );
@@ -289,15 +326,15 @@ describe("the prompts list", () => {
     });
   });
 
-  it("hands the prompt to Play from Use in Play, and says why it can't while a run starts", async () => {
+  it("hands the prompt to Create from Make a video, and says why it can't while a video starts", async () => {
     const user = userEvent.setup();
     const used: string[] = [];
     const { unmount } = renderRouted(
-      <PromptsRoute kind="article" onKind={() => {}} onUseInPlay={(one) => used.push(one.name)} />,
+      <PromptsRoute kind="article" onMakeVideo={(picked) => used.push(picked.name)} />,
       deps([dossier]),
     );
     await user.click(
-      await screen.findByRole("button", { name: "Use Documentary dossier in Play" }),
+      await screen.findByRole("button", { name: "Make a video with Documentary dossier" }),
     );
     expect(used).toEqual(["Documentary dossier"]);
     unmount();
@@ -305,18 +342,19 @@ describe("the prompts list", () => {
     renderRouted(
       <PromptsRoute
         kind="article"
-        onKind={() => {}}
-        onUseInPlay={(one) => used.push(one.name)}
-        playBlocked="Play is starting a run from its draft."
+        onMakeVideo={(picked) => used.push(picked.name)}
+        makeBlocked="Create is starting a video from its draft."
       />,
       deps([dossier]),
     );
-    const blocked = await screen.findByRole("button", { name: "Use Documentary dossier in Play" });
+    const blocked = await screen.findByRole("button", {
+      name: "Make a video with Documentary dossier",
+    });
     expect(blocked.hasAttribute("disabled")).toBe(true);
-    expect(blocked.getAttribute("title")).toBe("Play is starting a run from its draft.");
+    expect(blocked.getAttribute("title")).toBe("Create is starting a video from its draft.");
   });
 
-  it("shows what uses the prompt and its latest change beside the list, and every version in History", async () => {
+  it("says its versions and what uses it on one line, lists the users, and opens every version in History", async () => {
     const user = userEvent.setup();
     let restored: string | undefined;
     const version = (n: number, body: string, restoredFrom: number | null = null) => ({
@@ -349,19 +387,18 @@ describe("the prompts list", () => {
 
     await findRow("Documentary dossier");
     const detail = screen.getByRole("region", { name: "Documentary dossier details" });
-    expect(await within(detail).findByText("1 template, 1 schedule, 1 project")).not.toBeNull();
-    expect(within(detail).getByRole("link", { name: "Cats" }).getAttribute("href")).toBe(
+    expect(
+      await within(detail).findByText(/2 versions · used by 1 template, 1 schedule, 1 project$/u),
+    ).not.toBeNull();
+    const users = within(detail).getByRole("region", { name: "Used by" });
+    expect(within(users).getByRole("link", { name: "Cats" }).getAttribute("href")).toBe(
       "/projects/x1",
     );
-    expect(within(detail).getByText(/2 of 3 revisions, including the current one/u)).not.toBeNull();
-    expect(within(detail).getByText("Schedule · paused")).not.toBeNull();
-    // The latest change, in place.
-    expect((await within(detail).findByText("short")).tagName).toBe("DEL");
-    expect(within(detail).getByText("long").tagName).toBe("INS");
+    expect(within(users).getByText(/2 of 3 revisions, including the current one/u)).not.toBeNull();
+    expect(within(users).getByText("Schedule · paused")).not.toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "More actions for Documentary dossier" }));
     await user.click(
-      await screen.findByRole("menuitem", { name: "History of Documentary dossier" }),
+      within(detail).getByRole("button", { name: "Compare versions of Documentary dossier" }),
     );
     const drawer = await screen.findByRole("dialog", { name: "History of Documentary dossier" });
     expect(within(drawer).getByText("short").tagName).toBe("DEL");
@@ -375,17 +412,20 @@ describe("the prompts list", () => {
     expect(await within(drawer).findByText("Restored version 1 as a new version.")).not.toBeNull();
   });
 
-  it("opens the same History from Compare versions in the detail", async () => {
-    const user = userEvent.setup();
-    renderRouted(<Screen />, deps([dossier]));
+  it("offers Compare versions only once there are two, and says when nothing uses it", async () => {
+    renderRouted(
+      <Screen />,
+      deps([dossier], {
+        "GET /api/prompts/p1/history": jsonAnswer(one(1)),
+        "GET /api/prompts/p1/used-by": jsonAnswer(unused),
+      }),
+    );
 
     await findRow("Documentary dossier");
-    await user.click(
-      screen.getByRole("button", { name: "Compare versions of Documentary dossier" }),
-    );
-    expect(
-      await screen.findByRole("dialog", { name: "History of Documentary dossier" }),
-    ).not.toBeNull();
+    const detail = screen.getByRole("region", { name: "Documentary dossier details" });
+    expect(await within(detail).findByText(/1 version · not used yet$/u)).not.toBeNull();
+    expect(within(detail).queryByRole("button", { name: /Compare versions/u })).toBeNull();
+    expect(within(detail).queryByRole("region", { name: "Used by" })).toBeNull();
   });
 
   it("says what went wrong when the list cannot be read", async () => {

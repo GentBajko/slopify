@@ -25,7 +25,7 @@ afterEach(() => {
   tutorial.progress.mockClear();
 });
 
-it("offers the narration starter without saving or silently replacing a draft", async () => {
+it("offers the narration starter as an example, without saving or silently replacing a draft", async () => {
   const user = userEvent.setup();
   const spy = saveSpy([]);
   renderRouted(
@@ -33,28 +33,30 @@ it("offers the narration starter without saving or silently replacing a draft", 
     deps([], { "POST /api/prompts": spy.answer }),
   );
   await screen.findByLabelText("Name");
-  await user.click(screen.getByRole("button", { name: "Use Documentary Starter" }));
-  expect((screen.getByLabelText("Body") as HTMLTextAreaElement).value).toBe(narrationStarter);
+  const pick = async () => {
+    await user.click(screen.getByRole("button", { name: "Start from an example" }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: "Documentary delivery (built in)" }),
+    );
+  };
+  await pick();
+  expect(body().value).toBe(narrationStarter);
   expect(spy.sent).toEqual([]);
-  await fill(user, "Body", "My detailed delivery prompt.");
-  await user.click(screen.getByRole("button", { name: "Use Documentary Starter" }));
+  await fill(user, "Instructions", "My detailed delivery prompt.");
+  await pick();
   const dialog = await screen.findByRole("dialog");
-  expect((screen.getByLabelText("Body") as HTMLTextAreaElement).value).toBe(
-    "My detailed delivery prompt.",
-  );
+  expect(body().value).toBe("My detailed delivery prompt.");
   await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
-  expect((screen.getByLabelText("Body") as HTMLTextAreaElement).value).toBe(
-    "My detailed delivery prompt.",
-  );
-  await user.click(screen.getByRole("button", { name: "Use Documentary Starter" }));
+  expect(body().value).toBe("My detailed delivery prompt.");
+  await pick();
   await user.click(
-    within(await screen.findByRole("dialog")).getByRole("button", { name: "Use starter" }),
+    within(await screen.findByRole("dialog")).getByRole("button", { name: "Replace the text" }),
   );
-  expect((screen.getByLabelText("Body") as HTMLTextAreaElement).value).toBe(narrationStarter);
+  expect(body().value).toBe(narrationStarter);
   expect(spy.sent).toEqual([]);
 });
 
-it("starts a YouTube Description prompt from the built-in wording", async () => {
+it("starts a YouTube description prompt from the built-in wording", async () => {
   const user = userEvent.setup();
   renderRouted(
     <PromptEditorRoute
@@ -66,11 +68,106 @@ it("starts a YouTube Description prompt from the built-in wording", async () => 
     deps([]),
   );
   await screen.findByLabelText("Name");
-  expect(screen.queryByRole("button", { name: "Use Documentary Starter" })).toBeNull();
-  await user.click(screen.getByRole("button", { name: "Use Built-in Starter" }));
-  expect((screen.getByLabelText("Body") as HTMLTextAreaElement).value).toBe(
-    defaultDescriptionPrompt,
+  await user.click(screen.getByRole("button", { name: "Start from an example" }));
+  expect(screen.queryByRole("menuitem", { name: "Documentary delivery (built in)" })).toBeNull();
+  await user.click(await screen.findByRole("menuitem", { name: "Built-in wording" }));
+  expect(body().value).toBe(defaultDescriptionPrompt);
+});
+
+it("offers the saved prompts of the same kind as examples, and none at all where there are none", async () => {
+  const user = userEvent.setup();
+  const history: Prompt = {
+    id: "p7",
+    kind: "article",
+    name: "History · Story",
+    body: "Tell the story of {{Topic}}.",
+    slots: ["Topic"],
+    updatedAt: "2026-09-01T10:00:00.000Z",
+  };
+  const picture: Prompt = { ...history, id: "p8", kind: "image", name: "Oil scene" };
+  renderRouted(
+    <PromptEditorRoute promptId={undefined} kind="article" from={undefined} onLeave={vi.fn()} />,
+    deps([history, picture]),
   );
+  await user.click(await screen.findByRole("button", { name: "Start from an example" }));
+  expect((await screen.findAllByRole("menuitem")).map((one) => one.textContent)).toEqual([
+    "History · Story",
+  ]);
+  await user.click(screen.getByRole("menuitem", { name: "History · Story" }));
+  expect(body().value).toBe("Tell the story of {{Topic}}.");
+  cleanup();
+
+  renderRouted(
+    <PromptEditorRoute promptId={undefined} kind="thumbnail" from={undefined} onLeave={vi.fn()} />,
+    deps([history, picture]),
+  );
+  await screen.findByLabelText("Name");
+  expect(screen.queryByRole("button", { name: "Start from an example" })).toBeNull();
+});
+
+it("sets the text as prose: spell check on, an example in the empty box, no line numbers", async () => {
+  await newEditor();
+  const box = body();
+  expect(box.getAttribute("spellcheck")).toBe("true");
+  expect(box.getAttribute("placeholder")).toBe(
+    "Tell the writer what to make and how. Put {{Topic}} where the video's subject goes.",
+  );
+  expect(screen.queryByText("0 of 100,000 characters")).toBeNull();
+  expect(screen.getByText("Writes the article the narrator reads.")).not.toBeNull();
+});
+
+it("shows the kind on one line, and the full choice only on request", async () => {
+  const user = userEvent.setup();
+  await newEditor();
+  expect(screen.getByText("Article prompt")).not.toBeNull();
+  expect(screen.queryByRole("radio", { name: "Image" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Change kind" }));
+  await user.click(screen.getByRole("radio", { name: "Image" }));
+  expect(
+    screen.getByText("An image prompt describes the pictures shown during the video."),
+  ).not.toBeNull();
+  expect(screen.getByRole("heading", { level: 1, name: "New image prompt" })).not.toBeNull();
+});
+
+it("keeps Save, Cancel and Delete in one bar pinned to the bottom of the window", async () => {
+  renderRouted(
+    <PromptEditorRoute promptId="p1" kind="article" from={undefined} onLeave={vi.fn()} />,
+    deps([dossier]),
+  );
+  await screen.findByDisplayValue("Documentary dossier");
+  const bar = screen.getByRole("button", { name: "Save" }).closest("[data-slot=editor-actions]");
+  // The tour's target is the bar itself: a wrapper around it would be its sticky box.
+  expect(bar?.getAttribute("data-tour")).toBe("prompt-save");
+  expect(bar?.className).toContain("sticky");
+  expect(bar?.parentElement?.getAttribute("data-tour")).not.toBe("prompt-save");
+  expect(within(bar as HTMLElement).getByRole("button", { name: "Delete" })).not.toBeNull();
+  expect(within(bar as HTMLElement).getByRole("link", { name: "Cancel" })).not.toBeNull();
+});
+
+it("saves and hands the saved prompt to Create from Save and make a video", async () => {
+  const user = userEvent.setup();
+  const spy = saveSpy([]);
+  const made: string[] = [];
+  const onLeave = vi.fn();
+  renderRouted(
+    <PromptEditorRoute
+      promptId={undefined}
+      kind="article"
+      from={undefined}
+      onLeave={onLeave}
+      onMakeVideo={(prompt) => made.push(prompt.id)}
+    />,
+    deps([], { "POST /api/prompts": spy.answer }),
+  );
+  await screen.findByLabelText("Name");
+  await user.type(screen.getByLabelText("Name"), "Dossier");
+  await fill(user, "Instructions", "About {{topic}}.");
+  await user.click(screen.getByRole("button", { name: "Save and make a video" }));
+  await waitFor(() => {
+    expect(spy.sent).toEqual([{ kind: "article", name: "Dossier", body: "About {{topic}}." }]);
+  });
+  await waitFor(() => expect(made).toEqual(["new"]), { timeout: 4000 });
+  expect(onLeave).not.toHaveBeenCalled();
 });
 
 const dossier: Prompt = {
@@ -125,6 +222,8 @@ async function fill(user: UserEvent, label: string, text: string): Promise<void>
   await user.paste(text);
 }
 
+const body = () => screen.getByLabelText("Instructions") as HTMLTextAreaElement;
+
 // The first paint under a router is asynchronous, so opening the editor waits for it.
 async function newEditor(extra: Readonly<Record<string, Answer>> = {}, onLeave = vi.fn()) {
   const rendered = renderRouted(
@@ -151,14 +250,14 @@ describe("tutorial completion from the prompt editor", () => {
       promptIsImage: false,
     });
     await fill(user, "Name", "My article");
-    await fill(user, "Body", "Write about {{topic");
+    await fill(user, "Instructions", "Write about {{topic");
     expect(tutorial.progress.mock.lastCall?.[0]).toMatchObject({
       promptNamed: true,
       promptBodyReady: false,
       promptHasKeywords: false,
       promptSaveReady: false,
     });
-    await fill(user, "Body", "Write about {{topic}}.");
+    await fill(user, "Instructions", "Write about {{topic}}.");
     expect(tutorial.progress.mock.lastCall?.[0]).toMatchObject({
       promptBodyReady: true,
       promptHasKeywords: true,
@@ -181,7 +280,7 @@ describe("tutorial completion from the prompt editor", () => {
     const save = saveSpy([dossier]);
     await newEditor({ "POST /api/prompts": save.answer });
     await fill(user, "Name", dossier.name);
-    await fill(user, "Body", dossier.body);
+    await fill(user, "Instructions", dossier.body);
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
@@ -194,24 +293,28 @@ describe("tutorial completion from the prompt editor", () => {
   });
 });
 
-describe("the prompt editor's slots panel", () => {
-  it("invites the first slot, then lists what the body holds as chips", async () => {
+describe("the prompt editor's keywords panel", () => {
+  it("invites the first keyword, then lists what the text asks for as chips", async () => {
     const user = userEvent.setup();
     await newEditor();
 
-    expect(screen.getByText("Slots appear here as you type {{name}}.")).not.toBeNull();
+    expect(
+      screen.getByText(
+        "Type {{Topic}} where the video's subject goes. Each keyword becomes a question on Create.",
+      ),
+    ).not.toBeNull();
 
-    await fill(user, "Body", "About {{topic}} in {{era}}.");
+    await fill(user, "Instructions", "About {{topic}} in {{era}}.");
     expect(screen.getByText("topic").getAttribute("data-slot-chip")).toBe("topic");
     expect(screen.getByText("era").getAttribute("data-slot-chip")).toBe("era");
   });
 
-  it("says a body without slots runs as written", async () => {
+  it("says a text without keywords runs as written", async () => {
     const user = userEvent.setup();
     await newEditor();
 
-    await fill(user, "Body", "No slots at all.");
-    expect(screen.getByText("No slots. This prompt runs as written.")).not.toBeNull();
+    await fill(user, "Instructions", "No slots at all.");
+    expect(screen.getByText("It asks you for nothing: it runs as written.")).not.toBeNull();
   });
 });
 
@@ -221,33 +324,34 @@ describe("the prompt editor's lint", () => {
     const { container } = await newEditor();
 
     // The `{{` is the 16th character of the body: line 2, column 6.
-    await fill(user, "Body", "Line one.\nThen {{bad");
+    await fill(user, "Instructions", "Line one.\nThen {{bad");
 
     const marks = container.querySelectorAll("[data-lint-mark]");
     expect(marks).toHaveLength(1);
     expect(marks[0]?.textContent).toBe("{{");
     expect(marks[0]?.getAttribute("data-lint-mark")).toBe("15");
-    expect(screen.getByText("1 slot error")).not.toBeNull();
+    expect(screen.getByText("1 keyword error")).not.toBeNull();
+    // In the list beside the text, and beside Save as the reason it holds.
     expect(
-      screen.getByText(
+      screen.getAllByText(
         "The `{{` at line 2, column 6 is never closed. Add `}}` after the keyword name.",
       ),
-    ).not.toBeNull();
-    expect(screen.getByLabelText("Body").getAttribute("aria-invalid")).toBe("true");
+    ).toHaveLength(2);
+    expect(screen.getByLabelText("Instructions").getAttribute("aria-invalid")).toBe("true");
   });
 
   it("marks an empty slot and a nested one, and counts them", async () => {
     const user = userEvent.setup();
     const { container } = await newEditor();
 
-    await fill(user, "Body", "{{}} and {{a{b}}");
+    await fill(user, "Instructions", "{{}} and {{a{b}}");
     expect(container.querySelectorAll("[data-lint-mark]")).toHaveLength(2);
-    expect(screen.getByText("2 slot errors")).not.toBeNull();
+    expect(screen.getByText("2 keyword errors")).not.toBeNull();
     expect(
-      screen.getByText(
+      screen.getAllByText(
         "The keyword at line 1, column 1 has no name. Write a name between `{{` and `}}`.",
       ),
-    ).not.toBeNull();
+    ).toHaveLength(2);
     expect(
       screen.getByText(
         "The keyword at line 1, column 10 contains a brace. Keywords cannot be placed inside other keywords.",
@@ -259,31 +363,89 @@ describe("the prompt editor's lint", () => {
     const user = userEvent.setup();
     const { container } = await newEditor();
 
-    await fill(user, "Body", "About {{topic}}.");
+    await fill(user, "Instructions", "About {{topic}}.");
     expect(container.querySelectorAll("[data-lint-mark]")).toHaveLength(0);
-    expect(screen.queryByText("1 slot error")).toBeNull();
+    expect(screen.queryByText("1 keyword error")).toBeNull();
   });
 });
 
 describe("the prompt editor's Save", () => {
-  it("holds until there is a name, and names the missing name first", async () => {
+  it("says nothing on arrival, and names the missing name first once Save is pressed", async () => {
+    const user = userEvent.setup();
+    const spy = saveSpy([]);
+    await newEditor({ "POST /api/prompts": spy.answer });
+
+    const save = screen.getByRole("button", { name: "Save" });
+    expect(save.getAttribute("aria-disabled")).toBe("false");
+    expect(screen.queryByText("Enter a name.")).toBeNull();
+
+    await user.click(save);
+    expect(spy.sent).toEqual([]);
+    expect(save.getAttribute("aria-disabled")).toBe("true");
+    // Beside Save, and under the field it is about, which gets the cursor.
+    expect(screen.getAllByText("Enter a name.")).toHaveLength(2);
+    const name = screen.getByLabelText("Name");
+    expect(document.activeElement).toBe(name);
+    expect(name.getAttribute("aria-invalid")).toBe("true");
+
+    // The text names the prompt until a name is typed, so its malformed keyword is next.
+    await fill(user, "Instructions", "About {{bad");
+    expect((name as HTMLInputElement).value).toBe("About bad");
+    expect(document.getElementById(save.getAttribute("aria-describedby") ?? "")?.textContent).toBe(
+      "The `{{` at line 1, column 7 is never closed. Add `}}` after the keyword name.",
+    );
+  });
+
+  it("names a new prompt from the first words of its text until a name is typed", async () => {
+    const user = userEvent.setup();
+    const spy = saveSpy([]);
+    await newEditor({ "POST /api/prompts": spy.answer });
+    const name = screen.getByLabelText("Name") as HTMLInputElement;
+
+    await fill(user, "Instructions", "Write a calm bedtime story about {{Topic}} for sleepy ears.");
+    expect(name.value).toBe("Write a calm bedtime story about");
+    await fill(user, "Instructions", "Tell {{Topic}} as a legend.");
+    expect(name.value).toBe("Tell Topic as a legend");
+
+    await fill(user, "Name", "Legends");
+    await fill(user, "Instructions", "Tell {{Topic}} as a myth.");
+    expect(name.value).toBe("Legends");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(spy.sent).toEqual([
+        { kind: "article", name: "Legends", body: "Tell {{Topic}} as a myth." },
+      ]);
+    });
+  });
+
+  it("keeps the name of a prompt that already has one when its text changes", async () => {
+    const user = userEvent.setup();
+    renderRouted(
+      <PromptEditorRoute promptId="p1" kind="article" from={undefined} onLeave={vi.fn()} />,
+      deps([dossier]),
+    );
+    await screen.findByDisplayValue("Documentary dossier");
+    await fill(user, "Instructions", "Something else about {{topic}}.");
+    expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("Documentary dossier");
+  });
+
+  it("names an empty name once the field is left empty", async () => {
     const user = userEvent.setup();
     await newEditor();
 
-    const save = screen.getByRole("button", { name: "Save" });
-    expect(save.getAttribute("aria-disabled")).toBe("true");
-    expect(screen.getByText("Enter a name.")).not.toBeNull();
-
-    // A malformed body does not change which problem is first: the name still is.
-    await fill(user, "Body", "About {{bad");
-    expect(screen.getByText("Enter a name.")).not.toBeNull();
+    await user.click(screen.getByLabelText("Name"));
+    await user.tab();
+    expect(screen.getAllByText("Enter a name.").length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("Name").getAttribute("aria-invalid")).toBe("true");
   });
 
-  it("names the missing body once the name is there", async () => {
+  it("names the missing text once the name is there and Save is pressed", async () => {
     const user = userEvent.setup();
     await newEditor();
 
     await user.type(screen.getByLabelText("Name"), "Dossier");
+    expect(screen.queryByText("Enter the text.")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Save" }));
     expect(screen.getByText("Enter the text.")).not.toBeNull();
     expect(screen.getByRole("button", { name: "Save" }).getAttribute("aria-disabled")).toBe("true");
   });
@@ -293,7 +455,7 @@ describe("the prompt editor's Save", () => {
     await newEditor();
 
     await user.type(screen.getByLabelText("Name"), "Dossier");
-    await fill(user, "Body", "About {{bad");
+    await fill(user, "Instructions", "About {{bad");
 
     const save = screen.getByRole("button", { name: "Save" });
     expect(save.getAttribute("aria-disabled")).toBe("true");
@@ -309,10 +471,10 @@ describe("the prompt editor's Save", () => {
     const { onLeave } = await newEditor({ "POST /api/prompts": spy.answer });
 
     await user.type(screen.getByLabelText("Name"), "Dossier");
-    await fill(user, "Body", "About {{bad");
+    await fill(user, "Instructions", "About {{bad");
     expect(screen.getByRole("button", { name: "Save" }).getAttribute("aria-disabled")).toBe("true");
 
-    await fill(user, "Body", "About {{bad}}");
+    await fill(user, "Instructions", "About {{bad}}");
 
     const save = screen.getByRole("button", { name: "Save" });
     expect(save.getAttribute("aria-disabled")).toBe("false");
@@ -339,7 +501,7 @@ describe("a name another prompt already has", () => {
     await newEditor({ "POST /api/prompts": spy.answer });
 
     await user.type(screen.getByLabelText("Name"), "documentary DOSSIER");
-    await fill(user, "Body", "Anything.");
+    await fill(user, "Instructions", "Anything.");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     const name = screen.getByLabelText("Name");
@@ -365,7 +527,8 @@ describe("a name another prompt already has", () => {
     await newEditor({ "POST /api/prompts": spy.answer });
 
     await user.type(screen.getByLabelText("Name"), "Documentary dossier");
-    await fill(user, "Body", "Anything.");
+    await fill(user, "Instructions", "Anything.");
+    await user.click(screen.getByRole("button", { name: "Change kind" }));
     await user.click(screen.getByRole("radio", { name: "Image" }));
     await user.click(screen.getByRole("button", { name: "Save" }));
 
@@ -392,7 +555,7 @@ describe("an existing prompt", () => {
 
     const name = await screen.findByLabelText("Name");
     expect((name as HTMLInputElement).value).toBe("Documentary dossier");
-    expect((screen.getByLabelText("Body") as HTMLTextAreaElement).value).toBe(
+    expect((screen.getByLabelText("Instructions") as HTMLTextAreaElement).value).toBe(
       "Compose a dossier on {{topic}}.",
     );
     expect(screen.getByRole("button", { name: "Save" }).getAttribute("aria-disabled")).toBe(
@@ -465,34 +628,36 @@ describe("an existing prompt", () => {
 
     const name = await screen.findByLabelText("Name");
     expect((name as HTMLInputElement).value).toBe("Documentary dossier copy");
-    expect((screen.getByLabelText("Body") as HTMLTextAreaElement).value).toBe(
+    expect((screen.getByLabelText("Instructions") as HTMLTextAreaElement).value).toBe(
       "Compose a dossier on {{topic}}.",
     );
   });
 });
 
 describe("the prompt editor's keywords Slopify fills", () => {
-  it("offers the keywords of the prompt's kind above the body, and follows a change of kind", async () => {
+  it("offers the keywords of the prompt's kind above the text, and follows a change of kind", async () => {
     const user = userEvent.setup();
     await newEditor();
     const bar = screen.getByRole("toolbar", { name: "Insert a keyword Slopify fills" });
     expect(within(bar).queryByRole("button", { name: "Insert Summary" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Change kind" }));
     await user.click(screen.getByRole("radio", { name: "Image" }));
     await user.click(within(bar).getByRole("button", { name: "Insert Summary" }));
-    expect((screen.getByLabelText("Body") as HTMLTextAreaElement).value).toBe(
+    expect((screen.getByLabelText("Instructions") as HTMLTextAreaElement).value).toBe(
       "{{Slopify_Summary}}",
     );
   });
 
-  it("marks the keywords in the body for the prompt's kind", async () => {
+  it("marks the keywords in the text for the prompt's kind", async () => {
     const user = userEvent.setup();
     const { container } = await newEditor();
-    await fill(user, "Body", "{{Slopify_Title}} {{Slopify_Hook}}");
+    await fill(user, "Instructions", "{{Slopify_Title}} {{Slopify_Hook}}");
     const kinds = () =>
       [...container.querySelectorAll("[data-keyword-kind]")].map((span) =>
         span.getAttribute("data-keyword-kind"),
       );
     expect(kinds()).toEqual(["known", "misuse"]);
+    await user.click(screen.getByRole("button", { name: "Change kind" }));
     await user.click(screen.getByRole("radio", { name: "Image" }));
     expect(kinds()).toEqual(["known", "known"]);
   });
@@ -510,7 +675,7 @@ describe("the prompt editor's keywords Slopify fills", () => {
     );
     await screen.findByDisplayValue("Documentary dossier");
     expect(screen.queryByText(/isn't a keyword Slopify fills/)).toBeNull();
-    await fill(user, "Body", "About {{Slopify_Wish}} and {{Slopify_Other}}.");
+    await fill(user, "Instructions", "About {{Slopify_Wish}} and {{Slopify_Other}}.");
     expect(
       screen.getAllByText(/\{\{Slopify_Other\}\} at line 1, column 28 isn't a keyword/).length,
     ).toBeGreaterThan(0);

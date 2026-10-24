@@ -3,6 +3,10 @@ import { useEffect, useRef, useState } from "react";
 // A PDF drawn page by page onto canvases with pdf.js, loaded only when a page shows one. The
 // new pages are drawn off screen and put in place together, so an update never flashes
 // empty, and the scroll position stays where the reader left it.
+//
+// pdf.js's legacy build carries its own polyfills (Map.prototype.getOrInsertComputed and the
+// like) in both the page and its worker, so a browser a version or two behind still draws the
+// pages instead of failing on a missing built-in.
 export function PdfPages({
   data,
   label,
@@ -57,8 +61,8 @@ export function PdfPages({
 }
 
 async function draw(data: Uint8Array, width: number): Promise<HTMLCanvasElement[]> {
-  const pdfjs = await import("pdfjs-dist");
-  const worker = await import("pdfjs-dist/build/pdf.worker.min.mjs?url");
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const worker = await import("pdfjs-dist/legacy/build/pdf.worker.min.mjs?url");
   pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
   // pdf.js takes ownership of the buffer it is given, so it gets a copy.
   const task = pdfjs.getDocument({ data: data.slice() });

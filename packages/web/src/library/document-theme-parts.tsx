@@ -3,7 +3,7 @@ import type { ReactElement, ReactNode } from "react";
 import { SectionHead } from "@/components/kit/section-head";
 import { faceFamilies } from "@/lib/document-theme-fields";
 
-// Library → Documents' pieces: a theme's one-line summary, its swatches on the row and the
+// PDF themes' pieces: a theme's one-line summary, its swatches on the row and the
 // selected theme's colours, fonts and page beside the list.
 
 export function themeMeta(values: DocumentTheme): string {

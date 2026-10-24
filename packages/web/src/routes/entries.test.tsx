@@ -1,7 +1,6 @@
 import type { Entry } from "@app/slices/library/model.js";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { EntryCategory } from "@/api";
 import type { Answer } from "@/test-app";
@@ -31,13 +30,16 @@ const written: Entry = {
 };
 
 function deps(entries: readonly Entry[], extra: Readonly<Record<string, Answer>> = {}) {
-  return testDeps({ "GET /api/entries": jsonAnswer({ entries }), ...extra });
+  return testDeps({
+    "GET /api/entries": jsonAnswer({ entries }),
+    "GET /api/prompts": jsonAnswer({ prompts: [] }),
+    ...extra,
+  });
 }
 
-// The tab lives in the URL, so router.tsx owns the move; this stands in for it.
+// The list lives in the URL (router.tsx reads it); a test names it.
 function Screen({ start = "intro" as EntryCategory }) {
-  const [category, setCategory] = useState<EntryCategory>(start);
-  return <EntriesRoute category={category} onCategory={setCategory} />;
+  return <EntriesRoute category={start} />;
 }
 
 // A row is found by its title, which is the button that shows it in the detail column.
@@ -49,25 +51,34 @@ async function findRow(name: string): Promise<HTMLElement> {
 }
 
 describe("the intros and outros list", () => {
-  it("offers both categories and shows only the one that is on", async () => {
-    const user = userEvent.setup();
-    renderRouted(<Screen />, deps([coldOpen, written]));
+  it("sits at the foot of the Prompts kinds as Intros and Outros, showing the one picked", async () => {
+    renderRouted(<Screen start="outro" />, deps([coldOpen, written]));
 
-    expect(await findRow("Cold open")).not.toBeNull();
-    expect(screen.queryByText("Written sign-off")).toBeNull();
-
-    const categories = screen.getByRole("group", { name: "Entry category" });
-    await user.click(within(categories).getByRole("button", { name: "Outros" }));
     expect(await findRow("Written sign-off")).not.toBeNull();
     expect(screen.queryByText("Cold open")).toBeNull();
+    expect(screen.getByRole("heading", { level: 1, name: "Prompts" })).not.toBeNull();
+    const kinds = screen.getByRole("navigation", { name: "Kinds of prompt" });
+    const outros = within(kinds).getByRole("link", { name: /^Outros/u });
+    expect(outros.getAttribute("aria-current")).toBe("page");
+    await waitFor(() => expect(outros.textContent).toBe("Outros, 1"));
+    expect(
+      within(kinds)
+        .getByRole("link", { name: /^Intros/u })
+        .getAttribute("href"),
+    ).toBe("/entries?category=intro");
+    expect(
+      screen.getByText(
+        "Spoken after the video ends, like “Thanks for watching. See you next week.”",
+      ),
+    ).not.toBeNull();
   });
 
-  it("says each row's mode and keyword count on its meta line", async () => {
+  it("says on each row what it asks for and how its words start", async () => {
     renderRouted(<Screen />, deps([coldOpen]));
 
     const row = await findRow("Cold open");
-    expect(row.querySelector(".sl-row__meta")?.textContent).toMatch(
-      /^Text · 1 keyword · updated /u,
+    expect(row.querySelector(".sl-row__meta")?.textContent).toBe(
+      "Asks for: topic ·Today on the channel: {{topic}}.",
     );
   });
 
@@ -85,53 +96,67 @@ describe("the intros and outros list", () => {
     const first = await findRow("Cold open");
     expect(first.getAttribute("aria-current")).toBe("true");
     const detail = screen.getByRole("region", { name: "Cold open details" });
-    expect(within(detail).getByText("Today on the channel: {{topic}}.")).not.toBeNull();
-    expect(within(detail).getByText("{{topic}}")).not.toBeNull();
-    expect(within(detail).getByRole("link", { name: "Edit intro" }).getAttribute("href")).toBe(
+    expect(detail.querySelector("[data-slot=prompt-text]")?.textContent).toBe(
+      "Today on the channel: {{topic}}.",
+    );
+    expect(within(detail).getByText("Intro · Say these exact words")).not.toBeNull();
+    expect(
+      within(within(detail).getByRole("list", { name: "Keywords" })).getByText("topic"),
+    ).not.toBeNull();
+    expect(within(detail).getByRole("link", { name: "Edit" }).getAttribute("href")).toBe(
       "/entries/e1",
     );
 
     await user.click(screen.getByRole("button", { name: "Warm open" }));
     const next = await screen.findByRole("region", { name: "Warm open details" });
-    expect(within(next).getByText("{{channel}}")).not.toBeNull();
+    expect(
+      within(within(next).getByRole("list", { name: "Keywords" })).getByText("channel"),
+    ).not.toBeNull();
     expect((await findRow("Warm open")).getAttribute("aria-current")).toBe("true");
     expect(first.getAttribute("aria-current")).toBeNull();
   });
 
-  it("narrows the list to the rows whose name or text matches the search", async () => {
+  it("searches intros and outros both, by name and words, and says each hit's kind", async () => {
     const user = userEvent.setup();
     const second: Entry = { ...coldOpen, id: "e3", name: "Warm open", body: "Hello friends." };
-    renderRouted(<Screen />, deps([coldOpen, second]));
+    renderRouted(<Screen />, deps([coldOpen, second, written]));
 
     await findRow("Cold open");
-    await user.type(screen.getByRole("searchbox", { name: "Search intros and outros" }), "friends");
+    const search = screen.getByRole("searchbox", { name: "Search intros and outros" });
+    await user.type(search, "friends");
     expect(screen.queryByRole("button", { name: "Cold open" })).toBeNull();
     expect(await findRow("Warm open")).not.toBeNull();
+
+    await user.clear(search);
+    await user.type(search, "sign-off");
+    const hit = await findRow("Written sign-off");
+    expect(hit.querySelector(".sl-row__meta")?.textContent).toMatch(/^Outro · /u);
   });
 
-  it("teaches what an intro is when the category is empty", async () => {
+  it("teaches what an intro is when there is none, with the button that makes the first", async () => {
     renderRouted(<Screen />, deps([written]));
 
     expect(await screen.findByRole("heading", { name: "No intros yet" })).not.toBeNull();
     expect(
-      screen.getByText("An intro is narrated before the body in the run's voice."),
-    ).not.toBeNull();
+      screen.getAllByText("Spoken before the video starts, like “Welcome back to the channel.”"),
+    ).not.toHaveLength(0);
+    const news = screen.getAllByRole("link", { name: "New intro" });
+    expect(news).toHaveLength(1);
+    expect(news[0]?.getAttribute("href")).toBe("/entries/new?category=intro");
   });
 
-  it("teaches what an outro is with the same row, saying where it lands", async () => {
+  it("teaches what an outro is the same way", async () => {
     renderRouted(<Screen start="outro" />, deps([coldOpen]));
 
     expect(await screen.findByRole("heading", { name: "No outros yet" })).not.toBeNull();
-    expect(
-      screen.getByText("An outro is narrated after the body in the run's voice."),
-    ).not.toBeNull();
+    expect(screen.getAllByRole("link", { name: "New outro" })).toHaveLength(1);
   });
 
-  it("points New intro or outro and Edit at the editor, carrying the tab that is on", async () => {
+  it("points New intro and Edit at the editor, carrying the list on show", async () => {
     renderRouted(<Screen />, deps([coldOpen]));
 
     await findRow("Cold open");
-    expect(screen.getByRole("link", { name: "New intro or outro" }).getAttribute("href")).toBe(
+    expect(screen.getByRole("link", { name: "New intro" }).getAttribute("href")).toBe(
       "/entries/new?category=intro",
     );
     expect(screen.getByRole("link", { name: "Edit Cold open" }).getAttribute("href")).toBe(
@@ -157,7 +182,7 @@ describe("the intros and outros list", () => {
     // What the row is for stays on it; the occasional actions sit behind More.
     expect(
       [...actions.querySelectorAll("a, button")].map((one) => one.getAttribute("aria-label")),
-    ).toEqual(["Edit Cold open", "Use Cold open in Play", "More actions for Cold open"]);
+    ).toEqual(["Edit Cold open", "Make a video with Cold open", "More actions for Cold open"]);
     await user.click(within(actions).getByRole("button", { name: "More actions for Cold open" }));
     expect(
       (await screen.findByRole("menuitem", { name: "Duplicate Cold open" })).getAttribute("href"),

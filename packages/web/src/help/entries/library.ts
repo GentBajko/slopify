@@ -1,61 +1,38 @@
-import type { KeywordPlace } from "@app/slices/keywords/model.js";
-import { keywordsFor } from "@app/slices/keywords/specs.js";
 import type { HelpEntry } from "../entry.js";
 
-// The keywords Slopify fills that a prompt kind or entry category can use, read from the
-// keyword table so the tip never lists one that kind can't use.
-function keywordsHere(place: KeywordPlace): string {
-  const names = keywordsFor(place).map((spec) => `{{${spec.name}}}`);
-  return `Keywords Slopify fills here: ${names.join(", ")}. They never become fields on Play. Click one in the Insert bar to put it at the cursor; point at it there or in the text for what it fills in, an example and what it costs.`;
-}
-
-const factsSection = { page: "Keywords-Slopify-Fills", anchor: "facts-slopify-already-has" };
-const digestSection = { page: "Keywords-Slopify-Fills", anchor: "written-from-the-article" };
-const pictureSection = { page: "Keywords-Slopify-Fills", anchor: "per-picture" };
-
-// Library → Prompts, Intros & Outros, Templates, Documents and Aliases. The document theme
+// Prompts (with intros and outros), Templates, PDF themes and Pronunciation. The PDF theme
 // numbers (defaults and ranges) are the built-in Plain theme's and the save schema's, from
 // packages/app/src/slices/document/theme.ts and theme-schema.ts.
 export const libraryHelp = {
   // ── Prompts ──────────────────────────────────────────────────────────────────────────
-  "library.prompt.kind": {
-    title: "Prompt kind",
-    body: "What the prompt is for, which decides where Play offers it. Article writes the video's text, Image and Thumbnail describe pictures, Narration Preparation adds delivery cues, YouTube Description writes the description, Shorts picks the short clips, Review checks a finished stage, Script writes speaker turns, Post writes a post for another site.",
-    tutorial: { page: "Prompts", anchor: "prompt-kinds" },
-  },
-  "library.prompt.name": {
-    title: "Prompt name",
-    body: "What Play and Edit project list this prompt by. Up to 200 characters, and unique within its kind. Templates remember a prompt by name, so after a rename they use the copy saved with them until you pick it again.",
-    tutorial: { page: "Prompts", anchor: "write-a-new-prompt" },
-  },
   "library.prompt.body.article": {
     title: "Article prompt",
-    body: "The instruction the text model gets to write the video's article, which becomes the narration. Each {{keyword}} of your own becomes a field on Play. One call on the project's LLM, plus up to 3 more when the answer runs out of room; research notes go first when research ran. The answer's sources and pronunciation sections are never narrated.",
+    body: "The instructions the AI writer gets to write the video's article, which becomes the narration. Each {{keyword}} of your own becomes a question on Create. One AI call per video, plus up to 3 more when the answer runs out of room; research notes go first when research ran. The answer's sources and pronunciation sections are never narrated.",
     tutorial: { page: "Prompts", anchor: "write-a-new-prompt" },
   },
   "library.prompt.body.image": {
     title: "Image prompt",
-    body: "Sent as written to the image model, with the keywords filled in; no text model rewrites it. Play sets how many pictures each prompt makes (1 to 20, at most 60 a run), and each picture is one image call. Pictures show for 15 s each by default and repeat until the video ends.",
+    body: "Sent as written to the image service, with the keywords filled in; no AI writer rewrites it. Create sets how many pictures each prompt makes (1 to 20, at most 60 a video), and each picture is one image call. Pictures show for 15 s each by default and repeat until the video ends.",
     tutorial: { page: "Prompts", anchor: "write-a-new-prompt" },
   },
   "library.prompt.body.thumbnail": {
     title: "Thumbnail prompt",
-    body: "Sent to the image model to draw the thumbnail. With Thumbnail set to Prompt by LLM, the text model first turns it into a picture prompt using the title and article, one extra call. 1 thumbnail by default, or 3: the second a close-up, the third a wider shot, each one image call.",
+    body: "Sent to the image service to draw the thumbnail. When the AI writes the thumbnail's picture prompt, it first turns this into one using the title and article, one extra AI call. 1 thumbnail by default, or 3: the second a close-up, the third a wider shot, each one image call.",
     tutorial: { page: "Prompts", anchor: "write-a-new-prompt" },
   },
   "library.prompt.body.narration": {
-    title: "Narration Preparation prompt",
-    body: "Tells the text model how the narration should be delivered. It only adds cues, such as a short speaking direction or a laugh or sigh, and never rewrites the words. One call each for the body, the intro and the outro. Works only with the Inworld TTS-2 voice model. With several speakers, each speaker on TTS-2 gets cues suited to their role.",
+    title: "Narration preparation prompt",
+    body: "Tells the AI how the narration should be delivered. It only adds cues, such as a short speaking direction or a laugh or sigh, and never rewrites the words. One AI call each for the article, the intro and the outro. Works only with the Inworld TTS-2 voice model. With several speakers, each speaker on TTS-2 gets cues suited to their role.",
     tutorial: { page: "Play-Narration", anchor: "narration-preparation" },
   },
   "library.prompt.body.description": {
-    title: "YouTube Description prompt",
-    body: "Tells the text model how to write the video's YouTube description, chapters, hashtags and tags from the timestamped transcript. One call per video. Each {{keyword}} of your own becomes a field on Play. A project that picks none uses the Built-in wording.",
+    title: "YouTube description prompt",
+    body: "Tells the AI writer how to write the video's YouTube description, chapters, hashtags and tags from the timestamped transcript. One AI call per video. Each {{keyword}} of your own becomes a question on Create. A project that picks none uses the built-in wording.",
     tutorial: { page: "Prompts", anchor: "write-a-new-prompt" },
   },
   "library.prompt.body.shorts": {
     title: "Shorts prompt",
-    body: "Tells the text model which moments of the video to cut into vertical shorts (3 of 60 to 120 s by default). One call picks them, then one call per short writes its picture prompts, and each picture is one image call. A project that picks none uses the Built-in wording.",
+    body: "Tells the AI which moments of the video to cut into vertical shorts (3 of 60 to 120 s by default). One AI call picks them, then one per short writes its picture prompts, and each picture is one image call. A project that picks none uses the built-in wording.",
     tutorial: { page: "Prompts", anchor: "write-a-new-prompt" },
   },
   "library.prompt.body.review": {
@@ -65,160 +42,30 @@ export const libraryHelp = {
   },
   "library.prompt.body.script": {
     title: "Script prompt",
-    body: "Used in place of an Article prompt when a run has several voices and writes a script. The text model answers with # section headings and Name: words turns, one speaker per paragraph; text in [square brackets] is not spoken. One call on the project's LLM.",
+    body: "Used in place of an Article prompt when a video has several voices and writes a script. The AI writer answers with # section headings and Name: words turns, one speaker per paragraph; text in [square brackets] is not spoken. One AI call per video.",
     tutorial: { page: "Prompts", anchor: "write-a-new-prompt" },
   },
   "library.prompt.body.post": {
     title: "Post prompt",
-    body: "Tells the text model how to write a post for X, LinkedIn, Instagram, TikTok, Reddit or Bluesky from the article. Slopify adds the site's length limit and the hashtags and link after it. One call per site that uses it, on the project's text model. Pick it in a template's Upload pack.",
+    body: "Tells the AI writer how to write a post for X, LinkedIn, Instagram, TikTok, Reddit or Bluesky from the article. Slopify adds the site's length limit and the hashtags and link after it. One AI call per site that uses it. Pick it in a template's YouTube description and posts section.",
     tutorial: { page: "Posting-to-Social-Sites", anchor: "post-prompts" },
-  },
-  "library.keywords.article": {
-    title: "Keywords Slopify fills in Article prompts",
-    body: keywordsHere("article"),
-    tutorial: factsSection,
-  },
-  "library.keywords.script": {
-    title: "Keywords Slopify fills in Script prompts",
-    body: keywordsHere("script"),
-    tutorial: factsSection,
-  },
-  "library.keywords.narration": {
-    title: "Keywords Slopify fills in Narration Preparation prompts",
-    body: keywordsHere("narration"),
-    tutorial: factsSection,
-  },
-  "library.keywords.image": {
-    title: "Keywords Slopify fills in Image prompts",
-    body: keywordsHere("image"),
-    tutorial: pictureSection,
-  },
-  "library.keywords.thumbnail": {
-    title: "Keywords Slopify fills in Thumbnail prompts",
-    body: keywordsHere("thumbnail"),
-    tutorial: pictureSection,
-  },
-  "library.keywords.description": {
-    title: "Keywords Slopify fills in YouTube Description prompts",
-    body: keywordsHere("description"),
-    tutorial: digestSection,
-  },
-  "library.keywords.shorts": {
-    title: "Keywords Slopify fills in Shorts prompts",
-    body: keywordsHere("shorts"),
-    tutorial: digestSection,
-  },
-  "library.keywords.post": {
-    title: "Keywords Slopify fills in Post prompts",
-    body: keywordsHere("post"),
-    tutorial: digestSection,
-  },
-  "library.keywords.review": {
-    title: "Keywords Slopify fills in Review prompts",
-    body: keywordsHere("review"),
-    tutorial: digestSection,
-  },
-  "library.keywords.intro": {
-    title: "Keywords Slopify fills in intros",
-    body: keywordsHere("intro"),
-    tutorial: factsSection,
-  },
-  "library.keywords.outro": {
-    title: "Keywords Slopify fills in outros",
-    body: keywordsHere("outro"),
-    tutorial: factsSection,
-  },
-  "library.prompt.starter": {
-    title: "Starter text",
-    body: "Fills the body with ready-made text to start from: the documentary delivery cues for Narration Preparation, or the Built-in wording YouTube Description, Shorts and Post use when no prompt is picked. When the body already has text you confirm first. Nothing is saved until you choose Save.",
-    tutorial: { page: "Prompts", anchor: "start-from-ready-made-text" },
   },
   "library.prompt.photorealistic": {
     title: "Draws photorealistic pictures",
-    body: "Turn on when this prompt's style looks like real photos or film. Prepare upload then answers Yes to YouTube's AI use question (a realistic-looking scene that didn't happen) for videos and shorts drawn with it. Leave off for painterly or illustrated styles. Applies at once, apart from Save; a channel's Always Yes or Always No wins. Default: off.",
+    body: "Turn on when this prompt's style looks like real photos or film. Copy for YouTube Studio then answers Yes to YouTube's AI use question (a realistic-looking scene that didn't happen) for videos and shorts drawn with it. Leave off for painterly or illustrated styles. Applies at once, apart from Save; a channel's Always Yes or Always No wins. Default: off.",
     tutorial: { page: "Prompts", anchor: "mark-an-image-prompt-as-photorealistic" },
   },
-  "library.slots": {
-    title: "Detected slots",
-    body: "Your own {{keywords}} in the body, listed as you type; the keywords Slopify fills are listed apart. Each of yours becomes one field on Play, typed once and filled into every prompt that names it. Names are case-sensitive, so {{Topic}} and {{topic}} are two fields. A keyword the project title also names is typed per video and saved empty in templates.",
-    tutorial: { page: "Prompts", anchor: "keywords-slots" },
-  },
-  "library.slots.filled": {
-    title: "Keywords Slopify fills",
-    body: "The keywords in the text that Slopify fills itself, such as {{Slopify_Title}}: they never become fields on Play. Using one turns on what fills it, free or part of one AI call per run. One where it can't be filled is warned about below; Save still works, but Play refuses the run until you move or remove it.",
-    tutorial: { page: "Keywords-Slopify-Fills", anchor: "how-they-work" },
-  },
-  "library.used-by": {
-    title: "Used by",
-    body: "The templates, schedules and projects that name this item, matched by name within its kind. For a project it says how many of its revisions used it and whether the current one does. Projects keep their own text, so editing here changes only runs started later.",
-    tutorial: { page: "Prompts", anchor: "used-by" },
-  },
-  "library.history": {
-    title: "History",
-    body: "Every save that changes the name or text adds a version, and every version is kept. Here you see the latest change with the changed words marked. Compare versions opens them all side by side, with Restore for an older one.",
-    tutorial: { page: "Prompts", anchor: "history-and-versions" },
-  },
-  "library.history.compare": {
-    title: "Compare versions",
-    body: "Pick any two saved versions to see them side by side, with the words that changed marked. Older and Newer can be any versions; a rename between them is said above the text.",
-    tutorial: { page: "Prompts", anchor: "history-and-versions" },
-  },
-  "library.history.versions": {
-    title: "Versions",
-    body: "Every saved version, newest first. Restore saves an older version again as a new version, so nothing after it is lost and History notes where it came from. Projects already made keep their text.",
-    tutorial: { page: "Prompts", anchor: "history-and-versions" },
-  },
-  // ── Intros & Outros ──────────────────────────────────────────────────────────────────
-  "library.entry.category": {
-    title: "Intro or outro",
-    body: "An intro is narrated before the body of the video, an outro after it, in the same voice. Play offers each in its own picker. A name only needs to be unique within its category.",
-    tutorial: { page: "Intros-and-Outros", anchor: "text-or-llm" },
-  },
+  // ── Rename in a list (Templates) ─────────────────────────────────────────────────────
   "library.inline-rename": {
     title: "Rename in the list",
     body: "Changes only the name, right in the list; the text stays as it is. Enter saves, Escape keeps the old name, and Undo on the notice renames it back. A prompt or intro/outro keeps the rename in History; templates that picked the old name use the copy saved with them until you pick it again. A template saves a new version; schedules keep the version they were made from.",
     tutorial: { page: "Library-Overview", anchor: "rename-in-the-row" },
   },
-  "library.entry.name": {
-    title: "Entry name",
-    body: "What Play and Edit project list this intro or outro by. Up to 200 characters, and unique within its category.",
-    tutorial: { page: "Intros-and-Outros", anchor: "write-an-intro-or-outro" },
-  },
-  "library.entry.mode": {
-    title: "Mode",
-    body: "Text is narrated as written, with the keywords filled in and no extra call. LLM sends the body as an instruction to the project's text model, with the title, keyword values and article, and narrates the answer: one call per entry, and the run then needs an LLM. Default: Text.",
-    tutorial: { page: "Intros-and-Outros", anchor: "text-or-llm" },
-  },
-  "library.entry.body": {
-    title: "Entry body",
-    body: "In Text mode, the words the narrator says; in LLM mode, the instruction whose answer is said. Each {{keyword}} of your own becomes a field on Play. It is narrated as its own audio file with the run's voice, one voice request each.",
-    tutorial: { page: "Intros-and-Outros", anchor: "write-an-intro-or-outro" },
-  },
-  // ── Narration aliases ────────────────────────────────────────────────────────────────
+  // ── Pronunciation ────────────────────────────────────────────────────────────────────
   "library.aliases": {
-    title: "Narration aliases",
-    body: "Words the narrator says differently from how they are written, such as Dr. as Doctor. Only what the voice and Narration Preparation receive changes; the article and captions keep the written words. A project copies this list when it starts and uses it while Use narration aliases is on. Up to 1000 aliases, saved as a whole.",
+    title: "Pronunciation aliases",
+    body: "Words the narrator says differently from how they are written, such as Dr. as Doctor. Only what the voice and narration preparation receive changes; the article and captions keep the written words. A project copies this list when it starts and uses it while Use narration aliases is on. Up to 1000 aliases, saved as a whole.",
     tutorial: { page: "Narration-Aliases-and-Glossary", anchor: "narration-aliases" },
-  },
-  "library.aliases.written": {
-    title: "Written",
-    body: "The word or phrase as it appears in the article, up to 200 characters. Spaces inside it match any spacing. Two aliases can't share a written form; where two overlap, the one starting first wins, then the longer.",
-    tutorial: { page: "Narration-Aliases-and-Glossary", anchor: "rules" },
-  },
-  "library.aliases.spoken": {
-    title: "Say it as",
-    body: "What the narrator says instead, spelled the way it sounds, up to 500 characters. Only the audio changes. An alias wins over a Pronunciation Glossary entry for the same words.",
-    tutorial: { page: "Narration-Aliases-and-Glossary", anchor: "rules" },
-  },
-  "library.aliases.whole-word": {
-    title: "Whole word",
-    body: "On: matches only where the written form stands as a word of its own, so it never fires inside a longer word. Off: matches inside other words too. Default: on.",
-    tutorial: { page: "Narration-Aliases-and-Glossary", anchor: "rules" },
-  },
-  "library.aliases.match-case": {
-    title: "Match case",
-    body: "On: matches only with the same capital letters, so US is not us. Off: capitals are ignored. Default: off.",
-    tutorial: { page: "Narration-Aliases-and-Glossary", anchor: "rules" },
   },
   // ── Templates ────────────────────────────────────────────────────────────────────────
   "templates.show-channel": {
@@ -266,27 +113,7 @@ export const libraryHelp = {
     body: "The channel the template belongs to, and the one a draft made from it runs in. Default: the draft's own channel, or its template's channel when it has none.",
     tutorial: { page: "Templates", anchor: "save-a-template-from-library--templates" },
   },
-  // ── Document themes ──────────────────────────────────────────────────────────────────
-  "library.themes.yours": {
-    title: "Your themes",
-    body: "Themes you made or copied from a built-in. Pick one on the Document row in Play or in Edit project. A project keeps its own copy of the settings, so editing or deleting a theme here never changes a PDF already made or queued.",
-    tutorial: { page: "Document-Themes", anchor: "built-in-and-your-own-themes" },
-  },
-  "library.themes.built-in": {
-    title: "Built-in themes",
-    body: "Looks that ship with Slopify and can't be changed. Plain is an unbranded flat page and what a new project gets. Copy one to make a theme of your own you can edit.",
-    tutorial: { page: "Document-Themes", anchor: "built-in-and-your-own-themes" },
-  },
-  "library.theme.name": {
-    title: "Theme name",
-    body: "What the theme is called on the Document row in Play and in Edit project. Up to 80 characters.",
-    tutorial: { page: "Document-Themes", anchor: "make-a-theme" },
-  },
-  "library.theme.preview": {
-    title: "Preview",
-    body: "A sample article laid out with this theme by the same renderer that makes a project's PDF, redrawn about half a second after you stop typing. It runs on your computer and costs nothing. Your projects use their own text and thumbnail.",
-    tutorial: { page: "Document-Themes", anchor: "make-a-theme" },
-  },
+  // ── PDF themes ───────────────────────────────────────────────────────────────────────
   "library.theme.page.format": {
     title: "Paper size",
     body: "The page size of the PDF. A4 (210 × 297 mm) is used in most of the world; US Letter (216 × 279 mm) in the US and Canada. Pick the one your readers print on. Default: A4.",
