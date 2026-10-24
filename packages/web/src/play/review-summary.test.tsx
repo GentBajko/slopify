@@ -77,6 +77,51 @@ it("summarizes the run in the rows' own groups, with one Change per group", asyn
   }
 });
 
+// What a group says a stage's choice is, read beside its label.
+const said = (group: string, label: string) =>
+  within(region(group)).getByText(label, { selector: "dt" }).nextElementSibling?.textContent;
+
+it.each([
+  [
+    "everything generated",
+    generated,
+    {
+      Article: "Write it for me",
+      Research: "Off",
+      Narration: "AI voice (paid per character)",
+      Images: "Made by AI (paid)",
+      Video: "Make the video",
+      Thumbnail: "From my thumbnail prompt",
+    },
+  ],
+  [
+    "everything supplied",
+    suppliedDocument,
+    {
+      Article: "Use my text as written",
+      Narration: "Off",
+      Images: "None",
+      Thumbnail: "None",
+    },
+  ],
+] as const)(
+  "names each stage's choice in its row's own words (%s)",
+  async (_name, document, words) => {
+    const harness = reviewHarness();
+    await harness.prepare(document);
+    const groups: Readonly<Record<string, string>> = {
+      Article: "Article",
+      Research: "Article",
+      Narration: "Narration",
+      Images: "Images",
+      Video: "Video and style",
+      Thumbnail: "Extras",
+    };
+    for (const [label, expected] of Object.entries(words))
+      expect([label, said(groups[label] ?? label, label)]).toEqual([label, expected]);
+  },
+);
+
 it("says nothing is missing when a run only uses supplied content", async () => {
   const harness = reviewHarness();
   await harness.prepare(suppliedDocument);
