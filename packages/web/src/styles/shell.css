@@ -734,7 +734,7 @@
     display: none;
   }
 
-  /* Page shapes. Workspace: section rail, fluid main, action rail. List and detail. */
+  /* Page shapes. Workspace: section rail, fluid main, status column. List and detail. */
   .sl-workspace {
     display: grid;
     grid-template-columns: 180px minmax(0, 1fr) 320px;
@@ -768,50 +768,100 @@
     gap: var(--space-4);
     min-width: 0;
   }
-  /* A project: the page itself doesn't scroll. The header stays put and each column (the
-     sections, the open section, the status rail) scrolls on its own, so the whole project is
-     in view at once. Narrower screens keep the page's own scroll (below). */
+  /* A project: the title row, then one main column for the open section and one status
+     column beside it. The page scrolls as every page does; the status column stays in view
+     beside the section. Narrower windows put the status column after the section. */
+  .sl-project {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .sl-project > .sl-workspace {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: var(--space-5);
+  }
+  .sl-project .sl-workspace__aside {
+    gap: var(--space-3);
+    max-height: calc(100dvh - var(--space-5) * 2);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  /* The title row stays one line: a long title is cut (whole on hover), the meta gives way,
+     and the actions never wrap under it. */
+  .sl-project__header {
+    flex-wrap: nowrap;
+    margin-bottom: 0;
+  }
+  .sl-project__header .sl-page-header__lead {
+    flex: 1 1 auto;
+    flex-wrap: nowrap;
+  }
+  .sl-project__header .sl-page-header__lead > h1 {
+    flex: 0 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
+  .sl-project__header .sl-page-header__meta {
+    flex: 0 1 auto;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+  }
+  .sl-project__header .sl-page-header__actions {
+    flex: none;
+    flex-wrap: nowrap;
+  }
+  .sl-project__meta {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0 var(--space-2);
+  }
+  .sl-project__meta .sl-status {
+    font-size: inherit;
+    line-height: inherit;
+  }
+  /* The one line under the title row: the sample, a paused or queued run. */
+  .sl-project__note {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-1);
+    font-size: 13px;
+    line-height: 19px;
+    color: var(--color-ink-2);
+  }
+  /* The status list: rows dense enough for every output and All files in one glance, the
+     second line of a row at work under its name. */
+  .sl-status-list .sl-rail__item {
+    height: 32px;
+    padding: 0 8px;
+    gap: var(--space-2);
+  }
+  .sl-status-list__more {
+    margin: -2px 0 4px;
+    padding-left: 24px;
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--color-ink-2);
+  }
+  .sl-status-list__cost {
+    margin: 0;
+    padding-left: 8px;
+    font-size: 13px;
+    line-height: 19px;
+    color: var(--color-ink-2);
+  }
+  /* The page scrolls, so a stage's text reads straight down it: no box inside the page. The
+     article's search stays at the top while reading. */
   @media (min-width: 1181px) {
-    .sl-page:has(> .sl-project),
-    .sl-page:has(.sl-project) {
-      padding-bottom: 20px;
-    }
-    .sl-project {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-4);
-      /* The window less the page's 16px top and 20px bottom padding. */
-      height: calc(100dvh - 36px);
-    }
-    .sl-project > .sl-workspace {
-      flex: 1;
-      min-height: 0;
-      align-items: stretch;
-      /* The open section gets the width: the section list and the status rail stay slim. */
-      grid-template-columns: 160px minmax(0, 1fr) 280px;
-      gap: var(--space-5);
-    }
     .sl-project .sl-reading-layout {
       grid-template-columns: 170px minmax(0, 1fr);
       gap: var(--space-5);
     }
-    .sl-project .sl-workspace__sections,
-    .sl-project .sl-workspace__main,
-    .sl-project .sl-workspace__aside {
-      /* Relative, not static: absolutely placed things inside a column (the screen-reader
-         headings) then stay inside its scroll, instead of stretching the page so the window
-         scrolls too and slides the whole project up into an empty screen. */
-      position: relative;
-      top: auto;
-      min-height: 0;
-      overflow-y: auto;
-      overscroll-behavior: contain;
-    }
-    .sl-project .sl-workspace__main {
-      padding-right: 6px;
-    }
-    /* The section already scrolls: text reads straight down it, no box inside the box. The
-       article's search stays at the top while reading. */
     .sl-project .sl-reading__scroll,
     .sl-project .sl-stage-scroll {
       max-height: none;
@@ -826,11 +876,41 @@
       background: var(--color-ground);
     }
     .sl-project .sl-reading-layout > .sl-toc {
-      top: 0;
+      top: var(--space-6);
     }
     .sl-project .sl-reading__tools > div:has(input) {
       flex: 1 1 auto;
       min-width: 0;
+    }
+  }
+  @media (max-width: 1180px) {
+    .sl-project > .sl-workspace {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .sl-project .sl-workspace__aside {
+      order: 1;
+      max-height: none;
+      overflow: visible;
+    }
+  }
+  /* Phones: the title row wraps (the actions under the title), and nothing scrolls sideways. */
+  @media (max-width: 767px) {
+    .sl-project {
+      min-width: 0;
+      overflow-x: clip;
+    }
+    .sl-project__header {
+      flex-wrap: wrap;
+    }
+    .sl-project__header .sl-page-header__lead {
+      flex-wrap: wrap;
+    }
+    .sl-project__header .sl-page-header__meta {
+      white-space: normal;
+    }
+    .sl-project__header .sl-page-header__actions {
+      flex-wrap: wrap;
+      margin-left: 0;
     }
   }
   /* Library → Templates → Open studio: the sections, a section's settings and its sample. The

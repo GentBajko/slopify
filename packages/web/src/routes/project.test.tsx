@@ -26,11 +26,17 @@ afterEach(cleanup);
 
 // Cancel the run sits in the title row's "More" menu, behind its confirmation.
 async function pressCancelRun(): Promise<void> {
-  await userEvent.click(await screen.findByRole("button", { name: "More project actions" }));
+  await userEvent.click(await screen.findByRole("button", { name: "More" }));
   await userEvent.click(await screen.findByRole("menuitem", { name: "Cancel the run…" }));
 }
 
-const nextAction = () => screen.getByRole("region", { name: "Next action" });
+// The title row, where the project's next action is the one primary button.
+const nextAction = () => {
+  const row = screen.getByRole("heading", { level: 1 }).closest("header");
+  if (row === null) throw new Error("The project has no title row.");
+  return row;
+};
+const statusList = () => screen.findByRole("navigation", { name: "Project sections" });
 
 describe("the project workspace", () => {
   it("shows a skeleton in the final shape while the project is coming", async () => {
@@ -46,37 +52,71 @@ describe("the project workspace", () => {
     expect(await screen.findByText(/No project has that id\./)).not.toBeNull();
   });
 
-  it("lists the sections in the rail, each stage with its lamp, then the views", async () => {
+  it("lists what the project makes, each with its state word and one detail, then All files", async () => {
     renderRouted(<ProjectRoute projectId="p1" />, deps());
-    const rail = await screen.findByRole("navigation", { name: "Project sections" });
-    // Each stage's state is in its name as a word, not only in the lamp's colour.
+    const rail = await statusList();
+    // Each output's state is a word beside its lamp, and a finished one says what it holds;
+    // no row for Cost, Progress, Settings or Versions on a finished project.
     expect(
       within(rail)
         .getAllByRole("link")
         .map((item) => item.textContent),
     ).toEqual([
-      "Outputs",
-      "Article, Done",
-      "Narration, Done",
-      "Images, Done",
-      "Video, Done",
-      "Cost",
-      "Live",
-      "Settings",
-      "History",
+      "Article, Done · with sources and glossary",
+      "Narration, Done · 01:00 · with intro and outro",
+      "Images, Done · 2 images + 1 thumbnail",
+      "Video, Done · 01:12 · 16:9",
+      "All files, 9 files",
     ]);
     const video = within(rail).getByRole("link", { name: /^Video/ });
-    expect(video.textContent).toBe("Video, Done");
-    expect(within(rail).getByRole("link", { name: /^Video\W+Done$/ })).toBe(video);
     expect(video.querySelector("[data-tone]")).not.toBeNull();
     // A section is an address: it opens in a new tab and survives a reload.
     expect(video.getAttribute("href")).toBe("/projects/p1?section=video");
+    expect(video.getAttribute("aria-current")).toBe("page");
     expect(screen.getAllByRole("status").map((live) => live.textContent)).toContain(
       "Project: Done",
     );
+    // Nothing in the status column is a raised card or a disabled control.
+    expect(document.querySelector(".sl-next")).toBeNull();
   });
 
-  it("sums up the run's cost in the status rail and opens the Cost section from it", async () => {
+  it("gives Shorts and the YouTube text their own sections, each opened by its address", async () => {
+    const youtube = {
+      ...finished,
+      project: {
+        ...finished.project,
+        config: {
+          ...finished.project.config,
+          youtubeDescription: true,
+          shorts: { enabled: true, count: 2, minSeconds: 20, maxSeconds: 40 },
+        },
+      },
+      outputs: [
+        ...finished.outputs,
+        output("youtube_description", "video"),
+        output("short_video", "video", { meta: { short: 1 } }),
+      ],
+    };
+    renderRouted(
+      <ProjectRoute projectId="p1" />,
+      deps({ "GET /api/projects/p1": jsonAnswer(youtube) }),
+    );
+    const rail = await statusList();
+    expect(
+      within(rail)
+        .getAllByRole("link")
+        .map((item) => item.querySelector(".truncate")?.textContent),
+    ).toEqual(["Article", "Narration", "Images", "Video", "Shorts", "YouTube text", "All files"]);
+    expect(within(rail).getByRole("link", { name: /^Shorts/ }).textContent).toBe(
+      "Shorts, Done · 1 short",
+    );
+    await userEvent.click(within(rail).getByRole("link", { name: /^YouTube text/ }));
+    const text = await screen.findByRole("region", { name: "YouTube text" });
+    expect(text.hidden).toBe(false);
+    expect(document.querySelector<HTMLElement>('section[aria-label="Video"]')?.hidden).toBe(true);
+  });
+
+  it("sums up the run's cost in one line under the list and opens the breakdown from it", async () => {
     const line = {
       calls: 3,
       cost: 1.25,
@@ -106,10 +146,12 @@ describe("the project workspace", () => {
         }),
       }),
     );
-    const summary = await screen.findByRole("region", { name: "Cost so far" });
-    expect(summary.textContent).toContain("$1.25 spent");
-    await userEvent.click(within(summary).getByRole("button", { name: "By stage" }));
+    const cost = (await screen.findByText(/^Cost \$1\.25/)).closest("p");
+    expect(cost?.textContent).toBe("Cost $1.25 · 1 min 30 s of working time · See the breakdown");
+    await userEvent.click(screen.getByRole("link", { name: "See the breakdown" }));
     expect(await screen.findByRole("region", { name: "Run cost summary" })).not.toBeNull();
+    // The breakdown is on screen: the line no longer offers it.
+    expect(screen.queryByRole("link", { name: "See the breakdown" })).toBeNull();
   });
 
   it("adds the PDF section once the run makes one", async () => {
@@ -129,7 +171,7 @@ describe("the project workspace", () => {
       }),
     );
     const pdf = await selectProjectStage("Document");
-    expect(within(pdf).getByText("PDF · DiceMaster theme")).not.toBeNull();
+    expect(within(pdf).getByText("DiceMaster theme")).not.toBeNull();
     expect(within(pdf).getByRole("link", { name: "Download PDF" }).getAttribute("href")).toBe(
       `${testOrigin}/files/p1/document-pdf`,
     );
@@ -143,7 +185,7 @@ describe("the project workspace", () => {
 });
 
 describe("the next action", () => {
-  it("opens a finished project on its video, with Prepare upload the one action", async () => {
+  it("opens a finished project on its video, with Copy for YouTube Studio the one action", async () => {
     // A video made for YouTube: it writes the YouTube description.
     const youtube = {
       ...finished,
@@ -163,28 +205,30 @@ describe("the next action", () => {
     const video = await screen.findByRole("region", { name: "Video" });
     expect(within(video).getByLabelText("Generated video")).not.toBeNull();
     expect(await downloadItem("Video (.mp4)")).not.toBeNull();
-    expect(within(nextAction()).getByRole("button", { name: "Prepare upload" })).not.toBeNull();
-    // The project's next step, the open section's own Download, and its YouTube part's Copy.
+    expect(
+      within(nextAction()).getByRole("button", { name: "Copy for YouTube Studio" }),
+    ).not.toBeNull();
+    // The project's next step and the open section's own Download; the YouTube text is a
+    // section of its own, not more of the Video section.
     const shown = [...document.querySelectorAll(".sl-btn--primary")].filter(
       (button) => button.closest("[hidden]") === null,
     );
     expect(shown.map((button) => button.textContent?.trim()).sort()).toEqual([
-      "Copy",
+      "Copy for YouTube Studio",
       "Download",
-      "Prepare upload",
     ]);
     const article = await selectProjectStage("Article");
     expect(await within(article).findByText(/A long finished article/)).not.toBeNull();
   });
 
-  it("offers no Prepare upload for a video that is not made for YouTube", async () => {
+  it("offers no Copy for YouTube Studio for a video that is not made for YouTube", async () => {
     renderRouted(<ProjectRoute projectId="p1" />, deps());
     const video = await screen.findByRole("region", { name: "Video" });
     expect(within(video).getByLabelText("Generated video")).not.toBeNull();
-    expect(screen.queryByRole("button", { name: "Prepare upload" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Copy for YouTube Studio" })).toBeNull();
   });
 
-  it("offers Pause while the run is at work, and the steps with their state", async () => {
+  it("offers Pause while the run is at work, and Progress and each output's state", async () => {
     const paused = vi.fn();
     renderRouted(
       <ProjectRoute projectId="p1" />,
@@ -210,11 +254,15 @@ describe("the next action", () => {
       }),
     );
     await screen.findByRole("region", { name: "Narration" });
-    expect(within(nextAction()).getByText("Making the narration · 1 of 4.")).not.toBeNull();
-    const steps = screen.getByRole("list", { name: "Run steps" });
-    const narration = within(steps).getByText("Narration").closest("li") as HTMLElement;
-    expect(within(narration).getByText("Running")).not.toBeNull();
-    expect(within(steps).queryByText(/^Research/)).toBeNull();
+    const rail = await statusList();
+    // Progress leads the list while the run goes; a row at work says what it does under it.
+    expect(within(rail).getByRole("link", { name: /^Progress/ }).textContent).toBe(
+      "Progress, Running · 1 of 4",
+    );
+    const narration = within(rail).getByRole("link", { name: /^Narration/ });
+    expect(narration.textContent).toBe("Narration, Running");
+    expect(narration.nextElementSibling?.textContent).toBe("chunk 1 of 4 · time left unknown");
+    expect(within(rail).queryByText(/^Research/)).toBeNull();
     await userEvent.click(within(nextAction()).getByRole("button", { name: "Pause" }));
     await waitFor(() => expect(paused).toHaveBeenCalledTimes(1));
   });
@@ -248,9 +296,12 @@ describe("time left on a running step", () => {
         ),
       }),
     );
-    const steps = await screen.findByRole("list", { name: "Run steps" });
-    expect(await within(steps).findByText(/about 4 min left$/)).not.toBeNull();
-    expect(within(steps).getByText(/time left unknown$/)).not.toBeNull();
+    const rail = await statusList();
+    const line = (name: string) =>
+      within(rail).getByRole("link", { name: new RegExp(`^${name}`) }).nextElementSibling
+        ?.textContent;
+    await waitFor(() => expect(line("Images")).toMatch(/about 4 min left$/));
+    expect(line("Narration")).toMatch(/time left unknown$/);
   });
 });
 
@@ -296,7 +347,7 @@ describe("a failed stage", () => {
         },
       }),
     );
-    await screen.findByRole("region", { name: "Next action" });
+    await screen.findByRole("region", { name: "Images" });
     await userEvent.click(within(nextAction()).getByRole("button", { name: "Try images again" }));
     await waitFor(() => {
       expect(retried).toHaveBeenCalledTimes(1);
@@ -322,9 +373,10 @@ describe("a failed stage", () => {
         ),
       }),
     );
-    const link = await within(
-      await screen.findByRole("region", { name: "Next action" }),
-    ).findByRole("link", { name: "Open Settings → Providers → fal.ai" });
+    await screen.findByRole("region", { name: "Images" });
+    const link = await within(nextAction()).findByRole("link", {
+      name: "Open Settings → Providers → fal.ai",
+    });
     expect(link.getAttribute("href")).toBe("/settings?section=providers");
   });
 });
@@ -397,15 +449,12 @@ describe("cancelling a run", () => {
     });
   });
 
-  it("offers no Cancel once the run is over", async () => {
+  it("offers no Cancel once the run is over, and Delete in its place", async () => {
     renderRouted(<ProjectRoute projectId="p1" />, deps());
-    await screen.findByRole("navigation", { name: "Project sections" });
-    await userEvent.click(screen.getByRole("button", { name: "More project actions" }));
-    expect(
-      (await screen.findByRole("menuitem", { name: "Cancel the run…" })).getAttribute(
-        "aria-disabled",
-      ),
-    ).toBe("true");
+    await statusList();
+    await userEvent.click(screen.getByRole("button", { name: "More" }));
+    expect(await screen.findByRole("menuitem", { name: "Delete project…" })).not.toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Cancel the run…" })).toBeNull();
   });
 
   it("keeps article output read-only and offers the settings while a stage runs", async () => {
@@ -620,5 +669,57 @@ describe("the stage bodies", () => {
     expect(screen.queryByRole("button", { name: "Render the video again" })).toBeNull();
     expect(screen.getByLabelText("Generated video")).not.toBeNull();
     expect(screen.queryByLabelText("Subtitles", { selector: "select" })).toBeNull();
+  });
+});
+
+describe("Progress", () => {
+  const going = body({
+    status: "running",
+    stages: [
+      stage("research", "skipped"),
+      stage("article", "done"),
+      stage("audio", "done"),
+      stage("images", "done"),
+      stage("thumbnail", "done"),
+      stage("video", "running", {
+        progressCurrent: 45,
+        progressTotal: 100,
+        activity: { label: "rendering the video", percent: 45 },
+      }),
+    ],
+    outputs: [output("article_md", "article"), ...finished.outputs.slice(3, 9)],
+  });
+
+  it("shows the whole run's progress, its steps and the video rendering while the run goes", async () => {
+    renderRouted(
+      <ProjectRoute projectId="p1" />,
+      deps({ "GET /api/projects/p1": jsonAnswer(going) }),
+    );
+    const rail = await statusList();
+    await userEvent.click(within(rail).getByRole("link", { name: /^Progress/ }));
+    const progress = await screen.findByRole("region", { name: "Progress" });
+    expect(within(progress).getByText(/^Making your video · 3 of 4/)).not.toBeNull();
+    expect(within(progress).getByRole("progressbar", { name: "Whole run" })).not.toBeNull();
+    const steps = within(progress).getByRole("list", { name: "Run steps" });
+    expect(within(steps).getByText("Video")).not.toBeNull();
+    const video = within(progress).getByRole("region", { name: "Video" });
+    expect(within(video).getByRole("progressbar", { name: "Video" })).not.toBeNull();
+    expect(within(video).getAllByText("Rendering the video (45%)").length).toBeGreaterThan(0);
+    // A finished step says so, never that it is still to come.
+    const article = within(progress).getByRole("region", { name: "Article" });
+    expect(article.textContent).toContain("Written.");
+    expect(article.textContent).not.toContain("appears here as it is written");
+  });
+
+  it("is not offered once the run is over, and its old address opens the video", async () => {
+    renderRouted(<ProjectRoute projectId="p1" />, deps());
+    const rail = await statusList();
+    expect(within(rail).queryByRole("link", { name: /^Progress/ })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Progress" })).toBeNull();
+    expect(
+      within(rail)
+        .getByRole("link", { name: /^Video/ })
+        .getAttribute("aria-current"),
+    ).toBe("page");
   });
 });

@@ -48,7 +48,7 @@ it("says a step waits for the person only at a checkpoint that holds the run", (
     steps({}, [{ checkpointId: "images-gate", stage: "images", waitsFor: "person", ...gate }]),
   ).toEqual([
     ["Article", "Done", expect.anything()],
-    ["Images", "Waiting for your review", "Approve it under Checkpoints to carry on."],
+    ["Images", "Waiting for your review", "Press Approve at the top to carry on."],
     ["Video", "Not started", "Waits for the stages above"],
   ]);
   // The video's checkpoint, not reached yet, holds nothing.

@@ -79,15 +79,26 @@ function Group({
 }
 
 export function RevisionForm(
-  props: EditorProps & { readonly renderContent?: (props: EditorProps) => ReactNode },
+  props: EditorProps & {
+    readonly renderContent?: (props: EditorProps) => ReactNode;
+    // The section an address opened the settings on.
+    readonly opening?: EditSection | undefined;
+    // The pauses for this run, at the top of Pauses and checks: they take effect at once.
+    readonly checks?: ReactNode;
+  },
 ): import("react").ReactElement {
   const { view, edit, onChange, onPending, fields } = props;
   const formId = useId();
-  const [section, setSection] = useState<EditSection>(props.focus?.section ?? "inputs");
+  const [section, setSection] = useState<EditSection>(
+    props.focus?.section ?? props.opening ?? "inputs",
+  );
   // A change asked for from the project page opens the section it belongs to.
   useEffect(() => {
     if (props.focus !== undefined) setSection(props.focus.section);
   }, [props.focus]);
+  useEffect(() => {
+    if (props.opening !== undefined) setSection(props.opening);
+  }, [props.opening]);
   const [pending, setPending] = useState({ font: false, content: false, music: false });
   useEffect(() => {
     onPending(pending.font || pending.content || pending.music);
@@ -163,7 +174,7 @@ export function RevisionForm(
     { id: "prompts", label: "Prompts" },
     {
       id: "reviews",
-      label: "Reviews",
+      label: "Pauses and checks",
       ...(config.reviews === undefined ? {} : { badge: "on" }),
     },
     ...(config.sources.audio !== "off" || config.shorts?.enabled === true
@@ -677,7 +688,12 @@ export function RevisionForm(
             onChange={onChange}
           />
         </section>
-        <section aria-label="Reviews" hidden={current !== "reviews"} className={panel("reviews")}>
+        <section
+          aria-label="Pauses and checks"
+          hidden={current !== "reviews"}
+          className={panel("reviews")}
+        >
+          {props.checks}
           <RevisionReviews
             edit={edit}
             providers={providers.data?.providers ?? []}

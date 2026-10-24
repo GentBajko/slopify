@@ -15,12 +15,13 @@ import { activityText, stageName } from "./summary.js";
 
 // The next action rule (docs/design-system.md, "Controls that say what they do"): a project
 // shows exactly one action for its situation, named for its result, and only when it applies.
-// This is the one place that decides it, from the project's state alone, so the right rail,
-// the section it concerns and the command palette can never disagree. The mapping table is
+// This is the one place that decides it, from the project's state alone, so the title row's
+// primary button, the section it concerns and the command palette can never disagree. The mapping table is
 // written out in docs/design-system.md; next-action.test.ts covers every row.
 
-// The project page's places: the stage sections, the run's cost and live view, and the
-// settings views that replace the main column.
+// The project page's places: the stage sections (with Shorts and the YouTube text, each its
+// own), All files ("outputs"), the run's cost, its Progress while it goes ("live"), and the
+// settings view with its Pauses and checks ("checkpoints") and Versions ("history").
 export type SectionId =
   | "outputs"
   | "article"
@@ -161,8 +162,8 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
       situation: "sample",
       tone: "info",
       status: "Sample project",
-      title: "This is the sample project, finished and free to explore.",
-      why: "It is read-only. Your own copy can be edited and made again.",
+      title: "A finished sample to explore.",
+      why: "It is read-only: Make my own copy to edit it and make it again.",
       action: { label: "Make my own copy", intent: { kind: "copy-sample" } },
     };
 
@@ -335,8 +336,8 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
           tone: "done",
           status: keptAsIsWord,
           title: "The video is ready; what is left won't run.",
-          why: "Prepare upload lays out the file, title, description, thumbnails and tags in the order YouTube Studio asks for them. Editing the project brings the rest back to Needs you.",
-          action: { label: "Prepare upload", intent: { kind: "prepare-upload" } },
+          why: "Copy for YouTube Studio lays out the file, title, description, thumbnails and tags in the order YouTube Studio asks for them. Editing the project brings the rest back to Needs you.",
+          action: { label: "Copy for YouTube Studio", intent: { kind: "prepare-upload" } },
           section: "youtube",
         }
       : {
@@ -392,14 +393,15 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
     };
 
   // The first thing a person makes is a short; the long video comes second. A finished short
-  // leads there, with the same topic and starter pack. Prepare upload stays in its section.
+  // leads there, with the same topic and starter template. Copy for YouTube Studio stays in
+  // its section.
   if (project.status === "done" && config.mode === "short")
     return {
       situation: "done",
       tone: "done",
       status: "Done",
       title: "The short is ready.",
-      why: "Play opens set up for a long video on the same topic, with the same starter pack and providers. Nothing starts until you press Play.",
+      why: "Create opens set up for a long video on the same topic, with the same starter template and services. Nothing is made until you press Make the video.",
       action: { label: "Make the full video on this topic", intent: { kind: "full-video" } },
     };
 
@@ -409,8 +411,8 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
       tone: "done",
       status: "Done",
       title: "The video is ready.",
-      why: "Prepare upload lays out the file, title, description, thumbnails and tags in the order YouTube Studio asks for them.",
-      action: { label: "Prepare upload", intent: { kind: "prepare-upload" } },
+      why: "Copy for YouTube Studio lays out the file, title, description, thumbnails and tags in the order YouTube Studio asks for them.",
+      action: { label: "Copy for YouTube Studio", intent: { kind: "prepare-upload" } },
       section: "youtube",
     };
 

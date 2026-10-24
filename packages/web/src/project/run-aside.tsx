@@ -11,20 +11,20 @@ import type { CheckpointHold } from "@app/slices/reviews/holds.js";
 import type { RunCost } from "@app/slices/run-cost/panel.js";
 import type { Output } from "@app/slices/storage/model.js";
 import type { ReactElement } from "react";
-import { Button } from "@/components/kit/button";
-import { SectionHead } from "@/components/kit/section-head";
-import { Meter } from "@/components/kit/stats";
+import { TextLink } from "@/components/kit/link";
+import { Rail, RailLink } from "@/components/kit/rail";
 import type { Tone } from "@/components/kit/status";
-import { type Step, Steps } from "@/components/kit/steps";
-import { usd, wholeNumber } from "@/lib/format";
+import type { Step } from "@/components/kit/steps";
+import { usd } from "@/lib/format";
 import { stageWords } from "@/lib/stage-words";
 import { retryingWord } from "@/lib/state-words";
-import { accountLine, shareShort, shareValue, windowName } from "./plan-share.js";
+import type { SectionId } from "./next-action.js";
 import { workDuration } from "./run-cost.js";
+import type { StatusRow } from "./status-rows.js";
 import { finalOutput, summaryOf } from "./summary.js";
 
-// The right rail under the next action: the run's steps with their times and one detail
-// line each, then what the run has cost so far and its share of the plan limits.
+// The status column beside the open section: the run's steps (`runSteps`, which the status
+// list and the Progress view read), the one status list and the cost line.
 
 const toneOf = (stage: Stage): Tone => {
   switch (stage.state) {
@@ -45,7 +45,7 @@ const toneOf = (stage: Stage): Tone => {
 type StepHold = CheckpointHold["waitsFor"] | "agent";
 
 const holdLook: Readonly<Record<StepHold, { readonly state: string; readonly detail: string }>> = {
-  person: { state: heldWord, detail: "Approve it under Checkpoints to carry on." },
+  person: { state: heldWord, detail: "Press Approve at the top to carry on." },
   day: { state: preparedWord, detail: "Its schedule makes it on its day." },
   agent: { state: waitingForAgentWord, detail: "Goes on once the agent answers." },
 };
@@ -121,8 +121,8 @@ export function runSteps({
     });
 }
 
-// A step changing state is said aloud ("Video: running"), wherever the steps are on screen
-// (below 1180px the steps list is left out, so this is not part of it).
+// A step changing state is said aloud ("Video: running"), wherever the status list is on
+// screen.
 export function StageAnnouncements({
   stages,
 }: {
@@ -141,62 +141,100 @@ export function StageAnnouncements({
   );
 }
 
-export function RunSteps({ steps }: { readonly steps: readonly Step[] }): ReactElement {
+// The status column's list: one row per thing the project makes, each a link to its section,
+// with its lamp, its state in words and one detail; a row at work or waiting says what it does
+// on a second line. All files ends it.
+export function ProjectStatusList({
+  rows,
+  projectId,
+  selected,
+}: {
+  readonly rows: readonly StatusRow[];
+  readonly projectId: string;
+  readonly selected: SectionId;
+}): ReactElement {
   return (
-    <section aria-labelledby="run-steps-title" className="flex flex-col gap-2">
-      <SectionHead id="run-steps-title" title="Run" size="small" className="pb-0" />
-      <Steps steps={steps} label="Run steps" dense />
-    </section>
+    <Rail label="Project sections" className="sl-status-list">
+      {rows.map((row) => (
+        <div key={row.id} className="sl-status-list__row">
+          <RailLink
+            to={`/projects/${projectId}`}
+            search={{ section: row.id }}
+            resetScroll={false}
+            data-tour={`project-rail-${row.id}`}
+            current={row.id === selected}
+            {...(row.tone === undefined || row.state === undefined
+              ? {}
+              : { tone: row.tone, state: row.state })}
+            {...(row.detail === undefined
+              ? {}
+              : {
+                  meta:
+                    row.state === undefined ? (
+                      // A row without a state still reads "All files, 9 files" aloud.
+                      <>
+                        <span className="sr-only">, </span>
+                        {row.detail}
+                      </>
+                    ) : (
+                      row.detail
+                    ),
+                })}
+          >
+            {row.name}
+          </RailLink>
+          {row.more === undefined ? null : <p className="sl-status-list__more">{row.more}</p>}
+        </div>
+      ))}
+    </Rail>
   );
 }
 
-// "$3.37 spent · ~$9.10 via API", then each plan's share: "Codex: 14% of your weekly limit".
-export function CostSoFar({
+// "Cost $0.07 · 4 s of working time · See the breakdown": the run's cost in one line under the
+// list, the breakdown one press away. While the run goes it is the cost so far.
+export function CostLine({
   cost,
-  onOpen,
+  running,
+  projectId,
+  breakdownShown,
 }: {
   readonly cost: RunCost | undefined;
-  // Opens the Cost section, the breakdown by stage.
-  readonly onOpen?: () => void;
-}): ReactElement | null {
-  if (cost === undefined || (cost.calls === 0 && cost.byStage.length === 0)) return null;
-  const windows = cost.plans.flatMap((plan) =>
-    plan.reported ? plan.windows.map((window) => ({ plan, window })) : [],
-  );
+  readonly running: boolean;
+  readonly projectId: string;
+  // The breakdown is on screen already: the line does not offer it again.
+  readonly breakdownShown: boolean;
+}): ReactElement {
+  const spent = cost !== undefined && (cost.calls > 0 || cost.byStage.length > 0);
+  const parts = [
+    cost === undefined
+      ? undefined
+      : !spent
+        ? "Nothing spent yet"
+        : `${running ? "Cost so far" : "Cost"} ${usd(cost.cost)}${cost.unpriced > 0 ? " known" : ""}`,
+    spent && cost?.apiEquivalent !== null && cost?.apiEquivalent !== undefined
+      ? `~${usd(cost.apiEquivalent)} via API`
+      : undefined,
+    // The run's working time once it has stopped; while it runs the clock in the title row counts.
+    spent && cost?.run !== null && cost?.run !== undefined && !cost.run.running
+      ? `${workDuration(cost.run.workingMs)} of working time`
+      : undefined,
+  ].filter((part): part is string => part !== undefined);
   return (
-    <section aria-labelledby="cost-so-far-title" className="flex flex-col gap-3">
-      <SectionHead id="cost-so-far-title" title="Cost so far" size="small" className="pb-0">
-        {onOpen === undefined ? null : (
-          <Button variant="quiet" size="small" onClick={onOpen}>
-            By stage
-          </Button>
-        )}
-      </SectionHead>
-      <p className="m-0 text-small text-ink-2">
-        <strong className="text-ink">{usd(cost.cost)}</strong>
-        {cost.unpriced > 0 ? " known, spent" : " spent"}
-        {cost.apiEquivalent === null ? null : ` · ~${usd(cost.apiEquivalent)} via API`}
-        {/* The run's working time once it has stopped; while it runs the clock above counts. */}
-        {cost.run === null || cost.run.running
-          ? null
-          : ` · ${workDuration(cost.run.workingMs)} of work`}
-      </p>
-      {windows.map(({ plan, window }) => {
-        const used = shareValue(window);
-        const name = `${windowName(window.kind)} ${plan.name} limit`;
-        return (
-          <div key={`${plan.account}/${window.kind}`} className="flex flex-col gap-1">
-            <p className="m-0 text-small text-ink-2">{shareShort(plan, window)}</p>
-            <Meter
-              value={(window.usedPercent ?? 0) / 100}
-              label={`Share of the ${name} this run used`}
-              valueText={`${used} of your ${name}; the account is at ${wholeNumber.format(window.nowPercent)}%`}
-              tone={window.nowPercent >= 80 ? "waiting" : "accent"}
-            />
-            <p className="m-0 text-small text-ink-3">{accountLine(plan, window)}</p>
-          </div>
-        );
-      })}
-    </section>
+    <p className="sl-status-list__cost" data-tour="project-rail-cost">
+      {parts.join(" · ")}
+      {breakdownShown ? null : (
+        <>
+          {parts.length === 0 ? null : " · "}
+          <TextLink
+            to="/projects/$projectId"
+            params={{ projectId }}
+            search={{ section: "cost" }}
+            resetScroll={false}
+          >
+            See the breakdown
+          </TextLink>
+        </>
+      )}
+    </p>
   );
 }

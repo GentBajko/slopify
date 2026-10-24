@@ -90,6 +90,7 @@ describe("the project page's sections", () => {
         [],
         project,
       ),
-    ).toBe("Article ready");
+      // Done says the article is written; a finished section borrows nothing to add to it.
+    ).toBe("");
   });
 });

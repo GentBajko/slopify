@@ -1,9 +1,12 @@
 import { progressOf } from "@app/kernel/runner/graph.js";
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "@tanstack/react-router";
+import { CopyIcon } from "lucide-react";
 import { type ReactElement, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { removeProject } from "@/api";
 import { useApp } from "@/app-context";
+import { useCurrentChannel } from "@/channels/current";
 import { BatchQueueCount } from "@/components/batch-queue";
 import { useDocumentTitle } from "@/components/document-title";
 import { Button } from "@/components/kit/button";
@@ -11,14 +14,13 @@ import { Callout } from "@/components/kit/callout";
 import { useCommand } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Workspace } from "@/components/kit/layout";
-import { Rail, RailLink } from "@/components/kit/rail";
-import type { Tone } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
 import { ProjectDesigns, useProjectDesignCount } from "@/designs/project-designs";
 import { copyText } from "@/fixes/fix-actions";
+import { markUploaded } from "@/home/api";
+import { isReadyToUpload } from "@/home/ready";
 import { intents, useIntent } from "@/lib/intents";
 import { shortcuts } from "@/lib/shortcuts";
-import { retryingWord } from "@/lib/state-words";
 import { isSample as isBundledSample, readSample, sampleKey } from "@/onboarding/api";
 import { StageBodyFor } from "@/project/bodies";
 import { ShortsBlock } from "@/project/body-shorts";
@@ -28,11 +30,9 @@ import {
   checkpointRevisionKey,
   checkpointStatus,
 } from "@/project/checkpoint-api";
-import { CheckpointPanel } from "@/project/checkpoint-panel";
 import { confirmationFor } from "@/project/confirmations";
 import { OpenProjectTab } from "@/project/fix-it";
-import { FreeSpaceOffer } from "@/project/free-space";
-import { type MoreAction, ProjectHeader } from "@/project/header";
+import { finishedAudiobook, type MoreAction, ProjectHeader } from "@/project/header";
 import { LiveBuild } from "@/project/live-build";
 import { MoveToChannel } from "@/project/move-channel";
 import {
@@ -41,36 +41,39 @@ import {
   type SectionId,
   sectionForStage,
 } from "@/project/next-action";
-import { NextActionPanel, useNextAction } from "@/project/next-action-view";
+import {
+  NextActionButton,
+  NextActionNote,
+  NextChapterOffer,
+  useNextAction,
+} from "@/project/next-action-view";
 import { ProjectOutputs } from "@/project/project-outputs";
+import { fileCount } from "@/project/project-outputs-model";
 import {
   EditRequestContext,
   RegenerateNowContext,
   RevisionControlContext,
 } from "@/project/revision-action-context";
-import { RevisionContentEditors } from "@/project/revision-content";
-import { RevisionForm } from "@/project/revision-form";
 import { RevisionMedia } from "@/project/revision-media";
-import {
-  RebuildDrawer,
-  RevisionEditPanel,
-  RevisionHistoryPanel,
-  useRevisionController,
-} from "@/project/revision-workspace";
-import { CostSoFar, RunSteps, runSteps, StageAnnouncements } from "@/project/run-aside";
+import { RebuildDrawer, useRevisionController } from "@/project/revision-workspace";
+import { CostLine, ProjectStatusList, StageAnnouncements } from "@/project/run-aside";
 import { RunClock, RunCostPanel } from "@/project/run-cost";
 import { SaveProjectTemplate } from "@/project/save-template";
+import { type YoutubeCopy, YoutubeCopyContext } from "@/project/section-copy";
 import { makesYoutubeVideo } from "@/project/sections";
+import { type SettingsTab, SettingsView } from "@/project/settings-view";
 import { SectionEmpty, StageSection } from "@/project/stage-section";
-import { finalOutput } from "@/project/summary";
+import { statusRows } from "@/project/status-rows";
+import { finalOutput, stageName } from "@/project/summary";
 import { useProjectActions } from "@/project/use-actions";
 import { useLiveProject } from "@/project/use-live";
 import { suggestedStage } from "@/project/workspace";
-import { projectQuery, promptsQuery, runCostQuery } from "@/queries";
+import { keys, projectQuery, projectsQuery, runCostQuery } from "@/queries";
 import { PrepareUploadDrawer } from "@/studio/prepare-upload";
 import { makeNextChapter } from "@/templates/api";
 import { useTutorialProjectStep } from "@/tutorial/context";
 import { ProjectMissing } from "./project-missing.js";
+import { restoreProjects } from "./projects-bulk.js";
 
 // Keep stage bodies mounted when navigating: editors and players retain their local state.
 // Project identity resets the entire workspace so drafts cannot cross project boundaries.
@@ -79,21 +82,16 @@ export function ProjectRoute({
   openDraft,
 }: {
   readonly projectId: string;
-  // Opens a Play draft and shows Play: where "Make the next chapter" lands. Absent hides it.
+  // Opens a Create draft and shows Create: where "Make the next chapter" lands. Absent hides it.
   readonly openDraft?: ((draftId: string) => Promise<boolean>) | undefined;
 }) {
   return <ProjectWorkspace key={projectId} projectId={projectId} openDraft={openDraft} />;
 }
 
-interface RailItem {
-  readonly id: SectionId;
-  readonly label: string;
-  readonly tone?: Tone | undefined;
-  readonly meta?: string;
-}
-
 // The section open on a project page is its address (`?section=images`): it survives a reload,
-// opens in a new tab, and Back returns to the section before.
+// opens in a new tab, and Back returns to the section before. "outputs" is All files, "live"
+// the run's Progress, "checkpoints" and "history" the settings view's Pauses and checks and
+// Versions; the old words stay so old links keep working.
 const sectionIds: readonly SectionId[] = [
   "outputs",
   "article",
@@ -115,53 +113,31 @@ export function projectSectionOf(value: unknown): SectionId | undefined {
 }
 
 const sectionTitles: Readonly<Record<SectionId, string>> = {
-  outputs: "Outputs",
+  outputs: "All files",
   article: "Article",
   narration: "Narration",
   images: "Images",
   video: "Video",
   shorts: "Shorts",
-  youtube: "YouTube",
+  youtube: "YouTube text",
   document: "PDF",
   cost: "Cost",
-  live: "Live",
+  live: "Progress",
   settings: "Settings",
-  history: "History",
-  checkpoints: "Checkpoints",
+  history: "Versions",
+  checkpoints: "Pauses and checks",
 };
 
-// A stage's state in words beside its lamp, so the rail does not speak in colour alone.
-export function stageStateWord(tone: Tone): string {
-  switch (tone) {
-    case "failed":
-      return "Failed";
-    case "running":
-      return "Running";
-    case "waiting":
-      return retryingWord;
-    case "done":
-      return "Done";
-    case "info":
-      return "Info";
-    case "off":
-      return "Not started";
-  }
-}
-
-const toneOf = (stages: readonly (Stage | undefined)[]): Tone | undefined => {
-  const present = stages.filter((stage): stage is Stage => stage !== undefined);
-  if (present.length === 0 || present.every((stage) => stage.state === "skipped")) return undefined;
-  if (present.some((stage) => stage.state === "failed" && stage.retryAt === undefined))
-    return "failed";
-  if (present.some((stage) => stage.state === "running")) return "running";
-  if (present.some((stage) => stage.state === "failed")) return "waiting";
-  if (
-    present.every(
-      (stage) => stage.state === "done" || stage.state === "provided" || stage.state === "skipped",
-    )
-  )
-    return "done";
-  return "off";
+// The settings view's tabs, by the address that opens each: Pauses and checks is a section of
+// the settings.
+const settingsTabOf: Readonly<Partial<Record<SectionId, SettingsTab>>> = {
+  settings: "settings",
+  checkpoints: "settings",
+  history: "versions",
+};
+const sectionOfSettingsTab: Readonly<Record<SettingsTab, SectionId>> = {
+  settings: "settings",
+  versions: "history",
 };
 
 function ProjectWorkspace({
@@ -173,9 +149,9 @@ function ProjectWorkspace({
 }) {
   const { api } = useApp();
   const notify = useToast();
+  const client = useQueryClient();
   const nextChapter = useNextChapter(projectId, openDraft);
   const project = useQuery(projectQuery(api, projectId));
-  const prompts = useQuery(promptsQuery(api));
   const runCost = useQuery({
     ...runCostQuery(api, projectId),
     // The run's clock reads the server's working time again while the project runs.
@@ -184,6 +160,9 @@ function ProjectWorkspace({
         ? 20_000
         : false,
   });
+  // The list's row for this project: its channel and whether it was marked uploaded.
+  const listing = useQuery(projectsQuery(api)).data?.projects.find((one) => one.id === projectId);
+  const channels = useCurrentChannel().channels;
   const actions = useProjectActions(projectId);
   const navigate = useNavigate();
   const chosen = projectSectionOf(
@@ -205,8 +184,10 @@ function ProjectWorkspace({
   const [templateOpen, setTemplateOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
   const [designsOpen, setDesignsOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const designCount = useProjectDesignCount(projectId);
   const [cancelling, setCancelling] = useState(false);
+  const youtubeCopy = useRef<YoutubeCopy>({});
   const revisionId = project.data?.revisionId ?? null;
   const controller = useRevisionController(projectId, revisionId, {
     onOpenEdit: () => setChosen("settings"),
@@ -243,7 +224,8 @@ function ProjectWorkspace({
   const summary = project.data?.project;
   const stages = project.data?.stages ?? [];
   const outputs = project.data?.outputs ?? [];
-  // Prepare upload is for a video made for YouTube; any other video keeps its downloads only.
+  // Copy for YouTube Studio is for a video made for YouTube; any other video keeps its
+  // downloads only.
   const uploadReady =
     summary !== undefined &&
     outputs.some((output) => output.role === "video") &&
@@ -266,7 +248,7 @@ function ProjectWorkspace({
   });
 
   // The settings view opens straight into the editor.
-  const settingsShown = chosen === "settings";
+  const settingsShown = chosen === "settings" || chosen === "checkpoints";
   const opened = useRef(false);
   useEffect(() => {
     if (!settingsShown) {
@@ -280,9 +262,41 @@ function ProjectWorkspace({
     controller.openEditor();
   }, [settingsShown, controller]);
 
+  const title = summary?.title ?? "";
+  const uploaded = useMutation({
+    mutationFn: (mark: boolean) => markUploaded(api, projectId, mark),
+    onSuccess: (_, mark) =>
+      notify(
+        mark ? `Marked uploaded: ${title}.` : `${title} is back on Ready to upload.`,
+        "success",
+        mark ? { label: "Undo", run: () => uploaded.mutate(false) } : undefined,
+      ),
+    onError: (error: Error) =>
+      notify(`${title} wasn't changed: ${error.message} Choose it in More again.`, "error"),
+    onSettled: async () => {
+      await client.invalidateQueries({ queryKey: keys.projects });
+    },
+  });
+  const remove = useMutation({
+    mutationFn: () => removeProject(api, projectId),
+    onSuccess: async () => {
+      notify(`Moved "${title}" to the trash.`, "success", {
+        label: "Undo",
+        run: () =>
+          void (listing === undefined
+            ? undefined
+            : restoreProjects(api, client, notify, [listing])),
+      });
+      await client.invalidateQueries({ queryKey: keys.projects });
+      await navigate({ to: "/projects" });
+    },
+    onError: (error: Error) =>
+      notify(`"${title}" wasn't deleted: ${error.message} Choose Delete project again.`, "error"),
+    onSettled: () => setDeleting(false),
+  });
+
   const inFlight = stages.some((stage) => stage.state === "running");
   const running = summary?.status === "running";
-  const title = summary?.title ?? "";
   // The browser tab names the project and, once one is picked, its section.
   useDocumentTitle(
     title === "" ? undefined : chosen === undefined ? title : `${title} · ${sectionTitles[chosen]}`,
@@ -302,7 +316,7 @@ function ProjectWorkspace({
         notify("This project has no next action right now: nothing waits on you.", "info");
       // Softening is charged and asks first, which only its button does.
       else if (intent.intent.kind === "soften")
-        notify("Soften and retry asks first: press it in the Next action panel on the right.");
+        notify("Soften and retry asks first: press it at the top of the project.");
       else next.run(intent.intent);
     },
   });
@@ -314,7 +328,7 @@ function ProjectWorkspace({
       const stage = project.data?.stages.find((one) => one.kind === "images");
       if (stage === undefined || stage.state === "skipped")
         notify(
-          `${title} makes no slideshow images, so there is no image to regenerate. To add them, open Settings in this project and choose how its images are made.`,
+          `${title} makes no slideshow images, so there is no image to make again. To add them, open Edit settings in this project and choose how its images are made.`,
           "error",
         );
       else setChosen("images");
@@ -331,18 +345,18 @@ function ProjectWorkspace({
   });
   useCommand({
     id: "project.prepare-upload",
-    title: "Prepare upload",
+    title: "Copy for YouTube Studio",
     group: "This project",
     context: title,
-    keywords: ["youtube", "studio", "upload", "publish"],
+    keywords: ["youtube", "studio", "upload", "publish", "prepare"],
     run: () => {
       if (uploadReady) setUploadOpen(true);
-      else notify("Prepare upload opens once the video has been made.", "info");
+      else notify("Copy for YouTube Studio opens once the video has been made.", "info");
     },
   });
   useCommand({
     id: "project.settings",
-    title: "Edit project settings",
+    title: "Edit settings",
     group: "This project",
     context: title,
     keywords: ["edit", "settings", "prompts", "providers", "channel"],
@@ -371,6 +385,14 @@ function ProjectWorkspace({
     context: title,
     keywords: ["cancel", "stop"],
     run: () => setCancelling(true),
+  });
+  useCommand({
+    id: "project.copy-id",
+    title: "Copy project ID",
+    group: "This project",
+    context: title,
+    keywords: ["id", "bug", "script", "api"],
+    run: () => copyProjectId(projectId, notify),
   });
   const groups = outdatedGroups(outdated);
   useCommand({
@@ -435,81 +457,46 @@ function ProjectWorkspace({
   const config = summary.config;
   const on = (stage: Stage | undefined) => stage !== undefined && stage.state !== "skipped";
   const shortsShown =
-    config.shorts?.enabled === true ||
-    outputs.some((output) => output.role === "short_video" || output.role === "shorts");
+    videoStage !== undefined &&
+    (config.shorts?.enabled === true ||
+      outputs.some((output) => output.role === "short_video" || output.role === "shorts"));
   const youtubeShown =
-    config.youtubeDescription === true ||
-    outputs.some((output) => output.role === "youtube_description");
-  // The person's reviews holding the run now, by the server's rule (`reviews/holds.ts`).
-  const yours = project.data.holding.filter((hold) => hold.waitsFor === "person").length;
-  const stageItems: readonly RailItem[] = [
-    // Every output in one list, with its state and downloads, and Add another output.
-    { id: "outputs", label: "Outputs" },
-    ...(on(article) || on(research)
-      ? [{ id: "article" as const, label: "Article", tone: toneOf([article, research]) }]
-      : []),
-    ...(on(audio) ? [{ id: "narration" as const, label: "Narration", tone: toneOf([audio]) }] : []),
-    ...(on(images) || on(thumbnail) || config.reference !== undefined
-      ? [{ id: "images" as const, label: "Images", tone: toneOf([images, thumbnail]) }]
-      : []),
-    ...(on(videoStage)
-      ? [
-          {
-            id: "video" as const,
-            label: finalOutput(config) === "audio" ? "Audio export" : "Video",
-            tone: toneOf([videoStage]),
-          },
-        ]
-      : []),
-    ...(on(documentStage)
-      ? [{ id: "document" as const, label: "PDF", tone: toneOf([documentStage]) }]
-      : []),
-    { id: "cost", label: "Cost" },
-    { id: "live", label: "Live" },
-  ];
-  // A section with outdated outputs says how many beside its name.
-  const railItems = stageItems.map((item) => {
-    const count = groups
-      .filter((group) => group.section === item.id)
-      .reduce((sum, group) => sum + group.count, 0);
-    return count === 0 ? item : { ...item, meta: `${String(count)} outdated` };
+    videoStage !== undefined &&
+    (config.youtubeDescription === true ||
+      outputs.some((output) => output.role === "youtube_description"));
+  const progressShown = summary.status === "running" || summary.status === "paused" || inFlight;
+  const outdatedIn = (section: SectionId): number =>
+    groups.filter((group) => group.section === section).reduce((sum, one) => sum + one.count, 0);
+  const rows = statusRows({
+    stages,
+    outputs,
+    project: summary,
+    resumable: project.data.resumable,
+    holding: project.data.holding,
+    now: Date.now(),
+    shorts: shortsShown,
+    youtube: youtubeShown,
+    outdated: outdatedIn,
+    files: fileCount({ config, stages, outputs }),
   });
-  const settingsItems: readonly RailItem[] = [
-    {
-      id: "settings",
-      label: "Settings",
-      ...(controller.unsaved ? { meta: "unsaved" } : {}),
-    },
-    ...(revisionId === null
-      ? []
-      : [
-          {
-            id: "checkpoints" as const,
-            label: "Checkpoints",
-            ...(yours === 0 ? {} : { meta: `${String(yours)} held` }),
-          },
-        ]),
-    { id: "history", label: "History" },
-  ];
-  const all = [...railItems, ...settingsItems];
+  const views: readonly SectionId[] = ["cost", "settings", "checkpoints", "history"];
+  const reachable = (id: SectionId | undefined): boolean =>
+    id !== undefined && (views.includes(id) || rows.some((row) => row.id === id));
   // The page opens where the next action points (the failed step, the held review, the
-  // outdated images), or else on the stage the run is at.
+  // outdated images), else on the stage the run is at: a finished video opens on its Video,
+  // with the player, its downloads and Copy description in the first screen.
   const situation = next.next?.situation;
-  // A finished video with its description written opens on YouTube, where the upload is
-  // prepared: Copy description is one press away.
-  const suggested =
+  const suggested: SectionId =
     next.next?.section !== undefined && situation !== "done" && situation !== "running"
       ? next.next.section
-      : situation === "done" && outputs.some((output) => output.role === "youtube_description")
-        ? "youtube"
-        : sectionForStage(suggestedStage(stages));
-  // Shorts and YouTube are parts of the Video section: a link or action naming them opens it.
-  const folded = (id: SectionId | undefined): SectionId | undefined =>
-    id === "shorts" || id === "youtube" ? "video" : id;
+      : sectionForStage(suggestedStage(stages));
   const selected: SectionId =
-    chosen !== undefined && all.some((item) => item.id === folded(chosen))
-      ? (folded(chosen) ?? "video")
-      : (all.find((item) => item.id === folded(suggested))?.id ?? railItems[0]?.id ?? "cost");
+    chosen !== undefined && reachable(chosen)
+      ? chosen
+      : reachable(suggested)
+        ? suggested
+        : (rows[0]?.id ?? "outputs");
+  const settingsTab = settingsTabOf[selected];
   const busyFor = (...kinds: readonly (Stage | undefined)[]): boolean =>
     revisionId === null
       ? summary.status === "running" || summary.status === "paused" || inFlight || actions.pending
@@ -545,55 +532,67 @@ function ProjectWorkspace({
         ["running", "done", "provided", "failed", "canceled"].includes(stage.state),
     );
 
+  const ready = listing !== undefined && !isSample && isReadyToUpload(listing) && uploadReady;
   const more: readonly MoreAction[] = [
-    {
-      id: "rebuild",
-      label: "Choose what to remake…",
-      run: () => controller.review({ kind: "allAffected" }),
-      disabled: controller.busy,
-    },
-    {
-      id: "template",
-      label: "Save as template…",
-      run: () => setTemplateOpen(true),
-      disabled: revisionId === null || isSample,
-    },
-    {
-      id: "designs",
-      label: designCount === undefined ? "Designs…" : `Designs (${String(designCount)})…`,
-      run: () => setDesignsOpen(true),
-      disabled: isSample,
-    },
-    {
-      id: "channel",
-      label: "Move to channel…",
-      run: () => setMoveOpen(true),
-      disabled: isSample,
-    },
-    // For a bug report, or a script that talks to /api/projects/<id>.
-    {
-      id: "copy-id",
-      label: "Copy project ID",
-      run: () =>
-        void copyText(projectId).then((copied) =>
-          notify(
-            copied
-              ? `Copied the project ID ${projectId}.`
-              : `The browser blocked copying. The project ID is ${projectId}.`,
-            copied ? "success" : "info",
-          ),
-        ),
-    },
-    {
-      id: "cancel",
-      label: "Cancel the run…",
-      run: () => setCancelling(true),
-      disabled: !running || actions.pending,
-      apart: true,
-    },
+    ...(ready
+      ? [{ id: "uploaded", label: "Mark uploaded", run: () => uploaded.mutate(true) }]
+      : listing?.uploadedAt !== null && listing?.uploadedAt !== undefined && !isSample
+        ? [{ id: "uploaded", label: "Mark not uploaded", run: () => uploaded.mutate(false) }]
+        : []),
+    // Only with outdated outputs: then the remake is chosen file by file.
+    ...(groups.length === 0
+      ? []
+      : [
+          {
+            id: "rebuild",
+            label: "Choose what to remake…",
+            run: () => controller.review({ kind: "allAffected" }),
+            disabled: controller.busy,
+          },
+        ]),
+    // The sample is read-only: its copy is where these act.
+    ...(isSample
+      ? [
+          {
+            id: "sample",
+            label: "Read-only sample. Press Make my own copy first.",
+            run: () => undefined,
+            disabled: true,
+          },
+        ]
+      : [
+          {
+            id: "template",
+            label: "Save as template…",
+            run: () => setTemplateOpen(true),
+            disabled: revisionId === null,
+          },
+          ...(channels.length < 2
+            ? []
+            : [{ id: "channel", label: "Move to channel…", run: () => setMoveOpen(true) }]),
+          {
+            id: "designs",
+            label:
+              designCount === undefined || designCount === 0
+                ? "Posters & pictures…"
+                : `Posters & pictures (${String(designCount)})…`,
+            run: () => setDesignsOpen(true),
+          },
+        ]),
+    // While the run goes it is cancelled first; deleting comes after.
+    running
+      ? {
+          id: "cancel",
+          label: "Cancel the run…",
+          run: () => setCancelling(true),
+          disabled: actions.pending,
+          apart: true,
+        }
+      : { id: "delete", label: "Delete project…", run: () => setDeleting(true), apart: true },
   ];
   const cancelCopy = confirmationFor({ kind: "cancel" });
-  // A refused press that belongs to the whole project (a cancel, a pause) is said in the rail.
+  // A refused press that belongs to the whole project (a cancel, a pause) is said under the
+  // title row.
   const refusal = actions.refusal?.stage === undefined ? actions.refusal : undefined;
   const feedback =
     refusal !== undefined ? (
@@ -603,26 +602,42 @@ function ProjectWorkspace({
         </Button>
       </Callout>
     ) : actions.notice !== undefined ? (
-      <p role="status" className="m-0 text-small text-ink-2">
+      <p role="status" className="m-0">
         {actions.notice}
       </p>
     ) : controller.preview === undefined &&
       (controller.error || controller.refusal) &&
-      selected !== "settings" &&
-      selected !== "history" ? (
-      <p role="alert" className="m-0 text-small text-danger">
+      settingsTab === undefined ? (
+      <p role="alert" className="m-0 text-danger">
         {controller.error ?? controller.refusal?.message}
       </p>
     ) : undefined;
-
-  const steps = runSteps({
-    stages,
-    outputs,
-    project: summary,
-    resumable: project.data.resumable,
-    holding: project.data.holding,
-    now: Date.now(),
-  });
+  const channel =
+    channels.length < 2 || listing === undefined
+      ? undefined
+      : channels.find((one) => one.id === listing.channelId)?.name;
+  const chapter = nextChapter !== undefined && finishedAudiobook(summary) ? nextChapter : undefined;
+  // Copy for YouTube Studio, where the next action does not already offer it.
+  const studio =
+    uploadReady && next.next?.action?.intent.kind !== "prepare-upload" ? (
+      <Button variant="secondary" onClick={() => setUploadOpen(true)}>
+        Copy for YouTube Studio
+      </Button>
+    ) : null;
+  // The YouTube text's two copies, beside the video they go with.
+  const written = outputs.some((output) => output.role === "youtube_description");
+  const copies = written ? (
+    <>
+      <Button onClick={() => youtubeCopy.current.description?.()}>
+        <CopyIcon aria-hidden="true" strokeWidth={1.75} />
+        Copy description
+      </Button>
+      <Button onClick={() => youtubeCopy.current.tags?.()}>
+        <CopyIcon aria-hidden="true" strokeWidth={1.75} />
+        Copy tags
+      </Button>
+    </>
+  ) : null;
 
   return (
     <RevisionMedia projectId={projectId} revisionId={revisionId}>
@@ -642,212 +657,190 @@ function ProjectWorkspace({
                   : controller.regenerateNow
               }
             >
-              <div className="sl-project">
-                <div data-tour="project-controls">
-                  <ProjectHeader
-                    project={summary}
-                    progress={progressOf(stages)}
-                    prompts={prompts.data?.prompts}
-                    editing={selected === "settings"}
-                    onEdit={() => setChosen("settings")}
-                    more={more}
-                    nextChapter={nextChapter}
-                    clock={
-                      <RunClock
-                        cost={runCost.data}
-                        status={summary.status}
-                        measuredAt={runCost.dataUpdatedAt}
-                      />
-                    }
-                  />
-                </div>
-                <StageAnnouncements stages={stages} />
-                <Workspace
-                  sections={
-                    <Rail label="Project sections">
-                      {railItems.map((item) => (
-                        <SectionLink
-                          key={item.id}
-                          projectId={projectId}
-                          item={item}
-                          selected={selected}
-                        />
-                      ))}
-                      <hr className="sl-rule my-2" />
-                      {settingsItems.map((item) => (
-                        <SectionLink
-                          key={item.id}
-                          projectId={projectId}
-                          item={item}
-                          selected={selected}
-                        />
-                      ))}
-                    </Rail>
-                  }
-                  aside={
-                    <>
-                      <NextActionPanel state={next} feedback={feedback} />
-                      {summary === undefined ? null : (
-                        <FreeSpaceOffer
-                          projectId={projectId}
-                          title={summary.title}
+              <YoutubeCopyContext value={youtubeCopy}>
+                <div className="sl-project">
+                  <div data-tour="project-controls">
+                    <ProjectHeader
+                      project={summary}
+                      progress={progressOf(stages)}
+                      stages={stages}
+                      channel={channel}
+                      uploadedAt={isSample ? null : listing?.uploadedAt}
+                      primary={<NextActionButton state={next} />}
+                      editing={settingsTab !== undefined}
+                      unsaved={controller.unsaved}
+                      onEdit={() => setChosen("settings")}
+                      more={more}
+                      clock={
+                        <RunClock
+                          cost={runCost.data}
                           status={summary.status}
-                          sample={isSample || sample.isPending}
+                          measuredAt={runCost.dataUpdatedAt}
                         />
-                      )}
-                      <div className="flex flex-col gap-6 max-[1180px]:hidden">
-                        <RunSteps steps={steps} />
-                        <CostSoFar cost={runCost.data} onOpen={() => openSection("cost")} />
+                      }
+                    />
+                    <NextActionNote state={next} feedback={feedback} />
+                  </div>
+                  <StageAnnouncements stages={stages} />
+                  <Workspace
+                    asideLabel="Project status"
+                    aside={
+                      <>
+                        <ProjectStatusList rows={rows} projectId={projectId} selected={selected} />
+                        <CostLine
+                          cost={runCost.data}
+                          running={running}
+                          projectId={projectId}
+                          breakdownShown={selected === "cost"}
+                        />
+                        {chapter === undefined ? null : (
+                          <NextChapterOffer
+                            nextChapter={chapter}
+                            primary={next.next?.action === undefined}
+                          />
+                        )}
                         <BatchQueueCount />
-                      </div>
-                    </>
-                  }
-                >
-                  <StageSection
-                    id="article"
-                    title="Article"
-                    stages={[article, research].filter(isStage)}
-                    active={selected === "article"}
-                    {...sectionProps}
+                      </>
+                    }
                   >
-                    {/* The article's body says itself what it waits for, and stays mounted so a
-                    new revision's text replaces the old one in place. */}
-                    {on(article) || on(research) ? (
-                      body(article, research)
-                    ) : (
-                      <SectionEmpty stage={article} project={summary} name="Article" />
-                    )}
-                  </StageSection>
-                  <StageSection
-                    id="narration"
-                    title="Narration"
-                    stages={[audio].filter(isStage)}
-                    active={selected === "narration"}
-                    {...sectionProps}
-                  >
-                    {opens(audio) ? (
-                      body(audio)
-                    ) : (
-                      <SectionEmpty stage={audio} project={summary} name="Narration" />
-                    )}
-                  </StageSection>
-                  <StageSection
-                    id="images"
-                    title="Images"
-                    head={false}
-                    stages={[images, thumbnail].filter(isStage)}
-                    active={selected === "images"}
-                    {...sectionProps}
-                  >
-                    {body(images, thumbnail)}
-                  </StageSection>
-                  <StageSection
-                    id="video"
-                    title={finalOutput(config) === "audio" ? "Audio export" : "Video"}
-                    stages={[videoStage].filter(isStage)}
-                    active={selected === "video"}
-                    {...sectionProps}
-                    // Prepare upload is the next action once the video is done; before that (an
-                    // outdated output waiting, say) it is here, where the upload is prepared.
-                    {...(uploadReady && next.next?.action?.intent.kind !== "prepare-upload"
-                      ? {
-                          extra: (
-                            <Button variant="secondary" onClick={() => setUploadOpen(true)}>
-                              Prepare upload
-                            </Button>
-                          ),
-                        }
-                      : {})}
-                  >
-                    {body(videoStage)}
-                    {/* The video's Shorts and its YouTube text, parts of this one section. */}
-                    {videoStage !== undefined && shortsShown ? (
-                      <ShortsBlock stage={videoStage} project={summary} outputs={outputs} />
-                    ) : null}
-                    {videoStage !== undefined && youtubeShown ? (
-                      <YoutubeBlock stage={videoStage} project={summary} outputs={outputs} />
-                    ) : null}
-                  </StageSection>
-                  {documentStage === undefined ? null : (
                     <StageSection
-                      id="document"
-                      title="PDF"
-                      stages={[documentStage]}
-                      active={selected === "document"}
+                      id="article"
+                      title="Article"
+                      stages={[article, research].filter(isStage)}
+                      active={selected === "article"}
                       {...sectionProps}
                     >
-                      {opens(documentStage) ? (
-                        body(documentStage)
+                      {/* The article's body says itself what it waits for, and stays mounted so a
+                    new revision's text replaces the old one in place. */}
+                      {on(article) || on(research) ? (
+                        body(article, research)
                       ) : (
-                        <SectionEmpty stage={documentStage} project={summary} name="PDF" />
+                        <SectionEmpty stage={article} project={summary} name="Article" />
                       )}
                     </StageSection>
-                  )}
-                  <View id="outputs" title="Outputs" selected={selected}>
-                    <ProjectOutputs
-                      projectId={projectId}
-                      revisionId={revisionId}
-                      config={config}
-                      stages={stages}
-                      outputs={outputs}
-                      controller={controller}
-                    />
-                  </View>
-                  <View id="cost" title="Run cost" selected={selected}>
-                    <RunCostPanel projectId={projectId} />
-                  </View>
-                  <View id="live" title="Live" selected={selected}>
-                    {selected === "live" ? (
-                      <LiveBuild
-                        project={summary}
-                        revisionId={revisionId}
-                        stages={stages}
-                        outputs={outputs}
-                      />
-                    ) : null}
-                  </View>
-                  <View id="settings" title="Settings" selected={selected}>
-                    <RevisionEditPanel
-                      controller={controller}
-                      projectId={projectId}
-                      active={selected === "settings"}
-                      renderEditor={(props) => (
-                        <RevisionForm
-                          {...props}
-                          renderContent={(contentProps) => (
-                            <RevisionContentEditors
-                              key={contentProps.view.revision.id}
-                              {...contentProps}
-                            />
-                          )}
-                        />
+                    <StageSection
+                      id="narration"
+                      title="Narration"
+                      stages={[audio].filter(isStage)}
+                      active={selected === "narration"}
+                      {...sectionProps}
+                    >
+                      {opens(audio) ? (
+                        body(audio)
+                      ) : (
+                        <SectionEmpty stage={audio} project={summary} name="Narration" />
                       )}
-                    />
-                  </View>
-                  {revisionId === null ? null : (
-                    <View id="checkpoints" title="Checkpoints" selected={selected}>
-                      <CheckpointPanel
+                    </StageSection>
+                    <StageSection
+                      id="images"
+                      title="Images"
+                      head={false}
+                      stages={[images, thumbnail].filter(isStage)}
+                      active={selected === "images"}
+                      {...sectionProps}
+                    >
+                      {body(images, thumbnail)}
+                    </StageSection>
+                    <StageSection
+                      id="video"
+                      title={stageName("video", config)}
+                      stages={[videoStage].filter(isStage)}
+                      active={selected === "video"}
+                      {...sectionProps}
+                      {...(copies === null && (studio === null || youtubeShown)
+                        ? {}
+                        : {
+                            extra: (
+                              <>
+                                {copies}
+                                {youtubeShown ? null : studio}
+                              </>
+                            ),
+                          })}
+                    >
+                      {body(videoStage)}
+                    </StageSection>
+                    {videoStage === undefined || !shortsShown ? null : (
+                      <StageSection
+                        id="shorts"
+                        title="Shorts"
+                        stages={[]}
+                        active={selected === "shorts"}
+                        {...sectionProps}
+                      >
+                        <ShortsBlock stage={videoStage} project={summary} outputs={outputs} />
+                      </StageSection>
+                    )}
+                    {videoStage === undefined || !youtubeShown ? null : (
+                      <StageSection
+                        id="youtube"
+                        title="YouTube text"
+                        stages={[]}
+                        active={selected === "youtube"}
+                        {...sectionProps}
+                        {...(studio === null ? {} : { extra: studio })}
+                      >
+                        <YoutubeBlock stage={videoStage} project={summary} outputs={outputs} />
+                      </StageSection>
+                    )}
+                    {documentStage === undefined ? null : (
+                      <StageSection
+                        id="document"
+                        title="PDF"
+                        stages={[documentStage]}
+                        active={selected === "document"}
+                        {...sectionProps}
+                      >
+                        {opens(documentStage) ? (
+                          body(documentStage)
+                        ) : (
+                          <SectionEmpty stage={documentStage} project={summary} name="PDF" />
+                        )}
+                      </StageSection>
+                    )}
+                    <View id="outputs" title="All files" selected={selected}>
+                      <ProjectOutputs
                         projectId={projectId}
                         revisionId={revisionId}
-                        paused={summary.status === "paused"}
+                        config={config}
                         stages={stages}
-                        approvedInRail={
-                          next.next?.action?.intent.kind === "approve"
-                            ? next.next.action.intent.gate.checkpointId
-                            : undefined
-                        }
+                        outputs={outputs}
+                        controller={controller}
                       />
                     </View>
-                  )}
-                  <View id="history" title="History" selected={selected}>
-                    <RevisionHistoryPanel
+                    <View id="cost" title="Cost" selected={selected}>
+                      <RunCostPanel projectId={projectId} />
+                    </View>
+                    {progressShown ? (
+                      <View id="live" title="Progress" selected={selected}>
+                        {selected === "live" ? (
+                          <LiveBuild
+                            project={summary}
+                            revisionId={revisionId}
+                            stages={stages}
+                            outputs={outputs}
+                            resumable={project.data.resumable}
+                            holding={project.data.holding}
+                          />
+                        ) : null}
+                      </View>
+                    ) : null}
+                    <SettingsView
+                      shown={settingsTab !== undefined}
+                      tab={settingsTab ?? "settings"}
+                      opening={selected === "checkpoints" ? "reviews" : undefined}
+                      onTab={(tab) => setChosen(sectionOfSettingsTab[tab])}
                       controller={controller}
                       projectId={projectId}
-                      active={selected === "history"}
+                      project={summary}
+                      revisionId={revisionId}
+                      stages={stages}
+                      sample={isSample || sample.isPending}
+                      onCopyId={() => copyProjectId(projectId, notify)}
                     />
-                  </View>
-                </Workspace>
-              </div>
+                  </Workspace>
+                </div>
+              </YoutubeCopyContext>
               <RebuildDrawer controller={controller} />
               {uploadOpen ? (
                 <PrepareUploadDrawer projectId={projectId} onClose={() => setUploadOpen(false)} />
@@ -883,6 +876,17 @@ function ProjectWorkspace({
                 }}
                 onCancel={() => setCancelling(false)}
               />
+              <ConfirmDialog
+                open={deleting}
+                title={`Delete "${summary.title}"?`}
+                // Settings → Trash puts it back, or removes the rows and the folder for good.
+                consequence="Moves the project to the trash for 30 days. Undo brings it back, or restore it later in Settings → Backup & storage → Trash."
+                confirmLabel="Delete project"
+                cancelLabel="Keep it"
+                pending={remove.isPending}
+                onConfirm={() => remove.mutate()}
+                onCancel={() => setDeleting(false)}
+              />
             </RegenerateNowContext>
           </EditRequestContext>
         </OpenProjectTab>
@@ -893,35 +897,22 @@ function ProjectWorkspace({
 
 const isStage = (stage: Stage | undefined): stage is Stage => stage !== undefined;
 
-function SectionLink({
-  projectId,
-  item,
-  selected,
-}: {
-  readonly projectId: string;
-  readonly item: RailItem;
-  readonly selected: SectionId;
-}): ReactElement {
-  // Every stage says how it stands in words beside its lamp ("Done", "Running", "Not
-  // started"); the kit's rail draws the word and lines the names up.
-  return (
-    <RailLink
-      to={`/projects/${projectId}`}
-      search={{ section: item.id }}
-      resetScroll={false}
-      // On phones the rail is a row of tabs, each as wide as its name.
-      className="max-md:w-auto"
-      data-tour={`project-rail-${item.id}`}
-      current={item.id === selected}
-      {...(item.tone === undefined ? {} : { tone: item.tone, state: stageStateWord(item.tone) })}
-      {...(item.meta === undefined ? {} : { meta: item.meta })}
-    >
-      {item.label}
-    </RailLink>
+// For a bug report, or a script that talks to /api/projects/<id>.
+function copyProjectId(
+  projectId: string,
+  notify: (message: string, tone?: "success" | "info") => void,
+): void {
+  void copyText(projectId).then((copied) =>
+    notify(
+      copied
+        ? `Copied the project ID ${projectId}.`
+        : `The browser blocked copying. The project ID is ${projectId}.`,
+      copied ? "success" : "info",
+    ),
   );
 }
 
-// A view of the main column that is not a stage: cost, live, settings, checkpoints, history.
+// A view of the main column that is not a stage: All files, the cost, the run's progress.
 function View({
   id,
   title,
@@ -934,7 +925,7 @@ function View({
   readonly children: ReactNode;
 }): ReactElement {
   return (
-    <section hidden={selected !== id} aria-label={title} className="flex min-w-0 flex-col gap-5">
+    <section hidden={selected !== id} aria-label={title} className="flex min-w-0 flex-col gap-3">
       <h2 className="sl-section-head__title m-0">{title}</h2>
       {children}
     </section>
@@ -950,23 +941,22 @@ const placeholderProject = {
   config: { sources: {} },
 } as unknown as ProjectSummary;
 
-// The final layout's shape, not a spinner: title row, section rail, main column, action rail.
+// The final layout's shape, not a spinner: title row, main column, status column.
 function SkeletonWorkspace() {
   return (
-    <div role="status" aria-label="Loading project">
-      <div className="mb-6 flex flex-col gap-2">
+    <div role="status" aria-label="Loading project" className="sl-project">
+      <div className="flex flex-col gap-2">
         <span className="h-3 w-20 rounded-control bg-sunken" />
         <span className="h-8 w-80 max-w-full rounded-control bg-sunken" />
       </div>
       <Workspace
-        sections={
+        aside={
           <div className="flex flex-col gap-2">
             {["a", "b", "c", "d", "e"].map((row) => (
               <span key={row} className="h-8 rounded-control bg-sunken" />
             ))}
           </div>
         }
-        aside={<span className="h-40 rounded-control bg-sunken" />}
       >
         <span className="h-[480px] rounded-control bg-sunken" />
       </Workspace>
@@ -974,8 +964,8 @@ function SkeletonWorkspace() {
   );
 }
 
-// "Make the next chapter": the server makes the draft, then Play opens on it. A retry of a press
-// whose answer was lost reuses the same draft id, so it never makes a second draft.
+// "Make the next chapter": the server makes the draft, then Create opens on it. A retry of a
+// press whose answer was lost reuses the same draft id, so it never makes a second draft.
 function useNextChapter(
   projectId: string,
   openDraft: ((draftId: string) => Promise<boolean>) | undefined,
@@ -1004,7 +994,7 @@ function useNextChapter(
           if (await openDraft(reply.value.draft.id)) draftId.current = undefined;
           else
             setError(
-              "The next chapter's draft was made, but Play could not open it because the draft open there is not saved yet. Open Play, let it save, then press Make the next chapter again.",
+              "The next chapter's draft was made, but Create could not open it because the draft open there is not saved yet. Open Create, let it save, then press Make the next chapter again.",
             );
         })
         .catch((thrown: unknown) =>

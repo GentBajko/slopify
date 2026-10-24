@@ -387,7 +387,7 @@ describe("the next action", () => {
           uploadReady: true,
         }),
       )?.action?.label,
-    ).toBe("Prepare upload");
+    ).toBe("Copy for YouTube Studio");
   });
 
   it("says a queued run waits for its turn, without a button", () => {
@@ -453,12 +453,12 @@ describe("the next action", () => {
     ).toEqual(["Remake the outdated image", "Remake 2 outdated shorts"]);
   });
 
-  it("prepares the upload once the video is done", () => {
+  it("offers Copy for YouTube Studio once the video is done", () => {
     const next = nextActionFor(input());
     expect(next).toMatchObject({
       situation: "done",
       section: "youtube",
-      action: { label: "Prepare upload", intent: { kind: "prepare-upload" } },
+      action: { label: "Copy for YouTube Studio", intent: { kind: "prepare-upload" } },
     });
     expect(nextActionFor(input({ project: { status: "partial", config } }))?.situation).toBe(
       "done",
@@ -496,7 +496,7 @@ describe("the next action", () => {
     ).toBe("outdated");
   });
 
-  it("leads a finished short to the full video on its topic, ahead of Prepare upload", () => {
+  it("leads a finished short to the full video on its topic, ahead of Copy for YouTube Studio", () => {
     const short = { ...config, mode: "short" } as ProjectSummary["config"];
     expect(nextActionFor(input({ project: { status: "done", config: short } }))).toMatchObject({
       situation: "done",

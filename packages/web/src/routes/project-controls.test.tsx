@@ -80,7 +80,8 @@ describe("project pause and provider changes", () => {
     expect(screen.queryByRole("button", { name: "Pause" })).toBeNull();
   });
 
-  // A restart held it: the header says what the next action says, and nothing is to approve.
+  // A restart held it: the header says so, the line under it says what Continue does, and
+  // nothing is to approve.
   it("reads a run a restart stopped as Stopped in its header and its next action", async () => {
     const current = paused();
     const fixture = revisionRouteFixture({
@@ -90,7 +91,8 @@ describe("project pause and provider changes", () => {
     });
     renderRouted(<ProjectRoute projectId="p1" />, deps(fixture.routes));
     expect(await screen.findByRole("button", { name: "Continue the run" })).not.toBeNull();
-    expect(screen.getAllByText("Stopped").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("Stopped")).not.toBeNull();
+    expect(screen.getByText(/^The run stopped before it finished\. Continuing/)).not.toBeNull();
     expect(screen.queryByText("Waiting for your review")).toBeNull();
   });
 
@@ -104,7 +106,7 @@ describe("project pause and provider changes", () => {
     });
     renderRouted(<ProjectRoute projectId="p1" />, deps(fixture.routes));
     expect((await screen.findAllByText("Waiting for the agent")).length).toBeGreaterThan(0);
-    expect(screen.getByText("An agent is reviewing what was made.")).not.toBeNull();
+    expect(screen.getByText(/^An agent is reviewing what was made\./)).not.toBeNull();
     expect(screen.queryByRole("button", { name: "Continue the run" })).toBeNull();
     expect(screen.queryByText("Stopped")).toBeNull();
   });
@@ -151,21 +153,18 @@ describe("project pause and provider changes", () => {
         }),
       }),
     );
-    const next = await screen.findByRole("region", { name: "Next action" });
+    // Beside the video, where the page opens.
+    const video = await screen.findByRole("region", { name: "Video" });
     expect(
-      await within(next).findByText(
+      await within(video).findByText(
         "Everything but the video is made; its schedule renders the video on its day.",
       ),
     ).not.toBeNull();
-    const steps = screen.getByRole("list", { name: "Run steps" });
-    const video = within(steps).getByText("Video").closest("li") as HTMLElement;
-    expect(within(video).getByText("Prepared")).not.toBeNull();
-    expect(within(steps).getByText("Its schedule makes it on its day.")).not.toBeNull();
-    expect(steps.textContent).not.toContain("Waiting for your review");
     const rail = screen.getByRole("navigation", { name: "Project sections" });
-    expect(within(rail).getByRole("link", { name: /^Checkpoints/ }).textContent).not.toContain(
-      "held",
-    );
+    const row = within(rail).getByRole("link", { name: /^Video/ });
+    expect(row.textContent).toBe("Video, Prepared");
+    expect(row.nextElementSibling?.textContent).toBe("Its schedule makes it on its day.");
+    expect(rail.textContent).not.toContain("Waiting for your review");
   });
 
   // A template's checkpoint the run hasn't reached yet is in the checkpoints list but not in
@@ -203,10 +202,9 @@ describe("project pause and provider changes", () => {
         }),
       }),
     );
-    const next = await screen.findByRole("region", { name: "Next action" });
-    expect(await within(next).findByRole("button", { name: "Pause" })).not.toBeNull();
-    expect(within(next).queryByRole("button", { name: /^Approve/ })).toBeNull();
-    expect(within(next).queryByText(/ready for your review/)).toBeNull();
+    expect(await screen.findByRole("button", { name: "Pause" })).not.toBeNull();
+    expect(screen.queryByRole("button", { name: /^Approve/ })).toBeNull();
+    expect(screen.queryByText(/ready for your review/)).toBeNull();
   });
 
   it("continues a paused checkpoint project by keyboard, then offers the approval", async () => {
@@ -258,16 +256,17 @@ describe("project pause and provider changes", () => {
       }),
     );
     const rail = await screen.findByRole("navigation", { name: "Project sections" });
+    // The held review is the narration's: its row says what to do.
     await waitFor(() =>
-      expect(within(rail).getByRole("link", { name: /^Checkpoints/ }).textContent).toContain(
-        "1 held",
+      expect(within(rail).getByRole("link", { name: /^Narration/ }).textContent).toBe(
+        "Narration, Waiting for your review",
       ),
     );
-    await openProjectTab("Checkpoints");
+    await openProjectTab("Pauses and checks");
     // Paused: continuing comes first, and the held review cannot be approved yet.
     const approval = await screen.findByRole("button", { name: "Approve Narration checkpoint" });
     expect(approval.hasAttribute("disabled")).toBe(true);
-    const next = screen.getByRole("region", { name: "Next action" });
+    const next = screen.getByRole("heading", { level: 1 }).closest("header") as HTMLElement;
     const button = within(next).getByRole("button", { name: "Continue the run" });
     button.focus();
     await user.keyboard("{Enter}");
@@ -275,11 +274,18 @@ describe("project pause and provider changes", () => {
     await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
     button.focus();
     await user.keyboard("{Enter}");
-    // Once it runs, the review it waits on is the next action, and only there.
+    // Once it runs, the review it waits on is the next action, and Pauses and checks offers
+    // the same approval where the person is looking.
     expect(
       await within(next).findByRole("button", { name: "Approve and render the video" }),
     ).not.toBeNull();
-    expect(screen.queryByRole("button", { name: "Approve Narration checkpoint" })).toBeNull();
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: "Approve Narration checkpoint" })
+          .hasAttribute("disabled"),
+      ).toBe(false),
+    );
     await openProjectTab("Edit");
     expect(await screen.findByRole("form", { name: "Edit project" })).not.toBeNull();
     expect(resume).toHaveBeenCalledTimes(2);

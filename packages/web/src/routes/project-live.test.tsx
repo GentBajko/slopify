@@ -220,7 +220,9 @@ describe("the page under a live run", () => {
 
     await waitFor(() => {
       expect(
-        within(screen.getByRole("list", { name: "Run steps" })).getByText(/^image 20 of 20( · |$)/),
+        within(screen.getByRole("navigation", { name: "Project sections" })).getByText(
+          /^image 20 of 20( · |$)/,
+        ),
       ).not.toBeNull();
     });
     expect(reads()).toBe(before);
@@ -250,10 +252,12 @@ describe("the page under a live run", () => {
     expect(
       within(article).getByRole("tab", { name: "Research" }).getAttribute("aria-selected"),
     ).toBe("true");
-    const research = within(screen.getByRole("list", { name: "Run steps" }))
-      .getByText("Research")
-      .closest("li") as HTMLElement;
-    expect(within(research).getByText("Running")).not.toBeNull();
+    // Its row in the status list is the Article's, at work on the research.
+    const row = within(screen.getByRole("navigation", { name: "Project sections" })).getByRole(
+      "link",
+      { name: /^Article/ },
+    );
+    expect(row.textContent).toBe("Article, Running");
     const before = reads();
     source.emit({
       type: "llm.preview",

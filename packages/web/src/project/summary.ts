@@ -53,7 +53,6 @@ const running: Readonly<Record<StageKind, (current: number, total: number) => st
 
 const segments: Readonly<Record<string, string>> = {
   audio_intro: "intro",
-  audio_body: "body",
   audio_outro: "outro",
 };
 
@@ -80,7 +79,7 @@ export function summaryOf(
         return "Ready to run";
       return "Waits for the stages above";
     case "provided":
-      return filenames(mine) ?? "Provided";
+      return filenames(mine) ?? "Supplied by you";
     case "failed":
       // The row's error line carries the provider's own words; repeating them here would
       // truncate them into the column.
@@ -141,20 +140,22 @@ function done(kind: StageKind, mine: readonly Output[], project: ProjectSummary)
   switch (kind) {
     case "research":
       return "Notes ready";
+    // "Done" already says the article is written; only its end matter is news.
     case "article": {
-      const extras = mine.filter(
-        (output) => output.role === "sources" || output.role === "glossary",
-      );
-      return extras.length === 0
-        ? "Article ready"
-        : `Article and ${String(extras.length)} end-matter files`;
+      const extras = [
+        ...(mine.some((output) => output.role === "sources") ? ["sources"] : []),
+        ...(mine.some((output) => output.role === "glossary") ? ["glossary"] : []),
+      ];
+      return extras.length === 0 ? "" : `With ${extras.join(" and ")}`;
     }
+    // The length, then the intro and outro when there are any; the body is the narration
+    // itself, so it is never named.
     case "audio": {
       const named = mine.flatMap((output) => {
         const segment = segments[output.role];
         return segment === undefined ? [] : [segment];
       });
-      return join([sentence(named), duration(total(mine))]);
+      return join([duration(total(mine)), withParts(named)]);
     }
     case "images":
       return count(mine.filter((output) => output.role === "image").length, "image");
@@ -166,7 +167,7 @@ function done(kind: StageKind, mine: readonly Output[], project: ProjectSummary)
         finalOutput(project.config) === "audio" ? "WAV · stereo · 48 kHz" : project.format,
       ]);
     case "document":
-      return `PDF · ${documentThemeLabel(project.config.document)} theme`;
+      return `${documentThemeLabel(project.config.document)} theme`;
   }
 }
 
@@ -204,18 +205,9 @@ function count(many: number, noun: string): string {
   return many === 1 ? `1 ${noun}` : `${String(many)} ${noun}s`;
 }
 
-function sentence(words: readonly string[]): string | undefined {
-  if (words.length === 0) {
-    return undefined;
-  }
-  if (words.length === 1) {
-    return capital(words[0] ?? "");
-  }
-  return capital(`${words.slice(0, -1).join(", ")} and ${words[words.length - 1] ?? ""}`);
-}
-
-function capital(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1);
+// "with intro and outro", "with intro": the narration's other parts.
+function withParts(words: readonly string[]): string | undefined {
+  return words.length === 0 ? undefined : `with ${words.join(" and ")}`;
 }
 
 function join(parts: readonly (string | undefined)[]): string {

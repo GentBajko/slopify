@@ -3,9 +3,10 @@ import { defaultVoicesSettings } from "@app/slices/voices/model.js";
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { body } from "@/routes/project-fixtures";
+import { body, stage } from "@/routes/project-fixtures";
 import { renderRouted, testDeps } from "@/test-app";
-import { ProjectHeader } from "./header";
+import { finishedAt, ProjectHeader, runLength } from "./header";
+import { NextChapterOffer } from "./next-action-view";
 
 afterEach(cleanup);
 
@@ -17,90 +18,98 @@ const chapter: ProjectSummary = {
     voices: { ...defaultVoicesSettings("audiobook"), book: { title: "Sea Tales", chapter: 3 } },
   },
 };
+const ran = [
+  stage("article", "done", {
+    startedAt: "2026-09-27T17:15:00.000Z",
+    finishedAt: "2026-09-27T17:16:00.000Z",
+  }),
+  stage("video", "done", {
+    startedAt: "2026-09-27T17:16:00.000Z",
+    finishedAt: "2026-09-27T17:18:00.000Z",
+  }),
+];
 
-it("offers Make the next chapter on a finished audiobook and names its book", async () => {
-  const user = userEvent.setup();
-  const run = vi.fn();
+it("says a finished project's state, when it finished, how long it took and its channel", async () => {
   renderRouted(
     <ProjectHeader
       project={chapter}
-      prompts={undefined}
+      stages={ran}
+      channel="Sea stories"
+      uploadedAt="2026-09-28T09:00:00.000Z"
       editing={false}
       onEdit={() => {}}
       more={[]}
-      nextChapter={{ run, pending: false }}
       progress={1}
     />,
     testDeps({}),
   );
-  expect(await screen.findByText(/^Sea Tales · Chapter 3 · /)).not.toBeNull();
-  await user.click(screen.getByRole("button", { name: "Make the next chapter" }));
-  expect(run).toHaveBeenCalledOnce();
+  const meta = await screen.findByText(/^Sea Tales · Chapter 3$/);
+  const line = meta.closest(".sl-project__meta");
+  expect(line?.textContent).toMatch(
+    /^DoneProject: Done· Sea Tales · Chapter 3· finished .+, 3 min· Sea stories· uploaded .+$/,
+  );
+  // The whole title is there on hover when the row cuts it short.
+  expect(screen.getByTitle("Rope Tricks").textContent).toBe("Rope Tricks");
 });
 
-it("has no next chapter for a running audiobook or a video", async () => {
+it("names the run's start until it finishes", async () => {
   renderRouted(
-    <>
-      <ProjectHeader
-        project={{ ...chapter, status: "running" }}
-        prompts={undefined}
-        editing={false}
-        onEdit={() => {}}
-        more={[]}
-        nextChapter={{ run: () => {}, pending: false }}
-        progress={1}
-      />
-      <ProjectHeader
-        project={plain}
-        prompts={undefined}
-        editing={false}
-        onEdit={() => {}}
-        more={[]}
-        nextChapter={{ run: () => {}, pending: false }}
-        progress={1}
-      />
-    </>,
+    <ProjectHeader
+      project={{ ...plain, status: "running" }}
+      stages={ran}
+      editing={false}
+      onEdit={() => {}}
+      more={[]}
+      progress={0.5}
+    />,
     testDeps({}),
   );
-  expect(await screen.findAllByText("Rope Tricks")).toHaveLength(2);
-  expect(screen.queryByRole("button", { name: "Make the next chapter" })).toBeNull();
+  expect(await screen.findByText(/^started /)).not.toBeNull();
+  expect(screen.queryByText(/^finished /)).toBeNull();
+});
+
+it("puts the next action first, then Edit settings, then a worded More", async () => {
+  const user = userEvent.setup();
+  const removed = vi.fn();
+  renderRouted(
+    <ProjectHeader
+      project={plain}
+      stages={ran}
+      primary={<button type="button">Copy for YouTube Studio</button>}
+      editing={false}
+      onEdit={() => {}}
+      more={[
+        { id: "uploaded", label: "Mark uploaded", run: () => {} },
+        { id: "delete", label: "Delete project…", run: removed, apart: true },
+      ]}
+      progress={1}
+    />,
+    testDeps({}),
+  );
+  const buttons = (await screen.findAllByRole("button")).map((button) => button.textContent);
+  expect(buttons).toEqual(["Copy for YouTube Studio", "Edit settings", "More"]);
+  await user.click(screen.getByRole("button", { name: "More" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Delete project…" }));
+  expect(removed).toHaveBeenCalledOnce();
 });
 
 it("says a held or prepared project's state as Projects and the agent tools do", async () => {
+  const header = (over: Partial<ProjectSummary>, progress: number) => (
+    <ProjectHeader
+      project={{ ...plain, ...over }}
+      stages={[]}
+      editing={false}
+      onEdit={() => {}}
+      more={[]}
+      progress={progress}
+    />
+  );
   renderRouted(
     <>
-      <ProjectHeader
-        project={{ ...plain, status: "pending" }}
-        prompts={undefined}
-        editing={false}
-        onEdit={() => {}}
-        more={[]}
-        progress={0.5}
-      />
-      <ProjectHeader
-        project={{ ...plain, status: "pending", prepared: true }}
-        prompts={undefined}
-        editing={false}
-        onEdit={() => {}}
-        more={[]}
-        progress={0.5}
-      />
-      <ProjectHeader
-        project={{ ...plain, status: "pending" }}
-        prompts={undefined}
-        editing={false}
-        onEdit={() => {}}
-        more={[]}
-        progress={0}
-      />
-      <ProjectHeader
-        project={{ ...plain, status: "pending", waitingForAgent: true }}
-        prompts={undefined}
-        editing={false}
-        onEdit={() => {}}
-        more={[]}
-        progress={0.5}
-      />
+      {header({ status: "pending" }, 0.5)}
+      {header({ status: "pending", prepared: true }, 0.5)}
+      {header({ status: "pending" }, 0)}
+      {header({ status: "pending", waitingForAgent: true }, 0.5)}
     </>,
     testDeps({}),
   );
@@ -108,4 +117,20 @@ it("says a held or prepared project's state as Projects and the agent tools do",
   expect(screen.getByText("Prepared")).not.toBeNull();
   expect(screen.getByText("Queued")).not.toBeNull();
   expect(screen.getByText("Waiting for the agent")).not.toBeNull();
+});
+
+it("reads when a run finished and how long it took from its steps", () => {
+  expect(finishedAt(ran)).toBe("2026-09-27T17:18:00.000Z");
+  expect(runLength(ran)).toBe("3 min");
+  expect(runLength([])).toBeUndefined();
+  expect(finishedAt([stage("article", "pending")])).toBeUndefined();
+});
+
+it("offers a finished audiobook's next chapter with one line saying what it opens", async () => {
+  const user = userEvent.setup();
+  const run = vi.fn();
+  renderRouted(<NextChapterOffer nextChapter={{ run, pending: false }} primary />, testDeps({}));
+  await user.click(await screen.findByRole("button", { name: "Make the next chapter" }));
+  expect(run).toHaveBeenCalledOnce();
+  expect(screen.getByText(/^Opens Create set up for the next chapter/)).not.toBeNull();
 });

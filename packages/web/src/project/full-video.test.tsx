@@ -1,15 +1,15 @@
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 import { PlayDraftProvider, type PlaySession, usePlaySession } from "@/play/draft-context";
 import { draftView, playRoutes } from "@/play/play-test-fixture";
 import { body, stage } from "@/routes/project-fixtures";
 import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
-import { NextActionPanel, useNextAction } from "./next-action-view.js";
+import { NextActionButton, NextActionNote, useNextAction } from "./next-action-view.js";
 import { revisionView } from "./revision-fixture.js";
 import type { RevisionController } from "./revision-workspace.js";
 
-// The first thing a person makes is a short; its next action opens Play on the long video
+// The first thing a person makes is a short; its next action opens Create on the long video
 // about the same topic (`edge/http/onboarding.ts` builds the draft).
 
 afterEach(cleanup);
@@ -44,10 +44,15 @@ function Harness() {
     openSection: () => undefined,
     openUpload: () => undefined,
   });
-  return <NextActionPanel state={state} />;
+  return (
+    <>
+      <NextActionButton state={state} />
+      <NextActionNote state={state} />
+    </>
+  );
 }
 
-it("opens Play on a draft for the full video when a finished short's action is pressed", async () => {
+it("opens Create on a draft for the full video when a finished short's action is pressed", async () => {
   const draftId = "00000000-0000-4000-8000-00000000f011";
   const posted: unknown[] = [];
   renderRouted(
@@ -64,11 +69,8 @@ it("opens Play on a draft for the full video when a finished short's action is p
       }),
     ),
   );
-  const next = await screen.findByRole("region", { name: "Next action" });
-  expect(within(next).getByText("The short is ready.")).not.toBeNull();
-  await userEvent.click(
-    within(next).getByRole("button", { name: "Make the full video on this topic" }),
-  );
+  expect(await screen.findByText(/^The short is ready\. Create opens/)).not.toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "Make the full video on this topic" }));
   await waitFor(() => expect(session?.activeId).toBe(draftId));
   expect(session?.document.form.title).toBe("The Library of Alexandria");
   expect(posted).toEqual([

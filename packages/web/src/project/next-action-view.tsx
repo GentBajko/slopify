@@ -9,8 +9,9 @@ import { Button } from "@/components/kit/button";
 import { Callout, type CalloutTone } from "@/components/kit/callout";
 import { ariaKeyShortcuts } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
+import { HelpLine } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { ButtonLink } from "@/components/kit/link";
-import { NextAction as NextActionCard } from "@/components/kit/next-action";
 import { copyText, SignInActions } from "@/fixes/fix-actions";
 import { sentence } from "@/http";
 import { shortcuts } from "@/lib/shortcuts";
@@ -32,9 +33,10 @@ import type { RevisionController } from "./revision-workspace.js";
 import { clockTime } from "./summary.js";
 import type { ProjectActions } from "./use-actions.js";
 
-// Where the next action is carried out: the right rail's card, and the same action beside the
-// thing it affects (a callout at the top of that section). `nextActionFor` decides; this only
-// gathers its inputs from the page's queries and runs the intent it names.
+// Where the next action is carried out: the title row's primary button, with one line under
+// the title row where the situation needs saying, and the same action beside the thing it
+// affects (a callout at the top of that section). `nextActionFor` decides; this only gathers
+// its inputs from the page's queries and runs the intent it names.
 
 export interface NextActionState {
   readonly next: NextAction | undefined;
@@ -123,11 +125,13 @@ export function useNextAction({
   const session = useOptionalPlaySession();
   const full = useMutation({
     mutationFn: async () => {
-      if (session === null) throw new Error("Play isn't available on this page. Reload the page");
+      if (session === null) throw new Error("Create isn't available on this page. Reload the page");
       if (session.review.starting || session.review.uncertain || session.review.created !== null)
-        throw new Error("Play is starting a run from its open draft. Wait for it to start");
+        throw new Error("Create is making a video from its open draft. Wait for it to start");
       if (!(await session.flush()))
-        throw new Error("The draft open in Play couldn't be saved. Open Play, save or discard it");
+        throw new Error(
+          "The draft open in Create couldn't be saved. Open Create, save or discard it",
+        );
       fullDraft.current ??= crypto.randomUUID();
       const { draft } = await fullVideoDraft(api, {
         projectId: project.id,
@@ -135,7 +139,7 @@ export function useNextAction({
       });
       await client.invalidateQueries({ queryKey: keys.playDrafts });
       if (!(await session.open(draft.id)))
-        throw new Error("The full video's draft was made but didn't open. Open Play and pick it");
+        throw new Error("The full video's draft was made but didn't open. Open Create and pick it");
       fullDraft.current = null;
       await navigate({ to: "/play" });
     },
@@ -237,7 +241,7 @@ function busyLabel(intent: NextIntent): string | undefined {
     case "soften":
       return "Softening…";
     case "full-video":
-      return "Opening Play…";
+      return "Opening Create…";
     default:
       return undefined;
   }
@@ -313,8 +317,26 @@ function ActionButton({
   );
 }
 
-// The right rail's card: the state, what is ready, what the action does, and the action.
-export function NextActionPanel({
+// The project's next action as the title row's one primary button, named for its result.
+export function NextActionButton({
+  state,
+}: {
+  readonly state: NextActionState;
+}): ReactElement | null {
+  return <ActionButton state={state} variant="primary" />;
+}
+
+// The situations no section callout says and the title row's state word does not cover: the
+// sample, a paused, stopped or queued run, a run parked on an agent, a finished short.
+function noted(next: NextAction): boolean {
+  if (next.situation === "running") return false;
+  if (calloutTone[next.situation] !== undefined && next.section !== undefined) return false;
+  return !(next.situation === "done" && next.action?.intent.kind === "prepare-upload");
+}
+
+// One line under the title row: what the situation is and what the button does, only where
+// a person needs it, then what a press elsewhere on the page said when it did not work.
+export function NextActionNote({
   state,
   feedback,
 }: {
@@ -323,26 +345,58 @@ export function NextActionPanel({
   readonly feedback?: ReactNode;
 }): ReactElement | null {
   const next = state.next;
-  if (next === undefined && feedback === undefined && state.message === undefined) return null;
+  const line = next !== undefined && noted(next);
+  if (!line && feedback === undefined && state.message === undefined) return null;
   return (
-    <div className="flex flex-col gap-3">
-      {next === undefined ? null : (
-        <NextActionCard
-          tone={next.tone}
-          status={next.status}
-          title={next.title}
-          {...(next.why === undefined ? {} : { why: next.why })}
-          {...(next.action === undefined
-            ? {}
-            : { action: <ActionButton state={state} variant="primary" /> })}
-        />
-      )}
+    <div className="sl-project__note">
+      {line && next !== undefined ? (
+        <p className="m-0">
+          {next.title}
+          {next.why === undefined ? null : ` ${next.why}`}
+        </p>
+      ) : null}
       {state.message === undefined ? null : (
-        <p role="alert" className="m-0 text-small text-danger">
+        <p role="alert" className="m-0 text-danger">
           {state.message}
         </p>
       )}
       {feedback}
+    </div>
+  );
+}
+
+// A finished audiobook's next step, in the status column: its next chapter, set up in Create.
+export function NextChapterOffer({
+  nextChapter,
+  primary,
+}: {
+  readonly nextChapter: {
+    readonly run: () => void;
+    readonly pending: boolean;
+    readonly error?: string | undefined;
+  };
+  // The project has no other next action, so this is the page's one lime button.
+  readonly primary: boolean;
+}): ReactElement {
+  return (
+    <div className="flex flex-col items-start gap-1" {...helpScope}>
+      <Button
+        variant={primary ? "primary" : "secondary"}
+        disabled={nextChapter.pending}
+        disabledReason="Making the next chapter's draft"
+        onClick={nextChapter.run}
+      >
+        {nextChapter.pending ? "Making the next chapter…" : "Make the next chapter"}
+      </Button>
+      <HelpLine>
+        Opens Create set up for the next chapter with the same voices and settings. Nothing is made
+        until you start it there.
+      </HelpLine>
+      {nextChapter.error === undefined ? null : (
+        <p role="alert" className="m-0 text-small text-danger">
+          {nextChapter.error}
+        </p>
+      )}
     </div>
   );
 }
@@ -357,7 +411,7 @@ const calloutTone: Readonly<Record<NextAction["situation"], CalloutTone | undefi
   held: "waiting",
   waiting: "waiting",
   outdated: "info",
-  // "The video is ready" is the rail's card; repeating it above the section only pushes the
+  // "Done" is in the title row with its button; repeating it above the section only pushes the
   // section down.
   done: undefined,
 };
@@ -376,9 +430,7 @@ export function NextActionBeside({
   const tone = calloutTone[next.situation];
   if (tone === undefined) return null;
   return (
-    // Below 1180px the right rail's card sits above the sections, so it is the one shown.
     <Callout
-      className="max-[1180px]:hidden"
       tone={tone}
       title={next.title}
       {...(next.action === undefined
