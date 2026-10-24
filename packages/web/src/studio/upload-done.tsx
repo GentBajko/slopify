@@ -130,11 +130,13 @@ export function UploadDone({
         </div>
       )}
       {error === undefined ? null : <p className="m-0 text-small text-danger">{error}</p>}
-      <HelpLine>
-        {short === null
-          ? "Takes it off Ready to upload. Its link also goes at the end of every short's description."
-          : "Keeps the short's link with the project, under YouTube links."}
-      </HelpLine>
+      {done ? null : (
+        <HelpLine>
+          {short === null
+            ? "Takes it off Ready to upload. Its link also goes at the end of every short's description."
+            : "Keeps the short's link with the project, under YouTube links."}
+        </HelpLine>
+      )}
     </section>
   );
 }

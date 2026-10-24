@@ -260,7 +260,7 @@ function UploadRow({
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <label
           htmlFor={short === null ? videoLinkBoxId : id}
-          className="w-[64px] shrink-0 text-small font-semibold"
+          className="w-16 shrink-0 text-small font-semibold"
         >
           {name}
         </label>
@@ -308,7 +308,7 @@ function UploadRow({
       </div>
       <p
         id={`${id}-state`}
-        className={`m-0 pl-[76px] text-small max-sm:pl-0 ${error !== undefined || video?.finishState === "failed" || video?.commentState === "failed" || video?.abState === "failed" ? "text-danger" : "text-ink-2"}`}
+        className={`m-0 pl-19 text-small max-sm:pl-0 ${error !== undefined || video?.finishState === "failed" || video?.commentState === "failed" || video?.abState === "failed" ? "text-danger" : "text-ink-2"}`}
       >
         {state}
       </p>
@@ -357,7 +357,7 @@ function PreviousEpisode({ projectId }: { readonly projectId: string }): ReactEl
   return (
     <div className="flex min-w-0 flex-col gap-0.5 pt-1" {...helpScope}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <label htmlFor={id} className="w-[64px] shrink-0 text-small font-semibold leading-tight">
+        <label htmlFor={id} className="w-16 shrink-0 text-small font-semibold leading-tight">
           Previous episode
         </label>
         <Input
@@ -386,9 +386,9 @@ function PreviousEpisode({ projectId }: { readonly projectId: string }): ReactEl
         </Button>
       </div>
       {error === undefined ? null : (
-        <p className="m-0 pl-[76px] text-small text-danger max-sm:pl-0">{error}</p>
+        <p className="m-0 pl-19 text-small text-danger max-sm:pl-0">{error}</p>
       )}
-      <HelpLine className="pl-[76px] max-sm:pl-0">
+      <HelpLine className="pl-19 max-sm:pl-0">
         Fills {"{{Previous video}}"} in the description and goes in the end screen. Left empty, the
         end screen uses the last long video you uploaded.
       </HelpLine>

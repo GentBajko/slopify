@@ -183,7 +183,7 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <label
                   htmlFor={`${id}-${String(item.short)}`}
-                  className="w-[64px] shrink-0 text-small font-semibold"
+                  className="w-16 shrink-0 text-small font-semibold"
                 >
                   {name}
                 </label>
@@ -221,7 +221,7 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
               </div>
               <p
                 id={`${id}-${String(item.short)}-state`}
-                className={`m-0 pl-[76px] text-small ${late ? "text-danger" : "text-ink-2"} max-sm:pl-0`}
+                className={`m-0 pl-19 text-small ${late ? "text-danger" : "text-ink-2"} max-sm:pl-0`}
               >
                 {state}
               </p>

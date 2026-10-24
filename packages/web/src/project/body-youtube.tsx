@@ -314,8 +314,8 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
 
   return (
     <div className="@container min-w-0">
-      <div className="grid min-w-0 grid-cols-1 gap-x-8 gap-y-5 @min-[860px]:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
-        <div className="flex min-w-0 flex-col gap-5">
+      <div className="grid min-w-0 grid-cols-1 gap-x-8 gap-y-4 @min-[860px]:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+        <div className="flex min-w-0 flex-col gap-4">
           <section aria-labelledby={`${id}-description`} className="flex min-w-0 flex-col gap-2">
             <PartHead
               id={`${id}-description`}
@@ -494,7 +494,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
             </div>
           )}
         </div>
-        <div className="flex min-w-0 flex-col gap-5">
+        <div className="flex min-w-0 flex-col gap-4">
           {sample ? (
             <SampleNote projectId={project.id} />
           ) : (
