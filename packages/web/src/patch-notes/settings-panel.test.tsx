@@ -124,8 +124,8 @@ function Location() {
   return <output aria-label="Location">{href}</output>;
 }
 
-describe("Ctrl+K → Show patch notes", () => {
-  it("opens Settings → Patch notes", async () => {
+describe("Ctrl+K → What's new", () => {
+  it("opens Settings → What's new, found by its old name too", async () => {
     const user = userEvent.setup();
     renderRouted(
       <CommandPaletteProvider>

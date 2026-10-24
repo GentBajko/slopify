@@ -59,7 +59,7 @@ describe("the usage screen", () => {
     // One short line, so it sits under the title rather than behind an info button.
     expect(
       screen.getByText(
-        "What this computer made. The same counts, anonymized, add to slopify.stream's totals.",
+        "What this computer made. Slopify always adds these counts, anonymously, to slopify.stream's totals; there is no switch.",
       ),
     ).not.toBeNull();
   });

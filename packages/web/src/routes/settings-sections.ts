@@ -84,7 +84,7 @@ export const settingsSections = [
   {
     id: "usage",
     label: "Usage",
-    meta: "What this computer made. The same counts, anonymized, add to slopify.stream's totals.",
+    meta: "What this computer made. Slopify always adds these counts, anonymously, to slopify.stream's totals; there is no switch.",
     run: 3,
   },
   {

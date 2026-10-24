@@ -80,17 +80,17 @@ export function PatchNotesPopup(): ReactElement | null {
   );
 }
 
-// Ctrl+K → Show patch notes: every release's notes, in Settings → Patch notes.
+// Ctrl+K → What's new: every release's notes, in Settings → What's new.
 export function PatchNotesCommand(): null {
   const navigate = useNavigate();
   useCommand({
     id: "nav.patch-notes",
-    title: "Show patch notes",
+    title: "What's new",
     group: "Go to",
     run: () => {
       void navigate({ to: "/settings", search: { section: "patch-notes" } });
     },
-    keywords: ["what's new", "changelog", "release notes", "version"],
+    keywords: ["patch notes", "changelog", "release notes", "version"],
   });
   return null;
 }
