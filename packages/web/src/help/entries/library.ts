@@ -56,11 +56,6 @@ export const libraryHelp = {
     tutorial: { page: "Prompts", anchor: "mark-an-image-prompt-as-photorealistic" },
   },
   // ── Rename in a list (Templates) ─────────────────────────────────────────────────────
-  "library.inline-rename": {
-    title: "Rename in the list",
-    body: "Changes only the name, right in the list; the text stays as it is. Enter saves, Escape keeps the old name, and Undo on the notice renames it back. A prompt or intro/outro keeps the rename in History; templates that picked the old name use the copy saved with them until you pick it again. A template saves a new version; schedules keep the version they were made from.",
-    tutorial: { page: "Library-Overview", anchor: "rename-in-the-row" },
-  },
   // ── Pronunciation ────────────────────────────────────────────────────────────────────
   "library.aliases": {
     title: "Pronunciation aliases",
