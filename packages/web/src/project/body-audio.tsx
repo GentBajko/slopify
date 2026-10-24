@@ -25,6 +25,7 @@ import {
   OutputFolder,
   StageBody,
 } from "./parts.js";
+import { useReadOnlySample } from "./read-only.js";
 import { useNarrationTiming } from "./review-narration.js";
 import { ReviewVerdict, reviewFor, useReviews } from "./review-verdict.js";
 import { useOutputMedia } from "./revision-media.js";
@@ -63,6 +64,7 @@ export function AudioBody({ stage, project, outputs, busy }: BodyProps) {
     return report === undefined ? [] : [{ name: segmentNames[player.segment], report }];
   });
   const timing = useNarrationTiming(project, outputs, landed);
+  const sample = useReadOnlySample(project.id);
   const markdown = useNarrationMarkdown(mine);
   const [status, setStatus] = useState<{ text: string; tone: StatusTone } | undefined>();
   const copy = useCallback((text: string, what: string) => {
@@ -149,7 +151,12 @@ export function AudioBody({ stage, project, outputs, busy }: BodyProps) {
         projectId={project.id}
         busy={busy}
       />
-      <NarrationText outputs={mine} timing={timing} onCopy={copy} />
+      {/* A sample's narration is read and followed, never fixed: it cannot be changed. */}
+      <NarrationText
+        outputs={mine}
+        timing={sample ? { ...timing, fix: undefined } : timing}
+        onCopy={copy}
+      />
     </StageBody>
   );
 }
