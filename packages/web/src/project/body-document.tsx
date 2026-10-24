@@ -20,6 +20,8 @@ export function DocumentBody({ stage, project, outputs }: BodyProps) {
   // Only a revision's file answers `inline=1`; the older project-file route always downloads,
   // so it can be neither shown here nor opened in a tab.
   const inline = media?.folder ? `${media.url}?inline=1` : undefined;
+  // A browser without its own PDF viewer says so in a line rather than drawing an empty box.
+  const viewer = typeof navigator === "undefined" || navigator.pdfViewerEnabled !== false;
 
   if (pdf === undefined)
     return (
@@ -34,8 +36,8 @@ export function DocumentBody({ stage, project, outputs }: BodyProps) {
   return (
     <StageBody className="@container">
       <div className="grid items-start gap-x-6 gap-y-3 @min-[760px]:grid-cols-[minmax(0,1fr)_minmax(240px,300px)]">
-        {inline === undefined ? null : (
-          // The browser's own PDF viewer; one without it shows the line inside instead.
+        {inline === undefined || !viewer ? null : (
+          // The browser's own PDF viewer, the first page in view.
           <object
             data={inline}
             type="application/pdf"
@@ -61,6 +63,11 @@ export function DocumentBody({ stage, project, outputs }: BodyProps) {
             )}
             <OutputFolder output={pdf} />
           </ButtonRow>
+          {inline !== undefined && !viewer ? (
+            <p className="m-0 text-small text-ink-2">
+              This browser does not show PDFs on the page: open it in a new tab to read it.
+            </p>
+          ) : null}
           <MetaLine>
             {[fileSize(pdf.bytes), `${theme} theme`, "contents link to their pages"]
               .filter((part) => part !== undefined)
