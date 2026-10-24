@@ -89,10 +89,14 @@ export function SchedulesView({
   const sidebarChannel = useCurrentChannel().channelId;
   // Starts on the channel the sidebar shows, then is this list's own choice. "" shows every channel's schedules; a schedule's channel is its template's.
   const [channelFilter, setChannelFilter] = useState(sidebarChannel ?? "");
+  // The channel filter only when there is more than one channel to tell apart; with one, a
+  // choice left over from when there were more no longer applies.
+  const manyChannels = (channels.data?.length ?? 0) > 1;
+  const filter = manyChannels ? channelFilter : "";
   const inChannel = (schedule: ScheduleSummary): boolean => {
-    if (channelFilter === "") return true;
+    if (filter === "") return true;
     const template = templates.data?.find((one) => one.id === schedule.templateId);
-    return (template ? channelOfTemplate(template) : defaultChannelId) === channelFilter;
+    return (template ? channelOfTemplate(template) : defaultChannelId) === filter;
   };
   // Search and sort appear once there are several schedules to look through.
   const [query, setQuery] = useState("");
@@ -211,8 +215,6 @@ export function SchedulesView({
           } as const)
         : undefined;
   const rowPending = mutation.isPending || formBusy || formOpen;
-  // The channel filter only when there is more than one channel to tell apart.
-  const manyChannels = (channels.data?.length ?? 0) > 1;
   // New schedule sits over the list once there is one; the first one is made from the empty
   // list's own button. It is hidden, not greyed, while the form is open or nothing can run.
   const canStart = !formOpen && templates.data !== undefined && !noTemplates;
@@ -273,7 +275,7 @@ export function SchedulesView({
             loaded={schedules.data !== undefined}
             live={liveSchedules}
             hiddenBySearch={listTools ? channelSchedules.length - liveSchedules.length : 0}
-            channelFiltered={channelFilter !== ""}
+            channelFiltered={filter !== ""}
             deleted={deletedSchedules}
             {...(canStart ? { onNew: () => startNew() } : {})}
             selectedId={formOpen ? undefined : selected?.id}
