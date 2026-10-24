@@ -340,6 +340,8 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
       (before.id === session.activeId || before.id === null)
     )
       return;
+    // The guided tour opens the rows it points into itself.
+    if (tutorial?.active === true) return;
     // A frame later, so what this draft's opening filled in by itself (the first-run defaults)
     // is already counted.
     requestAnimationFrame(() => {
@@ -661,7 +663,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
             previewLine={previewLine}
           />
         }
-        asideLabel="Make it"
+        asideLabel="Length, cost and the Make button"
       >
         <OutputPicker
           form={form}

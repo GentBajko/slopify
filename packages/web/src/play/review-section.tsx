@@ -73,7 +73,7 @@ export function ReviewSection({
                         ? "Topic"
                         : rowLabel(problem.row, kind)}
                     :
-                  </span>
+                  </span>{" "}
                   <span>{problem.text}</span>
                   <ArrowRightIcon aria-hidden="true" strokeWidth={1.75} />
                 </Button>

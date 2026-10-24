@@ -340,7 +340,7 @@ function StylePreviewEntry({
       <Button variant="quiet" size="small" onClick={() => setOpen(true)}>
         Watch a 6-second preview
       </Button>
-      <Dialog open={open} onOpenChange={setOpen} title="Style preview">
+      <Dialog open={open} onOpenChange={setOpen} title="Preview with your captions and look">
         {open ? children : null}
       </Dialog>
     </section>

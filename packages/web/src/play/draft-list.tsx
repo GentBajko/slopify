@@ -114,7 +114,7 @@ export function DraftList(): ReactElement {
             Reload saved draft
           </Button>
           <Button variant="quiet" size="small" onClick={() => void session.saveAsNew()}>
-            Keep mine as a new draft
+            Save as a new draft
           </Button>
         </>
       ) : null}

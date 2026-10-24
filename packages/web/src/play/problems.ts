@@ -185,8 +185,11 @@ export function setupProblems({
     blocker !== undefined && isUpload(blocker.field)
       ? [{ row: undefined, field: blocker.field, text: blocker.hint, hint: blocker.hint }]
       : [];
+  // Within a row, what the server refused comes first: it has the last word on the draft.
+  const server = (error: FieldError): number => (refused.includes(error) ? 0 : 1);
   const ranked = [...errors].sort(
-    (left, right) => readingRank(left.field) - readingRank(right.field),
+    (left, right) =>
+      server(left) - server(right) || readingRank(left.field) - readingRank(right.field),
   );
   const all = [...readinessFirst, ...ranked.map(placed)];
   const order: readonly (SetupRowId | "topic")[] = ["topic", ...setupRows.map((row) => row.id)];
