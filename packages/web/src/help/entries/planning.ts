@@ -11,7 +11,7 @@ export const planningHelp = {
   },
   "planning.schedule.template": {
     title: "Template",
-    body: "The saved template each run starts from, with its version. Each run uses the template's newest version until you press Mark ready in its Template studio; from then on runs use the newest version marked ready, and a version you save later waits until you mark it ready. The template decides the providers, and so what each run costs. Save templates from Play; they are listed in Library → Templates.",
+    body: "The saved template each run starts from, with its version. Each run uses the template's newest version until you press Mark ready in Edit template; from then on runs use the newest version marked ready, and a version you save later waits until you mark it ready. The template decides the services, and so what each run costs. Save templates from Create; they are listed under Templates.",
     tutorial: { page: "Schedules", anchor: "create-a-schedule" },
   },
   "planning.schedule.cadence": {
@@ -81,12 +81,12 @@ export const planningHelp = {
   },
   "planning.schedule.brief": {
     title: "Series brief",
-    body: "What the series covers, its style and what makes a topic worth a video. Only topic generation reads it. Leave it empty to use the channel's series brief from the channel's Brand tab. Up to 4,000 characters.",
+    body: "What the series covers, its style and what makes a topic worth a video. Only topic generation reads it. Leave it empty to use the series brief on the channel's Name and look tab. Up to 4,000 characters.",
     tutorial: { page: "Schedules", anchor: "topics-that-find-themselves" },
   },
   "planning.schedule.new-topics": {
     title: "New topics",
-    body: "Off: you add every topic yourself. Generate and queue directly: new topics join the end of the list. Generate and hold for approval: they wait under Topics waiting, and beside the calendar, until you approve them. Each generation is one LLM call. Default: Off.",
+    body: "Off: you add every topic yourself. Generate and queue directly: new topics join the end of the list. Generate and hold for approval: they wait under Topics waiting, and beside the calendar, until you approve them. Each generation is one AI call. Default: Off.",
     tutorial: { page: "Schedules", anchor: "topics-that-find-themselves" },
   },
   "planning.schedule.rank-topics": {
@@ -100,8 +100,8 @@ export const planningHelp = {
     tutorial: { page: "Schedules", anchor: "topics-that-find-themselves" },
   },
   "planning.schedule.generation-llm": {
-    title: "Topic generation LLM",
-    body: "The text model that suggests topics. Ticked, it uses the provider and model the template writes with. Untick to pick another, such as a cheaper model. Either way each generation is one call on that provider. Default: the template's LLM.",
+    title: "Topic generation AI model",
+    body: "The AI model that suggests topics. Ticked, it uses the service and model the template writes with. Untick to pick another, such as a cheaper model. Either way each generation is one call on that service. Default: the template's model.",
     tutorial: { page: "Schedules", anchor: "topics-that-find-themselves" },
   },
   "planning.schedule.held-keywords": {

@@ -672,7 +672,7 @@ function GenerationFields({
                   })
                 }
               />
-              Use the template's LLM
+              Use the template's AI model
               {own === null && templateLlm !== undefined && templateLlm.provider !== ""
                 ? ` (${templateLlm.provider} · ${templateLlm.model})`
                 : ""}
@@ -682,7 +682,7 @@ function GenerationFields({
           {own === null ? null : (
             <div className="grid gap-4 min-[700px]:grid-cols-2">
               <ProviderPicker
-                label="Provider"
+                label="Service"
                 family="llm"
                 providers={providers.data?.providers ?? []}
                 value={own.provider}

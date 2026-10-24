@@ -217,8 +217,8 @@ describe("the planning screens explain every control", () => {
     await user.selectOptions(screen.getByLabelText("Cadence"), "once");
     expectExplained();
     await user.selectOptions(screen.getByLabelText("New topics"), "hold");
-    await user.click(screen.getByRole("checkbox", { name: /Use the template's LLM/ }));
-    await screen.findByLabelText("Provider");
+    await user.click(screen.getByRole("checkbox", { name: /Use the template's AI model/ }));
+    await screen.findByLabelText("Service");
     expectExplained();
     await user.click(screen.getByRole("button", { name: "Table" }));
     await user.click(screen.getByRole("button", { name: "Add topic" }));

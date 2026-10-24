@@ -326,7 +326,7 @@ it("says which template version the schedule runs, and what to press when none i
     within(detail).getByText("Its runs are skipped: no version of its template is marked ready"),
   ).toBeTruthy();
   expect(
-    within(detail).getByRole("link", { name: "Open the template's studio" }).getAttribute("href"),
+    within(detail).getByRole("link", { name: "Edit template" }).getAttribute("href"),
   ).toBe(`/templates/${templateId}`);
 });
 
