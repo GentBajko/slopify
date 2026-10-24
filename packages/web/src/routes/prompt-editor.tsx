@@ -1,4 +1,9 @@
-import type { Prompt, PromptDraft, PromptKind } from "@app/slices/library/model.js";
+import {
+  nameMax,
+  type Prompt,
+  type PromptDraft,
+  type PromptKind,
+} from "@app/slices/library/model.js";
 import { defaultShortsPrompt } from "@app/slices/shorts/model.js";
 import { defaultPostPrompt } from "@app/slices/social/post-prompt.js";
 import { defaultDescriptionPrompt } from "@app/slices/youtube/model.js";
@@ -163,6 +168,22 @@ export function PromptEditorRoute({
     setEdited(next);
     setRefused((current) => current.filter((problem) => problem.field !== field));
   };
+  // A new prompt's name follows the first words of its text until a name of one's own is
+  // typed, so a prompt can be saved without thinking one up. A copy keeps "<name> copy".
+  const editBody = (body: string): void => {
+    const follows =
+      promptId === undefined &&
+      from === undefined &&
+      (draft.name.trim() === "" || draft.name === nameFromText(draft.body));
+    if (!follows) {
+      edit({ ...draft, body }, "body");
+      return;
+    }
+    setEdited({ ...draft, body, name: nameFromText(body) });
+    setRefused((current) =>
+      current.filter((problem) => problem.field !== "body" && problem.field !== "name"),
+    );
+  };
 
   // The stored prompt's own keyword names, which its save lets through, as the server does.
   const grandfathered = promptId !== undefined && found !== undefined ? found.slots : [];
@@ -229,7 +250,7 @@ export function PromptEditorRoute({
   ];
   const pickExample = (example: Example): void => {
     if (draft.body.trim() !== "" && draft.body !== example.body) setReplacing(example);
-    else edit({ ...draft, body: example.body }, "body");
+    else editBody(example.body);
   };
 
   return (
@@ -339,9 +360,7 @@ export function PromptEditorRoute({
               place={draft.kind}
               targetId={bodyId}
               value={draft.body}
-              onChange={(next) => {
-                edit({ ...draft, body: next }, "body");
-              }}
+              onChange={editBody}
             />
             <SlotBody
               id={bodyId}
@@ -351,9 +370,7 @@ export function PromptEditorRoute({
               placeholder={kindPlaceholder(draft.kind)}
               invalid={lint.length > 0}
               describedBy={lint.length === 0 ? undefined : lintId}
-              onChange={(next) => {
-                edit({ ...draft, body: next }, "body");
-              }}
+              onChange={editBody}
             />
           </div>
 
@@ -432,9 +449,7 @@ export function PromptEditorRoute({
             warnings={warnings}
             place={draft.kind}
             bodyId={bodyId}
-            onChange={(next) => {
-              edit({ ...draft, body: next }, "body");
-            }}
+            onChange={editBody}
           />
         </div>
       </div>
@@ -446,7 +461,7 @@ export function PromptEditorRoute({
         confirmLabel="Replace the text"
         tone="primary"
         onConfirm={() => {
-          if (replacing !== undefined) edit({ ...draft, body: replacing.body }, "body");
+          if (replacing !== undefined) editBody(replacing.body);
           setReplacing(undefined);
         }}
         onCancel={() => setReplacing(undefined)}
@@ -482,6 +497,20 @@ const bodyTips = {
   script: "library.prompt.body.script",
   post: "library.prompt.body.post",
 } as const satisfies Record<PromptKind, HelpId>;
+
+// A new prompt's name until one is typed: the first six words of its text, without the
+// braces of its keywords or the end of a sentence.
+function nameFromText(body: string): string {
+  const words = body
+    .replace(/\{\{|\}\}/g, "")
+    .split(/\s+/)
+    .filter((word) => word !== "")
+    .slice(0, 6);
+  return words
+    .join(" ")
+    .replace(/[\s.,:;!?…–—-]+$/u, "")
+    .slice(0, nameMax);
+}
 
 // The kinds with a built-in text to start from: the documentary delivery cues, and the wording
 // the YouTube description, the shorts and the posts use when a project picks no prompt.

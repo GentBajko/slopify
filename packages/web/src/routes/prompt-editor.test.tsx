@@ -388,11 +388,45 @@ describe("the prompt editor's Save", () => {
     expect(document.activeElement).toBe(name);
     expect(name.getAttribute("aria-invalid")).toBe("true");
 
-    // A malformed text does not change which problem is first: the name still is.
+    // The text names the prompt until a name is typed, so its malformed keyword is next.
     await fill(user, "Instructions", "About {{bad");
+    expect((name as HTMLInputElement).value).toBe("About bad");
     expect(document.getElementById(save.getAttribute("aria-describedby") ?? "")?.textContent).toBe(
-      "Enter a name.",
+      "The `{{` at line 1, column 7 is never closed. Add `}}` after the keyword name.",
     );
+  });
+
+  it("names a new prompt from the first words of its text until a name is typed", async () => {
+    const user = userEvent.setup();
+    const spy = saveSpy([]);
+    await newEditor({ "POST /api/prompts": spy.answer });
+    const name = screen.getByLabelText("Name") as HTMLInputElement;
+
+    await fill(user, "Instructions", "Write a calm bedtime story about {{Topic}} for sleepy ears.");
+    expect(name.value).toBe("Write a calm bedtime story about");
+    await fill(user, "Instructions", "Tell {{Topic}} as a legend.");
+    expect(name.value).toBe("Tell Topic as a legend");
+
+    await fill(user, "Name", "Legends");
+    await fill(user, "Instructions", "Tell {{Topic}} as a myth.");
+    expect(name.value).toBe("Legends");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(spy.sent).toEqual([
+        { kind: "article", name: "Legends", body: "Tell {{Topic}} as a myth." },
+      ]);
+    });
+  });
+
+  it("keeps the name of a prompt that already has one when its text changes", async () => {
+    const user = userEvent.setup();
+    renderRouted(
+      <PromptEditorRoute promptId="p1" kind="article" from={undefined} onLeave={vi.fn()} />,
+      deps([dossier]),
+    );
+    await screen.findByDisplayValue("Documentary dossier");
+    await fill(user, "Instructions", "Something else about {{topic}}.");
+    expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("Documentary dossier");
   });
 
   it("names an empty name once the field is left empty", async () => {
