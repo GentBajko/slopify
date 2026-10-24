@@ -4,7 +4,7 @@ import { type ReactElement, useState } from "react";
 import { readKeywordFacts } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { HelpLine } from "@/components/kit/field";
 
 // Whether the project's prompts use a fact Slopify copied when the run started (the channel,
 // its links, the neighbouring videos…), or the project already holds such facts.
@@ -16,8 +16,9 @@ export function wantsKeywordFacts(edit: RevisionEdit): boolean {
 }
 
 // Edit project → Prompts: copy the keyword facts again from the channel as it is now. They land
-// in the edit like any other change, so nothing is remade until Save, and the save remakes only
-// what uses a changed fact. The read is applied to the edit as it is when it answers.
+// in the edit like any other change, so nothing is made again until Save, and the save makes
+// again only what uses a changed fact; the line under the button says so, and that it is free.
+// The read is applied to the edit as it is when it answers.
 export function KeywordFactsRefresh({
   projectId,
   edit,
@@ -47,23 +48,24 @@ export function KeywordFactsRefresh({
   };
   return (
     <div className="flex flex-col items-start gap-1">
-      <span className="flex items-center gap-1" {...helpScope}>
-        <Button
-          variant="quiet"
-          size="small"
-          disabled={state.kind === "busy"}
-          onClick={() => {
-            void refresh();
-          }}
-        >
-          {state.kind === "busy" ? "Refreshing keyword facts…" : "Refresh keyword facts"}
-        </Button>
-        <InfoTip id="project.prompts.keyword-facts" />
-      </span>
+      <Button
+        variant="quiet"
+        size="small"
+        disabled={state.kind === "busy"}
+        onClick={() => {
+          void refresh();
+        }}
+      >
+        {state.kind === "busy" ? "Refreshing keyword facts…" : "Refresh keyword facts"}
+      </Button>
+      <HelpLine>
+        Copies the channel's name, series brief, links and cast again, free; saving then makes again
+        only what uses a changed fact.
+      </HelpLine>
       {state.kind === "done" ? (
         <p role="status" className="m-0 text-small text-ink-2">
-          Keyword facts copied again. Save to remake only the steps whose prompts use a fact that
-          changed.
+          Keyword facts copied again. Save to make again only the steps whose prompts use a fact
+          that changed.
         </p>
       ) : state.kind === "failed" ? (
         <p role="alert" className="m-0 text-small text-danger">

@@ -3,7 +3,7 @@ import type { StageKind } from "@app/kernel/pipeline.js";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Select } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { helpScope } from "@/components/kit/info-tip";
 import { cn } from "@/lib/utils";
 import { useProjectRevision } from "./live-revision.js";
 
@@ -66,16 +66,12 @@ export function LiveWriting({
       area.current.scrollTop = area.current.scrollHeight;
   }, [follow, selected?.text]);
   if (calls.length === 0 && stage !== "research" && stage !== "article") return null;
+  // One scope: the line at the foot says what watching costs and when the text is kept, for
+  // the task picker and Follow output alike.
   return (
-    <div className={cn("border-y border-line", className)}>
-      <div
-        className="flex flex-wrap items-center justify-between gap-3 border-b border-line py-3"
-        {...helpScope}
-      >
-        <span className="inline-flex items-center gap-1">
-          <span className="text-small font-semibold text-accent-ink">Live writing</span>
-          <InfoTip id="project.live.writing" />
-        </span>
+    <div className={cn("border-y border-line", className)} {...helpScope}>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line py-3">
+        <span className="text-small font-semibold text-accent-ink">Live writing</span>
         {calls.length > 1 ? (
           <Select
             aria-label="Live writing task"
@@ -106,10 +102,10 @@ export function LiveWriting({
         tabIndex={0}
         className="max-h-[360px] min-h-32 overflow-auto whitespace-pre-wrap break-words py-4 font-sans text-small leading-relaxed text-ink-2"
       >
-        {selected?.text || "Waiting for the provider's first text…"}
+        {selected?.text || "Waiting for the AI's first words…"}
       </section>
-      <p className="border-t border-line py-2 text-label text-ink-3">
-        Live preview. The complete output is saved when this stage finishes.
+      <p className="border-t border-line py-2 text-label text-ink-3" data-help-text="">
+        Watching costs nothing extra; the full text is saved when this stage finishes.
       </p>
     </div>
   );

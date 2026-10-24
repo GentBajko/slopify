@@ -98,11 +98,6 @@ export const projectHelp = {
     body: "Copies a prompt from your Library into this project, replacing the raw prompt below. The project keeps its own copy, so later Library edits reach it only when you pick it again or press Use the Library version. Outputs made from the old wording turn outdated; nothing is remade until you choose.",
     tutorial: { page: "Editing-a-Project", anchor: "prompts" },
   },
-  "project.prompts.keyword-facts": {
-    title: "Refresh keyword facts",
-    body: "The project keeps the facts it copied when it started, such as the channel name, series brief, links, cast and neighbouring videos, so later changes to the channel never change it. Refresh copies them again now. Saving afterwards remakes only the steps whose prompts use a fact that changed. Free: no AI call.",
-    tutorial: { page: "Keywords-Slopify-Fills", anchor: "facts-slopify-already-has" },
-  },
   "project.prompts.raw": {
     title: "Raw prompt",
     body: "This project's own copy of the prompt, with keywords still in double braces such as {{Topic}}. Edit it to change what the model is asked for this project only; the Library prompt is untouched. Saving fills the keywords in again, and what was made from the old wording turns outdated.",
@@ -122,11 +117,6 @@ export const projectHelp = {
     title: "Narration chunk text",
     body: "What the narrator says in this chunk. Editing it has this chunk spoken again by your voice provider, paid per character of the chunk, when you remake outdated outputs; the other chunks keep their audio. Captions and the video follow. It does not change the article.",
     tutorial: { page: "Editing-a-Project", anchor: "edit-narration" },
-  },
-  "project.live.writing": {
-    title: "Live writing",
-    body: "The text model's words as they arrive, so you can see the article or research taking shape. When a stage makes several calls, the list picks which one to watch. Follow output keeps the newest text in view; untick it to read back. Watching costs nothing extra; the full text is saved when the stage finishes.",
-    tutorial: { page: "Project-Page", anchor: "live" },
   },
   "project.rebuild.keep-provided": {
     title: "Keep the provided content",

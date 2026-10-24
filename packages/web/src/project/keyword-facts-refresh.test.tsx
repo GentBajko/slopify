@@ -44,10 +44,15 @@ describe("Refresh keyword facts", () => {
     });
     expect(
       screen.getByText(
-        "Keyword facts copied again. Save to remake only the steps whose prompts use a fact that changed.",
+        "Keyword facts copied again. Save to make again only the steps whose prompts use a fact that changed.",
       ),
     ).not.toBeNull();
-    expect(screen.getByRole("button", { name: "About Refresh keyword facts" })).not.toBeNull();
+    // What it copies, that it is free and what saving then does, under the button in words.
+    expect(
+      screen.getByText(
+        "Copies the channel's name, series brief, links and cast again, free; saving then makes again only what uses a changed fact.",
+      ),
+    ).not.toBeNull();
   });
 
   it("says what failed and how to try again, and changes nothing", async () => {
