@@ -276,7 +276,7 @@ export function FullScriptSwitch({
 }: {
   readonly view: StudioView;
   readonly onDone: (problem: string | null) => void;
-}): ReactElement {
+}): ReactElement | null {
   const { api } = useApp();
   const client = useQueryClient();
   const next = !view.sample.fullScript;
@@ -300,6 +300,9 @@ export function FullScriptSwitch({
       setAsking(false);
     }
   }
+  // While no sample can be made of the setup (the panel's fix link says why), the choice has
+  // nothing to change and no true price.
+  if (price.data !== undefined && price.data.problem !== null) return null;
   return (
     <Switch
       checked={view.sample.fullScript}

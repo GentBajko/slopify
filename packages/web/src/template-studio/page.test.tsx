@@ -405,6 +405,11 @@ it("never prices a sample at $0: free, plan usage, or why none can be made", asy
   });
   let sample = await screen.findByRole("region", { name: "Article sample" });
   expect(await within(sample).findByRole("button", { name: "Make sample · free" })).not.toBeNull();
+  expect(
+    await within(sample).findByRole("switch", {
+      name: "Write the whole article in the sample (free)",
+    }),
+  ).not.toBeNull();
   cleanup();
   open("script", {
     [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer(passing),
@@ -428,6 +433,8 @@ it("never prices a sample at $0: free, plan usage, or why none can be made", asy
     await within(sample).findByText("No sample can be made of this setup: pick an article prompt."),
   ).not.toBeNull();
   expect(within(sample).queryByRole("button", { name: /^Make sample/ })).toBeNull();
+  // The whole-article choice has nothing to change then, and no price to show.
+  expect(within(sample).queryByRole("switch", { name: /Write the whole article/ })).toBeNull();
 });
 
 it("puts a failing check's fix where Make sample would be", async () => {
