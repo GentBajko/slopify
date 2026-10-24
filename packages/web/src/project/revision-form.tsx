@@ -605,6 +605,8 @@ export function RevisionForm(
               language={config.language}
               audioEnabled={config.sources.audio !== "off"}
               videoEnabled={video}
+              // With a video, the rendered style preview below shows the captions, as in Create.
+              showPreview={!video}
               onChange={(subtitles) =>
                 onChange({
                   ...edit,

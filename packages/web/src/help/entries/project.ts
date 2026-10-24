@@ -134,7 +134,7 @@ export const projectHelp = {
     tutorial: { page: "Editing-a-Project", anchor: "change-the-article-text" },
   },
   "project.prompts.template": {
-    title: "Use saved template",
+    title: "Use a saved prompt",
     body: "Copies a prompt from your Library into this project, replacing the raw prompt below. The project keeps its own copy, so later Library edits reach it only when you pick it again or press Use the Library version. Outputs made from the old wording turn outdated; nothing is remade until you choose.",
     tutorial: { page: "Editing-a-Project", anchor: "prompts" },
   },

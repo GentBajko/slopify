@@ -211,7 +211,7 @@ export function RevisionPrompts({
               }
             />
             <Field
-              label={`Use saved template for ${name}`}
+              label={`Use a saved prompt for ${name}`}
               id={`${formId}-library-${key}`}
               tip="project.prompts.template"
             >
@@ -253,7 +253,7 @@ export function RevisionPrompts({
                   replace({ ...next, config }, `${name} now uses "${picked.name}".`);
                 }}
               >
-                <option value="">Choose a saved template</option>
+                <option value="">Choose a saved prompt</option>
                 {options.map((option) => (
                   <option key={option.id} value={option.id}>
                     {option.name}

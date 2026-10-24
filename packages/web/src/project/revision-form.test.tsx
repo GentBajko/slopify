@@ -271,7 +271,7 @@ it("preserves saved unavailable choices, content references and frozen templates
   expect(latest.config.chunking).toEqual(view.revision.config.chunking);
   await openEditSection("Article");
   await screen.findByRole("option", { name: "Fresh template" });
-  await user.selectOptions(screen.getByLabelText("Use saved template for Article"), "replacement");
+  await user.selectOptions(screen.getByLabelText("Use a saved prompt for Article"), "replacement");
   expect(latest.config.rendered.article).toBe("Write new");
   expect(latest.config.articlePrompt).toBe("Fresh template");
   expect(latest.content.promptTemplates.article).toBe("Write {{topic}}");
@@ -337,7 +337,7 @@ it("copies an explicitly selected entry and ignores subsequent library changes",
     "Hello {{topic}}",
   );
   expect(latest.config.intro?.mode).toBe("text");
-  await user.selectOptions(screen.getByLabelText("Use saved template for Intro"), "intro");
+  await user.selectOptions(screen.getByLabelText("Use a saved prompt for Intro"), "intro");
   expect(latest.config.intro?.mode).toBe("llm");
   expect(latest.config.rendered.intro).toBe("Changed elsewhere");
 });
