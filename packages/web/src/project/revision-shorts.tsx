@@ -15,8 +15,8 @@ import {
 import { clipBounds, type ShortPick } from "@app/slices/shorts/pick.js";
 import { type ReactElement, useId, useState } from "react";
 import { Button } from "@/components/kit/button";
-import { Field, Select } from "@/components/kit/field";
-import { InfoTip } from "@/components/kit/info-tip";
+import { Field, HelpLine, Select } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { Shorts, shortsPreviewOf } from "@/play/shorts";
 import type { ShortsForm } from "@/play/state";
 import { StylePreview } from "@/video/style-preview";
@@ -309,11 +309,14 @@ function PickedClips({
   return (
     <section aria-labelledby={`${id}-clips`} className="space-y-3 border-t border-line pt-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-1">
+        <span className="flex flex-col gap-1" {...helpScope}>
           <h4 id={`${id}-clips`} className="sl-kicker m-0">
             Picked clips
           </h4>
-          <InfoTip id="project.shorts.clips" />
+          <HelpLine>
+            Earlier and Later move a clip by one sentence, at no cost; changes apply when you save
+            and continue the run.
+          </HelpLine>
         </span>
         {again ? (
           <p className="flex flex-wrap items-center gap-2 text-small text-accent-ink">
@@ -333,11 +336,14 @@ function PickedClips({
             </Button>
           </p>
         ) : (
-          <span className="inline-flex items-center gap-1">
+          <span className="flex flex-col items-start gap-1" {...helpScope}>
             <Button type="button" onClick={() => onChange(pickAgain(edit))}>
               Pick different moments
             </Button>
-            <InfoTip id="project.shorts.pick-again" />
+            <HelpLine>
+              One writing call when the run goes on; a clip that moves gets new images, one image
+              call each.
+            </HelpLine>
           </span>
         )}
       </div>
@@ -532,11 +538,11 @@ function ClipRow({
             </Button>
           </p>
         ) : (
-          <span className="inline-flex items-center gap-1">
+          <span className="flex flex-col items-start gap-1" {...helpScope}>
             <Button type="button" disabled={locked} onClick={() => onRemake(true)}>
               Make this short again
             </Button>
-            <InfoTip id="project.shorts.remake" />
+            <HelpLine>New images, one image call each, when the run goes on.</HelpLine>
           </span>
         )}
       </div>

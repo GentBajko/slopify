@@ -15,7 +15,6 @@ import {
 import { useApp } from "@/app-context";
 import { channelQuery, defaultChannelId } from "@/channels/api";
 import { Button } from "@/components/kit/button";
-import { InfoTip } from "@/components/kit/info-tip";
 import { ChunkingControl } from "@/play/chunking";
 import { DescribeFiguresToggle } from "@/play/describe-figures";
 import { NarrationAliasesToggle } from "@/play/narration-aliases";
@@ -78,7 +77,6 @@ function useSharedGlossary(
         <Button type="button" variant="quiet" disabled={state.busy} onClick={() => void copy()}>
           {state.busy ? "Copying…" : "Update from other projects"}
         </Button>
-        <InfoTip id="project.edit.update-glossary" />
       </p>
     ) : undefined;
   return {
@@ -140,7 +138,6 @@ function useAliases(edit: RevisionEdit, onChange: (edit: RevisionEdit) => void) 
           <Button type="button" variant="quiet" disabled={state.busy} onClick={() => void copy()}>
             {state.busy ? "Copying…" : "Update from Library"}
           </Button>
-          <InfoTip id="project.edit.update-aliases" />
         </p>
       ) : undefined,
   };

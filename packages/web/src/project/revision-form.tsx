@@ -25,9 +25,9 @@ import { useApp } from "@/app-context";
 import { channelQuery, defaultChannelId } from "@/channels/api";
 import { DocumentThemePicker } from "@/components/document-theme-picker";
 import { Button } from "@/components/kit/button";
-import { Field, Input, Select, Textarea } from "@/components/kit/field";
+import { Field, HelpLine, Input, Select, Textarea } from "@/components/kit/field";
 import { Fold } from "@/components/kit/fold";
-import { InfoTip } from "@/components/kit/info-tip";
+import { helpScope } from "@/components/kit/info-tip";
 import { RailButton } from "@/components/kit/rail";
 import type { HelpId } from "@/help/catalog";
 import { RevisionLanguage } from "@/language/revision-language";
@@ -396,7 +396,7 @@ export function RevisionForm(
                 }
               />
               {config.sources.article === "generate" ? (
-                <div className="flex items-center gap-1">
+                <div className="flex flex-col items-start gap-1" {...helpScope}>
                   <Button
                     onClick={() =>
                       onChange({
@@ -407,7 +407,10 @@ export function RevisionForm(
                   >
                     Write the article again after review
                   </Button>
-                  <InfoTip id="project.edit.regenerate-article" />
+                  <HelpLine>
+                    Paid writing calls when you remake; the remake shows their cost first. It
+                    replaces your edits to the article.
+                  </HelpLine>
                 </div>
               ) : null}
             </>

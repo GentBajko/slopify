@@ -1,7 +1,8 @@
 import type { ReactElement, ReactNode } from "react";
 import { ActionBar, StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
-import { InfoTip } from "@/components/kit/info-tip";
+import { HelpLine } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { startedAt } from "@/lib/utils";
 import { DraftLeaveGuard } from "./draft-leave-guard.js";
@@ -85,7 +86,12 @@ export function RevisionEditPanel({
         {guard}
         {intro ?? (
           <>
-            <SectionHead title="Saved version" info="project.saved-revision" />
+            <div className="flex flex-col gap-1" {...helpScope}>
+              <SectionHead title="Saved version" className="pb-0" />
+              <HelpLine>
+                Each save is a version, listed under Versions. Saving never starts work.
+              </HelpLine>
+            </div>
             {c.saved.error === null ? null : (
               <p role="alert" className="m-0 text-small text-danger">
                 {c.saved.error.message}
@@ -127,16 +133,13 @@ export function RevisionEditPanel({
               Reload the current version
             </Button>
           ) : null}
-          <span className="inline-flex items-center gap-1">
-            <Button
-              disabled={c.busy}
-              onClick={() => c.review({ kind: "allAffected" })}
-              variant="secondary"
-            >
-              Choose what to remake
-            </Button>
-            <InfoTip id="project.choose-remake" />
-          </span>
+          <Button
+            disabled={c.busy}
+            onClick={() => c.review({ kind: "allAffected" })}
+            variant="secondary"
+          >
+            Choose what to remake
+          </Button>
           <Button variant="primary" disabled={c.busy} onClick={c.openEditor}>
             Edit project
           </Button>
