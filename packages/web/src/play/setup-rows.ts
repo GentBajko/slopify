@@ -10,7 +10,7 @@ import {
   videoEditOf,
 } from "@app/slices/video/edit-settings.js";
 import { voiceFormatLabels } from "@app/slices/voices/model.js";
-import { stageWords } from "@/lib/stage-words";
+import { pauseLabel } from "./checkpoints";
 import type { OutputKind } from "./output-kind";
 import type { PlaySection } from "./sections";
 import { type PlayFormState, shortsOn } from "./state";
@@ -324,10 +324,11 @@ export function rowSummary(row: SetupRowId, form: PlayFormState, context: Summar
         : "Nothing else.";
     }
     case "reviews": {
+      // Each pause as its tick names it: "after the article (before the narration)".
       const pauses = form.checkpoints ?? [];
-      const before = listed(pauses.map((stage) => stageWords[stage].toLowerCase()));
+      const after = listed(pauses.map((stage) => pauseLabel(stage, form).replace(/^Pause /, "")));
       const parts = [
-        pauses.length > 0 ? `Pauses for your approval before ${before}` : undefined,
+        pauses.length > 0 ? `Pauses for your approval ${after}` : undefined,
         context.reviews > 0
           ? `an AI checks ${String(context.reviews)} ${context.reviews === 1 ? "step" : "steps"}`
           : undefined,

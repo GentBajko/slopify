@@ -124,7 +124,9 @@ describe("each setup row's one sentence", () => {
         { ...form, checkpoints: ["audio", "video"] },
         { ...context, reviews: 1 },
       ),
-    ).toBe("Pauses for your approval before narration and video; an AI checks 1 step.");
+    ).toBe(
+      "Pauses for your approval after the article (before the narration) and after the images (before the video); an AI checks 1 step.",
+    );
   });
 
   it("shows a title pattern and the keywords asked for, never a bare keyword in braces", () => {
