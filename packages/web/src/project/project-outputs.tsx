@@ -271,17 +271,22 @@ function Preview({
   const own = output !== undefined && (output.role === "image" || output.role === "thumbnail");
   const picture = useOutputMedia(own ? output : poster);
   const seconds = output?.durationMs ?? null;
+  // One frame size for every row, so the names line up; a short's 9:16 poster stands in the
+  // middle of it.
   return (
-    <span
-      className={cn(
-        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-control bg-sunken text-ink-2",
-        kind === "shorts" ? "h-16 w-9" : "h-14 w-24",
-      )}
-    >
+    <span className="relative flex h-14 w-24 shrink-0 items-center justify-center overflow-hidden rounded-control bg-sunken text-ink-2">
       {picture === undefined ? (
         icons[kind]
       ) : (
-        <img src={picture.url} alt="" className="size-full object-cover" loading="lazy" />
+        <img
+          src={picture.url}
+          alt=""
+          className={cn(
+            "object-cover",
+            kind === "shorts" ? "aspect-[9/16] h-full w-auto" : "size-full",
+          )}
+          loading="lazy"
+        />
       )}
       {seconds === null ? null : (
         <span className="absolute right-1 bottom-1 rounded-[3px] bg-[rgb(0_0_0/0.7)] px-1 text-[11px] text-white tabular-nums leading-4">

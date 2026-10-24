@@ -786,14 +786,15 @@
     overflow-y: auto;
     overscroll-behavior: contain;
   }
-  /* The title row stays one line: a long title is cut (whole on hover), the meta gives way,
-     and the actions never wrap under it. */
+  /* The title row stays one line: a long title is cut (whole on hover) and the meta gives way
+     with an ellipsis, so the actions stay beside them. Only a window too narrow for 24rem of
+     title beside the actions puts the actions on a line of their own, instead of cutting the
+     title to a word. */
   .sl-project__header {
-    flex-wrap: nowrap;
     margin-bottom: 0;
   }
   .sl-project__header .sl-page-header__lead {
-    flex: 1 1 auto;
+    flex: 1 1 24rem;
     flex-wrap: nowrap;
   }
   .sl-project__header .sl-page-header__lead > h1 {
@@ -815,10 +816,9 @@
     flex: none;
     flex-wrap: nowrap;
   }
-  .sl-project__meta {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0 var(--space-2);
+  /* Inline, so a meta too long for the row ends in an ellipsis rather than a cut word. */
+  .sl-project__meta > * + * {
+    margin-left: var(--space-2);
   }
   .sl-project__meta .sl-status {
     font-size: inherit;
@@ -893,18 +893,17 @@
       overflow: visible;
     }
   }
-  /* Phones: the title row wraps (the actions under the title), and nothing scrolls sideways. */
+  /* Phones: the title and its meta wrap, the actions go under them, and nothing scrolls
+     sideways. */
   @media (max-width: 767px) {
     .sl-project {
       min-width: 0;
       overflow-x: clip;
     }
-    .sl-project__header {
-      flex-wrap: wrap;
-    }
     .sl-project__header .sl-page-header__lead {
       flex-wrap: wrap;
     }
+    .sl-project__header .sl-page-header__lead > h1,
     .sl-project__header .sl-page-header__meta {
       white-space: normal;
     }
