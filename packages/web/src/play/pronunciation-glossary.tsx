@@ -62,7 +62,7 @@ export function PronunciationGlossary({
       )}
       {!supported ? (
         <p id={`${id}-support`} className="text-label text-ink-3">
-          Unavailable for this provider or model. Your saved preference is retained.
+          Only Inworld TTS-2 voices read it; your choice is kept for when you pick one.
         </p>
       ) : null}
     </div>
