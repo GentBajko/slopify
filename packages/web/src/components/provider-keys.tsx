@@ -15,7 +15,7 @@ import { Button, ButtonRow } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Field } from "@/components/kit/field";
 import { Fold } from "@/components/kit/fold";
-import { hitArea, hitTarget } from "@/components/kit/list-row";
+import { hitArea, RowSelect } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { Status, type Tone } from "@/components/kit/status";
 import { CliProviderDetail, cliState, ServiceAbout } from "@/components/provider-cli";
@@ -288,17 +288,13 @@ function ServiceRow({
         )}
       >
         <span className="flex min-w-0 items-baseline gap-2">
-          <button
-            type="button"
-            aria-expanded={expands ? selected : undefined}
-            onClick={onSelect}
-            className={cn(
-              hitTarget,
-              "min-w-0 truncate border-0 bg-transparent p-0 text-left font-[inherit] font-semibold text-ink",
-            )}
+          <RowSelect
+            onSelect={onSelect}
+            expanded={expands ? selected : undefined}
+            className="min-w-0"
           >
             {provider.displayName}
-          </button>
+          </RowSelect>
           <span className="shrink-0 text-small text-ink-2">{kindWord(provider)}</span>
         </span>
         <Status tone={state.tone}>{state.word}</Status>
