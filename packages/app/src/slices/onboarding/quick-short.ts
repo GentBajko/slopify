@@ -15,8 +15,6 @@ import type { PackPromptKey, StarterPack } from "./packs.js";
 // narration when one is set up, else the computer's built-in voice. What is missing is said
 // with what fixes it, in the same words the first-run checklist uses (`shortReadiness`).
 
-export type { ShortGap };
-
 export interface ShortProviders {
   readonly llm: ProviderChoice;
   readonly audio: VoiceChoice;
