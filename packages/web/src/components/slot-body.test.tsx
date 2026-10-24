@@ -51,6 +51,30 @@ describe("prompt body", () => {
     expect(screen.getByText("95,000 of 100,000 characters")).not.toBeNull();
   });
 
+  it("highlights each keyword of your own and leaves Slopify's in accent ink", () => {
+    const { container } = render(
+      <SlotBody
+        id="body"
+        value={"About {{Topic}} on {{Slopify_Channel}}, {{ Mood }} and {{}}."}
+        place="article"
+        invalid={false}
+        describedBy={undefined}
+        onChange={() => undefined}
+      />,
+    );
+    const overlay = container.querySelector("[data-slot=lint-overlay]");
+    expect(
+      [...(overlay?.querySelectorAll("[data-own-keyword]") ?? [])].map((one) => one.textContent),
+    ).toEqual(["{{Topic}}", "{{ Mood }}"]);
+    expect(overlay?.querySelector("[data-keyword=Slopify_Channel]")?.className).toContain(
+      "text-accent-ink",
+    );
+    // The text reads the same with its marks: nothing is added or moved.
+    expect(overlay?.textContent).toBe(
+      "About {{Topic}} on {{Slopify_Channel}}, {{ Mood }} and {{}}.",
+    );
+  });
+
   it("jumps from a lint sentence to the marked brace", async () => {
     const user = userEvent.setup();
     render(<Editor start={"Line one\nand {{ open"} />);

@@ -51,7 +51,10 @@ export function DetectedSlots({
           <ul aria-label="Your keywords" className="m-0 flex list-none flex-wrap gap-2 p-0">
             {own.map((slot) => (
               <li key={slot} className="flex">
-                <SlotChip name={slot} className="px-2 py-1 text-ink" />
+                <SlotChip
+                  name={slot}
+                  className="border-accent/40 bg-accent-tint px-2 py-1 text-ink"
+                />
               </li>
             ))}
           </ul>

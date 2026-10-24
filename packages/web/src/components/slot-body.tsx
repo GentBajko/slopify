@@ -1,3 +1,4 @@
+import { keywordOf } from "@app/slices/keywords/specs.js";
 import { bodyMax } from "@app/slices/library/model.js";
 import { type ReactElement, useId, useRef, useState } from "react";
 import { Textarea } from "@/components/kit/field";
@@ -35,6 +36,33 @@ const keywordLooks: Readonly<Record<KeywordMark, string>> = {
   misuse: "text-danger underline decoration-wavy decoration-danger underline-offset-[3px]",
   legacy: "underline decoration-dotted decoration-waiting decoration-2 underline-offset-[3px]",
 };
+
+// A keyword of your own (`{{Topic}}`), the question you answer on Create, is highlighted
+// behind its letters, apart from the accent-ink letters of a keyword Slopify fills. Only a
+// background and a ring are drawn (neither takes room), so the mirror's glyphs stay exactly
+// where the textarea's are. The prompt's detail and the "Asks you for" chips wear the same
+// highlight.
+export const ownKeywordLook = "rounded-[3px] bg-accent-tint text-ink ring-1 ring-accent/40";
+
+const wellFormed = /\{\{([^{}\n]*)\}\}/g;
+
+// Plain text cut at each keyword of your own: one with a name that Slopify does not fill.
+export function ownKeywordParts(
+  text: string,
+): readonly { readonly at: number; readonly text: string; readonly own: boolean }[] {
+  const parts: { at: number; text: string; own: boolean }[] = [];
+  let cursor = 0;
+  for (const match of text.matchAll(wellFormed)) {
+    const name = (match[1] ?? "").trim();
+    if (name === "" || keywordOf(name) !== undefined) continue;
+    if (match.index > cursor)
+      parts.push({ at: cursor, text: text.slice(cursor, match.index), own: false });
+    parts.push({ at: match.index, text: match[0], own: true });
+    cursor = match.index + match[0].length;
+  }
+  if (cursor < text.length) parts.push({ at: cursor, text: text.slice(cursor), own: false });
+  return parts;
+}
 
 // The pieces cut at each line break, so the mirror draws the lines the textarea holds.
 export function bodyLines(body: string, where?: BodyPlace): readonly Line[] {
@@ -145,7 +173,17 @@ export function SlotBody({
                         : keywordLooks[piece.keyword.kind]
                   }
                 >
-                  {piece.text}
+                  {piece.marked || piece.keyword !== undefined
+                    ? piece.text
+                    : ownKeywordParts(piece.text).map((part) =>
+                        part.own ? (
+                          <span key={part.at} data-own-keyword="" className={ownKeywordLook}>
+                            {part.text}
+                          </span>
+                        ) : (
+                          part.text
+                        ),
+                      )}
                 </span>
               ))}
               {/* An empty line still takes its height, as it does in the textarea. */}

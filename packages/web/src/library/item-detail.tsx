@@ -6,6 +6,7 @@ import { keywordLabel } from "@/components/keyword-insert-bar";
 import { Button } from "@/components/kit/button";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
+import { ownKeywordLook } from "@/components/slot-body";
 import { SlotChip } from "@/components/slot-chip";
 import { keywordSlots } from "@/lib/draft-lint";
 import { plural } from "@/lib/format";
@@ -74,7 +75,10 @@ export function LibraryItemDetail({
             <ul aria-label="Keywords" className="m-0 flex list-none flex-wrap gap-2 p-0">
               {own.map((slot) => (
                 <li key={slot} className="flex">
-                  <SlotChip name={slot} className="px-2 py-1 text-ink" />
+                  <SlotChip
+                    name={slot}
+                    className="border-accent/40 bg-accent-tint px-2 py-1 text-ink"
+                  />
                 </li>
               ))}
             </ul>
@@ -104,10 +108,11 @@ export function LibraryItemDetail({
   );
 }
 
-// The prompt as it reads: prose in the reading face, with each `{{keyword}}` in the accent
-// colour so the blanks stand out.
+// The prompt as it reads: prose in the reading face, marked as the editor marks it. A keyword
+// of your own (the question you answer on Create) is highlighted; one Slopify fills is in
+// accent ink.
 function PromptText({ body }: { readonly body: string }): ReactElement {
-  const parts = body.split(/(\{\{[^{}]*\}\})/u);
+  const parts = body.split(/(\{\{[^{}\n]*\}\})/u);
   let at = 0;
   return (
     <div
@@ -117,12 +122,17 @@ function PromptText({ body }: { readonly body: string }): ReactElement {
       {parts.map((part) => {
         const start = at;
         at += part.length;
-        return part.startsWith("{{") && part.endsWith("}}") ? (
-          <span key={start} className="font-medium text-accent-ink">
+        if (!(part.startsWith("{{") && part.endsWith("}}"))) return part;
+        const name = part.slice(2, -2).trim();
+        if (name === "") return part;
+        return keywordOf(name) === undefined ? (
+          <span key={start} data-own-keyword="" className={ownKeywordLook}>
             {part}
           </span>
         ) : (
-          part
+          <span key={start} className="text-accent-ink">
+            {part}
+          </span>
         );
       })}
     </div>

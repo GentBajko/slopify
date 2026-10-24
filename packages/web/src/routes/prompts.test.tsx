@@ -218,6 +218,12 @@ describe("the prompts list", () => {
     await user.click(screen.getByRole("button", { name: "Short dossier" }));
     const next = await screen.findByRole("region", { name: "Short dossier details" });
     expect(next.querySelector("[data-slot=prompt-text]")?.textContent).toBe(second.body);
+    // Your own keyword is highlighted as the editor highlights it; Slopify's is not.
+    expect(
+      [...next.querySelectorAll("[data-slot=prompt-text] [data-own-keyword]")].map(
+        (one) => one.textContent,
+      ),
+    ).toEqual(["{{era}}"]);
     expect(within(next).getByText("Slopify fills in: Channel.")).not.toBeNull();
     expect((await findRow("Short dossier")).getAttribute("aria-current")).toBe("true");
     expect(first.getAttribute("aria-current")).toBeNull();
