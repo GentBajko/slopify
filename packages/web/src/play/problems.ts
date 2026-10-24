@@ -172,8 +172,14 @@ export function setupProblems({
   const topicField = (field: string): boolean =>
     (field === "title" && topics.length === 0) ||
     topics.some((topic) => field === `values.${topic}`);
+  // The server's own sentence is kept when it says something the form does not know ("That
+  // article prompt was deleted."); for a rule the form checks too, the form's words.
   const placed = (error: FieldError): SetupProblem => {
-    const server = refused.includes(error);
+    const server =
+      refused.includes(error) &&
+      !errors.some(
+        (other) => other !== error && !refused.includes(other) && other.field === error.field,
+      );
     return {
       row: topicField(error.field) ? "topic" : rowOf(error.field, llmRow),
       field: error.field,

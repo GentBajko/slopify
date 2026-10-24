@@ -114,7 +114,7 @@ export function admission(input: AdmissionInput): Admission {
     : [
         {
           field: "subtitles.fontSize",
-          message: "Choose a whole subtitle font size from 16 to 120.",
+          message: "Choose a whole caption font size from 16 to 120.",
         },
       ];
   const refused = [...misplaced, ...(admitted.ok ? [] : admitted.fields), ...subtitles];

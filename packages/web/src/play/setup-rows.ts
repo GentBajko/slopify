@@ -206,7 +206,7 @@ export function rowSummary(row: SetupRowId, form: PlayFormState, context: Summar
         : render(form.title, { ...blanks, ...nonEmpty(form.values) });
       return (
         [
-          context.topics.length > 0 && pattern !== undefined ? `Title: ${pattern}.` : undefined,
+          context.topics.length > 0 && pattern !== undefined ? `Title: “${pattern}”.` : undefined,
           asks.length > 0 ? `Asks for: ${asks.join(", ")}.` : undefined,
         ]
           .filter((part) => part !== undefined)
