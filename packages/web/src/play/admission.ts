@@ -12,10 +12,12 @@ import type { Field } from "@app/slices/admission/substitute.js";
 import { collectFields, detectSlots } from "@app/slices/admission/substitute.js";
 import { keywordUsesOf, placedProblems } from "@app/slices/keywords/rules.js";
 import type { Entry, Prompt, PromptKind } from "@app/slices/library/model.js";
+import { topicKeywords } from "@app/slices/project-templates/one-off.js";
 import type { DraftInput, PlayFormState, Upload } from "@/play/state";
 import { ambientUploadOn, draftOf, shortsOn, stagedOf } from "@/play/state";
 import { validSubtitleStyle } from "@/subtitles/config";
 import { articleKind } from "./article-kind";
+import { outputKindOf, outputNoun } from "./output-kind";
 import { placedBodies, textEntryRefusals } from "./placed-bodies";
 
 // Live admission. `admit` is the server's own function, imported through `@app/*`: the
@@ -189,9 +191,21 @@ export function firstBlocker(form: PlayFormState, result: AdmissionResult): Bloc
   if (result.ok) {
     return undefined;
   }
-  const ranked = [...result.fields].sort((left, right) => rank(left.field) - rank(right.field));
+  const ranked = [...result.fields].sort(
+    (left, right) => readingRank(left.field) - readingRank(right.field),
+  );
   const first = ranked[0];
   return first === undefined ? undefined : { field: first.field, hint: hintOf(form, first) };
+}
+
+// The hint under the Make button: the next thing to do, then "first" ("Pick an article prompt
+// first"), unless it offers two ways. A rule the form has no shorter sentence for says its
+// own, verbatim.
+export function hintOf(form: PlayFormState, error: FieldError): string {
+  const fix = fixOf(form, error);
+  if (fix === undefined) return error.message;
+  // "…, or pick another" already offers a way out; "first" would read as part of it.
+  return fix.includes(", or ") ? fix : `${fix} first`;
 }
 
 function uploadBlocker(form: PlayFormState): Blocker | undefined {
@@ -220,15 +234,16 @@ function uploadBlocker(form: PlayFormState): Blocker | undefined {
     picked.push(provided.ambientBed);
   }
   if (picked.some((upload) => upload.error !== undefined)) {
-    return { field: "provided", hint: "Remove the upload that failed to play" };
+    return { field: "provided", hint: "Remove the upload that failed first" };
   }
   if (picked.some((upload) => upload.file === undefined)) {
-    return { field: "provided", hint: "Wait for the uploads to finish to play" };
+    return { field: "provided", hint: "Wait for the uploads to finish first" };
   }
   return undefined;
 }
 
-function rank(field: string): number {
+// Where a field sits in the reading order: the lower, the sooner a person meets it.
+export function readingRank(field: string): number {
   let best = readingOrder.length;
   for (const [at, prefix] of readingOrder.entries()) {
     if ((field === prefix || field.startsWith(`${prefix}.`)) && at < best) {
@@ -238,92 +253,92 @@ function rank(field: string): number {
   return best;
 }
 
-// The next action, in the form's own words. Where a field can fail two ways the form
-// decides which sentence it is, rather than reading the rule's message back.
-function hintOf(form: PlayFormState, error: FieldError): string {
+// The next action, in the form's own words and without "first": the setup row that holds the
+// problem says it in red ("Pick a voice"), the hint under the Make button adds "first". Where a
+// field can fail two ways the form decides which sentence it is, rather than reading the rule's
+// message back. Undefined for a rule the form has no shorter sentence for.
+export function fixOf(form: PlayFormState, error: FieldError): string | undefined {
+  const about = `Type what the ${outputNoun(outputKindOf(form))} is about`;
   if (error.field.startsWith("values.")) {
-    return `Fill ${error.field.slice("values.".length)} to play`;
+    const name = error.field.slice("values.".length);
+    return topicKeywords(form.title).includes(name) ? about : `Fill in ${name}`;
   }
-  const keyword = keywordHint(error);
+  const keyword = keywordFix(error);
   if (keyword !== undefined) return keyword;
   if (error.field.startsWith("imagePrompts.")) {
     return error.field.endsWith(".number")
-      ? `Set a Number between 1 and ${String(numberPerPromptMax)} to play`
-      : "Pick an image prompt to play";
+      ? `Set how many images, from 1 to ${String(numberPerPromptMax)}`
+      : "Pick an image prompt";
   }
   switch (error.field) {
     case "title":
       return form.title.trim() === ""
-        ? "Name the video to play"
-        : `Shorten the title to ${String(titleMax)} characters to play`;
+        ? about
+        : `Shorten the title to ${String(titleMax)} characters`;
     case "imagePrompts":
       return form.imagePrompts.length === 0
-        ? "Tick an image prompt to play"
-        : `Lower the Numbers to play: a run makes at most ${String(imagesPerRunMax)} images`;
+        ? "Tick an image prompt"
+        : `Lower the image counts to ${String(imagesPerRunMax)} in all`;
     case "llm":
-      return "Pick an LLM provider and model to play";
+      return "Pick a service and model to write the text";
     case "articlePrompt":
-      return articleKind(form) === "script"
-        ? "Pick a script prompt to play"
-        : "Pick an article prompt to play";
+      return articleKind(form) === "script" ? "Pick a script prompt" : "Pick an article prompt";
     case "audio":
-      return "Pick a narration provider to play";
+      return "Pick a voice service";
     case "audio.voice":
-      return "Pick a voice to play";
+      return "Pick a voice";
     case "images":
-      return "Pick an image provider and model to play";
+      return "Pick an image service and model";
     case "thumbnailPrompt":
-      return "Pick a thumbnail prompt to play";
+      return "Pick a thumbnail prompt";
     case "youtubeDescription":
-      return "Turn narration on, or the YouTube description off, to play";
+      return "Turn narration on, or the YouTube description off";
     case "shorts.enabled":
-      return "Turn narration on, or Shorts off, to play";
+      return "Turn narration on, or Shorts off";
     case "shorts.count":
-      return "Set how many shorts to make to play";
+      return "Set how many shorts to make";
     case "shorts.minSeconds":
     case "shorts.maxSeconds":
-      return "Set the shorts' length to play";
+      return "Set how long the shorts are";
     case "shorts.speed":
-      return "Choose the shorts' speed to play";
+      return "Choose the shorts' speed";
     case "shorts.musicVolume":
-      return "Set the shorts' music volume to play";
+      return "Set the shorts' music volume";
     case "shorts.music":
-      return "Attach the shorts' background music again, or remove it, to play";
+      return "Attach the shorts' music again, or remove it";
     case "shorts.fullVideoLink":
-      return "Fix the full video link to play";
+      return "Fix the full video link";
     case "provided.research":
-      return "Paste your text under Article to play";
+      return "Paste your notes under Article";
     case "provided.article":
-      return "Paste the article to play";
+      return "Paste the article";
     case "provided.audio":
-      return "Attach the narration audio to play";
+      return "Attach the narration audio";
     case "provided.images":
       return form.provided.images.length > imagesPerRunMax
-        ? `Remove images to play: a run holds at most ${String(imagesPerRunMax)}`
-        : "Attach at least one image to play";
+        ? `Keep at most ${String(imagesPerRunMax)} images`
+        : "Attach at least one image";
     case "provided.thumbnail":
-      return "Attach the thumbnail image to play";
+      return "Attach the thumbnail image";
     case "reference.prompt":
-      return "Pick the establishing image's prompt to play";
+      return "Pick the establishing image's prompt";
     case "provided.reference":
-      return "Attach the establishing image to play";
+      return "Attach the establishing image";
     default:
-      // A rule the form has no shorter sentence for says its own, verbatim: nothing is
-      // invented and nothing is swallowed.
-      return error.message;
+      return undefined;
   }
 }
 
 // A keyword Slopify fills that can't be filled where it is: the sentence names it, and the field
 // is the prompt (or title) that holds it, which the field's own hint would misread as unpicked.
-function keywordHint(error: FieldError): string | undefined {
+function keywordFix(error: FieldError): string | undefined {
   const name = /\{\{(Slopify_\w+)\}\}/.exec(error.message)?.[1];
   if (name === undefined) return undefined;
-  if (error.message.includes("Article is Off")) return "Set Article to Generate or Provide to play";
-  if (error.field === "title") return `Remove {{${name}}} from the title to play`;
+  if (error.message.includes("Article is Off")) return "Turn the article on";
+  if (error.field === "title") return `Remove {{${name}}} from the title`;
   if (error.field === "intro" || error.field === "outro")
-    return `Remove {{${name}}} from the ${error.field}, or set its Mode to LLM, to play`;
-  return `Remove {{${name}}} from that prompt, or pick another, to play`;
+    return `Remove {{${name}}} from the ${error.field}, or have the AI write it`;
+  return `Remove {{${name}}} from that prompt, or pick another`;
 }
 
 function bodyOf(prompts: readonly Prompt[], kind: PromptKind, name: string): string | undefined {
