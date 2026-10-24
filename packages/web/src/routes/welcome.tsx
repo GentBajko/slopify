@@ -78,7 +78,7 @@ function StepList({
       steps={steps.map((one, index) => ({
         id: one.id,
         tone: index < at ? "done" : index === at ? "info" : "off",
-        state: index < at ? "done" : index === at ? "current step" : "not yet",
+        state: index < at ? "Done" : index === at ? "Now" : "Not yet",
         name: (
           <Button
             variant="quiet"
