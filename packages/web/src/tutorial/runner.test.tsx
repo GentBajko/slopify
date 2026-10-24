@@ -507,12 +507,14 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     await openRow("Keywords");
     await fill(user, "topic", "Mountains");
     await openSection("Review");
+    // The rail's button: where every box measures the same, the summary's foot carries one too.
+    const rail = () => within(screen.getByRole("region", { name: "Start" }));
     await waitFor(() =>
-      expect((screen.getByRole("button", { name: makeKey }) as HTMLButtonElement).disabled).toBe(
+      expect((rail().getByRole("button", { name: makeKey }) as HTMLButtonElement).disabled).toBe(
         false,
       ),
     );
-    await user.click(await screen.findByRole("button", { name: makeKey }));
+    await user.click(await rail().findByRole("button", { name: makeKey }));
     await waitFor(() =>
       expect(router.state.location.pathname).toBe("/projects/actual-created-project"),
     );
