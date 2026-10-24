@@ -90,7 +90,7 @@ describe("exportPack", () => {
     );
     const id = readyTemplate(h);
     const pack = await exported(h, id);
-    expect(pack.filename).toBe("weekly-history.slopify-pack.zip");
+    expect(pack.filename).toBe("weekly-history.slopify-template.zip");
     expect(pack.version).toBe(1);
     const files = unzipSync(pack.bytes);
     expect(Object.keys(files)).toEqual(["manifest.json"]);
@@ -319,7 +319,7 @@ describe("importPack", () => {
     expect(importPack(to.deps, leaky)).toMatchObject({
       ok: false,
       reason: "invalid-input",
-      message: expect.stringContaining("keys never travel in a pack"),
+      message: expect.stringContaining("keys never travel in a template file"),
     });
     expect(to.deps.db.prepare("SELECT count(*) AS n FROM project_templates").get()).toEqual({
       n: 0,
@@ -340,7 +340,7 @@ describe("importPack", () => {
     expect(readPack(big)).toMatchObject({
       ok: false,
       message: expect.stringContaining(
-        "samples/picture-1.png is larger than a template pack allows",
+        "samples/picture-1.png is larger than a template file allows",
       ),
     });
     const odd = zipSync({ "manifest.json": strToU8("{}"), "run.sh": strToU8("echo") });
@@ -364,7 +364,7 @@ describe("importPack", () => {
     });
     expect(readPack(newer)).toMatchObject({
       ok: false,
-      message: expect.stringContaining("made by a newer Slopify (pack format 2)"),
+      message: expect.stringContaining("made by a newer Slopify (file format 2)"),
     });
     const missing = zipSync({
       "manifest.json": strToU8(
@@ -435,7 +435,7 @@ describe("readPack against zip bombs", () => {
     const started = performance.now();
     expect(readPack(bomb)).toMatchObject({
       ok: false,
-      message: expect.stringContaining("more files than a template pack ever has"),
+      message: expect.stringContaining("more files than an exported template ever has"),
     });
     expect(performance.now() - started).toBeLessThan(2000);
     expect(process.memoryUsage().arrayBuffers - before).toBeLessThan(64 * 1024 * 1024);
@@ -444,7 +444,7 @@ describe("readPack against zip bombs", () => {
   it("refuses a pack one file over the count, and two entries with the same name", () => {
     expect(readPack(overlappingZip(pictureNames(packLimits.samples + 1), 10))).toMatchObject({
       ok: false,
-      message: expect.stringContaining("more files than a template pack ever has"),
+      message: expect.stringContaining("more files than an exported template ever has"),
     });
     expect(readPack(overlappingZip(["samples/a.png", "samples/a.png"], 10))).toMatchObject({
       ok: false,

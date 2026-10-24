@@ -120,7 +120,7 @@ describe("quoteBakeoff", () => {
     ).toMatchObject({
       ok: false,
       message: expect.stringContaining(
-        "voice models are compared within the template's voice provider",
+        "voice models are compared within the template's voice service",
       ),
     });
     expect(

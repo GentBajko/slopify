@@ -500,7 +500,7 @@ it("exports the version schedules run as a file and imports it as a new, uncheck
   expect(pack.status).toBe(200);
   expect(pack.headers.get("content-type")).toBe("application/zip");
   expect(pack.headers.get("content-disposition")).toBe(
-    'attachment; filename="show.slopify-pack.zip"',
+    'attachment; filename="show.slopify-template.zip"',
   );
   const bytes = new Uint8Array(await pack.arrayBuffer());
   expect(Object.keys(unzipSync(bytes))).toEqual(["manifest.json"]);
@@ -546,7 +546,7 @@ it("refuses an import that isn't a pack, and one with no file, saying what to ch
   });
   expect(empty.status).toBe(400);
   expect(await empty.json()).toMatchObject({
-    detail: "No pack arrived with the upload. Choose the pack's .zip file again.",
+    detail: "No file arrived with the upload. Choose the template's .zip file again.",
   });
   expect(h.deps.db.prepare("SELECT count(*) AS n FROM project_templates").get()).toEqual({ n: 1 });
 });

@@ -201,7 +201,7 @@ function basis(
     if (section === "voice" && model.provider !== current.provider)
       return refuse(
         "invalid-input",
-        "A voice is chosen per provider, so voice models are compared within the template's voice provider. Pick models of that provider, or change the voice in Voice first.",
+        "A voice belongs to its voice service, so voice models are compared within the template's voice service. Pick models of that service, or change the voice in Narration first.",
       );
   }
   return { ok: true, document: template.document, version: template.version, current };

@@ -941,7 +941,7 @@ it("exports the version schedules run as a file from More, and says why when it 
       new Response(new Uint8Array([80, 75]), {
         headers: {
           "content-type": "application/zip",
-          "content-disposition": 'attachment; filename="weekly-documentary.slopify-pack.zip"',
+          "content-disposition": 'attachment; filename="weekly-documentary.slopify-template.zip"',
         },
       }),
   });

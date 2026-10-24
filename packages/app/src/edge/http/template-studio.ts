@@ -268,12 +268,12 @@ export function templateStudioRoutes(deps: AppDeps) {
           return problem(c, {
             status: 413,
             title: "Content Too Large",
-            detail: `This pack is larger than ${String(packLimits.uploadBytes / 1024 / 1024)} MB, more than a template pack ever is. Export it again from the template's Edit template page, or ask whoever made it to.`,
+            detail: `This template file is larger than ${String(packLimits.uploadBytes / 1024 / 1024)} MB, more than an exported template ever is. Export it again from the template's Edit template page, or ask whoever made it to.`,
           });
         if (bytes === undefined || bytes.byteLength === 0)
           return problem(c, {
             status: 400,
-            detail: "No pack arrived with the upload. Choose the pack's .zip file again.",
+            detail: "No file arrived with the upload. Choose the template's .zip file again.",
           });
         const result = importPack(review, new Uint8Array(bytes));
         if (!result.ok) return refusedStudio(c, result);
@@ -629,7 +629,7 @@ export function templateStudioRoutes(deps: AppDeps) {
             c,
             found,
             found?.type ?? "application/octet-stream",
-            "This template has no such sample from a pack. Open Edit template to see the samples it has.",
+            "This template has no such sample from the file it came in. Open Edit template to see the samples it has.",
           );
         },
       )

@@ -340,7 +340,7 @@ export async function sayItAs(
       return {
         ok: false,
         reason: "invalid-input",
-        message: `The alias wasn't saved: ${saved.fields.map((field) => field.message).join(" ")} Fix it in Library → Narration aliases, then try again.`,
+        message: `The alias wasn't saved: ${saved.fields.map((field) => field.message).join(" ")} Fix it in Settings → Voices → Pronunciation, then try again.`,
       };
     if (quote.lines === 0) return { ok: true, value: { alias, queued: false, quote } };
     // The sample's next revision copies Library → Narration aliases as they are now, so its

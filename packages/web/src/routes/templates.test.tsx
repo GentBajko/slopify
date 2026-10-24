@@ -573,7 +573,7 @@ it("imports a template file and opens it in Edit template", async () => {
   if (input === null) throw new Error("no file input");
   await user.upload(
     input,
-    new File(["zip"], "weekly.slopify-pack.zip", { type: "application/zip" }),
+    new File(["zip"], "weekly.slopify-template.zip", { type: "application/zip" }),
   );
   await waitFor(() => expect(path).toBe("/templates/66666666-6666-4666-8666-666666666666"));
   expect(imported).toHaveBeenCalledTimes(1);

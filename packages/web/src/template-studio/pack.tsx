@@ -64,7 +64,7 @@ export function importedSentence(value: ImportedPackView): string {
   const renamed =
     value.renamed.length === 0
       ? ""
-      : ` ${value.renamed.map((one) => `"${one.from}" came in as "${one.to}"`).join(", ")}, because your Library has other text under ${value.renamed.length === 1 ? "that name" : "those names"}.`;
+      : ` ${value.renamed.map((one) => `"${one.from}" came in as "${one.to}"`).join(", ")}, because Prompts already has other text under ${value.renamed.length === 1 ? "that name" : "those names"}.`;
   const voice = value.voiceKnown
     ? ""
     : " Its voice isn't in your Settings → Voices: its Narration check says what to do.";

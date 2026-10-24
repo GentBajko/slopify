@@ -453,7 +453,7 @@ export async function downloadPack(
     const named = /filename="([^"]+)"/.exec(response.headers.get("content-disposition") ?? "");
     return {
       ok: true,
-      filename: named?.[1] ?? "template.slopify-pack.zip",
+      filename: named?.[1] ?? "template.slopify-template.zip",
       blob: await response.blob(),
     };
   }

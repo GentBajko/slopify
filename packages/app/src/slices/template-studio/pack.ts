@@ -249,7 +249,7 @@ export async function exportPack(
   return {
     ok: true,
     value: {
-      filename: `${slug(template.name)}.slopify-pack.zip`,
+      filename: `${slug(template.name)}.slopify-template.zip`,
       bytes: zipSync(entries),
       version: template.version,
     },
