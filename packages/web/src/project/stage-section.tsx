@@ -273,8 +273,10 @@ export function SectionMore({
           {rerunLabel(stage.kind, project)}
         </Button>
       ))}
+      {/* What it replaces stays under Versions: a remake, not a deletion. */}
       <ConfirmDialog
         open={asking !== undefined}
+        tone="primary"
         title={asking === undefined ? "" : `${rerunVerb(asking, project)}?`}
         consequence={copy?.consequence ?? ""}
         confirmLabel={asking === undefined ? "" : rerunVerb(asking, project)}
