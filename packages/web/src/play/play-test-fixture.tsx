@@ -368,7 +368,9 @@ export async function mountPlay(
       },
     },
   );
-  await screen.findByRole("radio", { name: /^Dossier/ });
+  // The prompts arrive with the first queries; on a busy machine that can take past the
+  // default second.
+  await screen.findByRole("radio", { name: /^Dossier/ }, { timeout: 5000 });
   if (start !== undefined)
     await act(async () => {
       session().edit(start);
