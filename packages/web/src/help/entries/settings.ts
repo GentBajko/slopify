@@ -192,8 +192,8 @@ export const settingsHelp = {
 
   // First run
   "welcome.packs": {
-    title: "Starter packs",
-    body: "Each pack adds prompts, a suggested voice and a template for one kind of channel, so you can pick the template in Create, type a topic and go. Adding a pack twice changes nothing, and it never replaces a prompt or template of yours with the same name.",
+    title: "Starter templates",
+    body: "Each starter template adds its prompts, a suggested voice and the template for one kind of channel, so you can pick the template in Create, type a topic and go. Adding one twice changes nothing, and it never replaces a prompt or template of yours with the same name.",
     tutorial: { page: "First-Launch-and-Welcome", anchor: "starter-packs" },
   },
 } as const satisfies Readonly<Record<string, HelpEntry>>;

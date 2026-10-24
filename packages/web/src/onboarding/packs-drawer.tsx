@@ -8,8 +8,9 @@ import { InfoTip } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { installPack, onboardingKey, readFirstRun } from "./api.js";
 
-// Library → Templates → Add pack: the four starter packs, each adding its prompts, a suggested
-// voice and a template. Adding one twice changes nothing and never replaces an item of yours.
+// Templates → Add starter templates: the four starter templates, each adding its prompts, a
+// suggested voice and the template. Adding one twice changes nothing and never replaces an item
+// of yours.
 export function PacksDrawer({
   open,
   onClose,
@@ -34,7 +35,7 @@ export function PacksDrawer({
   return (
     <Drawer
       open={open}
-      title="Add a starter pack"
+      title="Add starter templates"
       onClose={onClose}
       footer={
         <StatusSlot tone={install.error || view.error ? "error" : "success"}>
@@ -44,7 +45,7 @@ export function PacksDrawer({
               ? undefined
               : install.data.added
                 ? "Added: its prompts are in Prompts and its template is in this list."
-                : "That pack was already added.")}
+                : "That starter template was already added.")}
         </StatusSlot>
       }
     >
@@ -52,7 +53,7 @@ export function PacksDrawer({
         Prompts, a suggested voice and a template for one kind of channel.
         <InfoTip id="welcome.packs" />
       </p>
-      <List label="Starter packs" className="sl-list--wrap-meta">
+      <List label="Starter templates" className="sl-list--wrap-meta">
         {(view.data?.packs ?? []).map((pack) => (
           <ListRow
             key={pack.id}
@@ -63,12 +64,12 @@ export function PacksDrawer({
                 disabled={pack.installed || install.isPending}
                 onClick={() => install.mutate(pack.id)}
               >
-                {pack.installed ? "Added" : "Add pack"}
+                {pack.installed ? "Added" : "Add template"}
               </Button>
             }
           />
         ))}
-        {view.data === undefined ? <ListRow title="Loading packs…" /> : null}
+        {view.data === undefined ? <ListRow title="Loading starter templates…" /> : null}
       </List>
     </Drawer>
   );

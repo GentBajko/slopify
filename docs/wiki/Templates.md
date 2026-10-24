@@ -122,7 +122,7 @@ When a template picks a model that has been retired, its row says so, for exampl
 
 ## Starter packs
 
-**Library → Templates → Add pack** opens **Add a starter pack**. Press **Add pack** on a pack's row; it then reads **Added**. Each pack adds prompts, a suggested voice and a ready-made Play template for one kind of channel:
+**Templates → Add starter templates** opens **Add starter templates**. Press **Add template** on a row; it then reads **Added**. Each one adds prompts, a suggested voice and a ready-made template for one kind of channel:
 
 | Pack | What it is for |
 |---|---|

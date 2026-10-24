@@ -12,7 +12,7 @@ import { rememberedDraft } from "./draft-restore";
 import { templateProviderDefaults, withProviderDefaults } from "./draft-state";
 import { outputKindOf, outputNoun } from "./output-kind";
 
-// A person who picked "A blank setup" keeps it for the rest of this tab's visit: Create does
+// A person who picked "A blank video" keeps it for the rest of this tab's visit: Create does
 // not pick the starter template for them again.
 const blankKey = "slopify.create.blank";
 export function choseBlank(): boolean {
@@ -58,7 +58,8 @@ export function useStarterTemplate(): {
 
 // "Start from: History starter ▾" above the topic: picking a template opens a fresh draft made
 // from it, and what was typed for the topic comes along. A fresh draft starts from the first
-// starter template by itself; "A blank setup" starts from nothing and stays picked.
+// starter template by itself; "A blank video" (or audiobook, …) starts from nothing and stays
+// picked.
 export function TemplateField({
   topics,
   paused,
@@ -165,10 +166,11 @@ export function TemplateField({
     tried.current = generation;
     void pick(starter.id, true);
   }, [starter, paused, generation, session.activeId, session.edited]);
+  const noun = outputNoun(outputKindOf(session.document.form));
   const help = templates.error
     ? `Templates didn't load. ${templates.error.message}`
     : templates.data?.length === 0
-      ? `No templates yet. Set this ${outputNoun(outputKindOf(session.document.form))} up, then Save as template.`
+      ? `No templates yet. Set this ${noun} up, then Save as template.`
       : undefined;
   return (
     <div className="flex min-w-0 flex-col gap-1" {...helpScope}>
@@ -185,7 +187,7 @@ export function TemplateField({
           onChange={(event) => void pick(event.target.value)}
         >
           <option value="">
-            {source && !current ? "A template no longer saved" : "A blank setup"}
+            {source && !current ? "A template no longer saved" : `A blank ${noun}`}
           </option>
           {(templates.data ?? []).map((template) => (
             <option key={template.id} value={template.id}>

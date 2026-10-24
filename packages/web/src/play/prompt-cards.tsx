@@ -140,7 +140,7 @@ export function PromptCards({
               const gist =
                 card.body === undefined
                   ? {
-                      sentence: "Saved with this setup; it is no longer in Prompts.",
+                      sentence: "A copy kept here; it is no longer in Prompts.",
                       length: undefined,
                     }
                   : promptGist(card.body);
