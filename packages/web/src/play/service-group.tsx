@@ -4,6 +4,7 @@ import { Button } from "@/components/kit/button";
 import { HelpLine } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
 import { TextLink } from "@/components/kit/link";
+import { providerUnavailableLabel } from "@/lib/provider-status";
 import { cn } from "@/lib/utils";
 import { ModelPicker, ProviderPicker, providerOptions } from "./pickers";
 
@@ -69,6 +70,16 @@ export function ServiceGroup({
   const id = useId();
   const options = providerOptions(providers, family);
   const blocked = options.length > 0 && options.every((option) => option.disabled === true);
+  // A saved or template's service that can't be used now ("OpenAI · No key") says so under the
+  // group too, with the same way to fix it.
+  const picked = providers.find((one) => one.id === provider && one.family === family);
+  const refusal = picked === undefined ? undefined : providerUnavailableLabel(picked.readiness);
+  const pickedProblem =
+    picked === undefined || refusal === undefined
+      ? undefined
+      : refusal === "No key"
+        ? `${picked.displayName} has no key yet`
+        : `${picked.displayName}: ${refusal}`;
   return (
     // biome-ignore lint/a11y/useSemanticElements: a fieldset's legend would leave the field grid; the group is named by its visible label.
     <div
@@ -105,16 +116,16 @@ export function ServiceGroup({
         onPick={onModel}
       />
       {children}
-      {blocked && provider === "" ? (
+      {blocked || pickedProblem !== undefined ? (
         <div className="sl-fields__wide flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
           <HelpLine>
-            {words[family].none} ·{" "}
+            {blocked ? words[family].none : pickedProblem} ·{" "}
             <TextLink to="/settings" search={keysSearch(family)}>
               {words[family].key} ↗
             </TextLink>
-            {leaveOut === undefined ? null : " · or"}
+            {leaveOut === undefined || !blocked ? null : " · or"}
           </HelpLine>
-          {leaveOut === undefined ? null : (
+          {leaveOut === undefined || !blocked ? null : (
             <Button variant="quiet" size="small" onClick={leaveOut.onLeave}>
               {leaveOut.label}
             </Button>

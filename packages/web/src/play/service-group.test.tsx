@@ -98,6 +98,20 @@ describe("who does a stage", () => {
     expect(onLeave).toHaveBeenCalledOnce();
   });
 
+  it("says when the picked service can't be used, with the way to add its key", async () => {
+    renderRouted(
+      <Group
+        providers={[keyed("openai-tts", "OpenAI", false), keyed("cartesia", "Cartesia", true)]}
+        provider="openai-tts"
+      />,
+      testDeps({}),
+    );
+    expect(await screen.findByText(/OpenAI has no key yet/)).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Add a voice key ↗" })).not.toBeNull();
+    // Another service works, so the stage need not be left out.
+    expect(screen.queryByRole("button", { name: "Set Narration to Off" })).toBeNull();
+  });
+
   it("says under the model whether it works, and links to Settings → Models for the rest", async () => {
     renderRouted(
       <Group providers={[keyed("openai-tts", "OpenAI", true)]} provider="openai-tts" />,
