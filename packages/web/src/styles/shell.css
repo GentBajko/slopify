@@ -1357,3 +1357,27 @@
     }
   }
 }
+
+/* The usage-stats notice (components/notice.tsx) sits on the window's bottom edge until OK is
+   pressed: the page ends above it, and a page's action bar and the toasts stay just above it.
+   The notice measures its own height into --usage-notice-height. Utilities, because the
+   action bar's own bottom is a utility. */
+@layer utilities {
+  html:has([data-slot="usage-notice"]) .sl-app__main {
+    padding-bottom: var(--usage-notice-height, 0px);
+  }
+  html:has([data-slot="usage-notice"]) [data-slot="action-bar"] {
+    bottom: var(--usage-notice-height, 0px);
+  }
+  html:has([data-slot="usage-notice"]) .sl-toasts {
+    bottom: calc(var(--space-4) + var(--usage-notice-height, 0px));
+  }
+  @media (max-width: 767px) {
+    html:has([data-slot="usage-notice"]) [data-slot="action-bar"] {
+      bottom: calc(48px + max(12px, env(safe-area-inset-bottom)) + var(--usage-notice-height, 0px));
+    }
+    html:has([data-slot="usage-notice"]) .sl-toasts {
+      bottom: calc(56px + max(12px, env(safe-area-inset-bottom)) + var(--usage-notice-height, 0px));
+    }
+  }
+}

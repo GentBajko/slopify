@@ -1,27 +1,24 @@
 import type { ModelInfo, ProviderFamily } from "../../kernel/ports/model.js";
 import { readinessIsUsable } from "../../kernel/ports/model.js";
+import type { SpeechInstall } from "../../kernel/ports/system-speech.js";
 import type { ProviderChoice, RunDraft, VoiceChoice } from "../admission/model.js";
 import { titleMax } from "../admission/rules.js";
 import type { LoudnessSettings } from "../loudness/model.js";
 import { defaultSentencePauseSeconds } from "../narration/pauses-model.js";
 import { type ProviderStatus, systemVoiceProvider, type Voice } from "../settings/model.js";
+import type { FirstRunView, ShortGap } from "./model.js";
 import type { PackPromptKey, StarterPack } from "./packs.js";
 
 // "Make a 60-second short": a topic in, a short-mode project out (`admission/short-mode.ts`),
 // with the providers picked for the user from what this machine has: an installed CLI for the
 // text and, with Codex, the images, so no key is needed for those; a keyed voice for the
 // narration when one is set up, else the computer's built-in voice. What is missing is said
-// with the screen that fixes it.
+// with what fixes it, in the same words the first-run checklist uses (`shortReadiness`).
 
 export interface ShortProviders {
   readonly llm: ProviderChoice;
   readonly audio: VoiceChoice;
   readonly images: ProviderChoice;
-}
-
-export interface ShortGap {
-  readonly need: "text" | "voice" | "images";
-  readonly message: string;
 }
 
 export type ShortPlan =
@@ -35,8 +32,10 @@ export type ShortPlan =
 
 export type ModelsFor = (provider: string, family: ProviderFamily) => Promise<readonly ModelInfo[]>;
 
-const textClis = ["claude-code", "codex", "gemini"] as const;
-const keyedImages = ["openai-image", "google-image", "fal", "replicate"] as const;
+// Who is asked first for each part: the CLIs before a key for the text, Codex before a key for
+// the images.
+const textOrder = ["claude-code", "codex", "gemini", "openrouter"] as const;
+const imageOrder = ["codex-image", "openai-image", "google-image", "fal", "replicate"] as const;
 const keyedVoices = ["openai-tts", "elevenlabs", "cartesia", "inworld"] as const;
 // The first model of these providers is the one a first short uses, unless one of these is
 // listed: a fast, capable default rather than the slowest or the smallest.
@@ -47,6 +46,99 @@ const preferred: Readonly<Record<string, RegExp>> = {
 
 function ready(status: ProviderStatus | undefined): boolean {
   return status !== undefined && readinessIsUsable(status.readiness);
+}
+
+const statusOf = (statuses: readonly ProviderStatus[]) => (id: string) =>
+  statuses.find((row) => row.id === id);
+
+// The keyed voice a first short narrates with: a saved voice of a voice service with a key,
+// else the voice the pack suggests when its service has a key.
+function keyedVoice(
+  statuses: readonly ProviderStatus[],
+  voices: readonly Voice[],
+  suggested: StarterPack["voice"],
+): { readonly provider: string; readonly voiceId: string } | undefined {
+  const status = statusOf(statuses);
+  const saved = voices.find(
+    (voice) => voice.provider !== systemVoiceProvider && ready(status(voice.provider)),
+  );
+  if (saved !== undefined) return { provider: saved.provider, voiceId: saved.voiceId };
+  return ready(status(suggested.provider))
+    ? { provider: suggested.provider, voiceId: suggested.voiceId }
+    : undefined;
+}
+
+// One gap per part nothing can do, in plain words with what fixes it. The voice names a voice
+// service that has a key but no saved voice, since a key alone is not the fix then.
+function gapOf(
+  need: ShortGap["need"],
+  statuses: readonly ProviderStatus[],
+  install: SpeechInstall | undefined,
+): ShortGap {
+  if (need === "text")
+    return {
+      need,
+      fix: "key",
+      message:
+        "Nothing can write the script yet. Sign in to Claude Code, Codex or Antigravity CLI on this computer, or add an OpenRouter key.",
+    };
+  if (need === "images")
+    return {
+      need,
+      fix: "key",
+      message:
+        "Nothing can make the images yet. Add an image key (OpenAI, Google, fal.ai or Replicate), or sign in to Codex CLI on this computer.",
+    };
+  const status = statusOf(statuses);
+  const unsaved = keyedVoices.map(status).find((row) => ready(row));
+  if (unsaved !== undefined)
+    return {
+      need,
+      fix: "saved-voice",
+      message: `${unsaved.displayName} has a key but no voice saved yet. Save one in Settings → Voices, or add an OpenAI key, which works at once.`,
+    };
+  return {
+    need,
+    fix: "key",
+    message:
+      "Nothing can read the script aloud yet. Add a voice key: an OpenAI key works at once with the voices Slopify sets up.",
+    ...(install === undefined ? {} : { install: { ...install, commands: [...install.commands] } }),
+  };
+}
+
+// What a first short would use on this computer and what it lacks, without asking any provider
+// for its models: the first-run checklist, which must agree with the refusal below.
+export function shortReadiness(input: {
+  readonly statuses: readonly ProviderStatus[];
+  readonly voices: readonly Voice[];
+  readonly suggested: StarterPack["voice"];
+  readonly install?: SpeechInstall | undefined;
+}): FirstRunView["needs"] {
+  const status = statusOf(input.statuses);
+  const part = (row: ProviderStatus | undefined) =>
+    row === undefined
+      ? { by: null, how: null }
+      : ({ by: row.displayName, how: row.readiness.kind === "cli" ? "sign-in" : "key" } as const);
+  const text = part(textOrder.map(status).find((row) => ready(row)));
+  const images = part(imageOrder.map(status).find((row) => ready(row)));
+  const keyed = keyedVoice(input.statuses, input.voices, input.suggested);
+  const system = status(systemVoiceProvider)?.readiness;
+  const voice =
+    keyed !== undefined
+      ? part(status(keyed.provider))
+      : system?.kind === "local" && system.available
+        ? ({ by: system.engine ?? "System voice", how: "computer" } as const)
+        : { by: null, how: null };
+  const gaps = (
+    [
+      ["text", text],
+      ["images", images],
+      ["voice", voice],
+    ] as const
+  )
+    .filter(([, done]) => done.by === null)
+    .map(([need]) => gapOf(need, input.statuses, input.install));
+  return { text, voice, images, gaps };
 }
 
 // The computer's own voice a first short falls back to: the best speech program found and its
@@ -75,6 +167,21 @@ async function firstModel(
   );
 }
 
+// The first ready provider in `order` that lists a model.
+async function firstReady(
+  input: { readonly statuses: readonly ProviderStatus[]; readonly modelsFor: ModelsFor },
+  order: readonly string[],
+  family: ProviderFamily,
+): Promise<ProviderChoice | undefined> {
+  const status = statusOf(input.statuses);
+  for (const id of order) {
+    if (!ready(status(id))) continue;
+    const model = await firstModel(input.modelsFor, id, family);
+    if (model !== undefined) return { provider: id, model };
+  }
+  return undefined;
+}
+
 export async function planShortProviders(input: {
   readonly statuses: readonly ProviderStatus[];
   readonly voices: readonly Voice[];
@@ -84,60 +191,27 @@ export async function planShortProviders(input: {
   readonly suggested: StarterPack["voice"];
   // The built-in voice found on this computer, used when no keyed voice is ready.
   readonly systemVoice?: SystemVoicePick | undefined;
+  // How to install the computer's voice here, said when nothing can narrate.
+  readonly install?: SpeechInstall | undefined;
 }): Promise<ShortPlan> {
-  const status = (id: string) => input.statuses.find((row) => row.id === id);
-  const gaps: ShortGap[] = [];
-
-  let llm: ProviderChoice | undefined;
-  for (const id of [...textClis, "openrouter"]) {
-    if (!ready(status(id))) continue;
-    const model = await firstModel(input.modelsFor, id, "llm");
-    if (model !== undefined) {
-      llm = { provider: id, model };
-      break;
-    }
-  }
-  if (llm === undefined)
-    gaps.push({
-      need: "text",
-      message:
-        "No text model is ready. Install Claude Code, Codex or Antigravity CLI and sign in to it (Settings → Providers shows what Slopify found), or add an OpenRouter key in Settings → Providers.",
-    });
-
-  let images: ProviderChoice | undefined;
-  for (const id of ["codex-image", ...keyedImages]) {
-    if (!ready(status(id))) continue;
-    const model = await firstModel(input.modelsFor, id, "image");
-    if (model !== undefined) {
-      images = { provider: id, model };
-      break;
-    }
-  }
-  if (images === undefined)
-    gaps.push({
-      need: "images",
-      message:
-        "No image model is ready. Install Codex CLI and sign in to it, or add an OpenAI, Google, fal.ai or Replicate key in Settings → Providers.",
-    });
+  const status = statusOf(input.statuses);
+  const llm = await firstReady(input, textOrder, "llm");
+  const images = await firstReady(input, imageOrder, "image");
 
   // A keyed voice first (a saved one, else the pack's suggestion), then the computer's own: a
   // saved system voice, else the one found. Keys are the better voice, never a requirement.
   let audio: VoiceChoice | undefined;
-  const keyed = (provider: string) => provider !== systemVoiceProvider;
-  const saved = input.voices.find(
-    (voice) => keyed(voice.provider) && ready(status(voice.provider)),
-  );
-  const provider =
-    saved?.provider ??
-    (ready(status(input.suggested.provider)) ? input.suggested.provider : undefined);
-  if (provider !== undefined) {
-    const model = await firstModel(input.modelsFor, provider, "tts");
-    if (model !== undefined)
-      audio = { provider, model, voice: saved?.voiceId ?? input.suggested.voiceId };
+  const keyed = keyedVoice(input.statuses, input.voices, input.suggested);
+  if (keyed !== undefined) {
+    const model = await firstModel(input.modelsFor, keyed.provider, "tts");
+    if (model !== undefined) audio = { provider: keyed.provider, model, voice: keyed.voiceId };
   }
   let systemVoice = false;
-  const system = status(systemVoiceProvider);
-  if (audio === undefined && ready(system) && input.systemVoice !== undefined) {
+  if (
+    audio === undefined &&
+    ready(status(systemVoiceProvider)) &&
+    input.systemVoice !== undefined
+  ) {
     const savedSystem = input.voices.find((voice) => voice.provider === systemVoiceProvider);
     audio = {
       provider: systemVoiceProvider,
@@ -146,22 +220,17 @@ export async function planShortProviders(input: {
     };
     systemVoice = true;
   }
-  if (audio === undefined) {
-    const systemIssue =
-      system?.readiness.kind === "local" && system.readiness.issue !== undefined
-        ? ` ${system.readiness.issue}`
-        : "";
-    gaps.push({
-      need: "voice",
-      message: keyedVoices.some((id) => ready(status(id)))
-        ? "Your voice provider has no saved voice yet. Add one in Settings → Voices, then try again."
-        : `No voice is ready to narrate the short: no voice key is saved and this computer's built-in voice can't be used.${systemIssue || " Install espeak-ng, or add an OpenAI, ElevenLabs, Cartesia or Inworld key in Settings → Providers (with ElevenLabs, Cartesia or Inworld, also save a voice in Settings → Voices)."}`,
-    });
-  }
 
-  return llm === undefined || images === undefined || audio === undefined
-    ? { ok: false, gaps }
-    : { ok: true, providers: { llm, audio, images }, systemVoice };
+  if (llm === undefined || images === undefined || audio === undefined)
+    return {
+      ok: false,
+      gaps: [
+        ...(llm === undefined ? [gapOf("text", input.statuses, input.install)] : []),
+        ...(images === undefined ? [gapOf("images", input.statuses, input.install)] : []),
+        ...(audio === undefined ? [gapOf("voice", input.statuses, input.install)] : []),
+      ],
+    };
+  return { ok: true, providers: { llm, audio, images }, systemVoice };
 }
 
 // The short-mode draft for a topic, using the pack's (or starter set's) script and scene

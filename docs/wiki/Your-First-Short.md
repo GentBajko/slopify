@@ -26,23 +26,23 @@ You need three things. Slopify checks them when you press the button and tells y
 | Images | Codex CLI, then an OpenAI, Google, fal.ai or Replicate key. |
 | Voice | Your first saved voice whose provider has a key. If none, the style's suggested OpenAI voice when an OpenAI key is saved. If there is no voice key at all, your computer's own voice (the **System voice**): macOS or Windows speech, or Piper, SVOX Pico, eSpeak NG or eSpeak on Linux. |
 
-Command-line tools can't speak, but you don't need a voice key to start: with none saved, the short is narrated by your computer's built-in voice, for free. It sounds robotic, so add a key when you want a better voice. With ElevenLabs, Cartesia or Inworld, also save a voice in Settings → **Voices**. See [the system voice](Providers-and-Keys#the-system-voice).
+Command-line tools can't speak, but you don't need a voice key to start: with none saved, the short is narrated by your computer's built-in voice, for free. It sounds robotic, so add a key when you want a better voice. An OpenAI key is the simplest: the suggested voices work with it right away. With ElevenLabs, Cartesia or Inworld, also save a voice in Settings → **Voices**. See [the system voice](Providers-and-Keys#the-system-voice).
 
 To set these up:
 
 1. Install and sign in to Claude Code, Codex or Antigravity CLI (see [AI CLIs](AI-CLIs)), or add keys in Settings → **Providers** (see [Providers and Keys](Providers-and-Keys)).
 2. Optional: add a voice key in Settings → **Providers**. An OpenAI key is the simplest: the suggested voice works with it right away.
-3. Back on the first-run screen, step **1 · What you have** shows which tools are ready and who will narrate.
+3. Back on the first-run screen, step 1, **What a short needs**, shows the Script, Voice and Images lines, each **Ready** or **Not connected** with its fix. Press **Check again** after installing a speech program.
 
 ## Make the short
 
 1. Open the first-run screen.
-2. On **2 · Pick a style**, press **Use this style** on one row:
+2. On step 2, **Pick a style**, press one row; it reads **Picked**:
    - **General**: a neutral explainer style, with the OpenAI voice `alloy` as its suggestion.
    - **Sleep lore**, **True crime**, **History** or **Science explainers**: that starter pack's script prompt, image style and suggested voice.
-3. Go to **3 · Make your first short**. In **Topic**, type what the short is about, in a few words or a question (up to 200 characters). For example: `Why the sea glows at night`. A specific topic gives a sharper short than a broad one.
-4. Press **Make a 60-second short**. The status line says **Starting your short…**.
-5. Slopify creates the project and starts it. The step now says "Your short is being made." Press **Watch it being made** to open its page.
+3. Press **Next: Make your first short**. In **Topic**, type what the short is about, in a few words or a question (up to 200 characters). For example: `Why the sea glows at night`. A specific topic gives a sharper short than a broad one.
+4. Press **Make a 60-second short** in the bar at the bottom of the window. The status line says **Starting your short…**.
+5. Slopify creates the project and starts it. The step now says "Your short is being made." Press **Watch it being made** in the bar to open its page.
 
 Pressing the button twice, or retrying after a dropped connection, opens the same project instead of starting a second one.
 
@@ -53,7 +53,7 @@ Pressing the button twice, or retrying after a dropped connection, opens the sam
 - **A saved voice.** The style's suggested OpenAI voice is added to Settings → **Voices** (for General: **Starter narrator**), unless you already have one with that voice. When the computer's own voice narrates, it is saved there too, named `<voice> (computer voice)`, so Play offers it later.
 - **Settings.** Captions at the bottom, a slow zoom or pan on each image, half a second of silence at each end, and the volume levelled as in your Settings.
 
-The pack's Play template is not added this way. To get it, press **Add to library** on the pack's row in step 2, or use Library → **Templates** → **Add pack**. **Make the full video on this topic** (below) also adds it.
+The pack's template is not added this way. To get it, use Library → **Templates** → **Add pack**. **Make the full video on this topic** (below) also adds it.
 
 ## Watch it being made
 
@@ -84,14 +84,14 @@ The file is also in the project's folder under your Projects folder (see [Where 
 
 ## If it refuses to start
 
-The message names what is missing and where to fix it:
+The status line says "The short didn't start." and the lines above the topic say what is missing, each with the button that fixes it. They are the same lines as step 1:
 
-| Message starts with | Fix |
+| Line says | Fix |
 | --- | --- |
-| No text model is ready. | Install Claude Code, Codex or Antigravity CLI and sign in, or add an OpenRouter key in Settings → Providers. |
-| No image model is ready. | Install Codex CLI and sign in, or add an OpenAI, Google, fal.ai or Replicate key in Settings → Providers. |
-| No voice is ready to narrate the short | Install `espeak-ng` (Linux) so the computer's voice can narrate, or add an OpenAI, ElevenLabs, Cartesia or Inworld key in Settings → Providers. |
-| Your voice provider has no saved voice yet. | Add a voice in Settings → Voices, then try again. |
+| Nothing can write the script yet. | Sign in to Claude Code, Codex or Antigravity CLI, or press **Add a key for writing** (OpenRouter). |
+| Nothing can make the images yet. | Press **Add an image key** (OpenAI, Google, fal.ai or Replicate), or sign in to Codex CLI. |
+| Nothing can read the script aloud yet. | Press **Add a voice key** (OpenAI works at once), or on Linux install `espeak-ng` and press **Check again**. |
+| *Voice service* has a key but no voice saved yet. | Press **Save a voice** (Settings → Voices), or add an OpenAI key. |
 | Slopify can't list the models on this machine right now. | Restart Slopify and try again. |
 
 If the run fails later, the project page and Home's **Needs you** say which step failed and offer the fix. See [Recovery and Retries](Recovery-and-Retries).

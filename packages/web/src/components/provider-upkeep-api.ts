@@ -93,7 +93,3 @@ export async function switchAllRetired(api: Api): Promise<{
 export async function readFirstRun(api: Api): Promise<FirstRunStatus> {
   return read<FirstRunStatus>(await api.fetch(`${api.origin}/api/providers/first-run`));
 }
-export async function dismissWelcome(api: Api): Promise<void> {
-  const response = await api.fetch(`${api.origin}/api/providers/first-run/dismiss`, post);
-  if (!response.ok) await read<unknown>(response);
-}

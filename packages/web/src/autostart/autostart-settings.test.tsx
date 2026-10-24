@@ -97,7 +97,7 @@ it("offers it once on the first-run screen, and No thanks ends the offer", async
   await waitFor(() => expect(screen.queryByRole("button", { name: "No thanks" })).toBeNull());
 });
 
-it("shows Docker's start-at-login status on the first-run screen, with nothing to switch", async () => {
+it("asks nothing on the first-run screen in Docker, where there is nothing to switch", async () => {
   renderApp(
     <AutostartOffer />,
     testDeps({
@@ -115,18 +115,45 @@ it("shows Docker's start-at-login status on the first-run screen, with nothing t
       } satisfies AutostartView),
     }),
   );
-  expect(await screen.findByText("Starts with Docker: no")).not.toBeNull();
-  expect(
-    screen.getByText(/Start Docker Desktop when you sign in to your computer/u),
-  ).not.toBeNull();
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  expect(screen.queryByText(/Start Slopify when you log in/u)).toBeNull();
   expect(screen.queryByRole("button", { name: "Start when I log in" })).toBeNull();
+});
+
+it("asks in one line on the first-run screen, with nothing in lime", async () => {
+  renderApp(
+    <AutostartOffer />,
+    testDeps({ "GET /api/settings/autostart": jsonAnswer(native(false, true)) }),
+  );
+  const yes = await screen.findByRole("button", { name: "Start when I log in" });
+  expect(screen.getByRole("region", { name: "Start Slopify when you log in?" })).not.toBeNull();
+  expect(yes.className).not.toContain("sl-btn--primary");
+  expect(screen.getByRole("button", { name: "No thanks" }).className).not.toContain(
+    "sl-btn--primary",
+  );
 });
 
 describe("the reminder for someone who updated", () => {
   const settled = {
     "GET /api/telemetry/notice": jsonAnswer({ seen: true, appVersion: "3.0.1" }),
-    "GET /api/onboarding": jsonAnswer({ show: false }),
+    "GET /api/onboarding": jsonAnswer({ show: false, settle: false }),
   };
+
+  it("starts on No thanks, since the other answer changes the computer", async () => {
+    renderRouted(
+      <AutostartReminder />,
+      testDeps({ ...settled, "GET /api/settings/autostart": jsonAnswer(native(false, true)) }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Start Slopify when you log in?" });
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(dialog).getByRole("button", { name: "No thanks" }),
+      ),
+    );
+    expect(
+      within(dialog).getByRole("button", { name: "Start when I log in" }).className,
+    ).not.toContain("sl-btn--primary");
+  });
 
   it("asks once, and Start when I log in turns it on", async () => {
     let sent: unknown;
@@ -170,7 +197,38 @@ describe("the reminder for someone who updated", () => {
       <AutostartReminder />,
       testDeps({
         ...settled,
-        "GET /api/onboarding": jsonAnswer({ show: true }),
+        "GET /api/onboarding": jsonAnswer({ show: true, settle: false }),
+        "GET /api/settings/autostart": jsonAnswer(native(false, true)),
+      }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("asks the server afresh once due, so a question leaving the welcome answered never opens", async () => {
+    let reads = 0;
+    renderRouted(
+      <AutostartReminder />,
+      testDeps({
+        ...settled,
+        // The page read the offer on the welcome; Skip has answered it since.
+        "GET /api/settings/autostart": (request) => {
+          reads += 1;
+          return jsonAnswer(native(false, reads === 1))(request);
+        },
+      }),
+    );
+    await waitFor(() => expect(reads).toBe(2));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("stays away while a first project made elsewhere is being settled, which answers it", async () => {
+    renderRouted(
+      <AutostartReminder />,
+      testDeps({
+        ...settled,
+        "GET /api/onboarding": jsonAnswer({ show: false, settle: true }),
         "GET /api/settings/autostart": jsonAnswer(native(false, true)),
       }),
     );

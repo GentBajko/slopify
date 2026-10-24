@@ -117,17 +117,17 @@ Captions are timed against the narration by a speech model that runs on your com
 
 ## Anonymous usage stats
 
-The first time you open Slopify it shows **Anonymous usage stats**, a notice listing exactly what is counted, with one button, **Got it**. These counts feed the live totals on slopify.stream.
+The first time you open Slopify, a line on the bottom edge of the window says: "Slopify adds what it makes (videos, images, words) to the public totals on its website, slopify.stream, anonymously. Nothing you type leaves this computer." **What's counted** opens the full list in place, and **OK** puts the line away. Nothing is counted before you press **OK**, and the page above it works as usual meanwhile.
 
-| Tracked | Never tracked |
+| Counted | Never counted |
 | --- | --- |
-| Tokens in and out per stage, with provider and model | API keys |
-| Audio seconds, images, thumbnails, videos rendered | Prompt bodies and keyword values |
-| PDF documents, YouTube descriptions and shorts made | Titles, article or research text |
-| Projects created, and that this machine installed Slopify | Files and file names |
-| The time each of those happened | OS, locale, hardware |
+| How many videos, shorts, images, thumbnails, PDFs and YouTube descriptions were made | Your API keys |
+| How much text each AI read and wrote, with the AI service and model, and for which part of the video | What you type: prompts, topics, keywords and titles |
+| How many seconds of narration were made, and whether for the main part, the intro or the outro | The scripts and research Slopify writes |
+| How many projects were started | Your files and their names |
+| That Slopify was installed | Your system, language or hardware |
 
-Each report carries a random id of its own, a random id for this machine and the Slopify version. There is no setting to turn it off. Settings → **Usage** shows the same counters for your machine only.
+Each count goes out with the Slopify version, the time, a random number of its own and a random number for this computer: never your name, your files or where you are. There is no setting to turn it off. Settings → **Usage** shows the same counters for your computer only.
 
 ## If it doesn't start
 

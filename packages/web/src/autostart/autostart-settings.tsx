@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ReactElement } from "react";
+import { type ReactElement, useId } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
-import { helpScope } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { Switch } from "@/components/kit/switch";
 import {
@@ -43,9 +42,8 @@ export function AutostartSettings(): ReactElement {
   const { view, turn } = useAutostart();
   const data = view.data;
   return (
-    // The heading's info button explains the switch below it.
-    <div {...helpScope}>
-      <SectionHead title={title} info="settings.autostart" />
+    <div>
+      <SectionHead title="Start at login" />
       {view.error === null ? null : (
         <p role="alert" className="m-0 mb-3 text-body text-danger">
           Starting at login couldn't be checked: {view.error.message}
@@ -66,6 +64,7 @@ export function AutostartSettings(): ReactElement {
             checked={data.enabled === true}
             disabled={!data.available || turn.isPending}
             describedBy="autostart-summary"
+            help="Slopify starts in the background when you log in, without opening a browser tab, so your bookmark always opens it."
             onChange={(next) => turn.mutate(next)}
           />
           <p id="autostart-summary" className="m-0 text-small text-ink-2">
@@ -106,53 +105,41 @@ export function DockerStatus({ view }: { readonly view: AutostartView }): ReactE
   );
 }
 
-// The first-run screen asks once. Either answer, here, in Settings or in the terminal, ends it.
+// The first-run screen asks once, in one line under the topic, while the question is open.
+// Either answer, here, in Settings or in the terminal, ends it; leaving the first-run screen
+// answers it as No. In Docker there is nothing to switch, so it asks nothing.
 export function AutostartOffer(): ReactElement | null {
   const { view, turn, decline } = useAutostart();
+  const headingId = useId();
   if (turn.isSuccess && view.data?.enabled === true)
     return (
-      <p role="status" className="m-0 text-small text-ink-2">
+      <p role="status" className="m-0 mb-4 text-small text-ink-2">
         Slopify now starts when you log in. Change it any time in Settings → General.
       </p>
     );
-  // Docker has nothing to switch here, but the person should know whether Slopify will be
-  // there after a restart, and where Docker's own setting is.
-  if (view.data?.kind === "docker")
-    return (
-      <>
-        <SectionHead title={title} info="settings.autostart" />
-        <div className="mb-6">
-          <DockerStatus view={view.data} />
-        </div>
-      </>
-    );
-  if (view.data?.offer !== true) return null;
+  if (view.data?.kind !== "native" || !view.data.offer) return null;
   const error = turn.error ?? decline.error;
-  // A section of its own, separated by space: never a box inside the page's surface.
+  const busy = turn.isPending || decline.isPending;
   return (
-    <section>
-      <SectionHead title={title} info="settings.autostart" />
-      <p className="m-0 mb-3 text-small text-ink-2">
-        Have Slopify ready whenever you open your bookmark, without starting it from a terminal.
-      </p>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          variant="primary"
-          disabled={turn.isPending || decline.isPending}
-          onClick={() => turn.mutate(true)}
-        >
-          Start when I log in
-        </Button>
-        <Button
-          variant="quiet"
-          disabled={turn.isPending || decline.isPending}
-          onClick={() => decline.mutate()}
-        >
-          No thanks
-        </Button>
+    <section aria-labelledby={headingId} className="mb-4">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <p className="m-0 min-w-[16rem] flex-1">
+          <span id={headingId} className="font-semibold">
+            Start Slopify when you log in?
+          </span>{" "}
+          <span className="text-small text-ink-2">Then your bookmark always opens it.</span>
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button size="small" disabled={busy} onClick={() => turn.mutate(true)}>
+            Start when I log in
+          </Button>
+          <Button size="small" variant="quiet" disabled={busy} onClick={() => decline.mutate()}>
+            No thanks
+          </Button>
+        </div>
       </div>
       {error === null ? null : (
-        <p role="alert" className="m-0 mt-3 text-small text-danger">
+        <p role="alert" className="m-0 mt-2 text-small text-danger">
           {error.message}
         </p>
       )}

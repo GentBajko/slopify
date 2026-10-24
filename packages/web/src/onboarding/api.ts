@@ -1,12 +1,18 @@
 import type { NarrationPeaks } from "@app/slices/narration/peaks-model.js";
-import type { FirstRunView, SampleProjects } from "@app/slices/onboarding/model.js";
+import {
+  type FirstRunView,
+  type SampleProjects,
+  type ShortGap,
+  shortGapSchema,
+} from "@app/slices/onboarding/model.js";
+import { z } from "zod";
 import type { Api } from "@/api";
-import { read } from "@/http";
+import { errorOf, problemOf, read } from "@/http";
 
 // The first five minutes' endpoints (`edge/http/onboarding.ts`). Every refusal is the
 // server's own sentence, which names the screen that fixes it.
 
-export type { FirstRunView, SampleProjects };
+export type { FirstRunView, SampleProjects, ShortGap };
 
 export const onboardingKey = ["onboarding"] as const;
 export const sampleKey = ["onboarding", "sample"] as const;
@@ -25,6 +31,13 @@ export async function readFirstRun(api: Api): Promise<FirstRunView> {
   return read<FirstRunView>(await api.fetch(`${api.origin}/api/onboarding`));
 }
 
+// The checklist's Check again: the same view, after a fresh look for a speech program.
+export async function checkFirstRun(api: Api): Promise<FirstRunView> {
+  return read<FirstRunView>(await post(api, "/check"));
+}
+
+// Skip, Done, or a real project made elsewhere. It also answers "Start Slopify when I log in"
+// as No, so the question is never put to a fresh install in a dialog over Home.
 export async function dismissFirstRun(api: Api): Promise<void> {
   await read<unknown>(await post(api, "/dismiss"));
 }
@@ -39,11 +52,28 @@ export async function installPack(api: Api, packId: string): Promise<InstalledPa
   return read<InstalledPack>(await post(api, `/packs/${encodeURIComponent(packId)}`));
 }
 
+// A short started, or refused for what this computer lacks: each gap with what fixes it, as
+// the first-run checklist says it. Any other failure throws its sentence.
+export type ShortResult =
+  | { readonly ok: true; readonly projectId: string }
+  | { readonly ok: false; readonly gaps: readonly ShortGap[] };
+
 export async function makeShort(
   api: Api,
   input: { readonly topic: string; readonly packId?: string; readonly requestId: string },
-): Promise<{ readonly projectId: string }> {
-  return read<{ projectId: string }>(await post(api, "/short", input));
+): Promise<ShortResult> {
+  const response = await post(api, "/short", input);
+  if (response.ok) {
+    const { projectId } = (await response.json()) as { projectId: string };
+    return { ok: true, projectId };
+  }
+  const problem = await problemOf(response);
+  const gaps = z
+    .array(shortGapSchema)
+    .safeParse((problem as { readonly gaps?: unknown } | undefined)?.gaps);
+  if (response.status === 409 && gaps.success && gaps.data.length > 0)
+    return { ok: false, gaps: gaps.data };
+  throw errorOf(response, problem);
 }
 
 // A finished short's "Make the full video on this topic": a Play draft for the long video.

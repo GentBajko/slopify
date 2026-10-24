@@ -5,7 +5,9 @@ import { z } from "zod";
 import {
   defaultSpeechVoice,
   detectSpeechCached,
+  forgetDetectedSpeech,
   primaryLanguage,
+  speechInstall,
 } from "../../kernel/ports/system-speech.js";
 import { loudnessOfDefault } from "../../slices/loudness/model.js";
 import { firstRunView } from "../../slices/onboarding/first-run.js";
@@ -36,9 +38,10 @@ import {
 import { systemVoiceProvider } from "../../slices/settings/model.js";
 import { readSettings } from "../../slices/settings/playback.js";
 import { providerStatuses } from "../../slices/settings/readiness.js";
-import { listVoices } from "../../slices/settings/repo.js";
+import { listVoices, writeSetting } from "../../slices/settings/repo.js";
 import { addVoice } from "../../slices/settings/voices.js";
 import { projectTitle } from "../../slices/storage/repo.js";
+import { autostartAnsweredKey } from "../autostart/model.js";
 import type { AppDeps } from "./app.js";
 import { onInvalid, problem } from "./problem.js";
 import { createProject } from "./project-create.js";
@@ -55,7 +58,16 @@ export function onboardingRoutes(deps: AppDeps) {
       hostCliStatus: deps.hostCliStatus,
       host: deps.speechHost,
     });
-  const speech = () => detectSpeechCached(deps.probe, deps.speechHost ?? process);
+  const host = deps.speechHost ?? process;
+  const speech = () => detectSpeechCached(deps.probe, host);
+  const view = async () => firstRunView(deps.db, await statuses(), speechInstall(host));
+  // Done with the first-run screen (Skip, Done, a first short, or a project made elsewhere):
+  // it also answers "Start Slopify when I log in" as No, so a fresh install is never asked it
+  // in a dialog over Home. The screen's own row and Settings → General still turn it on.
+  const doneWithFirstRun = () => {
+    dismissFirstRun(deps.db, deps.clock.now().toISOString());
+    writeSetting(deps.db, autostartAnsweredKey, "1");
+  };
   // The best speech program found and its English voice, for a short made without a voice key.
   const systemVoicePick = async (): Promise<SystemVoicePick | undefined> => {
     const engine = (await speech()).engines[0];
@@ -78,10 +90,16 @@ export function onboardingRoutes(deps: AppDeps) {
   return new Hono()
     .get("/", async (c) => {
       c.header("Cache-Control", "no-store");
-      return c.json(firstRunView(deps.db, await statuses()));
+      return c.json(await view());
+    })
+    .post("/check", async (c) => {
+      // The checklist's Check again: looks for a speech program afresh instead of answering
+      // from the last minute's look, so a program installed a moment ago is found.
+      forgetDetectedSpeech(deps.probe);
+      return c.json(await view());
     })
     .post("/dismiss", (c) => {
-      dismissFirstRun(deps.db, deps.clock.now().toISOString());
+      doneWithFirstRun();
       return c.json({ dismissed: true });
     })
     .post("/packs/:id", zValidator("param", packParam, onInvalid), (c) => {
@@ -119,6 +137,7 @@ export function onboardingRoutes(deps: AppDeps) {
         modelsFor,
         suggested: pack.voice,
         systemVoice: await systemVoicePick(),
+        install: speechInstall(host),
       });
       if (!plan.ok)
         return problem(c, {
@@ -175,7 +194,7 @@ export function onboardingRoutes(deps: AppDeps) {
         });
       recordShortRequest(deps.db, input.requestId, created.project.id);
       // A real project now exists, so the first-run screen is done with.
-      dismissFirstRun(deps.db, deps.clock.now().toISOString());
+      doneWithFirstRun();
       return c.json({ projectId: created.project.id, replayed: false }, 201);
     })
     .post("/full-video", zValidator("json", fullVideoInputSchema, onInvalid), (c) => {

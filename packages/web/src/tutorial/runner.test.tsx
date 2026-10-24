@@ -55,9 +55,9 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
         ),
       );
     });
-    await screen.findByRole("dialog", { name: "Anonymous usage stats" });
+    const notice = await screen.findByRole("region", { name: "Usage stats" });
     expect(screen.queryByRole("region", { name: "Interactive getting started guide" })).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Got it" }));
+    await user.click(within(notice).getByRole("button", { name: "OK" }));
     await at("text-key");
     expect(router.state.location.pathname).toBe("/settings");
     expect(nextHeld()).toBe(true);

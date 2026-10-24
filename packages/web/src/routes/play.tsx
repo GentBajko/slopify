@@ -12,7 +12,7 @@ import { useCommand } from "@/components/kit/command-palette";
 import { Drawer } from "@/components/kit/drawer";
 import { Field, Input } from "@/components/kit/field";
 import { PageHeader, Workspace } from "@/components/kit/layout";
-import { Welcome } from "@/components/welcome";
+import { useFreshProviderDefaults } from "@/components/welcome";
 import { PlayLanguage } from "@/language/play-language";
 import { usePlayDraft } from "@/lib/form-drafts";
 import { shortcuts } from "@/lib/shortcuts";
@@ -131,6 +131,8 @@ export function PlayForm({
   const { document } = session;
   const kind = outputKindOf(form);
   const sidebarChannel = useCurrentChannel().channelId;
+  // The tools the first launch found fill a fresh draft's writer and image service.
+  useFreshProviderDefaults(session.adoptDefaults);
   const { adoptChannel } = session;
   // A fresh draft starts in the channel the sidebar shows, not always the default one.
   // biome-ignore lint/correctness/useExhaustiveDependencies: asked again for each new draft.
@@ -617,7 +619,6 @@ export function PlayForm({
         meta={form.title.trim() === "" ? "Untitled draft" : form.title}
         actions={<DraftList />}
       />
-      <Welcome onDefaults={session.adoptDefaults} />
       <Workspace
         className="sl-workspace--play"
         aside={

@@ -1,65 +1,56 @@
 # First Launch and Welcome
 
-The first time you open Slopify it walks you through three steps: what your computer already has, a style, and your first 60-second short. The short is being made by the time you finish, and three finished sample projects are there to explore while you wait, without spending anything.
+The first time you open Slopify it walks you through three steps: what a short needs and what your computer already has for it, a style, and your first 60-second short. The short is being made by the time you finish, and three finished sample projects are there to explore, without spending anything.
 
-**Where to find it:** it opens by itself on a fresh install. Its address is `http://127.0.0.1:6969/welcome`.
+**Where to find it:** it opens by itself on a fresh install. Its address is `http://127.0.0.1:6969/welcome`; `?step=style` or `?step=make` opens a later step.
 
 ## What happens the first time
 
-1. **Anonymous usage stats.** A notice lists exactly what is counted and what never is. Press **Got it** to continue. It shows once per machine. See [Install](Install#anonymous-usage-stats).
-2. **Welcome to Slopify.** Home sends you to the first-run screen once. It has three steps, shown as tabs: **1 · What you have**, **2 · Pick a style** and **3 · Make your first short**. **Next** and **Back** at the bottom move between them, and you can click a tab directly.
-3. **Start at login.** The last step offers **Start when I log in** once, unless you already answered in the terminal.
+1. **Usage stats.** A line on the bottom edge of the window says that Slopify adds what it makes (videos, images, words) to the public totals on its website, slopify.stream, anonymously, and that nothing you type leaves your computer. **What's counted** opens the full list in place; **OK** puts the line away. Nothing is counted before you press **OK**. The page above it works as usual. See [Install](Install#anonymous-usage-stats).
+2. **Welcome to Slopify.** Home sends you to the first-run screen once. Each step has a title and "Step 1 of 3"; **Next** and **Back** in the bar at the bottom of the window move between them.
+3. **Start at login.** Step 3 asks once, in one line: **Start when I log in** or **No thanks**.
 
-The first-run screen stops appearing for good when you press **Skip** (it reads **Done** once your short is on its way), or when your first real project exists (anything except the samples), even if you delete that project later.
+The first-run screen stops appearing for good when you press **Skip** (it reads **Done** once your short is on its way), or when your first real project exists (anything except the samples), even if you delete that project later. Leaving it this way also answers the start-at-login question as no; you can still turn it on in Settings → **General**.
 
-## Step 1: What you have
+If you leave for Settings to add a key, the welcome keeps its step, your topic and your style for when you come back.
 
-### Found on this computer
+## Step 1: What a short needs
 
-Slopify looks for Claude Code, Codex and Antigravity CLI and shows one row for each:
+A 60-second short needs three things. Each has its own line, with its state and, when it is missing, the one button that fixes it:
 
-| Row says | Meaning |
-| --- | --- |
-| **Ready · 1.2.3 · writes** | Installed, a supported version and signed in, as far as Slopify can tell. It can write the text. |
-| **Ready · … · writes and draws** | Codex: it writes the text and draws the images. |
-| **Installed, not usable yet** or a reason | Found, but something is missing, such as a sign-in. The reason is shown. |
-| **Not found** | Not installed, or not on the `PATH` Slopify sees. |
+| Line | Ready when | Fix when it says **Not connected** |
+| --- | --- | --- |
+| **Script** | Claude Code, Codex or Antigravity CLI is installed and signed in, or an OpenRouter key is saved. It says who writes it, for example "Claude Code writes it with your sign-in." | **Add a key for writing** (opens Settings at OpenRouter), or sign in to a CLI. |
+| **Voice** | A voice key is saved, or your computer has a speech program. | **Add a voice key** (opens Settings at OpenAI: its key works at once with the voices Slopify sets up). On Linux, **Use your computer's free voice instead** shows the commands that install `espeak-ng`; run one, then press **Check again**. |
+| **Images** | Codex CLI is signed in, or an OpenAI, Google, fal.ai or Replicate key is saved. | **Add an image key** (opens Settings at OpenAI). |
 
-When at least one is ready, the step says which parts need no API key, for example "You can make a video now: no API keys are needed for the text, the images or the narration." When none is ready, it says "Nothing on this computer can write the script yet." with **Open Settings → Providers**: install and sign in to a CLI, or add an OpenRouter key.
+When the computer's own voice reads the script, the Voice line says so and offers **Add a voice key** for a better one. With an ElevenLabs, Cartesia or Inworld key but no voice saved, it says **No voice saved** with **Save a voice** (Settings → **Voices**).
 
-### Narration voice
+**Check again** looks again, including for a speech program installed a moment ago. **Other tools and services Slopify can use** opens Settings → **Providers**. Below the lines, the three finished samples are there to watch (see [Explore the samples](#explore-the-samples)).
 
-The second part says who will read the script aloud:
-
-| It says | Meaning |
-| --- | --- |
-| "Narration uses your *provider* voice key." | A voice key (OpenAI, ElevenLabs, Cartesia or Inworld) is saved, so that provider narrates. |
-| "Narration uses your computer's built-in voice (*engine*); add an ElevenLabs or OpenAI key later for a better one." | No voice key, so the computer's own speech narrates, for free. See [the system voice](Providers-and-Keys#the-system-voice). |
-| "No voice can narrate the short yet." | Neither a key nor a speech program was found. Press **Add a voice key**, or install a speech program (on Linux, `espeak-ng`) and press **Check again**. |
-
-**Add a voice key** opens Settings → **Providers**. See [AI CLIs](AI-CLIs) and [Providers and Keys](Providers-and-Keys).
+See [AI CLIs](AI-CLIs) and [Providers and Keys](Providers-and-Keys).
 
 ## Step 2: Pick a style
 
-Each row is a style for the short. **General** is a neutral explainer style; the others are the starter packs (Sleep lore, True crime, History, Science explainers). Press **Use this style** on a row; it then reads **Picked**.
+Each row is a style for the short. **General** is a neutral explainer style; the others are the starter packs (Sleep lore, True crime, History, Science explainers). Press a row to pick it; the picked row reads **Picked**.
 
-Making the short with a pack adds that pack's script and scene prompts to your Library and its suggested voice to Settings → **Voices**. **Add to library** on a pack's row also adds its Play template, for later long videos; it then reads **In your library**. See [Starter packs](#starter-packs).
+Making the short with a pack adds that pack's script and scene prompts to your Library and its suggested voice to Settings → **Voices**. See [Starter packs](#starter-packs).
 
 ## Step 3: Make a 60-second short
 
 A topic in, a captioned vertical short out, usually in about five minutes with the command-line tools. It has its own page: [Your First Short](Your-First-Short).
 
-The step repeats the style and the voice line from step 1. If no voice can narrate yet, it shows the same **Add a voice key** and **Check again** buttons.
-
 | Field | What it does | Limits |
 | --- | --- | --- |
-| **Topic** | What the short is about, in a few words or a question. A specific topic gives a sharper short than a broad one. | Up to 200 characters |
+| **Topic** | What the short is about, in a few words or a question. A specific topic gives a sharper short than a broad one. The line under it says the style and who writes, reads and draws it. | Up to 200 characters |
 
-Press **Make a 60-second short**. The status line says **Starting your short…**, then the step says "Your short is being made." with **Watch it being made**, which opens the project's page and its live view. While it runs, the samples and the start-at-login offer are right below.
+If something is still missing, the step shows the same lines as step 1 above the topic, and **Make a 60-second short** is not lime until they are ready.
+
+Press **Make a 60-second short** in the bar at the bottom. With no topic it puts you in the field and says "Type a topic first." Otherwise the status line says **Starting your short…**, then the step says "Your short is being made." and the bar offers **Watch it being made**, which opens the project's page. The samples are listed below while it runs.
 
 ## Explore the samples
 
-Three finished projects come with Slopify, marked **Sample** in Projects. Step 3 of the first-run screen lists them under **While you wait: the samples**. They are read-only, so nothing you do on them reaches a paid provider.
+Three finished projects come with Slopify, marked **Sample** in Projects. Step 1 of the first-run screen lists them, and step 3 again while your short is being made. They are read-only, so nothing you do on them reaches a paid provider.
 
 | Sample | What it shows | Button |
 | --- | --- | --- |
@@ -92,7 +83,7 @@ A starter pack sets you up for one kind of channel. Each one adds, in one go:
 - a suggested OpenAI voice, saved under Settings → **Voices**;
 - a Play template that uses them, named `<pack> starter`, with its captions, motion and Look.
 
-Then you pick the template on Play, type a topic and start. See [Templates](Templates) and [Play Overview](Play-Overview).
+Then you pick the template in Create, type a topic and start. See [Templates](Templates) and [Play Overview](Play-Overview).
 
 | Pack | What it is for | Suggested voice |
 | --- | --- | --- |
@@ -101,7 +92,7 @@ Then you pick the template on Play, type a topic and start. See [Templates](Temp
 | **History** | Narrative history of people, places and events, told like a documentary. | OpenAI `fable` |
 | **Science explainers** | Clear, friendly explanations of how the world works, one idea at a time. | OpenAI `nova` |
 
-On the first-run screen, **Add to library** on a pack's row adds all of this; it then reads **In your library**. Making a short with a pack adds its prompts and voice only, not the template.
+Making a short with a pack on the first-run screen adds its prompts and voice only, not the template.
 
 - Adding a pack twice changes nothing.
 - It never replaces a prompt or template of yours with the same name: the pack's copy comes in as `<name> (2)`.
@@ -111,11 +102,11 @@ You can add packs later too, from Library → **Templates** → **Add pack**.
 
 ## Start when I log in
 
-Step 3 of the first-run screen asks once: **Start when I log in** or **No thanks**. Either answer, here, in Settings → **General** or in the terminal, ends the question. See [Start at Login](Start-at-Login).
+Step 3 of the first-run screen asks once, in one line: **Start when I log in** or **No thanks**. Either answer, here, in Settings → **General** or in the terminal, ends the question; so does leaving the first-run screen, as a no. See [Start at Login](Start-at-Login).
 
-## Set up a long video instead
+## Make a long video instead
 
-At the bottom of every step, **Set up a long video instead** takes you to Play, where you choose prompts, keywords and outputs yourself. See [Play Overview](Play-Overview).
+On steps 1 and 2, **Make a long video instead** in the bottom bar takes you to Create, where you choose prompts, keywords and outputs yourself. See [Play Overview](Play-Overview).
 
 ## The interactive tutorial
 
@@ -130,10 +121,6 @@ At the bottom of every step, **Set up a long video instead** takes you to Play, 
 Each step highlights the real control you will use and opens its screen for you. Your place is saved, so it survives a page reload. On the review-and-start step, **Skip generating** leaves the run unstarted and goes on to Home, Channels and the Calendar instead of ending the tutorial. Other steps have **Skip this step** (or **Skip without saving**).
 
 When Projects has no projects at all, it also shows **Make your first video** with **Start tutorial**.
-
-## The provider welcome in Settings
-
-Settings → **Providers** shows a short welcome on a fresh install that names the command-line tools it found and says a video can be made without an API key. Press **Got it** to hide it.
 
 ## Tips
 

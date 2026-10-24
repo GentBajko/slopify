@@ -16,6 +16,28 @@ export const sampleProjectsSchema = z.object({
 });
 export type SampleProjects = z.infer<typeof sampleProjectsSchema>;
 
+// What a 60-second short needs that nothing on this computer does yet, with what fixes it. The
+// first-run checklist and the refusal of "Make a 60-second short" say the same gaps.
+export const shortGapSchema = z.object({
+  need: z.enum(["text", "voice", "images"]),
+  // What is missing and what fixes it, in a sentence or two.
+  message: z.string(),
+  // A key for that part, or (the voice) a voice saved for the voice service that has a key.
+  fix: z.enum(["key", "saved-voice"]),
+  // The voice only: how to install the computer's own free voice from a terminal, where that
+  // can be done.
+  install: z.object({ text: z.string(), commands: z.array(z.string()) }).optional(),
+});
+export type ShortGap = z.infer<typeof shortGapSchema>;
+
+// Who does one part of a first short, by name ("Claude Code CLI", "OpenAI", "eSpeak NG"), and
+// how: with the person's own sign-in to a tool on this computer, a saved key, or (the voice)
+// the computer's own speech. Null while nothing can.
+const shortPartSchema = z.object({
+  by: z.string().nullable(),
+  how: z.enum(["sign-in", "key", "computer"]).nullable(),
+});
+
 export const firstRunViewSchema = z
   .object({
     show: z.boolean(),
@@ -23,33 +45,17 @@ export const firstRunViewSchema = z
     // with POST /dismiss, so deleting every project later does not bring the screen back.
     // Reading this view writes nothing.
     settle: z.boolean(),
-    // Who narrates a first short: a voice provider with a saved key, else the computer's own.
-    voice: z.object({
-      // The keyed voice provider that would be used, by name ("OpenAI"), or null.
-      keyed: z.string().nullable(),
-      system: z.object({
-        available: z.boolean(),
-        // The speech program found ("eSpeak NG", "macOS voices").
-        engine: z.string().nullable(),
-        // Why none can be used, with the fix.
-        issue: z.string().nullable(),
-      }),
+    // The three things a short needs (the script, a voice and the images), each with who would
+    // do it, and the gaps, as "Make a 60-second short" would refuse them.
+    needs: z.object({
+      text: shortPartSchema,
+      voice: shortPartSchema,
+      images: shortPartSchema,
+      gaps: z.array(shortGapSchema),
     }),
     // The Library of Alexandria's project, as before the demos; `samples` has all three.
     sampleProjectId: z.string().nullable(),
     samples: sampleProjectsSchema,
-    clis: z.array(
-      z.object({
-        id: z.enum(["claude-code", "codex", "gemini"]),
-        name: z.string(),
-        installed: z.boolean(),
-        ready: z.boolean(),
-        version: z.string().nullable(),
-        issue: z.string().nullable(),
-        // Codex draws the images too.
-        draws: z.boolean(),
-      }),
-    ),
     packs: z.array(
       z.object({
         id: z.string(),

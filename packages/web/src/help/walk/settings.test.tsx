@@ -343,20 +343,14 @@ describe("Home", () => {
 const firstRun: FirstRunView = {
   show: true,
   settle: false,
-  voice: { keyed: null, system: { available: true, engine: "eSpeak NG", issue: null } },
+  needs: {
+    text: { by: "Codex CLI", how: "sign-in" },
+    voice: { by: "eSpeak NG", how: "computer" },
+    images: { by: "Codex CLI", how: "sign-in" },
+    gaps: [],
+  },
   sampleProjectId: "sample-1",
   samples: { library: "sample-1", audiobook: null, podcast: null },
-  clis: [
-    {
-      id: "codex",
-      name: "Codex CLI",
-      installed: true,
-      ready: true,
-      version: "0.160.0",
-      issue: null,
-      draws: true,
-    },
-  ],
   packs: [
     {
       id: "history",
@@ -380,18 +374,18 @@ describe("Your files", () => {
 });
 
 describe("Welcome", () => {
-  it("explains the short's topic and style, the packs and starting at login", async () => {
+  it("explains the short's topic, with no info button anywhere on the first run", async () => {
     renderRouted(
-      <WelcomeRoute />,
+      <WelcomeRoute step="make" onStep={() => undefined} />,
       testDeps({
         "GET /api/onboarding": jsonAnswer(firstRun),
         "GET /api/settings/autostart": jsonAnswer(autostart),
       }),
     );
-    // Every step's panel is in the page, the ones not picked hidden.
-    await screen.findByRole("button", { name: "Use History", hidden: true });
-    await screen.findByRole("button", { name: "Start when I log in", hidden: true });
+    await screen.findByRole("button", { name: "Start when I log in" });
     expect(screen.getByLabelText("Topic")).not.toBeNull();
     expectExplained();
+    // A label that says what it does needs no info button, and the first run carries none.
+    expect(document.querySelector("[data-help-id]")).toBeNull();
   });
 });

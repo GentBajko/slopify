@@ -7,53 +7,76 @@ import { FirstRunNotice } from "./notice.js";
 
 afterEach(cleanup);
 
-const title = "Anonymous usage stats";
+const sentence =
+  "Slopify adds what it makes (videos, images, words) to the public totals on its website, slopify.stream, anonymously. Nothing you type leaves this computer.";
 
-// The notice's copy is a promise made before anything is collected, so it is pinned to
-// the code that does the collecting rather than to a reviewer's memory. Every key
-// `payloadSchema` allows, and every event type the catalogue has, is mapped to the words
-// the dialog says it in; adding a key without saying so fails here first.
+// The notice's list is a promise made before anything is counted, so it is pinned to the code
+// that does the counting rather than to a reviewer's memory. Every key `payloadSchema` allows,
+// and every kind of count the catalogue has, is mapped to the words the list says it in;
+// adding a key without saying so fails here first.
 const promisedPayload: Readonly<Record<string, string>> = {
-  appVersion: "this version is included in each report",
-  stage: "Tokens in and out per stage, with provider and model",
-  segment: "Audio seconds per segment",
-  provider: "Tokens in and out per stage, with provider and model",
-  model: "Tokens in and out per stage, with provider and model",
-  tokensIn: "Tokens in and out per stage, with provider and model",
-  tokensOut: "Tokens in and out per stage, with provider and model",
-  audioSeconds: "Audio seconds per segment",
-  images: "Images made",
-  thumbnails: "Thumbnails made",
-  descriptions: "YouTube descriptions written",
-  shorts: "Shorts made",
+  appVersion: "the Slopify version",
+  stage: "for which part of the video",
+  segment: "whether for the main part, the intro or the outro",
+  provider: "with the AI service and model",
+  model: "with the AI service and model",
+  tokensIn: "How much text each AI read and wrote",
+  tokensOut: "How much text each AI read and wrote",
+  audioSeconds: "How many seconds of narration were made",
+  images: "images",
+  thumbnails: "thumbnails",
+  descriptions: "YouTube descriptions",
+  shorts: "shorts",
 };
 
 const promisedTypes: Readonly<Record<string, string>> = {
-  install: "That this machine installed Slopify",
-  "project.created": "Projects created",
-  // Every stage that completes, of which the render is the one the counters name.
-  "stage.completed": "Videos rendered",
+  install: "That Slopify was installed",
+  "project.created": "How many projects were started",
+  // Every part that completes, of which the finished video is the one the totals name.
+  "stage.completed": "How many videos",
 };
 
 // The envelope `slices/telemetry/flush.ts` builds around a payload.
-const fresh = jsonAnswer({ seen: false, appVersion: "9.9.9" });
-
 const promisedEnvelope = [
-  "a random ID of its own",
-  "this machine's random ID",
-  "The time each of those happened",
+  "the time",
+  "a random number of its own",
+  "a random number for this computer",
 ];
 
+// Words of the code, which a person reading the notice never needs.
+const codeWords = /\b(tokens?|stages?|segments?|events?|ID|IDs)\b/;
+
+const fresh = jsonAnswer({ seen: false, appVersion: "9.9.9" });
+
+async function openList(): Promise<HTMLElement> {
+  await userEvent.click(await screen.findByRole("button", { name: "What's counted" }));
+  return screen.getByRole("region", { name: "Usage stats" });
+}
+
 describe("the first-run notice", () => {
-  it("is shown when this machine has not seen it", async () => {
+  it("is one sentence and OK on the window's edge, not a dialog over the page", async () => {
     renderApp(<FirstRunNotice />, testDeps({ "GET /api/telemetry/notice": fresh }));
 
-    expect(await screen.findByText(title)).not.toBeNull();
-    // The disclosure itself: what is counted and what never is.
-    expect(screen.getByText("Tracked")).not.toBeNull();
-    expect(screen.getByText("Never tracked")).not.toBeNull();
-    expect(screen.getByText("API keys")).not.toBeNull();
-    expect(screen.getByText("Videos rendered")).not.toBeNull();
+    const notice = await screen.findByRole("region", { name: "Usage stats" });
+    expect(screen.getByText(sentence)).not.toBeNull();
+    expect(screen.getByRole("button", { name: "OK" })).not.toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    // The list waits behind its link.
+    expect(screen.queryByText("Never counted")).toBeNull();
+    expect(notice.textContent).not.toMatch(codeWords);
+  });
+
+  it("opens the full list in place, in plain words", async () => {
+    renderApp(<FirstRunNotice />, testDeps({ "GET /api/telemetry/notice": fresh }));
+
+    const notice = await openList();
+    expect(screen.getByRole("list", { name: "Counted" })).not.toBeNull();
+    expect(screen.getByRole("list", { name: "Never counted" })).not.toBeNull();
+    expect(screen.getByText("Your API keys")).not.toBeNull();
+    expect(notice.textContent).not.toMatch(codeWords);
+    expect(
+      screen.getByRole("button", { name: "Hide the list" }).getAttribute("aria-expanded"),
+    ).toBe("true");
   });
 
   it("is never shown again once the machine has seen it", async () => {
@@ -63,16 +86,16 @@ describe("the first-run notice", () => {
     );
 
     await waitFor(() => {
-      expect(screen.queryByText(title)).toBeNull();
+      expect(screen.queryByText(sentence)).toBeNull();
     });
   });
 
   it("shows nothing while the answer is still coming", () => {
     renderApp(<FirstRunNotice />, testDeps({}));
-    expect(screen.queryByText(title)).toBeNull();
+    expect(screen.queryByText(sentence)).toBeNull();
   });
 
-  it("creates the machine id on Got it and does not come back", async () => {
+  it("starts counting only on OK, and does not come back", async () => {
     const dismissed = vi.fn(jsonAnswer({ seen: true }));
     renderApp(
       <FirstRunNotice />,
@@ -82,55 +105,56 @@ describe("the first-run notice", () => {
       }),
     );
 
-    await userEvent.click(await screen.findByRole("button", { name: "Got it" }));
+    await screen.findByText(sentence);
+    expect(dismissed).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "OK" }));
 
     await waitFor(() => {
-      expect(screen.queryByText(title)).toBeNull();
+      expect(screen.queryByText(sentence)).toBeNull();
     });
     expect(dismissed).toHaveBeenCalledTimes(1);
   });
 
-  it("cannot be escaped: it must be acknowledged", async () => {
+  it("stays until OK: Esc does not answer it", async () => {
     renderApp(<FirstRunNotice />, testDeps({ "GET /api/telemetry/notice": fresh }));
 
-    await screen.findByText(title);
+    await screen.findByText(sentence);
     await userEvent.keyboard("{Escape}");
 
-    expect(screen.getByText(title)).not.toBeNull();
+    expect(screen.getByText(sentence)).not.toBeNull();
   });
 
   it("names every payload key the code is allowed to send", async () => {
     renderApp(<FirstRunNotice />, testDeps({ "GET /api/telemetry/notice": fresh }));
-    const dialog = await screen.findByRole("dialog");
+    const notice = await openList();
 
     // If this fails, a key was added to the payload and the promise was not updated.
     expect(Object.keys(payloadSchema.shape).toSorted()).toEqual(
       Object.keys(promisedPayload).toSorted(),
     );
     for (const words of new Set(Object.values(promisedPayload))) {
-      expect(dialog.textContent).toContain(words);
+      expect(notice.textContent).toContain(words);
     }
   });
 
-  it("names every event type the code is allowed to send, and the envelope around it", async () => {
+  it("names every kind of count the code is allowed to send, and what goes with each", async () => {
     renderApp(<FirstRunNotice />, testDeps({ "GET /api/telemetry/notice": fresh }));
-    const dialog = await screen.findByRole("dialog");
+    const notice = await openList();
 
     expect([...telemetryEventTypes].toSorted()).toEqual(Object.keys(promisedTypes).toSorted());
     for (const words of Object.values(promisedTypes)) {
-      expect(dialog.textContent).toContain(words);
+      expect(notice.textContent).toContain(words);
     }
     for (const words of promisedEnvelope) {
-      expect(dialog.textContent).toContain(words);
+      expect(notice.textContent).toContain(words);
     }
   });
 
-  it("names the version that goes out with every report", async () => {
+  it("names the version that goes out with every count", async () => {
     renderApp(<FirstRunNotice />, testDeps({ "GET /api/telemetry/notice": fresh }));
+    const notice = await openList();
 
-    expect(
-      await screen.findByText("Slopify 9.9.9 · this version is included in each report"),
-    ).not.toBeNull();
+    expect(notice.textContent).toContain("the Slopify version (9.9.9)");
   });
 
   it("promises nothing about a version it has not been told", async () => {
@@ -138,12 +162,13 @@ describe("the first-run notice", () => {
       <FirstRunNotice />,
       testDeps({ "GET /api/telemetry/notice": jsonAnswer({ seen: false }) }),
     );
+    const notice = await openList();
 
-    await screen.findByText(title);
-    expect(screen.queryByText(/included in each report/)).toBeNull();
+    expect(notice.textContent).toContain("the Slopify version,");
+    expect(notice.textContent).not.toMatch(/version \(/);
   });
 
-  it("stays open and names the problem when the dismissal fails", async () => {
+  it("stays and names the problem when OK fails", async () => {
     renderApp(
       <FirstRunNotice />,
       testDeps({
@@ -152,9 +177,9 @@ describe("the first-run notice", () => {
       }),
     );
 
-    await userEvent.click(await screen.findByRole("button", { name: "Got it" }));
+    await userEvent.click(await screen.findByRole("button", { name: "OK" }));
 
     expect(await screen.findByText("The data directory is read-only.")).not.toBeNull();
-    expect(screen.getByText(title)).not.toBeNull();
+    expect(screen.getByText(sentence)).not.toBeNull();
   });
 });

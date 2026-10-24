@@ -3,11 +3,10 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { freshDraftDocument, withProviderDefaults } from "@/play/draft-state";
-import { emptyAnswer, jsonAnswer, renderApp, testDeps } from "@/test-app";
+import { jsonAnswer, renderApp, testDeps } from "@/test-app";
 import { CatalogueSettings } from "./catalogue.js";
 import { ProviderHealthCheck } from "./provider-health.js";
 import { ProviderKeys } from "./provider-keys.js";
-import { Welcome } from "./welcome.js";
 
 afterEach(cleanup);
 
@@ -249,48 +248,7 @@ describe("retired models", () => {
   });
 });
 
-describe("first run", () => {
-  it("says no key is needed, hands Play the found providers, and goes away on Got it", async () => {
-    let dismissed = false;
-    const seen: unknown[] = [];
-    renderApp(
-      <Welcome onDefaults={(defaults) => seen.push(defaults)} />,
-      testDeps({
-        "GET /api/providers/first-run": (request) =>
-          jsonAnswer(
-            dismissed
-              ? { firstRun: false, detected: [], defaults: {}, message: null, detail: null }
-              : {
-                  firstRun: true,
-                  detected: [
-                    {
-                      id: "claude-code",
-                      displayName: "Claude Code CLI",
-                      installed: true,
-                      usable: true,
-                      version: "2.1.0",
-                    },
-                  ],
-                  defaults: { llm: { provider: "claude-code", model: "sonnet" } },
-                  message: "You can make a video now, no API keys needed.",
-                  detail: "Slopify found Claude Code CLI and picked it on Play.",
-                },
-          )(request),
-        "POST /api/providers/first-run/dismiss": (request) => {
-          dismissed = true;
-          return emptyAnswer()(request);
-        },
-      }),
-    );
-    expect(await screen.findByText("You can make a video now, no API keys needed.")).not.toBeNull();
-    expect(screen.getByText("Found: Claude Code CLI 2.1.0")).not.toBeNull();
-    expect(seen).toEqual([{ llm: { provider: "claude-code", model: "sonnet" } }]);
-    await userEvent.click(screen.getByRole("button", { name: "Got it" }));
-    await waitFor(() => {
-      expect(screen.queryByText("You can make a video now, no API keys needed.")).toBeNull();
-    });
-  });
-
+describe("the first launch's provider defaults", () => {
   it("fills only a draft nobody picked providers in", () => {
     const defaults = { llm: { provider: "claude-code", model: "sonnet" } };
     expect(withProviderDefaults(freshDraftDocument, defaults).form.llm).toEqual(defaults.llm);
