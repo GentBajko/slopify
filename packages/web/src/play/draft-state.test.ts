@@ -5,6 +5,7 @@ import {
   normalizePlayForm,
   parseDraftDocument,
   serializeDraftDocument,
+  withProviderDefaults,
 } from "./draft-state";
 
 const id = "11111111-1111-4111-8111-111111111111";
@@ -176,3 +177,29 @@ it.each([undefined, false, true])(
     }
   },
 );
+
+describe("the services a new or template-made draft starts with", () => {
+  const defaults = {
+    llm: { provider: "claude-code", model: "sonnet" },
+    images: { provider: "codex-image", model: "gpt-image" },
+  };
+  it("fills each service nobody picked, and leaves a picked one alone", () => {
+    const writer = { ...freshDraftDocument.form, llm: { provider: "openrouter", model: "x" } };
+    const filled = withProviderDefaults({ ...freshDraftDocument, form: writer }, defaults);
+    expect(filled.form.llm).toEqual({ provider: "openrouter", model: "x" });
+    expect(filled.form.images).toEqual(defaults.images);
+    expect(withProviderDefaults(freshDraftDocument, defaults).form.llm).toEqual(defaults.llm);
+  });
+  it("hands back the same document when there is nothing to fill", () => {
+    const picked = {
+      ...freshDraftDocument,
+      form: {
+        ...freshDraftDocument.form,
+        llm: { provider: "openrouter", model: "x" },
+        images: { provider: "fal", model: "y" },
+      },
+    };
+    expect(withProviderDefaults(picked, defaults)).toBe(picked);
+    expect(withProviderDefaults(freshDraftDocument, {})).toBe(freshDraftDocument);
+  });
+});

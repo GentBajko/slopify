@@ -3,7 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { startedAt } from "@/lib/utils";
 import { jsonAnswer, renderApp, testDeps } from "@/test-app";
 import { PlayDraftProvider, type PlaySession, usePlaySession } from "./draft-context";
-import { DraftList } from "./draft-list";
+import { DraftList, draftName } from "./draft-list";
 import { draftView, playRoutes } from "./play-test-fixture";
 
 afterEach(() => {
@@ -176,4 +176,13 @@ it("clears a corrupt remembered identity after explicit list discard", async () 
     if (original) Object.defineProperty(window, "localStorage", original);
     else Object.defineProperty(window, "localStorage", { configurable: true, value: undefined });
   }
+});
+
+it("names a draft by its title once its keywords are filled, never by a keyword in braces", () => {
+  expect(draftName({ title: "{{Topic}}", values: {} })).toBe("Untitled");
+  expect(draftName({ title: "Lore: {{Topic}}", values: { Topic: "  " } })).toBe("Untitled");
+  expect(draftName({ title: "Lore: {{Topic}}", values: { Topic: "Cleopatra" } })).toBe(
+    "Lore: Cleopatra",
+  );
+  expect(draftName({ title: "", values: {} })).toBe("Untitled");
 });

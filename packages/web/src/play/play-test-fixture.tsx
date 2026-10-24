@@ -332,10 +332,12 @@ export const generatedRun: PlayDraftDocument = {
   },
 };
 
-// Mounts Play on a fresh draft, or on `start` when given, once the lists it picks from arrived.
+// Mounts Create on a fresh draft, or on `start` when given, once the lists it picks from
+// arrived (the article prompts, in the Article row a fresh draft opens on), or once `ready`.
 export async function mountPlay(
   overrides: Readonly<Record<string, Answer>> = {},
   start?: PlayDraftDocument,
+  ready: () => Promise<unknown> = () => screen.findByRole("option", { name: "Dossier" }),
 ): Promise<{
   readonly created: ReturnType<typeof vi.fn>;
   readonly requests: readonly Request[];
@@ -374,7 +376,7 @@ export async function mountPlay(
     },
   );
   trackSession(session);
-  await screen.findByRole("option", { name: "Dossier" });
+  await ready();
   if (start !== undefined)
     await act(async () => {
       session().edit(start);
