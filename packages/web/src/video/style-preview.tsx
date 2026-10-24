@@ -63,7 +63,7 @@ export function StylePreview({
   readonly settings: StylePreviewSettings;
   readonly label?: string;
   // False where the caller already names the preview (Create's dialog, under its own title):
-  // the preview then draws no heading of its own, only its line and Render again.
+  // the preview then draws no heading of its own, only its line and Make the preview again.
   readonly titled?: boolean;
   // What the picture in settings.image is, in words ("the establishing image").
   readonly drawnOn?: string | undefined;
@@ -136,7 +136,7 @@ export function StylePreview({
           message:
             error instanceof Error && error.message !== ""
               ? error.message
-              : "The style preview couldn't render. Press Render again.",
+              : "The style preview couldn't be made. Press Make the preview again.",
         });
       }
     },
@@ -174,12 +174,12 @@ export function StylePreview({
 
   const heading = shorts === undefined ? "Style preview" : "Shorts preview";
   const portrait = format === "9:16" || shorts !== undefined;
-  // What it is and what it costs, in the one line under the heading: nothing, it renders here.
+  // What it is and what it costs, in the one line under the heading: nothing, it is made here.
   const meta =
     shorts === undefined
-      ? "6 seconds of the sample, rendered free on this computer with your settings"
-      : "A few seconds of the sample as a short, rendered free on this computer with your settings";
-  const renderAgain = (
+      ? "6 seconds of the sample with your settings, made free on this computer"
+      : "A few seconds of the sample as a short with your settings, made free on this computer";
+  const makeAgain = (
     <Button
       variant="quiet"
       size="small"
@@ -192,19 +192,19 @@ export function StylePreview({
       }}
     >
       <RefreshCw aria-hidden="true" size={16} strokeWidth={1.75} />
-      Render again
+      Make the preview again
     </Button>
   );
   return (
     <section aria-label={heading} className="min-w-0 space-y-3">
       {titled ? (
         <SectionHead as="h3" title={heading} meta={meta}>
-          {renderAgain}
+          {makeAgain}
         </SectionHead>
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
           <p className="m-0 text-small text-ink-2">{meta}</p>
-          {renderAgain}
+          {makeAgain}
         </div>
       )}
       {shown === undefined ? null : (

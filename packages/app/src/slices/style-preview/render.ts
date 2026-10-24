@@ -235,16 +235,16 @@ function explained(log: Log, error: unknown): StylePreviewError {
   if (isMissingFont(error))
     return new StylePreviewError(
       "font-missing",
-      "The style preview couldn't render because the chosen caption font is no longer available; it may have been uninstalled or deleted. Choose another font under Subtitles, then press Render again.",
+      "The style preview couldn't render because the chosen caption font is no longer available; it may have been uninstalled or deleted. Choose another caption font, then press Make the preview again.",
     );
   if (message.startsWith("Slopify could not start ffmpeg") || /\bENOENT\b/.test(message))
     return new StylePreviewError(
       "ffmpeg-missing",
-      "The style preview couldn't render because ffmpeg wasn't found. Install ffmpeg, or use the Docker image, then press Render again.",
+      "The style preview couldn't render because ffmpeg wasn't found. Install ffmpeg, or use the Docker image, then press Make the preview again.",
     );
   log.write("error", "style-preview.render", { detail: message });
   return new StylePreviewError(
     "render-failed",
-    "The style preview couldn't render because ffmpeg stopped with an error. Press Render again; if it fails again, use Download diagnostics in Settings and report it.",
+    "The style preview couldn't render because ffmpeg stopped with an error. Press Make the preview again; if it fails again, use Download diagnostics in Settings and report it.",
   );
 }

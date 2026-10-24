@@ -122,7 +122,7 @@ it("refuses a request it can't read", async () => {
 it("says in words what failed and how to fix it", async () => {
   fail = new StylePreviewError(
     "ffmpeg-missing",
-    "The style preview couldn't render because ffmpeg wasn't found. Install ffmpeg, or use the Docker image, then press Render again.",
+    "The style preview couldn't render because ffmpeg wasn't found. Install ffmpeg, or use the Docker image, then press Make the preview again.",
   );
   const response = await post(app(), body);
   expect(response.status).toBe(503);

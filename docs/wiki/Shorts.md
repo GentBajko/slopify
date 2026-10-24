@@ -44,7 +44,7 @@ Write your own Shorts prompts and Image prompts in **Library → Prompts** ([Pro
 
 ## Shorts preview
 
-While **More shorts options** is open (on Play, or in Edit project → **Shorts**), **Shorts preview** ("A few seconds of the sample as a short, rendered free on this computer with your settings") renders a few seconds of the bundled sample project as a 9:16 short, through the same renderer real shorts use: the big word-by-word captions in your caption font, the title on screen when **Title on screen** is on (the sample's title, "The Library of Alexandria"), and your **Speed**. The line under it reads, for example, "Title on screen · 1.10×". It renders on your computer at no cost; **Render again** forces a fresh one.
+While **More shorts options** is open (on Play, or in Edit project → **Shorts**), **Shorts preview** ("A few seconds of the sample as a short with your settings, made free on this computer") renders a few seconds of the bundled sample project as a 9:16 short, through the same renderer real shorts use: the big word-by-word captions in your caption font, the title on screen when **Title on screen** is on (the sample's title, "The Library of Alexandria"), and your **Speed**. The line under it reads, for example, "Title on screen · 1.10×". It renders on your computer at no cost; **Make the preview again** forces a fresh one.
 
 ## What it costs
 

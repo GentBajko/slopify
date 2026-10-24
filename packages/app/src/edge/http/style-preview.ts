@@ -44,7 +44,7 @@ export function stylePreviewRoutes(deps: { readonly stylePreviews?: StylePreview
         return problem(c, {
           status: 404,
           detail:
-            "This style preview is no longer saved; Slopify keeps only the most recent ones. Press Render again to make it.",
+            "This style preview is no longer saved; Slopify keeps only the most recent ones. Press Make the preview again to make it.",
         });
       return fileResponse(c, saved.path, saved.bytes, {
         "content-type": "video/mp4",
@@ -58,6 +58,6 @@ function unavailable(c: Context): Response {
   return problem(c, {
     status: 503,
     detail:
-      "The style preview isn't available because this Slopify started without its video renderer. Restart Slopify, then press Render again.",
+      "The style preview isn't available because this Slopify started without its video renderer. Restart Slopify, then press Make the preview again.",
   });
 }

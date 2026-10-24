@@ -57,7 +57,7 @@ it("renders the preview with the settings and plays it", async () => {
   );
   expect(screen.getByRole("heading", { name: "Style preview" })).toBeTruthy();
   expect(
-    screen.getByText("6 seconds of the sample, rendered free on this computer with your settings"),
+    screen.getByText("6 seconds of the sample with your settings, made free on this computer"),
   ).toBeTruthy();
   expect(await screen.findByRole("status")).toHaveProperty("textContent", "Rendering the preview…");
   release();
@@ -70,7 +70,7 @@ it("renders the preview with the settings and plays it", async () => {
   });
   expect(await screen.findByText("Captions: System sans 52 · Lower middle")).toBeTruthy();
 
-  await userEvent.click(screen.getByRole("button", { name: "Render again" }));
+  await userEvent.click(screen.getByRole("button", { name: "Make the preview again" }));
   await waitFor(() => {
     expect(video.getAttribute("src")).toBe(`${testOrigin}/api/style-preview/${hash}.mp4?v=2`);
   });
@@ -84,14 +84,14 @@ it("says in words what failed and how to fix it", async () => {
     testDeps({
       "GET /api/fonts": fonts,
       "POST /api/style-preview": problemAnswer(
-        "The style preview couldn't render because ffmpeg wasn't found. Install ffmpeg, or use the Docker image, then press Render again.",
+        "The style preview couldn't render because ffmpeg wasn't found. Install ffmpeg, or use the Docker image, then press Make the preview again.",
         503,
       ),
     }),
   );
   const alert = await screen.findByRole("alert");
   expect(alert.textContent).toContain("ffmpeg wasn't found");
-  expect(alert.textContent).toContain("press Render again");
+  expect(alert.textContent).toContain("press Make the preview again");
   expect(screen.queryByLabelText("Style preview", { selector: "video" })).toBeNull();
 });
 

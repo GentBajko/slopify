@@ -65,7 +65,7 @@ export const stylePreviewRequestSchema = z.object({
       motionStyle: z.enum(motionStyles),
     })
     .optional(),
-  // Render again even when this exact preview is already saved.
+  // Make the preview again even when this exact preview is already saved.
   force: z.boolean().optional(),
 });
 export type StylePreviewRequest = z.infer<typeof stylePreviewRequestSchema>;

@@ -110,9 +110,9 @@ After the run, you can fix a misheard word or nudge a caption's timing on the pr
 
 ## Style preview
 
-The **Style preview** at the top of the right rail ("6 seconds of the sample, rendered free on this computer with your settings") is rendered on this computer by the real video renderer, with your captions, Look and motion. It plays six seconds of the bundled sample project's real narration over three of its pictures, two seconds each, so a transition and a chapter card both show, and the captions are timed to the narration's words, as in a real video. It plays in Slopify's own player, with sound.
+The **Style preview** at the top of the right rail ("6 seconds of the sample with your settings, made free on this computer") is rendered on this computer by the real video renderer, with your captions, Look and motion. It plays six seconds of the bundled sample project's real narration over three of its pictures, two seconds each, so a transition and a chapter card both show, and the captions are timed to the narration's words, as in a real video. It plays in Slopify's own player, with sound.
 
-The pictures are the sample's (landscape or portrait, following **Frame format**), unless there is something closer to your video: your uploaded establishing image, or else a picture of the cast member the title names (or the first cast member with a picture). The line under it names the caption settings, and "Drawn on …" when it uses one of your pictures. It renders again by itself a moment after you change a setting, costs no API calls, and **Render again** forces a fresh one.
+The pictures are the sample's (landscape or portrait, following **Frame format**), unless there is something closer to your video: your uploaded establishing image, or else a picture of the cast member the title names (or the first cast member with a picture). The line under it names the caption settings, and "Drawn on …" when it uses one of your pictures. It renders again by itself a moment after you change a setting, costs no API calls, and **Make the preview again** forces a fresh one.
 
 It shows while the video is generated from images. If the caption settings are invalid, it says "Fix the caption settings to render the preview."
 

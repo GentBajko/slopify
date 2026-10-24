@@ -27,7 +27,7 @@ A local render of six seconds of the bundled sample project, drawn with the capt
   - Play's Shorts rail, through `shortsPreviewOf` (`packages/web/src/play/stage-rails.tsx:384-386`, `packages/web/src/play/shorts.tsx:38-50`).
   - Edit project, only while the Subtitles section is open and the project has a video (`packages/web/src/project/revision-form.tsx:740-758`).
   - Edit project's Shorts settings (`packages/web/src/project/revision-shorts.tsx:118-121`).
-- The component renders by itself 600 ms after it mounts or after any setting changes (`packages/web/src/video/style-preview.tsx:48`, `:142-148`). "Render again" sends `force: true` (`packages/web/src/video/style-preview.tsx:185-198`).
+- The component renders by itself 600 ms after it mounts or after any setting changes (`packages/web/src/video/style-preview.tsx:48`, `:142-148`). "Make the preview again" sends `force: true` (`packages/web/src/video/style-preview.tsx:185-198`).
 - Endpoint: `POST /api/style-preview` validated by `stylePreviewRequestSchema`; `GET /api/style-preview/:file` streams the mp4 (`packages/app/src/edge/http/style-preview.ts:18`, `:41`; mount `packages/app/src/edge/http/app.ts:277`).
 - The service exists only when `main.ts` wires it with ffmpeg, the data-folder cache directory and the picture reader (`packages/app/src/main.ts:661-666`). No authority check: any caller of the local API may render.
 
@@ -73,17 +73,17 @@ A local render of six seconds of the bundled sample project, drawn with the capt
 
 | Case | Behavior | Cite |
 |---|---|---|
-| Service not wired | 503 "…started without its video renderer. Restart Slopify, then press Render again." | `packages/app/src/edge/http/style-preview.ts:20`, `:59-66` |
+| Service not wired | 503 "…started without its video renderer. Restart Slopify, then press Make the preview again." | `packages/app/src/edge/http/style-preview.ts:20`, `:59-66` |
 | Request fails schema | 400 problem from `onInvalid` | `packages/app/src/edge/http/problem.ts:78-90` |
-| Invalid request in the browser (e.g. font size outside 16–120) | No request is sent; "Render again" is disabled; the page says the preview renders again once the size is 16–120 | `packages/web/src/video/style-preview.tsx:143`, `:186-191`, `:222-226` |
+| Invalid request in the browser (e.g. font size outside 16–120) | No request is sent; "Make the preview again" is disabled; the page says the preview renders again once the size is 16–120 | `packages/web/src/video/style-preview.tsx:143`, `:186-191`, `:222-226` |
 | Caption font gone | `font-missing` → 409 with "Choose another font under Subtitles" | `render.ts:217-221`, `style-preview.ts:32-33` |
 | ffmpeg not startable / ENOENT | `ffmpeg-missing` → 503 with "Install ffmpeg, or use the Docker image" | `render.ts:222-226`, `style-preview.ts:32-33` |
 | Any other render error | Logged `style-preview.render`; `render-failed` → 500 naming Download diagnostics | `render.ts:227-231` |
 | Render exceeds 120 s | Aborted by the timeout signal; surfaces as one of the failures above | `service.ts:42-43`, `:79` |
 | Render finishes without a file | Plain `Error` ("…finished without writing its video"), rethrown past the handler | `service.ts:86-88`, `style-preview.ts:31` |
 | Named picture missing, not a picture, too large or unreadable | Sample stills are used; the hash omits `image` | `images.ts:34-44`, `settings.ts:130` |
-| Saved preview pruned or never made | GET 404 "…keeps only the most recent ones. Press Render again" | `style-preview.ts:43-50` |
-| Browser failure message empty | "The style preview couldn't render. Press Render again." | `packages/web/src/video/style-preview.tsx:130-136` |
+| Saved preview pruned or never made | GET 404 "…keeps only the most recent ones. Press Make the preview again" | `style-preview.ts:43-50` |
+| Browser failure message empty | "The style preview couldn't be made. Press Make the preview again." | `packages/web/src/video/style-preview.tsx:130-136` |
 | Setting changes mid-render | The previous fetch is aborted; a late reply from a superseded request is ignored | `packages/web/src/video/style-preview.tsx:115-129`, `:149` |
 | Same hash requested concurrently | Joins the in-flight promise; one ffmpeg run | `service.ts:50`, `:97-98`, `:107-111` |
 | Prune fails | Logged `style-preview.prune` at warn; reply is unaffected | `service.ts:124-128` |

@@ -128,7 +128,7 @@ each heading and Copy all as Markdown.
 Edit project → **Subtitles** shows a **Style preview**: six seconds of video rendered by the
 same renderer as the finished video, at a small size, with the project's format, caption font,
 size and position, the Look, the transition and a chapter card (when chapter cards are on). It
-renders when the section opens and again a moment after a setting changes; **Render again**
+renders when the section opens and again a moment after a setting changes; **Make the preview again**
 renders it from scratch. Captions show in the preview only when they are burned in, because a
 caption file is drawn by the player in its own style. The pictures are three of the bundled
 sample project's images (landscape or portrait by format) and the sound is six seconds of its

@@ -101,7 +101,7 @@ To fix a misheard word or move a caption, edit the captions themselves: see [Edi
 **Style preview** (under Subtitles in Edit project, and in Play's right rail) renders six seconds of video with the real renderer, at a small size: your format, captions, Look, transition, motion and a chapter card when chapter cards are on.
 
 - It is drawn on the project's establishing image or a cast picture when there is one (the line under it says "Drawn on ..."), otherwise on three plain stills.
-- It renders again by itself a moment after you change a setting. **Render again** forces a fresh one.
+- It renders again by itself a moment after you change a setting. **Make the preview again** forces a fresh one.
 - Captions show in the preview only when they are burned in.
 - The sound is silence. It costs no API calls, only a few seconds of your computer's time.
 

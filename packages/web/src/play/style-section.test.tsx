@@ -71,7 +71,9 @@ it("renders again on request, forcing a fresh render of the same settings", asyn
   await waitFor(async () => expect((await previewBodies(requests)).length).toBeGreaterThan(0), {
     timeout: 3000,
   });
-  await userEvent.click(await within(preview).findByRole("button", { name: "Render again" }));
+  await userEvent.click(
+    await within(preview).findByRole("button", { name: "Make the preview again" }),
+  );
   await waitFor(async () => expect((await previewBodies(requests)).at(-1)?.force).toBe(true));
 });
 

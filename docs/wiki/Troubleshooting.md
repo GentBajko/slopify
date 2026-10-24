@@ -70,7 +70,7 @@ Slopify ships its own ffmpeg; you do not need to install one. In Docker it is in
 | "Slopify could not start ffmpeg ..." | Reinstall Slopify. If you set `SLOPIFY_FFMPEG`, check it points to a working ffmpeg. |
 | "The audio/video export failed (ffmpeg exited with code ...)" | Open **Error details**: it quotes what ffmpeg could not do, for example an input file it could not open. Replace that file (an uploaded image or clip in **Edit project → Images**), or try again. |
 | "Slopify couldn't measure the loudness of the narration" | Try again. If it happens again, turn off **Level the volume** in **Edit project → Inputs → Pauses and volume**, then download diagnostics and report it. |
-| "The style preview couldn't render ... Press Render again." | Press **Render again**. If it fails again, download diagnostics and report it. |
+| "The style preview couldn't render ... Press Make the preview again." | Press **Make the preview again**. If it fails again, download diagnostics and report it. |
 | "The free subtitle model could not be downloaded" / "download was interrupted" / "failed download verification" | The caption model (378 MB by default, the size chosen in Settings → Production defaults → **Subtitle timing model**) downloads on first use. Check your connection, then **Continue** the run, or pick a smaller model there. `SLOPIFY_NO_MODEL_PREFETCH` only skips the download at start; captions still need it. |
 | "Captions can't be edited until the current narration has finished and its subtitle timing is ready." | Let the narration and subtitle timing finish, then edit captions. |
 | "The saved subtitle timing doesn't match the current narration." | Do what the message says: make the subtitle timing again (More → make it again), then edit the captions. |
