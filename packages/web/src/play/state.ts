@@ -195,7 +195,8 @@ export const freshForm: PlayFormState = {
   provided: { research: "", article: "", audio: undefined, images: [], thumbnail: undefined },
 };
 
-export const sourceLabels: Readonly<Record<StageSource, string>> = {
+// The fallback for a choice a stage has no words of its own for.
+const sourceLabels: Readonly<Record<StageSource, string>> = {
   off: "Off",
   generate: "Generate",
   provide: "Provide",
