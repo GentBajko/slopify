@@ -5,13 +5,13 @@ import { afterEach, expect, it, vi } from "vitest";
 import { body, stage } from "@/routes/project-fixtures";
 import { type Answer, jsonAnswer, renderRouted, testDeps } from "@/test-app";
 import type { SectionId } from "./next-action.js";
-import { NextActionBeside, NextActionPanel, useNextAction } from "./next-action-view.js";
+import { NextActionBeside, NextActionButton, useNextAction } from "./next-action-view.js";
 import { revisionView } from "./revision-fixture.js";
 import type { RevisionController } from "./revision-workspace.js";
 import type { Action, ProjectActions } from "./use-actions.js";
 
 // A failed step's fix is the project's next action (next-action.ts decides which); these check
-// that each one does what its name says from the rail and beside the step.
+// that each one does what its name says from the title row and beside the step.
 
 afterEach(cleanup);
 
@@ -53,7 +53,9 @@ function Harness({
   });
   return (
     <>
-      <NextActionPanel state={state} />
+      <section aria-label="Title row">
+        <NextActionButton state={state} />
+      </section>
       <section aria-label="Beside the step">
         <NextActionBeside state={state} section={state.next?.section ?? "article"} />
       </section>
@@ -87,7 +89,7 @@ function setup(
   return { run, openSection };
 }
 
-const rail = () => screen.findByRole("region", { name: "Next action" });
+const rail = () => screen.findByRole("region", { name: "Title row" });
 const beside = () => screen.findByRole("region", { name: "Beside the step" });
 
 const signedOut =
@@ -126,7 +128,9 @@ it("copies a signed-out CLI's sign-in command and, once Check again finds it sig
     },
   );
   const next = await rail();
-  expect(within(next).getByText("Codex is signed out, so the article stopped.")).not.toBeNull();
+  expect(
+    within(await beside()).getByText("Codex is signed out, so the article stopped."),
+  ).not.toBeNull();
   await user.click(within(next).getByRole("button", { name: "Copy sign-in command" }));
   expect(await navigator.clipboard.readText()).toBe("codex login");
   // Still signed out: nothing is retried, and the toast says what to do.
@@ -154,7 +158,7 @@ it("softens a refused image prompt after saying what it will do", async () => {
   expect(run).toHaveBeenCalledWith({ kind: "soften", stage: "images" });
 });
 
-it("opens the settings for a refused article prompt, beside the step as in the rail", async () => {
+it("opens the settings for a refused article prompt, beside the step as in the title row", async () => {
   const { openSection } = setup("article", {
     failureKind: "refusal",
     failureReason: "The model refused to write this.",

@@ -3,7 +3,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ComponentProps, type ReactElement, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
-import { SectionHead } from "@/components/kit/section-head";
 import { sentence } from "@/http";
 import { stageWords } from "@/lib/stage-words";
 import { keys } from "@/queries";
@@ -20,14 +19,16 @@ import {
 import { CheckpointChoices } from "./checkpoint-choices.js";
 
 const label = (stage: StageKind): string => stageWords[stage];
+const lower = (stage: StageKind): string => stageWords[stage].toLowerCase();
+
+// The pauses for this run, at the top of Settings → Pauses and checks: which steps the run
+// stops after, and each pause that holds work now, with its Approve. The same approval is the
+// title row's next action; here it sits with the pause it ends.
 interface Props {
   readonly projectId: string;
   readonly revisionId: string | null;
   readonly paused: boolean;
   readonly stages: ComponentProps<typeof CheckpointChoices>["stages"];
-  // The gate the project's next action approves: its button is in the right rail, so the
-  // row here says so instead of offering a second one.
-  readonly approvedInRail?: string | undefined;
 }
 export function CheckpointPanel(props: Props): ReactElement | null {
   if (props.revisionId === null) return null;
@@ -44,7 +45,6 @@ function CurrentCheckpoints({
   revisionId,
   paused,
   stages,
-  approvedInRail,
 }: Props & { readonly revisionId: string }): ReactElement | null {
   const { api } = useApp();
   const client = useQueryClient();
@@ -67,29 +67,28 @@ function CurrentCheckpoints({
   if (status.isPending) return null;
   if (status.error || result?.ok === false)
     return (
-      <section aria-label="Review checkpoints" className="flex flex-col items-start gap-3">
+      <section aria-label="Pauses" className="flex flex-col items-start gap-3">
         <p role="alert" className="m-0 text-small text-danger">
           {status.error?.message ??
             (result?.ok === false
               ? result.message
-              : "Checkpoints couldn't be loaded. Press Reload checkpoints.")}
+              : "The pauses couldn't be loaded. Press Load the reviews again.")}
         </p>
-        <Button onClick={() => void reload()}>Reload checkpoints</Button>
+        <Button onClick={() => void reload()}>Load the reviews again</Button>
       </section>
     );
   if (!result?.ok) return null;
   if (result.value.revisionId !== revisionId)
     return (
-      <section aria-label="Review checkpoints" className="flex flex-col items-start gap-3">
+      <section aria-label="Pauses" className="flex flex-col items-start gap-3">
         <p role="alert" className="m-0 text-small text-danger">
-          The project was edited after these checkpoints loaded. Press Reload checkpoints before
+          The project was edited after these pauses loaded. Press Load the reviews again before
           approving.
         </p>
       </section>
     );
   return (
-    <section aria-label="Review checkpoints" className="flex flex-col gap-5">
-      <SectionHead title="Review checkpoints" size="small" className="pb-0" />
+    <section aria-label="Pauses" className="flex flex-col gap-4">
       {paused ? (
         <p className="m-0 text-small text-waiting">
           The project is paused. Continue the run before approving held work.
@@ -107,7 +106,7 @@ function CurrentCheckpoints({
           void client.invalidateQueries({ queryKey: keys.projects });
         }}
       />
-      {result.value.checkpoints.map((gate) => (
+      {result.value.checkpoints.filter(worthShowing).map((gate) => (
         <Gate
           key={`${gate.checkpointId}:${gate.fingerprint}`}
           gate={gate}
@@ -121,7 +120,6 @@ function CurrentCheckpoints({
           }
           reload={reload}
           current={gate.revisionId === revisionId}
-          {...(gate.checkpointId === approvedInRail ? { inRail: true } : {})}
         />
       ))}
     </section>
@@ -131,19 +129,23 @@ type Outcome = {
   readonly kind: "success" | "transport" | "refused";
   readonly message: string;
 } | null;
+// A pause worth a row of its own: one that holds work, was approved, or whose inputs changed.
+// A pause the run has not reached is its tick above.
+function worthShowing(gate: CheckpointGate): boolean {
+  return gate.state !== "configured" || gate.fingerprint !== gate.currentFingerprint;
+}
+
 function Gate({
   gate,
   disabled,
   reload,
   current,
-  inRail = false,
 }: {
   readonly gate: CheckpointGate;
   readonly disabled: boolean;
   readonly reload: () => Promise<boolean>;
   // The gate belongs to the version of the project on screen.
   readonly current: boolean;
-  readonly inRail?: boolean;
 }): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
@@ -195,8 +197,8 @@ function Gate({
             ? {
                 kind: "success",
                 message: result.value.replayed
-                  ? "Checkpoint already approved."
-                  : "Checkpoint approved. Work will run when its dependencies are ready.",
+                  ? "It was already approved."
+                  : "Approved. What comes after it runs once what it needs is ready.",
               }
             : { kind: "refused", message: result.message },
         );
@@ -215,35 +217,33 @@ function Gate({
     }
   }
   return (
-    <div className="flex flex-col gap-2 border-t border-line pt-4">
-      <SectionHead as="h3" title={`${label(gate.stage)} checkpoint`} className="pb-0" />
+    <div className="flex flex-col gap-2 border-t border-line pt-3">
+      <h3 className="m-0 text-title-3">{`Paused after the ${previousOf(gate.stage)}`}</h3>
       <p className="m-0 text-small text-ink-2">
         {gate.state === "released" && gate.approvedAt !== null
-          ? "Authorized for this revision. Work can run when dependencies are ready and the project is resumed."
+          ? "Approved for this version. What comes after it runs once what it needs is ready and the run goes on."
           : gate.state === "satisfied"
-            ? "Checkpoint satisfied. Its reviewed work is complete."
+            ? "Approved, and what came after it is made."
             : gate.state === "invalidated" || gate.fingerprint !== gate.currentFingerprint
-              ? "Inputs changed. Review the current revision before approving."
+              ? "What it was made from has changed. Look at the current version before approving."
               : eligible
-                ? `${label(gate.stage)} is held for your review. Its dependent work waits for this approval; independent work can continue.`
-                : `Checkpoint ${gate.state}.`}
+                ? `The ${previousOf(gate.stage)} ${isAre(gate.stage)} ready for your review. The ${lower(gate.stage)} and what follows wait for your approval; other work goes on.`
+                : "Not reached yet."}
       </p>
       {/* The version's id stays on hover for a bug report; the line itself says which one. */}
-      <p className="m-0 text-small text-ink-3" title={`Version ${gate.revisionId}`}>
-        {current
-          ? "Applies to the project as it is now."
-          : "Set on an earlier version. Reload checkpoints to see the current one."}
-      </p>
-      {gate.dependents.length ? (
-        <ul aria-label="Dependent work" className="m-0 flex list-none flex-wrap gap-2 p-0">
+      {current ? null : (
+        <p className="m-0 text-small text-ink-3" title={`Version ${gate.revisionId}`}>
+          Set on an earlier version. Press Load the reviews again to see the current one.
+        </p>
+      )}
+      {gate.dependents.length === 0 ? null : (
+        <ul aria-label="Waits for this approval" className="m-0 flex list-none flex-wrap gap-2 p-0">
           {gate.dependents.map((stage) => (
             <li key={stage} className="sl-chip">
               {label(stage)}
             </li>
           ))}
         </ul>
-      ) : (
-        <p className="m-0 text-small text-ink-2">No dependent stages.</p>
       )}
       {outcome ? (
         <p
@@ -255,15 +255,14 @@ function Gate({
           {outcome.message}
         </p>
       ) : null}
-      {eligible && inRail && outcome === null ? (
-        <p className="m-0 text-small text-ink-2">
-          Its approval is the project's next action, in the right rail.
-        </p>
-      ) : eligible ? (
+      {eligible ? (
         <Button
           className="self-start"
           disabled={
             disabled || pending || outcome?.kind === "refused" || outcome?.kind === "success"
+          }
+          disabledReason={
+            disabled ? "Continue the run first, then approve" : "Working on the last press"
           }
           onClick={() => void approve()}
         >
@@ -271,7 +270,7 @@ function Gate({
             ? "Approving…"
             : outcome?.kind === "transport"
               ? "Retry approval"
-              : `Approve ${label(gate.stage)} checkpoint`}
+              : `Approve and make the ${lower(gate.stage)}`}
         </Button>
       ) : null}
       {outcome?.kind === "refused" ? (
@@ -281,9 +280,26 @@ function Gate({
             if (await reload()) setOutcome(null);
           }}
         >
-          Reload checkpoints
+          Load the reviews again
         </Button>
       ) : null}
     </div>
   );
 }
+
+// What a pause before a stage holds for review: the step that comes before it. A pause holds
+// its own stage and everything made from it (`slices/checkpoints/fingerprint.ts`).
+function previousOf(stage: StageKind): string {
+  switch (stage) {
+    case "audio":
+      return "article";
+    case "images":
+      return "narration";
+    case "video":
+      return "images";
+    default:
+      return lower(stage);
+  }
+}
+
+const isAre = (stage: StageKind): string => (stage === "video" ? "are" : "is");

@@ -80,7 +80,8 @@ describe("project pause and provider changes", () => {
     expect(screen.queryByRole("button", { name: "Pause" })).toBeNull();
   });
 
-  // A restart held it: the header says what the next action says, and nothing is to approve.
+  // A restart held it: the header says so, the line under it says what Continue does, and
+  // nothing is to approve.
   it("reads a run a restart stopped as Stopped in its header and its next action", async () => {
     const current = paused();
     const fixture = revisionRouteFixture({
@@ -90,7 +91,8 @@ describe("project pause and provider changes", () => {
     });
     renderRouted(<ProjectRoute projectId="p1" />, deps(fixture.routes));
     expect(await screen.findByRole("button", { name: "Continue the run" })).not.toBeNull();
-    expect(screen.getAllByText("Stopped").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("Stopped")).not.toBeNull();
+    expect(screen.getByText(/^The run stopped before it finished\. Continuing/)).not.toBeNull();
     expect(screen.queryByText("Waiting for your review")).toBeNull();
   });
 
@@ -104,7 +106,7 @@ describe("project pause and provider changes", () => {
     });
     renderRouted(<ProjectRoute projectId="p1" />, deps(fixture.routes));
     expect((await screen.findAllByText("Waiting for the agent")).length).toBeGreaterThan(0);
-    expect(screen.getByText("An agent is reviewing what was made.")).not.toBeNull();
+    expect(screen.getByText(/^An agent is reviewing what was made\./)).not.toBeNull();
     expect(screen.queryByRole("button", { name: "Continue the run" })).toBeNull();
     expect(screen.queryByText("Stopped")).toBeNull();
   });
@@ -151,21 +153,18 @@ describe("project pause and provider changes", () => {
         }),
       }),
     );
-    const next = await screen.findByRole("region", { name: "Next action" });
+    // Beside the video, where the page opens.
+    const video = await screen.findByRole("region", { name: "Video" });
     expect(
-      await within(next).findByText(
+      await within(video).findByText(
         "Everything but the video is made; its schedule renders the video on its day.",
       ),
     ).not.toBeNull();
-    const steps = screen.getByRole("list", { name: "Run steps" });
-    const video = within(steps).getByText("Video").closest("li") as HTMLElement;
-    expect(within(video).getByText("Prepared")).not.toBeNull();
-    expect(within(steps).getByText("Its schedule makes it on its day.")).not.toBeNull();
-    expect(steps.textContent).not.toContain("Waiting for your review");
     const rail = screen.getByRole("navigation", { name: "Project sections" });
-    expect(within(rail).getByRole("link", { name: /^Checkpoints/ }).textContent).not.toContain(
-      "held",
-    );
+    const row = within(rail).getByRole("link", { name: /^Video/ });
+    expect(row.textContent).toBe("Video, Prepared");
+    expect(row.nextElementSibling?.textContent).toBe("Its schedule makes it on its day.");
+    expect(rail.textContent).not.toContain("Waiting for your review");
   });
 
   // A template's checkpoint the run hasn't reached yet is in the checkpoints list but not in
@@ -203,10 +202,9 @@ describe("project pause and provider changes", () => {
         }),
       }),
     );
-    const next = await screen.findByRole("region", { name: "Next action" });
-    expect(await within(next).findByRole("button", { name: "Pause" })).not.toBeNull();
-    expect(within(next).queryByRole("button", { name: /^Approve/ })).toBeNull();
-    expect(within(next).queryByText(/ready for your review/)).toBeNull();
+    expect(await screen.findByRole("button", { name: "Pause" })).not.toBeNull();
+    expect(screen.queryByRole("button", { name: /^Approve/ })).toBeNull();
+    expect(screen.queryByText(/ready for your review/)).toBeNull();
   });
 
   it("continues a paused checkpoint project by keyboard, then offers the approval", async () => {
@@ -258,16 +256,17 @@ describe("project pause and provider changes", () => {
       }),
     );
     const rail = await screen.findByRole("navigation", { name: "Project sections" });
+    // The held review is the narration's: its row says what to do.
     await waitFor(() =>
-      expect(within(rail).getByRole("link", { name: /^Checkpoints/ }).textContent).toContain(
-        "1 held",
+      expect(within(rail).getByRole("link", { name: /^Narration/ }).textContent).toBe(
+        "Narration, Waiting for your review",
       ),
     );
-    await openProjectTab("Checkpoints");
+    await openProjectTab("Pauses and checks");
     // Paused: continuing comes first, and the held review cannot be approved yet.
-    const approval = await screen.findByRole("button", { name: "Approve Narration checkpoint" });
+    const approval = await screen.findByRole("button", { name: "Approve and make the narration" });
     expect(approval.hasAttribute("disabled")).toBe(true);
-    const next = screen.getByRole("region", { name: "Next action" });
+    const next = screen.getByRole("heading", { level: 1 }).closest("header") as HTMLElement;
     const button = within(next).getByRole("button", { name: "Continue the run" });
     button.focus();
     await user.keyboard("{Enter}");
@@ -275,11 +274,19 @@ describe("project pause and provider changes", () => {
     await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
     button.focus();
     await user.keyboard("{Enter}");
-    // Once it runs, the review it waits on is the next action, and only there.
+    // Once it runs, the review it waits on is the next action, and Pauses and checks offers
+    // the same approval where the person is looking.
     expect(
-      await within(next).findByRole("button", { name: "Approve and render the video" }),
+      await within(next).findByRole("button", { name: "Approve and make the narration" }),
     ).not.toBeNull();
-    expect(screen.queryByRole("button", { name: "Approve Narration checkpoint" })).toBeNull();
+    await waitFor(() =>
+      expect(
+        screen
+          .getAllByRole("button", { name: "Approve and make the narration" })
+          .find((button) => button.closest("header") === null)
+          ?.hasAttribute("disabled"),
+      ).toBe(false),
+    );
     await openProjectTab("Edit");
     expect(await screen.findByRole("form", { name: "Edit project" })).not.toBeNull();
     expect(resume).toHaveBeenCalledTimes(2);
@@ -301,27 +308,38 @@ describe("project pause and provider changes", () => {
       }),
     );
     await openProjectEditor();
-    await openEditSection("Providers");
-    await user.selectOptions(await screen.findByLabelText("Text provider"), "claude-code");
-    await user.click(screen.getByRole("button", { name: "Enter Text model ID" }));
-    await user.type(screen.getByRole("textbox", { name: "Text model" }), "sonnet");
-    await user.selectOptions(screen.getByLabelText("Narration provider"), "cartesia");
-    await user.click(screen.getByRole("button", { name: "Enter Narration model ID" }));
-    await user.type(screen.getByRole("textbox", { name: "Narration model" }), "sonic-3");
-    await user.selectOptions(screen.getByLabelText("Narration voice"), "new-voice");
-    await user.selectOptions(screen.getByLabelText("Image provider"), "google-image");
-    await user.click(screen.getByRole("button", { name: "Enter Image model ID" }));
-    await user.type(screen.getByRole("textbox", { name: "Image model" }), "image-model");
+    // Each stage's service sits in that stage's section, in Create's words.
+    await openEditSection("Article");
+    await user.selectOptions(await screen.findByLabelText("Service"), "claude-code");
+    await user.click(screen.getByRole("button", { name: "Enter Model ID" }));
+    await user.type(screen.getByRole("textbox", { name: "Model" }), "sonnet");
+    await openEditSection("Narration");
+    await user.selectOptions(screen.getByLabelText("Voice service"), "cartesia");
+    await user.click(screen.getByRole("button", { name: "Enter Voice model ID" }));
+    await user.type(screen.getByRole("textbox", { name: "Voice model" }), "sonic-3");
+    await user.selectOptions(screen.getByLabelText("Voice"), "new-voice");
     await user.click(screen.getByRole("radio", { name: "Every 3000 characters" }));
     await user.clear(screen.getByLabelText("Characters"));
     await user.type(screen.getByLabelText("Characters"), "1800");
+    await openEditSection("Images");
+    await user.selectOptions(screen.getByLabelText("Image service"), "google-image");
+    await user.click(screen.getByRole("button", { name: "Enter Image model ID" }));
+    await user.type(screen.getByRole("textbox", { name: "Image model" }), "image-model");
     expect(screen.queryByRole("button", { name: "Run settings" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Save providers" })).toBeNull();
     await user.click(screen.getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(fixture.save).toHaveBeenCalledOnce(), { timeout: 5_000 });
-    await waitFor(() => expect(screen.queryByLabelText("Project title")).toBeNull(), {
-      timeout: 5_000,
-    });
+    // The settings open again on the version just saved, at the section they were on.
+    await screen.findByText(
+      "Saved as a new version. Nothing is made again until you choose to.",
+      undefined,
+      { timeout: 5_000 },
+    );
+    expect(
+      within(screen.getByRole("navigation", { name: "Edit sections" }))
+        .getByRole("button", { name: /^Images/ })
+        .getAttribute("aria-current"),
+    ).not.toBeNull();
     expect(fixture.view().revision.config).toMatchObject({
       llm: { provider: "claude-code", model: "sonnet" },
       audio: { provider: "cartesia", model: "sonic-3", voice: "new-voice" },

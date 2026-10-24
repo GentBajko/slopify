@@ -1,82 +1,186 @@
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
+import type { CheckpointHold } from "@app/slices/reviews/holds.js";
 import type { Output } from "@app/slices/storage/model.js";
 import { useQuery } from "@tanstack/react-query";
-import { type ReactElement, use } from "react";
+import { type ReactElement, type ReactNode, use, useEffect, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { type Aspect, MediaFrame, MediaGrid } from "@/components/kit/media";
+import { Player } from "@/components/kit/player";
 import { SectionHead } from "@/components/kit/section-head";
+import { Meter } from "@/components/kit/stats";
+import { Steps } from "@/components/kit/steps";
 import { peaksKey, readPeaks } from "@/onboarding/api";
 import { frameAspect } from "./body-images.js";
 import { OpenProjectTab } from "./fix-it.js";
 import { LiveAudio } from "./live-audio.js";
 import { LiveWriting } from "./live-writing.js";
 import { useOutputMedia } from "./revision-media.js";
+import { runSteps } from "./run-aside.js";
 import { workDuration } from "./run-cost.js";
+import { timeLeft } from "./status-rows.js";
+import { duration, finalOutput, stageFraction, summaryOf } from "./summary.js";
 import { WaveAudioPlayer } from "./waveform.js";
+import { overallProgress } from "./workspace.js";
 
-// Watching the project build: the steps and where each stands, the article as it is written,
-// the images as they land and the narration's waveform growing piece by piece. Everything here
-// is fed by the project page's event stream; nothing on it starts or changes work.
+// Progress: watching the run while it goes. A headline with the whole run's share and time
+// left ("Making your video · 3 of 5 · about 6 min left") over one bar, the steps with their
+// times, then what each makes as it lands: the article as it is written, the narration's
+// waveform growing, the images as they are drawn and the video while it renders, which becomes
+// its player the moment the file is there. A finished step says so in the past tense. Fed by
+// the page's event stream; nothing here starts or changes work.
 export function LiveBuild({
   project,
   revisionId,
   stages,
   outputs,
+  resumable,
+  holding,
 }: {
   readonly project: ProjectSummary;
   readonly revisionId: string | null;
   readonly stages: readonly Stage[];
   readonly outputs: readonly Output[];
+  readonly resumable: boolean;
+  readonly holding: readonly CheckpointHold[];
 }): ReactElement {
+  const now = useNow(project.status === "running");
+  const overall = overallProgress(stages);
+  const left = project.status === "paused" ? undefined : timeLeft(stages, now);
+  const steps = runSteps({ stages, outputs, project, resumable, holding, now });
   // In the order they are shown, not the order they happened to land in.
   const images = outputs
     .filter((output) => output.role === "image")
     .sort((a, b) => (a.meta.index ?? 0) - (b.meta.index ?? 0));
-  const article = stages.find((stage) => stage.kind === "article");
-  const openTab = use(OpenProjectTab);
-  // The steps are in the status rail beside this; here is what they make.
+  const stageOf = (kind: Stage["kind"]): Stage | undefined =>
+    stages.find((stage) => stage.kind === kind && stage.state !== "skipped");
+  const article = stageOf("article");
+  const audio = stageOf("audio");
+  const imagesStage = stageOf("images");
+  const video = stageOf("video");
+  const headline = [
+    project.status === "paused" ? "Paused" : makingWords(project),
+    `${String(overall.completed)} of ${String(overall.total)}`,
+    left,
+  ]
+    .filter((part) => part !== undefined)
+    .join(" · ");
   return (
-    <div className="flex min-w-0 flex-col">
-      <div className="min-w-0">
-        <SectionHead title="Article" />
-        {article?.state === "running" ? (
-          <LiveWriting projectId={project.id} stage="article" className="mb-6" />
-        ) : article?.state === "done" ? (
-          <p className="mb-6 flex flex-wrap items-center gap-3 text-small text-ink-2">
-            The article is written.
-            {openTab === undefined ? null : (
-              <Button variant="secondary" size="small" onClick={() => openTab("output")}>
-                Read it
-              </Button>
-            )}
-          </p>
-        ) : (
-          <p className="mb-6 text-small text-ink-2">
-            {article === undefined || article.state === "skipped"
-              ? "This project has no article."
-              : "The article appears here as it is written."}
-          </p>
-        )}
-        <SectionHead title="Narration" />
-        <LiveNarration
-          projectId={project.id}
-          revisionId={revisionId}
-          audio={stages.find((stage) => stage.kind === "audio")}
-          outputs={outputs}
+    <div className="flex min-w-0 flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <p className="m-0 font-semibold text-ink">{headline}</p>
+        <Meter
+          progress
+          value={overall.percent / 100}
+          label="Whole run"
+          valueText={`${String(overall.percent)}% of the run done`}
+          tone={project.status === "paused" ? "waiting" : "accent"}
         />
-        <SectionHead title="Images" />
-        {images.length === 0 ? (
-          <p className="text-small text-ink-2">The images appear here as each one is drawn.</p>
-        ) : (
-          <MediaGrid list density="compact" label="Images so far">
-            {images.map((image) => (
-              <LiveImage key={image.id} output={image} aspect={frameAspect(project.format)} />
-            ))}
-          </MediaGrid>
-        )}
       </div>
+      <Steps steps={steps} label="Run steps" />
+      {article === undefined ? null : (
+        <Pane title="Article">
+          <LiveArticle project={project} article={article} />
+        </Pane>
+      )}
+      {audio === undefined ? null : (
+        <Pane title="Narration">
+          <LiveNarration
+            projectId={project.id}
+            revisionId={revisionId}
+            audio={audio}
+            outputs={outputs}
+          />
+        </Pane>
+      )}
+      {imagesStage === undefined ? null : (
+        <Pane title="Images">
+          {images.length === 0 ? (
+            <p className="m-0 text-small text-ink-2">
+              {imagesStage.state === "pending"
+                ? "Not started yet. Each image appears here as it is drawn."
+                : "The images appear here as each one is drawn."}
+            </p>
+          ) : (
+            <MediaGrid list density="compact" label="Images so far">
+              {images.map((image) => (
+                <LiveImage key={image.id} output={image} aspect={frameAspect(project.format)} />
+              ))}
+            </MediaGrid>
+          )}
+        </Pane>
+      )}
+      {video === undefined || finalOutput(project.config) !== "video" ? null : (
+        <Pane title="Video">
+          <LiveVideo project={project} video={video} outputs={outputs} />
+        </Pane>
+      )}
     </div>
+  );
+}
+
+function Pane({
+  title,
+  children,
+}: {
+  readonly title: string;
+  readonly children: ReactNode;
+}): ReactElement {
+  return (
+    <section aria-label={title} className="flex min-w-0 flex-col gap-2">
+      <SectionHead as="h3" title={title} size="small" className="pb-0" />
+      {children}
+    </section>
+  );
+}
+
+// "Making your video", "Making your audiobook", "Writing your article".
+function makingWords(project: ProjectSummary): string {
+  const format = project.config.voices?.format;
+  if (format === "audiobook" || format === "drama") return "Making your audiobook";
+  if (format === "podcast") return "Making your podcast";
+  const made = finalOutput(project.config);
+  return made === "video"
+    ? "Making your video"
+    : made === "audio"
+      ? "Making your narration"
+      : "Writing your article";
+}
+
+// A clock for the time left, ticking each second while the run goes.
+function useNow(ticking: boolean): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!ticking) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [ticking]);
+  return now;
+}
+
+function LiveArticle({
+  project,
+  article,
+}: {
+  readonly project: ProjectSummary;
+  readonly article: Stage;
+}): ReactElement {
+  const openTab = use(OpenProjectTab);
+  if (article.state === "running") return <LiveWriting projectId={project.id} stage="article" />;
+  const finished = article.state === "done" || article.state === "provided";
+  return (
+    <p className="m-0 flex flex-wrap items-center gap-3 text-small text-ink-2">
+      {article.state === "provided"
+        ? "Supplied by you."
+        : article.state === "done"
+          ? "Written."
+          : "Not started yet. It is written here as you watch."}
+      {finished && openTab !== undefined ? (
+        <Button variant="secondary" size="small" onClick={() => openTab("output")}>
+          Read it
+        </Button>
+      ) : null}
+    </p>
   );
 }
 
@@ -102,9 +206,49 @@ function LiveImage({
   );
 }
 
-// Narration in Live: while it is spoken, the waveform growing and the parts so far to play;
-// once it is done, the body narration's own player (the levelled join when Level the volume is
-// on, which is what the video plays).
+// The video while it renders, with how far it is; its player once the file is there.
+function LiveVideo({
+  project,
+  video,
+  outputs,
+}: {
+  readonly project: ProjectSummary;
+  readonly video: Stage;
+  readonly outputs: readonly Output[];
+}): ReactElement {
+  const file = outputs.find((output) => output.role === "video");
+  const media = useOutputMedia(video.state === "done" ? file : undefined);
+  if (media !== undefined && file !== undefined)
+    return (
+      <div className="flex max-w-[720px] flex-col gap-1">
+        <Player src={media.url} label={`${project.title}, the video`} />
+        <p className="m-0 text-small text-ink-2">
+          {[duration(file.durationMs ?? undefined), "rendered"].filter(Boolean).join(" · ")}
+        </p>
+      </div>
+    );
+  if (video.state === "running") {
+    const share = stageFraction(video);
+    const words = summaryOf(video, outputs, project);
+    return share === undefined ? (
+      <p className="m-0 text-small text-ink-2">{words}</p>
+    ) : (
+      <div className="flex max-w-[480px] flex-col gap-1">
+        <p className="m-0 text-small text-ink-2">{words}</p>
+        <Meter progress value={share} label="Video" valueText={words} />
+      </div>
+    );
+  }
+  return (
+    <p className="m-0 text-small text-ink-2">
+      Not started yet. It is put together once the narration and images are made.
+    </p>
+  );
+}
+
+// Narration while it is spoken: the waveform growing and the parts so far to play; once it is
+// done, the body narration's own player (the levelled join when Level the volume is on, which
+// is what the video plays) and its length.
 function LiveNarration({
   projectId,
   revisionId,
@@ -113,14 +257,14 @@ function LiveNarration({
 }: {
   readonly projectId: string;
   readonly revisionId: string | null;
-  readonly audio: Stage | undefined;
+  readonly audio: Stage;
   readonly outputs: readonly Output[];
 }): ReactElement {
   const body =
     outputs.find((output) => output.role === "audio_levelled" && output.meta.segment === "body") ??
     outputs.find((output) => output.role === "audio_body");
-  const media = useOutputMedia(audio?.state === "running" ? undefined : body);
-  if (audio?.state === "running")
+  const media = useOutputMedia(audio.state === "running" ? undefined : body);
+  if (audio.state === "running")
     return (
       <>
         <Waveform projectId={projectId} revisionId={revisionId} />
@@ -129,9 +273,18 @@ function LiveNarration({
     );
   if (media !== undefined)
     return (
-      <div className="mb-6">
+      <div className="flex flex-col gap-1">
         <WaveAudioPlayer label="Body narration" src={media.url} />
+        <p className="m-0 text-small text-ink-2">
+          {[duration(body?.durationMs ?? undefined), "narrated"].filter(Boolean).join(" · ")}
+        </p>
       </div>
+    );
+  if (audio.state === "pending")
+    return (
+      <p className="m-0 text-small text-ink-2">
+        Not started yet. Its waveform grows here as each part is spoken.
+      </p>
     );
   return <Waveform projectId={projectId} revisionId={revisionId} />;
 }
@@ -158,7 +311,7 @@ function Waveform({
   const folded: number[] = [];
   for (let at = 0; at < all.length; at += step) folded.push(Math.max(...all.slice(at, at + step)));
   return (
-    <div className="mb-6">
+    <div>
       <div
         role="img"
         aria-label={

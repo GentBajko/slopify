@@ -15,12 +15,13 @@ import { activityText, stageName } from "./summary.js";
 
 // The next action rule (docs/design-system.md, "Controls that say what they do"): a project
 // shows exactly one action for its situation, named for its result, and only when it applies.
-// This is the one place that decides it, from the project's state alone, so the right rail,
-// the section it concerns and the command palette can never disagree. The mapping table is
+// This is the one place that decides it, from the project's state alone, so the title row's
+// primary button, the section it concerns and the command palette can never disagree. The mapping table is
 // written out in docs/design-system.md; next-action.test.ts covers every row.
 
-// The project page's places: the stage sections, the run's cost and live view, and the
-// settings views that replace the main column.
+// The project page's places: the stage sections (with Shorts and the YouTube text, each its
+// own), All files ("outputs"), the run's cost, its Progress while it goes ("live"), and the
+// settings view with its Pauses and checks ("checkpoints") and Versions ("history").
 export type SectionId =
   | "outputs"
   | "article"
@@ -161,8 +162,8 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
       situation: "sample",
       tone: "info",
       status: "Sample project",
-      title: "This is the sample project, finished and free to explore.",
-      why: "It is read-only. Your own copy can be edited and made again.",
+      title: "A finished sample to explore.",
+      why: "It is read-only: Make my own copy to edit it and make it again.",
       action: { label: "Make my own copy", intent: { kind: "copy-sample" } },
     };
 
@@ -263,24 +264,28 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
       why: "Nothing to do: the run carries on once the agent answers, and a review no agent answers passes by itself 2 hours after it was asked.",
     };
 
+  // A pause holds its own stage and everything made from it (`slices/checkpoints`): what is
+  // ready to look at is the step before it, and approving makes the held stage.
   const held = input.held[0];
   if (held !== undefined) {
+    const before = reviewedBefore(held.stage);
     const heldName = name(held.stage);
     const prepared = input.project.prepared === true && held.stage === "video";
+    const after = held.dependents.filter((kind) => kind !== held.stage);
     return {
       situation: "held",
       tone: "waiting",
       status: heldStateWord(input.project),
       title: prepared
         ? "Everything but the video is made; its schedule renders the video on its day."
-        : `The ${lower(heldName)} ${isAre(heldName)} ready for your review.`,
+        : `The ${lower(name(before))} ${isAre(name(before))} ready for your review.`,
       why: prepared
         ? "Approving now renders it before its day."
-        : held.dependents.length === 0
-          ? "Approving marks it reviewed."
-          : `Approving lets ${list(held.dependents.map((kind) => lower(plural(name(kind)))))} run. Nothing after it runs until you do.`,
+        : after.length === 0
+          ? `Approving makes the ${lower(heldName)}. Nothing after it runs until you do.`
+          : `Approving makes the ${lower(heldName)}, then ${list(after.map((kind) => lower(plural(name(kind)))))}. Nothing after it runs until you do.`,
       action: { label: approveLabel(held, name), intent: { kind: "approve", gate: held } },
-      section: sectionForStage(held.stage),
+      section: prepared ? "video" : sectionForStage(before),
     };
   }
 
@@ -335,8 +340,8 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
           tone: "done",
           status: keptAsIsWord,
           title: "The video is ready; what is left won't run.",
-          why: "Prepare upload lays out the file, title, description, thumbnails and tags in the order YouTube Studio asks for them. Editing the project brings the rest back to Needs you.",
-          action: { label: "Prepare upload", intent: { kind: "prepare-upload" } },
+          why: "Copy for YouTube Studio lays out the file, title, description, thumbnails and tags in the order YouTube Studio asks for them. Editing the project brings the rest back to Needs you.",
+          action: { label: "Copy for YouTube Studio", intent: { kind: "prepare-upload" } },
           section: "youtube",
         }
       : {
@@ -392,14 +397,15 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
     };
 
   // The first thing a person makes is a short; the long video comes second. A finished short
-  // leads there, with the same topic and starter pack. Prepare upload stays in its section.
+  // leads there, with the same topic and starter template. Copy for YouTube Studio stays in
+  // its section.
   if (project.status === "done" && config.mode === "short")
     return {
       situation: "done",
       tone: "done",
       status: "Done",
       title: "The short is ready.",
-      why: "Play opens set up for a long video on the same topic, with the same starter pack and providers. Nothing starts until you press Play.",
+      why: "Create opens set up for a long video on the same topic, with the same starter template and services. Nothing is made until you press Make the video.",
       action: { label: "Make the full video on this topic", intent: { kind: "full-video" } },
     };
 
@@ -409,21 +415,34 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
       tone: "done",
       status: "Done",
       title: "The video is ready.",
-      why: "Prepare upload lays out the file, title, description, thumbnails and tags in the order YouTube Studio asks for them.",
-      action: { label: "Prepare upload", intent: { kind: "prepare-upload" } },
+      why: "Copy for YouTube Studio lays out the file, title, description, thumbnails and tags in the order YouTube Studio asks for them.",
+      action: { label: "Copy for YouTube Studio", intent: { kind: "prepare-upload" } },
       section: "youtube",
     };
 
   return undefined;
 }
 
+// Named for what approving makes: the held stage itself.
 function approveLabel(gate: HeldGate, name: (kind: StageKind) => string): string {
-  if (gate.dependents.includes("video")) return "Approve and render the video";
-  if (gate.dependents.includes("images")) return "Approve and make the images";
-  if (gate.dependents.includes("audio")) return "Approve and record the narration";
-  const first = gate.dependents[0];
-  if (first !== undefined) return `Approve and make the ${lower(name(first))}`;
-  return `Approve the ${lower(name(gate.stage))}`;
+  return `Approve and make the ${lower(name(gate.stage))}`;
+}
+
+// The step a pause before this stage holds up for review: the one made just before it.
+function reviewedBefore(stage: StageKind): StageKind {
+  switch (stage) {
+    case "audio":
+      return "article";
+    case "images":
+    case "thumbnail":
+      return "audio";
+    case "video":
+      return "images";
+    case "document":
+      return "article";
+    default:
+      return stage;
+  }
 }
 
 // " · rendering the video (45%)" when the server named the step, else " · 3 of 8" in whole

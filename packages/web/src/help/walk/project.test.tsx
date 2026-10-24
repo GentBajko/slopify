@@ -236,7 +236,15 @@ describe("the project page", () => {
   it("explains every control in each section of a finished project", async () => {
     const fixture = revisionRouteFixture(finished);
     renderRouted(<ProjectRoute projectId="p1" />, fixture.app);
-    for (const section of ["Article", "Narration", "Images", "Video", "Cost", "Live", "History"]) {
+    for (const section of [
+      "Article",
+      "Narration",
+      "Images",
+      "Video",
+      "All files",
+      "Cost",
+      "Versions",
+    ]) {
       await openProjectSection(section);
       expect({ section, unexplained: unexplained() }).toEqual({ section, unexplained: [] });
     }
@@ -256,8 +264,8 @@ describe("the project page", () => {
         "GET /api/projects/p1/checkpoints": jsonAnswer({ revisionId: "r1", checkpoints: [] }),
       }),
     );
-    await openProjectSection("Checkpoints");
-    await screen.findByRole("group", { name: "Checkpoint choices" });
+    await openProjectSection("Pauses and checks");
+    await screen.findByRole("group", { name: "Pauses for this run" });
     expect(unexplained()).toEqual([]);
   });
 });
@@ -270,27 +278,29 @@ describe("Edit project", () => {
     const sections = within(nav)
       .getAllByRole("button")
       .map((button) => button.firstChild?.textContent ?? "");
+    // Create's sections, in Create's order and words.
     expect(sections).toEqual([
-      "Inputs",
+      "Title and keywords",
       "Article",
-      "Providers",
-      "Prompts",
-      "Reviews",
-      "Shorts",
-      "Subtitles",
-      "Images",
       "Narration",
+      "Images",
+      "Video and style",
       "Captions",
+      "Outputs",
+      "Pauses and checks",
+      "Channel",
     ]);
     const found: Record<string, readonly string[]> = {};
     for (const section of sections) {
       await openEditSection(section);
-      if (section === "Inputs") {
-        // The Look opens to the rest of the video edit.
-        const look = screen.getByText("Look").closest("details");
-        if (look !== null) look.open = true;
+      if (section === "Video and style") {
+        // The Look and Sound polish open to the rest of the video edit.
+        for (const name of ["Look", "Sound polish"]) {
+          const fold = screen.getByText(name).closest("details");
+          if (fold !== null) fold.open = true;
+        }
       }
-      if (section === "Shorts")
+      if (section === "Outputs")
         await userEvent.click(
           screen.getAllByRole("button", { name: "Use my own range" })[0] ?? document.body,
         );

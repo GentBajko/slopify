@@ -212,8 +212,9 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
         .getByRole("button", { name: "Edit settings" })
         .closest('[data-tour="project-controls"]'),
     ).not.toBeNull();
+    // The settings are Edit settings in the title row, not a row of the status list.
     const sections = screen.getByRole("navigation", { name: "Project sections" });
-    expect(within(sections).getByRole("link", { name: "Settings" })).not.toBeNull();
+    expect(within(sections).queryByRole("link", { name: /^Settings/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Run settings/ })).toBeNull();
     expect(
       requests.filter((request) => /^POST \/api\/drafts\/[^/]+\/start$/.test(request)),
@@ -230,9 +231,13 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     // Then the rest of a channel's screens: the run's cost, the upload, Home, Channels, Calendar.
     await next(user, "run-cost");
     expect(document.querySelector('[data-tutorial="hole"]')).not.toBeNull();
-    expect(within(rail).getByRole("link", { name: "Cost" }).getAttribute("data-tour")).toBe(
-      "project-rail-cost",
-    );
+    // The run's cost is the line under the status list, its breakdown one press away.
+    expect(
+      within(rail.parentElement ?? rail)
+        .getByRole("link", { name: "See the breakdown" })
+        .closest("[data-tour]")
+        ?.getAttribute("data-tour"),
+    ).toBe("project-rail-cost");
     await next(user, "studio-prep");
     await next(user, "home");
     expect(router.state.location.pathname).toBe("/");

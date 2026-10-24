@@ -170,16 +170,16 @@ describe("the page under a live run", () => {
     const server: Server = { landed: 0, video: "pending", textModel: "model-before" };
     const { source, reads } = mount(server);
     await openProjectEditor();
-    const model = await screen.findByLabelText("Text model");
+    const model = await screen.findByLabelText("Model");
     expect((model as HTMLInputElement).value).toBe("model-before");
     const before = reads();
     server.textModel = "model-after";
     source.emit({ type: "project.updated", projectId: "p1" });
     await waitFor(() => expect(reads()).toBe(before + 1));
-    expect((screen.getByLabelText("Text model") as HTMLSelectElement).value).toBe("model-before");
+    expect((screen.getByLabelText("Model") as HTMLSelectElement).value).toBe("model-before");
     await userEvent.click(screen.getByRole("button", { name: "Discard changes" }));
     await openProjectEditor();
-    expect(((await screen.findByLabelText("Text model")) as HTMLSelectElement).value).toBe(
+    expect(((await screen.findByLabelText("Model")) as HTMLSelectElement).value).toBe(
       "model-after",
     );
   });
@@ -220,7 +220,9 @@ describe("the page under a live run", () => {
 
     await waitFor(() => {
       expect(
-        within(screen.getByRole("list", { name: "Run steps" })).getByText(/^image 20 of 20( · |$)/),
+        within(screen.getByRole("navigation", { name: "Project sections" })).getByText(
+          /^image 20 of 20( · |$)/,
+        ),
       ).not.toBeNull();
     });
     expect(reads()).toBe(before);
@@ -250,10 +252,12 @@ describe("the page under a live run", () => {
     expect(
       within(article).getByRole("tab", { name: "Research" }).getAttribute("aria-selected"),
     ).toBe("true");
-    const research = within(screen.getByRole("list", { name: "Run steps" }))
-      .getByText("Research")
-      .closest("li") as HTMLElement;
-    expect(within(research).getByText("Running")).not.toBeNull();
+    // Its row in the status list is the Article's, at work on the research.
+    const row = within(screen.getByRole("navigation", { name: "Project sections" })).getByRole(
+      "link",
+      { name: /^Article/ },
+    );
+    expect(row.textContent).toBe("Article, Running");
     const before = reads();
     source.emit({
       type: "llm.preview",

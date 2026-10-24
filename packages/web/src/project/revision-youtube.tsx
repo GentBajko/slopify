@@ -2,7 +2,8 @@ import type { Prompt } from "@app/slices/library/model.js";
 import type { RevisionEdit, RevisionView } from "@app/slices/revisions/model.js";
 import type { ReactElement } from "react";
 import { Button } from "@/components/kit/button";
-import { InfoTip } from "@/components/kit/info-tip";
+import { HelpLine } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { YoutubeDescription } from "@/play/youtube-description";
 import { editOfForm, setPrompt } from "./revision-form-state";
 
@@ -92,7 +93,7 @@ export function RevisionYoutube({
             </Button>
           </p>
         ) : (
-          <span className="inline-flex items-center gap-1">
+          <span className="flex flex-col items-start gap-1" {...helpScope}>
             <Button
               type="button"
               onClick={() => {
@@ -104,7 +105,9 @@ export function RevisionYoutube({
             >
               Write the description again after review
             </Button>
-            <InfoTip id="project.edit.rewrite-description" />
+            <HelpLine>
+              One paid writing call when you remake; the description you have now is replaced.
+            </HelpLine>
           </span>
         )
       ) : null}

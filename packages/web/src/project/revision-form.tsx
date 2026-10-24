@@ -1,4 +1,4 @@
-import { stageKinds } from "@app/kernel/pipeline.js";
+import type { stageKinds } from "@app/kernel/pipeline.js";
 import { type MotionStyle, motionStyles, sourceOf } from "@app/slices/admission/model.js";
 import {
   edgeSilenceSecondsMax,
@@ -11,14 +11,23 @@ import {
 } from "@app/slices/admission/rules.js";
 import { defaultSubtitles } from "@app/slices/subtitles/model.js";
 import { useQuery } from "@tanstack/react-query";
-import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
+import {
+  type ReactElement,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
+import type { Entry } from "@/api";
 import { useApp } from "@/app-context";
 import { channelQuery, defaultChannelId } from "@/channels/api";
 import { DocumentThemePicker } from "@/components/document-theme-picker";
 import { Button } from "@/components/kit/button";
-import { Field, Input, Select, Textarea } from "@/components/kit/field";
-import { InfoTip } from "@/components/kit/info-tip";
-import { Rule } from "@/components/kit/layout";
+import { Field, HelpLine, Input, Select, Textarea } from "@/components/kit/field";
+import { Fold } from "@/components/kit/fold";
+import { helpScope } from "@/components/kit/info-tip";
 import { RailButton } from "@/components/kit/rail";
 import type { HelpId } from "@/help/catalog";
 import { RevisionLanguage } from "@/language/revision-language";
@@ -39,7 +48,7 @@ import { EditAmbientBed, EditLoudness, EditPauses } from "./edit-sound-and-scale
 import { revisionFileUrl } from "./revision-api.js";
 import { changeSource, editOfForm } from "./revision-form-state.js";
 import { RevisionNarration } from "./revision-narration.js";
-import { RevisionPrompts } from "./revision-prompts.js";
+import { type PromptPart, RevisionPrompts } from "./revision-prompts.js";
 import { RevisionProviders } from "./revision-providers.js";
 import { RevisionReviews } from "./revision-reviews.js";
 import { RevisionShorts } from "./revision-shorts.js";
@@ -79,15 +88,41 @@ function Group({
 }
 
 export function RevisionForm(
-  props: EditorProps & { readonly renderContent?: (props: EditorProps) => ReactNode },
-): import("react").ReactElement {
+  props: EditorProps & {
+    readonly renderContent?: (props: EditorProps) => ReactNode;
+    // The section an address opened the settings on, or the one open before a save.
+    readonly opening?: EditSection | undefined;
+    // Told which section is open, so the settings can open on it again after a save.
+    readonly onSection?: (section: EditSection) => void;
+    // The pauses for this run, at the top of Pauses and checks: they take effect at once.
+    readonly checks?: ReactNode;
+  },
+): ReactElement {
   const { view, edit, onChange, onPending, fields } = props;
   const formId = useId();
-  const [section, setSection] = useState<EditSection>(props.focus?.section ?? "inputs");
-  // A change asked for from the project page opens the section it belongs to.
+  const [section, setSection] = useState<EditSection>(
+    props.focus?.section ?? props.opening ?? "title",
+  );
+  // A change asked for from the project page opens the section it belongs to; Rename puts
+  // the cursor in the title.
+  const titleField = useRef<HTMLInputElement>(null);
+  const [renaming, setRenaming] = useState(0);
   useEffect(() => {
-    if (props.focus !== undefined) setSection(props.focus.section);
+    if (props.focus === undefined) return;
+    setSection(props.focus.section);
+    if (props.focus.section === "title") setRenaming((count) => count + 1);
   }, [props.focus]);
+  // Once the title's section is on screen.
+  useEffect(() => {
+    if (renaming > 0) titleField.current?.focus();
+  }, [renaming]);
+  useEffect(() => {
+    if (props.opening !== undefined) setSection(props.opening);
+  }, [props.opening]);
+  const { onSection } = props;
+  useEffect(() => {
+    onSection?.(section);
+  }, [onSection, section]);
   const [pending, setPending] = useState({ font: false, content: false, music: false });
   useEffect(() => {
     onPending(pending.font || pending.content || pending.music);
@@ -149,37 +184,15 @@ export function RevisionForm(
     readonly label: string;
     readonly badge?: string;
   }[] = [
-    { id: "inputs", label: "Inputs" },
-    ...(config.sources.article === "off"
-      ? []
-      : [
-          {
-            id: "article" as const,
-            label: "Article",
-            ...(edit.content.articleEdited ? { badge: "edited" } : {}),
-          },
-        ]),
-    { id: "providers", label: "Providers" },
-    { id: "prompts", label: "Prompts" },
+    { id: "title", label: "Title and keywords" },
     {
-      id: "reviews",
-      label: "Reviews",
-      ...(config.reviews === undefined ? {} : { badge: "on" }),
+      id: "article",
+      label: "Article",
+      ...(edit.content.articleEdited ? { badge: "edited" } : {}),
     },
-    ...(config.sources.audio !== "off" || config.shorts?.enabled === true
-      ? [
-          {
-            id: "shorts" as const,
-            label: "Shorts",
-            ...(config.shorts?.enabled ? { badge: "on" } : {}),
-          },
-        ]
-      : []),
-    ...(config.sources.article === "off" ? [] : [{ id: "subtitles" as const, label: "Subtitles" }]),
+    { id: "narration", label: "Narration" },
     { id: "images", label: "Images", badge: String(edit.content.imageOrder.length) },
-    ...(config.sources.audio === "generate"
-      ? [{ id: "narration" as const, label: "Narration" }]
-      : []),
+    { id: "video", label: "Video and style" },
     ...(config.sources.article === "off"
       ? []
       : [
@@ -191,14 +204,97 @@ export function RevisionForm(
               : { badge: String(edit.content.subtitleCues.cues.length) }),
           },
         ]),
+    { id: "outputs", label: "Outputs" },
+    {
+      id: "checks",
+      label: "Pauses and checks",
+      ...(config.reviews === undefined ? {} : { badge: "on" }),
+    },
+    { id: "channel", label: "Channel" },
   ];
-  const current = sections.some((one) => one.id === section) ? section : "inputs";
+  const current = sections.some((one) => one.id === section) ? section : "title";
   const panel = (id: EditSection) => cn("min-w-0 space-y-6", current === id ? undefined : "hidden");
   const number = (value: number) => (Number.isFinite(value) ? value : "");
   const video = config.sources.video !== "off";
+  const promptList = prompts.data?.prompts ?? [];
+  const entryList = entries.data?.entries ?? [];
+  // Each stage's source (made by AI, supplied, or off) sits at the top of its own section.
+  const sourceField = (kind: (typeof stageKinds)[number]) =>
+    // With Article Off, what reads the article is off and not offered.
+    config.sources.article === "off" &&
+    (kind === "research" || kind === "audio" || kind === "document") ? null : (
+      <Field
+        key={kind}
+        label={`${stageWords[kind]} source`}
+        tip={sourceTips[kind]}
+        error={problem(`sources.${kind}`)}
+      >
+        <Select
+          value={sourceOf(config.sources, kind)}
+          onChange={(event) => {
+            const option = sourceOptions(kind).find((one) => one.value === event.target.value);
+            if (option === undefined) return;
+            const next = changeSource(edit, kind, option.value);
+            onChange(
+              kind === "article" && option.value === "provide" && !edit.content.articleEdited
+                ? {
+                    ...next,
+                    content: {
+                      ...next.content,
+                      articleMarkdown: view.articleMarkdown ?? edit.content.articleMarkdown,
+                    },
+                  }
+                : next,
+            );
+          }}
+        >
+          {sourceOptions(kind)
+            .filter(
+              (option) =>
+                !(
+                  kind === "thumbnail" &&
+                  option.value === "prompt_by_llm" &&
+                  config.sources.article === "off"
+                ),
+            )
+            .map((option) => (
+              <option
+                key={option.value}
+                value={option.value}
+                disabled={
+                  kind === "video" && option.value === "generate" && config.sources.images === "off"
+                }
+              >
+                {option.label}
+              </option>
+            ))}
+        </Select>
+      </Field>
+    );
+  const providerPart = (part: "text" | "voice" | "images") => (
+    <RevisionProviders
+      part={part}
+      projectId={view.revision.projectId}
+      edit={edit}
+      providers={providers.data?.providers ?? []}
+      voices={voices.data?.voices ?? []}
+      onChange={onChange}
+    />
+  );
+  const promptPart = (part: PromptPart) => (
+    <RevisionPrompts
+      part={part}
+      edit={edit}
+      projectId={view.revision.projectId}
+      saved={view.revision.config.imagePrompts}
+      prompts={promptList}
+      entries={entryList}
+      onChange={onChange}
+    />
+  );
   return (
-    <div className="grid min-w-0 gap-8 md:grid-cols-[180px_minmax(0,1fr)]">
-      <nav aria-label="Edit sections" className="min-w-0 md:sticky md:top-16 md:self-start">
+    <div className="grid min-w-0 gap-6 md:grid-cols-[180px_minmax(0,1fr)]">
+      <nav aria-label="Edit sections" className="min-w-0 md:sticky md:top-4 md:self-start">
         <ul className="m-0 flex list-none gap-1 overflow-x-auto p-0 [scrollbar-width:none] md:flex-col">
           {sections.map((one) => (
             <li key={one.id} className="shrink-0">
@@ -236,159 +332,146 @@ export function RevisionForm(
             ))}
           </ul>
         )}
-        <section aria-label="Inputs" hidden={current !== "inputs"} className={panel("inputs")}>
-          <Group title="Project">
-            <Field label="Project title" error={problem("title")} className="md:col-span-2">
-              <Input
-                value={config.title}
-                maxLength={titleMax}
-                onChange={(event) =>
-                  onChange({ ...edit, config: { ...config, title: event.target.value } })
-                }
-              />
-            </Field>
-            <div className="md:col-span-2">
-              <FormatPicker
-                value={config.format}
-                onPick={(format) => onChange({ ...edit, config: { ...config, format } })}
-              />
-            </div>
-          </Group>
-          <Rule />
-          <Group title="Channel" columns={false}>
-            <EditChannel
-              edit={edit}
-              saved={view.revision.config}
-              problem={problem}
-              onChange={onChange}
+        <section
+          aria-label="Title and keywords"
+          hidden={current !== "title"}
+          className={panel("title")}
+        >
+          <Field label="Project title" error={problem("title")}>
+            <Input
+              ref={titleField}
+              value={config.title}
+              maxLength={titleMax}
+              onChange={(event) =>
+                onChange({ ...edit, config: { ...config, title: event.target.value } })
+              }
             />
-          </Group>
-          <Rule />
-          <Group title="Stages">
-            {stageKinds
-              // With Article Off, what reads the article is off and not offered.
-              .filter(
-                (kind) =>
-                  !(
-                    config.sources.article === "off" &&
-                    (kind === "research" || kind === "audio" || kind === "document")
-                  ),
-              )
-              .map((kind) => (
-                <Field
-                  key={kind}
-                  label={`${stageWords[kind]} source`}
-                  tip={sourceTips[kind]}
-                  error={problem(`sources.${kind}`)}
-                >
-                  <Select
-                    value={sourceOf(config.sources, kind)}
-                    onChange={(event) => {
-                      const option = sourceOptions(kind).find(
-                        (one) => one.value === event.target.value,
-                      );
-                      if (option === undefined) return;
-                      const next = changeSource(edit, kind, option.value);
-                      onChange(
-                        kind === "article" &&
-                          option.value === "provide" &&
-                          !edit.content.articleEdited
-                          ? {
-                              ...next,
-                              content: {
-                                ...next.content,
-                                articleMarkdown:
-                                  view.articleMarkdown ?? edit.content.articleMarkdown,
-                              },
-                            }
-                          : next,
-                      );
-                    }}
-                  >
-                    {sourceOptions(kind)
-                      .filter(
-                        (option) =>
-                          !(
-                            kind === "thumbnail" &&
-                            option.value === "prompt_by_llm" &&
-                            config.sources.article === "off"
-                          ),
-                      )
-                      .map((option) => (
-                        <option
-                          key={option.value}
-                          value={option.value}
-                          disabled={
-                            kind === "video" &&
-                            option.value === "generate" &&
-                            config.sources.images === "off"
-                          }
-                        >
-                          {option.label}
-                        </option>
-                      ))}
-                  </Select>
-                </Field>
-              ))}
-            {config.sources.images === "off" ? (
-              <p className="m-0 text-small text-ink-2 md:col-span-2">
-                Images are Off. Video is also Off in these changes.
-              </p>
-            ) : null}
-            <Field label="PDF theme" id={`${formId}-document-theme`} tip="play.document-theme">
-              <DocumentThemePicker
-                id={`${formId}-document-theme`}
-                disabled={sourceOf(config.sources, "document") === "off"}
-                value={config.document}
-                onChange={(document) => {
-                  onChange({ ...edit, config: { ...config, document } });
-                }}
-              />
-            </Field>
-          </Group>
-          <Rule />
-          <Group title="Timing">
+          </Field>
+          {promptPart("keywords")}
+        </section>
+        <section aria-label="Article" hidden={current !== "article"} className={panel("article")}>
+          <div className="grid min-w-0 gap-4 md:grid-cols-2">
+            {sourceField("research")}
+            {sourceField("article")}
+          </div>
+          {config.sources.research === "provide" ? (
             <Field
-              label="Silence gap (seconds)"
-              tip="play.silence-gap"
-              error={problem("silenceGapSeconds")}
+              label="Research notes"
+              tip="play.provided.research"
+              error={problem("provided.research")}
             >
-              <Input
-                type="number"
-                min={0}
-                max={silenceGapSecondsMax}
-                step={0.1}
-                value={number(config.silenceGapSeconds)}
+              <Textarea
+                rows={6}
+                value={config.provided.research ?? ""}
                 onChange={(event) =>
                   onChange({
                     ...edit,
-                    config: { ...config, silenceGapSeconds: Number(event.target.value) },
+                    config: {
+                      ...config,
+                      provided: { ...config.provided, research: event.target.value },
+                    },
                   })
                 }
               />
             </Field>
-            {config.sources.audio === "off" ? null : (
-              <Field
-                label="Silence at start and end (seconds)"
-                tip="play.edge-silence"
-                error={problem("edgeSilenceSeconds")}
-              >
-                <Input
-                  type="number"
-                  min={0}
-                  max={edgeSilenceSecondsMax}
-                  step={0.5}
-                  value={number(config.edgeSilenceSeconds)}
-                  onChange={(event) =>
-                    onChange({
-                      ...edit,
-                      config: { ...config, edgeSilenceSeconds: Number(event.target.value) },
-                    })
-                  }
-                />
-              </Field>
-            )}
-            {video ? (
+          ) : null}
+          {providerPart("text")}
+          {promptPart("article")}
+          {config.sources.article === "off" ? null : (
+            <>
+              <ArticleTextField
+                error={problem("content.articleMarkdown") ?? problem("provided.article")}
+                help={
+                  edit.content.articleEdited
+                    ? "Your edited article is kept when other settings change. Writing it again replaces it after the remake review."
+                    : undefined
+                }
+                value={
+                  (edit.content.articleEdited
+                    ? edit.content.articleMarkdown
+                    : view.articleMarkdown) ??
+                  edit.content.articleMarkdown ??
+                  config.provided.article ??
+                  ""
+                }
+                onChange={(text) =>
+                  onChange({
+                    ...edit,
+                    content: { ...edit.content, articleMarkdown: text, articleEdited: true },
+                  })
+                }
+              />
+              {config.sources.article === "generate" ? (
+                <div className="flex flex-col items-start gap-1" {...helpScope}>
+                  <Button
+                    onClick={() =>
+                      onChange({
+                        ...edit,
+                        regenerate: [...new Set([...(edit.regenerate ?? []), "article:body"])],
+                      })
+                    }
+                  >
+                    Write the article again after review
+                  </Button>
+                  <HelpLine>
+                    Paid writing calls when you remake; the remake shows their cost first. It
+                    replaces your edits to the article.
+                  </HelpLine>
+                </div>
+              ) : null}
+            </>
+          )}
+        </section>
+        <section
+          aria-label="Narration"
+          hidden={current !== "narration"}
+          className={panel("narration")}
+        >
+          {sourceField("audio")}
+          {providerPart("voice")}
+          <RevisionNarration
+            edit={edit}
+            view={view}
+            prompts={promptList}
+            error={problem("narrationPrompt")}
+            onChange={onChange}
+          />
+          <Group title="Intro and outro">
+            {(["intro", "outro"] as const).map((category) => (
+              <IntroOutro
+                key={category}
+                category={category}
+                view={view}
+                edit={edit}
+                entries={entryList}
+                onChange={onChange}
+              />
+            ))}
+          </Group>
+          {promptPart("narration")}
+        </section>
+        <section aria-label="Images" hidden={current !== "images"} className={panel("images")}>
+          {sourceField("images")}
+          {providerPart("images")}
+          {promptPart("images")}
+        </section>
+        <section
+          aria-label="Video and style"
+          hidden={current !== "video"}
+          className={panel("video")}
+        >
+          {sourceField("video")}
+          {config.sources.images === "off" ? (
+            <p className="m-0 text-small text-ink-2">
+              Images are Off. Video is also Off in these changes.
+            </p>
+          ) : null}
+          <FormatPicker
+            value={config.format}
+            onPick={(format) => onChange({ ...edit, config: { ...config, format } })}
+          />
+          {video ? (
+            <Group title="Images and cuts">
               <Field
                 label="Seconds per image"
                 tip="play.image-seconds"
@@ -408,8 +491,6 @@ export function RevisionForm(
                   }
                 />
               </Field>
-            ) : null}
-            {video ? (
               <Field label="Zoom (%)" tip="play.zoom" error={problem("zoomPercent")}>
                 <Input
                   type="number"
@@ -425,8 +506,6 @@ export function RevisionForm(
                   }
                 />
               </Field>
-            ) : null}
-            {video ? (
               <Field label="Motion" tip="play.motion">
                 <Select
                   value={config.motionStyle}
@@ -444,12 +523,7 @@ export function RevisionForm(
                   ))}
                 </Select>
               </Field>
-            ) : null}
-          </Group>
-          {video ? (
-            <>
-              <Rule />
-              <Group title="Cuts and look" columns={false}>
+              <div className="space-y-4 md:col-span-2">
                 {videoEdit.cuts}
                 {videoEdit.look}
                 {config.sources.audio === "generate" && config.audio?.describeFigures === true ? (
@@ -463,243 +537,72 @@ export function RevisionForm(
                     }}
                   />
                 ) : null}
-              </Group>
-              {config.sources.audio === "off" ? null : (
-                <>
-                  <Rule />
-                  <Group title="Ambient sound" columns={false}>
-                    <EditAmbientBed edit={edit} problem={problem} onChange={onChange} />
-                  </Group>
-                </>
-              )}
-            </>
+              </div>
+            </Group>
           ) : null}
-          {config.sources.audio === "off" ? null : (
-            <>
-              <Rule />
-              <Group title="Pauses and volume" columns={false}>
-                <EditPauses edit={edit} problem={problem} onChange={onChange} />
-                <EditLoudness edit={edit} problem={problem} onChange={onChange} />
-              </Group>
-            </>
-          )}
-          <Rule />
-          <Group title="Intro and outro">
-            {(["intro", "outro"] as const).map((category) => {
-              // The project keeps the wording it copied; when the Library's entry of the same
-              // name has changed since, both are offered: this project's version or the newer one.
-              const chosen = config[category]?.name;
-              const copy = view.revision.content.promptTemplates[category];
-              const library = entries.data?.entries.find(
-                (entry) => entry.category === category && entry.name === chosen,
-              );
-              const split =
-                chosen !== undefined &&
-                library !== undefined &&
-                typeof copy === "string" &&
-                view.revision.config[category]?.name === chosen &&
-                copy !== library.body;
-              const current = edit.content.promptTemplates[category];
-              const kept = `${keptValue}${chosen ?? ""}`;
-              const value =
-                chosen === undefined ? "" : split && current !== library?.body ? kept : chosen;
-              return (
+          <Fold
+            summary="Sound polish"
+            state={config.sources.audio === "off" ? "Silence only" : "Pauses, volume and silences"}
+          >
+            <div className="mt-3 space-y-6">
+              <div className="grid min-w-0 gap-4 md:grid-cols-2">
                 <Field
-                  key={category}
-                  label={category === "intro" ? "Intro" : "Outro"}
-                  tip={category === "intro" ? "play.intro" : "play.outro"}
+                  label="Silence gap (seconds)"
+                  tip="play.silence-gap"
+                  error={problem("silenceGapSeconds")}
                 >
-                  <Select
-                    value={value}
-                    onChange={(event) => {
-                      if (event.target.value === kept && typeof copy === "string") {
-                        // Back to the wording this project already had.
-                        onChange(
-                          editOfForm({
-                            ...edit,
-                            config: { ...config, [category]: view.revision.config[category] },
-                            content: {
-                              ...edit.content,
-                              promptTemplates: {
-                                ...edit.content.promptTemplates,
-                                [category]: copy,
-                              },
-                            },
-                          }),
-                        );
-                        return;
-                      }
-                      const selected = entries.data?.entries.find(
-                        (entry) => entry.category === category && entry.name === event.target.value,
-                      );
-                      const next = { ...config };
-                      if (selected === undefined) delete next[category];
-                      else next[category] = { name: selected.name, mode: selected.mode };
-                      onChange(
-                        editOfForm({
-                          ...edit,
-                          config: next,
-                          content:
-                            selected === undefined
-                              ? edit.content
-                              : {
-                                  ...edit.content,
-                                  promptTemplates: {
-                                    ...edit.content.promptTemplates,
-                                    [category]: selected.body,
-                                  },
-                                },
-                        }),
-                      );
-                    }}
-                  >
-                    <option value="">Off</option>
-                    {chosen !== undefined &&
-                    !entries.data?.entries.some(
-                      (entry) => entry.category === category && entry.name === chosen,
-                    ) ? (
-                      <option value={chosen}>{chosen} (saved entry)</option>
-                    ) : null}
-                    {split ? <option value={kept}>{chosen} · this project's version</option> : null}
-                    {entries.data?.entries
-                      .filter((entry) => entry.category === category)
-                      .map((entry) => (
-                        <option key={entry.id} value={entry.name}>
-                          {split && entry.name === chosen
-                            ? `${entry.name} · Library version (newer)`
-                            : entry.name}
-                        </option>
-                      ))}
-                  </Select>
-                </Field>
-              );
-            })}
-          </Group>
-          {config.sources.research === "provide" ? (
-            <>
-              <Rule />
-              <Group title="Research" columns={false}>
-                <Field
-                  label="Research notes"
-                  tip="play.provided.research"
-                  error={problem("provided.research")}
-                >
-                  <Textarea
-                    rows={6}
-                    value={config.provided.research ?? ""}
+                  <Input
+                    type="number"
+                    min={0}
+                    max={silenceGapSecondsMax}
+                    step={0.1}
+                    value={number(config.silenceGapSeconds)}
                     onChange={(event) =>
                       onChange({
                         ...edit,
-                        config: {
-                          ...config,
-                          provided: { ...config.provided, research: event.target.value },
-                        },
+                        config: { ...config, silenceGapSeconds: Number(event.target.value) },
                       })
                     }
                   />
                 </Field>
-              </Group>
-            </>
-          ) : null}
-        </section>
-        <section aria-label="Article" hidden={current !== "article"} className={panel("article")}>
-          <ArticleTextField
-            error={problem("content.articleMarkdown") ?? problem("provided.article")}
-            help={
-              edit.content.articleEdited
-                ? "Your edited article is kept when other settings change. Regenerating it replaces it after the rebuild review."
-                : undefined
-            }
-            value={
-              (edit.content.articleEdited ? edit.content.articleMarkdown : view.articleMarkdown) ??
-              edit.content.articleMarkdown ??
-              config.provided.article ??
-              ""
-            }
-            onChange={(text) =>
-              onChange({
-                ...edit,
-                content: { ...edit.content, articleMarkdown: text, articleEdited: true },
-              })
-            }
-          />
-          {config.sources.article === "generate" ? (
-            <div className="flex items-center gap-1">
-              <Button
-                onClick={() =>
-                  onChange({
-                    ...edit,
-                    regenerate: [...new Set([...(edit.regenerate ?? []), "article:body"])],
-                  })
-                }
-              >
-                Regenerate article after review
-              </Button>
-              <InfoTip id="project.edit.regenerate-article" />
+                {config.sources.audio === "off" ? null : (
+                  <Field
+                    label="Silence at start and end (seconds)"
+                    tip="play.edge-silence"
+                    error={problem("edgeSilenceSeconds")}
+                  >
+                    <Input
+                      type="number"
+                      min={0}
+                      max={edgeSilenceSecondsMax}
+                      step={0.5}
+                      value={number(config.edgeSilenceSeconds)}
+                      onChange={(event) =>
+                        onChange({
+                          ...edit,
+                          config: { ...config, edgeSilenceSeconds: Number(event.target.value) },
+                        })
+                      }
+                    />
+                  </Field>
+                )}
+              </div>
+              {config.sources.audio === "off" ? null : (
+                <>
+                  <EditPauses edit={edit} problem={problem} onChange={onChange} />
+                  <EditLoudness edit={edit} problem={problem} onChange={onChange} />
+                  {video ? (
+                    <EditAmbientBed edit={edit} problem={problem} onChange={onChange} />
+                  ) : null}
+                </>
+              )}
             </div>
-          ) : null}
+          </Fold>
         </section>
         <section
-          aria-label="Providers"
-          hidden={current !== "providers"}
-          className={panel("providers")}
-        >
-          <RevisionLanguage edit={edit} error={problem("language")} onChange={onChange} />
-          <RevisionProviders
-            projectId={view.revision.projectId}
-            edit={edit}
-            providers={providers.data?.providers ?? []}
-            voices={voices.data?.voices ?? []}
-            onChange={onChange}
-          />
-          <RevisionNarration
-            edit={edit}
-            view={view}
-            prompts={prompts.data?.prompts ?? []}
-            error={problem("narrationPrompt")}
-            onChange={onChange}
-          />
-        </section>
-        <section aria-label="Prompts" hidden={current !== "prompts"} className={panel("prompts")}>
-          <RevisionYoutube
-            edit={edit}
-            view={view}
-            prompts={prompts.data?.prompts ?? []}
-            problem={problem}
-            onChange={onChange}
-          />
-          <RevisionPrompts
-            edit={edit}
-            projectId={view.revision.projectId}
-            saved={view.revision.config.imagePrompts}
-            prompts={prompts.data?.prompts ?? []}
-            entries={entries.data?.entries ?? []}
-            onChange={onChange}
-          />
-        </section>
-        <section aria-label="Reviews" hidden={current !== "reviews"} className={panel("reviews")}>
-          <RevisionReviews
-            edit={edit}
-            providers={providers.data?.providers ?? []}
-            prompts={prompts.data?.prompts ?? []}
-            problem={problem}
-            onChange={onChange}
-          />
-        </section>
-        <section aria-label="Shorts" hidden={current !== "shorts"} className={panel("shorts")}>
-          <RevisionShorts
-            edit={edit}
-            view={view}
-            prompts={prompts.data?.prompts ?? []}
-            problem={problem}
-            onChange={onChange}
-            onPending={markMusic}
-          />
-        </section>
-        <section
-          aria-label="Subtitles"
-          hidden={current !== "subtitles"}
-          className={panel("subtitles")}
+          aria-label="Captions"
+          hidden={current !== "captions"}
+          className={panel("captions")}
         >
           <div data-tour="project-subtitles">
             <SubtitleControls
@@ -708,6 +611,8 @@ export function RevisionForm(
               language={config.language}
               audioEnabled={config.sources.audio !== "off"}
               videoEnabled={video}
+              // With a video, the rendered style preview below shows the captions, as in Create.
+              showPreview={!video}
               onChange={(subtitles) =>
                 onChange({
                   ...edit,
@@ -719,7 +624,7 @@ export function RevisionForm(
             />
           </div>
           {/* Mounted only while the section is open: each change renders a few seconds of video. */}
-          {current !== "subtitles" || !video ? null : (
+          {current !== "captions" || !video ? null : (
             <StylePreview
               drawnOn={drawn?.drawnOn}
               poster={previewPoster}
@@ -737,6 +642,67 @@ export function RevisionForm(
             />
           )}
         </section>
+        <section aria-label="Outputs" hidden={current !== "outputs"} className={panel("outputs")}>
+          {sourceField("thumbnail")}
+          <RevisionYoutube
+            edit={edit}
+            view={view}
+            prompts={promptList}
+            problem={problem}
+            onChange={onChange}
+          />
+          {config.sources.audio !== "off" || config.shorts?.enabled === true ? (
+            <section aria-label="Shorts" className="space-y-4">
+              <h3 className="m-0 text-title-3">Shorts</h3>
+              <RevisionShorts
+                edit={edit}
+                view={view}
+                prompts={promptList}
+                problem={problem}
+                onChange={onChange}
+                onPending={markMusic}
+              />
+            </section>
+          ) : null}
+          <Group title="PDF">
+            {sourceField("document")}
+            <Field label="PDF look" id={`${formId}-document-theme`} tip="play.document-theme">
+              <DocumentThemePicker
+                id={`${formId}-document-theme`}
+                disabled={sourceOf(config.sources, "document") === "off"}
+                value={config.document}
+                onChange={(document) => {
+                  onChange({ ...edit, config: { ...config, document } });
+                }}
+              />
+            </Field>
+          </Group>
+          {promptPart("outputs")}
+        </section>
+        <section
+          aria-label="Pauses and checks"
+          hidden={current !== "checks"}
+          className={panel("checks")}
+        >
+          {props.checks}
+          <RevisionReviews
+            edit={edit}
+            providers={providers.data?.providers ?? []}
+            prompts={promptList}
+            problem={problem}
+            onChange={onChange}
+          />
+          {promptPart("checks")}
+        </section>
+        <section aria-label="Channel" hidden={current !== "channel"} className={panel("channel")}>
+          <EditChannel
+            edit={edit}
+            saved={view.revision.config}
+            problem={problem}
+            onChange={onChange}
+          />
+          <RevisionLanguage edit={edit} error={problem("language")} onChange={onChange} />
+        </section>
         {props.renderContent?.({
           view,
           edit,
@@ -747,5 +713,99 @@ export function RevisionForm(
         })}
       </div>
     </div>
+  );
+}
+
+// The intro or the outro: off, an entry from the Library, or the wording this project copied
+// when the Library's entry of the same name has changed since (both are offered then).
+function IntroOutro({
+  category,
+  view,
+  edit,
+  entries,
+  onChange,
+}: {
+  readonly category: "intro" | "outro";
+  readonly view: EditorProps["view"];
+  readonly edit: EditorProps["edit"];
+  readonly entries: readonly Entry[];
+  readonly onChange: (edit: EditorProps["edit"]) => void;
+}): ReactElement {
+  const { config } = edit;
+  const chosen = config[category]?.name;
+  const copy = view.revision.content.promptTemplates[category];
+  const library = entries.find((entry) => entry.category === category && entry.name === chosen);
+  const split =
+    chosen !== undefined &&
+    library !== undefined &&
+    typeof copy === "string" &&
+    view.revision.config[category]?.name === chosen &&
+    copy !== library.body;
+  const current = edit.content.promptTemplates[category];
+  const kept = `${keptValue}${chosen ?? ""}`;
+  const value = chosen === undefined ? "" : split && current !== library?.body ? kept : chosen;
+  return (
+    <Field
+      label={category === "intro" ? "Intro" : "Outro"}
+      tip={category === "intro" ? "play.intro" : "play.outro"}
+    >
+      <Select
+        value={value}
+        onChange={(event) => {
+          if (event.target.value === kept && typeof copy === "string") {
+            // Back to the wording this project already had.
+            onChange(
+              editOfForm({
+                ...edit,
+                config: { ...config, [category]: view.revision.config[category] },
+                content: {
+                  ...edit.content,
+                  promptTemplates: { ...edit.content.promptTemplates, [category]: copy },
+                },
+              }),
+            );
+            return;
+          }
+          const selected = entries.find(
+            (entry) => entry.category === category && entry.name === event.target.value,
+          );
+          const next = { ...config };
+          if (selected === undefined) delete next[category];
+          else next[category] = { name: selected.name, mode: selected.mode };
+          onChange(
+            editOfForm({
+              ...edit,
+              config: next,
+              content:
+                selected === undefined
+                  ? edit.content
+                  : {
+                      ...edit.content,
+                      promptTemplates: {
+                        ...edit.content.promptTemplates,
+                        [category]: selected.body,
+                      },
+                    },
+            }),
+          );
+        }}
+      >
+        <option value="">Off</option>
+        {chosen !== undefined &&
+        !entries.some((entry) => entry.category === category && entry.name === chosen) ? (
+          <option value={chosen}>{chosen} (saved entry)</option>
+        ) : null}
+        {split ? <option value={kept}>{chosen} · this project's version</option> : null}
+        {entries
+          .filter((entry) => entry.category === category)
+          .map((entry) => (
+            <option key={entry.id} value={entry.name}>
+              {split && entry.name === chosen
+                ? `${entry.name} · Library version (newer)`
+                : entry.name}
+            </option>
+          ))}
+      </Select>
+    </Field>
   );
 }

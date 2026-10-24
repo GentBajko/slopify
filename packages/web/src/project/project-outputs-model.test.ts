@@ -1,7 +1,7 @@
 import type { RunConfig } from "@app/slices/admission/model.js";
 import { describe, expect, it } from "vitest";
 import { body, output, stage } from "@/routes/project-fixtures";
-import { projectOutputs } from "./project-outputs-model.js";
+import { fileCount, projectOutputs } from "./project-outputs-model.js";
 import { makesYoutubeVideo } from "./sections.js";
 
 const base = body({ status: "done", stages: [], outputs: [] }).project.config as RunConfig;
@@ -22,10 +22,11 @@ describe("projectOutputs", () => {
     expect(rows.map((row) => row.kind)).toEqual(["article"]);
     const [article] = rows;
     expect(article?.state).toBe("current");
-    expect(article?.stateWords).toBe("Current");
+    // The lamp and Done say it is the current file; no fourth word for finished.
+    expect(article?.stateWords).toBe("Done");
     expect(article?.primary?.label).toBe("Markdown (.bin)");
     expect(article?.alternatives.map((one) => one.label)).toEqual(["Plain text (.bin)"]);
-    expect(article?.version).toMatch(/^Made \d+ Oct/);
+    expect(article?.version).toMatch(/^made (Oct \d+|\d+ Oct)/);
   });
 
   it("counts a provided article, which only has plain text, as made", () => {
@@ -40,7 +41,7 @@ describe("projectOutputs", () => {
     expect(article?.alternatives).toEqual([]);
   });
 
-  it("names which article a narration reads, and says when it reads the previous one", () => {
+  it("says when a narration was made, and when it reads the text from before an edit", () => {
     const md = output("article_md", "article", { createdAt: "2026-10-03T13:40:00.000Z" });
     const wav = output("audio_export", "video", { createdAt: "2026-10-04T09:00:00.000Z" });
     const config: RunConfig = {
@@ -51,7 +52,8 @@ describe("projectOutputs", () => {
     const current = projectOutputs({ config, stages, outputs: [md, wav] });
     const narration = current.find((row) => row.kind === "narration");
     expect(narration?.primary?.output.id).toBe(wav.id);
-    expect(narration?.version).toMatch(/from the text of 3 Oct/);
+    expect(narration?.version).toMatch(/^made (Oct \d+|\d+ Oct)/);
+    expect(narration?.version).not.toMatch(/text/);
     const older = projectOutputs({
       config,
       stages,
@@ -61,7 +63,7 @@ describe("projectOutputs", () => {
     expect(older?.state).toBe("older");
     expect(older?.stateWords).toMatch(/previous/i);
     expect(older?.version).toMatch(/before the current text/);
-    expect(older?.next).toMatch(/Update it from Narration, or keep this version/);
+    expect(older?.next).toMatch(/Open Narration to make it again, or keep this version/);
   });
 
   it("offers an audiobook as chaptered M4B first and a podcast as its MP3 episode with a transcript", () => {
@@ -100,7 +102,7 @@ describe("projectOutputs", () => {
     expect(book.some((row) => row.kind === "narration")).toBe(false);
   });
 
-  it("downloads images, thumbnails and shorts as sets, and puts subtitles beside the video", () => {
+  it("downloads images, thumbnails and shorts as sets, and lists each file once", () => {
     const images = [1, 2].map((index) => output("image", "images", { meta: { index } }));
     const thumbs = [1, 2].map((index) => output("thumbnail", "thumbnail", { meta: { index } }));
     const shorts = [2, 1].map((short) =>
@@ -124,10 +126,26 @@ describe("projectOutputs", () => {
     const shown = rows.find((row) => row.kind === "video");
     expect(shown?.primary?.output.id).toBe(video.id);
     expect(shown?.alternatives.map((one) => one.output.id)).toContain(srt.id);
-    expect(rows.find((row) => row.kind === "shorts")?.set?.members.map((one) => one.id)).toEqual([
-      "short-1",
-      "short-2",
-    ]);
+    // The thumbnails are their own row, not another format of the video.
+    expect(shown?.alternatives.some((one) => one.output.role === "thumbnail")).toBe(false);
+    const shortsRow = rows.find((row) => row.kind === "shorts");
+    expect(shortsRow?.set?.members.map((one) => one.id)).toEqual(["short-1", "short-2"]);
+    expect(shortsRow?.section).toBe("shorts");
+    expect(shortsRow?.next).toBe("Review it in Shorts");
+  });
+
+  it("keeps the PDF on its own row, not under the article", () => {
+    const md = output("article_md", "article");
+    const pdf = output("document_pdf", "document");
+    const config: RunConfig = {
+      ...articleOnly,
+      sources: { ...articleOnly.sources, document: "generate" },
+    };
+    const stages = [stage("article", "done"), stage("document", "done")];
+    const rows = projectOutputs({ config, stages, outputs: [md, pdf] });
+    expect(rows.find((row) => row.kind === "article")?.alternatives).toEqual([]);
+    expect(rows.find((row) => row.kind === "pdf")?.primary?.output.id).toBe(pdf.id);
+    expect(fileCount({ config, stages, outputs: [md, pdf] })).toBe(2);
   });
 
   it("says failure and work in progress in words", () => {
@@ -136,7 +154,7 @@ describe("projectOutputs", () => {
       stages: [stage("article", "running"), stage("document", "failed")],
       outputs: [],
     });
-    expect(rows.find((row) => row.kind === "article")?.stateWords).toBe("In progress");
+    expect(rows.find((row) => row.kind === "article")?.stateWords).toBe("Running");
     const pdf = rows.find((row) => row.kind === "pdf");
     expect(pdf?.state).toBe("failed");
     expect(pdf?.stateWords).toBe("Failed before it was made");

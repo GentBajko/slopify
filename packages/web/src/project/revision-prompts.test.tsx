@@ -44,6 +44,7 @@ it("offers the Library's newer outro, or keeping the project's own", async () =>
   const mount = () =>
     render(
       <RevisionPrompts
+        part="narration"
         edit={edit()}
         prompts={[]}
         entries={[outro("Say goodbye warmly.")]}
@@ -68,6 +69,7 @@ it("asks again when the Library changes once more", () => {
   window.localStorage.setItem("slopify.library-kept", JSON.stringify(["Outro:x:y"]));
   render(
     <RevisionPrompts
+      part="narration"
       edit={edit()}
       prompts={[]}
       entries={[outro("A third wording.")]}

@@ -5,24 +5,27 @@ import type { RebuildConsent } from "./rebuild-review.js";
 import type { EditRequest } from "./revision-action-context.js";
 import type { RevisionRefusal } from "./revision-api.js";
 
+// The settings' sections, in Create's order and words: Title and keywords, Article, Narration,
+// Images, Video and style, Captions, Outputs, Pauses and checks, Channel.
 export type EditSection =
-  | "inputs"
+  | "title"
   | "article"
-  | "providers"
-  | "prompts"
-  | "reviews"
-  | "shorts"
-  | "subtitles"
-  | "images"
   | "narration"
-  | "captions";
+  | "images"
+  | "video"
+  | "captions"
+  | "outputs"
+  | "checks"
+  | "channel";
 
 // What the draft's status line says after something happened to the draft itself.
 export type DraftNotice =
   | { readonly kind: "restored"; readonly savedAt: string }
   | { readonly kind: "reapplied" }
   | { readonly kind: "discarded" }
-  | { readonly kind: "copied"; readonly ok: boolean };
+  | { readonly kind: "copied"; readonly ok: boolean }
+  // The draft was saved as the current version; the editor opens again on it.
+  | { readonly kind: "saved" };
 
 export interface RegenerateOptions {
   // The charge the person saw and accepted at the button, in USD. A remake whose estimate is

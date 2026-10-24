@@ -175,7 +175,15 @@ describe("editing the article", () => {
     await waitFor(() => expect(fixture.save).toHaveBeenCalledOnce());
     expect(fixture.view().revision.content.articleMarkdown).toBe("Rewritten.");
     expect(fixture.start).not.toHaveBeenCalled();
-  });
+    // The settings stay open, on the new version, and say it was saved.
+    await screen.findByText("Saved as a new version. Nothing is made again until you choose to.");
+    expect(screen.queryByRole("button", { name: "Edit project" })).toBeNull();
+    expect(((await screen.findByLabelText("Article text")) as HTMLTextAreaElement).value).toBe(
+      "Rewritten.",
+    );
+    // ceiling: types a sentence, saves and waits for the settings to open again; alone about
+    // 1.5 s, past the 5 s default under a loaded full suite.
+  }, 20_000);
 
   it("keeps the typing when the revision save is refused", async () => {
     const fixture = revisionRouteFixture(finished);
@@ -204,9 +212,8 @@ describe("editing the article", () => {
     await userEvent.type(editor, "My unfinished changes.");
     await selectProjectStage("Audio");
     await selectProjectStage("Article");
-    // The draft waits in the Settings view, which the rail marks unsaved.
-    const rail = screen.getByRole("navigation", { name: "Project sections" });
-    expect(within(rail).getByRole("link", { name: /^Settings/ }).textContent).toContain("unsaved");
+    // The draft waits in the settings view, which the title row says is unsaved.
+    expect(screen.getByText("Unsaved changes")).not.toBeNull();
     await openProjectTab("Edit");
     expect((screen.getByLabelText("Article text") as HTMLTextAreaElement).value).toBe(
       "My unfinished changes.",

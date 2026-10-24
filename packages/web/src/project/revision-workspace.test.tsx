@@ -245,12 +245,13 @@ it("recovers a history restore conflict without requiring an open editor", async
     }),
   );
   await user.click(screen.getByRole("tab", { name: "History" }));
-  await user.click(await screen.findByRole("button", { name: /Earlier ·/ }));
-  await user.click(await screen.findByRole("button", { name: "Restore this revision" }));
+  await user.click(await screen.findByRole("button", { name: "Restore" }));
+  await user.click(await screen.findByRole("button", { name: "Restore version 1" }));
   await screen.findByText("Project changed.");
-  await user.click(screen.getByRole("button", { name: "Reload current revision" }));
+  await user.click(screen.getByRole("button", { name: "Reload the current version" }));
   await waitFor(() => expect(prepare).toHaveBeenCalledOnce());
-  await user.click(screen.getByRole("button", { name: "Restore this revision" }));
+  await user.click(screen.getByRole("button", { name: "Restore" }));
+  await user.click(await screen.findByRole("button", { name: "Restore version 1" }));
   await waitFor(() => expect(restore).toHaveBeenCalledTimes(2));
   expect(screen.queryByRole("textbox")).toBeNull();
 });
@@ -372,7 +373,7 @@ it("opens Edit project with a change the Output tab asks for, in the section it 
         disabled={request === undefined}
         onClick={() =>
           request?.({
-            section: "shorts",
+            section: "outputs",
             change: (edit) => ({ ...edit, regenerate: ["shorts:2"] }),
           })
         }
@@ -404,7 +405,7 @@ it("opens Edit project with a change the Output tab asks for, in the section it 
   );
   await user.click(await screen.findByRole("button", { name: "Make short 2 again" }));
   // Nothing is saved until the user presses Save changes on the Edit tab.
-  expect(await screen.findByText("shorts: shorts:2")).not.toBeNull();
+  expect(await screen.findByText("outputs: shorts:2")).not.toBeNull();
   expect(screen.getByRole("tab", { name: /^Edit/ }).getAttribute("aria-selected")).toBe("true");
   expect(save).not.toHaveBeenCalled();
   await user.click(screen.getByRole("button", { name: "Save changes" }));

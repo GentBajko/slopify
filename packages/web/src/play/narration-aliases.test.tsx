@@ -34,7 +34,14 @@ function ProjectSubject({ use }: { readonly use: boolean | undefined }): ReactEl
   });
   return (
     <>
-      <RevisionProviders projectId="p1" edit={edit} providers={[]} voices={[]} onChange={setEdit} />
+      <RevisionProviders
+        part="voice"
+        projectId="p1"
+        edit={edit}
+        providers={[]}
+        voices={[]}
+        onChange={setEdit}
+      />
       <output aria-label="Saved config">
         {JSON.stringify({
           use: edit.config.audio?.useNarrationAliases,

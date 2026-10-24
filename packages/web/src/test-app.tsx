@@ -213,15 +213,31 @@ export async function openEditSection(name: string): Promise<void> {
   await userEvent.click(within(nav).getByRole("button", { name: new RegExp(`^${name}`) }));
 }
 
-// The project page's section rail (routes/project.tsx): a section or view that is not showing
-// is one press away. "Edit" is the Settings view.
+// The project page (routes/project.tsx): a section in the status column's list is one press
+// away; Cost is the cost line's See the breakdown; Settings is Edit settings in the title row,
+// with Versions its second tab and Pauses and checks a section of its form.
 export async function openProjectSection(name: string): Promise<void> {
+  if (name === "Cost") {
+    const breakdown = screen.queryByRole("link", { name: "See the breakdown" });
+    if (breakdown !== null) await userEvent.click(breakdown);
+    return;
+  }
+  if (name === "Settings" || name === "Versions" || name === "Pauses and checks") {
+    const edit = await screen.findByRole("button", { name: "Edit settings" });
+    if (edit.getAttribute("aria-pressed") !== "true") await userEvent.click(edit);
+    if (name === "Versions")
+      await userEvent.click(await screen.findByRole("tab", { name: "Versions" }));
+    if (name === "Pauses and checks") await openEditSection("Pauses and checks");
+    return;
+  }
   const rail = await screen.findByRole("navigation", { name: "Project sections" });
   const item = within(rail).getByRole("link", { name: new RegExp(`^${name}`) });
   if (item.getAttribute("aria-current") !== "page") await userEvent.click(item);
 }
 
-export async function openProjectTab(name: "Edit" | "History" | "Checkpoints" | "Cost" | "Live") {
+export async function openProjectTab(
+  name: "Edit" | "Versions" | "Pauses and checks" | "Cost" | "Progress",
+) {
   await openProjectSection(name === "Edit" ? "Settings" : name);
 }
 

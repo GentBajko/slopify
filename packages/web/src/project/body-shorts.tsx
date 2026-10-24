@@ -98,7 +98,7 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
       >
         {editable && clips.length > 0 ? (
           <span className="inline-flex items-center gap-1" {...helpScope}>
-            <Button onClick={() => requestEdit({ section: "shorts", change: pickAgain })}>
+            <Button onClick={() => requestEdit({ section: "outputs", change: pickAgain })}>
               Pick different moments
             </Button>
             <InfoTip id="project.shorts.pick-again" />
@@ -143,7 +143,7 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
                   ? {
                       onRemake: () =>
                         requestEdit({
-                          section: "shorts",
+                          section: "outputs",
                           change: (edit) => remakeShort(edit, clip.number),
                         }),
                     }

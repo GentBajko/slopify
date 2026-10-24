@@ -23,8 +23,8 @@ export type OutputKind =
   | "shorts"
   | "pdf";
 
-// The rail section each output lives in.
-export type OutputSection = "article" | "narration" | "images" | "video" | "document";
+// The section each output lives in.
+export type OutputSection = "article" | "narration" | "images" | "video" | "shorts" | "document";
 
 export type OutputState = "current" | "older" | "working" | "failed" | "waiting" | "missing";
 
@@ -43,7 +43,7 @@ export interface ProjectOutput {
   readonly stateWords: string;
   // The file the preview and the version line are about.
   readonly main: Output | undefined;
-  // "Made 4 Oct, 14:05 from the article of 3 Oct, 13:40".
+  // "made Oct 4 14:05", or "made Oct 4 14:05, before the current text".
   readonly version: string | undefined;
   // The export a person most likely wants, named for what it is.
   readonly primary: ExportFile | undefined;
@@ -121,9 +121,9 @@ export function projectOutputs(input: OutputsInput): readonly ProjectOutput[] {
   if (on("article") || on("research") || article !== undefined)
     build("article", "Article", "article", ["research", "article"], article, {
       primary: file(article, article?.role === "article_md" ? "Markdown" : "Plain text")[0],
+      // The PDF has its own row.
       alternatives: [
         ...(article?.role === "article_md" ? file(role("article_txt"), "Plain text") : []),
-        ...file(role("document_pdf"), "PDF"),
         ...file(role("notes"), "Research notes"),
         ...file(role("sources"), "Research sources"),
       ],
@@ -204,15 +204,10 @@ export function projectOutputs(input: OutputsInput): readonly ProjectOutput[] {
   if ((on("video") && config.sources.video !== "off") || video !== undefined)
     build("video", "Video", "video", ["video"], video, {
       primary: file(video, "Video")[0],
+      // The thumbnails have their own row.
       alternatives: [
         ...file(role("subtitles_srt"), "Subtitles"),
         ...file(role("subtitles_vtt"), "Subtitles"),
-        ...thumbnails.flatMap((one) =>
-          file(
-            one,
-            thumbnails.length > 1 ? `Thumbnail ${String(one.meta.index ?? 1)}` : "Thumbnail",
-          ),
-        ),
         ...file(role("youtube_description"), "YouTube description"),
         ...file(role("youtube_tags"), "YouTube tags"),
       ],
@@ -224,7 +219,7 @@ export function projectOutputs(input: OutputsInput): readonly ProjectOutput[] {
     (a, b) => Number(a.meta.short ?? 0) - Number(b.meta.short ?? 0),
   );
   if (shorts.length > 0 || config.shorts?.enabled === true)
-    build("shorts", "Shorts", "video", ["video"], shorts[0], {
+    build("shorts", "Shorts", "shorts", ["video"], shorts[0], {
       set: shorts.length === 0 ? undefined : { set: "shorts", members: shorts },
       alternatives: shorts.flatMap((one) => file(one, `Short ${String(one.meta.short ?? 1)}`)),
       // Shorts are cut from the narration and pictures, not from the finished video.
@@ -239,6 +234,17 @@ export function projectOutputs(input: OutputsInput): readonly ProjectOutput[] {
     });
 
   return list;
+}
+
+// How many files All files lists: each row's downloads, a set's members counted once.
+export function fileCount(input: OutputsInput): number {
+  const ids = new Set<string>();
+  for (const row of projectOutputs(input)) {
+    if (row.primary !== undefined) ids.add(row.primary.output.id);
+    for (const one of row.alternatives) ids.add(one.output.id);
+    for (const one of row.set?.members ?? []) ids.add(one.id);
+  }
+  return ids.size;
 }
 
 function byIndex(a: Output, b: Output): number {

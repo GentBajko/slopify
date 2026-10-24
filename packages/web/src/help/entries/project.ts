@@ -2,11 +2,6 @@ import type { HelpEntry } from "../entry.js";
 
 // The project page, Edit project and the video, caption and upload screens it opens.
 export const projectHelp = {
-  "project.next-chapter": {
-    title: "Make the next chapter",
-    body: "Opens a new draft on Play for this book's next chapter: the same speakers and voices, channel and cast, prompts and settings, with the chapter number one higher. Write or paste the new chapter's text there, then start it. The MP3 and M4B carry the book as their album and the chapter as their track. An audiobook that is not a book yet becomes one, named after it, starting at chapter 2.",
-    tutorial: { page: "Multiple-Voices", anchor: "make-the-next-chapter" },
-  },
   // Video edit: cuts and the Look (video/edit-controls.tsx), shared by Play and Edit project.
   "project.video.cuts": {
     title: "Cuts",
@@ -138,23 +133,8 @@ export const projectHelp = {
     body: "The script the narrator reads, in Markdown. Your edits are kept when other settings change and are saved as a new revision; the narration, images and video made from the old text turn outdated and are remade when you choose. Headings become chapters.",
     tutorial: { page: "Editing-a-Project", anchor: "change-the-article-text" },
   },
-  "project.edit.regenerate-article": {
-    title: "Regenerate article after review",
-    body: "Marks the article to be written again by the text model, which is one or more paid text calls. Nothing runs yet: the rebuild review lists it with the narration, images and video it outdates, and you start it there. It replaces any edits you made to the article.",
-    tutorial: { page: "Editing-a-Project", anchor: "regenerate-the-article" },
-  },
-  "project.saved-revision": {
-    title: "Saved revision",
-    body: "Every save of Edit project is a revision: a snapshot of the settings and content. Continuing a run always uses the current one. Saving never starts work; outputs the change affects turn outdated and keep their old version until remade. Remaking is offered as the next action, and History lets you go back.",
-    tutorial: { page: "Editing-a-Project", anchor: "history-and-saved-revisions" },
-  },
-  "project.choose-remake": {
-    title: "Choose what to remake",
-    body: "Opens the rebuild review for every outdated or failed output: what will be made again, kept or skipped, what it costs, and which inputs changed. Nothing runs until you press Remake there, and Keep things as they are closes it with nothing spent.",
-    tutorial: { page: "Editing-a-Project", anchor: "choose-what-to-remake" },
-  },
   "project.prompts.template": {
-    title: "Use saved template",
+    title: "Use a saved prompt",
     body: "Copies a prompt from your Library into this project, replacing the raw prompt below. The project keeps its own copy, so later Library edits reach it only when you pick it again or press Use the Library version. Outputs made from the old wording turn outdated; nothing is remade until you choose.",
     tutorial: { page: "Editing-a-Project", anchor: "prompts" },
   },
@@ -168,16 +148,6 @@ export const projectHelp = {
     body: "This project's own copy of the prompt, with keywords still in double braces such as {{Topic}}. Edit it to change what the model is asked for this project only; the Library prompt is untouched. Saving fills the keywords in again, and what was made from the old wording turns outdated.",
     tutorial: { page: "Editing-a-Project", anchor: "prompts" },
   },
-  "project.edit.rewrite-description": {
-    title: "Write the description again",
-    body: "Marks the YouTube description to be written again by the text model, one paid text call. Nothing runs yet: save, and it is remade when you continue the run or start the rebuild review. The description you have now is replaced.",
-    tutorial: { page: "YouTube-Description", anchor: "write-it-again-or-turn-it-on-later" },
-  },
-  "project.shorts.clips": {
-    title: "Picked clips",
-    body: "The moments the text model picked for your shorts, each shown by its first and last sentence. Earlier and Later move a clip's start or end by one sentence; Use my own range picks both from lists. Moving a clip costs no calls and keeps its images where the sentences stay the same. Changes apply when you save and continue the run.",
-    tutorial: { page: "Shorts", anchor: "change-the-picked-moments" },
-  },
   "project.shorts.range": {
     title: "Clip range",
     body: "The first and last sentence of this short, from the narration's timed sentences. The clip must stay between the shortest and longest length you set for shorts and must not overlap another clip; the line under the clip says what to change. Back to the AI's choice restores its pick.",
@@ -186,11 +156,6 @@ export const projectHelp = {
   "project.shorts.pick-again": {
     title: "Pick different moments",
     body: "Asks the text model to pick new moments when you save and continue the run, one text call. Ranges you set by hand are dropped. A new clip on the same sentences as an old one keeps its images; any other clip gets new images, one image call each, and is rendered again.",
-    tutorial: { page: "Shorts", anchor: "pick-new-moments-or-remake-one-short" },
-  },
-  "project.shorts.remake": {
-    title: "Make this short again",
-    body: "Makes this one short again when you save and continue the run: its image prompts are written again, its images are drawn again (one image call each) and it is rendered again. Its moment, title and the other shorts stay as they are.",
     tutorial: { page: "Shorts", anchor: "pick-new-moments-or-remake-one-short" },
   },
   "project.images.editor": {
@@ -273,11 +238,6 @@ export const projectHelp = {
     body: "The text model's words as they arrive, so you can see the article or research taking shape. When a stage makes several calls, the list picks which one to watch. Follow output keeps the newest text in view; untick it to read back. Watching costs nothing extra; the full text is saved when the stage finishes.",
     tutorial: { page: "Project-Page", anchor: "live" },
   },
-  "project.checkpoints.choices": {
-    title: "Checkpoint choices",
-    body: "A checkpoint holds the run before a step so you can check and edit what came before it. Tick a step that has not started to add one; untick to remove it, and work already admitted for that step carries on when ready. Pausing the project still applies. Only generated steps can have one. Save checkpoints applies the change.",
-    tutorial: { page: "Project-Page", anchor: "checkpoints" },
-  },
   "project.rebuild.keep-provided": {
     title: "Keep the provided content",
     body: "This output uses a file or text you supplied, and something it depends on, such as the narration, has changed since. Tick to confirm it still fits and keep it as it is. To use something else, cancel and replace the file in Edit project first. Remake stays off until you tick it.",
@@ -338,11 +298,6 @@ export const projectHelp = {
     body: "Records that you uploaded this finished video to YouTube yourself, so it leaves the ready-to-upload lists on Home and here and shows an Uploaded badge. Slopify does not upload anything or check YouTube. Undo takes the mark off.",
     tutorial: { page: "Publishing-to-YouTube", anchor: "mark-a-video-uploaded" },
   },
-  "project.edit.update-glossary": {
-    title: "Update from other projects",
-    body: "Copies your other projects' Pronunciation Glossary terms into this project again, picking up any added since the last copy. The project keeps its own copy, so nothing changes until you press this. After you save, only the narration chunks whose words those terms change are spoken again, paid per character.",
-    tutorial: { page: "Narration-Aliases-and-Glossary", anchor: "the-pronunciation-glossary" },
-  },
   "project.edit.show-figures": {
     title: "Show tables and figures on screen",
     body: "Shows each described table, figure, equation and code block in the video while its description is spoken, as the article's picture or a card drawn on this computer at no cost. Turning it on or off renders the video again, and any Shorts that include a card; the narration is kept. The cards appear under Images, From the article, and can be made again there.",
@@ -352,10 +307,5 @@ export const projectHelp = {
     title: "Describe tables and figures",
     body: "The text model writes a short spoken passage for each table, figure, equation and code block, said in its place. Turning it on costs one text-model call per block, and after you save, the narration chunks that contain a block are spoken again, paid per character (the whole narration when Chunking is the whole article). Other chunks keep their audio; captions and timing are redone to match.",
     tutorial: { page: "Play-Narration", anchor: "tables-figures-and-code" },
-  },
-  "project.edit.update-aliases": {
-    title: "Update from Library",
-    body: "Copies Library, Aliases into this project again, picking up aliases added or changed since the last copy. The project keeps its own copy, so a Library edit reaches it only when you press this. After you save, only the narration chunks the changed aliases touch are spoken again, paid per character.",
-    tutorial: { page: "Narration-Aliases-and-Glossary", anchor: "use-aliases-in-a-video" },
   },
 } as const satisfies Readonly<Record<string, HelpEntry>>;

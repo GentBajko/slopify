@@ -257,7 +257,8 @@ it("opens Edit project to make one short again, or to pick different moments", a
       shortsRanges: { "1": { first: 2, last: 4, pick: "fingerprint" } },
     },
   };
-  expect(requests.map((request) => request.section)).toEqual(["shorts", "shorts"]);
+  // Shorts are set under the settings' Outputs, as in Create.
+  expect(requests.map((request) => request.section)).toEqual(["outputs", "outputs"]);
   expect(requests[0]?.change(edit, view).regenerate).toEqual(["shorts:2"]);
   // The moments picked again drop the ranges set on the old ones.
   const again = requests[1]?.change(edit, view);

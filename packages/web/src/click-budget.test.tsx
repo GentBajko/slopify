@@ -193,7 +193,8 @@ describe("clicks from the landing screen to done", () => {
       }),
     );
 
-    // The page opens on YouTube for a finished video with its description written.
+    // The page opens on the Video for a finished video, its Copy description beside the player;
+    // it copies what the YouTube text section shows, once that text has arrived.
     const rail = await screen.findByRole("navigation", { name: "Project sections" });
     await waitFor(() =>
       expect(
@@ -202,9 +203,9 @@ describe("clicks from the landing screen to done", () => {
           .getAttribute("aria-current"),
       ).toBe("page"),
     );
-    const summary = await screen.findByRole("region", { name: "Summary" });
-    await waitFor(() => expect(summary.textContent).toBe("How rope holds."));
-    await you.click(screen.getByRole("button", { name: "Copy description" }));
+    expect(await screen.findByText("How rope holds.")).not.toBeNull();
+    const video = screen.getByRole("region", { name: "Video" });
+    await you.click(within(video).getByRole("button", { name: "Copy description" }));
     expect(writeText).toHaveBeenLastCalledWith(
       "How rope holds.\n\n0:00 Opening\n0:20 Knots\n0:40 Close\n\n#Rope",
     );

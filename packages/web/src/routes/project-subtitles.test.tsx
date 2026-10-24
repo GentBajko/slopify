@@ -50,12 +50,12 @@ function subtitleMode() {
 }
 
 describe("existing project subtitles", () => {
-  it("saves subtitle style with the revision and keeps it after reopening the editor", async () => {
+  it("saves subtitle style with the revision and shows it in the settings opened again", async () => {
     const user = userEvent.setup();
     const fixture = revisionRouteFixture(project());
     renderRouted(<ProjectRoute projectId="p1" />, deps({ ...fixture.routes, ...fontRoute }));
     await openProjectEditor();
-    await openEditSection("Subtitles");
+    await openEditSection("Captions");
     await screen.findByLabelText("Subtitles", { selector: "select" });
     await user.selectOptions(subtitleMode(), "burn-in");
     await screen.findByRole("option", { name: "Custom font · uploaded" });
@@ -64,7 +64,8 @@ describe("existing project subtitles", () => {
     await user.type(screen.getByLabelText("Subtitle font size"), "64");
     await user.selectOptions(screen.getByLabelText("Subtitle position"), "upper-middle");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
-    await waitFor(() => expect(screen.queryByLabelText("Project title")).toBeNull());
+    // The settings open again on the version just saved, still at Captions.
+    await screen.findByText("Saved as a new version. Nothing is made again until you choose to.");
     expect(fixture.save).toHaveBeenCalledOnce();
     expect(fixture.start).not.toHaveBeenCalled();
     expect(fixture.view().revision.config.subtitles).toEqual({
@@ -74,8 +75,6 @@ describe("existing project subtitles", () => {
       fontSize: 64,
       position: "upper-middle",
     });
-    await openProjectEditor();
-    await openEditSection("Subtitles");
     expect(((await screen.findByLabelText("Subtitle font size")) as HTMLInputElement).value).toBe(
       "64",
     );
@@ -83,8 +82,8 @@ describe("existing project subtitles", () => {
       "upper-middle",
     );
     expect(screen.queryByRole("button", { name: "Save subtitles" })).toBeNull();
-    // ceiling: opens the editor twice and saves; alone 0.8 s, it timed out once under a loaded
-    // full suite.
+    // ceiling: opens the editor, saves and waits for it to open again; alone 0.8 s, it timed
+    // out once under a loaded full suite.
   }, 20_000);
 
   it("keeps refused subtitle edits and maps the server field path", async () => {
@@ -106,7 +105,7 @@ describe("existing project subtitles", () => {
       deps({ ...fixture.routes, ...fontRoute, "POST /api/projects/p1/revisions": refusal }),
     );
     await openProjectEditor();
-    await openEditSection("Subtitles");
+    await openEditSection("Captions");
     await screen.findByLabelText("Subtitles", { selector: "select" });
     await user.selectOptions(subtitleMode(), "files");
     await user.clear(screen.getByLabelText("Subtitle font size"));
@@ -125,7 +124,7 @@ describe("existing project subtitles", () => {
     );
     renderRouted(<ProjectRoute projectId="p1" />, deps({ ...fixture.routes, ...fontRoute }));
     await openProjectEditor();
-    await openEditSection("Subtitles");
+    await openEditSection("Captions");
     await screen.findByLabelText("Subtitles", { selector: "select" });
     expect(subtitleMode().closest("fieldset")?.disabled).toBe(false);
     await user.selectOptions(subtitleMode(), "off");

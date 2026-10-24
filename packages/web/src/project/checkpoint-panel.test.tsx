@@ -43,7 +43,9 @@ it("requires reconciliation when another tab changes the checkpoint set during l
     }),
     openEvents: () => events,
   });
-  await user.click(await screen.findByRole("checkbox", { name: "Before Images" }));
+  await user.click(
+    await screen.findByRole("checkbox", { name: "Pause after the narration (before the images)" }),
+  );
   current = {
     ...status,
     checkpoints: [gate, { ...gate, stage: "video", checkpointId: "video-gate" }],
@@ -56,25 +58,36 @@ it("requires reconciliation when another tab changes the checkpoint set during l
     ),
   );
   const alert = await screen.findByRole("alert");
-  expect(alert.textContent).toContain("Checkpoint choices changed elsewhere");
-  expect(alert.textContent).toContain("Reload checkpoint choices");
+  expect(alert.textContent).toContain("The pauses changed elsewhere");
+  expect(alert.textContent).toContain("Load the pauses again");
   expect(document.activeElement).toBe(alert);
-  const save = screen.getByRole("button", { name: "Save checkpoints" });
+  const save = screen.getByRole("button", { name: "Save pauses" });
   expect(save.hasAttribute("disabled")).toBe(true);
   fireEvent.click(save);
   expect(patch).not.toHaveBeenCalled();
-  await user.click(screen.getByRole("button", { name: "Reload checkpoint choices" }));
+  await user.click(screen.getByRole("button", { name: "Load the pauses again" }));
   await waitFor(() =>
     expect(
-      (screen.getByRole("checkbox", { name: "Before Video" }) as HTMLInputElement).checked,
+      (
+        screen.getByRole("checkbox", {
+          name: "Pause after the images (before the video)",
+        }) as HTMLInputElement
+      ).checked,
     ).toBe(true),
   );
   expect(
-    (screen.getByRole("checkbox", { name: "Before Images" }) as HTMLInputElement).checked,
+    (
+      screen.getByRole("checkbox", {
+        name: "Pause after the narration (before the images)",
+      }) as HTMLInputElement
+    ).checked,
   ).toBe(false);
-  expect(document.activeElement).toBe(screen.getByRole("group", { name: "Checkpoint choices" }));
-  await user.click(screen.getByRole("checkbox", { name: "Before Images" }));
-  await user.click(save);
+  expect(document.activeElement).toBe(screen.getByRole("group", { name: "Pauses for this run" }));
+  await user.click(
+    screen.getByRole("checkbox", { name: "Pause after the narration (before the images)" }),
+  );
+  // Save shows again with the new change.
+  await user.click(screen.getByRole("button", { name: "Save pauses" }));
   await waitFor(() => expect(patch).toHaveBeenCalledOnce());
   expect(changes[0]).toEqual({ revisionId: "r1", stages: ["audio", "video", "images"] });
 });
@@ -111,23 +124,29 @@ it("adds and removes pending gates with explicit revision-bound saves", async ()
       [path]: post,
     }),
   );
-  const audio = await screen.findByRole("checkbox", { name: "Before Narration" });
-  expect(screen.getByRole("checkbox", { name: "Before Video" }).hasAttribute("disabled")).toBe(
-    false,
-  );
+  const audio = await screen.findByRole("checkbox", {
+    name: "Pause after the article (before the narration)",
+  });
+  expect(
+    screen
+      .getByRole("checkbox", { name: "Pause after the images (before the video)" })
+      .hasAttribute("disabled"),
+  ).toBe(false);
   audio.focus();
   await user.keyboard(" ");
   expect(patch).not.toHaveBeenCalled();
-  await user.click(screen.getByRole("button", { name: "Save checkpoints" }));
-  await screen.findByText("Checkpoint choices saved.");
+  await user.click(screen.getByRole("button", { name: "Save pauses" }));
+  await screen.findByText("Pauses saved.");
   expect(changes[0]).toEqual({ revisionId: "r1", stages: ["audio"] });
   expect(
-    (await screen.findByRole("button", { name: "Approve Narration checkpoint" })).hasAttribute(
+    (await screen.findByRole("button", { name: "Approve and make the narration" })).hasAttribute(
       "disabled",
     ),
   ).toBe(true);
-  await user.click(screen.getByRole("checkbox", { name: "Before Narration" }));
-  await user.click(screen.getByRole("button", { name: "Save checkpoints" }));
+  await user.click(
+    screen.getByRole("checkbox", { name: "Pause after the article (before the narration)" }),
+  );
+  await user.click(screen.getByRole("button", { name: "Save pauses" }));
   await waitFor(() => expect(changes).toHaveLength(2));
   expect(changes[1]).toEqual({ revisionId: "r1", stages: [] });
   expect(post).not.toHaveBeenCalled();
@@ -147,7 +166,11 @@ it("keeps running and unavailable checkpoint choices disabled", async () => {
     />,
     testDeps({ "GET /api/projects/p1/checkpoints": jsonAnswer(status) }),
   );
-  for (const name of ["Before Narration", "Before Images", "Before Video"])
+  for (const name of [
+    "Pause after the article (before the narration)",
+    "Pause after the narration (before the images)",
+    "Pause after the images (before the video)",
+  ])
     expect((await screen.findByRole("checkbox", { name })).hasAttribute("disabled")).toBe(true);
 });
 
@@ -176,21 +199,25 @@ it("keeps refused choices frozen until an explicit reload and restores keyboard 
       "PATCH /api/projects/p1/checkpoints": patch,
     }),
   );
-  await user.click(await screen.findByRole("checkbox", { name: "Before Narration" }));
-  await user.click(screen.getByRole("button", { name: "Save checkpoints" }));
+  await user.click(
+    await screen.findByRole("checkbox", { name: "Pause after the article (before the narration)" }),
+  );
+  await user.click(screen.getByRole("button", { name: "Save pauses" }));
   const alert = await screen.findByRole("alert");
   expect(alert.textContent).toContain("This stage has already started.");
   expect(document.activeElement).toBe(alert);
-  expect(screen.getByRole("button", { name: "Save checkpoints" }).hasAttribute("disabled")).toBe(
-    true,
-  );
-  await user.click(screen.getByRole("button", { name: "Reload checkpoint choices" }));
+  expect(screen.getByRole("button", { name: "Save pauses" }).hasAttribute("disabled")).toBe(true);
+  await user.click(screen.getByRole("button", { name: "Load the pauses again" }));
   await waitFor(() =>
     expect(
-      (screen.getByRole("checkbox", { name: "Before Narration" }) as HTMLInputElement).checked,
+      (
+        screen.getByRole("checkbox", {
+          name: "Pause after the article (before the narration)",
+        }) as HTMLInputElement
+      ).checked,
     ).toBe(true),
   );
-  expect(document.activeElement).toBe(screen.getByRole("group", { name: "Checkpoint choices" }));
+  expect(document.activeElement).toBe(screen.getByRole("group", { name: "Pauses for this run" }));
   expect(patch).toHaveBeenCalledOnce();
 });
 
@@ -211,9 +238,9 @@ it("shows a released gate as authorized when generated outputs change its finger
       }),
     }),
   );
-  expect(await screen.findByText(/Authorized for this revision/)).not.toBeNull();
-  expect(screen.queryByText(/Inputs changed/)).toBeNull();
-  expect(screen.queryByRole("button", { name: "Approve Narration checkpoint" })).toBeNull();
+  expect(await screen.findByText(/Approved for this version/)).not.toBeNull();
+  expect(screen.queryByText(/has changed/)).toBeNull();
+  expect(screen.queryByRole("button", { name: "Approve and make the narration" })).toBeNull();
 });
 
 const gate = {
@@ -248,18 +275,20 @@ function released() {
   };
 }
 
-it("explains held stage, dependents and reviewed revision without issuing commands", async () => {
+it("explains a held pause, what waits on it and its version, without issuing commands", async () => {
   const post = vi.fn(jsonAnswer(released()));
   renderApp(
     panel(),
     testDeps({ "GET /api/projects/p1/checkpoints": jsonAnswer(status), [path]: post }),
   );
-  await screen.findByRole("button", { name: "Approve Narration checkpoint" });
-  expect(screen.getByText(/Narration is held for your review/)).not.toBeNull();
-  expect(screen.getByText("Applies to the project as it is now.").getAttribute("title")).toBe(
-    "Version r1",
+  await screen.findByRole("button", { name: "Approve and make the narration" });
+  expect(screen.getByText("Paused after the article")).not.toBeNull();
+  expect(screen.getByText(/^The article is ready for your review\./)).not.toBeNull();
+  // The pause is about the project as it is now, so nothing says otherwise.
+  expect(screen.queryByText(/earlier version/)).toBeNull();
+  expect(screen.getByRole("list", { name: "Waits for this approval" }).textContent).toContain(
+    "Video",
   );
-  expect(screen.getByRole("list", { name: "Dependent work" }).textContent).toContain("Video");
   expect(post).not.toHaveBeenCalled();
 });
 
@@ -269,7 +298,7 @@ it("approves by keyboard with exact identity, accepts a duplicate and returns fo
     panel(),
     testDeps({ "GET /api/projects/p1/checkpoints": jsonAnswer(status), [path]: post }),
   );
-  const button = await screen.findByRole("button", { name: "Approve Narration checkpoint" });
+  const button = await screen.findByRole("button", { name: "Approve and make the narration" });
   button.focus();
   await userEvent.keyboard("{Enter}");
   await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
@@ -294,7 +323,7 @@ it("retains the same identity after an uncertain response and retries only on re
     panel(),
     testDeps({ "GET /api/projects/p1/checkpoints": jsonAnswer(status), [path]: post }),
   );
-  fireEvent.click(await screen.findByRole("button", { name: "Approve Narration checkpoint" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Approve and make the narration" }));
   const retry = await screen.findByRole("button", { name: "Retry approval" });
   expect(post).toHaveBeenCalledTimes(1);
   fireEvent.click(retry);
@@ -313,21 +342,23 @@ it("shows a typed stale refusal and requires reloading before a fresh approval",
     panel(),
     testDeps({ "GET /api/projects/p1/checkpoints": jsonAnswer(status), [path]: post }),
   );
-  fireEvent.click(await screen.findByRole("button", { name: "Approve Narration checkpoint" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Approve and make the narration" }));
   expect(await screen.findByRole("alert")).toHaveProperty(
     "textContent",
     expect.stringContaining("Review the current inputs."),
   );
   expect(screen.queryByRole("button", { name: "Retry approval" })).toBeNull();
   expect(
-    screen.getByRole("button", { name: "Approve Narration checkpoint" }).hasAttribute("disabled"),
+    screen.getByRole("button", { name: "Approve and make the narration" }).hasAttribute("disabled"),
   ).toBe(true);
-  expect(screen.getByRole("button", { name: "Reload checkpoints" })).not.toBeNull();
+  expect(screen.getByRole("button", { name: "Load the reviews again" })).not.toBeNull();
   expect(post).toHaveBeenCalledTimes(1);
-  fireEvent.click(screen.getByRole("button", { name: "Reload checkpoints" }));
+  fireEvent.click(screen.getByRole("button", { name: "Load the reviews again" }));
   await waitFor(() =>
     expect(
-      screen.getByRole("button", { name: "Approve Narration checkpoint" }).hasAttribute("disabled"),
+      screen
+        .getByRole("button", { name: "Approve and make the narration" })
+        .hasAttribute("disabled"),
     ).toBe(false),
   );
   expect(post).toHaveBeenCalledTimes(1);
@@ -343,7 +374,7 @@ it("does not submit twice while an approval is awaiting a response", async () =>
     panel(),
     testDeps({ "GET /api/projects/p1/checkpoints": jsonAnswer(status), [path]: post }),
   );
-  const button = await screen.findByRole("button", { name: "Approve Narration checkpoint" });
+  const button = await screen.findByRole("button", { name: "Approve and make the narration" });
   fireEvent.click(button);
   fireEvent.click(button);
   expect(post).toHaveBeenCalledTimes(1);
@@ -358,15 +389,15 @@ it("keeps project pause authoritative and rejects another revision's status", as
     deps,
   );
   expect(
-    (await screen.findByRole("button", { name: "Approve Narration checkpoint" })).hasAttribute(
+    (await screen.findByRole("button", { name: "Approve and make the narration" })).hasAttribute(
       "disabled",
     ),
   ).toBe(true);
   expect(screen.getByText(/The project is paused. Continue the run/)).not.toBeNull();
   mounted.unmount();
   renderApp(<CheckpointPanel projectId="p1" revisionId="r2" paused={false} stages={[]} />, deps);
-  expect(await screen.findByText(/edited after these checkpoints loaded/)).not.toBeNull();
-  expect(screen.queryByRole("button", { name: "Approve Narration checkpoint" })).toBeNull();
+  expect(await screen.findByText(/edited after these pauses loaded/)).not.toBeNull();
+  expect(screen.queryByRole("button", { name: "Approve and make the narration" })).toBeNull();
 });
 
 it.each(["running", "canceled"] as const)("disables approval for an %s stage", async (state) => {
@@ -380,7 +411,7 @@ it.each(["running", "canceled"] as const)("disables approval for an %s stage", a
     testDeps({ "GET /api/projects/p1/checkpoints": jsonAnswer(status) }),
   );
   expect(
-    (await screen.findByRole("button", { name: "Approve Narration checkpoint" })).hasAttribute(
+    (await screen.findByRole("button", { name: "Approve and make the narration" })).hasAttribute(
       "disabled",
     ),
   ).toBe(true);
@@ -400,13 +431,15 @@ it("allows a held gate to be approved after its stage completes while dependent 
     testDeps({ "GET /api/projects/p1/checkpoints": jsonAnswer(status) }),
   );
   expect(
-    (await screen.findByRole("button", { name: "Approve Narration checkpoint" })).hasAttribute(
+    (await screen.findByRole("button", { name: "Approve and make the narration" })).hasAttribute(
       "disabled",
     ),
   ).toBe(false);
-  expect(screen.getByRole("checkbox", { name: "Before Narration" }).hasAttribute("disabled")).toBe(
-    true,
-  );
+  expect(
+    screen
+      .getByRole("checkbox", { name: "Pause after the article (before the narration)" })
+      .hasAttribute("disabled"),
+  ).toBe(true);
 });
 
 it("refreshes checkpoints on project events and reconnect without approving", async () => {
@@ -427,7 +460,7 @@ it("refreshes checkpoints on project events and reconnect without approving", as
     return panel();
   }
   const mounted = renderApp(<Subject />, deps);
-  await screen.findByRole("button", { name: "Approve Narration checkpoint" });
+  await screen.findByRole("button", { name: "Approve and make the narration" });
   current = { ...status, checkpoints: [{ ...gate, state: "invalidated" }] };
   act(() =>
     source.dispatchEvent(
@@ -436,7 +469,7 @@ it("refreshes checkpoints on project events and reconnect without approving", as
       }),
     ),
   );
-  await screen.findByText(/Inputs changed/);
+  await screen.findByText(/has changed/);
   const before = get.mock.calls.length;
   act(() => {
     source.dispatchEvent(new Event("open"));

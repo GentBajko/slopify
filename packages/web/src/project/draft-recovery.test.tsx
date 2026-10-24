@@ -186,7 +186,7 @@ describe("a project's unsaved edit", () => {
     await screen.findByText("Project changed.");
     expect(screen.getByRole("button", { name: "Copy my edit" })).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Reload latest and re-apply my edit" }));
-    await screen.findByText(/Your edit is laid over the latest revision/);
+    await screen.findByText(/Your edit is laid over the latest version/);
     expect((title as HTMLInputElement).value).toBe("Mine");
     const seconds = screen.getByRole("textbox", { name: "Image seconds" });
     expect((seconds as HTMLInputElement).value).toBe("9");

@@ -116,8 +116,8 @@ describe("the summary in a rundown row", () => {
     expect(summaryOf(stage("audio", "provided"), outputs, project)).toBe("body.mp3");
   });
 
-  it("falls back to the word when a provided stage kept no filename", () => {
-    expect(summaryOf(stage("article", "provided"), [], project)).toBe("Provided");
+  it("says who supplied a provided stage that kept no filename", () => {
+    expect(summaryOf(stage("article", "provided"), [], project)).toBe("Supplied by you");
   });
 
   it("counts the attempts a failed stage used, and leaves the error to its own line", () => {
@@ -171,20 +171,23 @@ describe("the summary in a rundown row", () => {
     ).toBe("Running");
   });
 
-  it("lists the audio segments that exist and the longest one's length", () => {
+  it("gives the narration's length, then its intro and outro when it has them", () => {
     const outputs = [
       output("audio_intro", "audio", { durationMs: 7000 }),
       output("audio_body", "audio", { durationMs: 1_334_000 }),
       output("audio_outro", "audio", { durationMs: 5000 }),
     ];
     expect(summaryOf(stage("audio", "done"), outputs, project)).toBe(
-      "Intro, body and outro · 22:14",
+      "22:14 · with intro and outro",
+    );
+    expect(summaryOf(stage("audio", "done"), outputs.slice(0, 2), project)).toBe(
+      "22:14 · with intro",
     );
   });
 
-  it("names one audio segment without a list", () => {
+  it("never names the body: a narration without intro or outro is only its length", () => {
     const outputs = [output("audio_body", "audio", { durationMs: 60_000 })];
-    expect(summaryOf(stage("audio", "done"), outputs, project)).toBe("Body · 01:00");
+    expect(summaryOf(stage("audio", "done"), outputs, project)).toBe("01:00");
   });
 
   it("counts the images the stage landed", () => {
@@ -197,16 +200,15 @@ describe("the summary in a rundown row", () => {
     expect(summaryOf(stage("images", "done"), [], project)).toBe("0 images");
   });
 
-  it("counts the article's end matter", () => {
+  it("names the article's sources and glossary, and nothing more once Done says it is written", () => {
     const outputs = [
       output("article_md", "article"),
       output("sources", "article"),
       output("glossary", "article"),
     ];
-    expect(summaryOf(stage("article", "done"), outputs, project)).toBe(
-      "Article and 2 end-matter files",
-    );
-    expect(summaryOf(stage("article", "done"), outputs.slice(0, 1), project)).toBe("Article ready");
+    expect(summaryOf(stage("article", "done"), outputs, project)).toBe("With sources and glossary");
+    expect(summaryOf(stage("article", "done"), outputs.slice(0, 2), project)).toBe("With sources");
+    expect(summaryOf(stage("article", "done"), outputs.slice(0, 1), project)).toBe("");
   });
 
   it("says the research notes and the thumbnail are ready", () => {

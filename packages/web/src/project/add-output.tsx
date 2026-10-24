@@ -230,15 +230,19 @@ export function costWords(estimate: CostEstimate): string {
   return `About ${range}.`;
 }
 
-// The Settings tab a missing choice is set on.
+// The settings section a missing choice is set in, the one Create has it in.
 function sectionFor(field: string): EditSection {
-  if (field.startsWith("imagePrompts") || field.endsWith("Prompt")) return "prompts";
+  if (field.startsWith("imagePrompts") || field.startsWith("images") || field === "referencePrompt")
+    return "images";
   if (
     field.startsWith("audio") ||
     field.startsWith("voices") ||
-    field.startsWith("images") ||
-    field.startsWith("llm")
+    field === "narrationPrompt" ||
+    field === "intro" ||
+    field === "outro"
   )
-    return "providers";
-  return "inputs";
+    return "narration";
+  if (field.startsWith("llm") || field === "articlePrompt") return "article";
+  if (field.endsWith("Prompt") || field.startsWith("shorts")) return "outputs";
+  return "title";
 }
