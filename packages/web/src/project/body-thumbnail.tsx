@@ -121,7 +121,7 @@ export function ThumbnailTile({
         openLabel={`Open ${name} full size`}
         badge={
           <span className="inline-flex flex-wrap gap-1">
-            <Badge tone="info">
+            <Badge>
               {count === 1 ? "Thumbnail" : `Thumbnail ${String.fromCharCode(64 + variant)}`}
             </Badge>
             {review === undefined ? null : <ReviewChip review={review} />}

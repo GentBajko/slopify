@@ -188,11 +188,12 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
           />
         ) : null}
       </SectionHead>
-      {shown.length === 0 ? null : (
+      {/* What a tile's "Make this image again" costs, said once for the grid. A sample's line
+          under the title row says why it has none. */}
+      {shown.length === 0 || sample ? null : (
         <p className="m-0 text-small text-ink-2">
-          {sample
-            ? sampleReason
-            : "Making a picture again is one paid image call; the video shows it once the video is made again."}
+          Making a picture again is one paid image call; the video shows it once the video is made
+          again.
         </p>
       )}
       {imagesOn && groups.length === 0 && waiting === 0 && slots.length === 0 ? (

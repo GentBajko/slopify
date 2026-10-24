@@ -35,11 +35,17 @@ export function DocumentBody({ stage, project, outputs }: BodyProps) {
     <StageBody className="@container">
       <div className="grid items-start gap-x-6 gap-y-3 @min-[760px]:grid-cols-[minmax(0,1fr)_minmax(240px,300px)]">
         {inline === undefined ? null : (
-          <iframe
-            src={inline}
+          // The browser's own PDF viewer; one without it shows the line inside instead.
+          <object
+            data={inline}
+            type="application/pdf"
             title={`The PDF of ${project.title}`}
             className="h-[min(640px,75vh)] w-full rounded-control border border-line bg-screen"
-          />
+          >
+            <p className="m-0 p-4 text-small text-ink-2">
+              This browser does not show PDFs on the page. Open in a new tab to read it.
+            </p>
+          </object>
         )}
         <div className="flex min-w-0 flex-col gap-3">
           <ButtonRow>

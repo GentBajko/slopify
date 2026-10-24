@@ -165,10 +165,10 @@ export function VideoBody({ stage, project, outputs, subtitleControls }: BodyPro
       <div
         className={
           shape === "9:16"
-            ? "grid items-start gap-x-6 gap-y-4 @min-[600px]:grid-cols-[minmax(0,360px)_minmax(240px,340px)]"
+            ? "grid items-start justify-start gap-x-6 gap-y-4 @min-[600px]:grid-cols-[minmax(0,360px)_280px]"
             : shape === "1:1"
-              ? "grid items-start gap-x-6 gap-y-4 @min-[760px]:grid-cols-[minmax(0,520px)_minmax(240px,340px)]"
-              : "grid items-start gap-x-6 gap-y-4 @min-[760px]:grid-cols-[minmax(0,720px)_minmax(240px,340px)]"
+              ? "grid items-start justify-start gap-x-6 gap-y-4 @min-[760px]:grid-cols-[minmax(0,520px)_280px]"
+              : "grid items-start justify-start gap-x-6 gap-y-4 @min-[760px]:grid-cols-[minmax(0,720px)_280px]"
         }
       >
         <div className="min-w-0">

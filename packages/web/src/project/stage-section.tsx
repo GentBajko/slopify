@@ -20,14 +20,14 @@ import { LeadDownloadContext, sampleReason, useReadOnlySample } from "./read-onl
 import { RevisionControlContext } from "./revision-action-context.js";
 import { useCurrentRevisionView } from "./revision-media.js";
 import { rerunPrice, useRunCost } from "./stage-price.js";
-import { stageFraction, summaryOf } from "./summary.js";
+import { stageFraction, stageName, summaryOf } from "./summary.js";
 import type { ProjectActions } from "./use-actions.js";
 
 // One section of the project page's main column: its head (title, the one button that makes
 // the section's work again), the next action when it concerns this section, what a refused
 // press here said, and the body. The stage's state and summary are the status list's, beside
-// it, so the head does not say them again. Hidden sections stay mounted so an editor keeps
-// its typing.
+// it, so the head does not say them again; on a sample, the line under the title row says why
+// the make-again button is off. Hidden sections stay mounted so an editor keeps its typing.
 
 // Making a whole stage again replaces its outputs: named for its result, and confirmed first.
 const rerunVerbs: Readonly<Record<StageKind, string>> = {
@@ -55,6 +55,9 @@ const rerunCosts: Readonly<Record<StageKind, string>> = {
 export function rerunVerb(stage: StageKind, project: ProjectSummary): string {
   if (stage === "video" && project.config.sources.video === "off")
     return "Make the audio file again";
+  // An audiobook's or a podcast's final stage is named for what it makes.
+  if (stage === "video" && project.config.voices !== undefined)
+    return `Make the ${stageName("video", project.config).toLowerCase()} again`;
   const thumbnails = thumbnailCountOf(project.config);
   if (stage === "thumbnail" && thumbnails > 1)
     return `Make the ${String(thumbnails)} thumbnails again`;
@@ -132,8 +135,6 @@ export function StageSection({
   );
   const running = stages.find((stage) => stage.state === "running");
   const progress = running === undefined ? undefined : stageFraction(running);
-  const sample = useReadOnlySample(project.id);
-  const remakes = useRerunnable(stages).length > 0;
   return (
     <section
       hidden={!active}
@@ -152,9 +153,6 @@ export function StageSection({
           {extra}
           <SectionMore stages={stages} project={project} actions={actions} />
         </SectionHead>
-      ) : null}
-      {head && sample && remakes ? (
-        <p className="m-0 text-small text-ink-2">{sampleReason}</p>
       ) : null}
       {progress === undefined || running === undefined ? null : (
         <Meter

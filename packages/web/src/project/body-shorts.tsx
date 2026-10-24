@@ -293,17 +293,23 @@ function ShortCard({
         {video !== undefined && media !== undefined ? (
           <FileLink href={media.url} download size="small">
             <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
-            Download<span className="sr-only"> short {number}</span> (.mp4)
+            <span>
+              Download<span className="sr-only"> short {number}</span> (.mp4)
+            </span>
           </FileLink>
         ) : null}
         <Button size="small" onClick={onCopy}>
           <CopyIcon aria-hidden="true" strokeWidth={1.75} />
-          Copy<span className="sr-only"> short {number}</span> for YouTube
+          <span>
+            Copy<span className="sr-only"> short {number}</span> for YouTube
+          </span>
         </Button>
       </ButtonRow>
       {onRemake === undefined ? null : (
         <Button variant="quiet" size="small" className="self-start" onClick={onRemake}>
-          Make<span className="sr-only"> short {number}</span> again
+          <span>
+            Make<span className="sr-only"> short {number}</span> again
+          </span>
         </Button>
       )}
     </li>

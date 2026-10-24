@@ -66,7 +66,7 @@ it("shows the PDF on the page, downloads it and opens the same record in a new t
   expect(open.getAttribute("target")).toBe("_blank");
   expect(open.getAttribute("rel")).toContain("noopener");
   // The document itself, its first page in view, not only buttons that lead to it.
-  expect(screen.getByTitle("The PDF of Rope Tricks").getAttribute("src")).toBe(`${url}?inline=1`);
+  expect(screen.getByTitle("The PDF of Rope Tricks").getAttribute("data")).toBe(`${url}?inline=1`);
   expect(screen.getAllByRole("button", { name: "Open folder" })).toHaveLength(1);
   expect(screen.getByText("Plain theme", { exact: false })).not.toBeNull();
 });
