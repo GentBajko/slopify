@@ -38,7 +38,7 @@ function Group({
       modelField="audio.model"
       serviceProblem={undefined}
       modelProblem={undefined}
-      leaveOut={{ label: "set Narration to Off", onLeave }}
+      leaveOut={{ label: "Set Narration to Off", onLeave }}
       onService={(next) => {
         setProvider(next);
         setModel("");
@@ -94,7 +94,7 @@ describe("who does a stage", () => {
     expect(href.pathname).toBe("/settings");
     expect(href.searchParams.get("section")).toBe("providers");
     expect(href.searchParams.get("family")).toBe("tts");
-    await userEvent.click(screen.getByRole("button", { name: "set Narration to Off" }));
+    await userEvent.click(screen.getByRole("button", { name: "Set Narration to Off" }));
     expect(onLeave).toHaveBeenCalledOnce();
   });
 

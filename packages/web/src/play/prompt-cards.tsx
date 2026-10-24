@@ -158,7 +158,7 @@ export function PromptCards({
                     value={card.name}
                     checked={checked}
                     data-play-field={card.name === focusName ? field : undefined}
-                    className="mt-[3px] size-4 shrink-0 accent-accent"
+                    className="mt-0.5 size-4 shrink-0 accent-accent"
                     onChange={() => onPick(card.name)}
                   />
                   <span className="flex min-w-0 flex-col">

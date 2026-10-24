@@ -1,5 +1,6 @@
 import type { ProviderFamily, ProviderStatus } from "@app/slices/settings/model.js";
 import { type ReactElement, type ReactNode, useId } from "react";
+import { Button } from "@/components/kit/button";
 import { HelpLine } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
 import { TextLink } from "@/components/kit/link";
@@ -57,7 +58,7 @@ export function ServiceGroup({
   readonly modelField: string;
   readonly serviceProblem: string | undefined;
   readonly modelProblem: string | undefined;
-  // The stage's own way out when no service can be used: "set Narration to Off".
+  // The stage's own way out when no service can be used: "Set Narration to Off".
   readonly leaveOut?: { readonly label: string; readonly onLeave: () => void } | undefined;
   readonly className?: string | undefined;
   readonly onService: (provider: string) => void;
@@ -105,21 +106,20 @@ export function ServiceGroup({
       />
       {children}
       {blocked && provider === "" ? (
-        <HelpLine className="sl-fields__wide">
-          {words[family].none} ·{" "}
-          <TextLink to="/settings" search={keysSearch(family)}>
-            {words[family].key} ↗
-          </TextLink>
+        <div className="sl-fields__wide flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+          <HelpLine>
+            {words[family].none} ·{" "}
+            <TextLink to="/settings" search={keysSearch(family)}>
+              {words[family].key} ↗
+            </TextLink>
+            {leaveOut === undefined ? null : " · or"}
+          </HelpLine>
           {leaveOut === undefined ? null : (
-            <>
-              {" "}
-              · or{" "}
-              <button type="button" className="sl-link" onClick={leaveOut.onLeave}>
-                {leaveOut.label}
-              </button>
-            </>
+            <Button variant="quiet" size="small" onClick={leaveOut.onLeave}>
+              {leaveOut.label}
+            </Button>
           )}
-        </HelpLine>
+        </div>
       ) : null}
     </div>
   );

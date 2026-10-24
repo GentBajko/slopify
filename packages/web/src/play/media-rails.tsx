@@ -109,7 +109,7 @@ export function AudioRail({
               serviceProblem={problem("audio")}
               modelProblem={problem("audio.model")}
               leaveOut={{
-                label: "set Narration to Off",
+                label: "Set Narration to Off",
                 onLeave: () => update({ sources: { ...form.sources, audio: "off" } }),
               }}
               onService={(provider) =>
@@ -345,7 +345,7 @@ export function ImageProviderControls({
       leaveOut={
         form.sources.images === "generate"
           ? {
-              label: "set Images to None",
+              label: "Set Images to None",
               onLeave: () => update({ sources: { ...form.sources, images: "off", video: "off" } }),
             }
           : undefined
