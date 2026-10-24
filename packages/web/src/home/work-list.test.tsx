@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { TextLink } from "@/components/kit/link";
 import { renderRouted, testDeps } from "@/test-app";
 import { finishedLine, lengthWords, madeWords } from "./finished-words.js";
-import { ReadyList } from "./work-list.js";
+import { FinishedList } from "./work-list.js";
 
 afterEach(cleanup);
 
@@ -42,32 +42,84 @@ function row(title: string): HTMLElement {
   return item;
 }
 
-describe("Ready on Home", () => {
+describe("Finished on Home", () => {
   // The finished video is greeted with what a person does with one: watch it, download it.
   it("offers Watch and Download video on each finished video, with what it made and when", async () => {
-    renderRouted(<ReadyList ready={[ready("p1", "Rope Tricks")]} primary />, testDeps({}));
+    renderRouted(<FinishedList finished={[ready("p1", "Rope Tricks")]} primary />, testDeps({}));
     await screen.findByRole("link", { name: "Rope Tricks" });
     const item = row("Rope Tricks");
     expect(within(item).getByText("Ready to upload")).not.toBeNull();
     expect(
       within(item).getByText(/^3:05 · 16:9 · video \+ 2 shorts \+ PDF · finished /),
     ).not.toBeNull();
-    const watch = within(item).getByRole("link", { name: "Watch" });
+    const watch = within(item).getByRole("link", { name: "Watch Rope Tricks" });
+    expect(watch.textContent).toBe("Watch");
     expect(watch.getAttribute("href")).toBe("/projects/p1?section=video");
     expect(watch.className).toContain("sl-btn--primary");
-    const download = within(item).getByRole("link", { name: "Download video" });
+    const download = within(item).getByRole("link", { name: "Download video: Rope Tricks" });
     expect(download.getAttribute("href")).toMatch(/\/files\/p1\/video$/);
     expect(download.hasAttribute("download")).toBe(true);
     // No upload chores beside the video.
     expect(within(item).queryByRole("button", { name: /Mark uploaded|Prepare upload/ })).toBeNull();
   });
 
+  // Marking it uploaded changes its word, not whether Home shows it.
+  it("keeps an uploaded video, saying Uploaded, and counts what is left to upload", async () => {
+    renderRouted(
+      <FinishedList
+        finished={[
+          ready("p1", "Rope Tricks"),
+          ready("p2", "Knots", { uploadedAt: "2026-09-28T10:00:00.000Z" }),
+        ]}
+        primary
+      />,
+      testDeps({}),
+    );
+    await screen.findByRole("link", { name: "Knots" });
+    expect(within(row("Knots")).getByText("Uploaded")).not.toBeNull();
+    expect(within(row("Knots")).getByRole("link", { name: "Watch Knots" })).not.toBeNull();
+    expect(screen.getByText("2 videos · 1 ready to upload")).not.toBeNull();
+  });
+
+  // An audiobook has nothing to watch: its row opens the project.
+  it("offers Open on finished work that made no video", async () => {
+    renderRouted(
+      <FinishedList
+        finished={[
+          ready("p3", "The Willows", {
+            config: {
+              sources: {
+                research: "off",
+                article: "generate",
+                audio: "generate",
+                images: "off",
+                thumbnail: "off",
+                video: "off",
+              },
+            },
+            outputs: { video: false, shorts: 0, pdf: false, audio: true },
+          }),
+        ]}
+        primary={false}
+      />,
+      testDeps({}),
+    );
+    await screen.findByRole("link", { name: "The Willows" });
+    const item = row("The Willows");
+    expect(within(item).getByText("Done")).not.toBeNull();
+    expect(within(item).getByRole("link", { name: "Open The Willows" }).getAttribute("href")).toBe(
+      "/projects/p3",
+    );
+    expect(within(item).queryByRole("link", { name: /^Watch|^Download video/ })).toBeNull();
+    expect(screen.getByText("1 project")).not.toBeNull();
+  });
+
   // One verdict for a video that lost a step: the project page's own word, the step named, and
   // the way to it.
   it("says Done with problems on a video that lost a step, names it and links to it", async () => {
     renderRouted(
-      <ReadyList
-        ready={[ready("p2", "Knots", { status: "partial", failedSteps: ["document"] })]}
+      <FinishedList
+        finished={[ready("p2", "Knots", { status: "partial", failedSteps: ["document"] })]}
         primary={false}
       />,
       testDeps({}),
@@ -79,25 +131,28 @@ describe("Ready on Home", () => {
     expect(within(item).getByRole("link", { name: "See what failed" }).getAttribute("href")).toBe(
       "/projects/p2?section=document",
     );
-    expect(within(item).getByRole("link", { name: "Watch" }).className).not.toContain(
+    expect(within(item).getByRole("link", { name: "Watch Knots" }).className).not.toContain(
       "sl-btn--primary",
     );
   });
 
-  it("shows a sample as a sample, with Watch only", async () => {
+  // The section's name says they are samples; each row says Done like any finished run.
+  it("shows a sample as Done, with Watch only", async () => {
     renderRouted(
-      <ReadyList
+      <FinishedList
         title="Finished samples"
-        ready={[ready("s1", "The Library of Alexandria", { sample: true })]}
+        finished={[ready("s1", "The Library of Alexandria", { sample: true })]}
         primary={false}
       />,
       testDeps({}),
     );
     const section = await screen.findByRole("region", { name: "Finished samples" });
     const item = row("The Library of Alexandria");
-    expect(within(item).getByText("Sample")).not.toBeNull();
-    expect(within(item).getByRole("link", { name: "Watch" })).not.toBeNull();
-    expect(within(section).queryByRole("link", { name: "Download video" })).toBeNull();
+    expect(within(item).getByText("Done")).not.toBeNull();
+    expect(
+      within(item).getByRole("link", { name: "Watch The Library of Alexandria" }),
+    ).not.toBeNull();
+    expect(within(section).queryByRole("link", { name: /^Download video/ })).toBeNull();
   });
 
   it("shows six and links to the rest", async () => {
@@ -105,16 +160,16 @@ describe("Ready on Home", () => {
       ready(`p${String(index)}`, `Video ${String(index)}`),
     );
     renderRouted(
-      <ReadyList
-        ready={many}
+      <FinishedList
+        finished={many}
         primary
-        more={<TextLink to="/projects">See all 8 ready to upload</TextLink>}
+        more={<TextLink to="/projects">See all 8 finished in Projects</TextLink>}
       />,
       testDeps({}),
     );
     await screen.findByRole("link", { name: "Video 0" });
-    expect(screen.getAllByRole("link", { name: "Watch" })).toHaveLength(6);
-    expect(screen.getByRole("link", { name: "See all 8 ready to upload" })).not.toBeNull();
+    expect(screen.getAllByRole("link", { name: /^Watch / })).toHaveLength(6);
+    expect(screen.getByRole("link", { name: "See all 8 finished in Projects" })).not.toBeNull();
   });
 });
 

@@ -19,13 +19,13 @@ import { SectionHead } from "@/components/kit/section-head";
 import { NewModelsSlot } from "@/components/model-checks";
 import { Autopilot } from "@/home/autopilot";
 import { ComingUp } from "@/home/coming-up";
-import { isReadyToUpload } from "@/home/ready";
+import { finishedWork } from "@/home/ready";
 import { RunningMore } from "@/home/running-more";
 import { RunningProject } from "@/home/running-now";
 import { FirstVideo } from "@/home/setup";
 import { StartFromTemplate, type TemplateStart } from "@/home/templates";
 import { ThisWeek } from "@/home/week";
-import { type Decision, ReadyList, WorkList } from "@/home/work-list";
+import { type Decision, FinishedList, WorkList } from "@/home/work-list";
 import { plural } from "@/lib/format";
 import { dismissFirstRun, onboardingKey, readFirstRun } from "@/onboarding/api";
 import { projectsQuery } from "@/queries";
@@ -50,10 +50,10 @@ const byFinished = (a: ProjectListing, b: ProjectListing): number =>
 
 // Home, for the channel shown (or all). Before the person has a project of their own: what a
 // video needs on this computer with each fix, Make your first video, and the finished samples
-// to watch. Then: Ready (finished videos, with Watch and Download video), Needs you (decisions
-// and failures), Running (each run's step and time left, then the videos waiting to start in
-// their order), and beside them what the schedules start next, this week's numbers and the
-// templates to start from. Each region says when it is loading or failed, with Retry in place;
+// to watch. Then: Finished (the newest finished videos, uploaded or not, with Watch and
+// Download video), Needs you (decisions and failures), Running (each run's step and time left,
+// then the videos waiting to start in their order), and beside them what the schedules start
+// next, this week's numbers and the templates to start from. Each region says when it is loading or failed, with Retry in place;
 // nothing reads as empty before it loaded.
 export function HomeRoute({
   startFrom,
@@ -113,16 +113,14 @@ export function HomeRoute({
   const firstTime = projects.data !== undefined && all.every((one) => one.sample === true);
   // The samples stand in for finished work until the person has finished a video of their own.
   const samples = all.filter((one) => one.sample === true);
-  const ownFinished = all.some(
-    (one) => one.sample !== true && (one.status === "done" || one.status === "partial"),
-  );
-  const showSamples = samples.length > 0 && !ownFinished;
+  const showSamples = samples.length > 0 && !all.some(finishedWork);
   // Paused runs wait for the person, so they sit under Needs you, not Running. A run parked on
   // an agent's review goes on by itself, so it sits here.
   const running = mine.filter(runningNow);
   // Started and waiting their turn: listed in order under Running.
   const queued = mine.filter(queuedRun);
-  const ready = mine.filter(isReadyToUpload).toSorted(byFinished);
+  // What the person's runs made, uploaded or not.
+  const finished = mine.filter(finishedWork).toSorted(byFinished);
   // A step that failed beside another still waiting is listed here too, while the run reads by
   // that wait.
   const failed = mine.filter(failedRun);
@@ -199,13 +197,13 @@ export function HomeRoute({
                 />
               )}
               {firstTime ? <FirstVideo firstRun={firstRun.data} /> : null}
-              {ready.length === 0 ? null : (
-                <ReadyList
-                  ready={ready}
+              {finished.length === 0 ? null : (
+                <FinishedList
+                  finished={finished}
                   primary={!deciding}
                   more={
-                    <TextLink to="/projects" search={{ show: "ready" }}>
-                      {`See all ${String(ready.length)} ready to upload`}
+                    <TextLink to="/projects" search={{ sort: "finished" }}>
+                      {`See all ${String(finished.length)} finished in Projects`}
                     </TextLink>
                   }
                 />
@@ -232,9 +230,9 @@ export function HomeRoute({
                   <RunningMore running={running.length} queued={queued} projects={all} />
                 </section>
               ) : null}
-              {firstTime || ready.length > 0 || deciding || active ? null : (
+              {firstTime || finished.length > 0 || deciding || active ? null : (
                 <EmptyState
-                  title="Nothing is ready, waiting or running"
+                  title="Nothing is finished, waiting or running"
                   actions={
                     <ButtonLink to="/play" variant="primary">
                       Make a video
@@ -242,10 +240,7 @@ export function HomeRoute({
                   }
                 >
                   Finished videos show here with Watch and Download, and anything that needs you
-                  comes first.{" "}
-                  <TextLink to="/projects" search={{ sort: "finished" }}>
-                    See every finished video in Projects
-                  </TextLink>
+                  comes first.
                 </EmptyState>
               )}
             </>
@@ -253,7 +248,7 @@ export function HomeRoute({
         </BoardColumn>
         <BoardColumn>
           {showSamples ? (
-            <ReadyList ready={samples} title="Finished samples" primary={false} />
+            <FinishedList finished={samples} title="Finished samples" primary={false} />
           ) : null}
           {showComingUp ? (
             <section aria-label="Coming up">
@@ -289,11 +284,12 @@ export function HomeRoute({
               )}
             </section>
           ) : null}
-          <NewModelsSlot />
           <ThisWeek channelId={current.channelId} />
           {startFrom === undefined ? null : (
             <StartFromTemplate templates={myTemplates} start={startFrom} />
           )}
+          {/* Last, so its empty slot never opens a gap above the column's first section. */}
+          <NewModelsSlot />
         </BoardColumn>
       </Board>
     </div>

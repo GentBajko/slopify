@@ -54,14 +54,14 @@ Until you have a project of your own, Home shows:
 - **Your first video**: what a video needs on this computer (Script, Voice, Images), each with its state (**Ready** or **Not connected**) and the button that fixes it, the same list as the first-run screen. **Make your first video** opens Create; it is lime once nothing is missing.
 - **Finished samples**: the bundled samples, each with its picture, its length, what it made and **Watch**. They stay on Home until you have finished a video of your own.
 
-### Ready
+### Finished
 
-Your finished videos, newest first, up to 6 (**See all N ready to upload** opens Projects filtered to them). Each row has the thumbnail, the title, the state in words and one line such as `3:05 · 16:9 · video + 2 shorts + PDF · finished Sep 27`, then:
+What your runs made, newest finished first, up to 6 (**See all N finished in Projects** opens Projects with the most recently finished first). The heading counts them and says how many are still to upload, for example **4 videos · 2 ready to upload**. Each row has the thumbnail, the title, the state in words (**Ready to upload**, **Uploaded**, **Done with problems**, or **Done** for a run that made no video) and one line such as `3:05 · 16:9 · video + 2 shorts + PDF · finished Sep 27`, then:
 
-- **Watch** opens the project on its Video section.
+- **Watch** opens the project on its Video section (**Open**, for an audiobook or anything else without a video).
 - **Download video** saves the video file.
 
-A video that was made but lost another step reads **Done with problems** and names the step, for example **PDF failed**, with **See what failed** opening that section of the project. A video leaves Ready once you mark it uploaded (on Projects, or in the project's upload pack). The bundled samples are never here once you have your own videos.
+A video that was made but lost another step reads **Done with problems** and names the step, for example **PDF failed**, with **See what failed** opening that section of the project. Marking a video uploaded (on Projects, or in the project's upload pack) changes its word to **Uploaded**; it stays here. The bundled samples are never here: they have their own **Finished samples** until you have finished work of your own.
 
 ### Needs you
 
@@ -79,7 +79,7 @@ The things that don't move on until you act:
 
 A held run also offers **Keep as is**, which takes it off Needs you and leaves the rest unmade (with **Undo**); editing the project brings it back. A run waiting for an [agent's review](Agents-MCP#the-external-agent-reviewer) is not here: it goes on by itself, so it shows under Running. A step that failed while the run waits on something else shows here as a failed item. Up to 4 failed runs show; **See all N failed** opens Projects filtered to them.
 
-Only one button in the column is lime: the first decision's when there is one, otherwise **Watch** on the newest video. With nothing ready, waiting or running, Home says so, with **Make a video** and a link to every finished video in Projects. See [Reviews and Checkpoints](Reviews-and-Checkpoints), [Schedules](Schedules) and [Recovery and Retries](Recovery-and-Retries).
+Only one button in the column is lime: the first decision's when there is one, otherwise **Watch** on the newest video. With nothing finished, waiting or running, Home says so, with **Make a video**. See [Reviews and Checkpoints](Reviews-and-Checkpoints), [Schedules](Schedules) and [Recovery and Retries](Recovery-and-Retries).
 
 ### Running
 
@@ -185,7 +185,7 @@ Then its actions, in words:
 - **Download video** saves the finished video.
 - **Mark uploaded** on a finished video of yours. For a day after marking, **Undo upload mark** puts it back on Ready to upload; after that, select it and press **Mark not uploaded**.
 - **Make my own copy** on a sample: an ordinary project you can edit and make again; the sample stays as it came.
-- **Delete** (not while it runs: cancel the run first). A queued video has **Earlier**, **Later** and **Remove** instead.
+- **Delete** (not while it runs: cancel the run first). A queued video has **Earlier**, **Later** and **Remove** instead. On a phone the row keeps one line of actions: tick it and press **Delete** in the bar above the list.
 
 ### Work on several projects at once
 

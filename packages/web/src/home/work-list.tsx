@@ -6,13 +6,13 @@ import { SectionHead } from "@/components/kit/section-head";
 import { plural } from "@/lib/format";
 import { FailedItem } from "./failed-item.js";
 import { HeldTopicsItem, PausedItem, StoppedItem } from "./needs-you.js";
-import { ReadyItem } from "./ready.js";
+import { FinishedItem, isReadyToUpload } from "./ready.js";
 import { WaitingItem } from "./waiting-item.js";
 
-// Home's two work lists. Ready: the finished videos, each with Watch and Download video.
-// Needs you: the decisions waiting for the person (held reviews, stopped and paused runs,
-// suggested topics) and the failures with their fix. Only one action in the column is primary:
-// the first decision's when there is one, else the first video's Watch.
+// Home's two work lists. Finished: what the person's runs made, newest first, each with Watch
+// and Download video. Needs you: the decisions waiting for the person (held reviews, stopped
+// and paused runs, suggested topics) and the failures with their fix. Only one action in the
+// column is primary: the first decision's when there is one, else the newest video's Watch.
 
 export type Decision =
   | {
@@ -23,32 +23,47 @@ export type Decision =
 
 // Enough to see what matters without the page turning into the projects list.
 export const shownPerKind = 4;
-export const readyShown = 6;
+export const finishedShown = 6;
 
-export function ReadyList({
-  ready,
+// "4 videos · 2 ready to upload": how many, in the list's own noun, and how many still wait to
+// be uploaded.
+export function finishedMeta(finished: readonly ProjectListing[]): string {
+  const videos = finished.every((one) => one.config.sources.video !== "off");
+  const ready = finished.filter(isReadyToUpload).length;
+  return [
+    videos
+      ? plural(finished.length, "video", "videos")
+      : plural(finished.length, "project", "projects"),
+    ready === 0 || ready === finished.length ? undefined : `${String(ready)} ready to upload`,
+  ]
+    .filter((part) => part !== undefined)
+    .join(" · ");
+}
+
+export function FinishedList({
+  finished,
   primary,
-  title = "Ready",
+  title = "Finished",
   more,
 }: {
-  readonly ready: readonly ProjectListing[];
+  // Newest finished first.
+  readonly finished: readonly ProjectListing[];
   // Whether the first row's Watch is the column's one primary action.
   readonly primary: boolean;
   readonly title?: string;
-  // "See all 9 ready to upload": the Projects filter that holds every one, when Home shows
-  // fewer.
+  // "See all 9 finished in Projects", when Home shows fewer.
   readonly more?: ReactElement | undefined;
 }): ReactElement {
-  const shown = ready.slice(0, readyShown);
+  const shown = finished.slice(0, finishedShown);
   return (
     <section aria-label={title}>
-      <SectionHead title={title} meta={plural(ready.length, "video", "videos")} />
+      <SectionHead title={title} meta={finishedMeta(finished)} />
       <ul aria-label={title} className="sl-home-list m-0 list-none p-0">
         {shown.map((project, index) => (
-          <ReadyItem key={project.id} project={project} primary={primary && index === 0} />
+          <FinishedItem key={project.id} project={project} primary={primary && index === 0} />
         ))}
       </ul>
-      {ready.length > shown.length && more !== undefined ? (
+      {finished.length > shown.length && more !== undefined ? (
         <div className="mt-2">{more}</div>
       ) : null}
     </section>

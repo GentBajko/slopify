@@ -331,7 +331,7 @@ describe("Home", () => {
         }),
       }),
     );
-    await screen.findByRole("region", { name: "Ready" });
+    await screen.findByRole("region", { name: "Finished" });
     expect(await screen.findByLabelText("Showing:")).not.toBeNull();
     await screen.findByRole("region", { name: "This week" });
     // Every section says what it holds by its name and its rows: no info button beside a heading.
