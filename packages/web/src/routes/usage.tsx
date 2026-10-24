@@ -4,7 +4,7 @@ import { useApp } from "@/app-context";
 import { Board, BoardColumn } from "@/components/kit/board";
 import { type Column, DataTable, Stat, Stats } from "@/components/kit/stats";
 import { wholeNumber } from "@/lib/format";
-import { stageNames } from "@/project/summary";
+import { stageWords } from "@/lib/stage-words";
 import { usageQuery } from "@/queries";
 
 // 10 Usage: this install's own numbers, the same ones the marketing page aggregates. Everything
@@ -43,7 +43,7 @@ export function UsageBoard() {
 }
 
 const stageColumns: readonly Column<StageTokens>[] = [
-  { id: "stage", header: "Stage", cell: (row) => stageNames[row.stage] },
+  { id: "stage", header: "Stage", cell: (row) => stageWords[row.stage] },
   { id: "model", header: "Provider · model", cell: (row) => namedBy(row) },
   { id: "in", header: "Tokens in", numeric: true, cell: (row) => wholeNumber.format(row.tokensIn) },
   {

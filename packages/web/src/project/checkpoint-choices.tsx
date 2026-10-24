@@ -4,6 +4,7 @@ import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { sentence } from "@/http";
+import { stageWords } from "@/lib/stage-words";
 import {
   type CheckpointChange,
   type CheckpointGate,
@@ -16,9 +17,9 @@ type Outcome = {
   readonly message: string;
 } | null;
 const choices = [
-  { stage: "audio", name: "Audio" },
-  { stage: "images", name: "Images" },
-  { stage: "video", name: "Video / export" },
+  { stage: "audio", name: stageWords.audio },
+  { stage: "images", name: stageWords.images },
+  { stage: "video", name: stageWords.video },
 ] as const;
 export function CheckpointChoices({
   projectId,

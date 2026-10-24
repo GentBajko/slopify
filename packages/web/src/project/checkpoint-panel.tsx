@@ -1,9 +1,11 @@
+import type { StageKind } from "@app/kernel/pipeline.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ComponentProps, type ReactElement, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { SectionHead } from "@/components/kit/section-head";
 import { sentence } from "@/http";
+import { stageWords } from "@/lib/stage-words";
 import { keys } from "@/queries";
 import {
   type ApprovalIdentity,
@@ -17,7 +19,7 @@ import {
 
 import { CheckpointChoices } from "./checkpoint-choices.js";
 
-const label = (stage: string): string => stage.charAt(0).toUpperCase() + stage.slice(1);
+const label = (stage: StageKind): string => stageWords[stage];
 interface Props {
   readonly projectId: string;
   readonly revisionId: string | null;

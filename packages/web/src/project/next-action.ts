@@ -11,7 +11,7 @@ import type { Fix } from "@app/slices/fixes/rules.js";
 import type { OutputRole } from "@app/slices/storage/model.js";
 import type { Tone } from "@/components/kit/status";
 import { limitNames, limitWaitLine } from "./limit-wait.js";
-import { activityText, finalOutput } from "./summary.js";
+import { activityText, stageName } from "./summary.js";
 
 // The next action rule (docs/design-system.md, "Controls that say what they do"): a project
 // shows exactly one action for its situation, named for its result, and only when it applies.
@@ -142,17 +142,6 @@ export interface NextAction {
   readonly detail?: string;
 }
 
-// A stage as a person names it on this page: the Audio stage is the narration.
-export const stageWords: Readonly<Record<StageKind, string>> = {
-  research: "Research",
-  article: "Article",
-  audio: "Narration",
-  images: "Images",
-  thumbnail: "Thumbnail",
-  video: "Video",
-  document: "PDF",
-};
-
 // What a stopped run says, on its page and on Home's Needs you.
 export const stoppedLines = {
   title: "The run stopped before it finished.",
@@ -165,8 +154,7 @@ const lower = (text: string): string =>
 export function nextActionFor(input: NextActionInput): NextAction | undefined {
   const { project, stages } = input;
   const config = project.config;
-  const name = (kind: StageKind): string =>
-    kind === "video" && finalOutput(config) === "audio" ? "Audio export" : stageWords[kind];
+  const name = (kind: StageKind): string => stageName(kind, config);
 
   if (input.sample)
     return {

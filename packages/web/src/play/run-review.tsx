@@ -1,9 +1,10 @@
+import type { StageKind } from "@app/kernel/pipeline.js";
 import type { CostEstimate } from "@app/slices/estimate/index.js";
 import type { PlayReview } from "@app/slices/play-drafts/model.js";
 import type { ReactElement } from "react";
 import { Fold } from "@/components/kit/fold";
 import { usd } from "@/lib/format";
-import { checkpointOptions } from "./checkpoints";
+import { stageWords } from "@/lib/stage-words";
 import type { PlayFormState } from "./state";
 
 export function CheckpointReview({
@@ -13,8 +14,7 @@ export function CheckpointReview({
   readonly selected: PlayFormState["checkpoints"];
   readonly reviewed: PlayReview["checkpointSet"];
 }): ReactElement {
-  const label = (stage: string) =>
-    checkpointOptions.find((option) => option.stage === stage)?.label ?? stage;
+  const label = (stage: StageKind) => stageWords[stage];
   if (!selected?.length)
     return <p className="text-body text-ink-2">No review checkpoints selected.</p>;
   return (

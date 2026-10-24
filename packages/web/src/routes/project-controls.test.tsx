@@ -265,7 +265,7 @@ describe("project pause and provider changes", () => {
     );
     await openProjectTab("Checkpoints");
     // Paused: continuing comes first, and the held review cannot be approved yet.
-    const approval = await screen.findByRole("button", { name: "Approve Audio checkpoint" });
+    const approval = await screen.findByRole("button", { name: "Approve Narration checkpoint" });
     expect(approval.hasAttribute("disabled")).toBe(true);
     const next = screen.getByRole("region", { name: "Next action" });
     const button = within(next).getByRole("button", { name: "Continue the run" });
@@ -279,7 +279,7 @@ describe("project pause and provider changes", () => {
     expect(
       await within(next).findByRole("button", { name: "Approve and render the video" }),
     ).not.toBeNull();
-    expect(screen.queryByRole("button", { name: "Approve Audio checkpoint" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Approve Narration checkpoint" })).toBeNull();
     await openProjectTab("Edit");
     expect(await screen.findByRole("form", { name: "Edit project" })).not.toBeNull();
     expect(resume).toHaveBeenCalledTimes(2);

@@ -13,9 +13,10 @@ import { Lightbox, MediaFrame, MediaGrid } from "@/components/kit/media";
 import { LoadFailed, LoadingBlock } from "@/components/kit/query-state";
 import { Status } from "@/components/kit/status";
 import { type Step, Steps } from "@/components/kit/steps";
+import { stageWords } from "@/lib/stage-words";
 import { projectStateOf } from "@/lib/state-words";
 import { limitWaitLine } from "@/project/limit-wait";
-import { activityText, capitalised, stageName, stageNames } from "@/project/summary";
+import { activityText, capitalised, stageName } from "@/project/summary";
 import { useLiveProject } from "@/project/use-live";
 import { projectQuery } from "@/queries";
 
@@ -84,7 +85,7 @@ export function RunningProject({
   // The list row carries no full settings; the step names read the project's own.
   const config = body.data?.project.config;
   const nameOf = (kind: StageKind): string =>
-    config === undefined ? stageNames[kind] : stageName(kind, config);
+    config === undefined ? stageWords[kind] : stageName(kind, config);
   const stages = (body.data?.stages ?? []).filter(
     (stage) => stage.source !== "off" && stage.state !== "skipped",
   );

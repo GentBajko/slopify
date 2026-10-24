@@ -1,7 +1,8 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import type { ProjectSummary, RunConfig, Stage } from "@app/slices/admission/model.js";
 import type { Output } from "@app/slices/storage/model.js";
-import { stageName, stageNames, summaryOf } from "./summary.js";
+import { stageWords } from "@/lib/stage-words";
+import { stageName, summaryOf } from "./summary.js";
 
 // The page shows five sections for the run's seven stages. Research only feeds the article and
 // the thumbnail is one more picture, so neither earns a section of its own: research is a tab on
@@ -69,7 +70,7 @@ export function sectionLead(section: Section): StageKind {
 
 export function sectionName(section: Section, config: RunConfig): string {
   const lead = sectionLead(section);
-  return lead === section.kind ? stageName(section.kind, config) : stageNames[lead];
+  return lead === section.kind ? stageName(section.kind, config) : stageWords[lead];
 }
 
 export function sectionSummary(
@@ -81,7 +82,7 @@ export function sectionSummary(
   const shown = shownStage(section);
   const summary = summaryOf(shown, outputs, project, resumable);
   return shown === section.companion && section.stage.state !== "skipped"
-    ? `${stageNames[shown.kind]}: ${summary}`
+    ? `${stageWords[shown.kind]}: ${summary}`
     : summary;
 }
 

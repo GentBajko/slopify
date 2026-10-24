@@ -4,6 +4,7 @@ import { defaultSubtitles } from "@app/slices/subtitles/model.js";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
+import { stageWords } from "@/lib/stage-words";
 import { jsonAnswer, openEditSection, renderApp, testDeps } from "@/test-app";
 import { revisionView } from "./revision-fixture.js";
 import { RevisionForm } from "./revision-form.js";
@@ -139,10 +140,7 @@ it.each([
       },
     });
     await user.click(screen.getByRole("button", { name: "Edit project" }));
-    await user.selectOptions(
-      await screen.findByLabelText(`${source.charAt(0).toUpperCase()}${source.slice(1)} source`),
-      "off",
-    );
+    await user.selectOptions(await screen.findByLabelText(`${stageWords[source]} source`), "off");
     await openEditSection("Subtitles");
     expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "Subtitles" }).value).toBe(
       after,

@@ -291,7 +291,7 @@ describe("home", () => {
     const running = await screen.findByRole("region", { name: "Running now" });
     expect(await within(running).findByText("Waiting for the agent")).not.toBeNull();
     const needs = screen.getByRole("region", { name: "Needs you" });
-    expect(await within(needs).findByText("Failed · Audio")).not.toBeNull();
+    expect(await within(needs).findByText("Failed · Narration")).not.toBeNull();
   });
 
   // Parked on an agent's review before anything was made: it goes on by itself once the agent

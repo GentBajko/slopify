@@ -1,13 +1,14 @@
 import { type ReactElement, useId } from "react";
 import { Checkbox } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { stageWords } from "@/lib/stage-words";
 import { usePlaySession } from "./draft-context";
 import type { PlayFormState } from "./state";
 
 export const checkpointOptions = [
-  { stage: "audio", label: "Audio" },
-  { stage: "images", label: "Images" },
-  { stage: "video", label: "Video / export" },
+  { stage: "audio", label: stageWords.audio },
+  { stage: "images", label: stageWords.images },
+  { stage: "video", label: stageWords.video },
 ] as const;
 
 export function checkpointTarget(

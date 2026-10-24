@@ -7,21 +7,12 @@ import {
 } from "@app/slices/admission/state-words.js";
 import { documentThemeLabel } from "@app/slices/document/model.js";
 import type { Output } from "@app/slices/storage/model.js";
+import { stageWords } from "@/lib/stage-words";
 
 // The one-line summary in the middle of a rundown row: "7 chapters researched · 41
 // sources" in the design chapter's words, built here from what the project actually holds
 // rather than from anything invented. Pure, so every branch of it is tested without a
 // render.
-
-export const stageNames: Readonly<Record<StageKind, string>> = {
-  research: "Research",
-  article: "Article",
-  audio: "Audio",
-  images: "Images",
-  thumbnail: "Thumbnail",
-  video: "Video",
-  document: "Document",
-};
 
 export function finalOutput(config: RunConfig): "video" | "audio" | "article" {
   return config.sources.video !== "off"
@@ -31,8 +22,10 @@ export function finalOutput(config: RunConfig): "video" | "audio" | "article" {
       : "article";
 }
 
+// A stage's name on this project: a Video stage that only exports the narration is its Audio
+// export; every other stage keeps its one name (lib/stage-words.ts).
 export function stageName(kind: StageKind, config: RunConfig): string {
-  return kind === "video" && finalOutput(config) === "audio" ? "Audio export" : stageNames[kind];
+  return kind === "video" && finalOutput(config) === "audio" ? "Audio export" : stageWords[kind];
 }
 
 export function preparingSubtitles(stage: Stage, config: RunConfig): boolean {

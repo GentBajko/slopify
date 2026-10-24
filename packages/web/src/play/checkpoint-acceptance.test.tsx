@@ -30,7 +30,7 @@ it("keeps checkpoint Save, Review, Start and project approval as separate action
     },
   });
   await act(() => h.session().navigate("review"));
-  for (const name of ["Before Audio", "Before Images", "Before Video / export"])
+  for (const name of ["Before Narration", "Before Images", "Before Video"])
     await userEvent.click(screen.getByRole("checkbox", { name }));
   await act(() => h.session().flush());
   expect(h.session().view?.draft.document.form.checkpoints).toEqual(["audio", "images", "video"]);

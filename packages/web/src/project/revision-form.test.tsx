@@ -69,7 +69,7 @@ it("reads an absent Document source as Off and writes the source and theme", asy
       "GET /api/entries": jsonAnswer({ entries: [] }),
     }),
   );
-  const source = screen.getByRole<HTMLSelectElement>("combobox", { name: "Document source" });
+  const source = screen.getByRole<HTMLSelectElement>("combobox", { name: "PDF source" });
   expect(source.value).toBe("off");
   const theme = screen.getByRole<HTMLSelectElement>("combobox", { name: "PDF theme" });
   // A project saved with no theme was drawn with DiceMaster, and still is; the retired built-in
@@ -180,7 +180,7 @@ it("shows the video timing settings only where the export uses them", async () =
   expect(screen.queryByRole("spinbutton", { name: "Seconds per image" })).toBeNull();
   expect(screen.queryByRole("spinbutton", { name: "Zoom (%)" })).toBeNull();
   expect(screen.queryByRole("combobox", { name: "Motion" })).toBeNull();
-  await user.selectOptions(screen.getByRole("combobox", { name: "Audio source" }), "off");
+  await user.selectOptions(screen.getByRole("combobox", { name: "Narration source" }), "off");
   expect(
     screen.queryByRole("spinbutton", { name: "Silence at start and end (seconds)" }),
   ).toBeNull();

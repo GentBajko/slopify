@@ -14,7 +14,7 @@ const generated: PlayDraftDocument = {
   ...freshDraftDocument,
   form: { ...freshDraftDocument.form, title: "Review gates" },
 };
-const choices = ["Before Audio", "Before Images", "Before Video / export"] as const;
+const choices = ["Before Narration", "Before Images", "Before Video"] as const;
 
 it("selects each checkpoint and preserves it through saves, unrelated edits and reload", async () => {
   const h = reviewHarness();
@@ -49,10 +49,10 @@ it("disables unavailable generated stages and keeps audio-only export selectable
     });
   });
   expect(
-    (screen.getByRole("checkbox", { name: "Before Audio" }) as HTMLInputElement).disabled,
+    (screen.getByRole("checkbox", { name: "Before Narration" }) as HTMLInputElement).disabled,
   ).toBe(true);
   expect(
-    (screen.getByRole("checkbox", { name: "Before Video / export" }) as HTMLInputElement).disabled,
+    (screen.getByRole("checkbox", { name: "Before Video" }) as HTMLInputElement).disabled,
   ).toBe(false);
 });
 
@@ -63,7 +63,7 @@ it("lets users remove a saved checkpoint after its stage is disabled", async () 
     form: { ...suppliedDocument.form, checkpoints: ["audio"] },
   });
   await act(() => h.session().navigate("review"));
-  await userEvent.click(screen.getByRole("checkbox", { name: "Before Audio" }));
+  await userEvent.click(screen.getByRole("checkbox", { name: "Before Narration" }));
   expect(h.session().document.form.checkpoints).toEqual([]);
 });
 
@@ -87,9 +87,7 @@ it("shows reviewed dependency closure and pending approval, then invalidates cha
   });
   await h.prepare({ ...generated, form: { ...generated.form, checkpoints: ["audio"] } });
   const summary = await screen.findByRole("region", { name: "Checkpoints summary" });
-  await waitFor(() =>
-    expect(within(summary).getByText(/Also holds: Video \/ export/)).not.toBeNull(),
-  );
+  await waitFor(() => expect(within(summary).getByText(/Also holds: Video/)).not.toBeNull());
   expect(within(summary).getByText(/Approval required on the project page/)).not.toBeNull();
   await userEvent.click(within(summary).getByRole("button", { name: "Edit checkpoints" }));
   expect(h.session().section).toBe("review");

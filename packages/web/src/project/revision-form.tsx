@@ -22,6 +22,7 @@ import { Rule } from "@/components/kit/layout";
 import { RailButton } from "@/components/kit/rail";
 import type { HelpId } from "@/help/catalog";
 import { RevisionLanguage } from "@/language/revision-language";
+import { stageWords } from "@/lib/stage-words";
 import { cn } from "@/lib/utils";
 import { ShowFiguresToggle } from "@/play/describe-figures";
 import { FormatPicker } from "@/play/format-picker";
@@ -44,16 +45,6 @@ import { RevisionReviews } from "./revision-reviews.js";
 import { RevisionShorts } from "./revision-shorts.js";
 import type { EditorProps, EditSection } from "./revision-workspace.js";
 import { RevisionYoutube } from "./revision-youtube.js";
-
-const stageLabels: Readonly<Record<(typeof stageKinds)[number], string>> = {
-  research: "Research source",
-  article: "Article source",
-  audio: "Audio source",
-  images: "Images source",
-  thumbnail: "Thumbnail source",
-  video: "Video source",
-  document: "Document source",
-};
 
 const sourceTips = {
   research: "play.source.research",
@@ -286,7 +277,7 @@ export function RevisionForm(
               .map((kind) => (
                 <Field
                   key={kind}
-                  label={stageLabels[kind]}
+                  label={`${stageWords[kind]} source`}
                   tip={sourceTips[kind]}
                   error={problem(`sources.${kind}`)}
                 >

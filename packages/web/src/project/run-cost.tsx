@@ -17,10 +17,10 @@ import { Callout } from "@/components/kit/callout";
 import { SectionHead } from "@/components/kit/section-head";
 import { type Column, DataTable, Meter, Stat, Stats } from "@/components/kit/stats";
 import { usd, wholeNumber } from "@/lib/format";
+import { stageWords } from "@/lib/stage-words";
 import { runCostQuery } from "@/queries";
 import { limitNames, limitWaitLine } from "./limit-wait.js";
 import { accountLine, shareLabel, shareLine, shareValue, windowName } from "./plan-share.js";
-import { stageNames } from "./summary.js";
 
 // The Run cost tab: what the run's provider calls actually cost, per stage and per model,
 // what its CLI calls would have cost through the API, the usage behind both, and the share of
@@ -129,7 +129,7 @@ export function RunClock({
 }
 
 const stageColumns: readonly Column<StageCost>[] = [
-  { id: "stage", header: "Stage", cell: (row) => <strong>{stageNames[row.stage]}</strong> },
+  { id: "stage", header: "Stage", cell: (row) => <strong>{stageWords[row.stage]}</strong> },
   { id: "cost", header: "Cost", numeric: true, cell: lineCost },
   { id: "api", header: "Via API", numeric: true, cell: apiCost },
   { id: "usage", header: "Usage", numeric: true, cell: (row) => usage(row) || "—" },

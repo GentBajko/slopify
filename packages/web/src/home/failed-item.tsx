@@ -10,8 +10,8 @@ import { ButtonLink } from "@/components/kit/link";
 import { Status } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
 import { copyText } from "@/fixes/fix-actions";
+import { stageWords } from "@/lib/stage-words";
 import { fixOf } from "@/project/fix-it";
-import { stageNames } from "@/project/summary";
 import { keys } from "@/queries";
 import { ProjectThumb } from "./project-thumb.js";
 import { projectLink, WorkItem } from "./work-item.js";
@@ -47,7 +47,7 @@ export function FailedItem({
     (body.error === null
       ? "The run stopped with an error."
       : `The run stopped with an error; its details didn't load (${body.error.message}). Open the project to see them.`);
-  const where: string = stage === undefined ? "" : ` · ${stageNames[stage.kind as StageKind]}`;
+  const where: string = stage === undefined ? "" : ` · ${stageWords[stage.kind as StageKind]}`;
   const variant = primary ? "primary" : "secondary";
   const action =
     fix?.kind === "provider-settings" ? (
