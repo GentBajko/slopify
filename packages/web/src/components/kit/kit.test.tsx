@@ -4,6 +4,7 @@ import { cleanup, render, screen, waitFor, within } from "@testing-library/react
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { StatusSlot } from "./action-bar.js";
 import { Button, IconButton } from "./button.js";
 import { ConfirmDialog } from "./dialog.js";
 import { Checkbox, Field, Input, Select, Textarea } from "./field.js";
@@ -186,6 +187,18 @@ describe("the page header", () => {
     expect(css).toMatch(
       /\.sl-page \{\s*padding: var\(--space-4\) var\(--space-5\) var\(--space-6\);/,
     );
+  });
+});
+
+describe("the status line", () => {
+  it("takes no room while it is empty, and stays in the page for what arrives", () => {
+    const { rerender } = render(<StatusSlot className="mb-2" />);
+    const slot = screen.getByRole("status");
+    expect(slot.childNodes).toHaveLength(0);
+    for (const name of ["empty:min-h-0", "empty:m-0", "empty:py-0", "mb-2", "min-h-8"])
+      expect(slot.classList).toContain(name);
+    rerender(<StatusSlot className="mb-2">Saved</StatusSlot>);
+    expect(screen.getByRole("status").textContent).toBe("Saved");
   });
 });
 

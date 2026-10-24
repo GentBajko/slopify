@@ -10,10 +10,13 @@ const tones: Readonly<Record<StatusTone, string>> = {
   success: "text-accent-ink",
 };
 
-// A reserved line for transient feedback. It is always rendered at the same height, empty or
-// not, so a message arriving or leaving never moves the controls around it. Long text is cut
-// to one line with the full text on hover and in the accessible name, unless `wrap` asks for
-// every word on screen (a price or a refusal the person must read in full).
+// A line for transient feedback. With something to say it is one line tall; empty, it takes
+// no room (and drops its margins), so a page is never pushed down by a blank band waiting
+// for a message. Beside buttons, in a row or an action bar, the buttons hold the line's
+// height, so a message arriving or leaving does not move them. Long text is cut to one line
+// with the full text on hover and in the accessible name, unless `wrap` asks for every word
+// on screen (a price or a refusal the person must read in full). It stays in the page while
+// empty, so a screen reader still hears what arrives in it.
 export function StatusSlot({
   children,
   tone = "info",
@@ -35,7 +38,7 @@ export function StatusSlot({
       role={tone === "error" ? "alert" : "status"}
       title={text}
       className={cn(
-        "flex min-h-8 min-w-0 flex-1 items-center gap-2 text-small",
+        "flex min-h-8 min-w-0 flex-1 items-center gap-2 text-small empty:m-0 empty:min-h-0 empty:py-0",
         wrap ? "flex-wrap gap-y-0 py-1" : "overflow-hidden",
         tones[tone],
         className,
