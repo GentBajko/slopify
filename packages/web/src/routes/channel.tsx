@@ -4,7 +4,7 @@ import { PlusIcon } from "lucide-react";
 import { type ReactElement, type ReactNode, useState } from "react";
 import { readAbResults } from "@/api";
 import { useApp } from "@/app-context";
-import { channelQuery, channelsKey, deleteChannel } from "@/channels/api";
+import { channelQuery, channelsKey, channelsQuery, deleteChannel } from "@/channels/api";
 import { BrandTab } from "@/channels/brand-tab";
 import { CastTab } from "@/channels/cast-tab";
 import { channelDeleteConsequence, channelDeleteTitle } from "@/channels/delete-copy";
@@ -73,6 +73,9 @@ export function ChannelRoute({
   const client = useQueryClient();
   const navigate = useNavigate();
   const read = useQuery(channelQuery(api, channelId));
+  // With one channel, Channels is this very page, so there is no crumb back to it.
+  const channels = useQuery(channelsQuery(api));
+  const showCrumb = crumb && (channels.data?.length ?? 2) > 1;
   const projects = useQuery(projectsQuery(api));
   const tests = useQuery({
     queryKey: ["studio", "ab-results"],
@@ -147,7 +150,7 @@ export function ChannelRoute({
   return (
     <div>
       <PageHeader
-        {...(crumb ? { crumb: <Link to="/channels">Channels</Link> } : {})}
+        {...(showCrumb ? { crumb: <Link to="/channels">Channels</Link> } : {})}
         title={channel?.name ?? "Channel"}
         meta={channel?.isDefault ? "Default channel · videos with no channel land here" : undefined}
         actions={
