@@ -144,7 +144,7 @@ export function ProjectRow({
             <FileLink
               href={fileUrl(api, project.id, "video")}
               download
-              variant="quiet"
+              variant="secondary"
               size="small"
               aria-label={`Download video: ${project.title}`}
             >

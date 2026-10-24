@@ -104,7 +104,7 @@ export function ReadyItem({
             Watch
           </ButtonLink>
           {project.sample === true || project.outputs?.video !== true ? null : (
-            <FileLink href={fileUrl(api, project.id, "video")} download variant="quiet">
+            <FileLink href={fileUrl(api, project.id, "video")} download variant="secondary">
               Download video
             </FileLink>
           )}
