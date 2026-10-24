@@ -232,18 +232,6 @@ export const settingsHelp = {
     tutorial: { page: "Where-Your-Files-Live", anchor: "move-your-files-to-another-folder" },
   },
 
-  // About
-  "settings.whats-new": {
-    title: "What's new in this version",
-    body: "Opens the patch notes for the version you are running, in Settings, Patch notes. When this version has no notes of its own, it opens the newest ones instead.",
-    tutorial: { page: "Updating-and-Patch-Notes", anchor: "whats-new-tour-on-a-major-update" },
-  },
-  "settings.updates": {
-    title: "Updates",
-    body: "The circular-arrows button at the foot of the sidebar (at the top on a phone) checks for a newer Slopify and installs it. A dot on it means an update is ready. If a video is being made, the update waits until it finishes, and you can cancel it meanwhile. Slopify restarts itself and this page reconnects.",
-    tutorial: { page: "Updating-and-Patch-Notes", anchor: "update-from-the-app" },
-  },
-
   // Home
   "home.needs-you": {
     title: "Needs you",
