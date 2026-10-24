@@ -49,7 +49,7 @@ describe("getStudio", () => {
       ok: false,
       reason: "not-found",
       message:
-        "This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates.",
+        "This template no longer exists; it may have been deleted. Go to Templates to see your templates.",
     });
   });
 

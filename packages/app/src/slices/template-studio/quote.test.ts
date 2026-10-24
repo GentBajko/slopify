@@ -157,7 +157,7 @@ describe("quoteSave", () => {
     expect(quote.ok && quote.value.fits).toBe(false);
   });
 
-  it("says why no sample can be made when Play's review refuses the setup", async () => {
+  it("says why no sample can be made when Create's review refuses the setup", async () => {
     const { deps, id, document } = harness();
     const quote = await quoteSave(deps, id, {
       ...document,
@@ -181,7 +181,7 @@ describe("quoteSave", () => {
 describe("fieldSentence", () => {
   it("names an empty keyword and where it is filled, and keeps every other message", () => {
     expect(fieldSentence({ field: "values.topic", message: "Fill in this field." })).toBe(
-      "The keyword {{topic}} is empty. Fill it in Subject & research.",
+      "The keyword {{topic}} is empty. Fill it in Topic & title.",
     );
     expect(
       fieldSentence({ field: "audio.voice", message: "Choose a voice for the narration." }),

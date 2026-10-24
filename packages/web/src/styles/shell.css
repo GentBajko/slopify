@@ -1032,11 +1032,78 @@
       margin-left: 0;
     }
   }
-  /* Library → Templates → Open studio: the sections, a section's settings and its sample. The
-     sample needs room for a video, so its column is the widest rail; below 1180px it follows
-     the settings rather than sitting above them. */
+  /* Templates → Edit template: the sections, a section's settings and its sample. The settings
+     are the widest column; the sample keeps a phone-width column, room for a video and its
+     player. Below 1180px the sample follows the settings rather than sitting above them. */
   .sl-workspace.sl-workspace--studio {
-    grid-template-columns: 200px minmax(0, 1fr) minmax(320px, 420px);
+    grid-template-columns: 200px minmax(0, 1fr) 320px;
+  }
+  /* Templates: one card per template, a still of what it makes over its facts and actions,
+     four across at 1440px. */
+  .sl-template-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+    gap: var(--space-4);
+  }
+  .sl-template-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-width: 0;
+    padding: var(--space-3);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-media);
+    background: var(--color-surface);
+  }
+  .sl-template-card[aria-current="true"] {
+    border-color: var(--color-accent);
+  }
+  .sl-template-card__still {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--radius-control);
+    background: var(--color-screen);
+  }
+  .sl-template-card__still img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .sl-template-card__still:not([data-format="16:9"]) img {
+    object-fit: contain;
+  }
+  /* No picture yet: the template's shape, drawn to scale, with its ratio in it. */
+  .sl-template-card__shape {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    height: 72%;
+    aspect-ratio: 16 / 9;
+    border: 1px dashed var(--color-line-strong);
+    border-radius: var(--radius-control);
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--color-ink-2);
+    text-align: center;
+  }
+  [data-format="9:16"] > .sl-template-card__shape {
+    aspect-ratio: 9 / 16;
+  }
+  [data-format="1:1"] > .sl-template-card__shape {
+    aspect-ratio: 1 / 1;
+  }
+  .sl-template-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: auto;
   }
   /* Lists whose rows show more than one line: buttons that wrap under a narrow row, a meta
      line or a title read in full. (Tailwind's [&_.sl-row__…] can't say it: "_" there is a
@@ -1048,13 +1115,22 @@
   .sl-list--wrap-title .sl-row__title {
     white-space: normal;
   }
-  /* A section's whole name shows ("Reviews & checkpoints"): it wraps to a second line in the
-     narrow rail instead of being cut. Phones keep the one sideways row. */
+  /* A section's whole name shows ("YouTube description & posts"): it wraps in the narrow rail
+     instead of being cut, and its sample's word goes on the line under it, after the lamp's
+     column. Phones keep the one sideways row. */
   @media (min-width: 768px) {
     .sl-workspace--studio .sl-workspace__sections .sl-rail__item {
+      flex-wrap: wrap;
+      row-gap: 0;
       height: auto;
-      min-height: 40px;
+      min-height: 36px;
       padding-block: 6px;
+    }
+    .sl-workspace--studio .sl-workspace__sections .sl-rail__item > .sl-rail__meta {
+      flex-basis: 100%;
+      margin-left: calc(8px + var(--space-3));
+      font-size: 12px;
+      line-height: 16px;
     }
   }
   @media (max-width: 1180px) {
@@ -1499,6 +1575,8 @@
 @layer utilities {
   @media (min-width: 768px) {
     .sl-workspace--studio .sl-workspace__sections .sl-rail__item > .truncate {
+      flex: 1 1 0%;
+      min-width: 0;
       white-space: normal;
       overflow: visible;
       text-overflow: clip;

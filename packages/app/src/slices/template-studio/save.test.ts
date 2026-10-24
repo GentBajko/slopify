@@ -99,7 +99,7 @@ describe("saveStudio", () => {
     expect((await saveStudio(deps, id, input({ sample: "skip" }))).ok).toBe(true);
     const stale = await saveStudio(deps, id, input({ sample: "skip" }));
     expect(stale).toMatchObject({ ok: false, reason: "conflict" });
-    expect(!stale.ok && stale.message).toContain("it is now version 2. Reload the studio");
+    expect(!stale.ok && stale.message).toContain("it is now version 2. Reload the page");
     expect(versions()).toBe(2);
   });
 
@@ -144,14 +144,14 @@ describe("saveStudio", () => {
     expect(deps.acks.accepted(id, 2)).toBe(true);
   });
 
-  it("refuses a sample past today's budget, offering Save without a sample", async () => {
+  it("refuses a sample past today's budget, saying where it is raised", async () => {
     const { deps, id, quoted, input } = harness();
     writeStudioSettings(deps.db, { dailyBudget: 0 });
     const quote = await quoted();
     const result = await saveStudio(deps, id, input({ acknowledgedHigh: quote.high }));
     expect(result).toMatchObject({ ok: false, reason: "over-budget" });
     expect(!result.ok && result.message).toContain(
-      "Raise the budget in Settings → Template studio, or press Save without a sample.",
+      "Raise the budget in Settings → Template studio.",
     );
     expect(queuedJob(deps.db, id)).toBeUndefined();
   });
@@ -185,7 +185,7 @@ describe("saveStudio", () => {
     );
     expect(refused).toMatchObject({ ok: false, reason: "over-budget" });
     expect(!refused.ok && refused.message).toBe(
-      "This sample runs on your CLI plan, and samples may not use CLI plans. Turn on Samples may use my CLI plans in Settings → Template studio, or press Save without a sample.",
+      "This sample runs on your CLI plan, and samples may not use CLI plans. Turn on Samples may use my CLI plans in Settings → Template studio.",
     );
     expect(queuedJob(deps.db, id)).toBeUndefined();
     // Allowed, a sample whose only cost is plan usage starts at a $0 budget.
@@ -197,7 +197,7 @@ describe("saveStudio", () => {
     expect(allowed.value.fits).toBe(allowed.value.high === 0);
   });
 
-  it("says why no sample can be made when Play's review refuses the setup", async () => {
+  it("says why no sample can be made when Create's review refuses the setup", async () => {
     const { deps, id, changed, input } = harness();
     const result = await saveStudio(
       deps,
@@ -210,9 +210,7 @@ describe("saveStudio", () => {
       }),
     );
     expect(result).toMatchObject({ ok: false, reason: "invalid-input" });
-    expect(!result.ok && result.message).toContain(
-      "Press Save without a sample to keep the change.",
-    );
+    expect(!result.ok && result.message).toContain("Save keeps the change without a sample.");
   });
 
   it("refuses what it can't read and a template that is gone", async () => {

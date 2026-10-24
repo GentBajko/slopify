@@ -154,7 +154,7 @@ describe("free samples", () => {
     expect(free.view("t1", base, idle).video).toEqual({
       state: "needs-fix",
       sentence:
-        "The video sample couldn't be made because the caption font is no longer on this computer. Choose another font in Video & captions → Fine-tune, then press Make samples.",
+        "The video sample couldn't be made because the caption font is no longer on this computer. Choose another font under All Video & captions settings, then press Make sample.",
       url: null,
     });
   });
@@ -165,12 +165,12 @@ describe("free samples", () => {
     );
     await missing.make(base, new AbortController().signal);
     expect(missing.view("t1", base, idle).video.sentence).toBe(
-      "The video sample couldn't be made because ffmpeg wasn't found. Install ffmpeg, or use the Docker image, then press Make samples.",
+      "The video sample couldn't be made because ffmpeg wasn't found. Install ffmpeg, or use the Docker image, then press Make sample.",
     );
     const stopped = createFreeSamples(deps({ stylePreviews: previews(new Error("exit 1")) }));
     await stopped.make(base, new AbortController().signal);
     expect(stopped.view("t1", base, idle).video.sentence).toBe(
-      "The video sample couldn't be made because ffmpeg stopped with an error. Press Make samples again; if it fails again, use Download diagnostics in Settings and report it.",
+      "The video sample couldn't be made because ffmpeg stopped with an error. Press Make sample again; if it fails again, use Download diagnostics in Settings and report it.",
     );
   });
 
@@ -187,7 +187,7 @@ describe("free samples", () => {
     );
     await free.make(base, new AbortController().signal);
     expect(free.view("t1", base, idle).document.sentence).toBe(
-      "The PDF sample couldn't be made: The cover is unreadable. Change the theme in Document (PDF) → Fine-tune, then press Make samples.",
+      "The PDF sample couldn't be made: The cover is unreadable. Change the theme under All PDF settings, then press Make sample.",
     );
   });
 

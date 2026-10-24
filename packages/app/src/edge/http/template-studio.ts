@@ -24,6 +24,7 @@ import {
   systemTimeZone,
   writeStudioSettings,
 } from "../../slices/template-studio/budget.js";
+import { templateCards } from "../../slices/template-studio/cards.js";
 import {
   makeSamplesForAll,
   quoteSamplesForAll,
@@ -129,7 +130,7 @@ const quoteBody = z
   );
 
 const unpriced =
-  "This Slopify can't price or make paid samples because Play's review isn't available here. Restart Slopify; if it happens again, use Download diagnostics in Settings and report it.";
+  "This Slopify can't price or make paid samples because Create's review isn't available here. Restart Slopify; if it happens again, use Download diagnostics in Settings and report it.";
 
 // A refusal that carries the new quote (a higher price, unknown prices, past the budget), so the
 // page can show it on the button at once.
@@ -150,7 +151,7 @@ function refusedWithQuote(
 }
 
 const missingTemplate =
-  "This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates.";
+  "This template no longer exists; it may have been deleted. Go to Templates to see your templates.";
 
 function service(deps: AppDeps): TemplateStudioService {
   return (
@@ -217,6 +218,10 @@ export function templateStudioRoutes(deps: AppDeps) {
         });
   return (
     new Hono()
+      // Templates: what each template makes, its still and its facts, for picking one.
+      .get("/cards", (c) =>
+        c.json({ cards: templateCards({ db: deps.db, paths: deps.paths, log: deps.log }) }),
+      )
       // Settings → Template studio: the samples' daily budgets, and what was spent today.
       .get("/settings", (c) => c.json(settingsView()))
       .put("/settings", zValidator("json", studioSettingsSchema, onInvalid), (c) => {
@@ -263,12 +268,12 @@ export function templateStudioRoutes(deps: AppDeps) {
           return problem(c, {
             status: 413,
             title: "Content Too Large",
-            detail: `This pack is larger than ${String(packLimits.uploadBytes / 1024 / 1024)} MB, more than a template pack ever is. Export it again from the template's studio, or ask whoever made it to.`,
+            detail: `This template file is larger than ${String(packLimits.uploadBytes / 1024 / 1024)} MB, more than an exported template ever is. Export it again from the template's Edit template page, or ask whoever made it to.`,
           });
         if (bytes === undefined || bytes.byteLength === 0)
           return problem(c, {
             status: 400,
-            detail: "No pack arrived with the upload. Choose the pack's .zip file again.",
+            detail: "No file arrived with the upload. Choose the template's .zip file again.",
           });
         const result = importPack(review, new Uint8Array(bytes));
         if (!result.ok) return refusedStudio(c, result);
@@ -496,7 +501,7 @@ export function templateStudioRoutes(deps: AppDeps) {
           const template = templateById(deps.db, id);
           if (template === undefined) return gone(c, missingTemplate);
           const notMade =
-            "This loudness sample isn't made yet. Open the template's studio and press Make samples.";
+            "This loudness sample isn't made yet. Open Edit template and press Make sample.";
           if (file === "before.mp3") {
             const source = studio.loudnessSource;
             const size =
@@ -624,7 +629,7 @@ export function templateStudioRoutes(deps: AppDeps) {
             c,
             found,
             found?.type ?? "application/octet-stream",
-            "This template has no such sample from a pack. Open its studio to see the samples it has.",
+            "This template has no such sample from the file it came in. Open Edit template to see the samples it has.",
           );
         },
       )
@@ -635,7 +640,7 @@ export function templateStudioRoutes(deps: AppDeps) {
           c,
           studio.documentFile?.(studio.free.documentHashOf(template.document)),
           "application/pdf",
-          "This PDF sample isn't made yet. Open the template's studio and press Make samples.",
+          "This PDF sample isn't made yet. Open Edit template and press Make sample.",
         );
       })
   );

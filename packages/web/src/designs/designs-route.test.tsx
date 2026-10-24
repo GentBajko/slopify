@@ -1,10 +1,9 @@
 import type { DesignView } from "@app/slices/designs/model.js";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { type Answer, jsonAnswer, renderRouted, testDeps } from "@/test-app";
-import { DesignsRoute, type DesignsTab } from "./designs-route";
+import { DesignsRoute, DesignTemplateList } from "./designs-route";
 import { blankTemplate } from "./document";
 import { ProjectDesigns } from "./project-designs";
 import { StartFromPicture } from "./start";
@@ -75,29 +74,30 @@ function deps(extra: Readonly<Record<string, Answer>> = {}) {
   });
 }
 
-describe("Library → Designs", () => {
-  it("shows the designs with their pictures, and the templates on their own tab", async () => {
-    function Harness() {
-      const [tab, setTab] = useState<DesignsTab>("designs");
-      return <DesignsRoute tab={tab} onTab={setTab} />;
-    }
-    renderRouted(<Harness />, deps());
+describe("Designs", () => {
+  it("shows the designs with their pictures, its start buttons in its header", async () => {
+    renderRouted(<DesignsRoute />, deps());
     const grid = await screen.findByRole("list", { name: "Designs" });
     expect(within(grid).getByRole("img", { name: "Band photo" }).getAttribute("src")).toContain(
       "/api/designs/d1/steps/d1-s1/picture",
     );
-    expect(screen.getByRole("button", { name: "Edit a picture" })).not.toBeNull();
-    expect(screen.getByRole("button", { name: "Design a poster" })).not.toBeNull();
-    await userEvent.click(screen.getByRole("tab", { name: "Templates" }));
-    const list = await screen.findByRole("list", { name: "Design templates" });
-    expect(within(list).getByText("Ready · v2")).not.toBeNull();
-    expect(screen.getByRole("button", { name: "New design template" })).not.toBeNull();
+    expect(screen.getByRole("heading", { name: "Designs", level: 1 })).not.toBeNull();
+    const header = screen.getByRole("banner");
+    expect(within(header).getByRole("button", { name: "Edit a picture" })).not.toBeNull();
+    expect(within(header).getByRole("button", { name: "Design a poster" })).not.toBeNull();
+    expect(screen.queryByRole("tab")).toBeNull();
+  });
+
+  it("lists the poster templates, each with what its schedules can run", async () => {
+    renderRouted(<DesignTemplateList onNew={() => {}} />, deps());
+    const list = await screen.findByRole("list", { name: "Poster templates" });
+    expect(within(list).getByRole("link", { name: "Edit template Gig poster" })).not.toBeNull();
   });
 
   it("deletes a design from its tile", async () => {
     let deleted = false;
     renderRouted(
-      <DesignsRoute tab="designs" onTab={() => {}} />,
+      <DesignsRoute />,
       deps({
         "DELETE /api/designs/d1": () => {
           deleted = true;
@@ -111,7 +111,7 @@ describe("Library → Designs", () => {
 
   it("says what failed when a picture can't be used", async () => {
     renderRouted(
-      <DesignsRoute tab="designs" onTab={() => {}} />,
+      <DesignsRoute />,
       deps({
         "POST /api/designs/pictures": () =>
           new Response(

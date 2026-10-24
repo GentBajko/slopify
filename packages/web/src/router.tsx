@@ -12,7 +12,7 @@ import {
 import { useDocumentTitle } from "@/components/document-title";
 import { Shell } from "@/components/shell";
 import { DesignRoute } from "@/designs/design-page";
-import { DesignsRoute, type DesignsTab, designsTabOf } from "@/designs/designs-route";
+import { DesignsRoute } from "@/designs/designs-route";
 import { DesignTemplateRoute } from "@/designs/editor/template-editor";
 import { categoryOf } from "@/lib/entry-options";
 import { kindOf } from "@/lib/prompt-kinds";
@@ -49,10 +49,11 @@ import {
   settingsSectionOf,
   settingsSections,
 } from "@/routes/settings";
-import { TemplatesRoute } from "@/routes/templates";
+import { TemplatesRoute, type TemplatesTab, templatesTabOf } from "@/routes/templates";
 import { TutorialsRoute } from "@/routes/tutorials";
 import { WelcomeRoute, type WelcomeStep, welcomeSteps } from "@/routes/welcome";
 import { TemplateStudioPage } from "@/template-studio/page";
+import { usePlayHandoff } from "@/templates/play-handoff";
 
 // A code-based route tree: a handful of screens need no file convention, and the
 // generated tree a plugin would write would be one more artefact to keep honest.
@@ -251,30 +252,17 @@ function ChannelPage() {
   );
 }
 
-interface DesignsSearch {
-  readonly tab?: DesignsTab;
-}
-
+// Designs: the pictures edited and the posters designed. Its old Templates tab is Templates →
+// Poster templates now, and its address still lands there.
 const designsRoute = createRoute({
-  getParentRoute: () => libraryRoute,
+  getParentRoute: () => rootRoute,
   path: "designs",
-  validateSearch: (search: Record<string, unknown>): DesignsSearch =>
-    search.tab === undefined ? {} : { tab: designsTabOf(search.tab) },
-  component: DesignsPage,
+  beforeLoad: ({ search }) => {
+    if ((search as Record<string, unknown>).tab === "templates")
+      throw redirect({ to: "/templates", search: { tab: "posters" }, replace: true });
+  },
+  component: DesignsRoute,
 });
-
-function DesignsPage() {
-  const { tab } = designsRoute.useSearch();
-  const navigate = useNavigate();
-  return (
-    <DesignsRoute
-      tab={tab ?? "designs"}
-      onTab={(next) => {
-        void navigate({ to: "/designs", search: next === "designs" ? {} : { tab: next } });
-      }}
-    />
-  );
-}
 
 const designPageRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -298,10 +286,19 @@ function DesignTemplatePage() {
   return <DesignTemplateRoute key={templateId} templateId={templateId} />;
 }
 
+// Templates: video templates, and poster templates on their own tab (`?tab=posters`).
+// `?item=` names a template to show (a link from the calendar or Ctrl+K).
+interface TemplatesSearch extends ItemSearch {
+  readonly tab?: TemplatesTab;
+}
+
 const templatesRoute = createRoute({
-  getParentRoute: () => libraryRoute,
+  getParentRoute: () => rootRoute,
   path: "templates",
-  validateSearch: (search: Record<string, unknown>): ItemSearch => itemOf(search.item),
+  validateSearch: (search: Record<string, unknown>): TemplatesSearch => ({
+    ...(templatesTabOf(search.tab) === "posters" ? { tab: "posters" as const } : {}),
+    ...itemOf(search.item),
+  }),
   component: TemplatesPage,
 });
 
@@ -379,28 +376,26 @@ function CalendarPage() {
 }
 
 function TemplatesPage(): import("react").ReactElement {
-  const session = usePlaySession();
+  const { tab, item } = templatesRoute.useSearch();
   const navigate = useNavigate();
   return (
     <TemplatesRoute
-      getGeneration={session.generation}
-      blocked={
-        session.review.starting || session.review.uncertain || session.review.created !== null
-      }
-      beforeApply={session.flush}
-      onApplied={async (draftId, isCurrent) => {
-        if (!isCurrent()) return false;
-        if (!(await session.open(draftId, isCurrent))) return false;
-        if (!isCurrent()) return false;
-        await navigate({ to: "/play" });
-        return isCurrent();
+      {...usePlayHandoff()}
+      tab={tab ?? "videos"}
+      item={item}
+      onTab={(next) => {
+        // A tab is a place: Back returns to the one before.
+        void navigate({
+          to: "/templates",
+          search: next === "posters" ? { tab: "posters" } : {},
+          resetScroll: false,
+        });
       }}
     />
   );
 }
 
-// Library → Templates → Open studio. `?section=` is the section shown; any other value opens
-// the first.
+// Templates → Edit template. `?section=` is the section shown; any other value opens the first.
 const templateStudioRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "templates/$templateId",
@@ -434,6 +429,7 @@ function TemplateStudioRoutePage(): import("react").ReactElement {
     <TemplateStudioPage
       key={templateId}
       templateId={templateId}
+      play={usePlayHandoff()}
       section={section ?? "subject"}
       compare={
         compareProvider === undefined || compareModel === undefined
@@ -827,13 +823,13 @@ const routeTree = rootRoute.addChildren({
   libraryRoute: libraryRoute.addChildren({
     promptsRoute,
     entriesRoute,
-    templatesRoute,
-    designsRoute,
     documentThemesRoute,
     narrationAliasesRoute,
     abResultsRoute,
   }),
+  templatesRoute,
   templateStudioRoute,
+  designsRoute,
   schedulesRoute,
   scheduleRoute,
   calendarRoute,

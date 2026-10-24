@@ -49,7 +49,7 @@ const refuse = (message: string): StudioResult<never> => ({
 });
 
 const notAPack =
-  "This file isn't a template pack Slopify can read. Choose the .zip that Export pack in a template's studio made.";
+  "This file isn't a template file Slopify can read. Choose the .zip a template's Export as a file (.zip) made.";
 
 class ZipStopped extends Error {}
 
@@ -63,7 +63,7 @@ interface Unpacked {
 export function readPack(bytes: Uint8Array): StudioResult<Unpacked> {
   if (bytes.byteLength > packLimits.uploadBytes)
     return refuse(
-      `This pack is larger than ${String(packLimits.uploadBytes / 1024 / 1024)} MB, more than a template pack ever is. Export it again from the template's studio, or ask whoever made it to.`,
+      `This template file is larger than ${String(packLimits.uploadBytes / 1024 / 1024)} MB, more than an exported template ever is. Export it again from the template's Edit template page, or ask whoever made it to.`,
     );
   let oversized: string | undefined;
   let unexpected: string | undefined;
@@ -114,36 +114,36 @@ export function readPack(bytes: Uint8Array): StudioResult<Unpacked> {
   }
   if (tooMany)
     return refuse(
-      `This pack holds more files than a template pack ever has (a manifest and at most ${String(packLimits.samples)} samples), so nothing was imported. Export the pack again from the template's studio.`,
+      `This template file holds more files than an exported template ever has (a manifest and at most ${String(packLimits.samples)} samples), so nothing was imported. Export it again from the template's Edit template page.`,
     );
   if (twice !== undefined)
     return refuse(
-      `This pack holds ${twice.slice(0, 120)} twice, which an exported pack never does, so nothing was imported. Export the pack again from the template's studio.`,
+      `This template file holds ${twice.slice(0, 120)} twice, which an exported template never does, so nothing was imported. Export it again from the template's Edit template page.`,
     );
   if (oversized !== undefined)
     return refuse(
-      `This pack's ${oversized} is larger than a template pack allows, so nothing was imported. Export the pack again from the template's studio.`,
+      `This template file's ${oversized} is larger than a template file allows, so nothing was imported. Export it again from the template's Edit template page.`,
     );
   if (unexpected !== undefined)
     return refuse(
-      `This pack holds a file a template pack never has (${unexpected.slice(0, 120)}), so nothing was imported. Export the pack again from the template's studio.`,
+      `This template file holds a file an exported template never has (${unexpected.slice(0, 120)}), so nothing was imported. Export it again from the template's Edit template page.`,
     );
   const raw = entries["manifest.json"];
   if (raw === undefined)
     return refuse(
-      "This zip has no manifest.json, so it isn't a template pack. Choose the .zip that Export pack in a template's studio made.",
+      "This zip has no manifest.json, so it isn't a template file. Choose the .zip a template's Export as a file (.zip) made.",
     );
   const text = strFromU8(raw);
   if (looksSecret(text))
     return refuse(
-      "This pack holds what looks like an API key or a login token, so Slopify didn't import it: keys never travel in a pack. Ask whoever made it to remove it from the template and export it again.",
+      "This template file holds what looks like an API key or a login token, so Slopify didn't import it: keys never travel in a template file. Ask whoever made it to remove it from the template and export it again.",
     );
   let json: unknown;
   try {
     json = JSON.parse(text);
   } catch {
     return refuse(
-      "This pack's manifest.json isn't readable JSON; the file may be damaged. Export the pack again from the template's studio.",
+      "This template file's manifest.json isn't readable JSON; the file may be damaged. Export it again from the template's Edit template page.",
     );
   }
   const head = json as { readonly format?: unknown; readonly formatVersion?: unknown };
@@ -151,7 +151,7 @@ export function readPack(bytes: Uint8Array): StudioResult<Unpacked> {
     return refuse(notAPack);
   if (typeof head.formatVersion === "number" && head.formatVersion > packFormatVersion)
     return refuse(
-      `This pack was made by a newer Slopify (pack format ${String(head.formatVersion)}). Update Slopify in Settings → About, then import it again.`,
+      `This template file was made by a newer Slopify (file format ${String(head.formatVersion)}). Update Slopify in Settings → About, then import it again.`,
     );
   const parsed = packManifestSchema.safeParse(json);
   if (!parsed.success) {
@@ -159,7 +159,7 @@ export function readPack(bytes: Uint8Array): StudioResult<Unpacked> {
     const where =
       issue === undefined ? "" : ` (${issue.path.join(".") || "manifest"}: ${issue.message})`;
     return refuse(
-      `This pack's manifest isn't one Slopify can use${where.slice(0, 300)}. It may be damaged or edited by hand; export it again from the template's studio.`,
+      `This template file's manifest isn't one Slopify can use${where.slice(0, 300)}. It may be damaged or edited by hand; export it again from the template's Edit template page.`,
     );
   }
   const files = new Map<string, Uint8Array>();
@@ -167,7 +167,7 @@ export function readPack(bytes: Uint8Array): StudioResult<Unpacked> {
     const file = entries[sample.file];
     if (file === undefined)
       return refuse(
-        `This pack names a sample (${sample.file}) it doesn't hold; the file may be damaged. Export the pack again from the template's studio.`,
+        `This template file names a sample (${sample.file}) it doesn't hold; the file may be damaged. Export it again from the template's Edit template page.`,
       );
     files.set(sample.file, file);
   }
@@ -272,8 +272,8 @@ export function importPack(deps: TemplateDeps, bytes: Uint8Array): StudioResult<
       if (!created.ok)
         throw new PackRefused(
           created.reason === "missing-prompt"
-            ? "This pack's template names a prompt or intro/outro the pack doesn't carry, so it can't be made here. Ask whoever made it to export it again."
-            : "Slopify couldn't make a template from this pack. Import it again; if it fails again, use Download diagnostics in Settings and report it.",
+            ? "This file's template names a prompt or intro/outro the file doesn't carry, so it can't be made here. Ask whoever made it to export it again."
+            : "Slopify couldn't make a template from this file. Import it again; if it fails again, use Download diagnostics in Settings and report it.",
         );
       const audio = created.value.document.form.audio;
       const voiceKnown =

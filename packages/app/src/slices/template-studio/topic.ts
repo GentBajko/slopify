@@ -90,7 +90,7 @@ async function change(
       ok: false,
       reason: "not-found",
       message:
-        "This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates.",
+        "This template no longer exists; it may have been deleted. Go to Templates to see your templates.",
     };
   const quoted = await quoteSample(deps, id, {
     topic: next.topic,
@@ -210,7 +210,7 @@ export async function setSampleTopic(
         ok: false as const,
         reason: "conflict" as const,
         message:
-          "This topic change was already sent with another topic or price. Reload the studio to see the sample's topic, then change it again.",
+          "This topic change was already sent with another topic or price. Reload the page to see the sample's topic, then change it again.",
       };
     const replayed = await quoteSample(deps, id, {
       topic: last.topic,
@@ -275,7 +275,7 @@ export async function setFullScript(deps: SaveDeps, id: string, raw: unknown) {
     return {
       ok: false as const,
       reason: "invalid-input" as const,
-      message: "The studio sent a request Slopify couldn't read. Reload the page and try again.",
+      message: "Edit template sent a request Slopify couldn't read. Reload the page and try again.",
     };
   const record = sampleOf(deps.db, id);
   return change(

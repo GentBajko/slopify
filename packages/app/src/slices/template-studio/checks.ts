@@ -2,6 +2,10 @@ import { detectSlots, filledKeywords } from "../admission/substitute.js";
 import { isReserved } from "../keywords/model.js";
 import type { PlayDraftDocument } from "../play-drafts/schema.js";
 import { topicKeywords } from "../project-templates/one-off.js";
+import {
+  type ProviderChoices,
+  withProviderDefaults,
+} from "../project-templates/provider-defaults.js";
 import { usesPostPrompt } from "../social/rules.js";
 import { sectionLabel, type TemplateSection } from "./model.js";
 
@@ -33,6 +37,9 @@ export interface FreeCheckInput {
   readonly bodies: readonly string[];
   // Whether each provider this computer has is ready: a key stored, a CLI found.
   readonly providers: ReadonlyMap<string, { readonly name: string; readonly ready: boolean }>;
+  // The writer and image service this computer picks for a setup nobody chose them in, which
+  // every run of the template uses too (`project-templates/provider-defaults.ts`).
+  readonly defaults?: ProviderChoices;
   readonly schedules: readonly ScheduleFit[];
   // The schedules' cost per month at the high estimate, with the steps no price is known for
   // and, when a run couldn't be priced at all, why. Null when no schedule runs this template.
@@ -75,13 +82,18 @@ const scheduleHref = (id: string): string =>
 const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const agentWindowMs = 7 * 24 * 60 * 60 * 1000;
 
+// The checks in order. Providers is one line per missing thing, each with its own fix, so the
+// count of lines to fix is the count of things to fix. A run that can't start can't be priced
+// either: while a line above says why, the monthly cost's line would only say it again, so it
+// waits until they are fixed.
 export function freeChecks(input: FreeCheckInput): readonly Check[] {
+  const start = [keywordsCheck(input), ...providersChecks(input), voiceCheck(input)];
+  const blocked = start.some((check) => !check.ok);
+  const cost = monthlyCostCheck(input);
   return [
-    keywordsCheck(input),
-    providersCheck(input),
-    voiceCheck(input),
+    ...start,
     releaseSlotsCheck(input),
-    monthlyCostCheck(input),
+    ...(blocked && !cost.ok ? [] : [cost]),
     answerersCheck(input),
   ];
 }
@@ -121,7 +133,7 @@ function keywordsCheck(input: FreeCheckInput): Check {
     ok: false,
     sentence: `${empty.length === 1 ? "A keyword is" : "Keywords are"} empty: ${list(empty.map((name) => `{{${name}}}`))}. A run would send the prompt with nothing in ${empty.length === 1 ? "its place" : "their place"}.`,
     fix: {
-      label: "Fill the keywords in Subject & research",
+      label: `Fill them in ${sectionLabel.subject}`,
       href: studioHref(input.templateId, "subject"),
     },
   };
@@ -154,7 +166,7 @@ function usedProviders(document: PlayDraftDocument): readonly {
             family: "llm" as const,
             provider: form.llm.provider,
             section: "script" as const,
-            what: "text model",
+            what: "writing service",
           },
         ]
       : []),
@@ -164,7 +176,7 @@ function usedProviders(document: PlayDraftDocument): readonly {
             family: "tts" as const,
             provider: form.audio.provider,
             section: "voice" as const,
-            what: "voice",
+            what: "voice service",
           },
         ]
       : []),
@@ -174,7 +186,7 @@ function usedProviders(document: PlayDraftDocument): readonly {
             family: "image" as const,
             provider: form.images.provider,
             section: "pictures" as const,
-            what: "picture model",
+            what: "image service",
           },
         ]
       : []),
@@ -184,36 +196,50 @@ function usedProviders(document: PlayDraftDocument): readonly {
             family: "llm" as const,
             provider: form.reviews.provider,
             section: "reviews" as const,
-            what: "reviewer model",
+            what: "service for the AI checks",
           },
         ]
       : []),
   ];
 }
 
-function providersCheck(input: FreeCheckInput): Check {
-  const used = usedProviders(input.document);
-  const unchosen = used.find((one) => one.provider === "");
-  if (unchosen !== undefined)
-    return {
-      id: "providers",
-      ok: false,
-      sentence: `No ${unchosen.what} is chosen, so the run can't start.`,
-      fix: {
-        label: `Choose one in ${sectionLabel[unchosen.section]}`,
-        href: studioHref(input.templateId, unchosen.section),
-      },
-    };
-  const missing = used.find((one) => input.providers.get(one.provider)?.ready !== true);
-  if (missing === undefined)
-    return { id: "providers", ok: true, sentence: "Every provider this template uses is set up." };
-  const name = input.providers.get(missing.provider)?.name ?? missing.provider;
-  return {
-    id: "providers",
-    ok: false,
-    sentence: `${name} (the ${missing.what}) isn't set up on this computer: no key is stored or its program wasn't found.`,
-    fix: { label: "Set it up in Settings → Providers", href: "/settings?section=providers" },
-  };
+function providersChecks(input: FreeCheckInput): readonly Check[] {
+  const used = usedProviders(withProviderDefaults(input.document, input.defaults ?? {}));
+  const unchosen = used.filter(
+    (one, index) =>
+      one.provider === "" && used.findIndex((other) => other.what === one.what) === index,
+  );
+  const missing = used.filter(
+    (one, index) =>
+      one.provider !== "" &&
+      input.providers.get(one.provider)?.ready !== true &&
+      used.findIndex((other) => other.provider === one.provider) === index,
+  );
+  const lines = [
+    ...unchosen.map(
+      (one): Check => ({
+        id: "providers",
+        ok: false,
+        sentence: `No ${one.what} is chosen, so a run can't start.`,
+        fix: {
+          label: `Choose one in ${sectionLabel[one.section]}`,
+          href: studioHref(input.templateId, one.section),
+        },
+      }),
+    ),
+    ...missing.map((one): Check => {
+      const name = input.providers.get(one.provider)?.name ?? one.provider;
+      return {
+        id: "providers",
+        ok: false,
+        sentence: `${name}, the ${one.what}, isn't set up on this computer: no key is stored or its program wasn't found.`,
+        fix: { label: "Set it up in Settings → Providers", href: "/settings?section=providers" },
+      };
+    }),
+  ];
+  return lines.length > 0
+    ? lines
+    : [{ id: "providers", ok: true, sentence: "Every service this template uses is set up." }];
 }
 
 // The narration's voice (and each speaker's) is chosen and is one of the voices this computer
@@ -221,7 +247,10 @@ function providersCheck(input: FreeCheckInput): Check {
 function voiceCheck(input: FreeCheckInput): Check {
   const { form } = input.document;
   const voiced = form.sources.audio === "generate";
-  const fix = { label: "Choose a voice in Voice", href: studioHref(input.templateId, "voice") };
+  const fix = {
+    label: `Choose a voice in ${sectionLabel.voice}`,
+    href: studioHref(input.templateId, "voice"),
+  };
   if (!voiced) return { id: "voice", ok: true, sentence: "The narration isn't voiced by Slopify." };
   const picks = [
     { who: "The narration's", provider: form.audio.provider, voice: form.audio.voice },
@@ -235,7 +264,7 @@ function voiceCheck(input: FreeCheckInput): Check {
     return {
       id: "voice",
       ok: false,
-      sentence: "No voice is chosen for the narration, so the run can't start.",
+      sentence: "No voice is chosen for the narration, so a run can't start.",
       fix,
     };
   const known = input.voices;
@@ -346,14 +375,14 @@ function answerersCheck(input: FreeCheckInput): Check {
       id: "answerers",
       ok: true,
       sentence: agent
-        ? "An agent connected this week answers the checkpoints."
-        : "You're notified when a checkpoint waits.",
+        ? "An agent connected this week answers when a run pauses."
+        : "You're notified when a run pauses for you.",
     };
   return {
     id: "answerers",
     ok: false,
     sentence:
-      "A run stops at a checkpoint and nobody would know: no notification address is set and no agent connected in the last 7 days.",
+      "A run pauses for your approval and nobody would know: no notification address is set and no agent connected in the last 7 days.",
     fix: {
       label: "Set a notification address in Settings → Notifications",
       href: "/settings?section=notifications",

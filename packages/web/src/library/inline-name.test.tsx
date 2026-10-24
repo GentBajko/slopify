@@ -1,11 +1,8 @@
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, expect, it } from "vitest";
 import { ToastProvider } from "@/components/kit/toast";
-import { freshDraftDocument } from "@/play/draft-state";
-import { TemplatesRoute } from "@/routes/templates";
-import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
 import { InlineName } from "./inline-name";
 
 afterEach(cleanup);
@@ -85,47 +82,4 @@ it("keeps the field open with the server's reason when a name is taken, and Esca
   );
   await user.keyboard("{Escape}");
   expect(screen.getByRole("button", { name: "Rename Cold open" })).toBeTruthy();
-});
-
-it("renames a template by saving its setup as it is under the new name", async () => {
-  const user = userEvent.setup();
-  const templateId = "11111111-1111-4111-8111-111111111111";
-  const summary = {
-    id: templateId,
-    name: "Weekly documentary",
-    version: 2,
-    createdAt: "2026-09-12T00:00:00Z",
-    updatedAt: "2026-09-13T00:00:00Z",
-  };
-  let name = summary.name;
-  const sent: { baseVersion: number; name: string; document: unknown }[] = [];
-  renderRouted(
-    <TemplatesRoute onApplied={() => undefined} />,
-    testDeps({
-      "GET /api/design-templates": jsonAnswer({ templates: [] }),
-      "GET /api/project-templates": (request) =>
-        jsonAnswer({ templates: [{ ...summary, name }] })(request),
-      "GET /api/drafts": jsonAnswer({ drafts: [] }),
-      [`GET /api/project-templates/${templateId}`]: jsonAnswer({
-        template: { ...summary, document: freshDraftDocument },
-      }),
-      [`PUT /api/project-templates/${templateId}`]: async (request) => {
-        const body = (await request.json()) as (typeof sent)[number];
-        sent.push(body);
-        name = body.name;
-        return jsonAnswer({
-          template: { ...summary, name, version: 3, document: freshDraftDocument },
-        })(request);
-      },
-    }),
-  );
-  await user.click(await screen.findByRole("button", { name: "Rename Weekly documentary" }));
-  const field = screen.getByRole("textbox", { name: "New name for Weekly documentary" });
-  await user.clear(field);
-  await user.type(field, "Monthly documentary{Enter}");
-  await waitFor(() => expect(sent).toHaveLength(1));
-  expect(sent[0]?.baseVersion).toBe(2);
-  expect(sent[0]?.name).toBe("Monthly documentary");
-  expect(sent[0]?.document).toEqual(JSON.parse(JSON.stringify(freshDraftDocument)));
-  expect(await screen.findByRole("button", { name: "Rename Monthly documentary" })).toBeTruthy();
 });

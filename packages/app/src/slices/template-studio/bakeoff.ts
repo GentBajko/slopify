@@ -153,7 +153,7 @@ const refuse = (reason: StudioRefusal, message: string): Refused => ({
 });
 
 const missingTemplate =
-  "This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates.";
+  "This template no longer exists; it may have been deleted. Go to Templates to see your templates.";
 
 // What the bake-off is made on: the template's newest version, with a current paid sample.
 function basis(
@@ -185,7 +185,7 @@ function basis(
   if (sample === undefined || !projectExists(deps.db, sample.projectId) || made?.state !== "done")
     return refuse(
       "not-ready",
-      `Compare models runs on the template's current sample, and version ${String(template.version)} has none yet. Press Save (or Make sample) in the studio, wait for it, then compare.`,
+      `Compare models runs on the template's current sample, and version ${String(template.version)} has none yet. Press Make sample, wait for it, then compare.`,
     );
   const seen = new Set<string>();
   for (const model of models) {
@@ -201,7 +201,7 @@ function basis(
     if (section === "voice" && model.provider !== current.provider)
       return refuse(
         "invalid-input",
-        "A voice is chosen per provider, so voice models are compared within the template's voice provider. Pick models of that provider, or change the voice in Voice first.",
+        "A voice belongs to its voice service, so voice models are compared within the template's voice service. Pick models of that service, or change the voice in Narration first.",
       );
   }
   return { ok: true, document: template.document, version: template.version, current };

@@ -113,7 +113,7 @@ export async function saveStudio(deps: SaveDeps, id: string, raw: unknown): Prom
       ok: false,
       reason: "invalid-input",
       message:
-        "The studio sent a Save Slopify couldn't read. Reload the page and press Save again.",
+        "Edit template sent a Save Slopify couldn't read. Reload the page and press Save again.",
     };
   const input = parsed.data;
   const head = templateById(deps.db, id);
@@ -122,7 +122,7 @@ export async function saveStudio(deps: SaveDeps, id: string, raw: unknown): Prom
       ok: false,
       reason: "not-found",
       message:
-        "This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates.",
+        "This template no longer exists; it may have been deleted. Go to Templates to see your templates.",
     };
   const update = {
     id,
@@ -140,7 +140,7 @@ export async function saveStudio(deps: SaveDeps, id: string, raw: unknown): Prom
         ok: false,
         reason: "conflict",
         message:
-          "This Save was already sent with different settings. Reload the studio to see what was saved.",
+          "This Save was already sent with different settings. Reload the page to see what was saved.",
       };
     return {
       ok: true,
@@ -156,7 +156,7 @@ export async function saveStudio(deps: SaveDeps, id: string, raw: unknown): Prom
     return {
       ok: false,
       reason: "conflict",
-      message: `This template changed since you opened it: it is now version ${String(head.version)}. Reload the studio to see the change, then make yours again.`,
+      message: `This template changed since you opened it: it is now version ${String(head.version)}. Reload the page to see the change, then make yours again.`,
     };
   let quote: SampleQuote | null = null;
   if (input.sample === "make") {
@@ -167,28 +167,28 @@ export async function saveStudio(deps: SaveDeps, id: string, raw: unknown): Prom
       return {
         ok: false,
         reason: "invalid-input",
-        message: `${quote.problem} Press Save without a sample to keep the change.`,
+        message: `${quote.problem} Save keeps the change without a sample.`,
         quote,
       };
     if (exceedsAcknowledged(quote.high, input.acknowledgedHigh))
       return {
         ok: false,
         reason: "cost-changed",
-        message: `The sample now costs about ${money(quote.high)}, more than the ${money(input.acknowledgedHigh)} you saw. Press Save again to accept the new price, or Save without a sample.`,
+        message: `The sample now costs about ${money(quote.high)}, more than the ${money(input.acknowledgedHigh)} you saw. Press Make sample again to accept the new price.`,
         quote,
       };
     if (quote.unknown > 0 && input.acknowledgedUnknown !== true)
       return {
         ok: false,
         reason: "cost-changed",
-        message: `${String(quote.unknown)} ${quote.unknown === 1 ? "step of this sample has" : "steps of this sample have"} no known price. Tick that you accept unknown costs, then press Save again, or Save without a sample.`,
+        message: `${String(quote.unknown)} ${quote.unknown === 1 ? "step of this sample has" : "steps of this sample have"} no known price. Tick that you accept unknown costs, then press Make sample again.`,
         quote,
       };
     if (!quote.fits)
       return {
         ok: false,
         reason: "over-budget",
-        message: `${budgetWords(quote.budget, quote, "This sample")}, or press Save without a sample.`,
+        message: `${budgetWords(quote.budget, quote, "This sample")}.`,
         quote,
       };
   }
@@ -206,7 +206,7 @@ export async function saveStudio(deps: SaveDeps, id: string, raw: unknown): Prom
         saved.reason === "missing-prompt"
           ? "A prompt or intro/outro entry this template uses was deleted. Choose another in the template, then press Save again."
           : saved.reason === "conflict"
-            ? "This template changed while you were editing. Reload the studio to see the latest, then make your change again."
+            ? "This template changed while you were editing. Reload the page to see the latest, then make your change again."
             : "Some template settings are not valid, for example an image you supplied yourself. Check the template's settings and press Save again.",
     };
   const template = saved.value;
@@ -258,7 +258,7 @@ export function requestSample(
       ok: false,
       reason: "invalid-input",
       message:
-        "The studio sent a request Slopify couldn't read. Reload the page and press Make sample again.",
+        "Edit template sent a request Slopify couldn't read. Reload the page and press Make sample again.",
     };
   const head = templateById(deps.db, id);
   if (head === undefined)
@@ -266,13 +266,13 @@ export function requestSample(
       ok: false,
       reason: "not-found",
       message:
-        "This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates.",
+        "This template no longer exists; it may have been deleted. Go to Templates to see your templates.",
     };
   if (head.version !== parsed.data.version)
     return {
       ok: false,
       reason: "conflict",
-      message: `This template is now version ${String(head.version)}, not the version ${String(parsed.data.version)} you saw. Reload the studio, then press Make sample.`,
+      message: `This template is now version ${String(head.version)}, not the version ${String(parsed.data.version)} you saw. Reload the page, then press Make sample.`,
     };
   const at = deps.clock.now().toISOString();
   if (parsed.data.acknowledgedUnknown === true) deps.acks.accept(id, head.version);

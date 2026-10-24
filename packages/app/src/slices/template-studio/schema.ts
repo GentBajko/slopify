@@ -240,3 +240,29 @@ export const anatomyViewSchema = z
   .strict()
   .readonly();
 export type AnatomyViewData = z.infer<typeof anatomyViewSchema>;
+
+// GET /api/template-studio/cards: what each template makes, for the Templates page (`cards.ts`).
+export const templateCardSchema = z
+  .object({
+    id: z.string(),
+    // A picture of what it makes, served by the app, or null when there is none yet.
+    still: z.string().nullable(),
+    format: z.enum(["16:9", "9:16", "1:1"]),
+    // Whether it makes a video at all (a narration-only setup does not).
+    video: z.boolean(),
+    words: z.number().int().nonnegative().nullable(),
+    voice: z
+      .object({ provider: z.string(), voiceId: z.string(), name: z.string() })
+      .strict()
+      .nullable(),
+    captions: z.enum(["off", "burn-in", "files"]),
+    shorts: z.number().int().nonnegative(),
+    pdf: z.boolean(),
+    // The keywords each video asks for: the topic keywords of its title ("Topic").
+    asks: z.array(z.string()),
+    // The schedules that run it now (paused ones too).
+    schedules: z.number().int().nonnegative(),
+  })
+  .strict();
+export type TemplateCard = z.infer<typeof templateCardSchema>;
+export const templateCardsSchema = z.object({ cards: z.array(templateCardSchema) }).strict();

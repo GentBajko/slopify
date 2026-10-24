@@ -53,7 +53,7 @@ function PickTemplate({
     <Drawer open onClose={onClose} title={`Compare ${model.name} on a sample`} width="narrow">
       <div className="flex flex-col gap-3">
         <p className="m-0 text-small text-ink-2">
-          {`Pick the template whose sample to compare it on. Its studio opens with Compare models ready, beside the model the template uses now; nothing is spent until you press Compare there.${model.family === "tts" ? " Voice models are compared within the template's voice provider." : ""}`}
+          {`Pick the template whose sample to compare it on. Edit template opens with Compare models ready, beside the model the template uses now; nothing is spent until you press Compare there.${model.family === "tts" ? " Voice models are compared within the template's voice service." : ""}`}
         </p>
         {templates.error ? (
           <p role="alert" className="m-0 text-body text-danger">
@@ -63,7 +63,8 @@ function PickTemplate({
           <p className="m-0 text-small text-ink-2">Loading your templates…</p>
         ) : templates.data.length === 0 ? (
           <p className="m-0 text-small text-ink-2">
-            No templates yet. Save a setup in Library → Templates, make its sample, then compare.
+            No templates yet. Add a starter template on Templates, or save one from Create with Save
+            as template, make its sample, then compare.
           </p>
         ) : (
           <List label="Templates to compare on">

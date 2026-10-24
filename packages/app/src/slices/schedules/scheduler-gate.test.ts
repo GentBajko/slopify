@@ -91,7 +91,7 @@ const tick = new Date("2026-09-12T00:01:30.000Z");
 // A gated template with no version it may run can't be reached through Save and Mark ready
 // (Mark ready marks the newest version), so these runs are told so directly.
 const notReady =
-  "Not started: Lighthouses has no version marked ready. Open it in Library → Templates → Open studio and press Mark ready.";
+  "Not started: Lighthouses has no version approved for schedules. Open it in Templates → Edit template and choose More → Approve for schedules.";
 
 describe("a schedule's template version", () => {
   it("runs a template saved before the studio exactly as before (legacy)", async () => {
@@ -171,7 +171,7 @@ describe("a schedule's template version", () => {
       {
         status: "skipped",
         error:
-          "Not started: Lighthouses has no version marked ready. Open it in Library → Templates → Open studio and press Mark ready.",
+          "Not started: Lighthouses has no version approved for schedules. Open it in Templates → Edit template and choose More → Approve for schedules.",
       },
     ]);
     expect(queue().map((item) => item.title)).toEqual(["Pyramids", "Obelisks"]);
@@ -201,7 +201,7 @@ describe("a schedule's template version", () => {
       ok: false,
       reason: "not-ready",
       detail:
-        "Not started: Lighthouses has no version marked ready. Open it in Library → Templates → Open studio and press Mark ready.",
+        "Not started: Lighthouses has no version approved for schedules. Open it in Templates → Edit template and choose More → Approve for schedules.",
     });
     expect(h.events).toEqual([]);
   });

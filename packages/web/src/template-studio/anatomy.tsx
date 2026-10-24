@@ -1,9 +1,10 @@
 import type { TemplateSection } from "@app/slices/template-studio/model.js";
 import type { AnatomyViewData, StudioView } from "@app/slices/template-studio/schema.js";
 import { useQuery } from "@tanstack/react-query";
-import { type ReactElement, useState } from "react";
+import { type ReactElement, type ReactNode, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { Select } from "@/components/kit/field";
+import { Fold } from "@/components/kit/fold";
 import { cn } from "@/lib/utils";
 import { anatomyQuery } from "./api";
 
@@ -34,8 +35,19 @@ const originClass: Readonly<Record<Origin, string>> = {
   setting: "rounded-sm bg-info-tint px-0.5 italic",
 };
 
-// Prompt anatomy: what each part of a section's prompt is and who wrote it. Read only when
-// opened, since it works the prompt out.
+// Who is sent each section's prompt, for the fold's name: "What the writer is sent".
+const sentTo: Partial<Readonly<Record<TemplateSection, string>>> = {
+  script: "What the writer is sent",
+  voice: "What the voice is sent",
+  pictures: "What the image service is sent",
+  thumbnail: "What the image service is sent for the thumbnail",
+  shorts: "What the writer is sent for the shorts",
+  upload: "What the writer is sent for the description and posts",
+  reviews: "What the AI checks are sent",
+};
+
+// What a section's prompt says, part by part, and who wrote each part. Worked out only when
+// opened, since it builds the prompt.
 export function PromptAnatomy({
   view,
   section,
@@ -43,19 +55,35 @@ export function PromptAnatomy({
   readonly view: StudioView;
   readonly section: TemplateSection;
 }): ReactElement | null {
-  const [open, setOpen] = useState(false);
-  if (!promptSections.includes(section)) return null;
+  const summary = sentTo[section];
+  if (!promptSections.includes(section) || summary === undefined) return null;
   return (
-    <details
-      open={open}
-      onToggle={(event) => setOpen(event.currentTarget.open)}
-      className="rounded-control border border-line px-3"
-    >
-      <summary className="flex min-h-9 cursor-pointer items-center text-small text-ink-2">
-        Prompt anatomy
-      </summary>
-      {open ? <AnatomyBody view={view} section={section} /> : null}
-    </details>
+    <Fold summary={summary}>
+      <WhenOpen>
+        <AnatomyBody view={view} section={section} />
+      </WhenOpen>
+    </Fold>
+  );
+}
+
+// A fold draws its content while closed too; this shows its children only while the fold
+// around it is open, so the prompt is built only for a person who asked to see it.
+function WhenOpen({ children }: { readonly children: ReactNode }): ReactElement {
+  const marker = useRef<HTMLSpanElement>(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const details = marker.current?.closest("details");
+    if (details === null || details === undefined) return;
+    const read = () => setOpen(details.open);
+    read();
+    details.addEventListener("toggle", read);
+    return () => details.removeEventListener("toggle", read);
+  }, []);
+  return (
+    <>
+      <span ref={marker} hidden />
+      {open ? children : null}
+    </>
   );
 }
 

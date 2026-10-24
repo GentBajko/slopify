@@ -1,8 +1,7 @@
-import { templateNameMax } from "@app/slices/project-templates/schema.js";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Fragment, type ReactElement, useRef, useState } from "react";
+import { type UseQueryResult, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ChevronDownIcon, EllipsisIcon } from "lucide-react";
+import { type ReactElement, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
-import { useAssistantSelection } from "@/assistant/screen";
 import { channelsQuery } from "@/channels/api";
 import { useCurrentChannel } from "@/channels/current";
 import { channelOfTemplate } from "@/channels/members-tabs";
@@ -12,124 +11,225 @@ import { useCommand } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
 import { Input, Select } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
-import { ListDetail } from "@/components/kit/layout";
-import { ButtonLink } from "@/components/kit/link";
-import { List, ListRow } from "@/components/kit/list-row";
-import { SectionHead } from "@/components/kit/section-head";
+import { PageHeader } from "@/components/kit/layout";
+import { ButtonLink, TextLink } from "@/components/kit/link";
+import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/components/kit/menu";
 import { Badge } from "@/components/kit/status";
+import { Tabs } from "@/components/kit/tabs";
 import { useToast } from "@/components/kit/toast";
 import { RetiredModelRow } from "@/components/retired-models";
-import { RowCheck, useSelection } from "@/components/selection";
+import { designTemplatesQuery } from "@/designs/api";
 import { DesignTemplateList } from "@/designs/designs-route";
 import { useDesignStarts } from "@/designs/start";
-import { LibraryBulkBar, SelectionArea } from "@/library/bulk-bar";
-import { InlineName } from "@/library/inline-name";
-import { ListSkeleton, libraryListDetail } from "@/library/list-states";
-import { useLibraryItem } from "@/library/list-url";
-import { LibraryRowActions } from "@/library/row-actions";
 import { sortLibrary, useLibrarySort } from "@/library/sort";
 import { SortMenu } from "@/library/sort-menu";
-import { Stamp } from "@/library/time";
 import { PacksDrawer } from "@/onboarding/packs-drawer";
-import { type TemplateGate, templateGateBadge } from "@/template-studio/gate-words";
-import { ImportPack } from "@/template-studio/pack";
+import { providersQuery } from "@/queries";
+import { downloadPack, type TemplateCard, templateCardsQuery } from "@/template-studio/api";
+import { templateGateBadge } from "@/template-studio/gate-words";
+import { useImportFile } from "@/template-studio/pack";
 import {
   deleteProjectTemplate,
-  renameProjectTemplate,
   type TemplateSummary,
   templatesKey,
   templatesQuery,
 } from "@/templates/api";
-import { TemplateDetail, TemplateHistoryDrawer } from "@/templates/row-parts";
-import { SaveTemplateDrawer } from "@/templates/save-drawer";
+import { cardFacts } from "@/templates/card-facts";
+import type { PlayHandoff } from "@/templates/play-handoff";
+import { TemplateHistoryDrawer } from "@/templates/row-parts";
 import { useTemplateActions } from "@/templates/use-template-actions";
-import { useTemplatesBulk } from "@/templates/use-templates-bulk";
-import { LibraryToolbar } from "./library.js";
 
-// Library → Templates: saved Play setups, each set up in its studio (Open studio) and used in
-// Play as a fresh draft to review. The rows carry the Library's row actions in view (Open
-// studio, Use in Play; Duplicate, History, Delete behind More) and a pencil to rename in place; the picked row's keywords sit beside the list.
-// Save a setup opens a drawer.
+export type TemplatesTab = "videos" | "posters";
+
+export function templatesTabOf(value: unknown): TemplatesTab {
+  return value === "posters" ? "posters" : "videos";
+}
+
+// With more templates than this, a search box and the sort appear.
+const toolsFrom = 7;
+
+// Templates: every saved setup, video templates first and poster templates on their own tab.
+// A video template is a card that shows what it makes (a still, its shape, voice, length,
+// captions and shorts, and what each video asks for) with Make a video, which opens Create
+// with the template picked and only the topic to type, and Edit template.
 export function TemplatesRoute({
-  onApplied,
-  beforeApply,
-  getGeneration,
-  blocked = false,
-}: {
-  readonly onApplied: (draftId: string, isCurrent: () => boolean) => unknown | Promise<unknown>;
-  readonly beforeApply?: () => Promise<boolean>;
-  readonly getGeneration?: () => number;
-  readonly blocked?: boolean;
+  tab = "videos",
+  onTab,
+  item,
+  ...play
+}: PlayHandoff & {
+  readonly tab?: TemplatesTab;
+  readonly onTab?: (next: TemplatesTab) => void;
+  // A template a link names: its card is scrolled into view and marked.
+  readonly item?: string | undefined;
 }): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
   const templates = useQuery(templatesQuery(api));
+  const cards = useQuery(templateCardsQuery(api));
   const channels = useQuery(channelsQuery(api));
+  const designs = useDesignStarts();
+  const [adding, setAdding] = useState(false);
+  const importing = useImportFile();
+  const [shown, setShown] = useState<TemplatesTab>(tab);
+  const current = onTab === undefined ? shown : tab;
+  const pick = (next: TemplatesTab) => (onTab === undefined ? setShown(next) : onTab(next));
+  useCommand({
+    id: "templates.add-starters",
+    title: "Add starter templates",
+    group: "Templates",
+    keywords: ["template", "starter", "pack"],
+    run: () => setAdding(true),
+  });
+  const count = templates.data?.length;
+  const posters = useQuery(designTemplatesQuery(api));
+  // An empty list teaches with its own button; the header doesn't repeat it.
+  return (
+    <div>
+      <PageHeader
+        title="Templates"
+        meta="A template is a saved setup. Make a video from one, or edit what it makes."
+        actions={
+          current === "videos" ? (
+            <>
+              {count === 0 ? null : (
+                <Button onClick={() => setAdding(true)} aria-expanded={adding}>
+                  Add starter templates
+                </Button>
+              )}
+              <Menu>
+                <MenuTrigger asChild>
+                  <Button aria-label="More ways to add templates" disabled={importing.busy}>
+                    More
+                    <ChevronDownIcon aria-hidden="true" className="size-4" strokeWidth={1.75} />
+                  </Button>
+                </MenuTrigger>
+                <MenuContent>
+                  <MenuItem onSelect={importing.choose}>Import a template file (.zip)</MenuItem>
+                </MenuContent>
+              </Menu>
+            </>
+          ) : posters.data?.length === 0 ? undefined : (
+            <Button disabled={designs.busy} onClick={designs.startTemplate}>
+              New poster template
+            </Button>
+          )
+        }
+      />
+      {importing.input}
+      {designs.input}
+      <PacksDrawer
+        open={adding}
+        onClose={() => setAdding(false)}
+        onInstalled={() => void client.invalidateQueries({ queryKey: templatesKey })}
+      />
+      <Tabs<TemplatesTab>
+        label="Kinds of template"
+        idPrefix="templates"
+        value={current}
+        onChange={pick}
+        items={[
+          {
+            id: "videos",
+            label: count === undefined ? "Video templates" : `Video templates (${String(count)})`,
+          },
+          { id: "posters", label: "Poster templates" },
+        ]}
+        className="mb-4"
+      />
+      <div
+        role="tabpanel"
+        id={`templates-panel-${current}`}
+        aria-labelledby={`templates-tab-${current}`}
+      >
+        {importing.problem === null ? null : (
+          <p role="alert" className="m-0 mb-3 text-small text-danger">
+            {importing.problem}
+          </p>
+        )}
+        {current === "videos" ? (
+          <VideoTemplates
+            templates={templates}
+            cards={cards.data}
+            channels={channels.data ?? []}
+            play={play}
+            item={item}
+            onAdd={() => setAdding(true)}
+          />
+        ) : (
+          <PosterTemplates problem={designs.problem} onNew={designs.startTemplate} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function VideoTemplates({
+  templates,
+  cards,
+  channels,
+  play,
+  item,
+  onAdd,
+}: {
+  readonly templates: UseQueryResult<readonly TemplateSummary[]>;
+  readonly cards: readonly TemplateCard[] | undefined;
+  readonly channels: readonly { readonly id: string; readonly name: string }[];
+  readonly play: PlayHandoff;
+  readonly item: string | undefined;
+  readonly onAdd: () => void;
+}): ReactElement {
+  const { api } = useApp();
+  const client = useQueryClient();
+  const notify = useToast();
+  const providers = useQuery(providersQuery(api));
   const sidebarChannel = useCurrentChannel().channelId;
-  // Starts on the channel the sidebar shows, then is this list's own choice. "" shows every channel's templates.
-  const [channelFilter, setChannelFilter] = useState(sidebarChannel ?? "");
+  // Starts on the channel the app shows, then is this list's own choice. "" is every channel.
+  const [channelFilter, setChannelFilter] = useState(
+    channels.length > 1 ? (sidebarChannel ?? "") : "",
+  );
   const [query, setQuery] = useState("");
   const [sort, setSort] = useLibrarySort("template");
-  const needle = query.trim().toLowerCase();
-  const inChannel = templates.data?.filter(
-    (template) => channelFilter === "" || channelOfTemplate(template) === channelFilter,
-  );
-  const shown =
-    inChannel === undefined
-      ? undefined
-      : sortLibrary(
-          inChannel.filter((template) => template.name.toLowerCase().includes(needle)),
-          sort,
-        );
-  const selection = useSelection(shown?.map((template) => template.id) ?? []);
-  const chosen = shown?.filter((template) => selection.has(template.id)) ?? [];
-  useAssistantSelection(
-    "template",
-    chosen.map((template) => ({ id: template.id, label: template.name })),
-  );
-  const bulk = useTemplatesBulk(templates.data ?? [], selection);
-  const channelName = (template: TemplateSummary): string | undefined =>
-    channels.data?.find((channel) => channel.id === channelOfTemplate(template))?.name;
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const notify = useToast();
-  const [saving, setSaving] = useState(false);
-  const [adding, setAdding] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<TemplateSummary | null>(null);
-  // The template shown beside the list (`?item=` in the URL): its keywords and versions.
-  const [picked, setPicked] = useLibraryItem();
-  const [historyOf, setHistoryOf] = useState<TemplateSummary | null>(null);
+  const [versionsOf, setVersionsOf] = useState<TemplateSummary | null>(null);
+  const [pending, setPending] = useState(false);
   const active = useRef(false);
+  const actions = useTemplateActions(play);
+  const all = templates.data ?? [];
+  const tools = all.length >= toolsFrom;
+  const needle = tools ? query.trim().toLowerCase() : "";
+  const inChannel = all.filter(
+    (template) =>
+      channels.length < 2 || channelFilter === "" || channelOfTemplate(template) === channelFilter,
+  );
+  const shown = sortLibrary(
+    inChannel.filter((template) => template.name.toLowerCase().includes(needle)),
+    tools ? sort : "name",
+  );
   async function execute(action: () => Promise<void>): Promise<void> {
     if (active.current) return;
     active.current = true;
     setPending(true);
-    setError(null);
+    setProblem(null);
     try {
       await action();
     } catch (error) {
-      setError(error instanceof Error ? error.message : "That didn't finish. Try again.");
+      setProblem(error instanceof Error ? error.message : "That didn't finish. Try again.");
     } finally {
       active.current = false;
       setPending(false);
     }
   }
-  const { apply, duplicate } = useTemplateActions({
-    onApplied,
-    beforeApply,
-    getGeneration,
-    blocked,
-  });
   async function remove(): Promise<void> {
-    if (!deleting) return;
-    const deletedId = deleting.id;
+    if (deleting === null) return;
+    const gone = deleting.id;
     const reply = await deleteProjectTemplate(api, deleting);
     if (!reply.ok) throw new Error(reply.message);
     setDeleting(null);
     await client.cancelQueries({ queryKey: templatesKey });
     client.setQueryData<readonly TemplateSummary[]>(templatesKey, (current) =>
-      current?.filter((template) => template.id !== deletedId),
+      current?.filter((template) => template.id !== gone),
     );
     notify(
       "Template moved to the trash. Restore it in Settings → Trash within 30 days.",
@@ -137,235 +237,138 @@ export function TemplatesRoute({
     );
     await client.invalidateQueries({ queryKey: templatesKey });
   }
-  useCommand({
-    id: "library.save-template",
-    title: "Save a setup as a template",
-    group: "Library",
-    keywords: ["template", "new template", "play draft"],
-    run: () => setSaving(true),
-  });
-  const status =
-    error && !deleting
-      ? ({ tone: "error", text: error } as const)
-      : blocked
-        ? ({
-            tone: "warning",
-            text: "A run is still starting in Play. Wait for it to finish (or press Check whether it started there), then apply a template.",
-          } as const)
-        : templates.error
-          ? ({ tone: "error", text: templates.error.message } as const)
-          : templates.isPending
-            ? ({ tone: "info", text: "Loading templates…" } as const)
-            : undefined;
-  return (
-    <div>
-      <PacksDrawer
-        open={adding}
-        onClose={() => setAdding(false)}
-        onInstalled={() =>
-          void client.invalidateQueries({ queryKey: templatesQuery(api).queryKey })
-        }
-      />
-      <LibraryToolbar
-        action={
-          <>
-            <ImportPack />
-            <span className="flex items-center gap-1">
-              <Button variant="secondary" onClick={() => setAdding(true)} aria-expanded={adding}>
-                Add pack
-              </Button>
-              <InfoTip id="welcome.packs" label="Add pack" />
-            </span>
-            <span className="flex items-center gap-1">
-              <Button variant="primary" onClick={() => setSaving(true)} aria-expanded={saving}>
-                Save a setup
-              </Button>
-              <InfoTip id="templates.save" label="Save a setup" />
-            </span>
-          </>
-        }
-      >
-        <Input
-          type="search"
-          aria-label="Search templates"
-          placeholder="Search templates"
-          value={query}
-          className="w-full min-w-0 sm:w-56"
-          onChange={(event) => setQuery(event.target.value)}
-        />
-        <span className="flex w-full items-center gap-1 sm:w-auto" {...helpScope}>
-          <Select
-            aria-label="Show templates of"
-            value={channelFilter}
-            className="w-full sm:w-56"
-            onChange={(event) => setChannelFilter(event.target.value)}
-          >
-            <option value="">All channels</option>
-            {(channels.data ?? []).map((channel) => (
-              <option key={channel.id} value={channel.id}>
-                {channel.name}
-              </option>
-            ))}
-          </Select>
-          <InfoTip id="templates.show-channel" />
-        </span>
-        <SortMenu what="templates" sort={sort} onSort={setSort} />
-        <p className="m-0 flex items-center gap-1 text-small text-ink-2">
-          Reuse a Play setup and its checkpoint choices. Use in Play creates a fresh draft to
-          review.
-          <InfoTip id="templates.apply" label="Use in Play" />
-        </p>
-      </LibraryToolbar>
-      <div className="mb-2 flex min-h-8 flex-wrap items-center gap-3">
-        <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
-        {templates.error ? (
-          <Button size="small" onClick={() => void templates.refetch()}>
-            Reload templates
-          </Button>
-        ) : null}
-        <Button
-          variant="quiet"
-          size="small"
-          disabled={pending || templates.isFetching}
-          onClick={() => void templates.refetch()}
-        >
-          Refresh templates
+  async function exportFile(template: TemplateSummary): Promise<void> {
+    const reply = await downloadPack(api, template.id);
+    if (!reply.ok) throw new Error(reply.message);
+    const url = URL.createObjectURL(reply.blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = reply.filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+  if (templates.error)
+    return (
+      <div className="flex flex-wrap items-center gap-3">
+        <StatusSlot tone="error">{`The templates didn't load: ${templates.error.message}`}</StatusSlot>
+        <Button size="small" onClick={() => void templates.refetch()}>
+          Reload templates
         </Button>
       </div>
-      {templates.data?.length === 0 ? (
-        <EmptyState title="No templates yet">
-          Use Save a setup to keep a Play draft for reuse.
-        </EmptyState>
+    );
+  if (templates.data === undefined)
+    return (
+      <div
+        role="status"
+        aria-busy="true"
+        aria-label="Loading templates"
+        className="sl-template-cards"
+      >
+        <div className="h-72 rounded-media bg-raised" />
+        <div className="h-72 rounded-media bg-raised" />
+        <div className="h-72 rounded-media bg-raised" />
+      </div>
+    );
+  if (all.length === 0)
+    return (
+      <EmptyState
+        title="No templates yet"
+        actions={
+          <Button variant="primary" onClick={onAdd}>
+            Add starter templates
+          </Button>
+        }
+      >
+        A template keeps a whole setup, so a video takes only a topic. Start from a starter
+        template, or save one from Create with Save as template.
+      </EmptyState>
+    );
+  return (
+    <div className="flex flex-col gap-3">
+      {tools || channels.length > 1 ? (
+        <div className="flex flex-wrap items-center gap-3">
+          {tools ? (
+            <Input
+              type="search"
+              aria-label="Search templates"
+              placeholder="Search templates"
+              value={query}
+              className="w-full min-w-0 sm:w-56"
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          ) : null}
+          {channels.length > 1 ? (
+            <Select
+              aria-label="Show templates of"
+              value={channelFilter}
+              className="w-full sm:w-56"
+              onChange={(event) => setChannelFilter(event.target.value)}
+            >
+              <option value="">All channels</option>
+              {channels.map((channel) => (
+                <option key={channel.id} value={channel.id}>
+                  {channel.name}
+                </option>
+              ))}
+            </Select>
+          ) : null}
+          {tools ? <SortMenu what="templates" sort={sort} onSort={setSort} /> : null}
+        </div>
       ) : null}
-      {templates.data?.length && shown?.length === 0 ? (
+      <StatusSlot tone={play.blocked ? "warning" : "error"}>
+        {(deleting === null ? problem : null) ??
+          (play.blocked
+            ? "A video is still starting on Create. Wait for it, then make the next one."
+            : undefined)}
+      </StatusSlot>
+      {shown.length === 0 ? (
         <p className="m-0 py-3 text-small text-ink-2">
           {needle === ""
             ? "No templates in this channel."
             : `No templates match "${query.trim()}"${channelFilter === "" ? "" : " in this channel"}.`}
         </p>
-      ) : null}
-      {templates.isPending && !templates.error ? <ListSkeleton label="Project templates" /> : null}
-      {shown?.length ? (
-        <ListDetail
-          className={libraryListDetail}
-          list={
-            <SelectionArea selection={selection}>
-              <LibraryBulkBar
-                selection={selection}
-                total={shown.length}
-                noun={["template", "templates"]}
-                scope={
-                  shown.length === templates.data?.length
-                    ? undefined
-                    : `Select all ${String(shown.length)} shown`
-                }
-                busy={bulk.busy || pending}
-                onDuplicate={() => bulk.duplicate(chosen)}
-                onDelete={() => bulk.remove(chosen)}
-              />
-              <List label="Project templates">
-                {shown.map((template) => (
-                  <Fragment key={template.id}>
-                    <ListRow
-                      className="max-md:grid-cols-1"
-                      lead={
-                        <RowCheck selection={selection} value={template.id} label={template.name} />
-                      }
-                      title={
-                        <InlineName
-                          name={template.name}
-                          maxLength={templateNameMax}
-                          onSelect={() => setPicked(template.id)}
-                          onRename={async (next) => {
-                            const refused = await renameProjectTemplate(api, template.id, next);
-                            await client.invalidateQueries({ queryKey: templatesKey });
-                            return refused;
-                          }}
-                        />
-                      }
-                      selected={template.id === picked}
-                      meta={
-                        <>
-                          {/* First, so a narrow row cuts the date rather than the badge. */}
-                          {template.gate === undefined ? null : <GateBadge gate={template.gate} />}
-                          {channelName(template) === undefined ? "" : `${channelName(template)} · `}
-                          Version {template.version} · updated <Stamp iso={template.updatedAt} />
-                        </>
-                      }
-                      actions={
-                        <LibraryRowActions
-                          name={template.name}
-                          edit={
-                            <ButtonLink
-                              to="/templates/$templateId"
-                              params={{ templateId: template.id }}
-                              variant="secondary"
-                              size="small"
-                              aria-label={`Open the studio of ${template.name}`}
-                            >
-                              Open studio
-                            </ButtonLink>
-                          }
-                          duplicate={
-                            <Button
-                              variant="quiet"
-                              size="small"
-                              aria-label={`Duplicate ${template.name}`}
-                              disabled={pending}
-                              disabledReason="Working on the last press"
-                              onClick={() => void execute(() => duplicate(template))}
-                            >
-                              Duplicate
-                            </Button>
-                          }
-                          play={{
-                            run: () => void execute(() => apply(template)),
-                            blocked: blocked
-                              ? "A run is still starting in Play. Wait for it, then use the template."
-                              : pending
-                                ? "Working on the last press"
-                                : undefined,
-                          }}
-                          onHistory={() => setHistoryOf(template)}
-                          onDelete={() => {
-                            setDeleting(template);
-                            setError(null);
-                          }}
-                        />
-                      }
-                    />
-                    <RetiredModelRow kind="template" id={template.id} name={template.name} />
-                  </Fragment>
-                ))}
-              </List>
-            </SelectionArea>
-          }
-          detail={<TemplateDetail template={templates.data?.find((one) => one.id === picked)} />}
-        />
-      ) : null}
-      <DesignTemplates />
-      <SaveTemplateDrawer
-        open={saving}
-        onClose={() => setSaving(false)}
-        templates={templates.data}
-        channels={channels.data ?? []}
-        pending={pending}
-        error={error}
-        execute={execute}
-      />
-      {historyOf === null ? null : (
+      ) : (
+        <ul aria-label="Video templates" className="sl-template-cards m-0 list-none p-0">
+          {shown.map((template) => (
+            <TemplateCardItem
+              key={template.id}
+              template={template}
+              picked={template.id === item}
+              card={cards?.find((one) => one.id === template.id)}
+              channel={
+                channels.length > 1
+                  ? channels.find((one) => one.id === channelOfTemplate(template))?.name
+                  : undefined
+              }
+              providerName={(id) =>
+                providers.data?.providers.find((one) => one.id === id)?.displayName ?? id
+              }
+              pending={pending}
+              onMake={() => void execute(() => actions.apply(template))}
+              onDuplicate={() => void execute(() => actions.duplicate(template))}
+              onExport={() => void execute(() => exportFile(template))}
+              onVersions={() => setVersionsOf(template)}
+              onDelete={() => {
+                setDeleting(template);
+                setProblem(null);
+              }}
+            />
+          ))}
+        </ul>
+      )}
+      {versionsOf === null ? null : (
         <TemplateHistoryDrawer
-          key={`${historyOf.id}:${String(historyOf.version)}`}
-          template={historyOf}
-          onClose={() => setHistoryOf(null)}
+          key={`${versionsOf.id}:${String(versionsOf.version)}`}
+          template={versionsOf}
+          onClose={() => setVersionsOf(null)}
         />
       )}
       <ConfirmDialog
         open={deleting !== null}
         title={`Delete ${deleting?.name ?? "template"}?`}
         consequence={
-          error ??
-          "Moves it to the trash for 30 days (Settings → Trash). Existing projects and drafts keep their setup."
+          problem ??
+          "Moves it to the trash for 30 days (Settings → Trash). Projects already made from it keep their setup."
         }
         confirmLabel="Delete template"
         pending={pending}
@@ -378,38 +381,154 @@ export function TemplatesRoute({
   );
 }
 
-// Whether the template's newest version is ready for its schedules, its detail on hover.
-function GateBadge({ gate }: { readonly gate: TemplateGate }): ReactElement {
-  const badge = templateGateBadge(gate);
+// One template as a card: what it makes, at a glance, and the two things to do with it.
+function TemplateCardItem({
+  template,
+  picked,
+  card,
+  channel,
+  providerName,
+  pending,
+  onMake,
+  onDuplicate,
+  onExport,
+  onVersions,
+  onDelete,
+}: {
+  readonly template: TemplateSummary;
+  readonly picked: boolean;
+  readonly card: TemplateCard | undefined;
+  readonly channel: string | undefined;
+  readonly providerName: (id: string) => string;
+  readonly pending: boolean;
+  readonly onMake: () => void;
+  readonly onDuplicate: () => void;
+  readonly onExport: () => void;
+  readonly onVersions: () => void;
+  readonly onDelete: () => void;
+}): ReactElement {
+  const { api } = useApp();
+  const badge = templateGateBadge(template.gate, card?.schedules ?? 0);
+  const format = card?.format ?? "16:9";
+  const shown = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    if (picked) shown.current?.scrollIntoView?.({ block: "nearest" });
+  }, [picked]);
   return (
-    <Badge tone={badge.tone} className="mr-2" title={badge.detail}>
-      {badge.word}
-    </Badge>
+    <li
+      ref={shown}
+      className="sl-template-card"
+      aria-label={template.name}
+      aria-current={picked ? "true" : undefined}
+    >
+      <div className="sl-template-card__still" data-format={format}>
+        {card?.still == null ? (
+          <div className="sl-template-card__shape" aria-hidden="true">
+            <span>{format}</span>
+            <span className="text-ink-3">No preview yet</span>
+          </div>
+        ) : (
+          <img src={`${api.origin}${card.still}`} alt={`A still from ${template.name}'s sample`} />
+        )}
+      </div>
+      <div className="flex min-w-0 flex-col gap-1">
+        <h3 className="m-0 truncate text-title-3" title={template.name}>
+          {template.name}
+        </h3>
+        <p className="m-0 text-small text-ink-2">
+          {card === undefined ? "Reading what it makes…" : cardFacts(card, providerName)}
+        </p>
+        {card === undefined || card.asks.length === 0 ? null : (
+          <p className="m-0 text-small text-ink-2">{`Asks for: ${card.asks.join(", ")}`}</p>
+        )}
+        {badge === undefined && channel === undefined ? null : (
+          <p className="m-0 flex flex-wrap items-center gap-x-2 gap-y-1 text-small text-ink-2">
+            {badge === undefined ? null : <Badge tone={badge.tone}>{badge.word}</Badge>}
+            {channel === undefined ? null : <span>{channel}</span>}
+          </p>
+        )}
+        {badge === undefined || badge.tone !== "waiting" ? null : (
+          <p className="m-0 text-small text-ink-2">{badge.detail}</p>
+        )}
+      </div>
+      <div className="sl-template-card__actions">
+        <Button
+          variant="primary"
+          size="small"
+          aria-label={`Make a video with ${template.name}`}
+          disabled={pending}
+          disabledReason="Working on the last press"
+          onClick={onMake}
+        >
+          Make a video
+        </Button>
+        <ButtonLink
+          to="/templates/$templateId"
+          params={{ templateId: template.id }}
+          search={{}}
+          size="small"
+          aria-label={`Edit template ${template.name}`}
+        >
+          Edit template
+        </ButtonLink>
+        <Menu>
+          <MenuTrigger asChild>
+            <Button size="small" variant="quiet" aria-label={`More for ${template.name}`}>
+              <EllipsisIcon aria-hidden="true" className="size-4" strokeWidth={1.75} />
+            </Button>
+          </MenuTrigger>
+          <MenuContent>
+            <MenuItem
+              aria-label={`Duplicate ${template.name}`}
+              disabled={pending}
+              onSelect={onDuplicate}
+            >
+              Duplicate
+            </MenuItem>
+            <MenuItem aria-label={`Versions of ${template.name}`} onSelect={onVersions}>
+              Versions
+            </MenuItem>
+            <MenuItem
+              aria-label={`Export ${template.name} as a file (.zip)`}
+              disabled={pending}
+              onSelect={onExport}
+            >
+              Export as a file (.zip)
+            </MenuItem>
+            <MenuSeparator />
+            <MenuItem aria-label={`Delete ${template.name}`} onSelect={onDelete}>
+              Delete…
+            </MenuItem>
+          </MenuContent>
+        </Menu>
+      </div>
+      <RetiredModelRow kind="template" id={template.id} name={template.name} />
+    </li>
   );
 }
 
-// Library → Templates is where every template is set up: below the project templates, the
-// design templates (posters, flyers), each opened in its own studio.
-function DesignTemplates(): ReactElement {
-  const starts = useDesignStarts();
+// Poster templates: posters and flyers with fields such as {{Event}}, made again by hand or
+// ahead of each date by a schedule, each set up in its own editor.
+function PosterTemplates({
+  problem,
+  onNew,
+}: {
+  readonly problem: string | null;
+  readonly onNew: () => void;
+}): ReactElement {
   return (
-    <section aria-label="Design templates" className="mt-8">
-      <SectionHead
-        title="Design templates"
-        info="templates.design"
-        meta="Posters and flyers with fields such as {{Event}}, made again by hand or by a schedule."
-      >
-        <Button variant="secondary" disabled={starts.busy} onClick={starts.startTemplate}>
-          New design template
-        </Button>
-      </SectionHead>
-      {starts.problem === null ? null : (
-        <p role="alert" className="m-0 mb-2 text-body text-danger">
-          {starts.problem}
+    <div className="flex flex-col gap-3">
+      <p className="m-0 text-small text-ink-2">
+        A poster with fields such as {"{{Event}}"}, made again by hand or ahead of each date by a
+        schedule. Your posters and picture edits are under{" "}
+        <TextLink to="/designs">Designs</TextLink>.
+      </p>
+      {problem === null ? null : (
+        <p role="alert" className="m-0 text-body text-danger">
+          {problem}
         </p>
       )}
-      {starts.input}
-      <DesignTemplateList />
-    </section>
+      <DesignTemplateList onNew={onNew} />
+    </div>
   );
 }

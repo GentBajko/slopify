@@ -1,9 +1,18 @@
 import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
+import { withProviderDefaults } from "@app/slices/project-templates/provider-defaults.js";
 import { sectionLabel, type TemplateSection } from "@app/slices/template-studio/model.js";
 import type { StudioView } from "@app/slices/template-studio/schema.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Navigate } from "@tanstack/react-router";
-import { type ReactElement, useCallback, useEffect, useRef, useState } from "react";
+import {
+  type ReactElement,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { useApp } from "@/app-context";
 import { useAssistantContext } from "@/assistant/screen";
 import { useDocumentTitle } from "@/components/document-title";
@@ -15,42 +24,57 @@ import { SectionHead } from "@/components/kit/section-head";
 import { Tabs } from "@/components/kit/tabs";
 import { designTemplateQuery } from "@/designs/api";
 import { cn } from "@/lib/utils";
+import { providersQuery } from "@/queries";
 import { UnsavedLeaveGuard } from "@/routes/unsaved-leave-guard";
+import type { PlayHandoff } from "@/templates/play-handoff";
 import { PromptAnatomy } from "./anatomy";
 import type { BakeoffPick } from "./api";
 import { requestFreeSamples, templateStudioKey, templateStudioQuery } from "./api";
 import { BakeoffResults, bakeoffSectionOf, CompareModels, usingModel } from "./bakeoff";
 import { ChecksList } from "./checks-list";
 import { FineTune } from "./fine-tune";
-import { MadeWith } from "./made-with";
-import { ExportPack, PackSamples } from "./pack";
-import { MarkReady } from "./ready-gate";
+import { MadeWith, useProviderDefaults } from "./made-with";
+import { PackSamples } from "./pack";
+import { gateLine, StudioActions, useApproval } from "./ready-gate";
 import { SamplePanel } from "./sample-panel";
 import { SaveBar } from "./save-bar";
+import { ScheduleSection } from "./schedule-section";
 import { SectionRail } from "./section-rail";
 import { TemplateSession } from "./session";
-import { SampleTopic } from "./topic";
 import { VisibleControls } from "./visible";
 
 type Pane = "sections" | "settings" | "sample";
 
-// Library → Templates → Open studio: a template set up section by section, in pipeline order,
-// each section's sample beside its settings.
+// The sections whose whole editor is shown at once, with nothing folded: they hold few enough
+// settings, and every one of them matters (the shorts, each pause and AI check, the
+// description and each site's post).
+const unfolded: readonly TemplateSection[] = ["shorts", "reviews", "upload"];
+// Topic & title's other settings (the language, a keyword the title doesn't fill) follow its
+// lead ones with no fold: a fold of one or two settings hides more than it tidies. PDF has no
+// others: whether to make it and its look are both lead settings.
+const followed: readonly TemplateSection[] = ["subject"];
+const leadOnly: readonly TemplateSection[] = ["document", "schedule"];
+
+// Templates → Edit template: a template set up section by section, in run order, each
+// section's sample beside its settings.
 export function TemplateStudioPage({
   templateId,
   section,
   compare,
+  play,
 }: {
   readonly templateId: string;
   readonly section: TemplateSection;
   // A model to compare on the sample (Settings → Models → Compare on a sample).
   readonly compare?: BakeoffPick | undefined;
+  // How Make a video opens Create; without it the page has no Make a video.
+  readonly play?: PlayHandoff | undefined;
 }): ReactElement {
   const { api } = useApp();
   // The assistant knows which template and section the person has open.
   useAssistantContext({ templateId, section: sectionLabel[section] });
   const studio = useQuery(templateStudioQuery(api, templateId));
-  // One studio address for every kind of template: a design template's id opens its studio.
+  // One address for every kind of template: a design template's id opens its editor.
   const design = useQuery({
     ...designTemplateQuery(api, templateId),
     enabled: studio.error !== null,
@@ -64,12 +88,9 @@ export function TemplateStudioPage({
   if (studio.error)
     return (
       <div>
-        <PageHeader
-          title="Template studio"
-          crumb={<TextLink to="/templates">Templates</TextLink>}
-        />
+        <PageHeader title="Edit template" crumb={<TextLink to="/templates">Templates</TextLink>} />
         <p role="alert" className="m-0 text-body text-danger">
-          {`The studio didn't open: ${studio.error.message}`}
+          {`This template didn't open: ${studio.error.message}`}
         </p>
       </div>
     );
@@ -80,47 +101,35 @@ export function TemplateStudioPage({
       view={studio.data}
       section={section}
       compare={compare}
+      play={play}
     />
   );
-}
-
-function gateWords(view: StudioView): string {
-  if (!view.gated) return "Not checked in the studio: schedules run the newest version";
-  const runs =
-    view.runnableVersion === null || view.runnableVersion === view.template.version
-      ? ""
-      : ` · schedules run version ${String(view.runnableVersion)}`;
-  switch (view.gate) {
-    case "ready":
-      return "Ready";
-    case "carried":
-      return "Ready, carried from an earlier version";
-    case "legacy":
-      return "Saved before the studio: schedules run it";
-    case "unchecked":
-      return `Not checked in the studio${runs}`;
-  }
 }
 
 function Studio({
   view,
   section,
   compare,
+  play,
 }: {
   readonly view: StudioView;
   readonly section: TemplateSection;
   readonly compare?: BakeoffPick | undefined;
+  readonly play?: PlayHandoff | undefined;
 }): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
-  useDocumentTitle(`${view.template.name} · Template studio`);
+  useDocumentTitle(`${view.template.name} · Edit template`);
   const saved = view.template.document;
   const [document, setDocument] = useState<PlayDraftDocument>(saved);
+  const [name, setName] = useState(view.template.name);
   const [pane, setPane] = useState<Pane>("settings");
   const [fineTune, setFineTune] = useState(0);
   const [status, setStatus] = useState<{ tone: StatusTone; text: string } | undefined>();
   const [making, setMaking] = useState(false);
   const asked = useRef(false);
+  const providers = useQuery(providersQuery(api));
+  const defaults = useProviderDefaults();
   async function make(): Promise<void> {
     setMaking(true);
     try {
@@ -129,7 +138,7 @@ function Studio({
     } catch (error) {
       setStatus({
         tone: "error",
-        text: `The samples weren't asked for: ${error instanceof Error ? error.message : String(error)} Press Make samples again.`,
+        text: `The samples weren't asked for: ${error instanceof Error ? error.message : String(error)} Press Make sample again.`,
       });
     } finally {
       setMaking(false);
@@ -145,13 +154,17 @@ function Studio({
     asked.current = true;
     void make();
   }, [view]);
-  const dirty = JSON.stringify(document) !== JSON.stringify(saved);
+  const trimmed = name.trim();
+  const dirty =
+    JSON.stringify(document) !== JSON.stringify(saved) ||
+    (trimmed !== "" && trimmed !== view.template.name);
   const current = view.sections.find((one) => one.id === section) ?? view.sections[0];
+  const blocker = useApproval(view, dirty);
   const onFiles = useCallback(
     () =>
       setStatus({
         tone: "info",
-        text: "Files are added to each video in Play: the template keeps only that the video provides them.",
+        text: "Files are added to each video on Create: the template keeps only that the video provides them.",
       }),
     [],
   );
@@ -162,35 +175,43 @@ function Studio({
   if (current === undefined) return <StudioSkeleton />;
   const comparable = bakeoffSectionOf(current.id);
   const hidden = (which: Pane) => (pane === which ? undefined : "max-md:hidden");
+  // Who makes the article and the images once this computer's defaults stand in for a choice
+  // nobody made; a section still without one shows its pickers where the check's link lands.
+  const filled = withProviderDefaults(document, defaults).form;
+  const unchosen = { llm: filled.llm.provider === "", images: filled.images.provider === "" };
+  const pickerShown =
+    (current.id === "script" && unchosen.llm) || (current.id === "pictures" && unchosen.images);
+  const scheduled = view.gated || view.schedule.cost !== null;
+  const gate = scheduled ? gateLine(view) : undefined;
+  const line =
+    gate?.line === undefined
+      ? undefined
+      : blocker === undefined
+        ? gate.line
+        : `${gate.line} First ${blocker}.`;
   return (
     <TemplateSession document={document} onEdit={edit} onFiles={onFiles}>
       <UnsavedLeaveGuard dirty={dirty} what="your template changes" saveLabel="Save" />
       <PageHeader
         crumb={<TextLink to="/templates">Templates</TextLink>}
-        title={view.template.name}
-        meta={`Version ${String(view.template.version)} · ${gateWords(view)}`}
+        title="Edit template"
+        meta={`${view.template.name} · version ${String(view.template.version)}${gate === undefined ? "" : ` · ${gate.word}`}`}
         actions={
-          <>
-            <SampleTopic view={view} />
-            <ExportPack
-              view={view}
-              onProblem={(message) =>
-                setStatus(message === undefined ? undefined : { tone: "error", text: message })
-              }
-            />
-            <MarkReady
-              view={view}
-              dirty={dirty}
-              onProblem={(message) =>
-                setStatus(message === undefined ? undefined : { tone: "error", text: message })
-              }
-            />
-          </>
+          <StudioActions
+            view={view}
+            dirty={dirty}
+            scheduled={scheduled}
+            play={play}
+            onProblem={(message) =>
+              setStatus(message === undefined ? undefined : { tone: "error", text: message })
+            }
+          />
         }
       />
+      {line === undefined ? null : <p className="m-0 -mt-2 mb-3 text-small text-ink-2">{line}</p>}
       <Tabs
         className="mb-4 md:hidden"
-        label="Studio panes"
+        label="Edit template panes"
         idPrefix="studio"
         value={pane}
         onChange={setPane}
@@ -213,8 +234,25 @@ function Studio({
           </div>
         }
         aside={
-          <div className={cn("flex flex-col gap-6", hidden("sample"))}>
-            <SamplePanel view={view} section={current} making={making} onMake={() => void make()} />
+          <div className={cn("flex flex-col gap-5", hidden("sample"))}>
+            {current.id === "schedule" ? null : (
+              <SamplePanel
+                view={view}
+                section={current}
+                making={making}
+                onMake={() => void make()}
+                aliasesOn={document.form.audio.useNarrationAliases === true}
+                onAliasesOn={() =>
+                  edit({
+                    ...document,
+                    form: {
+                      ...document.form,
+                      audio: { ...document.form.audio, useNarrationAliases: true },
+                    },
+                  })
+                }
+              />
+            )}
             <PackSamples templateId={view.template.id} />
             <ChecksList templateId={view.template.id} />
           </div>
@@ -222,15 +260,34 @@ function Studio({
       >
         <section
           aria-label={`${current.label} settings`}
-          className={cn("flex flex-col gap-4", hidden("settings"))}
+          className={cn("flex min-w-0 flex-col gap-4", hidden("settings"))}
         >
-          <SectionHead title={current.label} as="h2" />
-          <VisibleControls section={current.id} document={document} onEdit={edit} />
-          <MadeWith
-            section={current.id}
-            document={document}
-            onChange={() => setFineTune((n) => n + 1)}
-          />
+          <SectionHead title={current.label} as="h2" className="pb-0" />
+          {current.id === "schedule" ? (
+            <ScheduleSection view={view} />
+          ) : unfolded.includes(current.id) ? (
+            <FineTune section={current.id} onFiles={onFiles} />
+          ) : (
+            <>
+              <VisibleControls
+                section={current.id}
+                document={document}
+                name={name}
+                providers={providers.data?.providers ?? []}
+                unchosen={unchosen}
+                onEdit={edit}
+                onName={setName}
+              />
+              {pickerShown ? null : (
+                <MadeWith
+                  templateId={view.template.id}
+                  section={current.id}
+                  document={document}
+                  onChange={() => setFineTune((n) => n + 1)}
+                />
+              )}
+            </>
+          )}
           {comparable === undefined ? null : (
             <>
               <CompareModels
@@ -250,25 +307,89 @@ function Studio({
               />
             </>
           )}
-          <Fold
-            key={`${current.id}:${String(fineTune)}`}
-            defaultOpen={fineTune > 0}
-            summary={`Fine-tune ${current.label}`}
-          >
+          {leadOnly.includes(current.id) ||
+          unfolded.includes(current.id) ? null : followed.includes(current.id) ? (
             <FineTune section={current.id} onFiles={onFiles} />
-          </Fold>
+          ) : (
+            <AllSettings
+              key={`${current.id}:${String(fineTune)}`}
+              label={current.label}
+              open={fineTune > 0}
+            >
+              <FineTune section={current.id} onFiles={onFiles} />
+            </AllSettings>
+          )}
           <PromptAnatomy view={view} section={current.id} />
         </section>
       </Workspace>
-      <SaveBar view={view} document={document} dirty={dirty} note={status} />
+      <SaveBar view={view} document={document} name={name} dirty={dirty} note={status} />
     </TemplateSession>
   );
 }
 
-// The page's shape while it loads: the header row, the three columns and the action bar.
+// What a person meets as a setting of its own: the help walk's controls (help/coverage.ts),
+// without a player's buttons, a file input or a group that is only layout.
+const settingSelector = [
+  "input:not([type=hidden]):not([type=file])",
+  "select",
+  "textarea",
+  "[role=switch]",
+  "[role=checkbox]",
+  "[role=combobox]",
+  "[role=radiogroup]",
+  "[role=group]",
+].join(",");
+
+// A row of choices is one setting: the kit's Segmented (pressed buttons in a group) or a toggle
+// group (radios in a radiogroup), never each of its buttons.
+function isSetting(control: Element): boolean {
+  if (control.closest("[data-slot=player], [data-slot=audio-player]") !== null) return false;
+  return (
+    control.getAttribute("role") !== "group" ||
+    [...control.children].some((child) => child.hasAttribute("aria-pressed"))
+  );
+}
+
+function useSettingCount(within: RefObject<HTMLElement | null>): number | undefined {
+  const [count, setCount] = useState<number>();
+  useLayoutEffect(() => {
+    const root = within.current;
+    if (root === null) return;
+    const next = [...root.querySelectorAll(settingSelector)].filter(isSetting).length;
+    if (next !== count) setCount(next);
+  });
+  return count;
+}
+
+// "All Video & captions settings (99)": a section's whole editor, folded under its few lead
+// settings, with how many it holds.
+function AllSettings({
+  label,
+  open,
+  children,
+}: {
+  readonly label: string;
+  readonly open: boolean;
+  readonly children: ReactElement;
+}): ReactElement {
+  const body = useRef<HTMLDivElement>(null);
+  const count = useSettingCount(body);
+  return (
+    <Fold
+      defaultOpen={open}
+      summary={`All ${label} settings${count === undefined || count === 0 ? "" : ` (${String(count)})`}`}
+    >
+      <div ref={body} className="flex min-w-0 flex-col gap-4 pt-2 pb-2">
+        {children}
+      </div>
+    </Fold>
+  );
+}
+
+// The page's shape while it loads: the header row and the three columns.
 function StudioSkeleton(): ReactElement {
   return (
-    <div role="status" aria-busy="true" aria-label="Loading the template studio">
+    <div role="status" aria-busy="true" aria-label="Loading the template">
       <div className="mb-4 h-8 w-72 rounded-control bg-raised" />
       <div className="sl-workspace sl-workspace--studio">
         <div className="h-96 rounded-control bg-raised" />

@@ -9,7 +9,7 @@ import { blankTemplate } from "../document";
 import { DesignTemplateRoute } from "./template-editor";
 
 // A rail section's button reads its name, then its sample's state ("Picture Off").
-const railName = (name: string): RegExp => new RegExp(`^${name}( |$)`);
+const railName = (name: string): RegExp => new RegExp(`^${name}(,| |$)`);
 
 afterEach(() => {
   cleanup();
@@ -52,6 +52,12 @@ function template(
     ...patch,
   };
 }
+
+// A poster template a schedule makes pieces from: approval is shown only for one.
+const scheduledDoc: DesignDocument = {
+  ...blankTemplate(),
+  schedule: { dateField: "Date", daysBefore: 7, time: "09:00" },
+};
 
 const done: SampleView = {
   state: "done",
@@ -100,8 +106,7 @@ function visibleSettings(): number {
   ).length;
 }
 
-const saveButton = () => screen.getByRole("button", { name: /^Save( ·|$)/ });
-const words = (button: HTMLElement) => button.firstChild?.textContent;
+const saveButton = () => screen.getByRole("button", { name: "Save" });
 
 describe("the design template editor", () => {
   it("has four sections, each with at most four settings on show", async () => {
@@ -117,9 +122,9 @@ describe("the design template editor", () => {
     }
   });
 
-  it("prices a Save: free when only the text changed, the artwork when the picture did", async () => {
+  it("saves without spending: a free redraw at once, new artwork left for Make sample", async () => {
     const user = userEvent.setup();
-    let saved: Record<string, unknown> | undefined;
+    const saved: Record<string, unknown>[] = [];
     renderRouted(
       <DesignTemplateRoute templateId="t1" />,
       deps(template({ sample: done }), {
@@ -133,6 +138,35 @@ describe("the design template editor", () => {
           )(request);
         },
         "PUT /api/design-templates/t1": async (request) => {
+          saved.push((await request.json()) as Record<string, unknown>);
+          return jsonAnswer({ template: template({ headVersion: 3 }), saved: true, sample: done })(
+            request,
+          );
+        },
+      }),
+    );
+    // Nothing changed yet: there is nothing to save, so no Save is drawn.
+    await screen.findByRole("button", { name: "Make a piece" });
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: railName("Text layout") }));
+    await user.click(screen.getByRole("button", { name: "Centre" }));
+    await waitFor(() => expect(saveButton().getAttribute("aria-disabled")).toBeNull());
+    await user.click(saveButton());
+    await waitFor(() => expect(saved).toHaveLength(1));
+    expect(saved[0]).toMatchObject({ baseVersion: 2, sample: "make", acknowledgedHigh: 0 });
+    expect(await screen.findByText("Saved as version 3.")).not.toBeNull();
+  });
+
+  it("leaves new artwork for Make sample when the picture changed", async () => {
+    const user = userEvent.setup();
+    let saved: Record<string, unknown> | undefined;
+    renderRouted(
+      <DesignTemplateRoute templateId="t1" />,
+      deps(template({ sample: done }), {
+        "POST /api/design-templates/t1/quote": jsonAnswer(
+          quote(0.04, { sections: ["picture"], makesPicture: true }),
+        ),
+        "PUT /api/design-templates/t1": async (request) => {
           saved = (await request.json()) as Record<string, unknown>;
           return jsonAnswer({ template: template({ headVersion: 3 }), saved: true, sample: done })(
             request,
@@ -140,19 +174,12 @@ describe("the design template editor", () => {
         },
       }),
     );
-    expect(words(await waitFor(saveButton))).toBe("Save");
-    expect(saveButton().getAttribute("aria-disabled")).toBe("true");
-    await user.click(screen.getByRole("button", { name: railName("Text layout") }));
-    await user.click(screen.getByRole("button", { name: "Centre" }));
-    await waitFor(() => expect(words(saveButton())).toBe("Save · free"));
-    await user.click(screen.getByRole("button", { name: railName("Picture") }));
-    await user.type(screen.getByLabelText("Describe the artwork"), " at night");
-    await waitFor(() => expect(words(saveButton())).toBe("Save · about $0.04"));
+    await user.type(await screen.findByLabelText("Describe the artwork"), " at night");
+    await waitFor(() => expect(saveButton().getAttribute("aria-disabled")).toBeNull());
     await user.click(saveButton());
     await waitFor(() =>
-      expect(saved).toMatchObject({ baseVersion: 2, sample: "make", acknowledgedHigh: 0.04 }),
+      expect(saved).toMatchObject({ baseVersion: 2, sample: "skip", acknowledgedHigh: 0 }),
     );
-    expect(await screen.findByText("Saved as version 3.")).not.toBeNull();
   });
 
   it("shows the sample, and makes a held one at its price on Make sample", async () => {
@@ -194,39 +221,41 @@ describe("the design template editor", () => {
     expect(image.getAttribute("src")).toContain("/api/designs/s1/files/a4.png?v=2");
   });
 
-  it("keeps Mark ready off until this version's sample is made, saying why", async () => {
+  it("keeps Approve for schedules off until this version's sample is made, saying why", async () => {
     renderRouted(
       <DesignTemplateRoute templateId="t1" />,
-      deps(template({ sample: { ...done, version: 1 } })),
+      deps(template({ sample: { ...done, version: 1 } }, scheduledDoc)),
     );
-    const button = await screen.findByRole("button", { name: "Mark ready" });
+    const button = await screen.findByRole("button", { name: "Approve for schedules" });
     expect(button.getAttribute("aria-disabled")).toBe("true");
     expect(button.getAttribute("data-tip")).toBe(
-      "Make this version's sample first: Mark ready needs a current sample to look over.",
+      "Make this version's sample first: approval needs a current sample to look over.",
     );
+    const panel = screen.getByRole("region", { name: "Sample" });
+    expect(within(panel).getByText("The sample shows version 1.")).not.toBeNull();
   });
 
-  it("offers Save without a sample for any unsaved change, whatever the sample costs", async () => {
+  it("says nothing of approval on a poster template no schedule makes", async () => {
+    renderRouted(<DesignTemplateRoute templateId="t1" />, deps(template({ sample: done })));
+    expect(await screen.findByText("Version 2")).not.toBeNull();
+    expect(screen.queryByRole("button", { name: "Approve for schedules" })).toBeNull();
+    expect(screen.queryByText(/for schedules/)).toBeNull();
+    expect(screen.getByRole("link", { name: "Templates" }).getAttribute("href")).toBe(
+      "/templates?tab=posters",
+    );
+    cleanup();
+    renderRouted(
+      <DesignTemplateRoute templateId="t1" />,
+      deps(template({ sample: done }, scheduledDoc)),
+    );
+    expect(await screen.findByText("Version 2 · Not ready for schedules")).not.toBeNull();
+  });
+
+  it("lists what approval found, each with the section to open", async () => {
     const user = userEvent.setup();
     renderRouted(
       <DesignTemplateRoute templateId="t1" />,
-      deps(template({ sample: done }), {
-        "POST /api/design-templates/t1/quote": jsonAnswer(
-          quote(0, { sections: ["picture"], makesPicture: true, unknown: 1 }),
-        ),
-      }),
-    );
-    const without = await screen.findByRole("button", { name: "Save without a sample" });
-    expect(without.hasAttribute("disabled")).toBe(true);
-    await user.type(await screen.findByLabelText("Template name"), " B");
-    await waitFor(() => expect(without.hasAttribute("disabled")).toBe(false));
-  });
-
-  it("lists what Mark ready found, each with the section to open", async () => {
-    const user = userEvent.setup();
-    renderRouted(
-      <DesignTemplateRoute templateId="t1" />,
-      deps(template({ sample: done }), {
+      deps(template({ sample: done }, scheduledDoc), {
         "POST /api/design-templates/t1/ready": () =>
           new Response(
             JSON.stringify({
@@ -247,7 +276,7 @@ describe("the design template editor", () => {
           ),
       }),
     );
-    await user.click(await screen.findByRole("button", { name: "Mark ready" }));
+    await user.click(await screen.findByRole("button", { name: "Approve for schedules" }));
     expect(await screen.findByText(/{{Place}} has no sample value. Fill it in/)).not.toBeNull();
     await user.click(screen.getByRole("button", { name: "Open Text layout" }));
     expect(await screen.findByRole("region", { name: "Text layout" })).not.toBeNull();

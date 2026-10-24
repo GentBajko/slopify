@@ -3,6 +3,8 @@ import { expect, it } from "vitest";
 import { createPrompt, updatePrompt } from "../library/save.js";
 import { draftFixture, must, reviewFixture } from "../play-drafts/draft.fake.js";
 import { reviewDraft } from "../play-drafts/review.js";
+import { providerDefaultsKey } from "../settings/first-run.js";
+import { writeSetting } from "../settings/repo.js";
 import {
   createTemplate,
   deleteTemplate,
@@ -201,6 +203,53 @@ it("keeps the shorts' background music by name, to be attached again like the ot
     expect(result.value.attachments).toMatchObject([
       { id: music?.attachmentId, kind: "audio", state: "reattach", stagedFileId: null },
     ]);
+  } finally {
+    h.close();
+  }
+});
+
+it("gives a draft made from a template nobody picked a writer or image service in this computer's defaults", () => {
+  const h = draftFixture();
+  try {
+    writeSetting(
+      h.deps.db,
+      providerDefaultsKey,
+      JSON.stringify({
+        llm: { provider: "claude-code", model: "sonnet" },
+        images: { provider: "codex-image", model: "gpt-image" },
+      }),
+    );
+    const blank = {
+      ...h.document,
+      form: {
+        ...h.document.form,
+        llm: { provider: "", model: "" },
+        images: { provider: "", model: "" },
+      },
+    };
+    const id = randomUUID();
+    expect(createTemplate(h.deps, { id, name: "Blank", document: blank }).ok).toBe(true);
+    const made = instantiateTemplate(h.deps, { templateId: id, id: randomUUID(), version: 1 });
+    if (!made.ok) throw new Error("Template did not instantiate");
+    expect(made.value.draft.document.form.llm).toEqual({
+      provider: "claude-code",
+      model: "sonnet",
+    });
+    expect(made.value.draft.document.form.images).toEqual({
+      provider: "codex-image",
+      model: "gpt-image",
+    });
+    // The template itself keeps asking for the person's own choice.
+    const saved = readTemplate(h.deps, id);
+    expect(saved.ok && saved.value.document.form.llm.provider).toBe("");
+
+    const chosen = randomUUID();
+    const half = { ...blank, form: { ...blank.form, images: { provider: "fal", model: "flux" } } };
+    expect(createTemplate(h.deps, { id: chosen, name: "Half", document: half }).ok).toBe(true);
+    const kept = instantiateTemplate(h.deps, { templateId: chosen, id: randomUUID(), version: 1 });
+    if (!kept.ok) throw new Error("Template did not instantiate");
+    expect(kept.value.draft.document.form.llm.provider).toBe("");
+    expect(kept.value.draft.document.form.images.provider).toBe("fal");
   } finally {
     h.close();
   }

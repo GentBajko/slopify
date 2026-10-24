@@ -80,7 +80,7 @@ export async function getAnatomy(
       ok: false,
       reason: "not-found",
       message:
-        "This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates.",
+        "This template no longer exists; it may have been deleted. Go to Templates to see your templates.",
     };
   const record = sampleOf(deps.db, id);
   const fullScript = record?.fullScript ?? false;

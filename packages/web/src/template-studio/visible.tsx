@@ -1,26 +1,39 @@
 import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
+import { templateNameMax } from "@app/slices/project-templates/schema.js";
+import type { ProviderStatus } from "@app/slices/settings/model.js";
 import type { TemplateSection } from "@app/slices/template-studio/model.js";
-import type { ReactElement, ReactNode } from "react";
+import { type ReactElement, type ReactNode, useId } from "react";
+import { DocumentThemePicker } from "@/components/document-theme-picker";
 import { Field, Input } from "@/components/kit/field";
+import { TextLink } from "@/components/kit/link";
 import { Segmented, type SegmentedOption, Switch } from "@/components/kit/switch";
-import type { HelpId } from "@/help/catalog";
-import { freshShorts } from "@/play/shorts";
-import { StudioPostSettings } from "@/social/studio-post-settings";
-import { TitlePattern } from "./fine-tune";
+import { ModelPicker, ProviderPicker } from "@/play/pickers";
 
 type Form = PlayDraftDocument["form"];
 type Edit = (form: Form) => void;
 
-// The two to four settings each section shows before Fine-tune, presets before numbers. Every
-// one is also in Fine-tune, in Play's own editor.
+// The few settings each section leads with, presets before numbers, laid out two across. The
+// section's whole editor (Play's own) is under "All … settings" below them. Shorts, Pauses and
+// checks and YouTube description & posts show their whole editor here instead (page.tsx).
 export function VisibleControls({
   section,
   document,
+  name,
+  providers,
+  unchosen,
   onEdit,
+  onName,
 }: {
   readonly section: TemplateSection;
   readonly document: PlayDraftDocument;
+  // The template's name as typed, saved with the next Save.
+  readonly name: string;
+  readonly providers: readonly ProviderStatus[];
+  // The writer and the image service nobody chose, with no default of this computer to stand
+  // in: their pickers are drawn here, where the check's link lands.
+  readonly unchosen: { readonly llm: boolean; readonly images: boolean };
   readonly onEdit: (document: PlayDraftDocument) => void;
+  readonly onName: (name: string) => void;
 }): ReactElement | null {
   const { form } = document;
   const edit: Edit = (next) => onEdit({ ...document, form: next });
@@ -32,10 +45,17 @@ export function VisibleControls({
     case "subject":
       return (
         <Controls>
+          <Field label="Template name">
+            <Input
+              value={name}
+              maxLength={templateNameMax}
+              onChange={(event) => onName(event.target.value)}
+            />
+          </Field>
           <TitlePattern value={form.title} onChange={(title) => edit({ ...form, title })} />
           <Choice
             label="Research"
-            tip="play.source.research"
+            help="Looks the topic up before the article is written."
             value={form.sources.research === "off" ? "off" : "generate"}
             options={[
               { value: "off", label: "Off" },
@@ -49,8 +69,7 @@ export function VisibleControls({
       return (
         <Controls>
           <Choice
-            label="Script"
-            tip="play.source.article"
+            label="Article"
             value={form.sources.article === "provide" ? "provide" : "generate"}
             options={[
               { value: "generate", label: "Written by AI" },
@@ -58,17 +77,25 @@ export function VisibleControls({
             ]}
             onChange={(article) => edit(sources({ article }))}
           />
-          <Field
-            label="Expected length (words)"
-            help="For the cost estimate."
-            tip="play.expected-words"
-          >
+          <Field label="Expected length (words)" help="About 150 words is one minute of narration.">
             <Input
               inputMode="numeric"
+              className="sl-input--number"
               value={document.expectedWords}
               onChange={(event) => onEdit({ ...document, expectedWords: event.target.value })}
             />
           </Field>
+          {unchosen.llm && form.sources.article === "generate" ? (
+            <ServicePicker
+              group="Written by"
+              missing="writing service"
+              field="llm"
+              family="llm"
+              providers={providers}
+              value={form.llm}
+              onPick={(llm) => edit({ ...form, llm })}
+            />
+          ) : null}
         </Controls>
       );
     case "voice":
@@ -76,19 +103,17 @@ export function VisibleControls({
         <Controls>
           <Switch
             label="Level the volume"
-            tip="project.loudness"
+            help="Evens the narration out to YouTube's loudness."
             checked={form.loudness?.enabled ?? true}
             onChange={(enabled) => edit({ ...form, loudness: { ...form.loudness, enabled } })}
           />
           <Switch
             label="Soften breaths"
-            tip="project.remove-breaths"
             checked={form.removeBreaths === true}
             onChange={(removeBreaths) => edit({ ...form, removeBreaths })}
           />
           <Switch
             label="Soften S sounds"
-            tip="project.soften-s"
             checked={form.deEss === true}
             onChange={(deEss) => edit({ ...form, deEss })}
           />
@@ -98,8 +123,7 @@ export function VisibleControls({
       return (
         <Controls>
           <Choice
-            label="Pictures"
-            tip="play.source.images"
+            label="Images"
             value={
               form.sources.images === "provide"
                 ? "provide"
@@ -114,21 +138,33 @@ export function VisibleControls({
             ]}
             onChange={(images) => edit(sources({ images }))}
           />
-          <Switch
-            label="Scenes from the script"
-            tip="play.image-scenes"
-            checked={form.imageScenes === true}
-            disabled={form.sources.images !== "generate"}
-            onChange={(imageScenes) => edit({ ...form, imageScenes })}
-          />
+          {form.sources.images === "generate" ? (
+            <Switch
+              label="Scenes from the article"
+              help="Each image shows what the narration says at that moment."
+              checked={form.imageScenes === true}
+              onChange={(imageScenes) => edit({ ...form, imageScenes })}
+            />
+          ) : null}
+          {unchosen.images && form.sources.images === "generate" ? (
+            <ServicePicker
+              group="Made by"
+              missing="image service"
+              field="images"
+              family="image"
+              providers={providers}
+              value={form.images}
+              onPick={(images) => edit({ ...form, images })}
+            />
+          ) : null}
         </Controls>
       );
     case "video":
       return (
         <Controls>
           <Choice
-            label="Format"
-            tip="play.format"
+            label="Shape"
+            wide
             value={form.format}
             options={[
               { value: "16:9", label: "Landscape 16:9" },
@@ -139,7 +175,6 @@ export function VisibleControls({
           />
           <Choice
             label="Captions"
-            tip="project.subtitles.mode"
             value={form.subtitles.mode}
             options={[
               { value: "off", label: "Off" },
@@ -149,8 +184,7 @@ export function VisibleControls({
             onChange={(mode) => edit({ ...form, subtitles: { ...form.subtitles, mode } })}
           />
           <Choice
-            label="Motion"
-            tip="play.motion"
+            label="Image motion"
             value={form.motionStyle}
             options={[
               { value: "zoom", label: "Zoom" },
@@ -160,9 +194,10 @@ export function VisibleControls({
             ]}
             onChange={(motionStyle) => edit({ ...form, motionStyle })}
           />
-          <Field label="Seconds per picture" tip="play.image-seconds">
+          <Field label="Seconds per image">
             <Input
               inputMode="decimal"
+              className="sl-input--number"
               value={form.imageSeconds}
               onChange={(event) => edit({ ...form, imageSeconds: event.target.value })}
             />
@@ -174,7 +209,7 @@ export function VisibleControls({
         <Controls>
           <Choice
             label="Thumbnail"
-            tip="play.source.thumbnail"
+            wide
             value={
               form.sources.thumbnail === "provide" ||
               form.sources.thumbnail === "off" ||
@@ -192,7 +227,6 @@ export function VisibleControls({
           />
           <Choice
             label="Thumbnails per video"
-            tip="play.thumbnail-count"
             value={String(form.thumbnailCount ?? 1) as "1" | "3"}
             options={[
               { value: "1", label: "One" },
@@ -202,101 +236,143 @@ export function VisibleControls({
           />
         </Controls>
       );
-    case "shorts":
-      return (
-        <Controls>
-          <Switch
-            label="Make shorts from the video"
-            tip="play.shorts"
-            checked={form.shorts?.enabled === true}
-            onChange={(enabled) =>
-              edit({ ...form, shorts: { ...(form.shorts ?? freshShorts), enabled } })
-            }
-          />
-          <Field label="Shorts per video" tip="play.shorts.count">
-            <Input
-              inputMode="numeric"
-              disabled={form.shorts?.enabled !== true}
-              value={form.shorts?.count ?? freshShorts.count}
-              onChange={(event) =>
-                edit({
-                  ...form,
-                  shorts: { ...(form.shorts ?? freshShorts), count: event.target.value },
-                })
-              }
-            />
-          </Field>
-        </Controls>
-      );
     case "document":
       return (
         <Controls>
           <Choice
-            label="PDF document"
-            tip="play.source.document"
+            label="PDF"
             value={form.sources.document === "generate" ? "generate" : "off"}
             options={[
               { value: "off", label: "Off" },
-              { value: "generate", label: "Make a PDF from the script" },
+              { value: "generate", label: "Make a PDF of the article" },
             ]}
             onChange={(document) => edit(sources({ document }))}
           />
+          {form.sources.document === "generate" ? (
+            <PdfLook value={form.document} onChange={(next) => edit({ ...form, document: next })} />
+          ) : null}
         </Controls>
       );
-    case "reviews":
-      return (
-        <p className="m-0 text-small text-ink-2">
-          {reviewSummary(form)} Change them under Fine-tune.
-        </p>
-      );
-    case "upload":
-      return (
-        <Controls>
-          <Switch
-            label="Write the YouTube description, chapters and tags"
-            tip="play.youtube-description"
-            checked={form.youtubeDescription === true}
-            onChange={(youtubeDescription) => edit({ ...form, youtubeDescription })}
-          />
-          <StudioPostSettings form={form} onChange={(social) => edit({ ...form, social })} />
-        </Controls>
-      );
-    case "schedule":
+    default:
       return null;
   }
 }
 
-function reviewSummary(form: Form): string {
-  const checkpoints = form.checkpoints?.length ?? 0;
-  const reviews = Object.values(form.reviews?.stages ?? {}).filter(
-    (stage) => stage.mode !== "off",
-  ).length;
-  const count = (n: number, one: string, many: string) => `${String(n)} ${n === 1 ? one : many}`;
-  return `${count(checkpoints, "checkpoint", "checkpoints")} and ${count(reviews, "automatic review", "automatic reviews")}.`;
+// Who makes a section nobody chose one in, and no default of this computer stands in for: the
+// group's name ("Written by"), then the service and model pickers, saying in red, in the
+// checks' words, that a run can't start yet.
+function ServicePicker({
+  group,
+  missing,
+  field,
+  family,
+  providers,
+  value,
+  onPick,
+}: {
+  readonly group: string;
+  // What the checks call it: "writing service".
+  readonly missing: string;
+  readonly field: "llm" | "images";
+  readonly family: "llm" | "image";
+  readonly providers: readonly ProviderStatus[];
+  readonly value: { readonly provider: string; readonly model: string };
+  readonly onPick: (next: { provider: string; model: string }) => void;
+}): ReactElement {
+  return (
+    <fieldset className="sl-fields__wide m-0 min-w-0 border-0 p-0">
+      <legend className="sl-kicker mb-2 p-0">{group}</legend>
+      <div className="sl-fields">
+        <ProviderPicker
+          field={`${field}.provider`}
+          label="Service"
+          family={family}
+          providers={providers}
+          value={value.provider}
+          problem={
+            value.provider === "" ? `No ${missing} is chosen, so a run can't start.` : undefined
+          }
+          onPick={(provider) => onPick({ provider, model: "" })}
+        />
+        <ModelPicker
+          field={`${field}.model`}
+          label="Model"
+          provider={value.provider}
+          value={value.model}
+          problem={undefined}
+          onPick={(model) => onPick({ provider: value.provider, model })}
+        />
+      </div>
+    </fieldset>
+  );
+}
+
+// The look the PDF is drawn in, with a way to the looks themselves.
+function PdfLook({
+  value,
+  onChange,
+}: {
+  readonly value: Form["document"];
+  readonly onChange: (next: NonNullable<Form["document"]>) => void;
+}): ReactElement {
+  const id = useId();
+  return (
+    <Field id={id} label="PDF look">
+      <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+        <DocumentThemePicker
+          id={id}
+          field="document.theme"
+          value={value}
+          disabled={false}
+          onChange={onChange}
+        />
+        <TextLink to="/document-themes" className="text-small">
+          Edit PDF looks
+        </TextLink>
+      </span>
+    </Field>
+  );
+}
+
+function TitlePattern({
+  value,
+  onChange,
+}: {
+  readonly value: string;
+  readonly onChange: (title: string) => void;
+}): ReactElement {
+  return (
+    <Field label="Video title" help="{{Topic}} is filled with each video's topic.">
+      <Input value={value} maxLength={200} onChange={(event) => onChange(event.target.value)} />
+    </Field>
+  );
 }
 
 function Controls({ children }: { readonly children: ReactNode }): ReactElement {
   return (
-    <div data-slot="studio-controls" className="flex min-w-0 flex-col gap-4">
+    <div data-slot="studio-controls" className="sl-fields">
       {children}
     </div>
   );
 }
 
 // A choice row with its name shown above it, the way a field's label is, so a row of presets
-// never stands unlabelled (Format, Captions, Motion read alike as bare buttons).
+// never stands unlabelled (Shape, Captions, Image motion read alike as bare buttons).
 function Choice<T extends string>({
   label,
+  wide = false,
   ...rest
 }: {
   readonly label: string;
+  // Spans the row, for a choice whose options need the room ("Landscape 16:9").
+  readonly wide?: boolean;
   readonly value: T;
   readonly options: readonly SegmentedOption<T>[];
   readonly onChange: (next: T) => void;
-  readonly tip?: HelpId;
+  readonly help?: string;
 }): ReactElement {
   return (
-    <div className="sl-field" data-slot="studio-choice">
+    <div className={wide ? "sl-field sl-fields__wide" : "sl-field"} data-slot="studio-choice">
       <span className="sl-field__label" aria-hidden="true">
         {label}
       </span>

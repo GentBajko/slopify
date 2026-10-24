@@ -67,52 +67,6 @@ export const libraryHelp = {
     body: "Words the narrator says differently from how they are written, such as Dr. as Doctor. Only what the voice and narration preparation receive changes; the article and captions keep the written words. A project copies this list when it starts and uses it while Use narration aliases is on. Up to 1000 aliases, saved as a whole.",
     tutorial: { page: "Narration-Aliases-and-Glossary", anchor: "narration-aliases" },
   },
-  // ── Templates ────────────────────────────────────────────────────────────────────────
-  "templates.show-channel": {
-    title: "Show templates of",
-    body: "Shows only the templates of one channel, or of all. A template's channel is the one a draft made from it runs in. Choosing here changes nothing about the templates.",
-    tutorial: { page: "Templates", anchor: "filter-by-channel" },
-  },
-  "templates.apply": {
-    title: "Use in Play",
-    body: "Makes a new Play draft from the template and opens it in Play for you to review; nothing starts. Keywords the project title names start empty for this video's topic, and uploaded files keep their names but must be attached again. The template itself is unchanged.",
-    tutorial: { page: "Templates", anchor: "use-a-template" },
-  },
-  "templates.design": {
-    title: "Design templates",
-    body: "Posters, flyers and other designed pieces kept as templates, listed here beside your project templates. Open studio sets one up section by section (Picture, Text layout, Formats, Schedule) with a live sample, the same way a project template is set up. New design template starts an empty one.",
-    tutorial: { page: "Template-Studio", anchor: "design-templates" },
-  },
-  "templates.save": {
-    title: "Save a setup",
-    body: "Keeps a saved Play draft as a reusable template: every setting and checkpoint choice, plus a copy of each picked prompt and intro or outro. Keywords the project title names, like {{Topic}}, are saved empty; other keywords keep their values. Queued extra videos and uploaded fonts are left out.",
-    tutorial: { page: "Templates", anchor: "save-a-template-from-library--templates" },
-  },
-  "templates.save.draft": {
-    title: "Saved Play draft",
-    body: "The Play draft whose setup the template keeps. Only drafts saved in Play are listed; open Play to prepare one first. The draft itself stays as it is.",
-    tutorial: { page: "Templates", anchor: "save-a-template-from-library--templates" },
-  },
-  "templates.save.name": {
-    title: "Template name",
-    body: "What the template is called in this list and wherever you pick a template, such as a schedule. Up to 120 characters.",
-    tutorial: { page: "Templates", anchor: "save-a-template-from-library--templates" },
-  },
-  "templates.edit": {
-    title: "Edit a template",
-    body: "Shows the keywords the template fills and what each feeds. The pencil beside its name renames it; every save adds a version that History keeps. Schedules run the newest version until you press Mark ready in its Template studio; from then on a new version waits until you mark it ready. To change its settings, use it in Play, change the draft, then Save a setup.",
-    tutorial: { page: "Templates", anchor: "see-a-templates-keywords" },
-  },
-  "templates.history": {
-    title: "Template versions",
-    body: "Every saved version of the template, newest first. Pick one to compare its setup with the current one. Restore saves the older setup again as a new version, so nothing is lost. Drafts and projects made from it keep their setup.",
-    tutorial: { page: "Templates", anchor: "history" },
-  },
-  "templates.save.channel": {
-    title: "Template channel",
-    body: "The channel the template belongs to, and the one a draft made from it runs in. Default: the draft's own channel, or its template's channel when it has none.",
-    tutorial: { page: "Templates", anchor: "save-a-template-from-library--templates" },
-  },
   // ── PDF themes ───────────────────────────────────────────────────────────────────────
   "library.theme.page.format": {
     title: "Paper size",

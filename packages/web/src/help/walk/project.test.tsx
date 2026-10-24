@@ -6,7 +6,7 @@ import { defaultVideoEdit } from "@app/slices/video/edit-settings.js";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-import { selfExplanatory, unexplainedControls } from "@/help/coverage";
+import { selfExplanatory, stageEditors, unexplainedControls } from "@/help/coverage";
 import { RebuildReview } from "@/project/rebuild-review";
 import { revisionView } from "@/project/revision-fixture";
 import { ProjectRoute } from "@/routes/project";
@@ -42,7 +42,8 @@ const allow: readonly (string | RegExp)[] = [
 ];
 
 function unexplained(): readonly string[] {
-  return unexplainedControls(document.body, [...selfExplanatory, ...allow]).map(
+  // Edit project's Pauses and checks draws Create's own checker group ("Checked by Service").
+  return unexplainedControls(document.body, [...selfExplanatory, ...stageEditors, ...allow]).map(
     (control) => control.name,
   );
 }

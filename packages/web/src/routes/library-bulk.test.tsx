@@ -12,7 +12,6 @@ import { emptyAnswer, jsonAnswer, renderRouted, testDeps } from "@/test-app";
 import { DocumentThemesRoute } from "./document-themes.js";
 import { NarrationAliasesRoute } from "./narration-aliases.js";
 import { PromptsRoute } from "./prompts.js";
-import { TemplatesRoute } from "./templates.js";
 
 // Library tabs: ticked rows, the selection bar's Duplicate / Export / Delete selected, and
 // Import or export (docs/ux-audit-2026-10.md, Lists and collections).
@@ -264,40 +263,5 @@ describe("narration aliases", () => {
       ),
     ).not.toBeNull();
     expect(await rows()).toHaveLength(4);
-  });
-});
-
-describe("templates", () => {
-  it("moves the selected templates to the trash, and Undo restores them", async () => {
-    const user = userEvent.setup();
-    const seen = recorder();
-    const id = "11111111-1111-4111-8111-111111111111";
-    renderRouted(
-      withToasts(<TemplatesRoute onApplied={() => {}} />),
-      testDeps({
-        "GET /api/design-templates": jsonAnswer({ templates: [] }),
-        "GET /api/project-templates": jsonAnswer({
-          templates: [
-            {
-              id,
-              name: "Weekly",
-              version: 2,
-              createdAt: "2026-09-12T00:00:00Z",
-              updatedAt: "2026-09-13T00:00:00Z",
-            },
-          ],
-        }),
-        "GET /api/channels": jsonAnswer({ channels: [] }),
-        [`DELETE /api/project-templates/${id}`]: seen.record(emptyAnswer()),
-        "POST /api/trash/bulk/restore": seen.record(jsonAnswer({ restored: [], failed: [] })),
-      }),
-    );
-    await user.click(await box("Weekly"));
-    await user.click(screen.getByRole("button", { name: /Delete selected/u }));
-    expect(await screen.findByText("Moved 1 template to the trash.")).not.toBeNull();
-    await user.click(screen.getByRole("button", { name: "Undo" }));
-    await waitFor(() => expect(seen.calls).toContain("POST /api/trash/bulk/restore"));
-    expect(seen.calls[0]).toBe(`DELETE /api/project-templates/${id}`);
-    expect(seen.bodies).toEqual([{ items: [{ kind: "template", id }] }]);
   });
 });

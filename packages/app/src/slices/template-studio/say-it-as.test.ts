@@ -194,7 +194,7 @@ describe("quoteSayItAs and sayItAs", () => {
       ok: false,
       reason: "invalid-input",
       message:
-        "This template's voice doesn't use Library → Narration aliases, so “Say it as” would change nothing. Turn on Use narration aliases in Voice → Fine-tune, press Save, then try again.",
+        "This template's voice doesn't use your pronunciations (Settings → Voices → Pronunciation), so “Say it as” would change nothing. Turn on Use narration aliases under All Narration settings, press Save, then try again.",
     });
   });
 

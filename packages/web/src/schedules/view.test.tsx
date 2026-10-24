@@ -329,7 +329,7 @@ it("says which template version the schedule runs, and what to press when none i
   ).toBe(`/templates/${templateId}`);
 });
 
-it("says a schedule runs its template's newest version until a version is marked ready", async () => {
+it("says a schedule runs each version of its template as it is saved until one is approved", async () => {
   renderRouted(
     <SchedulesView />,
     testDeps({
@@ -345,9 +345,7 @@ it("says a schedule runs its template's newest version until a version is marked
     }),
   );
   const detail = await screen.findByRole("region", { name: "Morning stories detail" });
-  expect(
-    within(detail).getByText("Runs the newest version · Not checked in the studio"),
-  ).toBeTruthy();
+  expect(within(detail).getByText("Runs each version you save")).toBeTruthy();
   expect(within(detail).queryByText(/Its runs are skipped/)).toBeNull();
 });
 
@@ -368,9 +366,7 @@ it("shows a gated template's schedule running an older version while a newer one
   );
   const detail = await screen.findByRole("region", { name: "Morning stories detail" });
   expect(
-    within(detail).getByText(
-      "Runs version 6 · Not checked in the studio · version 7 not ready yet",
-    ),
+    within(detail).getByText("Runs version 6 · version 7 waits for your approval"),
   ).toBeTruthy();
   expect(within(detail).queryByText(/Its runs are skipped/)).toBeNull();
 });

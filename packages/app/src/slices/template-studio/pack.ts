@@ -14,7 +14,7 @@ import { findRevisionDownload } from "../revisions/downloads.js";
 import { currentRevisionId } from "../revisions/repo.js";
 import { getRevisionView } from "../revisions/view.js";
 import { listVoices } from "../settings/repo.js";
-import { checkedVersion } from "./gate.js";
+import { runnableVersion } from "./gate.js";
 import type { StudioResult } from "./model.js";
 import { gatesOf, sampleOf } from "./repo.js";
 
@@ -191,23 +191,25 @@ export async function exportPack(
       ok: false,
       reason: "not-found",
       message:
-        "This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates.",
+        "This template no longer exists; it may have been deleted. Go to Templates to see your templates.",
     };
-  const runs = checkedVersion(gatesOf(deps.db, templateId), head.version);
+  // What its schedules run: the newest version, or once it was first approved for schedules,
+  // the newest approved one.
+  const runs = runnableVersion(gatesOf(deps.db, templateId), head.version);
   const template = runs === undefined ? undefined : templateById(deps.db, templateId, runs);
   if (template === undefined)
     return {
       ok: false,
       reason: "not-ready",
       message:
-        "No version of this template is marked ready, so there is nothing to put in a pack: a pack carries what you checked. Press Mark ready in the studio, then Export pack.",
+        "No version of this template is approved for schedules, so there is nothing to put in the file: it carries what its schedules run. Approve a version in Edit template, then export it again.",
     };
   const setup = templateSetup(deps, template.document);
   if (!setup.ok)
     return {
       ok: false,
       reason: "invalid-input",
-      message: `Version ${String(template.version)} names a prompt or intro/outro that was deleted, so its text can't go into the pack. Choose another in the studio, Save, Mark ready, then Export pack.`,
+      message: `Version ${String(template.version)} names a prompt or intro/outro that was deleted, so its text can't go into the file. Choose another in Edit template, Save, then export it again.`,
     };
   const document = setup.value;
   const { audio } = document.form;
@@ -237,7 +239,7 @@ export async function exportPack(
       ok: false,
       reason: "invalid-input",
       message:
-        "Something in this template looks like an API key or a login token (a keyword's value or a prompt's text), so no pack was made: a pack is meant to be shared. Remove it in the studio, Save, Mark ready, then press Export pack again.",
+        "Something in this template looks like an API key or a login token (a keyword's value or a prompt's text), so no file was made: it is meant to be shared. Remove it in Edit template, Save, then export it again.",
     };
   const entries: Zippable = { "manifest.json": [strToU8(json), { level: 6 }] };
   for (const file of named) {
@@ -247,7 +249,7 @@ export async function exportPack(
   return {
     ok: true,
     value: {
-      filename: `${slug(template.name)}.slopify-pack.zip`,
+      filename: `${slug(template.name)}.slopify-template.zip`,
       bytes: zipSync(entries),
       version: template.version,
     },

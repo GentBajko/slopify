@@ -209,7 +209,7 @@ export async function makePaidSample(
   if (!resolved.ok) {
     mark({
       state: "failed",
-      heldReason: `${resolved.problem} Change it in the studio, then press Save.`,
+      heldReason: `${resolved.problem} Change it, press Save, then Make sample.`,
     });
     return;
   }

@@ -332,11 +332,6 @@ export const playHelp = {
     body: "Seconds of quiet between the intro and the narration, and between the narration and the outro, 0 to 30. It only matters when an intro or outro is set. Leave it empty to use the gap set in Settings, 3 seconds unless you changed it.",
     tutorial: { page: "Play-Narration", anchor: "silence-at-the-edges-and-between-segments" },
   },
-  "play.format": {
-    title: "Frame format",
-    body: "16:9 is a landscape video for YouTube and screens. 9:16 is a portrait video for phones. 1:1 is square, for posts and feeds. Images are drawn in this shape and captions are placed for it; shorts stay 9:16 and the thumbnail stays 16:9 for YouTube. Default: 16:9.",
-    tutorial: { page: "Play-Video-and-Style", anchor: "frame-format" },
-  },
 
   // Outputs row
   "play.thumbnail-prompt": {
@@ -349,25 +344,10 @@ export const playHelp = {
     body: "Three makes two more thumbnails from the same prompt with different compositions, for YouTube's Test & compare. Each costs one more image, so 3 thumbnails are 3 image calls. You can remake each on its own on the project page. Default: 1.",
     tutorial: { page: "Play-Outputs", anchor: "make-three-thumbnails-for-test--compare" },
   },
-  "play.youtube-description": {
-    title: "YouTube description",
-    body: "After caption timing, the text model writes a description with chapters at the narration's real times, hashtags at the end, and a separate list of tags, ready to copy. One text-model call. It runs beside the render. Needs narration. Default: off.",
-    tutorial: { page: "YouTube-Description", anchor: "turn-it-on" },
-  },
   "play.description-prompt": {
     title: "Description prompt",
     body: "The Library prompt the description is written from. Built-in asks for a short summary, 5 to 12 chapters, 3 to 5 hashtags and 15 to 25 tags. Write your own description prompt on Prompts to change the tone or add links.",
     tutorial: { page: "YouTube-Description", anchor: "turn-it-on" },
-  },
-  "play.shorts": {
-    title: "Shorts",
-    body: "After caption timing, the text model picks the best self-contained moments of the narration. Each becomes a vertical 1080×1920 clip with new images, big word-by-word captions and its own title, description and hashtags. It runs beside the render; its images are charged like any other. Needs narration. Default: off.",
-    tutorial: { page: "Shorts", anchor: "turn-on-shorts" },
-  },
-  "play.shorts.count": {
-    title: "How many shorts",
-    body: "How many shorts to cut from this video, 1 to 10. Each needs its own new images, so more shorts cost more image calls and render time. Default: 3.",
-    tutorial: { page: "Shorts", anchor: "options" },
   },
   "play.shorts.prompt": {
     title: "Shorts prompt",

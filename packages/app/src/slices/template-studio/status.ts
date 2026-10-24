@@ -57,15 +57,15 @@ function heldText(source: string, text: string): string {
 
 const offSentence: Readonly<Record<TemplateSection, string>> = {
   subject: "Research is off: the script is written from the topic alone.",
-  script: "The script is off.",
+  script: "The article is off.",
   voice: "The narration is off.",
-  pictures: "Pictures are off.",
+  pictures: "Images are off.",
   thumbnail: "The thumbnail is off.",
   video: "The video is off.",
   shorts: "Shorts are off.",
-  document: "The PDF document is off.",
-  reviews: "No review or checkpoint is on.",
-  upload: "No video, so there is no upload pack.",
+  document: "The PDF is off.",
+  reviews: "No pause or AI check is on.",
+  upload: "No video, so there is no YouTube description or post.",
   schedule: "",
 };
 
@@ -92,7 +92,7 @@ export function baseStatuses(
         id,
         label,
         state: "stale",
-        sentence: "No sample yet. Press Save to make one, or Make sample.",
+        sentence: "Make sample shows what this section makes, about the sample topic.",
       }
     );
   });
@@ -120,7 +120,7 @@ export function madeStatuses(
     id: "reviews",
     label: sectionLabel.reviews,
     state: "current",
-    sentence: "Where a run stops, and who answers each stop.",
+    sentence: "Where a run pauses for you, and which AI checks run.",
   };
   made.schedule =
     schedules === 0
@@ -128,7 +128,7 @@ export function madeStatuses(
           id: "schedule",
           label: sectionLabel.schedule,
           state: "off",
-          sentence: "No schedule runs this template yet. Make one in Calendar → Schedules.",
+          sentence: "No schedule runs this template yet.",
         }
       : {
           id: "schedule",
@@ -230,7 +230,7 @@ export function paidStatuses(
         id,
         "stale",
         done === undefined
-          ? "No sample yet. Press Make sample to make one."
+          ? "Make sample shows what this section makes, about the sample topic."
           : `Changed since the sample of version ${String(done.templateVersion)}. Press Make sample to see it again.`,
       );
   }

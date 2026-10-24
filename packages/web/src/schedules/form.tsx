@@ -54,6 +54,7 @@ export function ScheduleForm({
   onCreated,
   onError,
   editing,
+  templateId: picked,
   onCancel,
   error,
   onBusy,
@@ -67,6 +68,8 @@ export function ScheduleForm({
   readonly onCreated: () => void;
   readonly onError: (message: string) => void;
   readonly editing: ScheduleSummary | null;
+  // A new schedule's template, picked already (Edit template → New schedule).
+  readonly templateId?: string | undefined;
   readonly onCancel: () => void;
   // The last refusal, shown at the top of the form it belongs to.
   readonly error?: string | null;
@@ -74,7 +77,7 @@ export function ScheduleForm({
 }): ReactElement {
   const { api } = useApp();
   const [name, setName] = useState(editing?.name ?? "");
-  const [templateId, setTemplateId] = useState(editing?.templateId ?? "");
+  const [templateId, setTemplateId] = useState(editing?.templateId ?? picked ?? "");
   // Design schedules (Ahead of each date) are made in their design template's editor.
   const [kind, setKind] = useState<Exclude<Cadence["kind"], "by-date">>(
     editing === null || editing.cadence.kind === "by-date" ? "daily" : editing.cadence.kind,

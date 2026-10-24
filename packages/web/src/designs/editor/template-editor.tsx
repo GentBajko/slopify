@@ -2,7 +2,6 @@ import type { DesignDocument } from "@app/slices/designs/schema.js";
 import { type DesignSectionId, designSections } from "@app/slices/designs/sections.js";
 import type { SectionState } from "@app/slices/template-studio/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
 import { useDocumentTitle } from "@/components/document-title";
@@ -10,14 +9,13 @@ import { ActionBar, StatusSlot, type StatusTone } from "@/components/kit/action-
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { PageHeader, Workspace } from "@/components/kit/layout";
+import { TextLink } from "@/components/kit/link";
 import { LoadFailed, LoadingBlock } from "@/components/kit/query-state";
-import { EditorCrumb } from "@/library/editor-frame";
 import { keys } from "@/queries";
 import { StudioRail } from "@/template-studio/section-rail";
 import {
   designTemplateQuery,
   markReady,
-  priceWords,
   quoteTemplateSave,
   saveDesignTemplate,
   type TemplateCheck,
@@ -51,7 +49,7 @@ export function DesignTemplateRoute({ templateId }: { readonly templateId: strin
       <LoadFailed
         what="The design template"
         error={query.error}
-        fix="Open Library → Designs → Templates and choose it again."
+        fix="Open Templates → Poster templates and choose it again."
         onRetry={() => void query.refetch()}
         retrying={query.isFetching}
       />
@@ -90,14 +88,16 @@ function TemplateEditor({ template }: { readonly template: TemplateView }): Reac
     },
     enabled: dirty,
   });
+  // Save keeps the change and spends nothing: a sample whose artwork costs waits for Make
+  // sample, priced in the sample column; the free ones are drawn again at once.
   const save = useMutation({
-    mutationFn: (sample: "make" | "skip") =>
+    mutationFn: () =>
       saveDesignTemplate(api, template.id, {
         baseVersion: template.headVersion,
         name: name.trim(),
         document: doc,
-        sample,
-        acknowledgedHigh: quote.data?.high ?? 0,
+        sample: quote.data?.high === 0 && quote.data.unknown === 0 ? "make" : "skip",
+        acknowledgedHigh: 0,
       }),
     onSuccess: async (result) => {
       if (!result.ok) {
@@ -126,7 +126,7 @@ function TemplateEditor({ template }: { readonly template: TemplateView }): Reac
         setFailing([]);
         setStatus({
           tone: "success",
-          text: `Version ${String(template.headVersion)} is ready: schedules make pieces from it.`,
+          text: `Version ${String(template.headVersion)} is approved: schedules make pieces from it.`,
         });
       } else {
         setFailing(result.checks ?? []);
@@ -148,20 +148,17 @@ function TemplateEditor({ template }: { readonly template: TemplateView }): Reac
           ? "waiting"
           : state === "failed"
             ? "needs-fix"
-            : state === "done"
+            : state === "done" && template.sample?.version === template.headVersion
               ? "current"
-              : "off";
+              : "stale";
     }
-    return "off";
+    // Text layout, Formats and Schedule have no sample of their own: nothing to mark.
+    return "stale";
   };
-  const savePrice = !dirty
-    ? undefined
-    : quote.data === undefined
-      ? "pricing…"
-      : quote.data.makesPicture
-        ? priceWords(quote.data)
-        : "free";
   const isReady = template.readyVersion === template.headVersion;
+  // Approval matters only to a schedule: its words and its button show once the saved template
+  // has a schedule or a version was approved, never to someone making pieces by hand.
+  const scheduled = template.document.schedule !== undefined || template.readyVersion !== null;
   // As in a project template's studio, a version is marked ready once its own sample is made.
   const sampled =
     template.sample?.state === "done" && template.sample.version === template.headVersion;
@@ -170,19 +167,19 @@ function TemplateEditor({ template }: { readonly template: TemplateView }): Reac
     <>
       <PageHeader
         crumb={
-          <EditorCrumb>
-            <Link to="/designs" search={{ tab: "templates" }}>
-              Design templates
-            </Link>
-          </EditorCrumb>
+          <TextLink to="/templates" search={{ tab: "posters" }}>
+            Templates
+          </TextLink>
         }
         title={name.trim() === "" ? "Untitled template" : name}
-        meta={`Version ${String(template.headVersion)} · ${
-          isReady
-            ? "ready"
-            : template.readyVersion === null
-              ? "not marked ready"
-              : `version ${String(template.readyVersion)} is ready`
+        meta={`Version ${String(template.headVersion)}${
+          !scheduled
+            ? ""
+            : isReady
+              ? " · Ready for schedules"
+              : template.readyVersion === null
+                ? " · Not ready for schedules"
+                : ` · Schedules make version ${String(template.readyVersion)}`
         }`}
       />
       <Workspace
@@ -251,20 +248,6 @@ function TemplateEditor({ template }: { readonly template: TemplateView }): Reac
         status={<StatusSlot tone={status?.tone ?? "info"}>{status?.text ?? null}</StatusSlot>}
       >
         <Button
-          variant="quiet"
-          disabled={!dirty || save.isPending || name.trim() === ""}
-          disabledReason={
-            !dirty
-              ? "Nothing to save."
-              : name.trim() === ""
-                ? "Give the template a name under Picture."
-                : "Saving…"
-          }
-          onClick={() => save.mutate("skip")}
-        >
-          Save without a sample
-        </Button>
-        <Button
           disabled={dirty}
           disabledReason="Save first: a piece is made from the saved version."
           focusableWhenDisabled
@@ -272,43 +255,43 @@ function TemplateEditor({ template }: { readonly template: TemplateView }): Reac
         >
           Make a piece
         </Button>
-        <Button
-          disabled={dirty || isReady || ready.isPending || !sampled}
-          disabledReason={
-            dirty
-              ? "Save first: a version is marked ready as saved."
-              : isReady
-                ? "This version is already ready."
-                : !sampled
-                  ? "Make this version's sample first: Mark ready needs a current sample to look over."
-                  : undefined
-          }
-          focusableWhenDisabled
-          onClick={() => {
-            setStatus(null);
-            ready.mutate();
-          }}
-        >
-          Mark ready
-        </Button>
-        <Button
-          variant="primary"
-          disabled={!dirty || save.isPending || quote.isFetching || name.trim() === ""}
-          disabledReason={
-            !dirty
-              ? "Nothing to save."
-              : name.trim() === ""
-                ? "Give the template a name under Picture."
-                : "Working out the price…"
-          }
-          focusableWhenDisabled
-          onClick={() => {
-            setStatus(null);
-            save.mutate("make");
-          }}
-        >
-          {savePrice === undefined ? "Save" : `Save · ${savePrice}`}
-        </Button>
+        {scheduled ? (
+          <Button
+            disabled={dirty || isReady || ready.isPending || !sampled}
+            disabledReason={
+              dirty
+                ? "Save first: a version is approved as saved."
+                : isReady
+                  ? "This version is approved already."
+                  : !sampled
+                    ? "Make this version's sample first: approval needs a current sample to look over."
+                    : undefined
+            }
+            focusableWhenDisabled
+            onClick={() => {
+              setStatus(null);
+              ready.mutate();
+            }}
+          >
+            Approve for schedules
+          </Button>
+        ) : null}
+        {dirty ? (
+          <Button
+            variant="primary"
+            disabled={save.isPending || quote.isFetching || name.trim() === ""}
+            disabledReason={
+              name.trim() === "" ? "Give the template a name under Picture." : "Saving…"
+            }
+            focusableWhenDisabled
+            onClick={() => {
+              setStatus(null);
+              save.mutate();
+            }}
+          >
+            Save
+          </Button>
+        ) : null}
       </ActionBar>
       <MakePieceDrawer
         key={`${String(template.headVersion)}-${String(making)}`}

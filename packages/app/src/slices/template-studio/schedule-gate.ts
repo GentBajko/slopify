@@ -53,5 +53,5 @@ export function notReadySentence(db: DatabaseSync, templateId: string): string |
   const gate = templateGate(db, templateId);
   if (gate === undefined || gate.runs !== null) return undefined;
   const name = templateById(db, templateId)?.name ?? "This schedule's template";
-  return `Not started: ${name} has no version marked ready. Open it in Library → Templates → Open studio and press Mark ready.`;
+  return `Not started: ${name} has no version approved for schedules. Open it in Templates → Edit template and choose More → Approve for schedules.`;
 }

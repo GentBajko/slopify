@@ -10,12 +10,12 @@ import { draftFixture } from "../../slices/play-drafts/draft.fake.js";
 import { createTemplate } from "../../slices/project-templates/service.js";
 import { createFreeSamples } from "../../slices/template-studio/free.js";
 import { queuedJob } from "../../slices/template-studio/jobs.js";
-import { writeGate } from "../../slices/template-studio/repo.js";
 import {
   anatomyViewSchema,
   sampleQuoteSchema,
   studioChecksSchema,
   studioViewSchema,
+  templateCardsSchema,
 } from "../../slices/template-studio/schema.js";
 import { createPriceCache } from "../../slices/template-studio/service.js";
 import { paidDocument, reviewOver } from "../../slices/template-studio/studio.fake.js";
@@ -28,7 +28,7 @@ afterEach(() => {
 });
 
 const missing =
-  "This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates.";
+  "This template no longer exists; it may have been deleted. Go to Templates to see your templates.";
 
 function studio(service?: TemplateStudioService) {
   const h = mcpFixture(service === undefined ? {} : { templateStudio: service });
@@ -72,6 +72,21 @@ it("answers a template's checks on their own, and a 404 for one that doesn't exi
   const gone = await h.app.request(`/api/template-studio/${randomUUID()}/checks`);
   expect(gone.status).toBe(404);
   expect(await gone.json()).toMatchObject({ reason: "not-found", detail: missing });
+});
+
+it("answers what each template makes, for picking one on the Templates page", async () => {
+  const h = studio();
+  const reply = await h.app.request("/api/template-studio/cards");
+  expect(reply.status).toBe(200);
+  const { cards } = templateCardsSchema.parse(await reply.json());
+  expect(cards).toHaveLength(1);
+  expect(cards[0]).toMatchObject({
+    id: h.id,
+    still: null,
+    format: "16:9",
+    pdf: true,
+    schedules: 0,
+  });
 });
 
 it("prices a Save's sample without changing anything, and says why it can't when Play's review is missing", async () => {
@@ -191,7 +206,7 @@ it("asks for the current version's paid sample again at the price shown, and ref
   expect(await old.json()).toMatchObject({
     reason: "conflict",
     detail:
-      "This template is now version 1, not the version 7 you saw. Reload the studio, then press Make sample.",
+      "This template is now version 1, not the version 7 you saw. Reload the page, then press Make sample.",
   });
   expect((await h.post("/samples/make", { version: 1 })).status).toBe(400);
 });
@@ -343,8 +358,7 @@ it("plays the loudness before and after, and says what to press while one isn't 
   const notYet = await h.app.request(`/api/template-studio/${h.id}/loudness/after.mp3`);
   expect(notYet.status).toBe(404);
   expect(await notYet.json()).toMatchObject({
-    detail:
-      "This loudness sample isn't made yet. Open the template's studio and press Make samples.",
+    detail: "This loudness sample isn't made yet. Open Edit template and press Make sample.",
   });
   made = true;
   const levelled = await h.app.request(`/api/template-studio/${h.id}/loudness/after.mp3`);
@@ -472,27 +486,21 @@ it("lists the names to check, prices a Say it as, and refuses one that would cha
   });
   expect(refused.status).toBe(400);
   expect(await refused.json()).toMatchObject({
-    detail: expect.stringContaining("Turn on Use narration aliases in Voice → Fine-tune"),
+    detail: expect.stringContaining("Turn on Use narration aliases under All Narration settings"),
   });
   expect(
     (await h.post("/say-it-as", { written: "", spoken: "x", acknowledgedHigh: 0 })).status,
   ).toBe(400);
 });
 
-it("exports the ready version as a pack and imports it as a new, unchecked template", async () => {
+it("exports the version schedules run as a file and imports it as a new, unchecked template", async () => {
   const h = paidStudio();
-  const notReady = await h.app.request(`/api/template-studio/${h.id}/pack`);
-  expect(notReady.status).toBe(409);
-  expect(await notReady.json()).toMatchObject({
-    reason: "not-ready",
-    detail: expect.stringContaining("Press Mark ready in the studio, then Export pack."),
-  });
-  writeGate(h.deps.db, h.id, { version: 1, state: "ready", carriedFrom: null });
+  // No version was ever approved: schedules run the newest, and that is what the file carries.
   const pack = await h.app.request(`/api/template-studio/${h.id}/pack`);
   expect(pack.status).toBe(200);
   expect(pack.headers.get("content-type")).toBe("application/zip");
   expect(pack.headers.get("content-disposition")).toBe(
-    'attachment; filename="show.slopify-pack.zip"',
+    'attachment; filename="show.slopify-template.zip"',
   );
   const bytes = new Uint8Array(await pack.arrayBuffer());
   expect(Object.keys(unzipSync(bytes))).toEqual(["manifest.json"]);
@@ -529,7 +537,7 @@ it("refuses an import that isn't a pack, and one with no file, saying what to ch
   expect(refused.status).toBe(400);
   expect(await refused.json()).toMatchObject({
     reason: "invalid-input",
-    detail: expect.stringContaining("Choose the .zip that Export pack"),
+    detail: expect.stringContaining("Choose the .zip a template's Export as a file (.zip) made"),
   });
   const empty = await h.app.request("/api/template-studio/packs/import", {
     method: "POST",
@@ -538,7 +546,7 @@ it("refuses an import that isn't a pack, and one with no file, saying what to ch
   });
   expect(empty.status).toBe(400);
   expect(await empty.json()).toMatchObject({
-    detail: "No pack arrived with the upload. Choose the pack's .zip file again.",
+    detail: "No file arrived with the upload. Choose the template's .zip file again.",
   });
   expect(h.deps.db.prepare("SELECT count(*) AS n FROM project_templates").get()).toEqual({ n: 1 });
 });
@@ -554,7 +562,7 @@ it("answers no bake-off, refuses one before the template has a sample, and disca
   expect(quote.status).toBe(409);
   expect(await quote.json()).toMatchObject({
     reason: "not-ready",
-    detail: expect.stringContaining("Press Save (or Make sample) in the studio"),
+    detail: expect.stringContaining("Press Make sample, wait for it, then compare."),
   });
   const start = await h.post("/bakeoff", {
     section: "script",

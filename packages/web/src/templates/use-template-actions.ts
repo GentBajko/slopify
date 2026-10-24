@@ -10,22 +10,18 @@ import {
   type TemplateSummary,
   templatesKey,
 } from "./api";
+import type { PlayHandoff } from "./play-handoff";
 
-// Use in Play and Duplicate for a Templates row. Each press of one template version reuses
-// its id, so a retry after a lost reply never makes a second draft or copy; a press that
-// outlives the screen (or a newer Play draft) stops before it opens anything.
+// Make a video and Duplicate for a template. Each press of one template version reuses its id,
+// so a retry after a lost reply never makes a second draft or copy; a press that outlives the
+// screen (or a newer Create draft) stops before it opens anything.
 export function useTemplateActions({
   onApplied,
   beforeApply,
   getGeneration,
-  blocked,
-}: {
-  readonly onApplied: (draftId: string, isCurrent: () => boolean) => unknown | Promise<unknown>;
-  readonly beforeApply?: (() => Promise<boolean>) | undefined;
-  readonly getGeneration?: (() => number) | undefined;
-  readonly blocked: boolean;
-}): {
-  readonly apply: (template: TemplateSummary) => Promise<void>;
+  blocked = false,
+}: PlayHandoff): {
+  readonly apply: (template: Pick<TemplateSummary, "id" | "version">) => Promise<void>;
   readonly duplicate: (template: TemplateSummary) => Promise<void>;
 } {
   const { api } = useApp();
@@ -40,11 +36,15 @@ export function useTemplateActions({
       mounted.current = false;
     };
   }, []);
-  async function apply(template: TemplateSummary): Promise<void> {
+  async function apply(template: Pick<TemplateSummary, "id" | "version">): Promise<void> {
     const startGeneration = getGeneration?.();
-    if (blocked || (beforeApply && !(await beforeApply())))
+    if (blocked)
       throw new Error(
-        "Save or discard the draft open in Play first, then apply the template again.",
+        "A video is still starting on Create. Wait for it, then press Make a video again.",
+      );
+    if (beforeApply && !(await beforeApply()))
+      throw new Error(
+        "The draft open on Create couldn't be saved. Save or discard it there, then press Make a video again.",
       );
     if (
       !mounted.current ||
@@ -77,7 +77,7 @@ export function useTemplateActions({
     if (opened !== false) applications.current.delete(key);
     else
       throw new Error(
-        "The template's draft was created but didn't open. Press Use in Play again to open it.",
+        "The template's draft was made but Create didn't open it. Press Make a video again to open it.",
       );
   }
   // The copy is "<name> copy" in the same channel; pressed twice for one version it is made once.

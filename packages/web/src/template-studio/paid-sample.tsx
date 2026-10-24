@@ -58,7 +58,7 @@ export function PaidBody({
     case "pictures": {
       const images = of("image", "reference");
       return images.length === 0 ? null : (
-        <MediaGrid density="compact" label="Sample pictures">
+        <MediaGrid density="compact" label="Sample images">
           {images.map((image) => (
             <MediaFrame key={image.url} src={at(image.url)} alt={image.name} aspect={aspect} />
           ))}
@@ -107,7 +107,7 @@ export function PaidBody({
           size="small"
           className="self-start"
         >
-          Open the PDF of the sample's script
+          Open the PDF of the sample's article
         </FileLink>
       );
     }
@@ -141,10 +141,10 @@ function ScriptSample({ markdown }: { readonly markdown: string }): ReactElement
     <div className="flex flex-col gap-2">
       <p className="m-0 text-small text-ink-2">{excerptOf(markdown)}</p>
       <Button size="small" className="self-start" onClick={() => setReading(true)}>
-        Read the whole script
+        Read the whole article
       </Button>
-      <Drawer open={reading} title="Sample script" onClose={() => setReading(false)}>
-        <ReadingView markdown={markdown} label="Sample script" copyAll={false} />
+      <Drawer open={reading} title="Sample article" onClose={() => setReading(false)}>
+        <ReadingView markdown={markdown} label="Sample article" copyAll={false} />
       </Drawer>
     </div>
   );
@@ -213,8 +213,9 @@ function UploadSample({
   );
 }
 
-// Make sample: the current version's paid sample, at the price shown. A waiting one says its
-// price; any other is priced as a whole new sample, which is the most it can cost.
+// Make sample: the current version's paid sample, at the price on the button. A waiting one
+// says its price; any other is priced as a whole new sample, which is the most it can cost. A
+// setup no sample can be made of says why instead, and never shows a price.
 export function MakeSampleButton({
   view,
   onDone,
@@ -233,6 +234,7 @@ export function MakeSampleButton({
   });
   const high = known ?? whole.data?.high;
   const unknown = known === null ? (whole.data?.unknown ?? 0) > 0 : view.paid.state === "held";
+  const refused = known === null ? (whole.data?.problem ?? null) : null;
   async function make(): Promise<void> {
     if (high === undefined) return;
     setAsking(true);
@@ -252,6 +254,7 @@ export function MakeSampleButton({
       setAsking(false);
     }
   }
+  if (refused !== null) return <p className="m-0 text-small text-danger">{refused}</p>;
   return (
     <Button
       size="small"
@@ -259,19 +262,21 @@ export function MakeSampleButton({
       disabledReason={asking ? "Asking for the sample" : "Pricing the sample"}
       onClick={() => void make()}
     >
-      {high === undefined ? "Make sample" : `Make sample · ${about(high)}`}
+      {high === undefined
+        ? "Make sample · pricing…"
+        : `Make sample · ${known === null && whole.data?.onPlan === true ? "plan usage" : high === 0 ? "free" : about(high)}`}
     </Button>
   );
 }
 
-// Script: the whole script, or the outline and first chapter the sample writes by default.
+// Article: the whole article, or the outline and first chapter the sample writes by default.
 export function FullScriptSwitch({
   view,
   onDone,
 }: {
   readonly view: StudioView;
   readonly onDone: (problem: string | null) => void;
-}): ReactElement {
+}): ReactElement | null {
   const { api } = useApp();
   const client = useQueryClient();
   const next = !view.sample.fullScript;
@@ -295,14 +300,17 @@ export function FullScriptSwitch({
       setAsking(false);
     }
   }
+  // While no sample can be made of the setup (the panel's fix link says why), the choice has
+  // nothing to change and no true price.
+  if (price.data !== undefined && price.data.problem !== null) return null;
   return (
     <Switch
       checked={view.sample.fullScript}
       disabled={asking || price.data === undefined}
       onChange={() => void change()}
-      label={`Write the full script in the sample${price.data === undefined ? "" : ` (${about(price.data.high)})`}`}
-      tip="template-studio.full-script"
-      tipLabel="Write the full script in the sample"
+      className="text-left"
+      label={`Write the whole article in the sample${price.data === undefined ? "" : ` (${price.data.onPlan ? "plan usage" : price.data.high === 0 ? "free" : about(price.data.high)})`}`}
+      help="Off, the sample writes the outline and the first chapter. Your videos always get the whole article."
     />
   );
 }
@@ -312,7 +320,7 @@ const versionWord: Readonly<Record<StudioView["paid"]["versions"][number]["state
   making: "Being made",
   done: "Made",
   failed: "Failed",
-  skipped: "Saved without a sample",
+  skipped: "No sample made",
   held: "Waiting",
 };
 
@@ -322,7 +330,7 @@ export function EarlierSamples({ view }: { readonly view: StudioView }): ReactEl
   if (earlier.length === 0) return null;
   const when = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
   return (
-    <Fold summary={`Earlier samples · ${String(earlier.length)}`}>
+    <Fold summary="Earlier samples" state={String(earlier.length)}>
       <ul className="m-0 flex list-none flex-col gap-1 p-0 pb-3 text-small">
         {earlier.map((one) => (
           <li key={one.version} className="flex justify-between gap-3">

@@ -9,6 +9,8 @@ import {
   sampleQuoteSchema,
   studioChecksSchema,
   studioViewSchema,
+  type TemplateCard,
+  templateCardsSchema,
 } from "@app/slices/template-studio/schema.js";
 import type { UseQueryOptions } from "@tanstack/react-query";
 import { z } from "zod";
@@ -16,9 +18,24 @@ import type { Api } from "@/api";
 import { failure, jsonOf, refusalFrom, understood } from "@/http";
 import { usd } from "@/lib/format";
 
-// Library → Templates → Open studio reads one template's studio: its sections, samples and
-// free checks (`/api/template-studio`, not the YouTube Studio pack's `/api/studio`).
+// Templates → Edit template reads one template's sections, samples and free checks
+// (`/api/template-studio`, not the YouTube Studio pack's `/api/studio`).
 export const templateStudioKey = (id: string) => ["template-studio", id] as const;
+
+export type { TemplateCard };
+
+// Templates: what each template makes (`template-studio/cards.ts`). Under the templates' own
+// key, so whatever changes a template reads its card again too.
+export function templateCardsQuery(api: Api): UseQueryOptions<readonly TemplateCard[]> {
+  return {
+    queryKey: ["project-templates", "cards"],
+    queryFn: async () => {
+      const response = await api.fetch(`${api.origin}/api/template-studio/cards`);
+      if (!response.ok) throw await failure(response);
+      return understood(templateCardsSchema, await response.json()).cards;
+    },
+  };
+}
 
 // No such project template: the id may name a design template, which the page opens instead,
 // so it is said at once rather than asked again.
@@ -54,7 +71,7 @@ export function templateChecksQuery(api: Api, id: string): UseQueryOptions<Studi
   };
 }
 
-// Make samples: queues the free samples of the template's current version.
+// Make sample (free): queues the free samples of the template's current version.
 export async function requestFreeSamples(api: Api, id: string): Promise<void> {
   const response = await api.fetch(
     `${api.origin}/api/template-studio/${encodeURIComponent(id)}/free-samples`,
@@ -436,7 +453,7 @@ export async function downloadPack(
     const named = /filename="([^"]+)"/.exec(response.headers.get("content-disposition") ?? "");
     return {
       ok: true,
-      filename: named?.[1] ?? "template.slopify-pack.zip",
+      filename: named?.[1] ?? "template.slopify-template.zip",
       blob: await response.blob(),
     };
   }

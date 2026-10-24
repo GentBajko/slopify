@@ -5,9 +5,11 @@ import { type CostRow, estimateRun } from "../estimate/index.js";
 import type { DraftReviewDeps, DraftView, ResolvedPlayRun } from "../play-drafts/model.js";
 import { resolvePlayReview } from "../play-drafts/review.js";
 import type { PlayDraftDocument } from "../play-drafts/schema.js";
+import { withProviderDefaults } from "../project-templates/provider-defaults.js";
 import { templateById } from "../project-templates/repo.js";
+import { readProviderDefaults } from "../settings/first-run.js";
 import { type BudgetRoom, budgetRoom, fitsBudget } from "./budget.js";
-import type { StudioResult, TemplateSection } from "./model.js";
+import { type StudioResult, sectionLabel, type TemplateSection } from "./model.js";
 import { sampleOf } from "./repo.js";
 import { sampleDocument } from "./scope.js";
 import { affectedSections } from "./sections.js";
@@ -44,15 +46,18 @@ export interface QuoteDeps {
   readonly timeZone?: string | undefined;
 }
 
-// The sample's single run as Play's review resolves it, on a draft that is never saved.
+// The sample's single run as Play's review resolves it, on a draft that is never saved. Like a
+// video made from the template, it uses this computer's writer and image service where the
+// template chose none.
 export async function resolveSampleRun(
   review: DraftReviewDeps,
-  document: PlayDraftDocument,
+  scoped: PlayDraftDocument,
   fullScript: boolean,
 ): Promise<
   | { readonly ok: true; readonly run: ResolvedPlayRun; readonly words: number }
   | { readonly ok: false; readonly problem: string }
 > {
+  const document = withProviderDefaults(scoped, readProviderDefaults(review.db));
   const at = review.clock.now().toISOString();
   const view: DraftView = {
     draft: { id: review.uuid(), version: 1, createdAt: at, updatedAt: at, document },
@@ -67,14 +72,14 @@ export async function resolveSampleRun(
       ok: false,
       problem:
         resolved.fields.length === 0
-          ? "Play's review refused this setup, so no sample can be made. Open the template in Play (Use in Play) to see why."
+          ? "Create's review refused this setup, so no sample can be made. Press Make a video to see why on Create."
           : `No sample can be made of this setup: ${[...new Set(resolved.fields.map(fieldSentence))].join(" ")}`,
     };
   const run = resolved.value.runs[0];
   if (run === undefined)
     return {
       ok: false,
-      problem: "Play's review found no video to make, so no sample can be made.",
+      problem: "Create's review found no video to make, so no sample can be made.",
     };
   return {
     ok: true,
@@ -86,7 +91,7 @@ export async function resolveSampleRun(
 // A refused field in the studio's words: an empty keyword is named, with where it is filled.
 export function fieldSentence(field: { readonly field: string; readonly message: string }): string {
   if (field.field.startsWith("values."))
-    return `The keyword {{${field.field.slice("values.".length)}}} is empty. Fill it in Subject & research.`;
+    return `The keyword {{${field.field.slice("values.".length)}}} is empty. Fill it in ${sectionLabel.subject}.`;
   return field.message;
 }
 
@@ -153,7 +158,7 @@ export async function quoteSample(
       ok: false,
       reason: "not-found",
       message:
-        "This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates.",
+        "This template no longer exists; it may have been deleted. Go to Templates to see your templates.",
     };
   const document = ask.document ?? template.document;
   const sample = sampleOf(deps.db, templateId);

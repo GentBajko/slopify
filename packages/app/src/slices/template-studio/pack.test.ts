@@ -90,7 +90,7 @@ describe("exportPack", () => {
     );
     const id = readyTemplate(h);
     const pack = await exported(h, id);
-    expect(pack.filename).toBe("weekly-history.slopify-pack.zip");
+    expect(pack.filename).toBe("weekly-history.slopify-template.zip");
     expect(pack.version).toBe(1);
     const files = unzipSync(pack.bytes);
     expect(Object.keys(files)).toEqual(["manifest.json"]);
@@ -130,15 +130,27 @@ describe("exportPack", () => {
     expect(manifest.template.document.form.title).toBe("History: {{Topic}}");
   });
 
-  it("refuses a template with no version marked ready, and one whose text looks like a key", async () => {
+  it("packs the newest version of a template no version was approved of, as its schedules run", async () => {
     const h = install();
     const id = readyTemplate(h);
     h.deps.db.prepare("DELETE FROM template_gates WHERE template_id=?").run(id);
-    expect(await exportPack(exportDeps(h), id)).toMatchObject({
-      ok: false,
-      reason: "not-ready",
-      message: expect.stringContaining("Press Mark ready in the studio, then Export pack."),
+    const edited = updateTemplate(h.deps, {
+      id,
+      baseVersion: 1,
+      mutationId: randomUUID(),
+      name: "Weekly history",
+      document: { ...documentOf(h), form: { ...documentOf(h).form, title: "Newest" } },
     });
+    expect(edited.ok).toBe(true);
+    const manifest = JSON.parse(
+      strFromU8(unzipSync((await exported(h, id)).bytes)["manifest.json"] ?? new Uint8Array()),
+    );
+    expect(manifest.template.version).toBe(2);
+    expect(manifest.template.document.form.title).toBe("Newest");
+  });
+
+  it("refuses a template whose text looks like a key, and one that doesn't exist", async () => {
+    const h = install();
     const leaky = readyTemplate(h, {
       ...documentOf(h),
       form: {
@@ -291,7 +303,7 @@ describe("importPack", () => {
       ok: false,
       sentence:
         "The narration's voice (ID warm-voice) isn't one of your voices in Settings → Voices. Add it there under that ID, or choose one of yours.",
-      fix: { label: "Choose a voice in Voice" },
+      fix: { label: "Choose a voice in Narration" },
     });
   });
 
@@ -307,7 +319,7 @@ describe("importPack", () => {
     expect(importPack(to.deps, leaky)).toMatchObject({
       ok: false,
       reason: "invalid-input",
-      message: expect.stringContaining("keys never travel in a pack"),
+      message: expect.stringContaining("keys never travel in a template file"),
     });
     expect(to.deps.db.prepare("SELECT count(*) AS n FROM project_templates").get()).toEqual({
       n: 0,
@@ -328,7 +340,7 @@ describe("importPack", () => {
     expect(readPack(big)).toMatchObject({
       ok: false,
       message: expect.stringContaining(
-        "samples/picture-1.png is larger than a template pack allows",
+        "samples/picture-1.png is larger than a template file allows",
       ),
     });
     const odd = zipSync({ "manifest.json": strToU8("{}"), "run.sh": strToU8("echo") });
@@ -338,7 +350,7 @@ describe("importPack", () => {
     });
     expect(readPack(strToU8("not a zip"))).toMatchObject({
       ok: false,
-      message: expect.stringContaining("isn't a template pack"),
+      message: expect.stringContaining("isn't a template file"),
     });
     expect(readPack(zipSync({ "notes.txt": strToU8("") }))).toMatchObject({ ok: false });
     expect(readPack(zipSync({ "manifest.json": strToU8("{oops") }))).toMatchObject({
@@ -352,7 +364,7 @@ describe("importPack", () => {
     });
     expect(readPack(newer)).toMatchObject({
       ok: false,
-      message: expect.stringContaining("made by a newer Slopify (pack format 2)"),
+      message: expect.stringContaining("made by a newer Slopify (file format 2)"),
     });
     const missing = zipSync({
       "manifest.json": strToU8(
@@ -423,7 +435,7 @@ describe("readPack against zip bombs", () => {
     const started = performance.now();
     expect(readPack(bomb)).toMatchObject({
       ok: false,
-      message: expect.stringContaining("more files than a template pack ever has"),
+      message: expect.stringContaining("more files than an exported template ever has"),
     });
     expect(performance.now() - started).toBeLessThan(2000);
     expect(process.memoryUsage().arrayBuffers - before).toBeLessThan(64 * 1024 * 1024);
@@ -432,7 +444,7 @@ describe("readPack against zip bombs", () => {
   it("refuses a pack one file over the count, and two entries with the same name", () => {
     expect(readPack(overlappingZip(pictureNames(packLimits.samples + 1), 10))).toMatchObject({
       ok: false,
-      message: expect.stringContaining("more files than a template pack ever has"),
+      message: expect.stringContaining("more files than an exported template ever has"),
     });
     expect(readPack(overlappingZip(["samples/a.png", "samples/a.png"], 10))).toMatchObject({
       ok: false,
