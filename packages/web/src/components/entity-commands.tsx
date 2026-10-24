@@ -10,7 +10,7 @@ import { documentThemesQuery, entriesQuery, promptsQuery } from "@/queries";
 import { schedulesQuery } from "@/schedules/api";
 import { templatesQuery } from "@/templates/api";
 
-// The palette finds the Library and the plans by name, not only projects: "Edit prompt
+// The palette finds prompts, templates and plans by name, not only projects: "Edit prompt
 // Documentary dossier", "Open schedule Weekly myths", "Open channel History". They are searched,
 // never listed in an empty palette. The lists are read the first time the palette opens (most
 // visits never open it), then kept fresh by the screens that use them.
@@ -57,7 +57,7 @@ export function EntityCommands(): ReactElement {
     ...(templates.data ?? []).map((template) => ({
       id: `template.open.${template.id}`,
       title: `Open template ${template.name}`,
-      keywords: ["template", "setup", "library", "find"],
+      keywords: ["template", "library", "find"],
       // Templates shows the one in `?item=` beside the list.
       go: () => {
         void navigate({ to: "/templates", search: { item: template.id } });
@@ -101,7 +101,7 @@ function EntityCommand({ entity }: { readonly entity: Entity }): null {
   useCommand({
     id: entity.id,
     title: entity.title,
-    group: "Library and plans",
+    group: "Prompts, templates and plans",
     keywords: entity.keywords,
     searchOnly: true,
     run: entity.go,

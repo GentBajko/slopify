@@ -7,15 +7,17 @@ import { shortcuts } from "@/lib/shortcuts";
 import { settingsSections } from "@/routes/settings-sections";
 import { useTutorial } from "@/tutorial/context";
 
-// The shell's commands (Ctrl+K): every destination, the Create key, each channel, each
-// Settings section by its name and the words people use for it ("appearance" lands on the
-// section with the theme, not on Providers), the welcome
-// screen and the interactive tutorial.
+// The shell's commands (Ctrl+K). An empty palette opens on "Create a video", then "Go to" in the
+// rail's order and words (Home, Projects, Prompts, Templates, Calendar, Channels with two or more
+// channels, Settings). Searched only: schedules, usage, tutorials, each Settings section by its
+// name and the words people use for it ("appearance" lands on the section with the theme), the
+// welcome screen and the tour. With two or more channels, each channel to switch to.
 export function ShellCommands(): ReactElement {
+  const several = useCurrentChannel().channels.length > 1;
   return (
     <>
-      <NavigationCommands />
-      <ChannelCommands />
+      <NavigationCommands several={several} />
+      {several ? <ChannelCommands /> : null}
       {settingsSections.map((section) => (
         <SettingsSectionCommand key={section.id} id={section.id} label={section.label} />
       ))}
@@ -24,31 +26,104 @@ export function ShellCommands(): ReactElement {
   );
 }
 
-function NavigationCommands(): null {
+// Empty-palette order (kit/command-palette `rank`): Create first, then the destinations in the
+// rail's order, however late one of them registered (Channels does when the channels arrive).
+const rail = [
+  "home",
+  "projects",
+  "prompts",
+  "templates",
+  "calendar",
+  "channels",
+  "settings",
+] as const;
+const createRank = -rail.length - 1;
+const goRank = (id: (typeof rail)[number]): number => rail.indexOf(id) - rail.length;
+
+function NavigationCommands({ several }: { readonly several: boolean }): null {
   const navigate = useNavigate();
-  const current = useCurrentChannel();
   const go = (to: string) => () => {
     void navigate({ to });
   };
   useCommand({
+    id: "create.video",
+    title: "Create a video",
+    group: "Create",
+    rank: createRank,
+    run: go("/play"),
+    keywords: ["new video", "new project", "make", "start", "play"],
+    shortcut: shortcuts.newVideo,
+  });
+  useCommand({
     id: "nav.home",
-    title: "Open home",
+    title: "Open Home",
     group: "Go to",
+    rank: goRank("home"),
     shortcut: shortcuts.goHome,
     run: go("/"),
   });
   useCommand({
-    id: "nav.channels",
-    title: "Open channels",
+    id: "nav.projects",
+    title: "Open Projects",
     group: "Go to",
+    rank: goRank("projects"),
+    shortcut: shortcuts.goProjects,
+    run: go("/projects"),
+  });
+  useCommand({
+    id: "nav.prompts",
+    title: "Open Prompts",
+    group: "Go to",
+    rank: goRank("prompts"),
+    run: () => {
+      void navigate({ to: "/prompts", search: { kind: "article" } });
+    },
+    keywords: ["library", "intros", "outros"],
+    shortcut: shortcuts.goPrompts,
+  });
+  useCommand({
+    id: "nav.templates",
+    title: "Open Templates",
+    group: "Go to",
+    rank: goRank("templates"),
+    run: go("/templates"),
+    keywords: ["library", "designs", "posters"],
+    shortcut: shortcuts.goTemplates,
+  });
+  useCommand({
+    id: "nav.calendar",
+    title: "Open Calendar",
+    group: "Go to",
+    rank: goRank("calendar"),
+    run: go("/calendar"),
+    keywords: ["schedules"],
+    shortcut: shortcuts.goCalendar,
+  });
+  // In the rail, and so listed, only with two or more channels; found by name either way.
+  useCommand({
+    id: "nav.channels",
+    title: "Open Channels",
+    group: "Go to",
+    rank: goRank("channels"),
+    searchOnly: !several,
     run: go("/channels"),
-    keywords: ["cast", "brand"],
+    keywords: ["cast", "brand", "my channel"],
     shortcut: shortcuts.goChannels,
+  });
+  // Each section has its own command below, so a section's name finds the section itself.
+  useCommand({
+    id: "nav.settings",
+    title: "Open Settings",
+    group: "Go to",
+    rank: goRank("settings"),
+    run: go("/settings"),
+    shortcut: shortcuts.goSettings,
   });
   useCommand({
     id: "nav.schedules",
     title: "Open schedules",
     group: "Go to",
+    searchOnly: true,
     run: () => {
       void navigate({ to: "/calendar", search: { tab: "schedules" } });
     },
@@ -56,64 +131,10 @@ function NavigationCommands(): null {
     shortcut: shortcuts.goSchedules,
   });
   useCommand({
-    id: "channel.all",
-    title: "Show all channels",
-    group: "Channel",
-    run: () => current.setChannelId(null),
-    keywords: ["switch", "filter"],
-  });
-  useCommand({
-    id: "create.video",
-    title: "Create",
-    group: "Create",
-    run: go("/play"),
-    keywords: ["new project", "play", "make", "start"],
-    shortcut: shortcuts.newVideo,
-  });
-  useCommand({
-    id: "nav.projects",
-    title: "Open projects",
-    group: "Go to",
-    shortcut: shortcuts.goProjects,
-    run: go("/projects"),
-  });
-  useCommand({
-    id: "nav.calendar",
-    title: "Open calendar",
-    group: "Go to",
-    run: go("/calendar"),
-    keywords: ["schedules"],
-    shortcut: shortcuts.goCalendar,
-  });
-  useCommand({
-    id: "nav.library",
-    title: "Open library",
-    group: "Go to",
-    run: go("/prompts"),
-    keywords: ["prompts", "templates"],
-    shortcut: shortcuts.goLibrary,
-  });
-  // Each section has its own command below, so a section's name finds the section itself.
-  useCommand({
-    id: "nav.settings",
-    title: "Open settings",
-    group: "Go to",
-    run: go("/settings"),
-    shortcut: shortcuts.goSettings,
-  });
-  useCommand({
-    id: "nav.tutorials",
-    title: "Open tutorials",
-    group: "Go to",
-    run: () => {
-      void navigate({ to: "/help/tutorials/$page", params: { page: "Home" } });
-    },
-    keywords: ["help", "guide", "wiki", "docs", "how"],
-  });
-  useCommand({
     id: "nav.usage",
     title: "Open usage and costs",
     group: "Go to",
+    searchOnly: true,
     run: () => {
       void navigate({ to: "/settings", search: { section: "usage" } });
     },
@@ -122,7 +143,8 @@ function NavigationCommands(): null {
   return null;
 }
 
-// One command per channel, as a component so the list can grow and shrink.
+// "Show all channels" and one "Switch to …" per channel, as components so the list can grow
+// and shrink.
 function ChannelCommand({ id, name }: { readonly id: string; readonly name: string }): null {
   const current = useCurrentChannel();
   useCommand({
@@ -130,13 +152,20 @@ function ChannelCommand({ id, name }: { readonly id: string; readonly name: stri
     title: `Switch to ${name}`,
     group: "Channel",
     run: () => current.setChannelId(id),
-    keywords: ["channel", "switch", "filter"],
+    keywords: ["channel", "switch", "filter", "showing"],
   });
   return null;
 }
 
 function ChannelCommands(): ReactElement {
   const current = useCurrentChannel();
+  useCommand({
+    id: "channel.all",
+    title: "Show all channels",
+    group: "Channel",
+    run: () => current.setChannelId(null),
+    keywords: ["switch", "filter", "showing"],
+  });
   return (
     <>
       {current.channels.map((channel) => (
@@ -191,6 +220,16 @@ function HelpCommands(): null {
   const tutorial = useTutorial();
   const notify = useToast();
   useCommand({
+    id: "nav.tutorials",
+    title: "Open tutorials",
+    group: "Help",
+    searchOnly: true,
+    run: () => {
+      void navigate({ to: "/help/tutorials/$page", params: { page: "Home" } });
+    },
+    keywords: ["help", "guide", "wiki", "docs", "how"],
+  });
+  useCommand({
     id: "help.welcome",
     title: "Open the welcome screen",
     group: "Help",
@@ -202,13 +241,13 @@ function HelpCommands(): null {
   });
   useCommand({
     id: "help.tutorial",
-    title: "Start the interactive tutorial",
+    title: "Start the tour",
     group: "Help",
-    keywords: ["tour", "guide", "walkthrough", "first video", "learn", "help"],
+    keywords: ["interactive tutorial", "guide", "walkthrough", "first video", "learn", "help"],
     searchOnly: true,
     run: () => {
       if (tutorial === undefined) return;
-      if (tutorial.active) notify("The interactive tutorial is already running.", "info");
+      if (tutorial.active) notify("The tour is already running.", "info");
       else tutorial.start();
     },
   });
