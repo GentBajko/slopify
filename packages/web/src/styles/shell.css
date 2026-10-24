@@ -509,10 +509,10 @@
     }
   }
 
-  /* The app shell: a --rail-width (232px) rail and a fluid main column, centred beyond
-     content-max. The rail's surface and hairline are also painted on the shell itself, the
-     full height of the page, so however far a long page scrolls (and wherever a webview
-     gives up on sticky) the rail's column never ends at the first screen. */
+  /* The app shell: a --rail-width (76px) rail of icons with a word under each, and a fluid main
+     column, centred beyond content-max. The rail's surface and hairline are also painted on the
+     shell itself, the full height of the page, so however far a long page scrolls (and wherever
+     a webview gives up on sticky) the rail's column never ends at the first screen. */
   .sl-app {
     display: grid;
     grid-template-columns: var(--rail-width) minmax(0, 1fr);
@@ -528,7 +528,8 @@
   }
   /* Fixed to the window's full height rather than sticky: a sticky rail could end partway down
      the window (a zoomed or short window scrolled to the bottom), leaving an empty band. The
-     grid keeps its rail column, and the main column is placed in the second one. */
+     grid keeps its rail column, and the main column is placed in the second one. A window too
+     short for every item scrolls the rail on its own. */
   .sl-app__rail {
     position: fixed;
     top: 0;
@@ -538,45 +539,102 @@
     z-index: 20;
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    padding: 20px 14px;
+    gap: var(--space-2);
+    padding: var(--space-3) 6px;
     border-right: 1px solid var(--color-line);
     background: var(--color-surface);
     overflow-y: auto;
+    scrollbar-width: none;
   }
-  /* GitHub and the donation links, in the rail's own link type but a step quieter. */
-  .sl-rail__links {
+  .sl-app__logo {
+    display: flex;
+    justify-content: center;
+    padding: 2px 0 4px;
+  }
+  /* The Create key: the lime square at the top of every page, its plus over its word (shell.css
+     comes after kit.css, so these win over .sl-key's own row). */
+  .sl-app__create {
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+    height: 60px;
+    flex: none;
+    font: 700 13px / 16px var(--font-sans);
+    letter-spacing: 0.01em;
+  }
+  .sl-app__create svg {
+    width: 22px;
+    height: 22px;
+  }
+  /* A destination, or a foot item: its icon over its word, the whole square one target. */
+  .sl-navrail {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    padding-top: var(--space-2);
-    border-top: 1px solid var(--color-line);
   }
-  .sl-rail__link {
+  .sl-navrail__item {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: var(--space-3);
-    height: 32px;
-    padding: 0 12px;
+    justify-content: center;
+    gap: 4px;
+    width: 100%;
+    min-height: 52px;
+    flex: none;
+    padding: 6px 2px;
+    border: 0;
     border-radius: var(--radius-control);
-    font: 500 14px / 20px var(--font-sans);
+    background: transparent;
     color: var(--color-ink-2);
+    font: 500 12px / 15px var(--font-sans);
+    text-align: center;
     text-decoration: none;
+    overflow-wrap: anywhere;
+    cursor: pointer;
   }
-  .sl-rail__link:hover {
+  .sl-navrail__item:hover {
     background: var(--color-raised);
     color: var(--color-ink);
   }
-  .sl-rail__link svg {
-    width: 16px;
-    height: 16px;
+  .sl-navrail__item[aria-current],
+  .sl-navrail__item[aria-expanded="true"] {
+    background: var(--color-accent-tint);
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+  .sl-navrail__item svg {
+    width: 20px;
+    height: 20px;
     flex: none;
+  }
+  /* An update to install: the one foot item in the accent's ink. */
+  .sl-navrail__item--news {
+    color: var(--color-accent-ink);
+  }
+  /* "2 running": the lamp beside its word, under the destinations. */
+  .sl-navrail__running {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 2px 6px;
+    padding: 6px 2px;
+    border-radius: var(--radius-control);
+    font: 600 12px / 15px var(--font-sans);
+    color: var(--color-accent-ink);
+    text-align: center;
+    text-decoration: none;
+  }
+  .sl-navrail__running:hover {
+    background: var(--color-raised);
   }
   .sl-app__foot {
     margin-top: auto;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 2px;
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--color-line);
   }
   .sl-app__main {
     grid-column: 2;
@@ -607,40 +665,16 @@
     flex: none;
     color: var(--color-accent);
   }
-  /* Same type as the rail's links, so it reads as a label rather than part of the name. */
-  .sl-wordmark__version {
-    font: 500 15px / 22px var(--font-sans);
-    letter-spacing: normal;
-    color: var(--color-ink-2);
+  .sl-app__mark {
+    width: 28px;
+    height: 28px;
   }
-  .sl-searchbtn {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    height: 36px;
-    padding: 0 10px;
-    border-radius: var(--radius-control);
-    border: 1px solid var(--color-line-strong);
-    background: var(--color-sunken);
-    color: var(--color-ink-3);
-    font: 400 13px / 19px var(--font-sans);
-    width: 100%;
-    cursor: pointer;
-  }
-  .sl-searchbtn:hover {
-    color: var(--color-ink-2);
-    border-color: var(--color-ink-3);
-  }
-  .sl-searchbtn svg {
-    width: 16px;
-    height: 16px;
-    flex: none;
-  }
+  /* Phones: the wordmark, "N running", then Search and Help as words. */
   .sl-topbar {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: var(--space-3);
+    gap: var(--space-2);
     min-height: 52px;
     padding: 8px 40px;
     border-bottom: 1px solid var(--color-line);
@@ -651,6 +685,37 @@
     gap: var(--space-3);
     margin-right: auto;
     min-width: 0;
+  }
+  .sl-topbar__item,
+  .sl-topbar__running {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--color-ink-2);
+    font: 500 14px / 20px var(--font-sans);
+    white-space: nowrap;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .sl-topbar__item:hover,
+  .sl-topbar__item[aria-expanded="true"] {
+    background: var(--color-raised);
+    color: var(--color-ink);
+  }
+  .sl-topbar__item svg {
+    width: 18px;
+    height: 18px;
+    flex: none;
+  }
+  .sl-topbar__running {
+    padding: 0 4px;
+    color: var(--color-accent-ink);
+    font-weight: 600;
   }
   .sl-page {
     padding: var(--space-4) var(--space-5) var(--space-6);
@@ -1126,8 +1191,8 @@
     }
   }
 
-  /* Phones: one column, the rail becomes a bottom bar of five, section rails scroll
-     sideways as tabs. */
+  /* Phones: one column; the rail becomes a top bar (Search, Help) and a bottom bar of five with
+     the lime Create in the centre; section rails scroll sideways as tabs. */
   @media (max-width: 767px) {
     .sl-app {
       grid-template-columns: minmax(0, 1fr);
@@ -1141,7 +1206,7 @@
       grid-column: 1;
     }
     .sl-topbar {
-      padding: 8px 16px;
+      padding: 8px 12px 8px 16px;
     }
     .sl-page {
       padding: 16px;
@@ -1153,30 +1218,41 @@
       bottom: 0;
       z-index: 40;
       display: grid;
-      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      align-items: center;
       border-top: 1px solid var(--color-line);
       background: var(--color-surface);
-      padding: 8px 0 max(12px, env(safe-area-inset-bottom));
+      padding: 4px 4px max(12px, env(safe-area-inset-bottom));
     }
-    .sl-bottomnav a {
+    .sl-bottomnav__item {
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: center;
       gap: 4px;
       min-width: 0;
-      font-size: 12px;
-      line-height: 16px;
-      color: var(--color-ink-3);
+      min-height: 44px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      font: 500 12px / 16px var(--font-sans);
+      color: var(--color-ink-2);
       text-decoration: none;
+      cursor: pointer;
     }
-    @media (max-width: 359px) {
-      .sl-bottomnav a {
-        font-size: 11px;
-        letter-spacing: -0.01em;
-      }
-    }
-    .sl-bottomnav a[aria-current="page"] {
+    .sl-bottomnav__item[aria-current],
+    .sl-bottomnav__item[aria-expanded="true"] {
       color: var(--color-ink);
+      font-weight: 600;
+    }
+    .sl-bottomnav__create {
+      flex-direction: column;
+      gap: 2px;
+      width: auto;
+      height: 44px;
+      margin: 0 4px;
+      font: 700 12px / 16px var(--font-sans);
+      letter-spacing: 0.01em;
     }
     .sl-bottomnav svg {
       width: 20px;
@@ -1210,8 +1286,8 @@
       flex-wrap: wrap;
       align-items: flex-start;
     }
-    /* Above the bottom bar (its 8px top padding, 20px icon, 4px gap, 16px label and its
-       bottom padding with the safe area) and a gap, never over it. */
+    /* Above the bottom bar (its 4px top padding, the 44px Create key and its bottom padding
+       with the safe area, the 60px the action bars stand on too) and a gap, never over it. */
     .sl-toasts {
       bottom: calc(56px + max(12px, env(safe-area-inset-bottom)));
     }

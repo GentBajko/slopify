@@ -1,17 +1,23 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
 import {
-  BookIcon,
   BookOpenIcon,
   CalendarIcon,
+  CircleHelpIcon,
+  CompassIcon,
+  EllipsisIcon,
   FilmIcon,
-  HeartIcon,
+  HandHeartIcon,
   HouseIcon,
+  KeyboardIcon,
+  LayoutTemplateIcon,
+  NewspaperIcon,
   PlusIcon,
+  ScrollTextIcon,
   SearchIcon,
   SettingsIcon,
   SparklesIcon,
-  UsersIcon,
+  TvIcon,
 } from "lucide-react";
 import { type ReactElement, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { eventsUrl } from "@/api";
@@ -20,18 +26,24 @@ import { AssistantPanel } from "@/assistant/panel";
 import { AssistantScreenProvider } from "@/assistant/screen";
 import { AutostartReminder } from "@/autostart/autostart-reminder";
 import { useInstallKind } from "@/autostart/use-install-kind";
-import { ChannelPicker, CurrentChannelProvider } from "@/channels/current";
+import { CurrentChannelProvider, useCurrentChannel } from "@/channels/current";
 import { ConnectionStatus } from "@/components/connection-status";
 import { GlobalCommands } from "@/components/global-commands";
 import { SupportGlyph } from "@/components/glyph";
-import { Button, IconButton, PlayKey } from "@/components/kit/button";
+import { Button, PlayKey } from "@/components/kit/button";
 import {
   ariaKeyShortcuts,
   CommandPaletteProvider,
   useCommandPalette,
 } from "@/components/kit/command-palette";
-import { ButtonLink } from "@/components/kit/link";
-import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/kit/menu";
+import {
+  Menu,
+  MenuContent,
+  MenuItem,
+  MenuLabel,
+  MenuSeparator,
+  MenuTrigger,
+} from "@/components/kit/menu";
 import { Lamp } from "@/components/kit/status";
 import { Logo } from "@/components/logo";
 import { FirstRunNotice } from "@/components/notice";
@@ -48,132 +60,81 @@ import { PatchNotesCommand, PatchNotesPopup } from "@/patch-notes/popup";
 import { PlayDraftProvider } from "@/play/draft-context";
 import { coalesce } from "@/project/live";
 import { keys } from "@/queries";
-import { TutorialProvider } from "@/tutorial/context";
-import { TutorialLauncher } from "@/tutorial/launcher";
+import { TutorialProvider, useTutorial } from "@/tutorial/context";
 import { TutorialCommands } from "@/tutorials/commands";
-import { UpdateWidget } from "@/updates/widget";
+import { type UpdateView, useUpdate } from "@/updates/use-update";
+import { UpdateMenuRows, UpdateWidget } from "@/updates/widget";
 import { WhatsNewTour } from "@/whats-new/tour";
 
-// The 3.0 shell (docs/design-system.md, Layout): a 232px left rail with the wordmark, the
-// command palette button, the six destinations, the channel picker and the Create key; a
-// thin top bar for the running tally, updates and help; the page below, full width up to
-// content-max. On phones the rail becomes a bottom bar of six.
+// The shell (docs/design-system.md, Shell). From 768px up: a --rail-width (76px) rail of icons
+// with a word under each, on every page. Top to bottom: the logo, the lime Create key, the
+// destinations, "N running" while runs are active, and at the foot Search, Assistant, Help and
+// Support. Below 768px: a top bar (logo, Search, Help) and a bottom bar with Create in the
+// centre. Nothing else lives in the rail; a page's own controls stay on the page.
 //
-// `match` lists the paths a destination stays lit for. Schedules are the calendar's Schedules
-// tab; the old /schedules address redirects there.
+// `match` lists the paths a destination stays lit for.
 interface Destination {
   readonly id: string;
   readonly to: string;
   readonly label: string;
   readonly icon: ReactElement;
   readonly match: readonly string[];
-  // Shown in the phone's bottom bar (all six: Channels too, so nothing is reachable only
-  // through Ctrl+K on a phone).
-  readonly phone: boolean;
+  // Listed only with two or more channels; with one, its pages light Settings, where the
+  // channel is reached from.
+  readonly several?: true;
 }
 
 const iconProps = { "aria-hidden": true, strokeWidth: 1.75 } as const;
 
 const destinations: readonly Destination[] = [
-  {
-    id: "home",
-    to: "/",
-    label: "Home",
-    icon: <HouseIcon {...iconProps} />,
-    match: ["/"],
-    phone: true,
-  },
+  { id: "home", to: "/", label: "Home", icon: <HouseIcon {...iconProps} />, match: ["/"] },
   {
     id: "projects",
     to: "/projects",
     label: "Projects",
     icon: <FilmIcon {...iconProps} />,
     match: ["/projects"],
-    phone: true,
+  },
+  {
+    id: "prompts",
+    to: "/prompts",
+    label: "Prompts",
+    icon: <ScrollTextIcon {...iconProps} />,
+    match: ["/prompts", "/entries", "/library"],
+  },
+  {
+    id: "templates",
+    to: "/templates",
+    label: "Templates",
+    icon: <LayoutTemplateIcon {...iconProps} />,
+    match: ["/templates", "/designs", "/design-templates"],
   },
   {
     id: "calendar",
     to: "/calendar",
     label: "Calendar",
     icon: <CalendarIcon {...iconProps} />,
-    match: ["/calendar"],
-    phone: true,
+    match: ["/calendar", "/schedules"],
   },
   {
     id: "channels",
     to: "/channels",
     label: "Channels",
-    icon: <UsersIcon {...iconProps} />,
-    match: ["/channels"],
-    phone: true,
-  },
-  {
-    id: "library",
-    to: "/prompts",
-    label: "Library",
-    icon: <BookIcon {...iconProps} />,
-    match: [
-      "/library",
-      "/prompts",
-      "/entries",
-      "/templates",
-      "/document-themes",
-      "/narration-aliases",
-      "/ab-results",
-      "/designs",
-      "/design-templates",
-    ],
-    phone: true,
+    icon: <TvIcon {...iconProps} />,
+    match: ["/channels", "/ab-results"],
+    several: true,
   },
   {
     id: "settings",
     to: "/settings",
     label: "Settings",
     icon: <SettingsIcon {...iconProps} />,
-    match: ["/settings", "/usage"],
-    phone: true,
+    match: ["/settings", "/usage", "/document-themes", "/narration-aliases"],
   },
 ];
 
-// On a phone the three support links are one menu, so the top bar keeps room for search,
-// updates and help.
-function SupportMenu(): ReactElement {
-  return (
-    <Menu modal={false}>
-      <MenuTrigger asChild>
-        <IconButton label="Support Slopify" className="shrink-0">
-          <HeartIcon {...iconProps} />
-        </IconButton>
-      </MenuTrigger>
-      <MenuContent>
-        {support.map((link) => (
-          <MenuItem key={link.href} asChild>
-            <a href={link.href} target="_blank" rel="noreferrer" className="no-underline">
-              <SupportGlyph name={link.glyph} className={link.tone} />
-              {link.label}
-            </a>
-          </MenuItem>
-        ))}
-      </MenuContent>
-    </Menu>
-  );
-}
-
-// Help → Tutorials, beside the interactive tutorial's button: the guides to every screen.
-function TutorialsLink(): ReactElement {
-  return (
-    <ButtonLink
-      to="/help/tutorials/$page"
-      params={{ page: "Home" }}
-      variant="icon"
-      aria-label="Tutorials"
-      data-tip="Tutorials"
-      className="shrink-0"
-    >
-      <BookOpenIcon {...iconProps} />
-    </ButtonLink>
-  );
-}
+// The phone's bottom bar: Home and Projects, Create in the centre, Prompts, and More for the rest.
+const phoneBar = new Set(["home", "projects", "prompts"]);
 
 export function isActive(pathname: string, match: readonly string[]): boolean {
   return match.some((path) =>
@@ -181,9 +142,17 @@ export function isActive(pathname: string, match: readonly string[]): boolean {
   );
 }
 
-// The rail item a page lights, by its address.
-export function activeDestination(pathname: string): string | undefined {
-  return destinations.find((destination) => isActive(pathname, destination.match))?.id;
+// The rail item a page lights, by its address. With one channel Channels is not listed, and
+// its pages light Settings.
+export function activeDestination(pathname: string, channels = 2): string | undefined {
+  const found = destinations.find((destination) => isActive(pathname, destination.match));
+  if (found?.several === true && channels < 2) return "settings";
+  return found?.id;
+}
+
+function useDestinations(): readonly Destination[] {
+  const several = useCurrentChannel().channels.length > 1;
+  return destinations.filter((destination) => several || destination.several !== true);
 }
 
 const support = [
@@ -201,6 +170,22 @@ const support = [
     tone: "text-accent-ink",
   },
 ] as const;
+
+function SupportRows(): ReactElement {
+  return (
+    <>
+      <MenuLabel>Support Slopify</MenuLabel>
+      {support.map((link) => (
+        <MenuItem key={link.href} asChild>
+          <a href={link.href} target="_blank" rel="noreferrer" className="no-underline">
+            <SupportGlyph name={link.glyph} className={link.tone} />
+            {link.label}
+          </a>
+        </MenuItem>
+      ))}
+    </>
+  );
+}
 
 export function Shell() {
   return (
@@ -220,8 +205,8 @@ export function Shell() {
   );
 }
 
-// The sidebar shows from 768px up (shell.css hides it below). The update and tutorial
-// buttons are mounted in one place only, so an update is announced once, not twice.
+// The rail shows from 768px up, the top and bottom bars below (shell.css agrees). Only one set
+// is mounted, so every control and announcement exists once.
 const wideQuery = "(min-width: 768px)";
 function subscribeWide(listener: () => void): () => void {
   if (typeof window.matchMedia !== "function") return () => {};
@@ -236,19 +221,292 @@ function useWide(): boolean {
   return useSyncExternalStore(subscribeWide, isWide, () => true);
 }
 
+function reloadPage(): void {
+  window.location.reload();
+}
+
+// Help: the tour first, then the guides, the keys, the patch notes and Slopify's own update.
+// On a phone it also holds the Assistant and the support links, so the top bar stays two words.
+function HelpMenu({
+  update,
+  phone,
+  onAssistant,
+  className,
+}: {
+  readonly update: UpdateView;
+  readonly phone: boolean;
+  readonly onAssistant: () => void;
+  readonly className: string;
+}): ReactElement {
+  const tutorial = useTutorial();
+  const palette = useCommandPalette();
+  const onHelp = useLocation({ select: (location) => location.pathname.startsWith("/help") });
+  return (
+    <Menu modal={false}>
+      <MenuTrigger asChild>
+        <button type="button" className={className} aria-current={onHelp ? "page" : undefined}>
+          <CircleHelpIcon {...iconProps} />
+          <span>Help</span>
+        </button>
+      </MenuTrigger>
+      <MenuContent side={phone ? "bottom" : "right"} align="end" className="min-w-[220px]">
+        {tutorial === undefined || tutorial.active ? null : (
+          <MenuItem onSelect={tutorial.start}>
+            <CompassIcon {...iconProps} className="size-4" />
+            Start the tour
+          </MenuItem>
+        )}
+        <MenuItem asChild>
+          <Link to="/help/tutorials/$page" params={{ page: "Home" }} className="no-underline">
+            <BookOpenIcon {...iconProps} className="size-4" />
+            Tutorials
+          </Link>
+        </MenuItem>
+        {phone ? null : (
+          <MenuItem onSelect={palette.showShortcuts}>
+            <KeyboardIcon {...iconProps} className="size-4" />
+            Keyboard shortcuts
+          </MenuItem>
+        )}
+        <MenuItem asChild>
+          <Link to="/settings" search={{ section: "patch-notes" }} className="no-underline">
+            <NewspaperIcon {...iconProps} className="size-4" />
+            What's new
+          </Link>
+        </MenuItem>
+        {phone ? (
+          <MenuItem onSelect={onAssistant}>
+            <SparklesIcon {...iconProps} className="size-4" />
+            Assistant
+          </MenuItem>
+        ) : null}
+        <MenuSeparator />
+        <UpdateMenuRows update={update} />
+        {phone ? (
+          <>
+            <MenuSeparator />
+            <SupportRows />
+          </>
+        ) : null}
+      </MenuContent>
+    </Menu>
+  );
+}
+
+function SupportMenu(): ReactElement {
+  return (
+    <Menu modal={false}>
+      <MenuTrigger asChild>
+        <button type="button" className="sl-navrail__item">
+          <HandHeartIcon {...iconProps} />
+          <span>Support</span>
+        </button>
+      </MenuTrigger>
+      <MenuContent side="right" align="end">
+        <SupportRows />
+      </MenuContent>
+    </Menu>
+  );
+}
+
+function CreateKey({ className }: { readonly className: string }): ReactElement {
+  const onCreate = useLocation({ select: (location) => location.pathname === "/play" });
+  return (
+    <PlayKey asChild className={className}>
+      <Link
+        to="/play"
+        aria-current={onCreate ? "page" : undefined}
+        aria-keyshortcuts={ariaKeyShortcuts(shortcuts.newVideo)}
+      >
+        <PlusIcon {...iconProps} />
+        Create
+      </Link>
+    </PlayKey>
+  );
+}
+
+// "2 running": the lamp beside its word, to Home's Running list.
+function RunningLink({
+  running,
+  className,
+}: {
+  readonly running: number;
+  readonly className: string;
+}): ReactElement | null {
+  if (running === 0) return null;
+  return (
+    <Link to="/" hash="running" className={className}>
+      <Lamp tone="running" />
+      <span>{`${String(running)} running`}</span>
+    </Link>
+  );
+}
+
+function Rail({
+  running,
+  update,
+  assistantOpen,
+  onAssistant,
+}: {
+  readonly running: number;
+  readonly update: UpdateView;
+  readonly assistantOpen: boolean;
+  readonly onAssistant: () => void;
+}): ReactElement {
+  const palette = useCommandPalette();
+  const pathname = useLocation({ select: (location) => location.pathname });
+  const shown = useDestinations();
+  const channels = useCurrentChannel().channels.length;
+  const lit = activeDestination(pathname, channels);
+  return (
+    <aside className="sl-app__rail" aria-label="App">
+      <Link to="/" className="sl-app__logo">
+        <Logo className="sl-wordmark__logo sl-app__mark" />
+        <span className="sr-only">Slopify</span>
+      </Link>
+      <CreateKey className="sl-app__create" />
+      <nav aria-label="Main navigation" className="sl-navrail">
+        {shown.map((destination) => (
+          <Link
+            key={destination.id}
+            to={destination.to}
+            aria-current={lit === destination.id ? "page" : undefined}
+            className="sl-navrail__item"
+          >
+            {destination.icon}
+            <span>{destination.label}</span>
+          </Link>
+        ))}
+      </nav>
+      <RunningLink running={running} className="sl-navrail__running" />
+      <div className="sl-app__foot">
+        <UpdateWidget update={update} className="sl-navrail__item sl-navrail__item--news" />
+        <button
+          type="button"
+          className="sl-navrail__item"
+          aria-keyshortcuts="Control+K Meta+K"
+          onClick={() => palette.setOpen(true)}
+        >
+          <SearchIcon {...iconProps} />
+          <span>Search</span>
+        </button>
+        <button
+          type="button"
+          className="sl-navrail__item"
+          aria-expanded={assistantOpen}
+          onClick={onAssistant}
+        >
+          <SparklesIcon {...iconProps} />
+          <span>Assistant</span>
+        </button>
+        <HelpMenu
+          update={update}
+          phone={false}
+          onAssistant={onAssistant}
+          className="sl-navrail__item"
+        />
+        <SupportMenu />
+      </div>
+    </aside>
+  );
+}
+
+function TopBar({
+  running,
+  update,
+  onAssistant,
+}: {
+  readonly running: number;
+  readonly update: UpdateView;
+  readonly onAssistant: () => void;
+}): ReactElement {
+  const palette = useCommandPalette();
+  return (
+    <header className="sl-topbar">
+      <div className="sl-topbar__lead">
+        <Link to="/" className="sl-wordmark px-0">
+          <Logo className="sl-wordmark__logo" />
+          <span className="max-[380px]:sr-only">Slopify</span>
+        </Link>
+        <RunningLink running={running} className="sl-topbar__running" />
+      </div>
+      <div className="flex shrink-0 items-center gap-1">
+        <UpdateWidget update={update} side="bottom" className="sl-topbar__item" />
+        <button type="button" className="sl-topbar__item" onClick={() => palette.setOpen(true)}>
+          <SearchIcon {...iconProps} />
+          <span>Search</span>
+        </button>
+        <HelpMenu update={update} phone onAssistant={onAssistant} className="sl-topbar__item" />
+      </div>
+    </header>
+  );
+}
+
+function BottomBar(): ReactElement {
+  const pathname = useLocation({ select: (location) => location.pathname });
+  const shown = useDestinations();
+  const channels = useCurrentChannel().channels.length;
+  const lit = activeDestination(pathname, channels);
+  const bar = shown.filter((destination) => phoneBar.has(destination.id));
+  const more = shown.filter((destination) => !phoneBar.has(destination.id));
+  const item = (destination: Destination) => (
+    <Link
+      key={destination.id}
+      to={destination.to}
+      aria-current={lit === destination.id ? "page" : undefined}
+      className="sl-bottomnav__item"
+    >
+      {destination.icon}
+      <span>{destination.label}</span>
+    </Link>
+  );
+  return (
+    <nav aria-label="Main navigation (phone)" className="sl-bottomnav">
+      {bar.slice(0, 2).map(item)}
+      <CreateKey className="sl-bottomnav__create" />
+      {bar.slice(2).map(item)}
+      <Menu modal={false}>
+        <MenuTrigger asChild>
+          <button
+            type="button"
+            className="sl-bottomnav__item"
+            aria-current={more.some((one) => one.id === lit) ? "true" : undefined}
+          >
+            <EllipsisIcon {...iconProps} />
+            <span>More</span>
+          </button>
+        </MenuTrigger>
+        <MenuContent side="top" align="end" className="min-w-[200px]">
+          {more.map((destination) => (
+            <MenuItem key={destination.id} asChild>
+              <Link
+                to={destination.to}
+                aria-current={lit === destination.id ? "page" : undefined}
+                className="no-underline [&>svg]:size-4"
+              >
+                {destination.icon}
+                {destination.label}
+              </Link>
+            </MenuItem>
+          ))}
+        </MenuContent>
+      </Menu>
+    </nav>
+  );
+}
+
 function ShellContent() {
-  const { api, openEvents, version } = useApp();
+  const { api, openEvents } = useApp();
   const main = useRef<HTMLElement>(null);
   const [connection, setConnection] = useState<Connection | undefined>(undefined);
   useShellLocation(main);
-  const loadedVersion = useSyncExternalStore(version.subscribe, version.loadedAt, version.loadedAt);
   const wide = useWide();
   const queryClient = useQueryClient();
   const [running, setRunning] = useState(0);
-  const pathname = useLocation({ select: (location) => location.pathname });
   const runs = useRunNotifications();
-  const palette = useCommandPalette();
+  const update = useUpdate(reloadPage);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const toggleAssistant = () => setAssistantOpen((shown) => !shown);
   useInstallKind();
 
   useEffect(() => {
@@ -311,153 +569,23 @@ function ShellContent() {
       <PatchNotesCommand />
       <TutorialCommands />
       <ConnectionStatus connection={connection} />
-      <aside className="sl-app__rail" aria-label="App">
-        <Link to="/" className="sl-wordmark">
-          <Logo className="sl-wordmark__logo" />
-          Slopify
-          {loadedVersion === undefined ? null : (
-            <span className="sl-wordmark__version">{`v${loadedVersion}`}</span>
-          )}
-        </Link>
-        <button type="button" className="sl-searchbtn" onClick={() => palette.setOpen(true)}>
-          <SearchIcon {...iconProps} />
-          <span className="min-w-0 flex-1 truncate text-left">Search or run a command</span>
-          <span className="sl-kbd" aria-hidden="true">
-            <kbd>Ctrl</kbd>
-            <kbd>K</kbd>
-          </span>
-        </button>
-        <Button
-          variant="quiet"
-          className="w-full justify-start"
-          aria-expanded={assistantOpen}
-          onClick={() => setAssistantOpen((shown) => !shown)}
-        >
-          <SparklesIcon {...iconProps} />
-          Assistant
-        </Button>
-        <nav aria-label="Main navigation" className="sl-rail">
-          {destinations.map((destination) => (
-            <Link
-              key={destination.id}
-              to={destination.to}
-              aria-current={isActive(pathname, destination.match) ? "page" : undefined}
-              className="sl-rail__item"
-            >
-              {destination.icon}
-              {destination.label}
-            </Link>
-          ))}
-        </nav>
-        {running === 0 ? null : (
-          <Link
-            to="/"
-            hash="running"
-            className="sl-status sl-status--running px-3 no-underline hover:text-ink"
-          >
-            <Lamp tone="running" />
-            {`${String(running)} running`}
-          </Link>
-        )}
-        <div className="sl-app__foot">
-          <ChannelPicker className="min-w-0" />
-          <PlayKey asChild className="h-12 text-[16px]">
-            <Link to="/play" aria-keyshortcuts={ariaKeyShortcuts(shortcuts.newVideo)}>
-              <PlusIcon {...iconProps} />
-              Create
-            </Link>
-          </PlayKey>
-          <nav aria-label="Support Slopify" className="sl-rail__links">
-            {support.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                target="_blank"
-                rel="noreferrer"
-                className="sl-rail__link"
-              >
-                <SupportGlyph name={link.glyph} className={link.tone} />
-                {link.label}
-              </a>
-            ))}
-          </nav>
-          <div className="flex items-center gap-1 px-1">
-            <p className="m-0 min-w-0 flex-1 px-1 text-label text-ink-3">
-              Free. Your keys, your machine.
-            </p>
-            {wide ? (
-              <>
-                <UpdateWidget reload={() => window.location.reload()} />
-                <TutorialsLink />
-                <TutorialLauncher />
-              </>
-            ) : null}
-          </div>
-        </div>
-      </aside>
+      {wide ? (
+        <Rail
+          running={running}
+          update={update}
+          assistantOpen={assistantOpen}
+          onAssistant={toggleAssistant}
+        />
+      ) : null}
 
       <div className="sl-app__main">
-        {/* Phones only: from tablet width up, the sidebar carries all of this. */}
-        {wide ? null : (
-          <header className="sl-topbar">
-            <div className="sl-topbar__lead">
-              <Link to="/" className="sl-wordmark px-0">
-                <Logo className="sl-wordmark__logo" />
-                <span className="max-[380px]:sr-only">Slopify</span>
-              </Link>
-              <IconButton label="Search or run a command" onClick={() => palette.setOpen(true)}>
-                <SearchIcon {...iconProps} />
-              </IconButton>
-              {running === 0 ? null : (
-                <Link
-                  to="/"
-                  hash="running"
-                  aria-label={`${String(running)} running`}
-                  title={`${String(running)} running`}
-                  className="sl-status sl-status--running no-underline hover:text-ink"
-                >
-                  <Lamp tone="running" />
-                  {String(running)}
-                  <span className="sr-only sm:not-sr-only">running</span>
-                </Link>
-              )}
-            </div>
-            <div className="flex shrink-0 items-center gap-1 sm:gap-2 [&_button]:min-h-8 [&_button]:min-w-8">
-              <IconButton
-                label="Assistant"
-                aria-expanded={assistantOpen}
-                onClick={() => setAssistantOpen((shown) => !shown)}
-              >
-                <SparklesIcon {...iconProps} />
-              </IconButton>
-              <SupportMenu />
-              <UpdateWidget reload={() => window.location.reload()} />
-              <TutorialsLink />
-              <TutorialLauncher />
-            </div>
-          </header>
-        )}
-
+        {wide ? null : <TopBar running={running} update={update} onAssistant={toggleAssistant} />}
         <main ref={main} id="main" tabIndex={-1} className="sl-app__content sl-page">
           <Outlet />
         </main>
       </div>
 
-      <nav aria-label="Main navigation (phone)" className="sl-bottomnav">
-        {destinations
-          .filter((destination) => destination.phone)
-          .map((destination) => (
-            <Link
-              key={destination.id}
-              to={destination.to}
-              aria-current={isActive(pathname, destination.match) ? "page" : undefined}
-              className={cn(isActive(pathname, destination.match) && "text-ink")}
-            >
-              {destination.icon}
-              {destination.label}
-            </Link>
-          ))}
-      </nav>
+      {wide ? null : <BottomBar />}
 
       <AssistantPanel open={assistantOpen} onClose={() => setAssistantOpen(false)} />
       <AppearanceSkin />
@@ -465,11 +593,7 @@ function ShellContent() {
       <AutostartReminder />
       <WhatsNewTour />
       <PatchNotesPopup />
-      <VersionPrompt
-        reload={() => {
-          window.location.reload();
-        }}
-      />
+      <VersionPrompt reload={reloadPage} />
     </div>
   );
 }

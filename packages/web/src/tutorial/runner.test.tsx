@@ -11,6 +11,7 @@ import {
   mount,
   next,
   nextHeld,
+  pressStartTheTour,
   skipTo,
   start,
 } from "./test-fixture";
@@ -44,7 +45,7 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     });
     const user = userEvent.setup();
     const { router, requests } = await mount({ ready: false, notice: () => answer });
-    await user.click(screen.getByRole("button", { name: "Start interactive tutorial" }));
+    await pressStartTheTour(user);
     expect(screen.queryByRole("region", { name: "Interactive getting started guide" })).toBeNull();
     expect(router.state.location.pathname).toBe("/");
     await act(async () => {

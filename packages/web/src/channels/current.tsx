@@ -105,11 +105,7 @@ export function useCurrentChannel(): CurrentChannel {
 // of Home, Projects and the calendar. A native select: it is a choice of one from a short list,
 // and the platform's own menu is the most reachable one on a phone. With fewer than two
 // channels there is nothing to choose, and it draws nothing.
-export function ChannelPicker({
-  className,
-}: {
-  readonly className?: string;
-}): ReactElement | null {
+export function ChannelPicker({ className }: { readonly className?: string }): ReactElement | null {
   const current = useCurrentChannel();
   const id = useId();
   if (current.channels.length < 2) return null;
