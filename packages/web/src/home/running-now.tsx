@@ -127,7 +127,8 @@ export function RunningProject({
     name: nameOf(stage.kind),
     tone: stepTone[stage.state],
     state: stageStateWords[stage.state],
-    time: elapsed(stage.startedAt, stage.finishedAt, now),
+    // A step with no time to tell (provided, not started) shows none rather than a dash.
+    time: elapsed(stage.startedAt, stage.finishedAt, now) ?? "",
     detail: runningDetail(stage, now),
   }));
   const line = runLine(stages, now, nameOf);
