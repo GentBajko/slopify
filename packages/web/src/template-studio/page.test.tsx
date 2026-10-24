@@ -248,13 +248,15 @@ it("lists one line per thing to fix, first, each with its link, and counts them"
   });
   const region = await screen.findByRole("region", { name: "Checks" });
   expect(await within(region).findByText("3 to fix")).not.toBeNull();
-  const lines = within(region).getAllByRole("listitem");
+  const lines = within(within(region).getByRole("list", { name: "To fix" })).getAllByRole(
+    "listitem",
+  );
   expect(lines.map((line) => line.textContent?.slice(0, 22))).toEqual([
     "No writing service is ",
     "No image service is ch",
     "OpenAI, the voice serv",
-    "Every keyword has a va",
   ]);
+  expect(region.querySelector("details > summary")?.textContent).toBe("What passes1");
   expect(
     within(region).getByRole("link", { name: "Choose one in Images" }).getAttribute("href"),
   ).toBe(`/templates/${templateId}?section=pictures`);
