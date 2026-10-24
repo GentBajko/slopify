@@ -65,11 +65,12 @@ export function ImagePrompts({
       <span id={listId} className="sl-field__label">
         Which image style?
       </span>
-      {/* The prompts in the field grid's columns, each name with its Number at the end of its
-          own row, so the boxes line up down every column. */}
+      {/* The prompts in columns, each name with its Number at the end of its own row, so the
+          boxes line up down every column. A column is wide enough for a name beside "How many
+          images" and its box: at 15rem Create's wide column made three, and cut the names. */}
       <ul
         aria-labelledby={listId}
-        className="m-0 grid w-full list-none grid-cols-[repeat(auto-fill,minmax(min(100%,15rem),1fr))] gap-x-6 gap-y-2 p-0"
+        className="m-0 grid w-full list-none grid-cols-[repeat(auto-fill,minmax(min(100%,20rem),1fr))] gap-x-6 gap-y-2 p-0"
       >
         {options.map((prompt) => {
           const at = picked.findIndex((choice) => choice.name === prompt.name);
