@@ -555,31 +555,4 @@ export const playHelp = {
     body: "Videos started together run one at a time, in this order. Pausing a project holds the queue; when one fails or is canceled, the next one starts.",
     tutorial: { page: "Play-Overview", anchor: "the-video-queue" },
   },
-
-  // Settings → Voices
-  "play.voices.name": {
-    title: "Voice name",
-    body: "The name you pick this voice by on Play and in Edit project. Only you see it.",
-    tutorial: { page: "Providers-and-Keys", anchor: "add-a-voice" },
-  },
-  "play.voices.provider": {
-    title: "Voice provider",
-    body: "The text-to-speech service the voice ID belongs to. Only providers set up under Settings are listed.",
-    tutorial: { page: "Providers-and-Keys", anchor: "add-a-voice" },
-  },
-  "play.voices.voice-id": {
-    title: "Voice ID",
-    body: "The provider's own id for the voice, copied from its voice library. It is not checked now; a wrong id fails when a run's narration uses it. For Google Gemini, pick one of its 30 prebuilt voices instead.",
-    tutorial: { page: "Providers-and-Keys", anchor: "add-a-voice" },
-  },
-  "play.voices.languages": {
-    title: "Voice languages",
-    body: "The languages the voice speaks, as codes such as es, de. Play lists the voice only for projects in these languages. Blank asks the provider when it can say; a voice with unknown languages is offered for every language.",
-    tutorial: { page: "Providers-and-Keys", anchor: "add-a-voice" },
-  },
-  "play.voices.real-person": {
-    title: "Real person",
-    body: "Turn this on for a voice cloned from, or made to sound like, a real person. Prepare upload then answers Yes to YouTube's AI use question for videos it narrates. An AI voice that imitates no one stays off.",
-    tutorial: { page: "Providers-and-Keys", anchor: "add-a-voice" },
-  },
 } as const satisfies Readonly<Record<string, HelpEntry>>;
