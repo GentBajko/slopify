@@ -118,10 +118,10 @@ describe("projectOutputs", () => {
       ),
       outputs: [...images, ...thumbs, video, srt, ...shorts],
     });
-    expect(rows.find((row) => row.kind === "images")?.set?.members.map((one) => one.id)).toEqual([
-      ...images.map((one) => one.id),
-      ...thumbs.map((one) => one.id),
-    ]);
+    // The images' zip holds the images; the thumbnails are a set of their own.
+    expect(rows.find((row) => row.kind === "images")?.set?.members.map((one) => one.id)).toEqual(
+      images.map((one) => one.id),
+    );
     expect(rows.find((row) => row.kind === "thumbnails")?.set?.set).toBe("thumbnails");
     const shown = rows.find((row) => row.kind === "video");
     expect(shown?.primary?.output.id).toBe(video.id);
