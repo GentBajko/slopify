@@ -844,7 +844,7 @@ describe("subtitles on Play", () => {
 });
 
 describe("explicit review error navigation", () => {
-  it("opens More audio settings and focuses its native chunking control", async () => {
+  it("opens More narration settings and focuses its native chunking control", async () => {
     await mount(
       {
         "POST /api/projects": fieldsAnswer([
