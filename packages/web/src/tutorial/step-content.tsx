@@ -43,8 +43,8 @@ export function StepContent({
           </p>
           <Example text={articleExample} />
           <p>
-            Paste or write them in <strong>Instructions</strong>. <strong>{"{{topic}}"}</strong>{" "}
-            and <strong>{"{{audience}}"}</strong> will become questions on Create.
+            Paste or write them in <strong>Instructions</strong>. <strong>{"{{topic}}"}</strong> and{" "}
+            <strong>{"{{audience}}"}</strong> will become questions on Create.
           </p>
         </>
       );
@@ -56,8 +56,8 @@ export function StepContent({
             <strong>topic</strong> and <strong>audience</strong>.
           </p>
           <p>
-            <strong>{"{{topic}}"}</strong> is a keyword, not the value. You will enter “Albania”
-            on Create later. Repeated names use the same value; names are case-sensitive, so{" "}
+            <strong>{"{{topic}}"}</strong> is a keyword, not the value. You will enter “Albania” on
+            Create later. Repeated names use the same value; names are case-sensitive, so{" "}
             <strong>topic</strong> and <strong>Topic</strong> are different.
           </p>
           <p>
