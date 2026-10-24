@@ -9,6 +9,24 @@ afterEach(() => {
 });
 
 describe("Settings → Notifications", () => {
+  it("says under its heading when Slopify tells you and what a message holds", async () => {
+    renderApp(
+      <NotificationSettings />,
+      testDeps({ "GET /api/settings/notifications": jsonAnswer({ url: null }) }),
+    );
+    expect(screen.getByRole("heading", { name: "Browser and phone" })).not.toBeNull();
+    expect(
+      screen.getByText(
+        "When a run finishes, fails or waits for your review, Slopify sends the project's title and a link, never your keys.",
+      ),
+    ).not.toBeNull();
+    // In words, not behind an info button beside the heading.
+    expect(
+      screen.queryByRole("button", { name: /^About (Browser and phone|Notifications)$/ }),
+    ).toBeNull();
+    await screen.findByLabelText("Notification URL");
+  });
+
   it("refuses a URL that isn't http or https before anything is sent", async () => {
     const user = userEvent.setup();
     renderApp(

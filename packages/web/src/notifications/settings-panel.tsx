@@ -34,7 +34,7 @@ export function NotificationSettings() {
     <div>
       <SectionHead
         title="Browser and phone"
-        meta="When a run finishes, fails or waits for your review, Slopify sends its title and a link, never your keys."
+        meta="When a run finishes, fails or waits for your review, Slopify sends the project's title and a link, never your keys."
       />
       <div className="flex flex-col gap-8">
         <BrowserNotifications />

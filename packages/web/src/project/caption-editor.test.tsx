@@ -72,6 +72,12 @@ it("emits finite typed cues only after Apply, and releases dirty state on apply 
     />,
     testDeps({}),
   );
+  // What the times are and what an edit costs, in words under the heading.
+  expect(
+    screen.getByText(
+      "Times are seconds from the start of the narration; edits are free and only the captions and the video are made again.",
+    ),
+  ).not.toBeNull();
   const end = screen.getByRole("textbox", { name: "End for caption 1" });
   await user.clear(end);
   await user.type(end, "2.5");
