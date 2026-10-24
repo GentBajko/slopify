@@ -43,8 +43,8 @@ export function StepContent({
           </p>
           <Example text={articleExample} />
           <p>
-            Paste or write the instructions in <strong>Body</strong>. <strong>{"{{topic}}"}</strong>{" "}
-            and <strong>{"{{audience}}"}</strong> will become fields on Play.
+            Paste or write them in <strong>Instructions</strong>. <strong>{"{{topic}}"}</strong>{" "}
+            and <strong>{"{{audience}}"}</strong> will become questions on Create.
           </p>
         </>
       );
@@ -56,13 +56,13 @@ export function StepContent({
             <strong>topic</strong> and <strong>audience</strong>.
           </p>
           <p>
-            <strong>{"{{topic}}"}</strong> is a field name, not the value. You will enter “Albania”
-            on Play later. Repeated names use the same value; names are case-sensitive, so{" "}
+            <strong>{"{{topic}}"}</strong> is a keyword, not the value. You will enter “Albania”
+            on Create later. Repeated names use the same value; names are case-sensitive, so{" "}
             <strong>topic</strong> and <strong>Topic</strong> are different.
           </p>
           <p>
             There are no automatic keywords: <strong>{"{{title}}"}</strong> would also ask you for a
-            value. Fix any keyword warnings in Body before saving.
+            value. Fix any keyword warnings in Instructions before saving.
           </p>
         </>
       );
@@ -83,13 +83,13 @@ export function StepContent({
       return (
         <>
           <p>
-            Keep <strong>Kind</strong> on <strong>Image</strong>. Name this prompt{" "}
+            The kind already says <strong>Image prompt</strong>. Name this prompt{" "}
             <strong>Travel imagery</strong>, then enter this example or your own visual
             instructions.
           </p>
           <Example text={imageExample} />
           <p>
-            Using <strong>{"{{topic}}"}</strong> in both prompts creates one shared field on Play.
+            Using <strong>{"{{topic}}"}</strong> in both prompts asks you for it once on Create.
             Image prompts describe the picture directly; they do not automatically receive your
             article.
           </p>
@@ -100,7 +100,7 @@ export function StepContent({
         <>
           <p>
             Press <strong>Save</strong> to add this to your Image library. Next you will combine
-            both prompts on Play.
+            both prompts on Create.
           </p>
           <p>
             You can create more prompts later for different subjects, styles, lengths, or languages.

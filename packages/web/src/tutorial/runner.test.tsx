@@ -97,9 +97,9 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     expect(nextHeld()).toBe(true);
     await fill(user, "Name", "Tutorial article");
     await next(user, "article-body");
-    await fill(user, "Body", "Write a short article.");
+    await fill(user, "Instructions", "Write a short article.");
     expect(nextHeld()).toBe(true);
-    await fill(user, "Body", "Write a short article about {{topic}}.");
+    await fill(user, "Instructions", "Write a short article about {{topic}}.");
     await next(user, "article-keywords");
     await next(user, "article-save");
     expect(requests).not.toContain("POST /api/prompts");
@@ -112,7 +112,7 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     });
     await at("image-prompt");
     expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("");
-    expect((screen.getByLabelText("Body") as HTMLTextAreaElement).value).toBe("");
+    expect((screen.getByLabelText("Instructions") as HTMLTextAreaElement).value).toBe("");
     expect(nextHeld()).toBe(true);
     expect(requests.filter((request) => request === "POST /api/prompts")).toHaveLength(1);
     expect(requests).not.toContain("POST /api/projects");
@@ -125,7 +125,7 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     await skipTo(user, "article-name");
     await fill(user, "Name", "Taken name");
     await next(user, "article-body");
-    await fill(user, "Body", "Write about {{topic}}.");
+    await fill(user, "Instructions", "Write about {{topic}}.");
     await next(user, "article-keywords");
     await next(user, "article-save");
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -143,7 +143,7 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     await start(user);
     await skipTo(user, "image-prompt");
     await fill(user, "Name", "Tutorial images");
-    await fill(user, "Body", "An illustration of {{topic}}.");
+    await fill(user, "Instructions", "An illustration of {{topic}}.");
     // This step highlights the complete image editor, so Save is available before
     // the user presses the guide's Next to reach the separate save explanation.
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -160,7 +160,7 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     await user.click(guide().getByRole("button", { name: "Exit guide" }));
     await act(() => router.navigate({ to: "/prompts/new", search: { kind: "image" } }));
     expect(((await screen.findByLabelText("Name")) as HTMLInputElement).value).toBe("");
-    expect((screen.getByLabelText("Body") as HTMLTextAreaElement).value).toBe("");
+    expect((screen.getByLabelText("Instructions") as HTMLTextAreaElement).value).toBe("");
   }, 10000);
 
   it("gates Play steps on the real form and follows the ID created only by the user's PLAY click", async () => {
@@ -351,11 +351,11 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     const user = userEvent.setup();
     await mount({ initial: "/prompts/new?kind=article" });
     await fill(user, "Name", "Already in progress");
-    await fill(user, "Body", "My existing instructions about {{topic}}.");
+    await fill(user, "Instructions", "My existing instructions about {{topic}}.");
     await start(user);
     await skipTo(user, "article-name");
     expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("Already in progress");
-    expect((screen.getByLabelText("Body") as HTMLTextAreaElement).value).toBe(
+    expect((screen.getByLabelText("Instructions") as HTMLTextAreaElement).value).toBe(
       "My existing instructions about {{topic}}.",
     );
   });
@@ -364,12 +364,12 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     const user = userEvent.setup();
     const { router } = await mount({ initial: "/prompts/new?kind=article" });
     await fill(user, "Name", "Canceled draft");
-    await fill(user, "Body", "Canceled instructions.");
+    await fill(user, "Instructions", "Canceled instructions.");
     await user.click(screen.getByRole("link", { name: "Cancel" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/prompts"));
     await act(() => router.navigate({ to: "/prompts/new", search: { kind: "article" } }));
     expect(((await screen.findByLabelText("Name")) as HTMLInputElement).value).toBe("");
-    expect((screen.getByLabelText("Body") as HTMLTextAreaElement).value).toBe("");
+    expect((screen.getByLabelText("Instructions") as HTMLTextAreaElement).value).toBe("");
   });
 
   it("preserves separate Image and Play drafts when Back crosses their page boundaries", async () => {
@@ -378,13 +378,13 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     await start(user);
     await skipTo(user, "image-prompt");
     await fill(user, "Name", "Unsaved image idea");
-    await fill(user, "Body", "My image instructions about {{topic}}.");
+    await fill(user, "Instructions", "My image instructions about {{topic}}.");
     await user.click(guide().getByRole("button", { name: "Back" }));
     await at("article-save");
     await user.click(guide().getByRole("button", { name: "Skip without saving" }));
     await at("image-prompt");
     expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("Unsaved image idea");
-    expect((screen.getByLabelText("Body") as HTMLTextAreaElement).value).toBe(
+    expect((screen.getByLabelText("Instructions") as HTMLTextAreaElement).value).toBe(
       "My image instructions about {{topic}}.",
     );
     await next(user, "image-save");
