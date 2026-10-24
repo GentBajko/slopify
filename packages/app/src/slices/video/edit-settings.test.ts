@@ -91,7 +91,7 @@ describe("edit settings", () => {
       ["Transition", "Fade through black · 0.8 s"],
       ["Vignette", "Off"],
       ["Film grain", "Subtle"],
-      ["Colour grade", "None"],
+      ["Color grade", "None"],
       ["Atmosphere", "None"],
       ["Chapter cards", "Off"],
       ["Animate images", "Every 2nd image · kling"],

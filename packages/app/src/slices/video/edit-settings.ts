@@ -261,7 +261,7 @@ export function videoEditRows(
     ],
     ["Vignette", lookLevelLabels[edit.vignette]],
     ["Film grain", lookLevelLabels[edit.grain]],
-    ["Colour grade", colorGradeLabels[edit.grade]],
+    ["Color grade", colorGradeLabels[edit.grade]],
     ["Atmosphere", atmosphereLabels[edit.atmosphere]],
     ["Chapter cards", edit.chapterCards ? "On" : "Off"],
     [
