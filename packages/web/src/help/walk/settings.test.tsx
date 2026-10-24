@@ -20,7 +20,13 @@ afterEach(cleanup);
 // Every labelled control on Settings, Home and the first-run screen is explained beside it, by
 // a visible help line or an info button (help/coverage.ts). Nothing on these screens is allowed
 // without one.
-const areaAllow: readonly (string | RegExp)[] = [];
+const areaAllow: readonly (string | RegExp)[] = [
+  // The phone's page picker: it names the Settings page it shows, like a section list.
+  "Settings page",
+  // Voices' Add a voice: the service's name is the choice, and a service without a key says
+  // so in the option itself ("Cartesia (no key)").
+  "Voice service",
+];
 
 function expectExplained(): void {
   expect(unexplainedControls(document.body, [...selfExplanatory, ...areaAllow])).toEqual([]);
@@ -229,7 +235,7 @@ const loaded: Readonly<Record<SettingsSection, () => Promise<unknown>>> = {
   trash: () => screen.findByText("Cleopatra"),
   usage: () => screen.findByRole("heading", { level: 1, name: "Usage" }),
   "patch-notes": () => screen.findByRole("heading", { name: "Highlights" }),
-  about: () => screen.findByRole("list", { name: "Links" }),
+  about: () => screen.findByRole("link", { name: "Download diagnostics" }),
 };
 
 describe("Settings", () => {
@@ -242,15 +248,17 @@ describe("Settings", () => {
     },
   );
 
-  it("explains every provider's setup: a saved key, a missing key, a CLI and a host CLI", async () => {
+  it("explains every service's setup: a saved key, a missing key, a CLI and a host CLI", async () => {
     const user = userEvent.setup();
     renderRouted(<SettingsRoute section="providers" />, settingsDeps());
-    const text = await screen.findByRole("list", { name: "Text providers" });
+    const text = await screen.findByRole("list", { name: "Writing services" });
     expectExplained();
 
     await user.click(within(text).getByRole("button", { name: "OpenRouter" }));
     expect(screen.getByLabelText("OpenRouter API key")).not.toBeNull();
-    expect(screen.getByRole("button", { name: "About OpenRouter" })).not.toBeNull();
+    // What the service does and costs is in words on the page, not behind an info button.
+    expect(screen.getByText(/Each call is charged per token/)).not.toBeNull();
+    expect(screen.queryByRole("button", { name: /^About / })).toBeNull();
     expectExplained();
 
     await user.click(within(text).getByRole("button", { name: "Codex CLI" }));
@@ -259,7 +267,7 @@ describe("Settings", () => {
     expectExplained();
 
     await user.click(within(text).getByRole("button", { name: "Claude Code CLI" }));
-    expect(screen.getByRole("button", { name: "About Managed on host" })).not.toBeNull();
+    expect(screen.getByText(/run the Docker launcher again/)).not.toBeNull();
     expectExplained();
   });
 });
@@ -374,7 +382,8 @@ describe("Your files", () => {
     renderRouted(<SettingsRoute section="storage" />, settingsDeps());
     await user.click(await screen.findByRole("button", { name: "Choose another folder" }));
     expect(screen.getByLabelText("New folder")).not.toBeNull();
-    expect(screen.getByRole("button", { name: "About Your files" })).not.toBeNull();
+    // Where the keys and the database stay is said on the page.
+    expect(screen.getByText(/Your keys, settings and the database stay/)).not.toBeNull();
     expectExplained();
   });
 });

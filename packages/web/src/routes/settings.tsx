@@ -1,24 +1,23 @@
+import type { ProviderFamily } from "@app/slices/settings/model.js";
 import { useQueryClient } from "@tanstack/react-query";
-import { DownloadIcon } from "lucide-react";
+import { type ReactElement, useState } from "react";
 import { AgentSettings } from "@/agents/agent-settings";
 import { useApp } from "@/app-context";
 import { AutostartSettings } from "@/autostart/autostart-settings";
-import { CatalogueSettings } from "@/components/catalogue";
-import { Button } from "@/components/kit/button";
+import { CatalogueSettings, RetiredModelsInUse } from "@/components/catalogue";
 import { useCommand } from "@/components/kit/command-palette";
-import { InfoTip } from "@/components/kit/info-tip";
+import { Select } from "@/components/kit/field";
 import { PageHeader, Workspace } from "@/components/kit/layout";
-import { FileLink } from "@/components/kit/link";
+import { ButtonLink } from "@/components/kit/link";
 import { Rail, RailButton } from "@/components/kit/rail";
-import { TabPanel, Tabs } from "@/components/kit/tabs";
+import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
 import { ModelChecksSettings } from "@/components/model-checks";
-import { ProviderHealthCheck, useProviderHealth } from "@/components/provider-health";
-import { ProviderKeys } from "@/components/provider-keys";
+import { useProviderHealth } from "@/components/provider-health";
+import { type KeysFocus, ProviderKeys } from "@/components/provider-keys";
 import { Voices } from "@/components/voices";
-import { Welcome } from "@/components/welcome";
+import { cn } from "@/lib/utils";
 import { NotificationSettings } from "@/notifications/settings-panel";
-import { SampleSettings } from "@/onboarding/sample-settings";
 import { patchNotesQuery } from "@/patch-notes/api";
 import { PatchNotesSettings } from "@/patch-notes/settings-panel";
 import { RemoteAccessSettings } from "@/remote-access/remote-access-settings";
@@ -26,21 +25,17 @@ import { StudioSettings } from "@/studio/settings-panel";
 import { TemplateStudioSettings } from "@/template-studio/settings-panel";
 import { TrashSettings } from "@/trash/trash-settings";
 import { ChannelLinksSettings } from "@/youtube/channel-links";
-import { AboutSettings } from "./settings-about";
+import { AboutSettings, downloadDiagnostics } from "./settings-about";
+import { BackLink, backPlace, type SettingsBack } from "./settings-back";
 import { BackupSettings, useBackUpNow } from "./settings-backups";
 import { StorageTools, storageQueryKey } from "./settings-export";
 import { FilesFolder } from "./settings-files";
 import { AppearanceSetting, ProductionDefaults } from "./settings-preferences";
 import { ConnectionReadiness } from "./settings-readiness";
-import {
-  groupOfSection,
-  type SettingsSection,
-  settingsGroups,
-  settingsSectionOf,
-  settingsSections,
-} from "./settings-sections";
+import { type SettingsSection, settingsSectionOf, settingsSections } from "./settings-sections";
 import { UsageBoard } from "./usage";
 
+export type { SettingsBack } from "./settings-back";
 export {
   portableImportQueryKeys,
   portableMaxUploadBytes,
@@ -53,31 +48,28 @@ export {
   settingsSections,
 } from "./settings-sections";
 
-// The browser's own download of the diagnostics file, the same one the header's link saves.
-function downloadDiagnostics(origin: string): void {
-  const link = document.createElement("a");
-  link.href = `${origin}/api/diagnostics`;
-  link.download = "slopify-diagnostics.json";
-  document.body.append(link);
-  link.click();
-  link.remove();
-}
-
-// A settings rail of a few groups beside one section at a time; a group of several sections
-// shows them as tabs. The section is the `section` search parameter, not a route, so the page
-// title follows it; on phones the rail is a row of tabs that scrolls sideways on its own.
-// Explanations sit behind the info buttons beside what they explain.
+// Settings: one flat list of pages beside the page picked, each page named once (the list's
+// row is its title). The page is the `section` search parameter, not a route, so the title
+// follows it. On a phone the list is one select at the top, so the page starts right under it.
 export function SettingsRoute({
   section: asked = "providers",
   note,
+  family,
+  provider,
+  back,
   onSection = () => {},
   onNote = () => {},
 }: {
   readonly section?: SettingsSection;
-  // Settings → Patch notes: the note open in the reading view.
+  // What's new: the note open in the reading view.
   readonly note?: string | undefined;
+  // Keys & services: the family and the service to open and scroll to on arrival.
+  readonly family?: ProviderFamily | undefined;
+  readonly provider?: string | undefined;
+  // The screen the person came from to add a key, offered as the way back.
+  readonly back?: SettingsBack | undefined;
   readonly onSection?: (section: SettingsSection) => void;
-  // Opens Settings → Patch notes at this note, or at its list.
+  // Opens What's new at this note, or at its list.
   readonly onNote?: (note: string | undefined) => void;
 }) {
   const { api } = useApp();
@@ -87,13 +79,12 @@ export function SettingsRoute({
   const backUp = useBackUpNow();
   const section = settingsSectionOf(asked);
   const current = settingsSections.find((item) => item.id === section) ?? settingsSections[0];
-  const group = groupOfSection(section);
 
   useCommand({
     id: "settings.check-providers",
-    title: "Check all providers",
+    title: "Check every service",
     group: "Settings",
-    keywords: ["health", "keys", "signed in"],
+    keywords: ["health", "keys", "signed in", "providers"],
     run: () => {
       onSection("providers");
       health.mutate();
@@ -126,11 +117,6 @@ export function SettingsRoute({
     },
   });
 
-  const tabs = group.sections.map((id) => ({
-    id,
-    label: settingsSections.find((item) => item.id === id)?.label ?? id,
-  }));
-
   return (
     <div>
       <PageHeader
@@ -138,111 +124,141 @@ export function SettingsRoute({
         title={current.label}
         meta={current.meta}
         actions={
-          <>
-            {section === "providers" ? (
-              <Button disabled={health.isPending} onClick={() => health.mutate()}>
-                {health.isPending ? "Checking…" : "Check all"}
-              </Button>
-            ) : null}
-            <span className="inline-flex items-center gap-1">
-              <FileLink
-                variant="secondary"
-                href={`${api.origin}/api/diagnostics`}
-                download="slopify-diagnostics.json"
-              >
-                <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
-                Download diagnostics
-              </FileLink>
-              <InfoTip id="settings.diagnostics" />
-            </span>
-          </>
+          back === undefined ? undefined : (
+            <BackLink back={back}>{`Back to ${backPlace(back)}`}</BackLink>
+          )
         }
       />
       <Workspace
         sections={
-          <Rail label="Settings sections">
-            {settingsGroups.map((item) => (
-              <RailButton
-                key={item.id}
-                current={item.id === group.id}
-                onClick={() => onSection(item.sections[0] ?? "providers")}
-                className="whitespace-nowrap max-md:w-auto"
-              >
-                {item.label}
-              </RailButton>
-            ))}
-          </Rail>
+          <>
+            <Rail label="Settings pages" className="max-md:hidden">
+              {settingsSections.map((item, index) => (
+                <RailButton
+                  key={item.id}
+                  current={item.id === section}
+                  onClick={() => onSection(item.id)}
+                  // A little space where one run of pages ends and the next begins.
+                  className={cn(
+                    index > 0 && settingsSections[index - 1]?.run !== item.run && "mt-3",
+                  )}
+                >
+                  {item.label}
+                </RailButton>
+              ))}
+            </Rail>
+            <Select
+              aria-label="Settings page"
+              className="w-full md:hidden"
+              value={section}
+              options={settingsSections.map((item) => ({ value: item.id, label: item.label }))}
+              onChange={(event) => onSection(settingsSectionOf(event.target.value))}
+            />
+          </>
         }
       >
-        {tabs.length > 1 ? (
-          <Tabs
-            items={tabs}
-            value={section}
-            onChange={onSection}
-            label={`${group.label} sections`}
-            idPrefix="settings"
-            className="mb-6"
-          />
-        ) : null}
-        <TabPanel idPrefix="settings" id={section} active>
-          <section aria-label={current.label} className="flex min-w-0 flex-col gap-10">
-            {section === "providers" ? (
-              <>
-                <ConnectionReadiness />
-                <Welcome />
-                <ProviderKeys />
-                <ProviderHealthCheck run={health} />
-              </>
-            ) : null}
-            {section === "general" ? (
-              <>
-                <AppearanceSetting />
-                <AutostartSettings />
-              </>
-            ) : null}
-            {section === "remote-access" ? <RemoteAccessSettings /> : null}
-            {section === "voices" ? <Voices /> : null}
-            {section === "models" ? (
-              <>
-                <CatalogueSettings />
-                <ModelChecksSettings />
-              </>
-            ) : null}
-            {section === "agents" ? <AgentSettings /> : null}
-            {section === "playback" ? <ProductionDefaults /> : null}
-            {section === "template-studio" ? <TemplateStudioSettings /> : null}
-            {section === "notifications" ? <NotificationSettings /> : null}
-            {section === "channel-links" ? <ChannelLinksSettings /> : null}
-            {section === "studio" ? <StudioSettings /> : null}
-            {section === "storage" ? (
-              <>
-                <BackupSettings />
-                <FilesFolder usageQueryKey={storageQueryKey} />
-                <StorageTools />
-                <SampleSettings />
-              </>
-            ) : null}
-            {section === "trash" ? <TrashSettings /> : null}
-            {section === "usage" ? <UsageBoard /> : null}
-            {section === "patch-notes" ? <PatchNotesSettings note={note} onNote={onNote} /> : null}
-            {section === "about" ? (
-              <AboutSettings
-                onWhatsNew={() => {
-                  queryClient.fetchQuery(patchNotesQuery(api)).then(
-                    (notes) => onNote(notes.current ?? undefined),
-                    (error: unknown) => {
-                      notify(
-                        `The patch notes did not open: ${error instanceof Error ? error.message : String(error)} Open Settings → About → Patch notes to try again.`,
-                        "error",
-                      );
-                    },
-                  );
-                }}
-              />
-            ) : null}
-          </section>
-        </TabPanel>
+        <section aria-label={current.label} className="flex min-w-0 flex-col gap-6">
+          {section === "providers" ? (
+            <KeysAndServices family={family} provider={provider} back={back} health={health} />
+          ) : null}
+          {section === "voices" ? <Voices /> : null}
+          {section === "models" ? (
+            <>
+              <ModelChecksSettings />
+              <RetiredModelsInUse />
+              <CatalogueSettings />
+            </>
+          ) : null}
+          {section === "playback" ? (
+            <>
+              <ProductionDefaults />
+              <SectionHead
+                title="PDF look"
+                meta="The fonts, colours and page layout of the PDFs Slopify makes."
+              >
+                <ButtonLink to="/document-themes">Edit PDF looks</ButtonLink>
+              </SectionHead>
+              <div>
+                <SectionHead
+                  title="Template samples"
+                  meta="What a template's samples may spend while you edit it."
+                />
+                <TemplateStudioSettings />
+              </div>
+            </>
+          ) : null}
+          {section === "notifications" ? <NotificationSettings /> : null}
+          {section === "studio" ? (
+            <>
+              <StudioSettings />
+              <ChannelLinksSettings />
+            </>
+          ) : null}
+          {section === "storage" ? (
+            <>
+              <BackupSettings />
+              <FilesFolder usageQueryKey={storageQueryKey} />
+              <StorageTools />
+            </>
+          ) : null}
+          {section === "trash" ? <TrashSettings /> : null}
+          {section === "general" ? (
+            <>
+              <AppearanceSetting />
+              <AutostartSettings />
+            </>
+          ) : null}
+          {section === "remote-access" ? <RemoteAccessSettings /> : null}
+          {section === "agents" ? <AgentSettings /> : null}
+          {section === "about" ? (
+            <AboutSettings
+              onWhatsNew={() => {
+                queryClient.fetchQuery(patchNotesQuery(api)).then(
+                  (notes) => onNote(notes.current ?? undefined),
+                  (error: unknown) => {
+                    notify(
+                      `What's new did not open: ${error instanceof Error ? error.message : String(error)} Open Settings → What's new to try again.`,
+                      "error",
+                    );
+                  },
+                );
+              }}
+            />
+          ) : null}
+          {section === "usage" ? <UsageBoard /> : null}
+          {section === "patch-notes" ? <PatchNotesSettings note={note} onNote={onNote} /> : null}
+        </section>
       </Workspace>
     </div>
+  );
+}
+
+// Keys & services: what each kind of work has, with its fix, then every service by kind. A
+// readiness line's button, or a link from the welcome or Create, opens that kind's list and
+// scrolls to it.
+function KeysAndServices({
+  family,
+  provider,
+  back,
+  health,
+}: {
+  readonly family: ProviderFamily | undefined;
+  readonly provider: string | undefined;
+  readonly back: SettingsBack | undefined;
+  readonly health: ReturnType<typeof useProviderHealth>;
+}): ReactElement {
+  const [focus, setFocus] = useState<KeysFocus | undefined>(() =>
+    family === undefined && provider === undefined
+      ? undefined
+      : { family, provider, arrival: true },
+  );
+  return (
+    <>
+      <ConnectionReadiness
+        health={health}
+        onShow={(shown) => setFocus({ family: shown, provider: undefined, arrival: false })}
+      />
+      <ProviderKeys focus={focus} back={back} />
+    </>
   );
 }

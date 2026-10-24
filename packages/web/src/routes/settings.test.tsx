@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { CommandPaletteProvider, CommandRegistry } from "@/components/kit/command-palette";
 import { AppearanceSkin } from "@/components/theme";
 import type { Answer } from "@/test-app";
-import { jsonAnswer, problemAnswer, renderApp, testDeps } from "@/test-app";
+import { jsonAnswer, problemAnswer, renderRouted, testDeps } from "@/test-app";
 import {
   gapProblem,
   portableImportQueryKeys,
@@ -29,7 +29,10 @@ function deps(extra: Readonly<Record<string, Answer>> = {}) {
     "GET /api/settings/voices": jsonAnswer({ voices: [] }),
     "GET /api/settings": jsonAnswer(settings),
     "GET /api/settings/encoders": jsonAnswer({
-      nvidia: { available: false, reason: "No NVIDIA encoder found on this computer." },
+      nvidia: {
+        available: false,
+        reason: "No NVIDIA graphics card encoder was found on this computer.",
+      },
     }),
     // Backup & storage shows the daily backups first.
     "GET /api/backups": jsonAnswer({
@@ -109,9 +112,13 @@ describe("the backups section", () => {
 
   it("shows the last result, where backups land on the host, and refuses a bad keep count", async () => {
     const user = userEvent.setup();
-    renderApp(<SettingsRoute section="backups" />, deps({ "GET /api/backups": jsonAnswer(view) }));
+    renderRouted(
+      <SettingsRoute section="backups" />,
+      deps({ "GET /api/backups": jsonAnswer(view) }),
+    );
     expect(await screen.findByText(/ran out of space/)).not.toBeNull();
-    expect(screen.getByText(/failed\.$/)).not.toBeNull();
+    // The last result and the next one, in the section's one line.
+    expect(screen.getByText(/failed\. Next: /)).not.toBeNull();
     expect(screen.getByText(/\/home\/u\/Slopify\/Projects\/Backups/)).not.toBeNull();
     const keep = screen.getByLabelText("Keep last");
     await user.clear(keep);
@@ -122,7 +129,7 @@ describe("the backups section", () => {
 });
 
 describe("the settings screen", () => {
-  it("shows one section at a time, picked from the section list", async () => {
+  it("lists every page once, flat, and shows the one picked under its own name", async () => {
     const user = userEvent.setup();
     const picked: string[] = [];
     function Harness() {
@@ -137,73 +144,106 @@ describe("the settings screen", () => {
         />
       );
     }
-    renderApp(<Harness />, deps());
-    // The section is the page title, under the Settings crumb.
-    expect(await screen.findByRole("heading", { level: 1, name: "Providers" })).not.toBeNull();
+    renderRouted(<Harness />, deps());
+    // The page is the title, under the Settings crumb.
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Keys & services" }),
+    ).not.toBeNull();
     expect(screen.getByText("Settings")).not.toBeNull();
-    expect(await screen.findByRole("heading", { name: "Text" })).not.toBeNull();
+    expect(await screen.findByRole("heading", { name: "Voice services" })).not.toBeNull();
     expect(screen.queryByLabelText("Silence between segments")).toBeNull();
-    const nav = screen.getByRole("navigation", { name: "Settings sections" });
+    const nav = screen.getByRole("navigation", { name: "Settings pages" });
     expect(
       within(nav)
         .getAllByRole("button")
         .map((button) => button.textContent),
     ).toEqual([
-      "Connections",
+      "Keys & services",
+      "Voices",
+      "Models",
       "Production defaults",
       "Notifications",
-      "Publishing",
+      "YouTube Studio and posting",
       "Backup & storage",
+      "Trash",
       "General",
+      "Remote access",
+      "AI agents",
       "About",
+      "Usage",
+      "What's new",
     ]);
     expect(
-      within(nav).getByRole("button", { name: "Connections" }).getAttribute("aria-current"),
+      within(nav).getByRole("button", { name: "Keys & services" }).getAttribute("aria-current"),
     ).toBe("true");
-    // What is connected comes first, then the sections of the group as tabs.
-    expect(screen.getByRole("list", { name: "What is connected" })).not.toBeNull();
-    const tabs = screen.getByRole("tablist", { name: "Connections sections" });
-    await user.click(within(tabs).getByRole("tab", { name: "Voices" }));
+    // No second row of tabs: a row is a page.
+    expect(screen.queryByRole("tablist")).toBeNull();
+    // What the videos have comes first.
+    expect(screen.getByRole("list", { name: "What your videos have" })).not.toBeNull();
+    await user.click(within(nav).getByRole("button", { name: "Voices" }));
     expect(picked).toEqual(["voices"]);
     expect(screen.getByRole("heading", { level: 1, name: "Voices" })).not.toBeNull();
     await user.click(within(nav).getByRole("button", { name: "Production defaults" }));
     expect(await screen.findByLabelText("Silence between segments")).not.toBeNull();
-    expect(screen.queryByRole("heading", { name: "Text" })).toBeNull();
-    expect(
-      within(nav).getByRole("button", { name: "Connections" }).hasAttribute("aria-current"),
-    ).toBe(false);
+    expect(screen.queryByRole("heading", { name: "Voice services" })).toBeNull();
+    // The sample budgets moved here from their own tab.
+    expect(screen.getByRole("heading", { name: "Template samples" })).not.toBeNull();
     // Appearance is an app preference, under General with how Slopify starts.
     await user.click(within(nav).getByRole("button", { name: "General" }));
     expect(await screen.findByRole("button", { name: "System" })).not.toBeNull();
   });
 
-  it("opens an old section id where its content went", async () => {
-    renderApp(<SettingsRoute section="backups" />, deps());
-    expect(
-      await screen.findByRole("heading", { level: 1, name: "Backup & storage" }),
-    ).not.toBeNull();
+  it("offers the pages as one select on a phone", async () => {
+    const picked: string[] = [];
+    renderRouted(
+      <SettingsRoute section="trash" onSection={(next) => picked.push(next)} />,
+      deps({ "GET /api/trash": jsonAnswer({ items: [] }) }),
+    );
+    const select = (await screen.findByLabelText("Settings page")) as HTMLSelectElement;
+    expect(select.value).toBe("trash");
+    await userEvent.selectOptions(select, "about");
+    expect(picked).toEqual(["about"]);
   });
 
-  it("keeps Download diagnostics a download link on every section, and Check all on Providers", async () => {
+  it.each([
+    ["backups", "Backup & storage"],
+    ["template-studio", "Production defaults"],
+    ["channel-links", "YouTube Studio and posting"],
+  ] as const)("opens the old page id %s where its content went", async (old, title) => {
+    renderRouted(
+      <SettingsRoute section={old} />,
+      deps({
+        "GET /api/studio/settings": jsonAnswer({
+          playlists: [],
+          channelPlaylists: {},
+          pairing: { token: "a".repeat(64), origin: null },
+        }),
+      }),
+    );
+    expect(await screen.findByRole("heading", { level: 1, name: title })).not.toBeNull();
+  });
+
+  it("keeps Download diagnostics on About, not in every page's header", async () => {
     const user = userEvent.setup();
     function Harness() {
       const [section, setSection] = useState<SettingsSection>("providers");
       return <SettingsRoute section={section} onSection={setSection} />;
     }
-    renderApp(<Harness />, deps());
+    renderRouted(<Harness />, deps());
+    await screen.findByRole("heading", { level: 1, name: "Keys & services" });
+    expect(screen.queryByRole("link", { name: "Download diagnostics" })).toBeNull();
+    const nav = screen.getByRole("navigation", { name: "Settings pages" });
+    await user.click(within(nav).getByRole("button", { name: "About" }));
     const link = await screen.findByRole("link", { name: "Download diagnostics" });
     expect(link.getAttribute("href")).toBe("http://slopify.test/api/diagnostics");
     expect(link.getAttribute("download")).toBe("slopify-diagnostics.json");
-    expect(screen.getByRole("button", { name: "Check all" })).not.toBeNull();
-    await user.click(screen.getByRole("button", { name: "About" }));
-    expect(screen.queryByRole("button", { name: "Check all" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Download diagnostics" })).not.toBeNull();
+    expect(screen.getByText("Free. Your keys, your machine.")).not.toBeNull();
   });
 
-  it("runs Check all from the page header and lists the report under the providers", async () => {
+  it("checks every service from under the readiness lines and lists the report there", async () => {
     const user = userEvent.setup();
     let checks = 0;
-    renderApp(
+    renderRouted(
       <SettingsRoute section="providers" />,
       deps({
         "POST /api/providers/health": (request) => {
@@ -223,15 +263,39 @@ describe("the settings screen", () => {
         },
       }),
     );
-    expect(await screen.findByText("Not checked yet.")).not.toBeNull();
-    await user.click(screen.getByRole("button", { name: "Check all" }));
+    expect(await screen.findByText("Last checked: not yet.")).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "Check every service" }));
     expect(await screen.findByText("Signed in as you.")).not.toBeNull();
+    expect(screen.getByText(/^Last checked at /)).not.toBeNull();
     expect(checks).toBe(1);
+  });
+
+  it("offers the way back to the welcome while the person came from it", async () => {
+    renderRouted(
+      <SettingsRoute section="providers" back={{ to: "welcome", step: "make" }} />,
+      deps(),
+    );
+    const back = await screen.findByRole("link", { name: "Back to the welcome" });
+    expect(back.getAttribute("href")).toBe("/welcome?step=make");
+  });
+
+  it("offers the way back to Create, and nothing without a return", async () => {
+    const { unmount } = renderRouted(
+      <SettingsRoute section="providers" back={{ to: "play" }} />,
+      deps(),
+    );
+    expect((await screen.findByRole("link", { name: "Back to Create" })).getAttribute("href")).toBe(
+      "/play",
+    );
+    unmount();
+    renderRouted(<SettingsRoute section="providers" />, deps());
+    await screen.findByRole("heading", { level: 1, name: "Keys & services" });
+    expect(screen.queryByRole("link", { name: /^Back to/ })).toBeNull();
   });
 
   it("holds Save while the gap is not a number a run would take", async () => {
     const user = userEvent.setup();
-    renderApp(<SettingsRoute section="playback" />, deps());
+    renderRouted(<SettingsRoute section="playback" />, deps());
 
     const field = await screen.findByLabelText("Silence between segments");
     await user.clear(field);
@@ -245,7 +309,7 @@ describe("the settings screen", () => {
   it("saves the gap and confirms it inline", async () => {
     const user = userEvent.setup();
     let sent: unknown;
-    renderApp(
+    renderRouted(
       <SettingsRoute section="playback" />,
       deps({
         "PUT /api/settings": async (request) => {
@@ -267,7 +331,7 @@ describe("the settings screen", () => {
   it("offers the subtitle timing models, most accurate first, and saves the choice", async () => {
     const user = userEvent.setup();
     let sent: unknown;
-    renderApp(
+    renderRouted(
       <SettingsRoute section="playback" />,
       deps({
         "PUT /api/settings": async (request) => {
@@ -298,13 +362,19 @@ describe("the settings screen", () => {
   });
 
   it("shows the render settings at their defaults, without NVIDIA where there is none", async () => {
-    renderApp(<SettingsRoute section="playback" />, deps());
+    renderRouted(<SettingsRoute section="playback" />, deps());
 
     expect(await screen.findByRole("heading", { name: "Rendering" })).not.toBeNull();
     const encoder = (await screen.findByLabelText("Video encoder")) as HTMLSelectElement;
     expect(encoder.value).toBe("cpu");
     expect([...encoder.options].map((option) => option.text)).toEqual(["Processor (x264)"]);
-    expect(await screen.findByText("No NVIDIA encoder found on this computer.")).not.toBeNull();
+    expect(
+      await screen.findByText(
+        "No NVIDIA graphics card encoder was found on this computer. Videos are encoded on the processor.",
+      ),
+    ).not.toBeNull();
+    // Nothing the test printed, so nothing to fold.
+    expect(screen.queryByText("Details")).toBeNull();
     const clips = screen.getByLabelText("Clip encoding") as HTMLSelectElement;
     expect(clips.value).toBe("thorough");
     expect([...clips.options].map((option) => option.text)).toEqual(["Thorough", "Fast"]);
@@ -316,10 +386,38 @@ describe("the settings screen", () => {
     ]);
   });
 
+  it("says in plain words why the card is not used, with the test's output folded", async () => {
+    const user = userEvent.setup();
+    renderRouted(
+      <SettingsRoute section="playback" />,
+      deps({
+        "GET /api/settings/encoders": jsonAnswer({
+          nvidia: {
+            available: false,
+            reason:
+              "This computer's NVIDIA graphics card encoder did not pass its test, so it is not used.",
+            detail:
+              "the ffmpeg at ffmpeg lists NVENC but its test encode failed: Operation not permitted",
+          },
+        }),
+      }),
+    );
+    expect(
+      await screen.findByText(
+        "This computer's NVIDIA graphics card encoder did not pass its test, so it is not used. Videos are encoded on the processor.",
+      ),
+    ).not.toBeNull();
+    const details = screen.getByText("Details").closest("details");
+    expect(details?.open).toBe(false);
+    await user.click(screen.getByText("Details"));
+    expect(details?.open).toBe(true);
+    expect(within(details as HTMLElement).getByText(/Operation not permitted/)).not.toBeNull();
+  });
+
   it("offers the NVIDIA card where its encoder works, and saves each render choice", async () => {
     const user = userEvent.setup();
     const sent: unknown[] = [];
-    renderApp(
+    renderRouted(
       <SettingsRoute section="playback" />,
       deps({
         "GET /api/settings/encoders": jsonAnswer({ nvidia: { available: true } }),
@@ -347,7 +445,7 @@ describe("the settings screen", () => {
   });
 
   it("names the problem when the settings cannot be read", async () => {
-    renderApp(
+    renderRouted(
       <SettingsRoute section="playback" />,
       deps({ "GET /api/settings": problemAnswer("The database is locked.", 500) }),
     );
@@ -355,7 +453,7 @@ describe("the settings screen", () => {
   });
 
   it("shows disk usage while keeping backups and cleanup beside it", async () => {
-    renderApp(
+    renderRouted(
       <SettingsRoute section="storage" />,
       deps({
         "GET /api/storage": jsonAnswer({
@@ -398,7 +496,7 @@ describe("the settings screen", () => {
   it("sends an accepted backup as a file without buffering it in the page", async () => {
     const user = userEvent.setup();
     let received = "";
-    renderApp(
+    renderRouted(
       <SettingsRoute section="storage" />,
       deps({
         "PUT /api/storage/import": async (request) => {
@@ -418,7 +516,7 @@ describe("the settings screen", () => {
   it("rejects an oversized backup before sending or reading it", async () => {
     const user = userEvent.setup();
     let requests = 0;
-    renderApp(
+    renderRouted(
       <SettingsRoute section="storage" />,
       deps({
         "PUT /api/storage/import": (request) => {
@@ -463,16 +561,19 @@ describe("export everything and import a backup", () => {
     files: { count: 4, bytes: 3 * 1024 * 1024 },
   };
 
-  it("says keys are never included", async () => {
-    renderApp(<SettingsRoute section="storage" />, deps());
-    expect(await screen.findByText(/Provider keys are never included in a backup/)).not.toBeNull();
+  it("says keys are never included, with the page they go back on", async () => {
+    renderRouted(<SettingsRoute section="storage" />, deps());
+    expect(await screen.findByText(/Keys are never in a backup/)).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Keys & services" }).getAttribute("href")).toBe(
+      "/settings?section=providers",
+    );
   });
 
   it("names the projects it waits for instead of downloading an error", async () => {
     const user = userEvent.setup();
     const busy =
       'Slopify can\'t export while projects are being made ("Rope"): their files are still being written. Wait for them to finish, or pause them on their project page, then press Export everything again.';
-    renderApp(
+    renderRouted(
       <SettingsRoute section="storage" />,
       deps({
         "GET /api/storage/export/summary": jsonAnswer({ ready: false, detail: busy, busy: [] }),
@@ -491,7 +592,7 @@ describe("export everything and import a backup", () => {
       clicked.push(this.href);
     };
     try {
-      renderApp(
+      renderRouted(
         <SettingsRoute section="storage" />,
         deps({
           "GET /api/storage/export/summary": jsonAnswer({
@@ -513,7 +614,7 @@ describe("export everything and import a backup", () => {
   it("sends a full backup as a tar and lists what came in and what was skipped", async () => {
     const user = userEvent.setup();
     let type = "";
-    renderApp(
+    renderRouted(
       <SettingsRoute section="storage" />,
       deps({
         "PUT /api/storage/import": (request) => {
@@ -547,7 +648,7 @@ describe("export everything and import a backup", () => {
     const user = userEvent.setup();
     const newer =
       "This backup was made by a newer Slopify (9.0.0). Update Slopify first (npx @gentbajko/slopify@latest, or pull the latest Docker image), then import it again.";
-    renderApp(
+    renderRouted(
       <SettingsRoute section="storage" />,
       deps({ "PUT /api/storage/import": problemAnswer(newer, 422) }),
     );
@@ -561,7 +662,7 @@ describe("export everything and import a backup", () => {
 
 describe("the appearance switch", () => {
   it("leaves the theme to prefers-color-scheme until one is picked", async () => {
-    renderApp(
+    renderRouted(
       <>
         <AppearanceSkin />
         <SettingsRoute section="general" />
@@ -578,7 +679,7 @@ describe("the appearance switch", () => {
   // cache the moment the switch moves, not when the server answers.
   it("paints the new theme before the save has answered", async () => {
     const user = userEvent.setup();
-    renderApp(
+    renderRouted(
       <>
         <AppearanceSkin />
         <SettingsRoute section="general" />
@@ -595,7 +696,7 @@ describe("the appearance switch", () => {
   it("persists the override and keeps it after the answer", async () => {
     const user = userEvent.setup();
     let sent: unknown;
-    renderApp(
+    renderRouted(
       <>
         <AppearanceSkin />
         <SettingsRoute section="general" />
@@ -619,7 +720,7 @@ describe("the appearance switch", () => {
 
   it("hands the theme back when the save is refused", async () => {
     const user = userEvent.setup();
-    renderApp(
+    renderRouted(
       <>
         <AppearanceSkin />
         <SettingsRoute section="general" />
@@ -636,12 +737,12 @@ describe("the appearance switch", () => {
 });
 
 describe("the settings commands", () => {
-  it("offers Check all providers, Back up now and Download diagnostics under Settings", async () => {
+  it("offers Check every service, Back up now and Download diagnostics under Settings", async () => {
     const registry = new CommandRegistry();
     const picked: string[] = [];
     let checks = 0;
     let backups = 0;
-    renderApp(
+    renderRouted(
       <CommandPaletteProvider registry={registry}>
         <SettingsRoute section="about" onSection={(next) => picked.push(next)} />
       </CommandPaletteProvider>,
@@ -660,7 +761,7 @@ describe("the settings commands", () => {
     const own = () => registry.list().filter((command) => command.id !== "help.shortcuts");
     await waitFor(() => {
       expect(own().map((command) => command.title)).toEqual([
-        "Check all providers",
+        "Check every service",
         "Back up now",
         "Download diagnostics",
       ]);
@@ -672,7 +773,7 @@ describe("the settings commands", () => {
         .find((command) => command.title === title)
         ?.run();
 
-    await run("Check all providers");
+    await run("Check every service");
     await waitFor(() => expect(checks).toBe(1));
     await run("Back up now");
     await waitFor(() => expect(backups).toBe(1));
@@ -693,7 +794,7 @@ describe("the settings commands", () => {
 
   it("adds Export everything while Backup & storage is showing", async () => {
     const registry = new CommandRegistry();
-    renderApp(
+    renderRouted(
       <CommandPaletteProvider registry={registry}>
         <SettingsRoute section="storage" />
       </CommandPaletteProvider>,

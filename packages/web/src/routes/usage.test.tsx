@@ -58,7 +58,9 @@ describe("the usage screen", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Usage" })).not.toBeNull();
     // One short line, so it sits under the title rather than behind an info button.
     expect(
-      screen.getByText("This machine only. The same counters, anonymised, feed slopify.stream."),
+      screen.getByText(
+        "What this computer made. The same counts, anonymized, add to slopify.stream's totals.",
+      ),
     ).not.toBeNull();
   });
 

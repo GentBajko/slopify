@@ -1,122 +1,123 @@
-// Settings is a few groups rather than fourteen equal choices. Each group is one rail item; a
-// group with more than one section shows them as tabs. Every section keeps its own id, so a
-// link or a `?section=` from before the groups still opens the same place.
+// Settings is one flat list of pages, each named once: the row's name is the page's title. The
+// rows come in four runs (what makes the videos, how new videos are made and published, this
+// computer, Slopify itself), drawn with a little space between runs and no headings. Every page
+// keeps its id, so a link or a `?section=` from before still opens the same place, and the ids
+// of pages that were folded into others open the page that holds their content now.
 export const settingsSections = [
   {
     id: "providers",
-    label: "Providers",
-    meta: "Keys stay on this machine and go only to their provider. Readiness is checked again before each run.",
+    label: "Keys & services",
+    // What older messages and the help call this page.
+    formerly: ["Providers"],
+    meta: "What writes, reads aloud and draws your videos. Keys stay on this computer.",
+    run: 0,
   },
   {
     id: "voices",
     label: "Voices",
-    meta: "A wrong voice ID shows up when the audio stage uses it.",
+    meta: "The voices you can pick for narration.",
+    run: 0,
   },
   {
     id: "models",
     label: "Models",
-    meta: "New models, prices and retirements, checked once a day.",
-  },
-  {
-    id: "agents",
-    label: "Agents (MCP)",
-    meta: "Let an AI agent on this computer, such as Claude Code or Codex, run Slopify.",
+    meta: "Which models work with your keys and sign-ins.",
+    run: 0,
   },
   {
     id: "playback",
     label: "Production defaults",
-    meta: "How new runs pace the narration and level the volume, which model times English captions, and how this computer renders.",
-  },
-  {
-    id: "template-studio",
-    label: "Template studio",
-    meta: "The most a template's paid samples may spend in one day.",
+    formerly: ["Template studio"],
+    meta: "How new videos sound and render, and what template samples may spend.",
+    run: 1,
   },
   {
     id: "notifications",
     label: "Notifications",
-    meta: "When a run finishes, fails, waits for you, or a review needs a decision.",
-  },
-  {
-    id: "channel-links",
-    label: "Channel links",
-    meta: "The links a YouTube description's {{Name}} placeholders fill from.",
+    meta: "When a run finishes, fails or waits for you.",
+    run: 1,
   },
   {
     id: "studio",
     label: "YouTube Studio and posting",
-    meta: "The playlist upload packs name, and the Studio extension's pairing for YouTube Studio and other sites.",
+    formerly: ["Channel links"],
+    meta: "The browser extension that fills YouTube Studio, release times and playlists.",
+    run: 1,
   },
   {
     id: "storage",
     label: "Backup & storage",
-    meta: "Daily backups, export and import, and what uses disk space.",
+    meta: "Daily backups, export and import, and disk space.",
+    run: 2,
   },
   {
     id: "trash",
     label: "Trash",
-    meta: "Deleted projects, prompts, intros and outros, templates and schedules, kept for 30 days. Channels, cast, PDF themes and episode summaries are deleted permanently.",
+    meta: "Deleted things, kept for 30 days.",
+    run: 2,
   },
   {
     id: "general",
     label: "General",
-    meta: "How Slopify looks and how it starts on this computer.",
+    meta: "How Slopify looks and how it starts.",
+    run: 2,
   },
   {
     id: "remote-access",
     label: "Remote access",
-    meta: "Open Slopify on your phone or laptop through Tailscale, only inside your tailnet.",
+    meta: "Open Slopify on your phone or laptop through Tailscale.",
+    run: 2,
+  },
+  {
+    id: "agents",
+    label: "AI agents",
+    formerly: ["Agents (MCP)"],
+    meta: "Let Claude Code or Codex on this computer run Slopify for you.",
+    run: 2,
   },
   {
     id: "about",
     label: "About",
-    meta: "Free and open source, running on your machine with your own keys.",
+    meta: "Your version, updates and where to get help.",
+    run: 3,
   },
   {
     id: "usage",
     label: "Usage",
-    meta: "This machine only. The same counters, anonymised, feed slopify.stream.",
+    meta: "What this computer made. The same counts, anonymized, add to slopify.stream's totals.",
+    run: 3,
   },
   {
     id: "patch-notes",
-    label: "Patch notes",
-    meta: "What changed in each version of Slopify.",
+    label: "What's new",
+    formerly: ["Patch notes"],
+    meta: "What changed in each version.",
+    run: 3,
   },
-] as const;
-
-type ListedSection = (typeof settingsSections)[number]["id"];
-// "backups" was its own section; it is now part of Backup & storage.
-export type SettingsSection = ListedSection | "backups";
-
-interface SettingsGroup {
+] as const satisfies readonly {
   readonly id: string;
   readonly label: string;
-  readonly sections: readonly ListedSection[];
-}
+  readonly formerly?: readonly string[];
+  readonly meta: string;
+  readonly run: number;
+}[];
 
-const connections: SettingsGroup = {
-  id: "connections",
-  label: "Connections",
-  sections: ["providers", "voices", "models", "agents"],
-};
+type ListedSection = (typeof settingsSections)[number]["id"];
 
-export const settingsGroups: readonly SettingsGroup[] = [
-  connections,
-  { id: "production", label: "Production defaults", sections: ["playback", "template-studio"] },
-  { id: "notifications", label: "Notifications", sections: ["notifications"] },
-  { id: "publishing", label: "Publishing", sections: ["channel-links", "studio"] },
-  { id: "storage", label: "Backup & storage", sections: ["storage", "trash"] },
-  { id: "general", label: "General", sections: ["general", "remote-access"] },
-  { id: "about", label: "About", sections: ["about", "usage", "patch-notes"] },
-];
+// Pages that became part of another: "backups" of Backup & storage, "template-studio" (the
+// sample budgets) of Production defaults, "channel-links" (now on each channel's page) of
+// YouTube Studio and posting.
+const folded = {
+  backups: "storage",
+  "template-studio": "playback",
+  "channel-links": "studio",
+} as const satisfies Readonly<Record<string, ListedSection>>;
 
-// The section a `?section=` value opens: an old id lands where its content went, anything
-// unknown on Providers.
+export type SettingsSection = ListedSection | keyof typeof folded;
+
+// The page a `?section=` value opens: an old id lands where its content went, anything
+// unknown on Keys & services.
 export function settingsSectionOf(value: unknown): ListedSection {
-  if (value === "backups") return "storage";
+  if (typeof value === "string" && value in folded) return folded[value as keyof typeof folded];
   return settingsSections.find((section) => section.id === value)?.id ?? "providers";
-}
-
-export function groupOfSection(section: ListedSection): SettingsGroup {
-  return settingsGroups.find((group) => group.sections.includes(section)) ?? connections;
 }
