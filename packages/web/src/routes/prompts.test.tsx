@@ -234,9 +234,7 @@ describe("the prompts list", () => {
     const hit = await findRow("Oil painting scenes");
     expect(hit.querySelector(".sl-row__meta")?.textContent).toMatch(/^Image · Asks for: /u);
     expect(screen.getByRole("heading", { name: "1 prompt match “painting”" })).not.toBeNull();
-    // No kind is lit while the search spans them all.
-    const kinds = screen.getByRole("navigation", { name: "Kinds of prompt" });
-    expect(within(kinds).queryByRole("link", { current: "page" })).toBeNull();
+    expect(screen.getByText("Found in every kind.")).not.toBeNull();
 
     await user.clear(search);
     await user.type(search, "nothing like it");

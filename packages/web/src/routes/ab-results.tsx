@@ -82,7 +82,7 @@ export function AbResultsRoute(): ReactElement {
   });
   const list = results.data ?? [];
   return (
-    <div className="flex flex-col gap-4">
+    <div>
       <PageHeader
         crumb={
           <EditorCrumb>
@@ -113,7 +113,7 @@ export function AbResultsRoute(): ReactElement {
           )
         }
       />
-      <p className="m-0 max-w-[var(--measure)] text-small text-ink-2">
+      <p className="m-0 mb-3 max-w-[var(--measure)] text-small text-ink-2">
         The Slopify Studio extension reads these from YouTube Studio once a day.
       </p>
       <QueryState

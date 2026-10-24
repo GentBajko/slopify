@@ -114,7 +114,7 @@ export function EntriesRoute({
 
   return (
     <PromptsFrame
-      shown={searching ? null : { category }}
+      shown={{ category }}
       actions={
         <>
           <TransferMenu
@@ -141,7 +141,9 @@ export function EntriesRoute({
             ? `${plural(listed?.length ?? 0, "intro or outro", "intros and outros")} match “${query.trim()}”`
             : `${categoryLabel(category)}s`
         }
-        about={searching ? "Found in intros and outros." : categoryAbout(category)}
+        about={
+          searching ? "Found in intros and outros." : empty ? undefined : categoryAbout(category)
+        }
         tools={
           <>
             <Input
@@ -154,7 +156,8 @@ export function EntriesRoute({
               className="w-full min-w-0 sm:w-56"
               onChange={(event) => setTyped({ category, text: event.target.value })}
             />
-            <SortMenu what="intros and outros" sort={sort} onSort={setSort} />
+            {/* Nothing to order in an empty list. */}
+            {empty ? null : <SortMenu what="intros and outros" sort={sort} onSort={setSort} />}
           </>
         }
       />

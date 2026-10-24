@@ -108,7 +108,7 @@ export function PromptsRoute({
 
   return (
     <PromptsFrame
-      shown={searching ? null : { kind }}
+      shown={{ kind }}
       actions={
         <>
           <TransferMenu
@@ -135,7 +135,7 @@ export function PromptsRoute({
             ? `${plural(listed?.length ?? 0, "prompt")} match “${query.trim()}”`
             : `${kindLabel(kind)} prompts`
         }
-        about={searching ? "Found in every kind." : kindAbout(kind)}
+        about={searching ? "Found in every kind." : empty ? undefined : kindAbout(kind)}
         tools={
           <>
             <Input
@@ -148,7 +148,8 @@ export function PromptsRoute({
               className="w-full min-w-0 sm:w-56"
               onChange={(event) => setTyped({ kind, text: event.target.value })}
             />
-            <SortMenu what="prompts" sort={sort} onSort={setSort} />
+            {/* Nothing to order in an empty list. */}
+            {empty ? null : <SortMenu what="prompts" sort={sort} onSort={setSort} />}
           </>
         }
       />

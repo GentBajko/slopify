@@ -97,6 +97,30 @@ export function kindPlaceholder(kind: PromptKind): string {
   }
 }
 
+// An example name for a new prompt of the kind, as the Name field's placeholder.
+export function kindNameExample(kind: PromptKind): string {
+  switch (kind) {
+    case "article":
+      return "History documentary";
+    case "image":
+      return "Oil painting scenes";
+    case "thumbnail":
+      return "Bold title card";
+    case "narration":
+      return "Calm documentary delivery";
+    case "description":
+      return "Chapters and sources";
+    case "shorts":
+      return "Most surprising moments";
+    case "review":
+      return "Fact check";
+    case "script":
+      return "Two-host conversation";
+    case "post":
+      return "Short teaser";
+  }
+}
+
 // A kind read off the URL. Anything else is someone's typing, and Article is the kind the
 // screen opens on.
 export function kindOf(value: unknown): PromptKind {

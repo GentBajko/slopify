@@ -249,13 +249,9 @@ export function NarrationAliasesRoute(): ReactElement {
           </>
         }
       />
-      <p
-        className="m-0 mb-4 flex max-w-[var(--measure)] items-center gap-1 text-small text-ink-2"
-        {...helpScope}
-      >
+      <p className="m-0 mb-4 max-w-[var(--measure)] text-small text-ink-2" {...helpScope}>
         Words the narrator says differently, like Dr. as Doctor. The article, captions and PDF keep
-        the written word.
-        <InfoTip id="library.aliases" />
+        the written word. <InfoTip id="library.aliases" className="-my-1 align-middle" />
       </p>
 
       {listing.error === null ? null : (

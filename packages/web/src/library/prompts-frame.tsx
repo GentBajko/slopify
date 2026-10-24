@@ -11,11 +11,9 @@ import { kindLabel } from "@/lib/prompt-kinds";
 import { entriesQuery, promptsQuery } from "@/queries";
 
 // What the Prompts page is showing: one kind of prompt, or the intros or the outros (saved apart
-// from prompts, with a category instead of a kind), or a search through all of them (`null`).
-export type PromptsShown =
-  | { readonly kind: PromptKind }
-  | { readonly category: EntryCategory }
-  | null;
+// from prompts, with a category instead of a kind). A search spans every kind but stays on the
+// page of the kind it was typed on, so that kind stays lit.
+export type PromptsShown = { readonly kind: PromptKind } | { readonly category: EntryCategory };
 
 // The Prompts page: its title and actions on one line, every kind of prompt down the left with
 // how many are saved, and the list of the one picked beside it. Intros and outros sit at the
@@ -58,7 +56,7 @@ function PromptKinds({ shown }: { readonly shown: PromptsShown }): ReactElement 
           key={kind}
           to="/prompts"
           search={{ kind }}
-          current={shown !== null && "kind" in shown && shown.kind === kind}
+          current={"kind" in shown && shown.kind === kind}
           meta={count(prompts?.filter((prompt) => prompt.kind === kind).length)}
         >
           {kindLabel(kind)}
@@ -70,7 +68,7 @@ function PromptKinds({ shown }: { readonly shown: PromptsShown }): ReactElement 
           key={category}
           to="/entries"
           search={{ category }}
-          current={shown !== null && "category" in shown && shown.category === category}
+          current={"category" in shown && shown.category === category}
           meta={count(entries?.filter((entry) => entry.category === category).length)}
         >
           {`${categoryLabel(category)}s`}
@@ -88,14 +86,15 @@ export function PromptsListHead({
   tools,
 }: {
   readonly title: string;
-  readonly about: string;
+  // Left out where the empty state below says it.
+  readonly about?: string | undefined;
   readonly tools: ReactNode;
 }): ReactElement {
   return (
     <div className="flex min-h-9 flex-wrap items-center gap-x-4 gap-y-2">
       <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 gap-y-0">
         <h2 className="sl-section-head__title text-title-3">{title}</h2>
-        <p className="m-0 min-w-0 text-small text-ink-2">{about}</p>
+        {about === undefined ? null : <p className="m-0 min-w-0 text-small text-ink-2">{about}</p>}
       </div>
       <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">{tools}</div>
     </div>

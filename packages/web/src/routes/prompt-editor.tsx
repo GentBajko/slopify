@@ -38,6 +38,7 @@ import { narrationStarter } from "@/lib/narration-starter";
 import {
   kindAbout,
   kindLabel,
+  kindNameExample,
   kindNoun,
   kindOptions,
   kindPlaceholder,
@@ -256,7 +257,7 @@ export function PromptEditorRoute({
                 <Input
                   ref={nameBox}
                   value={draft.name}
-                  placeholder="History documentary"
+                  placeholder={kindNameExample(draft.kind)}
                   onChange={(event) => {
                     edit({ ...draft, name: event.target.value }, "name");
                   }}
