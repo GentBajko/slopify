@@ -82,12 +82,16 @@ export function WorkList({
     ...decisions,
     ...failed.slice(0, shownPerKind).map((project) => ({ kind: "failed" as const, project })),
   ];
+  // "2 decisions · 1 failed": a failure is not a decision, so it is counted apart.
+  const meta = [
+    decisions.length === 0 ? undefined : plural(decisions.length, "decision", "decisions"),
+    failed.length === 0 ? undefined : `${String(failed.length)} failed`,
+  ]
+    .filter((part) => part !== undefined)
+    .join(" · ");
   return (
     <section aria-label="Needs you">
-      <SectionHead
-        title="Needs you"
-        meta={plural(decisions.length + failed.length, "decision", "decisions")}
-      />
+      <SectionHead title="Needs you" meta={meta} />
       <ul aria-label="What needs you" className="sl-home-list m-0 list-none p-0">
         {rows.map((item, index) =>
           item.kind === "held" ? (

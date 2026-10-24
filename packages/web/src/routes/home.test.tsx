@@ -223,7 +223,7 @@ describe("home", () => {
       "/calendar",
     );
     expect(await within(needs).findByText("Failed · Images")).not.toBeNull();
-    expect(within(needs).getByText("3 decisions")).not.toBeNull();
+    expect(within(needs).getByText("2 decisions · 1 failed")).not.toBeNull();
     // The finished video is not a chore under Needs you: it has its own Finished section, first.
     expect(within(needs).queryByRole("link", { name: "Ashurbanipal" })).toBeNull();
     const finished = screen.getByRole("region", { name: "Finished" });
