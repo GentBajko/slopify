@@ -1,11 +1,11 @@
 import type { Format } from "@app/kernel/pipeline.js";
-import { thumbnailCountOf } from "@app/slices/admission/model.js";
 import type { Output } from "@app/slices/storage/model.js";
-import { DownloadIcon, RefreshCwIcon, Trash2Icon } from "lucide-react";
+import { DownloadIcon, RefreshCwIcon } from "lucide-react";
 import { type ReactElement, type ReactNode, useState } from "react";
 import { Button } from "@/components/kit/button";
-import { ConfirmDialog } from "@/components/kit/dialog";
-import { Rule } from "@/components/kit/layout";
+import { ConfirmDialog, Dialog } from "@/components/kit/dialog";
+import { Checkbox, HelpLine } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { FileLink } from "@/components/kit/link";
 import {
   type Aspect,
@@ -18,31 +18,39 @@ import { SectionHead } from "@/components/kit/section-head";
 import { Badge } from "@/components/kit/status";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
-import { ThumbnailPanel } from "./body-thumbnail.js";
+import { ThumbnailTile, thumbnailName, thumbnailSlots } from "./body-thumbnail.js";
 import { confirmationFor } from "./confirmations.js";
 import { groupImages } from "./image-groups.js";
 import { imageTitles } from "./image-titles.js";
 import { useOutdated, useOutputChange, useRegenerateAll } from "./output-change.js";
 import { OutputFolder } from "./parts.js";
+import { sampleReason, useReadOnlySample } from "./read-only.js";
 import { useRegenerateByNumber } from "./regenerate-by-number.js";
 import type { Review } from "./review-api.js";
-import { ImageReviewActions } from "./review-image-actions.js";
+import { TileMore } from "./review-image-actions.js";
 import { ReviewActions, ReviewChip, reviewFor, useReviews } from "./review-verdict.js";
 import { useOutputMedia, useOutputMediaList } from "./revision-media.js";
 import { SetDownload } from "./set-download.js";
-import { SectionMore } from "./stage-section.js";
+import { rerunPrice, useRunCost } from "./stage-price.js";
+import { useRerunnable } from "./stage-section.js";
 
-// Images: the establishing image the others follow, the thumbnails, then the slideshow images
-// grouped by the prompt that made them. Every picture is a media frame: a fixed aspect box on
-// `screen`, its caption, its review badge in the corner, Regenerate, Download and Delete on
-// hover and focus, and a press opens it full size in the lightbox.
+// Images: one grid, the thumbnail first (badged Thumbnail) and then the slideshow images,
+// grouped by the prompt that made them when there are several, every tile the same size.
+// Each tile shows its actions at rest, in words: make it again, download it, and More
+// (compare, replace with a file, delete); "Full size" opens it in the lightbox. The head has
+// the one zip of the images, the one folder and the one button that makes them all again. The
+// establishing image the others follow, which is not in the video, comes after.
 
 export function frameAspect(format: Format): Aspect {
   return format === "9:16" ? "portrait" : format === "1:1" ? "square" : "landscape";
 }
 
+// Four tiles across a project's main column at 1440 pixels: 200 pixels at the least.
+const gridColumns = "[grid-template-columns:repeat(auto-fill,minmax(200px,1fr))] gap-x-3 gap-y-4";
+
 export function ImagesBody({ stage, companion, project, outputs, actions, busy }: BodyProps) {
   const reviews = useReviews(project.id);
+  const sample = useReadOnlySample(project.id);
   const own = outputsOf(outputs, stage);
   const groups = groupImages(own, project.config.imagePrompts?.map((prompt) => prompt.name) ?? []);
   const all = groups.flatMap((group) => group.images);
@@ -54,9 +62,12 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
         output.role === "figure_card" && (output.meta.format ?? project.format) === project.format,
     )
     .toSorted((left, right) => (left.meta.index ?? 0) - (right.meta.index ?? 0));
-  const shown = [...all, ...cards];
+  const thumbnailStage = companion?.kind === "thumbnail" ? companion : undefined;
+  const slots =
+    thumbnailStage === undefined ? [] : thumbnailSlots(thumbnailStage, project, outputs);
+  const thumbnails = slots.flatMap((slot) => (slot.output === undefined ? [] : [slot.output]));
+  const shown = [...thumbnails, ...all, ...cards];
   const regenerate = useRegenerateByNumber(project, all, cards, actions, busy);
-  const regenerateAll = useRegenerateAll(all, busy);
   const files = useOutputMediaList(shown);
   const [open, setOpen] = useState<number | null>(null);
   // The pictures the lightbox pages through, and the output behind each, for its actions.
@@ -64,40 +75,26 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
   const titles = imageTitles(openable.map((image) => image.meta.prompt));
   const items: LightboxItem[] = openable.map((image, index) => ({
     src: files.get(image.id)?.url ?? "",
-    ...(image.role === "figure_card" || titles[index] === undefined
-      ? {}
-      : { title: titles[index] }),
+    ...(image.role === "thumbnail"
+      ? { title: "Thumbnail" }
+      : image.role === "figure_card" || titles[index] === undefined
+        ? {}
+        : { title: titles[index] }),
     alt:
       image.role === "figure_card"
         ? `On-screen card ${String(image.meta.index ?? "")}`
-        : (image.meta.prompt ?? `Image ${String(image.meta.index ?? "")}`),
+        : image.role === "thumbnail"
+          ? `Thumbnail for ${project.title}`
+          : (image.meta.prompt ?? `Image ${String(image.meta.index ?? "")}`),
     ...(isClip(image) ? { kind: "video" as const } : {}),
     caption:
       image.role === "figure_card"
         ? "Shown while the narration describes it"
-        : (image.meta.prompt ?? image.meta.promptName ?? "Slideshow image"),
+        : (image.meta.prompt ??
+          (image.role === "thumbnail" ? "Your own picture" : image.meta.promptName) ??
+          "Slideshow image"),
   }));
-  const reference =
-    project.config.reference === undefined ? null : (
-      <ReferencePanel
-        image={roleOf(own, "reference")}
-        format={project.format}
-        generated={project.config.reference.source === "prompt"}
-        affected={all.length}
-        actions={actions}
-        busy={busy}
-      />
-    );
-  const thumbnail =
-    companion?.kind === "thumbnail" ? (
-      <ThumbnailPanel
-        stage={companion}
-        project={project}
-        outputs={outputs}
-        actions={actions}
-        busy={busy}
-      />
-    ) : null;
+  const imagesOn = stage.state !== "skipped";
   const running = stage.state === "running";
   const waiting =
     running && stage.progressTotal !== null ? Math.max(0, stage.progressTotal - all.length) : 0;
@@ -105,171 +102,200 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
   const redone = reviewed.filter((review) => review.passed && review.attempt > 1).length;
   const flagged = reviewed.filter((review) => !review.passed && review.action === null).length;
   const meta = [
-    all.length === 0 ? undefined : `${String(all.length)} in the video`,
+    !imagesOn
+      ? undefined
+      : `${String(all.length)} in the video${
+          slots.length === 0
+            ? ""
+            : slots.length === 1
+              ? " + thumbnail"
+              : ` + ${String(slots.length)} thumbnails`
+        }`,
     reviewed.length === 0 ? undefined : "reviewed",
     redone === 0 ? undefined : `${String(redone)} redone after review`,
     flagged === 0 ? undefined : `${String(flagged)} flagged`,
   ]
     .filter((part) => part !== undefined)
     .join(" · ");
+  const opener = (output: Output) => () => setOpen(opened(openable, output));
+  const thumbnailTiles = slots.map((slot) =>
+    thumbnailStage === undefined ? null : (
+      <ThumbnailTile
+        key={`thumbnail-${String(slot.variant)}`}
+        slot={slot}
+        count={slots.length}
+        review={reviewFor(reviews, { outputId: slot.output?.id })}
+        stage={thumbnailStage}
+        project={project}
+        outputs={outputs}
+        actions={actions}
+        busy={busy}
+        sample={sample}
+        onOpen={slot.output === undefined ? () => undefined : opener(slot.output)}
+      />
+    ),
+  );
+  const placeholders = (first: string) =>
+    Array.from({ length: Math.min(waiting, 3) }, (_, slot) => (
+      <MediaFrame
+        // biome-ignore lint/suspicious/noArrayIndexKey: placeholders have no identity of their own.
+        key={slot}
+        alt="An image being made"
+        aspect={frameAspect(project.format)}
+        generating={slot === 0 ? first : "Waiting its turn"}
+      />
+    ));
+  // With one prompt the thumbnail leads the images' own grid; with several, it has its own
+  // row ahead of theirs.
+  const together = groups.length <= 1;
+  const tile = (image: Output, title: string | undefined) => (
+    <ImageTile
+      key={image.id}
+      image={image}
+      title={title}
+      projectId={project.id}
+      review={reviewFor(reviews, { outputId: image.id })}
+      format={project.format}
+      actions={actions}
+      busy={busy}
+      sample={sample}
+      onOpen={opener(image)}
+    />
+  );
+  const lead = slots.length === 0 ? null : thumbnailTiles;
   return (
-    <>
+    <div className="flex min-w-0 flex-col gap-3">
       {regenerate}
-      {reference}
-      {reference === null || (thumbnail === null && stage.state === "skipped") ? null : (
-        <Rule className="m-0" />
+      <SectionHead
+        title={imagesOn ? "Images" : slots.length > 1 ? "Thumbnails" : "Thumbnail"}
+        className="pb-0"
+        {...(meta === "" ? {} : { meta })}
+      >
+        {imagesOn ? (
+          <SetDownload projectId={project.id} set="images" members={all} />
+        ) : thumbnails.length > 1 ? (
+          <SetDownload projectId={project.id} set="thumbnails" members={thumbnails} />
+        ) : null}
+        <OutputFolder output={all[0] ?? thumbnails[0]} />
+        {imagesOn ? (
+          <ImagesAgain
+            stage={stage}
+            project={project}
+            images={all}
+            actions={actions}
+            busy={busy}
+            sample={sample}
+          />
+        ) : null}
+      </SectionHead>
+      {shown.length === 0 ? null : (
+        <p className="m-0 text-small text-ink-2">
+          {sample
+            ? sampleReason
+            : "Making a picture again is one paid image call; the video shows it once the video is made again."}
+        </p>
       )}
-      {thumbnail}
-      {thumbnail === null || stage.state === "skipped" ? null : <Rule className="m-0" />}
-      {stage.state === "skipped" ? null : (
-        <section aria-label="Slideshow images" className="flex min-w-0 flex-col gap-5">
-          <SectionHead title="Images" {...(meta === "" ? {} : { meta })}>
-            {regenerateAll === undefined ? null : (
-              <Button
-                size="small"
-                disabled={regenerateAll.unavailable}
-                disabledReason="Wait until the work on this project is done"
-                onClick={regenerateAll.act}
-              >
-                <RefreshCwIcon aria-hidden="true" strokeWidth={1.75} />
-                Regenerate all
-              </Button>
-            )}
-            {regenerateAll === undefined ? null : (
-              <ConfirmDialog
-                open={regenerateAll.asking}
-                tone="primary"
-                title={`Regenerate all ${String(regenerateAll.count)} images?`}
-                consequence={`Makes ${String(regenerateAll.count)} new images now, one paid image call each. The video keeps the current ones until you remake it; the old images stay in History.${regenerateAll.price === undefined ? "" : ` ${regenerateAll.price.text}`}`}
-                confirmLabel="Regenerate them"
-                cancelLabel="Keep them"
-                pending={actions.pending}
-                onConfirm={regenerateAll.confirm}
-                onCancel={regenerateAll.dismiss}
-              />
-            )}
-            {/* The files and their version are listed before the zip downloads. */}
-            <SetDownload
-              projectId={project.id}
-              set="images"
-              members={[
-                ...all,
-                ...outputs.filter(
-                  (output) =>
-                    output.role === "thumbnail" &&
-                    (output.meta.index ?? 1) <= thumbnailCountOf(project.config),
-                ),
-              ]}
-            />
-            <OutputFolder output={all[0]} />
-            <SectionMore stages={[stage]} project={project} actions={actions} />
-          </SectionHead>
-          {groups.length === 0 && waiting === 0 ? (
-            <p className="m-0 text-small text-ink-2">
-              {stage.state === "pending"
-                ? "The images are made once the narration is timed."
-                : "No images have landed yet."}
-            </p>
-          ) : null}
-          {groups.map((group, index) => (
+      {imagesOn && groups.length === 0 && waiting === 0 && slots.length === 0 ? (
+        <p className="m-0 text-small text-ink-2">
+          {stage.state === "pending"
+            ? "The images are made once the narration is timed."
+            : "No images have landed yet."}
+        </p>
+      ) : null}
+      {lead !== null && (!together || !imagesOn) ? (
+        <ImageGroup name="Thumbnail" count={slots.length} showName={imagesOn} leading={lead}>
+          {() => null}
+        </ImageGroup>
+      ) : null}
+      {imagesOn
+        ? groups.map((group, index) => (
             <ImageGroup
               key={group.name}
               name={group.name}
               count={group.images.length}
               showName={groups.length > 1}
+              leading={together && index === 0 ? lead : null}
               trailing={
                 index === groups.length - 1 && waiting > 0
-                  ? Array.from({ length: Math.min(waiting, 3) }, (_, slot) => (
-                      <MediaFrame
-                        // biome-ignore lint/suspicious/noArrayIndexKey: placeholders have no identity of their own.
-                        key={slot}
-                        alt="An image being made"
-                        aspect={frameAspect(project.format)}
-                        generating={slot === 0 ? "Drawing the next image" : "Waiting its turn"}
-                      />
-                    ))
+                  ? placeholders("Drawing the next image")
                   : null
               }
             >
               {(limit) => {
-                const titles = imageTitles(group.images.map((image) => image.meta.prompt));
-                return group.images
-                  .slice(0, limit)
-                  .map((image, index) => (
-                    <ImageTile
-                      key={image.id}
-                      image={image}
-                      title={titles[index]}
-                      projectId={project.id}
-                      review={reviewFor(reviews, { outputId: image.id })}
-                      format={project.format}
-                      actions={actions}
-                      busy={busy}
-                      onOpen={() => setOpen(opened(openable, image))}
-                    />
-                  ));
+                const names = imageTitles(group.images.map((image) => image.meta.prompt));
+                return group.images.slice(0, limit).map((image, at) => tile(image, names[at]));
               }}
             </ImageGroup>
-          ))}
-          {cards.length === 0 ? null : (
-            <ImageGroup name="From the article" count={cards.length} showName>
-              {(limit) =>
-                cards
-                  .slice(0, limit)
-                  .map((card) => (
-                    <ImageTile
-                      key={card.id}
-                      image={card}
-                      projectId={project.id}
-                      review={undefined}
-                      format={project.format}
-                      actions={actions}
-                      busy={busy}
-                      card
-                      onOpen={() => setOpen(opened(openable, card))}
-                    />
-                  ))
-              }
-            </ImageGroup>
-          )}
-          {groups.length === 0 && waiting > 0 ? (
-            <MediaGrid label="Images being made">
-              {Array.from({ length: Math.min(waiting, 3) }, (_, slot) => (
-                <MediaFrame
-                  // biome-ignore lint/suspicious/noArrayIndexKey: placeholders have no identity of their own.
-                  key={slot}
-                  alt="An image being made"
-                  aspect={frameAspect(project.format)}
-                  generating={slot === 0 ? "Drawing the first image" : "Waiting its turn"}
-                />
-              ))}
-            </MediaGrid>
-          ) : null}
-          <Lightbox
-            items={items}
-            index={open}
-            onIndex={setOpen}
-            onClose={() => setOpen(null)}
-            actions={(_, index) => {
-              const image = openable[index];
-              return image === undefined ? null : (
-                <OutputLightboxActions
-                  key={image.id}
-                  output={image}
-                  name={
-                    image.role === "figure_card"
-                      ? `on-screen card${numberOf(image)}`
-                      : `image${numberOf(image)}`
-                  }
+          ))
+        : null}
+      {imagesOn && groups.length === 0 && (waiting > 0 || (together && lead !== null)) ? (
+        <MediaGrid className={gridColumns}>
+          {lead}
+          {placeholders("Drawing the first image")}
+        </MediaGrid>
+      ) : null}
+      {cards.length === 0 ? null : (
+        <ImageGroup name="From the article" count={cards.length} showName>
+          {(limit) =>
+            cards
+              .slice(0, limit)
+              .map((card) => (
+                <ImageTile
+                  key={card.id}
+                  image={card}
+                  projectId={project.id}
+                  review={undefined}
+                  format={project.format}
                   actions={actions}
                   busy={busy}
+                  sample={sample}
+                  card
+                  onOpen={opener(card)}
                 />
-              );
-            }}
-          />
-        </section>
+              ))
+          }
+        </ImageGroup>
       )}
-    </>
+      {project.config.reference === undefined ? null : (
+        <ReferencePanel
+          image={roleOf(own, "reference")}
+          format={project.format}
+          generated={project.config.reference.source === "prompt"}
+          affected={all.length}
+          actions={actions}
+          busy={busy}
+          sample={sample}
+        />
+      )}
+      <Lightbox
+        items={items}
+        index={open}
+        onIndex={setOpen}
+        onClose={() => setOpen(null)}
+        actions={(_, index) => {
+          const image = openable[index];
+          if (image === undefined) return null;
+          const slot = slots.find((one) => one.output?.id === image.id);
+          return (
+            <OutputLightboxActions
+              key={image.id}
+              output={image}
+              name={
+                slot !== undefined
+                  ? thumbnailName(slot.variant, slots.length)
+                  : image.role === "figure_card"
+                    ? `on-screen card${numberOf(image)}`
+                    : `image${numberOf(image)}`
+              }
+              thumbnail={slot !== undefined}
+              actions={actions}
+              busy={busy}
+              sample={sample}
+            />
+          );
+        }}
+      />
+    </div>
   );
 }
 
@@ -284,18 +310,118 @@ function opened(openable: readonly Output[], image: Output): number | null {
   return at === -1 ? null : at;
 }
 
-// Regenerate and Download on the lightbox's bar, for the picture shown full size.
-export function OutputLightboxActions({
-  output,
-  name,
+// The Images head's one make-again button, named with how many it draws and what that costs.
+// Its dialog asks whether the video is made again with them (free, on by default): without
+// it the pictures are drawn now and the video keeps the old ones until it is made again.
+function ImagesAgain({
+  stage,
+  project,
+  images,
   actions,
   busy,
+  sample,
 }: {
-  readonly output: Output;
-  // "image 4", "thumbnail 2", "the establishing image".
-  readonly name: string;
+  readonly stage: BodyProps["stage"];
+  readonly project: BodyProps["project"];
+  readonly images: readonly Output[];
   readonly actions: BodyProps["actions"];
   readonly busy: boolean;
+  readonly sample: boolean;
+}): ReactElement | null {
+  const rerun = useRerunnable([stage]).length > 0;
+  const now = useRegenerateAll(images, busy);
+  const cost = useRunCost(project.id);
+  const [asking, setAsking] = useState(false);
+  const [withVideo, setWithVideo] = useState(true);
+  if (!rerun && now === undefined) return null;
+  const count = now?.count ?? images.length;
+  const both = rerun && now !== undefined;
+  const videoToo = now === undefined || (both && withVideo);
+  const working =
+    actions.pending || project.status === "running" || stage.state === "running" || busy;
+  const many = count === 1 ? "the image" : `all ${String(count)} images`;
+  const calls = `${String(count)} image ${count === 1 ? "call" : "calls"}`;
+  const price = videoToo ? rerunPrice(cost, "images") : now?.price?.text;
+  const consequence = videoToo
+    ? confirmationFor({ kind: "rerun", stage: "images", price }).consequence
+    : `${price === undefined ? "" : `${price} `}Draws every image again now, one paid image call each; the video keeps the current pictures until you make it again.`;
+  return (
+    <>
+      <Button
+        size="small"
+        disabled={sample || working}
+        focusableWhenDisabled
+        disabledReason={sample ? sampleReason : "Wait until the work on this project is done"}
+        onClick={() => {
+          setWithVideo(true);
+          setAsking(true);
+        }}
+      >
+        <RefreshCwIcon aria-hidden="true" strokeWidth={1.75} />
+        {`Make ${many} again · ${calls}`}
+      </Button>
+      <Dialog
+        open={asking}
+        onOpenChange={(next) => {
+          if (!next) setAsking(false);
+        }}
+        title={`Make ${many} again?`}
+        description={consequence}
+        footer={
+          <>
+            <Button variant="secondary" autoFocus onClick={() => setAsking(false)}>
+              Keep them
+            </Button>
+            <Button
+              variant="primary"
+              disabled={actions.pending}
+              disabledReason="Working on it"
+              onClick={() => {
+                setAsking(false);
+                if (videoToo) actions.run({ kind: "rerun", stage: "images" });
+                else now?.confirm();
+              }}
+            >
+              {`Make ${many} again`}
+            </Button>
+          </>
+        }
+      >
+        {both ? (
+          <div className="flex flex-col gap-1" {...helpScope}>
+            <label className="flex items-center gap-2 text-small text-ink">
+              <Checkbox
+                checked={withVideo}
+                onChange={(event) => setWithVideo(event.target.checked)}
+              />
+              Also make the video again with them (free)
+            </label>
+            <HelpLine>
+              Without it, the video keeps the current pictures until you make it again.
+            </HelpLine>
+          </div>
+        ) : null}
+      </Dialog>
+    </>
+  );
+}
+
+// Make it again and Download on the lightbox's bar, for the picture shown full size, in words.
+function OutputLightboxActions({
+  output,
+  name,
+  thumbnail,
+  actions,
+  busy,
+  sample,
+}: {
+  readonly output: Output;
+  // "image 4", "thumbnail B", "the thumbnail".
+  readonly name: string;
+  readonly thumbnail: boolean;
+  readonly actions: BodyProps["actions"];
+  readonly busy: boolean;
+  readonly sample: boolean;
 }): ReactElement {
   const media = useOutputMedia(output);
   const change = useOutputChange(output, actions, busy);
@@ -306,27 +432,35 @@ export function OutputLightboxActions({
           kind: change.asking,
           outputId: output.id,
           now: change.now,
+          thumbnail,
           price: change.price,
         });
   return (
     <>
-      <Button
-        size="small"
-        disabled={change.unavailable}
-        disabledReason="Wait until the work on this project is done"
-        onClick={() => change.act("regenerate-image")}
-        aria-label={`Regenerate ${name}`}
-      >
-        <RefreshCwIcon aria-hidden="true" strokeWidth={1.75} />
-        Regenerate
-      </Button>
-      {media === undefined ? null : <DownloadButton href={media.url} label={`Download ${name}`} />}
+      {sample ? null : (
+        <Button
+          size="small"
+          disabled={change.unavailable}
+          disabledReason="Wait until the work on this project is done"
+          onClick={() => change.act("regenerate-image")}
+        >
+          <RefreshCwIcon aria-hidden="true" strokeWidth={1.75} />
+          {thumbnail ? `Make ${name} again` : "Make this image again"}
+          {thumbnail ? null : <span className="sr-only"> for {name}</span>}
+        </Button>
+      )}
+      {media === undefined ? null : (
+        <FileLink href={media.url} download size="small">
+          <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
+          Download<span className="sr-only"> {name}</span>
+        </FileLink>
+      )}
       <ConfirmDialog
         open={change.asking !== undefined}
         tone="primary"
         title={copy?.title ?? ""}
         consequence={copy?.consequence ?? ""}
-        confirmLabel="Regenerate it"
+        confirmLabel={copy?.verb ?? ""}
         cancelLabel="Keep it"
         pending={actions.pending}
         onConfirm={change.confirm}
@@ -336,27 +470,8 @@ export function OutputLightboxActions({
   );
 }
 
-// A download that looks like the small secondary button beside it; the label is its name.
-export function DownloadButton({
-  href,
-  label,
-  text,
-}: {
-  readonly href: string;
-  readonly label: string;
-  // Shown beside the icon; icon only when absent.
-  readonly text?: string;
-}): ReactElement {
-  return (
-    <FileLink href={href} download aria-label={label} title={label} size="small">
-      <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
-      {text}
-    </FileLink>
-  );
-}
-
-// The establishing image, above the slideshow it is never part of: labelled as the reference
-// the other images are drawn from, with Regenerate when it was made from a prompt.
+// The establishing image, after the images it is never part of: labelled as the reference the
+// others are drawn from, with Make it again when it was made from a prompt.
 function ReferencePanel({
   image,
   format,
@@ -364,6 +479,7 @@ function ReferencePanel({
   affected,
   actions,
   busy,
+  sample,
 }: {
   readonly image: Output | undefined;
   readonly format: Format;
@@ -372,24 +488,28 @@ function ReferencePanel({
   readonly affected: number;
   readonly actions: BodyProps["actions"];
   readonly busy: boolean;
+  readonly sample: boolean;
 }) {
   const media = useOutputMedia(image);
   const change = useOutputChange(image, actions, busy);
   const [open, setOpen] = useState<number | null>(null);
+  const remakes = image !== undefined && generated && !sample;
   return (
-    <section aria-label="Establishing image" className="flex min-w-0 flex-col gap-5">
+    <section aria-label="Establishing image" className="flex min-w-0 flex-col gap-3">
       <SectionHead
-        kicker="Reference · not in the video"
+        as="h3"
         title="Establishing image"
-        meta="Every image follows it for the look, palette and style"
+        meta="Not in the video: every image follows it for the look, palette and style"
+        className="pb-0"
       >
-        {image !== undefined && generated ? (
+        {remakes ? (
           <Button
+            size="small"
             disabled={change.unavailable}
             disabledReason="Wait until the work on this project is done"
             onClick={() => change.act("regenerate-image")}
           >
-            Make the establishing image again
+            Make the establishing image again · 1 image call
           </Button>
         ) : null}
       </SectionHead>
@@ -406,17 +526,16 @@ function ReferencePanel({
           ? {}
           : {
               actions: (
-                <DownloadButton
-                  href={media.url}
-                  label="Download the establishing image"
-                  text="Download"
-                />
+                <FileLink href={media.url} download size="small">
+                  <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
+                  Download<span className="sr-only"> the establishing image</span>
+                </FileLink>
               ),
             })}
       />
-      {generated && affected > 0 ? (
+      {remakes && affected > 0 ? (
         <p className="m-0 text-small text-ink-2">
-          {`Making it again marks ${String(affected)} image${affected === 1 ? "" : "s"} outdated. They keep their current version until you remake them.`}
+          {`Making it again marks ${String(affected)} image${affected === 1 ? "" : "s"} outdated. They keep their current version until you make them again.`}
         </p>
       ) : null}
       <Lightbox
@@ -437,7 +556,7 @@ function ReferencePanel({
         actions={() =>
           media === undefined ? null : (
             <>
-              {generated ? (
+              {remakes ? (
                 <Button
                   size="small"
                   disabled={change.unavailable}
@@ -446,13 +565,15 @@ function ReferencePanel({
                     setOpen(null);
                     change.act("regenerate-image");
                   }}
-                  aria-label="Make the establishing image again"
                 >
                   <RefreshCwIcon aria-hidden="true" strokeWidth={1.75} />
-                  Regenerate
+                  Make the establishing image again
                 </Button>
               ) : null}
-              <DownloadButton href={media.url} label="Download the establishing image" />
+              <FileLink href={media.url} download size="small">
+                <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
+                Download<span className="sr-only"> the establishing image</span>
+              </FileLink>
             </>
           )
         }
@@ -461,7 +582,7 @@ function ReferencePanel({
         open={change.asking !== undefined}
         tone="primary"
         title="Make the establishing image again?"
-        consequence={`A new establishing image replaces this one${affected > 0 ? `, and the ${String(affected)} images drawn from it become outdated until you remake them` : ""}. The old one stays in History.${change.price === undefined ? "" : ` ${change.price}`}`}
+        consequence={`${change.price === undefined ? "" : `${change.price} `}A new establishing image replaces this one${affected > 0 ? `, and the ${String(affected)} images drawn from it become outdated until you make them again` : ""}; the old one stays under Versions.`}
         confirmLabel="Make it again"
         cancelLabel="Keep this one"
         pending={actions.pending}
@@ -474,27 +595,31 @@ function ReferencePanel({
 
 // Two rows, then "Show all": a group of sixty images does not turn the section into a page
 // of several thousand pixels. The cap is the reader's to lift.
-export const imageGroupCap = 12;
+const imageGroupCap = 12;
 
 function ImageGroup({
   name,
   count,
   showName,
+  leading,
   trailing,
   children,
 }: {
   readonly name: string;
   readonly count: number;
   readonly showName: boolean;
+  // Tiles ahead of the group's own: the thumbnail, when it shares the images' grid.
+  readonly leading?: ReactNode;
   readonly trailing?: ReactNode;
   readonly children: (limit: number) => ReactNode;
 }) {
   const [expanded, setExpanded] = useState(false);
   const capped = count > imageGroupCap && !expanded;
   return (
-    <section aria-label={`${name} × ${String(count)}`} className="flex flex-col gap-3">
+    <section aria-label={`${name} × ${String(count)}`} className="flex flex-col gap-2">
       {showName ? <h3 className="sl-kicker m-0">{`${name} × ${String(count)}`}</h3> : null}
-      <MediaGrid>
+      <MediaGrid className={gridColumns}>
+        {leading}
         {children(capped ? imageGroupCap : count)}
         {trailing}
       </MediaGrid>
@@ -519,6 +644,7 @@ function ImageTile({
   format,
   actions,
   busy,
+  sample,
   card = false,
   title,
   onOpen,
@@ -534,6 +660,8 @@ function ImageTile({
   readonly format: Format;
   readonly actions: BodyProps["actions"];
   readonly busy: boolean;
+  // A read-only sample: nothing here may spend or change it.
+  readonly sample: boolean;
   readonly onOpen: () => void;
 }): ReactElement {
   const media = useOutputMedia(image);
@@ -577,39 +705,31 @@ function ImageTile({
             {flagged && review !== undefined ? (
               <ReviewActions review={review} projectId={projectId} busy={busy} />
             ) : null}
-            <Button
-              size="small"
-              disabled={change.unavailable}
-              disabledReason="Wait until the work on this project is done"
-              onClick={() => change.act("regenerate-image")}
-              aria-label={`Regenerate ${name}`}
-            >
-              <RefreshCwIcon aria-hidden="true" strokeWidth={1.75} />
-              Regenerate
-            </Button>
-            <ImageReviewActions
+            {sample ? null : (
+              <Button
+                size="small"
+                disabled={change.unavailable}
+                disabledReason="Wait until the work on this project is done"
+                onClick={() => change.act("regenerate-image")}
+              >
+                {card ? "Make this card again" : "Make this image again"}
+                <span className="sr-only"> for {name}</span>
+              </Button>
+            )}
+            {media === undefined ? null : (
+              <FileLink href={media.url} download size="small">
+                <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
+                Download<span className="sr-only"> {name}</span>
+              </FileLink>
+            )}
+            <TileMore
               output={image}
               name={name}
               aspect={frameAspect(format)}
-              replaceable={!card}
+              replaceable={!card && !sample}
               disabled={change.unavailable}
+              {...(card || sample ? {} : { onDelete: () => change.act("delete-image") })}
             />
-            {media === undefined ? null : (
-              <DownloadButton href={media.url} label={`Download ${name}`} />
-            )}
-            {card ? null : (
-              <Button
-                size="small"
-                variant="destructive"
-                disabled={change.unavailable}
-                disabledReason="Wait until the work on this project is done"
-                onClick={() => change.act("delete-image")}
-                aria-label={`Delete ${name}`}
-                title={`Delete ${name}`}
-              >
-                <Trash2Icon aria-hidden="true" strokeWidth={1.75} />
-              </Button>
-            )}
           </>
         }
       />
@@ -618,9 +738,7 @@ function ImageTile({
         tone={change.asking === "delete-image" ? "destructive" : "primary"}
         title={copy?.title ?? ""}
         consequence={copy?.consequence ?? ""}
-        confirmLabel={
-          change.asking === "delete-image" ? "Delete the image" : "Regenerate the image"
-        }
+        confirmLabel={change.asking === "delete-image" ? "Delete the image" : (copy?.verb ?? "")}
         cancelLabel="Keep it"
         pending={actions.pending}
         onConfirm={change.confirm}

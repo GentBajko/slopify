@@ -1,7 +1,6 @@
 import type { RevisionOutputView, RevisionView } from "@app/slices/revisions/model.js";
 import type { Output } from "@app/slices/storage/model.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Columns2Icon } from "lucide-react";
 import { type ReactElement, useState } from "react";
 import type { Api } from "@/api";
 import { useApp } from "@/app-context";
@@ -13,8 +12,8 @@ import { keys } from "@/queries";
 import { revisionFileUrl, viewOf } from "./revision-api.js";
 import { useCurrentRevisionView, useOutputMedia } from "./revision-media.js";
 
-// ceiling: saved versions walked back looking for an earlier picture; past that the History
-// tab is the way to older ones.
+// ceiling: saved versions walked back looking for an earlier picture; past that Versions is
+// the way to older ones.
 const depth = 25;
 
 interface Earlier {
@@ -49,12 +48,13 @@ async function earlierPicture(
 }
 
 // A picture beside the one it replaced, to judge a remake or a replacement: before on the
-// left, now on the right, each with the prompt that made it.
+// left, now on the right, each with the prompt that made it. `open` is what a tile's "Compare
+// with previous" calls; undefined while the picture has no saved version to compare.
 export function useCompare(
   output: Output | undefined,
   name: string,
   aspect: Aspect,
-): { readonly button: ReactElement | null; readonly dialog: ReactElement | null } {
+): { readonly open: (() => void) | undefined; readonly dialog: ReactElement | null } {
   const [open, setOpen] = useState(false);
   const { api } = useApp();
   const client = useQueryClient();
@@ -89,19 +89,10 @@ export function useCompare(
     },
   });
   if (output === undefined || current === undefined || media === undefined)
-    return { button: null, dialog: null };
+    return { open: undefined, dialog: null };
   const title = name.charAt(0).toUpperCase() + name.slice(1);
   return {
-    button: (
-      <Button
-        size="small"
-        onClick={() => setOpen(true)}
-        aria-label={`Compare ${name} with its previous version`}
-        title={`Compare ${name} with its previous version`}
-      >
-        <Columns2Icon aria-hidden="true" strokeWidth={1.75} />
-      </Button>
-    ),
+    open: () => setOpen(true),
     dialog: (
       <Dialog
         open={open}
@@ -112,7 +103,7 @@ export function useCompare(
       >
         {earlier.error !== null ? (
           <p role="alert" className="m-0 text-small text-danger">
-            {`Couldn't load the earlier versions: ${earlier.error.message} Close this and try again; the History tab lists every saved version.`}
+            {`Couldn't load the earlier versions: ${earlier.error.message} Close this and try again; Versions lists every saved version.`}
           </p>
         ) : earlier.data === undefined ? (
           <p className="m-0 text-small text-ink-2">Looking for the previous version…</p>
