@@ -186,9 +186,10 @@ export function TopicGenerationPanel({
       ) : null}
       {schedule.topicGeneration.mode === "hold" ? (
         <div className="mt-4" {...helpScope}>
+          {/* Approve all weighs what each row's Approve weighs: the page's one lime is New
+              schedule, over the list. */}
           <SectionHead as="h3" title={`Topics waiting · ${String(rows.length)}`}>
             <Button
-              variant="primary"
               disabled={busy || rows.length === 0}
               disabledReason="Nothing is waiting"
               onClick={() =>

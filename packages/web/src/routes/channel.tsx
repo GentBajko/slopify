@@ -52,10 +52,10 @@ export function channelTabOf(value: unknown): ChannelTab {
 
 // One channel: its name, series brief and look; its cast; what it made; the templates and
 // schedules that belong to it; what it remembers of each video; and the titles new topics
-// avoid, as tabs under the page header. The header's primary is Make a video (Add to cast on
-// the Cast tab), with What worked on YouTube once a test of its videos was read. With one
-// channel, /channels is this page with New channel beside it (`routes/channels.tsx`):
-// `crumb` is off and `actions` adds the button.
+// avoid, as tabs under the page header. The header's primary is Make a video, unless the tab
+// has its own next step (`makeIsNext`), with What worked on YouTube once a test of its videos
+// was read. With one channel, /channels is this page with New channel beside it
+// (`routes/channels.tsx`): `crumb` is off and `actions` adds the button.
 export function ChannelRoute({
   channelId,
   tab,
@@ -146,9 +146,9 @@ export function ChannelRoute({
   // for an empty cast) its own Add to cast is the one button, so the header's goes.
   const addShown = tab === "cast" && cast.length > 0 && castSelected !== "new";
   // The tab's own next step wears the accent where it has one: Save channel on Name and look
-  // (its action bar), Add to cast on Cast, New schedule on Schedules. Elsewhere it is Make a
-  // video.
-  const makeIsNext = tab !== "cast" && tab !== "brand" && tab !== "schedules";
+  // (its action bar), Add to cast on Cast, New schedule on Schedules, Add titles (pasted or
+  // ticked in a CSV) on Titles to avoid. Elsewhere it is Make a video.
+  const makeIsNext = tab !== "cast" && tab !== "brand" && tab !== "schedules" && tab !== "videos";
   return (
     <div>
       <PageHeader
