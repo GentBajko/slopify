@@ -59,6 +59,8 @@ export function SchedulesView({
   const notify = useToast();
   const [editing, setEditing] = useState<ScheduleSummary | null>(null);
   const [creating, setCreating] = useState(false);
+  // The template a new schedule starts with, when Edit template's New schedule opened it.
+  const [creatingWith, setCreatingWith] = useState<string | undefined>();
   const [formBusy, setFormBusy] = useState(false);
   const [ownPick, setOwnPick] = useState<string | null>(null);
   const picked = onPick === undefined ? ownPick : (pickedId ?? null);
@@ -143,9 +145,10 @@ export function SchedulesView({
     setError(null);
   };
   const noTemplates = templates.data?.length === 0;
-  const startNew = () => {
+  const startNew = (templateId?: string) => {
     if (formOpen || noTemplates) return;
     setEditing(null);
+    setCreatingWith(templateId);
     setCreating(true);
     setError(null);
   };
@@ -179,18 +182,18 @@ export function SchedulesView({
     title: "New schedule",
     group: "Schedules",
     keywords: ["calendar", "recurring"],
-    run: startNew,
+    run: () => startNew(),
   });
   // "New schedule" run from another screen lands here (`components/global-commands.tsx`).
-  useIntent(
+  useIntent<string>(
     intents.newSchedule,
-    () => {
+    (templateId) => {
       if (noTemplates)
         notify(
           "A schedule runs a project template, and there is none yet. Open a project, choose Save as template, then run New schedule again.",
           "error",
         );
-      else startNew();
+      else startNew(templateId);
     },
     templates.data !== undefined,
   );
@@ -243,7 +246,7 @@ export function SchedulesView({
           </Select>
           <Button
             variant="primary"
-            onClick={startNew}
+            onClick={() => startNew()}
             disabled={formOpen || noTemplates}
             disabledReason={
               noTemplates
@@ -294,6 +297,7 @@ export function SchedulesView({
                 onBusy={setFormBusy}
                 key={editing?.id ?? "new"}
                 editing={editing}
+                templateId={editing === null ? creatingWith : undefined}
                 onCancel={() => {
                   if (!formBusy) closeForm();
                 }}
