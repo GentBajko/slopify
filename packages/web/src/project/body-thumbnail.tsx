@@ -8,7 +8,6 @@ import { ConfirmDialog } from "@/components/kit/dialog";
 import { FileLink } from "@/components/kit/link";
 import { MediaFrame } from "@/components/kit/media";
 import { MenuItem } from "@/components/kit/menu";
-import { Badge } from "@/components/kit/status";
 import type { BodyProps } from "./body.js";
 import { frameAspect } from "./body-images.js";
 import { confirmationFor } from "./confirmations.js";
@@ -20,7 +19,7 @@ import { YouTubePreview } from "./review-youtube-preview.js";
 import { useOutputMedia } from "./revision-media.js";
 
 // The thumbnails are the first tiles of the Images grid: one, or three (A, B, C) for YouTube's
-// Test & compare, each badged Thumbnail, the same size as the images and with the same actions
+// Test & compare, each captioned Thumbnail, the same size as the images and with the same actions
 // at rest: make it again, download it, and More (compare, replace with a file, see it as
 // YouTube shows it).
 
@@ -116,17 +115,13 @@ export function ThumbnailTile({
         {...(output === undefined && stage.state === "running"
           ? { generating: "Making the thumbnail" }
           : {})}
-        title={output === undefined ? missing(stage) : "Shown before the video plays"}
+        // Named in its caption, where the images have their scene: a badge on the picture
+        // would cover the Full size button on a phone's narrow tiles.
+        title={count === 1 ? "Thumbnail" : `Thumbnail ${String.fromCharCode(64 + variant)}`}
+        {...(output === undefined ? { meta: missing(stage) } : {})}
         onOpen={onOpen}
         openLabel={`Open ${name} full size`}
-        badge={
-          <span className="inline-flex flex-wrap gap-1">
-            <Badge>
-              {count === 1 ? "Thumbnail" : `Thumbnail ${String.fromCharCode(64 + variant)}`}
-            </Badge>
-            {review === undefined ? null : <ReviewChip review={review} />}
-          </span>
-        }
+        {...(review === undefined ? {} : { badge: <ReviewChip review={review} /> })}
         {...(output === undefined
           ? {}
           : {
