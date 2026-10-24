@@ -8,7 +8,7 @@
 // walk's allow list instead.
 //
 // The same pass holds three more rules on what a walk renders, each reported as one entry: no
-// name a walk renders (a setting, button, link, tab, menu item, option or heading) uses
+// name a walk renders (a setting, button, link, tab, menu item or heading) uses
 // jargon (TTS, LLM, STT, ASR, Chunking, Subtitles), and no button or link is named for the
 // machinery (Render, Regenerate, Remake); an info button sits beside a field's label, never
 // beside a button, a heading or a list row's title (a wrapper around either doesn't hide it),
@@ -118,11 +118,12 @@ function shown(element: Element): boolean {
 }
 
 // Every other name a walk renders, beyond the settings checked above: a button's, a link's, a
-// tab's, a menu item's, an option's, a heading's. Each name is reported once.
+// tab's, a menu item's, a heading's. Each name is reported once. A select's options are left
+// out: they are data, where a service's own model name ("GPT-4o mini TTS") is a name.
 function badWords(root: Element): UnexplainedControl[] {
   const found: UnexplainedControl[] = [];
   const reported = new Set<string>();
-  const named = "button, a[href], [role=tab], [role=menuitem], option, h1, h2, h3, h4, h5, h6";
+  const named = "button, a[href], [role=tab], [role=menuitem], h1, h2, h3, h4, h5, h6";
   for (const element of root.querySelectorAll(named)) {
     if (element.matches(controlSelector) || !shown(element)) continue;
     const name = (element.getAttribute("aria-label") ?? element.textContent ?? "")

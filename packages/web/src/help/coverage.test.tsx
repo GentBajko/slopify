@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { Button, IconButton, PlayKey } from "@/components/kit/button";
-import { Field, HelpLine, Input } from "@/components/kit/field";
+import { Field, HelpLine, Input, Select } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Segmented, Switch } from "@/components/kit/switch";
 import { LabelledSwitch } from "@/components/labelled-switch";
@@ -191,6 +191,12 @@ describe("a walk also names", () => {
         <Button>Regenerate all images</Button>
         <Button>Make the preview again</Button>
         <a href="/y">Remake</a>
+        {/* A service's own model name in a list of choices is a name, not jargon. */}
+        <Field label="Voice model" help="Reads the article aloud.">
+          <Select>
+            <option>GPT-4o mini TTS</option>
+          </Select>
+        </Field>
         <div hidden>
           <Button>Render hidden</Button>
         </div>
