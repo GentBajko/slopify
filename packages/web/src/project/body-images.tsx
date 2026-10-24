@@ -572,7 +572,6 @@ function ImageTile({
                 </span>
               ),
             })}
-        actionsShown={flagged}
         actions={
           <>
             {flagged && review !== undefined ? (

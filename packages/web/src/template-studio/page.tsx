@@ -166,7 +166,6 @@ function Studio({
     <TemplateSession document={document} onEdit={edit} onFiles={onFiles}>
       <UnsavedLeaveGuard dirty={dirty} what="your template changes" saveLabel="Save" />
       <PageHeader
-        row
         crumb={<TextLink to="/templates">Templates</TextLink>}
         title={view.template.name}
         meta={`Version ${String(view.template.version)} · ${gateWords(view)}`}

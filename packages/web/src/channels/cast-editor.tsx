@@ -296,7 +296,6 @@ function Pictures({
                 {...(image.state === "failed"
                   ? { badge: <Badge tone="failed">Failed</Badge> }
                   : {})}
-                actionsShown
                 actions={
                   <Button
                     variant="secondary"

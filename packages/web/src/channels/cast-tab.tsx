@@ -143,7 +143,6 @@ export function CastTab({
                     {...(ready.length === 0
                       ? { badge: <Badge tone="waiting">No picture</Badge> }
                       : {})}
-                    actionsShown
                     actions={
                       <>
                         <Button

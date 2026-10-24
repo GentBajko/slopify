@@ -775,7 +775,6 @@ function Steps({
                   meta={file.filename}
                   onOpen={() => setOpenThumbnail(index)}
                   openLabel={`Open thumbnail ${letterOf(index)} full size`}
-                  actionsShown
                   actions={
                     <>
                       {chosen || item.pickable === undefined ? null : (

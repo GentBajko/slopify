@@ -58,8 +58,6 @@ export function MediaFrame({
   // Small buttons in a row under the caption, named for their result in words: "Make this
   // image again", "Download". Always shown.
   readonly actions?: ReactNode;
-  /** @deprecated The actions always show now; this does nothing. Drop it from the call. */
-  readonly actionsShown?: boolean;
   // What is being made, in words: "Codex is refining the image · 3 so far".
   readonly generating?: ReactNode;
   // Opens the lightbox, or the item's own page. The frame shows a visible button in its top

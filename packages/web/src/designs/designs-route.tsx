@@ -136,7 +136,6 @@ function DesignGallery(): ReactElement {
               }
               openLabel={`Open ${design.name}`}
               openText="Open"
-              actionsShown
               actions={
                 <IconButton
                   label={`Delete ${design.name}`}

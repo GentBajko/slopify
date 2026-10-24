@@ -24,8 +24,6 @@ export function PageHeader({
   // The home greeting: the `display` size, once per screen at most, with the crumb above it
   // and the meta under it.
   readonly display?: boolean;
-  /** @deprecated Every page header is one row now; this does nothing. Drop it from the call. */
-  readonly row?: boolean;
   readonly className?: string;
 }): ReactElement {
   return (

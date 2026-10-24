@@ -74,7 +74,6 @@ export function ProjectHeader({
         </Link>
       }
       title={project.title}
-      row
       meta={
         <span className="inline-flex flex-wrap items-center gap-x-1">
           {subtitle(project, prompts)}

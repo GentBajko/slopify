@@ -203,7 +203,6 @@ function ThumbnailVariant({
         onOpen={onOpen}
         openLabel={`Open ${name} full size`}
         {...(review === undefined ? {} : { badge: <ReviewChip review={review} /> })}
-        actionsShown={flagged}
         {...(output === undefined
           ? {}
           : {
