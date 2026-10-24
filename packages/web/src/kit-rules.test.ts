@@ -106,8 +106,10 @@ describe("the kit's action rules", () => {
   });
 
   // A stage with several files shows one Download (a menu) and ONE Open folder, never a
-  // folder button per file. StageFiles, DownloadLink and OutputFolder each draw one.
-  it("gives each stage body at most one Open folder", () => {
+  // folder button per file. StageFiles, DownloadLink and OutputFolder each draw one. This
+  // reads each body file; project/section-rules.test.tsx counts them as rendered, in each
+  // section the page composes from several bodies.
+  it("gives each stage body file at most one Open folder", () => {
     const bodies = screens.filter(({ file }) => /^project\/body-[\w-]+\.tsx$/.test(file));
     expect(bodies.length).toBeGreaterThan(5);
     expect(
