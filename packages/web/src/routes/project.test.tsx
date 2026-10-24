@@ -212,7 +212,8 @@ describe("the next action", () => {
     await screen.findByRole("region", { name: "Narration" });
     expect(within(nextAction()).getByText("Making the narration · 1 of 4.")).not.toBeNull();
     const steps = screen.getByRole("list", { name: "Run steps" });
-    expect(within(steps).getByText("Narration").textContent).toBe("Narration, Running");
+    const narration = within(steps).getByText("Narration").closest("li") as HTMLElement;
+    expect(within(narration).getByText("Running")).not.toBeNull();
     expect(within(steps).queryByText(/^Research/)).toBeNull();
     await userEvent.click(within(nextAction()).getByRole("button", { name: "Pause" }));
     await waitFor(() => expect(paused).toHaveBeenCalledTimes(1));

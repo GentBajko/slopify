@@ -250,9 +250,10 @@ describe("the page under a live run", () => {
     expect(
       within(article).getByRole("tab", { name: "Research" }).getAttribute("aria-selected"),
     ).toBe("true");
-    expect(
-      within(screen.getByRole("list", { name: "Run steps" })).getByText("Research").textContent,
-    ).toBe("Research, Running");
+    const research = within(screen.getByRole("list", { name: "Run steps" }))
+      .getByText("Research")
+      .closest("li") as HTMLElement;
+    expect(within(research).getByText("Running")).not.toBeNull();
     const before = reads();
     source.emit({
       type: "llm.preview",

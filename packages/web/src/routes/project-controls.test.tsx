@@ -158,7 +158,8 @@ describe("project pause and provider changes", () => {
       ),
     ).not.toBeNull();
     const steps = screen.getByRole("list", { name: "Run steps" });
-    expect(steps.textContent).toContain("Video, Prepared");
+    const video = within(steps).getByText("Video").closest("li") as HTMLElement;
+    expect(within(video).getByText("Prepared")).not.toBeNull();
     expect(within(steps).getByText("Its schedule makes it on its day.")).not.toBeNull();
     expect(steps.textContent).not.toContain("Waiting for your review");
     const rail = screen.getByRole("navigation", { name: "Project sections" });

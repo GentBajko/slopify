@@ -12,7 +12,7 @@ import { useCommand } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Workspace } from "@/components/kit/layout";
 import { Rail, RailLink } from "@/components/kit/rail";
-import { Lamp, type Tone } from "@/components/kit/status";
+import type { Tone } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
 import { ProjectDesigns, useProjectDesignCount } from "@/designs/project-designs";
 import { copyText } from "@/fixes/fix-actions";
@@ -902,12 +902,8 @@ function SectionLink({
   readonly item: RailItem;
   readonly selected: SectionId;
 }): ReactElement {
-  // A stage that failed, runs or waits to retry says so in words; done and not started
-  // differ by the lamp's fill (a hollow ring until it starts), and every state is in the
-  // link's name for a screen reader.
-  const word = item.tone === undefined ? undefined : stageStateWord(item.tone);
-  const loud = item.tone === "failed" || item.tone === "running" || item.tone === "waiting";
-  const meta = [loud ? word : undefined, item.meta].filter(Boolean).join(" · ");
+  // Every stage says how it stands in words beside its lamp ("Done", "Running", "Not
+  // started"); the kit's rail draws the word and lines the names up.
   return (
     <RailLink
       to={`/projects/${projectId}`}
@@ -917,11 +913,10 @@ function SectionLink({
       className="max-md:w-auto"
       data-tour={`project-rail-${item.id}`}
       current={item.id === selected}
-      {...(item.tone === undefined ? {} : { icon: <Lamp tone={item.tone} /> })}
-      {...(meta === "" ? {} : { meta })}
+      {...(item.tone === undefined ? {} : { tone: item.tone, state: stageStateWord(item.tone) })}
+      {...(item.meta === undefined ? {} : { meta: item.meta })}
     >
       {item.label}
-      {word === undefined || loud ? null : <span className="sr-only">{`, ${word}`}</span>}
     </RailLink>
   );
 }
