@@ -50,8 +50,8 @@ export function StudioSettings() {
 const everyChannel = "";
 
 // Each channel's playlists: a list of names, each ticked by default or not. Every upload of a
-// project on that channel goes into the ticked ones; Prepare upload can change them for one
-// project. A channel with no list of its own uses the default list.
+// project on that channel goes into the ticked ones; Copy for YouTube Studio can change them for
+// one project. A channel with no list of its own uses the default list.
 function Playlists() {
   const { api } = useApp();
   const queryClient = useQueryClient();

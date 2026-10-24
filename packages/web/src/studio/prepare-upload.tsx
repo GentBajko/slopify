@@ -349,7 +349,7 @@ export function PrepareUploadDrawer({
             />
           ) : null}
           {pack.data.missing.length === 0 ? null : (
-            <Callout tone="waiting" title="Some of it isn't made yet.">
+            <Callout tone="waiting" title="Before you upload">
               <ul className="m-0 flex list-none flex-col gap-1 p-0">
                 {pack.data.missing.map((line) => (
                   <li key={line}>{line}</li>

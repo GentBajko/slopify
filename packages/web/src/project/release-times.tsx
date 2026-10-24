@@ -113,11 +113,12 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
         return rest;
       });
       if (change.line !== undefined) setFreePick("");
-      const name = uploadName(change.short);
+      // "the video", "Short 1".
+      const name = change.short === 0 ? "the video" : uploadName(change.short);
       const said =
         change.at === null
-          ? `Cleared the release date of the ${name.toLowerCase()}.`
-          : `Saved: the ${name.toLowerCase()} goes public ${when(change.at)}.`;
+          ? `Cleared the release date of ${name}.`
+          : `Saved: ${name} goes public ${when(change.at)}.`;
       const before = change.before;
       notify(
         said,
@@ -133,7 +134,7 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
   const { items, free, leadHours } = read.data;
   const long = items.find((item) => item.short === 0);
   // A box saves its date when it is left: a whole date that changed is saved; one half typed
-  // (the browser reports it as empty) goes back to what was saved. Clear the time empties it.
+  // (the browser reports it as empty) goes back to what was saved. Clear the date empties it.
   const commit = (item: (typeof items)[number]) => {
     const draft = drafts[item.short];
     if (draft === undefined) return;
@@ -165,7 +166,7 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
             !item.onYoutube && item.uploadBy !== null && Date.parse(item.uploadBy) < Date.now();
           const state: ReactNode = item.onYoutube ? (
             <>
-              <Status tone="done">On YouTube</Status>
+              <Status tone="done">Uploaded</Status>
               {item.at === null ? null : ` · goes public ${when(item.at)}`}
             </>
           ) : item.at === null || item.uploadBy === null ? (
@@ -215,7 +216,7 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
                     disabled={save.isPending}
                     onClick={() => save.mutate({ short: item.short, at: null, before: item.at })}
                   >
-                    Clear the time
+                    Clear the date
                   </Button>
                 )}
               </div>

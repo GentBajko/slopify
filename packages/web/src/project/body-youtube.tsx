@@ -308,9 +308,9 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
       }
     />
   );
-  // A part written before that part existed: what to press to have one.
-  const missing = (what: string, name: DescriptionField) =>
-    `Written before ${what} existed. Write the description again to have them written, or press Edit ${labels[name].toLowerCase()} to write your own.`;
+  // A part this description was written without: what to press to have one.
+  const missing = (name: DescriptionField) =>
+    `None yet. Write the description again to have ${name === "titles" ? "them" : "one"} written, or press Edit ${labels[name].toLowerCase()} to write your own.`;
 
   return (
     <div className="@container min-w-0">
@@ -431,7 +431,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
                 </Pasted>
               ) : (
                 <p className="m-0 text-small text-ink-2">
-                  {written ? missing("pinned comments", "pinnedComment") : waiting}
+                  {written ? missing("pinnedComment") : waiting}
                 </p>
               )}
               {commented ? (
@@ -466,9 +466,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
               {titleList.length > 0 ? (
                 <Pasted label="The other titles">{titleList.join("\n")}</Pasted>
               ) : (
-                <p className="m-0 text-small text-ink-2">
-                  {written ? missing("other titles", "titles") : waiting}
-                </p>
+                <p className="m-0 text-small text-ink-2">{written ? missing("titles") : waiting}</p>
               )}
               {titleList.length > 0 ? (
                 <p className="m-0 text-small text-ink-2">
@@ -511,7 +509,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
       <ConfirmDialog
         open={rewriting}
         title="Write the description again?"
-        consequence="Your text model writes a new summary, chapters, hashtags, tags, pinned comment and other titles. It is one AI call, billed like the first. A part you edited keeps your text and offers the new one beside it."
+        consequence="The AI writes a new summary, chapters, hashtags, tags, pinned comment and other titles. It is one AI call, billed like the first. A part you edited keeps your text and offers the new one beside it."
         confirmLabel="Write it again · 1 AI call"
         cancelLabel="Keep what is there"
         tone="primary"

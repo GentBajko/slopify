@@ -124,13 +124,18 @@ export function OnYoutube({
       </ul>
       <PreviousEpisode projectId={projectId} />
       {anyLink ? (
-        <Fold summary="More">
+        // Named for what it holds: testing other titles once the video is up, and the extension
+        // that fills the links in.
+        <Fold
+          summary={
+            long === undefined
+              ? "Have the links filled in for you"
+              : "Test other titles and thumbnails"
+          }
+        >
           <div className="flex flex-col gap-2 pt-1">
             {long === undefined ? null : (
               <div className="flex flex-col items-start gap-1">
-                <span className="text-small text-ink">
-                  Test other titles and thumbnails in YouTube Studio:
-                </span>
                 <span className="flex flex-wrap gap-2">
                   {(
                     [
@@ -192,7 +197,8 @@ function UploadRow({
   const notify = useToast();
   const id = useId();
   const name = uploadName(short);
-  const what = short === null ? "video's" : `${name.toLowerCase()}'s`;
+  // "the video's", "Short 1's".
+  const what = short === null ? "the video's" : `${name}'s`;
   const saved = video === undefined ? "" : `https://youtu.be/${video.videoId}`;
   const [value, setValue] = useState<string | undefined>();
   const shown = value ?? saved;
@@ -214,7 +220,7 @@ function UploadRow({
       notify(
         short === null
           ? "Saved the video's link. The project is marked uploaded."
-          : `Saved the ${what} link.`,
+          : `Saved ${what} link.`,
         "success",
       );
     },
@@ -230,7 +236,7 @@ function UploadRow({
       notify(
         short === null
           ? "Forgot the video's link. The project is back on Ready to upload."
-          : `Forgot the ${what} link.`,
+          : `Forgot ${what} link.`,
         "success",
         { label: "Undo", run: () => save.mutate(link) },
       );
@@ -242,15 +248,15 @@ function UploadRow({
     error ??
     (video?.uploadState === "done" ? (
       <>
-        <Status tone="done">On YouTube</Status>
+        <Status tone="done">Uploaded</Status>
         {extensionWords(video) === "" ? null : ` · ${extensionWords(video)}`}
       </>
     ) : video?.uploadState === "filled" ? (
       "Filled in YouTube Studio, not scheduled or published yet. Paste its link once it is up."
     ) : uploadedAt !== null ? (
       <>
-        <Status tone="done">Marked uploaded</Status>
-        {` ${shortDate(uploadedAt)} · paste its link so the shorts can point to it.`}
+        <Status tone="done">Uploaded</Status>
+        {` · ${shortDate(uploadedAt)} · paste its link so the shorts can point to it.`}
       </>
     ) : (
       "Not on YouTube yet"
@@ -288,7 +294,7 @@ function UploadRow({
             disabled={save.isPending}
             onClick={() =>
               shown.trim() === ""
-                ? setError(`Paste the ${what} link from YouTube first.`)
+                ? setError(`Paste ${what} link from YouTube first.`)
                 : save.mutate(shown.trim())
             }
           >

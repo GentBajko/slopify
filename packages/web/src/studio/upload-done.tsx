@@ -53,9 +53,7 @@ export function UploadDone({
       setError(undefined);
       if (next.uploaded)
         notify(
-          short === null
-            ? "Marked uploaded. It is off Ready to upload."
-            : `Saved the ${name.toLowerCase()}'s link.`,
+          short === null ? "Marked uploaded. It is off Ready to upload." : `Saved ${name}'s link.`,
           "success",
           short === null ? { label: "Undo", run: () => undo.mutate() } : undefined,
         );
@@ -70,10 +68,7 @@ export function UploadDone({
     },
     onSuccess: () => {
       refresh();
-      notify(
-        short === null ? "Back on Ready to upload." : `Forgot the ${name.toLowerCase()}'s link.`,
-        "success",
-      );
+      notify(short === null ? "Back on Ready to upload." : `Forgot ${name}'s link.`, "success");
     },
     onError: (failure: Error) => setError(failure.message),
   });
@@ -83,7 +78,7 @@ export function UploadDone({
       <div className="sl-kicker">Once it is up</div>
       {done ? (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <Status tone="done">{short === null ? "Uploaded" : "On YouTube"}</Status>
+          <Status tone="done">Uploaded</Status>
           <span className="text-small text-ink-2">
             {[
               uploadedAt === null ? undefined : shortDate(uploadedAt),
@@ -121,7 +116,7 @@ export function UploadDone({
             disabled={mark.isPending}
             onClick={() =>
               short !== null && link.trim() === ""
-                ? setError(`Paste the ${name.toLowerCase()}'s link from YouTube first.`)
+                ? setError(`Paste ${name}'s link from YouTube first.`)
                 : mark.mutate({ uploaded: true, link: link.trim() })
             }
           >

@@ -52,7 +52,7 @@ describe("ReleaseTimes", () => {
     expect(screen.getByText(/^Goes public .* · upload by /u)).not.toBeNull();
     expect(screen.getByText("No date yet")).not.toBeNull();
     // Only a row with a date can be cleared.
-    expect(screen.getAllByRole("button", { name: "Clear the time" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Clear the date" })).toHaveLength(1);
     expect(screen.getByRole("link", { name: "Calendar → Releases" }).getAttribute("href")).toBe(
       "/calendar?tab=releases",
     );
@@ -79,6 +79,7 @@ describe("ReleaseTimes", () => {
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0]).toContain('"at":"2036-10-10T19:00:00.000Z"');
     expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+    expect(await screen.findByText(/^Saved: the video goes public /u)).not.toBeNull();
     await userEvent.click(await screen.findByRole("button", { name: "Undo" }));
     await waitFor(() => expect(calls).toHaveLength(2));
     expect(calls[1]).toContain('"at":"2036-10-10T18:00:00.000Z"');
@@ -91,7 +92,7 @@ describe("ReleaseTimes", () => {
     fireEvent.change(input, { target: { value: "" } });
     fireEvent.blur(input);
     expect(calls).toEqual([]);
-    await userEvent.click(screen.getByRole("button", { name: "Clear the time" }));
+    await userEvent.click(screen.getByRole("button", { name: "Clear the date" }));
     await waitFor(() => expect(calls).toEqual(['put {"short":0,"at":null}']));
   });
 
@@ -118,7 +119,7 @@ describe("ReleaseTimes", () => {
     await waitFor(() => expect(calls).toEqual(['swap {"with":"p2"}', 'swap {"with":"p2"}']));
   });
 
-  it("says when an upload is late, and when it is on YouTube", async () => {
+  it("says when an upload is late, and when it is uploaded", async () => {
     setup({
       ...releases,
       items: [
@@ -140,6 +141,6 @@ describe("ReleaseTimes", () => {
     });
     expect(await screen.findByText("Late")).not.toBeNull();
     expect(screen.getByText(/Upload it now, or pick a later date\./u)).not.toBeNull();
-    expect(screen.getByText("On YouTube")).not.toBeNull();
+    expect(screen.getByText("Uploaded")).not.toBeNull();
   });
 });

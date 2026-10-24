@@ -58,16 +58,17 @@ it("names each upload, says where it stands and keeps Save link in view", async 
   expect(screen.getByText("Paste the video's link from YouTube first.")).not.toBeNull();
   expect(sent).toEqual([]);
   // Nothing else is offered until a link exists.
-  expect(screen.queryByText("More")).toBeNull();
+  expect(screen.queryByText("Test other titles and thumbnails")).toBeNull();
+  expect(screen.queryByText("Have the links filled in for you")).toBeNull();
   await userEvent.type(box, "https://youtu.be/6tRcYUoxyQo");
   await userEvent.click(saves[0] ?? document.body);
   await waitFor(() =>
     expect(sent).toEqual([{ short: null, link: "https://youtu.be/6tRcYUoxyQo" }]),
   );
-  expect(await screen.findByText("On YouTube")).not.toBeNull();
+  expect(await screen.findByText("Uploaded")).not.toBeNull();
   expect(screen.getByRole("button", { name: "Forget this link" })).not.toBeNull();
-  // Testing other titles and the extension wait in More once a link exists.
-  await userEvent.click(screen.getByText("More"));
+  // Testing other titles and the extension wait in a fold named for them once a link exists.
+  await userEvent.click(screen.getByText("Test other titles and thumbnails"));
   expect(screen.getByRole("button", { name: "Test titles and thumbnails" })).not.toBeNull();
   expect(
     screen.getByRole("link", { name: "Settings → YouTube Studio and posting" }),
@@ -85,11 +86,16 @@ it("forgets a short deleted in Studio, so it can be uploaded again, with Undo", 
     },
   });
   const user = userEvent.setup();
-  await user.click(await screen.findByRole("button", { name: "Forget this link" }));
+  const forget = await screen.findByRole("button", { name: "Forget this link" });
+  // A short's link alone offers the extension, in a fold named for it, but no title tests.
+  expect(screen.getByText("Have the links filled in for you")).not.toBeNull();
+  expect(screen.queryByText("Test other titles and thumbnails")).toBeNull();
+  await user.click(forget);
   await waitFor(() => expect(sent).toEqual([{ short: 1, link: "" }]));
   await waitFor(() =>
     expect(screen.queryByRole("button", { name: "Forget this link" })).toBeNull(),
   );
+  expect(await screen.findByText("Forgot Short 1's link.")).not.toBeNull();
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() =>
     expect(sent).toEqual([
@@ -101,7 +107,7 @@ it("forgets a short deleted in Studio, so it can be uploaded again, with Undo", 
 
 it("says a project marked uploaded without a link is up, and asks for its link", async () => {
   mount(0, { "GET /api/studio/videos/p1": jsonAnswer({ videos: [] }) }, "2026-10-04T00:48:00.000Z");
-  expect(await screen.findByText("Marked uploaded")).not.toBeNull();
+  expect(await screen.findByText("Uploaded")).not.toBeNull();
   expect(screen.getByText(/paste its link so the shorts can point to it/u)).not.toBeNull();
 });
 

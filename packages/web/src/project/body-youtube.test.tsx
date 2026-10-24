@@ -256,7 +256,11 @@ it("writes every part again from one button that says its cost, never from a par
   const regenerateNow = vi.fn();
   mount({ regenerateNow });
   await screen.findByText(/How rope holds/u);
-  expect(screen.getByText(/Written before pinned comments existed/u)).not.toBeNull();
+  expect(
+    screen.getByText(
+      /^None yet\. Write the description again to have one written, or press Edit pinned comment/u,
+    ),
+  ).not.toBeNull();
   expect(screen.queryByRole("button", { name: "Copy pinned comment" })).toBeNull();
   const again = screen.getAllByRole("button", { name: /again/u });
   expect(again.map((one) => one.textContent)).toEqual(["Write the description again · 1 AI call"]);
