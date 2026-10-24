@@ -91,7 +91,7 @@ describe("quoteBakeoff", () => {
       ok: false,
       reason: "not-ready",
       message:
-        "Compare models runs on the template's current sample, and version 1 has none yet. Press Save (or Make sample) in the studio, wait for it, then compare.",
+        "Compare models runs on the template's current sample, and version 1 has none yet. Press Make sample, wait for it, then compare.",
     });
   });
 
@@ -101,7 +101,7 @@ describe("quoteBakeoff", () => {
     expect(await quoteBakeoff(deps, id, scriptOn(document.form.llm.model))).toMatchObject({
       ok: false,
       reason: "invalid-input",
-      message: expect.stringContaining("is the model Script uses now"),
+      message: expect.stringContaining("is the model Article uses now"),
     });
     expect(
       await quoteBakeoff(deps, id, {
@@ -130,7 +130,7 @@ describe("quoteBakeoff", () => {
       }),
     ).toMatchObject({
       ok: false,
-      message: expect.stringContaining("No model makes Pictures in this template"),
+      message: expect.stringContaining("No model makes Images in this template"),
     });
   });
 

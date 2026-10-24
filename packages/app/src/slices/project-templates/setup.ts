@@ -2,9 +2,11 @@ import { templateChannelId } from "../channels/repo.js";
 import type { LibrarySnapshot } from "../library/snapshot.js";
 import { snapshotEntry, snapshotPrompt } from "../library/snapshot.js";
 import type { PlayDraftDocument } from "../play-drafts/model.js";
+import { readProviderDefaults } from "../settings/first-run.js";
 import { socialPlatforms } from "../social/model.js";
 import type { TemplateDeps, TemplateResult } from "./model.js";
 import { templateDocument } from "./one-off.js";
+import { withProviderDefaults } from "./provider-defaults.js";
 
 export function templateSetup(
   deps: Pick<TemplateDeps, "db">,
@@ -63,11 +65,14 @@ export function templateSetup(
   };
 }
 
+// A draft made from a template, for Create or a schedule's run. A template nobody picked a writer
+// or image service in gets this computer's defaults, as Edit template's checks expect.
 export function freshTemplateDraft(
   deps: TemplateDeps,
-  document: PlayDraftDocument,
+  saved: PlayDraftDocument,
   source: { readonly id: string; readonly version: number },
 ): PlayDraftDocument {
+  const document = withProviderDefaults(saved, readProviderDefaults(deps.db));
   const provided = document.form.provided;
   const fresh = (file: { readonly attachmentId: string; readonly name: string }) => ({
     attachmentId: deps.uuid(),

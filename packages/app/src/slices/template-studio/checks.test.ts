@@ -54,7 +54,7 @@ describe("freeChecks", () => {
   });
 
   describe("keywords", () => {
-    it("names each empty keyword and links to Subject & research", () => {
+    it("names each empty keyword and links to Topic & title", () => {
       const result = check({ bodies: ["Write in {{style}} about {{era}}."] }, "keywords");
       expect(result).toEqual({
         id: "keywords",
@@ -62,7 +62,7 @@ describe("freeChecks", () => {
         sentence:
           "Keywords are empty: {{style}} and {{era}}. A run would send the prompt with nothing in their place.",
         fix: {
-          label: "Fill the keywords in Subject & research",
+          label: "Fill them in Topic & title",
           href: "/templates/t1?section=subject",
         },
       });
@@ -102,6 +102,9 @@ describe("freeChecks", () => {
   });
 
   describe("providers", () => {
+    const providerLines = (overrides: Partial<FreeCheckInput>) =>
+      freeChecks({ ...input, ...overrides }).filter((one) => one.id === "providers");
+
     it("fails when a used provider has no key, and links to Settings → Providers", () => {
       const result = check(
         { providers: new Map([...ready, ["fal", { name: "fal.ai", ready: false }]]) },
@@ -111,15 +114,17 @@ describe("freeChecks", () => {
         id: "providers",
         ok: false,
         sentence:
-          "fal.ai (the picture model) isn't set up on this computer: no key is stored or its program wasn't found.",
+          "fal.ai, the image service, isn't set up on this computer: no key is stored or its program wasn't found.",
         fix: { label: "Set it up in Settings → Providers", href: "/settings?section=providers" },
       });
     });
 
-    it("fails on a provider this computer doesn't know at all", () => {
-      expect(check({ providers: new Map() }, "providers")?.sentence).toBe(
-        "openai (the text model) isn't set up on this computer: no key is stored or its program wasn't found.",
-      );
+    it("fails on a provider this computer doesn't know at all, one line for each", () => {
+      expect(providerLines({ providers: new Map() }).map((one) => one.sentence)).toEqual([
+        "openai, the writing service, isn't set up on this computer: no key is stored or its program wasn't found.",
+        "elevenlabs, the voice service, isn't set up on this computer: no key is stored or its program wasn't found.",
+        "fal, the image service, isn't set up on this computer: no key is stored or its program wasn't found.",
+      ]);
     });
 
     it("fails when a used stage has no provider chosen", () => {
@@ -129,9 +134,70 @@ describe("freeChecks", () => {
       };
       expect(check({ document: none }, "providers")).toMatchObject({
         ok: false,
-        sentence: "No voice is chosen, so the run can't start.",
-        fix: { href: "/templates/t1?section=voice" },
+        sentence: "No voice service is chosen, so a run can't start.",
+        fix: { label: "Choose one in Narration", href: "/templates/t1?section=voice" },
       });
+    });
+
+    it("names every missing thing on its own line, each with its fix, so the count is true", () => {
+      const empty = {
+        ...document,
+        form: {
+          ...document.form,
+          llm: { provider: "", model: "" },
+          images: { provider: "", model: "" },
+          audio: { ...document.form.audio, provider: "openai-tts" },
+        },
+      };
+      const lines = providerLines({
+        document: empty,
+        providers: new Map([...ready, ["openai-tts", { name: "OpenAI", ready: false }]]),
+      });
+      expect(lines.map((one) => [one.ok, one.sentence, one.fix?.label])).toEqual([
+        [false, "No writing service is chosen, so a run can't start.", "Choose one in Article"],
+        [false, "No image service is chosen, so a run can't start.", "Choose one in Images"],
+        [
+          false,
+          "OpenAI, the voice service, isn't set up on this computer: no key is stored or its program wasn't found.",
+          "Set it up in Settings → Providers",
+        ],
+      ]);
+    });
+
+    it("reads an unchosen writer and image service as this computer's defaults, as every run does", () => {
+      const empty = {
+        ...document,
+        form: {
+          ...document.form,
+          llm: { provider: "", model: "" },
+          images: { provider: "", model: "" },
+        },
+      };
+      const defaults = {
+        llm: { provider: "claude-code", model: "sonnet" },
+        images: { provider: "codex-image", model: "gpt-image" },
+      };
+      const providers = new Map([
+        ...ready,
+        ["claude-code", { name: "Claude Code CLI", ready: true }],
+        ["codex-image", { name: "Codex CLI (images)", ready: true }],
+      ]);
+      expect(providerLines({ document: empty, defaults, providers })).toEqual([
+        { id: "providers", ok: true, sentence: "Every service this template uses is set up." },
+      ]);
+      expect(
+        providerLines({
+          document: empty,
+          defaults,
+          providers: new Map([
+            ...ready,
+            ["claude-code", { name: "Claude Code CLI", ready: false }],
+          ]),
+        }).map((one) => one.sentence),
+      ).toEqual([
+        "Claude Code CLI, the writing service, isn't set up on this computer: no key is stored or its program wasn't found.",
+        "codex-image, the image service, isn't set up on this computer: no key is stored or its program wasn't found.",
+      ]);
     });
 
     it("ignores the provider of a stage that is off or provided", () => {
@@ -151,7 +217,7 @@ describe("freeChecks", () => {
       expect(check({ document: off, providers }, "providers")?.ok).toBe(true);
     });
 
-    it("checks the reviewer model when reviews are on", () => {
+    it("checks the AI checks' service when reviews are on", () => {
       const reviewed = {
         ...document,
         form: {
@@ -165,7 +231,7 @@ describe("freeChecks", () => {
         },
       };
       expect(check({ document: reviewed }, "providers")?.sentence).toContain(
-        "(the reviewer model)",
+        ", the service for the AI checks,",
       );
     });
   });
@@ -312,8 +378,8 @@ describe("freeChecks", () => {
       expect(check({ document: none, voices: mine }, "voice")).toEqual({
         id: "voice",
         ok: false,
-        sentence: "No voice is chosen for the narration, so the run can't start.",
-        fix: { label: "Choose a voice in Voice", href: "/templates/t1?section=voice" },
+        sentence: "No voice is chosen for the narration, so a run can't start.",
+        fix: { label: "Choose a voice in Narration", href: "/templates/t1?section=voice" },
       });
     });
 
@@ -323,7 +389,7 @@ describe("freeChecks", () => {
         ok: false,
         sentence:
           "The narration's voice (ID v) isn't one of your voices in Settings → Voices. Add it there under that ID, or choose one of yours.",
-        fix: { label: "Choose a voice in Voice", href: "/templates/t1?section=voice" },
+        fix: { label: "Choose a voice in Narration", href: "/templates/t1?section=voice" },
       });
     });
 

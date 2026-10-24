@@ -10,6 +10,7 @@ import { readNotificationUrl } from "../notifications/settings.js";
 import { templateById } from "../project-templates/repo.js";
 import { scheduleRows } from "../schedules/repo.js";
 import type { ScheduleSummary } from "../schedules/schema.js";
+import { readProviderDefaults } from "../settings/first-run.js";
 import type { ProviderStatus } from "../settings/model.js";
 import { listVoices, readJsonSetting } from "../settings/repo.js";
 import { type FreeCheckInput, freeChecks, type ScheduleFit } from "./checks.js";
@@ -135,7 +136,7 @@ export function createReadinessCache(
 }
 
 const missingTemplate =
-  "This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates.";
+  "This template no longer exists; it may have been deleted. Go to Templates to see your templates.";
 
 // The studio page's content, answered without waiting for the providers' readiness: the
 // checks that need it are read on their own (`getStudioChecks`).
@@ -234,6 +235,7 @@ export async function getStudioChecks(
             { name: status.displayName, ready: readinessIsUsable(status.readiness) },
           ]),
         ),
+        defaults: readProviderDefaults(deps.db),
         schedules: schedules.map(fitOf),
         voices: listVoices(deps.db),
         monthlyCost: cost,

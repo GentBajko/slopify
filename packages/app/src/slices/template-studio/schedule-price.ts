@@ -38,7 +38,7 @@ export async function priceDocument(
   const review = await resolvePlayReview(deps, view, { unsaved: true });
   if (!review.ok)
     return review.fields.length === 0
-      ? "Play's review refused this setup. Open the template in Play (Use in Play) to see why."
+      ? "Create's review refused this setup. Press Make a video on the template to see why on Create."
       : [...new Set(review.fields.map((field) => field.message))].join(" ");
   return {
     high: review.value.estimates.reduce((sum, estimate) => sum + estimate.high, 0),

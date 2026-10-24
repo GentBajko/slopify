@@ -60,7 +60,7 @@ export interface FreeSamples {
   readonly documentHashOf: (document: PlayDraftDocument) => string;
 }
 
-const press = "press Make samples";
+const press = "press Make sample";
 
 export function createFreeSamples(deps: FreeSampleDeps): FreeSamples {
   const failures = new Map<string, string>();
@@ -144,7 +144,7 @@ export function createFreeSamples(deps: FreeSampleDeps): FreeSamples {
           documentHash(theme),
           () => documents.make(theme),
           (error) =>
-            `The PDF sample couldn't be made: ${errorText(error)} Change the theme in Document (PDF) → Fine-tune, then ${press}.`,
+            `The PDF sample couldn't be made: ${errorText(error)} Change the theme under All PDF settings, then ${press}.`,
         );
       }
     },
@@ -207,7 +207,7 @@ export function createFreeSamples(deps: FreeSampleDeps): FreeSamples {
           ...(shown ?? {
             state: "current",
             sentence:
-              "Slopify's sample narration as it came, and levelled the way your videos will be. Your own voice's sample replaces it once paid samples are made.",
+              "How your narration will be levelled, shown on Slopify's sample narration until your voice's own sample is made.",
             url: `${base}/loudness/after.mp3?v=${lHash.slice(0, 12)}`,
           }),
           beforeUrl: `${base}/loudness/before.mp3`,
@@ -220,7 +220,7 @@ export function createFreeSamples(deps: FreeSampleDeps): FreeSamples {
 
       let pdf: FreeSample;
       if (form.sources.document !== "generate")
-        pdf = { state: "off", sentence: "The PDF document is off.", url: null };
+        pdf = { state: "off", sentence: "The PDF is off.", url: null };
       else if (deps.documents === undefined) pdf = unavailable("PDF sample");
       else {
         const hash = documentHashOf(document);
@@ -241,7 +241,7 @@ export function createFreeSamples(deps: FreeSampleDeps): FreeSamples {
 function videoFailure(error: unknown): string {
   if (error instanceof StylePreviewError) {
     if (error.reason === "font-missing")
-      return `The video sample couldn't be made because the caption font is no longer on this computer. Choose another font in Video & captions → Fine-tune, then ${press}.`;
+      return `The video sample couldn't be made because the caption font is no longer on this computer. Choose another font under All Video & captions settings, then ${press}.`;
     if (error.reason === "ffmpeg-missing")
       return `The video sample couldn't be made because ffmpeg wasn't found. Install ffmpeg, or use the Docker image, then ${press}.`;
   }

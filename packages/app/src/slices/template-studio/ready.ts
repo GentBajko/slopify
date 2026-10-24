@@ -43,11 +43,11 @@ export type ReadyResult =
 
 const checkLabel: Readonly<Record<FreeCheckId, string>> = {
   keywords: "Keywords",
-  providers: "Providers",
+  providers: "Services",
   voice: "Voice",
   "release-slots": "Release slots",
   "monthly-cost": "Monthly cost",
-  answerers: "Checkpoints answered",
+  answerers: "Pauses answered",
 };
 
 // The section states Mark ready accepts: nothing about them is left to look at.
@@ -93,13 +93,13 @@ function sentenceOf(problem: ReadyProblem): string {
 }
 
 const missingTemplate =
-  "This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates.";
+  "This template no longer exists; it may have been deleted. Go to Templates to see your templates.";
 
 function notNewest(version: number, head: number): ReadyResult {
   return {
     ok: false,
     reason: "conflict",
-    message: `Version ${String(version)} is no longer the newest: the template is at version ${String(head)}. Look over version ${String(head)}'s samples, then press Mark ready.`,
+    message: `Version ${String(version)} is no longer the newest: the template is at version ${String(head)}. Look over version ${String(head)}'s samples, then approve it for schedules.`,
     problems: [],
   };
 }
@@ -114,7 +114,7 @@ export async function markReady(
     return {
       ok: false,
       reason: "invalid-input",
-      message: "The studio sent a request Slopify couldn't read. Reload the page and try again.",
+      message: "Edit template sent a request Slopify couldn't read. Reload the page and try again.",
       problems: [],
     };
   const { version } = parsed.data;

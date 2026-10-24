@@ -154,7 +154,7 @@ describe("markReady", () => {
     const result = await markReady(deps, id, { version: 1 });
     if (result.ok) throw new Error("marked");
     expect(result.problems.map((problem) => problem.label)).toEqual(
-      expect.arrayContaining(["Video & captions", "Script"]),
+      expect.arrayContaining(["Video & captions", "Article"]),
     );
     expect(result.message).toContain("Video & captions: The video sample failed: no ffmpeg.");
   });
@@ -167,7 +167,7 @@ describe("markReady", () => {
       ok: false,
       reason: "conflict",
       message:
-        "Version 1 is no longer the newest: the template is at version 2. Look over version 2's samples, then press Mark ready.",
+        "Version 1 is no longer the newest: the template is at version 2. Look over version 2's samples, then approve it for schedules.",
       problems: [],
     });
   });
@@ -214,7 +214,7 @@ describe("readyProblems", () => {
       ),
     ).toEqual([
       {
-        label: "Providers",
+        label: "Services",
         sentence: "Set up OpenAI.",
         fix: { label: "Providers", href: "/settings?section=providers" },
       },

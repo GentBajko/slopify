@@ -146,7 +146,7 @@ export interface PronunciationsView {
 }
 
 const missingTemplate =
-  "This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates.";
+  "This template no longer exists; it may have been deleted. Go to Templates to see your templates.";
 
 export function pronunciationsOf(deps: SayItAsDeps, templateId: string): PronunciationsView {
   const head = templateById(deps.db, templateId);
@@ -202,7 +202,7 @@ export interface SayItAsQuote {
 }
 
 const aliasesOff =
-  "This template's voice doesn't use Library → Narration aliases, so “Say it as” would change nothing. Turn on Use narration aliases in Voice → Fine-tune, press Save, then try again.";
+  "This template's voice doesn't use your pronunciations (Settings → Voices → Pronunciation), so “Say it as” would change nothing. Turn on Use narration aliases under All Narration settings, press Save, then try again.";
 
 export function quoteSayItAs(
   deps: SayItAsDeps & {

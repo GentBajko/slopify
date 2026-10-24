@@ -130,15 +130,27 @@ describe("exportPack", () => {
     expect(manifest.template.document.form.title).toBe("History: {{Topic}}");
   });
 
-  it("refuses a template with no version marked ready, and one whose text looks like a key", async () => {
+  it("packs the newest version of a template no version was approved of, as its schedules run", async () => {
     const h = install();
     const id = readyTemplate(h);
     h.deps.db.prepare("DELETE FROM template_gates WHERE template_id=?").run(id);
-    expect(await exportPack(exportDeps(h), id)).toMatchObject({
-      ok: false,
-      reason: "not-ready",
-      message: expect.stringContaining("Press Mark ready in the studio, then Export pack."),
+    const edited = updateTemplate(h.deps, {
+      id,
+      baseVersion: 1,
+      mutationId: randomUUID(),
+      name: "Weekly history",
+      document: { ...documentOf(h), form: { ...documentOf(h).form, title: "Newest" } },
     });
+    expect(edited.ok).toBe(true);
+    const manifest = JSON.parse(
+      strFromU8(unzipSync((await exported(h, id)).bytes)["manifest.json"] ?? new Uint8Array()),
+    );
+    expect(manifest.template.version).toBe(2);
+    expect(manifest.template.document.form.title).toBe("Newest");
+  });
+
+  it("refuses a template whose text looks like a key, and one that doesn't exist", async () => {
+    const h = install();
     const leaky = readyTemplate(h, {
       ...documentOf(h),
       form: {
@@ -291,7 +303,7 @@ describe("importPack", () => {
       ok: false,
       sentence:
         "The narration's voice (ID warm-voice) isn't one of your voices in Settings → Voices. Add it there under that ID, or choose one of yours.",
-      fix: { label: "Choose a voice in Voice" },
+      fix: { label: "Choose a voice in Narration" },
     });
   });
 
@@ -338,7 +350,7 @@ describe("importPack", () => {
     });
     expect(readPack(strToU8("not a zip"))).toMatchObject({
       ok: false,
-      message: expect.stringContaining("isn't a template pack"),
+      message: expect.stringContaining("isn't a template file"),
     });
     expect(readPack(zipSync({ "notes.txt": strToU8("") }))).toMatchObject({ ok: false });
     expect(readPack(zipSync({ "manifest.json": strToU8("{oops") }))).toMatchObject({
