@@ -342,7 +342,7 @@ describe("the settings screen", () => {
     );
 
     // A settings answer from before the setting reads as its default.
-    const select = (await screen.findByLabelText("Subtitle timing model")) as HTMLSelectElement;
+    const select = (await screen.findByLabelText("Caption timing model")) as HTMLSelectElement;
     expect(select.value).toBe("fp32");
     expect([...select.options].map((option) => option.text)).toEqual([
       "Most accurate (378 MB, recommended)",

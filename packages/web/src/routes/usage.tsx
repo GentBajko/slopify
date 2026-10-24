@@ -110,7 +110,7 @@ function countersOf(usage: Usage): readonly { readonly label: string; readonly v
   const counters = usage.counters;
   return [
     { label: "Videos made", value: wholeNumber.format(counters.videosMade) },
-    { label: "Hours of audio", value: tenths.format(counters.audioSeconds / 3600) },
+    { label: "Hours of narration", value: tenths.format(counters.audioSeconds / 3600) },
     { label: "Images made", value: wholeNumber.format(counters.imagesMade) },
     {
       label: "Tokens used",

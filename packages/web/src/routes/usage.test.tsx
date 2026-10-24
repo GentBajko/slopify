@@ -86,8 +86,8 @@ describe("the usage screen", () => {
     const videos = await screen.findByText("Videos made");
     expect(videos.parentElement?.textContent).toBe("Videos made42");
     // The API answers in seconds; the hours are this screen's arithmetic.
-    expect(screen.getByText("Hours of audio").parentElement?.textContent).toBe(
-      "Hours of audio15.3",
+    expect(screen.getByText("Hours of narration").parentElement?.textContent).toBe(
+      "Hours of narration15.3",
     );
     expect(screen.getByText("Images made").parentElement?.textContent).toBe("Images made612");
     expect(screen.getByText("Tokens used").parentElement?.textContent).toBe("Tokens used8.4M");

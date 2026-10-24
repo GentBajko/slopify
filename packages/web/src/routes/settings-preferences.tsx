@@ -166,7 +166,7 @@ export function ProductionDefaults(): ReactElement {
       </Field>
 
       <Field
-        label="Subtitle timing model"
+        label="Caption timing model"
         tip="settings.subtitle-model"
         help="Bigger hears the narration more accurately and, on most computers, is also faster. It downloads once, the first time captions are timed."
         error={

@@ -75,7 +75,11 @@ export function FilesFolder({
       <div>
         <SectionHead
           title="Your files"
-          meta={view.folder ?? "The Docker project folder isn't set up."}
+          meta={
+            view.folder === null
+              ? "The Docker project folder isn't set up."
+              : "Where your projects, backups and exports are kept."
+          }
         >
           <Button disabled={view.folder === null || open.isPending} onClick={() => open.mutate()}>
             Open folder
@@ -120,7 +124,7 @@ export function FilesFolder({
   const resumable = phase === "failed" || phase === "interrupted";
   return (
     <div>
-      <SectionHead title="Your files" meta={view.folder}>
+      <SectionHead title="Your files" meta="Where your projects, backups and exports are kept.">
         {view.inDocuments || view.documentsRoot === null ? null : (
           <Button
             variant="secondary"

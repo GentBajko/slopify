@@ -4,42 +4,8 @@ import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { Field, Select } from "@/components/kit/field";
-import { type PatchNotesView, patchNotesQuery } from "./api.js";
+import { patchNotesQuery } from "./api.js";
 import { PatchNoteReader } from "./reader.js";
-
-const months = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-
-// "2026-09-27" as "27 September 2026", the way the notes themselves write dates.
-export function noteDate(date: string): string {
-  const [year, month, day] = date.split("-").map(Number);
-  const name = months[(month ?? 0) - 1];
-  return name === undefined || day === undefined ? date : `${String(day)} ${name} ${String(year)}`;
-}
-
-type Note = PatchNotesView["notes"][number];
-
-function noteMeta(note: Note, version: string): string {
-  const covers = note.range === undefined ? note.version : `Versions ${note.range}`;
-  const parts = [covers, `released ${noteDate(note.date)}`].filter(
-    (part): part is string => part !== undefined,
-  );
-  const line = parts.join(", ");
-  const sentence = line.charAt(0).toUpperCase() + line.slice(1);
-  return note.version === version ? `${sentence}. The version you are running.` : `${sentence}.`;
-}
 
 // Settings → What's new. Which version's notes are open is the page's `note` search parameter,
 // so Back and a shared address both work; without one the newest are open. One select picks
@@ -80,7 +46,13 @@ export function PatchNotesSettings({
           {`There are no patch notes called "${note}" in this version. The newest are below.`}
         </p>
       ) : null}
-      <Field label="Version" help={noteMeta(shown, version)} className="max-w-[360px]">
+      {/* The notes open with their own versions and release date, so the select says only
+          which is the one running. */}
+      <Field
+        label="Version"
+        {...(shown.version === version ? { help: "The version you are running." } : {})}
+        className="max-w-[360px]"
+      >
         <Select
           value={shown.id}
           options={notes.map((item) => ({

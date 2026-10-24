@@ -5,7 +5,7 @@ export const settingsHelp = {
   // Settings page
   "settings.diagnostics": {
     title: "Download diagnostics",
-    body: "Saves slopify-diagnostics.json: the Slopify version, your system and Node version, which providers are set up or found, the project count and the model catalogue's state. It never holds your keys, prompts or project content. Attach it to a bug report so the problem can be found faster.",
+    body: "Saves slopify-diagnostics.json: the Slopify version, your system and Node version, which services are set up or found, the project count and the state of the model list. It never holds your keys, prompts or project content. Attach it to a bug report so the problem can be found faster.",
     tutorial: { page: "Troubleshooting", anchor: "download-diagnostics" },
   },
 
@@ -24,7 +24,7 @@ export const settingsHelp = {
   // Providers
   "settings.provider.openrouter": {
     title: "OpenRouter",
-    body: "Writes the text (research, script, article, titles, descriptions) with hundreds of models from many companies through one key. Each call is charged per token from the credit you buy on OpenRouter; prices follow the model catalogue. Choose it when you want a model the command-line tools do not offer.",
+    body: "Writes the text (research, script, article, titles, descriptions) with hundreds of models from many companies through one key. Each call is charged per token from the credit you buy on OpenRouter; prices follow the model list. Choose it when you want a model the command-line tools do not offer.",
     tutorial: { page: "Providers-and-Keys", anchor: "openrouter" },
   },
   "settings.provider.claude-code": {
@@ -125,8 +125,8 @@ export const settingsHelp = {
     tutorial: { page: "Settings-Reference", anchor: "level-the-volume-for-new-runs" },
   },
   "settings.subtitle-model": {
-    title: "Subtitle timing model",
-    body: "The speech model that times English captions on this computer. Most accurate (378 MB) hears the narration best and on most computers runs faster too; Smallest (95 MB) can mishear a line and stop the run. The chosen model downloads once, on first use; switching back reuses one already downloaded. Changing it never marks subtitles outdated. Default: Most accurate.",
+    title: "Caption timing model",
+    body: "The speech model that times English captions on this computer. Most accurate (378 MB) hears the narration best and on most computers runs faster too; Smallest (95 MB) can mishear a line and stop the run. The chosen model downloads once, on first use; switching back reuses one already downloaded. Changing it never marks captions outdated. Default: Most accurate.",
     tutorial: { page: "Settings-Reference", anchor: "subtitle-timing-model" },
   },
   "settings.video-encoder": {
@@ -179,18 +179,18 @@ export const settingsHelp = {
 
   // YouTube Studio
   "settings.studio.extension": {
-    title: "Upload pack and extension",
-    body: "Slopify never uploads or publishes. A finished project's Prepare upload lists everything Studio asks for, with Copy buttons. The optional Slopify Studio browser extension fills Studio's upload dialog from that pack; you still press Publish. Install it from Install the Studio extension below: Download, three steps, then pair it with the token.",
+    title: "YouTube Studio extension",
+    body: "Slopify never uploads or publishes. A finished project's Copy for YouTube Studio lists everything Studio asks for, with Copy buttons. The optional Slopify Studio browser extension fills Studio's upload dialog for you; you still press Publish. Install it below, then pair it with the token.",
     tutorial: { page: "Studio-Extension", anchor: "get-the-extension" },
   },
   "settings.studio.playlist": {
     title: "Playlists",
-    body: "The YouTube playlists upload packs offer, typed exactly as Studio names them. Pick Every channel for the default list, or a channel to give it its own. Ticked On by default means every project goes into it; Prepare upload changes the ticks for one project. The extension ticks each one in Studio. Default: none.",
+    body: "The YouTube playlists Copy for YouTube Studio offers, typed exactly as Studio names them. Pick Every channel for the default list, or a channel to give it its own. Ticked On by default means every project goes into it; Copy for YouTube Studio changes the ticks for one project. The extension ticks each one in Studio. Default: none.",
     tutorial: { page: "Studio-Extension", anchor: "settings--youtube-studio" },
   },
   "settings.studio.pairing": {
     title: "Extension pairing token",
-    body: "A secret the Slopify Studio extension needs before it may read your upload packs, so no other page can. Copy it into the extension's options and press Pair. New pairing token makes a fresh one and unpairs the extension until you paste the new token.",
+    body: "A secret the Slopify Studio extension needs before it may read what your projects are ready to upload, so no other page can. Copy it into the extension's options and press Pair. New pairing token makes a fresh one and unpairs the extension until you paste the new token.",
     tutorial: { page: "Studio-Extension", anchor: "pair-it-with-slopify" },
   },
 

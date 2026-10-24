@@ -1,6 +1,5 @@
 import type { PostingPlan } from "@app/slices/studio/plan-model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { type ReactElement, useEffect, useState } from "react";
 import { readPostingPlan, saveAutoComment, saveLeadHours, savePostingPlan } from "@/api";
 import { useApp } from "@/app-context";
@@ -79,14 +78,20 @@ export function PostingPlanSettings({
   const live = (schedules.data ?? []).filter((one) => one.deletedAt === null);
   return (
     <section aria-label="Release times" className="flex flex-col gap-3">
-      <SectionHead as="h3" title="Release times" />
-      <p className="m-0 text-small text-ink-2">
-        Each schedule sets when its videos and shorts go out:{" "}
-        <Link to="/calendar" search={{ tab: "schedules" }}>
-          Calendar → Schedules
-        </Link>{" "}
-        → Edit → Release times.
-      </p>
+      <SectionHead
+        as="h3"
+        title="Release times"
+        className="pb-0"
+        meta={
+          <>
+            Each schedule sets when its videos and shorts go out, under Edit on{" "}
+            <TextLink to="/calendar" search={{ tab: "schedules" }}>
+              Calendar → Schedules
+            </TextLink>
+            .
+          </>
+        }
+      />
       {live.length === 0 ? null : (
         <p className="m-0 flex flex-wrap gap-x-3 gap-y-1 text-small">
           {live.map((one) => (

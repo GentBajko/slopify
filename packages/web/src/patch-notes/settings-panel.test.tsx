@@ -7,7 +7,6 @@ import { SettingsRoute } from "@/routes/settings";
 import { type Answer, jsonAnswer, problemAnswer, renderRouted, testDeps } from "@/test-app";
 import type { PatchNotesView } from "./api.js";
 import { PatchNotesCommand } from "./popup.js";
-import { noteDate } from "./settings-panel.js";
 
 afterEach(cleanup);
 
@@ -30,9 +29,10 @@ function routes(extra: Readonly<Record<string, Answer>> = {}) {
         headers: { "content-type": "text/markdown" },
       }),
     "GET /api/patch-notes/2.0-to-3.0": () =>
-      new Response("# Slopify 2.0 to 3.0\n\n## Highlights\n\n- Shorts.\n\n## Fixes\n\n- Fewer.\n", {
-        headers: { "content-type": "text/markdown" },
-      }),
+      new Response(
+        "# Slopify 2.0 to 3.0\n\nVersions 2.0.1 to 3.0.0, released 27 September 2026.\n\n## Highlights\n\n- Shorts.\n\n## Fixes\n\n- Fewer.\n",
+        { headers: { "content-type": "text/markdown" } },
+      ),
     ...extra,
   });
 }
@@ -72,7 +72,9 @@ describe("Settings → What's new", () => {
     );
     expect(await screen.findByRole("heading", { name: "Highlights" })).not.toBeNull();
     expect(screen.queryByRole("heading", { name: "Everything that changed" })).toBeNull();
-    expect(screen.getByText("Versions 2.0.1 to 3.0.0, released 27 September 2026.")).not.toBeNull();
+    // The notes say their versions and date once; the select adds nothing for an older note.
+    expect(screen.getAllByText(/released 27 September 2026/)).toHaveLength(1);
+    expect(screen.queryByText("The version you are running.")).toBeNull();
     const contents = screen.getByRole("navigation", { name: "Patch notes contents" });
     expect(
       within(contents)
@@ -114,11 +116,6 @@ describe("Settings → What's new", () => {
     await waitFor(() => {
       expect(onNote).toHaveBeenCalledWith("3.0.0");
     });
-  });
-
-  it("writes dates the way the notes do", () => {
-    expect(noteDate("2026-09-27")).toBe("27 September 2026");
-    expect(noteDate("not a date")).toBe("not a date");
   });
 });
 
