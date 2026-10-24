@@ -32,7 +32,7 @@ export function StageBody({
   readonly children: ReactNode;
   readonly className?: string;
 }) {
-  return <div className={cn("flex min-w-0 flex-col gap-5", className)}>{children}</div>;
+  return <div className={cn("flex min-w-0 flex-col gap-4", className)}>{children}</div>;
 }
 
 export function EngravedLabel({ children }: { readonly children: ReactNode }) {
@@ -169,13 +169,13 @@ export function RefusalLine({
 }
 
 // The server names the file it sends; the anchor only has to ask for it. A download of a
-// whole stage (Images' zip) with its one Open folder beside it: the section's main action
-// unless it has a more important one, so primary by default.
+// whole stage with its one Open folder beside it. Secondary: the page's one lime button is its
+// next action, and a download wears the lime only on a page without one.
 export function DownloadLink({
   projectId,
   asset,
   label = "Download",
-  variant = "primary",
+  variant = "secondary",
 }: {
   readonly projectId: string;
   readonly asset: string;
@@ -197,25 +197,35 @@ export function DownloadLink({
 
 export interface StageFile {
   readonly output: Output | undefined;
-  // What the file is, as the menu lists it: "Body narration (.mp3)".
+  // What the file is, as the menu lists it: "Narration (.mp3)".
   readonly label: string;
+}
+
+// "Download narration (.mp3)" from the file's own words "Narration (.mp3)"; a name in capitals
+// stays as it is ("Download PDF").
+export function downloadWords(label: string): string {
+  return /^[A-Z][a-z]/.test(label)
+    ? `Download ${label.charAt(0).toLowerCase()}${label.slice(1)}`
+    : `Download ${label}`;
 }
 
 function present(files: readonly StageFile[]): readonly Output[] {
   return files.flatMap((file) => (file.output === undefined ? [] : [file.output]));
 }
 
-// A stage's files behind one Download button, so a section with five files shows one
-// control rather than a row of links each with its own Open folder beside it. One file is
-// a plain download, no menu in between.
+// A stage's files behind one Download button named for what it holds ("Download the
+// article's files"), so a section with five files shows one control rather than a row of
+// links each with its own Open folder beside it. One file is a plain download named for its
+// file ("Download article (.md)"), no menu in between.
 export function DownloadMenu({
   files,
-  label = "Download",
-  variant = "primary",
+  label,
+  variant = "secondary",
 }: {
   readonly files: readonly StageFile[];
-  readonly label?: string;
-  // Primary: the stage's main action. Secondary when the section has a more important one.
+  // The menu's words; one file is named for itself.
+  readonly label?: string | undefined;
+  // Primary only on a page whose title row has no next action.
   readonly variant?: "primary" | "secondary";
 }) {
   const shown = files.filter(
@@ -225,22 +235,24 @@ export function DownloadMenu({
   const older = useOlderOutputs(shown.map((file) => file.output));
   const [only] = shown;
   if (only === undefined) return null;
-  if (shown.length === 1)
+  if (shown.length === 1) {
+    const words = downloadWords(only.label);
     return (
       <SingleDownload
         output={only.output}
-        label={older.has(only.output.id) ? `${label} (previous version)` : label}
+        label={older.has(only.output.id) ? `${words} (previous version)` : words}
         file={only.label}
         variant={variant}
       />
     );
+  }
   return (
     // Not modal: an open menu leaves the rest of the page readable and clickable.
     <Menu modal={false}>
       <MenuTrigger asChild>
         <Button variant={variant}>
           <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
-          {label}
+          {label ?? `Download ${String(shown.length)} files`}
           <ChevronDownIcon aria-hidden="true" strokeWidth={1.75} />
         </Button>
       </MenuTrigger>
@@ -304,14 +316,14 @@ export function OutputFolder({ output }: { readonly output: Output | undefined }
 // (Copy article, Show instructions) in the order primary, secondary, quiet.
 export function StageFiles({
   files,
-  label = "Download",
-  variant = "primary",
+  label,
+  variant = "secondary",
   noteOlder = true,
   zip,
   children,
 }: {
   readonly files: readonly StageFile[];
-  readonly label?: string;
+  readonly label?: string | undefined;
   readonly variant?: "primary" | "secondary";
   // False where the body already says its file is from before the last change.
   readonly noteOlder?: boolean;
@@ -348,7 +360,7 @@ export function StageFiles({
 }
 
 // The files an edit made outdated: they stay usable, named as the previous version.
-function useOlderOutputs(outputs: readonly Output[]): ReadonlySet<string> {
+export function useOlderOutputs(outputs: readonly Output[]): ReadonlySet<string> {
   const view = useCurrentRevisionView();
   const ids = new Set(outputs.map((output) => output.id));
   return new Set(
@@ -358,10 +370,30 @@ function useOlderOutputs(outputs: readonly Output[]): ReadonlySet<string> {
   );
 }
 
-// The quiet line under a row of actions: lengths, formats, what a file measured. Its own
-// line in ink-2, never beside the buttons.
+// The quiet line under a row of actions: what a person can use (length, shape, size, whether
+// it is ready for YouTube), in words. Measurements for the technically minded go behind a
+// "Technical details" fold, never here. Its own line in ink-2, never beside the buttons.
 export function MetaLine({ children }: { readonly children: ReactNode }) {
   return <p className="m-0 text-small text-ink-2 tabular-nums">{children}</p>;
+}
+
+// "3 min 5 s", "45 s", "1 h 3 min": a length in words, for a facts line.
+export function lengthWords(ms: number | null | undefined): string | undefined {
+  if (ms === null || ms === undefined || !Number.isFinite(ms) || ms <= 0) return undefined;
+  const seconds = Math.round(ms / 1000);
+  if (seconds < 60) return `${String(seconds)} s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${String(minutes)} min ${String(seconds % 60)} s`;
+  return `${String(Math.floor(minutes / 60))} h ${String(minutes % 60)} min`;
+}
+
+// "385 KB", "9.7 MB": a file's size, for a facts line.
+export function fileSize(bytes: number | null | undefined): string | undefined {
+  if (bytes === null || bytes === undefined || !Number.isFinite(bytes) || bytes <= 0)
+    return undefined;
+  if (bytes < 1_000_000) return `${String(Math.max(1, Math.round(bytes / 1000)))} KB`;
+  const mb = bytes / 1_000_000;
+  return `${mb < 10 ? mb.toFixed(1) : String(Math.round(mb))} MB`;
 }
 
 // One of the project's own files, read as text. Loading and failure are said here so the

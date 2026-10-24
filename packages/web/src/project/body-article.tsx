@@ -176,6 +176,7 @@ export function ArticleBody({ stage, companion, project, outputs, busy }: BodyPr
       {/* The stage's files behind one Download, its one Open folder, then Copy for the open
           tab and the instructions behind it. Writing either again is in the section's More. */}
       <StageFiles
+        label="Download article files"
         files={[
           ...(markdown === undefined
             ? []
