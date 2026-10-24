@@ -144,10 +144,10 @@ export function Shorts({
       onChange={(enabled) => onChange({ ...value, enabled })}
     >
       <div className="sl-fields">
-        <GridField htmlFor={`${id}-count`} label="How many" tip="play.shorts.count">
+        <GridField htmlFor={`${id}-count`} label="How many">
           {number("count", "How many shorts", shortsCountMin, shortsCountMax)}
         </GridField>
-        <GridField htmlFor={`${id}-minSeconds`} label="Length" tip="play.shorts.length">
+        <GridField htmlFor={`${id}-minSeconds`} label="Length">
           {number("minSeconds", "Shortest short, in seconds", shortsSecondsMin, shortsSecondsMax)}
           <span aria-hidden="true">to</span>
           {number("maxSeconds", "Longest short, in seconds", shortsSecondsMin, shortsSecondsMax)}

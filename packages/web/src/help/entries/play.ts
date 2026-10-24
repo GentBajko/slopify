@@ -369,11 +369,6 @@ export const playHelp = {
     body: "How many shorts to cut from this video, 1 to 10. Each needs its own new images, so more shorts cost more image calls and render time. Default: 3.",
     tutorial: { page: "Shorts", anchor: "options" },
   },
-  "play.shorts.length": {
-    title: "Short length",
-    body: "The shortest and longest a short may run, in seconds, between 15 and 180. The text model picks moments within these bounds. Default: 60 to 120.",
-    tutorial: { page: "Shorts", anchor: "options" },
-  },
   "play.shorts.prompt": {
     title: "Shorts prompt",
     body: "The Library prompt the text model follows to pick the moments and write each short's title, description and hashtags. Built-in picks moments that make sense alone and open on a hook.",
