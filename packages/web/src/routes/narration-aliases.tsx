@@ -1,24 +1,24 @@
 import type { NarrationAlias } from "@app/kernel/ports/narration-aliases.js";
 import { mergeAliases } from "@app/slices/library/transfer.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { ClipboardPasteIcon, PlusIcon } from "lucide-react";
 import { type ReactElement, useEffect, useId, useRef, useState } from "react";
 import { saveNarrationAliases } from "@/api";
 import { useApp } from "@/app-context";
 import { ActionBar, StatusSlot, type StatusTone } from "@/components/kit/action-bar";
-import { Board, BoardColumn } from "@/components/kit/board";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { EmptyState } from "@/components/kit/empty-state";
 import { Input } from "@/components/kit/field";
-import { InfoTip } from "@/components/kit/info-tip";
-import { SectionHead } from "@/components/kit/section-head";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { PageHeader } from "@/components/kit/layout";
 import { useToast } from "@/components/kit/toast";
 import { counted, useSelection } from "@/components/selection";
 import { LibraryBulkBar, SelectionArea } from "@/library/bulk-bar";
+import { EditorCrumb } from "@/library/editor-frame";
 import { TransferMenu } from "@/library/transfer-menu";
 import { keys, narrationAliasesQuery } from "@/queries";
-import { LibraryToolbar } from "@/routes/library";
 import { PasteAliasesDialog } from "./narration-alias-paste.js";
 import { type AliasRow, AliasRows, matchingRows } from "./narration-alias-rows.js";
 import { aliasFileTypes, useAliasTransfer } from "./narration-alias-transfer.js";
@@ -34,9 +34,11 @@ const plain = (rows: readonly AliasRow[]): readonly NarrationAlias[] =>
     caseSensitive,
   }));
 
-// Library → Aliases: words the narrator says differently from how they are written ("Dr." as
-// "Doctor"). One list, saved as a whole. A project takes a copy when it starts, and only uses
-// it while Use narration aliases is on; the article and the captions keep the written words.
+// Pronunciation (Settings → Voices links here): words the narrator says differently from how
+// they are written ("Dr." as "Doctor"). One list, saved as a whole. A project takes a copy when
+// it starts, and only uses it while Use narration aliases is on; the article and the captions
+// keep the written words. Add alias is the page's one lime button until something changes;
+// then the Save bar appears with the lime Save.
 export function NarrationAliasesRoute(): ReactElement {
   const { api } = useApp();
   const queryClient = useQueryClient();
@@ -96,10 +98,11 @@ export function NarrationAliasesRoute(): ReactElement {
       setErrors({});
       setRows(keyed(result.value.aliases));
       setSaved(JSON.stringify(result.value.aliases));
-      setStatus({
-        text: "Saved. New projects use these aliases; a project you already started keeps its copy until you refresh it in Edit project.",
-        tone: "success",
-      });
+      setStatus(undefined);
+      notify(
+        "Saved. New projects use these aliases; a project already started keeps its copy until you refresh it in its settings.",
+        "success",
+      );
       await queryClient.invalidateQueries({ queryKey: keys.narrationAliases });
     },
     onError: (error) =>
@@ -196,10 +199,21 @@ export function NarrationAliasesRoute(): ReactElement {
     },
   });
 
+  // The Save bar is there only while there is something to save or to say about a save.
+  const barShown = dirty || save.isPending || status !== undefined;
+
   return (
     <div>
-      <LibraryToolbar
-        action={
+      <PageHeader
+        crumb={
+          <EditorCrumb>
+            <Link to="/settings" search={{ section: "voices" }}>
+              Settings
+            </Link>
+          </EditorCrumb>
+        }
+        title="Pronunciation"
+        actions={
           <>
             <TransferMenu
               what="aliases"
@@ -223,41 +237,48 @@ export function NarrationAliasesRoute(): ReactElement {
               <ClipboardPasteIcon aria-hidden="true" className="size-[14px]" />
               Paste many
             </Button>
-            <Button type="button" onClick={add} disabled={rows === undefined}>
+            <Button
+              type="button"
+              variant={barShown ? "secondary" : "primary"}
+              onClick={add}
+              disabled={rows === undefined}
+            >
               <PlusIcon aria-hidden="true" className="size-[14px]" />
               Add alias
             </Button>
           </>
         }
+      />
+      <p
+        className="m-0 mb-4 flex max-w-[var(--measure)] items-center gap-1 text-small text-ink-2"
+        {...helpScope}
       >
-        <Input
-          type="search"
-          aria-label="Search aliases"
-          placeholder="Search aliases"
-          value={query}
-          className="w-full min-w-0 sm:w-64"
-          onChange={(event) => setQuery(event.target.value)}
-        />
-        <p className="m-0 flex items-center gap-1 text-small text-ink-2">
-          Words the narrator says differently, like Dr. as Doctor.
-          <InfoTip id="library.aliases" />
-        </p>
-      </LibraryToolbar>
+        Words the narrator says differently, like Dr. as Doctor. The article, captions and PDF keep
+        the written word.
+        <InfoTip id="library.aliases" />
+      </p>
 
       {listing.error === null ? null : (
-        <Callout tone="danger" title="Couldn't load the aliases" className="mb-6">
+        <Callout tone="danger" title="Couldn't load the aliases" className="mb-4">
           {listing.error.message} Reload the page to try again.
         </Callout>
       )}
 
-      <Board split="aside">
-        <BoardColumn label="Aliases">
-          {rows === undefined ? null : shown.length === 0 ? (
-            <EmptyState title="No aliases yet">
-              Use Add alias to say a word differently from how it is written, or Paste many to add a
-              list.
-            </EmptyState>
-          ) : visible.length === 0 ? (
+      {rows === undefined ? null : shown.length === 0 ? (
+        <EmptyState title="No aliases yet">
+          Press Add alias for one word, or Paste many to add a list like Dr. = Doctor.
+        </EmptyState>
+      ) : (
+        <div className="flex max-w-[960px] flex-col gap-3">
+          <Input
+            type="search"
+            aria-label="Search aliases"
+            placeholder="Search aliases"
+            value={query}
+            className="w-full min-w-0 sm:w-64"
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          {visible.length === 0 ? (
             <EmptyState title="No alias matches">
               {`Nothing in the ${String(shown.length)} aliases contains “${query.trim()}”. Clear the search to see them all.`}
             </EmptyState>
@@ -287,46 +308,30 @@ export function NarrationAliasesRoute(): ReactElement {
               />
             </SelectionArea>
           )}
-        </BoardColumn>
-        <BoardColumn as="aside" label="How aliases are used">
-          <section className="text-small text-ink-2">
-            <SectionHead title="How they are used" />
-            <p className="m-0 mb-3">
-              The narrator reads the alias instead of the written word. The article, the captions
-              and the PDF keep the written word.
-            </p>
-            <p className="m-0 mb-3">
-              A project takes a copy of this list when it starts and uses it while Use narration
-              aliases is on. A project you already started keeps its copy until you refresh it in
-              Edit project.
-            </p>
-            <p className="m-0">
-              Whole word skips matches inside longer words; Match case only matches the exact
-              capitals.
-            </p>
-          </section>
-        </BoardColumn>
-      </Board>
+        </div>
+      )}
 
       <PasteAliasesDialog open={pasting} onClose={() => setPasting(false)} onAdd={addPasted} />
       <UnsavedLeaveGuard dirty={dirty} what="your alias changes" saveLabel="Save aliases" />
 
-      <ActionBar
-        status={
-          <StatusSlot tone={status?.tone ?? (dirty ? "warning" : "info")}>
-            {status?.text ?? (dirty ? "Unsaved changes. Press Save aliases to keep them." : "")}
-          </StatusSlot>
-        }
-      >
-        <Button
-          type="button"
-          variant="primary"
-          disabled={rows === undefined || save.isPending}
-          onClick={() => save.mutate(plain(shown))}
+      {barShown ? (
+        <ActionBar
+          status={
+            <StatusSlot tone={status?.tone ?? (dirty ? "warning" : "info")}>
+              {status?.text ?? (dirty ? "Unsaved changes. Press Save aliases to keep them." : "")}
+            </StatusSlot>
+          }
         >
-          {save.isPending ? "Saving…" : "Save aliases"}
-        </Button>
-      </ActionBar>
+          <Button
+            type="button"
+            variant="primary"
+            disabled={rows === undefined || save.isPending}
+            onClick={() => save.mutate(plain(shown))}
+          >
+            {save.isPending ? "Saving…" : "Save aliases"}
+          </Button>
+        </ActionBar>
+      ) : null}
     </div>
   );
 }

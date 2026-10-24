@@ -157,3 +157,28 @@ it("asks before leaving with unsaved changes", async () => {
   await user.click(screen.getByRole("button", { name: "Stay here" }));
   expect(screen.getByRole("list", { name: "Narration aliases" })).toBeTruthy();
 });
+
+it("keeps the lime for Add alias until something changes, then shows the Save bar", async () => {
+  const user = userEvent.setup();
+  renderRouted(
+    <NarrationAliasesRoute />,
+    testDeps({ "GET /api/pronunciations/aliases": jsonAnswer({ aliases: [] }) }),
+  );
+  expect(await screen.findByRole("heading", { level: 1, name: "Pronunciation" })).toBeTruthy();
+  expect(await screen.findByText(/No aliases yet/u)).toBeTruthy();
+  const add = screen.getByRole("button", { name: "Add alias" });
+  expect(add.getAttribute("data-variant")).toBe("primary");
+  // Nothing to save on an untouched list, so no Save is drawn.
+  expect(screen.queryByRole("button", { name: "Save aliases" })).toBeNull();
+  // The search shows once there is a list to search.
+  expect(screen.queryByRole("searchbox", { name: "Search aliases" })).toBeNull();
+
+  await user.click(add);
+  expect(screen.getByRole("button", { name: "Save aliases" }).getAttribute("data-variant")).toBe(
+    "primary",
+  );
+  expect(screen.getByRole("button", { name: "Add alias" }).getAttribute("data-variant")).toBe(
+    "secondary",
+  );
+  expect(screen.getByText(/Unsaved changes/u)).toBeTruthy();
+});
