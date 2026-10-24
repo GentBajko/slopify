@@ -24,7 +24,10 @@ import { selfExplanatory, unexplainedControls } from "../coverage.js";
 afterEach(cleanup);
 
 // What the Library may show with neither a help line nor an info button beside it.
-const libraryAllow: readonly (string | RegExp)[] = [];
+const libraryAllow: readonly (string | RegExp)[] = [
+  // Templates' channel choice only narrows the list, like a filter (shown with 2+ channels).
+  "Show templates of",
+];
 
 function expectExplained(): void {
   expect(unexplainedControls(document.body, [...selfExplanatory, ...libraryAllow])).toEqual([]);
@@ -258,31 +261,39 @@ describe("every Library control is explained", () => {
     expectExplained();
   });
 
-  it("on the templates list and in the Save a setup drawer", async () => {
+  it("on the templates list, its poster templates and the starter templates drawer", async () => {
     const user = userEvent.setup();
     renderRouted(
       <TemplatesRoute onApplied={vi.fn()} />,
       testDeps({
         "GET /api/design-templates": jsonAnswer({ templates: [] }),
         "GET /api/project-templates": jsonAnswer({
-          templates: [
-            {
-              id: "11111111-1111-4111-8111-111111111111",
-              name: "Weekly documentary",
-              version: 1,
-              createdAt: stamp,
-              updatedAt: stamp,
-            },
+          templates: Array.from({ length: 7 }, (_, index) => ({
+            id: `11111111-1111-4111-8111-11111111111${String(index)}`,
+            name: `Weekly documentary ${String(index)}`,
+            version: 1,
+            createdAt: stamp,
+            updatedAt: stamp,
+          })),
+        }),
+        "GET /api/template-studio/cards": jsonAnswer({ cards: [] }),
+        "GET /api/channels": jsonAnswer({
+          channels: [
+            { id: "c1", name: "History" },
+            { id: "c2", name: "Sleep" },
           ],
         }),
-        "GET /api/channels": jsonAnswer({ channels: [] }),
-        "GET /api/drafts": jsonAnswer({ drafts: [] }),
+        "GET /api/onboarding": jsonAnswer({ packs: [] }),
       }),
     );
-    await screen.findByRole("list", { name: "Project templates" });
+    await screen.findByRole("list", { name: "Video templates" });
     expectExplained();
-    await user.click(screen.getByRole("button", { name: "Save a setup" }));
-    await screen.findByLabelText("Saved Play draft");
+    await user.click(screen.getByRole("button", { name: "Add starter templates" }));
+    await screen.findByRole("dialog");
+    expectExplained();
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("tab", { name: "Poster templates" }));
+    await screen.findByRole("heading", { name: "No poster templates yet" });
     expectExplained();
   });
 });

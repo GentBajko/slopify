@@ -3,19 +3,19 @@ import type { StudioView } from "@app/slices/template-studio/schema.js";
 import { freshDraftDocument } from "@/play/draft-state";
 import { jsonAnswer } from "@/test-app";
 
-// One template's studio as the server answers it, for the studio's page tests and its help walk.
+// One template's Edit template page as the server answers it, for its page tests and help walk.
 export const templateId = "33333333-3333-4333-8333-333333333333";
 export const labels = [
-  "Subject & research",
-  "Script",
-  "Voice",
-  "Pictures",
+  "Topic & title",
+  "Article",
+  "Narration",
+  "Images",
   "Video & captions",
-  "Thumbnail & title",
+  "Thumbnail",
   "Shorts",
-  "Document (PDF)",
-  "Reviews & checkpoints",
-  "Upload pack",
+  "PDF",
+  "Pauses and checks",
+  "YouTube description & posts",
   "Schedule",
 ];
 export const document = {
@@ -47,7 +47,7 @@ export const view: StudioView = {
     sentence:
       id === "thumbnail"
         ? "The thumbnail is off."
-        : "No sample yet. Press Save to make one, or Make sample.",
+        : "Make sample shows what this section makes, about the sample topic.",
   })),
   free: {
     video: {
@@ -65,7 +65,7 @@ export const view: StudioView = {
       targetLufs: -14,
       ceiling: -2.5,
     },
-    document: { state: "off", sentence: "The PDF document is off.", url: null },
+    document: { state: "off", sentence: "The PDF is off.", url: null },
   },
   schedule: {
     runs: [
@@ -113,8 +113,8 @@ export const checks = {
     {
       id: "providers",
       ok: false,
-      sentence: "No voice is chosen, so the run can't start.",
-      fix: { label: "Choose one in Voice", href: `/templates/${templateId}?section=voice` },
+      sentence: "No voice service is chosen, so a run can't start.",
+      fix: { label: "Choose one in Narration", href: `/templates/${templateId}?section=voice` },
     },
   ],
 };

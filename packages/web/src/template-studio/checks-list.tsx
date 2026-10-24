@@ -6,12 +6,19 @@ import { SectionHead } from "@/components/kit/section-head";
 import { Status } from "@/components/kit/status";
 import { templateChecksQuery } from "./api";
 
-// The free checks a template passes before Mark ready: each failing one says what is wrong and
-// links to where it is fixed. Read on their own, so the studio shows while they load.
+// What a run of this template needs that it lacks, one line per missing thing with the link to
+// where it is fixed, failing ones first, so "3 to fix" means three lines to fix. Read on their
+// own, so the page shows while they load.
 export function ChecksList({ templateId }: { readonly templateId: string }): ReactElement {
   const { api } = useApp();
   const query = useQuery(templateChecksQuery(api, templateId));
-  const checks = query.data?.checks;
+  const checks =
+    query.data === undefined
+      ? undefined
+      : [
+          ...query.data.checks.filter((check) => !check.ok),
+          ...query.data.checks.filter((check) => check.ok),
+        ];
   const failing = checks?.filter((check) => !check.ok).length;
   return (
     <section aria-label="Checks" className="flex flex-col gap-2">
@@ -44,8 +51,9 @@ export function ChecksList({ templateId }: { readonly templateId: string }): Rea
         </div>
       ) : (
         <ul className="m-0 flex list-none flex-col gap-3 p-0">
-          {checks.map((check) => (
-            <li key={check.id} className="flex flex-col gap-1">
+          {checks.map((check, index) => (
+            // A check may say several things (one per missing service), so its id repeats.
+            <li key={`${check.id}:${String(index)}`} className="flex flex-col gap-1">
               <Status tone={check.ok ? "done" : "failed"}>
                 <span className="text-small">{check.sentence}</span>
               </Status>

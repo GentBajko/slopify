@@ -32,7 +32,7 @@ it("lists the sample's names, and saves one said another way at the voice-only p
   });
   const user = userEvent.setup();
   renderRouted(
-    <SayItAs templateId={id} revisionId="r1" />,
+    <SayItAs templateId={id} revisionId="r1" aliasesOn onAliasesOn={() => undefined} />,
     testDeps({
       [`GET ${base}/pronunciations`]: jsonAnswer(names),
       "POST /api/auditions/quote": priced(0.001),
@@ -67,14 +67,32 @@ it("lists the sample's names, and saves one said another way at the voice-only p
   });
   expect(
     await screen.findByText(
-      "Saved in Library → Narration aliases: “Cleopatra” is said “Klee-oh-PAT-ra”. Re-voicing the sample's lines that say it.",
+      "Saved in your pronunciations: “Cleopatra” is said “Klee-oh-PAT-ra”. Re-voicing the sample's lines that say it.",
     ),
   ).toBeTruthy();
 });
 
-it("says why the box can't be used while the voice doesn't use narration aliases", async () => {
+it("offers to use your pronunciations while the template's narration doesn't", async () => {
+  const user = userEvent.setup();
+  const turnOn = vi.fn();
   renderRouted(
-    <SayItAs templateId={id} revisionId="r1" />,
+    <SayItAs templateId={id} revisionId="r1" aliasesOn={false} onAliasesOn={turnOn} />,
+    testDeps({
+      [`GET ${base}/pronunciations`]: jsonAnswer({ ...names, aliasesOn: false }),
+      "POST /api/auditions/quote": priced(0.001),
+    }),
+  );
+  expect(
+    await screen.findByText("The narration doesn't use your pronunciations yet."),
+  ).toBeTruthy();
+  expect(screen.getByLabelText("Say Cleopatra as").hasAttribute("disabled")).toBe(true);
+  await user.click(screen.getByRole("button", { name: "Use them" }));
+  expect(turnOn).toHaveBeenCalledOnce();
+});
+
+it("asks for a Save once the narration is set to use them", async () => {
+  renderRouted(
+    <SayItAs templateId={id} revisionId="r1" aliasesOn onAliasesOn={() => undefined} />,
     testDeps({
       [`GET ${base}/pronunciations`]: jsonAnswer({ ...names, aliasesOn: false }),
       "POST /api/auditions/quote": priced(0.001),
@@ -82,36 +100,34 @@ it("says why the box can't be used while the voice doesn't use narration aliases
   );
   expect(
     await screen.findByText(
-      "Say it as writes Library → Narration aliases, which this template's voice doesn't use. Turn on Use narration aliases in Fine-tune Voice, then press Save.",
+      "Save to have the narration use your pronunciations, then say a name another way.",
     ),
   ).toBeTruthy();
-  expect(screen.getByLabelText("Say Cleopatra as").hasAttribute("disabled")).toBe(true);
 });
 
-it("shows the server's sentence before a sample exists", async () => {
-  renderRouted(
-    <SayItAs templateId={id} revisionId={null} />,
-    testDeps({
-      [`GET ${base}/pronunciations`]: jsonAnswer({
-        names: [],
-        aliasesOn: true,
-        voice: null,
-        problem:
-          "The names to check come from the sample's script. Press Save or Make sample to make one.",
-      }),
+it("draws nothing before the sample's article names anyone", async () => {
+  const asked = vi.fn(() =>
+    Response.json({
+      names: [],
+      aliasesOn: true,
+      voice: null,
+      problem: "The names to check come from the sample's article.",
     }),
   );
-  expect(
-    await screen.findByText(
-      "The names to check come from the sample's script. Press Save or Make sample to make one.",
-    ),
-  ).toBeTruthy();
+  renderRouted(
+    <SayItAs templateId={id} revisionId={null} aliasesOn onAliasesOn={() => undefined} />,
+    testDeps({ [`GET ${base}/pronunciations`]: asked }),
+  );
+  await waitFor(() => expect(asked).toHaveBeenCalledOnce());
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  expect(screen.queryByRole("region", { name: "Say it as" })).toBeNull();
+  expect(screen.queryByText("Names the voice may say wrong")).toBeNull();
 });
 
 it("shows a refusal's own sentence and keeps what was typed", async () => {
   const user = userEvent.setup();
   renderRouted(
-    <SayItAs templateId={id} revisionId="r1" />,
+    <SayItAs templateId={id} revisionId="r1" aliasesOn onAliasesOn={() => undefined} />,
     testDeps({
       [`GET ${base}/pronunciations`]: jsonAnswer(names),
       "POST /api/auditions/quote": priced(0.001),

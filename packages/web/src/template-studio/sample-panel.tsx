@@ -1,5 +1,6 @@
 import type { TemplateSection } from "@app/slices/template-studio/model.js";
 import type { StudioView } from "@app/slices/template-studio/schema.js";
+import { useQuery } from "@tanstack/react-query";
 import { type ReactElement, type ReactNode, useState } from "react";
 import { useApp } from "@/app-context";
 import { AudioPlayer } from "@/components/kit/audio-player";
@@ -7,11 +8,10 @@ import { Button } from "@/components/kit/button";
 import { FileLink, TextLink } from "@/components/kit/link";
 import { Player } from "@/components/kit/player";
 import { SectionHead } from "@/components/kit/section-head";
-import { DataTable } from "@/components/kit/stats";
 import { Status } from "@/components/kit/status";
 import { Steps } from "@/components/kit/steps";
-import { usd } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { templateChecksQuery } from "./api";
 import {
   EarlierSamples,
   FullScriptSwitch,
@@ -21,6 +21,7 @@ import {
 } from "./paid-sample";
 import { SayItAs } from "./say-it-as";
 import { stateTone, stateWord } from "./section-rail";
+import { SampleTopic } from "./topic";
 
 type Section = StudioView["sections"][number];
 
@@ -37,57 +38,65 @@ const freeOf = (
         ? view.free.document
         : undefined;
 
-// Beside a section's settings: its sample, Make samples for the free ones and Make sample for
-// a paid one that is outdated, waiting or failed. A failed one shows the step's own sentence.
+// The checks a sample can't be made past: a keyword left empty, a service missing, no voice.
+const blocking = new Set(["keywords", "providers", "voice"]);
+
+// Beside a section's settings: the topic every sample is about, then this section's sample, its
+// state in words, and the one button that makes it, priced ("Make sample · about $0.08", or
+// "· free" for the ones made on this computer). While a check says a run can't start, the
+// check's fix stands where the button would.
 export function SamplePanel({
   view,
   section,
   making,
   onMake,
+  aliasesOn,
+  onAliasesOn,
 }: {
   readonly view: StudioView;
   readonly section: Section;
-  // Make samples was pressed and its request hasn't answered.
+  // Make sample (free) was pressed and its request hasn't answered.
   readonly making: boolean;
   readonly onMake: () => void;
+  // Whether the template being edited says names the way your pronunciations list them.
+  readonly aliasesOn: boolean;
+  readonly onAliasesOn: () => void;
 }): ReactElement {
+  const { api } = useApp();
   const [problem, setProblem] = useState<string | null>(null);
+  const checks = useQuery(templateChecksQuery(api, view.template.id));
   const free = freeOf(view, section.id);
-  const makeable = free !== undefined && (free.state === "stale" || free.state === "needs-fix");
   const paid = paidSections.includes(section.id);
+  const makeable = free !== undefined && (free.state === "stale" || free.state === "needs-fix");
   const remakeable =
     paid &&
     ["stale", "needs-fix", "waiting"].includes(section.state) &&
     view.paid.state !== "queued" &&
     view.paid.state !== "making";
+  const fix =
+    checks.data?.version === view.template.version
+      ? checks.data.checks.find((check) => !check.ok && blocking.has(check.id))?.fix
+      : undefined;
+  const action = remakeable ? (
+    fix === undefined ? (
+      <MakeSampleButton view={view} onDone={setProblem} />
+    ) : (
+      <TextLink to={fix.href} className="text-small">{`${fix.label} first`}</TextLink>
+    )
+  ) : free !== undefined && !paid && makeable ? (
+    <Button size="small" disabled={making} disabledReason="Asking for the sample" onClick={onMake}>
+      Make sample · free
+    </Button>
+  ) : null;
   return (
     <section aria-label={`${section.label} sample`} className="flex flex-col gap-3">
+      <SampleTopic view={view} />
       <SectionHead
         title="Sample"
         as="h3"
         className="pb-0"
         status={<Status tone={stateTone[section.state]}>{stateWord[section.state]}</Status>}
-      >
-        {remakeable ? <MakeSampleButton view={view} onDone={setProblem} /> : null}
-        {free === undefined || paid ? null : (
-          <Button
-            size="small"
-            disabled={!makeable || making}
-            disabledReason={
-              making
-                ? "Asking for the samples"
-                : free.state === "current"
-                  ? "This sample is current"
-                  : free.state === "off"
-                    ? "This section is off"
-                    : "The sample is being made"
-            }
-            onClick={onMake}
-          >
-            Make samples
-          </Button>
-        )}
-      </SectionHead>
+      />
       <p
         className={cn(
           "m-0 text-small",
@@ -96,6 +105,7 @@ export function SamplePanel({
       >
         {section.sentence}
       </p>
+      {action === null ? null : <div className="flex flex-wrap items-center gap-2">{action}</div>}
       {problem === null ? null : (
         <p role="alert" className="m-0 text-small text-danger">
           {problem}
@@ -106,7 +116,12 @@ export function SamplePanel({
       ) : null}
       <PaidBody view={view} section={section.id} />
       {section.id === "voice" && section.state !== "off" && section.state !== "provided" ? (
-        <SayItAs templateId={view.template.id} revisionId={view.paid.revisionId} />
+        <SayItAs
+          templateId={view.template.id}
+          revisionId={view.paid.revisionId}
+          aliasesOn={aliasesOn}
+          onAliasesOn={onAliasesOn}
+        />
       ) : null}
       <SampleBody view={view} section={section.id} />
       {paid ? <EarlierSamples view={view} /> : null}
@@ -139,13 +154,19 @@ function SampleBody({
     case "voice": {
       const { loudness } = view.free;
       if (loudness.beforeUrl === null || loudness.url === null) return null;
-      const level = (lufs: number | null) => (lufs === null ? "" : ` · ${lufs.toFixed(1)} LUFS`);
       return (
-        <div className="flex flex-col gap-3">
-          <p className="m-0 text-small font-semibold">{`Before${level(loudness.beforeLufs)}`}</p>
+        <div className="flex flex-col gap-2">
+          <p className="m-0 text-small font-semibold" title={lufs(loudness.beforeLufs)}>
+            Before levelling
+          </p>
           <AudioPlayer src={at(loudness.beforeUrl)} label="Sample narration before levelling" />
-          <p className="m-0 text-small font-semibold">{`After${level(loudness.afterLufs)}${heldBack(loudness)}`}</p>
+          <p className="m-0 text-small font-semibold" title={lufs(loudness.afterLufs)}>
+            After levelling (YouTube loudness)
+          </p>
           <AudioPlayer src={at(loudness.url)} label="Sample narration after levelling" />
+          {heldBack(loudness) === "" ? null : (
+            <p className="m-0 text-small text-ink-2">{heldBack(loudness)}</p>
+          )}
         </div>
       );
     }
@@ -171,17 +192,15 @@ function SampleBody({
           </FileLink>
         </div>
       );
-    case "schedule":
-      return <ScheduleSample view={view} />;
     case "reviews":
-      return (
+      return view.reviews.length === 0 ? null : (
         <Steps
-          label="Where a run stops"
+          label="Where a run pauses"
           steps={view.reviews.map((step) => ({
             id: step.id,
             name: step.name,
             tone: step.kind === "checkpoint" ? "waiting" : "info",
-            state: step.kind === "checkpoint" ? "Waits for you" : "Checked automatically",
+            state: step.kind === "checkpoint" ? "Waits for you" : "Checked by AI",
             time: step.by === "you" ? "You" : step.by === "agent" ? "Agent" : "Model",
             detail: step.detail,
           }))}
@@ -190,46 +209,6 @@ function SampleBody({
     default:
       return null;
   }
-}
-
-function ScheduleSample({ view }: { readonly view: StudioView }): ReactElement {
-  const { runs, cost } = view.schedule;
-  const when = new Intl.DateTimeFormat(undefined, {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  return (
-    <div className="flex flex-col gap-3">
-      <DataTable
-        caption="The next runs"
-        rowKey={(run) => `${run.scheduleId}:${run.at}`}
-        rows={runs}
-        empty="No run is coming up."
-        columns={[
-          { id: "when", header: "When", cell: (run) => when.format(new Date(run.at)) },
-          {
-            id: "title",
-            header: "Title",
-            cell: (run) => (run.topic ? run.title : `${run.title} (no topic queued yet)`),
-          },
-          {
-            id: "schedule",
-            header: "Schedule",
-            cell: (run) => (run.paused ? `${run.scheduleName} (paused)` : run.scheduleName),
-          },
-        ]}
-      />
-      {cost === null || cost.problem !== null ? null : (
-        <p className="m-0 text-small text-ink-2">{costWords(cost)}</p>
-      )}
-      <TextLink to="/calendar" search={{ tab: "schedules" }} className="text-small">
-        Schedules in the calendar
-      </TextLink>
-    </div>
-  );
 }
 
 function Frame({
@@ -246,27 +225,17 @@ function Frame({
   );
 }
 
+const lufs = (value: number | null): string | undefined =>
+  value === null ? undefined : `${value.toFixed(1)} LUFS`;
+
 // A level that lands more than half a LU off its target says why: the limiter held the peaks
 // under the ceiling (Slopify's levelling stops adding gain past 6 dB more than the plain one).
-function heldBack(loudness: StudioView["free"]["loudness"]): string {
+export function heldBack(loudness: StudioView["free"]["loudness"]): string {
   const { afterLufs, targetLufs, ceiling } = loudness;
   if (afterLufs === null || targetLufs === null || ceiling === null) return "";
   const short = targetLufs - afterLufs;
   if (Math.abs(short) <= 0.5) return "";
-  if (short < 0) return ` (target ${targetLufs.toFixed(1)} LUFS)`;
-  return `: held back ${short.toFixed(1)} LU from ${targetLufs.toFixed(1)} so peaks stay under ${ceiling.toFixed(1)} dBTP`;
-}
-
-// What the schedules cost a month: the active ones now, and the paused ones once resumed (a
-// paused schedule still uses the template, and the calendar lists its runs).
-function costWords(cost: NonNullable<StudioView["schedule"]["cost"]>): string {
-  const active = `About ${usd(cost.high)} a month at most, for about ${String(cost.runs)} runs.`;
-  const { paused } = cost;
-  if (paused.schedules === 0) return active;
-  const resumed = `about ${usd(paused.high)} a month at most, for about ${String(paused.runs)} runs`;
-  if (cost.runs === 0)
-    return paused.schedules === 1
-      ? `1 paused schedule uses this template: nothing runs while it is paused. Resumed, ${resumed}.`
-      : `${String(paused.schedules)} paused schedules use this template: nothing runs while they are paused. Resumed, ${resumed}.`;
-  return `${active} ${paused.schedules === 1 ? "1 paused schedule" : `${String(paused.schedules)} paused schedules`} would add ${resumed}, once resumed.`;
+  if (short < 0)
+    return `It comes out ${Math.abs(short).toFixed(1)} LU louder than YouTube's ${targetLufs.toFixed(1)} LUFS.`;
+  return `Held back ${short.toFixed(1)} LU from YouTube's ${targetLufs.toFixed(1)} LUFS so its peaks stay under ${ceiling.toFixed(1)} dBTP.`;
 }

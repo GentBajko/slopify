@@ -1,89 +1,208 @@
-import { templateSections } from "@app/slices/template-studio/model.js";
+import { setupSectionNames } from "@app/slices/project-templates/setup-sections.js";
+import { setupSectionOf, templateSections } from "@app/slices/template-studio/model.js";
 import type { SampleQuoteView, StudioView } from "@app/slices/template-studio/schema.js";
 import { useLocation } from "@tanstack/react-router";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { AssistantScreenProvider, useAssistantScreen } from "@/assistant/screen";
+import { freshDraftDocument } from "@/play/draft-state";
 import { packs, xPack } from "@/social/post.fake";
+import type { PlayHandoff } from "@/templates/play-handoff";
 import { jsonAnswer, problemAnswer, renderRouted, testDeps } from "@/test-app";
 import { TemplateStudioPage } from "./page";
-import { priceLabel } from "./save-bar";
-import { checks, type document, labels, routes, templateId, view } from "./studio.fake";
+import { checks, labels, routes, templateId, view } from "./studio.fake";
 
 afterEach(cleanup);
 
-function open(section: (typeof templateSections)[number] = "subject", extra = {}) {
+function open(
+  section: (typeof templateSections)[number] = "subject",
+  extra = {},
+  play?: PlayHandoff,
+) {
   return renderRouted(
-    <TemplateStudioPage templateId={templateId} section={section} />,
+    <TemplateStudioPage templateId={templateId} section={section} play={play} />,
     testDeps({ ...routes, ...extra }),
   );
 }
 
-it("lists the sections in pipeline order, each with its sample's state in words", async () => {
+const quote = (over: Partial<SampleQuoteView> = {}): SampleQuoteView => ({
+  version: 3,
+  first: true,
+  sections: [],
+  rows: [{ stage: "Article", low: 0.1, high: 0.3, detail: "One call." }],
+  low: 0.08,
+  high: 0.3,
+  unknown: 0,
+  onPlan: false,
+  usesPlan: false,
+  budget: { budget: 2, spent: 0, unpriced: 0, left: 2, plans: false },
+  fits: true,
+  problem: null,
+  ...over,
+});
+
+// Nothing fails a check: the sample's own button shows.
+const passing = { version: 3, checks: checks.checks.map((check) => ({ ...check, ok: true })) };
+
+it("names its sections from the one list Create and a project share, in run order", () => {
+  expect(templateSections.map((id) => setupSectionNames[setupSectionOf[id]])).toEqual(labels);
+});
+
+it("lists the sections, a lamp and its word only where a section's sample says something", async () => {
   open();
   const rail = await screen.findByRole("navigation", { name: "Template sections" });
   const links = within(rail).getAllByRole("link");
   expect(links.map((link) => link.textContent)).toEqual(
-    labels.map(
-      (label, index) =>
-        `${label}${templateSections[index] === "thumbnail" ? "Off" : "No current sample"}`,
+    labels.map((label, index) =>
+      templateSections[index] === "thumbnail" ? `${label}, Off` : label,
     ),
   );
+  // No lamp stands without its word.
+  expect(rail.querySelectorAll(".sl-lamp")).toHaveLength(1);
   expect(links[0]?.getAttribute("aria-current")).toBe("page");
   expect(links[2]?.getAttribute("href")).toBe(`/templates/${templateId}?section=voice`);
 });
 
-it("names the version, what schedules run and the sample topic in the header", async () => {
+it("is titled Edit template, names the template and its version, and says what schedules run", async () => {
   open();
+  expect(await screen.findByRole("heading", { name: "Edit template", level: 1 })).not.toBeNull();
   expect(
-    await screen.findByRole("heading", { name: "Weekly documentary", level: 1 }),
+    screen.getByText("Weekly documentary · version 3 · Not ready for schedules"),
   ).not.toBeNull();
   expect(
-    screen.getByText("Version 3 · Not checked in the studio · schedules run version 2"),
+    await screen.findByText(
+      "Schedules run version 2 until you approve this one: More → Approve for schedules. First fix 1 check.",
+    ),
   ).not.toBeNull();
-  expect(screen.getByText("Sample topic: The history of the lighthouse")).not.toBeNull();
 });
 
-it.each(templateSections)(
-  "shows at most four settings in %s, Fine-tune folded",
+it("says nothing about schedules on a template no schedule runs", async () => {
+  open("subject", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({
+      ...view,
+      gated: false,
+      runnableVersion: 3,
+      schedule: { runs: [], cost: null },
+    }),
+  });
+  expect(await screen.findByText("Weekly documentary · version 3")).not.toBeNull();
+  expect(screen.queryByText(/schedules/i)).toBeNull();
+  await userEvent.setup().click(screen.getByRole("button", { name: "More for this template" }));
+  expect(await screen.findByRole("menuitem", { name: "Versions" })).not.toBeNull();
+  expect(screen.queryByRole("menuitem", { name: /Approve/ })).toBeNull();
+});
+
+it("folds each section's whole editor under its lead settings, as a disclosure with its count", async () => {
+  open("video");
+  const panel = await screen.findByRole("region", { name: "Video & captions settings" });
+  const summary = panel.querySelector("details > summary");
+  expect(summary?.textContent).toMatch(/^All Video & captions settings \(\d+\)$/);
+  expect(panel.querySelector("details")?.open).toBe(false);
+});
+
+it.each(["shorts", "reviews", "upload"] as const)(
+  "shows the whole of %s at once, under no All … settings fold",
   async (section) => {
     open(section);
     const panel = await screen.findByRole("region", {
       name: `${labels[templateSections.indexOf(section)] ?? section} settings`,
     });
-    const controls = panel.querySelector('[data-slot="studio-controls"]');
-    expect(controls?.children.length ?? 0).toBeLessThanOrEqual(4);
-    const fold = panel.querySelector("details");
-    expect(fold?.open).toBe(false);
-    expect(fold?.querySelector("summary")?.textContent).toMatch(/^Fine-tune /);
+    const folds = [...panel.querySelectorAll("details > summary")].map((one) => one.textContent);
+    expect(folds.filter((one) => one?.startsWith("All "))).toEqual([]);
+    expect(folds).toContainEqual(expect.stringMatching(/^What the .* sent/));
   },
 );
 
-it("says what the script is made with, and Change opens Fine-tune", async () => {
+it("puts each setting in one section: the shorts in Shorts, each site's post in YouTube description & posts", async () => {
+  open("shorts");
+  const shorts = await screen.findByRole("region", { name: "Shorts settings" });
+  expect(within(shorts).queryByRole("group", { name: "Post to" })).toBeNull();
+  cleanup();
+  open("upload");
+  const upload = await screen.findByRole("region", {
+    name: "YouTube description & posts settings",
+  });
+  expect(within(upload).getAllByRole("group", { name: "Post to" })).toHaveLength(1);
+  expect(within(upload).queryByText(/How many/)).toBeNull();
+});
+
+it("shows Pauses and checks' pauses and AI checks at once", async () => {
+  open("reviews");
+  const panel = await screen.findByRole("region", { name: "Pauses and checks settings" });
+  expect(within(panel).getAllByRole("checkbox").length).toBeGreaterThan(0);
+  expect(within(panel).getByRole("combobox", { name: "Article review" })).not.toBeNull();
+});
+
+it("says who writes the article, and Change opens all its settings", async () => {
   const user = userEvent.setup();
   open("script");
-  expect(await screen.findByText("Made with OpenRouter · claude")).not.toBeNull();
+  expect(await screen.findByText("Written by OpenRouter · claude")).not.toBeNull();
   await user.click(screen.getByRole("button", { name: "Change" }));
   await waitFor(() =>
     expect(
-      screen.getByRole("region", { name: "Script settings" }).querySelector("details")?.open,
+      screen.getByRole("region", { name: "Article settings" }).querySelector("details")?.open,
     ).toBe(true),
   );
 });
 
-it("shows the studio at once while its checks are still being looked up", async () => {
+it("reads an unchosen writer as this computer's default, as every video made from it does", async () => {
+  open("script", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({
+      ...view,
+      template: {
+        ...view.template,
+        document: {
+          ...view.template.document,
+          form: {
+            ...view.template.document.form,
+            llm: { provider: "", model: "" },
+            images: { provider: "", model: "" },
+          },
+        },
+      },
+    }),
+    "GET /api/providers/first-run": jsonAnswer({
+      firstRun: false,
+      detected: [],
+      defaults: { llm: { provider: "openrouter", model: "claude" } },
+      message: null,
+      detail: null,
+    }),
+  });
+  expect(await screen.findByText("Written by OpenRouter · claude (your default)")).not.toBeNull();
+});
+
+it("draws the writer's pickers where the check's link lands when there is no choice and no default", async () => {
+  open("script", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({
+      ...view,
+      template: {
+        ...view.template,
+        document: {
+          ...view.template.document,
+          form: { ...view.template.document.form, llm: { provider: "", model: "" } },
+        },
+      },
+    }),
+  });
+  const panel = await screen.findByRole("region", { name: "Article settings" });
+  expect(within(panel).getByRole("group", { name: "Written by" })).not.toBeNull();
+  expect(
+    within(panel).getAllByText("No writing service is chosen, so a run can't start.").length,
+  ).toBeGreaterThan(0);
+});
+
+it("shows the page at once while its checks are still being looked up", async () => {
   open("subject", {
     [`GET /api/template-studio/${templateId}/checks`]: () => new Promise<Response>(() => undefined),
   });
-  expect(
-    await screen.findByRole("heading", { name: "Weekly documentary", level: 1 }),
-  ).not.toBeNull();
+  expect(await screen.findByRole("heading", { name: "Edit template", level: 1 })).not.toBeNull();
   const pending = screen.getByRole("region", { name: "Checks" });
   expect(within(pending).getByRole("status", { name: "Checking the template" })).not.toBeNull();
 });
 
-it("says why the checks didn't load, and keeps the rest of the studio", async () => {
+it("says why the checks didn't load, and keeps the rest of the page", async () => {
   open("subject", {
     [`GET /api/template-studio/${templateId}/checks`]: problemAnswer(
       "Slopify couldn't look up your providers.",
@@ -96,70 +215,63 @@ it("says why the checks didn't load, and keeps the rest of the studio", async ()
       /The checks didn't load: Slopify couldn't look up your providers\./,
     ),
   ).not.toBeNull();
-  expect(screen.getByRole("heading", { name: "Weekly documentary", level: 1 })).not.toBeNull();
+  expect(screen.getByRole("heading", { name: "Edit template", level: 1 })).not.toBeNull();
 });
 
-it("lists the free checks, each failing one with its fix as a link", async () => {
-  open();
-  const checks = await screen.findByRole("region", { name: "Checks" });
-  expect(await within(checks).findByText("1 to fix")).not.toBeNull();
+it("lists one line per thing to fix, first, each with its link, and counts them", async () => {
+  open("subject", {
+    [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer({
+      version: 3,
+      checks: [
+        { id: "keywords", ok: true, sentence: "Every keyword has a value or is filled per video." },
+        {
+          id: "providers",
+          ok: false,
+          sentence: "No writing service is chosen, so a run can't start.",
+          fix: { label: "Choose one in Article", href: `/templates/${templateId}?section=script` },
+        },
+        {
+          id: "providers",
+          ok: false,
+          sentence: "No image service is chosen, so a run can't start.",
+          fix: { label: "Choose one in Images", href: `/templates/${templateId}?section=pictures` },
+        },
+        {
+          id: "providers",
+          ok: false,
+          sentence: "OpenAI, the voice service, isn't set up on this computer.",
+          fix: { label: "Set it up in Settings → Providers", href: "/settings?section=providers" },
+        },
+      ],
+    }),
+  });
+  const region = await screen.findByRole("region", { name: "Checks" });
+  expect(await within(region).findByText("3 to fix")).not.toBeNull();
+  const lines = within(region).getAllByRole("listitem");
+  expect(lines.map((line) => line.textContent?.slice(0, 22))).toEqual([
+    "No writing service is ",
+    "No image service is ch",
+    "OpenAI, the voice serv",
+    "Every keyword has a va",
+  ]);
   expect(
-    within(checks).getByRole("link", { name: "Choose one in Voice" }).getAttribute("href"),
-  ).toBe(`/templates/${templateId}?section=voice`);
+    within(region).getByRole("link", { name: "Choose one in Images" }).getAttribute("href"),
+  ).toBe(`/templates/${templateId}?section=pictures`);
 });
 
-const quote = (over: Partial<SampleQuoteView> = {}): SampleQuoteView => ({
-  version: 3,
-  first: false,
-  sections: ["video", "shorts", "upload"],
-  rows: [{ stage: "Export / subtitles", low: 0, high: 0, detail: "Local." }],
-  low: 0.08,
-  high: 0.12,
-  unknown: 0,
-  onPlan: false,
-  usesPlan: false,
-  budget: { budget: 2, spent: 0, unpriced: 0, left: 2, plans: false },
-  fits: true,
-  problem: null,
-  ...over,
-});
-
-it("prices the Save on its button and saves at that price", async () => {
+it("has no Save until something changed, and one Save that never spends", async () => {
   const user = userEvent.setup();
   const sent = vi.fn(async (request: Request) => {
-    const body = (await request.json()) as {
-      baseVersion: number;
-      sample: string;
-      acknowledgedHigh: number;
-      document: typeof document;
+    const body = (await request.json()) as Record<string, unknown> & {
+      document: { form: { format: string } };
     };
-    expect(body).toMatchObject({ baseVersion: 3, sample: "make", acknowledgedHigh: 0.12 });
-    expect(body.document.form.format).toBe("9:16");
-    return Response.json({
-      template: { ...view.template, version: 4 },
-      sample: "queued",
-      quote: null,
-      replayed: false,
+    expect(body).toMatchObject({
+      baseVersion: 3,
+      name: "Weekly documentary",
+      sample: "skip",
+      acknowledgedHigh: 0,
     });
-  });
-  open("video", {
-    [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(quote()),
-    [`POST /api/template-studio/${templateId}/save`]: sent,
-  });
-  const save = await screen.findByRole("button", { name: "Save" });
-  expect(save.hasAttribute("disabled")).toBe(true);
-  await user.click(screen.getByRole("button", { name: "Vertical 9:16" }));
-  expect(screen.getByText("Unsaved changes.")).not.toBeNull();
-  const priced = await screen.findByRole("button", { name: "Save · about $0.12" });
-  await waitFor(() => expect(priced.hasAttribute("disabled")).toBe(false));
-  await user.click(priced);
-  await waitFor(() => expect(sent).toHaveBeenCalledOnce());
-});
-
-it("saves without a sample, which spends nothing", async () => {
-  const user = userEvent.setup();
-  const sent = vi.fn(async (request: Request) => {
-    expect(await request.json()).toMatchObject({ sample: "skip", acknowledgedHigh: 0 });
+    expect(body.document.form.format).toBe("9:16");
     return Response.json({
       template: { ...view.template, version: 4 },
       sample: "skipped",
@@ -167,117 +279,99 @@ it("saves without a sample, which spends nothing", async () => {
       replayed: false,
     });
   });
-  open("video", {
-    [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(quote()),
-    [`POST /api/template-studio/${templateId}/save`]: sent,
-  });
-  await user.click(await screen.findByRole("button", { name: "Square 1:1" }));
-  await user.click(screen.getByRole("button", { name: "Save without a sample" }));
+  open("video", { [`POST /api/template-studio/${templateId}/save`]: sent });
+  await screen.findByRole("region", { name: "Video & captions settings" });
+  expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Vertical 9:16" }));
+  expect(screen.getByText("Unsaved changes. Save them before you make a video.")).not.toBeNull();
+  await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(sent).toHaveBeenCalledOnce());
 });
 
-it("puts a higher price back on the button, in the server's words, when the Save is refused", async () => {
+it("renames the template from Topic & title, saved with the next Save", async () => {
   const user = userEvent.setup();
-  open("video", {
+  const sent = vi.fn(async (request: Request) => {
+    expect(await request.json()).toMatchObject({ name: "Monthly documentary" });
+    return Response.json({
+      template: { ...view.template, version: 4 },
+      sample: "skipped",
+      quote: null,
+      replayed: false,
+    });
+  });
+  open("subject", { [`POST /api/template-studio/${templateId}/save`]: sent });
+  const name = await screen.findByRole("textbox", { name: "Template name" });
+  await user.clear(name);
+  await user.type(name, "Monthly documentary");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(sent).toHaveBeenCalledOnce());
+});
+
+it("makes a section's sample at the price on its button", async () => {
+  const user = userEvent.setup();
+  const made = vi.fn(async (request: Request) => {
+    expect(await request.json()).toMatchObject({ version: 3, acknowledgedHigh: 0.3 });
+    return Response.json({ queued: true, version: 3 }, { status: 202 });
+  });
+  open("script", {
+    [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer(passing),
     [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(quote()),
-    [`POST /api/template-studio/${templateId}/save`]: () =>
-      Response.json(
-        {
-          title: "Conflict",
-          status: 409,
-          detail:
-            "The sample now costs about $0.61, more than the $0.12 you saw. Press Save again to accept the new price, or Save without a sample.",
-          reason: "cost-changed",
-          quote: quote({ high: 0.61 }),
-        },
-        { status: 409, headers: { "content-type": "application/problem+json" } },
-      ),
+    [`POST /api/template-studio/${templateId}/samples/make`]: made,
   });
-  await user.click(await screen.findByRole("button", { name: "Square 1:1" }));
-  const priced = await screen.findByRole("button", { name: "Save · about $0.12" });
-  await waitFor(() => expect(priced.hasAttribute("disabled")).toBe(false));
-  await user.click(priced);
+  const sample = await screen.findByRole("region", { name: "Article sample" });
   expect(
-    await screen.findByText(
-      "The template wasn't saved: The sample now costs about $0.61, more than the $0.12 you saw. Press Save again to accept the new price, or Save without a sample.",
-    ),
+    within(sample).getByText("Make sample shows what this section makes, about the sample topic."),
   ).not.toBeNull();
-  expect(await screen.findByRole("button", { name: "Save · about $0.61" })).not.toBeNull();
-});
-
-it("says a first sample that costs nothing is free, and a change no sample shows needs none", async () => {
-  expect(priceLabel(quote({ high: 0, first: true, sections: [] }))).toBe("Save · free");
-  expect(priceLabel(quote({ high: 0, first: false, sections: [] }))).toBe("Save · no paid change");
-  expect(priceLabel(quote({ onPlan: true }))).toBe("Save · plan usage");
-});
-
-it("keeps Save on screen but off at today's budget, linking to where it is raised", async () => {
-  const user = userEvent.setup();
-  open("video", {
-    [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(
-      quote({
-        fits: false,
-        budget: { budget: 2, spent: 1.95, unpriced: 0, left: 0.05, plans: false },
-      }),
-    ),
-  });
-  await user.click(await screen.findByRole("button", { name: "Square 1:1" }));
-  const priced = await screen.findByRole("button", { name: "Save · about $0.12" });
-  expect(priced.hasAttribute("disabled") || priced.getAttribute("aria-disabled") === "true").toBe(
-    true,
+  await user.click(
+    await within(sample).findByRole("button", { name: "Make sample · about $0.30" }),
   );
-  expect(
-    screen.getByRole("link", { name: "Settings → Template studio" }).getAttribute("href"),
-  ).toBe("/settings?section=template-studio");
-  expect(
-    screen.getByRole("button", { name: "Save without a sample" }).hasAttribute("disabled"),
-  ).toBe(false);
+  await waitFor(() => expect(made).toHaveBeenCalledOnce());
 });
 
-it("says a sample on a CLI plan waits until samples may use plans, linking to the switch", async () => {
-  const user = userEvent.setup();
-  open("video", {
+it("never prices a sample at $0: free, plan usage, or why none can be made", async () => {
+  open("script", {
+    [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer(passing),
+    [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(quote({ high: 0 })),
+  });
+  let sample = await screen.findByRole("region", { name: "Article sample" });
+  expect(await within(sample).findByRole("button", { name: "Make sample · free" })).not.toBeNull();
+  cleanup();
+  open("script", {
+    [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer(passing),
     [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(
-      quote({ high: 0, onPlan: true, usesPlan: true, fits: false }),
+      quote({ high: 0, onPlan: true, usesPlan: true }),
     ),
   });
-  await user.click(await screen.findByRole("button", { name: "Square 1:1" }));
-  const priced = await screen.findByRole("button", { name: "Save · plan usage" });
-  expect(priced.getAttribute("aria-disabled") ?? priced.getAttribute("disabled")).not.toBeNull();
+  sample = await screen.findByRole("region", { name: "Article sample" });
   expect(
-    screen.getByText(/This sample runs on your CLI plan, and samples may not use CLI plans/),
+    await within(sample).findByRole("button", { name: "Make sample · plan usage" }),
   ).not.toBeNull();
+  cleanup();
+  open("script", {
+    [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer(passing),
+    [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(
+      quote({ high: 0, problem: "No sample can be made of this setup: pick an article prompt." }),
+    ),
+  });
+  sample = await screen.findByRole("region", { name: "Article sample" });
   expect(
-    screen.getByRole("link", { name: "Settings → Template studio" }).getAttribute("href"),
-  ).toBe("/settings?section=template-studio");
+    await within(sample).findByText("No sample can be made of this setup: pick an article prompt."),
+  ).not.toBeNull();
+  expect(within(sample).queryByRole("button", { name: /^Make sample/ })).toBeNull();
 });
 
-it("asks to accept steps with no known price before a priced Save", async () => {
-  const user = userEvent.setup();
-  open("video", {
-    [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(quote({ unknown: 2 })),
-  });
-  await user.click(await screen.findByRole("button", { name: "Square 1:1" }));
-  const priced = await screen.findByRole("button", { name: "Save · about $0.12" });
-  const accept = await screen.findByRole("switch", { name: "Accept 2 steps with no known price" });
-  expect(priced.hasAttribute("disabled") || priced.getAttribute("aria-disabled") === "true").toBe(
-    true,
-  );
-  await user.click(accept);
-  await waitFor(() =>
-    expect(
-      screen.getByRole("button", { name: "Save · about $0.12" }).hasAttribute("disabled"),
-    ).toBe(false),
-  );
+it("puts a failing check's fix where Make sample would be", async () => {
+  open("script");
+  const sample = await screen.findByRole("region", { name: "Article sample" });
+  const fix = await within(sample).findByRole("link", { name: "Choose one in Narration first" });
+  expect(fix.getAttribute("href")).toBe(`/templates/${templateId}?section=voice`);
+  expect(within(sample).queryByRole("button", { name: /^Make sample/ })).toBeNull();
 });
 
 it("shows a failed sample's own sentence and Make sample at its price", async () => {
   const user = userEvent.setup();
   const failed = "OpenRouter refused the key. Paste a new one in Settings → Providers.";
-  const made = vi.fn(async (request: Request) => {
-    expect(await request.json()).toMatchObject({ version: 3, acknowledgedHigh: 0.3 });
-    return Response.json({ queued: true, version: 3 }, { status: 202 });
-  });
+  const made = vi.fn(() => Response.json({ queued: true, version: 3 }, { status: 202 }));
   open("script", {
     [`GET /api/template-studio/${templateId}`]: jsonAnswer({
       ...view,
@@ -286,16 +380,16 @@ it("shows a failed sample's own sentence and Make sample at its price", async ()
       ),
       paid: { ...view.paid, state: "failed", sentence: failed, quotedHigh: 0.3 },
     }),
-    [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(quote()),
+    [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer(passing),
     [`POST /api/template-studio/${templateId}/samples/make`]: made,
   });
-  const sample = await screen.findByRole("region", { name: "Script sample" });
+  const sample = await screen.findByRole("region", { name: "Article sample" });
   expect(within(sample).getByText(failed)).not.toBeNull();
   await user.click(within(sample).getByRole("button", { name: "Make sample · about $0.30" }));
   await waitFor(() => expect(made).toHaveBeenCalledOnce());
 });
 
-it("shows the paid sample's pictures and its earlier versions", async () => {
+it("shows the paid sample's images and its earlier versions", async () => {
   open("pictures", {
     [`GET /api/template-studio/${templateId}`]: jsonAnswer({
       ...view,
@@ -315,40 +409,42 @@ it("shows the paid sample's pictures and its earlier versions", async () => {
       },
     }),
   });
-  const grid = await screen.findByRole("region", { name: "Sample pictures" });
+  const grid = await screen.findByRole("region", { name: "Sample images" });
   expect(
     within(grid)
       .getAllByRole("img")
       .map((img) => img.getAttribute("alt")),
   ).toEqual(["001.png", "002.png"]);
-  expect(screen.getByText("Earlier samples · 1")).not.toBeNull();
-  expect(screen.getByText("Version 2 · Saved without a sample")).not.toBeNull();
+  expect(screen.getByText("Earlier samples")).not.toBeNull();
+  expect(screen.getByText("Version 2 · No sample made")).not.toBeNull();
 });
 
-it("shows a prompt's anatomy, part by part, once opened", async () => {
+it("shows what the writer is sent, part by part, once opened", async () => {
   const user = userEvent.setup();
-  open("script", {
-    [`GET /api/template-studio/${templateId}/anatomy`]: jsonAnswer({
+  const anatomy = vi.fn(() =>
+    Response.json({
       section: "script",
       items: [{ key: "article", label: "Article prompt" }],
       item: "article",
       segments: [
         { origin: "yours", text: "Write about " },
         { origin: "keyword", name: "Topic", text: "lighthouses" },
-        { origin: "slopify", text: "\n\nThis is a short sample of the script." },
+        { origin: "slopify", text: "\n\nThis is a short sample of the article." },
       ],
       fromSample: true,
       problem: null,
     }),
-  });
-  const summary = await screen.findByText("Prompt anatomy");
+  );
+  open("script", { [`GET /api/template-studio/${templateId}/anatomy`]: anatomy });
+  const summary = await screen.findByText("What the writer is sent");
+  expect(anatomy).not.toHaveBeenCalled();
   await user.click(summary);
   expect(await screen.findByText("lighthouses")).not.toBeNull();
   expect(screen.getByTitle("Your keywords: Topic")).not.toBeNull();
   expect(screen.getByText("As the sample sent it.")).not.toBeNull();
 });
 
-it("changes the sample topic at the price the drawer shows", async () => {
+it("names the sample topic over the sample, and changes it at the price the drawer shows", async () => {
   const user = userEvent.setup();
   const changed = vi.fn(async (request: Request) => {
     expect(await request.json()).toMatchObject({ topic: "Salt roads", acknowledgedHigh: 0.9 });
@@ -360,13 +456,13 @@ it("changes the sample topic at the price the drawer shows", async () => {
     ),
     [`PUT /api/template-studio/${templateId}/topic`]: changed,
   });
-  await user.click(
-    await screen.findByRole("button", { name: "Sample topic: The history of the lighthouse" }),
-  );
-  const input = await screen.findByRole("textbox", { name: "Topic" });
+  expect(await screen.findByText("Sample topic")).not.toBeNull();
+  expect(screen.getByText("The history of the lighthouse")).not.toBeNull();
+  await user.click(screen.getByRole("button", { name: "Change the sample topic" }));
+  const input = await screen.findByRole("textbox", { name: "Your topic" });
   await user.clear(input);
   await user.type(input, "Salt roads");
-  const use = await screen.findByRole("button", { name: "Use topic · about $0.90" });
+  const use = await screen.findByRole("button", { name: "Use this topic · about $0.90" });
   await waitFor(() => expect(use.hasAttribute("disabled")).toBe(false));
   await user.click(use);
   await waitFor(() => expect(changed).toHaveBeenCalledOnce());
@@ -375,57 +471,57 @@ it("changes the sample topic at the price the drawer shows", async () => {
 it("switches between sections, settings and sample with tabs on a narrow screen", async () => {
   const user = userEvent.setup();
   open();
-  const tabs = await screen.findByRole("tablist", { name: "Studio panes" });
+  const tabs = await screen.findByRole("tablist", { name: "Edit template panes" });
   expect(
     within(tabs)
       .getAllByRole("tab")
       .map((tab) => tab.textContent),
   ).toEqual(["Sections", "Settings", "Sample"]);
-  const settings = screen.getByRole("region", { name: "Subject & research settings" });
-  const sample = screen.getByRole("region", { name: "Subject & research sample" });
+  const settings = screen.getByRole("region", { name: "Topic & title settings" });
+  const sample = screen.getByRole("region", { name: "Topic & title sample" });
   expect(settings.className).not.toContain("max-md:hidden");
   expect(sample.parentElement?.className).toContain("max-md:hidden");
   await user.click(within(tabs).getByRole("tab", { name: "Sample" }));
-  expect(screen.getByRole("region", { name: "Subject & research settings" }).className).toContain(
+  expect(screen.getByRole("region", { name: "Topic & title settings" }).className).toContain(
     "max-md:hidden",
   );
   expect(
-    screen.getByRole("region", { name: "Subject & research sample" }).parentElement?.className,
+    screen.getByRole("region", { name: "Topic & title sample" }).parentElement?.className,
   ).not.toContain("max-md:hidden");
 });
 
-it("says plainly when the studio can't be read", async () => {
+it("says plainly when the template can't be read", async () => {
   renderRouted(
     <TemplateStudioPage templateId={templateId} section="subject" />,
     testDeps({
       [`GET /api/template-studio/${templateId}`]: problemAnswer(
-        "This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates.",
+        "This template no longer exists; it may have been deleted. Go to Templates to see your templates.",
         404,
       ),
     }),
   );
   expect(
     await screen.findByText(
-      "The studio didn't open: This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates.",
+      "This template didn't open: This template no longer exists; it may have been deleted. Go to Templates to see your templates.",
     ),
   ).not.toBeNull();
 });
 
-it("plays the 30-second video sample in the template's frame", async () => {
+it("plays the 30-second video sample in the template's frame, with no button while it is ready", async () => {
   open("video");
   const sample = await screen.findByRole("region", { name: "Video & captions sample" });
   const video = sample.querySelector("video");
   expect(video?.getAttribute("src")).toBe("http://slopify.test/api/style-preview/abc.mp4?v=1");
-  expect(
-    within(sample).getByRole("button", { name: "Make samples" }).hasAttribute("disabled"),
-  ).toBe(true);
+  expect(within(sample).queryByRole("button", { name: /^Make sample/ })).toBeNull();
 });
 
-it("plays the loudness before and after, each with its level", async () => {
+it("plays the narration before and after levelling, its levels on the labels' titles", async () => {
   open("voice");
-  const sample = await screen.findByRole("region", { name: "Voice sample" });
-  expect(within(sample).getByText("Before · -19.4 LUFS")).not.toBeNull();
-  expect(within(sample).getByText("After · -14.0 LUFS")).not.toBeNull();
+  const sample = await screen.findByRole("region", { name: "Narration sample" });
+  expect(within(sample).getByText("Before levelling").getAttribute("title")).toBe("-19.4 LUFS");
+  expect(within(sample).getByText("After levelling (YouTube loudness)").getAttribute("title")).toBe(
+    "-14.0 LUFS",
+  );
   expect([...sample.querySelectorAll("audio")].map((one) => one.getAttribute("src"))).toEqual([
     `http://slopify.test/api/template-studio/${templateId}/loudness/before.mp3`,
     `http://slopify.test/api/template-studio/${templateId}/loudness/after.mp3?v=1`,
@@ -442,21 +538,21 @@ it("says how far the limiter held the level back when it lands short of the targ
       },
     }),
   });
-  const sample = await screen.findByRole("region", { name: "Voice sample" });
+  const sample = await screen.findByRole("region", { name: "Narration sample" });
   expect(
     within(sample).getByText(
-      "After · -13.2 LUFS: held back 1.2 LU from -12.0 so peaks stay under -2.5 dBTP",
+      "Held back 1.2 LU from YouTube's -12.0 LUFS so its peaks stay under -2.5 dBTP.",
     ),
   ).not.toBeNull();
 });
 
 it("lists the schedule's next runs with their titles and the cost a month", async () => {
   open("schedule");
-  const sample = await screen.findByRole("region", { name: "Schedule sample" });
-  const table = within(sample).getByRole("table", { name: "The next runs" });
+  const section = await screen.findByRole("region", { name: "Schedule settings" });
+  const table = within(section).getByRole("table", { name: "The next runs" });
   expect(within(table).getByText("History: Salt roads")).not.toBeNull();
   expect(
-    within(sample).getByText("About $4.35 a month at most, for about 8.7 runs."),
+    within(section).getByText("About $4.35 a month at most, for about 8.7 runs."),
   ).not.toBeNull();
 });
 
@@ -476,24 +572,42 @@ it("lists a paused schedule's runs marked paused, and what it costs once resumed
       },
     }),
   });
-  const sample = await screen.findByRole("region", { name: "Schedule sample" });
-  const table = within(sample).getByRole("table", { name: "The next runs" });
+  const section = await screen.findByRole("region", { name: "Schedule settings" });
+  const table = within(section).getByRole("table", { name: "The next runs" });
   expect(within(table).getByText("Weekdays (paused)")).not.toBeNull();
   expect(
-    within(sample).getByText(
+    within(section).getByText(
       "1 paused schedule uses this template: nothing runs while it is paused. Resumed, about $4.35 a month at most, for about 8.7 runs.",
     ),
   ).not.toBeNull();
 });
 
-it("shows where a run stops and who answers", async () => {
+it("starts a new schedule with this template picked", async () => {
+  const user = userEvent.setup();
+  let path = "";
+  function Probe(): null {
+    path = useLocation().href;
+    return null;
+  }
+  renderRouted(
+    <>
+      <TemplateStudioPage templateId={templateId} section="schedule" />
+      <Probe />
+    </>,
+    testDeps(routes),
+  );
+  await user.click(await screen.findByRole("button", { name: "New schedule with this template" }));
+  await waitFor(() => expect(path).toBe("/calendar?tab=schedules"));
+});
+
+it("shows where a run pauses and which AI checks run", async () => {
   open("reviews");
-  const steps = await screen.findByRole("list", { name: "Where a run stops" });
+  const steps = await screen.findByRole("list", { name: "Where a run pauses" });
   expect(steps.textContent).toContain("Before the video");
   expect(steps.textContent).toContain("The run waits here until you approve it.");
 });
 
-it("asks for a version's free samples by itself once, and again from Make samples", async () => {
+it("asks for a version's free samples by itself once, and again from Make sample · free", async () => {
   const user = userEvent.setup();
   const asked = vi.fn(() => Response.json({ queued: true, version: 3 }, { status: 202 }));
   const stale = {
@@ -509,7 +623,7 @@ it("asks for a version's free samples by itself once, and again from Make sample
   });
   await waitFor(() => expect(asked).toHaveBeenCalledOnce());
   const sample = await screen.findByRole("region", { name: "Video & captions sample" });
-  const make = within(sample).getByRole("button", { name: "Make samples" });
+  const make = within(sample).getByRole("button", { name: "Make sample · free" });
   await waitFor(() => expect(make.hasAttribute("disabled")).toBe(false));
   await user.click(make);
   await waitFor(() => expect(asked).toHaveBeenCalledTimes(2));
@@ -523,26 +637,26 @@ it("says when the samples couldn't be asked for", async () => {
   open("video", {
     [`GET /api/template-studio/${templateId}`]: jsonAnswer(stale),
     [`POST /api/template-studio/${templateId}/free-samples`]: problemAnswer(
-      "This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates.",
+      "This template no longer exists; it may have been deleted. Go to Templates to see your templates.",
       404,
     ),
   });
   expect(
     await screen.findByText(
-      "The samples weren't asked for: This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates. Press Make samples again.",
+      "The samples weren't asked for: This template no longer exists; it may have been deleted. Go to Templates to see your templates. Press Make sample again.",
     ),
   ).not.toBeNull();
 });
 
 it("says a section's sample sentence once, beside the sample", async () => {
   open("script");
-  await screen.findByRole("region", { name: "Script sample" });
+  await screen.findByRole("region", { name: "Article sample" });
   expect(
-    screen.getAllByText("No sample yet. Press Save to make one, or Make sample."),
+    screen.getAllByText("Make sample shows what this section makes, about the sample topic."),
   ).toHaveLength(1);
 });
 
-it("opens the sample's script in a wide reading drawer instead of the narrow column", async () => {
+it("opens the sample's article in a wide reading drawer instead of the narrow column", async () => {
   const user = userEvent.setup();
   const article = `# The lighthouse\n\n${"The keeper climbed the stairs at dusk. ".repeat(40)}\n\n## Chapter 1\n\nThe lamp was lit.`;
   open("script", {
@@ -551,14 +665,14 @@ it("opens the sample's script in a wide reading drawer instead of the narrow col
       paid: { ...view.paid, projectId: "P1", revisionId: "R1", state: "done", article },
     }),
   });
-  const sample = await screen.findByRole("region", { name: "Script sample" });
+  const sample = await screen.findByRole("region", { name: "Article sample" });
   expect(within(sample).queryByText("The lamp was lit.")).toBeNull();
-  await user.click(within(sample).getByRole("button", { name: "Read the whole script" }));
-  const drawer = await screen.findByRole("dialog", { name: "Sample script" });
+  await user.click(within(sample).getByRole("button", { name: "Read the whole article" }));
+  const drawer = await screen.findByRole("dialog", { name: "Sample article" });
   expect(within(drawer).getByText("The lamp was lit.")).not.toBeNull();
 });
 
-it("lists the names to check in the voice's sample", async () => {
+it("lists the names to check in the narration's sample only once its article names some", async () => {
   open("voice", {
     [`GET /api/template-studio/${templateId}`]: jsonAnswer({
       ...view,
@@ -571,8 +685,20 @@ it("lists the names to check in the voice's sample", async () => {
       problem: null,
     }),
   });
-  const sample = await screen.findByRole("region", { name: "Voice sample" });
+  const sample = await screen.findByRole("region", { name: "Narration sample" });
   expect(await within(sample).findByRole("listitem", { name: "Kish" })).not.toBeNull();
+  cleanup();
+  open("voice", {
+    [`GET /api/template-studio/${templateId}/pronunciations`]: jsonAnswer({
+      names: [],
+      aliasesOn: false,
+      voice: null,
+      problem: "The names to check come from the sample's article.",
+    }),
+  });
+  const empty = await screen.findByRole("region", { name: "Narration sample" });
+  await screen.findByText("Before levelling");
+  expect(within(empty).queryByText("Names the voice may say wrong")).toBeNull();
 });
 
 const settledView: StudioView = {
@@ -582,16 +708,18 @@ const settledView: StudioView = {
     state: one.id === "thumbnail" ? "off" : "current",
   })),
 };
-const passing = { version: 3, checks: checks.checks.map((check) => ({ ...check, ok: true })) };
 
-it("keeps Mark ready visible but disabled, saying what to fix first", async () => {
+it("says in the More menu what to do before approving for schedules", async () => {
+  const user = userEvent.setup();
   open();
-  const button = await screen.findByRole("button", { name: "Mark ready" });
-  await waitFor(() => expect(button.getAttribute("aria-disabled")).toBe("true"));
-  expect(button.getAttribute("aria-describedby")).not.toBeNull();
+  await user.click(await screen.findByRole("button", { name: "More for this template" }));
+  const approve = await screen.findByRole("menuitem", {
+    name: "Approve for schedules (fix 1 check first)",
+  });
+  expect(approve.getAttribute("aria-disabled")).toBe("true");
 });
 
-it("marks the version ready after saying schedules start running it", async () => {
+it("approves the version for schedules after saying they start running it", async () => {
   const user = userEvent.setup();
   let asked: unknown;
   const ready = vi.fn(async (request: Request) => {
@@ -603,21 +731,22 @@ it("marks the version ready after saying schedules start running it", async () =
     [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer(passing),
     [`POST /api/template-studio/${templateId}/ready`]: ready,
   });
-  const button = await screen.findByRole("button", { name: "Mark ready" });
-  await waitFor(() => expect(button.getAttribute("aria-disabled")).toBeNull());
-  await user.click(button);
-  const dialog = await screen.findByRole("dialog", { name: "Mark version 3 ready?" });
+  await user.click(await screen.findByRole("button", { name: "More for this template" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Approve for schedules" }));
+  const dialog = await screen.findByRole("dialog", {
+    name: "Approve version 3 for schedules?",
+  });
   expect(
     within(dialog).getByText(
-      "Schedules start running this version from their next run. Until now they ran version 2.",
+      "Its schedules run this version from their next run. Until now they ran version 2.",
     ),
   ).not.toBeNull();
-  await user.click(within(dialog).getByRole("button", { name: "Mark ready" }));
+  await user.click(within(dialog).getByRole("button", { name: "Approve for schedules" }));
   await waitFor(() => expect(ready).toHaveBeenCalledOnce());
   expect(asked).toEqual({ version: 3 });
 });
 
-it("says the newest version runs, and that Mark ready starts the gate, before any version is ready", async () => {
+it("says schedules run each saved version until a first approval holds later ones back", async () => {
   const user = userEvent.setup();
   open("subject", {
     [`GET /api/template-studio/${templateId}`]: jsonAnswer({
@@ -628,22 +757,21 @@ it("says the newest version runs, and that Mark ready starts the gate, before an
     [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer(passing),
   });
   expect(
-    await screen.findByText(
-      "Version 3 · Not checked in the studio: schedules run the newest version",
-    ),
+    await screen.findByText("Weekly documentary · version 3 · Schedules run each version you save"),
   ).not.toBeNull();
-  const button = await screen.findByRole("button", { name: "Mark ready" });
-  await waitFor(() => expect(button.getAttribute("aria-disabled")).toBeNull());
-  await user.click(button);
-  const dialog = await screen.findByRole("dialog", { name: "Mark version 3 ready?" });
+  await user.click(await screen.findByRole("button", { name: "More for this template" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Approve for schedules" }));
+  const dialog = await screen.findByRole("dialog", {
+    name: "Approve version 3 for schedules?",
+  });
   expect(
     within(dialog).getByText(
-      "Schedules keep running this version. From now on a version you save waits until you press Mark ready, so an edit no longer changes the next run by itself.",
+      "Its schedules keep running this version. From now on a version you save waits for your approval before they run it, so an edit never changes the next run by itself.",
     ),
   ).not.toBeNull();
 });
 
-it("shows Mark ready's refusal with each thing to fix", async () => {
+it("shows the approval's refusal with each thing to fix", async () => {
   const user = userEvent.setup();
   open("subject", {
     [`GET /api/template-studio/${templateId}`]: jsonAnswer(settledView),
@@ -652,23 +780,23 @@ it("shows Mark ready's refusal with each thing to fix", async () => {
       {
         title: "Conflict",
         reason: "not-ready",
-        detail: "Version 3 can't be marked ready yet. Voice: Press Make sample.",
-        problems: [{ label: "Voice", sentence: "Press Make sample.", section: "voice" }],
+        detail: "Version 3 can't be approved yet. Narration: Press Make sample.",
+        problems: [{ label: "Narration", sentence: "Press Make sample.", section: "voice" }],
       },
       409,
     ),
   });
-  const button = await screen.findByRole("button", { name: "Mark ready" });
-  await waitFor(() => expect(button.getAttribute("aria-disabled")).toBeNull());
-  await user.click(button);
+  await user.click(await screen.findByRole("button", { name: "More for this template" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Approve for schedules" }));
   const dialog = await screen.findByRole("dialog");
-  await user.click(within(dialog).getByRole("button", { name: "Mark ready" }));
+  await user.click(within(dialog).getByRole("button", { name: "Approve for schedules" }));
   expect(
-    await screen.findByText("Version 3 can't be marked ready yet. Voice: Press Make sample."),
+    await screen.findByText("Version 3 can't be approved yet. Narration: Press Make sample."),
   ).not.toBeNull();
 });
 
-it("says a ready version is marked, with no button to press again", async () => {
+it("says an approved version is ready for schedules, with nothing to approve again", async () => {
+  const user = userEvent.setup();
   open("subject", {
     [`GET /api/template-studio/${templateId}`]: jsonAnswer({
       ...settledView,
@@ -677,9 +805,12 @@ it("says a ready version is marked, with no button to press again", async () => 
     }),
     [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer(passing),
   });
-  const button = await screen.findByRole("button", { name: "Marked ready" });
-  expect(button.getAttribute("aria-disabled")).toBe("true");
-  expect(screen.getByText("Version 3 · Ready")).not.toBeNull();
+  expect(
+    await screen.findByText("Weekly documentary · version 3 · Ready for schedules"),
+  ).not.toBeNull();
+  await user.click(screen.getByRole("button", { name: "More for this template" }));
+  await screen.findByRole("menuitem", { name: "Versions" });
+  expect(screen.queryByRole("menuitem", { name: /Approve/ })).toBeNull();
 });
 
 it("asks for the free samples by itself when only the schedule's cost is still to work out", async () => {
@@ -704,6 +835,43 @@ it("asks for the free samples by itself when only the schedule's cost is still t
   await waitFor(() => expect(asked).toHaveBeenCalledOnce());
 });
 
+it("makes a video from the saved template, and waits for a Save while something changed", async () => {
+  const user = userEvent.setup();
+  const applied = vi.fn(() => true);
+  const instantiate = vi.fn(async (request: Request) => {
+    expect(await request.json()).toMatchObject({ version: 3 });
+    return Response.json({
+      draft: {
+        draft: {
+          id: "55555555-5555-4555-8555-555555555555",
+          version: 1,
+          createdAt: "now",
+          updatedAt: "now",
+          document: freshDraftDocument,
+        },
+        attachments: [],
+        review: null,
+        pendingStart: null,
+        start: null,
+      },
+    });
+  });
+  open(
+    "video",
+    { [`POST /api/project-templates/${templateId}/instantiate`]: instantiate },
+    { onApplied: applied },
+  );
+  const make = await screen.findByRole("button", { name: "Make a video" });
+  await user.click(screen.getByRole("button", { name: "Square 1:1" }));
+  expect(make.hasAttribute("disabled") || make.getAttribute("aria-disabled") === "true").toBe(true);
+  expect(screen.getByText("Unsaved changes. Save them before you make a video.")).not.toBeNull();
+  await user.click(screen.getByRole("button", { name: "Landscape 16:9" }));
+  await waitFor(() => expect(make.hasAttribute("disabled")).toBe(false));
+  await user.click(make);
+  await waitFor(() => expect(applied).toHaveBeenCalledOnce());
+  expect(instantiate).toHaveBeenCalledOnce();
+});
+
 function ScreenProbe() {
   return <output aria-label="assistant screen">{JSON.stringify(useAssistantScreen())}</output>;
 }
@@ -718,12 +886,12 @@ it("tells the assistant which template and section are open", async () => {
   );
   await waitFor(() =>
     expect(JSON.parse(screen.getByLabelText("assistant screen").textContent ?? "{}")).toMatchObject(
-      { templateId, section: "Voice" },
+      { templateId, section: "Narration" },
     ),
   );
 });
 
-it("opens a design template's studio when the address names a design template", async () => {
+it("opens a design template's editor when the address names a design template", async () => {
   const designId = "44444444-4444-4444-8444-444444444444";
   let path = "";
   function Probe(): null {
@@ -743,23 +911,23 @@ it("opens a design template's studio when the address names a design template", 
   await waitFor(() => expect(path).toBe(`/design-templates/${designId}`));
 });
 
-it("says the studio didn't open when the address names no template of either kind", async () => {
+it("says the template didn't open when the address names no template of either kind", async () => {
   renderRouted(
     <TemplateStudioPage templateId={templateId} section="subject" />,
     testDeps({
       [`GET /api/template-studio/${templateId}`]: problemAnswer(
-        "This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates.",
+        "This template no longer exists; it may have been deleted. Go to Templates to see your templates.",
         404,
       ),
       [`GET /api/design-templates/${templateId}`]: problemAnswer("No such design template.", 404),
     }),
   );
   expect((await screen.findByRole("alert")).textContent).toContain(
-    "The studio didn't open: This template no longer exists",
+    "This template didn't open: This template no longer exists",
   );
 });
 
-it("exports the version schedules run as a pack, and says why when there is none", async () => {
+it("exports the version schedules run as a file from More, and says why when it can't", async () => {
   const user = userEvent.setup();
   const create = vi.fn(() => "blob:pack");
   const revoke = vi.fn();
@@ -774,17 +942,13 @@ it("exports the version schedules run as a pack, and says why when there is none
         },
       }),
   });
-  await user.click(await screen.findByRole("button", { name: "Export pack (version 2)" }));
+  await user.click(await screen.findByRole("button", { name: "More for this template" }));
+  await user.click(
+    await screen.findByRole("menuitem", { name: "Export version 2 as a file (.zip)" }),
+  );
   await waitFor(() => expect(click).toHaveBeenCalledTimes(1));
   expect(create).toHaveBeenCalledTimes(1);
   click.mockRestore();
-  cleanup();
-
-  open("subject", {
-    [`GET /api/template-studio/${templateId}`]: jsonAnswer({ ...view, checkedVersion: null }),
-  });
-  const blocked = await screen.findByRole("button", { name: "Export pack" });
-  expect(blocked.getAttribute("aria-disabled") ?? blocked.getAttribute("disabled")).not.toBeNull();
   cleanup();
 
   open("subject", {
@@ -793,13 +957,16 @@ it("exports the version schedules run as a pack, and says why when there is none
       400,
     ),
   });
-  await user.click(await screen.findByRole("button", { name: "Export pack (version 2)" }));
+  await user.click(await screen.findByRole("button", { name: "More for this template" }));
+  await user.click(
+    await screen.findByRole("menuitem", { name: "Export version 2 as a file (.zip)" }),
+  );
   expect(
     await screen.findByText("Something in this template looks like an API key or a login token."),
   ).not.toBeNull();
 });
 
-it("shows the samples an imported pack came with", async () => {
+it("shows the samples an imported template came with", async () => {
   open("subject", {
     [`GET /api/template-studio/${templateId}/pack-samples`]: jsonAnswer({
       samples: [
@@ -816,7 +983,7 @@ it("shows the samples an imported pack came with", async () => {
       ],
     }),
   });
-  const section = await screen.findByRole("region", { name: "Samples from the pack" });
+  const section = await screen.findByRole("region", { name: "Samples it came with" });
   expect(within(section).getByRole("img", { name: "The pack's thumbnail" })).not.toBeNull();
   expect(within(section).getByText(/Your own samples replace these/)).not.toBeNull();
 });
@@ -827,24 +994,32 @@ it("names each choice row in Video & captions above its buttons", async () => {
   const names = [...panel.querySelectorAll('[data-slot="studio-choice"] .sl-field__label')].map(
     (label) => label.textContent,
   );
-  expect(names).toEqual(["Format", "Captions", "Motion"]);
+  expect(names).toEqual(["Shape", "Captions", "Image motion"]);
   expect(within(panel).getByRole("group", { name: "Captions" })).not.toBeNull();
 });
 
-it("turns a site on in the Upload pack with its defaults, and saves it with the template", async () => {
+it("turns a site on in YouTube description & posts with its defaults, saved with the template", async () => {
   const user = userEvent.setup();
-  const priced: unknown[] = [];
+  const saved: unknown[] = [];
   open("upload", {
     "GET /api/prompts": jsonAnswer({
       prompts: [{ id: "q1", kind: "post", name: "Hooky", body: "b", slots: [], updatedAt: "x" }],
     }),
-    [`POST /api/template-studio/${templateId}/quote`]: async (request: Request) => {
-      priced.push(((await request.json()) as { document: typeof document }).document.form.social);
-      return jsonAnswer(quote())(request);
+    [`POST /api/template-studio/${templateId}/save`]: async (request: Request) => {
+      saved.push(
+        ((await request.json()) as { document: { form: { social?: unknown } } }).document.form
+          .social,
+      );
+      return Response.json({
+        template: { ...view.template, version: 4 },
+        sample: "skipped",
+        quote: null,
+        replayed: false,
+      });
     },
   });
   const postTo = (await screen.findAllByRole("group", { name: "Post to" }))[0];
-  if (postTo === undefined) throw new Error("The Upload pack has a Post to row.");
+  if (postTo === undefined) throw new Error("The section has a Post to row.");
   await user.click(within(postTo).getByRole("checkbox", { name: "Bluesky" }));
   const bluesky = (await screen.findAllByRole("region", { name: "Bluesky post" }))[0];
   if (bluesky === undefined) throw new Error("Bluesky's settings show once it is on.");
@@ -853,8 +1028,9 @@ it("turns a site on in the Upload pack with its defaults, and saves it with the 
   );
   await user.selectOptions(within(bluesky).getByLabelText("Bluesky text"), "prompt");
   await user.selectOptions(within(bluesky).getByLabelText("Post prompt"), "Hooky");
+  await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() =>
-    expect(priced.at(-1)).toEqual({
+    expect(saved.at(-1)).toEqual({
       bluesky: {
         text: "prompt",
         prompt: "Hooky",
@@ -864,43 +1040,6 @@ it("turns a site on in the Upload pack with its defaults, and saves it with the 
       },
     }),
   );
-});
-
-it("prices a post prompt on Save: its Posts line on the button, plan usage on a CLI model", async () => {
-  const user = userEvent.setup();
-  let cli = false;
-  const postsRow = { stage: "Posts", low: 0.01, high: 0.03, detail: "One LLM call per site." };
-  open("upload", {
-    "GET /api/prompts": jsonAnswer({ prompts: [] }),
-    [`POST /api/template-studio/${templateId}/quote`]: async (request: Request) => {
-      const { document: sent } = (await request.json()) as { document: typeof document };
-      const prompted = Object.values(sent.form.social ?? {}).some((one) => one?.text === "prompt");
-      return jsonAnswer(
-        !prompted
-          ? quote({ high: 0, low: 0, rows: [] })
-          : cli
-            ? quote({
-                rows: [{ ...postsRow, low: 0, high: 0, onPlan: true }],
-                low: 0,
-                high: 0,
-                onPlan: true,
-                usesPlan: true,
-              })
-            : quote({ rows: [postsRow], low: 0.01, high: 0.03 }),
-      )(request);
-    },
-  });
-  const postTo = (await screen.findAllByRole("group", { name: "Post to" }))[0];
-  if (postTo === undefined) throw new Error("The Upload pack has a Post to row.");
-  await user.click(within(postTo).getByRole("checkbox", { name: "X" }));
-  const x = (await screen.findAllByRole("region", { name: "X post" }))[0];
-  if (x === undefined) throw new Error("X's settings show once it is on.");
-  await user.selectOptions(within(x).getByLabelText("X text"), "prompt");
-  expect(await screen.findByRole("button", { name: "Save · about $0.03" })).not.toBeNull();
-  // The template's model is a CLI one now (priced again as the post changes).
-  cli = true;
-  await user.click(within(postTo).getByRole("checkbox", { name: "LinkedIn" }));
-  expect(await screen.findByRole("button", { name: "Save · plan usage" })).not.toBeNull();
 });
 
 it("shows the sample's posts as each site shows them", async () => {

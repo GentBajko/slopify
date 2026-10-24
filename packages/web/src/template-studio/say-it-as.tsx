@@ -3,8 +3,8 @@ import { type ReactElement, useEffect, useState } from "react";
 import { quoteAuditions, speakAudition } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
-import { Field, Input } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { Field, HelpLine, Input } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { usd } from "@/lib/format";
 import {
   type PronunciationsView,
@@ -33,17 +33,24 @@ function spokenLine(line: string, term: string, spoken: string | null): string {
   );
 }
 
-// Voice → Say it as: the names the sample's script says that a voice may get wrong. Each plays
-// its line in the template's voice, and "Say it as" writes a Library alias and re-voices only
-// the sample's lines that say it, at the price on its Save.
+// Narration → names the voice may say wrong: the names the sample's article says. Each plays its
+// line in the template's voice, and a way to say it is kept in your pronunciations and re-voices
+// only the sample's lines that say it, at the price on its Save. Shown only once the sample's
+// article names someone or something; before that there is nothing to check.
 export function SayItAs({
   templateId,
   revisionId,
+  aliasesOn,
+  onAliasesOn,
 }: {
   readonly templateId: string;
   // The sample's revision: a new one may say other names.
   readonly revisionId: string | null;
-}): ReactElement {
+  // Whether the template being edited says names the way your pronunciations list them, and
+  // how to turn that on (Save then keeps it).
+  readonly aliasesOn: boolean;
+  readonly onAliasesOn: () => void;
+}): ReactElement | null {
   const { api } = useApp();
   const list = useQuery(pronunciationsQuery(api, templateId, revisionId));
   const [another, setAnother] = useState("");
@@ -54,6 +61,7 @@ export function SayItAs({
       </p>
     );
   const data = list.data;
+  if (data === undefined || data.names.length === 0) return null;
   const extra = another.trim();
   const names: readonly Name[] =
     data === undefined
@@ -64,43 +72,44 @@ export function SayItAs({
   return (
     <section aria-label="Say it as" className="flex flex-col gap-3">
       <h4 className="m-0 text-small font-semibold text-ink">Names the voice may say wrong</h4>
-      {data === undefined ? (
-        <div role="status" aria-busy="true" className="h-16 rounded-control bg-raised" />
+      {data.problem === null ? null : <p className="m-0 text-small text-ink-2">{data.problem}</p>}
+      {data.aliasesOn ? null : aliasesOn ? (
+        <p className="m-0 text-small text-ink-2">
+          Save to have the narration use your pronunciations, then say a name another way.
+        </p>
       ) : (
-        <>
-          {data.problem === null ? null : (
-            <p className="m-0 text-small text-ink-2">{data.problem}</p>
-          )}
-          {data.aliasesOn ? null : (
-            <p className="m-0 text-small text-ink-2">
-              Say it as writes Library → Narration aliases, which this template's voice doesn't use.
-              Turn on Use narration aliases in Fine-tune Voice, then press Save.
-            </p>
-          )}
-          {names.length === 0 ? null : (
-            <ul aria-label="Names to check" className="m-0 flex list-none flex-col gap-3 p-0">
-              {names.map((name) => (
-                <NameRow
-                  key={name.term}
-                  templateId={templateId}
-                  name={name}
-                  voice={data.voice}
-                  enabled={data.aliasesOn}
-                />
-              ))}
-            </ul>
-          )}
-          {revisionId === null ? null : (
-            <Field label="Another word to check" tip="template-studio.say-it-as">
-              <Input
-                value={another}
-                maxLength={100}
-                placeholder="A name the script says"
-                onChange={(event) => setAnother(event.target.value)}
-              />
-            </Field>
-          )}
-        </>
+        <p className="m-0 flex flex-wrap items-center gap-x-2 text-small text-ink-2">
+          The narration doesn't use your pronunciations yet.
+          <Button size="small" onClick={onAliasesOn}>
+            Use them
+          </Button>
+        </p>
+      )}
+      {names.length === 0 ? null : (
+        <ul aria-label="Names to check" className="m-0 flex list-none flex-col gap-3 p-0">
+          {names.map((name) => (
+            <NameRow
+              key={name.term}
+              templateId={templateId}
+              name={name}
+              voice={data.voice}
+              enabled={data.aliasesOn}
+            />
+          ))}
+        </ul>
+      )}
+      {revisionId === null ? null : (
+        <Field
+          label="Another word to check"
+          help="Type a name the article says to hear it in the template's voice."
+        >
+          <Input
+            value={another}
+            maxLength={100}
+            placeholder="A name the script says"
+            onChange={(event) => setAnother(event.target.value)}
+          />
+        </Field>
       )}
     </section>
   );
@@ -190,7 +199,7 @@ function NameRow({
       }
       setNote({
         error: false,
-        text: `Saved in Library → Narration aliases: “${name.term}” is said “${settled}”.${reply.value.queued ? " Re-voicing the sample's lines that say it." : " The sample's script doesn't say it, so nothing is re-voiced."}`,
+        text: `Saved in your pronunciations: “${name.term}” is said “${settled}”.${reply.value.queued ? " Re-voicing the sample's lines that say it." : " The sample's article doesn't say it, so nothing is re-voiced."}`,
       });
       setTyped("");
       await client.invalidateQueries({ queryKey: templateStudioKey(templateId) });
@@ -216,7 +225,7 @@ function NameRow({
         ? "Save · nothing to re-voice"
         : `Save · re-voice ${String(lines)} ${lines === 1 ? "line" : "lines"} · ${priceWords(quote.data.high)}`;
   const saveReason = !enabled
-    ? "Turn on Use narration aliases in Fine-tune Voice first"
+    ? "Use your pronunciations first"
     : settled === ""
       ? "Type how to say it first"
       : quote.data === undefined
@@ -238,35 +247,39 @@ function NameRow({
         )}
       </div>
       {name.line === null ? null : <p className="m-0 text-small text-ink-2">{name.line}</p>}
-      <div className="flex flex-wrap items-center gap-2" {...helpScope}>
-        <Button
-          size="small"
-          variant="quiet"
-          disabled={voice === null || playing}
-          disabledReason={voice === null ? "Choose a voice in Voice first" : "Speaking"}
-          onClick={() => void play()}
-        >
-          {playLabel}
-        </Button>
-        <Input
-          aria-label={`Say ${name.term} as`}
-          className="min-w-0 flex-1 basis-40"
-          value={typed}
-          maxLength={200}
-          placeholder="Say it as…"
-          disabled={!enabled}
-          onChange={(event) => setTyped(event.target.value)}
-        />
-        <InfoTip id="template-studio.say-it-as" label={`Say ${name.term} as`} />
-        <Button
-          size="small"
-          disabled={saveReason !== undefined}
-          disabledReason={saveReason}
-          focusableWhenDisabled
-          onClick={() => void save()}
-        >
-          {saveLabel}
-        </Button>
+      <div className="flex flex-col gap-1" {...helpScope}>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="small"
+            variant="quiet"
+            disabled={voice === null || playing}
+            disabledReason={voice === null ? "Choose a voice in Narration first" : "Speaking"}
+            onClick={() => void play()}
+          >
+            {playLabel}
+          </Button>
+          <Input
+            aria-label={`Say ${name.term} as`}
+            className="min-w-0 flex-1 basis-40"
+            value={typed}
+            maxLength={200}
+            placeholder="Say it as…"
+            disabled={!enabled}
+            onChange={(event) => setTyped(event.target.value)}
+          />
+          <Button
+            size="small"
+            disabled={saveReason !== undefined}
+            disabledReason={saveReason}
+            focusableWhenDisabled
+            onClick={() => void save()}
+          >
+            {saveLabel}
+          </Button>
+        </div>
+        <HelpLine>
+          Save keeps it for every video and re-voices only the sample's lines with it.
+        </HelpLine>
       </div>
       {note === undefined ? null : (
         <p

@@ -2,7 +2,7 @@ import type { SectionState, TemplateSection } from "@app/slices/template-studio/
 import type { StudioView } from "@app/slices/template-studio/schema.js";
 import type { ReactElement } from "react";
 import { Rail, RailButton, RailLink } from "@/components/kit/rail";
-import { Lamp, type Tone } from "@/components/kit/status";
+import type { Tone } from "@/components/kit/status";
 
 export const stateTone: Readonly<Record<SectionState, Tone>> = {
   current: "done",
@@ -14,14 +14,15 @@ export const stateTone: Readonly<Record<SectionState, Tone>> = {
   provided: "off",
 };
 
+// A section's sample in words, the same in the rail and over the sample.
 export const stateWord: Readonly<Record<SectionState, string>> = {
-  current: "Current",
+  current: "Sample ready",
   making: "Making",
   waiting: "Waiting",
   "needs-fix": "Needs a fix",
-  stale: "No current sample",
+  stale: "No sample yet",
   off: "Off",
-  provided: "Provided",
+  provided: "You add it",
 };
 
 // One section of a studio's rail: a project template's (`TemplateSection`) or a design
@@ -32,14 +33,18 @@ export interface RailSection<Id extends string> {
   readonly state: SectionState;
 }
 
-const lampOf = (state: SectionState): ReactElement => <Lamp tone={stateTone[state]} />;
-const wordOf = (state: SectionState): ReactElement => (
-  <span className="sr-only">{stateWord[state]}</span>
-);
+// The rail marks a section only when it says something: a sample made, being made, waiting or
+// failed, a section switched off. "No sample yet" is every section's starting point, so it
+// draws no lamp at all rather than a column of identical dots; the sample head says it.
+function standing(
+  state: SectionState,
+): { readonly tone: Tone; readonly state: string } | undefined {
+  return state === "stale" ? undefined : { tone: stateTone[state], state: stateWord[state] };
+}
 
 // The rail every template studio shows, whatever the template makes: its sections in order,
-// each with its sample's state as a lamp and (for a screen reader) a word. A section is a link
-// when the studio keeps it in the URL, a button when it keeps it in the page.
+// each with its sample's state as a lamp beside its word. A section is a link when the studio
+// keeps it in the URL, a button when it keeps it in the page.
 export function StudioRail<Id extends string>({
   sections,
   current,
@@ -55,17 +60,15 @@ export function StudioRail<Id extends string>({
   readonly onSelect?: (id: Id) => void;
 }): ReactElement {
   return (
-    <Rail label="Template sections">
+    <Rail label="Template sections" className="sl-studio-rail">
       {sections.map((section) => {
-        const icon = lampOf(section.state);
-        const meta = wordOf(section.state);
+        const mark = standing(section.state) ?? {};
         const link = linkOf?.(section.id);
         return link === undefined ? (
           <RailButton
             key={section.id}
             current={section.id === current}
-            icon={icon}
-            meta={meta}
+            {...mark}
             onClick={() => onSelect?.(section.id)}
           >
             {section.label}
@@ -77,8 +80,7 @@ export function StudioRail<Id extends string>({
             search={link.search}
             resetScroll={false}
             current={section.id === current}
-            icon={icon}
-            meta={meta}
+            {...mark}
           >
             {section.label}
           </RailLink>
@@ -88,7 +90,7 @@ export function StudioRail<Id extends string>({
   );
 }
 
-// A project template's sections in pipeline order, each a link that keeps the section in the URL.
+// A project template's sections in run order, each a link that keeps the section in the URL.
 export function SectionRail({
   templateId,
   sections,

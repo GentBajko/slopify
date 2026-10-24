@@ -4,16 +4,15 @@ import { useNavigate } from "@tanstack/react-router";
 import { type ReactElement, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { AudioPlayer } from "@/components/kit/audio-player";
-import { Button } from "@/components/kit/button";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { MediaFrame, MediaGrid } from "@/components/kit/media";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
 import { templatesKey } from "@/templates/api";
 import { downloadPack, type ImportedPackView, importTemplatePack, packSamplesQuery } from "./api";
 
-// Template packs: Export pack in a template's studio, Import template pack on Library →
-// Templates, and the samples a pack came with in the studio it opens.
+// Templates as files to share: Export as a file (.zip) in Edit template, Import a template file
+// (.zip) on Templates, and the samples a file came with, shown until the template makes its
+// own.
 
 function saveBlob(name: string, blob: Blob): void {
   const url = URL.createObjectURL(blob);
@@ -24,23 +23,24 @@ function saveBlob(name: string, blob: Blob): void {
   URL.revokeObjectURL(url);
 }
 
-// Why Export pack can't be pressed, or undefined when it can.
-export function exportBlocker(view: StudioView): string | undefined {
-  return view.checkedVersion === null
-    ? "Mark a version ready first: a pack carries the version you checked"
-    : undefined;
-}
-
-export function ExportPack({
-  view,
-  onProblem,
-}: {
-  readonly view: StudioView;
-  readonly onProblem: (message: string | undefined) => void;
-}): ReactElement {
+// Export as a file (.zip): the version its schedules run, as one file to share. Undefined
+// `blocker` when it can be made now; the label names an older version when that is the one.
+export function useExportFile(
+  view: StudioView,
+  onProblem: (message: string | undefined) => void,
+): {
+  readonly label: string;
+  readonly blocker: string | undefined;
+  readonly save: () => Promise<void>;
+} {
   const { api } = useApp();
   const [busy, setBusy] = useState(false);
-  const blocker = exportBlocker(view);
+  const runs = view.runnableVersion;
+  const label =
+    runs === null || runs === view.template.version
+      ? "Export as a file (.zip)"
+      : `Export version ${String(runs)} as a file (.zip)`;
+  const blocker = busy ? "making it" : runs === null ? "approve a version first" : undefined;
   async function save(): Promise<void> {
     setBusy(true);
     onProblem(undefined);
@@ -50,29 +50,13 @@ export function ExportPack({
       else onProblem(reply.message);
     } catch (error) {
       onProblem(
-        `The pack wasn't made: ${error instanceof Error ? error.message : String(error)} Press Export pack again.`,
+        `The file wasn't made: ${error instanceof Error ? error.message : String(error)} Choose Export as a file again.`,
       );
     } finally {
       setBusy(false);
     }
   }
-  return (
-    <span className="inline-flex items-center gap-1" {...helpScope}>
-      <Button
-        size="small"
-        variant="quiet"
-        disabled={blocker !== undefined || busy}
-        disabledReason={blocker ?? "Making the pack"}
-        focusableWhenDisabled
-        onClick={() => void save()}
-      >
-        {view.checkedVersion === null || view.checkedVersion === view.template.version
-          ? "Export pack"
-          : `Export pack (version ${String(view.checkedVersion)})`}
-      </Button>
-      <InfoTip id="template-studio.export-pack" label="Export pack" />
-    </span>
-  );
+  return { label, blocker, save };
 }
 
 // What the import says it did, in one sentence for the toast.
@@ -83,25 +67,30 @@ export function importedSentence(value: ImportedPackView): string {
       : ` ${value.renamed.map((one) => `"${one.from}" came in as "${one.to}"`).join(", ")}, because your Library has other text under ${value.renamed.length === 1 ? "that name" : "those names"}.`;
   const voice = value.voiceKnown
     ? ""
-    : " Its voice isn't in your Settings → Voices: the studio's Voice check says what to do.";
-  return `Imported ${value.name}. No schedule runs it until you look over its samples and press Mark ready.${renamed}${voice}`;
+    : " Its voice isn't in your Settings → Voices: its Narration check says what to do.";
+  return `Imported ${value.name}. Look over its samples, then press Make a video.${renamed}${voice}`;
 }
 
-// Library → Templates → Import template pack: choose the .zip, and the new template's studio
-// opens.
-export function ImportPack(): ReactElement {
+// Templates → More → Import a template file (.zip): choose the file, and the new template
+// opens in Edit template. `input` is the hidden file picker to render once; `choose` opens it.
+export function useImportFile(): {
+  readonly choose: () => void;
+  readonly busy: boolean;
+  readonly problem: string | null;
+  readonly input: ReactElement;
+} {
   const { api } = useApp();
   const client = useQueryClient();
   const navigate = useNavigate();
   const notify = useToast();
-  const input = useRef<HTMLInputElement>(null);
+  const file = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  async function send(file: File): Promise<void> {
+  async function send(picked: File): Promise<void> {
     setBusy(true);
     setProblem(null);
     try {
-      const reply = await importTemplatePack(api, file);
+      const reply = await importTemplatePack(api, picked);
       if (!reply.ok) {
         setProblem(reply.message);
         return;
@@ -115,38 +104,32 @@ export function ImportPack(): ReactElement {
       });
     } catch (error) {
       setProblem(
-        `The pack wasn't imported: ${error instanceof Error ? error.message : String(error)} Choose the file again.`,
+        `The template wasn't imported: ${error instanceof Error ? error.message : String(error)} Choose the file again.`,
       );
     } finally {
       setBusy(false);
-      if (input.current !== null) input.current.value = "";
+      if (file.current !== null) file.current.value = "";
     }
   }
-  return (
-    <span className="flex items-center gap-1">
+  return {
+    choose: () => file.current?.click(),
+    busy,
+    problem,
+    input: (
       <input
-        ref={input}
+        ref={file}
         type="file"
         accept=".zip,application/zip"
+        aria-hidden="true"
         className="sr-only"
         tabIndex={-1}
-        aria-hidden="true"
         onChange={(event) => {
-          const file = event.target.files?.[0];
-          if (file !== undefined) void send(file);
+          const picked = event.target.files?.[0];
+          if (picked !== undefined) void send(picked);
         }}
       />
-      <Button variant="secondary" disabled={busy} onClick={() => input.current?.click()}>
-        {busy ? "Importing…" : "Import template pack"}
-      </Button>
-      <InfoTip id="templates.import-pack" label="Import template pack" />
-      {problem === null ? null : (
-        <span role="alert" className="text-small text-danger">
-          {problem}
-        </span>
-      )}
-    </span>
-  );
+    ),
+  };
 }
 
 // The samples the template's pack came with, until its own are made.
@@ -159,13 +142,12 @@ export function PackSamples({ templateId }: { readonly templateId: string }): Re
   const pictures = samples.filter((sample) => sample.role !== "narration");
   const narration = samples.find((sample) => sample.role === "narration");
   return (
-    <section aria-label="Samples from the pack" className="flex flex-col gap-3">
+    <section aria-label="Samples it came with" className="flex flex-col gap-3">
       <SectionHead
-        title="Samples from the pack"
+        title="Samples it came with"
         as="h3"
         size="small"
-        info="template-studio.pack-samples"
-        meta="Made by whoever exported it. Your own samples replace these once you press Save."
+        meta="Made by whoever shared it. Your own samples replace these once you make them."
       />
       {pictures.length === 0 ? null : (
         <MediaGrid density="compact" list label="Pictures from the pack">

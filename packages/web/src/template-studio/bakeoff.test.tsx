@@ -133,13 +133,17 @@ describe("Compare models", () => {
     expect(within(dialog).getByRole("link", { name: "Settings → Template studio" })).not.toBeNull();
   });
 
-  it("is greyed while the settings have unsaved changes", async () => {
+  it("asks for a Save first, in words, while the settings have unsaved changes", async () => {
     const user = userEvent.setup();
     open();
     await user.clear(await screen.findByLabelText("Expected length (words)"));
     await user.type(screen.getByLabelText("Expected length (words)"), "900");
-    const button = screen.getByRole("button", { name: "Compare models" });
-    expect(button.getAttribute("aria-disabled") ?? button.getAttribute("disabled")).not.toBeNull();
+    expect(screen.queryByRole("button", { name: "Compare models" })).toBeNull();
+    expect(
+      screen.getByText(
+        "Save to compare other models: they are compared on the saved version's sample.",
+      ),
+    ).not.toBeNull();
   });
 });
 
@@ -152,13 +156,16 @@ describe("Compared models", () => {
       [`DELETE /api/template-studio/${templateId}/bakeoff`]: discarded,
     });
     const list = await screen.findByRole("list", { name: "Models compared" });
-    expect(within(list).getByText("Made · $0.008 charged · 12 s")).not.toBeNull();
-    expect(within(list).getByText("In use now · $0.02 charged · 41 s")).not.toBeNull();
+    const lines = within(list)
+      .getAllByRole("listitem")
+      .map((row) => row.querySelector("p + p")?.textContent);
+    expect(lines).toContain("Made· $0.008 charged · 12 s");
+    expect(lines).toContain("In use now· $0.02 charged · 41 s");
     await user.click(within(list).getByRole("button", { name: "Use this model" }));
     await waitFor(() => expect(discarded).toHaveBeenCalledTimes(1));
     expect(
       await screen.findByText(
-        /Switched to x\/new\. Press Save to make the template's sample with it/,
+        /Switched to x\/new; the compared copies were discarded\. Press Save, then Make sample/,
       ),
     ).not.toBeNull();
   });
@@ -181,7 +188,7 @@ describe("Compared models", () => {
     expect(
       discard.getAttribute("aria-disabled") ?? discard.getAttribute("disabled"),
     ).not.toBeNull();
-    expect(within(region).getByText("Making · about $0.01 · time not known")).not.toBeNull();
+    expect(region.textContent).toContain("Making· about $0.01 · time not known");
     cleanup();
     open({
       [`GET /api/template-studio/${templateId}/bakeoff`]: jsonAnswer({

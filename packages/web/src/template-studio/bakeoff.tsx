@@ -6,11 +6,10 @@ import { useApp } from "@/app-context";
 import { AudioPlayer } from "@/components/kit/audio-player";
 import { Button, ButtonRow } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { TextLink } from "@/components/kit/link";
 import { MediaFrame, MediaGrid } from "@/components/kit/media";
 import { SectionHead } from "@/components/kit/section-head";
-import { Lamp, type Tone } from "@/components/kit/status";
+import { Status, type Tone } from "@/components/kit/status";
 import { Switch } from "@/components/kit/switch";
 import { usd } from "@/lib/format";
 import { ModelPicker, ProviderPicker } from "@/play/pickers";
@@ -31,13 +30,13 @@ import { budgetLead, budgetReason } from "./budget-words";
 
 // Compare models: one section's sample made again on one or two other models, side by side
 // with the one in use, by what each made, cost and took. "Use this model" puts the model into
-// the settings; Save then makes the template's own sample with it, at the price on its button.
+// the settings; Save keeps it, and Make sample then makes the template's own sample with it.
 
 const familyOf = { script: "llm", voice: "tts", pictures: "image" } as const;
 const pickLabel = {
-  script: "text model",
+  script: "writing model",
   voice: "voice model",
-  pictures: "picture model",
+  pictures: "image model",
 } as const;
 
 export function bakeoffSectionOf(section: TemplateSection): BakeoffSection | undefined {
@@ -186,13 +185,12 @@ export function BakeoffResults({
         title="Compared models"
         as="h3"
         size="small"
-        info="template-studio.bakeoff-results"
         meta={
           bakeoff.stale
             ? `Made for version ${String(bakeoff.version)}; the template was saved since.`
             : going
               ? "Being made on copies of the sample. Your template doesn't change."
-              : "Made on copies of the sample. Your template doesn't change until you use a model and Save."
+              : "Made on copies of the sample, each with what it was charged and how long it took. Your template doesn't change until you use a model and Save."
         }
       >
         <Button
@@ -238,12 +236,10 @@ export function BakeoffResults({
           return (
             <li key={`${entry.provider}:${entry.model}`} className="sl-row max-sm:grid-cols-1">
               <div className="flex min-w-0 flex-col gap-2">
-                <p className="m-0 flex flex-wrap items-center gap-2 font-semibold">
-                  <Lamp tone={tone} />
-                  {entry.model}
-                </p>
-                <p className="m-0 text-small text-ink-2">
-                  {`${word} · ${cost} · ${secondsText(entry.seconds)}`}
+                <p className="m-0 font-semibold">{entry.model}</p>
+                <p className="m-0 flex flex-wrap items-center gap-x-2 text-small text-ink-2">
+                  <Status tone={tone}>{word}</Status>
+                  {`· ${cost} · ${secondsText(entry.seconds)}`}
                 </p>
                 {entry.failure === null ? null : (
                   <p className="m-0 text-small text-danger">{entry.failure}</p>
@@ -260,7 +256,7 @@ export function BakeoffResults({
                       if (await discard())
                         onUse(
                           { provider: entry.provider, model: entry.model },
-                          `Switched to ${entry.model}. Press Save to make the template's sample with it; the compared copies were discarded.`,
+                          `Switched to ${entry.model}; the compared copies were discarded. Press Save, then Make sample to see the template's own sample with it.`,
                         );
                     }}
                   >
@@ -295,18 +291,17 @@ export function CompareModels({
   const current = modelIn(document, section);
   if (current === undefined) return null;
   return (
-    <span className="inline-flex items-center gap-1 self-start" {...helpScope}>
-      <Button
-        size="small"
-        variant="quiet"
-        disabled={dirty}
-        disabledReason="Save first: models are compared on the saved version's sample"
-        focusableWhenDisabled
-        onClick={() => setOpen(true)}
-      >
-        Compare models
-      </Button>
-      <InfoTip id="template-studio.compare-models" label="Compare models" />
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+      {dirty ? null : (
+        <Button size="small" onClick={() => setOpen(true)}>
+          Compare models
+        </Button>
+      )}
+      <span className="text-small text-ink-2">
+        {dirty
+          ? "Save to compare other models: they are compared on the saved version's sample."
+          : "Makes this section's sample with other models, side by side, priced first."}
+      </span>
       {open ? (
         <CompareDrawer
           templateId={templateId}
@@ -316,7 +311,7 @@ export function CompareModels({
           onClose={() => setOpen(false)}
         />
       ) : null}
-    </span>
+    </div>
   );
 }
 
@@ -429,7 +424,7 @@ function CompareDrawer({
           <div key={String(index)} className="flex flex-col gap-2">
             {section === "voice" ? null : (
               <ProviderPicker
-                label={`Provider ${String(index + 1)}`}
+                label={`Service ${String(index + 1)}`}
                 family={family}
                 providers={providers.data?.providers ?? []}
                 value={pick.provider}

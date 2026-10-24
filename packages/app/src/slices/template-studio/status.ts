@@ -92,7 +92,7 @@ export function baseStatuses(
         id,
         label,
         state: "stale",
-        sentence: "No sample yet. Make sample shows what this section makes.",
+        sentence: "Make sample shows what this section makes, about the sample topic.",
       }
     );
   });
@@ -230,7 +230,7 @@ export function paidStatuses(
         id,
         "stale",
         done === undefined
-          ? "No sample yet. Make sample shows what this section makes."
+          ? "Make sample shows what this section makes, about the sample topic."
           : `Changed since the sample of version ${String(done.templateVersion)}. Press Make sample to see it again.`,
       );
   }

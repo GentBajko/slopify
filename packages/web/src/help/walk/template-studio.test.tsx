@@ -9,11 +9,35 @@ import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
 
 afterEach(cleanup);
 
-// Library → Templates → Open studio: every control in every section, in the topic and Compare
-// models drawers, and beside compared models, is explained beside it, by a visible help line
-// or an info button (help/coverage.ts). The walk opens each one the way a person would.
+// Templates → Edit template: every control in every section, in the topic and Compare models
+// drawers, and beside compared models, is explained beside it, by a visible help line or an
+// info button (help/coverage.ts), or says what it does by its name alone (below). The walk
+// opens each one the way a person would.
+const studioAllow: readonly (string | RegExp)[] = [
+  // Names that say what they set: the template's own name, and presets whose options name
+  // every choice ("Landscape 16:9", "On the video", "Zoom").
+  "Template name",
+  "Article",
+  "Images",
+  "Shape",
+  "Captions",
+  "Image motion",
+  "Seconds per image",
+  "Thumbnail",
+  "Thumbnails per video",
+  "PDF",
+  "Soften breaths",
+  "Soften S sounds",
+  // The service and model pickers under "Made by" when nothing makes the images yet: their
+  // red line says why they matter.
+  "Service",
+  "Model",
+  // The sample topic drawer's own topic, under the sentence saying what the topic is for.
+  "Your topic",
+];
+
 function expectExplained(): void {
-  expect(unexplainedControls(document.body, [...selfExplanatory])).toEqual([]);
+  expect(unexplainedControls(document.body, [...selfExplanatory, ...studioAllow])).toEqual([]);
 }
 
 const madeSample = {
@@ -66,7 +90,7 @@ function open(section: (typeof templateSections)[number], extra = {}) {
   );
 }
 
-describe("The template studio explains every control", () => {
+describe("Edit template explains every control", () => {
   it.each(templateSections)("in %s", async (section) => {
     open(section);
     await screen.findByRole("region", { name: /settings$/ });
@@ -90,7 +114,7 @@ describe("The template studio explains every control", () => {
         problem: null,
       }),
     });
-    await user.click(await screen.findByRole("button", { name: /^Sample topic:/ }));
+    await user.click(await screen.findByRole("button", { name: "Change the sample topic" }));
     await screen.findByRole("dialog", { name: "Sample topic" });
     expectExplained();
   });

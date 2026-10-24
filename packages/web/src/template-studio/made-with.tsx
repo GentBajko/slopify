@@ -1,13 +1,49 @@
 import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
+import {
+  type ProviderChoices,
+  withProviderDefaults,
+} from "@app/slices/project-templates/provider-defaults.js";
 import type { TemplateSection } from "@app/slices/template-studio/model.js";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
+import { readFirstRun, upkeepKeys } from "@/components/provider-upkeep-api";
+import { providerUnavailableLabel } from "@/lib/provider-status";
+import { cn } from "@/lib/utils";
 import { providersQuery } from "@/queries";
 
-// "Made with OpenRouter · claude-sonnet · change": the provider behind a section in one line,
-// its change in Fine-tune.
+// The writer and image service this computer picks for a setup nobody chose them in, the same
+// ones every run of the template gets (`project-templates/provider-defaults.ts`). Empty until
+// read, and on a computer where the first launch found nothing.
+export function useProviderDefaults(): ProviderChoices {
+  const { api } = useApp();
+  const status = useQuery({
+    queryKey: upkeepKeys.firstRun,
+    queryFn: () => readFirstRun(api),
+    retry: false,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  return status.data?.defaults ?? {};
+}
+
+const lead: Partial<Readonly<Record<TemplateSection, string>>> = {
+  script: "Written by",
+  voice: "Read by",
+  pictures: "Images by",
+  thumbnail: "Thumbnail by",
+};
+
+const missingWhat: Partial<Readonly<Record<TemplateSection, string>>> = {
+  script: "writing service",
+  voice: "voice service",
+  pictures: "image service",
+  thumbnail: "image service",
+};
+
+// "Written by Claude Code CLI · sonnet (your default) · Change": who makes a section, in one
+// line, its change under All … settings. Nothing chosen is said in red, in the words the
+// checks use, so the section and the list agree.
 export function MadeWith({
   section,
   document,
@@ -19,19 +55,32 @@ export function MadeWith({
 }): ReactElement | null {
   const { api } = useApp();
   const providers = useQuery(providersQuery(api));
-  const choice = choiceOf(section, document.form);
+  const defaults = useProviderDefaults();
+  const filled = withProviderDefaults(document, defaults);
+  const choice = choiceOf(section, filled.form);
   if (choice === undefined) return null;
-  const name =
-    providers.data?.providers.find((one) => one.id === choice.provider)?.displayName ??
-    choice.provider;
-  const parts = [name, choice.model, choice.voice].filter(
+  const own = choiceOf(section, document.form);
+  const byDefault = own !== undefined && own.provider === "" && choice.provider !== "";
+  const service = providers.data?.providers.find((one) => one.id === choice.provider);
+  const name = service?.displayName ?? choice.provider;
+  // A service this computer can't use yet says so in the line, as the checks do.
+  const unusable = service === undefined ? undefined : providerUnavailableLabel(service.readiness);
+  const parts = [choice.voice, name, choice.model].filter(
     (part): part is string => part !== undefined && part !== "",
   );
+  const none = choice.provider === "";
   return (
-    <p className="m-0 flex flex-wrap items-center gap-x-2 text-small text-ink-2">
-      {parts.length === 0 ? "Nothing chosen to make it with yet" : `Made with ${parts.join(" · ")}`}
+    <p
+      className={cn(
+        "m-0 flex flex-wrap items-center gap-x-2 text-small",
+        none || unusable !== undefined ? "text-danger" : "text-ink-2",
+      )}
+    >
+      {none
+        ? `No ${missingWhat[section] ?? "service"} is chosen, so a run can't start.`
+        : `${lead[section] ?? "Made with"} ${parts.join(" · ")}${byDefault ? " (your default)" : ""}${unusable === undefined ? "" : ` (${name}: ${unusable.toLowerCase()})`}`}
       <Button variant="quiet" size="small" onClick={onChange}>
-        {parts.length === 0 ? "Choose" : "Change"}
+        {none ? "Choose one" : "Change"}
       </Button>
     </p>
   );
@@ -42,8 +91,6 @@ function choiceOf(
   form: PlayDraftDocument["form"],
 ): { readonly provider: string; readonly model: string; readonly voice?: string } | undefined {
   switch (section) {
-    case "subject":
-      return form.sources.research === "off" ? undefined : form.llm;
     case "script":
       return form.sources.article === "generate" ? form.llm : undefined;
     case "voice":
@@ -54,10 +101,6 @@ function choiceOf(
       return form.sources.thumbnail === "from_prompt" || form.sources.thumbnail === "prompt_by_llm"
         ? form.images
         : undefined;
-    case "reviews":
-      return form.reviews === undefined || form.reviews.reviewer === "agent"
-        ? undefined
-        : form.reviews;
     default:
       return undefined;
   }

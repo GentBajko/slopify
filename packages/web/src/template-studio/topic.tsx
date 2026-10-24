@@ -11,17 +11,21 @@ import { budgetReason } from "./budget-words";
 
 type Choice = "typed" | "next-queued" | "fixed";
 
-// The sample's topic, in the header: every section's sample is about it. Changing it remakes
-// every paid sample, so the drawer prices it before anything is spent.
+// The sample's topic, over every section's sample: each is made about it. Changing it makes
+// every paid sample again, so the drawer prices it before anything is spent.
 export function SampleTopic({ view }: { readonly view: StudioView }): ReactElement {
   const [open, setOpen] = useState(false);
   return (
-    <>
-      <Button size="small" variant="quiet" onClick={() => setOpen(true)}>
-        {`Sample topic: ${view.sample.topic}`}
+    <div className="flex items-end justify-between gap-3">
+      <div className="min-w-0">
+        <div className="sl-kicker">Sample topic</div>
+        <p className="m-0 text-body text-ink">{view.sample.topic}</p>
+      </div>
+      <Button size="small" aria-label="Change the sample topic" onClick={() => setOpen(true)}>
+        Change
       </Button>
       <TopicDrawer view={view} open={open} onClose={() => setOpen(false)} />
-    </>
+    </div>
   );
 }
 
@@ -74,7 +78,7 @@ function TopicDrawer({
     try {
       const ask = { topic, acknowledgedHigh: quote.data.high, acknowledgedUnknown: acceptUnknown };
       const key = JSON.stringify(ask);
-      // Press Use topic again after a lost answer: the same change, answered once.
+      // Press Use this topic again after a lost answer: the same change, answered once.
       if (attempt.current?.key !== key) attempt.current = { key, id: crypto.randomUUID() };
       const reply = await changeTopic(api, view.template.id, {
         ...ask,
@@ -94,7 +98,7 @@ function TopicDrawer({
       onClose();
     } catch (error) {
       setProblem(
-        `The topic wasn't changed: ${error instanceof Error ? error.message : String(error)} Press Use topic again.`,
+        `The topic wasn't changed: ${error instanceof Error ? error.message : String(error)} Press Use this topic again.`,
       );
     } finally {
       setSaving(false);
@@ -115,18 +119,21 @@ function TopicDrawer({
             disabledReason={saving ? "Changing the topic" : (blocked ?? "")}
             onClick={() => void use()}
           >
-            {quote.data === undefined ? "Use topic" : `Use topic · ${about(quote.data.high)}`}
+            {quote.data === undefined
+              ? "Use this topic"
+              : `Use this topic · ${quote.data.high === 0 ? "free" : about(quote.data.high)}`}
           </Button>
         </div>
       }
     >
       <div className="flex flex-col gap-4">
         <p className="m-0 text-small text-ink-2">
-          Every section's sample is made about this topic. A new one remakes all of them.
+          Every section's sample is made about this topic. A new topic makes every sample again, at
+          the price on the button; going back to the fixed topic is free.
         </p>
         <Segmented
           label="Topic"
-          tip="template-studio.sample-topic"
+          help="The next queued topic is the one a schedule makes its next video about."
           value={choice}
           onChange={setChoice}
           options={[
@@ -136,7 +143,7 @@ function TopicDrawer({
           ]}
         />
         {choice === "typed" ? (
-          <Field label="Topic" tip="template-studio.sample-topic">
+          <Field label="Your topic">
             <Input
               value={typed}
               maxLength={300}
