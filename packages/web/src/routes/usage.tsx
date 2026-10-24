@@ -44,7 +44,7 @@ export function UsageBoard() {
 
 const stageColumns: readonly Column<StageTokens>[] = [
   { id: "stage", header: "Stage", cell: (row) => stageWords[row.stage] },
-  { id: "model", header: "Provider · model", cell: (row) => namedBy(row) },
+  { id: "model", header: "Service · model", cell: (row) => namedBy(row) },
   { id: "in", header: "Tokens in", numeric: true, cell: (row) => wholeNumber.format(row.tokensIn) },
   {
     id: "out",
