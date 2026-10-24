@@ -6,6 +6,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { AutostartView } from "@/autostart/api";
+import { CurrentChannelProvider } from "@/channels/current";
 import { selfExplanatory, unexplainedControls } from "@/help/coverage";
 import type { RemoteAccessView } from "@/remote-access/api";
 import { HomeRoute } from "@/routes/home";
@@ -264,13 +265,34 @@ describe("Settings", () => {
 });
 
 const channel = "00000000-0000-4000-8000-000000000001";
+// The channel picker shows only when there are two channels to choose between.
+const channelSummary = (id: string, name: string) => ({
+  id,
+  name,
+  isDefault: id === channel,
+  brand: {},
+  seriesBrief: "",
+  version: 1,
+  createdAt: "x",
+  updatedAt: "x",
+  templates: 0,
+  cast: 0,
+});
 
 describe("Home", () => {
   it("explains the channel picker and every widget", async () => {
     const running = body({ status: "running", stages: [stage("images", "running")], outputs: [] });
     renderRouted(
-      <HomeRoute />,
+      <CurrentChannelProvider>
+        <HomeRoute />
+      </CurrentChannelProvider>,
       testDeps({
+        "GET /api/channels": jsonAnswer({
+          channels: [
+            channelSummary(channel, "My channel"),
+            channelSummary("00000000-0000-4000-8000-000000000002", "History at Bedtime"),
+          ],
+        }),
         "GET /api/projects": jsonAnswer({
           projects: [
             { ...running.project, id: "p-run", channelId: channel, uploadedAt: null },
@@ -310,7 +332,7 @@ describe("Home", () => {
       }),
     );
     await screen.findByRole("region", { name: "Needs you" });
-    expect(screen.getByLabelText("Channel")).not.toBeNull();
+    expect(await screen.findByLabelText("Channel")).not.toBeNull();
     // Coming up shows once there are schedules; there are none here.
     for (const name of ["Needs you", "Running now", "This week"])
       expect(screen.getByRole("button", { name: `About ${name}` })).not.toBeNull();

@@ -1,4 +1,4 @@
-import { act, cleanup, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { jsonAnswer, renderApp, testDeps } from "@/test-app";
@@ -21,13 +21,21 @@ const channel = (id: string, name: string) => ({
 
 function Shows({ ids }: { readonly ids: readonly string[] }) {
   const current = useCurrentChannel();
-  return <p>{`Showing: ${ids.filter((id) => current.includes(id)).join(", ")}`}</p>;
+  return (
+    <>
+      <p>{`Showing: ${ids.filter((id) => current.includes(id)).join(", ")}`}</p>
+      <p>{`Channels: ${String(current.channels.length)}`}</p>
+    </>
+  );
 }
 
-function mount(channels = [channel("c1", "My channel"), channel("c2", "History at Bedtime")]) {
+function mount(
+  channels = [channel("c1", "My channel"), channel("c2", "History at Bedtime")],
+  variant: "rail" | "header" = "rail",
+) {
   return renderApp(
     <CurrentChannelProvider>
-      <ChannelPicker />
+      <ChannelPicker variant={variant} />
       <Shows ids={["c1", "c2"]} />
     </CurrentChannelProvider>,
     testDeps({ "GET /api/channels": jsonAnswer({ channels }) }),
@@ -39,14 +47,30 @@ describe("the current channel", () => {
     const user = userEvent.setup();
     mount();
     expect(screen.getByText("Showing: c1, c2")).not.toBeNull();
-    const picker = screen.getByLabelText("Channel");
-    await waitFor(() =>
-      expect(screen.getByRole("option", { name: "History at Bedtime" })).not.toBeNull(),
-    );
+    const picker = await screen.findByLabelText("Channel");
+    expect(screen.getByRole("option", { name: "History at Bedtime" })).not.toBeNull();
     await user.selectOptions(picker, "c2");
     expect(screen.getByText("Showing: c2")).not.toBeNull();
     await user.selectOptions(picker, "");
     expect(screen.getByText("Showing: c1, c2")).not.toBeNull();
+  });
+
+  it("draws nothing while there is only one channel to show", async () => {
+    mount([channel("c1", "My channel")]);
+    await screen.findByText("Channels: 1");
+    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(screen.queryByRole("button", { name: /^About/ })).toBeNull();
+  });
+
+  it("reads as one line in a page header: Showing: and the channel, with no info button", async () => {
+    const user = userEvent.setup();
+    mount(undefined, "header");
+    const picker = await screen.findByRole("combobox", { name: "Showing:" });
+    expect(screen.queryByRole("button", { name: /^About/ })).toBeNull();
+    expect((picker as HTMLSelectElement).value).toBe("");
+    expect(within(picker).getByRole("option", { name: "All channels" })).not.toBeNull();
+    await user.selectOptions(picker, "c2");
+    expect(screen.getByText("Showing: c2")).not.toBeNull();
   });
 
   it("reads a channel that no longer exists as every channel", async () => {

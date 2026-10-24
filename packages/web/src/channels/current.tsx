@@ -15,10 +15,10 @@ import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { cn } from "@/lib/utils";
 import { type ChannelSummary, channelsQuery } from "./api.js";
 
-// The channel the person is looking at, picked in the rail. Home, the calendar and Projects
-// show only its work; "All channels" (null) shows everything. The choice is this browser's
-// own, shared by its tabs, and survives a reload; storage can be missing or throw, and the
-// picker still works.
+// The channel the person is looking at, picked with ChannelPicker. Home, the calendar and
+// Projects show only its work; "All channels" (null) shows everything. The choice is this
+// browser's own, shared by its tabs, and survives a reload; storage can be missing or throw,
+// and the picker still works.
 
 const storageKey = "slopify.channel";
 
@@ -98,11 +98,48 @@ export function useCurrentChannel(): CurrentChannel {
   return useContext(Context) ?? everything;
 }
 
-// The rail's channel picker (and the phone's, on Home). A native select: it is a choice of
-// one from a short list, and the platform's own menu is the most reachable one on a phone.
-export function ChannelPicker({ className }: { readonly className?: string }): ReactElement {
+// Which channel's work the page shows. A native select: it is a choice of one from a short
+// list, and the platform's own menu is the most reachable one on a phone. With fewer than two
+// channels there is nothing to choose, and it draws nothing.
+//   "header" sits in the page header of Home, Projects and the calendar: "Showing: All
+//            channels ▾" on one line, no info button.
+//   "rail"   the rail's (and the phone's, on Home): a label above the select, with its tip.
+export function ChannelPicker({
+  className,
+  variant = "rail",
+}: {
+  readonly className?: string;
+  readonly variant?: "rail" | "header";
+}): ReactElement | null {
   const current = useCurrentChannel();
   const id = useId();
+  if (current.channels.length < 2) return null;
+  const select = (
+    <select
+      id={id}
+      className={cn("sl-select", variant === "header" && "sl-select--compact")}
+      value={current.channelId ?? ""}
+      onChange={(event) =>
+        current.setChannelId(event.target.value === "" ? null : event.target.value)
+      }
+    >
+      <option value="">All channels</option>
+      {current.channels.map((channel) => (
+        <option key={channel.id} value={channel.id}>
+          {channel.name}
+        </option>
+      ))}
+    </select>
+  );
+  if (variant === "header")
+    return (
+      <div className={cn("flex min-w-0 items-center gap-2", className)} data-slot="channel-picker">
+        <label htmlFor={id} className="shrink-0 text-small text-ink-2">
+          Showing:
+        </label>
+        {select}
+      </div>
+    );
   return (
     <div className={cn("flex flex-col gap-1", className)} {...helpScope}>
       <span className="flex items-center gap-1 px-2">
@@ -111,21 +148,7 @@ export function ChannelPicker({ className }: { readonly className?: string }): R
         </label>
         <InfoTip id="planning.channel.current" className="-my-1" />
       </span>
-      <select
-        id={id}
-        className="sl-select"
-        value={current.channelId ?? ""}
-        onChange={(event) =>
-          current.setChannelId(event.target.value === "" ? null : event.target.value)
-        }
-      >
-        <option value="">All channels</option>
-        {current.channels.map((channel) => (
-          <option key={channel.id} value={channel.id}>
-            {channel.name}
-          </option>
-        ))}
-      </select>
+      {select}
     </div>
   );
 }

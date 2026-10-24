@@ -95,10 +95,13 @@ export function unexplainedControls(
   return missing;
 }
 
-// Self-explanatory controls every screen may carry without a help line or a tip.
+// Self-explanatory controls every screen may carry without a help line or a tip. "Showing:" is
+// the page header's channel picker (channels/current.tsx): like a filter, it only narrows what
+// the page shows.
 export const selfExplanatory: readonly (string | RegExp)[] = [
   /^Search\b/i,
   /^Filter\b/i,
   /^Sort\b/i,
   /^Select (all|row|\S+ for)/i,
+  /^Showing:$/,
 ];

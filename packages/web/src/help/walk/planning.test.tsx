@@ -286,15 +286,27 @@ describe("the planning screens explain every control", () => {
     expectExplained();
   });
 
-  it("walks the channel picker and the named links", async () => {
+  it("walks both channel pickers and the named links", async () => {
+    // A picker shows only when there are two channels to choose between.
+    const second: ChannelSummary = {
+      ...summary,
+      id: "00000000-0000-4000-8000-000000000002",
+      name: "History at Bedtime",
+      isDefault: false,
+    };
     renderRouted(
       <CurrentChannelProvider>
         <ChannelPicker />
+        <ChannelPicker variant="header" />
         <ChannelLinksSettings />
       </CurrentChannelProvider>,
-      testDeps(channelRoutes),
+      testDeps({
+        ...channelRoutes,
+        "GET /api/channels": jsonAnswer({ channels: [summary, second] }),
+      }),
     );
-    await screen.findByRole("option", { name: "My channel" });
+    expect(await screen.findAllByRole("option", { name: "History at Bedtime" })).toHaveLength(2);
+    expect(screen.getByRole("combobox", { name: "Showing:" })).not.toBeNull();
     await screen.findByRole("link", { name: "Open the default channel's links" });
     await waitFor(expectExplained);
   });
