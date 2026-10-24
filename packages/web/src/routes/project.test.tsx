@@ -759,4 +759,44 @@ describe("the title row's More", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "Delete project" }));
     await waitFor(() => expect(removed).toHaveBeenCalledOnce());
   });
+
+  it("marks a finished video uploaded from More, with Undo, and says so in the title row", async () => {
+    const marked: unknown[] = [];
+    let uploadedAt: string | null = null;
+    const youtube = {
+      ...finished,
+      project: {
+        ...finished.project,
+        config: { ...finished.project.config, youtubeDescription: true },
+      },
+    };
+    renderRouted(
+      <ProjectRoute projectId="p1" />,
+      deps({
+        "GET /api/projects/p1": jsonAnswer(youtube),
+        "GET /api/projects": () =>
+          jsonAnswer({
+            projects: [
+              {
+                ...youtube.project,
+                progress: 1,
+                channelId: "00000000-0000-4000-8000-000000000001",
+                uploadedAt,
+              },
+            ],
+          })(new Request("http://test")),
+        "PUT /api/projects/p1/uploaded": async (request) => {
+          const body = (await request.json()) as { uploaded: boolean };
+          marked.push(body);
+          uploadedAt = body.uploaded ? "2026-09-28T09:00:00.000Z" : null;
+          return jsonAnswer({ uploadedAt })(request);
+        },
+      }),
+    );
+    await statusList();
+    await userEvent.click(screen.getByRole("button", { name: "More" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Mark uploaded" }));
+    await waitFor(() => expect(marked).toEqual([{ uploaded: true }]));
+    expect(await screen.findByText(/^uploaded /)).not.toBeNull();
+  });
 });
