@@ -238,8 +238,8 @@ export function StorageTools() {
             <TextLink to="/settings" search={{ section: "providers" }}>
               Keys & services
             </TextLink>
-            . Importing adds and replaces nothing. Clear leftover files removes files no project
-            uses.
+            . Importing only adds: it replaces nothing. Clear leftover files removes files no
+            project uses.
           </p>
           {exporting.phase === "preparing" ? (
             <p role="status" className="m-0 text-ink">
