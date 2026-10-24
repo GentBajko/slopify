@@ -118,6 +118,10 @@ function openingOf(
     : targetOf(listed, { family, provider: undefined, arrival: false }, voices);
 }
 
+// How much of a kind (its heading, a few services and the top of the setup beside them) must
+// already show for a link to it to leave the page where it is.
+const inViewPx = 240;
+
 // Two columns from 1024px: a kind's list with the picked service's setup beside it. On one
 // column the setup opens under its own row, so the three lists stay together.
 function useWide(): boolean {
@@ -179,10 +183,10 @@ export function ProviderKeys({
     const family = target?.family ?? focus.family;
     if (family === undefined) return;
     const section = sections.current.get(family);
-    // A kind already in the top half of the window stays where it is, so the page header (and
-    // its way back to the welcome or Create) stays in view on a wide screen.
+    // A kind whose heading and first lines are already in the window stays where it is, so the
+    // page header (and its way back to the welcome or Create) stays in view on a wide screen.
     const top = section?.getBoundingClientRect().top;
-    if (top !== undefined && top >= 0 && top < window.innerHeight / 2) return;
+    if (top !== undefined && top >= 0 && top + inViewPx <= window.innerHeight) return;
     section?.scrollIntoView?.({ block: "start", behavior: focus.arrival ? "auto" : "smooth" });
   }, [focus, loaded]);
 

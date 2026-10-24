@@ -123,7 +123,7 @@ describe("Keys & services' lists", () => {
     expect(screen.queryByLabelText("OpenRouter API key")).toBeNull();
   });
 
-  it("scrolls to the kind a link names only when it is not already in the top half of the window", async () => {
+  it("scrolls to the kind a link names only when it does not already show in the window", async () => {
     const scrolled = vi.fn();
     const proto = HTMLElement.prototype as { scrollIntoView?: unknown };
     const before = proto.scrollIntoView;
