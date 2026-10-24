@@ -1,7 +1,7 @@
 import type { GlobalEvent } from "@app/edge/events/hub.js";
 import type { StageStateEvent } from "@app/kernel/events.js";
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
-import { act, cleanup, screen } from "@testing-library/react";
+import { act, cleanup, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createAppRouter } from "@/router";
 import { body, stage } from "@/routes/project-fixtures";
@@ -116,5 +116,18 @@ it("says nothing as a step fails in a run with nothing waiting", async () => {
   // The page is read for the subject; nothing is shown once it answers.
   await vi.waitFor(() => expect(read).toHaveBeenCalled());
   await new Promise((resolve) => setTimeout(resolve, 50));
+  expect(shown).toEqual([]);
+});
+
+// With browser notifications off, as they are by default, the end of a run is still said in
+// words on the page, with the way to the video.
+it("says a finished video in a toast with Watch, with browser notifications off", async () => {
+  stored.delete("slopify.notifications.browser");
+  const { send } = await shell(false);
+  send({ type: "project.state", projectId: "p1", state: "running" } as GlobalEvent);
+  send({ type: "project.state", projectId: "p1", state: "done" } as GlobalEvent);
+  const toasts = screen.getByRole("region", { name: "Notifications" });
+  expect(await within(toasts).findByText("Video ready: Rope Tricks")).not.toBeNull();
+  expect(within(toasts).getByRole("button", { name: "Watch" })).not.toBeNull();
   expect(shown).toEqual([]);
 });
