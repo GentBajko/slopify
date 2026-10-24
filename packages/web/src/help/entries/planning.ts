@@ -1,7 +1,7 @@
 import type { HelpEntry } from "../entry.js";
 
-// Schedules, the calendar, channels (brand kit, cast, episode memory, existing videos) and the
-// named links YouTube descriptions fill from.
+// Schedules, channels (the current channel, its language and YouTube AI disclosure) and the
+// cast.
 export const planningHelp = {
   // Schedules
   "planning.schedule.name": {
@@ -141,120 +141,20 @@ export const planningHelp = {
   },
 
   // Channels
-  "planning.channels": {
-    title: "Channels",
-    body: "A channel is one series: its brand kit, series brief, cast, templates and schedules. Every template belongs to one channel, and each run from it uses that channel's look and cast. The default channel holds everything made before channels and can't be deleted.",
-    tutorial: { page: "Channels", anchor: "the-channels-page" },
-  },
   "planning.channel.current": {
     title: "Current channel",
     body: "Home, Projects and the calendar show only this channel's work. All channels shows everything. It only filters what you see; every project and schedule keeps its own channel. This browser remembers your choice, and every Slopify tab open in it follows the same pick.",
     tutorial: { page: "Channels", anchor: "show-one-channels-work" },
   },
-  "planning.channel.name": {
-    title: "Channel name",
-    body: "The name you see in the channel picker, on Play and on the calendar. It stays inside Slopify and doesn't have to match your YouTube channel. Up to 200 characters.",
-    tutorial: { page: "Channels", anchor: "create-a-channel" },
-  },
-  "planning.channel.brief": {
-    title: "Series brief",
-    body: "What the channel covers, its style and what makes a topic worth a video. Topic generation reads it for every schedule of this channel that has no brief of its own. It doesn't change how videos are written. Up to 10,000 characters.",
-    tutorial: { page: "Channels", anchor: "brand" },
-  },
   "planning.channel.ai-disclosure": {
     title: "YouTube AI disclosure",
-    body: "Studio's AI use answer for this channel's videos and Shorts, given by Prepare upload and the Studio extension. Automatic says Yes only for YouTube's three cases: a voice marked as imitating a real person, real footage altered, or photorealistic AI pictures from a marked Image prompt. Saves as you pick. Default: Automatic.",
+    body: "Studio's AI use answer for this channel's videos and Shorts, given by Copy for YouTube Studio and the Studio extension. Automatic says Yes only for YouTube's three cases: a voice marked as imitating a real person, real footage altered, or photorealistic AI pictures from a marked Image prompt. Mark voices in Settings → Voices and image prompts in Prompts. Default: Automatic.",
     tutorial: { page: "Publishing-to-YouTube", anchor: "override-per-channel" },
   },
   "planning.channel.language": {
     title: "Language of new projects",
-    body: "The language this channel's new projects are written and narrated in when Play or the template picks none. It applies with the brand kit off too, since it is not styling. Pick voices that speak it. Not set means English. Projects already made keep their language.",
+    body: "The language this channel's new projects are written and narrated in when Create or the template picks none. It applies with the channel's look turned off too, since it is not styling. Pick voices that speak it. Not set means English. Projects already made keep their language.",
     tutorial: { page: "Other-Languages", anchor: "set-a-channels-language" },
-  },
-  "planning.channel.brand-kit": {
-    title: "Brand kit",
-    body: "The look every template of this channel gets unless it sets its own: fonts, colours, end screen, intro, outro, PDF theme and ambient sound. It fills only what a template leaves at its default, and a blank field adds nothing. Turn it off for one video on Play or in Edit project.",
-    tutorial: { page: "Channels", anchor: "brand" },
-  },
-  "planning.channel.brand.caption-font": {
-    title: "Caption font",
-    body: "The subtitle font for this channel's videos whose template leaves the font at Default. Not set leaves the template's font alone. Fonts you upload in the subtitle font picker on Play appear here.",
-    tutorial: { page: "Channels", anchor: "brand" },
-  },
-  "planning.channel.brand.caption-colour": {
-    title: "Caption colour",
-    body: "The subtitle text colour, as # and six hex digits such as #FFFFFF, for videos whose template sets no colour of its own. Blank leaves the template's colour alone.",
-    tutorial: { page: "Channels", anchor: "brand" },
-  },
-  "planning.channel.brand.caption-outline": {
-    title: "Caption outline",
-    body: "The colour of the line around each subtitle letter, as # and six hex digits such as #000000, for videos whose template sets none. A dark outline keeps light captions readable on bright pictures. Blank leaves the template's outline alone.",
-    tutorial: { page: "Channels", anchor: "brand" },
-  },
-  "planning.channel.brand.font": {
-    title: "Title font",
-    body: "The font of chapter cards and the end screen for videos whose template sets no title style. Not set leaves the template's font alone. Fonts you upload in the subtitle font picker on Play appear here.",
-    tutorial: { page: "Channels", anchor: "brand" },
-  },
-  "planning.channel.brand.title-colour": {
-    title: "Title colour",
-    body: "The text colour of chapter cards and the end screen, as # and six hex digits such as #FFD700, for videos whose template sets no title style. Blank leaves the template's colour alone.",
-    tutorial: { page: "Channels", anchor: "brand" },
-  },
-  "planning.channel.brand.end-screen": {
-    title: "End screen text",
-    body: "A line shown over the last 5 seconds of every video of this channel whose template sets no end screen, such as Subscribe for more. Up to 200 characters. Blank shows no end screen text.",
-    tutorial: { page: "Channels", anchor: "brand" },
-  },
-  "planning.channel.brand.intro": {
-    title: "Intro",
-    body: "An entry from Library → Intros & outros, narrated before every video of this channel whose template has no intro. Not set adds none. It adds its own length to each video and costs one voice request, since it is narrated.",
-    tutorial: { page: "Channels", anchor: "brand" },
-  },
-  "planning.channel.brand.outro": {
-    title: "Outro",
-    body: "An entry from Library → Intros & outros, narrated after every video of this channel whose template has no outro. Not set adds none. It adds its own length to each video and costs one voice request, since it is narrated.",
-    tutorial: { page: "Channels", anchor: "brand" },
-  },
-  "planning.channel.brand.document-theme": {
-    title: "PDF theme",
-    body: "The look of the PDF document for videos of this channel whose template picks no theme: a built-in theme or one you saved. Not set leaves the template's choice alone. A saved theme that was deleted is skipped.",
-    tutorial: { page: "Channels", anchor: "brand" },
-  },
-  "planning.channel.template-move": {
-    title: "Move a template",
-    body: "Moves a template, and every schedule that runs it, to another channel. Their next runs use that channel's brand kit, cast and series brief. Projects already made keep what they were made with.",
-    tutorial: { page: "Channels", anchor: "templates" },
-  },
-  "planning.channel.episode-memory": {
-    title: "Episode memory",
-    body: "When a video of this channel finishes, one short call to its text model writes a summary of up to 150 words. A new episode about the same cast or title words gets up to 5 related summaries in its writing prompt, so it agrees with them. Videos already made never change. Default: on for new channels.",
-    tutorial: { page: "Channels", anchor: "episodes-episode-memory" },
-  },
-  "planning.channel.episode-summary": {
-    title: "Episode summary",
-    body: "What the text model wrote this episode covered. Related new episodes read it before they are written. Edit it to correct a fact; your text is kept even if the video finishes again.",
-    tutorial: { page: "Channels", anchor: "episodes-episode-memory" },
-  },
-  "planning.channel.videos-paste": {
-    title: "Existing video titles",
-    body: "Titles of videos this channel made before Slopify, one per line. Topic generation and its duplicate checks skip them, as they skip the videos made here. Titles already listed are skipped, whatever their case.",
-    tutorial: { page: "Channels", anchor: "existing-videos" },
-  },
-  "planning.channel.videos-csv": {
-    title: "Import a YouTube Studio CSV",
-    body: "In YouTube Studio open Analytics → Content → Advanced mode and export the table as a CSV. Slopify reads its titles on this machine and lists them with ticks first, so you keep only this channel's videos.",
-    tutorial: { page: "Channels", anchor: "existing-videos" },
-  },
-  "planning.channel.videos-filter": {
-    title: "Keep only titles containing",
-    body: 'Ticks only the titles containing this text, in any case, such as "Egypt" or "History at Bedtime"; empty ticks them all. Use it when one Studio export holds several series. Remembered for this channel\'s next import.',
-    tutorial: { page: "Channels", anchor: "existing-videos" },
-  },
-  "planning.channel.videos-ticks": {
-    title: "Titles in the CSV",
-    body: "Only ticked titles are added when you press Add. Untick videos of other series in the same export, or type in Keep only titles containing to tick by text.",
-    tutorial: { page: "Channels", anchor: "existing-videos" },
   },
 
   // Cast
@@ -302,12 +202,5 @@ export const planningHelp = {
     title: "Picture to make",
     body: "The prompt for the generated reference picture. It starts from the name, the description and a request for a plain background; edit it as you like. Up to 4,000 characters.",
     tutorial: { page: "Cast-Library", anchor: "generate-a-picture" },
-  },
-
-  // YouTube
-  "planning.links.named": {
-    title: "Named links",
-    body: "Write {{Name}} in a YouTube description, or ask for it in a Description prompt, and it becomes the link of that name when the description is shown, copied or downloaded, such as {{Patreon}} or {{Discord}}. Each channel keeps its own list on its Brand tab, so a project fills from its channel's links; its own {{Previous video}} wins over the channel's. A name with no link stays as typed. Save channel keeps the list.",
-    tutorial: { page: "YouTube-Description", anchor: "links-in-the-description" },
   },
 } as const satisfies Readonly<Record<string, HelpEntry>>;

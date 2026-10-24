@@ -1,6 +1,6 @@
 import { type ReactElement, useId, useRef } from "react";
 import { Button } from "@/components/kit/button";
-import { Checkbox, Field, Input } from "@/components/kit/field";
+import { Checkbox, Field, HelpLine, Input } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
@@ -61,7 +61,6 @@ export function CsvPreview({
       <SectionHead
         as="h3"
         title="Titles in the CSV"
-        info="planning.channel.videos-ticks"
         meta={`${count.toLocaleString("en")} of ${pluralGrouped(preview.titles.length, "title", "titles")} ticked · Shift+click ticks a range`}
       >
         <Button variant="primary" disabled={busy || count === 0} onClick={onSave}>
@@ -71,10 +70,13 @@ export function CsvPreview({
           Cancel
         </Button>
       </SectionHead>
+      <HelpLine>
+        Only ticked titles are added: untick the videos of other series in the same export.
+      </HelpLine>
       <Field
         label="Keep only titles containing…"
-        tip="planning.channel.videos-filter"
-        tipLabel="Keep only titles containing"
+        className="mt-3"
+        help="Ticks only the titles with this text in them, such as History at Bedtime; kept for the next import."
       >
         <Input value={filter} maxLength={200} onChange={(event) => onFilter(event.target.value)} />
       </Field>

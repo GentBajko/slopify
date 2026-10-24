@@ -1,9 +1,12 @@
+import type { ProjectListing } from "@app/slices/admission/model.js";
 import type { CastMember, Channel, ChannelSummary } from "@app/slices/channels/model.js";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { CommandPaletteProvider, CommandRegistry } from "@/components/kit/command-palette";
+import { type PlaySession, PlaySessionProvider } from "@/play/draft-context";
+import { freshDraftDocument } from "@/play/draft-state";
 import { type Answer, jsonAnswer, renderRouted, testDeps } from "@/test-app";
 import { ChannelRoute, type ChannelTab } from "./channel.js";
 import { ChannelsRoute } from "./channels.js";
@@ -52,6 +55,32 @@ function recording(answer: Answer, seen: unknown[]): Answer {
   };
 }
 
+const templateId = "11111111-1111-4111-8111-111111111111";
+
+function listing(projectId: string, title: string): ProjectListing {
+  return {
+    id: projectId,
+    title,
+    status: "done",
+    progress: 1,
+    format: "16:9",
+    channelId: id,
+    uploadedAt: null,
+    config: {
+      sources: {
+        research: "off",
+        article: "generate",
+        audio: "generate",
+        images: "generate",
+        thumbnail: "generate",
+        video: "generate",
+      },
+    },
+    createdAt: "2026-09-27T09:00:00.000Z",
+    updatedAt: "2026-09-27T10:00:00.000Z",
+  };
+}
+
 function Page({ start = "brand" as ChannelTab }) {
   const [tab, setTab] = useState<ChannelTab>(start);
   return <ChannelRoute channelId={id} tab={tab} onTab={setTab} />;
@@ -65,21 +94,51 @@ const common = {
   "GET /api/providers": jsonAnswer({ providers: [] }),
 };
 
+const otherId = "00000000-0000-4000-8000-000000000002";
+const side: ChannelSummary = {
+  ...channel,
+  id: otherId,
+  name: "Side",
+  isDefault: false,
+  templates: 0,
+  cast: 0,
+};
+
 describe("Channels", () => {
-  it("lists each channel with its templates and cast", async () => {
+  it("lists each channel with its templates and cast, the whole row opening it", async () => {
     const summary: ChannelSummary = { ...channel, templates: 2, cast: 1 };
     renderRouted(
       <ChannelsRoute />,
-      testDeps({ "GET /api/channels": jsonAnswer({ channels: [summary] }) }),
+      testDeps({ "GET /api/channels": jsonAnswer({ channels: [summary, side] }) }),
     );
     expect(await screen.findByText("My channel")).not.toBeNull();
-    expect(screen.getByText("Default · 2 templates · 1 in the cast")).not.toBeNull();
-    expect(screen.getByRole("link", { name: "Open My channel" }).getAttribute("href")).toBe(
+    expect(
+      screen.getByText("Default · videos with no channel land here · 2 templates · 1 in the cast"),
+    ).not.toBeNull();
+    expect(screen.getByRole("link", { name: "My channel" }).getAttribute("href")).toBe(
       `/channels/${id}`,
     );
+    // One way in per row: no Open beside the name, no detail panel with another.
+    expect(screen.queryByRole("link", { name: /^Open/ })).toBeNull();
     expect(screen.getByRole("button", { name: "Rename My channel" })).not.toBeNull();
     // The default channel holds everything made before channels; it has no Delete.
     expect(screen.queryByRole("button", { name: "Delete My channel" })).toBeNull();
+  });
+
+  it("is the channel's own page when there is only one, with New channel beside it", async () => {
+    const user = userEvent.setup();
+    const summary: ChannelSummary = { ...channel, templates: 0, cast: 0 };
+    renderRouted(
+      <ChannelsRoute />,
+      testDeps({ ...common, "GET /api/channels": jsonAnswer({ channels: [summary] }) }),
+    );
+    expect(await screen.findByRole("heading", { level: 1, name: "My channel" })).not.toBeNull();
+    expect(screen.getByRole("tab", { name: "Name and look" }).getAttribute("aria-selected")).toBe(
+      "true",
+    );
+    expect(screen.queryByRole("list", { name: "Channels" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "New channel" }));
+    expect(await screen.findByRole("form", { name: "New channel" })).not.toBeNull();
   });
 
   it("renames a channel from its row, keeping its brand kit", async () => {
@@ -89,7 +148,7 @@ describe("Channels", () => {
     renderRouted(
       <ChannelsRoute />,
       testDeps({
-        "GET /api/channels": jsonAnswer({ channels: [summary] }),
+        "GET /api/channels": jsonAnswer({ channels: [summary, side] }),
         [`PUT /api/channels/${id}`]: recording(jsonAnswer({ ...channel, name: "Lore" }), seen),
       }),
     );
@@ -109,21 +168,13 @@ describe("Channels", () => {
 
   it("deletes a channel from its row after confirming", async () => {
     const user = userEvent.setup();
-    const other = "00000000-0000-4000-8000-000000000002";
     const deleted: string[] = [];
-    const side: ChannelSummary = {
-      ...channel,
-      id: other,
-      name: "Side",
-      isDefault: false,
-      templates: 0,
-      cast: 0,
-    };
+    const summary: ChannelSummary = { ...channel, templates: 0, cast: 0 };
     renderRouted(
       <ChannelsRoute />,
       testDeps({
-        "GET /api/channels": jsonAnswer({ channels: [side] }),
-        [`DELETE /api/channels/${other}`]: (request) => {
+        "GET /api/channels": jsonAnswer({ channels: [summary, side] }),
+        [`DELETE /api/channels/${otherId}`]: (request) => {
           deleted.push(request.method);
           return new Response(null, { status: 204 });
         },
@@ -143,9 +194,9 @@ describe("Channels", () => {
         <ChannelsRoute />
         <Page />
       </CommandPaletteProvider>,
-      testDeps({ ...common, "GET /api/channels": jsonAnswer({ channels: [summary] }) }),
+      testDeps({ ...common, "GET /api/channels": jsonAnswer({ channels: [summary, side] }) }),
     );
-    await screen.findByRole("tab", { name: "Brand" });
+    await screen.findByRole("tab", { name: "Name and look" });
     const titles = () => registry.list().map((command) => [command.title, command.group]);
     await waitFor(() =>
       expect(titles()).toEqual(
@@ -188,29 +239,206 @@ describe("Channels", () => {
     });
   });
 
-  it("saves the YouTube AI disclosure as soon as it is picked", async () => {
+  it("asks the YouTube AI disclosure under Posting, after the name and look, and saves it with them", async () => {
     const user = userEvent.setup();
     const seen: unknown[] = [];
+    const disclosed: unknown[] = [];
     renderRouted(
       <Page />,
       testDeps({
         ...common,
+        [`PUT /api/channels/${id}`]: recording(jsonAnswer({ ...channel, version: 4 }), seen),
         [`PUT /api/channels/${id}/ai-disclosure`]: recording(
-          jsonAnswer({ ...channel, aiDisclosure: "no" }),
-          seen,
+          jsonAnswer({ ...channel, version: 5, aiDisclosure: "no" }),
+          disclosed,
         ),
       }),
     );
-    const picker = await screen.findByRole("combobox", { name: "YouTube AI disclosure" });
+    const name = await screen.findByLabelText("Channel name");
+    const picker = screen.getByRole("combobox", { name: "YouTube AI disclosure" });
+    // The legal question comes after the channel's own name, in the folded Posting.
+    expect(name.compareDocumentPosition(picker) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect((picker as HTMLSelectElement).value).toBe("auto");
+    await user.click(screen.getByText("Posting"));
     await user.click(screen.getByRole("button", { name: "About YouTube AI disclosure" }));
     expect(
       await screen.findByText(/Automatic says Yes only for YouTube.s three cases/),
     ).not.toBeNull();
     await user.keyboard("{Escape}");
     await user.selectOptions(picker, "no");
-    await waitFor(() => expect(seen).toEqual([{ aiDisclosure: "no" }]));
-    await waitFor(() => expect((picker as HTMLSelectElement).value).toBe("no"));
+    expect(disclosed).toEqual([]);
+    await user.click(screen.getByRole("button", { name: "Save channel" }));
+    await waitFor(() => expect(disclosed).toEqual([{ aiDisclosure: "no" }]));
+    expect(seen).toHaveLength(1);
+  });
+
+  it("offers Make a video in the header and names its tabs in plain words", async () => {
+    renderRouted(<Page />, testDeps(common));
+    await screen.findByLabelText("Channel name");
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Name and look",
+      "Cast1",
+      "Projects",
+      "Templates",
+      "Schedules",
+      "Memory",
+      "Titles to avoid",
+    ]);
+    expect(screen.getByRole("link", { name: "Make a video" }).getAttribute("href")).toBe("/play");
+    // No A/B test of this channel's videos was read, so no link to what worked.
+    expect(screen.queryByRole("link", { name: "What worked on YouTube" })).toBeNull();
+  });
+
+  it("links to what worked on YouTube once a test of one of its videos was read", async () => {
+    renderRouted(
+      <Page />,
+      testDeps({
+        ...common,
+        "GET /api/projects": jsonAnswer({
+          projects: [{ ...listing("p1", "Cleopatra Awakens"), channelId: id }],
+        }),
+        "GET /api/studio/ab-results": jsonAnswer({
+          results: [
+            {
+              projectId: "p1",
+              projectTitle: "Cleopatra Awakens",
+              short: null,
+              videoId: "v",
+              readAt: "a",
+              variants: [],
+            },
+          ],
+        }),
+      }),
+    );
+    expect(
+      (await screen.findByRole("link", { name: "What worked on YouTube" })).getAttribute("href"),
+    ).toBe("/ab-results");
+  });
+
+  it("lists what the channel made, newest first, with Watch on the finished ones", async () => {
+    renderRouted(
+      <Page start="projects" />,
+      testDeps({
+        ...common,
+        "GET /api/projects": jsonAnswer({
+          projects: [
+            { ...listing("p1", "Cleopatra Awakens"), channelId: id },
+            {
+              ...listing("p2", "The Library Burns"),
+              channelId: id,
+              status: "running",
+              updatedAt: "2026-10-01T00:00:00.000Z",
+            },
+            { ...listing("p3", "Another channel's"), channelId: "elsewhere" },
+          ],
+        }),
+      }),
+    );
+    const list = await screen.findByRole("list", { name: "Channel projects" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows.map((row) => within(row).getAllByRole("link")[0]?.textContent)).toEqual([
+      "The Library Burns",
+      "Cleopatra Awakens",
+    ]);
+    expect(within(rows[0] as HTMLElement).getByText("Running")).not.toBeNull();
+    expect(within(rows[0] as HTMLElement).queryByRole("link", { name: /^Watch/ })).toBeNull();
+    expect(
+      within(rows[1] as HTMLElement)
+        .getByRole("link", { name: "Watch Cleopatra Awakens" })
+        .getAttribute("href"),
+    ).toBe("/projects/p1?section=video");
+  });
+
+  it("lists the channel's templates with Make a video, their schedules and New schedule", async () => {
+    const user = userEvent.setup();
+    const made: string[] = [];
+    const asked: string[] = [];
+    const session = {
+      review: { starting: false, uncertain: false, created: null },
+      flush: async () => true,
+      generation: () => 1,
+      open: async (draftId: string) => {
+        made.push(draftId);
+        return true;
+      },
+    } as unknown as PlaySession;
+    renderRouted(
+      <PlaySessionProvider value={session}>
+        <Page start="templates" />
+      </PlaySessionProvider>,
+      testDeps({
+        ...common,
+        "GET /api/project-templates": jsonAnswer({
+          templates: [
+            {
+              id: templateId,
+              name: "History starter",
+              version: 1,
+              updatedAt: "2026-09-27T10:00:00.000Z",
+              channelId: id,
+            },
+          ],
+        }),
+        "GET /api/schedules": jsonAnswer({ schedules: [] }),
+        [`POST /api/project-templates/${templateId}/instantiate`]: async (request) => {
+          const { id: draftId } = (await request.json()) as { id: string };
+          asked.push(draftId);
+          return Response.json({
+            draft: {
+              draft: {
+                id: draftId,
+                version: 1,
+                createdAt: "now",
+                updatedAt: "now",
+                document: freshDraftDocument,
+              },
+              attachments: [],
+              review: null,
+              pendingStart: null,
+              start: null,
+            },
+          });
+        },
+      }),
+    );
+    const list = await screen.findByRole("list", { name: "Channel templates" });
+    expect(within(list).getByRole("link", { name: "History starter" }).getAttribute("href")).toBe(
+      `/templates/${templateId}`,
+    );
+    expect(within(list).getByText(/· No schedule$/)).not.toBeNull();
+    expect(within(list).getByRole("link", { name: "New schedule" }).getAttribute("href")).toBe(
+      "/calendar?tab=schedules",
+    );
+    // With one channel there is nowhere to move it.
+    expect(within(list).queryByRole("combobox")).toBeNull();
+    await user.click(
+      within(list).getByRole("button", { name: "Make a video from History starter" }),
+    );
+    // Create opens on the draft the template made.
+    await waitFor(() => expect(made).toHaveLength(1));
+    expect(made).toEqual(asked);
+  });
+
+  it("offers New schedule on a channel with templates and no schedule", async () => {
+    renderRouted(
+      <Page start="schedules" />,
+      testDeps({
+        ...common,
+        "GET /api/project-templates": jsonAnswer({
+          templates: [
+            { id: templateId, name: "History starter", version: 1, updatedAt: "a", channelId: id },
+          ],
+        }),
+        "GET /api/schedules": jsonAnswer({ schedules: [] }),
+      }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: "No schedules for this channel yet" }),
+    ).not.toBeNull();
+    expect(screen.getByRole("link", { name: "New schedule" }).getAttribute("href")).toBe(
+      "/calendar?tab=schedules",
+    );
   });
 
   it("shows the cast with its pictures and adds a member with aliases", async () => {

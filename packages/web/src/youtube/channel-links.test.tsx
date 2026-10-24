@@ -85,7 +85,9 @@ it("keeps each channel's own links, and saves an emptied list as empty", async (
     ((await screen.findByRole("textbox", { name: "Address of link 1" })) as HTMLInputElement).value,
   ).toBe("https://patreon.com/night");
   await user.click(screen.getByRole("button", { name: "Remove link 1" }));
-  expect(screen.getByText(/No channel links yet/u)).not.toBeNull();
+  // The fold's line says the list is empty now.
+  expect(screen.queryByRole("textbox", { name: "Address of link 1" })).toBeNull();
+  expect(screen.getByText("None yet")).not.toBeNull();
   await user.click(screen.getByRole("button", { name: "Save channel" }));
   await waitFor(() => expect(seen).toHaveLength(1));
   expect(seen[0]).toMatchObject({ brand: { links: [] } });
@@ -100,7 +102,7 @@ it("leaves the links out for a channel that never had any", async () => {
   expect((seen[0] as { brand: object }).brand).not.toHaveProperty("links");
 });
 
-it("points Settings → Channel links at the channel's Brand tab", async () => {
+it("points Settings → Channel links at the channel's Name and look tab", async () => {
   renderRouted(<ChannelLinksSettings />, testDeps({}));
   expect(
     (await screen.findByRole("link", { name: "Open the default channel's links" })).getAttribute(

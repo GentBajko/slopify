@@ -1,18 +1,23 @@
+import type { ScheduleSummary } from "@app/slices/schedules/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import { PlusIcon } from "lucide-react";
+import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
 import { StatusSlot } from "@/components/kit/action-bar";
+import { Button } from "@/components/kit/button";
 import { EmptyState } from "@/components/kit/empty-state";
-import { Select } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
-import { TextLink } from "@/components/kit/link";
+import { HelpLine, Select } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
+import { ButtonLink, TextLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { Status } from "@/components/kit/status";
+import { intents, requestIntent } from "@/lib/intents";
 import { scheduleStatusLook } from "@/lib/state-words";
+import { shortDate } from "@/lib/utils";
 import { schedulesQuery } from "@/schedules/api";
 import { formatScheduleDate } from "@/schedules/time";
-import { templatesKey, templatesQuery } from "@/templates/api";
+import { type TemplateSummary, templatesKey, templatesQuery } from "@/templates/api";
 import { channelsKey, channelsQuery, defaultChannelId, moveTemplate } from "./api";
 
 // A template with no channel (from an older server) is the default channel's.
@@ -20,13 +25,62 @@ export function channelOfTemplate(template: { readonly channelId?: string | unde
   return template.channelId ?? defaultChannelId;
 }
 
-// The Templates tab: the channel's templates, each with the channel it can be moved to. Its
-// schedules move with it.
-export function TemplatesTab({ channelId }: { readonly channelId: string }): ReactElement {
+// New schedule from a channel's page: the calendar's Schedules tab, on its form.
+function NewScheduleLink({
+  variant = "secondary",
+}: {
+  readonly variant?: "primary" | "secondary" | "quiet";
+}): ReactElement {
+  return (
+    <ButtonLink
+      to="/calendar"
+      search={{ tab: "schedules" }}
+      variant={variant}
+      size={variant === "quiet" ? "small" : "default"}
+      onClick={() => requestIntent(intents.newSchedule)}
+    >
+      {variant === "quiet" ? null : <PlusIcon aria-hidden="true" strokeWidth={1.75} />}
+      New schedule
+    </ButtonLink>
+  );
+}
+
+// "Saved Sep 27"; nothing for a date the server did not send in full.
+function savedOn(iso: string): string | undefined {
+  return Number.isNaN(Date.parse(iso)) ? undefined : `Saved ${shortDate(iso)}`;
+}
+
+// "Runs on Lore, next Oct 25" for a template's live schedules; "No schedule" without one.
+function schedulesLine(schedules: readonly ScheduleSummary[]): string {
+  if (schedules.length === 0) return "No schedule";
+  const named = schedules
+    .map((one) =>
+      one.nextRunAt === null
+        ? one.name
+        : `${one.name}, next ${formatScheduleDate(one.nextRunAt, one.timezone)}`,
+    )
+    .join("; ");
+  return `Runs on ${named}`;
+}
+
+// The Templates tab: what this channel can make. Each template opens its editor by its name,
+// makes a video from it, starts a schedule, and (with another channel to go to) moves to it
+// with its schedules.
+export function TemplatesTab({
+  channelId,
+  onMake,
+}: {
+  readonly channelId: string;
+  // Create, opened on a fresh draft of the template; absent outside the shell.
+  readonly onMake: ((template: TemplateSummary) => Promise<void>) | undefined;
+}): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
   const templates = useQuery(templatesQuery(api));
   const channels = useQuery(channelsQuery(api));
+  const schedules = useQuery(schedulesQuery(api));
+  const [problem, setProblem] = useState<string | undefined>();
+  const [making, setMaking] = useState<string | null>(null);
   const move = useMutation({
     mutationFn: (input: { readonly templateId: string; readonly channelId: string }) =>
       moveTemplate(api, input.templateId, input.channelId),
@@ -39,59 +93,106 @@ export function TemplatesTab({ channelId }: { readonly channelId: string }): Rea
   const own = (templates.data ?? []).filter(
     (template) => channelOfTemplate(template) === channelId,
   );
+  const others = (channels.data ?? []).filter((channel) => channel.id !== channelId);
+  const make = async (template: TemplateSummary) => {
+    if (onMake === undefined) return;
+    setProblem(undefined);
+    setMaking(template.id);
+    try {
+      await onMake(template);
+    } catch (error) {
+      setProblem(
+        `${template.name} didn't open in Create: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    } finally {
+      setMaking(null);
+    }
+  };
   return (
-    <div {...helpScope}>
-      <p className="m-0 mb-4 max-w-[68ch] text-small text-ink-2">
-        Runs from these templates use this channel's brand kit and cast. Save new ones from Play in{" "}
-        <Link to="/templates" className="underline">
-          Library → Templates
-        </Link>
-        . Move to sends a template and its schedules to another channel.{" "}
-        <InfoTip id="planning.channel.template-move" className="-my-1 align-middle" />
-      </p>
-      <StatusSlot tone={move.error || templates.error ? "error" : "info"} className="mb-2">
-        {move.error?.message ?? templates.error?.message}
+    <div {...helpScope} className="flex flex-col gap-3">
+      <StatusSlot tone="error">
+        {problem ?? move.error?.message ?? templates.error?.message}
       </StatusSlot>
       {templates.data && own.length === 0 ? (
-        <EmptyState title="No templates in this channel">
-          Pick this channel on Play, then save the setup as a template, or move one here from
-          another channel.
+        <EmptyState
+          title="No templates in this channel"
+          actions={
+            <ButtonLink to="/play" variant="primary">
+              Make a video
+            </ButtonLink>
+          }
+        >
+          A template is a saved setup for one kind of video. Make a video, then choose Save as
+          template{others.length === 0 ? "" : ", or move one here from another channel"}.
         </EmptyState>
       ) : null}
       {own.length > 0 ? (
         <List label="Channel templates" className="sl-list--wrap-actions">
-          {own.map((template) => (
-            <ListRow
-              key={template.id}
-              title={template.name}
-              meta={`Version ${String(template.version)}`}
-              actions={
-                <span className="flex items-center gap-2 text-small text-ink-2">
-                  Move to
-                  <Select
-                    aria-label={`Channel of ${template.name}`}
-                    value={channelId}
-                    disabled={move.isPending}
-                    onChange={(event) =>
-                      move.mutate({ templateId: template.id, channelId: event.target.value })
-                    }
-                    options={(channels.data ?? []).map((channel) => ({
-                      value: channel.id,
-                      label: channel.name,
-                    }))}
-                  />
-                </span>
-              }
-            />
-          ))}
+          {own.map((template) => {
+            const running = (schedules.data ?? []).filter(
+              (one) => one.deletedAt === null && one.templateId === template.id,
+            );
+            return (
+              <ListRow
+                key={template.id}
+                title={
+                  <Link to="/templates/$templateId" params={{ templateId: template.id }}>
+                    {template.name}
+                  </Link>
+                }
+                meta={[savedOn(template.updatedAt), schedulesLine(running)]
+                  .filter((part) => part !== undefined)
+                  .join(" · ")}
+                actions={
+                  <>
+                    {onMake === undefined ? null : (
+                      <Button
+                        size="small"
+                        aria-label={`Make a video from ${template.name}`}
+                        disabled={making !== null}
+                        disabledReason="Opening Create…"
+                        onClick={() => void make(template)}
+                      >
+                        {making === template.id ? "Opening…" : "Make a video"}
+                      </Button>
+                    )}
+                    <NewScheduleLink variant="quiet" />
+                    {others.length === 0 ? null : (
+                      <Select
+                        aria-label={`Move ${template.name} to`}
+                        className="w-auto"
+                        value=""
+                        disabled={move.isPending}
+                        onChange={(event) => {
+                          const target = event.target.value;
+                          if (target !== "")
+                            move.mutate({ templateId: template.id, channelId: target });
+                        }}
+                        options={[
+                          { value: "", label: "Move to…" },
+                          ...others.map((channel) => ({ value: channel.id, label: channel.name })),
+                        ]}
+                      />
+                    )}
+                  </>
+                }
+              />
+            );
+          })}
         </List>
+      ) : null}
+      {own.length > 0 && others.length > 0 ? (
+        <HelpLine>
+          Move to sends a template and its schedules to another channel; their next videos take that
+          channel's look and cast.
+        </HelpLine>
       ) : null}
     </div>
   );
 }
 
-// The Schedules tab: the schedules that run this channel's templates. They are managed in
-// Calendar → Schedules.
+// The Schedules tab: the schedules that run this channel's templates, with when each runs
+// next, and New schedule. They are edited on the calendar's Schedules tab.
 export function SchedulesTab({ channelId }: { readonly channelId: string }): ReactElement {
   const { api } = useApp();
   const templates = useQuery(templatesQuery(api));
@@ -105,47 +206,49 @@ export function SchedulesTab({ channelId }: { readonly channelId: string }): Rea
     (schedule) => schedule.deletedAt === null && inChannel.has(schedule.templateId),
   );
   return (
-    <div>
-      <p className="m-0 mb-4 max-w-[68ch] text-small text-ink-2">
-        A schedule belongs to the channel of the template it runs. Create and change schedules in{" "}
-        <Link to="/calendar" search={{ tab: "schedules" }} className="underline">
-          Calendar → Schedules
-        </Link>
-        .
-      </p>
-      <StatusSlot tone={schedules.error ? "error" : "info"} className="mb-2">
-        {schedules.error?.message}
-      </StatusSlot>
+    <div className="flex flex-col gap-3">
+      <StatusSlot tone="error">{schedules.error?.message}</StatusSlot>
       {schedules.data && own.length === 0 ? (
-        <EmptyState title="No schedules run this channel's templates">
-          Make one in Calendar → Schedules from one of this channel's templates.
+        <EmptyState
+          title="No schedules for this channel yet"
+          actions={inChannel.size === 0 ? undefined : <NewScheduleLink variant="primary" />}
+        >
+          {inChannel.size === 0
+            ? "A schedule makes a new video from one of this channel's templates at a time you pick. Save a template first."
+            : "A schedule makes a new video from one of this channel's templates at a time you pick, once or every week."}
         </EmptyState>
       ) : null}
       {own.length > 0 ? (
-        <List label="Channel schedules">
-          {own.map((schedule) => (
-            <ListRow
-              key={schedule.id}
-              title={
-                <TextLink to="/calendar" search={{ tab: "schedules", schedule: schedule.id }}>
-                  {schedule.name}
-                </TextLink>
-              }
-              meta={
-                <>
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="m-0 text-small text-ink-2">
+              Each one makes a video from this channel's templates at its times.
+            </p>
+            <NewScheduleLink />
+          </div>
+          <List label="Channel schedules">
+            {own.map((schedule) => (
+              <ListRow
+                key={schedule.id}
+                title={
+                  <TextLink to="/calendar" search={{ tab: "schedules", schedule: schedule.id }}>
+                    {schedule.name}
+                  </TextLink>
+                }
+                meta={`${
+                  schedule.nextRunAt === null
+                    ? "No next video"
+                    : `Next video ${formatScheduleDate(schedule.nextRunAt, schedule.timezone)}`
+                } · ${String(schedule.items.length)} ${schedule.items.length === 1 ? "topic" : "topics"} queued`}
+                actions={
                   <Status tone={scheduleStatusLook[schedule.status].tone}>
                     {scheduleStatusLook[schedule.status].word}
                   </Status>
-                  {` · ${
-                    schedule.nextRunAt === null
-                      ? "No next run"
-                      : `Next run ${formatScheduleDate(schedule.nextRunAt, schedule.timezone)}`
-                  } · ${String(schedule.items.length)} queued`}
-                </>
-              }
-            />
-          ))}
-        </List>
+                }
+              />
+            ))}
+          </List>
+        </>
       ) : null}
     </div>
   );

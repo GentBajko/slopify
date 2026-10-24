@@ -53,7 +53,8 @@ export function CastEditor({
   // Undefined while adding a new member.
   readonly member: CastMember | undefined;
   readonly open: boolean;
-  readonly onClose: () => void;
+  // Close, when there is something to go back to (the first member of an empty cast has none).
+  readonly onClose?: (() => void) | undefined;
   readonly onCreated: (id: string) => void;
 }): ReactElement | null {
   const { api } = useApp();
@@ -114,9 +115,11 @@ export function CastEditor({
         {member === undefined ? null : (
           <DuplicateCastButton channelId={channelId} member={member} onCreated={onCreated} />
         )}
-        <Button variant="quiet" size="small" onClick={onClose}>
-          Close
-        </Button>
+        {onClose === undefined ? null : (
+          <Button variant="quiet" size="small" onClick={onClose}>
+            Close
+          </Button>
+        )}
       </SectionHead>
       {member !== undefined && !member.images.some((image) => image.state === "ready") ? (
         <p className="m-0 mt-2 text-small text-waiting">
@@ -147,6 +150,7 @@ export function CastEditor({
               value={name}
               maxLength={200}
               required
+              placeholder="Ronald the Rat"
               onChange={(event) => setName(event.target.value)}
             />
           </Field>

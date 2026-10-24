@@ -6,7 +6,6 @@ import { Button } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
 import { Field, Input, Textarea } from "@/components/kit/field";
-import { InfoTip } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { useToast } from "@/components/kit/toast";
 import { pluralGrouped } from "@/lib/format";
@@ -22,13 +21,15 @@ import {
 } from "./memory-api";
 import { CsvPreview, type Preview, tickedBy } from "./videos-csv-preview";
 
-// The Existing videos tab: titles of videos the channel made before Slopify, pasted or imported
-// from YouTube Studio, so topic suggestions and duplicate checks skip them too.
+// The Titles to avoid tab: titles of videos the channel made before Slopify, pasted or imported
+// from YouTube Studio, so new topic ideas and duplicate checks skip them too. What it is for
+// comes first; the paste box opens from Paste titles….
 export function VideosTab({ channelId }: { readonly channelId: string }): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
   const read = useQuery(videosQuery(api, channelId));
   const [text, setText] = useState("");
+  const [pasting, setPasting] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [note, setNote] = useState<string | undefined>(undefined);
   const file = useRef<HTMLInputElement>(null);
@@ -39,8 +40,10 @@ export function VideosTab({ channelId }: { readonly channelId: string }): ReactE
     mutationFn: (body: { readonly text: string; readonly filter?: string }) =>
       importVideos(api, channelId, { format: "lines", ...body }),
     onSuccess: async (result, body) => {
-      if (body.filter === undefined) setText("");
-      else setPreview(undefined);
+      if (body.filter === undefined) {
+        setText("");
+        setPasting(false);
+      } else setPreview(undefined);
       setNote(
         `Added ${pluralGrouped(result.added, "title", "titles")}${
           result.skipped > 0
@@ -75,7 +78,7 @@ export function VideosTab({ channelId }: { readonly channelId: string }): ReactE
     onSuccess: refresh,
     onError: (failure, title) =>
       notify(
-        `Couldn't put “${title}” back: ${failure.message} Paste it into Paste titles and press Add titles.`,
+        `Couldn't put “${title}” back: ${failure.message} Press Paste titles…, paste it and press Add titles.`,
         "error",
       ),
   });
@@ -96,60 +99,88 @@ export function VideosTab({ channelId }: { readonly channelId: string }): ReactE
     add.isPending || scan.isPending || remove.isPending || restore.isPending || clear.isPending;
   const error = read.error ?? scan.error ?? add.error ?? remove.error;
   return (
-    <div>
-      <p className="mb-3 text-small text-ink-2">
-        Topic suggestions and duplicate checks skip these titles, as they skip the videos made here.
+    <div className="flex flex-col gap-3">
+      <p className="m-0 max-w-[90ch] text-small text-ink-2">
+        New topic ideas and duplicate checks skip these titles, as they skip the videos made here.
+        List the videos this channel made before Slopify.
       </p>
-      <Field label="Paste titles" tip="planning.channel.videos-paste" help="One title per line.">
-        <Textarea rows={5} value={text} onChange={(event) => setText(event.target.value)} />
-      </Field>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <Button
-          variant="primary"
-          disabled={busy || text.trim() === ""}
-          onClick={() => {
-            setNote(undefined);
-            add.mutate({ text });
-          }}
-        >
-          Add titles
-        </Button>
-        <Button
-          disabled={busy}
-          onClick={() => {
-            file.current?.click();
-          }}
-        >
-          Import a YouTube Studio CSV…
-        </Button>
-        <InfoTip id="planning.channel.videos-csv" />
-        <input
-          ref={file}
-          type="file"
-          accept=".csv,text/csv"
-          className="hidden"
-          aria-label="YouTube Studio CSV file"
-          onChange={async (event) => {
-            const picked = event.target.files?.[0];
-            event.target.value = "";
-            if (picked === undefined) return;
-            setNote(undefined);
-            add.reset();
-            scan.mutate(await picked.text());
-          }}
-        />
-        <Button
-          variant="quiet"
-          disabled={busy || videos.length === 0}
-          onClick={() => {
-            clear.reset();
-            setClearing(true);
-          }}
-        >
-          Remove all
-        </Button>
+      <div className="flex flex-col gap-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            aria-expanded={pasting}
+            disabled={busy}
+            onClick={() => {
+              add.reset();
+              setPasting((open) => !open);
+            }}
+          >
+            Paste titles…
+          </Button>
+          <Button
+            disabled={busy}
+            onClick={() => {
+              file.current?.click();
+            }}
+          >
+            Import a YouTube Studio CSV…
+          </Button>
+          <input
+            ref={file}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            aria-label="YouTube Studio CSV file"
+            onChange={async (event) => {
+              const picked = event.target.files?.[0];
+              event.target.value = "";
+              if (picked === undefined) return;
+              setNote(undefined);
+              add.reset();
+              scan.mutate(await picked.text());
+            }}
+          />
+          {videos.length === 0 ? null : (
+            <Button
+              variant="quiet"
+              disabled={busy}
+              onClick={() => {
+                clear.reset();
+                setClearing(true);
+              }}
+            >
+              Remove all
+            </Button>
+          )}
+        </div>
+        <p className="m-0 text-small text-ink-2">
+          The CSV comes from YouTube Studio: Analytics → Content → Advanced mode, then export the
+          table.
+        </p>
       </div>
-      <StatusSlot tone={error ? "error" : note ? "success" : "info"} className="mt-1">
+      {pasting ? (
+        <div className="flex flex-col gap-2">
+          <Field label="Titles, one per line" help="A title already listed is skipped.">
+            <Textarea rows={5} value={text} onChange={(event) => setText(event.target.value)} />
+          </Field>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="primary"
+              disabled={busy || text.trim() === ""}
+              disabledReason={busy ? "Adding…" : "Paste at least one title"}
+              onClick={() => {
+                setNote(undefined);
+                add.mutate({ text });
+              }}
+            >
+              Add titles
+            </Button>
+            <Button variant="quiet" onClick={() => setPasting(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : null}
+      <StatusSlot tone={error ? "error" : note ? "success" : "info"}>
         {error?.message ??
           note ??
           (read.isPending
@@ -179,19 +210,18 @@ export function VideosTab({ channelId }: { readonly channelId: string }): ReactE
           }}
         />
       )}
-      {read.data && videos.length === 0 ? (
-        <EmptyState title="No existing videos listed">
-          In YouTube Studio open Analytics → Content → Advanced mode, export the table as a CSV, and
-          import it here; or paste the titles above.
+      {read.data && videos.length === 0 && preview === undefined && !pasting ? (
+        <EmptyState title="No titles to avoid yet">
+          Press Paste titles… for a few, or import the whole list from YouTube Studio.
         </EmptyState>
       ) : null}
       {videos.length > 0 ? (
-        <section aria-label="Existing videos" className="mt-4">
+        <section aria-label="Titles to avoid">
           <div className="mb-2 flex flex-wrap items-center gap-3">
             <Input
               type="search"
-              aria-label="Search existing videos"
-              placeholder="Search existing videos"
+              aria-label="Search titles to avoid"
+              placeholder="Search titles to avoid"
               value={search}
               className="w-full min-w-0 sm:w-64"
               onChange={(event) => setSearch(event.target.value)}
@@ -207,7 +237,7 @@ export function VideosTab({ channelId }: { readonly channelId: string }): ReactE
               {`None of the titles contains “${search.trim()}”. Clear the search to see them all.`}
             </EmptyState>
           ) : (
-            <List label="Existing videos">
+            <List label="Titles to avoid">
               {rows.shown.map((video) => (
                 <ListRow
                   key={video.id}
