@@ -1,8 +1,8 @@
 import type { ManualCue } from "@app/slices/revisions/model.js";
 import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/kit/button";
-import { Input, Textarea } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { HelpLine, Input, Textarea } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import type { Audition } from "./review-audition.js";
 
 export function CaptionEditor({
@@ -80,12 +80,13 @@ export function CaptionEditor({
     setDirty(false);
   }
   return (
-    // One tip for every cue: each caption's text, start and end work the same way.
+    // One line for every cue: each caption's text, start and end work the same way.
     <section aria-label="Edit caption cues" className="space-y-3" {...helpScope}>
-      <div className="flex items-center gap-1">
-        <h3>Caption text and timing</h3>
-        <InfoTip id="project.captions.editor" />
-      </div>
+      <h3>Caption text and timing</h3>
+      <HelpLine>
+        Times are seconds from the start of the narration; edits are free and only the captions and
+        the video are made again.
+      </HelpLine>
       {draft.map((cue, index) => (
         <fieldset key={cue.id} className="space-y-2 rounded-control border border-line-strong p-3">
           <legend>Caption {index + 1}</legend>
@@ -142,12 +143,9 @@ export function CaptionEditor({
           {error}
         </p>
       )}
-      <span className="inline-flex items-center gap-1">
-        <Button type="button" onClick={apply}>
-          Apply caption edits to draft
-        </Button>
-        <InfoTip id="project.captions.apply" />
-      </span>
+      <Button type="button" onClick={apply}>
+        Apply caption edits to draft
+      </Button>
       {dirty ? <p>Apply these caption edits before saving the project.</p> : null}
     </section>
   );

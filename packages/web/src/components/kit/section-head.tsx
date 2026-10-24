@@ -1,17 +1,14 @@
 import type { ReactElement, ReactNode } from "react";
-import type { HelpId } from "@/help/catalog";
 import { cn } from "@/lib/utils";
-import { InfoTip } from "./info-tip.js";
 
 // The heading of one section inside a page: an optional kicker above, the title, one meta
-// line, the help behind an info button, and the section's own actions on the right in the
-// fixed order primary, secondary, quiet, overflow (children).
+// line, and the section's own actions on the right in the fixed order primary, secondary,
+// quiet, overflow (children). A heading carries no info button: its title says what the
+// section is, and a consequence worth knowing goes in the meta line, in words.
 export function SectionHead({
   title,
   kicker,
   meta,
-  info,
-  infoLabel = title,
   as: Heading = "h2",
   size = Heading === "h3" ? "small" : "default",
   id,
@@ -24,10 +21,6 @@ export function SectionHead({
   // An uppercase-by-style label; write it in sentence case.
   readonly kicker?: ReactNode;
   readonly meta?: ReactNode;
-  // The section's info button, from the help catalogue.
-  readonly info?: HelpId;
-  // What the info button is "About", when that is not the title.
-  readonly infoLabel?: string;
   readonly as?: "h2" | "h3";
   // "small" is the sub-head size (title-3), for a section inside a rail or a row; the heading
   // level stays what `as` says.
@@ -58,7 +51,6 @@ export function SectionHead({
           >
             {title}
           </Heading>
-          {info === undefined ? null : <InfoTip id={info} label={infoLabel} />}
           {status}
           {row && meta !== undefined ? (
             <p className="sl-section-head__meta m-0 min-w-0">{meta}</p>

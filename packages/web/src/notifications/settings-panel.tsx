@@ -27,11 +27,15 @@ const cantShow =
   "The test notification couldn't be shown: this browser only allows notifications from installed apps. Set a Notification URL below instead.";
 
 // Settings → Notifications: this browser's own notifications, and the Notification URL the
-// server POSTs to when no tab is open.
+// server POSTs to when no tab is open. The line under the heading says when Slopify tells you
+// and what a message holds; each switch says what it needs under it.
 export function NotificationSettings() {
   return (
     <div>
-      <SectionHead title="Browser and phone" info="settings.notifications" />
+      <SectionHead
+        title="Browser and phone"
+        meta="When a run finishes, fails or waits for your review, Slopify sends its title and a link, never your keys."
+      />
       <div className="flex flex-col gap-8">
         <BrowserNotifications />
         <RunSounds />

@@ -71,11 +71,6 @@ export const socialHelp = {
     body: "When you posted it yourself, or the extension missed it, paste the post's link here. It marks the post as posted, so Fill isn't offered again until you remove the link. Only the site's own post links are taken.",
     tutorial: posting("after-it-is-posted"),
   },
-  "social.fill": {
-    title: "Fill in the site",
-    body: "Opens the site's post form and hands this post to the Slopify Studio extension, which fills the words, media, AI label and schedule. It never presses Post, Share or Publish: you check the post and press it. The site must be allowed in the extension's options (Allow posting on the site).",
-    tutorial: posting("fill-in-a-site"),
-  },
   "social.reddit.live-check": {
     title: "Reddit needs a live check",
     body: "Reddit's post form hasn't been checked in a real browser yet, so the extension's part of it may miss a field. The title, subreddit and text go in through Reddit's own submit address, which works; check the media and flair before you press Post.",

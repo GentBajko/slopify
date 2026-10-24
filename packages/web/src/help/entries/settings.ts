@@ -141,11 +141,6 @@ export const settingsHelp = {
   },
 
   // Notifications
-  "settings.notifications": {
-    title: "Notifications",
-    body: "Slopify tells you when a run finishes, fails, or stops to wait for your review, and when an automatic review kept an item flagged and needs your decision. The message holds the project title, what happened and a link to the project, never your keys. Browser notifications need a Slopify tab open; a Notification URL works with none open.",
-    tutorial: { page: "Notifications", anchor: "when-slopify-notifies-you" },
-  },
   "settings.notifications.weekly": {
     title: "Weekly report",
     body: "Each Monday from 09:00 (this computer's time), Slopify sends last week's report to the Notification URL: videos made, failed steps with their reason, and what it cost. Needs a Notification URL. Default: off.",

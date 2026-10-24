@@ -56,7 +56,9 @@ it("renders the preview with the settings and plays it", async () => {
     testDeps({ "GET /api/fonts": fonts, "POST /api/style-preview": posted.answer }),
   );
   expect(screen.getByRole("heading", { name: "Style preview" })).toBeTruthy();
-  expect(screen.getByText("6 seconds of the sample, rendered with your settings")).toBeTruthy();
+  expect(
+    screen.getByText("6 seconds of the sample, rendered free on this computer with your settings"),
+  ).toBeTruthy();
   expect(await screen.findByRole("status")).toHaveProperty("textContent", "Rendering the preview…");
   release();
   const video = await screen.findByLabelText("Style preview", { selector: "video" });

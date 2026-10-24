@@ -174,10 +174,11 @@ export function StylePreview({
 
   const heading = shorts === undefined ? "Style preview" : "Shorts preview";
   const portrait = format === "9:16" || shorts !== undefined;
+  // What it is and what it costs, in the one line under the heading: nothing, it renders here.
   const meta =
     shorts === undefined
-      ? "6 seconds of the sample, rendered with your settings"
-      : "A few seconds of the sample as a short, rendered with your settings";
+      ? "6 seconds of the sample, rendered free on this computer with your settings"
+      : "A few seconds of the sample as a short, rendered free on this computer with your settings";
   const renderAgain = (
     <Button
       variant="quiet"
@@ -197,12 +198,7 @@ export function StylePreview({
   return (
     <section aria-label={heading} className="min-w-0 space-y-3">
       {titled ? (
-        <SectionHead
-          as="h3"
-          title={heading}
-          meta={meta}
-          info={shorts === undefined ? "project.video.style-preview" : "play.shorts.preview"}
-        >
+        <SectionHead as="h3" title={heading} meta={meta}>
           {renderAgain}
         </SectionHead>
       ) : (

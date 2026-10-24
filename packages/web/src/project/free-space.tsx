@@ -96,7 +96,6 @@ export function FreeSpaceOffer({
         as="h3"
         title="Free space"
         meta={`Outputs ${fileSize(data.outputsBytes)} · working files ${fileSize(data.workingBytes)}${data.historyBytes > 0 ? ` · old versions ${history}` : ""}`}
-        info="project.free-space"
       >
         {/* The rail is narrow: the button says what it frees, the dialog says the rest. */}
         {data.removableBytes > 0 ? (

@@ -88,11 +88,6 @@ export const projectHelp = {
     body: "The typeface of captions shown in the video and of chapter cards. Pick a bundled font or one you uploaded (.ttf or .otf); uploaded fonts stay available to every project. Caption files carry no font, since players style them. Changing it remakes only the video. Default: the bundled font.",
     tutorial: { page: "Video-Editing", anchor: "subtitles" },
   },
-  "project.video.style-preview": {
-    title: "Style preview",
-    body: "Six seconds of the sample project's narration and images, rendered on this computer by the real video renderer with your captions, Look and motion, on the establishing image or a cast picture when there is one. The captions follow the narration word by word. It renders again by itself a moment after you change a setting. It costs no API calls, only a few seconds of your computer's time. Render again forces a fresh one.",
-    tutorial: { page: "Video-Editing", anchor: "style-preview" },
-  },
   "project.edit.article-text": {
     title: "Article text",
     body: "The script the narrator reads, in Markdown. Your edits are kept when other settings change and are saved as a new revision; the narration, images and video made from the old text turn outdated and are remade when you choose. Headings become chapters.",
@@ -128,16 +123,6 @@ export const projectHelp = {
     body: "What the narrator says in this chunk. Editing it has this chunk spoken again by your voice provider, paid per character of the chunk, when you remake outdated outputs; the other chunks keep their audio. Captions and the video follow. It does not change the article.",
     tutorial: { page: "Editing-a-Project", anchor: "edit-narration" },
   },
-  "project.captions.editor": {
-    title: "Caption text and timing",
-    body: "Each caption's words and when it shows, in seconds from the start of the narration. Fix a misheard word or move a caption a little earlier or later; captions must not overlap and must end after they start. Edits cost nothing and only the subtitle files and the video are made again. The narration is not changed.",
-    tutorial: { page: "Editing-a-Project", anchor: "edit-captions" },
-  },
-  "project.captions.apply": {
-    title: "Apply caption edits to draft",
-    body: "Checks every caption (text present, times in order, inside the narration) and puts your edits into the project draft. Nothing is saved until you press Save changes, and the video is rendered again only when you remake outdated outputs.",
-    tutorial: { page: "Editing-a-Project", anchor: "edit-captions" },
-  },
   "project.live.writing": {
     title: "Live writing",
     body: "The text model's words as they arrive, so you can see the article or research taking shape. When a stage makes several calls, the list picks which one to watch. Follow output keeps the newest text in view; untick it to read back. Watching costs nothing extra; the full text is saved when the stage finishes.",
@@ -152,11 +137,6 @@ export const projectHelp = {
     title: "Unknown cost estimates",
     body: "Some steps use a model with no published price, so their cost cannot be estimated and is left out of the total shown. Tick to start anyway; the real cost is recorded under Cost once they run. The button that makes it again stays off until you tick it.",
     tutorial: { page: "Editing-a-Project", anchor: "choose-what-to-remake" },
-  },
-  "project.free-space": {
-    title: "Free space",
-    body: "Once a project has finished, Free drops the working files it was made from (narration parts, timing, render settings) and keeps what gets published, the video's and shorts' images and anything you uploaded. Delete old versions removes its History folder (earlier renders and narration). Each button says how much it frees. Changing the project or going back to an old version makes those files again.",
-    tutorial: { page: "Project-Page", anchor: "free-space" },
   },
   "project.edit.show-figures": {
     title: "Show tables and figures on screen",

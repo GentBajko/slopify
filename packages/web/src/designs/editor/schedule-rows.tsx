@@ -6,7 +6,7 @@ import { PlusIcon, Trash2Icon } from "lucide-react";
 import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button, IconButton } from "@/components/kit/button";
-import { Field, Input, Select } from "@/components/kit/field";
+import { Field, HelpLine, Input, Select } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { Status } from "@/components/kit/status";
@@ -161,13 +161,12 @@ export function ScheduleRows({
         ? "Change a row, the spend ceiling or the missed run first."
         : undefined;
   return (
-    // One scope: the table's cells are explained by the Rows heading's info button.
+    // One scope: the line under the Rows heading explains every row's cells.
     <div data-setting="rows" className="flex min-w-0 flex-col gap-3" {...helpScope}>
       <SectionHead
         as="h3"
         size="small"
         title="Rows"
-        info="library.design.rows"
         meta={
           schedule === undefined
             ? "No schedule yet: add a row for each event and save."
@@ -196,6 +195,10 @@ export function ScheduleRows({
           </Button>
         )}
       </SectionHead>
+      <HelpLine>
+        Each row is one piece, made the set number of days before its date and then taken off this
+        table.
+      </HelpLine>
       {/* One group a row, its fields wrapping to the column's width: every field and the
           Remove button stay in view, however many fields the template has. */}
       {shown.length === 0 ? (

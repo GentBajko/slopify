@@ -588,10 +588,6 @@ export const libraryHelp = {
     title: "At",
     body: "The local time of day a piece is made, on the day Days ahead picks. It is read in this computer's timezone, and a piece is only made while Slopify is open. Default: 09:00.",
   },
-  "library.design.rows": {
-    title: "Rows",
-    body: "One row per piece the schedule makes, with the words for each field and its date. Slopify makes each row's piece from the version marked ready, then takes the row off the table. Add a row, then Save rows; changes wait until you save.",
-  },
   "library.design.spend": {
     title: "Spend ceiling",
     body: "The most one piece may cost, in US dollars, such as 1 or 0.50. Before each piece Slopify prices its artwork; when the price is over this, or can't be known, that piece isn't made and the row stays on the table with the reason. Leave it empty for no ceiling. Default: empty.",

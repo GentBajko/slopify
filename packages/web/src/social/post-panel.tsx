@@ -272,7 +272,8 @@ function PasteLink({
 }
 
 // Fill in <site>: the drawer's one primary action while a site is chosen. It waits for the
-// extension, and opens the site's post form unless the post waits for its release time.
+// extension, and opens the site's post form unless the post waits for its release time. Who
+// presses Post is said in the panel's release line, and what stops it in the footer's status.
 export function PostFillButton({
   pack,
   extension,
@@ -302,30 +303,27 @@ export function PostFillButton({
     onError: (error) => say(`Couldn't hand the post to the extension: ${error.message}`, "error"),
   });
   return (
-    <>
-      <Button
-        variant="primary"
-        focusableWhenDisabled
-        disabled={blocked !== undefined || fill.isPending || pack.status.state === "posted"}
-        disabledReason={
-          pack.status.state === "posted"
-            ? `It is already on ${site}; remove its link to fill it again`
-            : (blocked ?? "Handing it to the extension")
-        }
-        onClick={() => {
-          // Opened inside the click, so the browser doesn't block the new tab.
-          if (readyNow(pack.platform, pack.schedule.at, new Date()))
-            window.open(
-              fillUrl(pack.composeUrl, pack.projectId, pack.platform),
-              "_blank",
-              "noopener",
-            );
-          fill.mutate();
-        }}
-      >
-        {`Fill in ${site}`}
-      </Button>
-      <InfoTip id="social.fill" />
-    </>
+    <Button
+      variant="primary"
+      focusableWhenDisabled
+      disabled={blocked !== undefined || fill.isPending || pack.status.state === "posted"}
+      disabledReason={
+        pack.status.state === "posted"
+          ? `It is already on ${site}; remove its link to fill it again`
+          : (blocked ?? "Handing it to the extension")
+      }
+      onClick={() => {
+        // Opened inside the click, so the browser doesn't block the new tab.
+        if (readyNow(pack.platform, pack.schedule.at, new Date()))
+          window.open(
+            fillUrl(pack.composeUrl, pack.projectId, pack.platform),
+            "_blank",
+            "noopener",
+          );
+        fill.mutate();
+      }}
+    >
+      {`Fill in ${site}`}
+    </Button>
   );
 }
