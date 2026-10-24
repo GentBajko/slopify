@@ -64,7 +64,7 @@ The project page shows each step as it runs:
 3. **Images**: four vertical images are drawn.
 4. **Video**: the words are timed against the narration and the short is rendered with word-by-word captions and the title on top.
 
-Open the **Live** tab to see the steps, the script as it is written, the images as they land and the narration's waveform. Each running step says its time left. While it runs, Home also lists it under **Running now**, and the sidebar shows how many runs are going.
+Open the **Live** tab to see the steps, the script as it is written, the images as they land and the narration's waveform. Each running step says its time left. While it runs, Home also lists it under **Running now**, and the rail shows how many runs are going.
 
 See [Project Page](Project-Page) for everything else on this page.
 

@@ -18,6 +18,7 @@ import {
   type AssistantScreen,
   assistantCliNames,
   assistantCliOf,
+  readyClis,
   type TurnState,
 } from "./model.js";
 import { screenNames } from "./names.js";
@@ -77,6 +78,8 @@ export type AnswerResult =
 export interface AssistantStatus {
   readonly choice: AssistantCliChoice;
   readonly preference: AssistantCliPreference;
+  // The CLIs that could answer now (`readyClis`).
+  readonly ready: readonly AssistantCli[];
 }
 
 export interface AssistantSessionView {
@@ -404,9 +407,11 @@ export function createAssistant(deps: AssistantDeps): Assistant {
     tokens: deps.tokens,
     status: async () => {
       const preference = cliPreferenceOf(deps.db);
+      const states = await deps.clis();
       return {
         preference,
-        choice: assistantCliOf(await deps.clis(), preference, deps.container),
+        choice: assistantCliOf(states, preference, deps.container),
+        ready: readyClis(states, deps.container),
       };
     },
     session: (id) => {

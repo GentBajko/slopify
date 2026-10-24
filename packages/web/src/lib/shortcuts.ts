@@ -9,7 +9,9 @@ export const shortcuts = {
   goProjects: ["G", "P"],
   goCalendar: ["G", "C"],
   goSchedules: ["G", "S"],
-  goLibrary: ["G", "L"],
+  // L, as the Library it replaced landed on Prompts.
+  goPrompts: ["G", "L"],
+  goTemplates: ["G", "T"],
   goChannels: ["G", "K"],
   goSettings: ["G", ","],
   // A project's next action (Approve, Retry, Prepare upload…).

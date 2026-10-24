@@ -2,7 +2,7 @@
 
 The Library holds the reusable pieces your videos are made from: prompts, intros and outros, templates, PDF document themes and narration aliases. Write a piece once and pick it on Play for every video that needs it.
 
-**Where to find it:** **Library** in the sidebar. It opens on **Prompts**; the tabs across the top switch sections. They come in three groups: **Setups** (what a project starts from), **Building blocks** (what those setups are made of) and **Results**.
+**Where to find it:** **Prompts** and **Templates** in the rail (an old link to the Library opens Prompts); the tabs across the top switch sections. They come in three groups: **Setups** (what a project starts from), **Building blocks** (what those setups are made of) and **Results**.
 
 ## The tabs
 

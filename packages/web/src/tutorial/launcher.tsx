@@ -1,24 +1,8 @@
-import { CircleHelpIcon } from "lucide-react";
-import { Button, IconButton } from "@/components/kit/button";
+import { Button } from "@/components/kit/button";
 import { useTutorial } from "./context";
 
-export function TutorialLauncher() {
-  const tutorial = useTutorial();
-  if (!tutorial) return null;
-  return (
-    <IconButton
-      label="Start interactive tutorial"
-      className="shrink-0"
-      onClick={tutorial.start}
-      disabled={tutorial.active}
-      focusableWhenDisabled
-      disabledReason="The tutorial is already running"
-    >
-      <CircleHelpIcon aria-hidden="true" strokeWidth={1.75} />
-    </IconButton>
-  );
-}
-
+// The tour's invitation on an empty Projects list. Everywhere else the tour starts from the
+// rail's Help menu ("Start the tour") or Ctrl+K.
 export function TutorialInvite() {
   const tutorial = useTutorial();
   if (!tutorial || tutorial.active) return null;
@@ -27,12 +11,12 @@ export function TutorialInvite() {
       <div className="min-w-0 flex-1">
         <h2 className="font-semibold">Make your first video</h2>
         <p className="mt-1 text-small text-ink-2">
-          An interactive walkthrough of API keys, reusable prompts, keywords, and Play. Each step
-          highlights the real controls you will use.
+          A guided tour of keys, your own prompts, keywords and Create. Each step points at the real
+          control you will use.
         </p>
       </div>
       <Button variant="secondary" onClick={tutorial.start}>
-        Start tutorial
+        Start the tour
       </Button>
     </div>
   );

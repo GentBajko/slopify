@@ -23,6 +23,8 @@ export interface AssistantView {
   readonly reason: string | null;
   readonly fix: AssistantFix | null;
   readonly preference: AssistantCliPreference;
+  // The CLIs that could answer now; "Answer with" is offered only with two.
+  readonly ready: readonly AssistantCli[];
   readonly session: AssistantSession | null;
 }
 

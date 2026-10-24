@@ -137,6 +137,13 @@ function blocked(cli: AssistantCli, state: AssistantCliState): string | undefine
   return undefined;
 }
 
+// The CLIs that could answer now, in Auto's order: the panel offers "Answer with" only when
+// there are two to choose between.
+export function readyClis(states: AssistantCliStates, container: boolean): readonly AssistantCli[] {
+  if (container) return [];
+  return assistantClis.filter((cli) => blocked(cli, states[cli]) === undefined);
+}
+
 // Auto takes Claude Code when it is ready, else Codex. A sign-in that couldn't be read is not
 // a refusal: the CLI says so itself if it really is signed out.
 export function assistantCliOf(

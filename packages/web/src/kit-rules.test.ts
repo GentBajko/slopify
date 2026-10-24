@@ -73,18 +73,20 @@ describe("the kit's action rules", () => {
     ).toEqual([]);
   });
 
-  it("builds no raw <button> outside the kit, apart from the shell's search field", () => {
+  it("builds no raw <button> outside the kit, apart from the shell's own rail and top-bar items", () => {
     const allowed = new Set(["components/shell.tsx"]);
     expect(
       offenders((text) => openingTags(text, "button")).filter(
         (line) => !allowed.has(line.slice(0, line.indexOf(":"))),
       ),
     ).toEqual([]);
-    // The one allowed: the search field in the rail, which looks like a field, not a button.
+    // The ones allowed: Search and Assistant in the rail and Search in the phone's top bar, an
+    // icon over (or beside) a word like the rail's links, which are navigation, not kit buttons.
+    // The shell's menus open from the kit's MenuTrigger.
     const shell = screens.find((one) => one.file === "components/shell.tsx")?.text ?? "";
-    expect(openingTags(shell, "button")).toEqual([
-      expect.stringContaining('className="sl-searchbtn"'),
-    ]);
+    const items = openingTags(shell, "button");
+    expect(items).toHaveLength(3);
+    for (const item of items) expect(item).toMatch(/className="sl-(navrail|topbar)__item"/);
   });
 
   it("selects a ListRow through onSelect, not a button hand-made into its title", () => {

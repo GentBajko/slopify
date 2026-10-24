@@ -8,8 +8,8 @@ import { useCommand } from "@/components/kit/command-palette";
 import { intents, requestIntent } from "@/lib/intents";
 import { projectsQuery } from "@/queries";
 
-// The palette from anywhere: every project by name ("Open Cleopatra", "Regenerate image 3 in
-// Cleopatra"), the Library and the plans by name (`entity-commands.tsx`), New schedule and Add
+// The palette from anywhere: every project by name ("Open Cleopatra", "Make image 3 again in
+// Cleopatra"), prompts, templates and plans by name (`entity-commands.tsx`), New schedule and Add
 // to calendar. They are searched, not listed: an empty palette
 // keeps the screen's own commands on top. A command that finishes on another screen goes
 // there and leaves an intent that screen takes (`lib/intents.ts`). The project in front of
@@ -114,10 +114,10 @@ function ImageCommand({
 }): null {
   useCommand({
     id: `index.image.${project.id}`,
-    title: `Regenerate an image in ${project.title}`,
-    numbered: (count) => `Regenerate image ${String(count)} in ${project.title}`,
+    title: `Make an image again in ${project.title}`,
+    numbered: (count) => `Make image ${String(count)} again in ${project.title}`,
     group: "Projects",
-    keywords: ["image", "picture", "redraw", "remake"],
+    keywords: ["image", "picture", "regenerate", "redraw", "remake"],
     searchOnly: true,
     run: (count) => {
       requestIntent(intents.showImages(project.id));

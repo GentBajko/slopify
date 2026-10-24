@@ -82,15 +82,15 @@ describe("the palette from anywhere", () => {
   it("finds a project's image by name and number, and hands the number to the project", async () => {
     const onImage = vi.fn();
     const registry = await mount(onImage);
-    const found = matchCommands(registry.list(), "cleopatra regenerate image 3");
-    expect(found[0]?.title).toBe("Regenerate image 3 in History: Cleopatra");
+    const found = matchCommands(registry.list(), "cleopatra make image 3 again");
+    expect(found[0]?.title).toBe("Make image 3 again in History: Cleopatra");
     // Only the project named: the other project's image command needs its own name.
     expect(found.map((command) => command.title)).not.toContain(
-      "Regenerate image 3 in Knot Tricks",
+      "Make image 3 again in Knot Tricks",
     );
-    // Word order does not matter.
+    // Word order does not matter, and the old word still finds it.
     expect(matchCommands(registry.list(), "image 3 cleopatra regenerate")[0]?.title).toBe(
-      "Regenerate image 3 in History: Cleopatra",
+      "Make image 3 again in History: Cleopatra",
     );
     await found[0]?.run();
     expect(onImage).toHaveBeenCalledWith(3);
@@ -122,7 +122,7 @@ function OpenPalette() {
   return null;
 }
 
-describe("the Library and plans by name", () => {
+describe("prompts, templates and plans by name", () => {
   it("are read once the palette opens, and found by name", async () => {
     const registry = new CommandRegistry();
     renderRouted(

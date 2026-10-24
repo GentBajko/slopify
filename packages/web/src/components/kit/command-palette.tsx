@@ -49,6 +49,10 @@ export interface Command {
   // Listed only once something is typed: an index of every project would bury the screen's
   // own commands in an empty palette.
   readonly searchOnly?: boolean;
+  // Where it sits in an empty palette, after the screen's own commands: lower first, then in
+  // the order registered. The shell's Create and Go to lead (negative); everything else is 0.
+  // A command registered again (its words changed) keeps its place this way.
+  readonly rank?: number;
 }
 
 // The registry is a tiny external store: a map and a version the palette subscribes to.
@@ -93,6 +97,8 @@ interface PaletteContextValue {
   readonly registry: CommandRegistry;
   readonly open: boolean;
   readonly setOpen: (open: boolean) => void;
+  // The "?" sheet of every key that works here, for a Help menu's Keyboard shortcuts.
+  readonly showShortcuts: () => void;
 }
 
 const PaletteContext = createContext<PaletteContextValue | undefined>(undefined);
@@ -103,7 +109,7 @@ export function useCommand(command: Command): void {
   const context = useContext(PaletteContext);
   const latest = useRef(command);
   latest.current = command;
-  const { id, title, group, context: where, searchOnly } = command;
+  const { id, title, group, context: where, searchOnly, rank } = command;
   // Arrays and elements are new on every render; their contents decide re-registering.
   const keywords = command.keywords?.join("\u0000");
   const shortcut = command.shortcut?.join("\u0000");
@@ -124,9 +130,10 @@ export function useCommand(command: Command): void {
         ? { numbered: (count: number) => latest.current.numbered?.(count) ?? title }
         : {}),
       ...(searchOnly === true ? { searchOnly: true } : {}),
+      ...(rank === undefined ? {} : { rank }),
       run: (count?: number) => latest.current.run(count),
     });
-  }, [registry, id, title, group, where, keywords, shortcut, numbered, searchOnly]);
+  }, [registry, id, title, group, where, keywords, shortcut, numbered, searchOnly, rank]);
 }
 
 // `/` puts the cursor in a list's search box.
@@ -152,9 +159,10 @@ export function useSearchShortcut(
 export function useCommandPalette(): {
   readonly open: boolean;
   readonly setOpen: (open: boolean) => void;
+  readonly showShortcuts: () => void;
 } {
   const context = useContext(PaletteContext);
-  return context ?? { open: false, setOpen: noop };
+  return context ?? { open: false, setOpen: noop, showShortcuts: noop };
 }
 
 function noop(): void {}
@@ -263,7 +271,8 @@ export function matchCommands(commands: readonly Command[], query: string): read
   });
   scored.sort((a, b) => {
     const ctx = Number(b.command.context !== undefined) - Number(a.command.context !== undefined);
-    if (blank) return ctx !== 0 ? ctx : a.order - b.order;
+    if (blank)
+      return ctx !== 0 ? ctx : (a.command.rank ?? 0) - (b.command.rank ?? 0) || a.order - b.order;
     return b.score - a.score || ctx || a.order - b.order;
   });
   return scored.map((entry) => entry.command);
@@ -469,7 +478,10 @@ export function CommandPaletteProvider({
     return () => window.removeEventListener("keydown", onKey);
   }, [registry]);
 
-  const value = useMemo(() => ({ registry, open, setOpen }), [registry, open]);
+  const value = useMemo(
+    () => ({ registry, open, setOpen, showShortcuts: () => setHelp(true) }),
+    [registry, open],
+  );
   return (
     <PaletteContext.Provider value={value}>
       {children}

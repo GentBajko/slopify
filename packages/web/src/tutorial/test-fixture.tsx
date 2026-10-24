@@ -280,7 +280,7 @@ export async function mount(
   const router = createAppRouter();
   router.update({ history: createMemoryHistory({ initialEntries: [options.initial ?? "/"] }) });
   renderApp(<RouterProvider router={router} />, testDeps(recorded));
-  await screen.findByRole("button", { name: "Start interactive tutorial" });
+  await screen.findByRole("button", { name: "Help" });
   return { router, requests };
 }
 
@@ -295,8 +295,14 @@ export async function at(id: TutorialStepId): Promise<void> {
   await waitFor(() => expect(document.querySelector('[data-tutorial="hole"]')).not.toBeNull());
 }
 
+// The tour starts from the rail's Help menu.
+export async function pressStartTheTour(user: UserEvent): Promise<void> {
+  await user.click(screen.getByRole("button", { name: "Help" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Start the tour" }));
+}
+
 export async function start(user: UserEvent): Promise<void> {
-  await user.click(screen.getByRole("button", { name: "Start interactive tutorial" }));
+  await pressStartTheTour(user);
   await at("text-key");
 }
 

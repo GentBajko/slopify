@@ -119,7 +119,7 @@ At the bottom of every step, **Set up a long video instead** takes you to Play, 
 
 ## The interactive tutorial
 
-The question-mark button at the foot of the sidebar (**Start interactive tutorial**) walks you through a first project in 25 steps ("3 of 25 · First project"):
+**Help → Start the tour** at the foot of the rail walks you through a first project in 25 steps ("3 of 25 · First project"):
 
 1. **Settings:** connect a text, a voice and an image provider, and add a narration voice.
 2. **Library:** write and save an article prompt with keywords, then an image prompt.

@@ -2,30 +2,31 @@
 
 Home is Slopify's front page: what needs you, what is running, what is coming up, what is ready to upload and what this week cost, on one screen. Projects is the full list of every run you ever started, with search and filters.
 
-**Where to find it:** the sidebar → **Home** (the Slopify logo also goes there) and **Projects**. On a phone, the bottom bar.
+**Where to find it:** the rail → **Home** (the Slopify logo also goes there) and **Projects**. On a phone, the bottom bar.
 
 ## Finding your way around
 
-Every page shares the same frame: the sidebar on the left and the page beside it. On a computer there is no top bar; everything lives in the sidebar.
+Every page shares the same frame: a narrow rail on the left, an icon with a word under it for each place, and the page beside it. On a computer there is no top bar; everything lives in the rail.
 
-### The sidebar
+### The rail
 
 From top to bottom:
 
 | Part | What it has |
 | --- | --- |
-| Logo | The Slopify play logo and name, with the version you are running beside it (for example `v3.0.0`). Click it to go Home. |
-| **Search or run a command** | Opens the command palette (`Ctrl+K`). |
-| Destinations | **Home**, **Projects**, **Calendar** (also lit on Schedules), **Channels**, **Library** (Templates; Prompts, Intros & outros, PDF themes, Narration aliases; A/B results), **Settings** (also lit on Usage). |
-| **N running** | Shown while runs are going. It links to Running now on Home. |
-| **Channel** | The channel picker (see below). |
-| **Create** | Opens Play to make a new project (`C` from anywhere). |
-| Links | **GitHub**, **Patreon** and **Buy Me a Coffee**, each opening in a new tab. |
-| Foot | "Free. Your keys, your machine.", the updates button (circular arrows, see [Updating and Patch Notes](Updating-and-Patch-Notes)), the **Tutorials** button (book, the guides; its page also has **Welcome screen**) and the tutorial button (question mark, **Start interactive tutorial**). |
+| Logo | The Slopify play logo. Click it to go Home. |
+| **Create** | The lime key. Opens Create to make a new video (`C` from anywhere). |
+| Destinations | **Home**, **Projects**, **Prompts** (also lit on Intros and outros), **Templates** (also lit on Designs), **Calendar** (also lit on Schedules), **Channels** (only once you have two or more channels; also lit on A/B results) and **Settings** (also lit on Usage, PDF themes and Pronunciation). |
+| **N running** | Shown while runs are going: a lamp and the count over the word running. It links to Running now on Home. |
+| **Update ready** | Shown only while a new version of Slopify is ready, waiting or installing. It opens a menu that says what installing does, with **Install update**. See [Updating and Patch Notes](Updating-and-Patch-Notes). |
+| **Search** | Opens the command palette (`Ctrl+K`). |
+| **Assistant** | Opens the assistant beside the page. See [Assistant](Assistant). |
+| **Help** | **Start the tour** (the interactive tutorial), **Tutorials** (the guides, whose page also has **Welcome screen**), **Keyboard shortcuts**, **What's new** (the patch notes) and **Check for updates**, with the version you are running. |
+| **Support** | **GitHub**, **Patreon** and **Buy Me a Coffee**, each opening in a new tab. |
 
 ### On a phone
 
-Below 768 pixels wide the sidebar is hidden. A slim bar at the top holds the logo, the search button, the running count, the GitHub, Patreon and Buy Me a Coffee icons, the updates button and the tutorial button. A bottom bar has all six destinations: Home, Projects, Calendar, Channels, Library and Settings. The Channel picker sits at the top of Home.
+Below 768 pixels wide the rail is hidden. A slim bar at the top holds the logo, the running count, **Search** and **Help**; on a phone Help also holds the **Assistant** and the support links, and turns lime-ink when an update is ready. A bottom bar has **Home**, **Projects**, the lime **Create** in the centre, **Prompts** and **More** (Templates, Calendar, Channels and Settings).
 
 ### Rows open with one press
 
@@ -33,15 +34,15 @@ In every list, a press anywhere on a row or tile opens or picks it, not only on 
 
 ### The command palette
 
-Press `Ctrl+K`, or click **Search or run a command**, to jump anywhere or run an action by typing. The **Go to** group has **Open home**, **Open projects**, **Open calendar**, **Open schedules**, **Open channels**, **Open library**, **Open settings**, **Open usage and costs**, **Open tutorials** and **Show patch notes**. **Create** opens Play. The **Channel** group has **Show all channels** and **Switch to <channel>**. See [Keyboard Shortcuts and Command Palette](Keyboard-Shortcuts-and-Command-Palette).
+Press `Ctrl+K`, or click **Search**, to jump anywhere or run an action by typing. With nothing typed it opens on **Create a video**, then the **Go to** group in the rail's order: **Open Home**, **Open Projects**, **Open Prompts**, **Open Templates**, **Open Calendar**, **Open Channels** (listed once you have two or more channels) and **Open Settings**. Typing also finds **Open schedules**, **Open usage and costs**, **Open tutorials** and **Start the tour**. With two or more channels the **Channel** group has **Show all channels** and **Switch to <channel>**. See [Keyboard Shortcuts and Command Palette](Keyboard-Shortcuts-and-Command-Palette).
 
 ### The Channel picker
 
-The **Channel** picker near the foot of the sidebar (at the top of Home on a phone) shows Home and the other screens for one channel, or for **All channels**. It only filters what you see: projects, schedules and costs of other channels keep running. Slopify remembers your choice in this browser. See [Channels](Channels).
+With two or more channels, Home, Projects and the Calendar show **Showing: All channels ▾** in their page header. Pick a channel to see only its work, or **All channels** for everything. It only filters what you see: projects, schedules and costs of other channels keep running. Slopify remembers your choice in this browser. With one channel there is nothing to pick, so it is not shown. See [Channels](Channels).
 
 ## Home
 
-**Where to find it:** the sidebar → **Home**.
+**Where to find it:** the rail → **Home**.
 
 The page title is the channel you picked (or **Home**), under today's date. At the top right are **Open calendar** and **New project**.
 
@@ -112,9 +113,9 @@ See [Costs and Run Cost](Costs-and-Run-Cost).
 
 ## Projects
 
-**Where to find it:** the sidebar → **Projects**.
+**Where to find it:** the rail → **Projects**.
 
-Every run ever started, newest first unless you pick another order, for the channel picked in the sidebar. The heading says how many projects there are and for which channel. **New project** opens Play.
+Every run ever started, newest first unless you pick another order, for the channel picked under **Showing:** (with two or more channels). The heading says how many projects there are and for which channel. **New project** opens Play.
 
 ### Search and filter
 
@@ -136,7 +137,7 @@ The search, the filter and the order are part of the address, so Back from a pro
 
 On a wide screen, **At a glance** beside the list counts the projects under each filter.
 
-If nothing matches, the list says **No project matches. Clear the search or pick All.** If the picked channel has no projects, pick **All channels** in the sidebar.
+If nothing matches, the list says **No project matches. Clear the search or pick All.** If the picked channel has no projects, pick **All channels** under **Showing:**.
 
 ### What each row shows
 
@@ -191,11 +192,11 @@ Videos started together (a batch from Play, for example) run one at a time. The 
 
 ### When there are no projects
 
-Projects shows **No projects yet** with **Make your first video** (opens Play), and an invitation to the interactive tutorial with **Start tutorial**.
+Projects shows **No projects yet** with **Make your first video** (opens Create), and an invitation to the interactive tutorial with **Start the tour**.
 
 ## Tips
 
-- The sidebar's **N running** link jumps straight to Running now on Home.
+- The rail's **N running** link jumps straight to Running now on Home.
 - Home and Projects follow the Channel picker. If a project seems missing, switch to **All channels**.
 - Updates wait for running work. See [Updating and Patch Notes](Updating-and-Patch-Notes).
 

@@ -1,10 +1,12 @@
 import { focusManager } from "@tanstack/react-query";
-import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { Menu, MenuContent, MenuTrigger } from "@/components/kit/menu";
 import { jsonAnswer, problemAnswer, renderApp, testDeps } from "@/test-app";
 import { type UpdateInfo, updateRecoveryTimeout } from "./api.js";
-import { UpdateWidget } from "./widget.js";
+import { useUpdate } from "./use-update.js";
+import { UpdateMenuRows, UpdateWidget } from "./widget.js";
 
 const available: UpdateInfo = {
   currentVersion: "0.8.2",
@@ -19,11 +21,35 @@ afterEach(() => {
   vi.useRealTimers();
   focusManager.setFocused(undefined);
 });
-function control(): HTMLButtonElement {
-  return screen.getByRole("button", { name: /Slopify updates/ });
+
+// The shell's two places for an update: the rail item (only while there is news) and the rows
+// at the foot of the Help menu.
+function Updates({ reload }: { readonly reload: () => void }) {
+  const update = useUpdate(reload);
+  return (
+    <>
+      <UpdateWidget update={update} />
+      <Menu modal={false}>
+        <MenuTrigger>Help</MenuTrigger>
+        <MenuContent>
+          <UpdateMenuRows update={update} />
+        </MenuContent>
+      </Menu>
+    </>
+  );
 }
-async function ready(): Promise<void> {
-  await waitFor(() => expect(control().disabled).toBe(false));
+// The update row of the Help menu, opened first.
+async function helpRow(): Promise<HTMLElement> {
+  await userEvent.click(screen.getByRole("button", { name: "Help" }));
+  return within(await screen.findByRole("menu", { name: "Help" })).getByRole("menuitem");
+}
+// The rail item, by the state it says.
+function item(name: string): HTMLElement | null {
+  return screen.queryByRole("button", { name });
+}
+// The live region: the state in a sentence, announced wherever the person is.
+function said(): string {
+  return (screen.queryByRole("alert") ?? screen.getByRole("status")).textContent ?? "";
 }
 function fakeTime(): void {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"] });
@@ -34,26 +60,31 @@ async function tick(ms = 2_010): Promise<void> {
   });
 }
 
-it("installs a known update with one click, without opening a panel", async () => {
+it("says an update is ready in words, and installs it from its menu once it has said what that does", async () => {
   const install = vi.fn(jsonAnswer({ ...available, status: "installing" }, 202));
   renderApp(
-    <UpdateWidget reload={vi.fn()} />,
+    <Updates reload={vi.fn()} />,
     testDeps({ "GET /api/update": jsonAnswer(available), "POST /api/update": install }),
   );
-  await ready();
-  expect(control().getAttribute("data-tip") ?? "").toContain("Your version: 0.8.2 · Newest: 0.8.3");
+  await userEvent.click(await screen.findByRole("button", { name: "Update ready" }));
+  const menu = await screen.findByRole("menu", { name: "Update ready" });
+  expect(menu.textContent).toContain("Your version: 0.8.2 · Newest: 0.8.3.");
+  expect(menu.textContent).toContain(
+    "Installing restarts Slopify; anything running finishes first.",
+  );
   expect(install).not.toHaveBeenCalled();
-  await userEvent.click(control());
+  await userEvent.click(within(menu).getByRole("menuitem", { name: "Install update 0.8.3" }));
   expect(install).toHaveBeenCalledTimes(1);
   expect(screen.queryByRole("dialog")).toBeNull();
-  expect(control().disabled).toBe(true);
+  expect(await screen.findByRole("button", { name: "Updating…" })).not.toBeNull();
+  expect((await helpRow()).getAttribute("aria-disabled")).toBe("true");
 });
 
-it("a check discovers an update without installing until the next click", async () => {
+it("says nothing in the rail without an update, and a check finds one without installing it", async () => {
   const searches: string[] = [];
   const install = vi.fn(jsonAnswer({ ...available, status: "installing" }, 202));
   renderApp(
-    <UpdateWidget reload={vi.fn()} />,
+    <Updates reload={vi.fn()} />,
     testDeps({
       "GET /api/update": (request) => {
         const search = new URL(request.url).search;
@@ -65,17 +96,21 @@ it("a check discovers an update without installing until the next click", async 
       "POST /api/update": install,
     }),
   );
-  await ready();
-  expect(control().getAttribute("data-tip") ?? "").toContain("Slopify 0.8.2");
-  await userEvent.click(control());
-  await ready();
+  await waitFor(() => expect(said()).toBe("You have Slopify 0.8.2."));
+  expect(screen.queryByRole("button", { name: /^Updat/ })).toBeNull();
+  const check = await helpRow();
+  expect(check.textContent).toBe("Check for updates");
+  await userEvent.click(check);
+  expect(await screen.findByRole("button", { name: "Update ready" })).not.toBeNull();
   expect(searches).toContain("?refresh=1");
   expect(install).not.toHaveBeenCalled();
-  await userEvent.click(control());
+  const row = await helpRow();
+  expect(row.textContent).toBe("Install update 0.8.3");
+  await userEvent.click(row);
   expect(install).toHaveBeenCalledTimes(1);
 });
 
-it("waits for running work instead of refusing, says for what, and cancels on the next click", async () => {
+it("waits for running work instead of refusing, says for what, and cancels on the next press", async () => {
   const waiting: UpdateInfo = {
     ...available,
     busy: true,
@@ -94,23 +129,20 @@ it("waits for running work instead of refusing, says for what, and cancels on th
     return jsonAnswer(current)(request);
   });
   renderApp(
-    <UpdateWidget reload={vi.fn()} />,
+    <Updates reload={vi.fn()} />,
     testDeps({
       "GET /api/update": (request) => jsonAnswer(current)(request),
       "POST /api/update": install,
       "DELETE /api/update": cancel,
     }),
   );
-  await ready();
-  await userEvent.click(control());
+  await screen.findByRole("button", { name: "Update ready" });
+  await userEvent.click(await helpRow());
   expect(install).toHaveBeenCalledTimes(1);
-  await waitFor(() =>
-    expect(control().getAttribute("data-tip") ?? "").toContain(
-      "Update to 0.8.3 will install when 'Cleopatra' finishes.",
-    ),
-  );
-  expect(control().disabled).toBe(false);
-  await userEvent.click(control());
+  await userEvent.click(await screen.findByRole("button", { name: "Update waiting" }));
+  expect(said()).toBe("Update to 0.8.3 will install when 'Cleopatra' finishes.");
+  const menu = await screen.findByRole("menu", { name: "Update waiting" });
+  await userEvent.click(within(menu).getByRole("menuitem", { name: "Cancel the update" }));
   expect(cancel).toHaveBeenCalledTimes(1);
   expect(install).toHaveBeenCalledTimes(1);
 });
@@ -118,13 +150,13 @@ it("waits for running work instead of refusing, says for what, and cancels on th
 it("shows installation failures without automatic retries", async () => {
   const install = vi.fn(problemAnswer("Disk is full.", 503));
   renderApp(
-    <UpdateWidget reload={vi.fn()} />,
+    <Updates reload={vi.fn()} />,
     testDeps({ "GET /api/update": jsonAnswer(available), "POST /api/update": install }),
   );
-  await ready();
-  await userEvent.click(control());
+  await screen.findByRole("button", { name: "Update ready" });
+  await userEvent.click(await helpRow());
   expect((await screen.findByRole("alert")).textContent).toContain("Disk is full.");
-  expect(control().getAttribute("data-tip") ?? "").toContain("Disk is full.");
+  expect(item("Update failed")).not.toBeNull();
   expect(install).toHaveBeenCalledTimes(1);
 });
 
@@ -132,7 +164,7 @@ it("clears Updating for an idle server at the same version", async () => {
   let accepted = false;
   const reload = vi.fn();
   renderApp(
-    <UpdateWidget reload={reload} />,
+    <Updates reload={reload} />,
     testDeps({
       "GET /api/update": (request) =>
         jsonAnswer(accepted ? { ...available, available: false, canUpdate: false } : available)(
@@ -144,12 +176,14 @@ it("clears Updating for an idle server at the same version", async () => {
       },
     }),
   );
-  await ready();
+  await screen.findByRole("button", { name: "Update ready" });
+  const row = await helpRow();
   fakeTime();
-  fireEvent.click(control());
+  fireEvent.click(row);
   await tick();
-  expect(control().disabled).toBe(false);
-  expect(control().getAttribute("data-tip") ?? "").not.toContain("Updating…");
+  await tick();
+  expect(screen.queryByRole("button", { name: /^Updat/ })).toBeNull();
+  expect(said()).toBe("You have Slopify 0.8.2.");
   expect(reload).not.toHaveBeenCalled();
 });
 
@@ -158,7 +192,7 @@ it("reconnects through restart and reloads only after activation", async () => {
     reads = 0;
   const reload = vi.fn();
   renderApp(
-    <UpdateWidget reload={reload} />,
+    <Updates reload={reload} />,
     testDeps({
       "GET /api/update": (request) => {
         if (!accepted) return jsonAnswer(available)(request);
@@ -177,12 +211,14 @@ it("reconnects through restart and reloads only after activation", async () => {
       },
     }),
   );
-  await ready();
+  await screen.findByRole("button", { name: "Update ready" });
+  const row = await helpRow();
   fakeTime();
-  fireEvent.click(control());
+  fireEvent.click(row);
   await tick(10);
   await tick();
-  expect(control().getAttribute("data-tip") ?? "").toContain("Reconnecting");
+  expect(said()).toContain("Reconnecting");
+  expect(item("Updating…")).not.toBeNull();
   await tick();
   expect(reload).not.toHaveBeenCalled();
   await tick();
@@ -193,7 +229,7 @@ it("stops presenting Updating when the replacement never reconnects", async () =
   let accepted = false;
   const reload = vi.fn();
   renderApp(
-    <UpdateWidget reload={reload} />,
+    <Updates reload={reload} />,
     testDeps({
       "GET /api/update": (request) =>
         jsonAnswer(accepted ? { ...available, status: "installing" } : available)(request),
@@ -203,28 +239,30 @@ it("stops presenting Updating when the replacement never reconnects", async () =
       },
     }),
   );
-  await ready();
+  await screen.findByRole("button", { name: "Update ready" });
+  const row = await helpRow();
   fakeTime();
-  fireEvent.click(control());
+  fireEvent.click(row);
   await tick(10);
-  expect(control().disabled).toBe(true);
+  expect(item("Updating…")).not.toBeNull();
   await tick(updateRecoveryTimeout);
-  expect(control().disabled).toBe(false);
-  expect(control().getAttribute("data-tip") ?? "").toContain("The update did not finish");
+  expect(item("Updating…")).toBeNull();
+  expect(item("Update failed")).not.toBeNull();
+  expect(said()).toContain("The update did not finish");
   expect(reload).not.toHaveBeenCalled();
 });
 
 it("recovers a persisted install state after a reload", async () => {
   fakeTime();
   renderApp(
-    <UpdateWidget reload={vi.fn()} />,
+    <Updates reload={vi.fn()} />,
     testDeps({ "GET /api/update": jsonAnswer({ ...available, status: "installing" }) }),
   );
   await tick(10);
-  expect(control().disabled).toBe(true);
+  expect(item("Updating…")).not.toBeNull();
   await tick(updateRecoveryTimeout);
-  expect(control().disabled).toBe(false);
-  expect(control().getAttribute("data-tip") ?? "").toContain("The update did not finish");
+  expect(item("Updating…")).toBeNull();
+  expect(said()).toContain("The update did not finish");
 });
 
 it("polls every fifteen minutes without installing", async () => {
@@ -232,7 +270,7 @@ it("polls every fifteen minutes without installing", async () => {
     install = vi.fn();
   fakeTime();
   renderApp(
-    <UpdateWidget reload={vi.fn()} />,
+    <Updates reload={vi.fn()} />,
     testDeps({ "GET /api/update": check, "POST /api/update": install }),
   );
   await tick(10);
@@ -241,12 +279,9 @@ it("polls every fifteen minutes without installing", async () => {
   expect(install).not.toHaveBeenCalled();
 });
 
-it("sits in the header flow instead of floating over page content", async () => {
-  renderApp(
-    <UpdateWidget reload={vi.fn()} />,
-    testDeps({ "GET /api/update": jsonAnswer(available) }),
-  );
-  await ready();
-  expect(control().className).not.toMatch(/\bfixed\b/);
-  expect(control().style.bottom).toBe("");
+it("sits in the rail's flow instead of floating over page content", async () => {
+  renderApp(<Updates reload={vi.fn()} />, testDeps({ "GET /api/update": jsonAnswer(available) }));
+  const shown = await screen.findByRole("button", { name: "Update ready" });
+  expect(shown.className).not.toMatch(/\bfixed\b/);
+  expect(shown.style.bottom).toBe("");
 });

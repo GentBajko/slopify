@@ -13,7 +13,7 @@ import {
   updateWaitInterval,
 } from "./api.js";
 
-interface UpdateView {
+export interface UpdateView {
   readonly info: UpdateInfo | undefined;
   readonly updating: boolean;
   readonly checking: boolean;
