@@ -390,7 +390,7 @@ export function createApp(deps: AppDeps): Hono {
       return problem(c, {
         status: 409,
         detail:
-          "This is the sample project, which is read-only so trying things on it never spends anything. Press Make my own copy at the top of the sample's page, then edit and rebuild the copy.",
+          "This is a sample project, which is read-only so trying things on it never spends anything. Press Make my own copy at the top right of its page, then change and make the copy again.",
         extensions: { reason: "sample-read-only" },
       });
     })

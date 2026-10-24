@@ -14,10 +14,10 @@ interface ChangeRequest {
   readonly nonce: number;
 }
 
-// "Regenerate image 3" and "Regenerate on-screen card 2" from the palette, for every image
+// "Make image 3 again" and "Make on-screen card 2 again" from the palette, for every image
 // whether or not its group is expanded, and "Regenerate image 3 in Cleopatra" run from another
-// screen (`components/global-commands.tsx`). Both ask first, as the Regenerate button does.
-// An image's number is its place in the slideshow, the "#3" on its frame.
+// screen (`components/global-commands.tsx`). Both ask first, as the tile's "Make this image
+// again" does. An image's number is its place in the slideshow, the "#3" on its frame.
 export function useRegenerateByNumber(
   project: BodyProps["project"],
   images: readonly Output[],
@@ -31,7 +31,7 @@ export function useRegenerateByNumber(
     const list = kind === "image" ? images : cards;
     const noun = kind === "image" ? "image" : "on-screen card";
     if (count === undefined) {
-      notify(`Type the ${noun}'s number with the command, for example "regenerate ${noun} 3".`);
+      notify(`Type the ${noun}'s number with the command, for example "make ${noun} 3 again".`);
       return;
     }
     const image = list.find((one) => one.meta.index === count);
@@ -39,8 +39,8 @@ export function useRegenerateByNumber(
       const numbers = list.flatMap((one) => (one.meta.index === undefined ? [] : [one.meta.index]));
       notify(
         numbers.length === 0
-          ? `${project.title} has no ${noun}s yet, so there is no ${noun} ${String(count)} to regenerate. They appear under Images once the run makes them.`
-          : `${project.title} has no ${noun} ${String(count)}: its ${noun}s are numbered ${String(Math.min(...numbers))} to ${String(Math.max(...numbers))}. Type one of those, or press Regenerate on the ${noun} in Images.`,
+          ? `${project.title} has no ${noun}s yet, so there is no ${noun} ${String(count)} to make again. They appear under Images once the run makes them.`
+          : `${project.title} has no ${noun} ${String(count)}: its ${noun}s are numbered ${String(Math.min(...numbers))} to ${String(Math.max(...numbers))}. Type one of those, or press Make this image again on it in Images.`,
         "error",
       );
       return;
@@ -53,21 +53,21 @@ export function useRegenerateByNumber(
   };
   useCommand({
     id: "project.image.regenerate",
-    title: "Regenerate an image",
-    numbered: (count) => `Regenerate image ${String(count)}`,
+    title: "Make an image again",
+    numbered: (count) => `Make image ${String(count)} again`,
     group: "This project",
     context: project.title,
-    keywords: ["image", "picture", "redraw", "remake"],
+    keywords: ["image", "picture", "regenerate", "redraw", "remake"],
     searchOnly: true,
     run: (count) => pick("image", count),
   });
   useCommand({
     id: "project.card.regenerate",
-    title: "Regenerate an on-screen card",
-    numbered: (count) => `Regenerate on-screen card ${String(count)}`,
+    title: "Make an on-screen card again",
+    numbered: (count) => `Make on-screen card ${String(count)} again`,
     group: "This project",
     context: project.title,
-    keywords: ["card", "figure", "table", "redraw", "remake"],
+    keywords: ["card", "figure", "table", "regenerate", "redraw", "remake"],
     searchOnly: true,
     run: (count) => pick("card", count),
   });
@@ -96,7 +96,7 @@ function RequestedChange({
     acted.current = true;
     if (change.unavailable)
       notify(
-        `${request.name} can't be regenerated while work on this project is running. Wait until it finishes, then run the command again or press Regenerate on it in Images.`,
+        `${request.name} can't be made again while work on this project is running. Wait until it finishes, then run the command again or press Make this image again on it in Images.`,
         "error",
       );
     else change.act("regenerate-image");
@@ -116,7 +116,7 @@ function RequestedChange({
       tone="primary"
       title={copy?.title ?? ""}
       consequence={copy?.consequence ?? ""}
-      confirmLabel="Regenerate the image"
+      confirmLabel={copy?.verb ?? ""}
       cancelLabel="Keep it"
       pending={actions.pending}
       onConfirm={change.confirm}

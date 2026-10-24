@@ -1,5 +1,5 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
-import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
+import { type ProjectSummary, type Stage, thumbnailCountOf } from "@app/slices/admission/model.js";
 import type { Output } from "@app/slices/storage/model.js";
 import { RefreshCwIcon } from "lucide-react";
 import { type ReactElement, type ReactNode, useContext, useState } from "react";
@@ -16,30 +16,71 @@ import { ErrorDetails } from "./error-details.js";
 import { LiveWriting } from "./live-writing.js";
 import type { SectionId } from "./next-action.js";
 import { NextActionBeside, type NextActionState } from "./next-action-view.js";
+import { LeadDownloadContext, sampleReason, useReadOnlySample } from "./read-only.js";
 import { RevisionControlContext } from "./revision-action-context.js";
 import { useCurrentRevisionView } from "./revision-media.js";
 import { rerunPrice, useRunCost } from "./stage-price.js";
 import { stageFraction, summaryOf } from "./summary.js";
 import type { ProjectActions } from "./use-actions.js";
 
-// One section of the project page's main column: its head (title, one meta line, a
-// button to make each stage again), the next action when it concerns this section, what a refused press
-// here said, and the body. Hidden sections stay mounted so an editor keeps its typing.
+// One section of the project page's main column: its head (title, the one button that makes
+// the section's work again), the next action when it concerns this section, what a refused
+// press here said, and the body. The stage's state and summary are the status list's, beside
+// it, so the head does not say them again. Hidden sections stay mounted so an editor keeps
+// its typing.
 
-// Re-running a whole stage replaces its outputs: named for its result, and confirmed first.
-const rerunLabels: Readonly<Record<StageKind, string>> = {
-  research: "Research again",
+// Making a whole stage again replaces its outputs: named for its result, and confirmed first.
+const rerunVerbs: Readonly<Record<StageKind, string>> = {
+  research: "Research the topic again",
   article: "Write the article again",
-  audio: "Record the narration again",
+  audio: "Make the narration again",
   images: "Make all images again",
-  thumbnail: "Make the thumbnails again",
-  video: "Render the video again",
-  document: "Render the PDF again",
+  thumbnail: "Make the thumbnail again",
+  video: "Make the video again",
+  document: "Make the PDF again",
 };
 
+// What each costs, said on the button: the two made on this computer are free, the others are
+// paid calls to the provider (the dialog says how much, where this project's record knows).
+const rerunCosts: Readonly<Record<StageKind, string>> = {
+  research: " · AI calls",
+  article: " · AI calls",
+  audio: " · voice calls",
+  images: " · image calls",
+  thumbnail: " · 1 image call",
+  video: " (free)",
+  document: " (free)",
+};
+
+export function rerunVerb(stage: StageKind, project: ProjectSummary): string {
+  if (stage === "video" && project.config.sources.video === "off")
+    return "Make the audio file again";
+  const thumbnails = thumbnailCountOf(project.config);
+  if (stage === "thumbnail" && thumbnails > 1)
+    return `Make the ${String(thumbnails)} thumbnails again`;
+  return rerunVerbs[stage];
+}
+
+// The button's words: the verb, then what it costs ("Make the video again (free)").
 export function rerunLabel(stage: StageKind, project: ProjectSummary): string {
-  if (stage === "video" && project.config.sources.video === "off") return "Export the audio again";
-  return rerunLabels[stage];
+  const thumbnails = thumbnailCountOf(project.config);
+  const cost =
+    stage === "thumbnail" && thumbnails > 1
+      ? ` · ${String(thumbnails)} image calls`
+      : rerunCosts[stage];
+  return `${rerunVerb(stage, project)}${cost}`;
+}
+
+// The stages of a section that can be made again from its head, as the saved version allows.
+export function useRerunnable(stages: readonly Stage[]): readonly Stage[] {
+  const revisioned = useContext(RevisionControlContext);
+  const view = useCurrentRevisionView();
+  return stages.filter(
+    (stage) =>
+      stage.state !== "skipped" &&
+      stage.state !== "pending" &&
+      (!revisioned || (view !== undefined && canRerunSection(view, stage.kind))),
+  );
 }
 
 export function StageSection({
@@ -91,35 +132,29 @@ export function StageSection({
   );
   const running = stages.find((stage) => stage.state === "running");
   const progress = running === undefined ? undefined : stageFraction(running);
-  const summary =
-    meta ??
-    (own === undefined
-      ? undefined
-      : stages
-          .filter((stage) => stage.state !== "skipped")
-          .map((stage) =>
-            stage === own
-              ? summaryOf(stage, outputs, project, resumable)
-              : `${stageWords[stage.kind]}: ${summaryOf(stage, outputs, project, resumable)}`,
-          )
-          .join(" · "));
+  const sample = useReadOnlySample(project.id);
+  const remakes = useRerunnable(stages).length > 0;
   return (
     <section
       hidden={!active}
       aria-label={title}
       data-tour={own === undefined ? undefined : `project-${own.kind}`}
-      className="flex min-w-0 flex-col gap-5"
+      className="flex min-w-0 flex-col gap-3"
     >
       {head ? (
         <SectionHead
           row
           title={title}
+          className="pb-0"
           {...(kicker === undefined ? {} : { kicker })}
-          {...(summary === undefined || summary === "" ? {} : { meta: summary })}
+          {...(meta === undefined ? {} : { meta })}
         >
           {extra}
           <SectionMore stages={stages} project={project} actions={actions} />
         </SectionHead>
+      ) : null}
+      {head && sample && remakes ? (
+        <p className="m-0 text-small text-ink-2">{sampleReason}</p>
       ) : null}
       {progress === undefined || running === undefined ? null : (
         <Meter
@@ -169,7 +204,8 @@ export function StageSection({
       own.kind !== "document" ? (
         <LiveWriting projectId={project.id} stage={own.kind} />
       ) : null}
-      {children}
+      {/* The section's main download wears the lime only when the title row has no next action. */}
+      <LeadDownloadContext value={next.next?.action === undefined}>{children}</LeadDownloadContext>
     </section>
   );
 }
@@ -199,8 +235,9 @@ export function SectionEmpty({
   );
 }
 
-// Re-running each of the section's stages from scratch, as a button in its head: a person who
-// wants a stage made again should see how, not hunt for it behind a menu. Each asks first.
+// Making each of the section's stages again from scratch, as a button in its head: a person who
+// wants a stage made again should see how, not hunt for it behind a menu. Each asks first,
+// with its price first. On a sample it stays in place, disabled, and the section says why.
 export function SectionMore({
   stages,
   project,
@@ -210,16 +247,10 @@ export function SectionMore({
   readonly project: ProjectSummary;
   readonly actions: ProjectActions;
 }): ReactElement | null {
-  const revisioned = useContext(RevisionControlContext);
-  const view = useCurrentRevisionView();
   const [asking, setAsking] = useState<StageKind | undefined>();
   const cost = useRunCost(project.id);
-  const rerunnable = stages.filter(
-    (stage) =>
-      stage.state !== "skipped" &&
-      stage.state !== "pending" &&
-      (!revisioned || (view !== undefined && canRerunSection(view, stage.kind))),
-  );
+  const sample = useReadOnlySample(project.id);
+  const rerunnable = useRerunnable(stages);
   if (rerunnable.length === 0) return null;
   const busy =
     actions.pending ||
@@ -235,9 +266,9 @@ export function SectionMore({
         <Button
           key={stage.id}
           size="small"
-          disabled={busy}
+          disabled={busy || sample}
           focusableWhenDisabled
-          disabledReason="Wait until the work on this project is done"
+          disabledReason={sample ? sampleReason : "Wait until the work on this project is done"}
           onClick={() => setAsking(stage.kind)}
         >
           <RefreshCwIcon aria-hidden="true" strokeWidth={1.75} />
@@ -246,9 +277,9 @@ export function SectionMore({
       ))}
       <ConfirmDialog
         open={asking !== undefined}
-        title={asking === undefined ? "" : `${rerunLabel(asking, project)}?`}
+        title={asking === undefined ? "" : `${rerunVerb(asking, project)}?`}
         consequence={copy?.consequence ?? ""}
-        confirmLabel={asking === undefined ? "" : rerunLabel(asking, project)}
+        confirmLabel={asking === undefined ? "" : rerunVerb(asking, project)}
         cancelLabel="Keep what is there"
         pending={actions.pending}
         onConfirm={() => {
