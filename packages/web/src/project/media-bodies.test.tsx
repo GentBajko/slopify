@@ -1,5 +1,6 @@
 import { assetOf } from "@app/slices/storage/asset-name.js";
 import type { Output } from "@app/slices/storage/model.js";
+import { defaultVoicesSettings } from "@app/slices/voices/model.js";
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
@@ -301,4 +302,28 @@ it("plays the video from a passage the captions left out when its time is presse
   await userEvent.click(screen.getByText("Passages left out of the subtitles"));
   await userEvent.click(screen.getByRole("button", { name: "Play from 1:15" }));
   expect(player.currentTime).toBe(75);
+});
+
+it("leads an audiobook with its chaptered file, the video beside it and the other format quiet", async () => {
+  const video = output("video", "video", { id: "o-video", path: "video.mp4" });
+  const m4b = output("audio_m4b", "video", { id: "o-m4b", path: "audiobook.m4b" });
+  const mp3 = output("audio_mp3", "video", { id: "o-mp3", path: "narration.mp3" });
+  const { props: given } = props([video, m4b, mp3]);
+  const book = {
+    ...given.project,
+    config: { ...given.project.config, voices: defaultVoicesSettings("audiobook") },
+  };
+  renderRouted(
+    <VideoBody {...given} project={book} stage={stage("video", "done")} />,
+    testDeps({}),
+  );
+  const links = (await screen.findAllByRole("link", { name: /^Download/ })).map(
+    (one) => one.textContent,
+  );
+  expect(links.slice(0, 2)).toEqual(["Download audiobook (.m4b)", "Download video (.mp4)"]);
+  expect(
+    screen.getByRole("link", { name: "Download audio with chapters (.mp3)" }).textContent,
+  ).toBe(".mp3 with chapters");
+  // Neither is a menu: each names the one file it fetches.
+  expect(screen.queryByRole("button", { name: /^Download/ })).toBeNull();
 });
