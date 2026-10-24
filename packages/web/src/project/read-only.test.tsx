@@ -61,7 +61,12 @@ describe("the sample project", () => {
         .getByRole("button", { name: /^Save changes/ })
         .getAttribute("aria-disabled"),
     ).toBe("true");
-    expect(form.querySelector("fieldset")?.disabled).toBe(true);
+    // Read section by section: the sections open, the fields cannot be changed.
+    const sections = within(form).getByRole("navigation", { name: "Edit sections" });
+    const article = within(sections).getByRole("button", { name: /^Article/ });
+    expect(article.closest("fieldset[disabled]")).toBeNull();
+    const title = within(form).getByRole("textbox", { name: /^Project title/ });
+    expect(title.closest("fieldset[disabled]")).not.toBeNull();
   });
 });
 

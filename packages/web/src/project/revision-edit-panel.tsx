@@ -163,13 +163,14 @@ export function RevisionEditPanel({
     >
       {guard}
       {sample ? <p className="m-0 mb-3 text-small text-ink-2">{sampleReason}</p> : null}
-      <fieldset disabled={c.pending || sample} className="m-0 min-w-0 border-0 p-0">
+      <fieldset disabled={c.pending} className="m-0 min-w-0 border-0 p-0">
         {renderEditor({
           view: c.view,
           edit: c.edit,
           fields: c.refusal?.fields ?? [],
           onChange: c.setEdit,
           onPending: c.setUploading,
+          readOnly: sample,
           ...(c.focus === undefined ? {} : { focus: c.focus }),
         })}
       </fieldset>

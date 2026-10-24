@@ -33,6 +33,8 @@ export interface EditorProps {
   readonly section?: EditSection | undefined;
   // The section a change asked for from the project page opens; a new object each time.
   readonly focus?: { readonly section: EditSection } | undefined;
+  // A bundled sample: its settings are shown to read, and nothing in them can be changed.
+  readonly readOnly?: boolean | undefined;
 }
 
 export type ProjectTab = "output" | "live" | "edit" | "history" | "checkpoints" | "cost";
