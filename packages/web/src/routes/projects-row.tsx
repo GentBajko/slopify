@@ -8,7 +8,7 @@ import { fileUrl } from "@/api";
 import { useApp } from "@/app-context";
 import { QueueItemActions } from "@/components/batch-queue";
 import { Button } from "@/components/kit/button";
-import { FileLink, TextLink } from "@/components/kit/link";
+import { ButtonLink, FileLink } from "@/components/kit/link";
 import { ListRow } from "@/components/kit/list-row";
 import { Meter } from "@/components/kit/stats";
 import { Badge, Status } from "@/components/kit/status";
@@ -109,7 +109,7 @@ export function ProjectRow({
                 {`${project.title}: ${state.word}`}
               </span>
             </Status>
-            <span className="min-w-0 truncate" title={meta}>
+            <span className="min-w-0 truncate max-md:whitespace-normal" title={meta}>
               {meta}
               {project.status === "partial" ? (
                 <>
@@ -132,14 +132,14 @@ export function ProjectRow({
       }
       actions={
         <>
-          <TextLink
+          <ButtonLink
             to="/projects/$projectId"
             params={{ projectId: project.id }}
+            size="small"
             aria-label={`Open ${project.title}`}
-            className="px-1 text-small"
           >
             Open
-          </TextLink>
+          </ButtonLink>
           {project.outputs?.video === true && finished(project) ? (
             <FileLink
               href={fileUrl(api, project.id, "video")}
@@ -184,12 +184,15 @@ export function ProjectRow({
               waiting={queue.waiting}
             />
           )}
+          {/* On a phone a row keeps one line of actions: ticking it offers Delete in the
+              selection bar. */}
           {running || queue !== undefined ? null : (
             <Button
               variant="quiet"
               size="small"
               aria-label={`Delete ${project.title}`}
               onClick={onDelete}
+              className="max-md:hidden"
             >
               <Trash2Icon aria-hidden="true" strokeWidth={1.75} className="size-[14px]" />
               Delete
