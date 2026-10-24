@@ -69,7 +69,7 @@ export function NarrationPreparation({
             </TextLink>
           ) : null}
           <TextLink to="/prompts/new" search={{ kind: "narration" }}>
-            New prompt ↗ (opens Prompts)
+            New narration prompt ↗ (opens Prompts)
           </TextLink>
         </div>
       ) : null}

@@ -195,7 +195,7 @@ for (const surface of surfaces) {
       expect(screen.getByLabelText("Saved audio").textContent).toBe(
         JSON.stringify({ ...audioFor(preference), model: "unsupported-model" }),
       );
-      expect(screen.getByText(/Your saved preference is retained/)).not.toBeNull();
+      expect(screen.getByText(/your choice is kept for when you pick one/)).not.toBeNull();
       await user.selectOptions(
         screen.getByRole("combobox", { name: surface.providerLabel }),
         "cartesia",
