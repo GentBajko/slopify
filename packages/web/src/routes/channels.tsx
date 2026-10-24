@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { PlusIcon } from "lucide-react";
 import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
@@ -18,28 +18,32 @@ import { useCommand } from "@/components/kit/command-palette";
 import { ConfirmDialog, Dialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
 import { Field, Input } from "@/components/kit/field";
-import { InfoTip } from "@/components/kit/info-tip";
-import { ListDetail, PageHeader } from "@/components/kit/layout";
-import { ButtonLink, TextLink } from "@/components/kit/link";
+import { PageHeader } from "@/components/kit/layout";
 import { List, ListRow } from "@/components/kit/list-row";
-import { SectionHead } from "@/components/kit/section-head";
-import { Stat, Stats } from "@/components/kit/stats";
+import { ChannelRoute, type ChannelTab } from "./channel";
 
-// Channels: one row per channel beside a summary of the picked one, each row opening its page
-// (brand kit, cast, templates, schedules), with Rename and Delete on the row. New channels start empty; the default one
-// holds everything made before channels and cannot be deleted.
-export function ChannelsRoute(): ReactElement {
+// Channels. With one channel there is nothing to pick between, so the page is that channel's
+// own page (its tabs at /channels?tab=…), with New channel beside its actions. With several,
+// one row per channel, the whole row opening its page, with Rename and Delete on the row. New
+// channels start empty; the default one holds everything made before channels and cannot be
+// deleted. Without `onTab` (a test rendering the screen alone) the tab lives here.
+export function ChannelsRoute({
+  tab: tabProp,
+  onTab,
+}: {
+  readonly tab?: ChannelTab | undefined;
+  readonly onTab?: ((tab: ChannelTab) => void) | undefined;
+} = {}): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
   const navigate = useNavigate();
   const channels = useQuery(channelsQuery(api));
+  const [ownTab, setOwnTab] = useState<ChannelTab>(tabProp ?? "brand");
+  const tab = onTab === undefined ? ownTab : (tabProp ?? "brand");
   // The name dialog: a new channel, or renaming one.
   const [naming, setNaming] = useState<"new" | ChannelSummary | null>(null);
   const [deleting, setDeleting] = useState<ChannelSummary | null>(null);
   const [name, setName] = useState("");
-  // The channel summarised beside the list: the one picked, else the first.
-  const [picked, setPicked] = useState<string | null>(null);
-  const shown = channels.data?.find((channel) => channel.id === picked) ?? channels.data?.[0];
   const create = useMutation({
     mutationFn: () => createChannel(api, crypto.randomUUID(), name.trim()),
     onSuccess: async (channel) => {
@@ -81,67 +85,56 @@ export function ChannelsRoute(): ReactElement {
     if (naming === "new") create.mutate();
     else rename.mutate(naming);
   };
+  const newChannel = (
+    <Button aria-expanded={naming === "new"} onClick={startNew}>
+      <PlusIcon aria-hidden="true" className="size-4" strokeWidth={1.75} />
+      New channel
+    </Button>
+  );
+  const only = channels.data?.length === 1 ? channels.data[0] : undefined;
   return (
     <div data-tour="channels">
-      <PageHeader
-        title="Channels"
-        meta={
-          <span className="inline-flex items-center gap-1">
-            A channel keeps its brand kit, cast, series brief, templates and schedules together.
-            <InfoTip id="planning.channels" />
-          </span>
-        }
-        actions={
-          <Button variant="primary" aria-expanded={naming === "new"} onClick={startNew}>
-            <PlusIcon aria-hidden="true" className="size-4" strokeWidth={1.75} />
-            New channel
-          </Button>
-        }
-      />
-      <StatusSlot tone={channels.error || remove.error ? "error" : "info"} className="mb-2">
-        {channels.error
-          ? `The channels couldn't be loaded: ${channels.error.message} Reload the page to try again.`
-          : deleting === null && remove.error
-            ? remove.error.message
-            : channels.isPending
-              ? "Loading channels…"
-              : undefined}
-      </StatusSlot>
-      {channels.data?.length === 0 ? (
-        <EmptyState
-          title="No channels yet"
-          actions={
-            <Button variant="primary" onClick={startNew}>
-              New channel
-            </Button>
-          }
-        >
-          Make one for each series you run; it keeps that series' look and cast.
-        </EmptyState>
-      ) : null}
-      {channels.data?.length ? (
-        <ListDetail
-          list={
+      {only === undefined ? (
+        <>
+          <PageHeader
+            title="Channels"
+            meta="Each channel has its own look, cast, templates and schedules."
+            actions={newChannel}
+          />
+          <StatusSlot tone={channels.error || remove.error ? "error" : "info"} className="mb-2">
+            {channels.error
+              ? `The channels couldn't be loaded: ${channels.error.message} Reload the page to try again.`
+              : deleting === null && remove.error
+                ? remove.error.message
+                : channels.isPending
+                  ? "Loading channels…"
+                  : undefined}
+          </StatusSlot>
+          {channels.data?.length === 0 ? (
+            <EmptyState
+              title="No channels yet"
+              actions={
+                <Button variant="primary" onClick={startNew}>
+                  New channel
+                </Button>
+              }
+            >
+              Make one for each series you run; it keeps that series' look and cast.
+            </EmptyState>
+          ) : null}
+          {channels.data?.length ? (
             <List label="Channels" className="sl-list--wrap-actions">
               {channels.data.map((channel) => (
                 <ListRow
                   key={channel.id}
-                  selected={channel.id === shown?.id}
-                  onSelect={() => setPicked(channel.id)}
-                  title={channel.name}
-                  meta={`${channel.isDefault ? "Default · " : ""}${String(channel.templates)} ${
-                    channel.templates === 1 ? "template" : "templates"
-                  } · ${String(channel.cast)} in the cast`}
+                  title={
+                    <Link to="/channels/$channelId" params={{ channelId: channel.id }}>
+                      {channel.name}
+                    </Link>
+                  }
+                  meta={channelMeta(channel)}
                   actions={
                     <>
-                      <TextLink
-                        to="/channels/$channelId"
-                        params={{ channelId: channel.id }}
-                        aria-label={`Open ${channel.name}`}
-                        className="px-2 text-small"
-                      >
-                        Open
-                      </TextLink>
                       <Button
                         variant="quiet"
                         size="small"
@@ -172,10 +165,20 @@ export function ChannelsRoute(): ReactElement {
                 />
               ))}
             </List>
-          }
-          detail={shown === undefined ? null : <ChannelGlance channel={shown} />}
+          ) : null}
+        </>
+      ) : (
+        <ChannelRoute
+          channelId={only.id}
+          tab={tab}
+          onTab={(next) => {
+            if (onTab === undefined) setOwnTab(next);
+            else onTab(next);
+          }}
+          crumb={false}
+          actions={newChannel}
         />
-      ) : null}
+      )}
       <Dialog
         open={naming !== null}
         onOpenChange={(open) => {
@@ -209,7 +212,14 @@ export function ChannelsRoute(): ReactElement {
             submit();
           }}
         >
-          <Field label="Channel name" tip="planning.channel.name">
+          <Field
+            label="Channel name"
+            help={
+              naming === "new"
+                ? "A channel starts empty: give it a look, a cast and templates on its page."
+                : undefined
+            }
+          >
             <Input
               value={name}
               maxLength={200}
@@ -236,44 +246,21 @@ export function ChannelsRoute(): ReactElement {
   );
 }
 
-// The channel beside the list: what it holds at a glance, and the way into its page.
-function ChannelGlance({ channel }: { readonly channel: ChannelSummary }): ReactElement {
-  const brand = channel.brand;
-  const facts: readonly (readonly [string, string])[] = [
-    ["Intro", brand.intro ?? "None"],
-    ["Outro", brand.outro ?? "None"],
-    ["PDF theme", brand.documentTheme ?? "Default"],
-    ["End screen text", brand.endScreenText ?? "None"],
-  ];
-  return (
-    <section aria-label={`About ${channel.name}`}>
-      <SectionHead
-        title={`About ${channel.name}`}
-        meta={channel.isDefault ? "The default channel" : undefined}
-      >
-        <ButtonLink to="/channels/$channelId" params={{ channelId: channel.id }}>
-          Open channel
-        </ButtonLink>
-      </SectionHead>
-      <Stats className="mb-6">
-        <Stat value={String(channel.templates)} label="Templates" />
-        <Stat value={String(channel.cast)} label="In the cast" />
-      </Stats>
-      <SectionHead as="h3" title="Series brief" className="pb-2" />
-      <p className="m-0 mb-6 whitespace-pre-wrap text-body text-ink-2">
-        {channel.seriesBrief.trim() === ""
-          ? "No series brief yet. Open the channel to say what it covers."
-          : channel.seriesBrief}
-      </p>
-      <SectionHead as="h3" title="Brand kit" className="pb-2" />
-      <dl className="m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-2 text-small">
-        {facts.map(([label, value]) => (
-          <div key={label} className="contents">
-            <dt className="text-ink-2">{label}</dt>
-            <dd className="m-0 truncate">{value}</dd>
-          </div>
-        ))}
-      </dl>
-    </section>
-  );
+// "Default · videos with no channel land here · 2 templates · 1 in the cast".
+export function channelMeta(channel: ChannelSummary): string {
+  return [
+    channel.isDefault ? "Default · videos with no channel land here" : undefined,
+    `${String(channel.templates)} ${channel.templates === 1 ? "template" : "templates"}`,
+    `${String(channel.cast)} in the cast`,
+    briefLine(channel.seriesBrief),
+  ]
+    .filter((part) => part !== undefined)
+    .join(" · ");
+}
+
+// The series brief's first line, short enough for a row.
+function briefLine(brief: string): string | undefined {
+  const line = brief.trim().split("\n")[0]?.trim() ?? "";
+  if (line === "") return undefined;
+  return line.length > 120 ? `${line.slice(0, 119)}…` : line;
 }

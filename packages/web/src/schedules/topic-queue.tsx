@@ -11,7 +11,6 @@ import { KeywordList, keywordFeeds } from "@/components/keyword-list";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { Field, Select, Textarea } from "@/components/kit/field";
-import { InfoTip } from "@/components/kit/info-tip";
 import { Segmented } from "@/components/kit/switch";
 import { limitCount } from "@/lib/limit-count";
 import {
@@ -113,10 +112,13 @@ export function TopicFields({
   const problems = [...switchProblems, ...result.problems];
   return (
     <fieldset className="m-0 flex min-w-0 flex-col gap-3 border-0 border-t border-line p-0 pt-5 min-[700px]:col-span-2">
-      <legend className="float-left mb-1 flex w-full items-center gap-1 text-title-3 font-semibold">
+      <legend className="float-left mb-1 w-full text-title-3 font-semibold">
         Topics (optional)
-        <InfoTip id="planning.schedule.topics" />
       </legend>
+      <p className="m-0 text-small text-ink-2">
+        Each run takes the first topic and makes one video about it. With none, every run uses the
+        template as saved.
+      </p>
       <div className="flex flex-wrap items-center gap-2">
         <Segmented
           label="How to write the topics"

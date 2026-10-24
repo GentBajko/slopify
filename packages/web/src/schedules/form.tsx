@@ -68,7 +68,8 @@ export function ScheduleForm({
   readonly onCreated: () => void;
   readonly onError: (message: string) => void;
   readonly editing: ScheduleSummary | null;
-  // A new schedule's template, picked already (Edit template → New schedule).
+  // A new schedule's template, picked already (Edit template → New schedule, or New schedule
+  // on a template's row of its channel).
   readonly templateId?: string | undefined;
   readonly onCancel: () => void;
   // The last refusal, shown at the top of the form it belongs to.
@@ -77,7 +78,10 @@ export function ScheduleForm({
 }): ReactElement {
   const { api } = useApp();
   const [name, setName] = useState(editing?.name ?? "");
-  const [templateId, setTemplateId] = useState(editing?.templateId ?? picked ?? "");
+  // A template asked for elsewhere starts picked, when it is one a schedule can run.
+  const [templateId, setTemplateId] = useState(
+    editing?.templateId ?? (templates.some((one) => one.id === picked) ? (picked ?? "") : ""),
+  );
   // Design schedules (Ahead of each date) are made in their design template's editor.
   const [kind, setKind] = useState<Exclude<Cadence["kind"], "by-date">>(
     editing === null || editing.cadence.kind === "by-date" ? "daily" : editing.cadence.kind,
@@ -557,10 +561,13 @@ function GenerationFields({
   const own = generation.llm;
   return (
     <fieldset className="m-0 flex min-w-0 flex-col gap-3 border-0 border-t border-line p-0 pt-5 min-[700px]:col-span-2">
-      <legend className="float-left mb-1 flex w-full items-center gap-1 text-title-3 font-semibold">
+      <legend className="float-left mb-1 w-full text-title-3 font-semibold">
         Topic generation
-        <InfoTip id="planning.schedule.generation" />
       </legend>
+      <p className="m-0 text-small text-ink-2">
+        When the queue runs low, one AI call suggests more topics from the series brief, skipping
+        titles already made or listed under the channel's Titles to avoid.
+      </p>
       <Field
         label="Series brief (optional)"
         id="schedule-brief"
@@ -666,7 +673,7 @@ function GenerationFields({
                   })
                 }
               />
-              Use the template's LLM
+              Use the template's AI model
               {own === null && templateLlm !== undefined && templateLlm.provider !== ""
                 ? ` (${templateLlm.provider} · ${templateLlm.model})`
                 : ""}
@@ -676,7 +683,7 @@ function GenerationFields({
           {own === null ? null : (
             <div className="grid gap-4 min-[700px]:grid-cols-2">
               <ProviderPicker
-                label="Provider"
+                label="Service"
                 family="llm"
                 providers={providers.data?.providers ?? []}
                 value={own.provider}

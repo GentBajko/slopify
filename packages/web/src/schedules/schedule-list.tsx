@@ -1,5 +1,7 @@
 import type { ScheduleSummary } from "@app/slices/schedules/model.js";
+import { PlusIcon } from "lucide-react";
 import { Fragment, type ReactElement, type ReactNode } from "react";
+import { Button } from "@/components/kit/button";
 import { EmptyState } from "@/components/kit/empty-state";
 import { List } from "@/components/kit/list-row";
 import { RetiredModelRow } from "@/components/retired-models";
@@ -21,6 +23,7 @@ export function ScheduleList({
   onEdit,
   onAction,
   onConfirm,
+  onNew,
 }: {
   readonly tools: ReactNode;
   readonly loaded: boolean;
@@ -36,6 +39,8 @@ export function ScheduleList({
   readonly onEdit: (schedule: ScheduleSummary) => void;
   readonly onAction: Act;
   readonly onConfirm: (kind: "cancel" | "delete", schedule: ScheduleSummary) => void;
+  // New schedule, inside the empty list; absent while one cannot be made.
+  readonly onNew?: (() => void) | undefined;
 }): ReactElement {
   return (
     <>
@@ -53,12 +58,22 @@ export function ScheduleList({
                 ? "No schedules yet"
                 : "No active schedules"
           }
+          {...(onNew === undefined
+            ? {}
+            : {
+                actions: (
+                  <Button variant="primary" onClick={onNew}>
+                    <PlusIcon aria-hidden="true" className="size-4" strokeWidth={1.75} />
+                    New schedule
+                  </Button>
+                ),
+              })}
         >
           {channelFiltered
             ? "Pick All channels to see the others, or make one from this channel's templates."
             : deleted.length === 0
-              ? "Your first one can be a one-off run or a recurring series. Press New schedule."
-              : "Create one with New schedule, or review deleted history below."}
+              ? "Pick a template, the days and a time; each run then makes a new video by itself while Slopify is open."
+              : "Make a new one, or look through the deleted ones below."}
         </EmptyState>
       ) : null}
       {live.length > 0 ? (

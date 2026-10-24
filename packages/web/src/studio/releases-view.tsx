@@ -1,11 +1,15 @@
 import type { CalendarEntry } from "@app/slices/studio/calendar.js";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { PlusIcon } from "lucide-react";
 import { type ReactElement, useState } from "react";
 import { readReleaseCalendar } from "@/api";
 import { useApp } from "@/app-context";
-import { Button, ButtonRow } from "@/components/kit/button";
+import { Button } from "@/components/kit/button";
 import { EmptyState } from "@/components/kit/empty-state";
+import { ButtonLink } from "@/components/kit/link";
+import { schedulesQuery } from "@/schedules/api";
+import { requestNewSchedule } from "@/schedules/new-from";
 import {
   day,
   type Editing,
@@ -13,10 +17,11 @@ import {
   FreeTime,
   ItemCell,
   releasesKey,
+  Unscheduled,
   weekOf,
   when,
 } from "./release-cells.js";
-import { inWindow, maxWeeks, releaseWindow } from "./release-window.js";
+import { inWindow, releaseWindow } from "./release-window.js";
 
 export { releasesKey };
 
@@ -24,7 +29,8 @@ export { releasesKey };
 // beside it, every item with its release, the time it must be uploaded and scheduled by (so
 // YouTube's checks finish while it is private) and where it stands. A free time of the posting
 // plan offers the finished projects of its series. Any time can be moved, and a long video set
-// to "not scheduled". Earlier and Later page through the next eight weeks, two at a time.
+// to "not scheduled". Earlier and Later page through the next eight weeks, two at a time. Under
+// the weeks, every finished video that has no release time yet, each with a way to give it one.
 
 export function ReleasesView(): ReactElement {
   const { api } = useApp();
@@ -36,6 +42,7 @@ export function ReleasesView(): ReactElement {
     queryFn: () => readReleaseCalendar(api, view.weeks),
     placeholderData: (previous) => previous,
   });
+  const schedules = useQuery(schedulesQuery(api));
   const [editing, setEditing] = useState<Editing | undefined>();
   if (calendar.isPending) return <p className="text-small text-ink-3">Loading the releases…</p>;
   if (calendar.isError)
@@ -57,54 +64,52 @@ export function ReleasesView(): ReactElement {
     group.entries.push(entry);
     weeks.set(week.key, group);
   }
+  const hasSchedule = (schedules.data ?? []).some((one) => one.deletedAt === null);
+  // Release times come from a schedule's own Release times; with none, the first step is one.
+  // With finished videos waiting below, giving one a time is nearer, so this steps back then.
+  const setUp = (
+    <ButtonLink
+      to="/calendar"
+      search={{ tab: "schedules" }}
+      variant={data.candidates.length === 0 ? "primary" : "secondary"}
+      onClick={hasSchedule ? undefined : () => requestNewSchedule()}
+    >
+      {hasSchedule ? null : <PlusIcon aria-hidden="true" strokeWidth={1.75} />}
+      {hasSchedule ? "Set release times in a schedule" : "New schedule"}
+    </ButtonLink>
+  );
   return (
-    <div className="flex flex-col gap-6">
-      <p className="m-0 text-small text-ink-2">
-        Every video and short is due {String(data.leadHours)} hours before its release, so YouTube's
-        copyright and ad checks finish while it is private. Change that, or the weekly times, in{" "}
-        <Link to="/settings" search={{ section: "studio" }}>
-          Settings → YouTube Studio and posting
-        </Link>
-        .
-      </p>
-      <nav aria-label="Release weeks" className="flex flex-wrap items-center gap-3">
-        <ButtonRow>
-          <Button
-            size="small"
-            disabled={!view.hasEarlier}
-            disabledReason="Releases already public are not listed here; open the project to see its release."
-            onClick={() => setPage(page - 1)}
-          >
+    <div className="flex flex-col gap-4">
+      <nav aria-label="Release weeks" className="flex flex-wrap items-center gap-2">
+        {view.hasEarlier ? (
+          <Button size="small" onClick={() => setPage(page - 1)}>
             Earlier
           </Button>
-          <Button
-            size="small"
-            disabled={!view.hasLater}
-            disabledReason={`Releases are listed up to ${String(maxWeeks)} weeks ahead.`}
-            onClick={() => setPage(page + 1)}
-          >
-            Later
-          </Button>
-          {page === 0 ? null : (
-            <Button size="small" variant="quiet" onClick={() => setPage(0)}>
-              Back to this week
-            </Button>
-          )}
-        </ButtonRow>
+        ) : null}
         <span className="text-small text-ink-2" role="status">
           {range}
         </span>
+        {view.hasLater ? (
+          <Button size="small" onClick={() => setPage(page + 1)}>
+            Later
+          </Button>
+        ) : null}
+        {page === 0 ? null : (
+          <Button size="small" variant="quiet" onClick={() => setPage(0)}>
+            Back to this week
+          </Button>
+        )}
       </nav>
       {entries.length === 0 ? (
         page === 0 ? (
-          <EmptyState title="No releases in the next two weeks">
-            Add your week in Settings → YouTube Studio and posting → Posting plan: each finished
-            project then takes its next free time, and its shorts the times after it. Or open a
-            finished project's Prepare upload, or press Later to look further ahead.
+          <EmptyState title="No release times in the next two weeks" actions={setUp}>
+            A schedule can give each video it makes a day and time to go public: open it, press
+            Edit, then Release times.
+            {data.candidates.length === 0 ? "" : " Or pick a time for a finished video below."}
           </EmptyState>
         ) : (
-          <EmptyState title={`No releases from ${range}`}>
-            Nothing is planned in these weeks yet. Press Back to this week, or Earlier.
+          <EmptyState title={`Nothing planned from ${range}`}>
+            Press Later to look further ahead, or Back to this week.
           </EmptyState>
         )
       ) : null}
@@ -166,6 +171,20 @@ export function ReleasesView(): ReactElement {
           </ul>
         </section>
       ))}
+      <Unscheduled
+        candidates={data.candidates}
+        zone={data.timeZone}
+        editing={editing}
+        onEdit={setEditing}
+      />
+      <p className="m-0 max-w-[90ch] text-small text-ink-2">
+        Every video and short is due {String(data.leadHours)} hours before its release, so YouTube's
+        copyright and ad checks finish while it is private. Change that in{" "}
+        <Link to="/settings" search={{ section: "studio" }}>
+          Settings → YouTube Studio and posting
+        </Link>
+        .
+      </p>
     </div>
   );
 }

@@ -33,8 +33,9 @@ export function matchingEpisodes(
 
 const preview = (text: string): string => (text.length > 160 ? `${text.slice(0, 160)}…` : text);
 
-// The Episodes tab: episode memory's on/off setting and the summaries finished episodes left,
-// each opened to read or edit, or deleted.
+// The Memory tab: whether the channel remembers what each finished video covered, and the
+// summaries it kept, each opened to read or edit, or deleted. New videos about the same people
+// or places are written to agree with them.
 export function EpisodesTab({ channelId }: { readonly channelId: string }): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
@@ -58,18 +59,14 @@ export function EpisodesTab({ channelId }: { readonly channelId: string }): Reac
   const [search, setSearch] = useState("");
   const found = matchingEpisodes(memories, search);
   return (
-    <div>
+    <div className="flex flex-col gap-3">
       <Switch
         checked={enabled}
         disabled={read.data === undefined || toggle.isPending}
         onChange={(next) => toggle.mutate(next)}
-        label="Episode memory"
-        tip="planning.channel.episode-memory"
-        describedBy={`${channelId}-memory-help`}
+        label="Remember what each video covered"
+        help="When a video finishes, one AI call writes a short summary of it; new videos about the same people or places are written to agree with it."
       />
-      <p id={`${channelId}-memory-help`} className="mt-1 mb-3 text-small text-ink-2">
-        Finished episodes leave a short summary that new related episodes are written with.
-      </p>
       <StatusSlot tone={read.error || toggle.error || remove.error ? "error" : "info"}>
         {read.error?.message ??
           toggle.error?.message ??
@@ -77,14 +74,14 @@ export function EpisodesTab({ channelId }: { readonly channelId: string }): Reac
           (read.isPending ? "Loading the episodes…" : undefined)}
       </StatusSlot>
       {read.data && memories.length === 0 ? (
-        <EmptyState title="No episodes remembered yet">
+        <EmptyState title="Nothing remembered yet">
           {enabled
-            ? "When a video on this channel finishes, its summary appears here."
-            : "Turn on episode memory, and the next finished video's summary appears here."}
+            ? "When a video in this channel finishes, its summary appears here."
+            : "Turn on Remember what each video covered, and the next finished video's summary appears here."}
         </EmptyState>
       ) : null}
       {memories.length > 0 ? (
-        <div className="mt-2 mb-2 flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Input
             type="search"
             aria-label="Search episode summaries"
@@ -197,7 +194,7 @@ function SummaryDialog({
       description={
         memory.source === "edited"
           ? "You edited this summary; finishing the video again keeps your text."
-          : "Written by the text model when the video finished. An edit here is kept."
+          : "Written by AI when the video finished. An edit here is kept."
       }
       footer={
         <>
@@ -212,7 +209,11 @@ function SummaryDialog({
         </>
       }
     >
-      <Field label="Summary" error={save.error?.message} tip="planning.channel.episode-summary">
+      <Field
+        label="Summary"
+        error={save.error?.message}
+        help="New videos about the same people or places read it before they are written."
+      >
         <Textarea rows={8} value={text} onChange={(event) => setText(event.target.value)} />
       </Field>
     </Dialog>

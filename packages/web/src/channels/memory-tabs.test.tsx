@@ -28,7 +28,7 @@ function recording(answer: Answer, seen: unknown[]): Answer {
   };
 }
 
-describe("Episodes tab", () => {
+describe("Memory tab", () => {
   it("shows the setting and the memories, turns memory off and saves an edited summary", async () => {
     const user = userEvent.setup();
     const toggled: unknown[] = [];
@@ -48,7 +48,9 @@ describe("Episodes tab", () => {
       }),
     );
     expect(await screen.findByText("Cleopatra Awakens")).not.toBeNull();
-    const toggle = screen.getByRole("switch", { name: "Episode memory" });
+    const toggle = screen.getByRole("switch", { name: "Remember what each video covered" });
+    // What turning it on costs is said under it, not only behind an info button.
+    expect(screen.getByText(/one AI call writes a short summary/)).not.toBeNull();
     expect(toggle.getAttribute("aria-checked")).toBe("true");
     await user.click(toggle);
     await waitFor(() => expect(toggled).toEqual([{ enabled: false }]));
@@ -61,7 +63,7 @@ describe("Episodes tab", () => {
   });
 });
 
-describe("Existing videos tab", () => {
+describe("Titles to avoid tab", () => {
   it("adds pasted titles and reports what was skipped", async () => {
     const user = userEvent.setup();
     const sent: unknown[] = [];
@@ -78,10 +80,14 @@ describe("Existing videos tab", () => {
       }),
     );
     expect(await screen.findByText("Hypatia")).not.toBeNull();
-    await user.type(screen.getByLabelText("Paste titles"), "Cleopatra{enter}hypatia");
+    // The paste box opens from its button; what the list is for is said before it.
+    expect(screen.queryByLabelText("Titles, one per line")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Paste titles…" }));
+    await user.type(screen.getByLabelText("Titles, one per line"), "Cleopatra{enter}hypatia");
     await user.click(screen.getByRole("button", { name: "Add titles" }));
     await waitFor(() => expect(sent).toEqual([{ format: "lines", text: "Cleopatra\nhypatia" }]));
     expect(await screen.findByText("Added 1 title; skipped 1 already listed.")).not.toBeNull();
+    expect(screen.queryByLabelText("Titles, one per line")).toBeNull();
   });
 
   it("previews a CSV, applies the remembered filter, and saves only the ticked titles", async () => {
@@ -110,7 +116,9 @@ describe("Existing videos tab", () => {
         ),
       }),
     );
-    await screen.findByText("No existing videos listed");
+    await screen.findByText("No titles to avoid yet");
+    // Nothing to remove yet, so no Remove all.
+    expect(screen.queryByRole("button", { name: "Remove all" })).toBeNull();
     const csv = new File(["Video title\nHistory: Hypatia\n"], "studio.csv", { type: "text/csv" });
     await user.upload(screen.getByLabelText("YouTube Studio CSV file"), csv);
     await waitFor(() =>
@@ -141,7 +149,7 @@ describe("Existing videos tab", () => {
   });
 });
 
-describe("Episodes tab search", () => {
+describe("Memory tab search", () => {
   it("finds episodes by title, cast or summary words", async () => {
     const user = userEvent.setup();
     const other: EpisodeMemory = {

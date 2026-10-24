@@ -1332,7 +1332,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-    min-height: 150px;
+    min-height: 104px;
     min-width: 0;
     padding: var(--space-2);
     border-right: 1px solid var(--color-line);

@@ -6,8 +6,8 @@ import { type ReactElement, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { StatusSlot } from "@/components/kit/action-bar";
 import { Button, ButtonRow } from "@/components/kit/button";
-import { Field, Input, Select, Textarea } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { Field, HelpLine, Input, Select, Textarea } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { Rule } from "@/components/kit/layout";
 import { FileLink } from "@/components/kit/link";
 import { Lightbox, MediaFrame, MediaGrid } from "@/components/kit/media";
@@ -53,7 +53,8 @@ export function CastEditor({
   // Undefined while adding a new member.
   readonly member: CastMember | undefined;
   readonly open: boolean;
-  readonly onClose: () => void;
+  // Close, when there is something to go back to (the first member of an empty cast has none).
+  readonly onClose?: (() => void) | undefined;
   readonly onCreated: (id: string) => void;
 }): ReactElement | null {
   const { api } = useApp();
@@ -101,26 +102,28 @@ export function CastEditor({
   };
   if (!open) return null;
   return (
-    <section aria-label={member === undefined ? "Add to cast" : `Edit ${member.name}`}>
+    <section aria-label={member === undefined ? "New cast member" : `Edit ${member.name}`}>
       <SectionHead
-        kicker={member === undefined ? "New cast member" : castKindLabels[member.kind]}
-        title={member === undefined ? "Add to cast" : member.name}
+        kicker={member === undefined ? undefined : castKindLabels[member.kind]}
+        title={member === undefined ? "New cast member" : member.name}
         meta={
           member === undefined
-            ? "Name it first, then give it reference pictures."
+            ? "Name it first, then give it a picture or two."
             : "Used whenever a title or an image brief names it or one of its aliases."
         }
       >
         {member === undefined ? null : (
           <DuplicateCastButton channelId={channelId} member={member} onCreated={onCreated} />
         )}
-        <Button variant="quiet" size="small" onClick={onClose}>
-          Close
-        </Button>
+        {onClose === undefined ? null : (
+          <Button variant="quiet" size="small" onClick={onClose}>
+            Close
+          </Button>
+        )}
       </SectionHead>
       {member !== undefined && !member.images.some((image) => image.state === "ready") ? (
         <p className="m-0 mt-2 text-small text-waiting">
-          No picture yet, so it is not sent with any image. Upload or generate one below.
+          No picture yet, so it is not sent with any image. Upload one or make one below.
         </p>
       ) : null}
       <form
@@ -133,7 +136,10 @@ export function CastEditor({
         }}
       >
         <div className="grid grid-cols-1 gap-4 min-[600px]:grid-cols-[160px_minmax(0,1fr)]">
-          <Field label="Kind" tip="planning.cast.kind">
+          <Field
+            label="Kind"
+            help="Characters and creatures get tall pictures; places and objects wide ones."
+          >
             <Select
               value={kind}
               onChange={(event) =>
@@ -142,16 +148,20 @@ export function CastEditor({
               options={castKinds.map((one) => ({ value: one, label: castKindLabels[one] }))}
             />
           </Field>
-          <Field label="Name" tip="planning.cast.name">
+          <Field label="Name" help="A video or image that names it reuses its pictures.">
             <Input
               value={name}
               maxLength={200}
               required
+              placeholder="Ronald the Rat"
               onChange={(event) => setName(event.target.value)}
             />
           </Field>
         </div>
-        <Field label="Aliases" tip="planning.cast.aliases" help="Press Enter to add each one.">
+        <Field
+          label="Aliases"
+          help="Other names that count as it, such as plurals or titles. Press Enter to add each one."
+        >
           <div className="flex gap-2">
             <Input
               value={alias}
@@ -185,7 +195,10 @@ export function CastEditor({
             ))}
           </ul>
         ) : null}
-        <Field label="Description for the image model" tip="planning.cast.description">
+        <Field
+          label="Description for the image model"
+          help="Sent with its pictures whenever an image shows it."
+        >
           <Textarea
             rows={3}
             value={description}
@@ -198,7 +211,7 @@ export function CastEditor({
         <div className="flex flex-col items-start gap-1">
           <Switch
             label="One of the channel's hosts"
-            tip="planning.cast.host"
+            help="New podcasts and interviews in this channel start with it as a host."
             checked={host}
             onChange={setHost}
           />
@@ -277,8 +290,7 @@ function Pictures({
       <SectionHead
         as="h3"
         title="Reference pictures"
-        meta={`Sent with every image whose brief, or the video's title, names ${member.name}.`}
-        info="planning.cast.pictures"
+        meta={`Up to 4. Sent with every image whose brief, or the video's title, names ${member.name}.`}
       />
       {member.images.length > 0 ? (
         <MediaGrid list density="compact" label={`Pictures of ${member.name}`} className="mt-3">
@@ -369,13 +381,13 @@ function Pictures({
       </div>
       <div className="mt-4 flex flex-col gap-4">
         <div className="flex flex-col gap-2" {...helpScope}>
-          <p className="sl-kicker m-0 flex items-center gap-1">
-            Make a picture
-            <InfoTip id="planning.cast.generate" className="-my-1" />
-          </p>
+          <p className="sl-kicker m-0">Make a picture</p>
+          <HelpLine>
+            A plain background with the whole figure in view makes the best reference.
+          </HelpLine>
           <div className="grid grid-cols-1 gap-4 min-[600px]:grid-cols-2">
             <ProviderPicker
-              label="Image provider"
+              label="Image service"
               family="image"
               providers={providers.data?.providers ?? []}
               value={provider}
@@ -396,8 +408,7 @@ function Pictures({
         </div>
         <Field
           label="Picture to make"
-          tip="planning.cast.picture-prompt"
-          help={limitCount(prompt.length, pictureMax, "characters")}
+          help={`Starts from the name and description; change it as you like. ${limitCount(prompt.length, pictureMax, "characters")}.`}
         >
           <Textarea
             ref={promptField}
@@ -410,10 +421,10 @@ function Pictures({
         <div>
           <Button
             disabled={generate.isPending || provider === "" || model === "" || prompt.trim() === ""}
-            disabledReason="Pick an image provider and model, and describe the picture"
+            disabledReason="Pick an image service and model, and describe the picture"
             onClick={() => generate.mutate()}
           >
-            Generate a picture
+            Make the picture · 1 image call
           </Button>
         </div>
       </div>
@@ -453,13 +464,11 @@ function CastVoiceFields({
       className="m-0 flex flex-col gap-3 border-0 border-t border-line p-0 pt-4"
       {...helpScope}
     >
-      <legend className="sl-kicker flex items-center gap-1">
-        Voice
-        <InfoTip id="planning.cast.voice" label="Cast voice" className="-my-1" />
-      </legend>
-      <p className="text-small text-ink-2">
-        For multi-voice runs: pick this member under Speakers on Play.
-      </p>
+      <legend className="sl-kicker">Voice</legend>
+      <HelpLine>
+        For videos with several voices: pick this member under Speakers on Create, and it reads with
+        this voice in every video.
+      </HelpLine>
       <div className="grid grid-cols-1 gap-3 min-[600px]:grid-cols-2">
         <ProviderPicker
           label="Voice service"

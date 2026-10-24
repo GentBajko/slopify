@@ -104,12 +104,12 @@ describe("the palette from anywhere", () => {
     expect(ids).not.toContain("index.image.p3");
   });
 
-  it("offers New schedule and Add to calendar when searched, and keeps an empty palette short", async () => {
+  it("offers New schedule and Add topics to a schedule when searched, and keeps an empty palette short", async () => {
     const registry = await mount();
     expect(matchCommands(registry.list(), "schedule").map((command) => command.title)).toContain(
       "New schedule",
     );
-    expect(matchCommands(registry.list(), "add to cal")[0]?.title).toBe("Add to calendar");
+    expect(matchCommands(registry.list(), "add topics")[0]?.title).toBe("Add topics to a schedule");
     expect(matchCommands(registry.list(), "").map((command) => command.id)).toEqual([
       "help.shortcuts",
     ]);

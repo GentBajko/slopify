@@ -26,7 +26,7 @@ const searchFrom = 8;
 
 // The Cast tab: every character, creature, place and object the channel draws the same way,
 // as a gallery of their first pictures, with the picked member's editor beside it (under it
-// on phones). The page header's Add to cast opens the editor empty.
+// on phones). The page header's Add to cast opens the editor empty; an empty cast opens on it.
 export function CastTab({
   channelId,
   cast,
@@ -85,24 +85,20 @@ export function CastTab({
               .toLowerCase()
               .includes(words),
         );
-  const editing = selected === "new" || member !== undefined;
+  // An empty cast opens on the form for the first member, so the screen shows what one is
+  // made of rather than a blank column.
+  const first = cast.length === 0;
+  const editing = first || selected === "new" || member !== undefined;
   return (
     <div className="grid grid-cols-1 items-start gap-8 min-[1024px]:grid-cols-[minmax(0,1fr)_440px]">
       <div className="min-w-0">
         <p className="m-0 mb-4 max-w-[68ch] text-small text-ink-2">
-          When a video's title or an image's brief names a member, its pictures go with that image
-          as references, so it looks the same in every video.
+          A cast member is a character, creature, place or thing with a few pictures. Whenever a
+          video mentions it, those pictures are reused, so it looks the same every time.
         </p>
-        {cast.length === 0 ? (
-          <EmptyState
-            title="No cast yet"
-            actions={
-              <Button variant="secondary" onClick={() => select("new")}>
-                Add to cast
-              </Button>
-            }
-          >
-            Add the characters, creatures, places and objects this channel keeps coming back to.
+        {first ? (
+          <EmptyState title="No cast yet">
+            Name the first one in the form beside this, then give it a picture or two.
           </EmptyState>
         ) : (
           <>
@@ -208,14 +204,14 @@ export function CastTab({
       <aside aria-label="Cast member editor" className="min-w-0">
         {editing ? (
           <CastEditor
-            key={selected ?? "closed"}
+            key={selected ?? "first"}
             channelId={channelId}
             member={member}
             open
-            onClose={() => select(null)}
+            {...(first ? {} : { onClose: () => select(null) })}
             onCreated={(id) => select(id)}
           />
-        ) : cast.length === 0 ? null : (
+        ) : (
           <p className="m-0 text-small text-ink-2">
             Pick a member's Edit to change its names, description and pictures here.
           </p>

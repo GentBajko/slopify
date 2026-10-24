@@ -3,7 +3,8 @@ import { Link } from "@tanstack/react-router";
 import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
 import { type ReactElement, useState } from "react";
 import { Button, IconButton } from "@/components/kit/button";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { HelpLine } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { ButtonLink, TextLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
@@ -83,8 +84,8 @@ export function ListView({
   if (ordered.length === 0)
     return (
       <p className="m-0 text-ink-2">
-        Nothing is planned in these weeks. Add topics with Add to calendar, or create a schedule on
-        the{" "}
+        Nothing is planned in these weeks. Press Later to look further ahead, or change a schedule's
+        days on the{" "}
         <Link to="/calendar" search={{ tab: "schedules" }}>
           Schedules
         </Link>{" "}
@@ -97,10 +98,10 @@ export function ListView({
   );
   return (
     <div className="flex flex-col gap-6" {...helpScope}>
-      <p className="m-0 flex items-center gap-1 text-small text-ink-2">
-        Move a topic earlier, later, to another day or to another schedule from its row.
-        <InfoTip id="planning.calendar.move" className="-my-1" />
-      </p>
+      <HelpLine>
+        The arrows swap a topic with its neighbour in the same schedule; Move to sends it to another
+        of that schedule's days, or to the end of another schedule's queue.
+      </HelpLine>
       {ordered.map((day) => (
         <section key={day.key} aria-label={fullDay.format(day.date)}>
           <SectionHead title={fullDay.format(day.date)} as="h3" />

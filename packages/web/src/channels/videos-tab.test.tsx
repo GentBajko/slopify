@@ -17,7 +17,7 @@ const many = Array.from({ length: 2000 }, (_, n) => ({
   createdAt: "a",
 }));
 
-describe("Existing videos tab with a large import", () => {
+describe("Titles to avoid tab with a large import", () => {
   it("draws the first rows of 2,000 titles, shows more on request and searches them all", async () => {
     const user = userEvent.setup();
     const started = performance.now();
@@ -25,13 +25,13 @@ describe("Existing videos tab with a large import", () => {
       <VideosTab channelId={id} />,
       testDeps({ [`GET /api/channels/${id}/videos`]: jsonAnswer({ videos: many }) }),
     );
-    const list = await screen.findByRole("list", { name: "Existing videos" });
+    const list = await screen.findByRole("list", { name: "Titles to avoid" });
     const bounded = performance.now() - started;
     expect(within(list).getAllByRole("listitem")).toHaveLength(rowsAtOnce);
     expect(screen.getByText("1,800 not shown")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Show 200 more" }));
     expect(within(list).getAllByRole("listitem")).toHaveLength(rowsAtOnce * 2);
-    await user.type(screen.getByRole("searchbox", { name: "Search existing videos" }), "hypatia");
+    await user.type(screen.getByRole("searchbox", { name: "Search titles to avoid" }), "hypatia");
     expect(screen.getByText("200 of 2,000 titles match")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^Show/u })).toBeNull();
 

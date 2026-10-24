@@ -2,8 +2,8 @@ import { type TopicRow, topicValueMax } from "@app/slices/schedules/topic-list.j
 import { PlusIcon, XIcon } from "lucide-react";
 import { type ReactElement, useEffect, useRef } from "react";
 import { Button, IconButton } from "@/components/kit/button";
-import { Input, Select } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { HelpLine, Input, Select } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { useToast } from "@/components/kit/toast";
 import { counted, RowCheck, SelectionBar, useSelection } from "@/components/selection";
 import { type TopicQueue, withRows } from "./topic-queue-state";
@@ -101,6 +101,10 @@ export function TopicTable({
 
   return (
     <div className="flex flex-col gap-3" {...helpScope}>
+      <HelpLine>
+        One row per video, in order. The first column fills the topic keyword; each extra column
+        sets that keyword for that video only, and a blank cell uses the every-run value.
+      </HelpLine>
       <div className="flex flex-wrap items-center gap-2">
         <Button size="small" onClick={() => insert(queue.rows.length, [blank()])}>
           <PlusIcon aria-hidden="true" className="size-4" strokeWidth={1.75} />
@@ -157,12 +161,7 @@ export function TopicTable({
                   <span className="sr-only">Select</span>
                 </th>
                 <th scope="col">#</th>
-                <th scope="col">
-                  <span className="inline-flex items-center gap-1">
-                    {topicName}
-                    <InfoTip id="planning.schedule.topic-table" className="-my-1" />
-                  </span>
-                </th>
+                <th scope="col">{topicName}</th>
                 {queue.columns.map((column) => (
                   <th key={column} scope="col">
                     <span className="inline-flex items-center gap-1">

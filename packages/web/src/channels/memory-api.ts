@@ -6,7 +6,7 @@ import { read } from "@/http";
 
 export type { ChannelVideo, EpisodeMemory };
 
-// Channel page → Episodes (episode memory) and Existing videos.
+// Channel page → Memory (what each finished video covered) and Titles to avoid.
 export interface ChannelEpisodes {
   readonly enabled: boolean;
   readonly memories: readonly EpisodeMemory[];

@@ -87,7 +87,7 @@ export function scheduleProblems(input: ScheduleCheckInput): ScheduleProblems {
     (input.generationLlm.provider === "" || input.generationLlm.model === "")
   )
     found.generation =
-      "Pick both a provider and a model for topic generation, or tick Use the template's LLM.";
+      "Pick both a service and a model for topic generation, or tick Use the template's AI model.";
   return found;
 }
 

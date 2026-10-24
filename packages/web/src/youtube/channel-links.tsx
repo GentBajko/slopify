@@ -3,12 +3,12 @@ import { PlusIcon, Trash2Icon } from "lucide-react";
 import type { ReactElement } from "react";
 import { defaultChannelId } from "@/channels/api";
 import { Button } from "@/components/kit/button";
-import { Input } from "@/components/kit/field";
+import { HelpLine, Input } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
 import { ButtonLink } from "@/components/kit/link";
 import { SectionHead } from "@/components/kit/section-head";
 
-// A channel's named links, edited on its Brand tab: the links a YouTube description's
+// A channel's named links, edited on its Name and look tab: the links a YouTube description's
 // `{{Name}}` placeholders fill from when it is shown, copied or downloaded, such as {{Patreon}}
 // or {{Discord}}. A project can set its own Previous video on its page, which wins over these.
 // The list is part of the Brand form, so Save channel keeps it.
@@ -23,16 +23,11 @@ export function ChannelLinksEditor({
     onChange(rows.map((row, at) => (at === index ? { ...row, ...next } : row)));
   return (
     <section aria-label="Channel links" {...helpScope}>
-      <SectionHead
-        title="Channel links"
-        meta="Write a link's name in braces in a description, such as {{Patreon}}."
-        info="planning.links.named"
-      />
-      {rows.length === 0 ? (
-        <p className="m-0 border-y border-line py-4 text-ink-2">
-          No channel links yet. Add one, then write its name in braces in a description.
-        </p>
-      ) : (
+      <HelpLine>
+        Write a link's name in braces in a YouTube description, such as {"{{Patreon}}"}, and it
+        becomes the link when the description is shown, copied or downloaded.
+      </HelpLine>
+      {rows.length === 0 ? null : (
         <ul aria-label="Channel links" className="sl-list m-0 list-none p-0">
           {/* The column names, seen on a wide screen; a phone shows them above each box. */}
           <li
@@ -95,16 +90,16 @@ export function ChannelLinksEditor({
   );
 }
 
-// Settings → Channel links: the links moved to each channel's Brand tab, so every channel fills
-// `{{Patreon}}` with its own. A list saved here before still fills the default channel's
-// projects until its Brand tab is saved.
+// Settings → Channel links: the links moved to each channel's Name and look tab, so every
+// channel fills `{{Patreon}}` with its own. A list saved here before still fills the default
+// channel's projects until that tab is saved.
 export function ChannelLinksSettings(): ReactElement {
   return (
     <div {...helpScope}>
-      <SectionHead title="Named links" info="planning.links.named" />
+      <SectionHead title="Named links" />
       <p className="m-0 max-w-[60ch] text-ink-2">
-        Each channel keeps its own links now, on its Brand tab under Channel links. Links saved here
-        before fill the default channel's descriptions until you save its Brand tab.
+        Each channel keeps its own links now, on its Name and look tab under Channel links. Links
+        saved here before fill the default channel's descriptions until you save that tab.
       </p>
       <div className="mt-3">
         <ButtonLink to="/channels/$channelId" params={{ channelId: defaultChannelId }}>

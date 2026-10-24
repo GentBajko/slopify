@@ -8,11 +8,11 @@ import { Dialog } from "@/components/kit/dialog";
 import { Field, Select, Textarea } from "@/components/kit/field";
 import { TextLink } from "@/components/kit/link";
 import { useToast } from "@/components/kit/toast";
-import { intents, requestIntent } from "@/lib/intents";
 import { calendarKey, schedulesKey, updateSchedule } from "@/schedules/api";
+import { requestNewSchedule } from "@/schedules/new-from";
 
-// "Add to calendar": topics typed or pasted one per line join the end of a schedule's queue,
-// so they take the next free runs of that schedule. A batch is just this.
+// "Add topics to a schedule": topics typed or pasted one per line join the end of a schedule's
+// queue, so they take the next free runs of that schedule. A batch is just this.
 
 export function topicLines(text: string): readonly string[] {
   return text
@@ -21,7 +21,18 @@ export function topicLines(text: string): readonly string[] {
     .filter((line) => line !== "");
 }
 
-export function AddToCalendar({
+// The schedules topics can be added to. A design schedule's rows each need a date, so they are
+// added in its template's editor.
+export function topicTargets(schedules: readonly ScheduleSummary[]): readonly ScheduleSummary[] {
+  return schedules.filter(
+    (one) =>
+      one.deletedAt === null &&
+      one.templateKind === "project" &&
+      (one.status === "active" || one.status === "paused"),
+  );
+}
+
+export function AddTopics({
   open,
   onOpenChange,
   schedules,
@@ -33,13 +44,7 @@ export function AddToCalendar({
   const { api } = useApp();
   const client = useQueryClient();
   const notify = useToast();
-  // A design schedule's rows each need a date, so they are added in its template's editor.
-  const usable = schedules.filter(
-    (one) =>
-      one.deletedAt === null &&
-      one.templateKind === "project" &&
-      (one.status === "active" || one.status === "paused"),
-  );
+  const usable = topicTargets(schedules);
   const [scheduleId, setScheduleId] = useState<string>("");
   const [text, setText] = useState("");
   const [error, setError] = useState<string | undefined>(undefined);
@@ -73,7 +78,7 @@ export function AddToCalendar({
       if (!reply.ok) {
         setError(
           reply.reason === "conflict"
-            ? `${schedule.name} changed while you were typing. Your topics are kept: press Add to calendar again.`
+            ? `${schedule.name} changed while you were typing. Your topics are kept: press Add again.`
             : reply.message,
         );
         return;
@@ -100,31 +105,25 @@ export function AddToCalendar({
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Add to calendar"
-      description="Each line becomes a topic at the end of the schedule's queue, so it takes that schedule's next free run."
+      title="Add topics to a schedule"
+      description="Each line is one topic: one video about it, made on the schedule's next free day."
       footer={
         <>
           <Button variant="secondary" onClick={() => onOpenChange(false)}>
-            Keep the calendar as it is
+            Cancel
           </Button>
-          <Button
-            variant="primary"
-            disabled={picked === undefined || topics.length === 0 || add.isPending}
-            disabledReason={
-              picked === undefined
-                ? "Create a schedule first."
-                : topics.length === 0
-                  ? "Type at least one topic."
-                  : "Adding…"
-            }
-            onClick={() => {
-              if (picked !== undefined) add.mutate(picked);
-            }}
-          >
-            {topics.length === 0
-              ? "Add to calendar"
-              : `Add ${String(topics.length)} ${topics.length === 1 ? "topic" : "topics"}`}
-          </Button>
+          {picked === undefined ? null : (
+            <Button
+              variant="primary"
+              disabled={topics.length === 0 || add.isPending}
+              disabledReason={topics.length === 0 ? "Type at least one topic." : "Adding…"}
+              onClick={() => add.mutate(picked)}
+            >
+              {topics.length === 0
+                ? "Add topics"
+                : `Add ${String(topics.length)} ${topics.length === 1 ? "topic" : "topics"}`}
+            </Button>
+          )}
         </>
       }
     >
@@ -136,7 +135,7 @@ export function AddToCalendar({
             search={{ tab: "schedules" }}
             onClick={() => {
               // Lands on the New schedule form itself, not just the Schedules tab.
-              requestIntent(intents.newSchedule);
+              requestNewSchedule();
               onOpenChange(false);
             }}
           >
@@ -148,7 +147,6 @@ export function AddToCalendar({
         <div className="flex flex-col gap-4">
           <Field
             label="Schedule"
-            tip="planning.calendar.add-schedule"
             help={
               picked === undefined ? undefined : (
                 <TextLink
@@ -172,7 +170,11 @@ export function AddToCalendar({
               ))}
             </Select>
           </Field>
-          <Field label="Topics, one per line" error={error} tip="planning.calendar.add-topics">
+          <Field
+            label="Topics, one per line"
+            error={error}
+            help="Each topic fills the schedule's topic keyword; its other keywords stay as the schedule sets them."
+          >
             <Textarea
               rows={8}
               value={text}

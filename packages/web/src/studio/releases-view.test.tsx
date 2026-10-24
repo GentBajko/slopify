@@ -1,5 +1,5 @@
 import type { ReleaseCalendar } from "@app/slices/studio/calendar.js";
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
@@ -89,14 +89,15 @@ it("pages through the coming weeks with Earlier and Later and comes back to this
     }),
   );
   expect(await screen.findByText("The next two weeks")).toBeTruthy();
-  const earlier = screen.getByRole("button", { name: "Earlier" });
-  expect(earlier.hasAttribute("disabled")).toBe(true);
+  // Nothing earlier than this week is listed, so there is no Earlier to press.
+  expect(screen.queryByRole("button", { name: "Earlier" })).toBeNull();
   expect(screen.getAllByRole("combobox")).toHaveLength(1);
   await user.click(screen.getByRole("button", { name: "Later" }));
   await waitFor(() => expect(asked).toContain("4"));
   // Weeks three and four: only the free time twenty days ahead.
   await waitFor(() => expect(screen.queryByText("✓ Scheduled · checks clear")).toBeNull());
   expect(screen.getAllByRole("combobox")).toHaveLength(1);
+  expect(screen.getByRole("button", { name: "Earlier" })).not.toBeNull();
   await user.click(screen.getByRole("button", { name: "Back to this week" }));
   expect(await screen.findByText("✓ Scheduled · checks clear")).toBeTruthy();
   expect(screen.getByText("The next two weeks")).toBeTruthy();
@@ -135,4 +136,63 @@ it("lists a free time's short times on its line's clock", async () => {
   expect(
     screen.getByText(new RegExp(`${clock.format(new Date(later(96)))} Kiritimati$`)),
   ).toBeTruthy();
+});
+
+it("lists finished videos with no release time and gives one a time", async () => {
+  const user = userEvent.setup();
+  const puts: unknown[] = [];
+  renderRouted(
+    <ReleasesView />,
+    testDeps({
+      "GET /api/studio/releases": jsonAnswer({ ...calendar, entries: [] }),
+      "GET /api/schedules": jsonAnswer({ schedules: [] }),
+      "GET /api/projects": jsonAnswer({
+        projects: [
+          {
+            id: "p2",
+            title: "The Harbour | Stories To Sleep To",
+            status: "done",
+            progress: 1,
+            format: "16:9",
+            channelId: "00000000-0000-4000-8000-000000000001",
+            uploadedAt: null,
+            config: { sources: { video: "generate" } },
+            createdAt: "2026-09-27T09:00:00.000Z",
+            updatedAt: "2026-09-27T10:00:00.000Z",
+          },
+        ],
+      }),
+      "PUT /api/studio/releases/p2": async (request) => {
+        puts.push(await request.json());
+        return jsonAnswer({ releases: [] })(request);
+      },
+    }),
+  );
+  // No release times yet: the way to get them, as a button, not a path in words.
+  expect(
+    await screen.findByRole("heading", { name: "No release times in the next two weeks" }),
+  ).toBeTruthy();
+  expect(screen.getByRole("link", { name: "New schedule" }).getAttribute("href")).toBe(
+    "/calendar?tab=schedules",
+  );
+  const list = screen.getByRole("list", { name: "Finished, no release time yet" });
+  expect(
+    within(list).getByRole("link", { name: "The Harbour | Stories To Sleep To" }),
+  ).toBeTruthy();
+  // Its series, what it is and when it finished.
+  expect(
+    await within(list).findByText(/^Stories To Sleep To · 16:9 · finished Sep 27/),
+  ).toBeTruthy();
+  await user.click(
+    within(list).getByRole("button", {
+      name: "Set a release time for The Harbour | Stories To Sleep To",
+    }),
+  );
+  // Only a time to set: there is nothing to take back yet.
+  expect(within(list).queryByRole("button", { name: "Not scheduled" })).toBeNull();
+  fireEvent.change(within(list).getByLabelText("Long video: release"), {
+    target: { value: "2026-11-02T18:00" },
+  });
+  await user.click(within(list).getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(puts).toEqual([{ short: 0, at: "2026-11-02T18:00:00.000Z" }]));
 });

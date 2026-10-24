@@ -212,15 +212,31 @@ const libraryIndexRoute = createRoute({
   },
 });
 
-// Channels is a destination of its own in the rail, beside Library.
+interface ChannelSearch {
+  readonly tab?: ChannelTab;
+}
+
+// Channels is a destination of its own in the rail. With one channel it is that channel's page,
+// so its tab is in the address too (`/channels?tab=cast`).
 const channelsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "channels",
-  component: ChannelsRoute,
+  validateSearch: (search: Record<string, unknown>): ChannelSearch =>
+    search.tab === undefined ? {} : { tab: channelTabOf(search.tab) },
+  component: ChannelsPage,
 });
 
-interface ChannelSearch {
-  readonly tab?: ChannelTab;
+function ChannelsPage() {
+  const { tab } = channelsRoute.useSearch();
+  const navigate = useNavigate();
+  return (
+    <ChannelsRoute
+      tab={tab ?? "brand"}
+      onTab={(next) => {
+        void navigate({ to: "/channels", search: { tab: next }, resetScroll: false });
+      }}
+    />
+  );
 }
 
 const channelRoute = createRoute({

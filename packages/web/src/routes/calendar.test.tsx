@@ -1,9 +1,9 @@
+import type { ProjectListing } from "@app/slices/admission/model.js";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { pausedPrepareReason } from "@/calendar/day-cell";
 import { type Answer, jsonAnswer, problemAnswer, renderRouted, testDeps } from "../test-app";
-import { CalendarRoute } from "./calendar";
+import { CalendarRoute, calendarTabLines } from "./calendar";
 
 afterEach(cleanup);
 beforeEach(() => {
@@ -191,8 +191,7 @@ describe("the calendar", () => {
     expect(screen.getByRole("combobox", { name: "Move Cleopatra to…" })).not.toBeNull();
   });
 
-  it("keeps Prepare off a paused schedule's run and says why", async () => {
-    const user = userEvent.setup();
+  it("leaves Prepare off a paused schedule's run, which says Paused", async () => {
     const prepare = vi.fn(jsonAnswer({ projectId: "p", title: "x" }, 201));
     renderRouted(
       <CalendarRoute />,
@@ -208,10 +207,8 @@ describe("the calendar", () => {
       }),
     );
     const chip = await screen.findByRole("article", { name: /^Cleopatra,/ });
-    const button = within(chip).getByRole("button", { name: "Prepare" });
-    expect(button.getAttribute("aria-disabled")).toBe("true");
-    expect(button.getAttribute("data-tip")).toBe(pausedPrepareReason);
-    await user.click(button);
+    expect(within(chip).getByText("Paused")).not.toBeNull();
+    expect(within(chip).queryByRole("button", { name: "Prepare" })).toBeNull();
     expect(prepare).not.toHaveBeenCalled();
   });
 
@@ -330,7 +327,7 @@ describe("the calendar", () => {
     expect(Date.parse(asked[1] ?? "") - Date.parse(asked[0] ?? "")).toBeGreaterThan(
       27 * 24 * 60 * 60_000,
     );
-    expect(screen.getByRole("button", { name: "This week" })).toHaveProperty("disabled", false);
+    expect(screen.getByRole("button", { name: "Back to this week" })).not.toBeNull();
   });
 
   it("adds typed topics to the end of a schedule's queue", async () => {
@@ -340,8 +337,8 @@ describe("the calendar", () => {
     );
     renderRouted(<CalendarRoute />, deps({ [`PUT /api/schedules/${scheduleId}`]: put }));
     await screen.findByRole("article", { name: /^Cleopatra,/ });
-    await user.click(screen.getByRole("button", { name: "Add to calendar" }));
-    const dialog = screen.getByRole("dialog", { name: "Add to calendar" });
+    await user.click(screen.getByRole("button", { name: "Add topics to a schedule" }));
+    const dialog = screen.getByRole("dialog", { name: "Add topics to a schedule" });
     await user.type(
       within(dialog).getByLabelText("Topics, one per line"),
       "Nefertiti\n\n  Solon  ",
@@ -358,6 +355,123 @@ describe("the calendar", () => {
       "Solon",
     ]);
     expect(body.baseVersion).toBe(4);
+  });
+});
+
+describe("an empty calendar", () => {
+  const finished = (id: string, title: string, over: Partial<ProjectListing> = {}) =>
+    ({
+      id,
+      title,
+      status: "done",
+      progress: 1,
+      format: "16:9",
+      channelId: "00000000-0000-4000-8000-000000000001",
+      uploadedAt: null,
+      config: {
+        sources: {
+          research: "off",
+          article: "generate",
+          audio: "generate",
+          images: "generate",
+          thumbnail: "generate",
+          video: "generate",
+        },
+      },
+      createdAt: "2026-09-27T09:00:00.000Z",
+      updatedAt: "2026-09-27T10:00:00.000Z",
+      ...over,
+    }) as ProjectListing;
+  const empty = (extra: Readonly<Record<string, Answer>> = {}) =>
+    testDeps({
+      "GET /api/calendar": jsonAnswer({
+        from: inDays(0, 0),
+        to: inDays(28, 0),
+        runs: [],
+        projects: [],
+        queued: [],
+      }),
+      "GET /api/schedules": jsonAnswer({ schedules: [] }),
+      ...extra,
+    });
+
+  it("says what a schedule is and offers Make a video now and New schedule, not empty weeks", async () => {
+    const user = userEvent.setup();
+    renderRouted(
+      <CalendarRoute />,
+      empty({
+        "GET /api/project-templates": jsonAnswer({
+          templates: [{ id: templateId, name: "Stories", version: 1, updatedAt: inDays(0, 0) }],
+        }),
+        "GET /api/channels": jsonAnswer({ channels: [] }),
+      }),
+    );
+    expect(await screen.findByRole("heading", { name: "Nothing scheduled yet" })).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Make a video now" }).getAttribute("href")).toBe(
+      "/play",
+    );
+    expect(document.querySelectorAll(".sl-cal-week")).toHaveLength(0);
+    // Nothing to drag, nothing to add topics to.
+    expect(screen.queryByText(/^Drag a topic/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Add topics to a schedule" })).toBeNull();
+    // The tab says what it is for.
+    expect(screen.getByText(calendarTabLines.weeks)).not.toBeNull();
+    // New schedule opens the Schedules tab on its form.
+    await user.click(screen.getByRole("button", { name: "New schedule" }));
+    expect(screen.getByRole("tab", { name: /^Schedules/ }).getAttribute("aria-selected")).toBe(
+      "true",
+    );
+    expect(await screen.findByRole("region", { name: "New schedule" })).not.toBeNull();
+  });
+
+  it("shows the newest finished videos with Watch, in the order they finished", async () => {
+    renderRouted(
+      <CalendarRoute />,
+      empty({
+        "GET /api/projects": jsonAnswer({
+          projects: [
+            finished("p-old", "The Old Kingdom", { updatedAt: "2026-09-20T10:00:00.000Z" }),
+            finished("p-new", "The Library of Alexandria"),
+            finished("p-run", "Still going", { status: "running", progress: 0.4 }),
+          ],
+        }),
+      }),
+    );
+    const strip = await screen.findByRole("region", { name: "Recently finished" });
+    expect(
+      within(strip)
+        .getAllByRole("listitem")
+        .map((one) => one.textContent),
+    ).toEqual([
+      expect.stringContaining("The Library of Alexandria"),
+      expect.stringContaining("The Old Kingdom"),
+    ]);
+    expect(
+      within(strip)
+        .getByRole("link", { name: "Watch The Library of Alexandria" })
+        .getAttribute("href"),
+    ).toBe("/projects/p-new?section=video");
+  });
+
+  it("keeps the drag sentence for a topic that can be picked up", async () => {
+    renderRouted(<CalendarRoute />, deps());
+    await screen.findByRole("article", { name: /^Cleopatra,/ });
+    expect(screen.getByText(/^Drag a topic to another day/)).not.toBeNull();
+    cleanup();
+    renderRouted(
+      <CalendarRoute />,
+      deps({
+        "GET /api/calendar": jsonAnswer({
+          from: inDays(0, 0),
+          to: inDays(28, 0),
+          runs: [run(3, null, null)],
+          projects: [],
+          queued: [],
+        }),
+      }),
+    );
+    await screen.findByText("A topic Slopify will suggest");
+    expect(screen.queryByText(/^Drag a topic/)).toBeNull();
   });
 });
 
@@ -610,11 +724,23 @@ describe("the Schedules tab", () => {
     expect(within(list).getByRole("button", { name: "Resume Other" })).not.toBeNull();
     expect(screen.getByRole("button", { name: /New schedule/ })).not.toBeNull();
     // The weeks and their primary action wait on the other tab.
-    expect(screen.queryByRole("button", { name: "Add to calendar" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Add topics to a schedule" })).toBeNull();
     expect(document.querySelector(".sl-cal-week")?.closest("[hidden]")).not.toBeNull();
     await screen.findByRole("region", { name: "Lore detail" });
     await user.click(screen.getByRole("tab", { name: "Coming weeks" }));
-    expect(screen.getByRole("button", { name: "Add to calendar" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Add topics to a schedule" })).not.toBeNull();
+  });
+
+  it("offers New schedule beside Add topics on the weeks, opening the Schedules tab's form", async () => {
+    const user = userEvent.setup();
+    renderRouted(<CalendarRoute />, tabDeps());
+    await screen.findByRole("article", { name: /^Cleopatra,/ });
+    expect(screen.getByRole("button", { name: "Add topics to a schedule" })).not.toBeNull();
+    await user.click(await screen.findByRole("button", { name: "New schedule" }));
+    expect(screen.getByRole("tab", { name: /^Schedules/ }).getAttribute("aria-selected")).toBe(
+      "true",
+    );
+    expect(await screen.findByRole("region", { name: "New schedule" })).not.toBeNull();
   });
 
   it("opens on the schedule the address names and reports a new pick", async () => {

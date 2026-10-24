@@ -125,7 +125,7 @@ export function ScheduleDetail({
               to="/templates/$templateId"
               params={{ templateId: schedule.templateId }}
             >
-              Open the template's studio
+              Edit template
             </ButtonLink>
           }
         >

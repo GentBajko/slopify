@@ -18,7 +18,16 @@ afterEach(cleanup);
 // Schedules, the calendar and channels: every control a person meets there is explained beside
 // it, by a visible help line or an info button (help/coverage.ts). The walk opens each form,
 // mode, tab, editor and dialog the way a person would.
-const planningAllow: readonly (string | RegExp)[] = [];
+const planningAllow: readonly (string | RegExp)[] = [
+  // Grid or List: its two answers say what each draws.
+  "Show the weeks as",
+  // A name says what it is.
+  "Channel name",
+  // The look's fonts and colours: the frame drawn beside them shows what each one changes.
+  /^(Caption|Title) (font|colour|outline)( picker)?$/,
+  // Each site's account: the one line under all of them says what they are for.
+  / account$/,
+];
 
 function expectExplained(): void {
   expect(unexplainedControls(document.body, [...selfExplanatory, ...planningAllow])).toEqual([]);
@@ -181,6 +190,7 @@ const channelRoutes: Readonly<Record<string, Answer>> = {
     filter: "history",
   }),
   "GET /api/settings/channel-links": jsonAnswer({ links: [{ name: "Patreon", url: "https://a" }] }),
+  "GET /api/projects": jsonAnswer({ projects: [] }),
 };
 
 function ChannelPage({ start }: { readonly start: ChannelTab }) {
@@ -207,8 +217,8 @@ describe("the planning screens explain every control", () => {
     await user.selectOptions(screen.getByLabelText("Cadence"), "once");
     expectExplained();
     await user.selectOptions(screen.getByLabelText("New topics"), "hold");
-    await user.click(screen.getByRole("checkbox", { name: /Use the template's LLM/ }));
-    await screen.findByLabelText("Provider");
+    await user.click(screen.getByRole("checkbox", { name: /Use the template's AI model/ }));
+    await screen.findByLabelText("Service");
     expectExplained();
     await user.click(screen.getByRole("button", { name: "Table" }));
     await user.click(screen.getByRole("button", { name: "Add topic" }));
@@ -225,7 +235,7 @@ describe("the planning screens explain every control", () => {
     expectExplained();
   });
 
-  it("walks the Calendar: weeks, the list, suggestions and Add to calendar", async () => {
+  it("walks the Calendar: weeks, the list, suggestions and Add topics to a schedule", async () => {
     const user = userEvent.setup();
     renderRouted(<CalendarRoute />, testDeps(planningRoutes));
     await screen.findByRole("article", { name: /^Cleopatra,/ });
@@ -233,25 +243,43 @@ describe("the planning screens explain every control", () => {
     await user.click(screen.getByRole("button", { name: "List" }));
     await screen.findByLabelText("Move Cleopatra to…");
     expectExplained();
-    await user.click(screen.getByRole("button", { name: "Add to calendar" }));
+    await user.click(screen.getByRole("button", { name: "Add topics to a schedule" }));
     await screen.findByLabelText("Topics, one per line");
     expectExplained();
   });
 
-  it("walks Channels: the list and the New channel dialog", async () => {
+  it("walks Channels: the list, Rename and the New channel dialog", async () => {
     const user = userEvent.setup();
-    renderRouted(<ChannelsRoute />, testDeps(channelRoutes));
+    const second: ChannelSummary = {
+      ...summary,
+      id: "00000000-0000-4000-8000-000000000002",
+      name: "History at Bedtime",
+      isDefault: false,
+    };
+    renderRouted(
+      <ChannelsRoute />,
+      testDeps({
+        ...channelRoutes,
+        "GET /api/channels": jsonAnswer({ channels: [summary, second] }),
+      }),
+    );
     await screen.findByText("My channel");
     expectExplained();
     await user.click(screen.getByRole("button", { name: "New channel" }));
     await screen.findByLabelText("Channel name");
     expectExplained();
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Rename History at Bedtime" }));
+    await screen.findByLabelText("Channel name");
+    expectExplained();
   });
 
-  it("walks a channel with every tab, editor and dialog open", async () => {
+  it("walks a channel with every tab, fold, editor and dialog open", async () => {
     const user = userEvent.setup();
     renderRouted(<ChannelPage start="brand" />, testDeps(channelRoutes));
     await screen.findByRole("combobox", { name: "YouTube AI disclosure" });
+    await user.click(screen.getByText("Channel links"));
+    await user.click(screen.getByText("Posting"));
     expectExplained();
 
     await user.click(screen.getByRole("tab", { name: /Cast/ }));
@@ -260,18 +288,22 @@ describe("the planning screens explain every control", () => {
     await screen.findByLabelText("Picture to make");
     expectExplained();
     await user.click(screen.getAllByRole("button", { name: "Add to cast" })[0] as HTMLElement);
-    await screen.findByRole("region", { name: "Add to cast" });
+    await screen.findByRole("region", { name: "New cast member" });
+    expectExplained();
+
+    await user.click(screen.getByRole("tab", { name: "Projects" }));
+    await screen.findByRole("heading", { name: "No projects in this channel yet" });
     expectExplained();
 
     await user.click(screen.getByRole("tab", { name: "Templates" }));
-    await screen.findByLabelText("Channel of Stories");
+    await screen.findByRole("list", { name: "Channel templates" });
     expectExplained();
 
     await user.click(screen.getByRole("tab", { name: "Schedules" }));
     await screen.findByRole("list", { name: "Channel schedules" });
     expectExplained();
 
-    await user.click(screen.getByRole("tab", { name: "Episodes" }));
+    await user.click(screen.getByRole("tab", { name: "Memory" }));
     await user.click(
       await screen.findByRole("button", { name: "Open the summary of Cleopatra Awakens" }),
     );
@@ -279,7 +311,10 @@ describe("the planning screens explain every control", () => {
     expectExplained();
     await user.keyboard("{Escape}");
 
-    await user.click(screen.getByRole("tab", { name: "Existing videos" }));
+    await user.click(screen.getByRole("tab", { name: "Titles to avoid" }));
+    await user.click(await screen.findByRole("button", { name: "Paste titles…" }));
+    await screen.findByLabelText("Titles, one per line");
+    expectExplained();
     const csv = new File(["Video title\nHistory: Hypatia\n"], "studio.csv", { type: "text/csv" });
     await user.upload(await screen.findByLabelText("YouTube Studio CSV file"), csv);
     await screen.findByLabelText("History: Hypatia");

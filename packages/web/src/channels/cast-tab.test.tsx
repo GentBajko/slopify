@@ -118,3 +118,15 @@ it("moves a member with Alt+Down on its Edit button, and not past the end", asyn
   ).not.toBeNull();
   expect(fake.sent).toHaveLength(1);
 });
+
+it("opens an empty cast on the form for its first member, with no second Add button", async () => {
+  renderRouted(<CastTab channelId={channelId} cast={[]} />, testDeps({}));
+  expect(await screen.findByRole("form", { name: "Cast member" })).toBeTruthy();
+  expect(screen.getByText(/A cast member is a character, creature, place or thing/)).toBeTruthy();
+  expect(screen.getByPlaceholderText("Ronald the Rat")).toBeTruthy();
+  // The only Add to cast on the tab is the form's own; the page header carries the other.
+  const adds = screen.getAllByRole("button", { name: "Add to cast" });
+  expect(adds.map((button) => button.getAttribute("form"))).toEqual(["cast-member-form"]);
+  // Nothing to go back to.
+  expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
+});

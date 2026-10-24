@@ -1,7 +1,6 @@
 import type { ScheduleSummary } from "@app/slices/schedules/model.js";
 import type { ReactElement } from "react";
 import { Input, Select } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
 
 // With this many schedules the list gets a search field and a sort order.
 export const listToolsFrom = 5;
@@ -51,7 +50,7 @@ export function ScheduleListTools({
   readonly onSort: (sort: ScheduleSort) => void;
 }): ReactElement {
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-2" {...helpScope}>
+    <div className="mb-3 flex flex-wrap items-center gap-2">
       <Input
         type="search"
         aria-label="Search schedules by name"
@@ -75,7 +74,6 @@ export function ScheduleListTools({
           </option>
         ))}
       </Select>
-      <InfoTip id="planning.schedules" />
     </div>
   );
 }
