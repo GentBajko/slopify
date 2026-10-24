@@ -245,7 +245,7 @@ export function SpeakersEditor({
               onChange={(nameTags) => set({ nameTags })}
             />
             <Switch
-              label="One request for consecutive turns where the voice provider can (ElevenLabs v3, Gemini)"
+              label="One request for consecutive turns where the voice service can (ElevenLabs v3, Gemini)"
               tip="play.speakers.native-dialogue"
               checked={value.nativeDialogue}
               onChange={(nativeDialogue) => set({ nativeDialogue })}
@@ -263,7 +263,7 @@ export function SpeakersEditor({
           {value.format === "podcast" || value.format === "interview" ? (
             <p className="text-small text-ink-2">
               The speaker panel (a tile per speaker, the one talking lit, their name below) is drawn
-              with the captions: set Captions to Burn in under Style to see it in the video.
+              with the captions: set Captions to Show captions in the video, under Video and style.
             </p>
           ) : null}
         </>
