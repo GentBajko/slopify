@@ -363,9 +363,9 @@ export function StepContent({
             fill it.
           </p>
           <p>
-            You have reached the end. Press the question-mark button at the foot of the sidebar
-            anytime to walk through these steps again, or the book beside it for Help → Tutorials,
-            the guides to every screen.
+            You have reached the end. Press <strong>Help</strong> at the foot of the rail anytime:
+            <strong> Start the tour</strong> walks through these steps again, and{" "}
+            <strong>Tutorials</strong> has the guides to every screen.
           </p>
         </>
       );
