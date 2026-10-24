@@ -99,15 +99,15 @@ export function FirstRunNotice(): ReactElement | null {
           slopify.stream, anonymously. Nothing you type leaves this computer.
         </p>
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            className="sl-link border-0 bg-transparent p-0 font-[inherit] text-small"
+          <Button
+            variant="quiet"
+            size="small"
             aria-expanded={listed}
             aria-controls={listId}
             onClick={() => setListed((shown) => !shown)}
           >
             {listed ? "Hide the list" : "What's counted"}
-          </button>
+          </Button>
           <Button disabled={dismiss.isPending} onClick={() => dismiss.mutate()}>
             OK
           </Button>
