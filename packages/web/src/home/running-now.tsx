@@ -18,10 +18,12 @@ import { projectStateOf } from "@/lib/state-words";
 import { limitWaitLine } from "@/project/limit-wait";
 import { activityText, capitalised, stageName } from "@/project/summary";
 import { useLiveProject } from "@/project/use-live";
+import { overallProgress } from "@/project/workspace";
 import { projectQuery } from "@/queries";
 
-// One run going now, as Home shows it: its steps with their lamps and times, and the images as
-// they land. It rides the project's own event stream, so a step lighting up or an image
+// One run going now, as Home shows it: where the whole run stands ("Step 2 of 4 · Narration ·
+// about 4 min left on this step"), its steps with their state words and times, and the images
+// as they land. It rides the project's own event stream, so a step lighting up or an image
 // arriving shows here in the same moment it does on the project page.
 
 const stepTone: Readonly<Record<Stage["state"], Step["tone"]>> = {
@@ -71,6 +73,29 @@ export function runningDetail(stage: Stage, now: number): string | undefined {
   return `${counted}${etaLabel(eta)}`;
 }
 
+// "Step 2 of 4 · Narration · about 4 min left on this step": where the whole run stands,
+// counted in the project page's sections (`overallProgress`), the step at work and its own time
+// left when there is something to go by. The run's total time left is not known yet: the
+// estimates are per step.
+export function runLine(
+  stages: readonly Stage[],
+  now: number,
+  nameOf: (kind: StageKind) => string,
+): string | undefined {
+  const running = stages.find((stage) => stage.state === "running");
+  if (running === undefined) return undefined;
+  const { completed, total } = overallProgress(stages);
+  const eta = stageEta(running, now);
+  const label = eta === undefined || eta.basis === "unknown" ? undefined : etaLabel(eta);
+  return [
+    total === 0 ? undefined : `Step ${String(Math.min(completed + 1, total))} of ${String(total)}`,
+    nameOf(running.kind),
+    label === undefined ? undefined : label.endsWith(" left") ? `${label} on this step` : label,
+  ]
+    .filter((part) => part !== undefined)
+    .join(" · ");
+}
+
 export function RunningProject({
   project,
   now,
@@ -93,7 +118,6 @@ export function RunningProject({
     .filter((output) => output.role === "image")
     .toSorted((left, right) => (left.meta.index ?? 0) - (right.meta.index ?? 0));
   const drawing = stages.find((stage) => stage.kind === "images" && stage.state === "running");
-  const running = stages.find((stage) => stage.state === "running");
   // "Waiting for Codex limits (resets at 14:00)": the run goes on by itself, so it stays here.
   const waiting = limitWaitLine(project.limitWaits);
   // The last few that landed, and a tile for the one being drawn.
@@ -106,25 +130,29 @@ export function RunningProject({
     time: elapsed(stage.startedAt, stage.finishedAt, now),
     detail: runningDetail(stage, now),
   }));
+  const line = runLine(stages, now, nameOf);
   return (
     <li className={`sl-home-run ${hitArea}`}>
       <div className="flex min-w-0 flex-col gap-3">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <div className="sl-row__title text-[17px]">
-            <Link to="/projects/$projectId" params={{ projectId: project.id }}>
-              {project.title}
-            </Link>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <div className="sl-row__title text-[17px]">
+              <Link to="/projects/$projectId" params={{ projectId: project.id }}>
+                {project.title}
+              </Link>
+            </div>
+            {project.status === "paused" ? (
+              <Status tone="waiting">Paused</Status>
+            ) : project.status === "pending" ? (
+              <Status tone="waiting">{projectStateOf(project).word}</Status>
+            ) : waiting !== undefined ? (
+              <Status tone="waiting">{waiting}</Status>
+            ) : (
+              <Status tone="running">Running</Status>
+            )}
           </div>
-          {project.status === "paused" ? (
-            <Status tone="waiting">Paused</Status>
-          ) : project.status === "pending" ? (
-            <Status tone="waiting">{projectStateOf(project).word}</Status>
-          ) : waiting !== undefined ? (
-            <Status tone="waiting">{waiting}</Status>
-          ) : (
-            <Status tone="running">
-              {running === undefined ? "Running" : nameOf(running.kind)}
-            </Status>
+          {line === undefined || line === "" ? null : (
+            <p className="m-0 text-small text-ink-2 tabular-nums">{line}</p>
           )}
         </div>
         {shown.length === 0 && drawing === undefined ? null : (

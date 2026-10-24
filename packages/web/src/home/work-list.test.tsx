@@ -1,14 +1,14 @@
 import type { ProjectListing } from "@app/slices/admission/model.js";
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { ToastProvider } from "@/components/kit/toast";
-import { type Answer, jsonAnswer, problemAnswer, renderRouted, testDeps } from "@/test-app";
-import { WorkList } from "./work-list.js";
+import { TextLink } from "@/components/kit/link";
+import { renderRouted, testDeps } from "@/test-app";
+import { finishedLine, lengthWords, madeWords } from "./finished-words.js";
+import { ReadyList } from "./work-list.js";
 
 afterEach(cleanup);
 
-function ready(id: string, title: string): ProjectListing {
+function ready(id: string, title: string, over: Partial<ProjectListing> = {}): ProjectListing {
   return {
     id,
     title,
@@ -29,80 +29,108 @@ function ready(id: string, title: string): ProjectListing {
     },
     createdAt: "2026-09-02T19:14:00.000Z",
     updatedAt: "2026-09-02T19:14:00.000Z",
+    finishedAt: "2026-09-27T17:22:21.000Z",
+    durationSeconds: 185,
+    outputs: { video: true, shorts: 2, pdf: true, audio: false },
+    ...over,
   };
 }
 
-function render(list: readonly ProjectListing[], routes: Record<string, Answer>) {
-  return renderRouted(
-    <ToastProvider>
-      <WorkList decisions={[]} failed={[]} ready={list} />
-    </ToastProvider>,
-    testDeps(routes),
-  );
+function row(title: string): HTMLElement {
+  const item = screen.getByRole("link", { name: title }).closest("li");
+  if (item === null) throw new Error(`no row for ${title}`);
+  return item;
 }
 
-function bar(): HTMLElement {
-  const found = document.querySelector<HTMLElement>("[data-slot='selection-bar']");
-  if (found === null) throw new Error("no selection bar");
-  return found;
-}
-
-describe("Ready to upload on Home", () => {
-  it("marks the ticked videos uploaded together, and Undo puts them back", async () => {
-    const user = userEvent.setup();
-    const calls: { id: string; uploaded: unknown }[] = [];
-    const answer = (id: string) => async (request: Request) => {
-      calls.push({ id, uploaded: ((await request.json()) as { uploaded: unknown }).uploaded });
-      return jsonAnswer({ uploadedAt: "2026-09-04T10:00:00.000Z" })(request);
-    };
-    render([ready("p1", "Rope Tricks"), ready("p2", "Knots"), ready("p3", "Sailing")], {
-      "PUT /api/projects/p1/uploaded": answer("p1"),
-      "PUT /api/projects/p2/uploaded": answer("p2"),
-      "PUT /api/projects/p3/uploaded": answer("p3"),
-    });
-    const go = within(await waitFor(bar)).getByRole("button", { name: "Mark selected uploaded" });
-    expect(go.hasAttribute("disabled")).toBe(true);
-    await user.click(screen.getByRole("checkbox", { name: "Select row: Rope Tricks" }));
-    await user.click(screen.getByRole("checkbox", { name: "Select row: Sailing" }));
-    expect(within(bar()).getByText("2 of 3 videos ready to upload selected")).not.toBeNull();
-    await user.click(go);
-    await waitFor(() =>
-      expect(calls).toEqual([
-        { id: "p1", uploaded: true },
-        { id: "p3", uploaded: true },
-      ]),
-    );
-    expect(
-      await screen.findByText(/Marked 2 videos uploaded\. They are off Needs you/),
-    ).not.toBeNull();
-    await user.click(screen.getByRole("button", { name: "Undo" }));
-    await waitFor(() =>
-      expect(calls.slice(2)).toEqual([
-        { id: "p1", uploaded: false },
-        { id: "p3", uploaded: false },
-      ]),
-    );
-  });
-
-  it("names a video that wasn't marked and how to try again", async () => {
-    const user = userEvent.setup();
-    render([ready("p1", "Rope Tricks"), ready("p2", "Knots")], {
-      "PUT /api/projects/p1/uploaded": jsonAnswer({ uploadedAt: "2026-09-04T10:00:00.000Z" }),
-      "PUT /api/projects/p2/uploaded": problemAnswer("The project is gone.", 404),
-    });
-    await user.click(within(await waitFor(bar)).getByRole("checkbox", { name: "Select all" }));
-    await user.click(within(bar()).getByRole("button", { name: "Mark selected uploaded" }));
-    expect(
-      await screen.findByText(
-        /1 video wasn't marked uploaded: "Knots": .*Press the button again\./,
-      ),
-    ).not.toBeNull();
-  });
-
-  it("offers no selection for a single video", async () => {
-    render([ready("p1", "Rope Tricks")], {});
+describe("Ready on Home", () => {
+  // The finished video is greeted with what a person does with one: watch it, download it.
+  it("offers Watch and Download video on each finished video, with what it made and when", async () => {
+    renderRouted(<ReadyList ready={[ready("p1", "Rope Tricks")]} primary />, testDeps({}));
     await screen.findByRole("link", { name: "Rope Tricks" });
-    expect(document.querySelector("[data-slot='selection-bar']")).toBeNull();
-    expect(screen.queryByRole("checkbox")).toBeNull();
+    const item = row("Rope Tricks");
+    expect(within(item).getByText("Ready to upload")).not.toBeNull();
+    expect(
+      within(item).getByText(/^3:05 · 16:9 · video \+ 2 shorts \+ PDF · finished /),
+    ).not.toBeNull();
+    const watch = within(item).getByRole("link", { name: "Watch" });
+    expect(watch.getAttribute("href")).toBe("/projects/p1?section=video");
+    expect(watch.className).toContain("sl-btn--primary");
+    const download = within(item).getByRole("link", { name: "Download video" });
+    expect(download.getAttribute("href")).toMatch(/\/files\/p1\/video$/);
+    expect(download.hasAttribute("download")).toBe(true);
+    // No upload chores beside the video.
+    expect(within(item).queryByRole("button", { name: /Mark uploaded|Prepare upload/ })).toBeNull();
+  });
+
+  // One verdict for a video that lost a step: the project page's own word, the step named, and
+  // the way to it.
+  it("says Done with problems on a video that lost a step, names it and links to it", async () => {
+    renderRouted(
+      <ReadyList
+        ready={[ready("p2", "Knots", { status: "partial", failedSteps: ["document"] })]}
+        primary={false}
+      />,
+      testDeps({}),
+    );
+    await screen.findByRole("link", { name: "Knots" });
+    const item = row("Knots");
+    expect(within(item).getByText("Done with problems")).not.toBeNull();
+    expect(within(item).getByText("PDF failed")).not.toBeNull();
+    expect(within(item).getByRole("link", { name: "See what failed" }).getAttribute("href")).toBe(
+      "/projects/p2?section=document",
+    );
+    expect(within(item).getByRole("link", { name: "Watch" }).className).not.toContain(
+      "sl-btn--primary",
+    );
+  });
+
+  it("shows a sample as a sample, with Watch only", async () => {
+    renderRouted(
+      <ReadyList
+        title="Finished samples"
+        ready={[ready("s1", "The Library of Alexandria", { sample: true })]}
+        primary={false}
+      />,
+      testDeps({}),
+    );
+    const section = await screen.findByRole("region", { name: "Finished samples" });
+    const item = row("The Library of Alexandria");
+    expect(within(item).getByText("Sample")).not.toBeNull();
+    expect(within(item).getByRole("link", { name: "Watch" })).not.toBeNull();
+    expect(within(section).queryByRole("link", { name: "Download video" })).toBeNull();
+  });
+
+  it("shows six and links to the rest", async () => {
+    const many = Array.from({ length: 8 }, (_, index) =>
+      ready(`p${String(index)}`, `Video ${String(index)}`),
+    );
+    renderRouted(
+      <ReadyList
+        ready={many}
+        primary
+        more={<TextLink to="/projects">See all 8 ready to upload</TextLink>}
+      />,
+      testDeps({}),
+    );
+    await screen.findByRole("link", { name: "Video 0" });
+    expect(screen.getAllByRole("link", { name: "Watch" })).toHaveLength(6);
+    expect(screen.getByRole("link", { name: "See all 8 ready to upload" })).not.toBeNull();
+  });
+});
+
+describe("the finished line", () => {
+  it("says the length, the shape, what was made and when it finished", () => {
+    const now = new Date("2026-09-30T12:00:00.000Z");
+    expect(lengthWords(185)).toBe("3:05");
+    expect(lengthWords(3730)).toBe("1:02:10");
+    expect(madeWords({ video: true, shorts: 1, pdf: false, audio: true })).toBe(
+      "video + 1 short + audio",
+    );
+    expect(madeWords({ video: false, shorts: 0, pdf: false, audio: false })).toBeUndefined();
+    expect(finishedLine(ready("p1", "Rope Tricks"), now)).toMatch(
+      /^3:05 · 16:9 · video \+ 2 shorts \+ PDF · finished \S+/,
+    );
+    // Nothing known yet but its shape.
+    expect(finishedLine({ format: "9:16" }, now)).toBe("9:16");
   });
 });

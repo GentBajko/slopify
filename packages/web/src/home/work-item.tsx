@@ -4,39 +4,32 @@ import { ButtonRow } from "@/components/kit/button";
 import { hitArea } from "@/components/kit/list-row";
 import { cn } from "@/lib/utils";
 
-// One row of Home's work list: the picture, its state, the title, at most one short line and
-// the actions. The list is a size container (`sl-home-list`), so a narrow column moves the
-// actions under the text instead of squeezing it to a word per line.
+// One row of a Home list: the picture, the title, then one line with the state in words and
+// what the row is about, and the actions on the right. Rows sit between hairlines, dense enough
+// to show eight or more in a screen. The list is a size container (`sl-home-list`), so a narrow
+// column moves the actions under the text instead of squeezing it to a word per line.
 export function WorkItem({
   lead,
   status,
   title,
   detail,
   action,
-  check,
 }: {
   readonly lead: ReactNode;
   readonly status: ReactNode;
   readonly title: ReactNode;
   readonly detail?: ReactNode;
   readonly action: ReactNode;
-  // A selection checkbox, beside the state so the grid keeps its columns.
-  readonly check?: ReactNode;
 }): ReactElement {
   return (
     <li className={cn("sl-home-item", hitArea)}>
       {lead}
-      <div className="flex min-w-0 flex-col gap-1">
-        {check === undefined ? (
-          status
-        ) : (
-          <div className="flex items-center gap-2">
-            {check}
-            {status}
-          </div>
-        )}
-        <div className="sl-row__title text-[17px]">{title}</div>
-        {detail === undefined ? null : <div className="text-small text-ink-2">{detail}</div>}
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <div className="sl-row__title">{title}</div>
+        <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5 text-small text-ink-2">
+          {status}
+          {detail === undefined ? null : <span className="min-w-0">{detail}</span>}
+        </div>
       </div>
       <ButtonRow className="sl-home-item__action">{action}</ButtonRow>
     </li>

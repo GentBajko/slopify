@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { startOfWeek } from "@/home/api";
 import { spentLabel } from "@/home/week";
+import { freshDraftDocument } from "@/play/draft-state";
 import { revisionView } from "@/project/revision-fixture";
 import { type Answer, jsonAnswer, problemAnswer, renderRouted, testDeps } from "@/test-app";
 import { HomeRoute } from "./home.js";
@@ -222,7 +223,15 @@ describe("home", () => {
       "/calendar",
     );
     expect(await within(needs).findByText("Failed · Images")).not.toBeNull();
-    expect(within(needs).getByText("3 decisions waiting · 1 ready to upload")).not.toBeNull();
+    expect(within(needs).getByText("3 decisions")).not.toBeNull();
+    // The finished video is not a chore under Needs you: it has its own Ready section, first.
+    expect(within(needs).queryByRole("link", { name: "Ashurbanipal" })).toBeNull();
+    const ready = screen.getByRole("region", { name: "Ready" });
+    expect(ready.compareDocumentPosition(needs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // A decision waits, so the column's one lime action is the decision's, not Watch.
+    expect(within(ready).getByRole("link", { name: "Watch" }).className).not.toContain(
+      "sl-btn--primary",
+    );
   });
 
   // A schedule's prepared project waits for its day and a run parked on
@@ -254,7 +263,7 @@ describe("home", () => {
     expect(within(needs).queryByText("Nefertiti")).toBeNull();
     expect(within(needs).queryByText("Hatshepsut")).toBeNull();
     // The agent's run goes on by itself, so it sits with the running ones and says why it stopped.
-    const running = screen.getByRole("region", { name: "Running now" });
+    const running = screen.getByRole("region", { name: "Running" });
     expect(within(running).getByText("Hatshepsut")).not.toBeNull();
     expect(within(running).getByText("Waiting for the agent")).not.toBeNull();
   });
@@ -288,7 +297,7 @@ describe("home", () => {
         }),
       }),
     );
-    const running = await screen.findByRole("region", { name: "Running now" });
+    const running = await screen.findByRole("region", { name: "Running" });
     expect(await within(running).findByText("Waiting for the agent")).not.toBeNull();
     const needs = screen.getByRole("region", { name: "Needs you" });
     expect(await within(needs).findByText("Failed · Narration")).not.toBeNull();
@@ -305,10 +314,10 @@ describe("home", () => {
         }),
       }),
     );
-    const running = await screen.findByRole("region", { name: "Running now" });
+    const running = await screen.findByRole("region", { name: "Running" });
     expect(await within(running).findByText("Hatshepsut")).not.toBeNull();
     expect(within(running).getAllByText(/Hatshepsut/)).toHaveLength(1);
-    expect(within(running).queryByText(/Queued, waiting to start/)).toBeNull();
+    expect(within(running).queryByRole("region", { name: "Waiting to start" })).toBeNull();
   });
 
   // A restart stopped it: Home says so and continues it, as its page would.
@@ -472,9 +481,12 @@ describe("home", () => {
 
   it("shows the running run's steps and the images as they land", async () => {
     renderRouted(<HomeRoute />, deps());
-    const running = await screen.findByRole("region", { name: "Running now" });
+    const running = await screen.findByRole("region", { name: "Running" });
     const steps = await within(running).findByRole("list", { name: "Steps of Sargon" });
     expect(await within(steps).findByText("Article")).not.toBeNull();
+    // Where the whole run stands, and the chip says its state, not the step's name.
+    expect(within(running).getByText("Step 2 of 3 · Images")).not.toBeNull();
+    expect(within(running).getAllByText("Running").length).toBeGreaterThan(0);
     expect(within(steps).getByText("7 min")).not.toBeNull();
     // No start time to measure the rate against: the time left is unknown, and says so.
     expect(within(steps).getByText("2 of 8 · time left unknown")).not.toBeNull();
@@ -511,47 +523,54 @@ describe("home", () => {
     expect(await within(steps).findByText("2 of 8 · about 12 min left")).not.toBeNull();
   });
 
-  it("lists what is coming up, what is ready to upload and this week's numbers", async () => {
-    const user = userEvent.setup();
+  it("lists what is coming up, what is ready and this week's numbers", async () => {
     renderRouted(<HomeRoute />, deps());
     const coming = await screen.findByRole("region", { name: "Coming up" });
     expect(await within(coming).findByText(/· Nefertiti$/)).not.toBeNull();
-    // Finished videos share the work list with the decisions, after them.
-    const ready = await screen.findByRole("region", { name: "Needs you" });
+    // Finished videos have their own section, with Watch and the video's state in words.
+    const ready = await screen.findByRole("region", { name: "Ready" });
     expect(within(ready).getByRole("link", { name: "Ashurbanipal" })).not.toBeNull();
     expect(within(ready).getByText("Ready to upload")).not.toBeNull();
+    expect(within(ready).getByRole("link", { name: "Watch" }).getAttribute("href")).toBe(
+      "/projects/p-done?section=video",
+    );
     // Marked uploaded: not listed.
     expect(within(ready).queryByRole("link", { name: "Hypatia" })).toBeNull();
-    expect(within(ready).getByRole("button", { name: "Prepare upload" })).not.toBeNull();
-    // The week's totals are on request.
-    const week = screen.getByRole("region", { name: "This week" });
-    expect(within(week).queryByText("$9.40")).toBeNull();
-    await user.click(within(week).getByRole("button", { name: "Show totals" }));
+    // The week's numbers are in the open, never behind a button.
+    const week = await screen.findByRole("region", { name: "This week" });
     expect(await within(week).findByText("$9.40")).not.toBeNull();
-    expect(within(week).getByText("spent · ~$31.00 via API")).not.toBeNull();
+    expect(within(week).getByText("3 videos")).not.toBeNull();
+    expect(within(week).getByText(/spent · ~\$31\.00 via API/)).not.toBeNull();
     expect(within(week).getByRole("meter", { name: "Weekly Codex limit" })).not.toBeNull();
+    expect(within(week).queryByRole("button")).toBeNull();
+    // A schedule exists, so the calendar is a press away.
+    expect(screen.getByRole("link", { name: "Open calendar" }).getAttribute("href")).toBe(
+      "/calendar",
+    );
   });
 
-  it("keeps the bundled samples off Ready to upload", async () => {
+  // Once the person has finished a video of their own, the samples step aside, and a sample is
+  // never Ready to upload.
+  it("keeps the bundled samples off Ready", async () => {
     renderRouted(
       <HomeRoute />,
       deps({
-        "GET /api/onboarding": jsonAnswer({
-          show: false,
-          sampleProjectId: "p-done",
-          samples: { library: "p-done", audiobook: null, podcast: null },
-          clis: [],
-          packs: [],
+        "GET /api/projects": jsonAnswer({
+          projects: [
+            listing("p-done", "Ashurbanipal", "done", { progress: 1, sample: true }),
+            listing("p-up", "Hypatia", "done", {
+              progress: 1,
+              uploadedAt: "2026-09-26T10:00:00.000Z",
+            }),
+            listing("p-run", "Sargon", "running", { progress: 0.4 }),
+          ],
         }),
       }),
     );
-    const ready = await screen.findByRole("region", { name: "Needs you" });
-    // Loaded (the projects and which of them are samples), and only then without the sample.
-    await waitFor(() => {
-      expect(within(ready).getByText("3 decisions waiting")).not.toBeNull();
-      expect(screen.getByText("Sargon")).not.toBeNull();
-      expect(within(ready).queryByRole("link", { name: "Ashurbanipal" })).toBeNull();
-    });
+    expect(await screen.findByRole("region", { name: "Running" })).not.toBeNull();
+    expect(screen.queryByRole("region", { name: "Ready" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Finished samples" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Ashurbanipal" })).toBeNull();
   });
 
   it("says under Running now when a run waits for a CLI's limits", async () => {
@@ -576,7 +595,7 @@ describe("home", () => {
         }),
       }),
     );
-    const running = await screen.findByRole("region", { name: "Running now" });
+    const running = await screen.findByRole("region", { name: "Running" });
     const time = resetsAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
     expect(
       await within(running).findByText(`Waiting for Codex limits (resets at ${time})`),
@@ -626,7 +645,7 @@ describe("home", () => {
         }),
       }),
     );
-    const running = await screen.findByRole("region", { name: "Running now" });
+    const running = await screen.findByRole("region", { name: "Running" });
     expect(await within(running).findByText("Sargon")).not.toBeNull();
     expect(within(running).queryByText("Hatshepsut")).toBeNull();
   });
@@ -644,7 +663,7 @@ describe("home", () => {
     expect(await within(needs).findByText("Paused")).not.toBeNull();
     expect(within(needs).getByRole("link", { name: "Open to continue" })).not.toBeNull();
     // Nothing runs, so there is no Running now section at all.
-    expect(screen.queryByRole("region", { name: "Running now" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Running" })).toBeNull();
   });
 
   it("links to every running run past the first three and names the queued ones", async () => {
@@ -669,13 +688,14 @@ describe("home", () => {
         ),
       }),
     );
-    const region = await screen.findByRole("region", { name: "Running now" });
+    const region = await screen.findByRole("region", { name: "Running" });
     const all = await within(region).findByRole("link", { name: "See all 4 running" });
     expect(all.getAttribute("href")).toBe("/projects?show=running");
-    expect(within(region).getByText("Hypatia, Cleopatra and 1 more")).not.toBeNull();
-    expect(within(region).getByRole("link", { name: "See queued" }).getAttribute("href")).toBe(
-      "/projects?show=queued",
-    );
+    // The videos waiting to start, by name, in the order the queue starts them.
+    const waiting = within(region).getByRole("region", { name: "Waiting to start" });
+    expect(within(waiting).getByText("3 videos, in the order they start")).not.toBeNull();
+    for (const name of ["Hypatia", "Cleopatra", "Nefertiti"])
+      expect(within(waiting).getByRole("link", { name })).not.toBeNull();
   });
 
   // Paused runs sit under Needs you on both screens, so the link's Running filter holds the runs
@@ -687,7 +707,7 @@ describe("home", () => {
       listing("p-pause", "Xerxes", "paused", { progress: 0.5 }),
     ];
     renderRouted(<HomeRoute />, deps({ "GET /api/projects": jsonAnswer({ projects }) }));
-    const region = await screen.findByRole("region", { name: "Running now" });
+    const region = await screen.findByRole("region", { name: "Running" });
     const all = await within(region).findByRole("link", { name: "See all 5 running" });
     const filter = projectFilterOf(
       new URL(all.getAttribute("href") ?? "", "http://x").searchParams.get("show"),
@@ -708,7 +728,7 @@ describe("home", () => {
     const needs = await screen.findByRole("region", { name: "Needs you" });
     expect(await within(needs).findByText("Hypatia")).not.toBeNull();
     // Nothing runs or waits its turn, so Running now has nothing to show.
-    expect(screen.queryByRole("region", { name: "Running now" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Running" })).toBeNull();
   });
 
   it("shows queued runs instead of the empty state when nothing runs yet", async () => {
@@ -718,24 +738,148 @@ describe("home", () => {
         "GET /api/projects": jsonAnswer({ projects: [listing("q1", "Hypatia", "pending")] }),
       }),
     );
-    const region = await screen.findByRole("region", { name: "Running now" });
+    const region = await screen.findByRole("region", { name: "Running" });
     expect(await within(region).findByText("Hypatia")).not.toBeNull();
     expect(within(region).queryByText("Start the next video")).toBeNull();
     expect(within(region).queryByRole("link", { name: /See all/ })).toBeNull();
   });
 
-  it("marks a finished video uploaded", async () => {
-    const user = userEvent.setup();
-    const put = vi.fn(jsonAnswer({ uploadedAt: "2026-09-27T10:00:00.000Z" }));
-    renderRouted(<HomeRoute />, deps({ "PUT /api/projects/p-done/uploaded": put }));
-    const ready = await screen.findByRole("region", { name: "Needs you" });
-    await user.click(await within(ready).findByRole("button", { name: "Mark uploaded" }));
-    await waitFor(() => expect(put).toHaveBeenCalledOnce());
+  // "Queue 3 videos": the waiting ones are listed in the queue's order, each moved in words.
+  it("lists the queued videos in the queue's order under Running, with Earlier and Later", async () => {
+    const running = body({ status: "running", stages: [], outputs: [] });
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/projects": jsonAnswer({
+          projects: [
+            listing("r1", "Sargon", "running", { progress: 0.2 }),
+            listing("q1", "Cleopatra", "pending"),
+            listing("q2", "Hypatia", "pending"),
+          ],
+        }),
+        "GET /api/projects/r1": jsonAnswer({
+          ...running,
+          project: { ...running.project, id: "r1" },
+        }),
+        "GET /api/projects/queue": jsonAnswer({
+          queue: [
+            { projectId: "r1", batchId: "b", position: 0, state: "active" },
+            { projectId: "q2", batchId: "b", position: 1, state: "queued" },
+            { projectId: "q1", batchId: "b", position: 2, state: "queued" },
+          ],
+        }),
+      }),
+    );
+    const list = await screen.findByRole("list", { name: "Waiting to start" });
+    await within(list).findByRole("link", { name: "Hypatia" });
     expect(
-      JSON.parse((await (put.mock.calls[0]?.[0] as Request | undefined)?.text()) ?? "{}"),
-    ).toEqual({
-      uploaded: true,
-    });
+      within(list)
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toEqual(["Hypatia", "Cleopatra"]);
+    expect(
+      within(list).getByRole("button", { name: "Move Hypatia later in the queue" }).textContent,
+    ).toBe("Later");
+  });
+
+  // Day one: nothing of the person's own, so Home says what a video needs, offers the first
+  // video, and shows the finished samples to watch, instead of an empty page.
+  it("on day one shows what a video needs, Make your first video and the finished samples", async () => {
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/projects": jsonAnswer({
+          projects: [
+            listing("s1", "The Library of Alexandria", "done", {
+              progress: 1,
+              sample: true,
+              durationSeconds: 185,
+              outputs: { video: true, shorts: 2, pdf: true, audio: false },
+            }),
+            listing("s2", "The Antikythera Mechanism", "done", { progress: 1, sample: true }),
+          ],
+        }),
+        "GET /api/schedules": jsonAnswer({ schedules: [] }),
+        "GET /api/home/week": jsonAnswer({
+          since: "x",
+          videos: 0,
+          calls: 0,
+          cost: 0,
+          unpriced: 0,
+          studioCost: 0,
+          apiEquivalent: null,
+          plans: [],
+        }),
+        "GET /api/onboarding": jsonAnswer({
+          show: false,
+          settle: false,
+          needs: {
+            text: { by: "Claude Code CLI", how: "sign-in" },
+            voice: { by: "OpenAI", how: "key" },
+            images: { by: "OpenAI", how: "key" },
+            gaps: [],
+          },
+          sampleProjectId: "s1",
+          samples: { library: "s1", audiobook: null, podcast: "s2" },
+          packs: [],
+        }),
+      }),
+    );
+    const first = await screen.findByRole("region", { name: "Your first video" });
+    expect(await within(first).findByRole("list", { name: "What a short needs" })).not.toBeNull();
+    const make = within(first).getByRole("link", { name: "Make your first video" });
+    expect(make.getAttribute("href")).toBe("/play");
+    // Nothing is missing: it is the screen's one lime action.
+    await waitFor(() => expect(make.className).toContain("sl-btn--primary"));
+    const samples = screen.getByRole("region", { name: "Finished samples" });
+    expect(within(samples).getAllByRole("link", { name: "Watch" })).toHaveLength(2);
+    expect(within(samples).getByText(/^3:05 · 16:9 · video \+ 2 shorts \+ PDF/)).not.toBeNull();
+    // No contradiction, no calendar without a schedule, no second Create.
+    expect(screen.queryByText(/Nothing needs you/)).toBeNull();
+    expect(screen.queryByRole("link", { name: "Open calendar" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Create" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "This week" })).toBeNull();
+  });
+
+  it("offers the templates to start from, each opening Create with it picked", async () => {
+    const user = userEvent.setup();
+    const opened: string[] = [];
+    const made: string[] = [];
+    renderRouted(
+      <HomeRoute
+        startFrom={{
+          blocked: false,
+          onApplied: (draftId) => {
+            opened.push(draftId);
+          },
+        }}
+      />,
+      deps({
+        [`POST /api/project-templates/${templateId}/instantiate`]: async (request) => {
+          const { id } = (await request.json()) as { id: string };
+          made.push(id);
+          return Response.json({
+            draft: {
+              draft: {
+                id,
+                version: 1,
+                createdAt: "now",
+                updatedAt: "now",
+                document: freshDraftDocument,
+              },
+              attachments: [],
+              review: null,
+              pendingStart: null,
+              start: null,
+            },
+          });
+        },
+      }),
+    );
+    const section = await screen.findByRole("region", { name: "Start from a template" });
+    await user.click(within(section).getByRole("button", { name: "Make a video with History" }));
+    await waitFor(() => expect(opened).toEqual(made));
+    expect(made).toHaveLength(1);
   });
 });
 
@@ -752,25 +896,38 @@ describe("home's load states", () => {
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("Your projects didn't load");
     expect(alert.textContent).toContain("The server stopped answering.");
-    expect(screen.queryByText("Nothing needs you and nothing is running")).toBeNull();
+    expect(screen.queryByText("Nothing is ready, waiting or running")).toBeNull();
     expect(screen.queryByRole("region", { name: "Needs you" })).toBeNull();
     fail = false;
     await user.click(screen.getByRole("button", { name: "Retry" }));
-    expect(await screen.findByRole("region", { name: "Running now" })).not.toBeNull();
+    expect(await screen.findByRole("region", { name: "Running" })).not.toBeNull();
     expect(screen.queryByText("Your projects didn't load", { exact: false })).toBeNull();
   });
 
-  it("says once that nothing needs you when that is true, and hides empty sections", async () => {
+  it("says once that nothing is ready, waiting or running when that is true, and hides empty sections", async () => {
     renderRouted(
       <HomeRoute />,
       deps({
-        "GET /api/projects": jsonAnswer({ projects: [] }),
+        "GET /api/projects": jsonAnswer({
+          projects: [
+            listing("p-up", "Hypatia", "done", {
+              progress: 1,
+              uploadedAt: "2026-09-26T10:00:00.000Z",
+            }),
+          ],
+        }),
         "GET /api/schedules": jsonAnswer({ schedules: [] }),
       }),
     );
-    expect(await screen.findByText("Nothing needs you and nothing is running")).not.toBeNull();
+    expect(await screen.findByText("Nothing is ready, waiting or running")).not.toBeNull();
+    expect(
+      screen
+        .getByRole("link", { name: "See every finished video in Projects" })
+        .getAttribute("href"),
+    ).toBe("/projects?sort=finished");
+    expect(screen.queryByRole("region", { name: "Ready" })).toBeNull();
     expect(screen.queryByRole("region", { name: "Needs you" })).toBeNull();
-    expect(screen.queryByRole("region", { name: "Running now" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Running" })).toBeNull();
     // No schedules: nothing to come up.
     await waitFor(() => expect(screen.queryByRole("region", { name: "Coming up" })).toBeNull());
   });

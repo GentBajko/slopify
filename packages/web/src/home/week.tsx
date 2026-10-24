@@ -1,14 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { type ReactElement, useId, useState } from "react";
+import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/kit/button";
-import { LoadingBlock, QueryState } from "@/components/kit/query-state";
+import { QueryState } from "@/components/kit/query-state";
 import { SectionHead } from "@/components/kit/section-head";
-import { Meter, Stat, Stats } from "@/components/kit/stats";
-import { usd } from "@/lib/format";
+import { Meter } from "@/components/kit/stats";
+import { plural, usd } from "@/lib/format";
 import { startOfWeek, type WeekSummary, weekQuery } from "./api.js";
 
-// "$9.40", with the unpriced calls said rather than read as free.
+// "$9.40 spent", with what it would have cost through the API and the unpriced calls said
+// rather than read as free.
 export function spentLabel(week: WeekSummary): string {
   const via = week.apiEquivalent === null ? "" : ` · ~${usd(week.apiEquivalent)} via API`;
   const unknown =
@@ -20,109 +20,61 @@ export function spentLabel(week: WeekSummary): string {
   return `spent${via}${unknown}${studio}`;
 }
 
-// Home's "This week": videos made since Monday, what they cost and would have cost through the
-// API, and how much of each CLI plan's weekly allowance is used now.
+// Nothing made, spent or measured this week: the section has nothing to say yet.
+function quiet(week: WeekSummary): boolean {
+  return (
+    week.videos === 0 &&
+    week.cost === 0 &&
+    week.unpriced === 0 &&
+    week.plans.every((plan) => plan.weeklyPercent === null)
+  );
+}
+
+// Home's "This week", in the open: "3 videos · $9.40 spent · ~$31.00 via API", then how much of
+// each CLI plan's weekly allowance is used. With a channel picked, the whole account's spend sits
+// beside it, so a filtered Home never reads as "nothing was spent". Before anything was made it
+// shows nothing.
 export function ThisWeek({ channelId }: { readonly channelId: string | null }): ReactElement {
   const { api } = useApp();
   const since = startOfWeek().toISOString();
   const week = useQuery(weekQuery(api, since, channelId));
-  // One channel's spend can be $0 while another's is not; the whole account's total sits
-  // beside it so a filtered Home never reads as "nothing was spent".
   const everything = useQuery({ ...weekQuery(api, since, null), enabled: channelId !== null });
   const total = channelId === null ? undefined : everything.data;
   return (
-    <QueryState
-      query={week}
-      what="This week's numbers"
-      compact
-      loading={<LoadingBlock label="Loading this week's numbers…" rows={1} rowClassName="h-20" />}
-    >
-      {(data) => (
-        <Stats className="sl-home-stats">
-          <Stat value={String(data.videos)} label="videos made" />
-          <Stat
-            value={usd(data.cost)}
-            label={`${spentLabel(data)}${
-              total === undefined ? "" : ` · ${usd(total.cost)} across all channels`
-            }`}
-          />
-          {data.plans
-            .filter((plan) => plan.weeklyPercent !== null)
-            .map((plan) => {
-              const percent = Math.round(plan.weeklyPercent ?? 0);
-              return (
-                <Stat
-                  key={plan.account}
-                  value={`${String(percent)}%`}
-                  label={`weekly ${plan.name} limit`}
-                >
-                  <Meter
-                    value={percent / 100}
-                    label={`Weekly ${plan.name} limit`}
-                    valueText={`${String(percent)}% of your weekly ${plan.name} limit`}
-                    tone={percent >= 80 ? "waiting" : "accent"}
-                  />
-                </Stat>
-              );
-            })}
-        </Stats>
-      )}
+    <QueryState query={week} what="This week's numbers" compact loading={null}>
+      {(data) =>
+        quiet(data) ? null : (
+          <section aria-label="This week" className="flex flex-col gap-2">
+            <SectionHead title="This week" meta="Since Monday" />
+            <p className="m-0 text-small text-ink-2 tabular-nums">
+              <span className="font-semibold text-ink">
+                {plural(data.videos, "video", "videos")}
+              </span>
+              {" · "}
+              <span className="font-semibold text-ink">{usd(data.cost)}</span>
+              {` ${spentLabel(data)}${total === undefined ? "" : ` · ${usd(total.cost)} across all channels`}`}
+            </p>
+            {data.plans
+              .filter((plan) => plan.weeklyPercent !== null)
+              .map((plan) => {
+                const percent = Math.round(plan.weeklyPercent ?? 0);
+                return (
+                  <div key={plan.account} className="flex items-center gap-3 text-small">
+                    <span className="w-40 shrink-0 text-ink-2">{`Weekly ${plan.name} limit`}</span>
+                    <Meter
+                      value={percent / 100}
+                      label={`Weekly ${plan.name} limit`}
+                      valueText={`${String(percent)}% of your weekly ${plan.name} limit`}
+                      tone={percent >= 80 ? "waiting" : "accent"}
+                      className="flex-1"
+                    />
+                    <span className="w-10 text-right tabular-nums">{`${String(percent)}%`}</span>
+                  </div>
+                );
+              })}
+          </section>
+        )
+      }
     </QueryState>
-  );
-}
-
-const openKey = "slopify.home.week-open";
-
-function readOpen(): boolean {
-  try {
-    return window.localStorage.getItem(openKey) === "1";
-  } catch {
-    return false;
-  }
-}
-
-// The week's totals on request: folded by default so the work stays first, and remembered in
-// this browser once opened. Folded, nothing is fetched.
-export function WeekTotals({
-  channelId,
-  channelName,
-}: {
-  readonly channelId: string | null;
-  readonly channelName?: string | undefined;
-}): ReactElement {
-  const [open, setOpen] = useState(readOpen);
-  const id = useId();
-  const toggle = (): void => {
-    const next = !open;
-    setOpen(next);
-    try {
-      window.localStorage.setItem(openKey, next ? "1" : "0");
-    } catch {
-      // A blocked storage only forgets the choice.
-    }
-  };
-  return (
-    <section aria-label="This week">
-      <SectionHead
-        title="This week"
-        info="home.this-week"
-        meta={
-          channelId === null
-            ? "Since Monday · every channel"
-            : `Since Monday · ${channelName ?? "this channel"} only`
-        }
-      >
-        <Button
-          variant="quiet"
-          size="small"
-          aria-expanded={open}
-          aria-controls={id}
-          onClick={toggle}
-        >
-          {open ? "Hide totals" : "Show totals"}
-        </Button>
-      </SectionHead>
-      <div id={id}>{open ? <ThisWeek channelId={channelId} /> : null}</div>
-    </section>
   );
 }
