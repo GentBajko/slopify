@@ -77,8 +77,13 @@ const schedule = (id: string, name: string, items: readonly string[]) => ({
   updatedAt: "2026-09-12T00:00:00.000Z",
   deletedAt: null,
 });
+// Lore's template has no version marked ready, so its detail also shows the callout that
+// says its runs are skipped and links to Edit template.
 const schedules = [
-  schedule(scheduleId, "Lore", ["Cleopatra", "Hypatia"]),
+  {
+    ...schedule(scheduleId, "Lore", ["Cleopatra", "Hypatia"]),
+    templateGate: { head: 1, runs: null, gated: true, gate: "unchecked" },
+  },
   schedule(otherId, "Other", ["Imhotep"]),
 ];
 const run = (day: number, index: number | null, topic: string | null, id = scheduleId) => ({
@@ -204,6 +209,7 @@ describe("the planning screens explain every control", () => {
   it("walks Schedules: the list, the detail and the form with every option open", async () => {
     const user = userEvent.setup();
     renderRouted(<SchedulesView />, testDeps(planningRoutes));
+    await screen.findByText("Its runs are skipped: no version of its template is marked ready");
     const waiting = await screen.findByRole("list", { name: "Topics waiting" });
     await user.click(within(waiting).getByRole("button", { name: "Edit" }));
     await screen.findByLabelText("Edit Pyramids");
@@ -315,7 +321,8 @@ describe("the planning screens explain every control", () => {
 
     await user.click(screen.getByRole("tab", { name: "Titles to avoid" }));
     await user.click(await screen.findByRole("button", { name: "Paste titles…" }));
-    await screen.findByLabelText("Titles, one per line");
+    // With a title typed, Add titles is live: still the tab's one lime once a CSV is read too.
+    await user.type(await screen.findByLabelText("Titles, one per line"), "Cleopatra Awakens");
     expectExplained();
     const csv = new File(["Video title\nHistory: Hypatia\n"], "studio.csv", { type: "text/csv" });
     await user.upload(await screen.findByLabelText("YouTube Studio CSV file"), csv);

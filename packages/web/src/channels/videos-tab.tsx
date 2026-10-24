@@ -163,8 +163,10 @@ export function VideosTab({ channelId }: { readonly channelId: string }): ReactE
             <Textarea rows={5} value={text} onChange={(event) => setText(event.target.value)} />
           </Field>
           <div className="flex flex-wrap items-center gap-2">
+            {/* The tab's one lime: Add titles, unless a CSV's ticked titles wait below, whose
+                Add N ticked titles is then the next step. */}
             <Button
-              variant="primary"
+              variant={preview === undefined ? "primary" : "secondary"}
               disabled={busy || text.trim() === ""}
               disabledReason={busy ? "Adding…" : "Paste at least one title"}
               onClick={() => {

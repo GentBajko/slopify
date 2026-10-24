@@ -118,9 +118,10 @@ export function ScheduleDetail({
           tone="waiting"
           className="mt-4"
           title="Its runs are skipped: no version of its template is marked ready"
+          // Secondary: the waiting callout already draws the eye, and New schedule over the
+          // list is the tab's one lime.
           actions={
             <ButtonLink
-              variant="primary"
               size="small"
               to="/templates/$templateId"
               params={{ templateId: schedule.templateId }}
