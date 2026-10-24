@@ -93,13 +93,14 @@ export function NarrationText({
                 className="sl-input pl-9"
               />
             </div>
-            {needle === "" ? null : (
-              <span className="text-small text-ink-2 tabular-nums" aria-live="polite">
-                {hits === 0
+            {/* The words do not look like buttons, so the line beside the box says they play. */}
+            <span className="text-small text-ink-2 tabular-nums" aria-live="polite">
+              {needle === ""
+                ? "Press a line to play from there."
+                : hits === 0
                   ? "No line has it"
                   : `${String(hits)} ${hits === 1 ? "line has it" : "lines have it"} · Enter shows the next`}
-              </span>
-            )}
+            </span>
           </div>
           <Transcript
             lines={lines}

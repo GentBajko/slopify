@@ -876,6 +876,9 @@
     background: var(--btn-soft);
     color: var(--color-ink);
   }
+  .sl-transcript__para--heading.sl-btn {
+    font-weight: 600;
+  }
   .sl-transcript__time {
     margin-right: 8px;
     font-size: 12px;

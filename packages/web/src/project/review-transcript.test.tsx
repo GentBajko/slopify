@@ -116,6 +116,32 @@ it("runs caption lines into paragraphs at sentence ends, pauses and new speakers
   ]);
 });
 
+it("keeps a heading the narration reads out apart from the sentences around it", () => {
+  const media = createRef<HTMLAudioElement>();
+  const line = (key: string, text: string, start: number, end: number) => ({
+    key,
+    text,
+    start,
+    end,
+    shownAt: start,
+    media,
+  });
+  const paragraphs = paragraphsOf([
+    line("a", "A library at the edge of the sea", 0, 2),
+    line("b", "Around three hundred years before our era,", 2.9, 5),
+    line("c", "the city of", 5, 6),
+    line("d", "Alexandria set out to gather books.", 6.1, 8),
+    line("e", "Collecting everything", 8.6, 10),
+    line("f", "Nobody knows how many scrolls it held.", 10.8, 13),
+  ]);
+  expect(paragraphs.map((paragraph) => paragraph.map((one) => one.key).join(""))).toEqual([
+    "a",
+    "bcd",
+    "e",
+    "f",
+  ]);
+});
+
 it("reads a short narration straight down the page, and a long one a page at a time", () => {
   const media = createRef<HTMLAudioElement>();
   const many = (count: number): TranscriptLine[] =>

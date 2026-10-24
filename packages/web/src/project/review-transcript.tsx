@@ -195,15 +195,21 @@ const windowSize = 120;
 const lead = 20;
 
 // Caption lines run together into paragraphs: a new one where the speaker or the player
-// changes, at a pause, or at the end of a sentence once a paragraph has a few lines.
+// changes, at a pause, or at the end of a sentence once a paragraph has a few lines. A heading
+// the narration reads out ("A library at the edge of the sea", then a pause and "Around three
+// hundred years…") is a paragraph of its own, so it never runs into the sentence after it.
 export function paragraphsOf(lines: readonly TranscriptLine[]): readonly TranscriptLine[][] {
   const paragraphs: TranscriptLine[][] = [];
   let current: TranscriptLine[] = [];
-  for (const line of lines) {
+  let afterHeading = false;
+  for (const [index, line] of lines.entries()) {
     const last = current.at(-1);
+    const heading = isHeading(line, lines[index + 1]);
     if (
       last !== undefined &&
-      (line.speaker?.name !== last.speaker?.name ||
+      (heading ||
+        afterHeading ||
+        line.speaker?.name !== last.speaker?.name ||
         line.media !== last.media ||
         line.start - last.end > 1.5 ||
         (current.length >= 4 && /[.!?…]["”’)]?$/u.test(last.text.trim())))
@@ -212,10 +218,26 @@ export function paragraphsOf(lines: readonly TranscriptLine[]): readonly Transcr
       current = [];
     }
     current.push(line);
+    afterHeading = heading;
   }
   if (current.length > 0) paragraphs.push(current);
   return paragraphs;
 }
+
+// A line read as a heading: no closing punctuation, then a pause and a new capitalised line by
+// the same voice. A caption broken mid-sentence runs on without the pause.
+function isHeading(line: TranscriptLine, next: TranscriptLine | undefined): boolean {
+  return (
+    next !== undefined &&
+    next.media === line.media &&
+    next.speaker?.name === line.speaker?.name &&
+    next.start - line.end >= 0.5 &&
+    !endsPhrase(line.text) &&
+    /^\p{Lu}/u.test(next.text.trim())
+  );
+}
+
+const endsPhrase = (text: string): boolean => /[.,;:!?…"”’)\]–—-]$/u.test(text.trim());
 
 // One paragraph: a single button whose words flow as text, so pressing anywhere in it plays
 // from the line pressed (and Enter from its first line); only the paragraphs whose spoken or
@@ -238,6 +260,8 @@ const Paragraph = memo(function Paragraph({
 }): ReactElement | null {
   const first = lines[0];
   if (first === undefined) return null;
+  // A heading read out stands alone and reads as one.
+  const heading = lines.length === 1 && !endsPhrase(first.text);
   const fixing = onFix === undefined ? undefined : lines.find((line) => line.key === active);
   const pressed = (event: MouseEvent<HTMLButtonElement>) => {
     const key =
@@ -248,7 +272,11 @@ const Paragraph = memo(function Paragraph({
   };
   return (
     <li className="m-0 flex flex-col items-start gap-1">
-      <Button variant="quiet" className="sl-transcript__para" onClick={pressed}>
+      <Button
+        variant="quiet"
+        className={cn("sl-transcript__para", heading && "sl-transcript__para--heading")}
+        onClick={pressed}
+      >
         <span className="sl-transcript__time">{playerTime(first.shownAt)}</span>
         {first.speaker === undefined ? null : (
           <span className="mr-1 inline-flex items-center gap-1 font-semibold">
