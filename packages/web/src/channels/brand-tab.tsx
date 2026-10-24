@@ -98,8 +98,7 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
       // The disclosure has a request of its own, sent only when changed. It goes first: it
       // leaves the channel's version alone, so a refusal here saves nothing and the rest
       // can still be saved against the version this form was opened on.
-      if (disclosure !== channel.aiDisclosure)
-        await saveAiDisclosure(api, channel.id, disclosure);
+      if (disclosure !== channel.aiDisclosure) await saveAiDisclosure(api, channel.id, disclosure);
       return saveChannel(api, channel.id, {
         name,
         seriesBrief: brief,

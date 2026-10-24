@@ -11,8 +11,8 @@ import { SectionHead } from "@/components/kit/section-head";
 import { Badge, type BadgeTone } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
 import { ProjectThumb } from "@/home/project-thumb";
-import { browserZone, zoneDiffers, zonedFormat, zonedTime, zoneName } from "@/lib/zoned";
 import { shortDate } from "@/lib/utils";
+import { browserZone, zoneDiffers, zonedFormat, zonedTime, zoneName } from "@/lib/zoned";
 import { keys, projectsQuery } from "@/queries";
 import { localScheduleTime, scheduleInstant } from "@/schedules/time";
 
@@ -345,7 +345,9 @@ function meta(
 ): string | undefined {
   const parts = [
     series === "" ? undefined : series,
-    project === undefined ? undefined : `${project.format} · finished ${shortDate(project.updatedAt)}`,
+    project === undefined
+      ? undefined
+      : `${project.format} · finished ${shortDate(project.updatedAt)}`,
   ].filter((part) => part !== undefined);
   return parts.length === 0 ? undefined : parts.join(" · ");
 }
