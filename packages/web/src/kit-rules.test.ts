@@ -152,6 +152,35 @@ describe("the kit's action rules", () => {
       expect(openingTags(screens.find((one) => one.file === file)?.text ?? "", "Lamp")).not.toEqual(
         [],
       );
+    // Nor is a lamp drawn by hand with the kit's class.
+    expect(offenders((text) => [...text.matchAll(/\bsl-lamp\b[\w-]*/g)].map((m) => m[0]))).toEqual(
+      [],
+    );
+  });
+
+  // The help walks (help/coverage.ts) catch an info button beside a button or a heading on the
+  // screens they render; this reads every file, so a state no walk opens can't keep one. A tip
+  // goes beside a setting's label, and a button's or heading's consequence goes in a line
+  // under it, in words.
+  it("puts no info button right after or before a button, or after or inside a heading", () => {
+    const button = "Button|ButtonLink|IconButton|FileLink|PlayKey";
+    const wrapper = String.raw`(?:<span\b[^>]*>\s*)?`;
+    const next = new RegExp(
+      String.raw`</(?:${button}|h[1-6])>\s*${wrapper}<InfoTip\b|<InfoTip\b[^>]*/>\s*(?:</span>\s*)?<(?:${button})\b`,
+      "g",
+    );
+    const inHeading = /<(h[1-6])\b[^>]*>(?:(?!<\/\1>)[\s\S])*?<InfoTip\b/g;
+    expect(
+      offenders((text) =>
+        [...text.matchAll(next), ...text.matchAll(inHeading)].map((m) => m[0].replace(/\s+/g, " ")),
+      ),
+    ).toEqual([]);
+    // It reads a tip after a button in a wrapper, before one, and inside a heading.
+    const caught = (text: string) => [...text.matchAll(next), ...text.matchAll(inHeading)].length;
+    expect(caught("<Button>Apply</Button>\n  <span>\n <InfoTip id={x} />")).toBe(1);
+    expect(caught('<InfoTip id={x} className="-my-1" />\n<Button>Apply</Button>')).toBe(1);
+    expect(caught('<h3 className="m-0">Rows <InfoTip id={x} /></h3>')).toBe(1);
+    expect(caught("<label>Rows</label>\n<InfoTip id={x} />")).toBe(0);
   });
 
   it("reads whole tags, arrows and nested braces included", () => {
