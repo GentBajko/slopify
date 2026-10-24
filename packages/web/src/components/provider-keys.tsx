@@ -35,7 +35,7 @@ const familyTitles: Readonly<Record<ProviderFamily, string>> = {
   tts: "Voice services",
   image: "Image services",
 };
-export const familyWords: Readonly<Record<ProviderFamily, string>> = {
+const familyWords: Readonly<Record<ProviderFamily, string>> = {
   llm: "Writing service",
   tts: "Voice service",
   image: "Image service",
@@ -53,7 +53,7 @@ function ready(provider: ProviderStatus): boolean {
 // One list of states for every service, here, on Voices and in the check of every service:
 // Ready, No key, Not found, Signed out, Needs fixing, and Not installed for the computer's own
 // voice without its speech program.
-export function stateOf(provider: ProviderStatus): {
+function stateOf(provider: ProviderStatus): {
   readonly tone: Tone;
   readonly word: string;
 } {

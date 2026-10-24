@@ -46,7 +46,7 @@ const families: readonly {
   },
 ];
 
-export interface ReadinessLine {
+interface ReadinessLine {
   readonly family: ProviderFamily;
   readonly label: string;
   readonly ready: boolean;

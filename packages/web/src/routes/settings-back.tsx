@@ -9,7 +9,7 @@ export interface SettingsBack {
   readonly step?: string | undefined;
 }
 
-export function backHref(back: SettingsBack): string {
+function backHref(back: SettingsBack): string {
   if (back.to === "play") return "/play";
   return back.step === undefined ? "/welcome" : `/welcome?step=${encodeURIComponent(back.step)}`;
 }

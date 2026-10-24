@@ -12,7 +12,7 @@ import { type HelpId, helpEntry } from "@/help/catalog";
 import { keys } from "@/queries";
 
 // What each service does and costs, in words under its name in its setup (ServiceAbout).
-export const providerTips = {
+const providerTips = {
   openrouter: "settings.provider.openrouter",
   "claude-code": "settings.provider.claude-code",
   codex: "settings.provider.codex",
