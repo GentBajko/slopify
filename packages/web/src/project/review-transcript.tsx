@@ -1,7 +1,15 @@
 import { speakerColour } from "@app/slices/voices/palette.js";
-import { PencilIcon } from "lucide-react";
-import { memo, type ReactElement, type RefObject, useEffect, useRef, useState } from "react";
-import { Button, IconButton } from "@/components/kit/button";
+import {
+  type MouseEvent,
+  memo,
+  type ReactElement,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { Button } from "@/components/kit/button";
 import { playerTime } from "@/components/kit/player";
 import { cn } from "@/lib/utils";
 import { lineAt } from "./review-timing.js";
@@ -53,52 +61,90 @@ export function useMediaClock(): { readonly target: EventTarget | null; readonly
   return clock;
 }
 
-// The transcript beside a player: press a line to play from there, the line being spoken is
-// marked while it plays, and a multi-voice run names each line's speaker in their colour. With
-// `onFix`, each line offers the narration editor at the passage it was spoken from.
+// The narration's words to read and follow: paragraphs of flowing text at the reading measure,
+// each opening with its time. Pressing the words plays from the line pressed, the line being
+// spoken is tinted, and a multi-voice run names each speaker in their colour. One worded "Fix
+// this line" sits under the paragraph of the line last played or pressed, and opens the
+// narration's editor at it, to correct its words or record it again. A narration of more than
+// 150 lines is drawn a page at a time in a box that follows the spoken line; a shorter one
+// reads straight down the page. `query` marks the lines that hold it; each change of `seek`
+// brings the next of them into view.
 export function Transcript({
   lines,
   label,
   onFix,
-  fixLabel = "Correct or remake this passage",
+  query = "",
+  seek = 0,
 }: {
   readonly lines: readonly TranscriptLine[];
   readonly label: string;
   readonly onFix?: ((line: TranscriptLine) => void) | undefined;
-  readonly fixLabel?: string;
+  readonly query?: string;
+  readonly seek?: number;
 }): ReactElement {
   const clock = useMediaClock();
-  const list = useRef<HTMLOListElement>(null);
+  const box = useRef<HTMLOListElement>(null);
   const mine = lines.filter((line) => line.media.current === clock.target);
   const at = lineAt(mine, clock.seconds);
-  const current = at === -1 ? undefined : mine[at]?.key;
+  const playing = at === -1 ? undefined : mine[at]?.key;
+  const [pressed, setPressed] = useState<string | undefined>();
+  const active = playing ?? pressed;
+  const long = lines.length > longNarration;
   // A two-hour narration has thousands of lines; drawing them all froze the project page for
   // seconds. Only a page of lines is drawn, and it follows the line being spoken.
   const [start, setStart] = useState(0);
-  const playingAt = current === undefined ? -1 : lines.findIndex((line) => line.key === current);
+  const playingAt = playing === undefined ? -1 : lines.findIndex((line) => line.key === playing);
   useEffect(() => {
-    if (playingAt === -1) return;
+    if (!long || playingAt === -1) return;
     setStart((from) =>
       playingAt < from || playingAt >= from + windowSize ? Math.max(0, playingAt - lead) : from,
     );
-  }, [playingAt]);
-  const shown = lines.slice(start, start + windowSize);
-  const later = lines.length - start - shown.length;
-  // The spoken line stays in view inside the list's own scroll, never scrolling the page.
+  }, [playingAt, long]);
+  const needle = query.trim().toLowerCase();
+  // Each Enter in the search box: the next line that holds the words, after the one last
+  // brought into view (from the top again for new words).
+  const found = useRef({ seek: 0, needle: "", at: -1 });
   useEffect(() => {
-    const box = list.current;
-    if (box === null || current === undefined) return;
-    const row = box.querySelector<HTMLElement>(`[data-line="${CSS.escape(current)}"]`);
+    if (seek === found.current.seek) return;
+    const after = found.current.needle === needle ? found.current.at : -1;
+    found.current = { seek, needle, at: after };
+    if (needle === "") return;
+    const hits = lines.flatMap((line, index) =>
+      line.text.toLowerCase().includes(needle) ? [index] : [],
+    );
+    const next = hits.find((index) => index > after) ?? hits[0];
+    if (next === undefined) return;
+    found.current.at = next;
+    if (long) setStart(Math.max(0, next - lead));
+    const key = lines[next]?.key ?? "";
+    requestAnimationFrame(() =>
+      box.current
+        ?.querySelector<HTMLElement>(`[data-line="${CSS.escape(key)}"]`)
+        ?.scrollIntoView?.({ block: "center" }),
+    );
+  }, [seek, needle, lines, long]);
+  const shown = long ? lines.slice(start, start + windowSize) : lines;
+  const later = lines.length - start - shown.length;
+  // In the long box, the spoken line stays in view inside the box's own scroll, never
+  // scrolling the page.
+  useEffect(() => {
+    const list = box.current;
+    if (!long || list === null || playing === undefined) return;
+    const row = list.querySelector<HTMLElement>(`[data-line="${CSS.escape(playing)}"]`);
     if (row === null) return;
     if (
-      row.offsetTop < box.scrollTop ||
-      row.offsetTop + row.offsetHeight > box.scrollTop + box.clientHeight
+      row.offsetTop < list.scrollTop ||
+      row.offsetTop + row.offsetHeight > list.scrollTop + list.clientHeight
     )
-      box.scrollTop = Math.max(0, row.offsetTop - box.clientHeight / 3);
-  }, [current]);
+      list.scrollTop = Math.max(0, row.offsetTop - list.clientHeight / 3);
+  }, [playing, long]);
+  const play = useCallback((line: TranscriptLine) => {
+    setPressed(line.key);
+    playFrom(line.media.current, line.start);
+  }, []);
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      {start > 0 ? (
+      {long && start > 0 ? (
         <Button
           variant="quiet"
           size="small"
@@ -109,21 +155,26 @@ export function Transcript({
         </Button>
       ) : null}
       <ol
-        ref={list}
+        ref={box}
         aria-label={label}
-        className="relative m-0 flex max-h-[420px] list-none flex-col overflow-y-auto p-0"
+        className={cn(
+          "sl-transcript relative m-0 flex max-w-[68ch] list-none flex-col gap-2 p-0",
+          long && "max-h-[70vh] overflow-y-auto",
+        )}
       >
-        {shown.map((line) => (
-          <Row
-            key={line.key}
-            line={line}
-            playing={line.key === current}
+        {paragraphsOf(shown).map((paragraph) => (
+          <Paragraph
+            key={paragraph[0]?.key}
+            lines={paragraph}
+            playing={playing}
+            active={active}
+            needle={needle}
+            onPlay={play}
             onFix={onFix}
-            fixLabel={fixLabel}
           />
         ))}
       </ol>
-      {later > 0 ? (
+      {long && later > 0 ? (
         <Button
           variant="quiet"
           size="small"
@@ -137,73 +188,99 @@ export function Transcript({
   );
 }
 
+// More lines than this and the transcript is a box of its own, a page of lines at a time.
+const longNarration = 150;
 const windowSize = 120;
 // Lines kept above the spoken one when the page moves to follow it.
 const lead = 20;
 
-// One line; only the rows whose playing state changed render again as the audio plays.
-const Row = memo(function Row({
-  line,
+// Caption lines run together into paragraphs: a new one where the speaker or the player
+// changes, at a pause, or at the end of a sentence once a paragraph has a few lines.
+export function paragraphsOf(lines: readonly TranscriptLine[]): readonly TranscriptLine[][] {
+  const paragraphs: TranscriptLine[][] = [];
+  let current: TranscriptLine[] = [];
+  for (const line of lines) {
+    const last = current.at(-1);
+    if (
+      last !== undefined &&
+      (line.speaker?.name !== last.speaker?.name ||
+        line.media !== last.media ||
+        line.start - last.end > 1.5 ||
+        (current.length >= 4 && /[.!?…]["”’)]?$/u.test(last.text.trim())))
+    ) {
+      paragraphs.push(current);
+      current = [];
+    }
+    current.push(line);
+  }
+  if (current.length > 0) paragraphs.push(current);
+  return paragraphs;
+}
+
+// One paragraph: a single button whose words flow as text, so pressing anywhere in it plays
+// from the line pressed (and Enter from its first line); only the paragraphs whose spoken or
+// pressed line changed render again as the audio plays.
+const Paragraph = memo(function Paragraph({
+  lines,
   playing,
+  active,
+  needle,
+  onPlay,
   onFix,
-  fixLabel,
 }: {
-  readonly line: TranscriptLine;
-  readonly playing: boolean;
+  readonly lines: readonly TranscriptLine[];
+  readonly playing: string | undefined;
+  readonly active: string | undefined;
+  // What the search box holds, lower case; empty marks nothing.
+  readonly needle: string;
+  readonly onPlay: (line: TranscriptLine) => void;
   readonly onFix: ((line: TranscriptLine) => void) | undefined;
-  readonly fixLabel: string;
-}): ReactElement {
+}): ReactElement | null {
+  const first = lines[0];
+  if (first === undefined) return null;
+  const fixing = onFix === undefined ? undefined : lines.find((line) => line.key === active);
+  const pressed = (event: MouseEvent<HTMLButtonElement>) => {
+    const key =
+      event.target instanceof Element
+        ? event.target.closest("[data-line]")?.getAttribute("data-line")
+        : undefined;
+    onPlay(lines.find((line) => line.key === key) ?? first);
+  };
   return (
-    <li
-      data-line={line.key}
-      aria-current={playing ? "true" : undefined}
-      className={cn(
-        "group grid grid-cols-[52px_minmax(0,1fr)_auto] items-start gap-2 rounded-control px-2 py-1",
-        playing && "bg-accent-tint",
-      )}
-    >
-      <Button
-        variant="quiet"
-        size="small"
-        className="h-auto justify-start px-1 py-0.5 text-label font-normal tabular-nums"
-        aria-label={`Play from ${playerTime(line.shownAt)}`}
-        onClick={() => playFrom(line.media.current, line.start)}
-      >
-        {playerTime(line.shownAt)}
-      </Button>
-      <Button
-        variant="quiet"
-        size="small"
-        className={cn(
-          "block h-auto min-w-0 whitespace-normal px-1 py-0.5 text-left text-small font-normal [--btn-soft:transparent]",
-          playing && "text-ink",
-        )}
-        onClick={() => playFrom(line.media.current, line.start)}
-      >
-        {line.speaker === undefined ? null : (
-          <span className="mr-2 inline-flex items-center gap-1 font-semibold text-ink">
+    <li className="m-0 flex flex-col items-start gap-1">
+      <Button variant="quiet" className="sl-transcript__para" onClick={pressed}>
+        <span className="sl-transcript__time">{playerTime(first.shownAt)}</span>
+        {first.speaker === undefined ? null : (
+          <span className="mr-1 inline-flex items-center gap-1 font-semibold">
             <span
               aria-hidden="true"
               className="inline-block size-2 rounded-full"
-              style={{ backgroundColor: speakerColour(line.speaker.index) }}
+              style={{ backgroundColor: speakerColour(first.speaker.index) }}
             />
-            {line.speaker.name}:
+            {first.speaker.name}:
           </span>
         )}
-        {line.text}
+        {lines.map((line, index) => (
+          <span key={line.key}>
+            {index === 0 ? null : " "}
+            <span
+              data-line={line.key}
+              aria-current={line.key === playing ? "true" : undefined}
+              {...(needle !== "" && line.text.toLowerCase().includes(needle)
+                ? { "data-match": "" }
+                : {})}
+              className="sl-transcript__line"
+            >
+              {line.text}
+            </span>
+          </span>
+        ))}
       </Button>
-      {onFix === undefined ? (
-        <span />
-      ) : (
-        <IconButton
-          size="small"
-          label={`${fixLabel}: “${line.text.slice(0, 40)}”`}
-          tip={fixLabel}
-          className="opacity-60 group-hover:opacity-100 focus-visible:opacity-100"
-          onClick={() => onFix(line)}
-        >
-          <PencilIcon aria-hidden="true" strokeWidth={1.75} />
-        </IconButton>
+      {fixing === undefined || onFix === undefined ? null : (
+        <Button size="small" onClick={() => onFix(fixing)}>
+          Fix this line
+          <span className="sr-only">: “{fixing.text.slice(0, 60)}”</span>
+        </Button>
       )}
     </li>
   );

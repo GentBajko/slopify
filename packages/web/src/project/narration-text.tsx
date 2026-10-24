@@ -1,90 +1,115 @@
 import type { Output } from "@app/slices/storage/model.js";
-import { type ReactElement, useCallback, useId, useState } from "react";
-import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
+import { SearchIcon } from "lucide-react";
+import { type ReactElement, useId, useState } from "react";
 import { ReadingView } from "@/components/kit/reading-view";
 import { useOutputText } from "./parts.js";
 import type { NarrationTiming } from "./review-narration.js";
 import { Transcript } from "./review-transcript.js";
 
-// The Audio section's narration text - the clean text that was spoken, intro, body and outro -
-// in the reading view, so it can be read, searched and copied rather than only downloaded. With
-// the caption timing current, it reads first as a transcript in step with the players above:
-// press a line to play from there, and the spoken line is marked.
-export function NarrationText({
-  outputs,
-  timing,
-}: {
-  readonly outputs: readonly Output[];
-  readonly timing?: NarrationTiming | undefined;
-}): ReactElement | null {
-  const id = useId();
+// The narration's clean text (what was spoken: intro, body and outro) as one piece of Markdown,
+// for Copy the text. One segment reads as itself; more get a heading each.
+export function useNarrationMarkdown(outputs: readonly Output[]): string | undefined {
   const of = (segment: string) =>
     outputs.find((output) => output.role === "narration_txt" && output.meta.segment === segment);
   const intro = useOutputText(of("intro")).data;
   const body = useOutputText(of("body")).data;
   const outro = useOutputText(of("outro")).data;
-  const [status, setStatus] = useState<{ text: string; tone: StatusTone } | undefined>();
-  const copy = useCallback((text: string, what: string) => {
-    if (!navigator.clipboard) {
-      setStatus({ text: `Couldn't copy the ${what}. Select the text and copy it.`, tone: "error" });
-      return;
-    }
-    void navigator.clipboard.writeText(text).then(
-      () => setStatus({ text: `Copied the ${what} as Markdown.`, tone: "success" }),
-      () =>
-        setStatus({
-          text: `Couldn't copy the ${what}. Select the text and copy it.`,
-          tone: "error",
-        }),
-    );
-  }, []);
-  const parts = [
-    ["Intro", intro],
-    ["Body", body],
-    ["Outro", outro],
-  ] as const;
-  const present = parts.filter(([, text]) => text !== undefined && text.trim() !== "");
+  const present = (
+    [
+      ["Intro", intro],
+      ["Body", body],
+      ["Outro", outro],
+    ] as const
+  ).filter(([, text]) => text !== undefined && text.trim() !== "");
+  if (present.length === 0) return undefined;
+  return present.length === 1
+    ? (present[0]?.[1] ?? "").trim()
+    : present.map(([name, text]) => `## ${name}\n\n${(text ?? "").trim()}`).join("\n\n");
+}
+
+// The Narration section's words. With the caption timing current they read as a transcript in
+// step with the players above, with a search box over it: press the words to play from there,
+// the line being spoken is marked, and Fix this line opens the editor at it. Without timing
+// the clean text shows in the reading view, which searches and copies it the same way.
+export function NarrationText({
+  outputs,
+  timing,
+  onCopy,
+}: {
+  readonly outputs: readonly Output[];
+  readonly timing?: NarrationTiming | undefined;
+  // What the reading view's own Copy does, with the section's status line.
+  readonly onCopy: (text: string, what: string) => void;
+}): ReactElement | null {
+  const id = useId();
+  const markdown = useNarrationMarkdown(outputs);
+  const [query, setQuery] = useState("");
+  const [seek, setSeek] = useState(0);
   if (!outputs.some((output) => output.role === "narration_txt")) return null;
-  // One segment reads as itself; more get a heading each, which the contents list picks up.
-  const markdown =
-    present.length === 1
-      ? (present[0]?.[1] ?? "").trim()
-      : present.map(([name, text]) => `## ${name}\n\n${(text ?? "").trim()}`).join("\n\n");
-  const reading = (
-    <ReadingView
-      markdown={markdown}
-      label="Narration text"
-      regionLabel="Narration text"
-      anchorPrefix="narration-"
-      what="narration text"
-      onCopy={copy}
-    >
-      <span className="block h-4 w-[40ch] max-w-full rounded-control bg-raised" />
-    </ReadingView>
-  );
   const lines = timing?.lines ?? [];
+  const needle = query.trim().toLowerCase();
+  const hits =
+    needle === "" ? 0 : lines.filter((line) => line.text.toLowerCase().includes(needle)).length;
   return (
     <section aria-labelledby={`${id}-title`} className="flex min-w-0 flex-col gap-2">
-      <h3 id={`${id}-title`} className="sl-kicker text-ink-3">
+      <h3 id={`${id}-title`} className="sl-kicker m-0">
         Narration text
       </h3>
       {lines.length === 0 ? (
-        reading
+        <ReadingView
+          markdown={markdown ?? ""}
+          label="Narration text"
+          regionLabel="Narration text"
+          anchorPrefix="narration-"
+          what="narration text"
+          onCopy={onCopy}
+        >
+          <span className="block h-4 w-[40ch] max-w-full rounded-control bg-raised" />
+        </ReadingView>
       ) : (
         <>
-          <p className="m-0 text-small text-ink-2">
-            Press a line to play from there; the line being spoken is marked.
-          </p>
-          <Transcript lines={lines} label="Narration transcript" onFix={timing?.fix} />
-          <details className="border-t border-line pt-2">
-            <summary className="cursor-pointer text-small font-semibold">
-              Read, search or copy the text
-            </summary>
-            {reading}
-          </details>
+          <div className="flex flex-wrap items-center gap-3">
+            <label htmlFor={`${id}-search`} className="sr-only">
+              Search the narration
+            </label>
+            <div className="relative w-full max-w-[320px]">
+              <SearchIcon
+                aria-hidden="true"
+                strokeWidth={1.75}
+                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-3"
+              />
+              <input
+                id={`${id}-search`}
+                type="search"
+                value={query}
+                placeholder="Search the narration"
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    setSeek((count) => count + 1);
+                  }
+                }}
+                className="sl-input pl-9"
+              />
+            </div>
+            {needle === "" ? null : (
+              <span className="text-small text-ink-2 tabular-nums" aria-live="polite">
+                {hits === 0
+                  ? "No line has it"
+                  : `${String(hits)} ${hits === 1 ? "line has it" : "lines have it"} · Enter shows the next`}
+              </span>
+            )}
+          </div>
+          <Transcript
+            lines={lines}
+            label="Narration transcript"
+            onFix={timing?.fix}
+            query={query}
+            seek={seek}
+          />
         </>
       )}
-      <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
     </section>
   );
 }

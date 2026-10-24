@@ -3,13 +3,13 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 import { jsonAnswer, renderApp, testDeps, testOrigin } from "@/test-app";
-import { narrationFiles } from "./narration-downloads";
+import { narrationAudioFiles, narrationTextFiles } from "./narration-downloads";
 import { StageFiles } from "./parts";
 import { revisionView } from "./revision-fixture";
 import { RevisionMedia } from "./revision-media";
 
 afterEach(cleanup);
-it("lists six named files in one Download menu, with one Open folder, scoped to the selected revision", async () => {
+it("lists six named text files in one Download menu, with one Open folder, scoped to the selected revision", async () => {
   const outputs: Output[] = (["intro", "body", "outro"] as const).flatMap((segment) =>
     (["narration_txt", "tts_script"] as const).map((role) => ({
       id: `${segment}-${role}`,
@@ -42,7 +42,7 @@ it("lists six named files in one Download menu, with one Open folder, scoped to 
   };
   const { container } = renderApp(
     <RevisionMedia projectId="p1" revisionId="old">
-      <StageFiles files={narrationFiles(outputs)} />
+      <StageFiles files={narrationTextFiles(outputs)} label="Download the text" />
     </RevisionMedia>,
     testDeps({ "GET /api/projects/p1/revisions/old": jsonAnswer({ view }) }),
   );
@@ -50,20 +50,21 @@ it("lists six named files in one Download menu, with one Open folder, scoped to 
   await waitFor(() =>
     expect(screen.getAllByRole("button", { name: "Open folder" })).toHaveLength(1),
   );
-  await userEvent.click(screen.getByRole("button", { name: "Download" }));
+  await userEvent.click(screen.getByRole("button", { name: "Download the text" }));
   expect(
-    (await screen.findByRole("menuitem", { name: "Body clean narration (.txt)" })).getAttribute(
+    (await screen.findByRole("menuitem", { name: "Spoken text, main part (.txt)" })).getAttribute(
       "href",
     ),
   ).toBe(`${testOrigin}/files/p1/revisions/old/body-narration_txt`);
   const items = screen.getAllByRole("menuitem");
+  // In plain words: no "TTS", no "clean narration".
   expect(items.map((item) => item.textContent)).toEqual([
-    "Intro clean narration (.txt)",
-    "Intro TTS script (.txt)",
-    "Body clean narration (.txt)",
-    "Body TTS script (.txt)",
-    "Outro clean narration (.txt)",
-    "Outro TTS script (.txt)",
+    "Spoken text, intro (.txt)",
+    "Script sent to the voice, intro (.txt)",
+    "Spoken text, main part (.txt)",
+    "Script sent to the voice, main part (.txt)",
+    "Spoken text, outro (.txt)",
+    "Script sent to the voice, outro (.txt)",
   ]);
   for (const output of outputs)
     expect(
@@ -91,13 +92,38 @@ it("offers the speaker split beside the narration files, as the text it was read
     meta: segment === undefined ? {} : { segment },
     createdAt: "today",
   });
-  const labels = narrationFiles(
+  const labels = narrationTextFiles(
     [file("body-script", "tts_script", "body")],
-    [],
     file("speakers", "script_md"),
   ).map((one) => one.label);
-  expect(labels).toEqual(["Body TTS script (.txt)", "Script by speaker (.md)"]);
+  expect(labels).toEqual(["Script sent to the voice (.txt)", "Script by speaker (.md)"]);
   expect(
-    narrationFiles([file("body-script", "tts_script", "body")]).map((one) => one.label),
-  ).toEqual(["Body TTS script (.txt)"]);
+    narrationTextFiles([file("body-script", "tts_script", "body")]).map((one) => one.label),
+  ).toEqual(["Script sent to the voice (.txt)"]);
+});
+
+it("names one recording the narration, and the parts of one in parts", () => {
+  const recording = (segment: "intro" | "body" | "outro"): Output => ({
+    id: segment,
+    projectId: "p1",
+    stageKind: "audio",
+    role: segment === "intro" ? "audio_intro" : segment === "body" ? "audio_body" : "audio_outro",
+    path: `${segment}.mp3`,
+    originalFilename: null,
+    bytes: 10,
+    durationMs: 1000,
+    meta: {},
+    createdAt: "today",
+  });
+  expect(
+    narrationAudioFiles([{ segment: "body", output: recording("body") }]).map((one) => one.label),
+  ).toEqual(["Narration (.mp3)"]);
+  expect(
+    narrationAudioFiles(
+      (["intro", "body", "outro"] as const).map((segment) => ({
+        segment,
+        output: recording(segment),
+      })),
+    ).map((one) => one.label),
+  ).toEqual(["Intro (.mp3)", "Main part (.mp3)", "Outro (.mp3)"]);
 });

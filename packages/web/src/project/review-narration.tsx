@@ -37,7 +37,7 @@ export interface NarrationTiming {
 
 // The narration chunks in the order Edit project → Narration numbers them, and the way to open
 // that editor at one of them. `open` is absent outside a project with saved versions.
-export function useNarrationChunks(): {
+function useNarrationChunks(): {
   readonly chunks: readonly { readonly key: string; readonly text: string }[];
   readonly open: ((chunk: number | undefined) => void) | undefined;
 } {
@@ -73,7 +73,7 @@ export function useNarrationChunks(): {
 }
 
 // The caption timing (`subtitles.json`, made with the video) when it is current.
-export function useTimedLines(outputs: readonly Output[]): readonly TimedLine[] {
+function useTimedLines(outputs: readonly Output[]): readonly TimedLine[] {
   const timing = outputs.find((output) => output.role === "subtitle_words");
   const stale = useOutdated(timing);
   const text = useOutputText(stale ? undefined : timing).data;
