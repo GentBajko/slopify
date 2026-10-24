@@ -74,7 +74,7 @@ export const settingsHelp = {
   },
   "settings.provider.google-tts": {
     title: "Google Gemini voices",
-    body: "Narrates with Gemini's 30 prebuilt voices, billed to your Gemini API key per text and audio token. It uses the key saved for Google images unless you save one here. Two speakers' consecutive turns can go in one request (see Speakers on Play).",
+    body: "Narrates with Gemini's 30 prebuilt voices, billed to your Gemini API key per text and audio token. It uses the key saved for Google images unless you save one here. Two speakers' consecutive turns can go in one request (see Speakers on Create).",
     tutorial: { page: "Providers-and-Keys", anchor: "google-gemini-speech" },
   },
   "settings.provider.fal": {
@@ -101,7 +101,7 @@ export const settingsHelp = {
   // Playback & appearance
   "settings.playback.silence-gap": {
     title: "Silence between segments",
-    body: "Seconds of quiet between the intro and the narration, and between the narration and the outro, in every new video, unless Play sets a different gap for one video. It only matters when an intro or outro is set; 0 runs them together. Default: 3 seconds, from 0 to 30. Videos already started keep their own gap.",
+    body: "Seconds of quiet between the intro and the narration, and between the narration and the outro, in every new video, unless Create sets a different gap for one video. It only matters when an intro or outro is set; 0 runs them together. Default: 3 seconds, from 0 to 30. Videos already started keep their own gap.",
     tutorial: { page: "Settings-Reference", anchor: "silence-between-segments" },
   },
   "settings.template-studio.budget": {
@@ -121,7 +121,7 @@ export const settingsHelp = {
   },
   "settings.loudness": {
     title: "Level the volume for new runs",
-    body: "Whether a new run on Play (and a template or quick short) starts with Level the volume on, and at which volumes. On evens out every narration piece and sets the video to about -14 LUFS, the loudness YouTube plays at, and the audio files to -18 LUFS. A project keeps what it started with; change it there in Edit project. Default: on.",
+    body: "Whether a new video on Create (and a template or quick short) starts with Level the volume on, and at which volumes. On evens out every narration piece and sets the video to about -14 LUFS, the loudness YouTube plays at, and the audio files to -18 LUFS. A project keeps what it started with; change it there in Edit project. Default: on.",
     tutorial: { page: "Settings-Reference", anchor: "level-the-volume-for-new-runs" },
   },
   "settings.subtitle-model": {
