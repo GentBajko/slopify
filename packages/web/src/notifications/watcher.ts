@@ -55,7 +55,6 @@ export interface AutoPassEvent {
   readonly item?: string | undefined;
 }
 
-// "Started: Title": a run began.
 // The end of a run, said in a toast on the page: whether it made a video decides Watch or Open.
 export interface ShownToast extends ShownNotice {
   readonly makesVideo: boolean;
@@ -64,6 +63,7 @@ export interface ShownToast extends ShownNotice {
 // The transitions a toast tells: the run ended, one way or another.
 const toastKinds: ReadonlySet<RunNotice> = new Set(["ready", "partial", "failed"]);
 
+// "Started: Title": a run began.
 export interface ShownStartNotice {
   readonly projectId: string;
   readonly title: string;

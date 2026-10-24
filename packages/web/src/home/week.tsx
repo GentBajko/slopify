@@ -15,8 +15,7 @@ export function spentLabel(week: WeekSummary): string {
     week.unpriced === 0
       ? ""
       : ` · ${String(week.unpriced)} ${week.unpriced === 1 ? "call" : "calls"} without a price`;
-  const studio =
-    week.studioCost > 0 ? ` · ${usd(week.studioCost)} of it on template studio samples` : "";
+  const studio = week.studioCost > 0 ? ` · ${usd(week.studioCost)} of it on template samples` : "";
   return `spent${via}${unknown}${studio}`;
 }
 
