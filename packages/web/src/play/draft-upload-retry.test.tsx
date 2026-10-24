@@ -76,7 +76,7 @@ it("offers Reattach after prerequisite Save retry and after reopening the saved 
     "PUT /api/drafts/:id/attachments/:attachmentId/file": upload,
   });
   await openSection("Outputs");
-  await userEvent.click(screen.getByRole("button", { name: "Drafts" }));
+  await userEvent.click(screen.getByRole("button", { name: /^Draft: / }));
   await userEvent.click(await screen.findByRole("button", { name: "Reopen upload" }));
   await screen.findByLabelText("Reattach picked.wav");
   expect(screen.queryByText("Copying")).toBeNull();

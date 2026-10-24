@@ -4,51 +4,21 @@ import type { HelpEntry } from "../entry.js";
 // (speakers, shorts, reviews, the establishing image, the language). Settings → Voices'
 // table is here too, as it lives in the same voice components.
 export const playHelp = {
-  // Top of Play
-  "play.output": {
-    title: "What are you making?",
-    body: "Picks the stages the project uses. Video narrates images with captions. Article writes or takes text, with an optional PDF. Audiobook reads a text aloud. Podcast is a conversation between speakers. Images draws pictures from your prompts. Each choice turns on what it needs and folds the rest away; every stage can still be changed under its row.",
-    tutorial: { page: "Play-Overview" },
-  },
-  "play.template": {
-    title: "Template",
-    body: "Starts this video from a saved setup: prompts, voice, images, style, outputs and reviews. Picking one opens a fresh draft made from it and carries the topic you typed. No template starts from the default setup. Save a setup you like with Save as template in the right rail.",
-    tutorial: { page: "Play-Overview", anchor: "template" },
-  },
+  // Top of Create
   "play.title": {
     title: "Title",
-    body: "The project's name in Slopify, shown on the project and in Projects. For a YouTube video it is also the YouTube title unless the YouTube text writes its own, and YouTube takes at most 100 characters there, without < or >. Write a keyword in double braces, like {{Topic}}, and the title becomes a pattern: you type the topic per video, and Add topic queues more videos from the same setup. Up to 200 characters.",
+    body: "The project's name in Slopify, shown on the project and in Projects. For a YouTube video it is also the YouTube title unless the YouTube text writes its own, and YouTube takes at most 100 characters there, without < or >. Write a keyword in double braces, like {{Topic}}, and the title becomes a pattern: you type the topic per video, and Another topic queues more videos from the same setup. Up to 200 characters.",
     tutorial: { page: "Play-Overview", anchor: "title-title-pattern-and-topic" },
   },
   "play.title-pattern": {
     title: "Title pattern",
-    body: "The title with its keywords in double braces, like History: {{Topic}}. Each keyword in it is a topic you type at the top of Play, once per video, and templates save it empty. Change the pattern here; the topic values stay at the top.",
-    tutorial: { page: "Play-Overview", anchor: "title-title-pattern-and-topic" },
-  },
-  "play.topic": {
-    title: "Topic",
-    body: "What this video is about. The title names this keyword, so its value fills the title and every prompt that names it. Each video from this setup gets its own value, and a template leaves it empty. Up to 200 characters.",
+    body: "The title with its keywords in double braces, like History: {{Topic}}. Each keyword in it is a topic you type at the top of Create, once per video, and templates save it empty. Change the pattern here; the topic values stay at the top.",
     tutorial: { page: "Play-Overview", anchor: "title-title-pattern-and-topic" },
   },
   "play.keyword": {
     title: "Keyword",
     body: "A value a picked prompt or the title asks for with {{name}}. You type it once and it fills every place that names it; the line under it lists where. Up to 200 characters. A keyword the title does not name is saved with a template.",
     tutorial: { page: "Play-Overview", anchor: "keywords" },
-  },
-  "play.more-videos": {
-    title: "More videos from the same setup",
-    body: "Add topic queues another video with everything else the same: only its title and keywords differ. Press a chip to change that video's keywords. Start queues all of them, and they run one at a time. One Start queues at most 50 videos.",
-    tutorial: { page: "Play-Overview", anchor: "more-videos-from-the-same-setup" },
-  },
-  "play.drafts": {
-    title: "Drafts",
-    body: "Play saves every change to this draft on its own; nothing starts until you press the Play key. Drafts lists your saved setups to open again or delete. New draft starts an empty one and keeps this one in the list.",
-    tutorial: { page: "Play-Overview", anchor: "drafts" },
-  },
-  "play.draft-conflict": {
-    title: "Changed elsewhere",
-    body: "This draft was saved from another tab or window since you opened it. Reload saved draft shows that version and drops your unsaved change. Save as a new draft keeps your version as a separate draft and leaves the other one alone.",
-    tutorial: { page: "Play-Overview", anchor: "when-a-draft-was-changed-elsewhere" },
   },
 
   // Sources, one switch per stage
@@ -285,11 +255,6 @@ export const playHelp = {
     body: "Adds images as the narration gets longer, planned from the expected length when the run starts. The extra images are shared among the ticked prompts in order, up to 240 in all; each is one more image call. The line under it shows the count. Turning it on switches Motion from Zoom to Mix of both.",
     tutorial: { page: "Play-Images", anchor: "more-images-for-long-videos" },
   },
-  "play.batch-queue": {
-    title: "Queue",
-    body: "With more than one video on the page: on, they run one after another, each starting when the one before finishes (Calendar → Batch queue shows the order); off, they all start at once. At once finishes sooner when the steps wait on providers, but the video renders share your computer's processor and plan limits are reached sooner. Default: on.",
-    tutorial: { page: "Play-Overview", anchor: "queue-or-all-at-once" },
-  },
   "play.image-scenes": {
     title: "Scenes from the article",
     body: "Gives every image its own moment. The project's AI model reads the article once and writes a scene per image, from the opening to the ending in slideshow order. The scene goes where a prompt has {{Scene}}, or after its first paragraph. A thumbnail prompt with {{Scene}} gets a scene too: the article's most striking moment, a different one per thumbnail. Off, a {{Scene}} line is left out. One more AI call per run.",
@@ -425,21 +390,6 @@ export const playHelp = {
   },
 
   // Right rail and dialogs
-  "play.estimate": {
-    title: "Estimated cost",
-    body: "What the providers are likely to charge for this run, in US dollars, from their published prices. Actual usage can differ, and the estimate does not cap spending.",
-    tutorial: { page: "Play-Overview", anchor: "estimated-cost" },
-  },
-  "play.expected-words": {
-    title: "Expected article words",
-    body: "How long you expect each generated article to be. It drives the cost estimate and how many images More images for long videos adds; the article's real length is used once it is written. About 150 words is one minute. Default: 1500.",
-    tutorial: { page: "Play-Overview", anchor: "expected-article-words-per-video" },
-  },
-  "play.refresh-review": {
-    title: "Refresh review",
-    body: "Asks the server to check the setup again and recalculate the estimate now, instead of waiting for you to pause typing. Use it after changing a prompt in the Library.",
-    tutorial: { page: "Play-Overview", anchor: "review-the-whole-setup" },
-  },
   "play.template-name": {
     title: "Template name",
     body: "The name the template is listed under on Play and Templates. The template keeps this setup's settings; the topic you typed and any extra videos are left out, as the list below says.",

@@ -2,7 +2,7 @@ import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { jsonAnswer } from "@/test-app";
-import { deferred, mountPlay } from "./play-test-fixture";
+import { deferred, makeKey, mountPlay, summaryTitle, topicLabel } from "./play-test-fixture";
 import { reviewHarness, reviewStorage, suppliedDocument } from "./review-test-harness";
 
 beforeEach(() => {
@@ -14,10 +14,10 @@ afterEach(() => {
 });
 it("opens Review with the keyboard without posting Start", async () => {
   const { requests } = await mountPlay();
-  screen.getByLabelText("Title").focus();
+  screen.getByLabelText(topicLabel).focus();
   await userEvent.keyboard("{Control>}{Enter}{/Control}");
-  expect(screen.getByRole("dialog", { name: "Review" })).not.toBeNull();
-  expect(screen.getByRole("button", { name: "Start run" })).not.toBeNull();
+  expect(screen.getByRole("dialog", { name: summaryTitle })).not.toBeNull();
+  expect(screen.getByRole("button", { name: makeKey })).not.toBeNull();
   expect(requests.some((request) => new URL(request.url).pathname.endsWith("/start"))).toBe(false);
 });
 it("synchronously guards doubleclick and clears only the confirmed active draft", async () => {
@@ -59,7 +59,7 @@ it.each([false, true])(
     await harness.prepare();
     await waitFor(() => expect(harness.session().review.valid).toBe(true));
     const id = harness.session().activeId;
-    await userEvent.click(screen.getByRole("button", { name: "Start run" }));
+    await userEvent.click(screen.getByRole("button", { name: makeKey }));
     await screen.findByRole("button", { name: "Check whether it started" });
     expect(window.localStorage.getItem("slopify.play-draft")).toBe(id);
     if (reload) {
@@ -89,7 +89,7 @@ it("retries an uncertain uncommitted Start with exactly the same identity", asyn
   });
   await harness.prepare();
   await waitFor(() => expect(harness.session().review.valid).toBe(true));
-  await userEvent.click(screen.getByRole("button", { name: "Start run" }));
+  await userEvent.click(screen.getByRole("button", { name: makeKey }));
   await userEvent.click(await screen.findByRole("button", { name: "Check whether it started" }));
   await waitFor(() => expect(harness.created).toHaveBeenCalledExactlyOnceWith("original"));
   const bodies = await Promise.all(
@@ -105,7 +105,7 @@ it("replays one receipt and rejects changed-body reuse without creating again", 
   const harness = reviewHarness(undefined, { "POST /api/projects": create });
   await harness.prepare();
   await waitFor(() => expect(harness.session().review.valid).toBe(true));
-  await userEvent.click(screen.getByRole("button", { name: "Start run" }));
+  await userEvent.click(screen.getByRole("button", { name: makeKey }));
   await waitFor(() => expect(harness.created).toHaveBeenCalledTimes(1));
   const sent = harness.requests.find((request) => request.url.endsWith("/start"));
   if (!sent) throw new Error("Missing Start request");
@@ -140,7 +140,7 @@ it("starts 50 videos from the same frozen base setup after restarting", async ()
     "Article only",
     ...variants.map((row) => row.title),
   ]);
-  await userEvent.click(screen.getByRole("button", { name: "Queue 50 videos" }));
+  await userEvent.click(screen.getByRole("button", { name: "Queue 50 articles" }));
   await waitFor(() => expect(harness.created).toHaveBeenCalledExactlyOnceWith("p1"));
   const sent = harness.requests.find((request) => request.url.endsWith("/start"));
   if (!sent) throw new Error("Missing batch Start");

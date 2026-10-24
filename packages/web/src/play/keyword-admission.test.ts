@@ -66,7 +66,7 @@ describe("keywords Slopify fills on Play", () => {
     expect(refusal?.message).toContain("Change the prompt in Library, or pick another one.");
     expect(blocker).toEqual({
       field: "articlePrompt",
-      hint: "Remove {{Slopify_Summary}} from that prompt, or pick another, to play",
+      hint: "Remove {{Slopify_Summary}} from that prompt, or pick another",
     });
   });
 
@@ -98,7 +98,7 @@ describe("keywords Slopify fills on Play", () => {
     expect(result.ok).toBe(false);
     expect(blocker).toEqual({
       field: "title",
-      hint: "Remove {{Slopify_Title}} from the title to play",
+      hint: "Remove {{Slopify_Title}} from the title first",
     });
   });
 
@@ -139,7 +139,7 @@ describe("keywords Slopify fills on Play", () => {
     expect(result.ok).toBe(false);
     expect(blocker).toEqual({
       field: "thumbnailPrompt",
-      hint: "Set Article to Generate or Provide to play",
+      hint: "Turn the article on first",
     });
   });
 });
@@ -163,7 +163,7 @@ describe("a Text intro or outro", () => {
     });
     expect(result.ok ? [] : result.fields.map((one) => one.field)).toContain("intro");
     expect(blocker?.hint).toBe(
-      "Remove {{Slopify_Release_Date}} from the intro, or set its Mode to LLM, to play",
+      "Remove {{Slopify_Release_Date}} from the intro, or have the AI write it",
     );
   });
 

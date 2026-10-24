@@ -1,7 +1,7 @@
 import { topicKeywords } from "@app/slices/project-templates/one-off.js";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { type ReactElement, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { channelsQuery, defaultChannelId } from "@/channels/api";
 import { useCurrentChannel } from "@/channels/current";
@@ -13,18 +13,21 @@ import { Drawer } from "@/components/kit/drawer";
 import { Field, Input } from "@/components/kit/field";
 import { PageHeader, Workspace } from "@/components/kit/layout";
 import { useFreshProviderDefaults } from "@/components/welcome";
+import { StartFromPicture } from "@/designs/start";
 import { PlayLanguage } from "@/language/play-language";
 import { usePlayDraft } from "@/lib/form-drafts";
+import { modelsKey, modelsQuery, type ProviderModels } from "@/lib/models";
 import { shortcuts } from "@/lib/shortcuts";
 import { admission, keywordOrigins } from "@/play/admission";
-import { ChannelPicker, useDraftCast } from "@/play/channel-picker";
+import { BrandKitControls, ChannelFor, useDraftCast } from "@/play/channel-picker";
 import { checkpointTarget } from "@/play/checkpoints";
 import { ContentSection } from "@/play/content-section";
 import { usePlaySession } from "@/play/draft-context";
 import { DraftList } from "@/play/draft-list";
+import { rememberedDraft } from "@/play/draft-restore";
 import { focusPlayField, playFieldTarget } from "@/play/field-targets";
 import { KeywordBlock } from "@/play/keywords";
-import { headingOf, outputKindOf, publishes, rowShown } from "@/play/output-kind";
+import { outputKindOf, publishes, rowShown } from "@/play/output-kind";
 import { OutputPicker } from "@/play/output-picker";
 import {
   ExtrasSection,
@@ -34,26 +37,28 @@ import {
 } from "@/play/outputs-section";
 import { PausesAndChecks } from "@/play/pauses-and-checks";
 import { previewImageOf } from "@/play/preview-image";
+import { readinessProblems, type SetupProblem, setupProblems } from "@/play/problems";
 import { ReviewSection } from "@/play/review-section";
 import { pendingReviewUpload, startLabel } from "@/play/review-state";
-import { lookSummary } from "@/play/review-summary";
 import { rowOrigin, useTemplateOrigin } from "@/play/row-origin";
 import { SaveTemplateDialog } from "@/play/save-template-dialog";
 import type { PlaySection } from "@/play/sections";
 import { SeenBefore } from "@/play/seen-before";
 import { SetupList, type SetupListRow } from "@/play/setup-list";
 import {
+  rowLabel,
   rowOf,
-  rowProblem,
   rowSummary,
   rowsOfSection,
   type SetupRowId,
   setupRows,
 } from "@/play/setup-rows";
-import { StartRail } from "@/play/start-rail";
+import { MakeButton, StartRail, useNarrow } from "@/play/start-rail";
 import { llmUsesOf, type PlayFormState, type Upload, type UploadSlot } from "@/play/state";
+import { choseBlank, TemplateField, useStarterTemplate } from "@/play/template-field";
 import { templateLibrary } from "@/play/template-library";
-import { MoreVideos, TemplateField, TopicFields } from "@/play/topic-fields";
+import { MoreVideos, TopicFields } from "@/play/topic-fields";
+import { useFirstRunDefaults } from "@/play/use-draft-session";
 import { entriesQuery, promptsQuery, providersQuery, settingsQuery, voicesQuery } from "@/queries";
 import { fontsKey, listFonts } from "@/subtitles/api";
 import { subtitlesFor } from "@/subtitles/config";
@@ -61,28 +66,10 @@ import { templatesQuery } from "@/templates/api";
 import { useTutorial, useTutorialEvent, useTutorialProgress } from "@/tutorial/context";
 import { StylePreview } from "@/video/style-preview";
 
-// Whether this browser asked for More settings last time: Create then opens on the whole form.
-const moreSettingsKey = "slopify.create.more-settings";
-export function createOpensSimple(): boolean {
-  try {
-    return window.localStorage.getItem(moreSettingsKey) !== "1";
-  } catch {
-    return true;
-  }
-}
-function rememberMoreSettings(): void {
-  try {
-    window.localStorage.setItem(moreSettingsKey, "1");
-  } catch {
-    // A private window keeps no preference: Create opens simple again next time.
-  }
-}
-
 export function PlayRoute() {
   const navigate = useNavigate();
   return (
     <PlayForm
-      simpleByDefault={createOpensSimple()}
       onCreated={(projectId) => {
         void navigate({ to: "/projects/$projectId", params: { projectId } });
       }}
@@ -90,26 +77,15 @@ export function PlayRoute() {
   );
 }
 
-// Play is one path from topic to queue: pick a template, type the topic (and more topics for
-// more videos), press the Play key. Everything else is folded into summary rows, each opening
-// its editor in place; the review, the estimate and the key sit in the right rail.
-export function PlayForm({
-  onCreated,
-  simpleByDefault = false,
-}: {
-  readonly onCreated: (projectId: string) => void;
-  // Create as its route opens it: the template, the topic and Start, with More settings for
-  // the whole form below. Without it, the whole form, as Play always was.
-  readonly simpleByDefault?: boolean;
-}) {
+// Create is one screen, top to bottom: what is being made, what it starts from, what it is
+// about (and more topics for more videos), then one row per part of the run, each a plain
+// sentence with Change opening its editor in place, one at a time. The Make button, the length
+// and the estimate sit in the right rail, with the one next thing to do under the button.
+export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string) => void }) {
   const { api } = useApp();
   const tutorial = useTutorial();
-  const [simpleChosen, setSimpleChosen] = useState(simpleByDefault);
-  const showMore = (): void => {
-    setSimpleChosen(false);
-    rememberMoreSettings();
-  };
   const tutorialEvent = useTutorialEvent();
+  const cache = useQueryClient();
 
   const providers = useQuery(providersQuery(api));
   const prompts = useQuery(promptsQuery(api));
@@ -118,18 +94,29 @@ export function PlayForm({
   const settings = useQuery(settingsQuery(api));
   const channels = useQuery(channelsQuery(api));
   const templates = useQuery(templatesQuery(api));
-  // Create is the template and the topic: with no template saved yet, or while the guided tour
-  // points into it, the whole form is the only way to set a video up.
-  const simple =
-    simpleChosen &&
-    tutorial?.active !== true &&
-    (templates.data === undefined || templates.data.length > 0);
   const fonts = useQuery({ queryKey: fontsKey, queryFn: () => listFonts(api), staleTime: 60_000 });
 
   const [form, setForm] = usePlayDraft();
+  // The picked services' model lists, so a row names a model as its service does ("Sonnet 5.5",
+  // not "sonnet"). Read once here; the pickers keep them fresh while a row is open. Each service
+  // once, and none before one is picked.
+  const pickedServices = [
+    ...new Set([form.llm.provider, form.audio.provider, form.images.provider]),
+  ].filter((provider) => provider !== "");
+  useQueries({
+    queries: pickedServices.map((provider) => ({
+      ...modelsQuery(api, provider),
+      refetchInterval: false as const,
+    })),
+  });
   const cast = useDraftCast();
   const session = usePlaySession();
   const { document } = session;
+  const starter = useStarterTemplate();
+  const defaultsSettled = useFirstRunDefaults(
+    session,
+    document.templateSource !== undefined || (!choseBlank() && starter.starter !== undefined),
+  );
   const kind = outputKindOf(form);
   const sidebarChannel = useCurrentChannel().channelId;
   // The tools the first launch found fill a fresh draft's writer and image service.
@@ -160,12 +147,46 @@ export function PlayForm({
   const root = useRef<HTMLDivElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const reviewHeading = useRef<HTMLHeadingElement>(null);
+  // Set once a run started from this page: it is on its way to the project, so nothing is
+  // picked for the next draft from here.
+  const leaving = useRef(false);
+  const narrow = useNarrow();
+  // Whether the open summary drawer covers the rail's Make button: a window too narrow for
+  // both side by side. Then the drawer carries the button in its foot, as on a phone.
+  const summaryOpen = session.section === "review";
+  const [coversKey, setCoversKey] = useState(false);
+  useLayoutEffect(() => {
+    if (!summaryOpen) return;
+    const measure = (): void => {
+      const drawer = reviewHeading.current?.closest('[data-slot="drawer"]');
+      const key = root.current?.querySelector('[data-tour="play-start"]');
+      const panel = drawer?.getBoundingClientRect();
+      const button = key?.getBoundingClientRect();
+      setCoversKey(
+        panel !== undefined &&
+          button !== undefined &&
+          panel.left < button.right &&
+          panel.right > button.left,
+      );
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [summaryOpen]);
+  // Whether the Make button was pressed for this draft: only then does what the server refused
+  // about the topic turn the topic field red.
+  const [pressed, setPressed] = useState(false);
+  const start = (): void => {
+    setPressed(true);
+    void session.startRun();
+  };
   const touchedDraft = useRef(session.activeId);
   useLayoutEffect(() => {
     if (touchedDraft.current !== session.activeId) {
       touchedDraft.current = session.activeId;
       setTouched(new Set());
       setVariantOpen(null);
+      setPressed(false);
     }
   }, [session.activeId]);
 
@@ -195,7 +216,7 @@ export function PlayForm({
   );
 
   const blocker = subtitleUploading
-    ? { field: "subtitles.fontUpload", hint: "Wait for the subtitle font upload to finish to play" }
+    ? { field: "subtitles.fontUpload", hint: "Wait for the caption font to finish uploading first" }
     : admissionBlocker;
 
   useEffect(() => {
@@ -203,11 +224,12 @@ export function PlayForm({
     const created = session.takeCreated();
     const id = created?.projectIds[0];
     if (!id) return;
+    leaving.current = true;
     tutorialEvent({ type: "project-created", id });
     onCreated(id);
   }, [session.review.created, session.takeCreated, tutorialEvent, onCreated]);
 
-  // Completion follows the same field rules as PLAY, with selected prompts checked
+  // Completion follows the same field rules as the Make button, with selected prompts checked
   // against the loaded library and pending uploads kept incomplete.
   const errors = result.ok ? refused : [...result.fields, ...refused];
   const clear = (...prefixes: readonly string[]): boolean =>
@@ -242,42 +264,121 @@ export function PlayForm({
 
   // The row the text model sits in: the section of the first thing that needs it.
   const llmRow = llmUsesOf(form, choices.entries, choices.prompts)[0]?.section ?? "article";
-  const target = (field: string) =>
-    checkpointTarget(field, form) ??
-    playFieldTarget(field, form, batchItems, choices.entries, choices.prompts);
+  // Pauses and checks open in their row like every other part of the run, never the drawer.
+  const target = (field: string): { readonly section: PlaySection; readonly field: string } => {
+    const checkpoint = checkpointTarget(field, form);
+    if (checkpoint !== undefined) return { section: "content", field: checkpoint.field };
+    return playFieldTarget(field, form, batchItems, choices.entries, choices.prompts);
+  };
+  // A field says what is wrong with it once it has been touched, or once the server refused
+  // it; what is typed (the topic, the keywords) never turns red before the person has been in
+  // it or pressed the Make button, however early the server checks the draft.
   const problem = (field: string): string | undefined => {
     const canonical = target(field).field;
-    return errors.find(
-      (error) =>
-        target(error.field).field === canonical &&
-        (refused.includes(error) || touched.has(field) || touched.has(canonical)),
-    )?.message;
+    return errors.find((error) => {
+      if (target(error.field).field !== canonical) return false;
+      const typed = error.field === "title" || error.field.startsWith("values.");
+      return (
+        touched.has(field) ||
+        touched.has(canonical) ||
+        (refused.includes(error) && (!typed || pressed))
+      );
+    })?.message;
   };
   const revealField = (field: string): void => {
     const found = target(field);
     setTouched((current) => new Set([...current, field, found.field]));
-    // Another video's keywords open in their own side panel, over the form rather than Review.
+    // Another video's keywords open in their own side panel, over the form rather than the
+    // summary.
     void session.navigate(
       found.field.startsWith("items.") ? "content" : found.section,
       found.field,
     );
   };
 
-  // Rows that need attention when a draft is opened start open; the rest stay folded until
-  // Change. Decided once per draft, after the lists the rules read have arrived, so a row
-  // never folds away while it is being fixed.
-  const loaded = [providers, prompts, entries, voices, settings].every(
-    (query) => query.isSuccess || query.isError,
-  );
+  // Everything that stops the Make button, once: the rows, the hint under the button and the
+  // summary drawer all read this list.
+  const providerList = providers.data?.providers ?? [];
+  const problems = setupProblems({
+    form,
+    errors,
+    refused,
+    topics,
+    llmRow,
+    blocker,
+    readinessFirst: readinessProblems(form, choices.entries, providerList, llmRow),
+  });
+  const rowProblem = (row: SetupRowId): SetupProblem | undefined =>
+    problems.find((one) => one.row === row);
+  const topicField = topics[0] === undefined ? "title" : `values.${topics[0]}`;
+  const onFix = (fix: SetupProblem): void => {
+    revealField(fix.field);
+  };
+  const isTopic = (field: string): boolean =>
+    (field === "title" && topics.length === 0) ||
+    topics.some((topic) => field === `values.${topic}`);
+
+  // A part of the run that has nothing to set for this video is not a row at all: the
+  // keywords when no prompt asks for one, the channel with only one channel.
+  const channelCount = channels.data?.length ?? 0;
+  const keywordsToSet =
+    fields.length > topics.length ||
+    (topics.length > 0 && !/^\s*\{\{[^{}]+\}\}\s*$/.test(form.title));
+  const visibleRows = setupRows.filter((row) => {
+    const flagged = rowProblem(row.id) !== undefined;
+    if (row.id === "title" && !keywordsToSet) return flagged;
+    if (row.id === "channel" && channelCount < 2) return flagged;
+    // With Article Off nothing is narrated, so the Narration row leaves Create.
+    if (row.id === "narration" && form.sources.article === "off") return flagged;
+    return rowShown(row.id, kind, { problem: flagged, open: open.has(row.id) });
+  });
+
+  // The first row that needs something opens when a draft is opened; the rest stay folded
+  // until Change. Decided once per draft, after the lists the rules read and the first-run
+  // defaults have arrived (and not for a fresh draft the starter template is about to
+  // replace), so a row never folds away while it is being fixed.
+  const loaded =
+    defaultsSettled &&
+    [providers, prompts, entries, voices, settings].every(
+      (query) => query.isSuccess || query.isError,
+    );
+  const paused = tutorial?.active === true || leaving.current;
+  const starterComing =
+    !paused &&
+    !choseBlank() &&
+    session.activeId === null &&
+    session.view === null &&
+    session.edited === 0 &&
+    document.templateSource === undefined &&
+    rememberedDraft() === null &&
+    (!starter.settled || starter.starter !== undefined);
+  // Brings a row's line into view when it is off screen, and leaves the page alone when not.
+  const showRow = (row: SetupRowId): void => {
+    requestAnimationFrame(() => {
+      root.current
+        ?.querySelector(`[data-setup-row="${row}"] [data-row-head]`)
+        ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+  };
+  const firstProblemRow = useRef<() => SetupRowId | undefined>(() => undefined);
+  firstProblemRow.current = () => visibleRows.find((row) => rowProblem(row.id) !== undefined)?.id;
   // A fresh draft saved for the first time gets its id without being another draft, so only a
   // new operation (open, new draft, discard) or a different id decides again.
   const openedFor = useRef<{ readonly generation: number; readonly id: string | null } | null>(
     null,
   );
   const generation = session.generation();
+  // Which draft the person (or a reveal) already opened a row in: the arrival choice leaves
+  // that alone, however late the lists it waits for arrive.
+  const rowsChosen = useRef<{ readonly generation: number; readonly id: string | null } | null>(
+    null,
+  );
+  const chooseRows = (): void => {
+    rowsChosen.current = { generation: session.generation(), id: session.activeId };
+  };
   // biome-ignore lint/correctness/useExhaustiveDependencies: decided once per opened draft.
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || starterComing) return;
     const before = openedFor.current;
     openedFor.current = { generation, id: session.activeId };
     if (
@@ -286,19 +387,26 @@ export function PlayForm({
       (before.id === session.activeId || before.id === null)
     )
       return;
-    setOpen(
-      new Set(
-        setupRows
-          .map((row) => row.id)
-          .filter(
-            (row) => row !== "reviews" && rowProblem(row, errors, topics, llmRow) !== undefined,
-          ),
-      ),
-    );
-  }, [loaded, session.activeId, generation]);
-
-  // A reveal (a refusal, the reason under the key, Library → Use in Play) opens what holds the
-  // field, then focuses it.
+    // The guided tour opens the rows it points into itself.
+    if (tutorial?.active === true) return;
+    // A frame later, so what this draft's opening filled in by itself (the first-run defaults)
+    // is already counted.
+    requestAnimationFrame(() => {
+      const chosen = rowsChosen.current;
+      if (
+        chosen !== null &&
+        chosen.generation === generation &&
+        (chosen.id === session.activeId || chosen.id === null)
+      )
+        return;
+      const first = firstProblemRow.current();
+      setOpen(new Set(first === undefined ? [] : [first]));
+      if (first !== undefined) showRow(first);
+    });
+  }, [loaded, starterComing, session.activeId, generation]);
+  // A reveal (the hint under the button, the summary's links, Prompts → Make a video) opens
+  // the one row that holds the field, closing the others, then focuses it. A section without a
+  // field (the guided tour) opens that section's rows.
   const focusSequence = useRef<number | null>(null);
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs for each reveal, and again once what holds the field is open.
   useLayoutEffect(() => {
@@ -306,18 +414,6 @@ export function PlayForm({
     if (!reveal) focusSequence.current = null;
     if (!reveal || reveal.sequence === focusSequence.current || !root.current) return;
     const field = reveal.field;
-    // A field Create doesn't show opens the whole form first.
-    if (
-      simple &&
-      reveal.section !== "review" &&
-      !(
-        field !== undefined &&
-        (field === "template" || topics.some((topic) => field === `values.${topic}`))
-      )
-    ) {
-      showMore();
-      return;
-    }
     const variant = field ? /^items\.([^.]+)(\.|$)/.exec(field)?.[1] : undefined;
     if (reveal.section === "review") {
       focusSequence.current = reveal.sequence;
@@ -330,21 +426,21 @@ export function PlayForm({
         setVariantOpen(variant);
         return;
       }
-    } else if (!(field && topics.some((topic) => field === `values.${topic}`))) {
+    } else if (!(field && isTopic(field))) {
       const owner = field ? rowOf(field, llmRow) : undefined;
       const rows = owner === undefined ? rowsOfSection(reveal.section) : [owner];
-      const closed = rows.filter((row) => !open.has(row));
-      if (!(field === "title" && topics.length === 0) && closed.length > 0) {
-        setOpen((current) => new Set([...current, ...closed]));
+      if (rows.some((row) => !open.has(row))) {
+        chooseRows();
+        setOpen(owner === undefined ? new Set([...open, ...rows]) : new Set<SetupRowId>([owner]));
         return;
       }
     }
     focusSequence.current = reveal.sequence;
     if (field && focusPlayField(root.current, field)) return;
     heading.current?.focus();
-  }, [session.reveal, open, variantOpen, simple]);
+  }, [session.reveal, open, variantOpen]);
 
-  const openReview = (): void => {
+  const openSummary = (): void => {
     void session.navigate("review");
   };
 
@@ -374,7 +470,7 @@ export function PlayForm({
 
   const controls = {
     form,
-    providers: providers.data?.providers ?? [],
+    providers: providerList,
     prompts: choices.prompts,
     voices: voices.data?.voices ?? [],
     silenceGapSeconds: settings.data?.silenceGapSeconds ?? 3,
@@ -394,21 +490,23 @@ export function PlayForm({
     (stage) => stage.mode !== "off",
   ).length;
   const summaryContext = {
-    providers: providers.data?.providers ?? [],
+    providers: providerList,
     voices: voices.data?.voices ?? [],
-    keywords: fields.length,
+    keywords: fields.map((field) => field.name),
     topics,
     channel: channels.data?.find((one) => one.id === channelId)?.name,
     brandKit: document.form.useBrandKit !== false,
-    look: lookSummary(document.form),
     fontName: fonts.data?.fonts.find((font) => font.id === form.subtitles.fontId)?.name,
-    checkpoints: form.checkpoints?.length ?? 0,
     reviews,
     kind,
+    modelName: (provider: string, model: string) =>
+      cache
+        .getQueryData<ProviderModels>(modelsKey(provider))
+        ?.models.find((one) => one.id === model)?.name,
   };
   const editors: Readonly<Record<SetupRowId, SetupListRow["editor"]>> = {
     title: (
-      <div className="flex min-w-0 flex-col gap-4 py-4">
+      <div className="flex min-w-0 flex-col gap-4 py-2">
         {topics.length ? (
           <Field label="Title pattern" tip="play.title-pattern" error={problem("title")}>
             <Input
@@ -429,91 +527,78 @@ export function PlayForm({
           problem={problem}
           onChange={(name, value) => update({ values: { ...form.values, [name]: value } })}
         />
-        {fields.length === topics.length ? (
-          <p className="m-0 text-small text-ink-2">
-            {fields.length === 0
-              ? "No keywords. A prompt or the title that names {{a keyword}} adds one here."
-              : "The only keywords are the topic, typed at the top."}
-          </p>
-        ) : null}
       </div>
     ),
-    article: <ContentSection {...controls} entries={choices.entries} />,
+    article: (
+      <div className="flex min-w-0 flex-col gap-4">
+        <ContentSection {...controls} entries={choices.entries} />
+        {form.sources.article === "off" ? null : <PlayLanguage />}
+      </div>
+    ),
     narration: <NarrationSection {...controls} entries={choices.entries} onKeyword={revealField} />,
     images: <ImagesSection {...controls} />,
     video: <VideoSection {...controls} problemOf={problem} />,
     outputs: <ExtrasSection {...controls} publishing={publishes(kind)} entries={choices.entries} />,
     reviews: <PausesAndChecks problem={problem} />,
-    channel: (
-      <div className="flex min-w-0 flex-col gap-4 py-4">
-        <ChannelPicker />
-        <PlayLanguage />
-      </div>
-    ),
+    channel: <BrandKitControls />,
   };
-  // With Article Off nothing is narrated, so the Narration row leaves Play. The rest follow what
-  // is being made; a row that needs attention or is open stays whatever was picked.
-  const visibleRows = setupRows.filter(
-    (row) =>
-      !(row.id === "narration" && form.sources.article === "off") &&
-      rowShown(row.id, kind, {
-        problem: rowProblem(row.id, errors, topics, llmRow) !== undefined,
-        open: open.has(row.id),
-      }),
-  );
+  // A template's own channel is where it is listed, not a field of its setup: a draft made from
+  // it starts in that channel, which is the template's, not a change made here.
+  const templateSetup =
+    origin === undefined
+      ? undefined
+      : {
+          ...origin,
+          channelId:
+            origin.channelId ?? (template === undefined ? undefined : channelOfTemplate(template)),
+        };
   const rows: readonly SetupListRow[] = visibleRows.map((row) => ({
     id: row.id,
-    label: row.label,
+    label: rowLabel(row.id, kind),
     summary: rowSummary(row.id, form, summaryContext),
-    problem: rowProblem(row.id, errors, topics, llmRow)?.message,
+    problem: rowProblem(row.id)?.text,
     origin:
-      origin === undefined
+      templateSetup === undefined
         ? undefined
-        : rowOrigin(row.id, document, origin) === "template"
+        : rowOrigin(row.id, document, templateSetup) === "template"
           ? `From ${template?.name ?? "the template"}`
           : "Changed here",
     editor: editors[row.id],
   }));
+  // One row open at a time: opening a row folds the others, and it comes into view.
   const setRow = (row: SetupRowId, next: boolean): void => {
+    chooseRows();
     setOpen((current) => {
+      if (next) return new Set<SetupRowId>([row]);
       const changed = new Set(current);
-      if (next) changed.add(row);
-      else changed.delete(row);
+      changed.delete(row);
       return changed;
     });
-  };
-  const openRow = (row: SetupRowId): void => {
-    setRow(row, true);
-    requestAnimationFrame(() => {
-      root.current
-        ?.querySelector(`[data-setup-row="${row}"]`)
-        ?.scrollIntoView({ block: "start", behavior: "smooth" });
-    });
+    if (next) showRow(row);
   };
 
-  // Every Play action in the command palette (Ctrl+K).
+  // Every Create action in the command palette (Ctrl+K).
   const pageVideoCount = document.variants.length + 1;
   const pendingUpload = pendingReviewUpload(document, session.view);
   const canStart =
     !session.review.starting &&
     (session.review.uncertain ||
-      (session.review.valid && !session.review.pending && errors.length === 0 && !pendingUpload));
+      (session.review.valid && !session.review.pending && problems.length === 0 && !pendingUpload));
   useCommand({
     id: "play.start",
     title: startLabel(session.review, document),
-    group: "Play",
+    group: "Create",
     context: form.title || "New project",
-    keywords: ["start", "queue", "run", "play", "go"],
+    keywords: ["start", "queue", "run", "make", "go"],
     run: () => {
-      if (canStart) void session.startRun();
-      else if (blocker) revealField(blocker.field);
-      else if (errors[0]) revealField(errors[0].field);
+      if (canStart) start();
+      else if (problems[0]) onFix(problems[0]);
     },
   });
   useCommand({
     id: "play.add-topic",
-    title: "Add a topic for another video",
-    group: "Play",
+    title: "Add another topic",
+    group: "Create",
     context: `${String(pageVideoCount)} video${pageVideoCount === 1 ? "" : "s"}`,
     keywords: ["more videos", "variation", "batch", "queue"],
     run: () => setAdding(true),
@@ -521,37 +606,41 @@ export function PlayForm({
   useCommand({
     id: "play.save-template",
     title: "Save as template",
-    group: "Play",
+    group: "Create",
     keywords: ["template", "setup", "reuse"],
     run: () => setSaving(true),
   });
   useCommand({
     id: "play.review",
-    title: "Review the whole setup",
-    group: "Play",
-    keywords: ["summary", "checkpoints", "prompt"],
+    title: "See everything this run will do",
+    group: "Create",
+    keywords: ["summary", "review", "prompt", "check"],
     // Bound by the palette's provider, from a field too: the label and the key are one.
     shortcut: shortcuts.reviewSetup,
-    run: openReview,
+    run: openSummary,
   });
   useCommand({
     id: "play.template",
-    title: "Pick a template",
-    group: "Play",
-    keywords: ["template", "setup"],
+    title: "Pick what to start from",
+    group: "Create",
+    keywords: ["template", "setup", "starter"],
     run: () => {
       if (root.current) focusPlayField(root.current, "template");
     },
   });
   const previewOn = form.sources.video === "generate" && form.sources.images !== "off";
   const drawn = previewImageOf(form, cast);
+  const captionMode = form.sources.audio === "off" ? "off" : form.subtitles.mode;
+  const fontName = summaryContext.fontName ?? "Barlow";
   const preview = previewOn ? (
     <StylePreview
+      // The dialog it opens in carries the title, "Preview with your captions and look".
+      titled={false}
       drawnOn={drawn?.drawnOn}
       settings={{
         format: form.format,
         subtitles: {
-          mode: form.sources.audio === "off" ? "off" : form.subtitles.mode,
+          mode: captionMode,
           fontId: form.subtitles.fontId,
           fontSize: Number(document.form.subtitles.fontSize) || form.subtitles.fontSize,
           position: form.subtitles.position,
@@ -561,7 +650,13 @@ export function PlayForm({
         image: drawn?.image,
       }}
     />
-  ) : null;
+  ) : undefined;
+  const previewLine =
+    captionMode === "burn-in"
+      ? `Captions: ${fontName} ${String(form.subtitles.fontSize)}, ${form.subtitles.position.replace(/-/g, " ")}`
+      : captionMode === "files"
+        ? "Captions: caption files only"
+        : "Captions: none";
 
   return (
     <div
@@ -574,128 +669,105 @@ export function PlayForm({
       className="min-w-0 max-[767px]:[&_button]:min-h-11 max-[767px]:[&_input:not([type=checkbox])]:min-h-11 max-[767px]:[&_select]:min-h-11 max-[767px]:[&_summary]:min-h-11"
     >
       <PageHeader
-        crumb="Create"
         title={
           <span ref={heading} tabIndex={-1}>
-            {headingOf(kind)}
+            Create
           </span>
         }
-        meta={form.title.trim() === "" ? "Untitled draft" : form.title}
-        actions={<DraftList />}
+        actions={
+          <>
+            <Button variant="quiet" onClick={() => setSaving(true)}>
+              Save as template
+            </Button>
+            <DraftList />
+          </>
+        }
       />
       <Workspace
         className="sl-workspace--play"
         aside={
           <StartRail
-            errors={errors}
-            blocker={blocker}
+            problems={problems}
             saveProblem={saveProblem}
-            onReveal={revealField}
-            onWholeSetup={openReview}
-            onSaveTemplate={() => setSaving(true)}
+            onStart={start}
+            onFix={onFix}
+            onWholeSetup={openSummary}
             preview={preview}
+            previewLine={previewLine}
           />
         }
-        asideLabel="Review and start"
+        asideLabel="Length, cost and the Make button"
       >
-        {simple ? null : (
-          <OutputPicker
-            form={form}
-            update={update}
-            // Choosing what to make folds away the open rows that work doesn't use; changing a
-            // stage inside a row never folds the row being edited.
-            onPicked={(picked) =>
-              setOpen(
-                (current) =>
-                  new Set(
-                    [...current].filter((row) =>
-                      rowShown(row, picked, { problem: false, open: false }),
-                    ),
+        <OutputPicker
+          form={form}
+          update={update}
+          // Choosing what to make folds away the open rows that work doesn't use; changing a
+          // stage inside a row never folds the row being edited.
+          onPicked={(picked) =>
+            setOpen(
+              (current) =>
+                new Set(
+                  [...current].filter((row) =>
+                    rowShown(row, picked, { problem: false, open: false }),
                   ),
-              )
-            }
-          />
-        )}
-        <div
-          data-tour="play-options"
-          className="grid min-w-0 grid-cols-1 items-start gap-4 min-[700px]:grid-cols-2"
-        >
-          <TemplateField topics={topics} onError={setTemplateError} />
+                ),
+            )
+          }
+        />
+        <div data-tour="play-options" className="flex min-w-0 flex-col gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2">
+            <TemplateField topics={topics} paused={paused} onError={setTemplateError} />
+            <ChannelFor />
+          </div>
           <TopicFields topics={topics} problem={problem} />
+          <MoreVideos
+            topics={topics}
+            keywordNames={fields.map((field) => field.name)}
+            origins={origins}
+            problem={problem}
+            adding={adding}
+            onAdding={setAdding}
+            open={variantOpen}
+            onOpen={setVariantOpen}
+          />
         </div>
         <SeenBefore topics={topics} />
         {templateError ? <Callout tone="danger" title={templateError} /> : null}
-        {simple ? (
-          <SimpleCreateFoot
-            needing={rows.filter((row) => row.problem !== undefined).length}
-            onMore={showMore}
-          />
-        ) : (
-          <>
-            <MoreVideos
-              topics={topics}
-              keywordNames={fields.map((field) => field.name)}
-              origins={origins}
-              problem={problem}
-              adding={adding}
-              onAdding={setAdding}
-              open={variantOpen}
-              onOpen={setVariantOpen}
-            />
-            <SetupList rows={rows} open={open} onChange={setRow} />
-          </>
-        )}
+        <SetupList rows={rows} open={open} onChange={setRow} />
+        <StartFromPicture />
       </Workspace>
       <Drawer
-        open={session.section === "review"}
-        title="Review"
+        open={summaryOpen}
+        title="Everything this run will do"
         headingRef={reviewHeading}
+        // Beside the rail where there is room, so the Make button and the estimate stay in
+        // view (styles/shell.css places it); where it covers the button (narrow windows), with
+        // the button in its foot.
+        className="min-[900px]:right-[var(--play-drawer-right)]"
         onClose={() => {
           void session.navigate("content" satisfies PlaySection);
         }}
+        {...(narrow || coversKey
+          ? { footer: <MakeButton problems={problems} onStart={start} onFix={onFix} /> }
+          : {})}
       >
-        <ReviewSection fields={fields} errors={errors} problem={problem} onReveal={revealField} />
+        <ReviewSection
+          fields={fields}
+          topicField={topicField}
+          problems={problems}
+          onFix={onFix}
+          onReveal={revealField}
+        />
       </Drawer>
       <SaveTemplateDialog open={saving} onClose={() => setSaving(false)} />
       {visibleRows.map((row) => (
-        <RowCommand key={row.id} id={row.id} label={row.label} onOpen={openRow} />
+        <RowCommand key={row.id} id={row.id} label={rowLabel(row.id, kind)} onOpen={setRow} />
       ))}
     </div>
   );
 }
 
-// Under Create's template and topic: More settings, and how many settings need fixing first.
-function SimpleCreateFoot({
-  needing,
-  onMore,
-}: {
-  readonly needing: number;
-  readonly onMore: () => void;
-}): ReactElement {
-  const more = (
-    <Button variant="secondary" size="small" onClick={onMore}>
-      More settings
-    </Button>
-  );
-  return needing > 0 ? (
-    <Callout
-      tone="waiting"
-      title={`${String(needing)} ${needing === 1 ? "setting needs" : "settings need"} you before this can start`}
-      actions={more}
-    >
-      More settings opens the whole form with each one marked.
-    </Callout>
-  ) : (
-    <div className="flex flex-wrap items-center gap-3">
-      {more}
-      <span className="text-small text-ink-2">
-        Everything else comes from the template: the voice, pictures, video and outputs.
-      </span>
-    </div>
-  );
-}
-
-// "Change narration" and the rest in the command palette, one per summary row.
+// "Change narration" and the rest in the command palette, one per setup row.
 function RowCommand({
   id,
   label,
@@ -703,14 +775,14 @@ function RowCommand({
 }: {
   readonly id: SetupRowId;
   readonly label: string;
-  readonly onOpen: (row: SetupRowId) => void;
+  readonly onOpen: (row: SetupRowId, open: boolean) => void;
 }): null {
   useCommand({
     id: `play.row.${id}`,
     title: `Change ${label.toLowerCase()}`,
-    group: "Play",
+    group: "Create",
     keywords: ["open", "edit", "section", label],
-    run: () => onOpen(id),
+    run: () => onOpen(id, true),
   });
   return null;
 }

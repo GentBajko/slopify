@@ -110,7 +110,7 @@ it.each([
     expect(session.status).toBe("conflict");
     expect(session.view === null).toBe(lostCreate);
     await act(() => client.invalidateQueries({ queryKey: ["play-drafts"] }));
-    fireEvent.click(screen.getByText("Drafts"));
+    fireEvent.click(screen.getByRole("button", { name: /^Draft: / }));
     fireEvent.click(await screen.findByRole("button", { name: "Delete Tab B" }));
     if (outcome === "conflict") otherWriter(h, id, "Tab C");
     fireEvent.click(screen.getByRole("button", { name: "Delete draft" }));
@@ -197,7 +197,7 @@ it("waits for a creation retry before deleting so a late POST cannot recreate th
     });
     await waitFor(() => expect(creates).toBe(2));
     await act(() => client.invalidateQueries({ queryKey: ["play-drafts"] }));
-    fireEvent.click(screen.getByText("Drafts"));
+    fireEvent.click(screen.getByRole("button", { name: /^Draft: / }));
     fireEvent.click(await screen.findByRole("button", { name: "Delete Retrying" }));
     fireEvent.click(screen.getByRole("button", { name: "Delete draft" }));
     await act(async () => {});

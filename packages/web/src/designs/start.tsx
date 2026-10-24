@@ -114,19 +114,18 @@ export function useDesignStarts(options: { readonly projectId?: string } = {}): 
   };
 }
 
-// Create's one quiet line under the five kinds: a picture is not a project, so it opens a
-// design instead.
+// Create's quiet last line: a poster or an edited picture is not a project, so each opens the
+// design editor instead, and says so on the button.
 export function StartFromPicture(): ReactElement {
   const starts = useDesignStarts();
   return (
-    <p className="m-0 mt-2 flex flex-wrap items-center gap-x-1 text-small text-ink-2">
-      <span>Or start from a picture:</span>
-      <Button variant="quiet" size="small" disabled={starts.busy} onClick={starts.pickPicture}>
-        Edit a picture
-      </Button>
-      <span aria-hidden="true">·</span>
+    <p className="m-0 flex flex-wrap items-center gap-x-2 gap-y-1 text-small text-ink-2">
+      <span>A picture instead?</span>
       <Button variant="quiet" size="small" disabled={starts.busy} onClick={starts.startPoster}>
-        Design a poster
+        Design a poster (opens the design editor)
+      </Button>
+      <Button variant="quiet" size="small" disabled={starts.busy} onClick={starts.pickPicture}>
+        Edit a picture (opens the design editor)
       </Button>
       {starts.input}
       {starts.problem === null ? null : (

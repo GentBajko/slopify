@@ -26,8 +26,7 @@ it("uploads the shorts' background music as a draft attachment from More shorts 
       return response({ ...ready(sent), name: "bed.mp3" });
     },
   });
-  await openRow("Narration");
-  await openRow("Outputs");
+  await openRow("Extras");
   // Asked for only once Shorts is ticked, under More shorts options.
   expect(screen.queryByLabelText(/^Background music/)).toBeNull();
   await userEvent.click(screen.getByRole("checkbox", { name: /^Shorts/ }));
@@ -46,8 +45,8 @@ it("uploads the shorts' background music as a draft attachment from More shorts 
     attachmentId,
     name: "bed.mp3",
   });
-  // Staged beside the narration file it sits under.
-  await waitFor(() => expect(screen.getAllByText("Staged")).toHaveLength(2));
+  // Staged like the narration file, which sits in its own row.
+  await waitFor(() => expect(screen.getAllByText("Staged")).toHaveLength(1));
   // The fold's line names the music while it is closed too.
   expect(screen.getByText(/Music: bed\.mp3/).closest("summary")?.textContent).toMatch(
     /^More shorts options.*Music: bed\.mp3/,

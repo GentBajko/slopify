@@ -7,7 +7,7 @@ import { PlayForm } from "@/routes/play";
 import { renderRouted, testDeps } from "@/test-app";
 import { PlayDraftProvider } from "./draft-context";
 import { freshDraftDocument } from "./draft-state";
-import { mountPlay, openRow, playRoutes } from "./play-test-fixture";
+import { makeKey, mountPlay, openRow, playRoutes, topicLabel } from "./play-test-fixture";
 import { reviewHarness, reviewStorage } from "./review-test-harness";
 import { oneOffNotes } from "./save-template-dialog";
 import { rowOf, rowsOfSection } from "./setup-rows";
@@ -33,18 +33,25 @@ const lore: PlayDraftDocument = {
 
 it("asks for the topic the title names and shows the title it makes", async () => {
   await mountPlay();
-  fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Lore: {{topic}}" } });
-  const topic = await screen.findByRole("textbox", { name: "topic" });
-  await userEvent.type(topic, "Cleopatra");
-  expect(screen.getByText("Lore: Cleopatra")).not.toBeNull();
-  // The title itself moves into the Title and keywords row, where it can still be changed.
+  fireEvent.change(screen.getByLabelText(topicLabel), { target: { value: "Lore: {{topic}}" } });
+  // The one field at the top now asks for the topic, in the same words.
+  await waitFor(() =>
+    expect(screen.getByLabelText(topicLabel).getAttribute("data-play-field")).toBe("values.topic"),
+  );
+  await userEvent.type(screen.getByLabelText(topicLabel), "Cleopatra");
+  expect(screen.getByText(/Title will be:/).textContent).toBe("Title will be: Lore: Cleopatra");
+  // The title itself moves into the Keywords row, where it can still be changed.
   expect(screen.queryByRole("textbox", { name: "Title" })).toBeNull();
+  await openRow("Keywords");
+  expect((screen.getByLabelText("Title pattern") as HTMLInputElement).value).toBe(
+    "Lore: {{topic}}",
+  );
 });
 
 it("queues more videos from the same setup as topic chips", async () => {
   const h = reviewHarness();
   await h.prepare(lore);
-  await userEvent.click(screen.getByRole("button", { name: "Add topic" }));
+  await userEvent.click(screen.getByRole("button", { name: "Another topic" }));
   await userEvent.type(screen.getByLabelText("topic of another video"), "Nefertiti{Enter}");
   await userEvent.type(screen.getByLabelText("topic of another video"), "Sargon{Enter}");
   const more = within(screen.getByRole("region", { name: "More videos from the same setup" }));
@@ -64,18 +71,21 @@ it("queues more videos from the same setup as topic chips", async () => {
   expect((within(panel).getByLabelText("minWords") as HTMLInputElement).value).toBe("1500");
 });
 
-it("says right under the Play key why it can't start, and goes to the field", async () => {
+it("says right under the Make button what to do next, and goes there", async () => {
   await mountPlay();
   const start = within(screen.getByRole("region", { name: "Start" }));
-  expect((start.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled).toBe(
-    true,
-  );
-  const reason = start.getByRole("button", { name: "Go to the field", description: /to play$/ });
-  expect(start.getByRole("button", { name: "Start run" }).getAttribute("aria-describedby")).toBe(
-    "play-start-reason",
-  );
+  const key = start.getByRole("button", { name: makeKey });
+  expect((key as HTMLButtonElement).disabled).toBe(true);
+  const reason = start.getByRole("button", { name: "Type what the video is about first" });
+  expect(key.getAttribute("aria-describedby")).toBe(reason.parentElement?.id);
   await userEvent.click(reason);
-  await waitFor(() => expect(document.activeElement?.hasAttribute("data-play-field")).toBe(true));
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText(topicLabel)));
+  await userEvent.type(screen.getByLabelText(topicLabel), "Rope Tricks");
+  await userEvent.click(start.getByRole("button", { name: "Pick an article prompt first" }));
+  // The prompts are cards: the focus lands on the card that stands for the field.
+  await waitFor(() =>
+    expect(document.activeElement?.getAttribute("data-play-field")).toBe("articlePrompt"),
+  );
 });
 
 it("names what a template leaves out: the topic, and the other videos", () => {
@@ -148,21 +158,22 @@ it("offers every Play action in the command palette", async () => {
   await screen.findByRole("radio", { name: /^Dossier/ });
   const titles = registry.list().map((command) => command.title);
   for (const title of [
-    "Start run",
-    "Add a topic for another video",
+    "Make the video",
+    "Add another topic",
     "Save as template",
-    "Review the whole setup",
-    "Pick a template",
-    "Change title and keywords",
+    "See everything this run will do",
+    "Pick what to start from",
     "Change article",
     "Change narration",
     "Change images",
     "Change video and style",
-    "Change outputs",
-    "Change reviews",
-    "Change channel",
+    "Change extras",
+    "Change pauses and checks",
   ])
     expect(titles).toContain(title);
+  // Nothing to set for keywords or the channel here, so neither is a row to change.
+  expect(titles).not.toContain("Change keywords");
+  expect(titles).not.toContain("Change channel");
   const run = (title: string) =>
     act(async () => {
       await registry
@@ -170,9 +181,9 @@ it("offers every Play action in the command palette", async () => {
         .find((command) => command.title === title)
         ?.run();
     });
-  await run("Change outputs");
-  expect(screen.getByRole("region", { name: "Outputs" })).not.toBeNull();
-  await run("Add a topic for another video");
+  await run("Change extras");
+  expect(screen.getByRole("region", { name: "Extras" })).not.toBeNull();
+  await run("Add another topic");
   expect(screen.getByLabelText("Title of another video")).not.toBeNull();
   await run("Save as template");
   expect(await screen.findByRole("dialog", { name: "Save as template" })).not.toBeNull();
@@ -202,6 +213,7 @@ it("names each stage once: the row says it, the editor under it starts at its sw
     ).toEqual([...choices]);
   }
   // A part of a row that is not the row itself keeps its own heading.
+  await openRow("Article");
   expect(
     within(screen.getByRole("region", { name: "Article" })).getByRole("heading", {
       name: "Research",

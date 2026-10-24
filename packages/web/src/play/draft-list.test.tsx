@@ -3,7 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { startedAt } from "@/lib/utils";
 import { jsonAnswer, renderApp, testDeps } from "@/test-app";
 import { PlayDraftProvider, type PlaySession, usePlaySession } from "./draft-context";
-import { DraftList } from "./draft-list";
+import { DraftList, draftName } from "./draft-list";
 import { draftView, playRoutes } from "./play-test-fixture";
 
 afterEach(() => {
@@ -33,7 +33,7 @@ it("lists server drafts with no browser identity and offers recovery for unreada
       }),
     ),
   );
-  fireEvent.click(await screen.findByText("Drafts"));
+  fireEvent.click(await screen.findByRole("button", { name: /^Draft: / }));
   await screen.findByText("Recovered");
   const edited = screen.getByText(`Last edited ${startedAt("2026-09-13")}`);
   expect(edited.getAttribute("datetime")).toBe("2026-09-13");
@@ -42,8 +42,8 @@ it("lists server drafts with no browser identity and offers recovery for unreada
   expect(remove).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "Delete draft" }));
   await screen.findByText("Cannot discard");
-  // The draft stays listed; the list reopens from the same Drafts control.
-  fireEvent.click(screen.getByText("Drafts"));
+  // The draft stays listed; the list reopens from the same Draft control.
+  fireEvent.click(screen.getByRole("button", { name: /^Draft: /, hidden: true }));
   expect(await screen.findByText("Recovered")).toBeTruthy();
 });
 it("discards an active dirty draft at the confirmed version without saving discarded edits", async () => {
@@ -87,7 +87,7 @@ it("discards an active dirty draft at the confirmed version without saving disca
       }),
     ),
   );
-  fireEvent.click(await screen.findByText("Drafts"));
+  fireEvent.click(await screen.findByRole("button", { name: /^Draft: / }));
   await screen.findByText("Active");
   await act(() => session?.open(id));
   act(() => {
@@ -124,7 +124,7 @@ it("removes a successfully discarded draft from the open list immediately", asyn
       }),
     ),
   );
-  fireEvent.click(await screen.findByText("Drafts"));
+  fireEvent.click(await screen.findByRole("button", { name: /^Draft: / }));
   fireEvent.click(await screen.findByRole("button", { name: "Delete To discard" }));
   fireEvent.click(screen.getByRole("button", { name: "Delete draft" }));
   await waitFor(() => expect(screen.queryByText("To discard")).toBeNull());
@@ -166,7 +166,7 @@ it("clears a corrupt remembered identity after explicit list discard", async () 
     // The state word beside Drafts says the remembered draft could not be used; the full
     // sentence is Play's action bar's to show.
     await screen.findByText("Couldn't save");
-    fireEvent.click(screen.getByText("Drafts"));
+    fireEvent.click(screen.getByRole("button", { name: /^Draft: / }));
     fireEvent.click(screen.getByRole("button", { name: "Delete Broken" }));
     fireEvent.click(screen.getByRole("button", { name: "Delete draft" }));
     await waitFor(() => expect(map.has("slopify.play-draft")).toBe(false));
@@ -176,4 +176,13 @@ it("clears a corrupt remembered identity after explicit list discard", async () 
     if (original) Object.defineProperty(window, "localStorage", original);
     else Object.defineProperty(window, "localStorage", { configurable: true, value: undefined });
   }
+});
+
+it("names a draft by its title once its keywords are filled, never by a keyword in braces", () => {
+  expect(draftName({ title: "{{Topic}}", values: {} })).toBe("Untitled");
+  expect(draftName({ title: "Lore: {{Topic}}", values: { Topic: "  " } })).toBe("Untitled");
+  expect(draftName({ title: "Lore: {{Topic}}", values: { Topic: "Cleopatra" } })).toBe(
+    "Lore: Cleopatra",
+  );
+  expect(draftName({ title: "", values: {} })).toBe("Untitled");
 });

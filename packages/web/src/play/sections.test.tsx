@@ -2,9 +2,16 @@ import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 import type { PlaySession } from "./draft-context";
-import { mountPlay, openRow, openSection, pickArticlePrompt } from "./play-test-fixture";
+import {
+  mountPlay,
+  openRow,
+  openSection,
+  pickArticlePrompt,
+  summaryTitle,
+  topicLabel,
+} from "./play-test-fixture";
 
-// The Outputs row's one line: what the run makes besides the video.
+// The Extras row's one sentence: what the run makes besides the video.
 function outputsSummary(): string {
   return document.querySelector('[data-setup-row="outputs"] [data-row-summary]')?.textContent ?? "";
 }
@@ -18,29 +25,48 @@ async function saveNow(session: () => PlaySession): Promise<void> {
 }
 
 afterEach(cleanup);
-it("folds the setup into rows that open in place and keep what was typed", async () => {
+it("folds the setup into rows, one open at a time, that keep what was typed", async () => {
   const { requests } = await mountPlay();
   const rows = within(screen.getByRole("list", { name: "Setup" }));
-  expect(rows.getAllByRole("button", { name: /^(Change|Done with) / })).toHaveLength(8);
-  await userEvent.type(screen.getByLabelText("Title"), "Retained");
-  // Rows that need attention on a fresh draft start open; the others open with Change.
-  for (const name of ["Video and style", "Outputs", "Channel"]) {
+  // Keywords and Channel are rows only when there is something to set: no prompt asks for a
+  // keyword yet, and there is one channel.
+  const names = document.querySelectorAll("[data-setup-row] > [data-row-head] h3");
+  expect(Array.from(names, (heading) => heading.textContent)).toEqual([
+    "Article",
+    "Narration",
+    "Images",
+    "Video and style",
+    "Extras",
+    "Pauses and checks",
+  ]);
+  // A row that needs something says Fix; the first of them is open on arrival.
+  expect(rows.getByRole("button", { name: "Fix narration" })).not.toBeNull();
+  expect(screen.getByRole("region", { name: "Article" })).not.toBeNull();
+  await userEvent.type(screen.getByLabelText(topicLabel), "Retained");
+  for (const name of ["Video and style", "Extras", "Pauses and checks"]) {
     const change = rows.getByRole("button", { name: `Change ${name.toLowerCase()}` });
     expect(change.getAttribute("aria-expanded")).toBe("false");
     await userEvent.click(change);
     expect(screen.getByRole("region", { name })).not.toBeNull();
-    await userEvent.click(rows.getByRole("button", { name: `Done with ${name.toLowerCase()}` }));
+    // Opening a row folds the one that was open.
+    expect(screen.queryByRole("region", { name: "Article" })).toBeNull();
+    await userEvent.click(rows.getByRole("button", { name: `Close ${name.toLowerCase()}` }));
     expect(screen.queryByRole("region", { name })).toBeNull();
   }
-  expect((screen.getByLabelText("Title") as HTMLInputElement).value).toBe("Retained");
+  expect((screen.getByLabelText(topicLabel) as HTMLInputElement).value).toBe("Retained");
   expect(requests.some((r) => r.url.endsWith("/api/projects") && r.method === "POST")).toBe(false);
 });
-it("opens Review while invalid and reveals the exact error control", async () => {
+it("opens the summary with the keyboard and goes to the exact missing control", async () => {
   const { created } = await mountPlay();
-  await userEvent.click(screen.getByLabelText("Title"));
+  await userEvent.type(screen.getByLabelText(topicLabel), "Rope Tricks");
+  await openRow("Extras");
   await userEvent.keyboard("{Control>}{Enter}{/Control}");
-  await screen.findByRole("heading", { name: "Review" });
-  await userEvent.click(screen.getByRole("button", { name: "Pick an article prompt." }));
+  await screen.findByRole("heading", { name: summaryTitle });
+  await userEvent.click(
+    within(screen.getByRole("list", { name: "What is missing" })).getByRole("button", {
+      name: /Pick an article prompt/,
+    }),
+  );
   await waitFor(() =>
     expect(document.activeElement?.getAttribute("data-play-field")).toBe("articlePrompt"),
   );
@@ -49,7 +75,7 @@ it("opens Review while invalid and reveals the exact error control", async () =>
 });
 it("does not mark untouched fields when another field changes", async () => {
   await mountPlay();
-  await userEvent.type(screen.getByLabelText("Title"), "Title");
+  await userEvent.type(screen.getByLabelText(topicLabel), "Title");
   expect(screen.getByLabelText("Article prompt").getAttribute("aria-invalid")).toBe("false");
 });
 
@@ -75,8 +101,8 @@ it("focuses a stable image count after removing an earlier selected prompt", asy
   await userEvent.clear(screen.getByLabelText("How many images for Maps"));
   await userEvent.click(screen.getByRole("checkbox", { name: "Oils" }));
   await openSection("Review");
-  const error = within(screen.getByRole("list", { name: "Setup errors" })).getByRole("button", {
-    name: /between 1 and 20/,
+  const error = within(screen.getByRole("list", { name: "What is missing" })).getByRole("button", {
+    name: /from 1 to 20/,
   });
   await userEvent.click(error);
   await waitFor(() =>
@@ -100,21 +126,25 @@ it("retains hidden literal keyword values and renders prompt HTML as text", asyn
     }),
   });
   await pickArticlePrompt("Dossier");
-  await openRow("Title and keywords");
   await userEvent.click(screen.getByText("Text of the prompt"));
   expect(document.querySelector("pre img")).toBeNull();
+  await openRow("Keywords");
   for (const name of ["__proto__", "topic.name", "with spaces"])
     await userEvent.type(screen.getByLabelText(name), "Kept");
+  await openRow("Article");
   const source = within(screen.getByRole("radiogroup", { name: "Article" }));
   await userEvent.click(source.getByRole("radio", { name: "Use my text as written" }));
+  // Nothing asks for a keyword now, so there is no Keywords row at all.
+  expect(document.querySelector('[data-setup-row="title"]')).toBeNull();
   expect(screen.queryByLabelText("__proto__")).toBeNull();
   await userEvent.click(source.getByRole("radio", { name: "Write it for me" }));
+  await openRow("Keywords");
   for (const name of ["__proto__", "topic.name", "with spaces"])
     expect((screen.getByLabelText(name) as HTMLInputElement).value).toBe("Kept");
 });
 it("keeps the draft when New prompt opens the prompt editor", async () => {
   const { requests } = await mountPlay();
-  await userEvent.type(screen.getByLabelText("Title"), "Keep this draft");
+  await userEvent.type(screen.getByLabelText(topicLabel), "Keep this draft");
   const link = screen.getByRole("link", { name: "New prompt ↗ (opens Prompts)" });
   expect(link.getAttribute("href")).toBe("/prompts/new?kind=article");
   await userEvent.click(link);
@@ -134,32 +164,33 @@ it("keeps the draft when New prompt opens the prompt editor", async () => {
   );
 });
 
-it("edits a provided article from the summary and preserves focus through autosave", async () => {
-  await mountPlay();
+it("goes to a provided article from the hint and preserves focus through autosave", async () => {
+  const { session } = await mountPlay();
+  await userEvent.type(screen.getByLabelText(topicLabel), "Rope Tricks");
   await userEvent.click(
     within(screen.getByRole("radiogroup", { name: "Article" })).getByRole("radio", {
       name: "Use my text as written",
     }),
   );
-  // The reason under the Play key names what is missing and goes to it.
+  await openRow("Extras");
+  // The hint under the Make key names what is missing and goes to it.
   await userEvent.click(
     within(screen.getByRole("region", { name: "Start" })).getByRole("button", {
-      name: "Go to the field",
-      description: "Paste the article to play",
+      name: "Paste the article first",
     }),
   );
   await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("Article text")));
   await userEvent.type(screen.getByLabelText("Article text"), "A provided article.");
-  await screen.findByText("Saved");
+  await waitFor(() => expect(session().status).toBe("saved"));
   expect(document.activeElement).toBe(screen.getByLabelText("Article text"));
 });
 
 it("ticks the PDF of the article, picks its theme and saves both into the draft", async () => {
   const { requests, session } = await mountPlay();
-  await openRow("Outputs");
+  await openRow("Extras");
   // Its look is asked for only once it is ticked.
   expect(screen.queryByRole("combobox", { name: "Theme" })).toBeNull();
-  expect(outputsSummary()).not.toMatch(/PDF/);
+  expect(outputsSummary()).toBe("The video only: no thumbnail, description, shorts or PDF.");
   await userEvent.click(screen.getByRole("checkbox", { name: "PDF of the article" }));
   const theme = screen.getByRole<HTMLSelectElement>("combobox", { name: "Theme" });
   // Plain is the one built-in; DiceMaster is no longer offered.
@@ -170,7 +201,7 @@ it("ticks the PDF of the article, picks its theme and saves both into the draft"
       (one) => one.textContent,
     ),
   ).toEqual(["Plain"]);
-  expect(outputsSummary()).toMatch(/PDF \(Plain\)/);
+  expect(outputsSummary()).toBe("Also makes a PDF in the Plain look.");
   await saveNow(session);
   {
     const saves = requests.filter(
@@ -187,7 +218,7 @@ it("ticks the PDF of the article, picks its theme and saves both into the draft"
 
 it("ticks the YouTube description, picks its prompt and saves both into the draft", async () => {
   const { requests, session } = await mountPlay();
-  await openRow("Outputs");
+  await openRow("Extras");
   const on = screen.getByRole<HTMLInputElement>("checkbox", { name: /YouTube description/ });
   expect(on.checked).toBe(false);
   expect(screen.queryByRole("combobox", { name: "Description prompt" })).toBeNull();
@@ -227,11 +258,11 @@ it("leaves the YouTube description and Shorts off the checklist without narratio
 
 it("switches Shorts on, sets how many and how long, picks both prompts and saves them into the draft", async () => {
   const { requests, session } = await mountPlay();
-  await openRow("Outputs");
+  await openRow("Extras");
   const on = screen.getByRole<HTMLInputElement>("checkbox", { name: /^Shorts/ });
   expect(on.checked).toBe(false);
   expect(screen.queryByRole("textbox", { name: "How many shorts" })).toBeNull();
-  expect(outputsSummary()).not.toMatch(/shorts/);
+  expect(outputsSummary()).not.toMatch(/\d shorts/);
   await userEvent.click(on);
   const count = screen.getByRole<HTMLInputElement>("textbox", { name: "How many shorts" });
   const prompt = screen.getByRole<HTMLSelectElement>("combobox", { name: "Shorts prompt" });
@@ -274,7 +305,7 @@ it("switches Shorts on, sets how many and how long, picks both prompts and saves
 
 it("refuses a Shorts length whose shortest is longer than its longest, in plain words", async () => {
   await mountPlay();
-  await openRow("Outputs");
+  await openRow("Extras");
   await userEvent.click(screen.getByRole("checkbox", { name: /^Shorts/ }));
   const shortest = screen.getByRole<HTMLInputElement>("textbox", {
     name: "Shortest short, in seconds",
@@ -288,16 +319,15 @@ it("refuses a Shorts length whose shortest is longer than its longest, in plain 
       "The longest a short may be must be at least the shortest. Raise the maximum or lower the minimum.",
     ),
   ).not.toBeNull();
-  expect(
-    within(
-      document.querySelector<HTMLElement>('[data-setup-row="outputs"]') ?? document.body,
-    ).getByText("Needs setup"),
-  ).not.toBeNull();
+  // The row says it too, in red, with its lamp and words.
+  expect(document.querySelector('[data-setup-row="outputs"] [data-row-problem]')?.textContent).toBe(
+    "Set how long the shorts are",
+  );
 });
 
 it("keeps the title, speed, music volume and link in More shorts options and saves them into the draft", async () => {
   const { requests, session } = await mountPlay();
-  await openRow("Outputs");
+  await openRow("Extras");
   await userEvent.click(screen.getByRole("checkbox", { name: /^Shorts/ }));
   // Closed until asked for; a new form starts with the title on screen.
   const more = screen.getByText("More shorts options");

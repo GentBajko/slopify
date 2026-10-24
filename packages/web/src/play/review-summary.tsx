@@ -1,11 +1,7 @@
-import { readinessIsUsable } from "@app/kernel/ports/model.js";
 import { sourceOf } from "@app/slices/admission/model.js";
-import { motionStyleLabels, usesYoutubeDescription } from "@app/slices/admission/rules.js";
+import { motionStyleLabels } from "@app/slices/admission/rules.js";
 import type { Field } from "@app/slices/admission/substitute.js";
 import { documentThemeLabel } from "@app/slices/document/model.js";
-import type { Entry } from "@app/slices/library/model.js";
-import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
-import type { ProviderFamily, ProviderStatus, Voice } from "@app/slices/settings/model.js";
 import {
   defaultMusicVolume,
   defaultShortsPromptName,
@@ -14,7 +10,6 @@ import {
 import {
   cutModeLabels,
   legacyVideoEdit,
-  usesAnimation,
   type VideoEditSettings,
   videoEditOf,
   videoEditRows,
@@ -28,12 +23,16 @@ import { modelsKey, type ProviderModels } from "@/lib/models";
 import { entriesQuery, providersQuery, voicesQuery } from "@/queries";
 import { type FontSummary, fontsKey } from "@/subtitles/api";
 import { usePlaySession } from "./draft-context";
+import { draftName } from "./draft-list";
+import { outputKindOf } from "./output-kind";
+import { requiredProviders } from "./problems";
 import { CheckpointReview } from "./run-review";
-import { type ShortsForm, shortsOn, sourceLabel, sourceLabels } from "./state";
+import { rowLabel, type SetupRowId } from "./setup-rows";
+import { type ShortsForm, shortsOn, sourceLabel } from "./state";
 
 // The Look in one line: only what differs from plain cuts, and the animated images with their
 // model and that they are paid.
-export function lookSummary(form: { readonly videoEdit?: VideoEditSettings | undefined }): string {
+function lookSummary(form: { readonly videoEdit?: VideoEditSettings | undefined }): string {
   const rows = videoEditRows(videoEditOf(form));
   const plain = new Map(videoEditRows(legacyVideoEdit));
   const changed = rows
@@ -50,218 +49,49 @@ export function lookSummary(form: { readonly videoEdit?: VideoEditSettings | und
   return changed.length === 0 ? "Plain cuts, no effects" : changed.join(" · ");
 }
 
-interface RequiredProvider {
-  readonly field: string;
-  readonly family: ProviderFamily;
-  readonly label: string;
-  readonly provider: string;
-  readonly model: string;
-  readonly voice?: string;
-}
-
-function readiness(provider: ProviderStatus | undefined): {
-  readonly ok: boolean;
-  readonly text: string;
-} {
-  if (provider === undefined) return { ok: false, text: "Provider status unavailable" };
-  if (provider.readiness.kind === "cli")
-    return readinessIsUsable(provider.readiness)
-      ? {
-          ok: true,
-          text:
-            provider.readiness.version === undefined
-              ? "CLI ready"
-              : `CLI ready · ${provider.readiness.version}`,
-        }
-      : { ok: false, text: provider.readiness.issue ?? "CLI not found" };
-  if (provider.readiness.kind === "local")
-    return provider.readiness.available
-      ? { ok: true, text: `Built-in voice · ${provider.readiness.engine ?? "ready"}` }
-      : { ok: false, text: provider.readiness.issue ?? "No speech program found" };
-  return provider.readiness.hasKey
-    ? { ok: true, text: "Key saved" }
-    : { ok: false, text: "No key" };
-}
-
-function requiredProviders(
-  form: PlayDraftDocument["form"],
-  entries: readonly Entry[],
-): readonly RequiredProvider[] {
-  const generatedAudio = form.sources.audio === "generate";
-  const generatedThumbnail = ["from_prompt", "prompt_by_llm"].includes(form.sources.thumbnail);
-  const generatedText =
-    form.sources.article === "generate" ||
-    form.sources.thumbnail === "prompt_by_llm" ||
-    usesYoutubeDescription(form) ||
-    shortsOn(form) ||
-    (generatedAudio &&
-      (["intro", "outro"] as const).some((kind) =>
-        entries.some(
-          (entry) => entry.category === kind && entry.name === form[kind] && entry.mode === "llm",
-        ),
-      ));
-  return [
-    ...(generatedText && form.llm
-      ? [
-          {
-            field: "llm.provider",
-            family: "llm" as const,
-            label: "Text generation",
-            provider: form.llm.provider,
-            model: form.llm.model,
-          },
-        ]
-      : []),
-    ...(generatedAudio && form.audio
-      ? [
-          {
-            field: "audio.provider",
-            family: "tts" as const,
-            label: "Narration",
-            provider: form.audio.provider,
-            model: form.audio.model,
-            voice: form.audio.voice,
-          },
-        ]
-      : []),
-    ...((form.sources.images === "generate" ||
-      generatedThumbnail ||
-      shortsOn(form) ||
-      usesAnimation(form)) &&
-    form.images
-      ? [
-          {
-            field: "images.provider",
-            family: "image" as const,
-            label: "Images",
-            provider: form.images.provider,
-            model: form.images.model,
-          },
-        ]
-      : []),
-  ];
-}
-
 function SummaryGroup({
   name,
+  change,
+  onChange,
   children,
 }: {
   readonly name: string;
+  // "Change narration": opens the row that holds these settings, closing the summary.
+  readonly change: string;
+  readonly onChange: () => void;
   readonly children: ReactNode;
 }): ReactElement {
   return (
-    <section aria-label={`${name} summary`} className="min-w-0 border-t border-line pt-5">
-      <h3 className="mb-4 font-semibold">{name}</h3>
+    <section aria-label={`${name} summary`} className="min-w-0 border-t border-line pt-3">
+      <div className="mb-1 flex items-center justify-between gap-3">
+        <h3 className="m-0 font-semibold">{name}</h3>
+        <Button variant="quiet" size="small" onClick={onChange}>
+          {change}
+        </Button>
+      </div>
       {children}
     </section>
   );
 }
 
-function PreflightSummary({
-  form,
-  entries,
-  providers,
-  voices,
-  textModels,
-  audioModels,
-  imageModels,
-  onReveal,
-}: {
-  readonly form: PlayDraftDocument["form"];
-  readonly entries: readonly Entry[];
-  readonly providers: readonly ProviderStatus[] | undefined;
-  readonly voices: readonly Voice[] | undefined;
-  readonly textModels: ProviderModels | undefined;
-  readonly audioModels: ProviderModels | undefined;
-  readonly imageModels: ProviderModels | undefined;
-  readonly onReveal: (field: string) => void;
-}): ReactElement {
-  const required = requiredProviders(form, entries);
-  if (!required.length)
-    return (
-      <SummaryGroup name="Run readiness">
-        <p className="text-body text-ink-2">
-          No generated providers required. Supplied content is ready for processing.
-        </p>
-      </SummaryGroup>
-    );
-  const modelLists: Readonly<Record<ProviderFamily, ProviderModels | undefined>> = {
-    llm: textModels,
-    tts: audioModels,
-    image: imageModels,
-  };
-  return (
-    <SummaryGroup name="Run readiness">
-      <p className="mb-3 text-small text-ink-2">
-        These checks are refreshed with Review and checked again when you start.
-      </p>
-      <ul className="divide-y divide-line" aria-label="Run readiness checks">
-        {required.map((choice) => {
-          const provider = providers?.find(
-            (candidate) => candidate.id === choice.provider && candidate.family === choice.family,
-          );
-          const providerCheck = readiness(provider);
-          const models = modelLists[choice.family];
-          const model = models?.models.find((candidate) => candidate.id === choice.model);
-          const modelCheck =
-            models === undefined
-              ? { ok: true, text: "Model checked at Start" }
-              : model !== undefined || models.allowsCustom
-                ? { ok: true, text: "Model available" }
-                : { ok: false, text: "Model unavailable" };
-          const voiceCheck =
-            choice.voice === undefined
-              ? undefined
-              : voices === undefined
-                ? { ok: false, text: "Voice list unavailable" }
-                : voices.some(
-                      (voice) =>
-                        voice.provider === choice.provider && voice.voiceId === choice.voice,
-                    )
-                  ? { ok: true, text: "Voice saved" }
-                  : { ok: false, text: "Voice missing" };
-          const checks = [providerCheck, modelCheck, ...(voiceCheck ? [voiceCheck] : [])];
-          const ready = checks.every((check) => check.ok);
-          return (
-            <li
-              key={`${choice.family}:${choice.provider}`}
-              className="flex flex-wrap items-center justify-between gap-3 py-3"
-            >
-              <span className="font-medium">{choice.label}</span>
-              <span className={ready ? "text-lime" : "text-danger"}>
-                {ready
-                  ? "Ready"
-                  : checks
-                      .filter((check) => !check.ok)
-                      .map((check) => check.text)
-                      .join(" · ")}
-              </span>
-              {!ready ? (
-                <Button variant="quiet" onClick={() => onReveal(choice.field)}>
-                  Edit ↗
-                </Button>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
-    </SummaryGroup>
-  );
-}
-
+// Everything the run will do, grouped by the same rows as the form, in words. Each group has
+// one Change that opens its row; the settings themselves are read here, not edited.
 export function ReviewSummary({
   fields,
+  topicField,
   onReveal,
   children,
 }: {
   readonly fields: readonly Field[];
+  // The field at the top of Create that holds the topic: "title", or "values.Topic".
+  readonly topicField: string;
   readonly onReveal: (field: string) => void;
   readonly children: ReactNode;
 }): ReactElement {
   const { document, review } = usePlaySession();
   const { form } = document;
   const { api } = useApp();
-  // Disabled observers would block Review's explicit catalogue refresh.
+  // Disabled observers would block the summary's explicit catalogue refresh.
   const cache = useQueryClient();
   const providers = cache.getQueryData(providersQuery(api).queryKey);
   const entries = cache.getQueryData(entriesQuery(api).queryKey);
@@ -270,141 +100,139 @@ export function ReviewSummary({
   const textModels = cache.getQueryData<ProviderModels>(modelsKey(form.llm.provider));
   const audioModels = cache.getQueryData<ProviderModels>(modelsKey(form.audio.provider));
   const imageModels = cache.getQueryData<ProviderModels>(modelsKey(form.images.provider));
+  const kind = outputKindOf(form);
+  const required = new Set(
+    requiredProviders(form, entries?.entries ?? []).map((choice) => choice.family),
+  );
   const generatedAudio = form.sources.audio === "generate";
   const generatedThumbnail = ["from_prompt", "prompt_by_llm"].includes(form.sources.thumbnail);
-  const generatedText =
-    form.sources.article === "generate" ||
-    form.sources.thumbnail === "prompt_by_llm" ||
-    usesYoutubeDescription(form) ||
-    shortsOn(form) ||
-    (generatedAudio &&
-      (["intro", "outro"] as const).some((kind) =>
-        entries?.entries.some(
-          (entry) => entry.category === kind && entry.name === form[kind] && entry.mode === "llm",
-        ),
-      ));
   const providerName = (id: string) =>
     providers?.providers.find((provider) => provider.id === id)?.displayName ?? id;
-  const row = (label: string, field: string | null, value: ReactNode) => (
+  const row = (label: string, value: ReactNode, empty = "Not picked yet") => (
     <div
-      key={field ?? label}
-      className="grid min-w-0 grid-cols-[90px_minmax(0,1fr)_auto] items-start gap-x-3 py-1 sm:grid-cols-[145px_minmax(0,1fr)_auto]"
+      key={label}
+      className="grid min-w-0 grid-cols-[110px_minmax(0,1fr)] items-start gap-x-3 sm:grid-cols-[150px_minmax(0,1fr)]"
     >
-      <dt className="break-words py-2 text-ink-2">{label}</dt>
-      <dd className="min-w-0 whitespace-pre-wrap break-words py-2">{value || "Not selected"}</dd>
-      {field ? (
-        <dd>
-          <Button variant="quiet" aria-label={`Edit ${label}`} onClick={() => onReveal(field)}>
-            Edit ↗
-          </Button>
-        </dd>
-      ) : null}
+      <dt className="break-words py-1 text-ink-2">{label}</dt>
+      <dd className="m-0 min-w-0 whitespace-pre-wrap break-words py-1">{value || empty}</dd>
     </div>
   );
+  const group = (id: SetupRowId, field: string, body: ReactNode) => {
+    const name = rowLabel(id, kind);
+    return (
+      <SummaryGroup
+        name={name}
+        change={`Change ${name.toLowerCase()}`}
+        onChange={() => onReveal(field)}
+      >
+        <dl className="m-0 text-body">{body}</dl>
+      </SummaryGroup>
+    );
+  };
   const chunkCount =
     form.chunking.mode === "words" || form.chunking.mode === "characters"
       ? form.chunking.mode
       : null;
   return (
     <>
-      <PreflightSummary
-        form={form}
-        entries={entries?.entries ?? []}
-        providers={providers?.providers}
-        voices={voices?.voices}
-        textModels={textModels}
-        audioModels={audioModels}
-        imageModels={imageModels}
-        onReveal={onReveal}
-      />
-      <SummaryGroup name="Content">
-        <dl className="text-body">
-          {row("Project", "title", form.title || "Untitled run")}
-          {row("Article", "sources.article", sourceLabel("article", form.sources.article))}
+      <SummaryGroup name="Topic" change="Change the topic" onChange={() => onReveal(topicField)}>
+        <dl className="m-0 text-body">
+          {row("Title", draftName(form))}
+          {fields.map(({ name }) => row(name, form.values[name] ?? "", "Not filled in yet"))}
+        </dl>
+        {children}
+      </SummaryGroup>
+      {group(
+        "article",
+        "sources.article",
+        <>
+          {row("Article", sourceLabel("article", form.sources.article))}
           {form.sources.article === "generate"
-            ? row("Article prompt", "articlePrompt", form.articlePrompt)
-            : row("Article text", "provided.article", "Your article")}
+            ? row("Article prompt", form.articlePrompt)
+            : form.sources.article === "provide"
+              ? row("Article text", "Your own text")
+              : null}
           {form.sources.article === "generate"
-            ? row("Research", "sources.research", sourceLabel("research", form.sources.research))
-            : row("Research", null, "Off · Article is provided")}
-          {form.sources.research === "provide" && form.sources.article === "generate"
-            ? row("Research text", "provided.research", form.provided.research)
+            ? row("Research", sourceLabel("research", form.sources.research))
             : null}
-          {generatedText ? (
+          {form.sources.research === "provide" && form.sources.article === "generate"
+            ? row("Research notes", form.provided.research)
+            : null}
+          {required.has("llm") ? (
             <>
-              {row("Text provider", "llm.provider", providerName(form.llm.provider))}
+              {row("Written by", providerName(form.llm.provider))}
               {row(
-                "Text model",
-                "llm.model",
+                "Model",
                 textModels?.models.find((model) => model.id === form.llm.model)?.name ??
                   form.llm.model,
               )}
               {form.llm.thinking ||
               textModels?.models.find((model) => model.id === form.llm.model)?.thinkingModes?.length
-                ? row("Thinking", "llm.thinking", form.llm.thinking ?? "Model default")
+                ? row("Thinking", form.llm.thinking ?? "Model default")
                 : null}
             </>
           ) : null}
-          {fields.map(({ name }) => row(name, `values.${name}`, form.values[name] ?? ""))}
-        </dl>
-        {children}
-      </SummaryGroup>
-      <SummaryGroup name="Outputs">
-        <dl className="text-body">
-          {row("Narration", "sources.audio", sourceLabel("audio", form.sources.audio))}
+        </>,
+      )}
+      {group(
+        "narration",
+        "sources.audio",
+        <>
+          {row("Narration", sourceLabel("audio", form.sources.audio))}
           {generatedAudio ? (
             <>
-              {row("Audio provider", "audio.provider", providerName(form.audio.provider))}
+              {row("Voice service", providerName(form.audio.provider))}
               {row(
-                "Audio model",
-                "audio.model",
+                "Voice model",
                 audioModels?.models.find((model) => model.id === form.audio.model)?.name ??
                   form.audio.model,
               )}
               {row(
                 "Voice",
-                "audio.voice",
                 voices?.voices.find(
                   (voice) =>
                     voice.provider === form.audio.provider && voice.voiceId === form.audio.voice,
                 )?.name ?? form.audio.voice,
               )}
               {row(
-                "Chunking",
-                chunkCount ? `chunking.${chunkCount}` : "chunking.mode",
+                "Split the narration",
                 chunkCount
                   ? `Every ${form.chunking[chunkCount] || "(not entered)"} ${chunkCount}`
                   : form.chunking.mode === "whole"
-                    ? "Whole text"
-                    : "Paragraph",
+                    ? "Read as one piece"
+                    : "By paragraph",
               )}
-              {row("Intro", "intro", form.intro || "Off")}
+              {row("Intro", form.intro || "None")}
               {row(
-                "Narration Preparation",
-                "narrationPrompt",
+                "Prepared for speech",
                 form.narrationPrompt
-                  ? `${form.narrationPrompt} · One LLM call per narration chunk and entry`
-                  : "Off",
+                  ? `${form.narrationPrompt} · one AI call per narration piece and entry`
+                  : "No",
               )}
-              {row("Outro", "outro", form.outro || "Off")}
+              {row("Outro", form.outro || "None")}
             </>
           ) : null}
           {form.sources.audio === "provide"
-            ? row("Narration file", "provided.audio", form.provided.audio?.name)
+            ? row("Narration file", form.provided.audio?.name)
             : null}
-          {row("Images", "sources.images", sourceLabel("images", form.sources.images))}
-          {form.sources.images === "generate" || generatedThumbnail || shortsOn(form) ? (
+        </>,
+      )}
+      {group(
+        "images",
+        "sources.images",
+        <>
+          {row("Images", sourceLabel("images", form.sources.images))}
+          {required.has("image") ? (
             <>
-              {row("Image provider", "images.provider", providerName(form.images.provider))}
+              {row("Image service", providerName(form.images.provider))}
               {row(
                 "Image model",
-                "images.model",
                 imageModels?.models.find((model) => model.id === form.images.model)?.name ??
                   form.images.model,
               )}
               {form.images.thinking === undefined
                 ? null
-                : row("Image effort", "images.thinking", form.images.thinking)}
+                : row("Image effort", form.images.thinking)}
             </>
           ) : null}
           {form.sources.images === "generate" &&
@@ -412,7 +240,6 @@ export function ReviewSummary({
           form.reference.source !== "off"
             ? row(
                 "Establishing image",
-                form.reference.source === "prompt" ? "reference.prompt" : "provided.reference",
                 `${
                   form.reference.source === "prompt"
                     ? form.reference.prompt || "(no prompt picked)"
@@ -430,141 +257,126 @@ export function ReviewSummary({
             : null}
           {form.sources.images === "generate"
             ? form.imagePrompts.length
-              ? form.imagePrompts.map((prompt, index) =>
-                  row(
-                    prompt.name,
-                    `imagePrompts.${index}.number`,
-                    `${prompt.name} · ${prompt.number || "(not entered)"} images`,
-                  ),
+              ? form.imagePrompts.map((prompt) =>
+                  row(prompt.name, `${prompt.number || "(not entered)"} images`),
                 )
-              : row("Image prompts", "imagePrompts", "None selected")
+              : row("Image prompts", "None ticked")
             : null}
           {form.sources.images === "provide"
             ? row(
                 "Image files",
-                "provided.images",
                 form.provided.images.length ? (
-                  <ol className="list-inside list-decimal">
+                  <ol className="m-0 list-inside list-decimal p-0">
                     {form.provided.images.map((file) => (
                       <li key={file.attachmentId}>{file.name}</li>
                     ))}
                   </ol>
                 ) : (
-                  "No files selected"
+                  "No files attached"
                 ),
               )
             : null}
-          {row("Thumbnail", "sources.thumbnail", sourceLabel("thumbnail", form.sources.thumbnail))}
-          {generatedThumbnail
-            ? row("Thumbnail prompt", "thumbnailPrompt", form.thumbnailPrompt)
-            : null}
-          {form.sources.thumbnail === "provide"
-            ? row("Thumbnail file", "provided.thumbnail", form.provided.thumbnail?.name)
-            : null}
-          {row("Video", "sources.video", sourceLabel("video", form.sources.video))}
+        </>,
+      )}
+      {group(
+        "video",
+        "format",
+        <>
+          {row("Shape", form.format)}
+          {kind === "video" ? row("Video", sourceLabel("video", form.sources.video)) : null}
           {form.sources.video === "generate"
-            ? row("Seconds per image", "imageSeconds", form.imageSeconds || "(not entered)")
-            : null}
-          {form.sources.video === "generate"
-            ? row(
-                "Zoom",
-                "zoomPercent",
-                form.zoomPercent ? `${form.zoomPercent}%` : "(not entered)",
-              )
+            ? row("Seconds per image", form.imageSeconds || "(not entered)")
             : null}
           {form.sources.video === "generate"
-            ? row("Motion", "motionStyle", motionStyleLabels[form.motionStyle])
+            ? row("Zoom", form.zoomPercent ? `${form.zoomPercent}%` : "(not entered)")
             : null}
           {form.sources.video === "generate"
-            ? row("Cuts", "videoEdit.cuts", cutModeLabels[videoEditOf(form).cuts])
+            ? row("Motion", motionStyleLabels[form.motionStyle])
             : null}
-          {form.sources.video === "generate" ? row("Look", "videoEdit", lookSummary(form)) : null}
+          {form.sources.video === "generate"
+            ? row("Cuts", cutModeLabels[videoEditOf(form).cuts])
+            : null}
+          {form.sources.video === "generate" ? row("Look", lookSummary(form)) : null}
           {form.sources.audio !== "off"
             ? row(
                 "Silence at start and end",
-                "edgeSilenceSeconds",
                 form.edgeSilenceSeconds ? `${form.edgeSilenceSeconds} s` : "(not entered)",
               )
             : null}
           {form.sources.audio !== "off"
+            ? row("Captions", captionWords[form.subtitles.mode] ?? form.subtitles.mode)
+            : row("Captions", "None: there is no narration")}
+          {form.sources.audio !== "off" && form.subtitles.mode !== "off" ? (
+            <>
+              {row(
+                "Caption font",
+                fonts?.fonts.find((font) => font.id === form.subtitles.fontId)?.name ??
+                  form.subtitles.fontId,
+              )}
+              {row("Caption size", `${form.subtitles.fontSize || "(not entered)"} px`)}
+              {row("Caption position", form.subtitles.position)}
+            </>
+          ) : null}
+        </>,
+      )}
+      {group(
+        "outputs",
+        "sources.thumbnail",
+        <>
+          {row("Thumbnail", sourceLabel("thumbnail", form.sources.thumbnail))}
+          {generatedThumbnail ? row("Thumbnail prompt", form.thumbnailPrompt) : null}
+          {form.sources.thumbnail === "provide"
+            ? row("Thumbnail file", form.provided.thumbnail?.name)
+            : null}
+          {form.sources.audio !== "off"
             ? row(
                 "YouTube description",
-                "youtubeDescription",
                 form.youtubeDescription === true
-                  ? `${form.descriptionPrompt || defaultDescriptionPromptName} prompt · One LLM call after subtitle timing`
-                  : "Off",
+                  ? `${form.descriptionPrompt || defaultDescriptionPromptName} prompt · one AI call after the captions are timed`
+                  : "No",
               )
             : null}
           {form.sources.audio !== "off"
             ? row(
                 "Shorts",
-                "shorts.enabled",
                 shortsOn(form) && form.shorts !== undefined
                   ? [
                       `${form.shorts.count} shorts of ${form.shorts.minSeconds}-${form.shorts.maxSeconds} s`,
                       `${form.shorts.prompt || defaultShortsPromptName} prompt`,
-                      `${form.shorts.imagePrompt || defaultShortsPromptName} image style`,
+                      `${form.shorts.imagePrompt || defaultShortsPromptName} image prompt`,
                       ...shortsExtrasSummary(form.shorts, form.provided.shortsMusic?.name),
-                      "Vertical images and renders after subtitle timing",
+                      "Portrait images, made after the captions are timed",
                     ].join(" · ")
-                  : "Off",
+                  : "No",
               )
             : null}
           {row(
-            "Document",
-            "sources.document",
+            "PDF",
             sourceOf(form.sources, "document") === "generate"
-              ? `PDF · ${documentThemeLabel(form.document)} theme`
-              : sourceLabels.off,
+              ? `${documentThemeLabel(form.document)} look`
+              : "No",
           )}
-        </dl>
-      </SummaryGroup>
-      <SummaryGroup name="Checkpoints">
+        </>,
+      )}
+      <SummaryGroup
+        name="Pauses and checks"
+        change="Change pauses and checks"
+        onChange={() => onReveal("checkpoints")}
+      >
         <CheckpointReview
           selected={form.checkpoints}
           reviewed={review.valid ? review.receipt?.checkpointSet : undefined}
         />
-        <Button
-          variant="quiet"
-          aria-label="Edit checkpoints"
-          onClick={() => onReveal("checkpoints")}
-        >
-          Edit checkpoints ↗
-        </Button>
-      </SummaryGroup>
-      <SummaryGroup name="Style">
-        <dl className="text-body">
-          {row("Frame", "format", form.format)}
-          {form.sources.audio !== "off"
-            ? row("Subtitles", "subtitles.mode", form.subtitles.mode)
-            : row("Subtitles", null, "Off · Audio is Off")}
-          {form.sources.audio !== "off" && form.subtitles.mode !== "off" ? (
-            <>
-              {row(
-                "Subtitle font",
-                "subtitles.fontId",
-                fonts?.fonts.find((font) => font.id === form.subtitles.fontId)?.name ??
-                  form.subtitles.fontId,
-              )}
-              {row(
-                "Subtitle size",
-                "subtitles.fontSize",
-                `${form.subtitles.fontSize || "(not entered)"} px`,
-              )}
-              {row("Subtitle position", "subtitles.position", form.subtitles.position)}
-            </>
-          ) : null}
-        </dl>
-        {form.sources.audio !== "off" && form.subtitles.mode === "files" ? (
-          <p className="mt-3 text-small text-ink-2">
-            Font, size and position apply to burned captions. SRT/VTT players choose their own
-            styling.
-          </p>
-        ) : null}
       </SummaryGroup>
     </>
   );
 }
+
+const captionWords: Readonly<Record<string, string>> = {
+  off: "None",
+  files: "Caption files only (.srt + .vtt)",
+  "burn-in": "Shown in the video",
+};
 
 // The later Shorts settings the review names, each only when it differs from the default.
 function shortsExtrasSummary(shorts: ShortsForm, music: string | undefined): readonly string[] {

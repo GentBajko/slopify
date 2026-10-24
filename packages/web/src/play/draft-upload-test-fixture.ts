@@ -62,7 +62,7 @@ export async function mountSupplied(
     }),
     ...over,
   });
-  await userEvent.click(screen.getByRole("button", { name: "Drafts" }));
+  await userEvent.click(screen.getByRole("button", { name: /^Draft: / }));
   await userEvent.click(await screen.findByRole("button", { name: "Supplied draft" }));
   await screen.findByDisplayValue("Supplied draft");
   return mounted;

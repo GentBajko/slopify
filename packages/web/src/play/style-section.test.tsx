@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { defaultChannelId } from "@/channels/api";
@@ -12,20 +12,13 @@ afterEach(() => {
   window.localStorage?.clear();
 });
 
-// The preview renders a moment after the last change. Its timers are faked once Play has
-// loaded, so a test moves past the pause at once instead of waiting it out; while they are,
-// controls are changed with fireEvent, which needs no timer of its own.
-function pausedTimers(): { readonly settle: () => Promise<void> } {
-  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-  return {
-    settle: async () => {
-      await act(() => vi.advanceTimersByTimeAsync(1000));
-      vi.useRealTimers();
-    },
-  };
+// The style preview opens from the rail on request, in a dialog of its own.
+async function openPreview(): Promise<HTMLElement> {
+  await userEvent.click(screen.getByRole("button", { name: "Watch a 6-second preview" }));
+  return screen.findByRole("dialog", { name: "Preview with your captions and look" });
 }
 
-// What the rail's style preview asked the server to render.
+// What the style preview asked the server to render.
 function previewBodies(requests: readonly Request[]): Promise<readonly Record<string, unknown>[]> {
   return Promise.all(
     requests
@@ -42,15 +35,19 @@ it.each([
   async ({ format, position }) => {
     const { requests } = await mountPlay();
     await openRow("Video and style");
-    const { settle } = pausedTimers();
     fireEvent.change(screen.getByLabelText("Captions", { selector: "select" }), {
       target: { value: "burn-in" },
     });
     fireEvent.click(screen.getByRole("radio", { name: position }));
     fireEvent.click(screen.getByRole("radio", { name: new RegExp(`^${format} `) }));
-    const rail = screen.getByRole("complementary", { name: "Review and start" });
-    expect(within(rail).getByRole("heading", { name: "Style preview" })).not.toBeNull();
-    await settle();
+    // Nothing renders until the person asks for it.
+    expect(await previewBodies(requests)).toEqual([]);
+    const preview = await openPreview();
+    // The dialog's title names the preview; the preview adds no second heading under it.
+    expect(within(preview).queryByRole("heading", { name: "Style preview" })).toBeNull();
+    await waitFor(async () => expect((await previewBodies(requests)).length).toBeGreaterThan(0), {
+      timeout: 3000,
+    });
     const last = (await previewBodies(requests)).at(-1);
     expect(last?.format).toBe(format);
     expect(last?.subtitles).toMatchObject({ mode: "burn-in", position });
@@ -70,11 +67,11 @@ it("renders again on request, forcing a fresh render of the same settings", asyn
       seconds: 6,
     }),
   });
-  const rail = screen.getByRole("complementary", { name: "Review and start" });
+  const preview = await openPreview();
   await waitFor(async () => expect((await previewBodies(requests)).length).toBeGreaterThan(0), {
     timeout: 3000,
   });
-  await userEvent.click(await within(rail).findByRole("button", { name: "Render again" }));
+  await userEvent.click(await within(preview).findByRole("button", { name: "Render again" }));
   await waitFor(async () => expect((await previewBodies(requests)).at(-1)?.force).toBe(true));
 });
 
@@ -120,6 +117,7 @@ it("draws the preview on the channel cast's picture when there is one", async ()
       ],
     }),
   });
+  const preview = await openPreview();
   await waitFor(
     async () =>
       expect((await previewBodies(requests)).at(-1)?.image).toEqual({
@@ -128,8 +126,7 @@ it("draws the preview on the channel cast's picture when there is one", async ()
       }),
     { timeout: 3000 },
   );
-  const rail = screen.getByRole("complementary", { name: "Review and start" });
-  expect(within(rail).getByText(/Drawn on Cleopatra's picture/)).not.toBeNull();
+  expect(within(preview).getByText(/Drawn on Cleopatra's picture/)).not.toBeNull();
 });
 
 it("keeps the sample and a raw invalid size, and says what to fix", async () => {
@@ -144,7 +141,7 @@ it("keeps the sample and a raw invalid size, and says what to fix", async () => 
   await userEvent.clear(screen.getByLabelText("Caption size"));
   expect((screen.getByLabelText("Caption size") as HTMLInputElement).value).toBe("");
   await openSection("Review");
-  expect(screen.getByRole("list", { name: "Setup errors" }).textContent).toMatch(/font size/i);
+  expect(screen.getByRole("list", { name: "What is missing" }).textContent).toMatch(/font size/i);
   expect((screen.getByLabelText("Preview sentence") as HTMLInputElement).value).toBe(
     "Only a sample",
   );
@@ -152,5 +149,6 @@ it("keeps the sample and a raw invalid size, and says what to fix", async () => 
 
 it("draws no style preview while the run makes no video", async () => {
   await mountSupplied();
+  expect(screen.queryByRole("button", { name: "Watch a 6-second preview" })).toBeNull();
   expect(screen.queryByRole("heading", { name: "Style preview" })).toBeNull();
 });

@@ -864,11 +864,32 @@
   .sl-workspace--no-aside {
     grid-template-columns: 180px minmax(0, 1fr);
   }
-  /* Play: no section rail, a wider action rail for the style preview and the Play key. On
-     narrow screens the rail follows the form, so the key comes after the topic. */
+  /* Create: no section rail; the action rail holds the count, the length, the cost and the
+     Make button, and the summary drawer opens beside it (routes/play.tsx). On narrow screens
+     the rail follows the form, so the button comes after the setup. */
   .sl-workspace.sl-workspace--play {
-    grid-template-columns: minmax(0, 1fr) 400px;
-    gap: var(--space-7);
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: var(--space-6);
+  }
+  /* Where Create's summary drawer ends on the right: 12px short of the action rail, which sits
+     the page's gutter (24px) and its own 340px in from the content's right edge, wherever the
+     content is centred or the Assistant takes the side; never so far left that the drawer
+     would go under the app's rail. */
+  .sl-app {
+    --play-drawer-right: clamp(
+      0px,
+      calc(max(0px, (100vw - var(--rail-width) - var(--content-max)) / 2) + 376px),
+      calc(100vw - var(--rail-width) - 560px)
+    );
+  }
+  @media (min-width: 1024px) {
+    .sl-app--side-panel {
+      --play-drawer-right: clamp(
+        0px,
+        calc(max(0px, (100vw - var(--rail-width) - 440px - var(--content-max)) / 2) + 816px),
+        calc(100vw - var(--rail-width) - 560px)
+      );
+    }
   }
   .sl-workspace__sections,
   .sl-workspace__aside {
@@ -1464,10 +1485,6 @@
       position: static;
       grid-column: 1 / -1;
       order: -1;
-    }
-    .sl-workspace.sl-workspace--play {
-      grid-template-columns: minmax(0, 1fr) 340px;
-      gap: var(--space-6);
     }
     .sl-workspace--play .sl-workspace__aside {
       position: sticky;

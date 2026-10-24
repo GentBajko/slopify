@@ -1,10 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import { type ReactElement, useId } from "react";
 import { useApp } from "@/app-context";
 import { type CastMember, channelQuery, channelsQuery, defaultChannelId } from "@/channels/api";
 import { channelOfTemplate } from "@/channels/members-tabs";
-import { Field, Select } from "@/components/kit/field";
 import { Switch } from "@/components/kit/switch";
 import { templatesQuery } from "@/templates/api";
 import { usePlaySession } from "./draft-context";
@@ -31,7 +30,54 @@ export function useDraftCast(): readonly CastMember[] {
   return cast.data?.cast ?? [];
 }
 
-export function ChannelPicker({ disabled = false }: { readonly disabled?: boolean }): ReactElement {
+// "For My channel ▾", beside Start from, with two or more channels: the channel this video is
+// made for. Nothing with one.
+export function ChannelFor({
+  disabled = false,
+}: {
+  readonly disabled?: boolean;
+}): ReactElement | null {
+  const { api } = useApp();
+  const session = usePlaySession();
+  const channels = useQuery(channelsQuery(api));
+  const current = useDraftChannelId();
+  const id = useId();
+  const { document } = session;
+  if ((channels.data?.length ?? 0) < 2) return null;
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <label htmlFor={id} className="shrink-0 text-small text-ink-2">
+        For
+      </label>
+      <select
+        id={id}
+        data-play-field="channelId"
+        aria-label="For channel"
+        className="sl-select sl-select--compact min-w-0 max-w-[240px]"
+        value={current}
+        disabled={disabled}
+        onChange={(event) => {
+          session.edit({ ...document, channelId: event.target.value });
+          session.invalidateReview(true);
+        }}
+      >
+        {(channels.data ?? []).map((one) => (
+          <option key={one.id} value={one.id}>
+            {one.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+// The Channel row's editor: whether the channel's brand kit fills the defaults, and the way to
+// the channel itself.
+export function BrandKitControls({
+  disabled = false,
+}: {
+  readonly disabled?: boolean;
+}): ReactElement {
   const { api } = useApp();
   const session = usePlaySession();
   const channels = useQuery(channelsQuery(api));
@@ -39,43 +85,23 @@ export function ChannelPicker({ disabled = false }: { readonly disabled?: boolea
   const current = useDraftChannelId();
   const channel = channels.data?.find((one) => one.id === current);
   const useKit = document.form.useBrandKit !== false;
-  const edit = (next: typeof document) => {
-    session.edit(next);
-    session.invalidateReview(true);
-  };
   return (
-    <div className="sl-fields items-end">
-      <Field label="Channel" tip="play.channel">
-        <Select
-          data-play-field="channelId"
-          value={current}
-          disabled={disabled}
-          onChange={(event) => edit({ ...document, channelId: event.target.value })}
-        >
-          {channels.data === undefined ? <option value={current}>Loading channels…</option> : null}
-          {(channels.data ?? []).map((one) => (
-            <option key={one.id} value={one.id}>
-              {one.name}
-              {one.cast > 0 ? ` · ${String(one.cast)} in the cast` : ""}
-            </option>
-          ))}
-        </Select>
-      </Field>
+    <div className="flex min-w-0 flex-col gap-3 py-2">
       <Switch
         label="Use the channel's brand kit"
-        tip="play.brand-kit"
+        help="Its caption font, intro, outro, PDF look and sounds fill what this setup leaves at its default."
         checked={useKit}
         disabled={disabled}
-        className="min-h-[38px]"
         onChange={(checked) => {
           const { useBrandKit: _kit, ...form } = document.form;
-          edit({ ...document, form: checked ? form : { ...form, useBrandKit: false } });
+          session.edit({ ...document, form: checked ? form : { ...form, useBrandKit: false } });
+          session.invalidateReview(true);
         }}
       />
       {channel ? (
-        <p className="sl-fields__wide m-0 text-small text-ink-3">
+        <p className="m-0 text-small text-ink-2">
           <Link to="/channels/$channelId" params={{ channelId: channel.id }} className="underline">
-            Edit {channel.name}
+            Open {channel.name}
           </Link>
           {useKit ? "" : " · its cast is still used"}
         </p>

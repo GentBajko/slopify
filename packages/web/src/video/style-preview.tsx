@@ -58,9 +58,13 @@ export function StylePreview({
   label,
   drawnOn,
   poster,
+  titled = true,
 }: {
   readonly settings: StylePreviewSettings;
   readonly label?: string;
+  // False where the caller already names the preview (Create's dialog, under its own title):
+  // the preview then draws no heading of its own, only its line and Render again.
+  readonly titled?: boolean;
   // What the picture in settings.image is, in words ("the establishing image").
   readonly drawnOn?: string | undefined;
   // The picture the preview is drawn on, as the player's poster until it plays. A cast
@@ -170,33 +174,43 @@ export function StylePreview({
 
   const heading = shorts === undefined ? "Style preview" : "Shorts preview";
   const portrait = format === "9:16" || shorts !== undefined;
+  const meta =
+    shorts === undefined
+      ? "6 seconds of the sample, rendered with your settings"
+      : "A few seconds of the sample as a short, rendered with your settings";
+  const renderAgain = (
+    <Button
+      variant="quiet"
+      size="small"
+      disabled={!valid || state.kind === "pending"}
+      disabledReason={
+        valid ? "Rendering the preview…" : "Fix the caption settings to render the preview."
+      }
+      onClick={() => {
+        void run(true);
+      }}
+    >
+      <RefreshCw aria-hidden="true" size={16} strokeWidth={1.75} />
+      Render again
+    </Button>
+  );
   return (
     <section aria-label={heading} className="min-w-0 space-y-3">
-      <SectionHead
-        as="h3"
-        title={heading}
-        meta={
-          shorts === undefined
-            ? "6 seconds of the sample, rendered with your settings"
-            : "A few seconds of the sample as a short, rendered with your settings"
-        }
-        info={shorts === undefined ? "project.video.style-preview" : "play.shorts.preview"}
-      >
-        <Button
-          variant="quiet"
-          size="small"
-          disabled={!valid || state.kind === "pending"}
-          disabledReason={
-            valid ? "Rendering the preview…" : "Fix the caption settings to render the preview."
-          }
-          onClick={() => {
-            void run(true);
-          }}
+      {titled ? (
+        <SectionHead
+          as="h3"
+          title={heading}
+          meta={meta}
+          info={shorts === undefined ? "project.video.style-preview" : "play.shorts.preview"}
         >
-          <RefreshCw aria-hidden="true" size={16} strokeWidth={1.75} />
-          Render again
-        </Button>
-      </SectionHead>
+          {renderAgain}
+        </SectionHead>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+          <p className="m-0 text-small text-ink-2">{meta}</p>
+          {renderAgain}
+        </div>
+      )}
       {shown === undefined ? null : (
         <Player
           src={shown}

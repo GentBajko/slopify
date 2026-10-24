@@ -5,6 +5,10 @@ import {
   normalizePlayForm,
   parseDraftDocument,
   serializeDraftDocument,
+  setFreshProviderDefaults,
+  setReadyServices,
+  templateProviderDefaults,
+  withProviderDefaults,
 } from "./draft-state";
 
 const id = "11111111-1111-4111-8111-111111111111";
@@ -176,3 +180,44 @@ it.each([undefined, false, true])(
     }
   },
 );
+
+describe("the services a new or template-made draft starts with", () => {
+  const defaults = {
+    llm: { provider: "claude-code", model: "sonnet" },
+    images: { provider: "codex-image", model: "gpt-image" },
+  };
+  it("fills each service nobody picked, and leaves a picked one alone", () => {
+    const writer = { ...freshDraftDocument.form, llm: { provider: "openrouter", model: "x" } };
+    const filled = withProviderDefaults({ ...freshDraftDocument, form: writer }, defaults);
+    expect(filled.form.llm).toEqual({ provider: "openrouter", model: "x" });
+    expect(filled.form.images).toEqual(defaults.images);
+    expect(withProviderDefaults(freshDraftDocument, defaults).form.llm).toEqual(defaults.llm);
+  });
+  it("hands back the same document when there is nothing to fill", () => {
+    const picked = {
+      ...freshDraftDocument,
+      form: {
+        ...freshDraftDocument.form,
+        llm: { provider: "openrouter", model: "x" },
+        images: { provider: "fal", model: "y" },
+      },
+    };
+    expect(withProviderDefaults(picked, defaults)).toBe(picked);
+    expect(withProviderDefaults(freshDraftDocument, {})).toBe(freshDraftDocument);
+  });
+  it("gives a template-made draft what the first launch found, else the service whose key is saved", () => {
+    const keyed = {
+      llm: { provider: "openrouter", model: "google/gemini-3.8-flash" },
+      images: { provider: "fal", model: "fal-ai/flux-2" },
+    };
+    setReadyServices(keyed);
+    setFreshProviderDefaults({ llm: defaults.llm });
+    try {
+      expect(templateProviderDefaults()).toEqual({ llm: defaults.llm, images: keyed.images });
+      expect(templateProviderDefaults(defaults)).toEqual(defaults);
+    } finally {
+      setReadyServices({});
+      setFreshProviderDefaults({});
+    }
+  });
+});

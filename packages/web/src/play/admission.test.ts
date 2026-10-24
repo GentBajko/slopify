@@ -135,12 +135,12 @@ describe("the hint names the first missing item", () => {
 
     expect(result.ok).toBe(false);
     expect(blocker?.field).toBe("articlePrompt");
-    expect(blocker?.hint).toBe("Pick an article prompt to play");
+    expect(blocker?.hint).toBe("Pick an article prompt first");
   });
 
   it("moves to the narration provider once the article prompt is picked", () => {
     expect(ask({ ...freshForm, articlePrompt: "Dossier" }).blocker?.hint).toBe(
-      "Pick a narration provider to play",
+      "Pick a voice service first",
     );
   });
 
@@ -152,16 +152,16 @@ describe("the hint names the first missing item", () => {
     };
 
     expect(ask(form).blocker?.field).toBe("audio.voice");
-    expect(ask(form).blocker?.hint).toBe("Pick a voice to play");
+    expect(ask(form).blocker?.hint).toBe("Pick a voice first");
   });
 
   it("asks for an image prompt, then the image provider", () => {
     const audio = { provider: "elevenlabs", model: "eleven_multilingual_v2", voice: "Narrator" };
     const withAudio: PlayFormState = { ...freshForm, articlePrompt: "Dossier", audio };
 
-    expect(ask(withAudio).blocker?.hint).toBe("Tick an image prompt to play");
+    expect(ask(withAudio).blocker?.hint).toBe("Tick an image prompt first");
     expect(ask({ ...withAudio, imagePrompts: [{ name: "Oils", number: 4 }] }).blocker?.hint).toBe(
-      "Pick an image provider and model to play",
+      "Pick an image service and model first",
     );
   });
 
@@ -169,12 +169,12 @@ describe("the hint names the first missing item", () => {
     const { blocker } = ask({ ...generated, title: "   ", values: {} });
 
     expect(blocker?.field).toBe("title");
-    expect(blocker?.hint).toBe("Name the video to play");
+    expect(blocker?.hint).toBe("Type what the video is about first");
   });
 
   it("asks for a shorter title when there is one and it is too long", () => {
     expect(ask({ ...generated, title: "x".repeat(201) }).blocker?.hint).toBe(
-      "Shorten the title to 200 characters to play",
+      "Shorten the title to 200 characters first",
     );
   });
 
@@ -182,7 +182,7 @@ describe("the hint names the first missing item", () => {
     const { blocker } = ask({ ...generated, values: { topic: "rope", minWords: "3000" } });
 
     expect(blocker?.field).toBe("values.style");
-    expect(blocker?.hint).toBe("Fill style to play");
+    expect(blocker?.hint).toBe("Fill in style first");
   });
 
   it("refuses a keyword over 200 characters and a keyword with a newline", () => {
@@ -205,10 +205,10 @@ describe("the hint names the first missing item", () => {
 describe("the Number a ticked image prompt runs", () => {
   it("refuses nought and refuses twenty-one, and takes both bounds", () => {
     expect(ask({ ...generated, imagePrompts: [{ name: "Oils", number: 0 }] }).blocker?.hint).toBe(
-      "Set a Number between 1 and 20 to play",
+      "Set how many images, from 1 to 20 first",
     );
     expect(ask({ ...generated, imagePrompts: [{ name: "Oils", number: 21 }] }).blocker?.hint).toBe(
-      "Set a Number between 1 and 20 to play",
+      "Set how many images, from 1 to 20 first",
     );
     expect(ask({ ...generated, imagePrompts: [{ name: "Oils", number: 1 }] }).result.ok).toBe(true);
     expect(ask({ ...generated, imagePrompts: [{ name: "Oils", number: 20 }] }).result.ok).toBe(
@@ -237,7 +237,7 @@ describe("the Number a ticked image prompt runs", () => {
           { name: "Oils", number: 21 },
         ],
       }).blocker?.hint,
-    ).toBe("Set a Number between 1 and 20 to play");
+    ).toBe("Set how many images, from 1 to 20 first");
     expect(ask(over).result.ok).toBe(true);
 
     const sixtyOne: PlayFormState = {
@@ -249,9 +249,7 @@ describe("the Number a ticked image prompt runs", () => {
         { name: "Maps", number: 1 },
       ],
     };
-    expect(ask(sixtyOne).blocker?.hint).toBe(
-      "Lower the Numbers to play: a run makes at most 60 images",
-    );
+    expect(ask(sixtyOne).blocker?.hint).toBe("Lower the image counts to 60 in all first");
   });
 });
 
@@ -329,7 +327,7 @@ describe("the LLM row", () => {
 
     const byLlm = ask({ ...base, sources: { ...base.sources, thumbnail: "prompt_by_llm" } });
     expect(byLlm.blocker?.field).toBe("llm");
-    expect(byLlm.blocker?.hint).toBe("Pick an LLM provider and model to play");
+    expect(byLlm.blocker?.hint).toBe("Pick a service and model to write the text first");
   });
 
   it("is required by an LLM-mode outro even when nothing else asks for one", () => {
@@ -372,12 +370,12 @@ describe("a provided stage", () => {
   it("asks for the paste, then the audio, then the images", () => {
     expect(
       ask({ ...provided, provided: { ...provided.provided, article: "  " } }).blocker?.hint,
-    ).toBe("Paste the article to play");
+    ).toBe("Paste the article first");
     expect(
       ask({ ...provided, provided: { ...provided.provided, audio: undefined } }).blocker?.hint,
-    ).toBe("Attach the narration audio to play");
+    ).toBe("Attach the narration audio first");
     expect(ask({ ...provided, provided: { ...provided.provided, images: [] } }).blocker?.hint).toBe(
-      "Attach at least one image to play",
+      "Attach at least one image first",
     );
   });
 
@@ -387,11 +385,11 @@ describe("a provided stage", () => {
 
     expect(
       ask({ ...provided, provided: { ...provided.provided, images: [copying] } }).blocker?.hint,
-    ).toBe("Wait for the uploads to finish to play");
+    ).toBe("Wait for the uploads to finish first");
     expect(
       ask({ ...provided, provided: { ...provided.provided, images: [copying, failed] } })?.blocker
         ?.hint,
-    ).toBe("Remove the upload that failed to play");
+    ).toBe("Remove the upload that failed first");
   });
 
   // A provided article forces research off, so the notes are only ever
@@ -399,7 +397,7 @@ describe("a provided stage", () => {
   it("asks for the research notes when research is provided beside a generated article", () => {
     expect(
       ask({ ...generated, sources: { ...generated.sources, research: "provide" } }).blocker?.hint,
-    ).toBe("Paste your text under Article to play");
+    ).toBe("Paste your notes under Article first");
   });
 
   it("posts the shorts' background music only while Shorts is on, and waits for its upload", () => {
@@ -422,7 +420,7 @@ describe("a provided stage", () => {
     const blocked = ask(withMusic(failed));
     expect(blocked.blocker).toEqual({
       field: "provided",
-      hint: "Remove the upload that failed to play",
+      hint: "Remove the upload that failed first",
     });
     // Focus goes to the music control, inside More shorts options on the Export rail.
     expect(playFieldTarget("provided", withMusic(failed), [])).toEqual({
@@ -430,14 +428,14 @@ describe("a provided stage", () => {
       field: "shorts.music",
     });
     expect(ask(withMusic(failed, false)).blocker?.hint).not.toBe(
-      "Remove the upload that failed to play",
+      "Remove the upload that failed first",
     );
   });
 
   it("asks for the thumbnail image when the thumbnail is provided", () => {
     expect(
       ask({ ...provided, sources: { ...provided.sources, thumbnail: "provide" } }).blocker?.hint,
-    ).toBe("Attach the thumbnail image to play");
+    ).toBe("Attach the thumbnail image first");
   });
 });
 

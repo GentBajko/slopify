@@ -32,11 +32,11 @@ it("asks what is being made first and shows only that work's setup", async () =>
       .getAllByRole("radio")
       .map((one) => one.getAttribute("aria-label")),
   ).toEqual(["Video", "Article", "Audiobook", "Podcast", "Images"]);
-  expect(screen.getByRole("heading", { name: "What's the video about?" })).not.toBeNull();
+  expect(screen.getByLabelText("What's the video about?")).not.toBeNull();
   expect(rowNames()).toContain("images");
 
   await userEvent.click(within(choice).getByRole("radio", { name: "Article" }));
-  expect(screen.getByRole("heading", { name: "What's the article about?" })).not.toBeNull();
+  expect(screen.getByLabelText("What's the article about?")).not.toBeNull();
   // No voice, pictures or video for an article, and nothing asks for a channel or YouTube.
   expect(rowNames()).not.toContain("narration");
   expect(rowNames()).not.toContain("images");
@@ -47,7 +47,7 @@ it("asks what is being made first and shows only that work's setup", async () =>
   expect(session().document.form.voices?.format).toBe("podcast");
   expect(rowNames()).toContain("narration");
   expect(rowNames()).not.toContain("images");
-  await openRow("Outputs");
+  await openRow("Extras");
   // The video's publishing extras fold away for standalone work.
   expect(screen.getByText(/^Publishing extras/)).not.toBeNull();
 });

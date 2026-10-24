@@ -1,23 +1,31 @@
 import { languageInfo } from "@app/kernel/ports/languages.js";
-import type { FieldError } from "@app/slices/admission/rules.js";
+import { render } from "@app/slices/admission/substitute.js";
 import { documentThemeLabel } from "@app/slices/document/model.js";
 import type { ProviderStatus, Voice } from "@app/slices/settings/model.js";
-import { cutModeLabels, videoEditOf } from "@app/slices/video/edit-settings.js";
+import {
+  atmosphereLabels,
+  colorGradeLabels,
+  transitionLabels,
+  type VideoEditSettings,
+  videoEditOf,
+} from "@app/slices/video/edit-settings.js";
 import { voiceFormatLabels } from "@app/slices/voices/model.js";
+import { stageWords } from "@/lib/stage-words";
 import type { OutputKind } from "./output-kind";
 import type { PlaySection } from "./sections";
-import { type PlayFormState, shortsOn, sourceLabels } from "./state";
+import { type PlayFormState, shortsOn } from "./state";
 
-// Play is one path: template, topic, Start. Everything else is folded into these rows, each
-// a one-line summary with Change opening its editor in place (Reviews opens the side panel).
+// Create is one screen: what is being made, the topic, then these rows, each one plain sentence
+// saying what the run will do, with Change opening its editor in place under it (one at a time).
+// The same names, in the same order, as Edit template and a project's Edit settings.
 export const setupRows = [
-  { id: "title", label: "Title and keywords", section: "content" },
+  { id: "title", label: "Keywords", section: "content" },
   { id: "article", label: "Article", section: "content" },
   { id: "narration", label: "Narration", section: "outputs" },
   { id: "images", label: "Images", section: "outputs" },
   { id: "video", label: "Video and style", section: "style" },
-  { id: "outputs", label: "Outputs", section: "outputs" },
-  { id: "reviews", label: "Reviews", section: "review" },
+  { id: "outputs", label: "Extras", section: "outputs" },
+  { id: "reviews", label: "Pauses and checks", section: "review" },
   { id: "channel", label: "Channel", section: "content" },
 ] as const satisfies readonly {
   readonly id: string;
@@ -25,6 +33,14 @@ export const setupRows = [
   readonly section: PlaySection;
 }[];
 export type SetupRowId = (typeof setupRows)[number]["id"];
+
+// A row's name for what is being made: the Video and style row of spoken work holds its
+// captions and sound, and of a set of images only their shape and look.
+export function rowLabel(row: SetupRowId, kind: OutputKind = "video"): string {
+  if (row === "video" && (kind === "audiobook" || kind === "podcast")) return "Sound and captions";
+  if (row === "video" && kind === "images") return "Shape and look";
+  return setupRows.find((one) => one.id === row)?.label ?? row;
+}
 
 // Which row holds a field, by the dotted names `admit` and the refusals use. The rows are
 // matched in order, so the longer prefixes come first.
@@ -39,6 +55,7 @@ const owners: readonly (readonly [SetupRowId, readonly string[]])[] = [
       "provided.article",
       "provided.research",
       "llm",
+      "language",
     ],
   ],
   [
@@ -101,7 +118,7 @@ const owners: readonly (readonly [SetupRowId, readonly string[]])[] = [
     ],
   ],
   ["reviews", ["checkpoints", "reviews"]],
-  ["channel", ["channelId", "useBrandKit", "language"]],
+  ["channel", ["channelId", "useBrandKit"]],
 ];
 
 // The dotted fields a row holds, for comparing a draft with the template it came from.
@@ -118,8 +135,8 @@ export function rowOf(field: string, llmRow: SetupRowId = "article"): SetupRowId
   return owners.find(([, prefixes]) => owns(prefixes, field))?.[0];
 }
 
-// The rows a section opens when nothing more precise is asked for: what the Content, Outputs
-// and Style tabs held before Play had rows (a saved draft remembers its section).
+// The rows a section opens when nothing more precise is asked for (the guided tour): what the
+// Content, Outputs and Style tabs held before Create had rows.
 export function rowsOfSection(section: PlaySection): readonly SetupRowId[] {
   switch (section) {
     case "content":
@@ -133,146 +150,225 @@ export function rowsOfSection(section: PlaySection): readonly SetupRowId[] {
   }
 }
 
-// The first refusal a row holds, so the row can say it needs attention. Topic keywords are
-// typed at the top of Play, so their refusals are not the Title row's to show.
-export function rowProblem(
-  row: SetupRowId,
-  errors: readonly FieldError[],
-  topics: readonly string[],
-  llmRow: SetupRowId = "article",
-): FieldError | undefined {
-  return errors.find((error) => {
-    if (rowOf(error.field, llmRow) !== row) return false;
-    if (row !== "title") return true;
-    if (error.field === "title") return topics.length > 0;
-    return !topics.some((topic) => error.field === `values.${topic}`);
-  });
-}
-
 export interface SummaryContext {
   readonly providers: readonly ProviderStatus[];
   readonly voices: readonly Voice[];
-  readonly keywords: number;
+  // The keywords the picked prompts and the title ask for, and which of them are topics.
+  readonly keywords: readonly string[];
   readonly topics: readonly string[];
   readonly channel: string | undefined;
   readonly brandKit: boolean;
-  readonly look: string;
   readonly fontName: string | undefined;
-  readonly checkpoints: number;
   readonly reviews: number;
   // What the person is making; absent reads as a video, as every draft did before the choice.
   readonly kind?: OutputKind | undefined;
+  // A model's name as its service lists it, when that list has arrived.
+  readonly modelName?: ((provider: string, model: string) => string | undefined) | undefined;
 }
 
-// Each row's one line: what the run will do, in the order a person would say it.
+const shapes: Readonly<Record<string, string>> = {
+  "16:9": "Landscape 16:9",
+  "9:16": "Portrait 9:16",
+  "1:1": "Square 1:1",
+};
+
+const article = (word: string): string => (/^[aeiou]/i.test(word) ? "an" : "a");
+
+// "a, b and c".
+function listed(parts: readonly string[]): string {
+  if (parts.length <= 1) return parts[0] ?? "";
+  return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1] ?? ""}`;
+}
+
+// Each row's one sentence: what the run will do, in the person's words and the services'
+// own names. Defaults read as defaults; nothing is a raw setting or id.
 export function rowSummary(row: SetupRowId, form: PlayFormState, context: SummaryContext): string {
-  const provider = (id: string): string =>
-    id === "" ? "no provider" : (context.providers.find((one) => one.id === id)?.displayName ?? id);
-  const join = (parts: readonly (string | boolean | undefined)[]): string =>
-    parts.filter((part): part is string => typeof part === "string" && part !== "").join(" · ");
+  const kind = context.kind ?? "video";
+  const service = (id: string): string | undefined =>
+    id === "" ? undefined : (context.providers.find((one) => one.id === id)?.displayName ?? id);
+  const model = (provider: string, id: string): string | undefined =>
+    id === "" ? undefined : (context.modelName?.(provider, id) ?? id);
+  const by = (choice: {
+    readonly provider: string;
+    readonly model: string;
+  }): string | undefined => {
+    const name = service(choice.provider);
+    if (name === undefined) return undefined;
+    const picked = model(choice.provider, choice.model);
+    return picked === undefined ? name : `${name} (${picked})`;
+  };
   switch (row) {
-    case "title":
-      return join([
-        context.topics.length ? form.title : false,
-        context.keywords === 0
-          ? "No keywords"
-          : `${String(context.keywords)} keyword${context.keywords === 1 ? "" : "s"}`,
-      ]);
-    case "article":
-      return form.sources.article === "off"
-        ? "Off: no article"
-        : form.sources.article === "provide"
-          ? "Your article"
-          : join([
-              form.articlePrompt || "No prompt picked",
-              form.llm.provider
-                ? `${provider(form.llm.provider)} · ${form.llm.model || "no model"}`
-                : false,
-              form.sources.research === "off"
-                ? "research off"
-                : `research: ${sourceLabels[form.sources.research].toLowerCase()}`,
-            ]);
+    case "title": {
+      const asks = context.keywords.filter((name) => !context.topics.includes(name));
+      const blanks = Object.fromEntries(context.topics.map((name) => [name, "…"]));
+      const pattern = /^\s*\{\{[^{}]+\}\}\s*$/.test(form.title)
+        ? undefined
+        : render(form.title, { ...blanks, ...nonEmpty(form.values) });
+      return (
+        [
+          context.topics.length > 0 && pattern !== undefined ? `Title: “${pattern}”.` : undefined,
+          asks.length > 0 ? `Asks for: ${asks.join(", ")}.` : undefined,
+        ]
+          .filter((part) => part !== undefined)
+          .join(" ") || "Nothing to fill in."
+      );
+    }
+    case "article": {
+      if (form.sources.article === "off") return "No article.";
+      const language =
+        form.language === undefined ? "" : ` In ${languageInfo(form.language).name}.`;
+      if (form.sources.article === "provide") return `Your own text, used as written.${language}`;
+      const writer = by(form.llm);
+      const prompt = form.articlePrompt === "" ? undefined : `the “${form.articlePrompt}” prompt`;
+      const research =
+        form.sources.research === "generate"
+          ? ", with web research"
+          : form.sources.research === "provide"
+            ? ", from your notes"
+            : "";
+      const missing = [
+        prompt === undefined ? "No article prompt picked yet." : undefined,
+        writer === undefined ? "No writing service picked yet." : undefined,
+      ].filter((part) => part !== undefined);
+      const made =
+        writer !== undefined && prompt !== undefined
+          ? `Written by ${writer} from ${prompt}${research}.`
+          : writer !== undefined
+            ? `Written by ${writer}${research}.`
+            : prompt !== undefined
+              ? `Written from ${prompt}${research}.`
+              : "";
+      return [made, ...missing].filter((part) => part !== "").join(" ") + language;
+    }
     case "narration": {
-      if (form.sources.audio === "off") return "Off, a silent video";
+      if (form.sources.audio === "off") return kind === "video" ? "None: a silent video." : "None.";
       if (form.sources.audio === "provide")
-        return form.provided.audio?.name ?? "Your narration file";
+        return form.provided.audio === undefined
+          ? "Your own recording, not attached yet."
+          : `Your own recording: ${form.provided.audio.name}.`;
+      const voiceService = service(form.audio.provider);
+      if (voiceService === undefined) return "No voice service picked yet.";
+      const extras = [
+        form.intro ? `the “${form.intro}” intro` : undefined,
+        form.outro ? `the “${form.outro}” outro` : undefined,
+      ].filter((part) => part !== undefined);
+      const after = extras.length > 0 ? `, with ${listed(extras)}` : "";
+      if (form.voices !== undefined)
+        return `${voiceFormatLabels[form.voices.format]} with ${String(form.voices.speakers.length)} speakers, read by ${voiceService}${after}.`;
       const voice = context.voices.find(
         (one) => one.provider === form.audio.provider && one.voiceId === form.audio.voice,
       );
-      return join([
-        provider(form.audio.provider),
-        form.voices === undefined
-          ? (voice?.name ?? (form.audio.voice || "no voice"))
-          : `${voiceFormatLabels[form.voices.format]}, ${String(form.voices.speakers.length)} speakers`,
-        form.narrationPrompt ? `prepared with ${form.narrationPrompt}` : false,
-        form.intro ? `intro ${form.intro}` : false,
-        form.outro ? `outro ${form.outro}` : false,
-      ]);
+      if (form.audio.voice === "") return `${voiceService}: no voice picked yet.`;
+      return `Read by ${voice?.name ?? form.audio.voice}, ${article(voiceService)} ${voiceService} voice${after}.`;
     }
     case "images": {
-      if (form.sources.images === "off") return "Off";
+      if (form.sources.images === "off") return "No images.";
       if (form.sources.images === "provide")
-        return `${String(form.provided.images.length)} of your images`;
-      const prompts = form.imagePrompts.map((one) => `${one.name} × ${one.number || "?"}`);
-      return join([
-        prompts.length ? prompts.join(", ") : "No image prompts picked",
-        provider(form.images.provider),
-        form.images.model,
-        form.reference !== undefined && form.reference.source !== "off"
-          ? "establishing image"
-          : false,
-      ]);
+        return form.provided.images.length === 0
+          ? "Your own images, none attached yet."
+          : `${String(form.provided.images.length)} of your own images.`;
+      const counts = form.imagePrompts.map((one) => Number(one.number) || 0);
+      const total = counts.reduce((sum, count) => sum + count, 0);
+      const styles = listed(form.imagePrompts.map((one) => `“${one.name}”`));
+      const drawer = by(form.images);
+      const made =
+        form.imagePrompts.length === 0
+          ? "No image prompt ticked yet."
+          : `${total > 0 ? String(total) : "Some"} ${total === 1 ? "image" : "images"} from ${styles}${drawer === undefined ? "" : `, made by ${drawer}`}${
+              form.reference !== undefined && form.reference.source !== "off"
+                ? ", all in the look of one establishing image"
+                : ""
+            }.`;
+      return drawer === undefined ? `${made} No image service picked yet.` : made;
     }
-    case "video":
-      return join([
-        form.format,
-        form.sources.video === "off"
-          ? "no video"
-          : cutModeLabels[videoEditOf(form).cuts].toLowerCase(),
-        form.sources.video === "off" ? false : context.look,
-        form.sources.audio !== "off" && form.subtitles.mode !== "off"
-          ? `captions ${context.fontName ?? form.subtitles.fontId} ${form.subtitles.fontSize} ${form.subtitles.position}`
-          : "no captions",
-      ]);
+    case "video": {
+      const shape = shapes[form.format] ?? form.format;
+      const captions =
+        form.sources.audio === "off" || form.subtitles.mode === "off"
+          ? "no captions"
+          : form.subtitles.mode === "files"
+            ? "caption files only"
+            : `captions in ${context.fontName ?? "the default font"}`;
+      if (kind === "images") return `${shape}.`;
+      if (kind === "audiobook" || kind === "podcast")
+        return `${captions[0]?.toUpperCase() ?? ""}${captions.slice(1)}.`;
+      if (form.sources.video === "off") return `No video: sound only, ${captions}.`;
+      const cuts =
+        videoEditOf(form).cuts === "narration"
+          ? "a new image at each sentence"
+          : "a new image every few seconds";
+      return `${shape}, ${cuts}, ${lookWords(videoEditOf(form))}, ${captions}.`;
+    }
     case "outputs": {
       const thumbnails =
         form.sources.thumbnail === "off"
-          ? false
+          ? undefined
           : form.sources.thumbnail === "provide"
-            ? "your thumbnail"
+            ? "your own thumbnail"
             : form.thumbnailCount === 3
               ? "3 thumbnails"
-              : "1 thumbnail";
+              : "a thumbnail";
       const parts = [
         thumbnails,
-        shortsOn(form) && form.shorts ? `${form.shorts.count} shorts` : false,
+        shortsOn(form) && form.shorts ? `${form.shorts.count} shorts` : undefined,
         form.youtubeDescription === true && form.sources.audio !== "off"
-          ? "YouTube description"
-          : false,
-        form.sources.document === "generate" ? `PDF (${documentThemeLabel(form.document)})` : false,
-      ];
-      return (
-        join(parts) ||
-        (context.kind === undefined || context.kind === "video" ? "Only the video" : "Nothing else")
-      );
+          ? "a YouTube description"
+          : undefined,
+        form.sources.document === "generate"
+          ? `a PDF in the ${documentThemeLabel(form.document)} look`
+          : undefined,
+      ].filter((part) => part !== undefined);
+      if (parts.length > 0) return `Also makes ${listed(parts)}.`;
+      return kind === "video"
+        ? "The video only: no thumbnail, description, shorts or PDF."
+        : "Nothing else.";
     }
-    case "reviews":
-      return join([
-        context.checkpoints === 0
-          ? "No checkpoints"
-          : `${String(context.checkpoints)} checkpoint${context.checkpoints === 1 ? "" : "s"}`,
-        context.reviews === 0
-          ? "no automatic reviews"
-          : `${String(context.reviews)} automatic review${context.reviews === 1 ? "" : "s"}`,
-      ]);
+    case "reviews": {
+      const pauses = form.checkpoints ?? [];
+      const before = listed(pauses.map((stage) => stageWords[stage].toLowerCase()));
+      const parts = [
+        pauses.length > 0 ? `Pauses for your approval before ${before}` : undefined,
+        context.reviews > 0
+          ? `an AI checks ${String(context.reviews)} ${context.reviews === 1 ? "step" : "steps"}`
+          : undefined,
+      ].filter((part) => part !== undefined);
+      return parts.length === 0
+        ? "Runs straight through: no pauses for your approval, no AI checks."
+        : `${parts.join("; ")}.`;
+    }
     case "channel":
-      return join([
-        context.channel ?? "Default channel",
-        context.brandKit ? "brand kit on" : "brand kit off",
-        // Only a language picked here; otherwise the channel's (or English) applies.
-        form.language === undefined ? undefined : languageInfo(form.language).name,
-        // Files are made without one; a channel only lends its defaults and keeps work together.
-        context.kind === undefined || context.kind === "video" ? undefined : "optional",
-      ]);
+      return `For ${context.channel ?? "the default channel"}, ${
+        context.brandKit
+          ? "with its brand kit (fonts, intro, outro and sounds)"
+          : "without its brand kit"
+      }.`;
   }
+}
+
+// The Look in words, only what differs from plain cuts: "a 1 s crossfade, a subtle vignette,
+// a sepia grade". Animated images are named as paid, since each is a video model call.
+export function lookWords(edit: VideoEditSettings): string {
+  const level = (value: string): string => value.toLowerCase();
+  const parts = [
+    edit.transition === "cut"
+      ? undefined
+      : `a ${String(edit.transitionSeconds)} s ${transitionLabels[edit.transition].toLowerCase()}`,
+    edit.vignette === "off" ? undefined : `a ${level(edit.vignette)} vignette`,
+    edit.grain === "off" ? undefined : `${level(edit.grain)} film grain`,
+    edit.grade === "none" ? undefined : `a ${colorGradeLabels[edit.grade].toLowerCase()} grade`,
+    edit.atmosphere === "none"
+      ? undefined
+      : `drifting ${atmosphereLabels[edit.atmosphere].toLowerCase()}`,
+    edit.chapterCards ? "chapter cards" : undefined,
+    edit.animate === "off"
+      ? undefined
+      : edit.animate === "every"
+        ? `every ${edit.animateEvery === 2 ? "2nd" : edit.animateEvery === 3 ? "3rd" : `${String(edit.animateEvery)}th`} image animated (paid)`
+        : "chapter openers animated (paid)",
+  ].filter((part) => part !== undefined);
+  return parts.length === 0 ? "no effects" : listed(parts);
+}
+
+function nonEmpty(values: Readonly<Record<string, string>>): Readonly<Record<string, string>> {
+  return Object.fromEntries(Object.entries(values).filter(([, value]) => value.trim() !== ""));
 }

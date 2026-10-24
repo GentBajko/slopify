@@ -1,8 +1,12 @@
+import { pickerEntries } from "@app/slices/model-checks/rules.js";
 import type { DraftView, PlayDraftDocument } from "@app/slices/play-drafts/model.js";
-import { useQueryClient } from "@tanstack/react-query";
+import type { ProviderFamily } from "@app/slices/settings/model.js";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useReducer, useRef } from "react";
 import { useApp } from "@/app-context";
-import { keys } from "@/queries";
+import { readFirstRun, upkeepKeys } from "@/components/provider-upkeep-api";
+import { modelsQuery } from "@/lib/models";
+import { keys, providersQuery } from "@/queries";
 import type { DraftReply } from "./draft-api";
 import {
   createPlayDraft,
@@ -21,7 +25,14 @@ import {
   remapForkEdits,
   retainUploadSettlements,
 } from "./draft-save";
-import { type FreshProviderDefaults, withProviderDefaults } from "./draft-state";
+import {
+  type FreshProviderDefaults,
+  setFreshProviderDefaults,
+  setReadyServices,
+  templateProviderDefaults,
+  withProviderDefaults,
+} from "./draft-state";
+import { readiness } from "./problems";
 import { createReviewOwner } from "./review-state";
 import { useDraftUploads } from "./use-draft-uploads";
 import { useReviewChoices } from "./use-review-choices";
@@ -189,6 +200,22 @@ export function useDraftSession(): PlaySession {
           void flush();
         }, 500);
     };
+    // A draft just made from a template (still its first saved version, untouched here) gets
+    // the writer and image service the first launch found, else the ones whose key is saved,
+    // where the template names none, and keeps them: they are saved with it. What arrives
+    // later fills what is still empty, as long as nothing but these fills changed the draft.
+    let filled: { readonly id: string | null; readonly edited: number } | null = null;
+    const fillTemplateProviders = (defaults?: FreshProviderDefaults) => {
+      const current = state.current;
+      if (current.document.templateSource === undefined) return;
+      const onlyFilled =
+        filled !== null && filled.id === current.id && filled.edited === current.clock.edited;
+      if (!onlyFilled && (current.view?.draft.version !== 1 || current.clock.edited > 0)) return;
+      const document = withProviderDefaults(current.document, templateProviderDefaults(defaults));
+      if (document === current.document) return;
+      edit(document);
+      filled = { id: state.current.id, edited: state.current.clock.edited };
+    };
     const open = async (id: string, isCurrent: () => boolean = () => true): Promise<boolean> => {
       if (review.state().starting || review.state().uncertain || review.state().created)
         return false;
@@ -208,6 +235,7 @@ export function useDraftSession(): PlaySession {
         }
         fork = null;
         install(reply.value);
+        fillTemplateProviders();
         await refreshDraftChoices(api, queryClient);
         return isCurrent();
       } catch (error) {
@@ -334,10 +362,15 @@ export function useDraftSession(): PlaySession {
       open,
       newDraft,
       // Defaults that arrive after Play opened fill a draft nobody has touched yet, without
-      // saving it: it is still the fresh form, only with the found providers picked.
+      // saving it: it is still the fresh form, only with the found providers picked. A draft
+      // just made from a template gets them too, saved.
       adoptDefaults: (defaults: FreshProviderDefaults) => {
         const current = state.current;
-        if (current.id !== null || current.clock.edited > 0 || current.view !== null) return;
+        if (current.id !== null || current.view !== null) {
+          fillTemplateProviders(defaults);
+          return;
+        }
+        if (current.clock.edited > 0) return;
         const document = withProviderDefaults(current.document, defaults);
         if (document !== current.document) publish({ document });
       },
@@ -409,4 +442,71 @@ export function useDraftSession(): PlaySession {
     navigate: owner.navigate,
     activeId: current.id ?? current.recoveryId,
   };
+}
+
+// The writer and image service this machine's first launch found, read once and handed to the
+// session: a fresh draft and a draft just made from a template start with them picked. For a
+// kind the first launch found nothing of, a draft made from a template takes the first service
+// of that kind that answers (a key saved in Settings), with its first listed model; those lists
+// are asked for only while `templates` says a template-made draft is open or on its way. True
+// once every answer (or a failure) has arrived.
+export function useFirstRunDefaults(
+  session: Pick<PlaySession, "adoptDefaults">,
+  templates: boolean,
+): boolean {
+  const { api } = useApp();
+  const status = useQuery({
+    queryKey: upkeepKeys.firstRun,
+    queryFn: () => readFirstRun(api),
+    retry: false,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  const providers = useQuery(providersQuery(api));
+  const found = status.data?.defaults;
+  const known =
+    (status.isSuccess || status.isError) &&
+    (!templates || providers.isSuccess || providers.isError);
+  const readyOf = (family: ProviderFamily): string | undefined =>
+    providers.data?.providers.find(
+      (provider) => provider.family === family && readiness(provider).ok,
+    )?.id;
+  const spare = {
+    llm: templates && known && found?.llm === undefined ? readyOf("llm") : undefined,
+    images: templates && known && found?.images === undefined ? readyOf("image") : undefined,
+  };
+  const asked = [spare.llm, spare.images].filter((id) => id !== undefined);
+  const lists = useQueries({
+    queries: asked.map((provider) => ({
+      ...modelsQuery(api, provider),
+      refetchInterval: false as const,
+    })),
+  });
+  const settled = known && lists.every((list) => list.isSuccess || list.isError);
+  const choice = (provider: string | undefined) => {
+    if (provider === undefined) return undefined;
+    const list = lists[asked.indexOf(provider)]?.data;
+    if (list === undefined) return undefined;
+    const model = pickerEntries(list.models, list.standings, "", list.standings === undefined)
+      .entries[0]?.model.id;
+    return model === undefined ? undefined : { provider, model };
+  };
+  // One hand-over once everything is known, so a draft is filled once, with all of it.
+  const handOver = settled
+    ? JSON.stringify({
+        found: found ?? {},
+        ready: { llm: choice(spare.llm), images: choice(spare.images) },
+      })
+    : undefined;
+  const { adoptDefaults } = session;
+  useEffect(() => {
+    if (handOver === undefined) return;
+    const { found, ready } = JSON.parse(handOver) as {
+      readonly found: FreshProviderDefaults;
+      readonly ready: FreshProviderDefaults;
+    };
+    setReadyServices(ready);
+    setFreshProviderDefaults(found);
+    adoptDefaults?.(found);
+  }, [handOver, adoptDefaults]);
+  return settled;
 }

@@ -49,11 +49,12 @@ it("starts a new video following the narration, with a plain Look folded away", 
 
 it("sets transitions, the Look, chapter cards and animated images, and saves them in the draft", async () => {
   const { requests, session } = await mountPlay(falModels);
-  await openRow("Video and style");
   // The clips are made on the image provider, so its models are the ones offered.
+  await openRow("Images");
   const provider = document.querySelector<HTMLSelectElement>('[data-play-field="images.provider"]');
   if (provider === null) throw new Error("The image provider picker is missing.");
   await userEvent.selectOptions(provider, "fal");
+  await openRow("Video and style");
   await userEvent.selectOptions(screen.getByRole("combobox", { name: "Cuts" }), "interval");
   await userEvent.click(screen.getByText("Look"));
   await userEvent.selectOptions(screen.getByRole("combobox", { name: "Transition" }), "crossfade");
