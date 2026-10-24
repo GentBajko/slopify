@@ -236,7 +236,15 @@ describe("the project page", () => {
   it("explains every control in each section of a finished project", async () => {
     const fixture = revisionRouteFixture(finished);
     renderRouted(<ProjectRoute projectId="p1" />, fixture.app);
-    for (const section of ["Article", "Narration", "Images", "Video", "Cost", "Live", "History"]) {
+    for (const section of [
+      "Article",
+      "Narration",
+      "Images",
+      "Video",
+      "All files",
+      "Cost",
+      "Versions",
+    ]) {
       await openProjectSection(section);
       expect({ section, unexplained: unexplained() }).toEqual({ section, unexplained: [] });
     }
@@ -256,7 +264,7 @@ describe("the project page", () => {
         "GET /api/projects/p1/checkpoints": jsonAnswer({ revisionId: "r1", checkpoints: [] }),
       }),
     );
-    await openProjectSection("Checkpoints");
+    await openProjectSection("Pauses and checks");
     await screen.findByRole("group", { name: "Checkpoint choices" });
     expect(unexplained()).toEqual([]);
   });
@@ -275,7 +283,7 @@ describe("Edit project", () => {
       "Article",
       "Providers",
       "Prompts",
-      "Reviews",
+      "Pauses and checks",
       "Shorts",
       "Subtitles",
       "Images",
