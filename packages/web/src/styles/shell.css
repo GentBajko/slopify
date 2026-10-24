@@ -529,7 +529,7 @@
   /* Fixed to the window's full height rather than sticky: a sticky rail could end partway down
      the window (a zoomed or short window scrolled to the bottom), leaving an empty band. The
      grid keeps its rail column, and the main column is placed in the second one. A window too
-     short for every item scrolls the rail on its own. */
+     short for every item scrolls the destinations under the foot, which stays in view. */
   .sl-app__rail {
     position: fixed;
     top: 0;
@@ -540,7 +540,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-    padding: var(--space-3) 6px;
+    padding: var(--space-3) 6px 0;
     border-right: 1px solid var(--color-line);
     background: var(--color-surface);
     overflow-y: auto;
@@ -639,13 +639,51 @@
     font-size: inherit;
     line-height: inherit;
   }
+  /* Search, Assistant, Help and Support: at the bottom of the rail, and held there when a short
+     window scrolls the rest. */
   .sl-app__foot {
+    position: sticky;
+    bottom: 0;
     margin-top: auto;
     display: flex;
     flex-direction: column;
     gap: 2px;
-    padding-top: var(--space-2);
+    padding: var(--space-2) 0 var(--space-3);
     border-top: 1px solid var(--color-line);
+    background: var(--color-surface);
+  }
+  /* A short window (a laptop under the browser's own bars, or a zoomed page): the items close
+     up so the whole rail still fits down to about 600px. */
+  @media (max-height: 760px) {
+    .sl-app__rail {
+      gap: 4px;
+      padding-top: var(--space-2);
+    }
+    .sl-app__logo {
+      padding: 0;
+    }
+    .sl-app__create {
+      height: 48px;
+    }
+    .sl-app__create svg {
+      width: 20px;
+      height: 20px;
+    }
+    .sl-navrail__item {
+      gap: 2px;
+      min-height: 42px;
+      padding: 3px 2px;
+    }
+    .sl-navrail__item svg {
+      width: 18px;
+      height: 18px;
+    }
+    .sl-navrail__running {
+      padding: 3px 2px;
+    }
+    .sl-app__foot {
+      padding: 4px 0 var(--space-2);
+    }
   }
   .sl-app__main {
     grid-column: 2;
