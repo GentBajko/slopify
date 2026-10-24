@@ -300,7 +300,9 @@ function Row({
         <label htmlFor={id} className="sl-field__label">
           {label}
         </label>
-        {tip === undefined ? null : <InfoTip id={tip} label={label.toLowerCase()} />}
+        {tip === undefined ? null : (
+          <InfoTip id={tip} label={label.toLowerCase()} className="-my-1" />
+        )}
       </span>
       {/* The main choice takes the room; a short one beside it (a length, a count) keeps its own. */}
       <div className="flex min-w-0 flex-wrap items-start gap-2 [&>select]:min-w-0 [&>select]:flex-1">
