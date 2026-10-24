@@ -2,7 +2,14 @@ import type { SampleId } from "@app/slices/onboarding/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { CheckIcon } from "lucide-react";
-import { type FormEvent, type ReactElement, type ReactNode, useRef, useState } from "react";
+import {
+  type FormEvent,
+  type ReactElement,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useApp } from "@/app-context";
 import { autostartKey } from "@/autostart/api";
 import { AutostartOffer } from "@/autostart/autostart-settings";
@@ -61,14 +68,14 @@ function Samples({
   made,
 }: {
   readonly title: string;
-  readonly made: FirstRunView["samples"] | undefined;
+  readonly made: FirstRunView["samples"];
 }): ReactElement {
   return (
     <>
       <SectionHead title={title} size="small" as="h3" className="mt-6" />
       <List label="Samples" className="sl-list--wrap-meta">
         {samples.map((one) => {
-          const projectId = made?.[one.id] ?? null;
+          const projectId = made[one.id];
           return (
             <ListRow
               key={one.id}
@@ -195,7 +202,7 @@ export function WelcomeRoute({
   // The step in the address; without `onStep` the screen keeps its own.
   readonly step?: WelcomeStep;
   readonly onStep?: (step: WelcomeStep) => void;
-} = {}): ReactElement {
+}): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
   const navigate = useNavigate();
@@ -240,6 +247,8 @@ export function WelcomeRoute({
       request.current = undefined;
       setRefused([]);
       setMade(result.projectId);
+      // The welcome is done with; a later visit starts with an empty topic.
+      setTopic("");
       await client.invalidateQueries({ queryKey: autostartKey });
       await client.invalidateQueries({ queryKey: keys.projects });
       await client.invalidateQueries({ queryKey: keys.voices });
@@ -280,13 +289,18 @@ export function WelcomeRoute({
                     : refused.map((gap) => gap.message).join(" "),
               };
   const at = welcomeSteps.indexOf(step);
+  // Focus follows a step the person moved to, once its panel is in the page.
+  const moved = useRef(false);
   const go = (to: WelcomeStep): void => {
+    moved.current = true;
     if (onStep === undefined) setOwnStep(to);
     else onStep(to);
-    requestAnimationFrame(() =>
-      document.getElementById(`welcome-step-${to}`)?.focus({ preventScroll: true }),
-    );
   };
+  useEffect(() => {
+    if (!moved.current) return;
+    moved.current = false;
+    document.getElementById(`welcome-step-${step}`)?.focus({ preventScroll: true });
+  }, [step]);
   const next = welcomeSteps[at + 1];
   const back = welcomeSteps[at - 1];
 
@@ -309,7 +323,9 @@ export function WelcomeRoute({
 
       <StepPanel id="found" at={step}>
         <SetupChecklist back={{ return: "welcome", step: "found" }} />
-        <Samples title="What Slopify makes: finished samples" made={data?.samples} />
+        {data === undefined ? null : (
+          <Samples title="What Slopify makes: finished samples" made={data.samples} />
+        )}
       </StepPanel>
 
       <StepPanel id="style" at={step}>
@@ -375,8 +391,8 @@ export function WelcomeRoute({
 
         <AutostartOffer />
 
-        {made === undefined ? null : (
-          <Samples title="While you wait: finished samples" made={data?.samples} />
+        {made === undefined || data === undefined ? null : (
+          <Samples title="While you wait: finished samples" made={data.samples} />
         )}
       </StepPanel>
 
