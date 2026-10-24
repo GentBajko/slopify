@@ -123,7 +123,7 @@ export const playHelp = {
   },
   "play.tts.model": {
     title: "Voice model",
-    body: "The voice service's speech model. Models differ in quality, languages, speed and price per character. Some features need a particular model: delivery cues need Inworld TTS-2. Settings → Models refreshes the list.",
+    body: "The voice service's speech model. Models differ in quality, languages, speed and price per character. Some features need a particular model: Narration Preparation needs Inworld TTS-2. Settings → Models refreshes the list.",
     tutorial: { page: "Play-Narration", anchor: "pick-a-voice" },
   },
   "play.voice": {
@@ -183,7 +183,7 @@ export const playHelp = {
   },
   "play.show-figures": {
     title: "Show tables and figures on screen",
-    body: "Each table, figure, equation and code block the narration describes is also shown in the video while it is described: the article's own picture for a figure, a card drawn in your brand kit's title font and colour for the rest. The images take turns around them, and Shorts that include one show it upright. Drawn on this computer at no cost. Needs Describe tables and figures. Default: on.",
+    body: "Each table, figure, equation and code block the narration describes is also shown in the video while it is described: the article's own picture for a figure, a card drawn in your brand kit's title font and color for the rest. The images take turns around them, and Shorts that include one show it upright. Drawn on this computer at no cost. Needs Describe tables and figures. Default: on.",
     tutorial: { page: "Play-Outputs", anchor: "show-tables-and-figures-on-screen" },
   },
   "play.skip-code": {
@@ -341,17 +341,17 @@ export const playHelp = {
   // Outputs row
   "play.thumbnail-prompt": {
     title: "Thumbnail prompt",
-    body: "The Library thumbnail prompt, keywords filled in. From prompt sends it to the image model as it is; Prompt by LLM gives it to the text model with the title and article to write the image prompt. Write prompts on Prompts.",
+    body: "The Library thumbnail prompt, keywords filled in. From my thumbnail prompt sends it to the image service as it is; Let the AI write the prompt gives it to the AI writer with the title and article to write the image prompt. Write prompts on Prompts.",
     tutorial: { page: "Play-Outputs", anchor: "thumbnail" },
   },
   "play.thumbnail-count": {
-    title: "Thumbnails",
+    title: "How many thumbnails",
     body: "Three makes two more thumbnails from the same prompt with different compositions, for YouTube's Test & compare. Each costs one more image, so 3 thumbnails are 3 image calls. You can remake each on its own on the project page. Default: 1.",
     tutorial: { page: "Play-Outputs", anchor: "make-three-thumbnails-for-test--compare" },
   },
   "play.youtube-description": {
     title: "YouTube description",
-    body: "After subtitle timing, the text model writes a description with chapters at the narration's real times, hashtags at the end, and a separate list of tags, ready to copy. One text-model call. It runs beside the render. Needs narration. Default: off.",
+    body: "After caption timing, the text model writes a description with chapters at the narration's real times, hashtags at the end, and a separate list of tags, ready to copy. One text-model call. It runs beside the render. Needs narration. Default: off.",
     tutorial: { page: "YouTube-Description", anchor: "turn-it-on" },
   },
   "play.description-prompt": {
@@ -361,7 +361,7 @@ export const playHelp = {
   },
   "play.shorts": {
     title: "Shorts",
-    body: "After subtitle timing, the text model picks the best self-contained moments of the narration. Each becomes a vertical 1080×1920 clip with new images, big word-by-word captions and its own title, description and hashtags. It runs beside the render; its images are charged like any other. Needs narration. Default: off.",
+    body: "After caption timing, the text model picks the best self-contained moments of the narration. Each becomes a vertical 1080×1920 clip with new images, big word-by-word captions and its own title, description and hashtags. It runs beside the render; its images are charged like any other. Needs narration. Default: off.",
     tutorial: { page: "Shorts", anchor: "turn-on-shorts" },
   },
   "play.shorts.count": {
@@ -380,8 +380,8 @@ export const playHelp = {
     tutorial: { page: "Shorts", anchor: "options" },
   },
   "play.shorts.image-style": {
-    title: "Image style",
-    body: "The Library image prompt the shorts' new vertical images are drawn from. Built-in draws cinematic, uncluttered images with the subject centred. Pick one of your image prompts to match the long video.",
+    title: "Image prompt",
+    body: "The Library image prompt the shorts' new vertical images are drawn from. Built-in draws cinematic, uncluttered images with the subject centered. Pick one of your image prompts to match the long video.",
     tutorial: { page: "Shorts", anchor: "options" },
   },
   "play.shorts.title-on-screen": {

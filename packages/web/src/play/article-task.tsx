@@ -112,7 +112,7 @@ export function SpokenText({ form }: { readonly form: PlayFormState }): ReactEle
   );
   if (!narrated || article.trim() === "") return null;
   const notes = [
-    useAliases ? "Library → Narration aliases are applied." : undefined,
+    useAliases ? "Your narration aliases are applied." : undefined,
     spoken.glossary ? "The Pronunciation Glossary at the end is used, not read." : undefined,
     form.narrationPrompt
       ? "Narration Preparation adds delivery cues; the words stay as shown."

@@ -18,7 +18,7 @@ export function ThumbnailCountPicker({
   return (
     <div className="flex min-w-0 items-center gap-3" {...helpScope}>
       <span id={id} className="sl-field__label block shrink-0">
-        Thumbnails
+        How many thumbnails
       </span>
       <ToggleGroup
         type="single"

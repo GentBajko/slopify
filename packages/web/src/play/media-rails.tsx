@@ -65,14 +65,20 @@ export function AudioRail({
     });
   }, [hidden, lead, form.audio, update]);
   const framing = form.voices !== undefined;
+  // The glossary only reaches voices that read IPA; for the others the switch is greyed and the
+  // fold's line leaves it out.
+  const glossaryReads = usesPronunciationGlossary({
+    sources: form.sources,
+    audio: { ...form.audio, usePronunciationGlossary: true },
+  });
   // The fold's own line says what is not at its default, in words, so a closed fold still
   // tells the reader what it holds.
   const moreState = [
     chunkingWords(form.chunking),
     form.intro ? `intro: ${form.intro}` : undefined,
     form.outro ? `outro: ${form.outro}` : undefined,
-    form.narrationPrompt ? "delivery cues on" : undefined,
-    form.audio.usePronunciationGlossary ? "pronunciation glossary on" : undefined,
+    form.narrationPrompt ? "narration preparation on" : undefined,
+    form.audio.usePronunciationGlossary && glossaryReads ? "pronunciation glossary on" : undefined,
     form.audio.describeFigures ? "tables and figures described" : undefined,
   ]
     .filter((part) => part !== undefined)
@@ -182,10 +188,7 @@ export function AudioRail({
               />
               <PronunciationGlossary
                 value={form.audio.usePronunciationGlossary}
-                supported={usesPronunciationGlossary({
-                  sources: form.sources,
-                  audio: { ...form.audio, usePronunciationGlossary: true },
-                })}
+                supported={glossaryReads}
                 onChange={(usePronunciationGlossary) =>
                   update({ audio: { ...form.audio, usePronunciationGlossary } })
                 }
@@ -383,7 +386,9 @@ function ReferenceRow({
       value={form.reference ?? referenceOff}
       prompts={prompts}
       problem={problem}
-      thumbnailOn={form.sources.thumbnail !== "off"}
+      thumbnailOn={
+        form.sources.thumbnail === "from_prompt" || form.sources.thumbnail === "prompt_by_llm"
+      }
       onChange={(reference) => update({ reference })}
       upload={
         <FilePick

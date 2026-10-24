@@ -27,7 +27,8 @@ export function VoicePicker({
   problem,
   onPick,
 }: {
-  readonly field: string;
+  // The draft field a refusal names, on Create and Edit template; the cast editor has none.
+  readonly field?: string | undefined;
   readonly label?: string;
   readonly group?: string | undefined;
   readonly provider: string;

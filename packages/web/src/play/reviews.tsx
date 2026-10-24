@@ -145,8 +145,14 @@ export function ReviewSettings({
     onChange({ ...value, ...checker, stages });
   };
   const on = reviewStagesInRunOrder.filter((stage) => modeOf(stage) !== "off");
+  const checkerName =
+    providers.find((one) => one.id === value.provider)?.displayName ?? value.provider;
   const advancedState = [
-    byAgent ? reviewerLabels.agent : value.provider === "" ? undefined : value.provider,
+    byAgent
+      ? reviewerLabels.agent
+      : value.provider === ""
+        ? undefined
+        : `Checked by ${checkerName}`,
     on.length === 0
       ? undefined
       : `${String(on.length)} ${on.length === 1 ? "stage" : "stages"} checked`,

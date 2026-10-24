@@ -24,7 +24,7 @@ const sources = [
 // on) the prompt or the file, and the tick that lets the thumbnail use it as a reference too.
 // `upload` is the file pick, shown for Upload; `prompt` replaces the library picker where the
 // prompt is edited in place. The tick is only drawn while there is a thumbnail to draw:
-// `thumbnailOn` is Outputs → Thumbnail.
+// `thumbnailOn` is Outputs → Thumbnail drawn by the image service (an uploaded one is not drawn).
 export function ReferenceImage({
   value,
   prompts,
