@@ -243,14 +243,25 @@ describe("Channels", () => {
     const user = userEvent.setup();
     const seen: unknown[] = [];
     const disclosed: unknown[] = [];
+    const order: string[] = [];
+    const noted =
+      (what: string, answer: Answer): Answer =>
+      (request) => {
+        order.push(what);
+        return answer(request);
+      };
     renderRouted(
       <Page />,
       testDeps({
         ...common,
-        [`PUT /api/channels/${id}`]: recording(jsonAnswer({ ...channel, version: 4 }), seen),
-        [`PUT /api/channels/${id}/ai-disclosure`]: recording(
-          jsonAnswer({ ...channel, version: 5, aiDisclosure: "no" }),
-          disclosed,
+        [`PUT /api/channels/${id}`]: noted(
+          "channel",
+          recording(jsonAnswer({ ...channel, version: 4, aiDisclosure: "no" }), seen),
+        ),
+        // The disclosure leaves the channel's version alone.
+        [`PUT /api/channels/${id}/ai-disclosure`]: noted(
+          "disclosure",
+          recording(jsonAnswer({ ...channel, aiDisclosure: "no" }), disclosed),
         ),
       }),
     );
@@ -268,8 +279,10 @@ describe("Channels", () => {
     await user.selectOptions(picker, "no");
     expect(disclosed).toEqual([]);
     await user.click(screen.getByRole("button", { name: "Save channel" }));
-    await waitFor(() => expect(disclosed).toEqual([{ aiDisclosure: "no" }]));
-    expect(seen).toHaveLength(1);
+    await waitFor(() => expect(seen).toHaveLength(1));
+    expect(disclosed).toEqual([{ aiDisclosure: "no" }]);
+    // First, so a refused disclosure saves nothing and the rest can still be saved.
+    expect(order).toEqual(["disclosure", "channel"]);
   });
 
   it("offers Make a video in the header and names its tabs in plain words", async () => {
@@ -485,6 +498,36 @@ describe("Channels", () => {
       description: "",
       host: false,
     });
+  });
+
+  it("shows one Add to cast: the header's opens the form, then the form's own adds", async () => {
+    const user = userEvent.setup();
+    const adds = () =>
+      screen
+        .getAllByRole("button", { name: "Add to cast" })
+        .map((button) => button.getAttribute("form"));
+    renderRouted(<Page start="cast" />, testDeps(common));
+    await screen.findByRole("region", { name: "Cast" });
+    expect(adds()).toEqual([null]);
+    await user.click(screen.getByRole("button", { name: "Add to cast" }));
+    await screen.findByRole("region", { name: "New cast member" });
+    // The form is open, so the header's opener has nothing left to do.
+    expect(adds()).toEqual(["cast-member-form"]);
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(adds()).toEqual([null]);
+  });
+
+  it("opens an empty cast on the form, with no Add to cast in the header", async () => {
+    renderRouted(
+      <Page start="cast" />,
+      testDeps({ ...common, [`GET /api/channels/${id}`]: jsonAnswer({ channel, cast: [] }) }),
+    );
+    await screen.findByRole("region", { name: "New cast member" });
+    expect(
+      screen
+        .getAllByRole("button", { name: "Add to cast" })
+        .map((button) => button.getAttribute("form")),
+    ).toEqual(["cast-member-form"]);
   });
 
   it("marks a cast member as one of the channel's hosts", async () => {

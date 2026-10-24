@@ -142,7 +142,9 @@ export function ChannelRoute({
         </EmptyState>
       </div>
     );
-  const onCast = tab === "cast";
+  // Add to cast opens the empty form beside the cast; while that form is already open (always,
+  // for an empty cast) its own Add to cast is the one button, so the header's goes.
+  const addShown = tab === "cast" && cast.length > 0 && castSelected !== "new";
   // The tab's own next step wears the accent where it has one: Save channel on Name and look
   // (its action bar), Add to cast on Cast, New schedule on Schedules. Elsewhere it is Make a
   // video.
@@ -179,7 +181,7 @@ export function ChannelRoute({
             >
               Make a video
             </ButtonLink>
-            {onCast && channel ? (
+            {addShown && channel ? (
               <Button variant="primary" onClick={addToCast}>
                 <PlusIcon aria-hidden="true" className="size-4" strokeWidth={1.75} />
                 Add to cast

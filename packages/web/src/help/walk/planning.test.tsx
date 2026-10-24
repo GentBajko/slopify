@@ -288,7 +288,7 @@ describe("the planning screens explain every control", () => {
     await screen.findByLabelText("Picture to make");
     expectExplained();
     await user.click(screen.getAllByRole("button", { name: "Add to cast" })[0] as HTMLElement);
-    await screen.findByRole("region", { name: "Add to cast" });
+    await screen.findByRole("region", { name: "New cast member" });
     expectExplained();
 
     await user.click(screen.getByRole("tab", { name: "Projects" }));

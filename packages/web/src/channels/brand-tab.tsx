@@ -95,7 +95,12 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
     (legacyLinks.data?.length ?? 0) > 0;
   const save = useMutation({
     mutationFn: async () => {
-      const saved = await saveChannel(api, channel.id, {
+      // The disclosure has a request of its own, sent only when changed. It goes first: it
+      // leaves the channel's version alone, so a refusal here saves nothing and the rest
+      // can still be saved against the version this form was opened on.
+      if (disclosure !== channel.aiDisclosure)
+        await saveAiDisclosure(api, channel.id, disclosure);
+      return saveChannel(api, channel.id, {
         name,
         seriesBrief: brief,
         brand: {
@@ -114,10 +119,6 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
           ? {}
           : { socialAccounts: posting.accounts }),
       });
-      // The disclosure has a request of its own; it goes after the rest, only when changed.
-      return disclosure === channel.aiDisclosure
-        ? saved
-        : saveAiDisclosure(api, channel.id, disclosure);
     },
     onSuccess: async (saved) => {
       notify("Channel saved.", "success");

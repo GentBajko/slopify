@@ -102,13 +102,13 @@ export function CastEditor({
   };
   if (!open) return null;
   return (
-    <section aria-label={member === undefined ? "Add to cast" : `Edit ${member.name}`}>
+    <section aria-label={member === undefined ? "New cast member" : `Edit ${member.name}`}>
       <SectionHead
-        kicker={member === undefined ? "New cast member" : castKindLabels[member.kind]}
-        title={member === undefined ? "Add to cast" : member.name}
+        kicker={member === undefined ? undefined : castKindLabels[member.kind]}
+        title={member === undefined ? "New cast member" : member.name}
         meta={
           member === undefined
-            ? "Name it first, then give it reference pictures."
+            ? "Name it first, then give it a picture or two."
             : "Used whenever a title or an image brief names it or one of its aliases."
         }
       >
@@ -123,7 +123,7 @@ export function CastEditor({
       </SectionHead>
       {member !== undefined && !member.images.some((image) => image.state === "ready") ? (
         <p className="m-0 mt-2 text-small text-waiting">
-          No picture yet, so it is not sent with any image. Upload or generate one below.
+          No picture yet, so it is not sent with any image. Upload one or make one below.
         </p>
       ) : null}
       <form
@@ -136,7 +136,10 @@ export function CastEditor({
         }}
       >
         <div className="grid grid-cols-1 gap-4 min-[600px]:grid-cols-[160px_minmax(0,1fr)]">
-          <Field label="Kind" tip="planning.cast.kind">
+          <Field
+            label="Kind"
+            help="Characters and creatures get tall pictures; places and objects wide ones."
+          >
             <Select
               value={kind}
               onChange={(event) =>
@@ -145,7 +148,7 @@ export function CastEditor({
               options={castKinds.map((one) => ({ value: one, label: castKindLabels[one] }))}
             />
           </Field>
-          <Field label="Name" tip="planning.cast.name">
+          <Field label="Name" help="A video or image that names it reuses its pictures.">
             <Input
               value={name}
               maxLength={200}
@@ -155,7 +158,10 @@ export function CastEditor({
             />
           </Field>
         </div>
-        <Field label="Aliases" tip="planning.cast.aliases" help="Press Enter to add each one.">
+        <Field
+          label="Aliases"
+          help="Other names that count as it, such as plurals or titles. Press Enter to add each one."
+        >
           <div className="flex gap-2">
             <Input
               value={alias}
@@ -189,7 +195,10 @@ export function CastEditor({
             ))}
           </ul>
         ) : null}
-        <Field label="Description for the image model" tip="planning.cast.description">
+        <Field
+          label="Description for the image model"
+          help="Sent with its pictures whenever an image shows it."
+        >
           <Textarea
             rows={3}
             value={description}
@@ -202,7 +211,7 @@ export function CastEditor({
         <div className="flex flex-col items-start gap-1">
           <Switch
             label="One of the channel's hosts"
-            tip="planning.cast.host"
+            help="New podcasts and interviews in this channel start with it as a host."
             checked={host}
             onChange={setHost}
           />
@@ -374,12 +383,11 @@ function Pictures({
         <div className="flex flex-col gap-2" {...helpScope}>
           <p className="sl-kicker m-0">Make a picture</p>
           <HelpLine>
-            Each press of Generate a picture is one image call on the service you pick. A plain
-            background with the whole figure in view makes the best reference.
+            A plain background with the whole figure in view makes the best reference.
           </HelpLine>
           <div className="grid grid-cols-1 gap-4 min-[600px]:grid-cols-2">
             <ProviderPicker
-              label="Image provider"
+              label="Image service"
               family="image"
               providers={providers.data?.providers ?? []}
               value={provider}
@@ -400,8 +408,7 @@ function Pictures({
         </div>
         <Field
           label="Picture to make"
-          tip="planning.cast.picture-prompt"
-          help={limitCount(prompt.length, pictureMax, "characters")}
+          help={`Starts from the name and description; change it as you like. ${limitCount(prompt.length, pictureMax, "characters")}.`}
         >
           <Textarea
             ref={promptField}
@@ -414,10 +421,10 @@ function Pictures({
         <div>
           <Button
             disabled={generate.isPending || provider === "" || model === "" || prompt.trim() === ""}
-            disabledReason="Pick an image provider and model, and describe the picture"
+            disabledReason="Pick an image service and model, and describe the picture"
             onClick={() => generate.mutate()}
           >
-            Generate a picture
+            Make the picture · 1 image call
           </Button>
         </div>
       </div>
@@ -467,7 +474,7 @@ function CastVoiceFields({
       </HelpLine>
       <div className="grid grid-cols-1 gap-3 min-[600px]:grid-cols-2">
         <ProviderPicker
-          label="Voice provider"
+          label="Voice service"
           family="tts"
           providers={providers.data?.providers ?? []}
           value={voice.provider}

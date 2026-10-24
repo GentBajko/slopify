@@ -1,7 +1,7 @@
 import type { HelpEntry } from "../entry.js";
 
-// Schedules, channels (the current channel, its language and YouTube AI disclosure) and the
-// cast.
+// Schedules and channels (the current channel, its language and YouTube AI disclosure). The
+// cast editor says what each field does in a line under it.
 export const planningHelp = {
   // Schedules
   "planning.schedule.name": {
@@ -125,37 +125,5 @@ export const planningHelp = {
     title: "Language of new projects",
     body: "The language this channel's new projects are written and narrated in when Create or the template picks none. It applies with the channel's look turned off too, since it is not styling. Pick voices that speak it. Not set means English. Projects already made keep their language.",
     tutorial: { page: "Other-Languages", anchor: "set-a-channels-language" },
-  },
-
-  // Cast
-  "planning.cast.kind": {
-    title: "Kind",
-    body: "Character, creature, place or object. A generated reference picture of a character or creature is portrait (9:16), of a place or object landscape (16:9), and its starting prompt asks for the whole figure, place or object in view. It doesn't change how the member is matched.",
-    tutorial: { page: "Cast-Library", anchor: "fields" },
-  },
-  "planning.cast.name": {
-    title: "Name",
-    body: "The name matched against video titles and image briefs, as whole words, ignoring case. When it is found, this member's pictures go with that image as references. Add other spellings and plurals as aliases. Up to 200 characters.",
-    tutorial: { page: "Cast-Library", anchor: "fields" },
-  },
-  "planning.cast.aliases": {
-    title: "Aliases",
-    body: "Other names that count as this member, matched as whole words, ignoring case: Cleopatra is found in Cleopatra's palace but not in Cleopatraic. Add plurals and titles such as the Last Pharaoh. Up to 20.",
-    tutorial: { page: "Cast-Library", anchor: "how-names-are-matched" },
-  },
-  "planning.cast.description": {
-    title: "Description for the image model",
-    body: "What the member looks like, in a sentence. It goes to the image model with the member's reference pictures for every image that names it, and starts the prompt of a generated picture. Up to 2,000 characters.",
-    tutorial: { page: "Cast-Library", anchor: "fields" },
-  },
-  "planning.cast.host": {
-    title: "Channel host",
-    body: "A recurring voice of this channel. When you pick Podcast or Interview on Play, the draft starts with the channel's hosts that have a voice as its hosts, so you don't add them every episode. You can still remove or add speakers on the draft. Projects already made are unchanged.",
-    tutorial: { page: "Cast-Library", anchor: "make-a-member-one-of-the-channels-hosts" },
-  },
-  "planning.cast.picture-prompt": {
-    title: "Picture to make",
-    body: "The prompt for the generated reference picture. It starts from the name, the description and a request for a plain background; edit it as you like. Up to 4,000 characters.",
-    tutorial: { page: "Cast-Library", anchor: "generate-a-picture" },
   },
 } as const satisfies Readonly<Record<string, HelpEntry>>;
