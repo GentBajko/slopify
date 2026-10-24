@@ -127,13 +127,12 @@
     top: calc(100% + 6px);
     bottom: auto;
   }
-  /* Tips at the ends of the player's bar and a frame's actions open inwards. */
+  /* Tips at the ends of the player's bar open inwards. */
   .sl-player__bar .sl-btn[data-tip]:first-child::after {
     left: 0;
     transform: none;
   }
-  .sl-player__bar .sl-btn[data-tip]:last-child::after,
-  .sl-media__actions .sl-btn[data-tip]::after {
+  .sl-player__bar .sl-btn[data-tip]:last-child::after {
     left: auto;
     right: 0;
     transform: none;
@@ -649,25 +648,24 @@
     top: 10px;
     left: 10px;
   }
+  /* The frame's actions: a row under the caption, at rest, like a row's actions. */
   .sl-media__actions {
+    gap: var(--space-1);
+  }
+  /* Full size: a small worded button in the frame's top right corner, on the dark screen in
+     both themes, as the Player's own buttons are. */
+  .sl-media__frame .sl-media__open.sl-btn {
     position: absolute;
+    top: 8px;
     right: 8px;
-    bottom: 8px;
-    display: flex;
-    gap: 6px;
-    opacity: 0;
-    transition: opacity 120ms;
-  }
-  .sl-media:hover .sl-media__actions,
-  .sl-media:focus-within .sl-media__actions,
-  .sl-media__actions--shown {
-    opacity: 1;
-  }
-  .sl-media__actions .sl-btn {
     background: rgba(8, 8, 10, 0.72);
     color: #ece9e2;
     border-color: transparent;
     backdrop-filter: blur(6px);
+  }
+  .sl-media__frame .sl-media__open.sl-btn:hover {
+    background: rgba(8, 8, 10, 0.9);
+    color: #fff;
   }
   .sl-media__caption {
     display: flex;

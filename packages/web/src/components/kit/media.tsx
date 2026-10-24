@@ -9,14 +9,17 @@ import {
 import { Dialog as DialogPrimitive } from "radix-ui";
 import { type KeyboardEvent, type ReactElement, type ReactNode, useState } from "react";
 import { cn } from "@/lib/utils";
-import { IconButton } from "./button.js";
+import { Button, IconButton } from "./button.js";
 import { Player } from "./player.js";
 import { Lamp } from "./status.js";
 import { nextZoom, type Zoom, ZoomImage } from "./zoom-image.js";
 
 // Images and video live in a media frame: `screen` behind, a fixed aspect box so grids never
-// jump, a caption line under it, actions on hover and focus, a status badge in the corner.
-// "tall" is 4:5, Instagram's picture shape.
+// jump, a caption line under it, the frame's actions in a row under the caption (always shown,
+// in words where the caller gives words), a status badge in the corner. A frame that opens
+// full size says so with a visible "Full size" button in its top right corner; the picture
+// itself opens it too. Nothing waits for the pointer to appear. "tall" is 4:5, Instagram's
+// picture shape.
 export type Aspect = "landscape" | "portrait" | "square" | "tall";
 
 const aspectClass: Readonly<Record<Aspect, string | undefined>> = {
@@ -36,10 +39,10 @@ export function MediaFrame({
   meta,
   badge,
   actions,
-  actionsShown = false,
   generating,
   onOpen,
   openLabel,
+  openText = "Full size",
   className,
 }: {
   // Absent while the media does not exist yet (generating, or empty).
@@ -52,18 +55,24 @@ export function MediaFrame({
   readonly title?: ReactNode;
   readonly meta?: ReactNode;
   readonly badge?: ReactNode;
-  // Small buttons: Regenerate, Open full size, Download.
+  // Small buttons in a row under the caption, named for their result in words: "Make this
+  // image again", "Download". Always shown.
   readonly actions?: ReactNode;
+  /** @deprecated The actions always show now; this does nothing. Drop it from the call. */
   readonly actionsShown?: boolean;
   // What is being made, in words: "Codex is refining the image · 3 so far".
   readonly generating?: ReactNode;
-  // Opens the lightbox, or picks the item. The whole figure, caption included, becomes a button
-  // named `openLabel`; the frame's actions stay buttons of their own.
+  // Opens the lightbox, or the item's own page. The frame shows a visible button in its top
+  // right corner (`openText`, "Full size" by default), named `openLabel` for screen readers,
+  // and a press anywhere on the picture does the same.
   readonly onOpen?: () => void;
   readonly openLabel?: string;
+  // The open button's visible words: "Open" for a frame that leads to the item's page.
+  readonly openText?: string;
   readonly className?: string;
 }): ReactElement {
   const showing = generating === undefined || generating === null || generating === false;
+  const opens = onOpen !== undefined && showing && src !== undefined;
   return (
     <figure className={cn("sl-media m-0", className)} data-slot="media-frame">
       <div className={cn("sl-media__frame", aspectClass[aspect])}>
@@ -80,28 +89,36 @@ export function MediaFrame({
             <span>{generating}</span>
           </div>
         )}
+        {opens ? (
+          <>
+            {/* The picture as a pointer target; keyboards and screen readers use the button. */}
+            <button
+              type="button"
+              className="sl-media__hit"
+              tabIndex={-1}
+              aria-hidden="true"
+              onClick={onOpen}
+            />
+            <Button
+              size="small"
+              className="sl-media__open"
+              aria-label={openLabel ?? `Open ${alt} full size`}
+              onClick={onOpen}
+            >
+              <Maximize2Icon aria-hidden="true" strokeWidth={1.75} />
+              {openText}
+            </Button>
+          </>
+        ) : null}
         {badge === undefined ? null : <span className="sl-media__badge">{badge}</span>}
-        {actions === undefined ? null : (
-          <div className={cn("sl-media__actions", actionsShown && "sl-media__actions--shown")}>
-            {actions}
-          </div>
-        )}
       </div>
-      {/* The whole figure, caption included, is the one target (shell.css). */}
-      {onOpen !== undefined && showing && src !== undefined ? (
-        <button
-          type="button"
-          className="sl-media__open"
-          aria-label={openLabel ?? `Open ${alt} full size`}
-          onClick={onOpen}
-        />
-      ) : null}
       {title === undefined && meta === undefined ? null : (
         <figcaption className="sl-media__caption">
           {title === undefined ? <span /> : <strong className="min-w-0 truncate">{title}</strong>}
           {meta === undefined ? null : <span className="shrink-0">{meta}</span>}
         </figcaption>
       )}
+      {actions === undefined ? null : <div className="sl-media__actions sl-btn-row">{actions}</div>}
     </figure>
   );
 }

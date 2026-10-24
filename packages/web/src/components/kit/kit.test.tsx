@@ -357,13 +357,61 @@ describe("rows and tiles are one target", () => {
     expect(css).toMatch(/\.sl-hit:has\(:is\(\.sl-hit__target, \.sl-row__title a\):focus-visible\)/);
   });
 
-  it("makes the whole media figure, caption included, the open button", () => {
+  it("says Full size on an openable frame, and opens from that button or the picture", async () => {
+    const user = userEvent.setup();
+    const opened = vi.fn();
     render(
-      <MediaFrame src="/a.png" alt="Hypatia" title="Hypatia" meta="Image 1" onOpen={() => {}} />,
+      <MediaFrame src="/a.png" alt="Hypatia" title="Hypatia" meta="Image 1" onOpen={opened} />,
     );
+    // One button for keyboards and screen readers, its words on the frame.
     const open = screen.getByRole("button", { name: "Open Hypatia full size" });
-    expect(open.parentElement?.tagName).toBe("FIGURE");
-    expect(css).toMatch(/\.sl-media \{\s*position: relative;/);
+    expect(open.textContent).toBe("Full size");
+    expect(open.closest(".sl-media__frame")).not.toBeNull();
+    await user.click(open);
+    // The picture is a pointer target of its own, covering the frame.
+    const picture = document.querySelector(".sl-media__hit");
+    expect(picture?.getAttribute("aria-hidden")).toBe("true");
+    expect(picture?.getAttribute("tabindex")).toBe("-1");
+    await user.click(picture as HTMLElement);
+    expect(opened).toHaveBeenCalledTimes(2);
+    expect(css).toMatch(/\.sl-media__hit \{\s*position: absolute;\s*inset: 0;/);
+  });
+
+  it("names the open button for a frame that leads to the item's page", () => {
+    render(
+      <MediaFrame
+        src="/a.png"
+        alt="Poster"
+        onOpen={() => {}}
+        openLabel="Open Poster"
+        openText="Open"
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Open Poster" }).textContent).toBe("Open");
+  });
+
+  it("shows a frame's actions at rest, in a row under the caption", () => {
+    const kitCss = readFileSync(join(import.meta.dirname, "..", "..", "styles", "kit.css"), "utf8");
+    const { container } = render(
+      <MediaFrame
+        src="/a.png"
+        alt="Hypatia"
+        title="Hypatia"
+        actions={<Button size="small">Make this image again</Button>}
+      />,
+    );
+    const actions = screen.getByRole("button", { name: "Make this image again" }).parentElement;
+    expect(actions?.className).toContain("sl-media__actions");
+    expect(actions?.previousElementSibling?.tagName).toBe("FIGCAPTION");
+    expect(container.querySelector(".sl-media__frame .sl-media__actions")).toBeNull();
+    // Nothing in the kit hides them until hover.
+    expect(kitCss).not.toMatch(/\.sl-media__actions[^{]*\{[^}]*opacity: 0/);
+    expect(css).not.toMatch(/\.sl-media__actions[^{]*\{[^}]*opacity: 0/);
+  });
+
+  it("says nothing opens while the picture is still being made", () => {
+    render(<MediaFrame alt="Next" generating="Drawing" onOpen={() => {}} />);
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });
 

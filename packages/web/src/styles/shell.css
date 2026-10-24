@@ -30,8 +30,7 @@
     }
     .sl-btn,
     .sl-switch__track,
-    .sl-switch__track::after,
-    .sl-media__actions {
+    .sl-switch__track::after {
       transition: none;
     }
   }
@@ -323,17 +322,9 @@
     color: var(--color-accent-ink);
   }
 
-  /* Media: the whole frame opens the lightbox; the actions sit above that button. */
-  /* An openable frame is one target, caption included: the open button covers the figure and
-     the frame's own actions and badge sit above it. */
-  .sl-media {
-    position: relative;
-  }
-  .sl-media__actions,
-  .sl-media__badge {
-    z-index: 1;
-  }
-  .sl-media__open {
+  /* Media: a press anywhere on an openable picture opens it, as its Full size button does; the
+     badge and that button sit above the picture's target. */
+  .sl-media__hit {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -342,8 +333,9 @@
     background: none;
     cursor: zoom-in;
   }
-  .sl-media__open:focus-visible {
-    outline-offset: -3px;
+  .sl-media__open,
+  .sl-media__badge {
+    z-index: 1;
   }
   .sl-media__generating {
     text-align: center;
