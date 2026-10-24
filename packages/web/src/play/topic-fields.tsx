@@ -210,7 +210,7 @@ export function MoreVideos({
               className="!h-8 w-48"
               value={text}
               maxLength={first === undefined ? titleMax : valueMax}
-              placeholder={first === undefined ? "Another title" : `Another ${first}`}
+              placeholder={first === undefined ? "Another title" : `Another ${first.toLowerCase()}`}
               onChange={(event) => setText(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Escape") onAdding(false);

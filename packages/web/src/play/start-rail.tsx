@@ -279,11 +279,11 @@ function ExpectedLength({
     : `about ${narrated ? `${minutes < 1 ? "under a minute" : `${String(minutes)} min`} · ` : ""}${words.toLocaleString("en-US")} words`;
   if (editing)
     return (
-      <div className="flex min-w-0 items-end gap-2">
+      <div className="flex min-w-0 flex-col items-end gap-1">
         <Field
           label="Words per video"
           help="About 150 words is one minute. The article prompt decides the real length."
-          className="min-w-0 flex-1"
+          className="w-full min-w-0"
         >
           <Input
             data-play-field="expectedWords"
@@ -299,7 +299,7 @@ function ExpectedLength({
             }}
           />
         </Field>
-        <Button variant="quiet" size="small" className="mb-7" onClick={() => setEditing(false)}>
+        <Button variant="quiet" size="small" onClick={() => setEditing(false)}>
           Done
         </Button>
       </div>
