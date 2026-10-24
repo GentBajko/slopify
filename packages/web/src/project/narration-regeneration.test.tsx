@@ -95,7 +95,7 @@ it.each(["saved replacement", "staged replacement", "text override"] as const)(
       );
     }
     await user.click(
-      screen.getByRole("button", { name: "Regenerate narration chunk 1 after review" }),
+      screen.getByRole("button", { name: "Make narration chunk 1 again · voice call" }),
     );
     await user.click(screen.getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(saves).toHaveLength(1));
@@ -120,7 +120,7 @@ it("discards an upload that settles after regeneration without undoing the saved
   });
   await within(screen.getByRole("region", { name: "Narration text" })).findByRole("status");
   await user.click(
-    screen.getByRole("button", { name: "Regenerate narration chunk 1 after review" }),
+    screen.getByRole("button", { name: "Make narration chunk 1 again · voice call" }),
   );
   copied.resolve(response({ ...staged, stageKind: "audio" }));
   await waitFor(() => expect(removed).toHaveBeenCalledTimes(1));

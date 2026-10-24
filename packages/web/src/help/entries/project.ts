@@ -153,34 +153,14 @@ export const projectHelp = {
     body: "The first and last sentence of this short, from the narration's timed sentences. The clip must stay between the shortest and longest length you set for shorts and must not overlap another clip; the line under the clip says what to change. Back to the AI's choice restores its pick.",
     tutorial: { page: "Shorts", anchor: "change-the-picked-moments" },
   },
-  "project.images.editor": {
-    title: "Edit images",
-    body: "Every image of the video in the order it is shown. You can edit a drawn image's prompt, replace any image with your own file, move it earlier or later, delete it, or add a drawn image, your own picture or a video clip. A clip plays muted in an image's place, trimmed, slowed or looped to fit. Changes apply after you save.",
-    tutorial: { page: "Editing-a-Project", anchor: "edit-images" },
-  },
   "project.images.prompt": {
     title: "Image prompt",
     body: "The words this one image is drawn from, with keywords in double braces filled in from the project. Editing it outdates only this image and the video; it is drawn again, one image call, when you remake outdated outputs. Use saved wording as template copies the prompt as sent so you can edit it.",
     tutorial: { page: "Editing-a-Project", anchor: "edit-images" },
   },
-  "project.images.regenerate": {
-    title: "Regenerate image",
-    body: "Marks this image to be drawn again from its prompt, one paid image call, with a new result. Nothing runs yet: the image says it is marked, and Keep takes the mark off. Press Save changes, and the rebuild review lists it with the video it outdates. The current image stays until the new one is made.",
-    tutorial: { page: "Editing-a-Project", anchor: "edit-images" },
-  },
-  "project.narration.editor": {
-    title: "Edit narration",
-    body: "The narration split into the chunks it was spoken in. Edit a chunk's text, replace its audio with your own file, or have it spoken again. Only the chunks you touch are made again, paid per character, and the video is rendered again with them. Changes apply after you save.",
-    tutorial: { page: "Editing-a-Project", anchor: "edit-narration" },
-  },
   "project.narration.chunk-text": {
     title: "Narration chunk text",
     body: "What the narrator says in this chunk. Editing it has this chunk spoken again by your voice provider, paid per character of the chunk, when you remake outdated outputs; the other chunks keep their audio. Captions and the video follow. It does not change the article.",
-    tutorial: { page: "Editing-a-Project", anchor: "edit-narration" },
-  },
-  "project.narration.regenerate": {
-    title: "Regenerate narration chunk after review",
-    body: "Marks this chunk to be spoken again with the same text and voice, paid per character of the chunk, for a new take when a word came out wrong. Nothing runs yet: save, and it is made again when you continue the run. The current audio stays until then.",
     tutorial: { page: "Editing-a-Project", anchor: "edit-narration" },
   },
   "project.captions.editor": {

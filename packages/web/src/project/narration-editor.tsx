@@ -4,7 +4,7 @@ import { type ComponentProps, useId, useRef, useState } from "react";
 import { z } from "zod";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
-import { Textarea } from "@/components/kit/field";
+import { HelpLine, Textarea } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { usePieceFocus } from "./review-focus.js";
 import { type NarrationChunkOrder, narrationChunkOrderOf } from "./revision-api.js";
@@ -109,9 +109,13 @@ export function NarrationEditor({
   }
   return (
     <section aria-label="Edit narration" className="space-y-3">
-      <div className="flex items-center gap-1">
+      <div className="flex flex-col gap-1">
         <h3>Narration</h3>
-        <InfoTip id="project.narration.editor" />
+        <HelpLine>
+          The narration in the chunks it was spoken in: edit a chunk's words, replace its audio with
+          your own file, or mark it to be spoken again. Only the chunks you change are made again,
+          paid per character, once you save and remake.
+        </HelpLine>
       </div>
       {edit.config.chunking?.mode === "whole" || edit.config.chunking === undefined ? (
         <p>
@@ -199,7 +203,7 @@ export function NarrationEditor({
             />
             {edit.regenerate?.includes(chunk.key) ? (
               <p className="flex flex-wrap items-center gap-2 text-small text-accent-ink">
-                Narration chunk {index + 1} will be regenerated after you save and press Remake.
+                Narration chunk {index + 1} is spoken again once you save and remake.
                 <Button
                   type="button"
                   variant="quiet"
@@ -238,9 +242,8 @@ export function NarrationEditor({
                     });
                   }}
                 >
-                  Regenerate narration chunk {index + 1} after review
+                  Make narration chunk {index + 1} again · voice call
                 </Button>
-                <InfoTip id="project.narration.regenerate" />
               </span>
             )}
           </fieldset>
