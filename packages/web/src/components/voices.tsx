@@ -92,8 +92,12 @@ function AddKeyLink({
 // that plays one sentence in it, and the form that adds one. A wrong voice ID is still only
 // found when narration uses it; the only rule the form knows is the one the server enforces.
 export function Voices({
+  provider: asked,
   back,
 }: {
+  // A voice service named in the address (Create's "add a voice" for the service it uses):
+  // Add a voice starts on it.
+  readonly provider?: string | undefined;
   // The screen the person came to Settings from, kept on the links to Keys & services.
   readonly back?: SettingsBack | undefined;
 } = {}) {
@@ -290,6 +294,7 @@ export function Voices({
         <SectionHead title="Add a voice" />
         <AddVoiceRow
           tts={tts}
+          asked={tts.find((provider) => provider.id === asked)?.id}
           needed={(listed ?? []).map((voice) => voice.provider)}
           // A service already named above the list is not offered a second time.
           said={silent.map((provider) => provider.id)}
@@ -374,11 +379,14 @@ function ListenButton({ voice }: { readonly voice: Voice }): ReactElement {
 
 function AddVoiceRow({
   tts,
+  asked,
   needed,
   said,
   back,
 }: {
   readonly tts: readonly ProviderStatus[];
+  // The service the address names, which the form starts on.
+  readonly asked: ProviderId | undefined;
   // The services the saved voices use, the likeliest one to add another voice of.
   readonly needed: readonly ProviderId[];
   // The services the page already offers to set up, above the list.
@@ -395,10 +403,12 @@ function AddVoiceRow({
   const [picked, setPicked] = useState<ProviderId | undefined>(undefined);
   const [refusal, setRefusal] = useState<VoiceRefusal | undefined>(undefined);
 
-  // The first service that can speak now (a voice for one without a key could not narrate),
-  // else the one the saved voices use.
+  // The service the address names, else the first that can speak now (a voice for one without
+  // a key could not narrate), else the one the saved voices use.
   const provider =
-    picked ?? (tts.find(usable) ?? tts.find((option) => needed.includes(option.id)) ?? tts[0])?.id;
+    picked ??
+    asked ??
+    (tts.find(usable) ?? tts.find((option) => needed.includes(option.id)) ?? tts[0])?.id;
   const service = tts.find((option) => option.id === provider);
 
   const add = useMutation({

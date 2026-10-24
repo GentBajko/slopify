@@ -452,6 +452,12 @@ describe("the voice list", () => {
     await waitFor(() => expect(service.value).toBe("openai-tts"));
   });
 
+  it("starts Add a voice on the service the address names", async () => {
+    renderRouted(<Voices provider="cartesia" />, deps([]));
+    const service = (await screen.findByLabelText("Voice service")) as HTMLSelectElement;
+    await waitFor(() => expect(service.value).toBe("cartesia"));
+  });
+
   it("says where an ElevenLabs voice ID comes from, and that a keyless service can't narrate yet", async () => {
     const user = userEvent.setup();
     renderRouted(<Voices />, deps([]));
