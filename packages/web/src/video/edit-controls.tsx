@@ -29,7 +29,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { type ReactElement, type ReactNode, useId } from "react";
 import { useApp } from "@/app-context";
-import { Checkbox } from "@/components/kit/field";
+import { Checkbox, HelpLine } from "@/components/kit/field";
 import { Fold } from "@/components/kit/fold";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Picker } from "@/components/ui/picker";
@@ -122,8 +122,11 @@ export function useVideoEditControls({
       summary="Look"
       state={summary.length === 0 ? "Plain cuts, no effects" : summary.join(" · ")}
     >
-      <div className="sl-fields pt-2 pb-3">
-        <Row id={`${id}-transition`} label="Transition" tip="project.video.transition">
+      <div className="sl-fields pt-2 pb-3" {...helpScope}>
+        <HelpLine className="sl-fields__wide">
+          Drawn on this computer at no cost; only animated images are charged, by the image service.
+        </HelpLine>
+        <Row id={`${id}-transition`} label="Transition">
           <Picker
             id={`${id}-transition`}
             data-play-field={`${fieldPrefix}.transition`}
@@ -153,7 +156,7 @@ export function useVideoEditControls({
             ))}
           </Picker>
         </Row>
-        <Row id={`${id}-grade`} label="Colour grade" tip="project.video.grade">
+        <Row id={`${id}-grade`} label="Colour grade">
           <Choice
             id={`${id}-grade`}
             field={`${fieldPrefix}.grade`}
@@ -163,7 +166,7 @@ export function useVideoEditControls({
             onChange={(grade: ColorGrade) => set({ grade })}
           />
         </Row>
-        <Row id={`${id}-vignette`} label="Vignette" tip="project.video.vignette">
+        <Row id={`${id}-vignette`} label="Vignette">
           <Choice
             id={`${id}-vignette`}
             field={`${fieldPrefix}.vignette`}
@@ -173,7 +176,7 @@ export function useVideoEditControls({
             onChange={(vignette: LookLevel) => set({ vignette })}
           />
         </Row>
-        <Row id={`${id}-grain`} label="Film grain" tip="project.video.grain">
+        <Row id={`${id}-grain`} label="Film grain">
           <Choice
             id={`${id}-grain`}
             field={`${fieldPrefix}.grain`}
@@ -183,7 +186,7 @@ export function useVideoEditControls({
             onChange={(grain: LookLevel) => set({ grain })}
           />
         </Row>
-        <Row id={`${id}-atmosphere`} label="Atmosphere" tip="project.video.atmosphere">
+        <Row id={`${id}-atmosphere`} label="Atmosphere">
           <Choice
             id={`${id}-atmosphere`}
             field={`${fieldPrefix}.atmosphere`}
@@ -278,18 +281,23 @@ function Row({
 }: {
   readonly id: string;
   readonly label: string;
-  readonly tip: HelpId;
+  // Only for a setting whose consequence needs a paragraph; the rest are explained by the
+  // line their group opens with.
+  readonly tip?: HelpId;
   readonly wide?: boolean;
   readonly children: ReactNode;
 }): ReactElement {
   // Label above, as every field (`.sl-fields`); the control fills its column.
   return (
-    <div className={cn("sl-field", wide && "sl-fields__wide")} {...helpScope}>
+    <div
+      className={cn("sl-field", wide && "sl-fields__wide")}
+      {...(tip === undefined ? {} : helpScope)}
+    >
       <span className="flex min-w-0 items-center gap-1">
         <label htmlFor={id} className="sl-field__label">
           {label}
         </label>
-        <InfoTip id={tip} label={label.toLowerCase()} />
+        {tip === undefined ? null : <InfoTip id={tip} label={label.toLowerCase()} />}
       </span>
       {/* The main choice takes the room; a short one beside it (a length, a count) keeps its own. */}
       <div className="flex min-w-0 flex-wrap items-start gap-2 [&>select]:min-w-0 [&>select]:flex-1">

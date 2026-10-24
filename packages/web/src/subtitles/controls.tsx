@@ -100,8 +100,8 @@ export function SubtitleControls({
           <span className="pb-1 text-label text-ink-3">{facts.tag}</span>
         </div>
         {value.mode !== "off" && audioEnabled ? (
-          <>
-            <p className="text-small text-ink-2">{facts.detail}</p>
+          <div className="flex min-w-0 flex-col gap-3" {...helpScope}>
+            <HelpLine>{facts.detail}</HelpLine>
             <div
               className="grid items-start gap-5"
               style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))" }}
@@ -118,12 +118,11 @@ export function SubtitleControls({
                     onUploading?.(pending);
                   }}
                 />
-                <div className={illustratedPositions ? "w-full" : "max-w-[180px]"} {...helpScope}>
+                <div className={illustratedPositions ? "w-full" : "max-w-[180px]"}>
                   <div className="mb-1 flex items-center gap-1">
                     <label htmlFor={sizeId} className="sl-field__label block">
                       Caption size
                     </label>
-                    <InfoTip id="project.subtitles.size" className="-my-1" />
                   </div>
                   <div className="flex items-center gap-5">
                     {illustratedPositions ? (
@@ -184,7 +183,7 @@ export function SubtitleControls({
                     </p>
                   ) : null}
                 </div>
-                <div {...helpScope}>
+                <div>
                   <div className="mb-1 flex items-center gap-1">
                     <label
                       htmlFor={illustratedPositions ? undefined : positionId}
@@ -193,7 +192,6 @@ export function SubtitleControls({
                     >
                       Caption position
                     </label>
-                    <InfoTip id="project.subtitles.position" className="-my-1" />
                   </div>
                   {illustratedPositions ? (
                     <ToggleGroup
@@ -279,7 +277,7 @@ export function SubtitleControls({
                 styled by the player that shows it.
               </p>
             ) : null}
-          </>
+          </div>
         ) : null}
       </fieldset>
       {session?.fontUpload && (value.mode === "off" || !audioEnabled) ? (

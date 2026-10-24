@@ -115,7 +115,7 @@ it("retains hidden literal keyword values and renders prompt HTML as text", asyn
 it("keeps the draft when New prompt opens the prompt editor", async () => {
   const { requests } = await mountPlay();
   await userEvent.type(screen.getByLabelText("Title"), "Keep this draft");
-  const link = screen.getByRole("link", { name: "New prompt ↗" });
+  const link = screen.getByRole("link", { name: "New prompt ↗ (opens Prompts)" });
   expect(link.getAttribute("href")).toBe("/prompts/new?kind=article");
   await userEvent.click(link);
   // The draft lives above the page, so its autosave still runs once Create is left.

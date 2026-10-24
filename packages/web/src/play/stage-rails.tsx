@@ -6,7 +6,8 @@ import { type ReactElement, useState } from "react";
 import { readStudioSettings } from "@/api";
 import { useApp } from "@/app-context";
 import { DocumentThemePicker } from "@/components/document-theme-picker";
-import { Input } from "@/components/kit/field";
+import { HelpLine, Input } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { TextLink } from "@/components/kit/link";
 import { Picker } from "@/components/ui/picker";
 import type { HelpId } from "@/help/catalog";
@@ -282,13 +283,13 @@ export function ImagesAndCuts({
     <section
       aria-label="Images and cuts"
       className="flex min-w-0 flex-col gap-4 border-b border-line py-4"
+      {...helpScope}
     >
       <h4 className="m-0 text-body font-semibold">Images and cuts</h4>
       <div className="sl-fields">
         <NumberField
           field="imageSeconds"
           label="Seconds per image"
-          tip="play.image-seconds"
           step={1}
           problem={problem("imageSeconds")}
           {...timing("imageSeconds")}
@@ -296,12 +297,11 @@ export function ImagesAndCuts({
         <NumberField
           field="zoomPercent"
           label="Zoom (%)"
-          tip="play.zoom"
           step={0.5}
           problem={problem("zoomPercent")}
           {...timing("zoomPercent")}
         />
-        <LabelledField label="Motion" tip="play.motion" problem={undefined}>
+        <LabelledField label="Motion" problem={undefined}>
           {({ id }) => (
             <Picker
               id={id}
@@ -320,6 +320,10 @@ export function ImagesAndCuts({
         </LabelledField>
         {edit.cuts}
       </div>
+      <HelpLine>
+        Cuts that follow the narration wait for a sentence to end; when the images run out they
+        start again.
+      </HelpLine>
       {edit.look}
       {form.sources.audio !== "off" ? (
         <PlayAmbientBed
@@ -465,7 +469,7 @@ export function NumberField({
 }: {
   readonly field: string;
   readonly label: string;
-  readonly tip: HelpId;
+  readonly tip?: HelpId | undefined;
   readonly placeholder?: string | undefined;
   readonly step: number;
   readonly problem: string | undefined;

@@ -12,8 +12,9 @@ import { quoteAuditions, speakAudition, type Voice } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
-import { Field, Input, Textarea } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { Field, HelpLine, Input, Textarea } from "@/components/kit/field";
+import { Fold } from "@/components/kit/fold";
+import { helpScope } from "@/components/kit/info-tip";
 import { RowCheck, type Selection } from "@/components/selection";
 import { usd } from "@/lib/format";
 import { OptionPicker } from "@/play/pickers";
@@ -154,25 +155,29 @@ export function SpeakerRow({
           onChange(Number(pace) === 1 ? rest : { ...rest, pace: Number(pace) });
         }}
       />
-      <details className="col-span-full text-small" {...helpScope}>
-        <summary className="flex min-h-8 cursor-pointer items-center gap-2 text-ink-2">
-          Pronunciations for {speaker.name.trim() || "this speaker"}
-          {speaker.pronunciations?.trim() ? " · set" : ""}
-          <InfoTip id="play.speaker.pronunciations" />
-        </summary>
-        <Textarea
-          rows={3}
-          aria-label={`Pronunciations for ${speaker.name.trim() || "this speaker"}`}
-          value={speaker.pronunciations ?? ""}
-          placeholder="Arda: /ˈɑɹdə/"
-          onChange={(event) => {
-            const { pronunciations: _old, ...rest } = speaker;
-            onChange(
-              event.target.value === "" ? rest : { ...rest, pronunciations: event.target.value },
-            );
-          }}
-        />
-      </details>
+      <Fold
+        className="col-span-full"
+        summary={`Pronunciations for ${speaker.name.trim() || "this speaker"}`}
+        state={speaker.pronunciations?.trim() ? "Set" : undefined}
+      >
+        <div className="flex flex-col gap-1 pb-3" {...helpScope}>
+          <Textarea
+            rows={3}
+            aria-label={`Pronunciations for ${speaker.name.trim() || "this speaker"}`}
+            value={speaker.pronunciations ?? ""}
+            placeholder="Arda: /ˈɑɹdə/"
+            onChange={(event) => {
+              const { pronunciations: _old, ...rest } = speaker;
+              onChange(
+                event.target.value === "" ? rest : { ...rest, pronunciations: event.target.value },
+              );
+            }}
+          />
+          <HelpLine>
+            One Term: /IPA/ per line, for this speaker only; Inworld TTS-2 voices use them.
+          </HelpLine>
+        </div>
+      </Fold>
       {skipped.length === 0 ? null : (
         <Callout
           tone="waiting"
@@ -267,7 +272,6 @@ function Audition({
             ? "Speaking…"
             : `Hear ${speaker.name.trim() || "this speaker"}${price === undefined ? "" : ` · ${price}`}`}
         </Button>
-        <InfoTip id="play.speaker.audition" />
       </span>
       <span className="min-h-5 text-label text-ink-2" aria-live="polite">
         {!ready
@@ -276,7 +280,7 @@ function Audition({
             ? speak.error.message
             : url !== undefined
               ? "Playing the audition."
-              : `Reads their first line: “${line.length > 60 ? `${line.slice(0, 60)}…` : line}”`}
+              : `Reads their first line, one paid request: “${line.length > 60 ? `${line.slice(0, 60)}…` : line}”`}
       </span>
     </div>
   );

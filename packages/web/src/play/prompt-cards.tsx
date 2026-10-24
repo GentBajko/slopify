@@ -99,7 +99,7 @@ export function PromptCards({
   const kindWord = kind === "script" ? "script" : "article";
   const newPrompt = (
     <TextLink to="/prompts/new" search={{ kind }}>
-      New prompt ↗
+      New prompt ↗ (opens Prompts)
     </TextLink>
   );
   return (

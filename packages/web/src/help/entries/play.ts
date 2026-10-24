@@ -263,16 +263,6 @@ export const playHelp = {
     body: "How fast this speaker talks, from 0.8× to 1.2× of the voice's own speed. Default: Normal.",
     tutorial: { page: "Multiple-Voices", anchor: "speaker-options" },
   },
-  "play.speaker.pronunciations": {
-    title: "Speaker pronunciations",
-    body: "One Term: /IPA/ per line, like the article's Pronunciation Glossary, for this speaker only. Used on Inworld TTS-2 voices, ahead of the glossary. A line with sounds the language does not use is skipped and read as ordinary text.",
-    tutorial: { page: "Multiple-Voices", anchor: "speaker-options" },
-  },
-  "play.speaker.audition": {
-    title: "Audition",
-    body: "Speaks this speaker's first line in their voice so you can hear it before the run. It is one real text-to-speech request, charged by the provider at about the price shown on the button.",
-    tutorial: { page: "Multiple-Voices", anchor: "speaker-options" },
-  },
 
   // Images row
   "play.images.provider": {
