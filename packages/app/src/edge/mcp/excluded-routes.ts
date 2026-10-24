@@ -57,6 +57,8 @@ export const excludedRoutes: Readonly<Record<string, string>> = {
   "GET /api/projects/:projectId/audio-preview/:previewId": listening,
   "GET /api/projects/:projectId/narration/peaks": listening,
   "POST /api/auditions": `${listening}; its price is quote_voice_sample`,
+  "GET /api/template-studio/cards":
+    "the Templates page's cards, a still and one line of facts per template for picking by eye; agents list templates with list_templates and read one with get_template_studio",
   "GET /api/template-studio/:id/loudness/:file": `${listening}; get_template_studio gives both levels`,
   "GET /api/template-studio/:id/document.pdf": `${listening}; get_template_studio says whether it is made`,
   "GET /api/template-studio/:id/pack":
