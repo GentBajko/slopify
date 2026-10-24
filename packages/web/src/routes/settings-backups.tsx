@@ -59,6 +59,8 @@ export function useBackUpNow() {
   });
 }
 
+// Daily backup: the switch saves at once, like every other switch in Settings. While it is on,
+// when it runs, how many it keeps and where they go show under it, kept together by their Save.
 export function BackupSettings() {
   const { api } = useApp();
   const queryClient = useQueryClient();
@@ -76,6 +78,17 @@ export function BackupSettings() {
       queryClient.setQueryData(backupsQueryKey, view);
       setDraft(undefined);
       setSaved(true);
+    },
+  });
+  // The switch alone: the saved time, count and folder with the new on or off, so a change
+  // typed below and not saved yet stays a draft.
+  const toggle = useMutation({
+    mutationFn: (config: BackupConfigInput) => saveBackups(api, config),
+    onSuccess: (view) => {
+      queryClient.setQueryData(backupsQueryKey, view);
+      setDraft((before) =>
+        before === undefined ? undefined : { ...before, enabled: view.config.enabled },
+      );
     },
   });
   const run = useBackUpNow();
@@ -104,10 +117,20 @@ export function BackupSettings() {
   const edit = (patch: Partial<Draft>): void => {
     if (current !== undefined) setDraft({ ...current, ...patch });
   };
+  const enabled = toggle.isPending ? toggle.variables.enabled : view?.config.enabled === true;
 
   return (
     <div>
-      <SectionHead title="Daily backup" info="settings.backups">
+      <SectionHead
+        title="Daily backup"
+        meta={
+          view === undefined ? (
+            <span className="inline-block h-4 w-48 rounded-control bg-raised" />
+          ) : (
+            <span role="status">{`${lastLine(view)} ${nextLine(view)}`.trim()}</span>
+          )
+        }
+      >
         {/* Secondary: the section's one primary is its form's Save. */}
         <Button
           disabled={view === undefined || view.running || run.isPending}
@@ -116,17 +139,7 @@ export function BackupSettings() {
           Back up now
         </Button>
       </SectionHead>
-      <div className="mb-6 flex flex-col gap-3">
-        <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 text-small text-ink-2">
-          <span role="status">
-            {view === undefined ? (
-              <span className="inline-block h-4 w-48 rounded-control bg-raised" />
-            ) : (
-              lastLine(view)
-            )}
-          </span>
-          <span>{view === undefined ? null : nextLine(view)}</span>
-        </div>
+      <div className="mb-4 flex flex-col gap-3">
         {view?.status.detail ? (
           view.status.lastResult === "failed" ? (
             <Callout tone="danger" title="Why the last backup stopped">
@@ -147,95 +160,110 @@ export function BackupSettings() {
           The backup settings couldn't be read: {backups.error.message}
         </p>
       ) : (
-        // One form: the switch and the fields below it are kept together by Save (or Enter in a
-        // field), and the line beside Save says when something is waiting for it.
-        <form
-          className="flex flex-col gap-6"
-          onSubmit={(event) => {
-            event.preventDefault();
-            submit();
-          }}
-        >
+        <div className="flex flex-col gap-4">
           <Switch
             label="Back up automatically"
-            tip="settings.backups.auto"
-            checked={current?.enabled === true}
-            disabled={current === undefined}
+            help="Each backup holds every project with its videos, so it can be many gigabytes."
+            checked={enabled}
+            disabled={view === undefined || toggle.isPending}
             className="self-start"
-            onChange={(next) => edit({ enabled: next })}
+            onChange={(next) => {
+              if (view === undefined) return;
+              toggle.mutate({
+                enabled: next,
+                time: view.config.time,
+                timeZone: browserTimeZone(),
+                keep: view.config.keep,
+                folder: view.config.folder,
+              });
+            }}
           />
-          <div className="grid items-start gap-6 md:grid-cols-2">
-            <Field
-              label="Time of day"
-              tip="settings.backups.time"
-              help={`${browserTimeZone()} time`}
-            >
-              <Input
-                type="time"
-                className="w-[140px] tabular-nums"
-                value={current?.time ?? "03:00"}
-                disabled={current === undefined}
-                onChange={(event) => edit({ time: event.target.value })}
-              />
-            </Field>
-            <Field
-              label="Keep last"
-              tip="settings.backups.keep"
-              help="Backups kept in the folder."
-              error={keepError}
-            >
-              <Input
-                type="number"
-                inputMode="numeric"
-                min={keepMin}
-                max={keepMax}
-                step={1}
-                className="w-[88px] tabular-nums"
-                value={current?.keep ?? "5"}
-                disabled={current === undefined}
-                onChange={(event) => edit({ keep: event.target.value })}
-              />
-            </Field>
-            <Field
-              label="Folder"
-              tip="settings.backups.folder"
-              className="md:col-span-2"
-              {...(view === undefined ? {} : { help: whereLine(view) })}
-            >
-              <Input
-                value={current?.folder ?? ""}
-                placeholder={view?.defaultFolder ?? ""}
-                disabled={current === undefined}
-                onChange={(event) => edit({ folder: event.target.value })}
-              />
-            </Field>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={!dirty || keepError !== undefined || save.isPending}
-              disabledReason={
-                keepError === undefined ? "Nothing changed since the last save." : keepError
-              }
-            >
-              Save
-            </Button>
-            <span className="inline-flex w-[52px]">{saved ? <SavedTick /> : null}</span>
-            <UnsavedStatus
-              dirty={dirty}
-              onDiscard={() => {
-                save.reset();
-                setDraft(undefined);
+          {toggle.error === null ? null : (
+            <p role="alert" className="m-0 text-small text-danger">
+              {`The switch wasn't saved: ${toggle.error.message} Press it again.`}
+            </p>
+          )}
+          {!enabled ? null : (
+            // One form: the fields are kept together by Save (or Enter in a field), and the line
+            // beside Save says when something is waiting for it.
+            <form
+              className="flex flex-col gap-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                submit();
               }}
-            />
-            {save.error === null ? null : (
-              <p role="alert" className="m-0 basis-full text-small text-danger">
-                {save.error.message}
-              </p>
-            )}
-          </div>
-        </form>
+            >
+              <div className="grid items-start gap-6 md:grid-cols-2">
+                <Field
+                  label="Time of day"
+                  help={`${browserTimeZone()} time. A backup waits while videos are being made.`}
+                >
+                  <Input
+                    type="time"
+                    className="w-[140px] tabular-nums"
+                    value={current?.time ?? "03:00"}
+                    disabled={current === undefined}
+                    onChange={(event) => edit({ time: event.target.value })}
+                  />
+                </Field>
+                <Field
+                  label="Keep last"
+                  help="The oldest backups beyond this number are deleted."
+                  error={keepError}
+                >
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={keepMin}
+                    max={keepMax}
+                    step={1}
+                    className="w-[88px] tabular-nums"
+                    value={current?.keep ?? "5"}
+                    disabled={current === undefined}
+                    onChange={(event) => edit({ keep: event.target.value })}
+                  />
+                </Field>
+                <Field
+                  label="Folder"
+                  className="md:col-span-2"
+                  {...(view === undefined ? {} : { help: whereLine(view) })}
+                >
+                  <Input
+                    value={current?.folder ?? ""}
+                    placeholder={view?.defaultFolder ?? ""}
+                    disabled={current === undefined}
+                    onChange={(event) => edit({ folder: event.target.value })}
+                  />
+                </Field>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={!dirty || keepError !== undefined || save.isPending}
+                  disabledReason={
+                    keepError === undefined ? "Nothing changed since the last save." : keepError
+                  }
+                >
+                  Save
+                </Button>
+                <span className="inline-flex w-[52px]">{saved ? <SavedTick /> : null}</span>
+                <UnsavedStatus
+                  dirty={dirty}
+                  onDiscard={() => {
+                    save.reset();
+                    setDraft(undefined);
+                  }}
+                />
+                {save.error === null ? null : (
+                  <p role="alert" className="m-0 basis-full text-small text-danger">
+                    {save.error.message}
+                  </p>
+                )}
+              </div>
+            </form>
+          )}
+        </div>
       )}
     </div>
   );
@@ -268,7 +296,7 @@ export function lastLine(view: BackupView): string {
 }
 
 function nextLine(view: BackupView): string {
-  if (!view.config.enabled) return "Automatic backups are off.";
+  if (!view.config.enabled) return "";
   if (view.overdue) return "Next: shortly.";
   return view.nextRunAt === null ? "" : `Next: ${when(view.nextRunAt)}.`;
 }

@@ -31,17 +31,20 @@ const view = {
   files: [],
 };
 
-describe("Settings → Backups save boundary", () => {
-  it("marks the automatic switch as unsaved until Save, and Discard turns it back", async () => {
+describe("Settings → Backup & storage → Daily backup", () => {
+  it("saves the automatic switch at once, like every other switch, keeping a typed draft", async () => {
     const user = userEvent.setup();
-    let sent: unknown;
+    const sent: { enabled: boolean; keep: number }[] = [];
+    let current = view;
     renderApp(
       <BackupSettings />,
       testDeps({
-        "GET /api/backups": jsonAnswer(view),
+        "GET /api/backups": (request) => jsonAnswer(current)(request),
         "PUT /api/backups": async (request) => {
-          sent = await request.json();
-          return jsonAnswer({ ...view, config: { ...view.config, keep: 7 } })(request);
+          const body = (await request.json()) as { enabled: boolean; keep: number };
+          sent.push(body);
+          current = { ...view, config: { ...view.config, enabled: body.enabled, keep: body.keep } };
+          return jsonAnswer(current)(request);
         },
       }),
     );
@@ -49,18 +52,31 @@ describe("Settings → Backups save boundary", () => {
     await waitFor(() => {
       expect(auto.hasAttribute("disabled")).toBe(false);
     });
-    expect(screen.getByRole("button", { name: "Save" }).hasAttribute("disabled")).toBe(true);
-    await user.click(auto);
-    expect(screen.getByText(/Unsaved changes/)).not.toBeNull();
-    await user.click(screen.getByRole("button", { name: "Discard" }));
-    expect(auto.getAttribute("aria-checked")).toBe("true");
-    expect(screen.queryByText(/Unsaved changes/)).toBeNull();
-
+    // A number typed and not saved yet stays a draft while the switch saves on its own.
     const keep = screen.getByLabelText("Keep last");
     await user.clear(keep);
-    await user.type(keep, "7{Enter}");
+    await user.type(keep, "7");
+    expect(screen.getByText(/Unsaved changes/)).not.toBeNull();
+
+    await user.click(auto);
     await waitFor(() => {
-      expect(sent).toMatchObject({ enabled: true, keep: 7 });
+      expect(sent).toEqual([expect.objectContaining({ enabled: false, keep: 5 })]);
+    });
+    // Off: when, how many and where are not asked.
+    await waitFor(() => {
+      expect(screen.queryByLabelText("Keep last")).toBeNull();
+    });
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+
+    await user.click(auto);
+    await waitFor(() => {
+      expect(sent.at(-1)).toMatchObject({ enabled: true, keep: 5 });
+    });
+    const again = await screen.findByLabelText("Keep last");
+    expect((again as HTMLInputElement).value).toBe("7");
+    await user.type(again, "{Enter}");
+    await waitFor(() => {
+      expect(sent.at(-1)).toMatchObject({ enabled: true, keep: 7 });
     });
   });
 });

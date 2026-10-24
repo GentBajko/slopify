@@ -1,15 +1,18 @@
 import type { ItemCounts } from "@app/slices/storage/backup-import.js";
 import { fileSize } from "@app/slices/storage/consequences.js";
-import { type QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { type BackupImportSummary, readBackupExportSummary, readStorageUsage } from "@/api";
 import { useApp } from "@/app-context";
+import { StatusSlot } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
-import { InfoTip } from "@/components/kit/info-tip";
+import { TextLink } from "@/components/kit/link";
 import { SectionHead } from "@/components/kit/section-head";
 import { Meter } from "@/components/kit/stats";
 import { useToast } from "@/components/kit/toast";
+import { LinkedText } from "@/components/linked-text";
+import { onboardingKey, readSample, restoreSample, sampleKey } from "@/onboarding/api";
 import { keys } from "@/queries";
 import { schedulesKey } from "@/schedules/api";
 import { fontsKey } from "@/subtitles/api";
@@ -67,6 +70,7 @@ export function StorageTools() {
     queryFn: () => readStorageUsage(api),
     staleTime: 30_000,
   });
+  const sample = useQuery({ queryKey: sampleKey, queryFn: () => readSample(api) });
   const [busy, setBusy] = useState(false);
   const [exporting, setExporting] = useState<ExportState>({ phase: "idle" });
   const [importing, setImporting] = useState<ImportState>({ phase: "idle" });
@@ -200,7 +204,10 @@ export function StorageTools() {
   return (
     <>
       <div>
-        <SectionHead title="Export and import" info="settings.storage.export">
+        <SectionHead
+          title="Export and import"
+          meta="Everything in one .tar file: projects, prompts, templates, schedules and settings."
+        >
           <Button disabled={working} onClick={() => void exportEverything()}>
             Export everything
           </Button>
@@ -221,17 +228,18 @@ export function StorageTools() {
               event.target.value = "";
             }}
           />
-          <span className="inline-flex items-center gap-1">
-            <Button variant="quiet" disabled={working} onClick={() => void cleanup()}>
-              Clear leftover files
-            </Button>
-            <InfoTip id="settings.storage.clean" />
-          </span>
+          <Button variant="quiet" disabled={working} onClick={() => void cleanup()}>
+            Clear leftover files
+          </Button>
         </SectionHead>
         <div className="flex flex-col gap-2 text-small text-ink-2">
           <p className="m-0">
-            Provider keys are never included in a backup. After importing, enter them again in
-            Settings → Providers.
+            Keys are never in a backup: after importing, add them again on{" "}
+            <TextLink to="/settings" search={{ section: "providers" }}>
+              Keys & services
+            </TextLink>
+            . Importing adds and replaces nothing. Clear leftover files removes files no project
+            uses.
           </p>
           {exporting.phase === "preparing" ? (
             <p role="status" className="m-0 text-ink">
@@ -278,7 +286,6 @@ export function StorageTools() {
       <div>
         <SectionHead
           title="Disk space"
-          info="settings.storage.disk"
           meta={
             usage.data ? (
               <>
@@ -300,10 +307,63 @@ export function StorageTools() {
           }
         />
         {usage.data && usage.data.byProject.length > 0 ? (
-          <ProjectStorageList projects={usage.data.byProject} queryKey={[...storageQueryKey]} />
+          <ProjectStorageList
+            projects={usage.data.byProject}
+            samples={new Set(Object.values(sample.data?.samples ?? {}).filter((id) => id !== null))}
+            queryKey={[...storageQueryKey]}
+          />
         ) : null}
+        <SampleRestore />
       </div>
     </>
+  );
+}
+
+const sampleNames = {
+  library: "The Library of Alexandria",
+  audiobook: "The Wind in the Willows",
+  podcast: "The Antikythera Mechanism",
+} as const;
+
+// The bundled samples are rows of the list above, marked Sample; this brings back any that
+// were deleted, and the originals in place of the others.
+function SampleRestore() {
+  const { api } = useApp();
+  const client = useQueryClient();
+  const sample = useQuery({ queryKey: sampleKey, queryFn: () => readSample(api) });
+  const restore = useMutation({
+    mutationFn: () => restoreSample(api),
+    onSettled: async () => {
+      await client.invalidateQueries({ queryKey: sampleKey });
+      await client.invalidateQueries({ queryKey: onboardingKey });
+      await client.invalidateQueries({ queryKey: keys.projects });
+      await client.invalidateQueries({ queryKey: storageQueryKey });
+    },
+  });
+  const samples = restore.data?.samples ?? sample.data?.samples;
+  const missing =
+    samples === undefined
+      ? []
+      : (Object.keys(sampleNames) as (keyof typeof sampleNames)[])
+          .filter((id) => samples[id] === null)
+          .map((id) => sampleNames[id]);
+  return (
+    <div className="mt-3 flex flex-col gap-1">
+      <div className="flex flex-wrap items-center gap-3">
+        <Button size="small" disabled={restore.isPending} onClick={() => restore.mutate()}>
+          {restore.isPending ? "Restoring…" : "Restore samples"}
+        </Button>
+        <span className="text-small text-ink-2">
+          {missing.length === 0
+            ? "Puts the three finished examples back as they shipped."
+            : `Brings back ${missing.join(", ")}, and the others as they shipped.`}
+        </span>
+      </div>
+      <StatusSlot tone={restore.error ? "error" : "success"}>
+        {restore.error?.message ??
+          (restore.isSuccess ? "The samples are back in Projects." : undefined)}
+      </StatusSlot>
+    </div>
   );
 }
 
@@ -360,7 +420,7 @@ export function ImportResult({
     result.usage.alreadyImported
       ? "Usage: this backup's history was already added before, so it wasn't counted twice."
       : `Usage: ${result.usage.events} recorded event(s) added to the totals.`,
-    "Provider keys are not in backups: enter them in Settings → Providers.",
+    "Keys are not in backups: add them again in Settings → Keys & services.",
   ].filter((line) => line !== null);
   return (
     <div>
@@ -375,7 +435,7 @@ export function ImportResult({
       <ul aria-label="Import result" className="m-0 list-disc pl-5 text-small text-ink-2">
         {lines.map((line) => (
           <li key={line} className="py-0.5">
-            {line}
+            <LinkedText text={line} />
           </li>
         ))}
         {result.projects.skipped.map((project) => (

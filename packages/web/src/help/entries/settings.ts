@@ -257,72 +257,16 @@ export const settingsHelp = {
   },
 
   // Backup & storage
-  "settings.storage.export": {
-    title: "Export and import",
-    body: "Export everything saves every project with its files and history, your library, templates, schedules, Play drafts, fonts, settings and usage in one .tar file; never provider keys. Import adds to this install and replaces nothing: projects already here are skipped, taken names arrive as “(imported)” and schedules arrive paused. Running projects must finish or pause first.",
-    tutorial: { page: "Where-Your-Files-Live", anchor: "export-and-import" },
-  },
-  "settings.storage.clean": {
-    title: "Clear leftover files",
-    body: "Deletes files in the projects folder that no project records any more, and uploaded files that no draft, template or project uses. Your projects, outputs and library are never touched. Slopify also does this each time it starts; use it after a crash or to free space now.",
-    tutorial: { page: "Where-Your-Files-Live", anchor: "clear-leftover-files" },
-  },
-  "settings.storage.disk": {
-    title: "Disk space",
-    body: "What Slopify stores on this computer: project files (outputs plus the working files they were made from), staged uploads, and deleted projects still in the trash. Deleted projects free their space when the trash removes them after 30 days, or when you choose Delete now.",
-    tutorial: { page: "Where-Your-Files-Live", anchor: "disk-space" },
-  },
-  "settings.storage.keep-outputs": {
-    title: "Free disk space",
-    body: "Delete old versions removes a project's History folder (earlier renders and narration). Keep outputs only removes a finished project's working files (narration parts, timing, render settings). Clean up everything does both for every project; running or unfinished ones keep everything. The current video, shorts, their images, thumbnail, documents and your uploads always stay. Remaking a project or going back to an old version makes the files again.",
-    tutorial: { page: "Where-Your-Files-Live", anchor: "keep-outputs-only" },
-  },
   "settings.sample.restore": {
     title: "Sample projects",
     body: "The finished examples that come with Slopify: a narrated video, an audiobook and a podcast, which you can look through without spending anything. Restore samples adds back any that were deleted and replaces the others with the originals. Your own copies of them are not touched.",
     tutorial: { page: "Where-Your-Files-Live", anchor: "sample-projects" },
   },
 
-  "settings.files": {
-    title: "Your files",
-    body: "Your projects, automatic backups and exports live here; new installs use Documents/Slopify. The database, settings, keys and logs stay in Slopify's hidden data folder. Moving copies every file, checks each copy by size and checksum, then switches, and keeps the old folder until you delete it. It takes as long as copying your projects and cannot start while a project is being made.",
-    tutorial: { page: "Where-Your-Files-Live", anchor: "see-your-files" },
-  },
-  "settings.files.docker": {
-    title: "Your files",
-    body: "Your projects and backups are in the folders Docker shares with this computer. The container cannot move its own folders, so run the command shown on the computer running Docker: the installer waits for running work, copies your projects, checks the copy and remounts the new folder.",
-    tutorial: { page: "Where-Your-Files-Live", anchor: "see-your-files" },
-  },
   "settings.files.new-folder": {
     title: "New folder",
     body: "The full path of the folder your files move to, on another disk or a synced folder for example. Slopify makes Projects and Backups inside it. It must be empty or not exist yet. The move needs as much free space there as your projects take now.",
     tutorial: { page: "Where-Your-Files-Live", anchor: "move-your-files-to-another-folder" },
-  },
-  // Backups
-  "settings.backups": {
-    title: "Daily backup",
-    body: "Once a day Slopify writes the file Export everything makes into the backup folder and deletes its own oldest backups beyond the number you keep. Nothing else there is touched. A backup waits while projects are being made; if Slopify was off at the time, it backs up a couple of minutes after it starts. Each backup can be many gigabytes.",
-    tutorial: { page: "Backups", anchor: "turn-on-daily-backups" },
-  },
-  "settings.backups.auto": {
-    title: "Back up automatically",
-    body: "Turns the daily backup on or off. Default: off, because each backup holds every project's video and can fill a disk. Back up now works either way. Press Save after changing it.",
-    tutorial: { page: "Backups", anchor: "turn-on-daily-backups" },
-  },
-  "settings.backups.time": {
-    title: "Time of day",
-    body: "When the daily backup runs, in this browser's time zone. Pick a time the computer is usually on and idle; a backup waits for running projects. Default: 03:00.",
-    tutorial: { page: "Backups", anchor: "when-the-daily-backup-runs" },
-  },
-  "settings.backups.keep": {
-    title: "Keep last",
-    body: "How many of Slopify's own backups stay in the folder; after a new one is written, the oldest beyond this number are deleted. Each holds everything, so disk use grows with this number. Default: 5, from 1 to 30.",
-    tutorial: { page: "Backups", anchor: "turn-on-daily-backups" },
-  },
-  "settings.backups.folder": {
-    title: "Backup folder",
-    body: "Where backups are written. Leave it empty to use the Backups folder beside your projects (Documents/Slopify/Backups on a new install), which moves with them. Point it at another disk or a synced folder to keep copies away from this disk. Slopify only ever deletes its own backup files there.",
-    tutorial: { page: "Backups", anchor: "where-the-files-go-and-what-they-are-called" },
   },
 
   // Trash
