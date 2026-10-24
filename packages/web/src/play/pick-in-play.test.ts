@@ -33,10 +33,10 @@ describe("pickInPlay", () => {
     expect(picked).toMatchObject({ section: "content", field: "articlePrompt" });
   });
 
-  it("adds an image prompt once, with one image", () => {
+  it("adds an image prompt once, with enough images for a video", () => {
     const once = pickInPlay(freshDraftDocument, prompt("image", "Ink"));
     const twice = pickInPlay(once.document, prompt("image", "Ink"));
-    expect(twice.document.form.imagePrompts).toEqual([{ name: "Ink", number: "1" }]);
+    expect(twice.document.form.imagePrompts).toEqual([{ name: "Ink", number: "16" }]);
     expect(twice.field).toBe("imagePrompts.Ink.number");
   });
 

@@ -48,19 +48,19 @@ describe("subtitle controls", () => {
     const list = vi.fn(jsonAnswer({ fonts }));
     renderApp(<Form />, testDeps({ "GET /api/fonts": list }));
     expect(
-      (screen.getByLabelText("Subtitles", { selector: "select" }) as HTMLSelectElement).value,
+      (screen.getByLabelText("Captions", { selector: "select" }) as HTMLSelectElement).value,
     ).toBe("off");
     expect(list).not.toHaveBeenCalled();
-    await user.selectOptions(screen.getByLabelText("Subtitles", { selector: "select" }), "burn-in");
+    await user.selectOptions(screen.getByLabelText("Captions", { selector: "select" }), "burn-in");
     await screen.findByRole("option", { name: "System sans · system" });
-    await user.selectOptions(screen.getByLabelText("Subtitle font"), "system-sans");
-    const size = screen.getByLabelText("Subtitle font size");
+    await user.selectOptions(screen.getByLabelText("Caption font"), "system-sans");
+    const size = screen.getByLabelText("Caption size");
     await user.clear(size);
     await user.type(size, "64");
     expect(screen.getByLabelText("Selected subtitles").textContent).toContain('"fontSize":64');
     expect(screen.getByText(/378 MB unless changed/)).not.toBeNull();
     expect(screen.getByText("Changed · default 48")).not.toBeNull();
-    await user.click(screen.getByRole("button", { name: "Reset subtitle font size to 48" }));
+    await user.click(screen.getByRole("button", { name: "Reset caption size to 48" }));
     expect(screen.getByLabelText("Selected subtitles").textContent).toContain('"fontSize":48');
     expect(screen.getByText("Default size")).not.toBeNull();
   });
@@ -80,13 +80,13 @@ describe("subtitle controls", () => {
         "POST /api/fonts": upload,
       }),
     );
-    await user.selectOptions(screen.getByLabelText("Subtitles", { selector: "select" }), "burn-in");
+    await user.selectOptions(screen.getByLabelText("Captions", { selector: "select" }), "burn-in");
     await user.upload(
       screen.getByLabelText("Upload font (.ttf or .otf)"),
       new File(["testfont"], "my-font.ttf", { type: "font/ttf" }),
     );
     await waitFor(() =>
-      expect((screen.getByLabelText("Subtitle font") as HTMLSelectElement).value).toBe(
+      expect((screen.getByLabelText("Caption font") as HTMLSelectElement).value).toBe(
         "custom-font",
       ),
     );
@@ -102,14 +102,14 @@ describe("subtitle controls", () => {
         "POST /api/fonts": problemAnswer("This file is not a font."),
       }),
     );
-    await user.selectOptions(screen.getByLabelText("Subtitles", { selector: "select" }), "files");
+    await user.selectOptions(screen.getByLabelText("Captions", { selector: "select" }), "files");
     await user.upload(
       screen.getByLabelText("Upload font (.ttf or .otf)"),
       new File(["bad"], "broken.otf", { type: "font/otf" }),
     );
     await screen.findByRole("alert");
     expect(screen.getByText("This file is not a font.")).not.toBeNull();
-    expect((screen.getByLabelText("Subtitle font") as HTMLSelectElement).value).toBe("default");
+    expect((screen.getByLabelText("Caption font") as HTMLSelectElement).value).toBe("default");
   });
 
   it("holds mode changes during an upload and releases its pending signal on unmount", async () => {
@@ -123,14 +123,14 @@ describe("subtitle controls", () => {
       <Form onUploading={busy} />,
       testDeps({ "GET /api/fonts": jsonAnswer({ fonts }), "POST /api/fonts": () => response }),
     );
-    await user.selectOptions(screen.getByLabelText("Subtitles", { selector: "select" }), "files");
+    await user.selectOptions(screen.getByLabelText("Captions", { selector: "select" }), "files");
     await user.upload(
       screen.getByLabelText("Upload font (.ttf or .otf)"),
       new File(["font"], "file.ttf", { type: "font/ttf" }),
     );
     await screen.findByText("Uploading font…");
     expect(
-      (screen.getByLabelText("Subtitles", { selector: "select" }) as HTMLSelectElement).disabled,
+      (screen.getByLabelText("Captions", { selector: "select" }) as HTMLSelectElement).disabled,
     ).toBe(true);
     expect(busy).toHaveBeenLastCalledWith(true);
     mounted.unmount();
@@ -148,16 +148,16 @@ describe("subtitle controls", () => {
     const user = userEvent.setup();
     const mounted = renderApp(<Form audio={false} />, testDeps({}));
     expect(
-      screen.getByLabelText("Subtitles", { selector: "select" }).closest("fieldset")?.disabled,
+      screen.getByLabelText("Captions", { selector: "select" }).closest("fieldset")?.disabled,
     ).toBe(true);
     mounted.unmount();
     renderApp(<Form video={false} />, testDeps({ "GET /api/fonts": jsonAnswer({ fonts }) }));
     expect(
-      (screen.getByRole("option", { name: "Burn into video + files" }) as HTMLOptionElement)
+      (screen.getByRole("option", { name: "Show captions in the video" }) as HTMLOptionElement)
         .disabled,
     ).toBe(true);
-    await user.selectOptions(screen.getByLabelText("Subtitles", { selector: "select" }), "files");
-    expect(screen.getByText(/Audio exports support separate subtitle files/)).not.toBeNull();
+    await user.selectOptions(screen.getByLabelText("Captions", { selector: "select" }), "files");
+    expect(screen.getByText(/With no video, captions come as files/)).not.toBeNull();
   });
 });
 
@@ -167,10 +167,10 @@ it("previews all five saved positions in the selected video frame", async () => 
     <Form format="9:16" />,
     testDeps({ "GET /api/fonts": jsonAnswer({ fonts }) }),
   );
-  await user.selectOptions(screen.getByLabelText("Subtitles", { selector: "select" }), "burn-in");
-  const preview = screen.getByRole("img", { name: "Subtitle style preview" });
+  await user.selectOptions(screen.getByLabelText("Captions", { selector: "select" }), "burn-in");
+  const preview = screen.getByRole("img", { name: "Caption style preview" });
   expect(preview.style.aspectRatio).toBe("1080 / 1920");
-  const position = screen.getByLabelText("Subtitle position");
+  const position = screen.getByLabelText("Caption position");
   expect(position.querySelectorAll("option")).toHaveLength(5);
   for (const [value, top] of [
     ["top", 3.125],
@@ -187,8 +187,8 @@ it("previews all five saved positions in the selected video frame", async () => 
   }
   mounted.unmount();
   renderApp(<Form format="16:9" />, testDeps({ "GET /api/fonts": jsonAnswer({ fonts }) }));
-  await user.selectOptions(screen.getByLabelText("Subtitles", { selector: "select" }), "burn-in");
-  expect(screen.getByRole("img", { name: "Subtitle style preview" }).style.aspectRatio).toBe(
+  await user.selectOptions(screen.getByLabelText("Captions", { selector: "select" }), "burn-in");
+  expect(screen.getByRole("img", { name: "Caption style preview" }).style.aspectRatio).toBe(
     "1920 / 1080",
   );
 });
@@ -224,10 +224,10 @@ it("lets Play suppress the embedded preview while project controls keep it by de
     <SubtitleControls {...props} showPreview={false} />,
     testDeps({ "GET /api/fonts": jsonAnswer({ fonts }) }),
   );
-  expect(screen.queryByRole("img", { name: "Subtitle style preview" })).toBeNull();
+  expect(screen.queryByRole("img", { name: "Caption style preview" })).toBeNull();
   mounted.unmount();
   renderApp(<SubtitleControls {...props} />, testDeps({ "GET /api/fonts": jsonAnswer({ fonts }) }));
-  expect(screen.getAllByRole("img", { name: "Subtitle style preview" })).toHaveLength(1);
+  expect(screen.getAllByRole("img", { name: "Caption style preview" })).toHaveLength(1);
   expect(screen.getByLabelText("Caption sample").textContent).toBe(
     "Every story begins with a word.",
   );
@@ -307,7 +307,7 @@ describe("font picker", () => {
       source: "system",
     }));
     renderApp(<Form />, testDeps({ "GET /api/fonts": jsonAnswer({ fonts: [...fonts, ...many] }) }));
-    await user.selectOptions(screen.getByLabelText("Subtitles", { selector: "select" }), "burn-in");
+    await user.selectOptions(screen.getByLabelText("Captions", { selector: "select" }), "burn-in");
     const filter = await screen.findByRole("searchbox", { name: "Filter fonts" });
     await user.type(filter, "garamond");
     const options = screen

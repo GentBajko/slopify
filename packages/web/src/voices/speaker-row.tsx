@@ -12,12 +12,14 @@ import { quoteAuditions, speakAudition, type Voice } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
-import { Field, Input, Textarea } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { Field, HelpLine, Input, Textarea } from "@/components/kit/field";
+import { Fold } from "@/components/kit/fold";
+import { helpScope } from "@/components/kit/info-tip";
 import { RowCheck, type Selection } from "@/components/selection";
-import { useVoicesForLanguage, VoiceLanguageNote } from "@/language/voice-language";
 import { usd } from "@/lib/format";
-import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
+import { OptionPicker } from "@/play/pickers";
+import { ServiceGroup } from "@/play/service-group";
+import { VoicePicker } from "@/play/voice-picker";
 import { RowMenu } from "./row-menu.js";
 
 // One speaker of the Multiple voices editor: name, role, voice, pace, pronunciations, an
@@ -63,9 +65,6 @@ export function SpeakerRow({
 }): ReactElement {
   const field = `voices.speakers.${String(index)}`;
   const voice = speaker.voice;
-  const ofProvider = voices.filter((one) => one.provider === voice.provider);
-  const byLanguage = useVoicesForLanguage(ofProvider, language, voice.voice || undefined);
-  const mine = language === undefined ? ofProvider : byLanguage.listed;
   const name = speaker.name.trim() || "this speaker";
   // The rows the narration would skip, found as they are typed. "und" (undetermined) reads
   // like any non-English language: full IPA, still never ARPAbet or tags.
@@ -114,43 +113,32 @@ export function SpeakerRow({
           if (next !== undefined) onChange({ ...speaker, role: next });
         }}
       />
-      <ProviderPicker
-        field={`${field}.voice`}
-        label="Voice provider"
-        tip="play.speaker.provider"
+      <ServiceGroup
         family="tts"
+        label={`${speaker.name.trim() || `Speaker ${String(index + 1)}`} is read by`}
         providers={providers}
-        value={voice.provider}
-        problem={problem?.(`${field}.voice`)}
-        onPick={(provider) => onChange({ ...speaker, voice: { provider, model: "", voice: "" } })}
-      />
-      <ModelPicker
-        label="Voice model"
-        tip="play.speaker.model"
         provider={voice.provider}
-        value={voice.model}
-        problem={undefined}
-        onPick={(model) => onChange({ ...speaker, voice: { ...voice, model } })}
-      />
-      <OptionPicker
-        field={`${field}.voice.voice`}
-        label="Voice"
-        tip="play.speaker.voice"
-        value={voice.voice}
-        placeholder={mine.length === 0 ? "No voices. Add one in Settings." : "Pick a voice"}
-        options={mine.map((one) => ({ value: one.voiceId, label: one.name }))}
-        problem={problem?.(`${field}.voice.voice`)}
-        onPick={(picked) => onChange({ ...speaker, voice: { ...voice, voice: picked } })}
-      />
-      {language === undefined ? null : (
-        <VoiceLanguageNote
+        model={voice.model}
+        serviceField={`${field}.voice`}
+        modelField={`${field}.voice.model`}
+        serviceProblem={problem?.(`${field}.voice`)}
+        modelProblem={undefined}
+        onService={(provider) =>
+          onChange({ ...speaker, voice: { provider, model: "", voice: "" } })
+        }
+        onModel={(model) => onChange({ ...speaker, voice: { ...voice, model } })}
+      >
+        <VoicePicker
+          field={`${field}.voice.voice`}
+          provider={voice.provider}
+          providers={providers}
+          voices={voices}
           language={language}
-          voice={ofProvider.find((one) => one.voiceId === voice.voice)}
-          hidden={byLanguage.hidden}
-          showAll={byLanguage.showAll}
-          onShowAll={byLanguage.setShowAll}
+          value={voice.voice}
+          problem={problem?.(`${field}.voice.voice`)}
+          onPick={(picked) => onChange({ ...speaker, voice: { ...voice, voice: picked } })}
         />
-      )}
+      </ServiceGroup>
       <OptionPicker
         field={`${field}.pace`}
         label="Pace"
@@ -167,25 +155,29 @@ export function SpeakerRow({
           onChange(Number(pace) === 1 ? rest : { ...rest, pace: Number(pace) });
         }}
       />
-      <details className="col-span-full text-small" {...helpScope}>
-        <summary className="flex min-h-8 cursor-pointer items-center gap-2 text-ink-2">
-          Pronunciations for {speaker.name.trim() || "this speaker"}
-          {speaker.pronunciations?.trim() ? " · set" : ""}
-          <InfoTip id="play.speaker.pronunciations" />
-        </summary>
-        <Textarea
-          rows={3}
-          aria-label={`Pronunciations for ${speaker.name.trim() || "this speaker"}`}
-          value={speaker.pronunciations ?? ""}
-          placeholder="Arda: /ˈɑɹdə/"
-          onChange={(event) => {
-            const { pronunciations: _old, ...rest } = speaker;
-            onChange(
-              event.target.value === "" ? rest : { ...rest, pronunciations: event.target.value },
-            );
-          }}
-        />
-      </details>
+      <Fold
+        className="col-span-full"
+        summary={`Pronunciations for ${speaker.name.trim() || "this speaker"}`}
+        state={speaker.pronunciations?.trim() ? "Set" : undefined}
+      >
+        <div className="flex flex-col gap-1 pb-3" {...helpScope}>
+          <Textarea
+            rows={3}
+            aria-label={`Pronunciations for ${speaker.name.trim() || "this speaker"}`}
+            value={speaker.pronunciations ?? ""}
+            placeholder="Arda: /ˈɑɹdə/"
+            onChange={(event) => {
+              const { pronunciations: _old, ...rest } = speaker;
+              onChange(
+                event.target.value === "" ? rest : { ...rest, pronunciations: event.target.value },
+              );
+            }}
+          />
+          <HelpLine>
+            One Term: /IPA/ per line, for this speaker only; Inworld TTS-2 voices use them.
+          </HelpLine>
+        </div>
+      </Fold>
       {skipped.length === 0 ? null : (
         <Callout
           tone="waiting"
@@ -276,18 +268,19 @@ function Audition({
           onClick={() => speak.mutate()}
           title={`Reads: ${line}`}
         >
-          {speak.isPending ? "Speaking…" : `Audition${price === undefined ? "" : ` · ${price}`}`}
+          {speak.isPending
+            ? "Speaking…"
+            : `Hear ${speaker.name.trim() || "this speaker"}${price === undefined ? "" : ` · ${price}`}`}
         </Button>
-        <InfoTip id="play.speaker.audition" />
       </span>
       <span className="min-h-5 text-label text-ink-2" aria-live="polite">
         {!ready
-          ? "Pick a provider, model and voice to audition."
+          ? "Pick a voice service, model and voice first."
           : speak.error !== null
             ? speak.error.message
             : url !== undefined
               ? "Playing the audition."
-              : `Reads their first line: “${line.length > 60 ? `${line.slice(0, 60)}…` : line}”`}
+              : `Reads their first line, one paid request: “${line.length > 60 ? `${line.slice(0, 60)}…` : line}”`}
       </span>
     </div>
   );

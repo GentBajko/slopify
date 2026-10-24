@@ -32,6 +32,7 @@ import {
   NarrationSection,
   VideoSection,
 } from "@/play/outputs-section";
+import { PausesAndChecks } from "@/play/pauses-and-checks";
 import { previewImageOf } from "@/play/preview-image";
 import { ReviewSection } from "@/play/review-section";
 import { pendingReviewUpload, startLabel } from "@/play/review-state";
@@ -159,7 +160,6 @@ export function PlayForm({
   const root = useRef<HTMLDivElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const reviewHeading = useRef<HTMLHeadingElement>(null);
-  const routerNavigate = useNavigate();
   const touchedDraft = useRef(session.activeId);
   useLayoutEffect(() => {
     if (touchedDraft.current !== session.activeId) {
@@ -344,12 +344,6 @@ export function PlayForm({
     heading.current?.focus();
   }, [session.reveal, open, variantOpen, simple]);
 
-  const library = async (to: "/prompts" | "/settings"): Promise<void> => {
-    if (!(await session.flush())) return;
-    if (to === "/prompts")
-      await routerNavigate({ to: "/prompts/new", search: { kind: "article" } });
-    else await routerNavigate({ to });
-  };
   const openReview = (): void => {
     void session.navigate("review");
   };
@@ -444,38 +438,12 @@ export function PlayForm({
         ) : null}
       </div>
     ),
-    article: (
-      <ContentSection
-        {...controls}
-        entries={choices.entries}
-        onLibrary={(to) => {
-          void library(to);
-        }}
-      />
-    ),
-    narration: (
-      <NarrationSection
-        {...controls}
-        entries={choices.entries}
-        onKeyword={revealField}
-        onSettings={() => {
-          void library("/settings");
-        }}
-      />
-    ),
+    article: <ContentSection {...controls} entries={choices.entries} />,
+    narration: <NarrationSection {...controls} entries={choices.entries} onKeyword={revealField} />,
     images: <ImagesSection {...controls} />,
     video: <VideoSection {...controls} problemOf={problem} />,
-    outputs: (
-      <ExtrasSection
-        {...controls}
-        publishing={publishes(kind)}
-        entries={choices.entries}
-        onSettings={() => {
-          void library("/settings");
-        }}
-      />
-    ),
-    reviews: undefined,
+    outputs: <ExtrasSection {...controls} publishing={publishes(kind)} entries={choices.entries} />,
+    reviews: <PausesAndChecks problem={problem} />,
     channel: (
       <div className="flex min-w-0 flex-col gap-4 py-4">
         <ChannelPicker />
@@ -507,10 +475,6 @@ export function PlayForm({
     editor: editors[row.id],
   }));
   const setRow = (row: SetupRowId, next: boolean): void => {
-    if (row === "reviews") {
-      openReview();
-      return;
-    }
     setOpen((current) => {
       const changed = new Set(current);
       if (next) changed.add(row);

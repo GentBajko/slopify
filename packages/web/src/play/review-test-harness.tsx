@@ -85,7 +85,7 @@ export function reviewHarness(
       await Promise.resolve();
     },
     prepare: async (document = suppliedDocument) => {
-      await screen.findByRole("option", { name: "Dossier" });
+      await screen.findByRole("radio", { name: /^Dossier/ });
       await act(async () => {
         session().edit(document);
         await session().navigate("review");

@@ -32,7 +32,7 @@ it("offers Article Off and pairs Images Off with Video Off", async () => {
   );
   await openEditSection("Article");
   const article = screen.getByRole("combobox", { name: "Article source" });
-  expect(within(article).queryByRole("option", { name: "Off" })).not.toBeNull();
+  expect(within(article).queryByRole("option", { name: "No text" })).not.toBeNull();
   await openEditSection("Images");
   await user.selectOptions(screen.getByRole("combobox", { name: "Images source" }), "generate");
   await openEditSection("Video and style");
@@ -43,9 +43,9 @@ it("offers Article Off and pairs Images Off with Video Off", async () => {
   const video = screen.getByRole("combobox", { name: "Video source" });
   if (!(video instanceof HTMLSelectElement)) throw new Error("Expected video source select.");
   expect(video.value).toBe("off");
-  expect(within(video).getByRole<HTMLOptionElement>("option", { name: "Generate" }).disabled).toBe(
-    true,
-  );
+  expect(
+    within(video).getByRole<HTMLOptionElement>("option", { name: "Make the video" }).disabled,
+  ).toBe(true);
   // The silences are sound polish, folded under the video's style.
   await user.click(screen.getByText("Sound polish"));
   const gap = screen.getByRole<HTMLInputElement>("spinbutton", { name: "Silence gap (seconds)" });
@@ -256,9 +256,11 @@ it("preserves saved unavailable choices, content references and frozen templates
       "GET /api/providers/gone-tts/models": jsonAnswer({ models: [], allowsCustom: false }),
     }),
   );
-  expect((screen.getByLabelText("Service") as HTMLSelectElement).value).toBe("gone-llm");
-  expect((screen.getByLabelText("Model") as HTMLSelectElement).value).toBe("old-text");
-  expect((screen.getByLabelText("Thinking") as HTMLSelectElement).value).toBe("high");
+  // Written by and Read by each ask for a Service.
+  const article = within(screen.getByRole("region", { name: "Written by", hidden: true }));
+  expect((article.getByLabelText("Service") as HTMLSelectElement).value).toBe("gone-llm");
+  expect((article.getByLabelText("Model") as HTMLSelectElement).value).toBe("old-text");
+  expect((article.getByLabelText("Thinking") as HTMLSelectElement).value).toBe("high");
   expect((screen.getByLabelText("Voice") as HTMLSelectElement).value).toBe("missing-voice");
   expect((screen.getByLabelText("Intro") as HTMLSelectElement).value).toBe("Deleted intro");
   await user.type(screen.getByLabelText("Project title"), " updated");
@@ -479,11 +481,11 @@ it("switches the YouTube description on in Outputs and freezes or drops its prom
   );
   await openEditSection("Outputs");
   const on = screen.getByRole<HTMLInputElement>("checkbox", { name: /YouTube description/ });
-  const prompt = screen.getByRole<HTMLSelectElement>("combobox", { name: "Description prompt" });
   expect(on.checked).toBe(false);
-  expect(prompt.disabled).toBe(true);
+  expect(screen.queryByRole("combobox", { name: "Description prompt" })).toBeNull();
   await user.click(on);
   expect(latest.config.youtubeDescription).toBe(true);
+  const prompt = screen.getByRole<HTMLSelectElement>("combobox", { name: "Description prompt" });
   await screen.findByRole("option", { name: "Hooky" });
   await user.selectOptions(prompt, "Hooky");
   expect(latest.config.descriptionPrompt).toBe("Hooky");
@@ -607,8 +609,9 @@ it("sets the Shorts in their own section: numbers, prompts and the more options"
   expect(state.latest.config.shorts?.prompt).toBe("Hooks");
   expect(state.latest.content.promptTemplates.shorts).toBe("Pick the boldest claims.");
   // A project saved before the title, speed, music and link reads as all of them unset.
-  const more = screen.getByText(/More shorts options/);
-  expect(more.textContent).toBe("More shorts options · No title on screen");
+  const more = screen.getByText("More shorts options");
+  const foldState = () => more.closest("summary")?.querySelector(".sl-fold__state")?.textContent;
+  expect(foldState()).toBe("No title on screen");
   await user.click(more);
   await user.click(screen.getByRole("checkbox", { name: /Title on screen/ }));
   await user.selectOptions(screen.getByRole("combobox", { name: "Speed" }), "1.15");
@@ -624,9 +627,7 @@ it("sets the Shorts in their own section: numbers, prompts and the more options"
     musicVolume: 30,
     fullVideoLink: "https://youtu.be/full",
   });
-  expect(more.textContent).toBe(
-    "More shorts options · Title on screen · 1.15× · Music at 30% · Full video linked",
-  );
+  expect(foldState()).toBe("Title on screen · 1.15× · Music at 30% · Full video linked");
   await user.click(screen.getByRole("checkbox", { name: /^Shorts/ }));
   expect(state.latest.config.shorts).toMatchObject({ enabled: false, count: 5, prompt: "Hooks" });
 });
@@ -736,7 +737,7 @@ it("shows an old project's video as it was, and writes edit settings only once o
   expect(screen.getByText("Plain cuts, no effects")).not.toBeNull();
   expect(latest.config.videoEdit).toBeUndefined();
   await user.click(screen.getByText("Look"));
-  await user.selectOptions(screen.getByRole("combobox", { name: "Colour grade" }), "sepia");
+  await user.selectOptions(screen.getByRole("combobox", { name: "Color grade" }), "sepia");
   expect(latest.config.videoEdit).toMatchObject({ cuts: "interval", grade: "sepia" });
   expect(screen.getByText("Look").nextElementSibling?.textContent).toBe("Sepia");
 });

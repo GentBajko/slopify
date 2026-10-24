@@ -15,9 +15,9 @@ import { SectionHead } from "@/components/kit/section-head";
 import { Badge, Chip } from "@/components/kit/status";
 import { Switch } from "@/components/kit/switch";
 import { FixActions } from "@/fixes/fix-actions";
-import { useVoicesForLanguage, VoiceLanguageNote } from "@/language/voice-language";
 import { limitCount } from "@/lib/limit-count";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
+import { VoicePicker } from "@/play/voice-picker";
 import { providersQuery, voicesQuery } from "@/queries";
 import {
   type CastKind,
@@ -448,9 +448,6 @@ function CastVoiceFields({
   const channel = useQuery(channelQuery(api, channelId));
   const language = channel.data?.channel.brand.language ?? "en";
   const voice = value ?? { provider: "", model: "", voice: "" };
-  const ofProvider = (voices.data?.voices ?? []).filter((one) => one.provider === voice.provider);
-  const byLanguage = useVoicesForLanguage(ofProvider, language, voice.voice || undefined);
-  const mine = byLanguage.listed;
   return (
     <fieldset
       className="m-0 flex flex-col gap-3 border-0 border-t border-line p-0 pt-4"
@@ -465,7 +462,7 @@ function CastVoiceFields({
       </p>
       <div className="grid grid-cols-1 gap-3 min-[600px]:grid-cols-2">
         <ProviderPicker
-          label="Voice provider"
+          label="Voice service"
           family="tts"
           providers={providers.data?.providers ?? []}
           value={voice.provider}
@@ -481,20 +478,14 @@ function CastVoiceFields({
           problem={undefined}
           onPick={(model) => onChange({ ...voice, model })}
         />
-        <OptionPicker
-          label="Voice"
+        <VoicePicker
+          provider={voice.provider}
+          providers={providers.data?.providers ?? []}
+          voices={voices.data?.voices ?? []}
+          language={language}
           value={voice.voice}
-          placeholder={mine.length === 0 ? "No voices. Add one in Settings." : "Pick a voice"}
-          options={mine.map((one) => ({ value: one.voiceId, label: one.name }))}
           problem={undefined}
           onPick={(picked) => onChange({ ...voice, voice: picked })}
-        />
-        <VoiceLanguageNote
-          language={language}
-          voice={ofProvider.find((one) => one.voiceId === voice.voice)}
-          hidden={byLanguage.hidden}
-          showAll={byLanguage.showAll}
-          onShowAll={byLanguage.setShowAll}
         />
         <OptionPicker
           label="Pace"

@@ -78,16 +78,13 @@ it("keeps the font upload lock after leaving Style and preserves concurrent styl
   const pending = deferred();
   await mountSupplied({ "POST /api/fonts": () => pending.promise });
   await openSection("Style");
-  await userEvent.selectOptions(
-    screen.getByLabelText("Subtitles", { selector: "select" }),
-    "files",
-  );
+  await userEvent.selectOptions(screen.getByLabelText("Captions", { selector: "select" }), "files");
   await userEvent.upload(
     screen.getByLabelText("Upload font (.ttf or .otf)"),
     new File(["font"], "draft.ttf", { type: "font/ttf" }),
   );
-  await userEvent.clear(screen.getByLabelText("Subtitle font size"));
-  await userEvent.type(screen.getByLabelText("Subtitle font size"), "64");
+  await userEvent.clear(screen.getByLabelText("Caption size"));
+  await userEvent.type(screen.getByLabelText("Caption size"), "64");
   await userEvent.click(screen.getByRole("radio", { name: "center" }));
   await openSection("Review");
   expect(screen.queryByRole("list", { name: "Setup errors" })).toBeNull();
@@ -113,8 +110,8 @@ it("keeps the font upload lock after leaving Style and preserves concurrent styl
     ).toBe("false"),
   );
   await openSection("Style");
-  expect((screen.getByLabelText("Subtitle font") as HTMLSelectElement).value).toBe("uploaded-font");
-  expect((screen.getByLabelText("Subtitle font size") as HTMLInputElement).value).toBe("64");
+  expect((screen.getByLabelText("Caption font") as HTMLSelectElement).value).toBe("uploaded-font");
+  expect((screen.getByLabelText("Caption size") as HTMLInputElement).value).toBe("64");
   expect(screen.getByRole("radio", { name: "center" }).getAttribute("aria-checked")).toBe("true");
 });
 it("keeps pending media across Outputs, Style, Content and binds its success once", async () => {
@@ -183,10 +180,7 @@ it("shows a failed font after revisiting Style and recovers by selecting a font"
   const pending = deferred();
   await mountSupplied({ "POST /api/fonts": () => pending.promise });
   await openSection("Style");
-  await userEvent.selectOptions(
-    screen.getByLabelText("Subtitles", { selector: "select" }),
-    "files",
-  );
+  await userEvent.selectOptions(screen.getByLabelText("Captions", { selector: "select" }), "files");
   await userEvent.upload(
     screen.getByLabelText("Upload font (.ttf or .otf)"),
     new File(["font"], "broken.ttf", { type: "font/ttf" }),
@@ -201,7 +195,7 @@ it("shows a failed font after revisiting Style and recovers by selecting a font"
   await openSection("Style");
   expect(screen.getByText("Invalid font")).not.toBeNull();
   expect(screen.getByText("Reattach broken.ttf, or select a font.")).not.toBeNull();
-  await userEvent.selectOptions(screen.getByLabelText("Subtitle font"), "default");
+  await userEvent.selectOptions(screen.getByLabelText("Caption font"), "default");
   await openSection("Review");
   await waitFor(() =>
     expect(
@@ -215,7 +209,7 @@ it("ignores dormant missing narration after Audio is turned Off", async () => {
   await openSection("Outputs");
   const { within } = await import("@testing-library/react");
   await userEvent.click(
-    within(screen.getByRole("radiogroup", { name: "audio source" })).getByRole("radio", {
+    within(screen.getByRole("radiogroup", { name: "Narration" })).getByRole("radio", {
       name: "Off",
     }),
   );

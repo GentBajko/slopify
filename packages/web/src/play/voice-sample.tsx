@@ -67,11 +67,11 @@ export function VoiceSample({ form }: { readonly form: PlayFormState }): ReactEl
         ? "price unknown"
         : `about ${usd(estimate.high)}`;
   return (
-    <Fold className="col-span-full" summary={<>Try a sample of your text</>}>
+    <Fold className="col-span-full" summary="Hear a sample of your text in this voice">
       <div className="flex flex-col gap-3 pt-2 pb-3">
         <p className="m-0 text-small text-ink-2">
           Reads one passage of up to {String(auditionLineMax)} characters in this voice
-          {useAliases ? ", with Library → Narration aliases" : ""}. The Pronunciation Glossary and
+          {useAliases ? ", with your narration aliases" : ""}. The Pronunciation Glossary and
           Narration Preparation are not applied, and the sample is not reused in the run.
         </p>
         <div className="flex flex-col gap-1" {...helpScope}>
@@ -95,13 +95,13 @@ export function VoiceSample({ form }: { readonly form: PlayFormState }): ReactEl
             type="button"
             disabled={!ready || said === "" || speak.isPending}
             disabledReason={
-              !ready ? "Pick a TTS provider, model and voice first" : "Type a passage first"
+              !ready ? "Pick a voice service, model and voice first" : "Type a passage first"
             }
             onClick={() => speak.mutate()}
           >
             {speak.isPending
               ? "Speaking…"
-              : `Play sample${price === undefined ? "" : ` · ${price}`}`}
+              : `Hear the sample${price === undefined ? "" : ` · ${price}`}`}
           </Button>
           <span className="min-h-5 text-label text-ink-2" aria-live="polite">
             {speak.error !== null

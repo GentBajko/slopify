@@ -145,7 +145,7 @@ it("offers every Play action in the command palette", async () => {
     </CommandPaletteProvider>,
     testDeps(playRoutes()),
   );
-  await screen.findByRole("option", { name: "Dossier" });
+  await screen.findByRole("radio", { name: /^Dossier/ });
   const titles = registry.list().map((command) => command.title);
   for (const title of [
     "Start run",
@@ -178,18 +178,28 @@ it("offers every Play action in the command palette", async () => {
   expect(await screen.findByRole("dialog", { name: "Save as template" })).not.toBeNull();
 });
 
-it("names each stage once: the row says it, the editor under it starts at its source", async () => {
+it("names each stage once: the row says it, the editor under it starts at its switch", async () => {
   await mountPlay();
-  for (const [row, stage] of [
-    ["Article", "Article"],
-    ["Narration", "Audio"],
-    ["Images", "Images"],
-    ["Video and style", "Export"],
+  for (const [row, stage, choices] of [
+    [
+      "Article",
+      "Article",
+      ["Write it for me", "Use my text as written", "Adapt my text", "No text"],
+    ],
+    ["Narration", "Narration", ["Off", "AI voice (paid per character)", "My own audio file"]],
+    ["Images", "Images", ["None", "Made by AI (paid)", "My own images"]],
+    ["Video and style", "Video", ["Off (sound only)", "Make the video"]],
   ] as const) {
     await openRow(row);
     const editor = screen.getByRole("region", { name: row });
     expect(within(editor).queryByRole("heading", { name: stage })).toBeNull();
-    expect(within(editor).getAllByText("Source").length).toBeGreaterThan(0);
+    // The switch is named for its stage, in words, and says what each choice makes.
+    const strip = within(editor).getByRole("radiogroup", { name: stage });
+    expect(
+      within(strip)
+        .getAllByRole("radio")
+        .map((one) => one.textContent),
+    ).toEqual([...choices]);
   }
   // A part of a row that is not the row itself keeps its own heading.
   expect(

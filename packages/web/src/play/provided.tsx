@@ -2,7 +2,6 @@ import { useId } from "react";
 import { Button } from "@/components/kit/button";
 import { Textarea } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
-import { Label } from "@/components/ui/label";
 import type { HelpId } from "@/help/catalog";
 import type { Upload } from "@/play/state";
 
@@ -37,7 +36,9 @@ export function PasteArea({
   return (
     <div {...(tip === undefined ? {} : helpScope)}>
       <span className="mb-1 flex items-center gap-1">
-        <Label htmlFor={fieldId}>{label}</Label>
+        <label htmlFor={fieldId} className="sl-field__label block">
+          {label}
+        </label>
         {tip === undefined ? null : <InfoTip id={tip} label={label} className="-my-1" />}
       </span>
       <Textarea
@@ -93,9 +94,9 @@ export function FilePick({
 
   return (
     <div>
-      <Label htmlFor={fieldId} className="mb-1">
+      <label htmlFor={fieldId} className="sl-field__label block mb-1">
         {label}
-      </Label>
+      </label>
       <input
         id={fieldId}
         data-play-field={field}

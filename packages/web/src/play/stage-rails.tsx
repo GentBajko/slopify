@@ -1,53 +1,61 @@
 import { type MotionStyle, motionStyles } from "@app/slices/admission/model.js";
 import { motionStyleLabels } from "@app/slices/admission/rules.js";
 import { usesScriptPrompt } from "@app/slices/voices/model.js";
-import { Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { type ReactElement, useState } from "react";
+import { readStudioSettings } from "@/api";
+import { useApp } from "@/app-context";
 import { DocumentThemePicker } from "@/components/document-theme-picker";
-import { Input } from "@/components/kit/field";
+import { HelpLine, Input } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
+import { TextLink } from "@/components/kit/link";
 import { Picker } from "@/components/ui/picker";
 import type { HelpId } from "@/help/catalog";
 import { ImageProviderControls } from "@/play/media-rails";
 import { LabelledField, OptionPicker } from "@/play/pickers";
 import { FilePick, PasteArea } from "@/play/provided";
 import type { RailProps } from "@/play/rail-frame";
-import { promptNames, railBeneath, railControls, SourceSwitch, StageRail } from "@/play/rail-frame";
+import { promptNames, SourceSwitch, StageRail } from "@/play/rail-frame";
 import { freshShorts, Shorts, shortsPreviewOf } from "@/play/shorts";
 import { shortsOn } from "@/play/state";
 import { YoutubeDescription } from "@/play/youtube-description";
 import { PostSettings } from "@/social/post-settings";
 import { formSocial, shortsOf } from "@/social/studio-post-settings";
+import { studioSettingsKey } from "@/studio/settings-panel";
 import { useVideoEditControls } from "@/video/edit-controls";
 import { StylePreview } from "@/video/style-preview";
 import { PlayAmbientBed } from "./ambient-bed";
 import { articleKind } from "./article-kind";
 import { ArticleTaskSwitch, articleTaskOf, SpokenText } from "./article-task";
-import { ShowFiguresToggle } from "./describe-figures.js";
-import { PlayLoudness } from "./loudness";
+import { OutputTick } from "./output-tick";
+import { PromptCards } from "./prompt-cards";
 import { ThumbnailCountPicker } from "./thumbnail-count.js";
 
 export function ResearchRail({ form, problem, update }: RailProps) {
   return (
-    <StageRail kind="research" name="Research" dim={form.sources.research === "off"}>
-      <SourceSwitch kind="research" form={form} update={update} />
-      <div className={railControls}>
-        {form.sources.research === "generate" ? (
-          <span className="engraved text-ink-3">Runs through the LLM, one agent per chapter</span>
-        ) : null}
-      </div>
+    <StageRail
+      kind="research"
+      name="Research"
+      dim={form.sources.research === "off"}
+      source={<SourceSwitch kind="research" form={form} update={update} />}
+      note={
+        form.sources.research === "generate"
+          ? "The AI plans chapters and looks each one up on the web before it writes: a few more AI calls."
+          : undefined
+      }
+    >
       {form.sources.research === "provide" ? (
-        <div className={railBeneath}>
-          <PasteArea
-            field="provided.research"
-            label="Research notes"
-            tip="play.provided.research"
-            value={form.provided.research}
-            placeholder="Paste the notes the article will be written from."
-            problem={problem("provided.research")}
-            onChange={(research) => {
-              update({ provided: { ...form.provided, research } });
-            }}
-          />
-        </div>
+        <PasteArea
+          field="provided.research"
+          label="Research notes"
+          tip="play.provided.research"
+          value={form.provided.research}
+          placeholder="Paste the notes the article will be written from."
+          problem={problem("provided.research")}
+          onChange={(research) => {
+            update({ provided: { ...form.provided, research } });
+          }}
+        />
       ) : null}
     </StageRail>
   );
@@ -55,26 +63,28 @@ export function ResearchRail({ form, problem, update }: RailProps) {
 
 export function ArticleRail({ form, prompts, problem, update, titled }: RailProps) {
   return (
-    <StageRail kind="article" name="Article" dim={false} titled={titled}>
-      <ArticleTaskSwitch form={form} update={update} />
-      <div className={`${railBeneath} grid gap-4`}>
-        {form.sources.article === "generate" ? (
-          <OptionPicker
-            field="articlePrompt"
-            label={usesScriptPrompt(form) ? "Script prompt" : "Article prompt"}
-            tip="play.article-prompt"
-            value={form.articlePrompt}
-            placeholder="Pick a prompt"
-            options={promptNames(prompts, articleKind(form))}
-            problem={problem("articlePrompt")}
-            onPick={(articlePrompt) => {
-              update({ articlePrompt });
-            }}
-          />
-        ) : null}
-      </div>
+    <StageRail
+      kind="article"
+      name="Article"
+      dim={false}
+      titled={titled}
+      source={<ArticleTaskSwitch form={form} update={update} />}
+    >
+      {form.sources.article === "generate" ? (
+        <PromptCards
+          field="articlePrompt"
+          label={usesScriptPrompt(form) ? "Script prompt" : "Article prompt"}
+          kind={articleKind(form)}
+          prompts={prompts}
+          value={form.articlePrompt}
+          problem={problem("articlePrompt")}
+          onPick={(articlePrompt) => {
+            update({ articlePrompt });
+          }}
+        />
+      ) : null}
       {form.sources.article === "provide" ? (
-        <div className={railBeneath}>
+        <div className="min-w-0">
           <PasteArea
             field="provided.article"
             label="Article text"
@@ -86,11 +96,15 @@ export function ArticleRail({ form, prompts, problem, update, titled }: RailProp
               update({ provided: { ...form.provided, article } });
             }}
           />
+          <p className="m-0 mt-1 text-label text-ink-3">
+            {form.provided.article.trim() ? form.provided.article.trim().split(/\s+/).length : 0}{" "}
+            words · {form.provided.article.length} characters
+          </p>
           <SpokenText form={form} />
         </div>
       ) : null}
       {articleTaskOf(form) === "adapt" ? (
-        <div className={railBeneath}>
+        <div className="min-w-0">
           <PasteArea
             field="provided.research"
             label="Your text"
@@ -104,7 +118,7 @@ export function ArticleRail({ form, prompts, problem, update, titled }: RailProp
           />
           <p className="mt-2 mb-0 text-small text-ink-2">
             The article prompt rewrites this text; the narration reads the rewritten article. To
-            read it before it is narrated, add a checkpoint after Article under Reviews.
+            read it first, tick Pause after the article under Pauses and checks.
           </p>
         </div>
       ) : null}
@@ -112,6 +126,7 @@ export function ArticleRail({ form, prompts, problem, update, titled }: RailProp
   );
 }
 
+// Outputs → Thumbnail: one tick; once ticked, how it is made and from what.
 export function ThumbnailRail({
   form,
   providers,
@@ -124,20 +139,28 @@ export function ThumbnailRail({
 }: RailProps) {
   const generating =
     form.sources.thumbnail === "from_prompt" || form.sources.thumbnail === "prompt_by_llm";
-
   return (
-    <StageRail kind="thumbnail" name="Thumbnail" dim={form.sources.thumbnail === "off"}>
-      <SourceSwitch kind="thumbnail" form={form} update={update} />
-      <div className={railControls}>
-        {generating && form.sources.images !== "generate" ? (
-          <ImageProviderControls
-            form={form}
-            providers={providers}
-            problem={problem}
-            update={update}
-          />
-        ) : null}
-        {generating ? (
+    <OutputTick
+      field="sources.thumbnail"
+      label="Thumbnail"
+      help="The picture people see before they press play. A drawn one is one image call each."
+      checked={form.sources.thumbnail !== "off"}
+      onChange={(on) =>
+        update({ sources: { ...form.sources, thumbnail: on ? "from_prompt" : "off" } })
+      }
+    >
+      <SourceSwitch kind="thumbnail" form={form} update={update} without="off" />
+      {generating ? (
+        <div className="sl-fields">
+          {form.sources.images !== "generate" ? (
+            <ImageProviderControls
+              form={form}
+              providers={providers}
+              problem={problem}
+              update={update}
+              label="Drawn by"
+            />
+          ) : null}
           <OptionPicker
             field="thumbnailPrompt"
             label="Thumbnail prompt"
@@ -150,37 +173,33 @@ export function ThumbnailRail({
               update({ thumbnailPrompt });
             }}
           />
-        ) : null}
-        {generating ? (
           <ThumbnailCountPicker
             value={form.thumbnailCount === 3 ? 3 : 1}
             onPick={(thumbnailCount) => {
               update({ thumbnailCount });
             }}
           />
-        ) : null}
-      </div>
-      {form.sources.thumbnail === "provide" ? (
-        <div className={railBeneath}>
-          <FilePick
-            field="provided.thumbnail"
-            label="Thumbnail image"
-            accept="image/png,image/jpeg,image/webp"
-            uploads={form.provided.thumbnail === undefined ? [] : [form.provided.thumbnail]}
-            problem={problem("provided.thumbnail")}
-            onPick={(files) => {
-              onPickFiles("thumbnail", files);
-            }}
-            onReattach={
-              onReattachFile ? (key, file) => onReattachFile("thumbnail", key, file) : undefined
-            }
-            onRemove={(key) => {
-              onRemoveFile("thumbnail", key);
-            }}
-          />
         </div>
       ) : null}
-    </StageRail>
+      {form.sources.thumbnail === "provide" ? (
+        <FilePick
+          field="provided.thumbnail"
+          label="Thumbnail image"
+          accept="image/png,image/jpeg,image/webp"
+          uploads={form.provided.thumbnail === undefined ? [] : [form.provided.thumbnail]}
+          problem={problem("provided.thumbnail")}
+          onPick={(files) => {
+            onPickFiles("thumbnail", files);
+          }}
+          onReattach={
+            onReattachFile ? (key, file) => onReattachFile("thumbnail", key, file) : undefined
+          }
+          onRemove={(key) => {
+            onRemoveFile("thumbnail", key);
+          }}
+        />
+      ) : null}
+    </OutputTick>
   );
 }
 
@@ -192,43 +211,66 @@ export type RawTiming = Readonly<Record<TimingField, string>> & {
   readonly onChange: (field: TimingField, value: string) => void;
 };
 
-export function VideoRail({
-  form,
-  prompts,
-  silenceGapSeconds,
-  problem,
-  update,
-  onPickFiles,
-  onRemoveFile,
-  onReattachFile,
-  rawTiming,
-  extras = true,
-  language,
-  titled,
-}: RailProps & {
-  readonly rawTiming?: RawTiming;
-  // The language the run is narrated in, the channel's when the draft picked none; a
-  // language without word timing always cuts every N seconds.
-  readonly language?: string | undefined;
-  // Whether the YouTube description and Shorts are drawn here too; Play draws them under
-  // Outputs instead.
-  readonly extras?: boolean;
-}) {
-  const explanation =
-    form.sources.video === "generate"
-      ? form.sources.audio === "off"
-        ? "Silent video · each image shown once"
-        : `Images and narration · ${String(silenceGapSeconds)} s segment gaps`
-      : form.sources.audio !== "off"
-        ? "Combined WAV export with narration and segment gaps"
-        : "Download each enabled stage separately";
-  const timing = (field: TimingField) => ({
+export function timingOf(
+  form: RailProps["form"],
+  update: RailProps["update"],
+  rawTiming: RawTiming | undefined,
+) {
+  return (field: TimingField) => ({
     value: rawTiming ? rawTiming[field] : Number.isFinite(form[field]) ? String(form[field]) : "",
     onChange: (value: string) => {
       if (rawTiming) rawTiming.onChange(field, value);
       else update({ [field]: value.trim() === "" ? Number.NaN : Number(value) });
     },
   });
+}
+
+// The Video stage's switch and the one sentence that says what the picked choice makes.
+export function VideoRail({ form, update, titled }: Pick<RailProps, "form" | "update" | "titled">) {
+  const narrated = form.sources.audio !== "off";
+  const made =
+    form.sources.video === "generate" && form.sources.images !== "off"
+      ? narrated
+        ? "The narration over the images, put together on this computer · free."
+        : "A silent video, each image shown once, put together on this computer · free."
+      : narrated
+        ? "Sound only: the narration as one audio file."
+        : "Each finished stage downloads on its own.";
+  // Make the video is greyed while there are no images; the line says why.
+  const note = form.sources.images === "off" ? `${made} A video needs images first.` : made;
+  return (
+    <StageRail
+      kind="video"
+      name="Video"
+      dim={form.sources.video === "off"}
+      titled={titled}
+      source={<SourceSwitch kind="video" form={form} update={update} />}
+      note={note}
+    />
+  );
+}
+
+// Under Video and style: how long each image stays, how it moves and is cut, its look, and the
+// ambient sound under the narration.
+export function ImagesAndCuts({
+  form,
+  problem,
+  update,
+  onPickFiles,
+  onRemoveFile,
+  onReattachFile,
+  rawTiming,
+  language,
+}: Pick<
+  RailProps,
+  "form" | "problem" | "update" | "onPickFiles" | "onRemoveFile" | "onReattachFile"
+> & {
+  readonly rawTiming?: RawTiming;
+  // The language the run is narrated in, the channel's when the draft picked none; a
+  // language without word timing always cuts every N seconds.
+  readonly language?: string | undefined;
+}): ReactElement {
+  const timing = timingOf(form, update, rawTiming);
   const edit = useVideoEditControls({
     value: form.videoEdit,
     narrated: form.sources.audio !== "off",
@@ -237,108 +279,116 @@ export function VideoRail({
     language: language ?? form.language,
     onChange: (videoEdit) => update({ videoEdit }),
   });
-
   return (
-    <StageRail kind="video" name="Export" dim={form.sources.video === "off"} titled={titled}>
-      <SourceSwitch kind="video" form={form} update={update} />
-      <span className={railControls}>
-        <span className="engraved text-ink-3">{explanation}</span>
-      </span>
-      {form.sources.video === "generate" || form.sources.audio !== "off" ? (
-        <div className={railControls}>
-          {form.sources.video === "generate" ? (
-            <NumberField
-              field="imageSeconds"
-              label="Seconds per image"
-              tip="play.image-seconds"
-              step={1}
-              problem={problem("imageSeconds")}
-              {...timing("imageSeconds")}
-            />
-          ) : null}
-          {form.sources.video === "generate" ? (
-            <NumberField
-              field="zoomPercent"
-              label="Zoom (%)"
-              tip="play.zoom"
-              step={0.5}
-              problem={problem("zoomPercent")}
-              {...timing("zoomPercent")}
-            />
-          ) : null}
-          {form.sources.video === "generate" ? (
-            <LabelledField label="Motion" tip="play.motion" problem={undefined}>
-              {({ id }) => (
-                <Picker
-                  id={id}
-                  data-play-field="motionStyle"
-                  className="w-full"
-                  value={form.motionStyle}
-                  onChange={(event) => update({ motionStyle: event.target.value as MotionStyle })}
-                >
-                  {motionStyles.map((style) => (
-                    <option key={style} value={style}>
-                      {motionStyleLabels[style]}
-                    </option>
-                  ))}
-                </Picker>
-              )}
-            </LabelledField>
-          ) : null}
-          {form.sources.video === "generate" ? edit.cuts : null}
-          {form.sources.audio !== "off" ? (
-            <NumberField
-              field="edgeSilenceSeconds"
-              label="Silence at start and end (seconds)"
-              tip="play.edge-silence"
-              step={0.5}
-              problem={problem("edgeSilenceSeconds")}
-              {...timing("edgeSilenceSeconds")}
-            />
-          ) : null}
-        </div>
-      ) : null}
-      {form.sources.video === "generate" ? <div className={railBeneath}>{edit.look}</div> : null}
-      {form.sources.video === "generate" && form.sources.audio !== "off" ? (
-        <div className={railBeneath}>
-          <PlayAmbientBed
-            form={form}
-            problem={problem}
-            update={update}
-            onPickFiles={onPickFiles}
-            onRemoveFile={onRemoveFile}
-            onReattachFile={onReattachFile}
-          />
-        </div>
-      ) : null}
+    <section
+      aria-label="Images and cuts"
+      className="flex min-w-0 flex-col gap-4 border-b border-line py-4 last:border-b-0"
+      {...helpScope}
+    >
+      <h4 className="m-0 text-body font-semibold">Images and cuts</h4>
+      <div className="sl-fields">
+        <NumberField
+          field="imageSeconds"
+          label="Seconds per image"
+          step={1}
+          problem={problem("imageSeconds")}
+          {...timing("imageSeconds")}
+        />
+        <NumberField
+          field="zoomPercent"
+          label="Zoom (%)"
+          step={0.5}
+          problem={problem("zoomPercent")}
+          {...timing("zoomPercent")}
+        />
+        <LabelledField label="Motion" problem={undefined}>
+          {({ id }) => (
+            <Picker
+              id={id}
+              data-play-field="motionStyle"
+              className="w-full"
+              value={form.motionStyle}
+              onChange={(event) => update({ motionStyle: event.target.value as MotionStyle })}
+            >
+              {motionStyles.map((style) => (
+                <option key={style} value={style}>
+                  {motionStyleLabels[style]}
+                </option>
+              ))}
+            </Picker>
+          )}
+        </LabelledField>
+        {edit.cuts}
+      </div>
+      <HelpLine>
+        Cuts that follow the narration wait for a sentence to end; when the images run out they
+        start again.
+      </HelpLine>
+      {edit.look}
       {form.sources.audio !== "off" ? (
-        <div className={railBeneath}>
-          <PlayLoudness form={form} problem={problem} update={update} />
-        </div>
+        <PlayAmbientBed
+          form={form}
+          problem={problem}
+          update={update}
+          onPickFiles={onPickFiles}
+          onRemoveFile={onRemoveFile}
+          onReattachFile={onReattachFile}
+        />
       ) : null}
-      {extras ? (
-        <div className={railBeneath}>
-          <VideoExtras
-            form={form}
-            prompts={prompts}
-            problem={problem}
-            update={update}
-            onPickFiles={onPickFiles}
-            onRemoveFile={onRemoveFile}
-            {...(onReattachFile === undefined ? {} : { onReattachFile })}
-          />
-        </div>
-      ) : null}
-      {form.sources.images === "off" ? (
-        <p className={`${railBeneath} text-small text-ink-2`}>
-          Video is Off because Images is Off. Generate or provide images to enable video.
-        </p>
-      ) : null}
-    </StageRail>
+    </section>
   );
 }
 
-// The YouTube description and Shorts: made from the narrated video, set beside it.
+// Outputs → Post to other sites: one tick; once ticked, the sites and what each post carries.
+// Nothing is posted for the person: Slopify fills a draft on each site and they press Post.
+function PostToSites({
+  form,
+  prompts,
+  update,
+}: Pick<RailProps, "form" | "prompts" | "update">): ReactElement {
+  const { api } = useApp();
+  const [opened, setOpened] = useState(false);
+  const studio = useQuery({
+    queryKey: studioSettingsKey,
+    queryFn: () => readStudioSettings(api),
+  });
+  const paired = studio.data === undefined ? undefined : studio.data.pairing.origin !== null;
+  const on = form.social !== undefined || opened;
+  return (
+    <OutputTick
+      field="social"
+      label="Post to other sites"
+      help={
+        paired === false ? (
+          <>
+            Drafts only: Slopify fills each post and you press Post. It needs the Slopify Studio
+            extension, which isn't set up yet ·{" "}
+            <TextLink to="/settings" search={{ section: "studio" }}>
+              Set it up ↗
+            </TextLink>
+          </>
+        ) : (
+          "Drafts only: Slopify fills each post and you press Post."
+        )
+      }
+      checked={on}
+      onChange={(next) => {
+        setOpened(next);
+        if (!next) update({ social: undefined });
+      }}
+    >
+      <PostSettings
+        value={form.social}
+        prompts={prompts}
+        shorts={shortsOf(form.shorts)}
+        onChange={(social) => update({ social: formSocial(social) })}
+      />
+    </OutputTick>
+  );
+}
+
+// The YouTube description, Shorts and posting to other sites: made from the narrated video,
+// each one tick of the Outputs checklist.
 export function VideoExtras({
   form,
   prompts,
@@ -351,78 +401,59 @@ export function VideoExtras({
   RailProps,
   "form" | "prompts" | "problem" | "update" | "onPickFiles" | "onRemoveFile" | "onReattachFile"
 >) {
+  if (form.sources.article === "off") return null;
+  const narrated = form.sources.audio !== "off";
   return (
-    <div className="flex min-w-0 flex-col gap-4">
-      {form.sources.audio === "generate" && form.audio.describeFigures === true ? (
-        <ShowFiguresToggle
-          value={form.showFigures}
-          onChange={(showFigures) => update({ showFigures })}
+    <>
+      {narrated || form.youtubeDescription === true ? (
+        <YoutubeDescription
+          enabled={form.youtubeDescription === true}
+          prompt={form.descriptionPrompt ?? ""}
+          prompts={prompts}
+          narrated={narrated}
+          problem={problem}
+          onChange={(next) => update(next)}
         />
       ) : null}
-      {form.sources.article === "off" ? null : (
-        <div>
-          <YoutubeDescription
-            enabled={form.youtubeDescription === true}
-            prompt={form.descriptionPrompt ?? ""}
-            prompts={prompts}
-            narrated={form.sources.audio !== "off"}
-            problem={problem}
-            onChange={(next) => update(next)}
-          />
-        </div>
-      )}
-      {form.sources.article === "off" ? null : (
-        <div>
-          <Shorts
-            value={form.shorts ?? freshShorts}
-            prompts={prompts}
-            narrated={form.sources.audio !== "off"}
-            problem={problem}
-            musicName={form.provided.shortsMusic?.name}
-            music={
-              <div className="basis-full">
-                <FilePick
-                  field="shorts.music"
-                  label="Background music (optional): an audio file, looped if shorter than a short"
-                  accept="audio/*"
-                  disabled={!shortsOn(form)}
-                  uploads={
-                    form.provided.shortsMusic === undefined ? [] : [form.provided.shortsMusic]
-                  }
-                  problem={problem("shorts.music")}
-                  onPick={(files) => onPickFiles("shortsMusic", files)}
-                  onReattach={
-                    onReattachFile
-                      ? (key, file) => onReattachFile("shortsMusic", key, file)
-                      : undefined
-                  }
-                  onRemove={(key) => onRemoveFile("shortsMusic", key)}
-                />
-                <p className="mt-1 text-label text-ink-3">
-                  Plays at the volume above under every short and dips while the narrator speaks.
-                </p>
-              </div>
-            }
-            preview={
-              <StylePreview
-                settings={shortsPreviewOf(form.shorts ?? freshShorts, form.subtitles.fontId)}
+      {narrated || form.shorts?.enabled === true ? (
+        <Shorts
+          value={form.shorts ?? freshShorts}
+          prompts={prompts}
+          narrated={narrated}
+          problem={problem}
+          musicName={form.provided.shortsMusic?.name}
+          music={
+            <div className="basis-full">
+              <FilePick
+                field="shorts.music"
+                label="Background music (optional): an audio file, looped if shorter than a short"
+                accept="audio/*"
+                disabled={!shortsOn(form)}
+                uploads={form.provided.shortsMusic === undefined ? [] : [form.provided.shortsMusic]}
+                problem={problem("shorts.music")}
+                onPick={(files) => onPickFiles("shortsMusic", files)}
+                onReattach={
+                  onReattachFile
+                    ? (key, file) => onReattachFile("shortsMusic", key, file)
+                    : undefined
+                }
+                onRemove={(key) => onRemoveFile("shortsMusic", key)}
               />
-            }
-            onChange={(shorts) => update({ shorts })}
-          />
-        </div>
-      )}
-      {form.sources.article === "off" ? null : (
-        <div data-play-field="social">
-          <PostSettings
-            value={form.social}
-            prompts={prompts}
-            shorts={shortsOf(form.shorts)}
-            onChange={(social) => update({ social: formSocial(social) })}
-          />
-        </div>
-      )}
-    </div>
+              <p className="mt-1 text-label text-ink-3">
+                Plays at the volume above under every short and dips while the narrator speaks.
+              </p>
+            </div>
+          }
+          preview={
+            <StylePreview
+              settings={shortsPreviewOf(form.shorts ?? freshShorts, form.subtitles.fontId)}
+            />
+          }
+          onChange={(shorts) => update({ shorts })}
+        />
+      ) : null}
+      <PostToSites form={form} prompts={prompts} update={update} />
+    </>
   );
 }
 
@@ -438,7 +469,7 @@ export function NumberField({
 }: {
   readonly field: string;
   readonly label: string;
-  readonly tip: HelpId;
+  readonly tip?: HelpId | undefined;
   readonly placeholder?: string | undefined;
   readonly step: number;
   readonly problem: string | undefined;
@@ -465,33 +496,37 @@ export function NumberField({
   );
 }
 
-// The PDF is laid out locally from the article and title, so nothing here needs a provider.
+// Outputs → PDF of the article: laid out locally from the article and title, so nothing here
+// needs a provider. One tick; once ticked, the look.
 export function DocumentRail({ form, update }: RailProps) {
-  const off = form.sources.document === "off";
+  if (form.sources.article === "off") return null;
   return (
-    <StageRail kind="document" name="Document" dim={off}>
-      <SourceSwitch kind="document" form={form} update={update} />
-      <div className={railControls}>
-        <LabelledField label="Theme" tip="play.document-theme" problem={undefined}>
-          {({ id }) => (
-            <span className="flex flex-wrap items-center gap-3">
-              <DocumentThemePicker
-                id={id}
-                field="document.theme"
-                className="w-auto min-w-[120px]"
-                disabled={off}
-                value={form.document}
-                onChange={(document) => {
-                  update({ document });
-                }}
-              />
-              <Link to="/document-themes" className="text-small text-accent-ink underline">
-                Edit themes
-              </Link>
-            </span>
-          )}
-        </LabelledField>
-      </div>
-    </StageRail>
+    <OutputTick
+      field="sources.document"
+      label="PDF of the article"
+      help="Laid out on this computer from the article and title · free."
+      checked={form.sources.document === "generate"}
+      onChange={(on) => update({ sources: { ...form.sources, document: on ? "generate" : "off" } })}
+    >
+      <LabelledField label="Theme" problem={undefined}>
+        {({ id }) => (
+          <span className="flex flex-wrap items-center gap-3">
+            <DocumentThemePicker
+              id={id}
+              field="document.theme"
+              className="w-auto min-w-[160px]"
+              disabled={false}
+              value={form.document}
+              onChange={(document) => {
+                update({ document });
+              }}
+            />
+            <TextLink to="/document-themes" className="text-small">
+              Edit themes ↗
+            </TextLink>
+          </span>
+        )}
+      </LabelledField>
+    </OutputTick>
   );
 }

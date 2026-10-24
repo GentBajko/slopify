@@ -4,6 +4,20 @@ import { Input } from "@/components/kit/field";
 import { LabelledField } from "@/play/pickers";
 import { InlineSwitch } from "@/play/switches";
 
+// The fold's line for it: "read as one piece", "split every 500 words".
+export function chunkingWords(value: Chunking): string {
+  switch (value.mode) {
+    case "whole":
+      return "read as one piece";
+    case "paragraph":
+      return "split by paragraph";
+    case "words":
+      return `split every ${String(value.words ?? defaultChunkWords)} words`;
+    case "characters":
+      return `split every ${String(value.characters ?? defaultChunkCharacters)} characters`;
+  }
+}
+
 export function ChunkingControl({
   value,
   onPick,
@@ -26,12 +40,12 @@ export function ChunkingControl({
     <>
       <InlineSwitch<ChunkMode>
         field="chunking.mode"
-        label="Chunking"
+        label="Split the narration by"
         tip="play.chunking"
         className="min-w-0 max-w-full flex-wrap [&_[data-slot=toggle-group]]:max-w-full [&_[data-slot=toggle-group]]:flex-wrap"
         value={value.mode}
         options={[
-          { value: "whole", label: "Whole" },
+          { value: "whole", label: "Nothing (one piece)" },
           { value: "paragraph", label: "Paragraph" },
           { value: "words", label: `Every ${String(rawCounts?.words ?? words)} words` },
           {

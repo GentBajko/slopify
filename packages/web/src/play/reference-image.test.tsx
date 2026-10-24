@@ -20,13 +20,20 @@ const prompts = [
   { id: "t", kind: "thumbnail" as const, name: "Cover", body: "Cover", slots: [], updatedAt: "" },
 ];
 
-function Subject({ onChange }: { readonly onChange: (next: ReferenceChoice) => void }) {
+function Subject({
+  onChange,
+  thumbnailOn = true,
+}: {
+  readonly onChange: (next: ReferenceChoice) => void;
+  readonly thumbnailOn?: boolean;
+}) {
   const [value, setValue] = useState<ReferenceChoice>(referenceOff);
   return (
     <ReferenceImage
       value={value}
       prompts={prompts}
       upload={<p>Upload slot</p>}
+      thumbnailOn={thumbnailOn}
       onChange={(next) => {
         setValue(next);
         onChange(next);
@@ -35,24 +42,26 @@ function Subject({ onChange }: { readonly onChange: (next: ReferenceChoice) => v
   );
 }
 
+const source = "Establishing image (keeps characters and style the same)";
+const tick = "Use it as a reference for the thumbnail too";
+
 describe("the establishing image control", () => {
-  it("starts Off with its prompt and thumbnail controls disabled, not hidden", async () => {
+  it("starts Off and asks for nothing more until it is on", async () => {
     renderRouted(<Subject onChange={() => {}} />, testDeps({}));
-    const source = (await screen.findByLabelText("Establishing image")) as HTMLSelectElement;
-    expect(source.value).toBe("");
-    expect((screen.getByLabelText("Establishing prompt") as HTMLSelectElement).disabled).toBe(true);
-    const thumbnail = screen.getByLabelText("Draw the thumbnail from it too") as HTMLInputElement;
-    expect(thumbnail.disabled).toBe(true);
-    expect(thumbnail.checked).toBe(true);
-    expect(screen.getByRole("button", { name: "About Establishing image" })).not.toBeNull();
+    const picker = (await screen.findByLabelText(source)) as HTMLSelectElement;
+    expect(picker.value).toBe("");
+    expect(screen.queryByLabelText("Establishing prompt")).toBeNull();
+    expect(screen.queryByLabelText(tick)).toBeNull();
+    expect(screen.getByText("Off: each image is drawn on its own.")).not.toBeNull();
   });
 
   it("offers only image prompts, then an upload slot for Upload", async () => {
     const onChange = vi.fn();
     renderRouted(<Subject onChange={onChange} />, testDeps({}));
-    fireEvent.change(await screen.findByLabelText("Establishing image"), {
+    fireEvent.change(await screen.findByLabelText(source), {
       target: { value: "prompt" },
     });
+    expect(screen.getByText(/one more image call/)).not.toBeNull();
     expect(screen.queryByRole("option", { name: "Cover" })).toBeNull();
     fireEvent.change(screen.getByLabelText("Establishing prompt"), {
       target: { value: "Cast sheet" },
@@ -62,16 +71,25 @@ describe("the establishing image control", () => {
       prompt: "Cast sheet",
       thumbnail: true,
     });
-    fireEvent.click(screen.getByLabelText("Draw the thumbnail from it too"));
+    expect((screen.getByLabelText(tick) as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByText("The thumbnail itself is switched on under Outputs.")).not.toBeNull();
+    fireEvent.click(screen.getByLabelText(tick));
     expect(onChange).toHaveBeenLastCalledWith({
       source: "prompt",
       prompt: "Cast sheet",
       thumbnail: false,
     });
-    fireEvent.change(screen.getByLabelText("Establishing image"), {
+    fireEvent.change(screen.getByLabelText(source), {
       target: { value: "provide" },
     });
     expect(screen.getByText("Upload slot")).not.toBeNull();
+  });
+
+  it("leaves the thumbnail out while the run makes none", async () => {
+    renderRouted(<Subject onChange={() => {}} thumbnailOn={false} />, testDeps({}));
+    fireEvent.change(await screen.findByLabelText(source), { target: { value: "prompt" } });
+    expect(screen.getByLabelText("Establishing prompt")).not.toBeNull();
+    expect(screen.queryByLabelText(tick)).toBeNull();
   });
 });
 

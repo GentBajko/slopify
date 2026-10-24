@@ -3,9 +3,8 @@ import type { SubtitleConfig } from "@app/slices/subtitles/model.js";
 import { defaultSubtitles, subtitlePositions } from "@app/slices/subtitles/model.js";
 import { type ReactElement, useId, useState } from "react";
 import { Button } from "@/components/kit/button";
-import { Input } from "@/components/kit/field";
+import { HelpLine, Input } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
-import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { validSubtitleStyle } from "./config";
 import { type ControlledFontUpload, FontPicker } from "./font-picker";
@@ -66,15 +65,17 @@ export function SubtitleControls({
     else onChange({ ...value, fontSize: defaultSubtitles.fontSize });
   };
   return (
-    <section className="flex min-w-0 flex-col gap-3" aria-label="Subtitles">
+    <section className="flex min-w-0 flex-col gap-3" aria-label="Captions">
       <fieldset
         disabled={disabled || !audioEnabled}
         className="flex min-w-0 flex-col gap-3 disabled:opacity-60"
       >
         <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-0 flex-1" {...helpScope}>
+          <div className="min-w-0 max-w-[22rem] flex-1" {...helpScope}>
             <div className="mb-1 flex items-center gap-1">
-              <Label htmlFor={id}>Subtitles</Label>
+              <label htmlFor={id} className="sl-field__label block">
+                Captions
+              </label>
               <InfoTip id="project.subtitles.mode" className="-my-1" />
             </div>
             <select
@@ -87,20 +88,20 @@ export function SubtitleControls({
               onChange={(event) =>
                 onChange({ ...value, mode: event.target.value as SubtitleConfig["mode"] })
               }
-              className="h-8 w-full rounded-control border border-line-strong bg-raised px-3 text-small text-ink"
+              className="sl-select"
             >
               <option value="off">Off</option>
-              <option value="files">Subtitle files (.srt + .vtt)</option>
               <option value="burn-in" disabled={!videoEnabled}>
-                Burn into video + files
+                Show captions in the video
               </option>
+              <option value="files">Caption files only (.srt + .vtt)</option>
             </select>
           </div>
           <span className="pb-1 text-label text-ink-3">{facts.tag}</span>
         </div>
         {value.mode !== "off" && audioEnabled ? (
-          <>
-            <p className="text-small text-ink-2">{facts.detail}</p>
+          <div className="flex min-w-0 flex-col gap-3" {...helpScope}>
+            <HelpLine>{facts.detail}</HelpLine>
             <div
               className="grid items-start gap-5"
               style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))" }}
@@ -117,15 +118,16 @@ export function SubtitleControls({
                     onUploading?.(pending);
                   }}
                 />
-                <div className={illustratedPositions ? "w-full" : "max-w-[180px]"} {...helpScope}>
+                <div className={illustratedPositions ? "w-full" : "max-w-[180px]"}>
                   <div className="mb-1 flex items-center gap-1">
-                    <Label htmlFor={sizeId}>Subtitle font size</Label>
-                    <InfoTip id="project.subtitles.size" className="-my-1" />
+                    <label htmlFor={sizeId} className="sl-field__label block">
+                      Caption size
+                    </label>
                   </div>
                   <div className="flex items-center gap-5">
                     {illustratedPositions ? (
                       <input
-                        aria-label="Subtitle font size slider"
+                        aria-label="Caption size slider"
                         type="range"
                         min={16}
                         max={120}
@@ -165,15 +167,16 @@ export function SubtitleControls({
                         ? `Changed · default ${String(defaultSubtitles.fontSize)}`
                         : "Default size"}
                     </span>
-                    <Button
-                      variant="quiet"
-                      size="small"
-                      disabled={!sizeChanged}
-                      aria-label={`Reset subtitle font size to ${String(defaultSubtitles.fontSize)}`}
-                      onClick={resetSize}
-                    >
-                      Reset
-                    </Button>
+                    {sizeChanged ? (
+                      <Button
+                        variant="quiet"
+                        size="small"
+                        aria-label={`Reset caption size to ${String(defaultSubtitles.fontSize)}`}
+                        onClick={resetSize}
+                      >
+                        Reset
+                      </Button>
+                    ) : null}
                   </div>
                   {!validSubtitleStyle(value) || sizeProblem ? (
                     <p role="alert" className="mt-1 text-label text-danger">
@@ -181,15 +184,15 @@ export function SubtitleControls({
                     </p>
                   ) : null}
                 </div>
-                <div {...helpScope}>
+                <div>
                   <div className="mb-1 flex items-center gap-1">
-                    <Label
+                    <label
                       htmlFor={illustratedPositions ? undefined : positionId}
                       id={`${positionId}-label`}
+                      className="sl-field__label block"
                     >
-                      Subtitle position
-                    </Label>
-                    <InfoTip id="project.subtitles.position" className="-my-1" />
+                      Caption position
+                    </label>
                   </div>
                   {illustratedPositions ? (
                     <ToggleGroup
@@ -271,11 +274,11 @@ export function SubtitleControls({
             ) : null}
             {value.mode === "files" ? (
               <p className="text-label text-ink-3">
-                Font, size and position apply to burned captions. SRT/VTT players choose their own
-                styling.
+                Font, size and position apply to captions shown in the video; a caption file is
+                styled by the player that shows it.
               </p>
             ) : null}
-          </>
+          </div>
         ) : null}
       </fieldset>
       {session?.fontUpload && (value.mode === "off" || !audioEnabled) ? (
@@ -304,13 +307,17 @@ export function SubtitleControls({
           {modeProblem}
         </p>
       ) : null}
-      <p id={hintId} className="text-small text-ink-2">
+      <HelpLine id={hintId}>
         {!audioEnabled
-          ? "Turn Audio on to add subtitles."
+          ? "Captions come from the narration: turn Narration on to add them."
           : !videoEnabled
-            ? "Audio exports support separate subtitle files. Enable Video to burn captions into an MP4."
-            : "Optional: download subtitles separately or keep them visible in the video."}
-      </p>
+            ? "With no video, captions come as files to upload beside the sound (.srt + .vtt)."
+            : value.mode === "files"
+              ? "Files to upload beside the video; the video itself shows none."
+              : value.mode === "burn-in"
+                ? "Also saved as .srt and .vtt files for YouTube."
+                : "Captions shown in the video are also saved as .srt and .vtt files for YouTube."}
+      </HelpLine>
     </section>
   );
 }

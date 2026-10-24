@@ -8,31 +8,6 @@ export const projectHelp = {
     body: "Every N seconds holds each image for Seconds per image. Follow the narration cuts in the pause after a sentence, as close to that length as the sentences allow (never under 40% of it), and starts a new image at every chapter. It needs word timing, so it works in English and the languages that have it. New projects default to Follow the narration.",
     tutorial: { page: "Video-Editing", anchor: "cuts" },
   },
-  "project.video.transition": {
-    title: "Transition",
-    body: "How one image hands over to the next: Cut, Crossfade, Fade through black, Slide or Wipe. The change is centred on the cut and takes the length you pick (0.2 to 2 s), so the video stays exactly as long as its narration. Default: Cut, 0.6 s.",
-    tutorial: { page: "Video-Editing", anchor: "cuts" },
-  },
-  "project.video.grade": {
-    title: "Colour grade",
-    body: "A colour treatment over the whole video: Warm fantasy, Cold, Desaturated or Sepia. It is applied while the video renders, so it costs no API calls, only render time. Default: None.",
-    tutorial: { page: "Video-Editing", anchor: "the-look" },
-  },
-  "project.video.vignette": {
-    title: "Vignette",
-    body: "Darkens the corners of the picture to draw the eye to the middle. Subtle or Strong. Applied while the video renders, with no API cost. Default: Off.",
-    tutorial: { page: "Video-Editing", anchor: "the-look" },
-  },
-  "project.video.grain": {
-    title: "Film grain",
-    body: "Adds moving film grain over the whole picture for an older, filmic feel. Subtle or Strong. Applied while the video renders, with no API cost. Default: Off.",
-    tutorial: { page: "Video-Editing", anchor: "the-look" },
-  },
-  "project.video.atmosphere": {
-    title: "Atmosphere",
-    body: "An overlay Slopify draws itself: rising embers, drifting dust, or low fog along the bottom of the frame. No footage is downloaded and no API is called; it only adds render time. Default: None.",
-    tutorial: { page: "Video-Editing", anchor: "the-look" },
-  },
   "project.video.chapter-cards": {
     title: "Chapter cards",
     body: "Shows each chapter's title in the middle of the picture for 2.5 seconds as the chapter starts, in the caption font. Chapters come from the YouTube description when that step runs, otherwise from the article's headings. Needs narration. Default: off.",
@@ -104,23 +79,13 @@ export const projectHelp = {
     tutorial: { page: "Video-Editing", anchor: "ambient-sound" },
   },
   "project.subtitles.mode": {
-    title: "Subtitles",
-    body: "Off makes none. Subtitle files gives you .srt and .vtt files to upload beside the video. Burn into video draws the captions into the picture and also makes the files; it needs Video on. Captions are timed from your narration on this computer, with no paid API; the first use downloads a speech model of about 378 MB (Settings → Production defaults → Subtitle timing model offers smaller ones). Default: Off.",
+    title: "Captions",
+    body: "Off makes none. Show captions in the video draws them into the picture and also makes .srt and .vtt files; it needs a video. Caption files only gives you the files to upload beside the video. Captions are timed from your narration on this computer, with no paid API; the first use downloads a speech model of about 378 MB (Settings → Production defaults offers smaller ones). Default: Off.",
     tutorial: { page: "Video-Editing", anchor: "subtitles" },
   },
   "project.subtitles.font": {
-    title: "Subtitle font",
-    body: "The typeface of burned-in captions and chapter cards. Pick a bundled font or one you uploaded (.ttf or .otf); uploaded fonts stay available to every project. Subtitle files carry no font, since players style them. Changing it remakes only the video. Default: the bundled font.",
-    tutorial: { page: "Video-Editing", anchor: "subtitles" },
-  },
-  "project.subtitles.size": {
-    title: "Subtitle font size",
-    body: "How big burned-in captions are, from 16 to 120. Larger is easier to read on phones but covers more of the picture. Default: 48.",
-    tutorial: { page: "Video-Editing", anchor: "subtitles" },
-  },
-  "project.subtitles.position": {
-    title: "Subtitle position",
-    body: "Where burned-in captions sit on the frame: Top, Upper-middle, Center, Lower-middle or Bottom. Move them up when the pictures have important detail near the bottom. Subtitle files ignore it. Default: Bottom.",
+    title: "Caption font",
+    body: "The typeface of captions shown in the video and of chapter cards. Pick a bundled font or one you uploaded (.ttf or .otf); uploaded fonts stay available to every project. Caption files carry no font, since players style them. Changing it remakes only the video. Default: the bundled font.",
     tutorial: { page: "Video-Editing", anchor: "subtitles" },
   },
   "project.video.style-preview": {

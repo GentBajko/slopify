@@ -12,6 +12,8 @@ export function Fold({
   state,
   remember,
   defaultOpen = false,
+  open,
+  onToggle,
   className,
   children,
 }: {
@@ -22,18 +24,24 @@ export function Fold({
   // A stable key, such as "play.audio-more".
   readonly remember?: string;
   readonly defaultOpen?: boolean;
+  // Held open or shut by the caller (a fold whose field has a problem stays open); the person's
+  // presses still reach `onToggle`.
+  readonly open?: boolean | undefined;
+  readonly onToggle?: ((open: boolean) => void) | undefined;
   readonly className?: string;
   readonly children: ReactNode;
 }): ReactElement {
-  const [open, setOpen] = useState(() => remembered(remember) ?? defaultOpen);
+  const [kept, setKept] = useState(() => remembered(remember) ?? defaultOpen);
+  const shown = open ?? kept;
   return (
     <details
-      open={open}
+      open={shown}
       onToggle={(event) => {
         const next = event.currentTarget.open;
-        if (next === open) return;
-        setOpen(next);
+        if (next === shown) return;
+        setKept(next);
         keep(remember, next);
+        onToggle?.(next);
       }}
       className={cn("sl-fold", className)}
       data-slot="fold"

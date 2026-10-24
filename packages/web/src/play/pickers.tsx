@@ -16,6 +16,9 @@ export interface FieldProps {
   readonly problem: string | undefined;
   // The info button beside the label, from the help catalogue.
   readonly tip?: HelpId | undefined;
+  // The id of the visible name of the group the control belongs to ("Read by"): the control
+  // is named by both, "Read by Service", so two groups' Service selects are told apart.
+  readonly group?: string | undefined;
   readonly onPick: (next: string) => void;
 }
 
@@ -24,23 +27,28 @@ export function LabelledField({
   field,
   problem,
   tip,
+  group,
   children,
 }: {
   readonly field?: string | undefined;
   readonly label: string;
   readonly problem: string | undefined;
   readonly tip?: HelpId | undefined;
+  readonly group?: string | undefined;
   readonly children: (props: {
     readonly id: string;
     readonly describedBy: string | undefined;
     readonly field: string | undefined;
+    // "group-id label-id" when the field sits in a named group, else undefined.
+    readonly labelledBy: string | undefined;
   }) => ReactNode;
 }) {
   const fieldId = useId();
+  const labelId = useId();
   const noteId = useId();
 
   const labelled = (
-    <label htmlFor={fieldId} className="sl-field__label">
+    <label id={labelId} htmlFor={fieldId} className="sl-field__label">
       {label}
     </label>
   );
@@ -58,7 +66,12 @@ export function LabelledField({
           <InfoTip id={tip} label={label} className="-my-1" />
         </span>
       )}
-      {children({ field, id: fieldId, describedBy: problem === undefined ? undefined : noteId })}
+      {children({
+        field,
+        id: fieldId,
+        describedBy: problem === undefined ? undefined : noteId,
+        labelledBy: group === undefined ? undefined : `${group} ${labelId}`,
+      })}
       {problem === undefined ? null : (
         <p id={noteId} className="sl-field__error m-0">
           {problem}
@@ -83,6 +96,7 @@ export function OptionPicker({
   options,
   disabled = false,
   tip,
+  group,
   onPick,
 }: FieldProps & {
   readonly placeholder: string;
@@ -90,13 +104,14 @@ export function OptionPicker({
   readonly disabled?: boolean | undefined;
 }) {
   return (
-    <LabelledField field={field} label={label} problem={problem} tip={tip}>
-      {({ id, describedBy }) => (
+    <LabelledField field={field} label={label} problem={problem} tip={tip} group={group}>
+      {({ id, describedBy, labelledBy }) => (
         <Select
           id={id}
           data-play-field={field}
           value={value}
           disabled={disabled}
+          aria-labelledby={labelledBy}
           aria-invalid={problem !== undefined}
           aria-describedby={describedBy}
           onChange={(event) => {
@@ -151,10 +166,13 @@ export function ProviderPicker({
   value,
   problem,
   tip,
+  group,
+  placeholder = "Pick a provider",
   onPick,
 }: FieldProps & {
   readonly family: ProviderFamily;
   readonly providers: readonly ProviderStatus[];
+  readonly placeholder?: string;
 }) {
   return (
     <OptionPicker
@@ -163,7 +181,8 @@ export function ProviderPicker({
       value={value}
       problem={problem}
       tip={tip}
-      placeholder="Pick a provider"
+      group={group}
+      placeholder={placeholder}
       options={[
         ...(value !== "" && !providers.some((one) => one.id === value && one.family === family)
           ? [{ value, label: `${value} (saved provider)`, disabled: true }]

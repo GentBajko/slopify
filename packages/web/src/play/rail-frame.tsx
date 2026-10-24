@@ -2,17 +2,15 @@ import type { StageKind } from "@app/kernel/pipeline.js";
 import type { StageSource } from "@app/slices/admission/model.js";
 import type { Prompt } from "@app/slices/library/model.js";
 import type { ProviderStatus, Voice } from "@app/slices/settings/model.js";
-import type { ReactNode } from "react";
+import { createContext, type ReactNode, useContext, useId } from "react";
 import { StageGlyph } from "@/components/glyph";
-import type { HelpId } from "@/help/catalog";
+import { HelpLine } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
+import { stageWords } from "@/lib/stage-words";
 import { cn } from "@/lib/utils";
 import type { PlayFormState, UploadSlot } from "@/play/state";
 import { sourceOptions } from "@/play/state";
 import { InlineSwitch } from "@/play/switches";
-
-// A section's fields: the kit's field grid (`.sl-fields`, labels above, equal columns).
-export const railControls = "col-span-3 min-w-0 sl-fields";
-export const railBeneath = "col-span-3 min-w-0";
 
 export interface RailProps {
   readonly form: PlayFormState;
@@ -39,70 +37,97 @@ export interface RailProps {
   readonly titled?: boolean | undefined;
 }
 
-// One stage inside a setup row's editor. A stage that is the row itself (Article under
-// Article, Audio under Narration) is untitled: the row already names it, so the source switch
-// sits under a plain Source label instead of a second heading.
+// The id of the visible name a stage's switch is labelled by: its rail's name, or the tick of
+// the output it belongs to.
+export const RailName = createContext<string | undefined>(undefined);
+
+// One stage inside a setup row's editor: its name, then its switch on the same line, saying in
+// the stage's own words what each choice makes and what it costs, then one sentence where the
+// switch needs one, then the stage's settings. A stage that is the row itself (Article under
+// Article, Narration under Narration) names itself as a field label rather than a heading.
 export function StageRail({
   kind,
   name,
   dim,
   titled = true,
+  source,
+  note,
   children,
 }: {
   readonly kind: StageKind;
   readonly name: string;
   readonly dim: boolean;
   readonly titled?: boolean | undefined;
-  readonly children: ReactNode;
+  // The stage's switch: SourceSwitch, or the article's own.
+  readonly source: ReactNode;
+  // One short sentence under the switch, saying what the picked choice does where its label
+  // cannot.
+  readonly note?: ReactNode;
+  readonly children?: ReactNode;
 }) {
+  const nameId = useId();
   return (
     <section
       data-tour={`play-${kind}`}
-      className="grid grid-cols-[24px_1fr_auto] items-center gap-x-2 gap-y-4 border-b border-line py-4 [&>div:empty]:hidden"
+      className="flex min-w-0 flex-col gap-4 border-b border-line py-4 last:border-b-0 [&>div:empty]:hidden"
     >
-      {titled ? (
-        <>
-          <StageGlyph kind={kind} className={dim ? "text-ink-3" : "text-ink-2"} />
-          <h3 className={cn("m-0 text-title-3", dim ? "text-ink-3" : undefined)}>{name}</h3>
-        </>
-      ) : (
-        <span className="sl-field__label col-span-2">Source</span>
-      )}
+      <div
+        className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2"
+        {...(note === undefined || note === null ? {} : helpScope)}
+      >
+        {titled ? (
+          <>
+            <StageGlyph kind={kind} className={dim ? "text-ink-3" : "text-ink-2"} />
+            <h3 id={nameId} className={cn("m-0 text-title-3", dim ? "text-ink-3" : undefined)}>
+              {name}
+            </h3>
+          </>
+        ) : (
+          <span id={nameId} className="sl-field__label">
+            {name}
+          </span>
+        )}
+        <RailName.Provider value={nameId}>{source}</RailName.Provider>
+        {note === undefined || note === null ? null : (
+          <HelpLine className="basis-full">{note}</HelpLine>
+        )}
+      </div>
       {children}
     </section>
   );
 }
 
-const sourceTips = {
-  research: "play.source.research",
-  article: "play.source.article",
-  audio: "play.source.audio",
-  images: "play.source.images",
-  thumbnail: "play.source.thumbnail",
-  video: "play.source.video",
-  document: "play.source.document",
-} as const satisfies Readonly<Record<StageKind, HelpId>>;
+// The id a stage's switch is labelled by: its rail's visible name.
+export function useRailName(): string | undefined {
+  return useContext(RailName);
+}
+
+export const switchWrap = "max-w-full [&_[data-slot=toggle-group]]:flex-wrap";
 
 // The switch offers exactly what `slices/admission/rules.ts` allows for that stage, so a
-// source the server would refuse cannot be pressed here.
+// source the server would refuse cannot be pressed here. With `without` a choice that another
+// control already makes is left off (the Outputs tick is the thumbnail's None).
 export function SourceSwitch({
   kind,
   form,
   update,
+  without,
 }: {
   readonly kind: StageKind;
   readonly form: PlayFormState;
   readonly update: (patch: Partial<PlayFormState>) => void;
+  readonly without?: StageSource | undefined;
 }) {
+  const labelledBy = useRailName();
   return (
     <InlineSwitch<StageSource>
       field={`sources.${kind}`}
-      label={`${kind} source`}
-      hideLabel
-      tip={sourceTips[kind]}
-      className="max-[700px]:col-span-3 max-[700px]:justify-self-start [&_[data-slot=toggle-group]]:flex-wrap"
+      label={stageWords[kind]}
+      labelledBy={labelledBy}
+      className={switchWrap}
       value={form.sources[kind]}
-      options={sourceOptions(kind)
+      options={sourceOptions(kind, form.sources.audio !== "off")
+        .filter((option) => option.value !== without)
         // With no article there is nothing for the AI to write a thumbnail prompt from.
         .filter(
           (option) =>

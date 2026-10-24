@@ -10,11 +10,17 @@ import type { HelpId } from "@/help/catalog";
 export function DescribeFiguresToggle({
   value,
   skipCode,
+  onScreen,
   onChange,
   tip = "play.describe-figures",
 }: {
   readonly value: boolean | undefined;
   readonly skipCode: boolean | undefined;
+  // "Also show them on screen", under it while it is on, where the run makes a video to show
+  // them in.
+  readonly onScreen?:
+    | { readonly value: boolean | undefined; readonly onChange: (value: boolean) => void }
+    | undefined;
   readonly onChange: (value: { describeFigures: boolean; skipCode: boolean }) => void;
   // Edit project explains what turning it on redoes.
   readonly tip?: HelpId;
@@ -62,19 +68,32 @@ export function DescribeFiguresToggle({
           <InfoTip id="play.skip-code" />
         </span>
       ) : null}
+      {on && onScreen !== undefined ? (
+        <div className="pl-7">
+          <ShowFiguresToggle
+            label="Also show them on screen"
+            value={onScreen.value}
+            onChange={onScreen.onChange}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
 
 // "Show tables and figures on screen": each described block is also drawn as a card the video
-// shows while its description is spoken. Only offered while the narration describes them.
+// shows while its description is spoken. Only offered while the narration describes them, so on
+// Play it sits under Describe tables and figures.
 export function ShowFiguresToggle({
   value,
   onChange,
+  label = "Show tables and figures on screen",
   tip = "play.show-figures",
 }: {
   readonly value: boolean | undefined;
   readonly onChange: (value: boolean) => void;
+  // Under Describe tables and figures it is "Also show them on screen".
+  readonly label?: string;
   readonly tip?: HelpId;
 }): ReactElement {
   const id = useId();
@@ -90,7 +109,7 @@ export function ShowFiguresToggle({
           checked={value === true}
           onChange={(event) => onChange(event.currentTarget.checked)}
         />
-        Show tables and figures on screen
+        {label}
       </label>
       <InfoTip id={tip} />
     </span>

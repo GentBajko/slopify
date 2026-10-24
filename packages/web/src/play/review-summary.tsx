@@ -29,7 +29,7 @@ import { entriesQuery, providersQuery, voicesQuery } from "@/queries";
 import { type FontSummary, fontsKey } from "@/subtitles/api";
 import { usePlaySession } from "./draft-context";
 import { CheckpointReview } from "./run-review";
-import { type ShortsForm, shortsOn, sourceLabels } from "./state";
+import { type ShortsForm, shortsOn, sourceLabel, sourceLabels } from "./state";
 
 // The Look in one line: only what differs from plain cuts, and the animated images with their
 // model and that they are paid.
@@ -320,12 +320,12 @@ export function ReviewSummary({
       <SummaryGroup name="Content">
         <dl className="text-body">
           {row("Project", "title", form.title || "Untitled run")}
-          {row("Article", "sources.article", sourceLabels[form.sources.article])}
+          {row("Article", "sources.article", sourceLabel("article", form.sources.article))}
           {form.sources.article === "generate"
             ? row("Article prompt", "articlePrompt", form.articlePrompt)
             : row("Article text", "provided.article", "Your article")}
           {form.sources.article === "generate"
-            ? row("Research", "sources.research", sourceLabels[form.sources.research])
+            ? row("Research", "sources.research", sourceLabel("research", form.sources.research))
             : row("Research", null, "Off · Article is provided")}
           {form.sources.research === "provide" && form.sources.article === "generate"
             ? row("Research text", "provided.research", form.provided.research)
@@ -351,7 +351,7 @@ export function ReviewSummary({
       </SummaryGroup>
       <SummaryGroup name="Outputs">
         <dl className="text-body">
-          {row("Narration", "sources.audio", sourceLabels[form.sources.audio])}
+          {row("Narration", "sources.audio", sourceLabel("audio", form.sources.audio))}
           {generatedAudio ? (
             <>
               {row("Audio provider", "audio.provider", providerName(form.audio.provider))}
@@ -392,7 +392,7 @@ export function ReviewSummary({
           {form.sources.audio === "provide"
             ? row("Narration file", "provided.audio", form.provided.audio?.name)
             : null}
-          {row("Images", "sources.images", sourceLabels[form.sources.images])}
+          {row("Images", "sources.images", sourceLabel("images", form.sources.images))}
           {form.sources.images === "generate" || generatedThumbnail || shortsOn(form) ? (
             <>
               {row("Image provider", "images.provider", providerName(form.images.provider))}
@@ -417,7 +417,15 @@ export function ReviewSummary({
                   form.reference.source === "prompt"
                     ? form.reference.prompt || "(no prompt picked)"
                     : (form.provided.reference?.name ?? "(no file attached)")
-                }${form.reference.thumbnail ? " · thumbnail too" : ""}`,
+                }${
+                  form.reference.thumbnail &&
+                  (
+                    form.sources.thumbnail === "from_prompt" ||
+                      form.sources.thumbnail === "prompt_by_llm"
+                  )
+                    ? " · thumbnail too"
+                    : ""
+                }`,
               )
             : null}
           {form.sources.images === "generate"
@@ -446,14 +454,14 @@ export function ReviewSummary({
                 ),
               )
             : null}
-          {row("Thumbnail", "sources.thumbnail", sourceLabels[form.sources.thumbnail])}
+          {row("Thumbnail", "sources.thumbnail", sourceLabel("thumbnail", form.sources.thumbnail))}
           {generatedThumbnail
             ? row("Thumbnail prompt", "thumbnailPrompt", form.thumbnailPrompt)
             : null}
           {form.sources.thumbnail === "provide"
             ? row("Thumbnail file", "provided.thumbnail", form.provided.thumbnail?.name)
             : null}
-          {row("Video", "sources.video", sourceLabels[form.sources.video])}
+          {row("Video", "sources.video", sourceLabel("video", form.sources.video))}
           {form.sources.video === "generate"
             ? row("Seconds per image", "imageSeconds", form.imageSeconds || "(not entered)")
             : null}

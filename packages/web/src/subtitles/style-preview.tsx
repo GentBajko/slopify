@@ -56,7 +56,7 @@ export function SubtitlePreview({
       </div>
       <div
         role="img"
-        aria-label="Subtitle style preview"
+        aria-label="Caption style preview"
         data-format={format}
         data-position={value.position ?? "bottom"}
         className="sl-media__frame mx-auto w-full text-center text-white"

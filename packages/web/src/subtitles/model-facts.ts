@@ -30,7 +30,7 @@ function megabytes(bytes: number): string {
   return `${String(Math.round(bytes / 1_000_000))} MB`;
 }
 
-// The short tag beside the Subtitles select and the sentence under it, for the project's
+// The short tag beside the Captions select and the sentence under it, for the project's
 // language: which model times the captions, and what its first use downloads.
 export function subtitleFacts(code: string | undefined): {
   readonly tag: string;
@@ -40,15 +40,15 @@ export function subtitleFacts(code: string | undefined): {
   if (language.timing === "english")
     return {
       tag: "English · local · no paid API",
-      detail: `Timed from your narration on this computer. The first English captions download the speech model chosen in Settings → Production defaults (${megabytes(englishModelBytes)} unless changed). Review the subtitles before publishing.`,
+      detail: `Timed from your narration on this computer. The first English captions download the speech model chosen in Settings → Production defaults (${megabytes(englishModelBytes)} unless changed). Check the captions before you publish.`,
     };
   if (language.timing === "multilingual")
     return {
       tag: `${language.name} · local · no paid API`,
-      detail: `Timed word by word from your narration on this computer. The first ${language.name} captions download a ${megabytes(multilingualModelBytes)} multilingual speech model. Review the subtitles before publishing.`,
+      detail: `Timed word by word from your narration on this computer. The first ${language.name} captions download a ${megabytes(multilingualModelBytes)} multilingual speech model. Check the captions before you publish.`,
     };
   return {
     tag: `${language.name} · by sentence · no paid API`,
-    detail: `${wordTimingUnavailable(language.code) ?? ""} Nothing is downloaded. Review the subtitles before publishing.`,
+    detail: `${wordTimingUnavailable(language.code) ?? ""} Nothing is downloaded. Check the captions before you publish.`,
   };
 }

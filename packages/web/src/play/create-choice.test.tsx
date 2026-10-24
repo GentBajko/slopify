@@ -57,7 +57,7 @@ it("reads the person's text as written and shows what will be spoken", async () 
   await openRow("Article");
   await userEvent.click(screen.getByRole("radio", { name: "Use my text as written" }));
   await userEvent.type(screen.getByLabelText("Article text"), "Dr. Ada narrates this.");
-  await userEvent.click(screen.getByText("Show the text that will be spoken"));
+  await userEvent.click(screen.getByText("Text that will be spoken"));
   expect(screen.getByLabelText("Text that will be spoken").textContent?.trim()).toBe(
     "Dr. Ada narrates this.",
   );
@@ -105,7 +105,7 @@ it("starts a fresh draft in the channel the sidebar shows", async () => {
       }),
     ),
   );
-  await screen.findByRole("option", { name: "Dossier" });
+  await screen.findByRole("radio", { name: /^Dossier/ });
   await waitFor(() => expect(captured?.document.channelId).toBe("c-2"));
   await act(async () => {});
 });

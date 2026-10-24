@@ -1,7 +1,7 @@
 import type { Prompt } from "@app/slices/library/model.js";
-import { Link } from "@tanstack/react-router";
 import { type ReactElement, useId } from "react";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { TextLink } from "@/components/kit/link";
 import { Picker } from "@/components/ui/picker";
 
 export function NarrationPreparation({
@@ -28,7 +28,7 @@ export function NarrationPreparation({
   return (
     <div className="col-span-full min-w-0 space-y-2" {...helpScope}>
       <span className="flex items-center gap-1">
-        <label htmlFor={id} className="text-small font-semibold">
+        <label htmlFor={id} className="sl-field__label">
           Narration Preparation
         </label>
         <InfoTip id="play.narration-preparation" />
@@ -62,15 +62,15 @@ export function NarrationPreparation({
         </p>
       )}
       {libraryLinks ? (
-        <div className="flex gap-4 text-small">
-          <Link to="/prompts/new" search={{ kind: "narration" }}>
-            Create prompt
-          </Link>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-small">
           {selected ? (
-            <Link to="/prompts/$promptId" params={{ promptId: selected.id }}>
-              View prompt
-            </Link>
+            <TextLink to="/prompts/$promptId" params={{ promptId: selected.id }}>
+              View prompt ↗
+            </TextLink>
           ) : null}
+          <TextLink to="/prompts/new" search={{ kind: "narration" }}>
+            New narration prompt ↗ (opens Prompts)
+          </TextLink>
         </div>
       ) : null}
     </div>

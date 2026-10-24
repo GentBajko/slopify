@@ -170,25 +170,25 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     await start(user);
     await skipTo(user, "play-options");
     await fill(user, "Title", "My first video");
-    await user.selectOptions(screen.getByLabelText("LLM"), "claude-code");
-    await user.selectOptions(screen.getByLabelText("Text model"), "sonnet");
+    await user.selectOptions(screen.getByLabelText("Written by Service"), "claude-code");
+    await user.selectOptions(screen.getByLabelText("Written by Model"), "sonnet");
     await next(user, "play-article");
     expect(nextHeld()).toBe(true);
-    await user.selectOptions(screen.getByLabelText("Article prompt"), "My article");
+    await user.click(await screen.findByRole("radio", { name: /^My article/ }));
     await next(user, "play-keywords");
     await fill(user, "topic", "Albanian mountains");
     await next(user, "play-audio");
     expect(nextHeld()).toBe(true);
-    await user.selectOptions(screen.getByLabelText("TTS"), "elevenlabs");
-    await user.selectOptions(screen.getByLabelText("TTS model"), "eleven_multilingual_v2");
+    await user.selectOptions(screen.getByLabelText("Read by Service"), "elevenlabs");
+    await user.selectOptions(screen.getByLabelText("Read by Model"), "eleven_multilingual_v2");
     expect(nextHeld()).toBe(true);
     await user.selectOptions(screen.getByLabelText("Voice"), "narrator-1");
     await next(user, "play-images");
     expect(nextHeld()).toBe(true);
-    await user.selectOptions(screen.getByLabelText("Provider"), "fal");
+    await user.selectOptions(screen.getByLabelText("Images by Service"), "fal");
     await user.selectOptions(
       within(document.querySelector('[data-tour="play-images"]') as HTMLElement).getByLabelText(
-        "Model",
+        "Images by Model",
       ),
       "fal-ai/flux-2",
     );
@@ -252,7 +252,7 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     ).toHaveLength(1);
     await act(() => router.navigate({ to: "/play" }));
     expect(((await screen.findByLabelText("Title")) as HTMLInputElement).value).toBe("");
-    expect((screen.getByLabelText("Article prompt") as HTMLSelectElement).value).toBe("");
+    expect(screen.queryByRole("radio", { name: /^My article/, checked: true })).toBeNull();
     // About 2.5 s alone; under the full suite's load it reaches about 6 s.
   }, 20000);
 
@@ -280,9 +280,10 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     async (final) => {
       const user = userEvent.setup();
       const { requests } = await mount({ completeProject: true });
-      const source = (kind: string, value: string) =>
+      const stage = { article: "Article", audio: "Narration", images: "Images" } as const;
+      const source = (kind: keyof typeof stage, value: string) =>
         user.click(
-          within(screen.getByRole("radiogroup", { name: `${kind} source` })).getByRole("radio", {
+          within(screen.getByRole("radiogroup", { name: stage[kind] })).getByRole("radio", {
             name: value,
           }),
         );
@@ -297,16 +298,16 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
       await next(user, "play-audio");
       if (final === "article") await source("audio", "Off");
       else {
-        await user.selectOptions(screen.getByLabelText("TTS"), "elevenlabs");
-        await user.selectOptions(screen.getByLabelText("TTS model"), "eleven_multilingual_v2");
+        await user.selectOptions(screen.getByLabelText("Read by Service"), "elevenlabs");
+        await user.selectOptions(screen.getByLabelText("Read by Model"), "eleven_multilingual_v2");
         await user.selectOptions(screen.getByLabelText("Voice"), "narrator-1");
       }
       await next(user, "play-images");
-      await source("images", "Off");
+      await source("images", "None");
       await next(user, "play-video");
       expect(
-        within(screen.getByRole("radiogroup", { name: "video source" }))
-          .getByRole("radio", { name: "Off" })
+        within(screen.getByRole("radiogroup", { name: "Video" }))
+          .getByRole("radio", { name: /^Off/ })
           .getAttribute("aria-checked"),
       ).toBe("true");
       await next(user, "play-subtitles");
@@ -398,7 +399,7 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     await at("play-options");
     await user.click(guide().getByRole("button", { name: /^Skip/ }));
     await at("play-article");
-    await user.selectOptions(screen.getByLabelText("Article prompt"), "My article");
+    await user.click(await screen.findByRole("radio", { name: /^My article/ }));
     await user.click(guide().getByRole("button", { name: "Back" }));
     await at("play-options");
     await user.click(guide().getByRole("button", { name: "Back" }));
@@ -406,7 +407,7 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("Unsaved image idea");
     await user.click(guide().getByRole("button", { name: "Skip without saving" }));
     await at("play-options");
-    expect((screen.getByLabelText("Article prompt") as HTMLSelectElement).value).toBe("My article");
+    expect(screen.getByRole("radio", { name: /^My article/, checked: true })).not.toBeNull();
     await user.click(guide().getByRole("button", { name: /^Skip/ }));
     await at("play-article");
     expect(nextHeld()).toBe(false);
@@ -428,11 +429,11 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     });
     await fill(user, "Title", "Draft with narration");
     await openSection("Content");
-    await user.selectOptions(await screen.findByLabelText("Article prompt"), "My article");
+    await user.click(await screen.findByRole("radio", { name: /^My article/ }));
     await openSection("Outputs");
     await user.click(
-      within(screen.getByRole("radiogroup", { name: "audio source" })).getByRole("radio", {
-        name: "Provide",
+      within(screen.getByRole("radiogroup", { name: "Narration" })).getByRole("radio", {
+        name: "My own audio file",
       }),
     );
     await user.upload(
@@ -460,7 +461,7 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     expect(((await screen.findByLabelText("Title")) as HTMLInputElement).value).toBe(
       "Draft with narration",
     );
-    expect((screen.getByLabelText("Article prompt") as HTMLSelectElement).value).toBe("My article");
+    expect(screen.getByRole("radio", { name: /^My article/, checked: true })).not.toBeNull();
     await openSection("Outputs");
     expect(
       within(screen.getByRole("region", { name: "Narration" })).getByText("narration.wav"),
@@ -484,32 +485,32 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
       },
     });
     await openSection("Outputs");
-    const audioSource = () => within(screen.getByRole("radiogroup", { name: "audio source" }));
+    const audioSource = () => within(screen.getByRole("radiogroup", { name: "Narration" }));
     await openSection("Outputs");
-    await user.click(audioSource().getByRole("radio", { name: "Provide" }));
+    await user.click(audioSource().getByRole("radio", { name: "My own audio file" }));
     await user.upload(
       screen.getByLabelText("Narration file"),
       new File(["audio"], "old-narration.wav", { type: "audio/wav" }),
     );
-    await user.click(audioSource().getByRole("radio", { name: "Generate" }));
+    await user.click(audioSource().getByRole("radio", { name: "AI voice (paid per character)" }));
     await openSection("Content");
-    await user.selectOptions(await screen.findByLabelText("Article prompt"), "My article");
+    await user.click(await screen.findByRole("radio", { name: /^My article/ }));
     await openSection("Outputs");
-    await user.selectOptions(screen.getByLabelText("TTS"), "elevenlabs");
-    await user.selectOptions(screen.getByLabelText("TTS model"), "eleven_multilingual_v2");
+    await user.selectOptions(screen.getByLabelText("Read by Service"), "elevenlabs");
+    await user.selectOptions(screen.getByLabelText("Read by Model"), "eleven_multilingual_v2");
     await user.selectOptions(screen.getByLabelText("Voice"), "narrator-1");
-    await user.selectOptions(screen.getByLabelText("Provider"), "fal");
+    await user.selectOptions(screen.getByLabelText("Images by Service"), "fal");
     await user.selectOptions(
       within(document.querySelector('[data-tour="play-images"]') as HTMLElement).getByLabelText(
-        "Model",
+        "Images by Model",
       ),
       "fal-ai/flux-2",
     );
     await user.click(screen.getByRole("checkbox", { name: "My images" }));
     await openSection("Content");
     await fill(user, "Title", "Generated narration instead");
-    await user.selectOptions(screen.getByLabelText("LLM"), "claude-code");
-    await user.selectOptions(screen.getByLabelText("Text model"), "sonnet");
+    await user.selectOptions(screen.getByLabelText("Written by Service"), "claude-code");
+    await user.selectOptions(screen.getByLabelText("Written by Model"), "sonnet");
     await fill(user, "topic", "Mountains");
     await openSection("Review");
     await waitFor(() =>
@@ -538,7 +539,7 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     await openSection("Content");
     expect(((await screen.findByLabelText("Title")) as HTMLInputElement).value).toBe("");
     await openSection("Outputs");
-    await user.click(audioSource().getByRole("radio", { name: "Provide" }));
+    await user.click(audioSource().getByRole("radio", { name: "My own audio file" }));
     expect(screen.queryByText("old-narration.wav")).toBeNull();
     expect(screen.queryByText("Staged")).toBeNull();
     expect(

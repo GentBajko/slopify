@@ -30,7 +30,11 @@ it("keeps checkpoint Save, Review, Start and project approval as separate action
     },
   });
   await act(() => h.session().navigate("review"));
-  for (const name of ["Before Narration", "Before Images", "Before Video"])
+  for (const name of [
+    "Pause after the article (before the narration)",
+    "Pause after the narration (before the images)",
+    "Pause after the images (before the video)",
+  ])
     await userEvent.click(screen.getByRole("checkbox", { name }));
   await act(() => h.session().flush());
   expect(h.session().view?.draft.document.form.checkpoints).toEqual(["audio", "images", "video"]);
@@ -39,8 +43,9 @@ it("keeps checkpoint Save, Review, Start and project approval as separate action
   await act(() => h.restart());
   await waitFor(() => expect(h.session().status).toBe("saved"));
   await act(() => h.session().navigate("review"));
-  await userEvent.click(screen.getByRole("checkbox", { name: "Before Images" }));
-  await userEvent.click(screen.getByRole("checkbox", { name: "Before Images" }));
+  const images = "Pause after the narration (before the images)";
+  await userEvent.click(screen.getByRole("checkbox", { name: images }));
+  await userEvent.click(screen.getByRole("checkbox", { name: images }));
   // Changing a checkpoint invalidates the estimate; reopening Review asks again.
   await act(() => h.session().navigate("outputs"));
   await act(() => h.session().navigate("review"));

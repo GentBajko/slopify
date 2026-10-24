@@ -26,13 +26,14 @@ it("restores a missing image selection and keeps its raw count until explicit re
   await act(async () => {
     await h.session().navigate("outputs");
   });
-  expect(screen.getByText(/Missing template/)).not.toBeNull();
-  expect((screen.getByLabelText("Number for Deleted image prompt") as HTMLInputElement).value).toBe(
-    "03",
-  );
+  expect(screen.getByText(/No longer in Prompts/)).not.toBeNull();
+  expect(
+    (screen.getByLabelText("How many images for Deleted image prompt") as HTMLInputElement).value,
+  ).toBe("03");
   await userEvent.click(screen.getByRole("checkbox", { name: "Maps" }));
   expect(h.session().document.form.imagePrompts[0]).toEqual(picked[0]);
   await userEvent.click(screen.getByRole("checkbox", { name: "Deleted image prompt" }));
-  expect(h.session().document.form.imagePrompts).toEqual([{ name: "Maps", number: "1" }]);
+  // A set of pictures with no video starts a fresh tick at a few images.
+  expect(h.session().document.form.imagePrompts).toEqual([{ name: "Maps", number: "4" }]);
   expect(h.session().document.form.sources.images).toBe("generate");
 });

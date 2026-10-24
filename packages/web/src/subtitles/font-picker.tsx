@@ -3,7 +3,6 @@ import { type ReactElement, useEffect, useId, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { Input, Select } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
-import { Label } from "@/components/ui/label";
 import { type FontSummary, fontsKey, fontUrl, listFonts, uploadFont } from "./api";
 import { usePreviewFont } from "./use-preview-font";
 
@@ -91,7 +90,9 @@ function FontPickerFields({
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-0 basis-full" {...helpScope}>
           <div className="mb-1 flex items-center gap-1">
-            <Label htmlFor={id}>Subtitle font</Label>
+            <label htmlFor={id} className="sl-field__label block">
+              Caption font
+            </label>
             <InfoTip id="project.subtitles.font" className="-my-1" />
           </div>
           {listed.length > filterFrom ? (
@@ -128,9 +129,9 @@ function FontPickerFields({
           <FontSample url={fontUrl(api, value)} />
         </div>
         <div className="min-w-0 basis-full">
-          <Label htmlFor={uploadId} className="mb-1">
+          <label htmlFor={uploadId} className="sl-field__label block mb-1">
             Upload font (.ttf or .otf)
-          </Label>
+          </label>
           <input
             id={uploadId}
             data-play-field="subtitles.fontUpload"

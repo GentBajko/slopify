@@ -1,6 +1,6 @@
 import { type ReactElement, useId } from "react";
-import { Checkbox } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { Checkbox, HelpLine } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { stageWords } from "@/lib/stage-words";
 import { usePlaySession } from "./draft-context";
 import type { PlayFormState } from "./state";
@@ -10,6 +10,30 @@ export const checkpointOptions = [
   { stage: "images", label: stageWords.images },
   { stage: "video", label: stageWords.video },
 ] as const;
+
+type CheckpointStage = (typeof checkpointOptions)[number]["stage"];
+
+// A checkpoint holds the run before its stage. It is named for what there is to look at when
+// it stops, and for what waits: "Pause after the article (before the narration)".
+export function pauseLabel(
+  stage: CheckpointStage,
+  form: {
+    readonly sources: { readonly audio: string; readonly images: string; readonly video: string };
+  },
+): string {
+  const { sources } = form;
+  const narrated = sources.audio !== "off";
+  switch (stage) {
+    case "audio":
+      return "Pause after the article (before the narration)";
+    case "images":
+      return `Pause after ${narrated ? "the narration" : "the article"} (before the images)`;
+    case "video":
+      return sources.images !== "off"
+        ? `Pause after the images (before ${sources.video === "generate" ? "the video" : "the sound file"})`
+        : "Pause after the narration (before the sound file)";
+  }
+}
 
 export function checkpointTarget(
   field: string,
@@ -28,6 +52,9 @@ export function checkpointTarget(
   };
 }
 
+// Pause for my approval: one tick per stage the run can stop before, each named for what it
+// stops after. A stage this run does not make has no tick, unless one was ticked before, which
+// stays with the reason it cannot apply.
 export function CheckpointControls({
   problem,
 }: {
@@ -44,67 +71,54 @@ export function CheckpointControls({
       tabIndex={-1}
       aria-invalid={problem("checkpoints") !== undefined}
       disabled={review.starting || review.uncertain}
-      className="min-w-0 rounded-media border border-line px-3 pt-1 pb-2"
+      className="m-0 flex min-w-0 flex-col gap-1 border-0 p-0"
       {...helpScope}
     >
-      <legend className="flex items-center gap-1 px-1 font-semibold">
-        Review checkpoints
-        <InfoTip id="play.checkpoints" />
-      </legend>
-      <div className="flex flex-wrap gap-x-6">
-        {checkpointOptions.map(({ stage, label }) => {
-          const checked = selected.includes(stage);
-          const enabled =
-            stage === "video"
-              ? (form.sources.video !== "off" && form.sources.images !== "off") ||
-                form.sources.audio !== "off"
-              : form.sources[stage] === "generate";
-          const error = problem(`checkpoints.${stage}`);
-          const id = `${prefix}-${stage}`;
-          return (
-            <div key={stage}>
-              <label
-                htmlFor={id}
-                className="flex min-h-10 items-center gap-3 max-[1099px]:min-h-11"
-              >
-                <Checkbox
-                  id={id}
-                  data-play-field={`checkpoints.${stage}`}
-                  aria-invalid={error !== undefined}
-                  aria-describedby={`${id}-detail`}
-                  checked={checked}
-                  disabled={!enabled && !checked}
-                  onChange={(event) => {
-                    const next = event.target.checked
-                      ? [...selected, stage]
-                      : selected.filter((value) => value !== stage);
-                    session.edit({ ...document, form: { ...form, checkpoints: next } });
-                    session.invalidateReview(true);
-                  }}
-                />
-                Before {label}
-              </label>
-              <p
-                id={`${id}-detail`}
-                className={
-                  error || (checked && !enabled) ? "pl-7 text-small text-danger" : "sr-only"
-                }
-              >
-                {error ??
-                  (enabled
-                    ? "Approval required before this step and its dependents run."
-                    : checked
-                      ? "This step is unavailable. Remove its checkpoint or enable the step."
-                      : stage === "video"
-                        ? "Enable Video or Audio to review before export."
-                        : `Choose Generate for ${label} to add this checkpoint.`)}
+      <legend className="mb-1 p-0 text-body font-semibold">Pause for my approval</legend>
+      {checkpointOptions.map(({ stage, label }) => {
+        const checked = selected.includes(stage);
+        const enabled =
+          stage === "video"
+            ? (form.sources.video !== "off" && form.sources.images !== "off") ||
+              form.sources.audio !== "off"
+            : form.sources[stage] === "generate";
+        if (!enabled && !checked) return null;
+        const error =
+          problem(`checkpoints.${stage}`) ??
+          (enabled
+            ? undefined
+            : `This run makes no ${label.toLowerCase()} to pause before: untick it.`);
+        const id = `${prefix}-${stage}`;
+        return (
+          <div key={stage}>
+            <label htmlFor={id} className="flex min-h-9 items-center gap-3 max-[1099px]:min-h-11">
+              <Checkbox
+                id={id}
+                data-play-field={`checkpoints.${stage}`}
+                aria-invalid={error !== undefined}
+                aria-describedby={error === undefined ? undefined : `${id}-detail`}
+                checked={checked}
+                onChange={(event) => {
+                  const next = event.target.checked
+                    ? [...selected, stage]
+                    : selected.filter((value) => value !== stage);
+                  session.edit({ ...document, form: { ...form, checkpoints: next } });
+                  session.invalidateReview(true);
+                }}
+              />
+              {pauseLabel(stage, form)}
+            </label>
+            {error === undefined ? null : (
+              <p id={`${id}-detail`} className="m-0 pl-7 text-small text-danger">
+                {error}
               </p>
-            </div>
-          );
-        })}
-      </div>
+            )}
+          </div>
+        );
+      })}
+      <HelpLine>The run waits under Home → Needs you until you approve.</HelpLine>
       {problem("checkpoints") ? (
-        <p className="text-small text-danger">{problem("checkpoints")}</p>
+        <p className="m-0 text-small text-danger">{problem("checkpoints")}</p>
       ) : null}
     </fieldset>
   );

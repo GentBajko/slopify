@@ -29,15 +29,16 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { type ReactElement, type ReactNode, useId } from "react";
 import { useApp } from "@/app-context";
-import { Checkbox } from "@/components/kit/field";
+import { Checkbox, HelpLine } from "@/components/kit/field";
+import { Fold } from "@/components/kit/fold";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Picker } from "@/components/ui/picker";
 import type { HelpId } from "@/help/catalog";
 import { videoModelsQuery } from "@/lib/models";
 import { cn } from "@/lib/utils";
 
-// The Video stage's edit settings, as Play's Export rail and Edit project draw them: a Cuts
-// picker beside Motion, and one "Look" row that opens to the rest. A project without the
+// The Video stage's edit settings, as Create's Video and style row and Edit project draw them: a
+// Cuts picker beside Motion, and one "Look" fold that opens to the rest. A project without the
 // settings shows today's slideshow (`legacyVideoEdit`) and only gets settings once one is
 // changed, so an untouched old project saves exactly what it had.
 
@@ -117,15 +118,15 @@ export function useVideoEditControls({
   );
 
   const look = (
-    <details className="group min-w-0 rounded-control border border-line-strong">
-      <summary className="flex min-h-10 cursor-pointer items-center gap-3 px-3 text-small max-[1099px]:min-h-11">
-        <span className="font-semibold">Look</span>
-        <span className="min-w-0 truncate text-ink-3">
-          {summary.length === 0 ? "Plain cuts, no effects" : summary.join(" · ")}
-        </span>
-      </summary>
-      <div className="sl-fields border-line-strong border-t p-3">
-        <Row id={`${id}-transition`} label="Transition" tip="project.video.transition">
+    <Fold
+      summary="Look"
+      state={summary.length === 0 ? "Plain cuts, no effects" : summary.join(" · ")}
+    >
+      <div className="sl-fields pt-2 pb-3" {...helpScope}>
+        <HelpLine className="sl-fields__wide">
+          Drawn on this computer at no cost; only animated images are charged, by the image service.
+        </HelpLine>
+        <Row id={`${id}-transition`} label="Transition">
           <Picker
             id={`${id}-transition`}
             data-play-field={`${fieldPrefix}.transition`}
@@ -139,23 +140,24 @@ export function useVideoEditControls({
               </option>
             ))}
           </Picker>
-          <Picker
-            aria-label="Transition length"
-            data-play-field={`${fieldPrefix}.transitionSeconds`}
-            aria-invalid={issue("transitionSeconds") !== undefined}
-            className="w-24 flex-none"
-            disabled={edit.transition === "cut"}
-            value={String(edit.transitionSeconds)}
-            onChange={(event) => set({ transitionSeconds: Number(event.target.value) })}
-          >
-            {transitionSecondsSteps.map((seconds) => (
-              <option key={seconds} value={String(seconds)}>
-                {seconds} s
-              </option>
-            ))}
-          </Picker>
+          {edit.transition === "cut" && issue("transitionSeconds") === undefined ? null : (
+            <Picker
+              aria-label="Transition length"
+              data-play-field={`${fieldPrefix}.transitionSeconds`}
+              aria-invalid={issue("transitionSeconds") !== undefined}
+              className="w-24 flex-none"
+              value={String(edit.transitionSeconds)}
+              onChange={(event) => set({ transitionSeconds: Number(event.target.value) })}
+            >
+              {transitionSecondsSteps.map((seconds) => (
+                <option key={seconds} value={String(seconds)}>
+                  {seconds} s
+                </option>
+              ))}
+            </Picker>
+          )}
         </Row>
-        <Row id={`${id}-grade`} label="Colour grade" tip="project.video.grade">
+        <Row id={`${id}-grade`} label="Color grade">
           <Choice
             id={`${id}-grade`}
             field={`${fieldPrefix}.grade`}
@@ -165,7 +167,7 @@ export function useVideoEditControls({
             onChange={(grade: ColorGrade) => set({ grade })}
           />
         </Row>
-        <Row id={`${id}-vignette`} label="Vignette" tip="project.video.vignette">
+        <Row id={`${id}-vignette`} label="Vignette">
           <Choice
             id={`${id}-vignette`}
             field={`${fieldPrefix}.vignette`}
@@ -175,7 +177,7 @@ export function useVideoEditControls({
             onChange={(vignette: LookLevel) => set({ vignette })}
           />
         </Row>
-        <Row id={`${id}-grain`} label="Film grain" tip="project.video.grain">
+        <Row id={`${id}-grain`} label="Film grain">
           <Choice
             id={`${id}-grain`}
             field={`${fieldPrefix}.grain`}
@@ -185,7 +187,7 @@ export function useVideoEditControls({
             onChange={(grain: LookLevel) => set({ grain })}
           />
         </Row>
-        <Row id={`${id}-atmosphere`} label="Atmosphere" tip="project.video.atmosphere">
+        <Row id={`${id}-atmosphere`} label="Atmosphere">
           <Choice
             id={`${id}-atmosphere`}
             field={`${fieldPrefix}.atmosphere`}
@@ -219,54 +221,56 @@ export function useVideoEditControls({
               </option>
             ))}
           </Picker>
-          <Picker
-            aria-label="Animate every how many images"
-            data-play-field={`${fieldPrefix}.animateEvery`}
-            aria-invalid={issue("animateEvery") !== undefined}
-            className="w-24 flex-none"
-            disabled={edit.animate !== "every"}
-            value={String(edit.animateEvery)}
-            onChange={(event) => set({ animateEvery: Number(event.target.value) })}
-          >
-            {Array.from(
-              { length: animateEveryMax - animateEveryMin + 1 },
-              (_value, at) => at + animateEveryMin,
-            ).map((every) => (
-              <option key={every} value={String(every)}>
-                every {every}
-              </option>
-            ))}
-          </Picker>
-          <Picker
-            aria-label="Image-to-video model"
-            data-play-field={`${fieldPrefix}.animateModel`}
-            aria-invalid={issue("animateModel") !== undefined}
-            className="min-w-0"
-            disabled={edit.animate === "off"}
-            value={edit.animateModel}
-            onChange={(event) => set({ animateModel: event.target.value })}
-          >
-            <option value="">Choose a model</option>
-            {savedModel ? (
-              <option value={edit.animateModel}>{edit.animateModel} (saved choice)</option>
-            ) : null}
-            {offered.map((one) => (
-              <option key={one.id} value={one.id}>
-                {videoBadge(one.name, models.data?.standings?.[one.id])}
-              </option>
-            ))}
-          </Picker>
+          {edit.animate === "every" || issue("animateEvery") !== undefined ? (
+            <Picker
+              aria-label="Animate every how many images"
+              data-play-field={`${fieldPrefix}.animateEvery`}
+              aria-invalid={issue("animateEvery") !== undefined}
+              className="w-24 flex-none"
+              value={String(edit.animateEvery)}
+              onChange={(event) => set({ animateEvery: Number(event.target.value) })}
+            >
+              {Array.from(
+                { length: animateEveryMax - animateEveryMin + 1 },
+                (_value, at) => at + animateEveryMin,
+              ).map((every) => (
+                <option key={every} value={String(every)}>
+                  every {every}
+                </option>
+              ))}
+            </Picker>
+          ) : null}
+          {edit.animate === "off" && issue("animateModel") === undefined ? null : (
+            <Picker
+              aria-label="Image-to-video model"
+              data-play-field={`${fieldPrefix}.animateModel`}
+              aria-invalid={issue("animateModel") !== undefined}
+              className="min-w-0"
+              value={edit.animateModel}
+              onChange={(event) => set({ animateModel: event.target.value })}
+            >
+              <option value="">Choose a model</option>
+              {savedModel ? (
+                <option value={edit.animateModel}>{edit.animateModel} (saved choice)</option>
+              ) : null}
+              {offered.map((one) => (
+                <option key={one.id} value={one.id}>
+                  {videoBadge(one.name, models.data?.standings?.[one.id])}
+                </option>
+              ))}
+            </Picker>
+          )}
         </Row>
         {problems.length > 0 ? (
           <p className="col-span-full text-small text-danger">{problems[0]}</p>
         ) : edit.animate !== "off" && models.isSuccess && offered.length === 0 ? (
           <p className="col-span-full text-label text-ink-3">
-            This image provider has no image-to-video models. Choose fal.ai or Replicate for images
+            This image service has no image-to-video models. Pick fal.ai or Replicate under Images
             to animate them.
           </p>
         ) : null}
       </div>
-    </details>
+    </Fold>
   );
   return { cuts, look };
 }
@@ -280,18 +284,25 @@ function Row({
 }: {
   readonly id: string;
   readonly label: string;
-  readonly tip: HelpId;
+  // Only for a setting whose consequence needs a paragraph; the rest are explained by the
+  // line their group opens with.
+  readonly tip?: HelpId;
   readonly wide?: boolean;
   readonly children: ReactNode;
 }): ReactElement {
   // Label above, as every field (`.sl-fields`); the control fills its column.
   return (
-    <div className={cn("sl-field", wide && "sl-fields__wide")} {...helpScope}>
+    <div
+      className={cn("sl-field", wide && "sl-fields__wide")}
+      {...(tip === undefined ? {} : helpScope)}
+    >
       <span className="flex min-w-0 items-center gap-1">
         <label htmlFor={id} className="sl-field__label">
           {label}
         </label>
-        <InfoTip id={tip} label={label.toLowerCase()} />
+        {tip === undefined ? null : (
+          <InfoTip id={tip} label={label.toLowerCase()} className="-my-1" />
+        )}
       </span>
       {/* The main choice takes the room; a short one beside it (a length, a count) keeps its own. */}
       <div className="flex min-w-0 flex-wrap items-start gap-2 [&>select]:min-w-0 [&>select]:flex-1">

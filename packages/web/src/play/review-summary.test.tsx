@@ -366,3 +366,23 @@ it.each([
   const label = within(outputs).getByText("Shorts");
   expect(label.nextElementSibling?.textContent).toBe(expected);
 });
+
+it.each([
+  { thumbnail: "from_prompt", says: "Cast sheet · thumbnail too" },
+  { thumbnail: "off", says: "Cast sheet" },
+] as const)(
+  "says the establishing image guides the thumbnail only while one is drawn ($thumbnail)",
+  async ({ thumbnail, says }) => {
+    const harness = reviewHarness();
+    await harness.prepare({
+      ...generated,
+      form: {
+        ...generated.form,
+        sources: { ...generated.form.sources, thumbnail },
+        reference: { source: "prompt", prompt: "Cast sheet", thumbnail: true },
+      },
+    });
+    const outputs = screen.getByRole("region", { name: "Outputs summary" });
+    expect(within(outputs).getByText(says)).not.toBeNull();
+  },
+);

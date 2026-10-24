@@ -1,6 +1,5 @@
 import { type ReactElement, useId } from "react";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
-import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 // One or three thumbnails. Three draws the same thumbnail prompt twice more with other
@@ -18,9 +17,9 @@ export function ThumbnailCountPicker({
   const id = useId();
   return (
     <div className="flex min-w-0 items-center gap-3" {...helpScope}>
-      <Label id={id} className="shrink-0">
-        Thumbnails
-      </Label>
+      <span id={id} className="sl-field__label block shrink-0">
+        How many thumbnails
+      </span>
       <ToggleGroup
         type="single"
         value={String(value)}
