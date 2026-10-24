@@ -15,6 +15,7 @@ import { Button, ButtonRow } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Field } from "@/components/kit/field";
 import { Fold } from "@/components/kit/fold";
+import { TextLink } from "@/components/kit/link";
 import { hitArea, RowSelect } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { Status, type Tone } from "@/components/kit/status";
@@ -25,7 +26,7 @@ import { SecretInput } from "@/components/secret-input";
 import { localState, SystemVoiceDetail } from "@/components/system-voices";
 import { cn } from "@/lib/utils";
 import { keys, providersQuery, voicesQuery } from "@/queries";
-import { BackLink, backPlace, type SettingsBack } from "@/routes/settings-back";
+import { BackLink, backPlace, backSearch, type SettingsBack } from "@/routes/settings-back";
 
 // The three kinds of service, in the order Keys & services draws them, by what they do for a
 // video: one writes, one reads aloud, one draws.
@@ -45,6 +46,11 @@ const familyWords: Readonly<Record<ProviderFamily, string>> = {
 // no character of the key and not even its length. It is spelled here too because
 // `GET /api/providers` reports only whether a key is stored, never the mask.
 const keyMask = "••••••••••••";
+
+// "an OpenAI", "a Cartesia": the article a service's name takes in a button.
+export function articleOf(name: string): "a" | "an" {
+  return /^[aeiou]/i.test(name) ? "an" : "a";
+}
 
 function ready(provider: ProviderStatus): boolean {
   return readinessIsUsable(provider.readiness);
@@ -172,9 +178,12 @@ export function ProviderKeys({
     if (target !== undefined) setPicked(target.id);
     const family = target?.family ?? focus.family;
     if (family === undefined) return;
-    sections.current
-      .get(family)
-      ?.scrollIntoView?.({ block: "start", behavior: focus.arrival ? "auto" : "smooth" });
+    const section = sections.current.get(family);
+    // A kind already in the top half of the window stays where it is, so the page header (and
+    // its way back to the welcome or Create) stays in view on a wide screen.
+    const top = section?.getBoundingClientRect().top;
+    if (top !== undefined && top >= 0 && top < window.innerHeight / 2) return;
+    section?.scrollIntoView?.({ block: "start", behavior: focus.arrival ? "auto" : "smooth" });
   }, [focus, loaded]);
 
   if (providers.error !== null) {
@@ -204,6 +213,11 @@ export function ProviderKeys({
         key={provider.id}
         provider={provider}
         hasKey={provider.readiness.hasKey}
+        voiceless={
+          provider.family === "tts" &&
+          voices.data !== undefined &&
+          !saved.some((voice) => voice.provider === provider.id)
+        }
         back={back}
       />
     );
@@ -307,10 +321,13 @@ function ServiceRow({
 function KeyDetail({
   provider,
   hasKey,
+  voiceless,
   back,
 }: {
   readonly provider: ProviderStatus;
   readonly hasKey: boolean;
+  // A voice service no saved voice uses: with its key saved, a voice is the next thing to add.
+  readonly voiceless: boolean;
   readonly back: SettingsBack | undefined;
 }) {
   const { api } = useApp();
@@ -488,6 +505,14 @@ function KeyDetail({
           ) : null}
         </ButtonRow>
       )}
+      {hasKey && voiceless ? (
+        <p className="m-0 text-small text-ink-2">
+          {`No ${provider.displayName} voice is saved yet, so narration can't use it. `}
+          <TextLink to="/settings" search={{ section: "voices", ...backSearch(back) }}>
+            {`Add ${articleOf(provider.displayName)} ${provider.displayName} voice`}
+          </TextLink>
+        </p>
+      ) : null}
 
       {guide === undefined ? null : (
         <Fold summary="Where to get a key" state={`${String(guide.steps.length)} steps`}>
@@ -537,8 +562,8 @@ function GuideSteps({ guide }: { readonly guide: KeyGuide }) {
       </p>
       <p className="m-0">{guide.permissions}</p>
       <p className="m-0">
-        More in the provider's {link(guide.docs.url, guide.docs.label)}. After saving, press Test
-        the key.
+        More in the service's {link(guide.docs.url, guide.docs.label)}. After saving, press Test the
+        key.
       </p>
     </>
   );

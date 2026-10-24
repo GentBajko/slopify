@@ -13,6 +13,16 @@ export function backPlace(back: SettingsBack): string {
   return back.to === "play" ? "Create" : "the welcome";
 }
 
+// The part of a Settings address that keeps the way back while the person moves on to another
+// Settings page (from a key to Voices, or from Voices to a key).
+export function backSearch(back: SettingsBack | undefined): {
+  readonly return?: SettingsBack["to"];
+  readonly step?: string;
+} {
+  if (back === undefined) return {};
+  return back.step === undefined ? { return: back.to } : { return: back.to, step: back.step };
+}
+
 // The welcome's own validator keeps a step it knows and drops any other, so the step goes back
 // as Settings was given it rather than as the welcome's type.
 function welcomeSearch(step: string | undefined): never {

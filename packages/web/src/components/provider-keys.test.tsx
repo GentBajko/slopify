@@ -6,7 +6,7 @@ import type {
 } from "@app/slices/settings/model.js";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type Answer,
   emptyAnswer,
@@ -121,6 +121,47 @@ describe("Keys & services' lists", () => {
     );
     expect(await screen.findByLabelText("fal.ai API key")).not.toBeNull();
     expect(screen.queryByLabelText("OpenRouter API key")).toBeNull();
+  });
+
+  it("scrolls to the kind a link names only when it is not already in the top half of the window", async () => {
+    const scrolled = vi.fn();
+    const proto = HTMLElement.prototype as { scrollIntoView?: unknown };
+    const before = proto.scrollIntoView;
+    proto.scrollIntoView = scrolled;
+    const at = (top: number) =>
+      vi
+        .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+        .mockReturnValue({ top, bottom: top + 300 } as DOMRect);
+    const services = [
+      keyed("openrouter", "llm", "OpenRouter", true),
+      keyed("openai-tts", "tts", "OpenAI", false),
+    ];
+    try {
+      // Already in view on a wide window: the page stays put, so its header stays in view.
+      at(200);
+      renderRouted(
+        <ProviderKeys focus={{ family: "tts", provider: undefined, arrival: true }} />,
+        deps(services),
+      );
+      expect(await screen.findByLabelText("OpenAI API key")).not.toBeNull();
+      expect(scrolled).not.toHaveBeenCalled();
+      cleanup();
+      vi.restoreAllMocks();
+
+      // Below the fold, as on a phone: the page brings that kind to the top.
+      at(1400);
+      renderRouted(
+        <ProviderKeys focus={{ family: "tts", provider: undefined, arrival: true }} />,
+        deps(services),
+      );
+      expect(await screen.findByLabelText("OpenAI API key")).not.toBeNull();
+      await waitFor(() => {
+        expect(scrolled).toHaveBeenCalledWith({ block: "start", behavior: "auto" });
+      });
+    } finally {
+      vi.restoreAllMocks();
+      proto.scrollIntoView = before;
+    }
   });
 
   it("names the problem when the services cannot be read", async () => {
@@ -293,6 +334,20 @@ describe("Keys & services' lists", () => {
     await user.type(field, "sk-test{Enter}");
     const done = await screen.findByRole("link", { name: "Done · back to the welcome" });
     expect(done.getAttribute("href")).toBe("/welcome?step=found");
+    // No voice uses OpenAI yet, so a voice is the next thing to add, with the way back kept.
+    const next = screen.getByRole("link", { name: "Add an OpenAI voice" });
+    expect(next.getAttribute("href")).toBe("/settings?section=voices&return=welcome&step=found");
+  });
+
+  it("says nothing about adding a voice once a saved voice uses the service", async () => {
+    renderRouted(
+      <ProviderKeys focus={{ family: "tts", provider: "openai-tts", arrival: true }} />,
+      deps([keyed("openai-tts", "tts", "OpenAI", true)], {}, [
+        { id: "v1", provider: "openai-tts", name: "History narrator", voiceId: "fable" },
+      ]),
+    );
+    expect(await screen.findByRole("button", { name: "Remove the key" })).not.toBeNull();
+    expect(screen.queryByRole("link", { name: /voice$/ })).toBeNull();
   });
 
   it("saves on Enter and shows the pasted key only while Show key is pressed", async () => {
