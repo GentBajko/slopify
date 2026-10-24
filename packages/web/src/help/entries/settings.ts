@@ -194,13 +194,6 @@ export const settingsHelp = {
     tutorial: { page: "Studio-Extension", anchor: "pair-it-with-slopify" },
   },
 
-  // Backup & storage
-  "settings.sample.restore": {
-    title: "Sample projects",
-    body: "The finished examples that come with Slopify: a narrated video, an audiobook and a podcast, which you can look through without spending anything. Restore samples adds back any that were deleted and replaces the others with the originals. Your own copies of them are not touched.",
-    tutorial: { page: "Where-Your-Files-Live", anchor: "sample-projects" },
-  },
-
   "settings.files.new-folder": {
     title: "New folder",
     body: "The full path of the folder your files move to, on another disk or a synced folder for example. Slopify makes Projects and Backups inside it. It must be empty or not exist yet. The move needs as much free space there as your projects take now.",
