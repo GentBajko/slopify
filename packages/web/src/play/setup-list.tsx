@@ -29,7 +29,12 @@ export function SetupList({
   readonly onChange: (row: SetupRowId, open: boolean) => void;
 }): ReactElement {
   return (
-    <ul aria-label="Setup" className="m-0 flex list-none flex-col border-t border-line p-0">
+    // The rows lay out by the list's own width: the name in its own column only where the
+    // sentence beside it still has room.
+    <ul
+      aria-label="Setup"
+      className="@container m-0 flex list-none flex-col border-t border-line p-0"
+    >
       {rows.map((row) => {
         const expanded = open.has(row.id);
         const editorId = `play-row-${row.id}`;
@@ -38,7 +43,7 @@ export function SetupList({
           <li key={row.id} data-setup-row={row.id} className="scroll-mt-4 border-b border-line">
             <div
               data-row-head
-              className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 gap-y-1 py-2.5 min-[600px]:grid-cols-[148px_minmax(0,1fr)_auto]"
+              className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 gap-y-1 py-2.5 @min-[560px]:grid-cols-[148px_minmax(0,1fr)_auto]"
             >
               <div className="col-start-1 row-start-1 min-w-0">
                 <h3 className="m-0 text-body font-semibold">{row.label}</h3>
@@ -48,7 +53,7 @@ export function SetupList({
                   </span>
                 )}
               </div>
-              <div className="col-span-2 col-start-1 row-start-2 min-w-0 min-[600px]:col-span-1 min-[600px]:col-start-2 min-[600px]:row-start-1">
+              <div className="col-span-2 col-start-1 row-start-2 min-w-0 @min-[560px]:col-span-1 @min-[560px]:col-start-2 @min-[560px]:row-start-1">
                 <p data-row-summary className="m-0 break-words text-small text-ink-2">
                   {row.summary}
                 </p>
@@ -63,7 +68,7 @@ export function SetupList({
               <Button
                 variant={row.problem !== undefined && !expanded ? "secondary" : "quiet"}
                 size="small"
-                className="col-start-2 row-start-1 min-[600px]:col-start-3"
+                className="col-start-2 row-start-1 @min-[560px]:col-start-3"
                 aria-expanded={expanded}
                 aria-controls={editorId}
                 {...(expanded ? {} : { "aria-label": `${row.problem ? "Fix" : "Change"} ${name}` })}

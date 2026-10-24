@@ -26,14 +26,16 @@ export function OutputPicker({
 }): ReactElement {
   const cast = useDraftCast();
   const current = outputKindOf(form);
-  // Each tile's own line says what it makes: the choice's explanation, visible at rest.
+  // Each tile's own line says what it makes: the choice's explanation, visible at rest. The
+  // tiles count by the column's own width, not the window's, so a narrow column beside the
+  // rail gets two or three to a row instead of five clipped ones.
   return (
-    <div className="min-w-0" {...helpScope}>
+    <div className="@container min-w-0" {...helpScope}>
       <ToggleGroup
         type="single"
         value={current}
         aria-label="What are you making?"
-        className="grid w-full grid-cols-2 gap-2 overflow-visible border-0 min-[520px]:grid-cols-3 min-[760px]:grid-cols-5"
+        className="grid w-full grid-cols-2 gap-2 overflow-visible border-0 @min-[440px]:grid-cols-3 @min-[640px]:grid-cols-5"
         onValueChange={(next) => {
           const picked = outputKinds.find((kind) => kind === next);
           if (picked === undefined || picked === current) return;
