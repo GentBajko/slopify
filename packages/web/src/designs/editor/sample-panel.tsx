@@ -13,8 +13,8 @@ import { designFileUrl, makeSample, pieceQuoteQuery, priceWords, type TemplateVi
 import { formatName } from "../document";
 
 // The live sample beside the settings: the template drawn with its sample values. A Save that
-// changes only the text or formats redraws it at once for free; a new picture is paid, and a
-// sample that would cost more than shown or go over the day's budget waits here for Make sample.
+// changes only the text or formats redraws it at once for free; new artwork is paid, so it
+// waits here for Make sample, at the price on the button.
 
 export function formatAspect(format: DesignFormat): "landscape" | "portrait" | "square" {
   const { width, height } = frames[format];
@@ -94,15 +94,20 @@ export function SamplePanel({ template }: { readonly template: TemplateView }): 
             })}
         className={`mx-auto w-full [&_img]:object-contain ${sampleWidth[formatAspect(picture)]}`}
       />
-      {sample?.state === "held" || sample?.state === "failed" || sample === null ? (
+      {sample?.state === "held" ||
+      sample?.state === "failed" ||
+      sample === null ||
+      (sample.state === "done" && sample.version !== template.headVersion) ? (
         <Callout
           tone={sample?.state === "failed" ? "danger" : "waiting"}
           title={
             sample === null
-              ? "Save to see a sample, or make one now."
+              ? "No sample yet."
               : sample.state === "failed"
                 ? "The sample wasn't made."
-                : "The sample is waiting for you."
+                : sample.state === "held"
+                  ? "The sample is waiting for you."
+                  : `The sample shows version ${String(sample.version)}.`
           }
           actions={
             <Button
