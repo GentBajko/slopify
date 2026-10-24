@@ -509,6 +509,22 @@ it("says whether schedules can run a template only where a schedule runs it or i
   ).not.toBeNull();
 });
 
+it("says a schedule uses a template never approved, without calling it ready", async () => {
+  renderRouted(
+    <TemplatesRoute onApplied={() => undefined} />,
+    testDeps({
+      ...routes,
+      "GET /api/project-templates": jsonAnswer({
+        templates: [{ ...template, gate: { head: 1, runs: 1, gated: false, gate: "unchecked" } }],
+      }),
+      "GET /api/template-studio/cards": jsonAnswer({ cards: [{ ...card, schedules: 2 }] }),
+    }),
+  );
+  const item = await screen.findByRole("listitem", { name: template.name });
+  expect(await within(item).findByText("Used by 2 schedules")).not.toBeNull();
+  expect(within(item).queryByText(/ready/i)).toBeNull();
+});
+
 it("lists the poster templates on their own tab, each opened in its editor", async () => {
   const user = userEvent.setup();
   renderRouted(

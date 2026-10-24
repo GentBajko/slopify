@@ -41,12 +41,13 @@ export function templateGateBadge(
     }
   | undefined {
   if (gate === undefined || (!gate.gated && schedules === 0)) return undefined;
-  const runs = `${String(schedules)} ${schedules === 1 ? "schedule runs" : "schedules run"}`;
+  // Before a first approval, schedules run each version as it is saved: nothing was approved,
+  // so the badge says only that schedules use it, not that it is ready.
   if (!gate.gated)
     return {
-      word: "Ready for schedules",
-      tone: "running",
-      detail: `${runs} each version you save.`,
+      word: `Used by ${String(schedules)} ${schedules === 1 ? "schedule" : "schedules"}`,
+      tone: "neutral",
+      detail: `${schedules === 1 ? "It runs" : "They run"} each version you save.`,
     };
   const headGate = gate.runs === gate.head ? gate.gate : "unchecked";
   if (headGate === "ready" || headGate === "carried" || headGate === "legacy")
