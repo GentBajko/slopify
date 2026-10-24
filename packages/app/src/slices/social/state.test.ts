@@ -35,7 +35,7 @@ describe("reportFill", () => {
     const result = reportFill(noProgress, "linkedin", { state: "filled" }, now);
     expect(result).toMatchObject({ ok: false, reason: "not-asked" });
     expect(result.ok ? "" : result.sentence).toContain(
-      "press Prepare upload, then Fill in LinkedIn",
+      "press Copy for YouTube Studio, then Fill in LinkedIn",
     );
   });
 

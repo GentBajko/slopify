@@ -118,7 +118,7 @@ describe("the page's routes", () => {
     });
     expect(response.status).toBe(409);
     expect(await detail(response)).toBe(
-      "A post written by a post prompt is a paid step, so it is picked in the template, in Template Studio → Upload pack, where Save shows its cost. For this project, pick a free text source in Prepare upload → X → Settings.",
+      "A post written by a post prompt is a paid step, so it is picked in the template, in Template Studio → Upload pack, where Save shows its cost. For this project, pick a free text source in Copy for YouTube Studio → X → Settings.",
     );
   });
 

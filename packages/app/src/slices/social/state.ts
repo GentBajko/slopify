@@ -68,7 +68,7 @@ export function reportFill(
     return {
       ok: false,
       reason: "not-asked",
-      sentence: `Nothing was waiting to be filled in ${site} for this project. In Slopify, open the project, press Prepare upload, then Fill in ${site}.`,
+      sentence: `Nothing was waiting to be filled in ${site} for this project. In Slopify, open the project, press Copy for YouTube Studio, then Fill in ${site}.`,
     };
   const url = report.url === undefined || report.url === "" ? null : report.url;
   if (url !== null && !linkPatterns[platform].test(url))

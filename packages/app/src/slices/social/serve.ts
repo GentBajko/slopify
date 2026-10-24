@@ -33,7 +33,7 @@ export type ServedMedia =
   | { readonly ok: false; readonly status: 404 | 503; readonly sentence: string };
 
 const gone =
-  "That file isn't in the project's posts any more. Reload Prepare upload and press Fill again.";
+  "That file isn't in the project's posts any more. Close Copy for YouTube Studio, open it again and press Fill again.";
 
 // One file of a project's posts, only when one of its posts lists it: the asset as it is, a
 // picture cut to its site's shape (made now the first time), or a design drawn in its format.

@@ -9,7 +9,7 @@ export const socialTools: readonly RouteTool[] = [
     route: "GET /api/social/packs/:projectId",
     title: "Read the posts for other sites",
     description:
-      "Prepare upload's posts: for each site the project posts to, the text as it goes in (with its count and limit), hashtags, link, media, AI label, when it goes out, warnings and where the post stands. The agent's work ends here: filling a site's form and posting are the person's.",
+      "Copy for YouTube Studio's posts: for each site the project posts to, the text as it goes in (with its count and limit), hashtags, link, media, AI label, when it goes out, warnings and where the post stands. The agent's work ends here: filling a site's form and posting are the person's.",
   },
   {
     name: "set_post_choice",

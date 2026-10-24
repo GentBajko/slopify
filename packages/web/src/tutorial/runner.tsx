@@ -180,7 +180,7 @@ export function TutorialRunner({
       ? "project-article"
       : step.id === "play-keywords" && progress.playHasKeywords === false
         ? "play-options"
-        : // Prepare upload follows a finished video; without one, the project header.
+        : // Copy for YouTube Studio follows a finished video; without one, the project header.
           step.id === "studio-prep" && output !== "video"
           ? "project-controls"
           : step.target;

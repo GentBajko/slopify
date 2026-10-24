@@ -342,7 +342,7 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
         expect(clicked).toHaveBeenCalledTimes(1);
       }
       await next(user, "run-cost");
-      // Without a video there is no Prepare upload to point at; the project header stands in.
+      // Without a video there is no Copy for YouTube Studio to point at; the project header stands in.
       await next(user, "studio-prep");
       await next(user, "home");
       await finishAppTour(user);

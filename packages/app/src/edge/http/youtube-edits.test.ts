@@ -142,7 +142,7 @@ describe("/api/projects/:id/youtube-edits", () => {
 });
 
 describe("effectiveDescription", () => {
-  it("hands on the user's edits with the links filled, as Prepare upload uses it", async () => {
+  it("hands on the user's edits with the links filled, as Copy for YouTube Studio uses it", async () => {
     const { app, db } = harness();
     const generated = {
       description: "Generated summary. {{Patreon}}\n\n0:00 A\n0:20 B\n0:40 C\n\n#Rope",

@@ -118,7 +118,7 @@ export function mediaFor(
   if (choice.video === "long") {
     if (sources.long === null)
       missing(
-        "The video isn't made yet. Let the Video stage finish (or use Continue the run on the project page), then open Prepare upload again.",
+        "The video isn't made yet. Let the Video stage finish (or use Continue the run on the project page), then open Copy for YouTube Studio again.",
       );
     else
       media.push({
@@ -138,7 +138,7 @@ export function mediaFor(
       missing(
         short === undefined
           ? `This project has no short ${String(number)}. Pick another short for ${site} in the post's media, or turn on Shorts in Edit project.`
-          : `Short ${String(number)} isn't rendered yet. Let the Video stage finish, then open Prepare upload again.`,
+          : `Short ${String(number)} isn't rendered yet. Let the Video stage finish, then open Copy for YouTube Studio again.`,
       );
     else
       media.push({

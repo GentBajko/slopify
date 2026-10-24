@@ -97,7 +97,7 @@ export const tutorialSteps = [
   },
   {
     id: "studio-prep",
-    title: "22. Prepare the YouTube upload",
+    title: "22. Copy it for YouTube Studio",
     target: "project-rail-video",
     page: "project",
   },

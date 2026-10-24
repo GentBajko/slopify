@@ -82,7 +82,7 @@ export const whatsNewTours: Readonly<Record<number, readonly WhatsNewStep[]>> = 
     {
       id: "studio",
       title: "YouTube Studio prep",
-      body: "Slopify never uploads. Prepare upload on a finished project lists everything Studio asks for, and the browser extension can fill it in for you.",
+      body: "Slopify never uploads. Copy for YouTube Studio on a finished project lists everything Studio asks for, and the browser extension can fill it in for you.",
       to: "/settings",
       search: { section: "studio" },
       place: "YouTube Studio settings",

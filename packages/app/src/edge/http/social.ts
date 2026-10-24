@@ -82,7 +82,7 @@ export function socialRoutes(deps: AppDeps) {
                   ok: false as const,
                   sentence:
                     drawn?.message ??
-                    "The design couldn't be drawn. Open it in Library → Designs to check it, then reload Prepare upload.",
+                    "The design couldn't be drawn. Open it in Library → Designs to check it, then close Copy for YouTube Studio and open it again.",
                 };
           },
         }),
@@ -153,7 +153,7 @@ export function socialRoutes(deps: AppDeps) {
           )
             return problem(c, {
               status: 409,
-              detail: `A post written by a post prompt is a paid step, so it is picked in the template, in Template Studio → Upload pack, where Save shows its cost. For this project, pick a free text source in Prepare upload → ${platformLabels[platform]} → Settings.`,
+              detail: `A post written by a post prompt is a paid step, so it is picked in the template, in Template Studio → Upload pack, where Save shows its cost. For this project, pick a free text source in Copy for YouTube Studio → ${platformLabels[platform]} → Settings.`,
             });
           writeChoice(deps.db, { projectId, platform }, choice, deps.clock.now());
           changed(projectId);
@@ -272,7 +272,7 @@ export function socialRoutes(deps: AppDeps) {
           return problem(c, {
             status: 404,
             detail:
-              "Nothing is waiting to be filled on this site. In Slopify, open the project, press Prepare upload, then Fill in the site's post.",
+              "Nothing is waiting to be filled on this site. In Slopify, open the project, press Copy for YouTube Studio, then Fill in the site's post.",
           });
         changed(next.pack.projectId);
         return c.json(next);
@@ -345,6 +345,6 @@ function unknownPost(c: Context): Response {
   return problem(c, {
     status: 404,
     detail:
-      "That project no longer posts to this site. In Slopify, open the project's Prepare upload and press Fill again.",
+      "That project no longer posts to this site. In Slopify, open the project's Copy for YouTube Studio and press Fill again.",
   });
 }
