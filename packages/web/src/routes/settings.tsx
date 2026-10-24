@@ -16,7 +16,6 @@ import { ModelChecksSettings } from "@/components/model-checks";
 import { ProviderHealthCheck, useProviderHealth } from "@/components/provider-health";
 import { ProviderKeys } from "@/components/provider-keys";
 import { Voices } from "@/components/voices";
-import { Welcome } from "@/components/welcome";
 import { NotificationSettings } from "@/notifications/settings-panel";
 import { SampleSettings } from "@/onboarding/sample-settings";
 import { patchNotesQuery } from "@/patch-notes/api";
@@ -189,7 +188,6 @@ export function SettingsRoute({
             {section === "providers" ? (
               <>
                 <ConnectionReadiness />
-                <Welcome />
                 <ProviderKeys />
                 <ProviderHealthCheck run={health} />
               </>

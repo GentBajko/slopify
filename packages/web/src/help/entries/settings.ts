@@ -10,11 +10,6 @@ export const settingsHelp = {
   },
 
   // General
-  "settings.autostart": {
-    title: "Start Slopify when you log in",
-    body: "Slopify starts in the background when you log in to this computer, without opening a browser tab; open it from your bookmark. It uses your account's own start-up list, so no administrator password is needed, and turning it off removes exactly what it added. Default: off. In Docker, Slopify starts whenever Docker does, so this only shows Docker's own setting.",
-    tutorial: { page: "Start-at-Login", anchor: "turn-it-on" },
-  },
   "settings.remote-access": {
     title: "Open on my other devices (Tailscale)",
     body: "Tailscale on this computer serves Slopify's page at an https address only devices in your tailnet can open. It uses Serve, never Funnel, so it is never on the public internet: Slopify has no login and holds your keys. Slopify removes the address when it stops and adds it back when it starts, and changes only the serve setting it added. Agents still connect only here. Default: off.",
@@ -377,39 +372,9 @@ export const settingsHelp = {
   },
 
   // First run
-  "welcome.samples": {
-    title: "Samples",
-    body: "Finished projects that come with Slopify: a narrated video, an audiobook and a podcast. They are read-only, so nothing you try on them costs anything; Make my own copy on a sample's page gives you one to edit.",
-    tutorial: { page: "First-Launch-and-Welcome", anchor: "explore-the-samples" },
-  },
-  "welcome.found": {
-    title: "Found on this computer",
-    body: "Claude Code, Codex and Antigravity CLI write the text with your own sign-in, so no API key is needed for it, and Codex also draws the images. The narration uses a voice key (OpenAI, ElevenLabs, Cartesia or Inworld) when one is saved in Settings → Providers, and otherwise your computer's built-in voice, so no key is needed to start.",
-    tutorial: { page: "First-Launch-and-Welcome", anchor: "found-on-this-computer" },
-  },
-  "welcome.voice": {
-    title: "Narration voice",
-    body: "Who reads the script aloud. With a voice key saved (OpenAI, ElevenLabs, Cartesia or Inworld), that provider narrates. Without one, your computer's own speech does it for free: macOS or Windows voices, or eSpeak NG on Linux. It sounds robotic, so add a key in Settings → Providers when you want a better voice.",
-    tutorial: { page: "First-Launch-and-Welcome", anchor: "narration-voice" },
-  },
-  "welcome.short": {
-    title: "Make a 60-second short",
-    body: "Slopify writes a script of about 150 words, narrates it, draws four vertical images and renders a captioned 9:16 short, usually in about five minutes with the command-line tools. The narration uses your voice provider's credit, or nothing with the built-in voice; text and images through a command-line tool count toward its plan.",
-    tutorial: { page: "First-Launch-and-Welcome", anchor: "step-3-make-a-60-second-short" },
-  },
-  "welcome.topic": {
-    title: "Topic",
-    body: "What the short is about, in a few words or a question, up to 200 characters. Slopify writes the script from it without a research step, to keep the first short quick, so a specific topic gives a sharper short than a broad one.",
-    tutorial: { page: "First-Launch-and-Welcome", anchor: "step-3-make-a-60-second-short" },
-  },
-  "welcome.pack": {
-    title: "Style",
-    body: "The starter pack whose prompts, voice and art direction the short uses. General is a neutral explainer style. Making the short with a pack adds its prompts and suggested voice to your library; Add to library also adds its template for Play.",
-    tutorial: { page: "First-Launch-and-Welcome", anchor: "step-2-pick-a-style" },
-  },
   "welcome.packs": {
     title: "Starter packs",
-    body: "Each pack adds prompts, a suggested voice and a Play template for one kind of channel, so you can pick the template on Play, type a topic and go. Adding a pack twice changes nothing, and it never replaces a prompt or template of yours with the same name.",
+    body: "Each pack adds prompts, a suggested voice and a template for one kind of channel, so you can pick the template in Create, type a topic and go. Adding a pack twice changes nothing, and it never replaces a prompt or template of yours with the same name.",
     tutorial: { page: "First-Launch-and-Welcome", anchor: "starter-packs" },
   },
 } as const satisfies Readonly<Record<string, HelpEntry>>;
