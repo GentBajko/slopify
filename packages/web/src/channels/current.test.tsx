@@ -29,13 +29,10 @@ function Shows({ ids }: { readonly ids: readonly string[] }) {
   );
 }
 
-function mount(
-  channels = [channel("c1", "My channel"), channel("c2", "History at Bedtime")],
-  variant: "rail" | "header" = "rail",
-) {
+function mount(channels = [channel("c1", "My channel"), channel("c2", "History at Bedtime")]) {
   return renderApp(
     <CurrentChannelProvider>
-      <ChannelPicker variant={variant} />
+      <ChannelPicker />
       <Shows ids={["c1", "c2"]} />
     </CurrentChannelProvider>,
     testDeps({ "GET /api/channels": jsonAnswer({ channels }) }),
@@ -47,7 +44,7 @@ describe("the current channel", () => {
     const user = userEvent.setup();
     mount();
     expect(screen.getByText("Showing: c1, c2")).not.toBeNull();
-    const picker = await screen.findByLabelText("Channel");
+    const picker = await screen.findByLabelText("Showing:");
     expect(screen.getByRole("option", { name: "History at Bedtime" })).not.toBeNull();
     await user.selectOptions(picker, "c2");
     expect(screen.getByText("Showing: c2")).not.toBeNull();
@@ -64,13 +61,25 @@ describe("the current channel", () => {
 
   it("reads as one line in a page header: Showing: and the channel, with no info button", async () => {
     const user = userEvent.setup();
-    mount(undefined, "header");
+    mount();
     const picker = await screen.findByRole("combobox", { name: "Showing:" });
     expect(screen.queryByRole("button", { name: /^About/ })).toBeNull();
     expect((picker as HTMLSelectElement).value).toBe("");
     expect(within(picker).getByRole("option", { name: "All channels" })).not.toBeNull();
     await user.selectOptions(picker, "c2");
     expect(screen.getByText("Showing: c2")).not.toBeNull();
+  });
+
+  it("shows everything while there is one channel, whatever was picked before", async () => {
+    try {
+      window.localStorage.setItem("slopify.channel", "c2");
+    } catch {
+      return;
+    }
+    mount([channel("c1", "My channel")]);
+    await screen.findByText("Channels: 1");
+    expect(screen.getByText("Showing: c1, c2")).not.toBeNull();
+    window.localStorage.removeItem("slopify.channel");
   });
 
   it("reads a channel that no longer exists as every channel", async () => {

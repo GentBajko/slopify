@@ -11,7 +11,6 @@ import {
   useState,
 } from "react";
 import { useApp } from "@/app-context";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { cn } from "@/lib/utils";
 import { type ChannelSummary, channelsQuery } from "./api.js";
 
@@ -48,9 +47,13 @@ export function CurrentChannelProvider({ children }: { readonly children: ReactN
   const channels = useQuery(channelsQuery(api));
   const [picked, setPicked] = useState<string | null>(stored);
   const list = channels.data ?? [];
-  // A channel deleted elsewhere reads as All channels rather than an empty screen.
+  // A channel deleted elsewhere reads as All channels rather than an empty screen, and so does
+  // a pick left over while there is only one channel: with nothing to choose between there is no
+  // picker to undo it with.
   const channelId =
-    picked !== null && channels.data !== undefined && !list.some((one) => one.id === picked)
+    picked !== null &&
+    channels.data !== undefined &&
+    (list.length < 2 || !list.some((one) => one.id === picked))
       ? null
       : picked;
   // The choice belongs to the browser, not the tab: a pick made in another Slopify tab is
@@ -98,57 +101,38 @@ export function useCurrentChannel(): CurrentChannel {
   return useContext(Context) ?? everything;
 }
 
-// Which channel's work the page shows. A native select: it is a choice of one from a short
-// list, and the platform's own menu is the most reachable one on a phone. With fewer than two
+// Which channel's work the page shows: "Showing: All channels ▾" on one line in the page header
+// of Home, Projects and the calendar. A native select: it is a choice of one from a short list,
+// and the platform's own menu is the most reachable one on a phone. With fewer than two
 // channels there is nothing to choose, and it draws nothing.
-//   "header" sits in the page header of Home, Projects and the calendar: "Showing: All
-//            channels ▾" on one line, no info button.
-//   "rail"   the rail's (and the phone's, on Home): a label above the select, with its tip.
 export function ChannelPicker({
   className,
-  variant = "rail",
 }: {
   readonly className?: string;
-  readonly variant?: "rail" | "header";
 }): ReactElement | null {
   const current = useCurrentChannel();
   const id = useId();
   if (current.channels.length < 2) return null;
-  const select = (
-    <select
-      id={id}
-      className={cn("sl-select", variant === "header" && "sl-select--compact")}
-      value={current.channelId ?? ""}
-      onChange={(event) =>
-        current.setChannelId(event.target.value === "" ? null : event.target.value)
-      }
-    >
-      <option value="">All channels</option>
-      {current.channels.map((channel) => (
-        <option key={channel.id} value={channel.id}>
-          {channel.name}
-        </option>
-      ))}
-    </select>
-  );
-  if (variant === "header")
-    return (
-      <div className={cn("flex min-w-0 items-center gap-2", className)} data-slot="channel-picker">
-        <label htmlFor={id} className="shrink-0 text-small text-ink-2">
-          Showing:
-        </label>
-        {select}
-      </div>
-    );
   return (
-    <div className={cn("flex flex-col gap-1", className)} {...helpScope}>
-      <span className="flex items-center gap-1 px-2">
-        <label htmlFor={id} className="sl-kicker">
-          Channel
-        </label>
-        <InfoTip id="planning.channel.current" className="-my-1" />
-      </span>
-      {select}
+    <div className={cn("flex min-w-0 items-center gap-2", className)} data-slot="channel-picker">
+      <label htmlFor={id} className="shrink-0 text-small text-ink-2">
+        Showing:
+      </label>
+      <select
+        id={id}
+        className="sl-select sl-select--compact"
+        value={current.channelId ?? ""}
+        onChange={(event) =>
+          current.setChannelId(event.target.value === "" ? null : event.target.value)
+        }
+      >
+        <option value="">All channels</option>
+        {current.channels.map((channel) => (
+          <option key={channel.id} value={channel.id}>
+            {channel.name}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
