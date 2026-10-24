@@ -8,9 +8,12 @@
 // walk's allow list instead.
 //
 // The same pass holds three more rules on what a walk renders, each reported as one entry: no
-// control's name uses jargon (TTS, LLM, STT, ASR, Chunking); an info button sits beside a
-// field's label, never after a button, a heading or a list row's title, and one to a field;
-// and each area of the screen has at most one enabled primary (lime) button.
+// name a walk renders (a setting, button, link, tab, menu item, option or heading) uses
+// jargon (TTS, LLM, STT, ASR, Chunking, Subtitles), and no button or link is named for the
+// machinery (Render, Regenerate, Remake); an info button sits beside a field's label, never
+// beside a button, a heading or a list row's title (a wrapper around either doesn't hide it),
+// and one to a field; and each area of the screen has at most one enabled primary (lime)
+// button.
 
 const controlSelector = [
   "input:not([type=hidden])",
@@ -101,15 +104,92 @@ export function unexplainedControls(
     if (explained(control.closest("[data-help-scope]"))) continue;
     missing.push({ name, html: control.outerHTML.slice(0, 160) });
   }
-  return [...missing, ...misplacedTips(root), ...extraPrimaries(root)];
+  return [...missing, ...badWords(root), ...misplacedTips(root), ...extraPrimaries(root)];
 }
 
-// Words a person who doesn't build software can't read, in a control's name. Say "voice",
-// "writer" and "split into parts" instead. PDF and AI are words people know.
-const jargon = /\b(TTS|LLM|STT|ASR)\b|\bChunking\b/;
+// Words a person who doesn't build software can't read. Say "voice", "writer", "captions"
+// and "split into parts" instead. PDF and AI are words people know.
+const jargon = /\b(TTS|LLM|STT|ASR|Subtitles?)\b|\bChunking\b/;
+// An action named for the machinery instead of its result: say "Make … again".
+const machineVerb = /^(Render|Re-render|Regenerate|Remake)\b/i;
 
 function shown(element: Element): boolean {
   return element.closest("[hidden],[aria-hidden=true],[inert]") === null;
+}
+
+// Every other name a walk renders, beyond the settings checked above: a button's, a link's, a
+// tab's, a menu item's, an option's, a heading's. Each name is reported once.
+function badWords(root: Element): UnexplainedControl[] {
+  const found: UnexplainedControl[] = [];
+  const reported = new Set<string>();
+  const named = "button, a[href], [role=tab], [role=menuitem], option, h1, h2, h3, h4, h5, h6";
+  for (const element of root.querySelectorAll(named)) {
+    if (element.matches(controlSelector) || !shown(element)) continue;
+    const name = (element.getAttribute("aria-label") ?? element.textContent ?? "")
+      .replace(/\s+/g, " ")
+      .trim();
+    const action = element.matches("button, a[href], [role=menuitem]");
+    const problem = jargon.test(name)
+      ? `Jargon in a label: ${name}`
+      : action && machineVerb.test(name)
+        ? `Named for the machinery, not its result: ${name}`
+        : undefined;
+    if (problem === undefined || reported.has(problem)) continue;
+    reported.add(problem);
+    found.push({ name: problem, html: element.outerHTML.slice(0, 160) });
+  }
+  return found;
+}
+
+// Text that is only spacing, or a comment, is not something a tip sits beside.
+function blank(node: Node): boolean {
+  if (node.nodeType === Node.ELEMENT_NODE) return false;
+  if (node.nodeType === Node.TEXT_NODE) return (node.textContent ?? "").trim() === "";
+  return true;
+}
+
+function sibling(node: Node, side: "previous" | "next"): Node | null {
+  let next = side === "previous" ? node.previousSibling : node.nextSibling;
+  while (next !== null && blank(next))
+    next = side === "previous" ? next.previousSibling : next.nextSibling;
+  return next;
+}
+
+// The one meaningful child of a wrapper, or undefined when it holds more (or text).
+function only(element: Element): Element | undefined {
+  const children = [...element.childNodes].filter((node) => !blank(node));
+  const [child] = children;
+  return children.length === 1 && child instanceof Element ? child : undefined;
+}
+
+// What sits right beside a tip on one side: a wrapper that holds nothing but the tip doesn't
+// hide its neighbour (`<span><InfoTip/></span>` after a button is after the button). Words
+// before it (a tip ending a sentence) or nothing at all is undefined. A help scope, a label or
+// a heading is as far as it looks.
+function beside(tip: Element, side: "previous" | "next"): Element | undefined {
+  let node: Element = tip;
+  for (;;) {
+    const next = sibling(node, side);
+    if (next !== null) return next instanceof Element ? next : undefined;
+    const parent = node.parentElement;
+    if (parent === null || only(parent) !== node) return undefined;
+    if (parent.matches("[data-help-scope], label, legend, h1, h2, h3, h4, h5, h6, [role=heading]"))
+      return undefined;
+    node = parent;
+  }
+}
+
+const heading = "h1, h2, h3, h4, h5, h6, [role=heading]";
+
+// What a tip's neighbour is, looking through wrappers that hold one element each: a button in
+// a span is still a button.
+function kind(neighbour: Element | undefined): string | undefined {
+  for (let element = neighbour; element !== undefined; element = only(element)) {
+    if (element.matches(kitButton)) return "a button";
+    if (element.matches(heading)) return "a heading";
+    if (element.matches(".sl-row__title")) return "a row's title";
+  }
+  return undefined;
 }
 
 // The kit's buttons, button-looking links and Play key, by the marks the kit puts on them
@@ -122,7 +202,7 @@ const kitPrimary = [
 ].join(",");
 
 // An info button sits beside a field's label, where the question comes up, and alone: never
-// after a button (the button's name says what it does), a heading or a list row's title, and
+// beside a button (the button's name says what it does), a heading or a list row's title, and
 // never a second one in the same field.
 function misplacedTips(root: Element): UnexplainedControl[] {
   const found: UnexplainedControl[] = [];
@@ -130,18 +210,9 @@ function misplacedTips(root: Element): UnexplainedControl[] {
   for (const tip of root.querySelectorAll("[data-help-id]")) {
     if (!shown(tip)) continue;
     const name = tip.getAttribute("aria-label") ?? tip.getAttribute("data-help-id") ?? "";
-    const before = tip.previousElementSibling;
-    const after =
-      before === null
-        ? undefined
-        : before.matches(kitButton)
-          ? "a button"
-          : before.matches("h2, h3, h4, h5")
-            ? "a heading"
-            : before.matches(".sl-row__title")
-              ? "a row's title"
-              : undefined;
-    if (tip.parentElement?.closest("h2, h3, h4, h5") != null) {
+    const after = kind(beside(tip, "previous"));
+    const before = kind(beside(tip, "next"));
+    if (tip.parentElement?.closest(heading) != null) {
       found.push({
         name: `Info button inside a heading: ${name}`,
         html: tip.outerHTML.slice(0, 160),
@@ -149,6 +220,11 @@ function misplacedTips(root: Element): UnexplainedControl[] {
     } else if (after !== undefined) {
       found.push({
         name: `Info button after ${after}: ${name}`,
+        html: tip.outerHTML.slice(0, 160),
+      });
+    } else if (before !== undefined) {
+      found.push({
+        name: `Info button before ${before}: ${name}`,
         html: tip.outerHTML.slice(0, 160),
       });
     }

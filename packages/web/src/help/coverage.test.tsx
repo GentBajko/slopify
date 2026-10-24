@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { Button, PlayKey } from "@/components/kit/button";
+import { Button, IconButton, PlayKey } from "@/components/kit/button";
 import { Field, HelpLine, Input } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Segmented, Switch } from "@/components/kit/switch";
@@ -175,6 +175,38 @@ describe("a walk also names", () => {
     ]);
   });
 
+  it("jargon on a button, a link, a tab or a heading, and an action named for the machinery", () => {
+    const { container } = render(
+      <div>
+        <h2>Subtitles</h2>
+        <h3>Rendering</h3>
+        <Button>Pick an LLM</Button>
+        <a href="/x">TTS settings</a>
+        <div role="tablist">
+          <button type="button" role="tab" aria-selected="true">
+            ASR
+          </button>
+        </div>
+        <Button>Render again</Button>
+        <Button>Regenerate all images</Button>
+        <Button>Make the preview again</Button>
+        <a href="/y">Remake</a>
+        <div hidden>
+          <Button>Render hidden</Button>
+        </div>
+      </div>,
+    );
+    expect(names(container)).toEqual([
+      "Jargon in a label: Subtitles",
+      "Jargon in a label: Pick an LLM",
+      "Jargon in a label: TTS settings",
+      "Jargon in a label: ASR",
+      "Named for the machinery, not its result: Render again",
+      "Named for the machinery, not its result: Regenerate all images",
+      "Named for the machinery, not its result: Remake",
+    ]);
+  });
+
   it("an info button after a button, a heading or a row's title, or inside a heading", () => {
     const { container } = render(
       <div>
@@ -208,6 +240,61 @@ describe("a walk also names", () => {
       "Info button after a heading: About Rows",
       "Info button after a row's title: About Cleopatra",
       "Info button inside a heading: About Voices",
+    ]);
+  });
+
+  it("an info button beside a button or a heading even when either is wrapped, or before one", () => {
+    const { container } = render(
+      <div>
+        <div>
+          <Button>Refresh keyword facts</Button>
+          <span>
+            <InfoTip id={tip} label="Wrapped tip" />
+          </span>
+        </div>
+        <div>
+          <span>
+            <Button>Save name</Button>
+          </span>
+          <InfoTip id={tip} label="Wrapped button" />
+        </div>
+        <div>
+          <span>
+            <IconButton label="Rename">
+              <svg aria-hidden="true" />
+            </IconButton>
+          </span>
+          <InfoTip id={tip} label="Icon button" />
+        </div>
+        <div>
+          <InfoTip id={tip} label="Before" />
+          <Button>Apply</Button>
+        </div>
+        <div>
+          <h1>Settings</h1>
+          <InfoTip id={tip} label="Page title" />
+        </div>
+        <div>
+          <h6>Live writing</h6>
+          <InfoTip id={tip} label="Small heading" />
+        </div>
+        {/* Ending a sentence, or beside a field's label with a button for its control, it
+            is where it belongs. */}
+        <p>
+          <Button>Copy</Button> the words, then paste them. <InfoTip id={tip} label="Sentence" />
+        </p>
+        <Field label="Pairing token" tip={tip}>
+          <Button>Copy the token</Button>
+        </Field>
+      </div>,
+    );
+    expect(names(container)).toEqual([
+      "Info button after a button: About Wrapped tip",
+      "Info button after a button: About Wrapped button",
+      "Info button after a button: About Icon button",
+      "Info button before a button: About Before",
+      "Info button after a heading: About Page title",
+      "Info button after a heading: About Small heading",
     ]);
   });
 
