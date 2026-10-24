@@ -486,7 +486,7 @@ it("leaves out every entry of a template studio's hidden sample project", () => 
 it("reports an active schedule whose template has no version it may run, for the person to fix", () => {
   const f = everything();
   const sentence =
-    "Not started: Harbor template has no version marked ready. Open it in Library → Templates → Open studio and press Mark ready.";
+    "Not started: Harbor template has no version approved for schedules. Open it in Templates → Edit template and choose More → Approve for schedules.";
   const entries = needsAttention(
     { ...f.h.deps, log: quiet, notReady: (id) => (id === templateId ? sentence : undefined) },
     now,
