@@ -192,7 +192,7 @@ Videos started together (a batch from Play, for example) run one at a time. The 
 
 ### When there are no projects
 
-Projects shows **No projects yet** with **Make your first video** (opens Play), and an invitation to the interactive tutorial with **Start tutorial**.
+Projects shows **No projects yet** with **Make your first video** (opens Create), and an invitation to the interactive tutorial with **Start the tour**.
 
 ## Tips
 
