@@ -41,7 +41,7 @@ export function RebuildReview({
       work.disposition === "local" ||
       work.disposition === "review",
   ).length;
-  const verb = making === 1 ? "Remake 1 output" : `Remake ${String(making)} outputs`;
+  const verb = making === 1 ? "Make 1 output again" : `Make ${String(making)} outputs again`;
   // Each thing still holding Start back, said next to the button so it is never a mystery.
   const holds = [
     ...(blocked.length === 0
