@@ -17,7 +17,7 @@ import { kindAbout, kindLabel, kindNoun, kindSentence } from "@/lib/prompt-kinds
 import { LibraryBulkBar, SelectionArea } from "@/library/bulk-bar";
 import { HistoryDrawer } from "@/library/history-drawer";
 import { LibraryItemDetail } from "@/library/item-detail";
-import { ListSkeleton, LoadError, libraryListDetail, promptRow } from "@/library/list-states";
+import { ListSkeleton, LoadError, promptListDetail, promptRow } from "@/library/list-states";
 import { useLibraryItem } from "@/library/list-url";
 import { PromptRowMeta, PromptsFrame, PromptsListHead } from "@/library/prompts-frame";
 import { LibraryRowActions } from "@/library/row-actions";
@@ -175,7 +175,7 @@ export function PromptsRoute({
         </EmptyState>
       ) : (
         <ListDetail
-          className={libraryListDetail}
+          className={promptListDetail}
           list={
             listed.length === 0 ? (
               <p className="m-0 py-3 text-small text-ink-2">{`No prompt of any kind has “${query.trim()}” in its name or text.`}</p>

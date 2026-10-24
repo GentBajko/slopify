@@ -889,6 +889,23 @@
       grid-template-columns: minmax(0, 1fr);
     }
   }
+  /* Beside the kinds, the list and the selected prompt share what width is left: two equal
+     columns once both can be read, the kit's slim list beside the text below that, and one
+     under the other when even that would squeeze the text to a few words a line. */
+  .sl-workspace--prompts > .sl-workspace__main {
+    container-type: inline-size;
+    container-name: prompts;
+  }
+  @container prompts (min-width: 860px) {
+    .sl-listdetail.sl-listdetail--prompts {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+  }
+  @container prompts (max-width: 619px) {
+    .sl-listdetail.sl-listdetail--prompts {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
   /* A prompt row (library/list-states `promptRow`): the name with its actions on the first
      line, then what it asks for and its first words across the whole row, under the actions
      too, so the words are not cut to a few letters beside the buttons. A list narrower than
