@@ -170,7 +170,7 @@ async function addMedia(context: FillContext): Promise<Note> {
   if (input === null)
     return {
       ok: false,
-      message: `LinkedIn's post box has no file input Slopify can use. Press Media and add ${names} yourself (Download them from Slopify's Prepare upload).`,
+      message: `LinkedIn's post box has no file input Slopify can use. Press Media and add ${names} yourself (Download them from Slopify's Copy for YouTube Studio).`,
       copy: names,
     };
   setFiles(input as HTMLInputElement, files);

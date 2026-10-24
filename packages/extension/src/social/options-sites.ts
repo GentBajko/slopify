@@ -5,7 +5,7 @@ import { platformLabels, type SocialPlatform, socialPlatforms } from "./types.js
 
 // The options page's "Posting" list: one row per site, with "Allow posting on <site>" (the
 // browser asks the person for that site only) or, once allowed, "Stop posting on <site>". The
-// worker is told after each change, so Slopify's Prepare upload knows which Fill buttons work.
+// worker is told after each change, so Slopify's Copy for YouTube Studio knows which Fill buttons work.
 
 export async function renderSites(
   list: HTMLElement,

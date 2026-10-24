@@ -83,7 +83,7 @@ async function fill(next: boolean): Promise<void> {
     const text = packText(item);
     const copied = await copyText(text);
     toast(
-      `Nothing was filled: Studio's upload dialog has changed, and Slopify couldn't find ${listed(report.missing)}. ${copied ? "The whole upload pack is copied" : "Press Copy for the whole upload pack"}: paste each part by hand, or use the Copy buttons in Slopify → Prepare upload. Updating the extension (Slopify → Settings → YouTube Studio → Download) may fix it.`,
+      `Nothing was filled: Studio's upload dialog has changed, and Slopify couldn't find ${listed(report.missing)}. ${copied ? "The whole upload pack is copied" : "Press Copy for the whole upload pack"}: paste each part by hand, or use the Copy buttons in Slopify → Copy for YouTube Studio. Updating the extension (Slopify → Settings → YouTube Studio → Download) may fix it.`,
       "error",
       text,
     );
@@ -513,7 +513,7 @@ function look(): void {
     addedTo = dialog;
     void addVideo(picker).catch((error: unknown) => {
       toast(
-        `The video couldn't be added: ${error instanceof Error ? error.message : String(error)} Drop it in by hand: Open folder in Slopify's Prepare upload shows it.`,
+        `The video couldn't be added: ${error instanceof Error ? error.message : String(error)} Drop it in by hand: Open folder in Slopify's Copy for YouTube Studio shows it.`,
         "error",
       );
     });

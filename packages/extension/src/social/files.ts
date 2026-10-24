@@ -29,7 +29,7 @@ export async function postFiles(
     } catch (error) {
       if (one.bytes !== null && one.bytes > workerMax)
         throw new Error(
-          `Slopify couldn't hand ${one.filename} to this page (${error instanceof Error ? error.message : String(error)}). Download it from Slopify's Prepare upload and add it to the post yourself.`,
+          `Slopify couldn't hand ${one.filename} to this page (${error instanceof Error ? error.message : String(error)}). Download it from Slopify's Copy for YouTube Studio and add it to the post yourself.`,
         );
       files.push(await sources.viaWorker(one));
     }

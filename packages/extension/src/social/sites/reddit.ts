@@ -112,7 +112,7 @@ async function fill(context: FillContext): Promise<SiteReport> {
     notes.push({
       ok: false,
       message:
-        "This post has no subreddit. Choose the community at the top of Reddit's form, or set it under the Reddit post in Slopify's Prepare upload.",
+        "This post has no subreddit. Choose the community at the top of Reddit's form, or set it under the Reddit post in Slopify's Copy for YouTube Studio.",
     });
 
   await until(waits, () => findIn(doc, selectors.title));

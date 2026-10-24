@@ -113,7 +113,7 @@ async function fill(context: FillContext): Promise<SiteReport> {
         {
           ok: false,
           message:
-            "A TikTok post needs a video or pictures, and this one has none. Pick the short or pictures for TikTok in Slopify's Prepare upload, then press Fill in TikTok again.",
+            "A TikTok post needs a video or pictures, and this one has none. Pick the short or pictures for TikTok in Slopify's Copy for YouTube Studio, then press Fill in TikTok again.",
         },
       ],
     };
