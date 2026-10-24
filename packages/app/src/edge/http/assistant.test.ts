@@ -89,6 +89,7 @@ describe("/api/assistant", () => {
       reason: null,
       fix: null,
       preference: "auto",
+      ready: ["claude-code"],
       session: null,
     });
     const id = await newSession(call);

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { type AssistantCliStates, assistantCliOf, assistantScreenSchema } from "./model.js";
+import {
+  type AssistantCliStates,
+  assistantCliOf,
+  assistantScreenSchema,
+  readyClis,
+} from "./model.js";
 
 const ready = { installed: true, login: "signed-in" } as const;
 const missing = { installed: false, login: "unknown" } as const;
@@ -63,6 +68,15 @@ describe("assistantCliOf", () => {
     const choice = assistantCliOf(states(ready, ready), "auto", true);
     expect(choice).toMatchObject({ ok: false, fix: { kind: "tutorial", page: "Install" } });
     expect(choice.ok ? "" : choice.reason).toContain("Docker");
+  });
+});
+
+describe("readyClis", () => {
+  it("lists the CLIs that could answer now, in Auto's order, and none in the Docker copy", () => {
+    expect(readyClis(states(ready, ready), false)).toEqual(["claude-code", "codex"]);
+    expect(readyClis(states(signedOut, ready), false)).toEqual(["codex"]);
+    expect(readyClis(states(missing, missing), false)).toEqual([]);
+    expect(readyClis(states(ready, ready), true)).toEqual([]);
   });
 });
 

@@ -64,15 +64,17 @@ export function assistantRoutes(
           reason: notWired,
           fix: null,
           preference: "auto" as const,
+          ready: [],
           session: null,
         });
-      const { choice, preference } = await assistant.status();
+      const { choice, preference, ready } = await assistant.status();
       return c.json({
         available: choice.ok,
         cli: choice.ok ? choice.cli : null,
         reason: choice.ok ? null : choice.reason,
         fix: choice.ok ? null : choice.fix,
         preference,
+        ready,
         session: assistant.session() ?? null,
       });
     })
