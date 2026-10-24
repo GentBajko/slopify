@@ -153,9 +153,9 @@ describe("Settings → YouTube Studio", () => {
     );
     const section = await screen.findByRole("region", { name: "Install the Studio extension" });
     expect(section.querySelectorAll("ol li")).toHaveLength(3);
-    expect(
-      screen.getByRole("link", { name: /Download for (Chrome|Firefox)/ }).getAttribute("href"),
-    ).toMatch(/^http:\/\/slopify\.test\/api\/studio\/extension\/(chrome|firefox)\.zip$/);
+    expect(screen.getByRole("link", { name: "Download the zip" }).getAttribute("href")).toMatch(
+      /^http:\/\/slopify\.test\/api\/studio\/extension\/(chrome|firefox)\.zip$/,
+    );
   });
 });
 
