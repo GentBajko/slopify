@@ -7,7 +7,6 @@ import { useCommand } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { FileLink } from "@/components/kit/link";
 import { MediaFrame } from "@/components/kit/media";
-import { MenuItem } from "@/components/kit/menu";
 import type { BodyProps } from "./body.js";
 import { frameAspect } from "./body-images.js";
 import { confirmationFor } from "./confirmations.js";
@@ -20,8 +19,8 @@ import { useOutputMedia } from "./revision-media.js";
 
 // The thumbnails are the first tiles of the Images grid: one, or three (A, B, C) for YouTube's
 // Test & compare, each captioned Thumbnail, the same size as the images and with the same actions
-// at rest: make it again, download it, and More (compare, replace with a file, see it as
-// YouTube shows it).
+// at rest: make it again, download it, More (compare, replace with a file), and see it as
+// YouTube shows it.
 
 interface ThumbnailSlot {
   readonly variant: number;
@@ -156,12 +155,12 @@ export function ThumbnailTile({
                         project.config.sources.thumbnail === "prompt_by_llm")
                     }
                     disabled={change.unavailable}
-                    extra={
-                      <MenuItem onSelect={() => setPreviewing(true)}>
-                        See it as YouTube shows it
-                      </MenuItem>
-                    }
                   />
+                  {/* What a thumbnail is for, so in sight on the tile, not in its More. */}
+                  <Button size="small" onClick={() => setPreviewing(true)}>
+                    See it as YouTube shows it
+                    {count === 1 ? null : <span className="sr-only"> ({name})</span>}
+                  </Button>
                 </>
               ),
             })}

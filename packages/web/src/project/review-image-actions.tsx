@@ -1,7 +1,7 @@
 import { thumbnailVariant } from "@app/slices/admission/model.js";
 import type { Output } from "@app/slices/storage/model.js";
 import { ChevronDownIcon } from "lucide-react";
-import { type ReactElement, type ReactNode, use } from "react";
+import { type ReactElement, use } from "react";
 import { Button } from "@/components/kit/button";
 import type { Aspect } from "@/components/kit/media";
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/components/kit/menu";
@@ -14,14 +14,13 @@ import { thumbnailPiece } from "./revision-thumbnail-files.js";
 // A picture tile's rarer actions behind one worded "More": compare it with the version it
 // replaced; for a slideshow image or a drawn thumbnail, replace it with a file of one's own
 // (the settings open at its Replace field, to choose the file, save, and remake only what uses
-// it); whatever else the tile adds; and Delete, last and apart. Nothing when none applies.
+// it); and Delete, last and apart. Nothing when none applies.
 export function TileMore({
   output,
   name,
   aspect,
   replaceable,
   disabled,
-  extra,
   onDelete,
 }: {
   readonly output: Output;
@@ -31,8 +30,6 @@ export function TileMore({
   readonly replaceable: boolean;
   // While the project works, what would change it waits.
   readonly disabled: boolean;
-  // More items, before Delete: the thumbnail's "See it as YouTube shows it".
-  readonly extra?: ReactNode;
   readonly onDelete?: (() => void) | undefined;
 }): ReactElement | null {
   const compare = useCompare(output, name, aspect);
@@ -55,8 +52,7 @@ export function TileMore({
           focusPiece(piece);
         }
       : undefined;
-  if (compare.open === undefined && replace === undefined && extra === undefined && !onDelete)
-    return null;
+  if (compare.open === undefined && replace === undefined && !onDelete) return null;
   return (
     <>
       <Menu modal={false}>
@@ -75,7 +71,6 @@ export function TileMore({
               Replace with my file
             </MenuItem>
           )}
-          {extra}
           {onDelete === undefined ? null : (
             <>
               <MenuSeparator />

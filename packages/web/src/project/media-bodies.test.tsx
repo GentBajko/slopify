@@ -253,6 +253,12 @@ it("leads the grid with the thumbnail, badged, with its own actions in its light
   // The images' zip holds the images only; the thumbnail has its own Download.
   expect(screen.getByRole("link", { name: "Download both images (.zip)" })).toBeTruthy();
   expect(screen.getByText("2 in the video + thumbnail")).toBeTruthy();
+  // How YouTube shows it, in sight on the tile.
+  await userEvent.click(
+    within(frames[0] as HTMLElement).getByRole("button", { name: "See it as YouTube shows it" }),
+  );
+  const preview = await screen.findByRole("dialog", { name: "The thumbnail on YouTube" });
+  await userEvent.click(within(preview).getByRole("button", { name: "Close" }));
   await userEvent.click(screen.getByRole("button", { name: "Open the thumbnail full size" }));
   const lightbox = await screen.findByRole("dialog", { name: /1 of 3/u });
   expect(
