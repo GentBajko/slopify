@@ -3,7 +3,7 @@ import type { CheckpointHold } from "@app/slices/reviews/holds.js";
 import type { LimitWait } from "@app/slices/run-cost/panel.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { type ReactElement, type ReactNode, useRef, useState } from "react";
+import { type ReactElement, type ReactNode, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Callout, type CalloutTone } from "@/components/kit/callout";
@@ -257,6 +257,12 @@ function ActionButton({
   readonly className?: string;
 }): ReactElement | null {
   const [softening, setSoftening] = useState(false);
+  // The busy words ("Pausing…") belong to this button's own press, not to another one on the
+  // page that is under way.
+  const [pressed, setPressed] = useState(false);
+  useEffect(() => {
+    if (!state.pending) setPressed(false);
+  }, [state.pending]);
   const action = state.next?.action;
   if (action === undefined) return null;
   const intent = action.intent;
@@ -282,7 +288,7 @@ function ActionButton({
         {action.label}
       </ButtonLink>
     );
-  const label = state.pending ? (busyLabel(intent) ?? action.label) : action.label;
+  const label = state.pending && pressed ? (busyLabel(intent) ?? action.label) : action.label;
   return (
     <>
       <Button
@@ -293,7 +299,13 @@ function ActionButton({
         aria-keyshortcuts={
           variant === "primary" ? ariaKeyShortcuts(shortcuts.nextAction) : undefined
         }
-        onClick={() => (intent.kind === "soften" ? setSoftening(true) : state.run(intent))}
+        onClick={() => {
+          if (intent.kind === "soften") setSoftening(true);
+          else {
+            setPressed(true);
+            state.run(intent);
+          }
+        }}
       >
         {label}
       </Button>
@@ -308,6 +320,7 @@ function ActionButton({
           pending={state.pending}
           onConfirm={() => {
             setSoftening(false);
+            setPressed(true);
             state.run(intent);
           }}
           onCancel={() => setSoftening(false)}

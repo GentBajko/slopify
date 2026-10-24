@@ -50,8 +50,10 @@ const holdLook: Readonly<Record<StepHold, { readonly state: string; readonly det
   agent: { state: waitingForAgentWord, detail: "Goes on once the agent answers." },
 };
 
+// A step the person supplied is done like any other; its detail says who supplied it.
 const stateWord = (stage: Stage): string => {
   if (stage.state === "failed" && stage.retryAt !== undefined) return retryingWord;
+  if (stage.state === "provided") return stageStateWords.done;
   return stageStateWords[stage.state];
 };
 
