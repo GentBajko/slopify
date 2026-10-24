@@ -160,8 +160,10 @@ export function DocumentThemeEditorRoute({
         }
         title={themeId === undefined ? "New PDF theme" : "Edit PDF theme"}
       />
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[180px_minmax(0,1fr)_minmax(300px,400px)]">
-        <div className="hidden lg:sticky lg:top-4 lg:block">
+      {/* The section list joins the form and the preview only where the form keeps room for
+          two settings a row; on a narrower window the sections' own titles are the list. */}
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(300px,400px)] xl:grid-cols-[180px_minmax(0,1fr)_minmax(300px,400px)]">
+        <div className="hidden xl:sticky xl:top-4 xl:block">
           <GroupJumps
             groups={groupStates}
             current={section}
