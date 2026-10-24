@@ -270,6 +270,7 @@ describe("migrate", () => {
       { version: 75, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 76, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 77, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 78, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -279,7 +280,7 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 69 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 70 });
   });
 
   it("upgrades a database at 62 through every later migration, the template studio's included", () => {
@@ -291,7 +292,7 @@ describe("migrate", () => {
         .prepare("SELECT version FROM schema_migrations WHERE version > 62 ORDER BY version")
         .all()
         .map((row) => row.version),
-    ).toEqual([63, 64, 65, 66, 67, 68, 70, 71, 72, 73, 74, 75, 76, 77]);
+    ).toEqual([63, 64, 65, 66, 67, 68, 70, 71, 72, 73, 74, 75, 76, 77, 78]);
   });
 
   // Applied by the set of versions a database has, never by its newest: one that took the
@@ -329,10 +330,10 @@ describe("migrate", () => {
   it("refuses a database newer than the app knows", () => {
     const db = openDb(":memory:");
     migrate(db, clock);
-    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(78, clock.now().toISOString());
+    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(79, clock.now().toISOString());
 
     expect(() => migrate(db, clock)).toThrow(
-      "database schema 78 is newer than this app knows (77)",
+      "database schema 79 is newer than this app knows (78)",
     );
   });
 
@@ -1012,4 +1013,26 @@ it("keeps every prompt and channel while adding social posts, channel accounts a
   expect(() => db.exec("UPDATE channels SET social_accounts = 'nope'")).toThrow();
   db.exec("DELETE FROM projects WHERE id='p1'");
   expect(db.prepare("SELECT count(*) AS n FROM social_posts").get()).toEqual({ n: 0 });
+});
+
+it("marks uploaded each project whose long video was already on YouTube, keeping a hand mark's time", () => {
+  const db = openDb(":memory:");
+  migrate(db, clock, { through: 77 });
+  for (const id of ["linked", "filled", "short", "marked"])
+    db.exec(`INSERT INTO projects VALUES ('${id}','${id}','16:9','{}','a','a')`);
+  db.exec(
+    `INSERT INTO youtube_videos (project_id,short,video_id,recorded_at,upload_state) VALUES
+       ('linked',0,'6tRcYUoxyQo','2026-10-01T10:00:00.000Z','done'),
+       ('filled',0,'6tRcYUoxyQo','2026-10-01T10:00:00.000Z','filled'),
+       ('short',1,'SoiEotWS3dA','2026-10-01T10:00:00.000Z','done'),
+       ('marked',0,'SoiEotWS3dA','2026-10-01T10:00:00.000Z','done')`,
+  );
+  db.exec("INSERT INTO project_uploads VALUES ('marked','2026-09-30T10:00:00.000Z')");
+
+  migrate(db, clock);
+
+  expect(db.prepare("SELECT * FROM project_uploads ORDER BY project_id").all()).toEqual([
+    { project_id: "linked", uploaded_at: "2026-10-01T10:00:00.000Z" },
+    { project_id: "marked", uploaded_at: "2026-09-30T10:00:00.000Z" },
+  ]);
 });
