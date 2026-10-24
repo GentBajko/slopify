@@ -431,6 +431,29 @@ export interface ProjectListing
   // The checkpoints holding the run now (`reviews/holds.ts`), as a project's page has them, so
   // Home's Needs you offers the right one. Left out when none holds it.
   readonly holding?: readonly CheckpointHold[];
+  // One of the bundled samples (`onboarding/sample.ts`): read-only, never uploaded, so it is
+  // never Ready to upload and its row offers Make my own copy. Left out on every other project.
+  readonly sample?: true;
+  // What a finished run made and when (`listing-facts.ts`), so a row tells finished work apart
+  // without opening it: "3:05 · video + 2 shorts + PDF · finished Sep 27". Each is left out
+  // while there is nothing to say.
+  readonly finishedAt?: string;
+  readonly durationSeconds?: number;
+  readonly outputs?: ListingOutputs;
+  // The steps that failed in a run that still made its video (`partial`), in the run's order,
+  // so its row names them ("PDF failed") and links to the one to look at.
+  readonly failedSteps?: readonly StageKind[];
+  // The current version holds an output an edit made outdated, so the list's Remake outdated
+  // has something to remake.
+  readonly outdated?: true;
+}
+
+// The finished files a list row names: the video, its shorts, the PDF and the listening files.
+export interface ListingOutputs {
+  readonly video: boolean;
+  readonly shorts: number;
+  readonly pdf: boolean;
+  readonly audio: boolean;
 }
 
 export interface ListingLimitWait {
