@@ -248,6 +248,32 @@ describe("what Create starts from", () => {
     await waitFor(() => expect(session().document.form.values.topic).toBe("Cleopatra"));
     expect((screen.getByLabelText(topicLabel) as HTMLInputElement).value).toBe("Cleopatra");
   });
+
+  it("gives a fresh draft the writer and image service the first launch found", async () => {
+    const { session } = await mountPlay({
+      "GET /api/providers/first-run": jsonAnswer({
+        firstRun: true,
+        detected: [],
+        defaults: {
+          llm: { provider: "claude-code", model: "sonnet" },
+          images: { provider: "fal", model: "fal-ai/flux-2" },
+        },
+        message: null,
+        detail: null,
+      }),
+    });
+    await waitFor(() =>
+      expect(session().document.form.llm).toMatchObject({
+        provider: "claude-code",
+        model: "sonnet",
+      }),
+    );
+    expect(session().document.form.images).toMatchObject({
+      provider: "fal",
+      model: "fal-ai/flux-2",
+    });
+    expect(session().document.templateSource).toBeUndefined();
+  });
 });
 
 describe("the draft's name and the title", () => {

@@ -12,7 +12,6 @@ import { useCommand } from "@/components/kit/command-palette";
 import { Drawer } from "@/components/kit/drawer";
 import { Field, Input } from "@/components/kit/field";
 import { PageHeader, Workspace } from "@/components/kit/layout";
-import { useFreshProviderDefaults } from "@/components/welcome";
 import { StartFromPicture } from "@/designs/start";
 import { PlayLanguage } from "@/language/play-language";
 import { usePlayDraft } from "@/lib/form-drafts";
@@ -119,8 +118,6 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   );
   const kind = outputKindOf(form);
   const sidebarChannel = useCurrentChannel().channelId;
-  // The tools the first launch found fill a fresh draft's writer and image service.
-  useFreshProviderDefaults(session.adoptDefaults);
   const { adoptChannel } = session;
   // A fresh draft starts in the channel the sidebar shows, not always the default one.
   // biome-ignore lint/correctness/useExhaustiveDependencies: asked again for each new draft.

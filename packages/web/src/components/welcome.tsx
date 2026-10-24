@@ -1,12 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactElement, type ReactNode, useEffect } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Fold } from "@/components/kit/fold";
 import { ButtonLink, TextLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { Status } from "@/components/kit/status";
-import { readFirstRun as readProviderFirstRun, upkeepKeys } from "@/components/provider-upkeep-api";
 import { cn } from "@/lib/utils";
 import {
   checkFirstRun,
@@ -15,29 +14,6 @@ import {
   readFirstRun,
   type ShortGap,
 } from "@/onboarding/api";
-import { type FreshProviderDefaults, setFreshProviderDefaults } from "@/play/draft-state";
-
-// The first launch's provider defaults: the command-line tools the server found (Claude Code
-// for the text, Codex for the images), written by GET /api/providers/first-run, handed to every
-// new Create draft. Create calls this with its session's `adoptDefaults`, so defaults that
-// arrive after it opened still fill a draft nobody has touched.
-export function useFreshProviderDefaults(
-  onDefaults?: ((defaults: FreshProviderDefaults) => void) | undefined,
-): void {
-  const { api } = useApp();
-  const status = useQuery({
-    queryKey: upkeepKeys.firstRun,
-    queryFn: () => readProviderFirstRun(api),
-    retry: false,
-    staleTime: Number.POSITIVE_INFINITY,
-  });
-  const defaults = status.data?.defaults;
-  useEffect(() => {
-    if (defaults === undefined) return;
-    setFreshProviderDefaults(defaults);
-    onDefaults?.(defaults);
-  }, [defaults, onDefaults]);
-}
 
 // Where a fix in Settings was opened from, so Settings can offer the way back ("Back to the
 // welcome") and the welcome reopens at the same step.

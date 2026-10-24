@@ -1,38 +1,10 @@
 import type { FirstRunView } from "@app/slices/onboarding/model.js";
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { FreshProviderDefaults } from "@/play/draft-state";
-import { jsonAnswer, renderApp, renderRouted, testDeps } from "@/test-app";
-import { SetupChecklist, useFreshProviderDefaults } from "./welcome.js";
+import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
+import { SetupChecklist } from "./welcome.js";
 
 afterEach(cleanup);
-
-function Defaults({ seen }: { readonly seen: FreshProviderDefaults[] }) {
-  useFreshProviderDefaults((defaults) => seen.push(defaults));
-  return null;
-}
-
-describe("the first launch's provider defaults", () => {
-  it("hands Create the tools the first launch found, and shows nothing", async () => {
-    const seen: FreshProviderDefaults[] = [];
-    const { container } = renderApp(
-      <Defaults seen={seen} />,
-      testDeps({
-        "GET /api/providers/first-run": jsonAnswer({
-          firstRun: true,
-          detected: [],
-          defaults: { llm: { provider: "claude-code", model: "sonnet" } },
-          message: "You can make a video now, no API keys needed.",
-          detail: null,
-        }),
-      }),
-    );
-    await waitFor(() =>
-      expect(seen).toEqual([{ llm: { provider: "claude-code", model: "sonnet" } }]),
-    );
-    expect(container.textContent).toBe("");
-  });
-});
 
 describe("the setup checklist on its own", () => {
   it("opens each fix at its service, with no way back to name when it is not on the welcome", async () => {
