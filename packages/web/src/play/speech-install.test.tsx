@@ -1,3 +1,4 @@
+import { noSpeechFix } from "@app/kernel/ports/system-speech.js";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
@@ -50,10 +51,18 @@ it("says what is wrong with the computer's voice in a sentence, without the comm
   expect(speechFix("No speech program was found on this computer.")).toBeUndefined();
 });
 
+it("leaves out the offer of an OpenAI key once one is saved", () => {
+  const said = `No speech program was found on this computer, so the system voice can't narrate. Install espeak-ng (for example sudo apt install espeak-ng), ${noSpeechFix}`;
+  expect(speechFix(said)).toBe(
+    `Install espeak-ng (for example sudo apt install espeak-ng), ${noSpeechFix}`,
+  );
+  expect(speechFix(said, true)).toBe("Install espeak-ng (for example sudo apt install espeak-ng).");
+});
+
 it("lists the install commands apart, and looks again when asked", async () => {
   let checked = 0;
   renderRouted(
-    <SpeechInstall issue={linux} />,
+    <SpeechInstall issue={linux} openAiKeySaved={false} />,
     testDeps({
       "GET /api/onboarding": jsonAnswer(view(espeak)),
       "POST /api/onboarding/check": (request) => {
@@ -75,7 +84,10 @@ it("lists the install commands apart, and looks again when asked", async () => {
 it("says the server's way out where the checklist lists no commands", async () => {
   // macOS: no commands to list, and the sentence after the first says what to do.
   renderRouted(
-    <SpeechInstall issue="macOS's speech command (say) didn't answer, so the system voice can't narrate. Check that /usr/bin/say runs in Terminal, or add an OpenAI key." />,
+    <SpeechInstall
+      issue="macOS's speech command (say) didn't answer, so the system voice can't narrate. Check that /usr/bin/say runs in Terminal, or add an OpenAI key."
+      openAiKeySaved={false}
+    />,
     testDeps({ "GET /api/onboarding": jsonAnswer(view(null)) }),
   );
   await userEvent.click(await screen.findByText("Install a speech program"));
@@ -88,7 +100,7 @@ it("says the server's way out where the checklist lists no commands", async () =
 it("draws nothing when neither the checklist nor the sentence has more to say", async () => {
   let asked = 0;
   const { container } = renderRouted(
-    <SpeechInstall issue="No speech program was found on this computer." />,
+    <SpeechInstall issue="No speech program was found on this computer." openAiKeySaved={false} />,
     testDeps({
       "GET /api/onboarding": (request) => {
         asked += 1;

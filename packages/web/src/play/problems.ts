@@ -1,4 +1,5 @@
 import { readinessIsUsable } from "@app/kernel/ports/model.js";
+import { noSpeechFix } from "@app/kernel/ports/system-speech.js";
 import type { StageSource } from "@app/slices/admission/model.js";
 import type { FieldError } from "@app/slices/admission/rules.js";
 import type { Entry } from "@app/slices/library/model.js";
@@ -119,9 +120,11 @@ export function speechIssue(issue: string | undefined): string {
 }
 
 // The rest of that sentence, after its first: what the server says to do about it, for the
-// Narration row to show apart where it has no commands of its own to list.
-export function speechFix(issue: string | undefined): string | undefined {
-  const rest = issue
+// Narration row to show apart where it has no commands of its own to list. Once an OpenAI voice
+// key is saved, its "or add an OpenAI key" is left out.
+export function speechFix(issue: string | undefined, openAiKeySaved = false): string | undefined {
+  const said = openAiKeySaved ? issue?.replace(`, ${noSpeechFix}`, ".") : issue;
+  const rest = said
     ?.split(/(?<=\.)\s+/)
     .slice(1)
     .join(" ")

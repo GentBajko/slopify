@@ -15,9 +15,12 @@ import { speechFix } from "./problems";
 // neither has anything to add.
 export function SpeechInstall({
   issue,
+  openAiKeySaved,
 }: {
   // The server's sentence on the computer's voice; its first sentence is the row's.
   readonly issue: string | undefined;
+  // Whether an OpenAI voice key is saved, so the sentence need not offer one.
+  readonly openAiKeySaved: boolean;
 }): ReactElement | null {
   const { api } = useApp();
   const client = useQueryClient();
@@ -31,7 +34,7 @@ export function SpeechInstall({
   });
   if (view.isPending) return null;
   const install = view.data?.needs.gaps.find((gap) => gap.need === "voice")?.install;
-  const rest = speechFix(issue);
+  const rest = speechFix(issue, openAiKeySaved);
   if (install === undefined && rest === undefined) return null;
   return (
     <Fold summary="Install a speech program" className="sl-fields__wide">

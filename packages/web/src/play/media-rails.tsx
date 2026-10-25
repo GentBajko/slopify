@@ -12,6 +12,7 @@ import { SpeakersEditor, voiceFormatLabel } from "@/voices/speakers-editor";
 import { DescribeFiguresToggle } from "./describe-figures.js";
 import { NarrationAliasesToggle } from "./narration-aliases.js";
 import { NarrationPreparation } from "./narration-preparation";
+import { readiness } from "./problems";
 import { PronunciationGlossary } from "./pronunciation-glossary";
 import { ReferenceImage, referenceOff } from "./reference-image";
 import { ServiceGroup } from "./service-group";
@@ -74,7 +75,12 @@ export function AudioRail({
   );
   const speechMissing =
     systemVoice?.readiness.kind === "local" && !systemVoice.readiness.available
-      ? { issue: systemVoice.readiness.issue }
+      ? {
+          issue: systemVoice.readiness.issue,
+          openAiKeySaved: providers.some(
+            (provider) => provider.id === "openai-tts" && readiness(provider).ok,
+          ),
+        }
       : undefined;
   // The glossary only reaches voices that read IPA; for the others the switch is greyed and the
   // fold's line leaves it out.
@@ -151,7 +157,7 @@ export function AudioRail({
                   Speakers.
                 </p>
               ) : null}
-              {speechMissing === undefined ? null : <SpeechInstall issue={speechMissing.issue} />}
+              {speechMissing === undefined ? null : <SpeechInstall {...speechMissing} />}
             </ServiceGroup>
           )}
           {hidden || framing ? null : <VoiceSample form={form} />}
