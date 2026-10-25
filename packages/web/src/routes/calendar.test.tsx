@@ -430,22 +430,34 @@ describe("an empty calendar", () => {
       empty({
         "GET /api/projects": jsonAnswer({
           projects: [
-            finished("p-old", "The Old Kingdom", { updatedAt: "2026-09-20T10:00:00.000Z" }),
-            finished("p-new", "The Library of Alexandria"),
+            // Renamed since, so changed last, but it finished first.
+            finished("p-old", "The Old Kingdom", {
+              status: "partial",
+              finishedAt: "2026-09-20T10:00:00.000Z",
+              updatedAt: "2026-09-28T10:00:00.000Z",
+            }),
+            finished("p-new", "The Library of Alexandria", {
+              finishedAt: "2026-09-27T10:00:00.000Z",
+              durationSeconds: 185,
+            }),
             finished("p-run", "Still going", { status: "running", progress: 0.4 }),
           ],
         }),
       }),
     );
     const strip = await screen.findByRole("region", { name: "Recently finished" });
-    expect(
-      within(strip)
-        .getAllByRole("listitem")
-        .map((one) => one.textContent),
-    ).toEqual([
+    const tiles = within(strip).getAllByRole("listitem");
+    expect(tiles.map((one) => one.textContent)).toEqual([
       expect.stringContaining("The Library of Alexandria"),
       expect.stringContaining("The Old Kingdom"),
     ]);
+    // Its length, what it is and when it finished; a run with a failed step says so in its
+    // state word.
+    expect(
+      within(tiles[0] as HTMLElement).getByText(/^3:05 · 16:9 · finished Sep 27/),
+    ).not.toBeNull();
+    expect(within(tiles[1] as HTMLElement).getByText("Done with problems")).not.toBeNull();
+    expect(within(strip).queryByText(/a step failed/)).toBeNull();
     expect(
       within(strip)
         .getByRole("link", { name: "Watch The Library of Alexandria" })

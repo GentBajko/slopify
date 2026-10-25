@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { type ReactElement, useState } from "react";
 import { saveRelease } from "@/api";
 import { useApp } from "@/app-context";
+import { finishedMeta } from "@/calendar/recent";
 import { Button } from "@/components/kit/button";
 import { Input, Select } from "@/components/kit/field";
 import { List, ListRow } from "@/components/kit/list-row";
@@ -11,8 +12,8 @@ import { SectionHead } from "@/components/kit/section-head";
 import { Badge, type BadgeTone } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
 import { ProjectThumb } from "@/home/project-thumb";
-import { shortDate } from "@/lib/utils";
 import { browserZone, zoneDiffers, zonedFormat, zonedTime, zoneName } from "@/lib/zoned";
+import { uploadName } from "@/project/release-times";
 import { keys, projectsQuery } from "@/queries";
 import { localScheduleTime, scheduleInstant } from "@/schedules/time";
 
@@ -103,7 +104,7 @@ export function TimeEditor({
     },
     onError: (error: Error) => notify(`The time wasn't changed: ${error.message}`, "error"),
   });
-  const label = item.short === 0 ? "Long video" : `Short ${String(item.short)}`;
+  const label = uploadName(item.short);
   return (
     <span className="flex flex-wrap items-center gap-1">
       <Input
@@ -167,7 +168,7 @@ export function ItemCell({
 }): ReactElement {
   const state = look(item);
   const open = editing?.projectId === projectId && editing.short === item.short;
-  const label = item.short === 0 ? "Long video" : `Short ${String(item.short)}`;
+  const label = uploadName(item.short);
   return (
     <div className="flex min-w-0 flex-col items-start gap-1">
       <span className="text-small text-ink-3">
@@ -338,16 +339,15 @@ export function Unscheduled({
   );
 }
 
-// "Sleep lore · 16:9 · finished Sep 27": the series when it has one, then what it is and when.
+// "Sleep lore · 3:05 · 16:9 · video + 2 shorts · finished Sep 27": the series when it has one,
+// then its length, what it is and when it finished.
 function meta(
   series: string,
-  project: { readonly format: string; readonly updatedAt: string } | undefined,
+  project: Parameters<typeof finishedMeta>[0] | undefined,
 ): string | undefined {
   const parts = [
     series === "" ? undefined : series,
-    project === undefined
-      ? undefined
-      : `${project.format} · finished ${shortDate(project.updatedAt)}`,
+    project === undefined ? undefined : finishedMeta(project),
   ].filter((part) => part !== undefined);
   return parts.length === 0 ? undefined : parts.join(" · ");
 }

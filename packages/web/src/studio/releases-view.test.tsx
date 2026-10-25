@@ -158,7 +158,9 @@ it("lists finished videos with no release time and gives one a time", async () =
             uploadedAt: null,
             config: { sources: { video: "generate" } },
             createdAt: "2026-09-27T09:00:00.000Z",
-            updatedAt: "2026-09-27T10:00:00.000Z",
+            updatedAt: "2026-09-29T10:00:00.000Z",
+            finishedAt: "2026-09-27T10:00:00.000Z",
+            durationSeconds: 1865,
           },
         ],
       }),
@@ -179,9 +181,9 @@ it("lists finished videos with no release time and gives one a time", async () =
   expect(
     within(list).getByRole("link", { name: "The Harbour | Stories To Sleep To" }),
   ).toBeTruthy();
-  // Its series, what it is and when it finished.
+  // Its series, its length, what it is and when it finished (not when it last changed).
   expect(
-    await within(list).findByText(/^Stories To Sleep To · 16:9 · finished Sep 27/),
+    await within(list).findByText(/^Stories To Sleep To · 31:05 · 16:9 · finished Sep 27/),
   ).toBeTruthy();
   await user.click(
     within(list).getByRole("button", {
@@ -190,7 +192,7 @@ it("lists finished videos with no release time and gives one a time", async () =
   );
   // Only a time to set: there is nothing to take back yet.
   expect(within(list).queryByRole("button", { name: "Not scheduled" })).toBeNull();
-  fireEvent.change(within(list).getByLabelText("Long video: release"), {
+  fireEvent.change(within(list).getByLabelText("Video: release"), {
     target: { value: "2026-11-02T18:00" },
   });
   await user.click(within(list).getByRole("button", { name: "Save" }));
