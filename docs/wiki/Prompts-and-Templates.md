@@ -55,7 +55,7 @@ Each video template is a card with a preview, its name, a line saying what it ma
 
 ## Starter templates
 
-**Templates** → **Add starter templates** adds a ready-made set for one kind of channel: prompts, a suggested voice and a video template. There are four: Sleep lore, True crime, History and Science explainers. Adding one twice changes nothing, and it never replaces a prompt or template of yours with the same name. See [Templates](Templates#starter-packs).
+**Templates** → **Add starter templates** adds a ready-made set for one kind of channel: prompts, a suggested voice and a video template. There are four: Sleep lore, True crime, History and Science explainers. Adding one twice changes nothing, and it never replaces a prompt or template of yours with the same name. See [Templates](Templates#starter-templates).
 
 ## Command palette shortcuts
 

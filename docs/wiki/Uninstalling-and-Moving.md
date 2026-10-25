@@ -7,7 +7,7 @@ How to take Slopify off a computer, and how to move your projects between a norm
 ## Before you remove anything
 
 1. Let running projects finish, or pause them.
-2. Open Settings → **Backup & storage** and press **Export everything**. Keep the downloaded `.tar` file somewhere safe. It holds every project with its files and history, your library, templates, schedules, Create drafts, fonts, settings and usage. It does not hold your provider keys; keep those in your password manager.
+2. Open Settings → **Backup & storage** and press **Export everything**. Keep the downloaded `.tar` file somewhere safe. It holds every project with its files and versions, your prompts, templates, schedules, Create drafts, fonts, settings and usage. It does not hold your service keys; keep those in your password manager.
 3. If you turned on Settings → **General** → **Start Slopify when I log in**, turn it off. That removes the login entry, so nothing tries to start Slopify at your next login.
 
 Deleting the folders below can't be undone. Scheduled backups in your `Backups` folder are deleted with it unless you move them first.
@@ -59,7 +59,7 @@ The installer turned on user lingering for the bridge (so your user services run
 3. Start Slopify normally: `npx @gentbajko/slopify@latest`. See [Install](Install).
 4. In the new Slopify, open Settings → **Backup & storage** → **Import a backup** and pick the `.tar` file. Large backups take a while to upload and check.
 5. Read the summary. Projects, library, templates and settings come in; schedules arrive paused.
-6. Enter your provider keys in Settings → **Keys & services** and check your voices in Settings → **Voices**.
+6. Enter your service keys in Settings → **Keys & services** and check your voices in Settings → **Voices**.
 7. Resume your schedules on the Schedules screen. See [Schedules](Schedules).
 8. Once everything opens fine, remove the Docker install as above.
 
@@ -69,7 +69,7 @@ The installer turned on user lingering for the bridge (so your user services run
 2. Stop it (`Ctrl+C`). If start-at-login is on, turn it off first so it doesn't come back at the next login and take port 6969.
 3. Install Docker: `npx @gentbajko/slopify@latest --docker`. See [Docker](Docker).
 4. Open `http://127.0.0.1:6969`, go to Settings → **Backup & storage** → **Import a backup** and pick the file.
-5. Enter your provider keys, resume schedules, and check that your projects open.
+5. Enter your service keys, resume schedules, and check that your projects open.
 6. Remove the old install when you are sure.
 
 ## Move to another computer
@@ -87,7 +87,7 @@ An import adds and never replaces:
 | Schedules | Arrive paused, so two installs never run them both. |
 | Settings | Filled in where this install has none; this install's own are kept. |
 | Usage history | Added once; importing the same backup again doesn't count it twice. |
-| Provider keys | Never in a backup. Enter them again. |
+| Service keys | Never in a backup. Enter them again. |
 
 Running projects must finish or pause before an import. See [Backups](Backups) for what an archive carries in full.
 

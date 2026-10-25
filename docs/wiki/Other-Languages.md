@@ -1,8 +1,8 @@
 # Other Languages
 
-A project can be written and narrated in one of 30 languages, not only English. Slopify asks the text model to write the article, description and shorts titles in that language, lists the voices that speak it, and times the captions for it. English and nine other languages get word-by-word captions; the rest are timed sentence by sentence.
+A project can be written and narrated in one of 30 languages, not only English. Slopify asks the AI to write the article, description and shorts titles in that language, lists the voices that speak it, and times the captions for it. English and nine other languages get word-by-word captions; the rest are timed sentence by sentence.
 
-**Where to find it:** Create → **Article** row → **Language**. On a finished project: Edit project → **Providers** → **Language**. For a channel's default: Channels → the channel → **Name and look** → **Language of new projects**.
+**Where to find it:** Create → **Article** row → **Language**. On a finished project: **Edit settings** → **Channel** → **Language**. For a channel's default: Channels → the channel → **Name and look** → **Language of new projects**.
 
 ## Pick a language for one video
 
@@ -23,9 +23,9 @@ This applies with the brand kit off too, because language is not styling. Projec
 
 ## Change the language of a finished project
 
-1. Open the project and press **Edit project**.
-2. Open **Providers** and pick the new **Language**.
-3. Save. Changing the language re-writes the project's text and re-times its captions; the rebuild review shows what will be remade and what it costs.
+1. Open the project and press **Edit settings**.
+2. Open **Channel** and pick the new **Language**.
+3. Press **Save changes**. Changing the language writes the project's text again and times its captions again; **Choose what to make again** shows what will be made and what it costs.
 
 ## What changes with the language
 
@@ -87,16 +87,16 @@ For any language other than English, Slopify checks that your caption font has t
 
 1. It uses a bundled Noto font for Latin, Greek, Cyrillic, Arabic, Hebrew, Devanagari and Thai.
 2. For Chinese, Japanese and Korean, which are not bundled (their fonts run to 10-20 MB), it looks for a font on your computer that has the letters.
-3. If none is found, the Video stage stops and says so. Upload a font that has the letters with **Upload font (.ttf or .otf)** in the caption font picker (Create → **Video and style**, or Edit project → **Subtitles**), choose it, then press **Try again**. Noto Sans JP, KR or SC from fonts.google.com work.
+3. If none is found, the Video stage stops and says so. Upload a font that has the letters with **Upload font (.ttf or .otf)** in the caption font picker (Create → **Video and style**, or **Edit settings** → **Captions**), choose it, then press **Try again**. Noto Sans JP, KR or SC from fonts.google.com work.
 
-English projects always render with exactly the font you chose.
+English projects always use exactly the font you chose.
 
 ## Limits
 
 - Only the 30 languages above can be picked.
 - Word-by-word captions and cuts that follow the narration are only available in English and the nine multilingual languages.
 - The first captions in a multilingual language need a one-time download of about 248 MB.
-- Some voice providers list languages incorrectly; use Show all voices if the voice you want is missing.
+- Some voice services list languages incorrectly; use Show all voices if the voice you want is missing.
 
 ## Related pages
 

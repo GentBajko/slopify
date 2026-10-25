@@ -90,7 +90,7 @@ The template goes to **Settings → Trash** for 30 days, where you can restore i
 
 When a template picks a model that has been retired, it says so, for example "Images … is retired.", with **Switch to <model>**. One press switches the template to the replacement, as in Settings → **Models**, and the schedules that run it follow. When there is no replacement, it says to choose another model in Settings → **Models** or edit the template. See [Models](Models#switch-away-from-a-retired-model).
 
-## Starter packs
+## Starter templates
 
 **Templates → Add starter templates** offers a ready-made set for one kind of channel. Each adds prompts, a suggested voice and a ready-made template, named `<kind> starter`:
 
@@ -101,7 +101,7 @@ When a template picks a model that has been retired, it says so, for example "Im
 | **History** | Narrative history of people, places and events, told like a documentary |
 | **Science explainers** | Clear, friendly explanations of how the world works, one idea at a time |
 
-Adding one twice changes nothing, and it never replaces a prompt or template of yours with the same name. The first-run screen offers the same starters; see [First launch and welcome](First-Launch-and-Welcome#starter-packs).
+Adding one twice changes nothing, and it never replaces a prompt or template of yours with the same name. The first-run screen offers the same starters; see [First launch and welcome](First-Launch-and-Welcome#starter-templates).
 
 ## Tips
 
