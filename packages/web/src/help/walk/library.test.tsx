@@ -20,7 +20,7 @@ import { selfExplanatory, unexplainedControls } from "../coverage.js";
 
 afterEach(cleanup);
 
-// What Prompts, PDF themes, Pronunciation and Templates may show with neither a help line nor an
+// What Prompts, PDF looks, Pronunciation and Templates may show with neither a help line nor an
 // info button beside it, each because its label says what it does.
 const libraryAllow: readonly (string | RegExp)[] = [
   // A name field: what the thing is called. A taken name is said under it as an error.
@@ -112,7 +112,7 @@ function EntriesScreen({ category }: { readonly category: EntryCategory }) {
   return <EntriesRoute category={category} />;
 }
 
-describe("every control on Prompts, Templates, PDF themes and Pronunciation is explained", () => {
+describe("every control on Prompts, Templates, PDF looks and Pronunciation is explained", () => {
   it("on the prompt list of every kind, its detail and its Versions drawer", async () => {
     const user = userEvent.setup();
     for (const prompt of prompts) {

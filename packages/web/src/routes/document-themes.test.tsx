@@ -52,14 +52,14 @@ describe("the document themes list", () => {
 
     const detail = await screen.findByRole("region", { name: "Night reading details" });
     expect(within(detail).getByText("#112233")).not.toBeNull();
-    expect(within(detail).getByRole("link", { name: "Edit theme" })).not.toBeNull();
+    expect(within(detail).getByRole("link", { name: "Edit look" })).not.toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Plain" }));
     const builtIn = await screen.findByRole("region", { name: "Plain details" });
     expect(
-      within(builtIn).getByText("Built-in themes can't be changed. Copy one to make it yours."),
+      within(builtIn).getByText("Built-in looks can't be changed. Copy one to make it yours."),
     ).not.toBeNull();
-    expect(within(builtIn).getByRole("link", { name: "Copy theme" })).not.toBeNull();
+    expect(within(builtIn).getByRole("link", { name: "Copy look" })).not.toBeNull();
   });
 
   it("deletes a saved theme behind a confirmation", async () => {
@@ -79,10 +79,10 @@ describe("the document themes list", () => {
     await user.click(await screen.findByRole("menuitem", { name: "Delete Night reading" }));
     const dialog = await screen.findByRole("dialog");
     // Themes have no Trash: the dialog says so before anything is lost.
-    expect(within(dialog).getByText("Delete the PDF theme “Night reading”?")).not.toBeNull();
+    expect(within(dialog).getByText("Delete the PDF look “Night reading”?")).not.toBeNull();
     expect(within(dialog).getByText(deleteConsequence)).not.toBeNull();
     expect(deleteConsequence).toContain("cannot be restored");
-    await user.click(within(dialog).getByRole("button", { name: "Delete theme permanently" }));
+    await user.click(within(dialog).getByRole("button", { name: "Delete look permanently" }));
     await waitFor(() => expect(deleted).toBe(true));
   });
 
@@ -90,7 +90,7 @@ describe("the document themes list", () => {
     renderRouted(<DocumentThemesRoute />, deps([]));
 
     expect(
-      await screen.findByText("No themes of your own yet. Copy a built-in below to start one."),
+      await screen.findByText("No looks of your own yet. Copy a built-in one below to start one."),
     ).not.toBeNull();
     expect(await screen.findByRole("region", { name: "Plain details" })).not.toBeNull();
   });

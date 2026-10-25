@@ -16,7 +16,7 @@ From top to bottom:
 | --- | --- |
 | Logo | The Slopify play logo. Click it to go Home. |
 | **Create** | The lime key. Opens Create to make a new video (`C` from anywhere). |
-| Destinations | **Home**, **Projects**, **Prompts** (also lit on Intros and outros), **Templates** (also lit on Designs), **Calendar** (also lit on Schedules), **Channels** (only once you have two or more channels; also lit on A/B results) and **Settings** (also lit on Usage, PDF themes and Pronunciation). |
+| Destinations | **Home**, **Projects**, **Prompts** (also lit on Intros and outros), **Templates** (also lit on Designs), **Calendar** (also lit on Schedules), **Channels** (only once you have two or more channels; also lit on A/B results) and **Settings** (also lit on Usage, PDF looks and Pronunciation). |
 | **N running** | Shown while runs are going: a lamp and the count over the word running. It links to **Running** on Home. |
 | **Update ready** | Shown only while a new version of Slopify is ready, waiting or installing. It opens a menu that says what installing does, with **Install update**. See [Updating and Patch Notes](Updating-and-Patch-Notes). |
 | **Search** | Opens the command palette (`Ctrl+K`). |

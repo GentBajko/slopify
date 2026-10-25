@@ -74,7 +74,7 @@ export function DocumentThemeEditorRoute({
               ? source.name
               : from === undefined
                 ? freeName(
-                    "My theme",
+                    "My look",
                     (data?.themes ?? []).map((theme) => theme.name),
                   )
                 : `${"label" in source ? source.label : source.name} copy`,
@@ -125,7 +125,7 @@ export function DocumentThemeEditorRoute({
   if (listing.error !== null) return <Notice>{listing.error.message}</Notice>;
   if (data === undefined) return <EditorSkeleton />;
   if (draft === undefined)
-    return <Notice>That theme is gone. It may have been deleted in another tab.</Notice>;
+    return <Notice>That look is gone. It may have been deleted in another tab.</Notice>;
 
   const edit = (next: Draft, field: string): void => {
     setEdited(next);
@@ -143,7 +143,7 @@ export function DocumentThemeEditorRoute({
   const flagged = groupStates.filter((group) => group.problems > 0).map((group) => group.title);
   const blocked =
     draft.name.trim() === ""
-      ? "Give the theme a name."
+      ? "Give the look a name."
       : problems.length > 0
         ? flagged.length === 0
           ? "Fix the highlighted settings first."
@@ -156,10 +156,10 @@ export function DocumentThemeEditorRoute({
       <PageHeader
         crumb={
           <EditorCrumb>
-            <Link to="/document-themes">PDF themes</Link>
+            <Link to="/document-themes">PDF looks</Link>
           </EditorCrumb>
         }
-        title={themeId === undefined ? "New PDF theme" : "Edit PDF theme"}
+        title={themeId === undefined ? "New PDF look" : "Edit PDF look"}
       />
       {/* The section list joins the form and the preview only where the form keeps room for
           two settings a row; on a narrower window the sections' own titles are the list. */}
@@ -278,7 +278,7 @@ export function DocumentThemeEditorRoute({
         open={deleting}
         title={`Delete "${draft.name}"?`}
         consequence="Projects that used it keep their own copy of its settings."
-        confirmLabel="Delete theme"
+        confirmLabel="Delete look"
         pending={remove.isPending}
         onConfirm={() => {
           if (themeId !== undefined) remove.mutate(themeId);
@@ -368,7 +368,7 @@ function Preview({ values }: { readonly values: DocumentTheme | undefined }) {
       <div className="max-h-[calc(100vh-220px)] min-h-[320px] overflow-y-auto rounded-media bg-sunken p-3">
         <PdfPages
           data={pdf?.bytes}
-          label="The sample article laid out with this theme"
+          label="The sample article laid out with this look"
           onDrawn={drawn}
         />
       </div>
@@ -388,7 +388,7 @@ function Preview({ values }: { readonly values: DocumentTheme | undefined }) {
 
 function Notice({ children }: { readonly children: string }) {
   return (
-    <EditorProblem back={<Link to="/document-themes">Back to PDF themes</Link>}>
+    <EditorProblem back={<Link to="/document-themes">Back to PDF looks</Link>}>
       {children}
     </EditorProblem>
   );

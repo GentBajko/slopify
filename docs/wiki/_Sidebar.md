@@ -66,7 +66,7 @@
 - [Keywords Slopify fills](Keywords-Slopify-Fills)
 - [Intros and outros](Intros-and-Outros)
 - [Aliases and glossary](Narration-Aliases-and-Glossary)
-- [Document themes](Document-Themes)
+- [PDF looks](Document-Themes)
 
 **Reference**
 - [Settings reference](Settings-Reference)

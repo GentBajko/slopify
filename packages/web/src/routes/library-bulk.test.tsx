@@ -195,7 +195,7 @@ const theme = (id: string, name: string): SavedDocumentTheme => ({
   updatedAt: "2026-09-01T10:00:00.000Z",
 });
 
-describe("PDF themes", () => {
+describe("PDF looks", () => {
   it("asks before deleting the selected themes, in permanent words", async () => {
     const user = userEvent.setup();
     const seen = recorder();
@@ -214,8 +214,8 @@ describe("PDF themes", () => {
     await user.click(screen.getByRole("button", { name: /Delete selected/u }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText(/deleted permanently/u)).not.toBeNull();
-    await user.click(within(dialog).getByRole("button", { name: "Delete 1 theme permanently" }));
-    expect(await screen.findByText("Deleted 1 PDF theme permanently.")).not.toBeNull();
+    await user.click(within(dialog).getByRole("button", { name: "Delete 1 look permanently" }));
+    expect(await screen.findByText("Deleted 1 PDF look permanently.")).not.toBeNull();
     expect(seen.calls).toEqual(["DELETE /api/document-themes/d1"]);
   });
 });

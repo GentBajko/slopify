@@ -86,8 +86,8 @@ describe("document theme editor", () => {
       <DocumentThemeEditorRoute themeId={undefined} from={undefined} onLeave={vi.fn()} />,
       deps(),
     );
-    expect(await screen.findByDisplayValue("My theme")).not.toBeNull();
-    expect(screen.getByRole("link", { name: "PDF themes" }).getAttribute("href")).toBe(
+    expect(await screen.findByDisplayValue("My look")).not.toBeNull();
+    expect(screen.getByRole("link", { name: "PDF looks" }).getAttribute("href")).toBe(
       "/document-themes",
     );
     cleanup();

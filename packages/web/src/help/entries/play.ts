@@ -249,7 +249,7 @@ export const playHelp = {
   },
   "play.document-theme": {
     title: "PDF look",
-    body: "How the PDF looks: one of three ready looks (Plain, Book in book type on parchment, Modern in a sans-serif on white) or one of your PDF themes. Preview shows it. A theme of yours is copied into the project, so editing it later leaves this project alone until you pick it again.",
+    body: "How the PDF looks: one of three ready looks (Plain, Book in book type on parchment, Modern in a sans-serif on white) or one of your own PDF looks. Preview shows it. A look of yours is copied into the project, so editing it later leaves this project alone until you pick it again.",
     tutorial: { page: "PDF-Documents", anchor: "options" },
   },
 
@@ -261,7 +261,7 @@ export const playHelp = {
   },
   "play.brand-kit": {
     title: "Channel's brand kit",
-    body: "Fills what these settings leave at their default from the channel: the caption font, intro, outro, PDF theme and ambient sound. What you set here wins. Turn it off to take none of it; the cast and language still apply. Default: on.",
+    body: "Fills what these settings leave at their default from the channel: the caption font, intro, outro, PDF look and ambient sound. What you set here wins. Turn it off to take none of it; the cast and language still apply. Default: on.",
     tutorial: { page: "Create-Overview", anchor: "channel-row" },
   },
   "play.language": {

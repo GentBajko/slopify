@@ -35,7 +35,7 @@ Press `?` anywhere (outside a text field) to see **Keyboard shortcuts**: every k
 | `/` | Projects, Prompts, Prompts → Intros and Outros | Puts the cursor in the list's search box. |
 | `Shift+N` | A project page | Runs the project's next action (Approve, Try again, Copy for YouTube Studio…). |
 | `Shift+D` | A project page | Copies the YouTube description. |
-| `Ctrl+S` / `Cmd+S` | The prompt, intro and outro and PDF theme editors | Saves, even while you are typing in a field. |
+| `Ctrl+S` / `Cmd+S` | The prompt, intro and outro and PDF look editors | Saves, even while you are typing in a field. |
 | `Up` / `Down`, `Home` / `End`, `Enter`, `Esc` | Command palette | Move, jump, run, close. |
 | `Ctrl+Enter` / `Cmd+Enter` | Create | Opens **See everything this run will do** without starting a run. |
 | `Space` or `K`, `J` / `L`, `Left` / `Right`, `M`, `F`, `C`, `0`–`9` | Inside a video or audio player | Play and pause, jump 10 seconds, jump 5 seconds, mute, full screen, captions, jump to a tenth of the way. See [Project Page](Project-Page#the-players). |
@@ -155,16 +155,16 @@ On the Projects list.
 | **Show failed projects** | Filters to failed projects. |
 | **Search projects** (`/`) | Puts the cursor in the search box. |
 
-### Prompts, templates and PDF themes
+### Prompts, templates and PDF looks
 
-On Prompts (with its intros and outros), PDF themes, Pronunciation and What worked on YouTube, except where a row says otherwise.
+New prompt and New intro or outro on Prompts (with its intros and outros), Templates, PDF looks, Pronunciation and What worked on YouTube; the rest from anywhere, found by typing.
 
 | Command | What it does |
 |---|---|
 | **New prompt** | Starts a new prompt (of the kind Prompts shows). |
 | **New intro** / **New outro** | Starts a new intro or outro (whichever list is showing). |
-| **New PDF theme** | Starts a new PDF theme. |
-| **Open intros and outros**, **Open PDF themes** | Opens that list (found by typing). **Open Prompts** and **Open Templates** are under Go to. |
+| **New PDF look** | Starts a new PDF look. |
+| **Open intros and outros**, **Open PDF looks**, **Open Pronunciation**, **Open What worked on YouTube** | Opens that page (found by typing, from anywhere). **Open Prompts** and **Open Templates** are under Go to. |
 | **Add starter templates** | On Templates: opens the starter templates to add. |
 
 See [Prompts and Templates](Prompts-and-Templates).

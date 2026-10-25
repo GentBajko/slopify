@@ -81,7 +81,7 @@ export function EntityCommands(): ReactElement {
     })),
     ...(themes.data?.themes ?? []).map((theme) => ({
       id: `theme.edit.${theme.id}`,
-      title: `Edit PDF theme ${theme.name}`,
+      title: `Edit PDF look ${theme.name}`,
       keywords: ["document", "pdf", "theme", "library"],
       go: () => {
         void navigate({ to: "/document-themes/$themeId", params: { themeId: theme.id } });

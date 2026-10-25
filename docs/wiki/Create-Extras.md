@@ -85,9 +85,9 @@ Drafts only: Slopify fills each post and you press Post. It needs the Slopify St
 | Option | What it does | Default |
 | --- | --- | --- |
 | **PDF of the article** | Turns it on. | Off |
-| **PDF look** | How the PDF looks: one of the three ready looks (**Plain**, **Book** or **Modern**), or one of your PDF themes. A theme of yours is copied into the project, so editing it later leaves this project alone until you pick it again. **Edit PDF looks ↗** opens the PDF themes. | Plain, or the channel's PDF look |
+| **PDF look** | How the PDF looks: one of the three ready looks (**Plain**, **Book** or **Modern**), or one of your own PDF looks. A look of yours is copied into the project, so editing it later leaves this project alone until you pick it again. **Edit PDF looks ↗** opens the PDF looks. | Plain, or the channel's PDF look |
 
-See [PDF Documents](PDF-Documents) and [Document Themes](Document-Themes).
+See [PDF Documents](PDF-Documents) and [PDF looks](Document-Themes).
 
 ## Audio files
 
@@ -106,7 +106,7 @@ See [PDF Documents](PDF-Documents) and [Document Themes](Document-Themes).
 - [Shorts](Shorts)
 - [YouTube Description](YouTube-Description)
 - [PDF Documents](PDF-Documents)
-- [Document Themes](Document-Themes)
+- [PDF looks](Document-Themes)
 - [Multiple Voices](Multiple-Voices)
 - [Posting to Social Sites](Posting-to-Social-Sites)
 - [Publishing to YouTube](Publishing-to-YouTube)
