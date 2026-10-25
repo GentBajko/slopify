@@ -57,11 +57,11 @@ With the establishing image on, the shorts' images are drawn with it as a refere
 
 ## See, copy and download your shorts
 
-When the run finishes, the project page's **Shorts** section shows a grid headed with the count, for example **3 shorts · 9:16**. Above the grid, one lime **Download** holds every short's MP4 in a menu (**Download the short** when there is one), with **Open folder** and **Pick different moments** beside it. Each short has:
+When the run finishes, the project page's **Shorts** part shows the shorts side by side. Above them sit **Download all 3 shorts (.zip)** (or **Download both shorts (.zip)**; none with one short), **Open folder** and **Pick different moments · 1 AI call**, and **Show what YouTube covers on a phone** draws the parts of the frame YouTube's buttons hide. Each short has:
 
 - A vertical player (Slopify's own, showing the short's first picture until it plays), its title and length.
-- Its description, the full video line and its hashtags.
-- One row of icon buttons whose names show when you point at them: **Download** (the short's MP4; left out when there is only one short, since the section's Download already fetches it), **Copy title, description and hashtags**, which puts all three on the clipboard in one go, and **More**, which holds **Make short N again**.
+- Its description and its hashtags.
+- Its actions in words: **Download (.mp4)**, **Copy for YouTube**, which puts its title, description, full video line and hashtags on the clipboard in one go, and **Make this short again** under them.
 
 While the stage runs, a short not rendered yet says how far it got, such as "Making images · 2 of 5" or "Rendering". A short that failed says so and points you to Error details in the Video part.
 
