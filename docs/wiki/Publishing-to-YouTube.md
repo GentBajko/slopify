@@ -8,7 +8,7 @@ Slopify never uploads or publishes for you: there is no YouTube sign-in and no u
 
 1. Open **Settings → YouTube Studio and posting**, press **Add playlist** and type each playlist exactly as it is called in Studio (up to 150 characters). Tick **On by default** for the ones every video goes into, then press **Save playlists**. The list is the default for every channel; pick a channel above it to give that channel its own list.
 2. Open **Channels** → your channel → **Name and look** and, under **Channel links**, add any links your descriptions use, such as `Patreon` or `Discord`. See [Channels](Channels#channel-links).
-3. In **Settings → Voices**, turn on **Real person** for any voice cloned from, or made to sound like, a real person.
+3. In **Settings → Voices**, turn on **Sounds like a real person** for any voice cloned from, or made to sound like, a real person.
 4. In **Prompts**, turn on **Draws photorealistic pictures** for any Image prompt whose style looks like real photos or film.
 5. Turn on **YouTube description** on Create (Extras row) for new videos, so they come with a description, chapters and tags.
 
@@ -65,7 +65,7 @@ Slopify answers **Yes only when one of those three cases applies**, and **No** o
 
 | Case | What you mark | Where |
 |---|---|---|
-| 1. A voice that imitates a real person | **Real person** on a voice cloned from, or made to sound like, a real person. A video or short narrated by that voice (the narration voice or any speaker) gets Yes. | Settings → **Voices**, the Real person column |
+| 1. A voice that imitates a real person | **Sounds like a real person** on a voice cloned from, or made to sound like, a real person. A video or short narrated by that voice (the narration voice or any speaker) gets Yes. | Settings → **Voices**, the Real person column |
 | 2. Real footage that is altered | In Copy for YouTube Studio's AI use step, the switch **The uploaded clip is real footage (filmed, not made by AI)** (or "The N uploaded clips are…"). It appears when the project's images include uploaded video clips. With it on, the video gets Yes when the Look's **Atmosphere** overlay (embers, dust or fog) is laid over them. A colour grade, vignette or grain alone counts as a minor edit and stays No. | Copy for YouTube Studio, per project |
 | 3. Photorealistic AI pictures | **Draws photorealistic pictures** on an Image prompt whose style looks like real photos or film. A video whose images are drawn from such a prompt, or a short whose **Image prompt** is one, gets Yes. The Built-in shorts style is not photorealistic. | Library → **Prompts**, in the Image prompt's editor (save the prompt first) |
 
@@ -98,7 +98,7 @@ Copy for YouTube Studio shows what the project has; it has no editor of its own.
 
 1. Close Copy for YouTube Studio.
 2. In the project's **YouTube** section, press **Edit** beside Summary, Chapters, Hashtags or Tags, change it and save.
-3. For a link, paste it under **Previous video for this project** and press **Save links**, or add it under **Channel links** on the channel's Name and look tab.
+3. For a link, paste it under **Previous episode** in the project's YouTube part and press **Save**, or add it under **Channel links** on the channel's Name and look tab.
 4. Open Copy for YouTube Studio again; it shows your edits.
 
 A short's title, description and hashtags come from the shorts pick; to change which moments are used, see [Shorts](Shorts). Its full video line comes from **Full video link** in **Edit settings** → **Extras** → **Shorts**.

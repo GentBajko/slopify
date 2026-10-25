@@ -14,7 +14,7 @@ The extension is built into Slopify, so there is nothing else to get. It is not 
 ## Get the extension
 
 1. Open Settings → **YouTube Studio and posting**. Under **Install the Studio extension**, pick your browser: **Chrome, Edge, Brave** or **Firefox**.
-2. Press **Download for Chrome** or **Download for Firefox**. It saves `slopify-studio-chrome.zip` or `slopify-studio-firefox.zip`.
+2. Press **Download the zip** in the first step. It saves `slopify-studio-chrome.zip` or `slopify-studio-firefox.zip`.
 3. Follow the three steps shown under the button, also written out below.
 
 Copy for YouTube Studio shows the same download and steps while no extension is paired.

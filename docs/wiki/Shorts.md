@@ -97,7 +97,7 @@ A clip must stay between the shortest and longest length you set and must not ov
 - **Multiple voices:** shorts start and end on a speaker's turn. See [Multiple-Voices](Multiple-Voices).
 - **Other languages:** titles and hashtags are written in the project's language. In languages without word timing, shorts show whole caption groups instead of word by word. See [Other-Languages](Other-Languages).
 - **Tables and figures:** a short that includes a described table or figure shows it upright.
-- **AI use answer:** a short's answer follows its Image style: Yes only if that Image prompt is marked **Draws photorealistic pictures** (the Built-in style is not), or a narrating voice is marked Real person. See [Publishing-to-YouTube](Publishing-to-YouTube#ai-use-disclosure).
+- **AI use answer:** a short's answer follows its Image prompt: Yes only if that Image prompt is marked **Draws photorealistic pictures** (the Built-in style is not), or a narrating voice is marked **Sounds like a real person**. See [Publishing-to-YouTube](Publishing-to-YouTube#ai-use-disclosure).
 
 ## Tips
 

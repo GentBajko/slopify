@@ -50,7 +50,7 @@ The section shows:
 
 | Row | What it shows |
 |---|---|
-| **Catalogue file** | The path of your local catalogue file (`models.yaml` in Slopify's data folder). |
+| **Catalog file** | The path of your local catalogue file (`models.yaml` in Slopify's data folder). |
 | **Verified** | The date the catalogue's prices were last verified. |
 | **Last checked** | When the last automatic or manual check ran, and what it changed. |
 
@@ -69,7 +69,7 @@ This overwrites the local catalogue with the published one and drops any edits y
 
 ## Edit the catalogue yourself
 
-The catalogue is a plain YAML file at the path shown under **Catalogue file**. You can add a model or switch one off in it; Slopify reloads it when it changes, and the daily check keeps your additions.
+The catalogue is a plain YAML file at the path shown under **Catalog file**. You can add a model or switch one off in it; Slopify reloads it when it changes, and the daily check keeps your additions.
 
 If the file is missing or has a mistake, Slopify keeps using the last working list and shows: "Your models.yaml file is missing or has a mistake, so Slopify is still using the last working model list." Fix the file, or use **Replace with published file**. The automatic check never overwrites a file that has a mistake in it.
 

@@ -120,7 +120,7 @@ On steps 1 and 2, **Make a long video instead** in the bottom bar takes you to C
 
 Each step highlights the real control you will use and opens its screen for you. Your place is saved, so it survives a page reload. On the review-and-start step, **Skip generating** leaves the run unstarted and goes on to Home, Channels and the Calendar instead of ending the tutorial. Other steps have **Skip this step** (or **Skip without saving**).
 
-When Projects has no projects at all, it also shows **Make your first video** with **Start tutorial**.
+When Projects has no projects at all, it also shows **Make your first video** with **Start the tour**.
 
 ## Tips
 

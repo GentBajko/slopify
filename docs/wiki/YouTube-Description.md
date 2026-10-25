@@ -40,7 +40,7 @@ The **Built-in** prompt asks for:
 - 3 to 5 hashtags, most specific last;
 - 15 to 25 tags, from broad to specific.
 
-To change the tone or add your own links, write a prompt of the kind **YouTube Description** in **Prompts**. Each `{{keyword}}` in it becomes a field on Create. The prompt editor's starter button (see **Starter text** in its help) fills in the Built-in wording to start from. See [Prompts](Prompts).
+To change the tone or add your own links, write a prompt of the kind **YouTube Description** in **Prompts**. Each `{{keyword}}` in it becomes a field on Create. The prompt editor's **Start from an example** → **Built-in wording** fills in the built-in wording to start from. See [Prompts](Prompts).
 
 ## Read and copy it
 
@@ -59,15 +59,15 @@ While the stage is running the parts say "Written once the captions are timed.";
 
 ## Edit a part
 
-1. In the project's YouTube section, press **Edit** beside Summary, Chapters, Hashtags, Tags, Pinned comment or Other titles.
+1. In the project's YouTube part, press **Edit** beside Summary, Chapters, Hashtags, Tags, Pinned comment or Other titles.
 2. Change the text and save.
 
-Your text is now marked **Your edit**. It is kept as yours:
+A line under it says it is your own text, kept when the description is written again:
 
-- When the description is written again, your part stays and "New generated version available." appears beside it with **Use it**, **Keep mine** and **View diff**.
-- **Use generated** goes back to the model's text at any time.
+- When the description is written again, your part stays and "*Part* written again. Yours stays until you choose." appears beside it with **Use the new one**, **Keep mine** and **Show the changes**.
+- **Use the written *part*** (for example **Use the written summary**) goes back to the AI's text at any time.
 
-Edits cost nothing and don't re-run anything.
+Edits cost nothing and make nothing again.
 
 ## Chapters follow YouTube's rules
 
@@ -90,7 +90,7 @@ Each channel has its own links:
 1. Open **Channels** → the project's channel → **Name and look**.
 2. Under **Channel links**, press **Add link**, type the name (for example `Patreon`) and the address, and press **Save channel**.
 
-A description takes the links of its project's channel. Names match without regard to case or extra spaces. A placeholder with no saved link stays as typed, is marked, and the YouTube section says "No link is saved for {{Name}}, so it stays as typed. Add it under Channel links on the channel's Name and look tab."
+A description takes the links of its project's channel. Names match without regard to case or extra spaces. A placeholder with no saved link stays as typed, is marked, and the YouTube part says "No link is saved for {{Name}}, so it stays as typed. Add it under Channel links on the channel's Name and look tab."
 
 Links saved in **Settings → Channel links** before each channel had its own still fill the default channel's descriptions until you save that channel's Name and look tab. See [Channels](Channels#channel-links).
 
@@ -98,8 +98,8 @@ Links saved in **Settings → Channel links** before each channel had its own st
 
 `{{Previous video}}` is special: each project can have its own.
 
-1. In the project's YouTube section, paste the link under **Previous video for this project**.
-2. Press **Save links**.
+1. In the project's YouTube part, paste the link under **Previous episode**.
+2. Press **Save**.
 
 The project's link wins over a **Previous video** link in the channel's links. It changes only what is shown and copied, with no text-model call.
 

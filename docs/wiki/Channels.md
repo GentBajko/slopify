@@ -131,7 +131,7 @@ Each channel keeps its own named links, under **Channel links** on its **Name an
 2. Under **Channel links**, press **Add link**, type the **name** (for example `Patreon`) and the URL (`https://…`). **Remove** takes one off.
 3. Press **Save channel**.
 
-Names match whatever their case or spacing. `{{Previous video}}` works the same way, but a project can set its own on its **YouTube** section (**Previous video for this project**, then **Save links**), which wins over the channel's. A placeholder with no link stays as typed, and the YouTube section says "No link is saved for {{…}}, so it stays as typed." with where to add it.
+Names match whatever their case or spacing. `{{Previous video}}` works the same way, but a project can set its own in its **YouTube** part (**Previous episode**, then **Save**), which wins over the channel's. A placeholder with no link stays as typed, and the YouTube section says "No link is saved for {{…}}, so it stays as typed." with where to add it.
 
 Links saved in Settings before channels had their own still fill the default channel's descriptions until you save its Name and look tab; Settings → **YouTube Studio and posting** → **Named links** now only points here (**Open the default channel's links**). Channel links travel in backups with their channel. See [YouTube description](YouTube-Description) and [Publishing to YouTube](Publishing-to-YouTube).
 
