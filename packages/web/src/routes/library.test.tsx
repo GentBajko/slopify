@@ -1,6 +1,10 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { CommandPaletteProvider, CommandRegistry } from "@/components/kit/command-palette";
+import {
+  CommandPaletteProvider,
+  CommandRegistry,
+  matchCommands,
+} from "@/components/kit/command-palette";
 import { renderRouted, testDeps } from "@/test-app";
 import { LibraryLayout } from "./library.js";
 
@@ -37,14 +41,18 @@ describe("the layout around Prompts, Templates, PDF themes and Pronunciation", (
         .list()
         .filter((command) => command.group === group)
         .map((command) => command.title);
-    expect(titles("Prompts")).toEqual([
-      "New prompt",
-      "New intro",
-      "Open prompts",
-      "Open intros and outros",
-    ]);
+    expect(titles("Prompts")).toEqual(["New prompt", "New intro", "Open intros and outros"]);
     expect(titles("PDF themes")).toEqual(["New PDF theme", "Open PDF themes"]);
-    expect(titles("Templates")).toEqual(["Open templates"]);
+    // Open Prompts and Open Templates are the rail's commands; no second copy here.
+    expect(titles("Templates")).toEqual([]);
     expect(titles("Library")).toEqual([]);
+    // The empty palette lists what to make; the lists are found by name.
+    expect(
+      matchCommands(registry.list(), "")
+        .filter((command) => command.id.startsWith("library."))
+        .map((command) => command.title),
+    ).toEqual(["New prompt", "New intro", "New PDF theme"]);
+    expect(matchCommands(registry.list(), "intros")[0]?.title).toBe("Open intros and outros");
+    expect(matchCommands(registry.list(), "pdf themes")[0]?.title).toBe("Open PDF themes");
   });
 });

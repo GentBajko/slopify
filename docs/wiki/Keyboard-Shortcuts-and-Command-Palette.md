@@ -159,14 +159,14 @@ On the Projects list.
 
 ### Library
 
-On any Library tab.
+On Prompts, Templates, PDF themes and Pronunciation.
 
 | Command | What it does |
 |---|---|
-| **New prompt** | Starts a new prompt (of the kind the tab shows). |
-| **New intro or outro** | Starts a new intro or outro. |
-| **New document theme** | Starts a new document theme. |
-| **Open prompts**, **Open intros and outros**, **Open templates**, **Open document themes** | Switches tab. |
+| **New prompt** | Starts a new prompt (of the kind Prompts shows). |
+| **New intro** / **New outro** | Starts a new intro or outro (whichever list is showing). |
+| **New PDF theme** | Starts a new PDF theme. |
+| **Open intros and outros**, **Open PDF themes** | Opens that list (found by typing). **Open Prompts** and **Open Templates** are under Go to. |
 | **Save a setup as a template** | On the Templates tab: saves a Play setup as a template. |
 
 See [Library-Overview](Library-Overview).

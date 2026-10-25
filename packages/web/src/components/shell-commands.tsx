@@ -87,7 +87,7 @@ function NavigationCommands({ several }: { readonly several: boolean }): null {
     group: "Go to",
     rank: goRank("templates"),
     run: go("/templates"),
-    keywords: ["library", "designs", "posters"],
+    keywords: ["library", "designs", "posters", "setups"],
     shortcut: shortcuts.goTemplates,
   });
   useCommand({
