@@ -205,7 +205,7 @@ function SetDownloadDialog({
                 <span className="text-ink">{outputLabel(row.output)}</span>
                 <span className="text-ink-2">
                   {` · made ${when(row.output.createdAt)}`}
-                  {row.older ? ` · previous version: ${outdatedWords(row.output.role)}` : ""}
+                  {row.older ? ` · ${outdatedWords(row.output.role).toLowerCase()}` : ""}
                 </span>
               </span>
             </label>

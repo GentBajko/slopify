@@ -684,9 +684,31 @@
     top: 10px;
     left: 10px;
   }
-  /* The frame's actions: a row under the caption, at rest, like a row's actions. */
+  /* A badge on a picture sits on the dark screen, as the Full size button does, so it reads on
+     a bright image; its tone keeps a light colour of its own. */
+  .sl-media__badge .sl-badge {
+    background: rgba(8, 8, 10, 0.78);
+    color: #ece9e2;
+    border-color: transparent;
+    backdrop-filter: blur(6px);
+  }
+  .sl-media__badge .sl-badge--info {
+    color: #a9d2ff;
+  }
+  .sl-media__badge .sl-badge--waiting {
+    color: #f5c97a;
+  }
+  .sl-media__badge .sl-badge--failed {
+    color: #ff9f8f;
+  }
+  .sl-media__badge .sl-badge--running {
+    color: #b6e070;
+  }
+  /* The frame's actions: a row under the caption, at rest, like a row's actions. Captions of
+     different lengths in one row of tiles: the actions still line up at the foot. */
   .sl-media__actions {
     gap: var(--space-1);
+    margin-top: auto;
   }
   /* Full size: a small worded button in the frame's top right corner, on the dark screen in
      both themes, as the Player's own buttons are. */

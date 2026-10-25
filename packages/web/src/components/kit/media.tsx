@@ -116,7 +116,13 @@ export function MediaFrame({
       </div>
       {title === undefined && meta === undefined ? null : (
         <figcaption className="sl-media__caption">
-          {title === undefined ? <span /> : <strong className="min-w-0 truncate">{title}</strong>}
+          {/* Up to three lines, so a picture's scene reads whole on its tile in all but the
+              longest prompts; Full size shows the whole prompt. */}
+          {title === undefined ? (
+            <span />
+          ) : (
+            <strong className="min-w-0 line-clamp-3">{title}</strong>
+          )}
           {meta === undefined ? null : <span className="shrink-0">{meta}</span>}
         </figcaption>
       )}
@@ -232,14 +238,17 @@ export function Lightbox({
         >
           {item === undefined || index === null ? null : (
             <>
+              {/* One line of title (the whole prompt is the caption under the picture), the
+                  item's actions, and Close always in the top right corner; on a phone the
+                  actions take the line under the title and the zoom keys give way to pinching. */}
               <div className="sl-lightbox__bar">
-                <DialogPrimitive.Title className="m-0 text-small font-semibold">
+                <DialogPrimitive.Title className="sl-lightbox__title m-0 text-small font-semibold">
                   {`${String(index + 1)} of ${String(count)} · ${item.title ?? item.alt}`}
                 </DialogPrimitive.Title>
-                <div className="sl-btn-row">
+                <div className="sl-lightbox__tools sl-btn-row">
                   {actions?.(item, index)}
                   {picture ? (
-                    <>
+                    <span className="sl-lightbox__zoom">
                       <IconButton
                         label="Zoom out"
                         disabled={zoom === 1}
@@ -257,7 +266,7 @@ export function Lightbox({
                       <IconButton label="Fit" disabled={zoom === 1} onClick={() => setZoom(1)}>
                         <Maximize2Icon aria-hidden="true" strokeWidth={1.75} />
                       </IconButton>
-                    </>
+                    </span>
                   ) : null}
                   <IconButton label="Previous" onClick={() => page(-1)} disabled={count < 2}>
                     <ChevronLeftIcon aria-hidden="true" strokeWidth={1.75} />
@@ -265,12 +274,12 @@ export function Lightbox({
                   <IconButton label="Next" onClick={() => page(1)} disabled={count < 2}>
                     <ChevronRightIcon aria-hidden="true" strokeWidth={1.75} />
                   </IconButton>
-                  <DialogPrimitive.Close asChild>
-                    <IconButton label="Close">
-                      <XIcon aria-hidden="true" strokeWidth={1.75} />
-                    </IconButton>
-                  </DialogPrimitive.Close>
                 </div>
+                <DialogPrimitive.Close asChild>
+                  <IconButton label="Close" className="sl-lightbox__close">
+                    <XIcon aria-hidden="true" strokeWidth={1.75} />
+                  </IconButton>
+                </DialogPrimitive.Close>
               </div>
               <div className="sl-lightbox__stage">
                 {item.kind === "video" ? (
