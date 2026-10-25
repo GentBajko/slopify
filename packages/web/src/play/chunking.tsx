@@ -3,6 +3,7 @@ import { defaultChunkCharacters, defaultChunkWords } from "@app/slices/narration
 import { HelpLine, Input } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
 import { LabelledField } from "@/play/pickers";
+import { switchWrap } from "@/play/rail-frame";
 import { InlineSwitch } from "@/play/switches";
 
 // The fold's line for it: "read as one piece", "split every 500 words".
@@ -44,7 +45,7 @@ export function ChunkingControl({
       <InlineSwitch<ChunkMode>
         field="chunking.mode"
         label="Split the narration by"
-        className="min-w-0 max-w-full flex-wrap [&_[data-slot=toggle-group]]:max-w-full [&_[data-slot=toggle-group]]:flex-wrap"
+        className={`min-w-0 flex-wrap [&_[data-slot=toggle-group]]:max-w-full ${switchWrap}`}
         value={value.mode}
         options={[
           { value: "whole", label: "Nothing (one piece)" },

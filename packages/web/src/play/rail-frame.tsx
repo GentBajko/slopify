@@ -102,7 +102,14 @@ export function useRailName(): string | undefined {
   return useContext(RailName);
 }
 
-export const switchWrap = "max-w-full [&_[data-slot=toggle-group]]:flex-wrap";
+// A stage's switch may wrap onto a second line. On a phone its choices then stand as separate
+// boxes that share each line between them, so a wrapped strip never leaves an empty cell
+// inside one border.
+export const switchWrap = [
+  "max-w-full [&_[data-slot=toggle-group]]:flex-wrap",
+  "max-[767px]:[&_[data-slot=toggle-group]]:gap-1 max-[767px]:[&_[data-slot=toggle-group]]:overflow-visible max-[767px]:[&_[data-slot=toggle-group]]:border-0",
+  "max-[767px]:[&_[data-slot=toggle-group-item]]:grow max-[767px]:[&_[data-slot=toggle-group-item]]:rounded-control max-[767px]:[&_[data-slot=toggle-group-item]]:border max-[767px]:[&_[data-slot=toggle-group-item]]:last:border-r",
+].join(" ");
 
 // The switch offers exactly what `slices/admission/rules.ts` allows for that stage, so a
 // source the server would refuse cannot be pressed here. With `without` a choice that another
