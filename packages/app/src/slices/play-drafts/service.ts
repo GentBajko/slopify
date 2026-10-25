@@ -1,6 +1,7 @@
 import { statSync } from "node:fs";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
+import { render } from "../admission/substitute.js";
 import { stagingPath } from "../storage/layout.js";
 import { stagedFileById } from "../storage/repo.js";
 import { releaseStagedFile } from "../storage/staging-refs.js";
@@ -145,14 +146,26 @@ export function readDraft(deps: DraftDeps, id: string): DraftResult<DraftView> {
     }),
   };
 }
+// A draft is listed by its title as the run would have it, with the topic typed in ("Lore:
+// Cleopatra", not "Lore: {{Topic}}"); a keyword still empty stays in braces.
 export function listDrafts(deps: DraftDeps): readonly DraftSummary[] {
-  return draftRows(deps.db).map((row) => ({
-    id: row.id,
-    title: row.title,
-    version: row.version,
-    updatedAt: row.updated_at,
-    readable: documentOf(row) !== null,
-  }));
+  return draftRows(deps.db).map((row) => {
+    const document = documentOf(row);
+    return {
+      id: row.id,
+      title: document === null ? row.title : filledTitle(document),
+      version: row.version,
+      updatedAt: row.updated_at,
+      readable: document !== null,
+    };
+  });
+}
+function filledTitle(document: PlayDraftDocument): string {
+  const { title, values } = document.form;
+  return render(
+    title,
+    Object.fromEntries(Object.entries(values).filter(([, value]) => value.trim() !== "")),
+  );
 }
 export function createDraft(
   deps: DraftDeps,

@@ -1,10 +1,10 @@
 import { render } from "@app/slices/admission/substitute.js";
 import type { DraftSummary } from "@app/slices/play-drafts/model.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDownIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { ChevronDownIcon, PlusIcon } from "lucide-react";
 import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
-import { Button, IconButton } from "@/components/kit/button";
+import { Button } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { List, ListRow } from "@/components/kit/list-row";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/kit/popover";
@@ -163,34 +163,42 @@ export function DraftList(): ReactElement {
             </p>
           ) : null}
           {list.data?.length ? (
-            // The title opens the draft; Delete sits on the row.
-            <List label="Saved drafts" className="max-h-72 overflow-y-auto">
+            // The title (with the topic typed in) opens the draft; Delete sits on the same line,
+            // so eight or more fit.
+            <List label="Saved drafts" className="max-h-80 overflow-y-auto">
               {list.data.map((draft) => {
                 const title = draftName({ title: draft.title, values: {} });
+                const named = title === "Untitled" ? "Untitled draft" : title;
+                const open = draft.id === session.activeId;
                 return (
                   <ListRow
                     key={draft.id}
-                    title={title === "Untitled" ? "Untitled draft" : title}
+                    className="grid-cols-[minmax(0,1fr)_auto] gap-2 px-3 py-1.5"
+                    title={named}
                     onSelect={() => {
                       setMenu(false);
                       void session.open(draft.id);
                     }}
                     meta={
-                      <time dateTime={draft.updatedAt} title={exactTime(draft.updatedAt)}>
-                        Last edited {startedAt(draft.updatedAt)}
-                      </time>
+                      <>
+                        {open ? "Open now · " : null}
+                        <time dateTime={draft.updatedAt} title={exactTime(draft.updatedAt)}>
+                          Last edited {startedAt(draft.updatedAt)}
+                        </time>
+                      </>
                     }
                     actions={
-                      <IconButton
+                      <Button
+                        variant="quiet"
                         size="small"
-                        label={`Delete ${title === "Untitled" ? "Untitled draft" : title}`}
+                        aria-label={`Delete ${named}`}
                         onClick={() => {
                           setConfirm(draft);
                           setError(null);
                         }}
                       >
-                        <Trash2Icon aria-hidden="true" />
-                      </IconButton>
+                        Delete
+                      </Button>
                     }
                   >
                     {draft.readable ? null : (

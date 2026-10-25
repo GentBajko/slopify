@@ -8,6 +8,7 @@ import { Button, ButtonRow } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
 import { Field, Input } from "@/components/kit/field";
 import { Chip } from "@/components/kit/status";
+import { cn } from "@/lib/utils";
 import { usePlaySession } from "./draft-context";
 import { headingOf, outputKindOf, outputNoun } from "./output-kind";
 
@@ -202,9 +203,11 @@ export function MoreVideos({
             ...keywordNames.map((k) => `items.${String(index + 1)}.values.${k}`),
           ].some((field) => problem(field) !== undefined);
           return (
+            // A long topic wraps inside its chip, which never grows past the column, so its
+            // remove button stays on screen.
             <Chip
               key={one.id}
-              {...(refused ? { className: "border-danger" } : {})}
+              className={cn("h-auto min-h-7 min-w-0 max-w-full py-0.5", refused && "border-danger")}
               {...(locked
                 ? {}
                 : {
@@ -217,7 +220,7 @@ export function MoreVideos({
                 variant="quiet"
                 size="small"
                 data-play-field={`items.${one.id}`}
-                className="-my-1 -ml-1.5 h-6 px-1.5 text-ink"
+                className="-ml-1.5 h-auto min-h-6 min-w-0 whitespace-normal break-words px-1.5 text-left text-ink"
                 aria-label={`Change the keywords of ${name}`}
                 onClick={() => onOpen(one.id)}
               >
