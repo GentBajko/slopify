@@ -18,7 +18,12 @@ import { UnsavedLeaveGuard } from "@/routes/unsaved-leave-guard";
 import type { PlayHandoff } from "@/templates/play-handoff";
 import { PromptAnatomy } from "./anatomy";
 import type { BakeoffPick } from "./api";
-import { requestFreeSamples, templateStudioKey, templateStudioQuery } from "./api";
+import {
+  requestFreeSamples,
+  templateChecksQuery,
+  templateStudioKey,
+  templateStudioQuery,
+} from "./api";
 import { BakeoffResults, bakeoffSectionOf, CompareModels, usingModel } from "./bakeoff";
 import { ChecksList } from "./checks-list";
 import { FineTune } from "./fine-tune";
@@ -107,6 +112,12 @@ function Studio({
   const [making, setMaking] = useState(false);
   const asked = useRef(false);
   const defaults = useProviderDefaults();
+  // On a phone the checks are under the Sample tab: its name says when something must be fixed.
+  const checks = useQuery(templateChecksQuery(api, view.template.id));
+  const toFix =
+    checks.data?.version === view.template.version
+      ? checks.data.checks.filter((check) => !check.ok).length
+      : 0;
   async function make(): Promise<void> {
     setMaking(true);
     try {
@@ -189,7 +200,7 @@ function Studio({
         items={[
           { id: "sections", label: "Sections" },
           { id: "settings", label: "Settings" },
-          { id: "sample", label: "Sample" },
+          { id: "sample", label: toFix === 0 ? "Sample" : `Sample · ${String(toFix)} to fix` },
         ]}
       />
       <Workspace

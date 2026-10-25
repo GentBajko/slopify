@@ -676,16 +676,18 @@ it("switches between sections, settings and sample with tabs on a narrow screen"
   const user = userEvent.setup();
   open();
   const tabs = await screen.findByRole("tablist", { name: "Edit template panes" });
+  // The checks are under the Sample tab on a phone: its name says one thing is to fix.
+  await within(tabs).findByRole("tab", { name: "Sample · 1 to fix" });
   expect(
     within(tabs)
       .getAllByRole("tab")
       .map((tab) => tab.textContent),
-  ).toEqual(["Sections", "Settings", "Sample"]);
+  ).toEqual(["Sections", "Settings", "Sample · 1 to fix"]);
   const settings = screen.getByRole("region", { name: "Title and keywords settings" });
   const sample = screen.getByRole("region", { name: "Title and keywords sample" });
   expect(settings.className).not.toContain("max-md:hidden");
   expect(sample.parentElement?.className).toContain("max-md:hidden");
-  await user.click(within(tabs).getByRole("tab", { name: "Sample" }));
+  await user.click(within(tabs).getByRole("tab", { name: "Sample · 1 to fix" }));
   expect(screen.getByRole("region", { name: "Title and keywords settings" }).className).toContain(
     "max-md:hidden",
   );

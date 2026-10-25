@@ -827,13 +827,22 @@
     }
   }
   /* With the Assistant beside it, a studio has the room of a narrower window: its sample and
-     checks go under the settings, as they do below 1180px. */
-  @media (min-width: 1024px) and (max-width: 1720px) {
+     checks go under the settings; below 1181px, where the sections are a row on top, the page
+     is one column. */
+  @media (min-width: 1181px) and (max-width: 1720px) {
     .sl-app--side-panel .sl-workspace.sl-workspace--studio {
       grid-template-columns: 180px minmax(0, 1fr);
     }
     .sl-app--side-panel .sl-workspace--studio .sl-workspace__aside {
       order: 1;
+    }
+  }
+  @media (min-width: 1024px) and (max-width: 1180px) {
+    .sl-app--side-panel .sl-workspace.sl-workspace--studio {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .sl-app--side-panel .sl-workspace--studio .sl-workspace__aside {
+      position: static;
     }
   }
   .sl-crumb {
@@ -1092,7 +1101,8 @@
   }
   /* Templates → Edit template: the sections, a section's settings and its sample. The settings
      are the widest column; the sample keeps a phone-width column, room for a video and its
-     player. Below 1180px the sample follows the settings rather than sitting above them. */
+     player. Below 1181px the sections are a row on top, so the sample and the checks stay in
+     view beside the settings (a laptop at 1024px). */
   .sl-workspace.sl-workspace--studio {
     grid-template-columns: 200px minmax(0, 1fr) 320px;
   }
@@ -1175,8 +1185,8 @@
   }
   /* A section's whole name shows ("YouTube description & posts"): it wraps in the narrow rail
      instead of being cut, and its sample's word goes on the line under it, after the lamp's
-     column. Phones keep the one sideways row. */
-  @media (min-width: 768px) {
+     column. Narrower windows keep the sections in a row. */
+  @media (min-width: 1181px) {
     .sl-workspace--studio .sl-workspace__sections .sl-rail__item {
       flex-wrap: wrap;
       row-gap: 0;
@@ -1191,12 +1201,27 @@
       line-height: 16px;
     }
   }
-  @media (max-width: 1180px) {
+  @media (min-width: 768px) and (max-width: 1180px) {
     .sl-workspace.sl-workspace--studio {
-      grid-template-columns: 180px minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr) 280px;
+    }
+    .sl-workspace--studio .sl-workspace__sections {
+      position: static;
+      grid-column: 1 / -1;
+    }
+    .sl-workspace--studio .sl-workspace__sections .sl-rail {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: var(--space-1);
+    }
+    .sl-workspace--studio .sl-workspace__sections .sl-rail__item {
+      flex: none;
+      width: auto;
     }
     .sl-workspace--studio .sl-workspace__aside {
-      order: 1;
+      position: sticky;
+      grid-column: auto;
+      order: 0;
     }
   }
   @media (max-width: 767px) {
@@ -1652,7 +1677,7 @@
 /* The studio rail's names wrap (above): Tailwind's truncate is a utility, so only a utility
    undoes it. */
 @layer utilities {
-  @media (min-width: 768px) {
+  @media (min-width: 1181px) {
     .sl-workspace--studio .sl-workspace__sections .sl-rail__item > .truncate {
       flex: 1 1 0%;
       min-width: 0;
