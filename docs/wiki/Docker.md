@@ -36,7 +36,7 @@ Running the same command again with nothing changed does nothing, apart from sta
 | Image | `ghcr.io/gentbajko/slopify:<version>`, pinned to the version of the installer you ran. It runs as a non-root user and already contains ffmpeg, the caption model and eSpeak NG, so the [System voice](Providers-and-Keys#the-system-voice) can narrate with no key. A healthcheck asks the app whether it is up. |
 | Compose file | Copied to `~/.local/share/slopify/docker/slopify/` with a private `.env` beside it. One service, `slopify`, with `restart: unless-stopped`. |
 | Port | `127.0.0.1:6969` on the host, localhost only. |
-| Data volume | `slopify-data`, mounted at `/data`. It holds the database, provider keys, settings, logs and staging. It is declared external, so `docker compose down` (even with `-v`) never deletes it. |
+| Data volume | `slopify-data`, mounted at `/data`. It holds the database, service keys, settings, logs and staging. It is declared external, so `docker compose down` (even with `-v`) never deletes it. |
 | Projects folder | A folder on your computer, mounted at `/data/projects`. |
 | Backups folder | A folder on your computer for scheduled backups, mounted at `/data/backups` (new installs from 3.0). |
 | Host CLI bridge | Optional. A small helper that lets the container use your AI command-line tools. |
@@ -115,7 +115,7 @@ systemctl --user status slopify-cli-bridge.service
 systemctl --user disable --now slopify-cli-bridge.service
 ```
 
-Turning it off leaves Docker, your API providers, your data and your host logins as they are. Run the install again after installing or moving a CLI.
+Turning it off leaves Docker, your keyed services, your data and your host logins as they are. Run the install again after installing or moving a CLI.
 
 If the installer can't ask (no interactive terminal), it stops and tells you to rerun with `--accept-host-cli` or `--host-cli=off`. Using the bridge needs systemd user services (`systemctl --user`); without them, use `--host-cli=off`.
 
@@ -152,7 +152,7 @@ SLOPIFY_PROJECTS_DIR=~/Documents/Slopify/Projects SLOPIFY_USER="$(id -u):$(id -g
 
 Update by changing `SLOPIFY_IMAGE` and running `docker compose up -d` again. This way has no automatic recovery copy or rollback, and Settings → General can't tell whether Docker starts at login.
 
-Keep the `127.0.0.1` binding. Anyone who reaches Slopify's port controls the app and its provider keys.
+Keep the `127.0.0.1` binding. Anyone who reaches Slopify's port controls the app and its service keys.
 
 ## Tips
 

@@ -123,11 +123,11 @@ On a project's page. The project's title shows beside each command.
 | **Copy for YouTube Studio** | Opens Copy for YouTube Studio once the video has been made. |
 | **Edit settings** | Opens the project's settings. |
 | The outdated files, as one command for the first group and one for everything | Opens the review that makes them again, with what it makes and its cost. Says so when nothing is outdated. |
-| **Save as template** | Saves this project's setup as a template. |
+| **Save as template** | Saves this project's settings as a template. |
 | **Make my own copy** | On a sample project, makes an editable copy. |
 | **Open the project folder** | Opens the project's folder on this computer. |
-| **Regenerate image N** / **Regenerate on-screen card N** | Redraws that image, including images behind **Show all**. Type the number, for example `regenerate image 12`. It asks first, as the Regenerate button does. |
-| **Regenerate the thumbnail** / **Regenerate thumbnail N** | Redraws a thumbnail. |
+| **Make an image again** / **Make an on-screen card again** | Draws that image again, including images behind **Show all**. Type the number with it, for example `image 12`. It asks first, as **Make this image again** does. |
+| **Make the thumbnail again** / **Make thumbnail 2 again** | Draws a thumbnail again. |
 | **Copy description** (`Shift+D`) | Copies the YouTube description, placeholders filled. |
 | **Copy tags** | Copies the YouTube tags. |
 
@@ -139,7 +139,7 @@ On Home.
 
 | Command | What it does |
 |---|---|
-| **Approve the article and record**, **Approve and draw the images**, **Approve and render** | Approves a run held at a review. One per held project; **Open the held run** when there is nothing to approve here. |
+| **Approve and make the narration**, **Approve and make the images**, **Approve and make the video** | Approves a run held at a pause. One per held project; **Open the held run** when there is nothing to approve here. |
 | **Mark uploaded** | Takes a finished video off the Ready to upload list. One per video. |
 
 See [Home-and-Projects](Home-and-Projects) and [Pauses and Checks](Reviews-and-Checkpoints).

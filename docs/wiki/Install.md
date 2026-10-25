@@ -1,6 +1,6 @@
 # Install
 
-Slopify is a local web app you start from a terminal. It runs on your own computer, opens in your browser at `http://127.0.0.1:6969`, and uses your own provider keys or the AI command-line tools you are already signed in to.
+Slopify is a local web app you start from a terminal. It runs on your own computer, opens in your browser at `http://127.0.0.1:6969`, and uses your own service keys or the AI command-line tools you are already signed in to.
 
 **Where to find it:** a terminal on your computer (PowerShell or Windows Terminal on Windows, Terminal on macOS, any shell on Linux).
 
@@ -84,7 +84,7 @@ Only one Slopify can use a data folder at a time. A second one on the same folde
 
 ## Keep it on 127.0.0.1
 
-Slopify has no login. Whoever can reach its port controls the app and every provider key saved in it. The default `127.0.0.1` means only your own computer can reach it.
+Slopify has no login. Whoever can reach its port controls the app and every service key saved in it. The default `127.0.0.1` means only your own computer can reach it.
 
 If you start it with another `--host`, the terminal prints a warning: `WARNING: bound to <host> - anyone who reaches this port controls the app and its keys (no login).` Only do that on a network you trust completely.
 
@@ -113,7 +113,7 @@ The bundled ffmpeg is a separate program under the GPL-3.0-or-later licence. Slo
 
 ## The caption model
 
-Captions are timed against the narration by a speech model that runs on your computer, at no cost. The English model is downloaded when Slopify starts, in the background, so a run never waits for it later: the one chosen in Settings → Production defaults → **Subtitle timing model**, Most accurate (378 MB) unless changed. The Docker image already carries it. It is kept in `<data folder>/models/`. Set `SLOPIFY_NO_MODEL_PREFETCH=1` to skip the download at start. Other languages use a separate model that is downloaded the first time a project in that language needs it.
+Captions are timed against the narration by a speech model that runs on your computer, at no cost. The English model is downloaded when Slopify starts, in the background, so a run never waits for it later: the one chosen in Settings → Production defaults → **Caption timing model**, Most accurate (378 MB) unless changed. The Docker image already carries it. It is kept in `<data folder>/models/`. Set `SLOPIFY_NO_MODEL_PREFETCH=1` to skip the download at start. Other languages use a separate model that is downloaded the first time a project in that language needs it.
 
 ## Anonymous usage stats
 

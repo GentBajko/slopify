@@ -58,12 +58,12 @@ Mark voices in **Settings → Voices** and Image prompts in **Prompts**. See [Pu
 | Field | What it does |
 |---|---|
 | **Caption font** | The caption font for videos whose template leaves the font at its default. Fonts you upload in the **Caption font** picker on Create appear here. |
-| **Caption colour** | Subtitle text colour as `#` and six hex digits, such as `#FFFFFF`. |
-| **Caption outline** | The colour of the line around each subtitle letter, such as `#000000`. A dark outline keeps light captions readable on bright pictures. |
+| **Caption colour** | The captions' text colour as `#` and six hex digits, such as `#FFFFFF`. |
+| **Caption outline** | The colour of the line around each caption letter, such as `#000000`. A dark outline keeps light captions readable on bright pictures. |
 | **Title font** | The font of chapter cards and the end screen, for videos whose template sets no title style. |
 | **Title colour** | The text colour of chapter cards and the end screen, such as `#FFD700`. |
 | **End screen text** | A line shown centred over the last 5 seconds of every video, such as "Subscribe for more". Up to 200 characters. Blank shows none. |
-| **Intro** / **Outro** | An entry from **Prompts → Intros** and **Outros**, narrated before or after the body of every video whose template has none. Each is narrated with the video's voice, so each costs one voice request per video (plus a text call for an LLM entry), and it shows in the estimate. See [Intros and outros](Intros-and-Outros). |
+| **Intro** / **Outro** | An entry from **Prompts → Intros** and **Outros**, narrated before or after the body of every video whose template has none. Each is narrated with the video's voice, so each costs one voice request per video (plus an AI call for one the AI writes), and it shows in the estimate. See [Intros and outros](Intros-and-Outros). |
 | **Document theme** | The look of the PDF for videos whose template picks no theme. A saved theme that was deleted is skipped. |
 | **Ambient sound** | Rain, Fireplace or Wind under the long video's narration, with its level (−40 to −6 dB, default −18), fade-in (0 to 30 s, default 3) and tail (0 to 30 s, default 6). Used when the template leaves its own ambient sound on "The channel's". A channel can't hold your own audio file. |
 
@@ -71,7 +71,7 @@ Mark voices in **Settings → Voices** and Image prompts in **Prompts**. See [Pu
 
 Press **Save channel** when you are done.
 
-To keep one video exactly as its template was saved, untick **Use the channel's brand kit** on Create or in Edit project. The cast and language still apply. Nothing in the kit reaches a project that already started; a project keeps what it was started with.
+To keep one video exactly as its template was saved, untick **Use the channel's brand kit** on Create or in a project's **Edit settings** → **Channel**. The cast and language still apply. Nothing in the kit reaches a project that already started; a project keeps what it was started with.
 
 ### Cast
 
@@ -87,17 +87,18 @@ The schedules that run this channel's templates, with their status and next run.
 
 ### Memory
 
-With **Episode memory** on, every finished video of the channel leaves a short summary, and new episodes about the same things read it so they agree with what came before.
+With **Remember what each video covered** on, every finished video of the channel leaves a short summary, and new episodes about the same things read it so they agree with what came before.
 
 How it works:
 
-1. When a video of this channel finishes, one short call to its text model writes a summary of up to 150 words: what the episode covered, the facts it stated, who appeared and what happened to them. The call shows on the project's **Run cost**. Finishing the same article again asks nothing, and a failed call never touches the project.
+1. When a video of this channel finishes, one short call to its AI writes a summary of up to 150 words: what the episode covered, the facts it stated, who appeared and what happened to them. The call shows in the project's cost line (**See the breakdown**). Finishing the same article again asks nothing, and a failed call never touches the project.
 2. When a new episode's article (or multi-voice script) is written by Slopify, the summaries of up to 5 related earlier episodes are added to its writing prompt under "Earlier episodes".
-3. An episode is related when it features a cast member the new title or keywords mention (strongest), or shares words of its title. Words most of the channel's titles share, such as a template's fixed prefix, and one- or two-letter words don't count. An episode with the very same title is a remake, not an earlier episode, and is left out.
+3. An episode is related when it features a cast member the new title or keywords mention (strongest), or shares words of its title. Words most of the channel's titles share, such as a template's fixed prefix, and one- or two-letter words don't count. An episode with the very same title is a new take on that video, not an earlier episode, and is left out.
 4. The summaries are copied into the project when it starts, so later edits never make a finished video outdated.
 
 On the tab:
 
+- **Search episode summaries** finds one by its title, a cast member or its words.
 - **Open** a summary to read or edit it. Your edited text is kept, even if the video finishes again.
 - **Delete** removes a summary from later prompts. The video itself is not changed.
 
@@ -109,7 +110,7 @@ Titles this channel published before or outside Slopify. Topic generation and it
 
 **Paste titles:**
 
-1. Type or paste titles into **Paste titles**, one per line.
+1. Press **Paste titles…**, then type or paste titles into **Titles, one per line**.
 2. Press **Add titles**. A title already listed (in any case) is skipped.
 
 **Import a YouTube Studio CSV:**
@@ -120,7 +121,7 @@ Titles this channel published before or outside Slopify. Topic generation and it
 4. If the export holds several series, type into **Keep only titles containing…** (for example a series name, any case). Only titles holding that text stay ticked. **Tick all** and **Untick all** reset the ticks, and you can tick each title by hand.
 5. Press **Add N ticked titles**. The import says how many were added and how many were skipped as already listed.
 
-The filter text is remembered for this channel's next import. **Remove** deletes one title, and **Remove all** clears the list.
+The filter text is remembered for this channel's next import. **Search titles to avoid** finds one, **Remove** deletes one title, and **Remove all** clears the list.
 
 ## Channel links
 
@@ -132,12 +133,12 @@ Each channel keeps its own named links, under **Channel links** on its **Name an
 
 Names match whatever their case or spacing. `{{Previous video}}` works the same way, but a project can set its own on its **YouTube** section (**Previous video for this project**, then **Save links**), which wins over the channel's. A placeholder with no link stays as typed, and the YouTube section says "No link is saved for {{…}}, so it stays as typed." with where to add it.
 
-Links saved in **Settings → Channel links** before channels had their own still fill the default channel's descriptions until you save its Name and look tab; that Settings section now only points here (**Open the default channel's links**). Channel links travel in backups with their channel. See [YouTube description](YouTube-Description) and [Publishing to YouTube](Publishing-to-YouTube).
+Links saved in Settings before channels had their own still fill the default channel's descriptions until you save its Name and look tab; Settings → **YouTube Studio and posting** → **Named links** now only points here (**Open the default channel's links**). Channel links travel in backups with their channel. See [YouTube description](YouTube-Description) and [Publishing to YouTube](Publishing-to-YouTube).
 
 ## Tips
 
 - Give each series its own channel, even if you upload them to one YouTube channel. The brand kit, cast and topic ideas stay separate.
-- Import your existing videos before turning on topic generation, so Slopify doesn't suggest what you already made.
+- Add the titles you made before (**Titles to avoid**) before turning on topic generation, so Slopify doesn't suggest what you already made.
 - Edit an episode summary when it gets a fact wrong. Later episodes will follow your version.
 
 ## Related pages
