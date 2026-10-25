@@ -64,7 +64,7 @@ export const settingsHelp = {
   },
   "settings.provider.system-voice": {
     title: "System voice",
-    body: "Narrates with the speech your computer already has: macOS voices, Windows voices, or on Linux Piper, SVOX Pico or eSpeak NG. No key, no account and no charge, but it sounds robotic next to ElevenLabs or OpenAI. On Linux, install espeak-ng if nothing is found. Its models are the speech programs Slopify found; add one of their voices in Settings → Voices.",
+    body: "Narrates with the speech your computer already has: macOS voices, Windows voices, or on Linux Piper, SVOX Pico or eSpeak NG. No key, no account and no charge, but it sounds robotic next to OpenAI, whose key narrates at once. On Linux, install espeak-ng if nothing is found. Its models are the speech programs Slopify found; add one of their voices in Settings → Voices.",
     tutorial: { page: "Providers-and-Keys", anchor: "the-system-voice" },
   },
   "settings.provider.google-tts": {

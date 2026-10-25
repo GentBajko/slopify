@@ -17,16 +17,13 @@ import { ConfirmDialog } from "@/components/kit/dialog";
 import { Field, HelpLine, Input, Select } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
 import { ButtonLink, TextLink } from "@/components/kit/link";
+import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { Status } from "@/components/kit/status";
 import { Switch } from "@/components/kit/switch";
 import { articleOf } from "@/components/provider-keys";
 import { SystemVoicePicker, sampleLine, useSystemVoices } from "@/components/system-voices";
-import {
-  languagesOfText,
-  languagesReading,
-  VoiceLanguagesCell,
-} from "@/language/voice-languages-cell";
+import { VoiceLanguagesCell, VoiceLanguagesPicker } from "@/language/voice-languages-cell";
 import { listProviderModels } from "@/lib/models";
 import { keys, providersQuery, voicesQuery } from "@/queries";
 import { backSearch, type SettingsBack } from "@/routes/settings-back";
@@ -165,105 +162,80 @@ export function Voices({
         );
       })}
 
-      <div className="min-w-0" {...helpScope}>
-        <div className="overflow-x-auto">
-          <table className="sl-table min-w-[720px] table-fixed">
-            <caption className="sr-only">Voices</caption>
-            <thead>
-              <tr>
-                <th scope="col" className="w-[28%] pr-4">
-                  Voice
-                </th>
-                <th scope="col" className="w-[20%] pr-4">
-                  Service
-                </th>
-                <th scope="col" className="w-[20%] pr-4">
-                  Speaks
-                </th>
-                <th scope="col" className="w-[14%] pr-4">
-                  Sounds like a real person
-                </th>
-                <th scope="col">
-                  <span className="sr-only">Listen and remove</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {listed === undefined ? (
-                <tr>
-                  <td colSpan={5}>
-                    <span className="block h-4 w-64 rounded-control bg-raised" />
-                  </td>
-                </tr>
-              ) : listed.length === 0 ? (
-                // An empty list teaches rather than showing a bare box.
-                <tr>
-                  <td colSpan={5} className="text-ink-2">
-                    No voices yet. Add one below: narration reads your script in it.
-                  </td>
-                </tr>
-              ) : (
-                listed.map((voice) => {
-                  const service = serviceOf(voice);
-                  const canSpeak = usable(service);
-                  return (
-                    <tr key={voice.id}>
-                      <td className="pr-4">
-                        <span className="block truncate font-semibold">{voice.name}</span>
-                        <span className="block truncate text-small text-ink-2">
-                          {voice.voiceId}
-                        </span>
-                      </td>
-                      <td className="pr-4">
-                        <span className="block truncate">
-                          {service?.displayName ?? voice.provider}
-                        </span>
-                        {service === undefined || providers.data === undefined ? null : canSpeak ? (
-                          <Status tone="done">Ready</Status>
-                        ) : (
-                          <Status tone="off">{missingWord(service)}</Status>
-                        )}
-                      </td>
-                      <td className="pr-4">
-                        <VoiceLanguagesCell voice={voice} />
-                      </td>
-                      <td className="pr-4">
-                        <Switch
-                          checked={
-                            realPerson.isPending && realPerson.variables.id === voice.id
-                              ? realPerson.variables.on
-                              : voice.imitatesRealPerson === true
-                          }
-                          disabled={realPerson.isPending}
-                          onChange={(on) => realPerson.mutate({ id: voice.id, on })}
-                          label={
-                            <span className="sr-only">{`${voice.name} sounds like a real person`}</span>
-                          }
-                          className="text-small"
-                        />
-                      </td>
-                      <td className="text-right">
-                        <span className="inline-flex flex-wrap justify-end gap-1">
-                          {canSpeak ? <ListenButton voice={voice} /> : null}
-                          <Button
-                            variant="quiet"
-                            size="small"
-                            aria-label={`Remove ${voice.name}`}
-                            onClick={() => {
-                              setRemoving(voice);
-                            }}
-                          >
-                            Remove
-                          </Button>
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+      {/* Rows, not a table: on a narrow column a row puts its actions under its text, so
+          nothing is cut off and the page never scrolls sideways. */}
+      <div className="@container min-w-0" {...helpScope}>
+        {listed === undefined ? (
+          <span className="block h-10 w-64 rounded-control bg-raised" />
+        ) : listed.length === 0 ? (
+          // An empty list teaches rather than showing a bare box.
+          <p className="m-0 text-ink-2">
+            No voices yet. Add one below: narration reads your script in it.
+          </p>
+        ) : (
+          <List label="Voices">
+            {listed.map((voice) => {
+              const service = serviceOf(voice);
+              const canSpeak = usable(service);
+              return (
+                <ListRow
+                  key={voice.id}
+                  className="relative"
+                  title={voice.name}
+                  meta={
+                    <span className="inline-flex max-w-full items-center gap-2">
+                      <span className="truncate">{service?.displayName ?? voice.provider}</span>
+                      {service === undefined || providers.data === undefined ? null : canSpeak ? (
+                        <Status tone="done">Ready</Status>
+                      ) : (
+                        <Status tone="off">{missingWord(service)}</Status>
+                      )}
+                      <span className="truncate">{`· ${voice.voiceId}`}</span>
+                    </span>
+                  }
+                  actions={
+                    <>
+                      {canSpeak ? <ListenButton voice={voice} /> : null}
+                      <Button
+                        variant="quiet"
+                        size="small"
+                        aria-label={`Remove ${voice.name}`}
+                        onClick={() => {
+                          setRemoving(voice);
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    </>
+                  }
+                >
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="text-small text-ink-2">Speaks</span>
+                      <VoiceLanguagesCell voice={voice} />
+                    </div>
+                    <Switch
+                      checked={
+                        realPerson.isPending && realPerson.variables.id === voice.id
+                          ? realPerson.variables.on
+                          : voice.imitatesRealPerson === true
+                      }
+                      disabled={realPerson.isPending}
+                      onChange={(on) => realPerson.mutate({ id: voice.id, on })}
+                      label={
+                        <>
+                          <span className="sr-only">{`${voice.name} sounds like a real person`}</span>
+                          <span aria-hidden="true">Sounds like a real person</span>
+                        </>
+                      }
+                      className="text-small"
+                    />
+                  </div>
+                </ListRow>
+              );
+            })}
+          </List>
+        )}
         {realPerson.error === null ? null : (
           <p role="alert" className="m-0 mt-2 text-small text-danger">
             {`Couldn't save Sounds like a real person: ${realPerson.error.message} Press the switch again.`}
@@ -280,12 +252,16 @@ export function Voices({
             someone real. YouTube asks you to say so when you upload; Copy for YouTube Studio
             answers Yes for you.
           </HelpLine>
-          <HelpLine>
-            Listen reads one sentence aloud: free with the system voice, one short paid request with
-            a service that has a key.
-          </HelpLine>
+          {/* Said only while a row draws Listen. */}
+          {(listed ?? []).some((voice) => usable(serviceOf(voice))) ? (
+            <HelpLine>
+              Listen reads one sentence aloud: free with the system voice, one short paid request
+              with a service that has a key.
+            </HelpLine>
+          ) : null}
           <p className="m-0 text-small text-ink-2">
-            How names and words are said: <TextLink to="/narration-aliases">Pronunciation</TextLink>
+            How names and words are said:{" "}
+            <TextLink to="/narration-aliases">Pronunciation ↗</TextLink>
           </p>
         </div>
       </div>
@@ -399,7 +375,7 @@ function AddVoiceRow({
   const [name, setName] = useState("");
   const [voiceId, setVoiceId] = useState("");
   const [pasting, setPasting] = useState(false);
-  const [languages, setLanguages] = useState("");
+  const [languages, setLanguages] = useState<readonly string[]>([]);
   const [picked, setPicked] = useState<ProviderId | undefined>(undefined);
   const [refusal, setRefusal] = useState<VoiceRefusal | undefined>(undefined);
 
@@ -426,7 +402,7 @@ function AddVoiceRow({
       setName("");
       setVoiceId("");
       setPasting(false);
-      setLanguages("");
+      setLanguages([]);
       setRefusal(undefined);
       await queryClient.invalidateQueries({ queryKey: keys.voices });
     },
@@ -444,14 +420,35 @@ function AddVoiceRow({
   const problem = (field: VoiceField): string | undefined =>
     refusal?.field === field ? refusal.message : undefined;
 
+  // The voice is typed for these services (and an OpenAI voice of your own), picked for the rest.
+  const typed =
+    provider !== "system-voice" &&
+    provider !== "google-tts" &&
+    (provider !== "openai-tts" || pasting);
+  // What the form still needs, said beside Add voice while it can't add: the next thing to do.
+  const missing =
+    provider === undefined
+      ? "Pick a voice service first"
+      : voiceId.trim() === ""
+        ? typed
+          ? "Paste a voice ID first"
+          : "Pick a voice first"
+        : name.trim() === ""
+          ? "Type a name first"
+          : undefined;
+  // The computer's own voice without its speech program has nothing to pick: the form says so
+  // once, with the fix, instead of offering an empty choice.
+  const uninstalled =
+    service !== undefined && service.readiness.kind === "local" && !usable(service);
+
   const submit = (): void => {
-    if (provider === undefined || refusal !== undefined || add.isPending) return;
-    const codes = languagesOfText(languages);
+    if (provider === undefined || missing !== undefined || refusal !== undefined || add.isPending)
+      return;
     add.mutate({
       provider,
       name,
       voiceId,
-      ...(codes.length === 0 ? {} : { languages: codes }),
+      ...(languages.length === 0 ? {} : { languages }),
     });
   };
 
@@ -470,7 +467,7 @@ function AddVoiceRow({
       <>
         Copy a voice's ID from the{" "}
         <a href={library.url} target="_blank" rel="noreferrer" className="sl-link">
-          {library.label}
+          {`${library.label} ↗`}
         </a>{" "}
         or your own voices there.
       </>
@@ -480,14 +477,16 @@ function AddVoiceRow({
 
   return (
     // A form so Enter in any box adds the voice, as Add voice does.
+    // Its columns follow the form's own width (a container), not the window's: beside the
+    // Settings list on a laptop it has two columns, and five only where all of them fit.
     <form
-      className="flex flex-col gap-3"
+      className="@container flex flex-col gap-3"
       onSubmit={(event) => {
         event.preventDefault();
         submit();
       }}
     >
-      <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+      <div className="grid items-start gap-4 @min-[36rem]:grid-cols-2 @min-[60rem]:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)_auto]">
         <Field label="Voice service" error={problem("provider")}>
           <Select
             value={provider ?? ""}
@@ -513,121 +512,136 @@ function AddVoiceRow({
           </Select>
         </Field>
 
-        <Field
-          label={
-            provider === "system-voice" ||
-            provider === "google-tts" ||
-            (provider === "openai-tts" && !pasting)
-              ? "Voice"
-              : "Voice ID"
-          }
-          error={problem("voiceId")}
-          {...(voiceHelp === undefined ? {} : { help: voiceHelp })}
-        >
-          {provider === "system-voice" ? (
-            // The computer's own voices are listed, not typed; picking one names it too.
-            <SystemVoicePicker
-              value={voiceId}
-              onPick={(voice) => {
-                edit("voiceId", () => {
-                  setVoiceId(voice.id);
-                });
-                if (name.trim() === "") setName(voice.name);
-                const language = /^([a-z]{2,3})(?:[-_]|$)/i.exec(voice.language ?? "")?.[1];
-                if (languages.trim() === "" && language !== undefined)
-                  setLanguages(language.toLowerCase());
-              }}
-            />
-          ) : provider === "google-tts" ? (
-            // Gemini speaks only its prebuilt voices, so they are picked rather than typed.
-            <Select
-              value={voiceId}
-              options={[
-                { value: "", label: "Pick a Gemini voice" },
-                ...geminiVoices.map((one) => ({
-                  value: one.name,
-                  label: `${one.name} (${one.style})`,
-                })),
-              ]}
-              onChange={(event) => pickVoice(event.target.value)}
-            />
-          ) : provider === "openai-tts" && !pasting ? (
-            <Select
-              value={voiceId}
-              options={[
-                { value: "", label: "Pick an OpenAI voice" },
-                ...openAiVoices.map((one) => ({ value: one, label: one })),
-                { value: pasteId, label: "A voice of my own (paste its ID)" },
-              ]}
-              onChange={(event) => {
-                if (event.target.value === pasteId) {
-                  setPasting(true);
-                  edit("voiceId", () => setVoiceId(""));
-                } else pickVoice(event.target.value);
-              }}
-            />
-          ) : (
-            <Input
-              className="tabular-nums"
-              value={voiceId}
-              onChange={(event) => {
-                const next = event.target.value;
-                edit("voiceId", () => {
-                  setVoiceId(next);
-                });
-              }}
-            />
-          )}
-        </Field>
+        {uninstalled ? (
+          <p className="m-0 flex flex-wrap items-center gap-2 self-center text-small text-ink-2 @min-[36rem]:col-span-full @min-[60rem]:col-span-4 @min-[60rem]:mt-6">
+            The system voice isn't installed on this computer, so it has no voices to add yet.
+            {said.includes(service.id) ? null : <AddKeyLink provider={service} back={back} />}
+          </p>
+        ) : (
+          <>
+            <Field
+              label={typed ? "Voice ID" : "Voice"}
+              error={problem("voiceId")}
+              {...(voiceHelp === undefined ? {} : { help: voiceHelp })}
+            >
+              {provider === "system-voice" ? (
+                // The computer's own voices are listed, not typed; picking one names it too.
+                <SystemVoicePicker
+                  value={voiceId}
+                  onPick={(voice) => {
+                    edit("voiceId", () => {
+                      setVoiceId(voice.id);
+                    });
+                    if (name.trim() === "") setName(voice.name);
+                    const language = /^([a-z]{2,3})(?:[-_]|$)/i.exec(voice.language ?? "")?.[1];
+                    if (languages.length === 0 && language !== undefined)
+                      setLanguages([language.toLowerCase()]);
+                  }}
+                />
+              ) : provider === "google-tts" ? (
+                // Gemini speaks only its prebuilt voices, so they are picked rather than typed.
+                <Select
+                  value={voiceId}
+                  options={[
+                    { value: "", label: "Pick a Gemini voice" },
+                    ...geminiVoices.map((one) => ({
+                      value: one.name,
+                      label: `${one.name} (${one.style})`,
+                    })),
+                  ]}
+                  onChange={(event) => pickVoice(event.target.value)}
+                />
+              ) : provider === "openai-tts" && !pasting ? (
+                <Select
+                  value={voiceId}
+                  options={[
+                    { value: "", label: "Pick an OpenAI voice" },
+                    ...openAiVoices.map((one) => ({ value: one, label: one })),
+                    { value: pasteId, label: "A voice of my own (paste its ID)" },
+                  ]}
+                  onChange={(event) => {
+                    if (event.target.value === pasteId) {
+                      setPasting(true);
+                      edit("voiceId", () => setVoiceId(""));
+                    } else pickVoice(event.target.value);
+                  }}
+                />
+              ) : (
+                <span className="flex min-w-0 flex-col items-start gap-1">
+                  <Input
+                    className="tabular-nums"
+                    value={voiceId}
+                    onChange={(event) => {
+                      const next = event.target.value;
+                      edit("voiceId", () => {
+                        setVoiceId(next);
+                      });
+                    }}
+                  />
+                  {provider === "openai-tts" ? (
+                    // The way back from pasting to OpenAI's own voices.
+                    <Button
+                      variant="quiet"
+                      size="small"
+                      onClick={() => {
+                        setPasting(false);
+                        edit("voiceId", () => setVoiceId(""));
+                      }}
+                    >
+                      Pick from OpenAI's voices
+                    </Button>
+                  ) : null}
+                </span>
+              )}
+            </Field>
 
-        <Field label="Name" help="How you pick it on Create." error={problem("name")}>
-          <Input
-            value={name}
-            onChange={(event) => {
-              const next = event.target.value;
-              edit("name", () => {
-                setName(next);
-              });
-            }}
-          />
-        </Field>
+            <Field label="Name" help="How you pick it on Create." error={problem("name")}>
+              <Input
+                value={name}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  edit("name", () => {
+                    setName(next);
+                  });
+                }}
+              />
+            </Field>
 
-        <Field
-          label="Languages it speaks (optional)"
-          help={
-            languages.trim() === ""
-              ? "Empty means any. Or type codes: es for Spanish, de for German."
-              : languagesReading(languages)
-          }
-          error={problem("languages")}
-        >
-          <Input
-            value={languages}
-            placeholder="Any language"
-            onChange={(event) => {
-              const next = event.target.value;
-              edit("languages", () => {
-                setLanguages(next);
-              });
-            }}
-          />
-        </Field>
+            <Field
+              label="Languages it speaks"
+              help="Create lists the voice for projects in these languages."
+              error={problem("languages")}
+            >
+              <VoiceLanguagesPicker
+                value={languages}
+                label="Languages it speaks"
+                onChange={(codes) => edit("languages", () => setLanguages(codes))}
+              />
+            </Field>
 
-        <Button
-          type="submit"
-          variant="primary"
-          className="md:mt-6"
-          disabled={provider === undefined || refusal !== undefined || add.isPending}
-        >
-          Add voice
-        </Button>
+            <div className="flex flex-col items-start gap-1 @min-[60rem]:mt-6">
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={missing !== undefined || refusal !== undefined || add.isPending}
+              >
+                Add voice
+              </Button>
+              {missing === undefined ? null : (
+                <span className="text-small text-ink-2">{missing}</span>
+              )}
+            </div>
+          </>
+        )}
       </div>
-      {service === undefined || usable(service) ? null : (
+      {/* A service with no key is said once: here, unless the note above the list says it. */}
+      {service === undefined ||
+      usable(service) ||
+      uninstalled ||
+      said.includes(service.id) ? null : (
         <p className="m-0 flex flex-wrap items-center gap-2 text-small text-ink-2">
-          {service.readiness.kind === "local"
-            ? "The system voice isn't installed on this computer yet."
-            : `${service.displayName} has no key yet: you can add the voice now, but it can't narrate until the key is saved.`}
-          {said.includes(service.id) ? null : <AddKeyLink provider={service} back={back} />}
+          {`${service.displayName} has no key yet: you can add the voice now, but it can't narrate until the key is saved.`}
+          <AddKeyLink provider={service} back={back} />
         </p>
       )}
       {add.error === null ? null : (
