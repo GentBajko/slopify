@@ -223,12 +223,11 @@ function ProjectWorkspace({
   const summary = project.data?.project;
   const stages = project.data?.stages ?? [];
   const outputs = project.data?.outputs ?? [];
-  // Copy for YouTube Studio is for a video made for YouTube; any other video keeps its
-  // downloads only.
+  // A finished video downloads from the title row; Copy for YouTube Studio is for a video
+  // made for YouTube, and any other video keeps its downloads only.
+  const videoReady = outputs.some((output) => output.role === "video");
   const uploadReady =
-    summary !== undefined &&
-    outputs.some((output) => output.role === "video") &&
-    makesYoutubeVideo(summary.config, outputs);
+    summary !== undefined && videoReady && makesYoutubeVideo(summary.config, outputs);
   const openSection = (section: SectionId) => setChosen(section);
   const next = useNextAction({
     project: summary ?? placeholderProject,
@@ -239,11 +238,10 @@ function ProjectWorkspace({
     gates: gateRows,
     outdated,
     waits: runCost.data?.waits ?? [],
-    uploadReady,
+    videoReady,
     actions,
     controller,
     openSection,
-    openUpload: () => setUploadOpen(true),
   });
 
   // The settings view opens straight into the editor.
@@ -639,13 +637,12 @@ function ProjectWorkspace({
       ? undefined
       : channels.find((one) => one.id === listing.channelId)?.name;
   const chapter = nextChapter !== undefined && finishedAudiobook(summary) ? nextChapter : undefined;
-  // Copy for YouTube Studio, where the next action does not already offer it.
-  const studio =
-    uploadReady && next.next?.action?.intent.kind !== "prepare-upload" ? (
-      <Button variant="secondary" onClick={() => setUploadOpen(true)}>
-        Copy for YouTube Studio
-      </Button>
-    ) : null;
+  // Copy for YouTube Studio, beside the video and in the YouTube text's head.
+  const studio = uploadReady ? (
+    <Button variant="secondary" onClick={() => setUploadOpen(true)}>
+      Copy for YouTube Studio
+    </Button>
+  ) : null;
   return (
     <RevisionMedia projectId={projectId} revisionId={revisionId}>
       <RevisionControlContext value={revisionId !== null}>
@@ -755,7 +752,7 @@ function ProjectWorkspace({
                       stages={[videoStage].filter(isStage)}
                       active={selected === "video"}
                       {...sectionProps}
-                      {...(studio === null || youtubeShown ? {} : { extra: studio })}
+                      {...(studio === null ? {} : { extra: studio })}
                     >
                       {body(videoStage)}
                     </StageSection>

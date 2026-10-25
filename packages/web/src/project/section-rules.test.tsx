@@ -1,4 +1,4 @@
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { ProjectRoute } from "@/routes/project";
 import { body, deps, finished, output, stage } from "@/routes/project-fixtures";
@@ -58,22 +58,50 @@ describe("a finished project's sections", () => {
         name,
         folders: within(section).getAllByRole("button", { name: "Open folder" }).length,
       }).toEqual({ name, folders: 1 });
-      // The next action is the one lime button; every download is secondary.
+      // The next action, the video's download, is the one lime button; every section's own
+      // download is secondary.
       expect({
         name,
         primaries: shown(".sl-btn--primary, .sl-key").map((one) => one.textContent?.trim()),
-      }).toEqual({ name, primaries: ["Copy for YouTube Studio"] });
+      }).toEqual({ name, primaries: ["Download video"] });
     }
   });
 
-  it("give the lime to the video's download when the page has no next action", async () => {
-    // A finished video not made for YouTube: nothing waits on the person.
-    renderRouted(<ProjectRoute projectId="p1" />, deps());
+  it("give the lime to the video's download in the title row, with Copy for YouTube Studio beside the video", async () => {
+    renderRouted(
+      <ProjectRoute projectId="p1" />,
+      deps({ "GET /api/projects/p1": jsonAnswer(made) }),
+    );
     await openProjectSection("Video");
-    await screen.findByRole("link", { name: "Download video (.mp4)" });
+    const video = await screen.findByRole("region", { name: "Video" });
+    await within(video).findByRole("link", { name: "Download video (.mp4)" });
     expect(shown(".sl-btn--primary, .sl-key").map((one) => one.textContent?.trim())).toEqual([
-      "Download video (.mp4)",
+      "Download video",
     ]);
+    expect(screen.getByRole("link", { name: "Download video" }).getAttribute("href")).toMatch(
+      /\/files\/p1\/video$/,
+    );
+    expect(within(video).getByRole("button", { name: "Copy for YouTube Studio" })).not.toBeNull();
+  });
+
+  it("give the lime to a section's download when the page has no next action", async () => {
+    // A finished PDF with no video: nothing waits on the person.
+    const pdf = body({
+      status: "done",
+      stages: [stage("article", "done"), stage("document", "done")],
+      outputs: [output("article_md", "article"), output("document_pdf", "document")],
+    });
+    renderRouted(
+      <ProjectRoute projectId="p1" />,
+      deps({ "GET /api/projects/p1": jsonAnswer(pdf) }),
+    );
+    await openProjectSection("PDF");
+    await screen.findByRole("region", { name: "PDF" });
+    await waitFor(() =>
+      expect(shown(".sl-btn--primary, .sl-key").map((one) => one.textContent?.trim())).toEqual([
+        "Download PDF",
+      ]),
+    );
   });
 
   it("keep one lime button on a paused project", async () => {

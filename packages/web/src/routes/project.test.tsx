@@ -187,7 +187,7 @@ describe("the project workspace", () => {
 });
 
 describe("the next action", () => {
-  it("opens a finished project on its video, with Copy for YouTube Studio the one action", async () => {
+  it("opens a finished project on its video, with Download video the one action", async () => {
     // A video made for YouTube: it writes the YouTube description.
     const youtube = {
       ...finished,
@@ -208,14 +208,16 @@ describe("the next action", () => {
     expect(within(video).getByLabelText("Generated video")).not.toBeNull();
     expect(await downloadItem("Video (.mp4)")).not.toBeNull();
     expect(
-      within(nextAction()).getByRole("button", { name: "Copy for YouTube Studio" }),
-    ).not.toBeNull();
-    // The project's next step is the page's one lime button: the downloads are secondary,
-    // and the YouTube text is a section of its own, not more of the Video section.
+      within(nextAction()).getByRole("link", { name: "Download video" }).getAttribute("href"),
+    ).toBe(`${testOrigin}/files/p1/video`);
+    // Copy for YouTube Studio sits beside the video, in its section's head.
+    expect(within(video).getByRole("button", { name: "Copy for YouTube Studio" })).not.toBeNull();
+    // The project's next step is the page's one lime button: the section's downloads are
+    // secondary, and the YouTube text is a section of its own, not more of the Video section.
     const shown = [...document.querySelectorAll(".sl-btn--primary")].filter(
       (button) => button.closest("[hidden]") === null,
     );
-    expect(shown.map((button) => button.textContent?.trim())).toEqual(["Copy for YouTube Studio"]);
+    expect(shown.map((button) => button.textContent?.trim())).toEqual(["Download video"]);
     const article = await selectProjectStage("Article");
     expect(await within(article).findByText(/A long finished article/)).not.toBeNull();
   });

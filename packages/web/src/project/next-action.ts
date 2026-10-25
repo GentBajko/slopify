@@ -87,8 +87,8 @@ export interface NextActionInput {
   readonly held: readonly HeldGate[];
   readonly outdated: readonly OutdatedOutput[];
   readonly waits: readonly LimitWaitLike[];
-  // A finished video is there to upload.
-  readonly uploadReady: boolean;
+  // A finished video file is there to download.
+  readonly videoReady: boolean;
   // The fix-it a failed step offers (`slices/fixes/rules.ts`), looked up by the caller.
   readonly fixOf: (stage: Stage) => Fix | undefined;
   // "14:05": how a time reads in a sentence. Injected so tests do not depend on the clock.
@@ -111,7 +111,7 @@ export type NextIntent =
   | { readonly kind: "soften"; readonly stage: StageKind }
   | { readonly kind: "edit" }
   | { readonly kind: "open-settings"; readonly section: "providers" | "storage" }
-  | { readonly kind: "prepare-upload" }
+  | { readonly kind: "download" }
   | { readonly kind: "full-video" };
 
 export type Situation =
@@ -148,6 +148,12 @@ export const stoppedLines = {
   title: "The run stopped before it finished.",
   why: "Continuing makes only what is missing; everything made so far is kept.",
 } as const;
+
+// The finished video's file, from the title row: the one thing to do once it is made.
+const downloadVideo: NonNullable<NextAction["action"]> = {
+  label: "Download video",
+  intent: { kind: "download" },
+};
 
 const lower = (text: string): string =>
   /^[A-Z]{2}/.test(text) ? text : text.charAt(0).toLowerCase() + text.slice(1);
@@ -334,15 +340,15 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
   // Kept as is on Home's Needs you: what is left was set aside on purpose (a step added after
   // the project was made, whose run would redo finished work), so nothing asks to continue.
   if (project.status === "pending" && project.setAside === true)
-    return input.uploadReady
+    return input.videoReady
       ? {
           situation: "done",
           tone: "done",
           status: keptAsIsWord,
           title: "The video is ready; what is left won't run.",
-          why: "Copy for YouTube Studio lays out the file, title, description, thumbnails and tags in the order YouTube Studio asks for them. Editing the project brings the rest back to Needs you.",
-          action: { label: "Copy for YouTube Studio", intent: { kind: "prepare-upload" } },
-          section: "youtube",
+          why: "Editing the project brings the rest back to Needs you.",
+          action: downloadVideo,
+          section: "video",
         }
       : {
           situation: "done",
@@ -394,8 +400,8 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
     };
 
   // The first thing a person makes is a short; the long video comes second. A finished short
-  // leads there, with the same topic and starter template. Copy for YouTube Studio stays in
-  // its section.
+  // leads there, with the same topic and starter template. Its download and Copy for YouTube
+  // Studio stay in its section.
   if (project.status === "done" && config.mode === "short")
     return {
       situation: "done",
@@ -406,15 +412,16 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
       action: { label: "Make the full video on this topic", intent: { kind: "full-video" } },
     };
 
-  if ((project.status === "done" || project.status === "partial") && input.uploadReady)
+  // A finished video is what the person came for: its download is the one thing to do next,
+  // uploaded or not. Copy for YouTube Studio sits beside the video, in its section's head.
+  if ((project.status === "done" || project.status === "partial") && input.videoReady)
     return {
       situation: "done",
       tone: "done",
       status: "Done",
-      title: "The video is ready.",
-      why: "Copy for YouTube Studio lays out the file, title, description, thumbnails and tags in the order YouTube Studio asks for them.",
-      action: { label: "Copy for YouTube Studio", intent: { kind: "prepare-upload" } },
-      section: "youtube",
+      title: "Your video is ready.",
+      action: downloadVideo,
+      section: "video",
     };
 
   return undefined;
