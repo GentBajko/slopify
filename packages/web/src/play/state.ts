@@ -201,7 +201,7 @@ const sourceLabels: Readonly<Record<StageSource, string>> = {
   generate: "Generate",
   provide: "Provide",
   from_prompt: "From prompt",
-  prompt_by_llm: "Prompt by LLM",
+  prompt_by_llm: "AI writes the prompt",
 };
 
 // What each stage's switch says, in the stage's own words: what the choice makes, from what,

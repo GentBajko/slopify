@@ -8,12 +8,12 @@ const posting = (anchor: string) => ({ page: "Posting-to-Social-Sites", anchor }
 export const socialHelp = {
   "social.text": {
     title: "Post text",
-    body: "Where the post's words come from: the article's summary, the YouTube description without its chapters, the title, a post prompt (a paid call to the project's text model, one per site), your own text, or none. Free sources cost nothing. Text longer than the site takes is cut at the last whole sentence that fits.",
+    body: "Where the post's words come from: the article's summary, the YouTube description without its chapters, the title, a post prompt (a paid call to the project's AI writer, one per site), your own text, or none. Free sources cost nothing. Text longer than the site takes is cut at the last whole sentence that fits.",
     tutorial: posting("where-the-words-come-from"),
   },
   "social.prompt": {
     title: "Post prompt",
-    body: "The Library prompt (kind Post) that writes this site's post from the article. Built-in uses Slopify's own wording. It is one call to the project's text model per site, so Save in Template Studio and the run's estimate show its price. Write your own in Library → Prompts → Post.",
+    body: "The post prompt that writes this site's post from the article. Built-in uses Slopify's own wording. It is one call to the project's AI writer per site, so Save in Edit template and the run's estimate show its price. Write your own on Prompts, under Post.",
     tutorial: posting("post-prompts"),
   },
   "social.custom": {

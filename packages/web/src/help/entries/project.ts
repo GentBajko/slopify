@@ -110,7 +110,7 @@ export const projectHelp = {
   },
   "project.edit.describe-figures": {
     title: "Describe tables and figures",
-    body: "The text model writes a short spoken passage for each table, figure, equation and code block, said in its place. Turning it on costs one text-model call per block, and after you save, the narration chunks that contain a block are spoken again, paid per character (the whole narration when Chunking is the whole article). Other chunks keep their audio; captions and timing are redone to match.",
+    body: "The AI writer writes a short spoken passage for each table, figure, equation and code block, said in its place. Turning it on costs one AI call per block, and after you save, the narration pieces that contain a block are spoken again, paid per character (the whole narration when it is read as one piece). Other pieces keep their audio; captions and timing are redone to match.",
     tutorial: { page: "Play-Narration", anchor: "tables-figures-and-code" },
   },
 } as const satisfies Readonly<Record<string, HelpEntry>>;

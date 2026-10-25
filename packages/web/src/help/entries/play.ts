@@ -29,7 +29,7 @@ export const playHelp = {
   },
   "play.source.article": {
     title: "Article source",
-    body: "Write it for me has the text model write the article from the article prompt, one call. Use my text as written narrates text you paste, word for word, with no text-model cost. Adapt my text has the article prompt rewrite text you paste, one call. No text is for images only. The article is what the narration reads and the PDF lays out. Default: Write it for me.",
+    body: "Write it for me has the AI writer write the article from the article prompt, one call. Use my text as written narrates text you paste, word for word, at no writing cost. Adapt my text has the article prompt rewrite text you paste, one call. No text is for images only. The article is what the narration reads and the PDF lays out. Default: Write it for me.",
     tutorial: { page: "Play-Title-and-Article", anchor: "choose-where-the-article-comes-from" },
   },
   "play.source.audio": {
@@ -49,24 +49,24 @@ export const playHelp = {
   },
   "play.source.video": {
     title: "Video",
-    body: "Make the video puts the slideshow together on this computer from the images and narration; it costs no provider money, only time. Off (sound only) keeps the narration as one audio file and leaves each other stage to download on its own. It needs images. Default: Make the video.",
+    body: "Make the video puts the slideshow together on this computer from the images and narration; it costs no money, only time. Off (sound only) keeps the narration as one audio file and leaves each other stage to download on its own. It needs images. Default: Make the video.",
     tutorial: { page: "Play-Video-and-Style", anchor: "choose-whether-to-render-a-video" },
   },
   "play.source.document": {
     title: "PDF of the article",
-    body: "Make a PDF lays out the article and title on this computer, in the theme you pick. It needs no provider and costs nothing. Default: Off.",
+    body: "Make a PDF lays out the article and title on this computer, in the theme you pick. It needs no service and costs nothing. Default: Off.",
     tutorial: { page: "PDF-Documents", anchor: "make-a-pdf" },
   },
 
   // Article row
   "play.provided.article": {
     title: "Article text",
-    body: "The article you paste is narrated word for word, and no text model writes one. Include everything that should be read, headings too. The count under it helps you judge the length: about 150 words is one minute of narration.",
+    body: "The article you paste is narrated word for word, and the AI writer writes none. Include everything that should be read, headings too. The count under it helps you judge the length: about 150 words is one minute of narration.",
     tutorial: { page: "Play-Title-and-Article", anchor: "paste-your-own-article" },
   },
   "play.provided.research": {
     title: "Research notes",
-    body: "Notes you paste are given to the text model with the article prompt, in place of web research. Paste facts, sources and quotes the article should draw on. Nothing is looked up.",
+    body: "Notes you paste are given to the AI writer with the article prompt, in place of web research. Paste facts, sources and quotes the article should draw on. Nothing is looked up.",
     tutorial: { page: "Play-Title-and-Article", anchor: "give-your-own-research-notes" },
   },
   "play.llm.provider": {
@@ -81,7 +81,7 @@ export const playHelp = {
   },
   "play.llm.thinking": {
     title: "Thinking",
-    body: "How long the model reasons before it answers, for models that offer it. Higher levels can write more carefully but take longer and use more tokens. Model default leaves it to the provider.",
+    body: "How long the model reasons before it answers, for models that offer it. Higher levels can write more carefully but take longer and use more tokens. Model default leaves it to the service.",
     tutorial: { page: "Play-Title-and-Article", anchor: "text-generation" },
   },
 
@@ -123,7 +123,7 @@ export const playHelp = {
   },
   "play.pronunciation-glossary": {
     title: "Pronunciation Glossary",
-    body: "Reads names with the IPA in the article's Pronunciation Glossary, such as Arda: /ˈɑɹdə/, with no extra text-model call. In your article prompt, ask for a glossary in slash-delimited standard-English IPA (Term: /IPA/), with an English approximation for foreign names; a line with sounds English lacks is read as plain text. Works with Inworld TTS-2 and TTS-2 Flash. The written text stays unchanged. Default: on.",
+    body: "Reads names with the IPA in the article's Pronunciation Glossary, such as Arda: /ˈɑɹdə/, with no extra AI call. In your article prompt, ask for a glossary in slash-delimited standard-English IPA (Term: /IPA/), with an English approximation for foreign names; a line with sounds English lacks is read as plain text. Works with Inworld TTS-2 and TTS-2 Flash. The written text stays unchanged. Default: on.",
     tutorial: { page: "Narration-Aliases-and-Glossary", anchor: "the-pronunciation-glossary" },
   },
   "play.share-glossary": {
@@ -133,7 +133,7 @@ export const playHelp = {
   },
   "play.describe-figures": {
     title: "Describe tables and figures",
-    body: "Instead of skipping tables, pictures, equations and code or reading them cell by cell, the text model writes a short spoken passage for each (a table's pattern, what a figure or equation means, what code does) and the narration says it in its place. One extra text-model call per block, in the estimate, kept for reuse. The article and PDF keep the real table; captions show what is said. Needs a text model. Default: on.",
+    body: "Instead of skipping tables, pictures, equations and code or reading them cell by cell, the AI writer writes a short spoken passage for each (a table's pattern, what a figure or equation means, what code does) and the narration says it in its place. One extra AI call per block, in the estimate, kept for reuse. The article and PDF keep the real table; captions show what is said. Needs an AI writer. Default: on.",
     tutorial: { page: "Play-Narration", anchor: "tables-figures-and-code" },
   },
   "play.show-figures": {
@@ -155,12 +155,12 @@ export const playHelp = {
   // Speakers
   "play.speakers.format": {
     title: "Speakers format",
-    body: "Narration uses one voice. Audiobook, Podcast, Radio drama and Interview give lines to several speakers, each with a voice. Several speakers need the text model to write or split the script. A new Podcast or Interview starts with the channel's hosts (cast members marked as hosts, with a voice).",
+    body: "Narration uses one voice. Audiobook, Podcast, Radio drama and Interview give lines to several speakers, each with a voice. Several speakers need the AI writer to write or split the script. A new Podcast or Interview starts with the channel's hosts (cast members marked as hosts, with a voice).",
     tutorial: { page: "Multiple-Voices", anchor: "formats" },
   },
   "play.speakers.script": {
     title: "Script",
-    body: "Write a script has the text model write speaker turns from a Script prompt, one Name: words paragraph each. Split the article (audiobooks) keeps the article as written and has the text model hand its narration and dialogue to the speakers, one extra call. Adapt the article (podcasts, interviews, dramas) also keeps the article as written; one extra call rewrites it as a conversation for the speakers, kept beside it as the script.",
+    body: "Write a script has the AI writer write speaker turns from a Script prompt, one Name: words paragraph each. Split the article (audiobooks) keeps the article as written and has the AI writer hand its narration and dialogue to the speakers, one extra call. Adapt the article (podcasts, interviews, dramas) also keeps the article as written; one extra call rewrites it as a conversation for the speakers, kept beside it as the script.",
     tutorial: { page: "Multiple-Voices", anchor: "the-script" },
   },
   "play.speakers.add-from-cast": {
@@ -195,12 +195,12 @@ export const playHelp = {
   },
   "play.speakers.native-dialogue": {
     title: "One request for consecutive turns",
-    body: "Sends back-to-back turns as one multi-speaker request where the provider has one (ElevenLabs v3 with up to 10 voices, Gemini TTS with 2), so the voices react to each other. Fewer requests, same characters charged. Other providers read each turn on its own.",
+    body: "Sends back-to-back turns as one multi-speaker request where the voice service has one (ElevenLabs v3 with up to 10 voices, Gemini TTS with 2), so the voices react to each other. Fewer requests, same characters charged. Other voice services read each turn on its own.",
     tutorial: { page: "Multiple-Voices", anchor: "run-wide-options" },
   },
   "play.speakers.audio-files": {
     title: "MP3 and M4B files",
-    body: "Also saves the narration as an MP3 and an M4B audiobook file with a chapter marker at each chapter, beside the video. Made on this computer at no provider cost.",
+    body: "Also saves the narration as an MP3 and an M4B audiobook file with a chapter marker at each chapter, beside the video. Made on this computer at no cost.",
     tutorial: { page: "Multiple-Voices", anchor: "run-wide-options" },
   },
   "play.speaker.name": {
@@ -210,7 +210,7 @@ export const playHelp = {
   },
   "play.speaker.role": {
     title: "Role",
-    body: "What this speaker does in the format: narrator, host, guest or character. The text model is told each speaker's role when it writes or splits the script.",
+    body: "What this speaker does in the format: narrator, host, guest or character. The AI writer is told each speaker's role when it writes or splits the script.",
     tutorial: { page: "Multiple-Voices", anchor: "speaker-options" },
   },
   "play.speaker.pace": {
@@ -232,7 +232,7 @@ export const playHelp = {
   },
   "play.images.effort": {
     title: "Effort",
-    body: "How long an image agent, such as the Codex CLI, reasons before it draws. Higher effort can follow the prompt more closely but takes longer and uses more tokens. Model default leaves it to the provider.",
+    body: "How long an image agent, such as the Codex CLI, reasons before it draws. Higher effort can follow the prompt more closely but takes longer and uses more tokens. Model default leaves it to the service.",
     tutorial: { page: "Play-Images", anchor: "drawing-with-the-codex-cli" },
   },
   "play.image-scale": {
@@ -247,7 +247,7 @@ export const playHelp = {
   },
   "play.image-scenes.keyword": {
     title: "Scenes on for one picture",
-    body: "This picture's prompt uses {{Slopify_Scene}}, {{Slopify_Setting}} or {{Slopify_Mood}}, so it gets its own scene even with Scenes from the article off. That is one AI call per run on the project's text model, shared by every picture. To stop it, remove the keyword from the prompt.",
+    body: "This picture's prompt uses {{Slopify_Scene}}, {{Slopify_Setting}} or {{Slopify_Mood}}, so it gets its own scene even with Scenes from the article off. That is one AI call per run, by the project's AI writer, shared by every picture. To stop it, remove the keyword from the prompt.",
     tutorial: { page: "Keywords-Slopify-Fills", anchor: "per-picture" },
   },
   "play.image-scale.rate": {
