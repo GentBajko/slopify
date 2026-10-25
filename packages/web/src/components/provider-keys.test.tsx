@@ -484,6 +484,89 @@ describe("Keys & services' lists", () => {
     expect(screen.queryByLabelText("System voice API key")).toBeNull();
   });
 
+  it("lists the system voice's install commands apart, looks again on Check again, and offers OpenAI's key", async () => {
+    const user = userEvent.setup();
+    let found = false;
+    let checks = 0;
+    const systemVoice = (): ProviderStatus => ({
+      id: "system-voice",
+      family: "tts",
+      displayName: "System voice",
+      readiness: found
+        ? { kind: "local", available: true, engine: "eSpeak NG" }
+        : {
+            kind: "local",
+            available: false,
+            issue:
+              "No speech program was found on this computer, so the system voice can't narrate. Install espeak-ng (for example sudo apt install espeak-ng), or add an OpenAI key in Settings → Providers.",
+          },
+    });
+    renderRouted(
+      <ProviderKeys focus={{ family: "tts", provider: "system-voice", arrival: true }} />,
+      testDeps({
+        "GET /api/providers": (request) =>
+          listing([
+            keyed("openrouter", "llm", "OpenRouter", true),
+            keyed("openai-tts", "tts", "OpenAI", false),
+            systemVoice(),
+          ])(request),
+        "GET /api/settings/voices": jsonAnswer({ voices: [] }),
+        "GET /api/providers/system-voice/voices": jsonAnswer({
+          engines: [],
+          issue: "No speech program was found on this computer.",
+          install: {
+            text: "Install espeak-ng with one of these:",
+            commands: ["sudo apt install espeak-ng", "sudo dnf install espeak-ng"],
+          },
+        }),
+        "POST /api/onboarding/check": (request) => {
+          checks += 1;
+          return jsonAnswer({ show: false })(request);
+        },
+      }),
+    );
+    // The sentence says what is wrong; the commands stand apart, one per line, to copy.
+    expect(
+      await screen.findByText("No speech program was found on this computer, so it can't narrate."),
+    ).not.toBeNull();
+    expect(screen.queryByText(/sudo apt install espeak-ng\)/)).toBeNull();
+    expect(screen.getByText("Install espeak-ng with one of these:")).not.toBeNull();
+    expect(
+      screen.getByText(
+        (_, node) => node?.tagName === "PRE" && /dnf install/.test(node.textContent),
+      ),
+    ).not.toBeNull();
+    // Still not found: Check again says so.
+    await user.click(screen.getByRole("button", { name: "Check again" }));
+    expect(
+      await screen.findByText("Looked again just now: still no speech program."),
+    ).not.toBeNull();
+    expect(checks).toBe(1);
+    // Installed now: the next look finds it.
+    found = true;
+    await user.click(screen.getByRole("button", { name: "Check again" }));
+    expect(await screen.findByText(/Found eSpeak NG/)).not.toBeNull();
+    expect(checks).toBe(2);
+  });
+
+  it("opens OpenAI's key from the system voice, the key that needs no program", async () => {
+    const user = userEvent.setup();
+    renderRouted(
+      <ProviderKeys focus={{ family: "tts", provider: "system-voice", arrival: true }} />,
+      deps([
+        keyed("openai-tts", "tts", "OpenAI", false),
+        {
+          id: "system-voice",
+          family: "tts",
+          displayName: "System voice",
+          readiness: { kind: "local", available: false },
+        },
+      ]),
+    );
+    await user.click(await screen.findByRole("button", { name: "Add an OpenAI key instead" }));
+    expect(await screen.findByLabelText("OpenAI API key")).not.toBeNull();
+  });
+
   it("on one column, opens a service's setup under its own line and keeps the lists together", async () => {
     const user = userEvent.setup();
     const matchMedia = window.matchMedia;

@@ -1,17 +1,19 @@
-import type { SpeechVoice } from "@app/kernel/ports/system-speech.js";
+import type { SpeechInstall, SpeechVoice } from "@app/kernel/ports/system-speech.js";
 import type { ProviderStatus } from "@app/slices/settings/model.js";
 import { systemVoiceProvider } from "@app/slices/settings/model.js";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Volume2Icon } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { type Api, speakAudition } from "@/api";
 import { useApp } from "@/app-context";
 import { Button, ButtonRow } from "@/components/kit/button";
 import { Input, Select } from "@/components/kit/field";
-import { ButtonLink } from "@/components/kit/link";
+import { ButtonLink, TextLink } from "@/components/kit/link";
 import { Status } from "@/components/kit/status";
 import { ServiceAbout } from "@/components/provider-cli";
 import { read } from "@/http";
+import { checkFirstRun, onboardingKey } from "@/onboarding/api";
+import { keys } from "@/queries";
 
 // The system voice's speech programs and their voices (`GET /api/providers/system-voice/voices`):
 // Keys & services shows what was found, Voices offers the voices to add.
@@ -24,6 +26,8 @@ export interface SystemVoices {
     readonly defaultVoice: string | null;
   }[];
   readonly issue: string | null;
+  // With no speech program: how to install one from a terminal, where that is how it is done.
+  readonly install?: SpeechInstall | null;
 }
 
 export const systemVoicesKey = ["providers", "system-voice", "voices"] as const;
@@ -49,17 +53,23 @@ export function localState(readiness: LocalReadiness): {
 }
 
 // The system voice's setup on Keys & services: the program found and how many voices it has,
-// or why none can speak and the fix.
+// or that none was found, the commands that install one, Check again once it is installed and
+// the key that needs no program at all.
 export function SystemVoiceDetail({
   provider,
   readiness,
+  onUseKey,
 }: {
   readonly provider: ProviderStatus;
   readonly readiness: LocalReadiness;
+  // Opens OpenAI's key on this page: its voices work at once, with no program to install.
+  readonly onUseKey?: () => void;
 }) {
   const headingId = useId();
-  const voices = useSystemVoices(readiness.available);
-  const engines = voices.data?.engines ?? [];
+  const voices = useSystemVoices();
+  const engines = readiness.available ? (voices.data?.engines ?? []) : [];
+  const install = voices.data?.install ?? undefined;
+  const check = useCheckSpeechAgain();
   return (
     <section
       aria-labelledby={headingId}
@@ -78,7 +88,9 @@ export function SystemVoiceDetail({
         <span className="min-w-0 break-words text-ink-2">
           {readiness.available
             ? `Found ${readiness.engine ?? "a speech program"}. Narration with it is free; a voice service with a key sounds better.`
-            : (readiness.issue ?? "No speech program was found on this computer.")}
+            : install !== undefined
+              ? noProgram
+              : (readiness.issue ?? noProgram)}
         </span>
       </p>
       {engines.length === 0 ? null : (
@@ -97,9 +109,61 @@ export function SystemVoiceDetail({
             Add a system voice
           </ButtonLink>
         </ButtonRow>
-      ) : null}
+      ) : (
+        <>
+          {install === undefined ? null : <InstallSteps install={install} />}
+          <ButtonRow>
+            <Button disabled={check.isPending} onClick={() => check.mutate()}>
+              {check.isPending ? "Checking…" : "Check again"}
+            </Button>
+            {onUseKey === undefined ? null : (
+              <Button variant="quiet" onClick={onUseKey}>
+                Add an OpenAI key instead
+              </Button>
+            )}
+          </ButtonRow>
+          {check.error === null ? null : (
+            <p role="alert" className="m-0 text-small text-danger">
+              {`Slopify couldn't look again: ${check.error.message}`}
+            </p>
+          )}
+          {check.isSuccess ? (
+            <p role="status" className="m-0 text-small text-ink-2">
+              Looked again just now: still no speech program.
+            </p>
+          ) : null}
+        </>
+      )}
     </section>
   );
+}
+
+const noProgram = "No speech program was found on this computer, so it can't narrate.";
+
+// The commands that install a speech program, apart from the sentence, so each can be copied.
+function InstallSteps({ install }: { readonly install: SpeechInstall }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-2">
+      <p className="m-0 text-small text-ink-2">{install.text}</p>
+      <pre className="m-0 overflow-x-auto rounded-sm bg-sunken px-3 py-2 font-mono text-small text-ink">
+        {install.commands.join("\n")}
+      </pre>
+    </div>
+  );
+}
+
+// Check again: looks for a speech program afresh (the server otherwise answers from the last
+// minute's look), then reads every service and the first-run view again.
+function useCheckSpeechAgain() {
+  const { api } = useApp();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => checkFirstRun(api),
+    onSuccess: async (view) => {
+      client.setQueryData(onboardingKey, view);
+      await client.invalidateQueries({ queryKey: keys.providers });
+    },
+  });
 }
 
 // Settings → Voices' Voice ID for the system voice: the voices found, grouped by program, and
@@ -147,12 +211,22 @@ export function SystemVoicePicker({
       void new Audio(next).play().catch(() => {});
     },
   });
-  if (voices.data !== undefined && engines.length === 0)
+  if (voices.data !== undefined && engines.length === 0) {
+    const install = voices.data.install ?? undefined;
     return (
-      <p role="alert" className="m-0 text-small text-danger">
-        {voices.data.issue ?? "No speech program was found on this computer."}
-      </p>
+      <div className="flex min-w-0 flex-col gap-2">
+        <p role="alert" className="m-0 text-small text-danger">
+          {install === undefined ? (voices.data.issue ?? noProgram) : noProgram}
+        </p>
+        {install === undefined ? null : <InstallSteps install={install} />}
+        <p className="m-0 text-small">
+          <TextLink to="/settings" search={{ section: "providers", provider: systemVoiceProvider }}>
+            Check again on Keys & services
+          </TextLink>
+        </p>
+      </div>
     );
+  }
   return (
     <div className="grid gap-1">
       {total > 12 ? (

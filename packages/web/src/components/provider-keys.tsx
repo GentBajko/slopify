@@ -47,6 +47,10 @@ const familyWords: Readonly<Record<ProviderFamily, string>> = {
 // `GET /api/providers` reports only whether a key is stored, never the mask.
 const keyMask = "••••••••••••";
 
+// The voice service whose key narrates at once with the voices Slopify sets up: what the
+// system voice offers instead of installing a speech program.
+const openAiVoice: ProviderId = "openai-tts";
+
 // "an OpenAI", "a Cartesia": the article a service's name takes in a button.
 export function articleOf(name: string): "a" | "an" {
   return /^[aeiou]/i.test(name) ? "an" : "a";
@@ -211,7 +215,14 @@ export function ProviderKeys({
         kind={familyWords[provider.family]}
       />
     ) : provider.readiness.kind === "local" ? (
-      <SystemVoiceDetail key={provider.id} provider={provider} readiness={provider.readiness} />
+      <SystemVoiceDetail
+        key={provider.id}
+        provider={provider}
+        readiness={provider.readiness}
+        {...(listed.some((one) => one.id === openAiVoice)
+          ? { onUseKey: () => setPicked(openAiVoice) }
+          : {})}
+      />
     ) : (
       <KeyDetail
         key={provider.id}
