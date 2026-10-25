@@ -41,7 +41,7 @@ export async function executeYoutubeRecipe(
   const llm = config.llm;
   if (llm === undefined || llm.provider.trim() === "" || llm.model.trim() === "")
     throw new Error(
-      `The YouTube description needs an AI text model, and none is chosen. Choose one in ${editSettings.writer}, then Try again.`,
+      `The YouTube description needs an AI model, and none is chosen. Choose a Service and a Model in ${editSettings.writer}, then Try again.`,
     );
   const { words } = readTimingWords(
     deps,
@@ -52,7 +52,7 @@ export async function executeYoutubeRecipe(
   const passages = transcriptPassages(words);
   if (passages.length === 0)
     throw new Error(
-      "The narration's word timing holds no words, so there is nothing to write the YouTube description from. Use More → Render the video again in the Video section, then Try again.",
+      "The narration's word timing holds no words, so there is nothing to write the YouTube description from. Press Make the video again in the project's Video section, then Try again.",
     );
   // The same timeline the timing walked: silence at the start, intro, gaps, body, outro and
   // silence at the end.

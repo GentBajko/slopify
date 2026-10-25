@@ -93,14 +93,14 @@ async function pick(
   const llm = config.llm;
   if (llm === undefined || llm.provider.trim() === "" || llm.model.trim() === "")
     throw new Error(
-      `Shorts need an AI text model to pick the clips, and none is chosen. Choose one in ${editSettings.writer}, then Try again.`,
+      `Shorts need an AI model to pick the clips, and none is chosen. Choose a Service and a Model in ${editSettings.writer}, then Try again.`,
     );
   const sentences = transcriptSentences(
     readTimingWords(deps, context, view, shortsTimingPurpose).words,
   );
   if (sentences.length === 0)
     throw new Error(
-      "The narration's word timing holds no words, so there is nothing to cut shorts from. Use More → Render the video again in the Video section, then Try again.",
+      "The narration's word timing holds no words, so there is nothing to cut shorts from. Press Make the video again in the project's Video section, then Try again.",
     );
   const audio = await revisionAudio(deps, context, view);
   const durationSeconds = audio.reduce((sum, segment) => sum + segment.seconds, 0);

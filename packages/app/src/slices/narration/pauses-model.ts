@@ -1,4 +1,3 @@
-import { createRows, editSettings } from "../../kernel/ports/settings-places.js";
 // Pauses between sentences. Some voices (Inworld's TTS-2 among them) run one sentence into the
 // next with barely a breath, so a narration sounds rushed. With a minimum set, the join finds
 // the quiet after each sentence in every narration piece and lengthens it to at least that
@@ -10,9 +9,11 @@ import { createRows, editSettings } from "../../kernel/ports/settings-places.js"
 // A paragraph's minimum is separate and 0 (the sentence minimum only) unless set: the pause
 // between paragraphs is mostly the narration prompt's and the voice's to make.
 //
-// Browser-safe: Play and Edit project read these limits. A run without either has neither on
+// Browser-safe: Create and Edit settings read these limits. A run without either has neither on
 // its config, which is what every project saved before them was, and the joins keep their
 // fingerprints then.
+
+import { createRows, editSettings } from "../../kernel/ports/settings-places.js";
 
 // ceiling: a quarter second reads brisk, 0.35 to 0.45 natural or documentary, 0.5 to 0.8 an
 // audiobook's relaxed pace, and above 0.8 sleep content; beyond 2 s it stops sounding like a

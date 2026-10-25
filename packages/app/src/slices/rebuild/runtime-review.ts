@@ -249,8 +249,8 @@ export function reviewMaterial(
         throw missing(
           stage === "images" ? "image" : "thumbnail",
           stage === "images"
-            ? "Use More → make it again in its section on Images"
-            : "Use More → make it again in its section on Thumbnail",
+            ? "Press Make this image again on it in the project's Images section"
+            : "Press Make the thumbnail again in the project's Images section",
         );
       const recipe = recipes.find((one) => one.key === itemKey);
       const brief = recipe?.input.kind === "image" ? recipe.input.prompt : "";
@@ -290,7 +290,7 @@ export function reviewMaterial(
       if (timing === undefined || itemKey !== narrationItemKey)
         throw missing(
           "narration's word timing",
-          "Use More → Render the video again in the Video section",
+          "Press Make the video again in the project's Video section",
         );
       const { words, omissions } = wordsSchema.parse(
         JSON.parse(readFileSync(path(timing), "utf8")),

@@ -12,7 +12,7 @@ const rejectedKey =
 const noKey =
   "No OpenRouter API key is saved. Add one in Settings → Keys & services, then use Try again.";
 const refused = (provider: string): string =>
-  `${provider} refused to make this image under its content rules. Reword the image prompt in the Images section of Edit project, or choose another image provider in its Providers section.`;
+  `${provider} refused to make this image under its content rules. Reword the image prompt in Edit settings → Images, or choose another image service there.`;
 
 describe("fixFor", () => {
   it("offers to sign in to the CLI the failure names, with the command to run", () => {

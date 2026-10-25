@@ -186,7 +186,7 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
           if (request.text.length > model.tts.maxCharacters)
             throw providerError({
               kind: "unsupported",
-              message: `A piece of narration is longer than this voice model's ${model.tts.maxCharacters}-character limit. Use More → make it again in its section on Audio so Slopify splits it into shorter pieces.`,
+              message: `A piece of narration is longer than this voice model's ${model.tts.maxCharacters}-character limit. Press Make the narration again in the project's Narration section, so Slopify splits it into shorter pieces.`,
             });
           return port.synthesize({ ...request, model: model.id });
         },

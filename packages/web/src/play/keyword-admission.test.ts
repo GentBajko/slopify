@@ -63,7 +63,7 @@ describe("keywords Slopify fills on Play", () => {
       ? undefined
       : result.fields.find((one) => one.field === "articlePrompt");
     expect(refusal?.message).toContain("can't be used in an Article prompt");
-    expect(refusal?.message).toContain("Change the prompt in Library, or pick another one.");
+    expect(refusal?.message).toContain("Change the prompt in Prompts, or pick another one.");
     expect(blocker).toEqual({
       field: "articlePrompt",
       hint: "Remove {{Slopify_Summary}} from that prompt, or pick another",

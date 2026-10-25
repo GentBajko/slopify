@@ -45,7 +45,7 @@ const checkLabel: Readonly<Record<FreeCheckId, string>> = {
   keywords: "Keywords",
   providers: "Services",
   voice: "Voice",
-  "release-slots": "Release slots",
+  "release-slots": "Release times",
   "monthly-cost": "Monthly cost",
   answerers: "Pauses answered",
 };

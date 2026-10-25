@@ -21,7 +21,7 @@ it("leaves out a project with nothing outdated, blocked work, or supplied conten
   const label = (key: string) => `“${key}”`;
   expect(
     previewBlocker({ work: [work("image:one", "reuse")], providedReuseRequired: [] }, label),
-  ).toBe("Nothing in it is outdated, so there is nothing to remake.");
+  ).toBe("Nothing in it is outdated, so there is nothing to make again.");
   expect(
     previewBlocker(
       {

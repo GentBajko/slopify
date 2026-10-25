@@ -94,7 +94,7 @@ export const scheduleTools: readonly RouteTool[] = [
     name: "generate_topics",
     route: "POST /api/schedules/:id/topics/generate",
     title: "Suggest topics",
-    description: "Asks the schedule's text model for topics, a paid call, like Suggest topics.",
+    description: "Asks the schedule's AI model for topics, a paid call, like Suggest topics.",
   },
   {
     name: "score_topics",

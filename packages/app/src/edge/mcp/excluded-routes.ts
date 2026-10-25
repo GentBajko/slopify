@@ -21,7 +21,7 @@ const cleanup =
 const assistantChat =
   "the in-app assistant's chat is the person's own: its asks are answered only by a press in the page, never by an agent";
 const notStarted =
-  "not a page action: projects start from Play drafts (start_draft) after their review and estimate";
+  "not a page action: projects start from drafts on Create (start_draft) after their review and estimate";
 
 export const excludedRoutes: Readonly<Record<string, string>> = {
   "GET /api/assistant": assistantChat,

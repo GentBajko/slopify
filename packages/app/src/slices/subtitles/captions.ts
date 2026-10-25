@@ -38,7 +38,7 @@ export function captionCues(words: readonly SpokenWord[]): readonly CaptionCue[]
       word.end <= word.start
     ) {
       throw new Error(
-        "The saved caption timing is damaged. Use More → Render the video again in the Video section to time them again, then Try again.",
+        "The saved caption timing is damaged. Press Make the video again in the project's Video section to time them again, then Try again.",
       );
     }
     const first = pending[0];

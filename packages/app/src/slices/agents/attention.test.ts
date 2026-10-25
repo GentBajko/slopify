@@ -28,7 +28,7 @@ function logged(f: { readonly h: { readonly deps: Omit<AttentionDeps, "log"> } }
 const scheduleId = "5c4e0f2a-7b1d-4e3a-9c6f-2d8b1a0e4f71";
 const templateId = "9a1b2c3d-4e5f-4a6b-8c7d-0e1f2a3b4c5d";
 const chunkFailure =
-  "Subtitles stopped matching the audio at 1:07:57 in narration chunk 5 of 10. Regenerate narration chunk 5 in Edit project → Narration, then Continue the run.";
+  "Captions stopped matching the audio at 1:07:57 in narration chunk 5 of 10. Make narration chunk 5 again in Edit settings → Narration, then Continue the run.";
 
 function everything() {
   const f = waitingReviewFixture();
@@ -429,10 +429,10 @@ it("marks a video step whose shorts pick stopped as in flight while its chunk is
   const f = everything();
   const { db } = f.h.deps;
   const pickStopped =
-    "The shorts pick stopped: subtitles stopped matching the audio in narration chunk 2 of 4. Regenerate narration chunk 2 in Edit project → Narration, then Continue the run.";
+    "The shorts pick stopped: captions stopped matching the audio in narration chunk 2 of 4. Make narration chunk 2 again in Edit settings → Narration, then Continue the run.";
   db.prepare("UPDATE stages SET failure_reason=? WHERE id='video'").run(pickStopped);
   db.prepare(
-    "UPDATE stages SET state='failed', failure_reason='The image provider refused.', finished_at='2026-09-10T00:05:00.000Z' WHERE id='images'",
+    "UPDATE stages SET state='failed', failure_reason='The image service refused.', finished_at='2026-09-10T00:05:00.000Z' WHERE id='images'",
   ).run();
   db.prepare(
     "INSERT INTO narration_retries(project_id,chunk_key,tries,state,detail,updated_at) VALUES ('p1','narration:2',1,'started',NULL,'2026-09-10T00:06:00.000Z')",
@@ -443,7 +443,7 @@ it("marks a video step whose shorts pick stopped as in flight while its chunk is
   expect(failed.map((entry) => [entry.stage, entry.reason, entry.autoRetryInFlight])).toEqual(
     expect.arrayContaining([
       ["video", pickStopped, true],
-      ["images", "The image provider refused.", false],
+      ["images", "The image service refused.", false],
     ]),
   );
 });

@@ -1,4 +1,3 @@
-import { createRows, editSettings } from "../../kernel/ports/settings-places.js";
 // Loudness normalization ("Level the volume"). Text-to-speech comes back at a different
 // loudness per voice and even per request, so a joined narration jumps. With the setting on:
 // - every narration piece (a chunk, an intro or outro part, a speaker's turn) is measured and
@@ -10,10 +9,12 @@ import { createRows, editSettings } from "../../kernel/ports/settings-places.js"
 // The ambient bed and the shorts' music are mixed before the master and ducked by the levelled
 // voice, so they keep their place under it.
 //
-// Browser-safe: Play, Edit project and Settings convert the same numbers.
+// Browser-safe: Create, Edit settings and Settings convert the same numbers.
 //
 // A run without the setting has no `loudness` at all, which is what every project saved before
 // it was, and every recipe leaves it out of its fingerprint then.
+
+import { createRows, editSettings } from "../../kernel/ports/settings-places.js";
 
 export interface LoudnessSettings {
   // The long video's and the shorts' integrated loudness, in LUFS.

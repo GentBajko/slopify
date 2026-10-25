@@ -53,7 +53,7 @@ describe("keywords in a saved version", () => {
         { ...rest, sources: { ...config.sources, thumbnail: "from_prompt" }, thumbnailPrompt: "T" },
         { ...content, promptTemplates: { thumbnailPrompt: "{{Slopify_Hook}}" } },
       ),
-    ).toContainEqual({ field: "llm", message: "Pick a text provider and model." });
+    ).toContainEqual({ field: "llm", message: "Choose a Service and a Model under Written by." });
   });
 
   it("lists every body a version runs with its place, the reviews' prompts too", () => {

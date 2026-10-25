@@ -60,10 +60,10 @@ export function validateRecipeInputs(
       (cost) => cost === "digest" || cost === "scenes",
     );
   if (llm && (!config.llm?.provider.trim() || !config.llm.model.trim()))
-    fields.push({ field: "llm", message: "Pick a text provider and model." });
+    fields.push({ field: "llm", message: "Choose a Service and a Model under Written by." });
   if (config.sources.audio === "generate") {
     if (!config.audio?.provider.trim() || !config.audio.model.trim())
-      fields.push({ field: "audio", message: "Pick a narration provider and model." });
+      fields.push({ field: "audio", message: "Choose a Service and a Model under Read by." });
     else if (!config.audio.voice.trim())
       fields.push({ field: "audio.voice", message: "Pick a narration voice." });
   }
@@ -78,7 +78,7 @@ export function validateRecipeInputs(
       usesAnimation(config)) &&
     (!config.images?.provider.trim() || !config.images.model.trim())
   )
-    fields.push({ field: "images", message: "Pick an image provider and model." });
+    fields.push({ field: "images", message: "Choose a Service and a Model under Images by." });
   // 60, or more for a project that scales its images with the narration (`images/scale.ts`).
   const imagesMax = imagesPerVideoMax(config);
   if (content.imageOrder.length > imagesMax)

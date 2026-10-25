@@ -51,7 +51,7 @@ export async function executeAnimateRecipe(
   };
   if (still === undefined)
     return fallback(
-      "its image wasn't ready to animate. Use More → Render the video again in the Video section after the image is made.",
+      "its image wasn't ready to animate. Press Make the video again in the project's Video section after the image is made.",
     );
   const animate = providers.forPiece(piece.id).animate;
   if (animate === undefined)
@@ -74,7 +74,7 @@ export async function executeAnimateRecipe(
   } catch (error) {
     if (context.signal.aborted) throw error;
     return fallback(
-      `${errorText(error)} To try again, use More → Render the video again in the Video section.`,
+      `${errorText(error)} To try again, press Make the video again in the project's Video section.`,
     );
   }
   if (!made.ok) return "held";

@@ -13,7 +13,7 @@ export const socialHelp = {
   },
   "social.text": {
     title: "Post text",
-    body: "Where the post's words come from: the article's summary, the YouTube description without its chapters, the title, a post prompt (a paid call to the project's text model, one per site), your own text, or none. Free sources cost nothing. Text longer than the site takes is cut at the last whole sentence that fits.",
+    body: "Where the post's words come from: the article's summary, the YouTube description without its chapters, the title, a post prompt (a paid AI call, one per site), your own text, or none. Free sources cost nothing. Text longer than the site takes is cut at the last whole sentence that fits.",
     tutorial: posting("where-the-words-come-from"),
   },
   "social.prompt": {

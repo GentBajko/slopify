@@ -238,7 +238,7 @@ export function estimateRun(
         kind: "unknown",
         stage: "Delivery cue overhead",
         detail:
-          "TTS character charges include delivery tags; their length is known after preparation.",
+          "The voice service charges for the delivery tags' characters too; their length is known after preparation.",
       });
     }
     // A template studio sample says only the narration's opening (`template-studio/scope.ts`).

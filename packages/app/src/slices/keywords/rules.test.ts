@@ -179,7 +179,7 @@ describe("placedProblems", () => {
       {
         field: "articlePrompt",
         message:
-          "{{Slopify_Hook}} at line 1, column 1 can't be used in an Article prompt: it is written from the article, which doesn't exist yet when this prompt runs. Remove it; it works in Image, Thumbnail, Description, Shorts, Review and Post. Change the prompt in Library, or pick another one.",
+          "{{Slopify_Hook}} at line 1, column 1 can't be used in an Article prompt: it is written from the article, which doesn't exist yet when this prompt runs. Remove it; it works in Image, Thumbnail, Description, Shorts, Review and Post. Change the prompt in Prompts, or pick another one.",
       },
     ]);
   });

@@ -224,7 +224,7 @@ export function voicesProblems(settings: VoicesSettings): readonly VoiceProblem[
     if (speaker.voice.provider.trim() === "" || speaker.voice.model.trim() === "")
       problems.push({
         field: `${field}.voice`,
-        message: `Choose a voice provider and model for ${name || "this speaker"}.`,
+        message: `Choose a voice service and model for ${name || "this speaker"}.`,
       });
     else if (speaker.voice.voice.trim() === "")
       problems.push({

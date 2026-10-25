@@ -5,7 +5,7 @@ export const libraryTools: readonly RouteTool[] = [
     name: "list_prompts",
     route: "GET /api/prompts",
     title: "List prompts",
-    description: "Library prompts of every kind.",
+    description: "Your prompts of every kind, as Prompts lists them.",
   },
   {
     name: "create_prompt",
@@ -71,7 +71,7 @@ export const libraryTools: readonly RouteTool[] = [
     name: "list_entries",
     route: "GET /api/entries",
     title: "List intros and outros",
-    description: "Library intros and outros.",
+    description: "Your intros and outros (Prompts → Intros and outros).",
   },
   {
     name: "create_entry",

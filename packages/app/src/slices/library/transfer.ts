@@ -146,7 +146,7 @@ export function readLibraryFile<S extends LibrarySection>(
   if (!top.success)
     return {
       ok: false,
-      message: `it isn't a Slopify library file. Pick a .json file made by Export on a Library tab.`,
+      message: `it isn't a Slopify library file. Pick a .json file made by Export on Prompts, the PDF looks or Pronunciation.`,
     };
   if (top.data.version > libraryFileVersion)
     return {

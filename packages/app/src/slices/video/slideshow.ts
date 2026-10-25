@@ -122,7 +122,7 @@ async function renderWith(
         throw new Error(
           internalError(
             "the chapter cards have no font",
-            "Use More → Render the video again in the Video section",
+            "Press Make the video again in the project's Video section",
           ),
         );
       mkdirSync(join(workspace, "fonts"), { mode: 0o700 });

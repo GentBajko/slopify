@@ -86,7 +86,7 @@ export function readTimingWords(
   const timing = readyOutput(view, { workKey: "subtitles:timing", role: "subtitle_words" });
   if (timing === undefined)
     throw new Error(
-      `The narration's word timing, which ${purpose}, is missing. Use More → Render the video again in the Video section, then Try again.`,
+      `The narration's word timing, which ${purpose}, is missing. Press Make the video again in the project's Video section, then Try again.`,
     );
   return wordsSchema.parse(
     JSON.parse(
@@ -212,7 +212,7 @@ async function cues(
     const output = readyOutput(view, { workKey: "subtitles:timing" });
     if (output === undefined)
       throw new Error(
-        "Caption timing is missing. Use More → Render the video again in the Video section, then Try again.",
+        "Caption timing is missing. Press Make the video again in the project's Video section, then Try again.",
       );
     const timed = wordsSchema.parse(
       JSON.parse(
@@ -244,7 +244,7 @@ async function files(
   const row = donePiece(view, "subtitles:cues");
   if (row?.piece.payload === null || row?.piece.payload === undefined)
     throw new Error(
-      "The captions haven't been prepared yet. Use More → Render the video again in the Video section, then Try again.",
+      "The captions haven't been prepared yet. Press Make the video again in the project's Video section, then Try again.",
     );
   const value = cuesSchema.parse(JSON.parse(row.piece.payload));
   const previous = view.outputs.find(
@@ -455,7 +455,7 @@ export function describeMismatch(
       : `${clock(mismatch.at)} into the ${segment} narration, in narration chunk ${String(at + 1)} of ${String(chunks.length)} (it starts "${opening(chunk.spokenText)}")`;
   const expected = mismatch.expected === "" ? "the end of the text" : `"${mismatch.expected}…"`;
   const heard = mismatch.heard === "" ? "no more speech" : `"${mismatch.heard.toLowerCase()}…"`;
-  const stopped = `Subtitles stopped matching the audio at ${where}. The text expected ${expected} but the audio has ${heard}`;
+  const stopped = `Captions stopped matching the audio at ${where}. The text expected ${expected} but the audio has ${heard}`;
   if (retry !== undefined) {
     const n = String(retry.chunk);
     return retry.try === undefined

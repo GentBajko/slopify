@@ -149,7 +149,7 @@ const details: Readonly<Record<Extract<ChannelResult<never>, { ok: false }>["rea
   "too-many-images":
     "This cast member already has the most pictures it can keep. Delete one first.",
   "no-image-provider":
-    "Slopify can't make pictures here yet. Set up an image provider in Settings → Keys & services, or upload a picture instead.",
+    "Slopify can't make pictures here yet. Set up an image service in Settings → Keys & services, or upload a picture instead.",
 };
 
 function refused(c: Context, result: Extract<ChannelResult<never>, { ok: false }>): Response {

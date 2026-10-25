@@ -279,7 +279,7 @@ it("names the time, the chunk and the words when the audio stops matching", () =
       heard: "WARGAMER'S HEADLINE WAS I TESTED D AND D'S",
     }),
   ).toBe(
-    'Subtitles stopped matching the audio at 1:40:22 into the body narration, in narration chunk 2 of 2 (it starts "Around its March 2023 release, Collider"). The text expected "Early reviews disagreed with each other. Wargamer\'s headline was…" but the audio has "wargamer\'s headline was i tested d and d\'s…" The recording there probably skips or changes words. Listen at 1:40:22: if words are missing or wrong, make narration chunk 2 again in Edit settings → Narration, then Continue the run. If it says them right, only another way (a year, an abbreviation or a name read its own way), making it again gives the same reading: use Download diagnostics in Settings and report it.',
+    'Captions stopped matching the audio at 1:40:22 into the body narration, in narration chunk 2 of 2 (it starts "Around its March 2023 release, Collider"). The text expected "Early reviews disagreed with each other. Wargamer\'s headline was…" but the audio has "wargamer\'s headline was i tested d and d\'s…" The recording there probably skips or changes words. Listen at 1:40:22: if words are missing or wrong, make narration chunk 2 again in Edit settings → Narration, then Continue the run. If it says them right, only another way (a year, an abbreviation or a name read its own way), making it again gives the same reading: use Download diagnostics in Settings and report it.',
   );
 });
 

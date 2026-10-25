@@ -42,7 +42,7 @@ export function narrationTextParts(
     );
     if (selected === undefined || recipe === undefined)
       throw new Error(
-        `Some narration chunks aren't finished, so the full narration text isn't available. Let the Narration stage finish (Continue the run, or Try the narration again), or make the missing chunk again in ${editSettings.narration}.`,
+        `Some narration chunks aren't finished, so the full narration text isn't available. Let the Narration stage finish (Continue the run, or Try again on Narration), or make the missing chunk again in ${editSettings.narration}.`,
       );
     const input = recipe.input;
     if (

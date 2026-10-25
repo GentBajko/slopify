@@ -134,7 +134,7 @@ export async function importLibrary(
   const bytes = Buffer.from(file.base64, "base64");
   if (bytes.byteLength > libraryFileMaxBytes)
     return refusal(
-      `${file.name} wasn't imported: it is larger than ${String(libraryFileMaxBytes / 1024 / 1024)} MB, far more than a Library export. Send the file export_library made.`,
+      `${file.name} wasn't imported: it is larger than ${String(libraryFileMaxBytes / 1024 / 1024)} MB, far more than an export of prompts, PDF looks or pronunciations. Send the file export_library made.`,
     );
   const content = bytes.toString("utf8");
   const outcome =

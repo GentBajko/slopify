@@ -79,7 +79,7 @@ export const channelTools: readonly RouteTool[] = [
     body: castGenerateSchema,
     title: "Generate a cast picture",
     description:
-      "Draws a cast picture with the image provider, a paid call, like Generate on the Cast tab.",
+      "Draws a cast picture with the image service, a paid call, like Make the picture on the Cast tab.",
   },
   {
     name: "delete_cast_picture",

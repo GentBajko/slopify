@@ -324,7 +324,7 @@ function checkAnswer(piece: WorkPiece, answer: LlmAnswer): string | undefined {
     const checked = parseScript(answer.text, piece.input.script.speakers);
     return checked.ok
       ? undefined
-      : `The conversation the text model wrote can't be read as a script: ${checked.reason}`;
+      : `The conversation the AI model wrote can't be read as a script: ${checked.reason}`;
   }
   return undefined;
 }
@@ -435,7 +435,7 @@ async function publishText(
       const checked = parseScript(parts.body, piece.input.script.speakers);
       if (!checked.ok)
         throw new Error(
-          `The text model's script can't be read: ${checked.reason} Try again to have it written again, or fix it in ${editSettings.article}.`,
+          `The AI model's script can't be read: ${checked.reason} Try again to have it written again, or fix it in ${editSettings.article}.`,
         );
     }
     await publishResult(

@@ -54,7 +54,7 @@ describe("what Mark ready reads from this computer", () => {
     );
     expect(await context([]).providerProblem("nope")).toContain("isn't one this Slopify knows");
     expect(await context(new Error("Probe failed.")).providerProblem("fal")).toBe(
-      "Slopify couldn't check the image provider: Probe failed. Open Settings → Keys & services, then press Approve for schedules again.",
+      "Slopify couldn't check the image service: Probe failed. Open Settings → Keys & services, then press Approve for schedules again.",
     );
   });
 });

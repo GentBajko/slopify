@@ -66,9 +66,11 @@ export async function contextChecks(
     checks.push({
       id: "provider",
       ok: problem === null,
-      sentence: problem ?? "The image provider is ready.",
+      sentence: problem ?? "The image service is ready.",
       fix:
-        problem === null ? null : { label: "Open Providers", href: "/settings?section=providers" },
+        problem === null
+          ? null
+          : { label: "Open Keys & services", href: "/settings?section=providers" },
     });
   } else {
     const kept = doc.picture.sha256 !== undefined;

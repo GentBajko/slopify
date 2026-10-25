@@ -105,5 +105,5 @@ export function lostMessage(lost: readonly number[], kept: readonly KeptShort[])
       return short === undefined ? `short ${String(at)}` : `short ${String(at)} ("${short.title}")`;
     })
     .join(", ");
-  return `The narration of ${names} changed, so its moment can't be kept. Untick it under Keep finished shorts in ${editSettings.shorts}, so a new moment is picked for it, then save.`;
+  return `The narration of ${names} changed, so its moment can't be kept. Untick it under Keep finished shorts in ${editSettings.shorts}, so a new moment is picked for it, save, then use Choose what to make again (in the project's More menu).`;
 }

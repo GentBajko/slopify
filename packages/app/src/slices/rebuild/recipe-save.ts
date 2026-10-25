@@ -425,7 +425,7 @@ export function validateRevisionEdit(
     config.subtitles !== undefined &&
     config.subtitles.mode !== "off"
   )
-    fields.push({ field: "subtitles.mode", message: "Subtitles need narration audio." });
+    fields.push({ field: "subtitles.mode", message: "Captions need narration audio." });
   fields.push(...voicesFields(config));
   return fields;
 }

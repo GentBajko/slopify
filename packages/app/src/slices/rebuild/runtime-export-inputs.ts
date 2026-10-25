@@ -101,7 +101,7 @@ export async function narrationAudio(
     );
     if (row === undefined && levelled)
       throw new Error(
-        `The levelled ${segment === "body" ? "narration" : segment} isn't finished yet, so the sound can't be exported at an even volume. Let the Narration stage finish (Continue the run, or Try the narration again), then try this stage again; or turn off Level the volume in ${editSettings.sound}.`,
+        `The levelled ${segment === "body" ? "narration" : segment} isn't finished yet, so the sound can't be exported at an even volume. Let the Narration stage finish (Continue the run, or Try again on Narration), then try this stage again; or turn off Level the volume in ${editSettings.sound}.`,
       );
     if (row === undefined) return undefined;
     const path = outputPath(deps.paths, view.revision.projectId, row.output.path);
@@ -115,7 +115,7 @@ export async function narrationAudio(
   const body = await input("audio_body");
   if (body === undefined)
     throw new Error(
-      "The narration audio isn't finished yet. Let the Narration stage finish (Continue the run, or Try the narration again), then try this stage again.",
+      "The narration audio isn't finished yet. Let the Narration stage finish (Continue the run, or Try again on Narration), then try this stage again.",
     );
   return narrationTimeline(config, {
     body,
@@ -189,7 +189,7 @@ export function revisionTranscript(
       )
         return recipe.input.semantic[0];
       throw new Error(
-        `Some narration chunks aren't finished, so the full narration text isn't available. Let the Narration stage finish (Continue the run, or Try the narration again), or make the missing chunk again in ${editSettings.narration}.`,
+        `Some narration chunks aren't finished, so the full narration text isn't available. Let the Narration stage finish (Continue the run, or Try again on Narration), or make the missing chunk again in ${editSettings.narration}.`,
       );
     });
     if (texts.length > 0) return texts.join("\n");

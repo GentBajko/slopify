@@ -168,7 +168,7 @@ export async function recoverProject(
                       field: "stage",
                       message:
                         late === "running"
-                          ? "Wait for this section to finish, or Pause the project before rerunning it."
+                          ? "Wait for this section to finish, or Pause the project before making it again."
                           : acceptedJobMessage,
                     },
                   ],
@@ -242,12 +242,12 @@ export async function recoverProject(
               ? {
                   field: "video",
                   message:
-                    "Source media is incomplete. Use Continue the run to recover it before rerunning the export.",
+                    "Some of what the video is made from isn't finished. Use Continue the run to finish it before making the video again.",
                 }
               : {
                   field: "document",
                   message:
-                    "The article or thumbnail the document is made from isn't finished. Use Continue the run to finish it, then More → make it again in its section on Document.",
+                    "The article or thumbnail the document is made from isn't finished. Use Continue the run to finish it, then press Make the PDF again in the project's PDF section.",
                 },
           ],
         });

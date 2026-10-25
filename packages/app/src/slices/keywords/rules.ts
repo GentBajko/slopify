@@ -212,7 +212,7 @@ export function placedProblems(
         message:
           place === "title"
             ? problem.message
-            : `${problem.message} Change the prompt in Library, or pick another one.`,
+            : `${problem.message} Change the prompt in Prompts, or pick another one.`,
       });
     }
   return problems;

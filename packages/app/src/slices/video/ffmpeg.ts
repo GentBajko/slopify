@@ -100,7 +100,7 @@ export function slideshowClips(
         throw new Error(
           internalError(
             "the video's edit list lost a shot",
-            "Use More → Render the video again in the Video section",
+            "Press Make the video again in the project's Video section",
           ),
         );
       clips.push({ name, segment, shot, frames: segment.count });
@@ -176,7 +176,7 @@ export function segmentArgs(
       throw new Error(
         internalError(
           "the video's edit list lost a shot",
-          "Use More → Render the video again in the Video section",
+          "Press Make the video again in the project's Video section",
         ),
       );
     const at = inputs.filter((one) => one === "-i").length;

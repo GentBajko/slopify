@@ -16,7 +16,7 @@ import { settleStep, stepById } from "./steps-repo.js";
 export const maxConcurrentDesignCalls = 2;
 
 export const noProviderMessage =
-  "No image provider is set up. Add one in Settings → Keys & services, then press the button again.";
+  "No image service is set up. Add one in Settings → Keys & services, then press the button again.";
 
 export interface DesignCalls {
   readonly start: (designId: string, stepId: string) => void;

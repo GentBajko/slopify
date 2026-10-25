@@ -28,7 +28,7 @@ export function previewBlocker(
   label: (key: string) => string,
 ): string | undefined {
   if (remadeWork(preview.work).length === 0)
-    return "Nothing in it is outdated, so there is nothing to remake.";
+    return "Nothing in it is outdated, so there is nothing to make again.";
   const blocked = preview.work.find((work) => work.disposition === "blocked");
   if (blocked !== undefined)
     return `${label(blocked.key)} can't run: ${blocked.reason.trim() || "no reason was given."} Open the project and press Choose what to make again to see what to fix.`;
