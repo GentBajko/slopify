@@ -58,8 +58,8 @@ export function SeenBefore({
   return (
     <p role="status" className="m-0 text-small text-ink-2">
       {seen.where === "project"
-        ? `This channel already has a video on this: "${seen.title}" (in Projects). Start anyway if you want another take.`
-        : `This channel already uploaded "${seen.title}" (Channel → Existing videos). Start anyway if you want another take.`}
+        ? `This channel already has a video on this: "${seen.title}" (in Projects). Make it anyway if you want another take.`
+        : `This channel already uploaded "${seen.title}" (in the channel's Titles to avoid). Make it anyway if you want another take.`}
     </p>
   );
 }

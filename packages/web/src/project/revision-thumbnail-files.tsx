@@ -99,7 +99,7 @@ function ThumbnailFile({
         <p className="m-0 text-small text-ink-2">Your file replaces {name} when you save.</p>
       ) : own ? (
         <p className="m-0 text-small text-ink-2">
-          Uses your file. Regenerate on the project page draws it again.
+          Uses your file. To draw one instead, press Make {name} again on the project page.
         </p>
       ) : null}
     </div>
