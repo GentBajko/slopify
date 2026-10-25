@@ -491,8 +491,9 @@ describe("home", () => {
     expect(within(running).getByText("Step 2 of 3 · Images")).not.toBeNull();
     expect(within(running).getAllByText("Running").length).toBeGreaterThan(0);
     expect(within(steps).getByText("7 min")).not.toBeNull();
-    // No start time to measure the rate against: the time left is unknown, and says so.
-    expect(within(steps).getByText("2 of 8 · time left unknown")).not.toBeNull();
+    // No start time to measure the rate against: the time left is left out, not said unknown.
+    expect(within(steps).getByText("2 of 8")).not.toBeNull();
+    expect(within(steps).queryByText(/time left unknown/)).toBeNull();
     // A step with no time to tell shows none, not a dash.
     expect(within(steps).queryByText("—")).toBeNull();
     const images = within(running).getByRole("list", { name: "Images of Sargon" });

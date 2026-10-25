@@ -258,7 +258,7 @@ describe("the next action", () => {
     const rail = await statusList();
     // Progress leads the list while the run goes; a row at work says what it does under it.
     expect(within(rail).getByRole("link", { name: /^Progress/ }).textContent).toBe(
-      "Progress, Running · 1 of 4",
+      "Progress, Running · 1 of 4 done",
     );
     const narration = within(rail).getByRole("link", { name: /^Narration/ });
     expect(narration.textContent).toBe("Narration, Running");

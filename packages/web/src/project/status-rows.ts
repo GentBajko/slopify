@@ -132,7 +132,8 @@ export function statusRows(input: StatusInput): readonly StatusRow[] {
       name: "Progress",
       tone: project.status === "paused" ? "waiting" : "running",
       state: project.status === "paused" ? "Paused" : "Running",
-      detail: `${String(overall.completed)} of ${String(overall.total)}`,
+      // "2 of 3 done" beside the header's "Step 3 of 3": both count these rows.
+      detail: `${String(overall.completed)} of ${String(overall.total)} done`,
       ...(left === undefined || project.status === "paused" ? {} : { more: left }),
     });
   }

@@ -14,11 +14,10 @@ import { LoadFailed, LoadingBlock } from "@/components/kit/query-state";
 import { Status } from "@/components/kit/status";
 import { type Step, Steps } from "@/components/kit/steps";
 import { stageWords } from "@/lib/stage-words";
-import { projectStateOf } from "@/lib/state-words";
+import { projectStateOf, retryingWord } from "@/lib/state-words";
 import { limitWaitLine } from "@/project/limit-wait";
-import { activityText, capitalised, stageName } from "@/project/summary";
+import { activityText, capitalised, clockTime, stageName } from "@/project/summary";
 import { useLiveProject } from "@/project/use-live";
-import { overallProgress } from "@/project/workspace";
 import { projectQuery } from "@/queries";
 
 // One run going now, as Home shows it: where the whole run stands ("Step 2 of 4 · Narration ·
@@ -54,41 +53,43 @@ export function elapsed(
 }
 
 // "2 of 8 · about 4 min left": what a running step has counted and its time left, recomputed
-// every second (`slices/eta`); "time left unknown" when there is nothing to go by. A step the
-// server names says what it is doing instead of its count ("Rendering the video (45%)"), as
-// the project page does: the video's last step is the long render, and "50 of 51" sat still
-// through all of it.
+// every second (`slices/eta`). A step of one call counts nothing worth saying ("0 of 1"), and
+// with nothing to go by the time is left out rather than said unknown: the step's state word
+// already says it runs. A step the server names says what it is doing instead of its count
+// ("Rendering the video (45%)"), as the project page does: the video's last step is the long
+// render, and "50 of 51" sat still through all of it.
 export function runningDetail(stage: Stage, now: number): string | undefined {
   const eta = stageEta(stage, now);
   if (eta === undefined) return undefined;
+  const left = eta.basis === "unknown" ? undefined : etaLabel(eta);
   const named = activityText(stage);
-  if (named !== undefined)
-    return eta.basis === "unknown"
+  const what =
+    named !== undefined
       ? capitalised(named)
-      : `${capitalised(named)} · ${etaLabel(eta)}`;
-  const counted =
-    stage.progressTotal !== null && stage.progressTotal > 0
-      ? `${String(Math.floor(stage.progressCurrent ?? 0))} of ${String(stage.progressTotal)} · `
-      : "";
-  return `${counted}${etaLabel(eta)}`;
+      : stage.progressTotal !== null && stage.progressTotal > 1
+        ? `${String(Math.floor(stage.progressCurrent ?? 0))} of ${String(stage.progressTotal)}`
+        : undefined;
+  const parts = [what, left].filter((part) => part !== undefined);
+  return parts.length === 0 ? undefined : parts.join(" · ");
 }
 
 // "Step 2 of 4 · Narration · about 4 min left on this step": where the whole run stands,
-// counted in the project page's sections (`overallProgress`), the step at work and its own time
+// counted in the steps the screen lists beside it (Home's step list, the project page's status
+// list), so the number and the name are the same row; then the step at work and its own time
 // left when there is something to go by. The run's total time left is not known yet: the
 // estimates are per step.
 export function runLine(
-  stages: readonly Stage[],
+  steps: readonly Stage[],
   now: number,
   nameOf: (kind: StageKind) => string,
 ): string | undefined {
-  const running = stages.find((stage) => stage.state === "running");
+  const at = steps.findIndex((stage) => stage.state === "running");
+  const running = steps[at];
   if (running === undefined) return undefined;
-  const { completed, total } = overallProgress(stages);
   const eta = stageEta(running, now);
   const label = eta === undefined || eta.basis === "unknown" ? undefined : etaLabel(eta);
   return [
-    total === 0 ? undefined : `Step ${String(Math.min(completed + 1, total))} of ${String(total)}`,
+    `Step ${String(at + 1)} of ${String(steps.length)}`,
     nameOf(running.kind),
     label === undefined ? undefined : label.endsWith(" left") ? `${label} on this step` : label,
   ]
@@ -122,16 +123,23 @@ export function RunningProject({
   const waiting = limitWaitLine(project.limitWaits);
   // The last few that landed, and a tile for the one being drawn.
   const shown = images.slice(drawing === undefined ? -4 : -3);
-  const steps: Step[] = stages.map((stage) => ({
-    id: stage.kind,
-    name: nameOf(stage.kind),
-    tone: stepTone[stage.state],
-    state: stageStateWords[stage.state],
-    // A step with no time to tell (provided, not started) shows none rather than a dash.
-    time: elapsed(stage.startedAt, stage.finishedAt, now) ?? "",
-    detail: runningDetail(stage, now),
-  }));
+  const steps: Step[] = stages.map((stage) => {
+    // Failed on something time can fix, it is pending again with when it tries.
+    const retry = stage.state === "pending" ? stage.retryAt : undefined;
+    return {
+      id: stage.kind,
+      name: nameOf(stage.kind),
+      tone: retry === undefined ? stepTone[stage.state] : "waiting",
+      state: retry === undefined ? stageStateWords[stage.state] : retryingWord,
+      // A step with no time to tell (provided, not started) shows none rather than a dash.
+      time: elapsed(stage.startedAt, stage.finishedAt, now) ?? "",
+      detail:
+        retry === undefined ? runningDetail(stage, now) : `Trying again at ${clockTime(retry)}`,
+    };
+  });
   const line = runLine(stages, now, nameOf);
+  // Running, Waiting to try again, Waiting for the agent: the project's own word.
+  const state = projectStateOf(project);
   return (
     <li className={`sl-home-run ${hitArea}`}>
       <div className="flex min-w-0 flex-col gap-3">
@@ -142,14 +150,10 @@ export function RunningProject({
                 {project.title}
               </Link>
             </div>
-            {project.status === "paused" ? (
-              <Status tone="waiting">Paused</Status>
-            ) : project.status === "pending" ? (
-              <Status tone="waiting">{projectStateOf(project).word}</Status>
-            ) : waiting !== undefined ? (
+            {waiting !== undefined && project.status === "running" ? (
               <Status tone="waiting">{waiting}</Status>
             ) : (
-              <Status tone="running">Running</Status>
+              <Status tone={state.tone}>{state.word}</Status>
             )}
           </div>
           {line === undefined || line === "" ? null : (

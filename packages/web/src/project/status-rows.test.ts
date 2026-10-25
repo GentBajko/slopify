@@ -71,7 +71,7 @@ describe("the status list", () => {
       id: "live",
       name: "Progress",
       state: "Running",
-      detail: "1 of 3",
+      detail: "1 of 3 done",
     });
     expect(rows[2]).toMatchObject({
       name: "Narration",

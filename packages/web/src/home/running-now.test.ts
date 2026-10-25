@@ -21,11 +21,15 @@ it("names the long render and its percentage instead of a step count that stands
   expect(
     runningDetail({ ...video, activity: { label: "rendering the video", percent: 45 } }, 0),
   ).toBe("Rendering the video (45%)");
-  expect(runningDetail(video, 0)).toBe("50 of 51 · time left unknown");
+  // Nothing to go by: the time is left out rather than said unknown.
+  expect(runningDetail(video, 0)).toBe("50 of 51");
+  // A step of one call counts nothing worth saying: its state word alone says it runs.
+  expect(runningDetail({ ...video, progressCurrent: 0, progressTotal: 1 }, 0)).toBeUndefined();
 });
 
-// Where the whole run stands: counted in the project page's sections, with the step at work and
-// its own time left only when there is something to go by.
+// Where the whole run stands: counted in the steps listed beside it, so the number and the name
+// are the same row, with the step at work and its own time left only when there is something to
+// go by.
 it("says the step of the run, its name and its time left on this step", () => {
   const at = (kind: Stage["kind"], state: Stage["state"], over: Partial<Stage> = {}): Stage => ({
     ...video,
@@ -50,8 +54,29 @@ it("says the step of the run, its name and its time left on this step", () => {
   ];
   const name = (kind: Stage["kind"]) => stageWords[kind];
   expect(runLine(stages, now, name)).toBe(
-    "Step 2 of 4 · Narration · about 4 min left on this step",
+    "Step 3 of 5 · Narration · about 4 min left on this step",
   );
+  // Steps finish out of order: the count still names the row at work.
+  expect(
+    runLine(
+      [at("article", "done"), at("audio", "running"), at("images", "done"), at("video", "pending")],
+      now,
+      name,
+    ),
+  ).toBe("Step 2 of 4 · Narration");
+  // Supplied steps are listed and counted like the rest.
+  expect(
+    runLine(
+      [
+        at("article", "provided"),
+        at("images", "provided"),
+        at("thumbnail", "running"),
+        at("video", "pending"),
+      ],
+      now,
+      name,
+    ),
+  ).toBe("Step 3 of 4 · Thumbnail");
   // No rate yet and no history: the time left is left out rather than guessed.
   expect(
     runLine([at("article", "done"), at("audio", "running"), at("video", "pending")], now, name),
