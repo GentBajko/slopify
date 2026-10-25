@@ -80,7 +80,7 @@ function gapOf(
       need,
       fix: "key",
       message:
-        "Nothing can write the script yet. Sign in to Claude Code, Codex or Antigravity CLI on this computer, or add an OpenRouter key.",
+        "Nothing can write the article yet. Sign in to Claude Code, Codex or Antigravity CLI on this computer, or add an OpenRouter key.",
     };
   if (need === "images")
     return {
@@ -101,7 +101,7 @@ function gapOf(
     need,
     fix: "key",
     message:
-      "Nothing can read the script aloud yet. Add a voice key: an OpenAI key works at once with the voices Slopify sets up.",
+      "Nothing can read the article aloud yet. Add a voice key: an OpenAI key works at once with the voices Slopify sets up.",
     ...(install === undefined ? {} : { install: { ...install, commands: [...install.commands] } }),
   };
 }

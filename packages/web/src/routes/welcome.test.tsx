@@ -14,7 +14,7 @@ const voiceGap: ShortGap = {
   need: "voice",
   fix: "key",
   message:
-    "Nothing can read the script aloud yet. Add a voice key: an OpenAI key works at once with the voices Slopify sets up.",
+    "Nothing can read the article aloud yet. Add a voice key: an OpenAI key works at once with the voices Slopify sets up.",
   install: {
     text: "Install espeak-ng with one of these:",
     commands: ["sudo apt install espeak-ng", "sudo pacman -S espeak-ng"],
@@ -326,7 +326,7 @@ describe("step 3: make the first short", () => {
     const odd: ShortGap = {
       need: "text",
       fix: "key",
-      message: "Nothing can write the script yet.",
+      message: "Nothing can write the article yet.",
     };
     renderRouted(
       <WelcomeRoute step="make" onStep={() => undefined} />,
@@ -337,7 +337,7 @@ describe("step 3: make the first short", () => {
     );
     await user.type(await screen.findByLabelText("Topic"), "Tides");
     await user.click(screen.getByRole("button", { name: "Make a 60-second short" }));
-    expect(await screen.findByText("Nothing can write the script yet.")).not.toBeNull();
+    expect(await screen.findByText("Nothing can write the article yet.")).not.toBeNull();
   });
 });
 

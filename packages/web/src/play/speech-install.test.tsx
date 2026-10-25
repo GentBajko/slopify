@@ -20,7 +20,7 @@ const view = (install: { readonly text: string; readonly commands: readonly stri
       {
         need: "voice",
         fix: "key",
-        message: "Nothing can read the script aloud yet.",
+        message: "Nothing can read the article aloud yet.",
         ...(install === null ? {} : { install }),
       },
     ],

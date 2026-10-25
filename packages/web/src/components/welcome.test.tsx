@@ -19,7 +19,7 @@ describe("the setup checklist on its own", () => {
           {
             need: "voice",
             fix: "key",
-            message: "Nothing can read the script aloud yet.",
+            message: "Nothing can read the article aloud yet.",
           },
         ],
       },
