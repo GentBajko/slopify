@@ -192,10 +192,10 @@ describe("Make outdated parts again for the ticked projects", () => {
     const toMake = within(review).getByRole("list", { name: "Projects to make again" });
     expect(within(toMake).getByText("Made again: Image request.")).not.toBeNull();
     expect(
-      within(toMake).getByText("Then rebuilt on this computer, free: Video export."),
+      within(toMake).getByText("Then rebuilt on this computer, free: Video."),
     ).not.toBeNull();
     expect(
-      within(toMake).getByText("Rebuilt on this computer, free: Video export."),
+      within(toMake).getByText("Rebuilt on this computer, free: Video."),
     ).not.toBeNull();
     const left = within(review).getByRole("list", { name: "Left out" });
     expect(within(left).getByText(/running now/)).not.toBeNull();

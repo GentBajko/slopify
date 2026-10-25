@@ -309,7 +309,7 @@ it("says what is made again, what is rebuilt on this computer and what stays", (
   );
   const scope = screen.getByRole("list", { name: "What this does" });
   expect(scope.textContent).toContain("Made again, charged: Image request 1.");
-  expect(scope.textContent).toContain("Then rebuilt on this computer, free: Video export.");
+  expect(scope.textContent).toContain("Then rebuilt on this computer, free: Video.");
   expect(scope.textContent).toContain("Stays as it is: 2 image requests.");
   expect(scope.textContent).toContain("the current version stays in use");
 });
