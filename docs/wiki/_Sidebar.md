@@ -12,8 +12,8 @@
 - [Updating and patch notes](Updating-and-Patch-Notes)
 - [Uninstalling and moving](Uninstalling-and-Moving)
 
-**Providers**
-- [Providers and keys](Providers-and-Keys)
+**Services and keys**
+- [Keys and services](Providers-and-Keys)
 - [AI CLIs](AI-CLIs)
 - [Models](Models)
 - [Costs and run cost](Costs-and-Run-Cost)

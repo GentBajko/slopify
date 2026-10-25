@@ -1,327 +1,305 @@
 # Settings Reference
 
-Every section of Settings, what each control does and its default. Sections with a page of their own are summarised here and linked for the details.
+Every page of Settings, what each control does and its default. Pages with a tutorial of their own are summed up here and linked for the details.
 
-**Where to find it:** **Settings** in the rail, or press `Ctrl+K` and run **Open Settings** (or **Open Settings: <section>** for one section). Settings opens on **Connections → Providers**. The rail on the left has seven groups; a group with more than one section shows them as tabs across the top. On a phone the rail is a row of tabs you can scroll sideways. An old link to a section (`?section=backups`, for example) still opens where it went.
+**Where to find it:** **Settings** in the rail, or press `Ctrl+K` and run **Open Settings** (or type a page's name, such as "voices"). `G` then `,` opens it too. Settings opens on **Keys & services**.
 
-## Sections at a glance
+Settings is one list of pages down the left, each named once: the name in the list is the page's title. The list comes in four runs with a little space between them: what makes the videos, how new videos are made and published, this computer, and Slopify itself. Each page's header says in one line what it holds. On a phone, a **Settings page** picker replaces the list. An old link to a page that was folded into another (`?section=backups`, `?section=template-studio`, `?section=channel-links`) opens the page that holds it now.
 
-| Group | Section | What it holds | Details |
-|---|---|---|---|
-| Connections | [Providers](#providers) | API keys, command-line tools, the system voice, health check | [Providers-and-Keys](Providers-and-Keys), [AI-CLIs](AI-CLIs) |
-| Connections | [Voices](#voices) | Voice IDs for narration | [Providers-and-Keys](Providers-and-Keys#add-a-voice) |
-| Connections | [Models](#models) | Model catalogue, retired models, models that work for you | [Models](Models) |
-| Connections | [Agents (MCP)](#agents-mcp) | The MCP address and setup lines for Claude Code and Codex, the last connection, what agents did | [Agents-MCP](Agents-MCP) |
-| Production defaults | [Production defaults](#production-defaults) | Silence gap, volume levelling for new runs, the caption timing model, how this computer renders | This page |
-| Production defaults | [Template studio](#template-studio) | The most a template's samples, and a designed piece template's, may spend in a day, and whether they may use CLI plans | This page |
-| Notifications | [Notifications](#notifications) | Browser and phone notifications | [Notifications](Notifications) |
-| Publishing | [Channel links](#channel-links) | A pointer to each channel's own links | [Channels](Channels#channel-links) |
-| Publishing | [YouTube Studio and posting](#youtube-studio-and-posting) | Playlists per channel, the Studio extension's download and pairing | [Studio-Extension](Studio-Extension), [Posting-to-Social-Sites](Posting-to-Social-Sites) |
-| Backup & storage | [Backup & storage](#backup--storage) | Your files folder, daily backups, export and import, disk space, samples | [Where-Your-Files-Live](Where-Your-Files-Live), [Backups](Backups) |
-| Backup & storage | [Trash](#trash) | Deleted items, kept 30 days | [Trash](Trash) |
-| General | [General](#general) | Light or dark, and starting Slopify when you log in | [Start-at-Login](Start-at-Login) |
-| About | [About](#about) | Updates, what's new, links, the welcome screen | [Updating-and-Patch-Notes](Updating-and-Patch-Notes) |
-| About | [Usage](#usage) | This install's counters | [Costs-and-Run-Cost](Costs-and-Run-Cost#your-usage-totals-settings--usage) |
-| About | [Patch notes](#patch-notes) | What changed in each version | [Updating-and-Patch-Notes](Updating-and-Patch-Notes) |
+## Pages at a glance
 
-## Download diagnostics
+| Page | What it holds | Details |
+|---|---|---|
+| [Keys & services](#keys--services) | What writes, reads aloud and draws your videos: keys, sign-in tools, the system voice, the check of every service | [Keys and Services](Providers-and-Keys), [AI CLIs](AI-CLIs) |
+| [Voices](#voices) | The voices you can pick for narration, and their pronunciation | [Keys and Services](Providers-and-Keys#add-a-voice) |
+| [Models](#models) | Which models work with your keys and sign-ins, the model list, retired models | [Models](Models) |
+| [Production defaults](#production-defaults) | The silence gap, the caption timing model, volume levelling for new runs, how this computer encodes videos, the PDF look, what template samples may spend | This page |
+| [Notifications](#notifications) | Browser notifications, run sounds, a notification URL, the weekly report | [Notifications](Notifications) |
+| [YouTube Studio and posting](#youtube-studio-and-posting) | Playlists, upload lead time, the Studio extension's pairing and install | [Studio Extension](Studio-Extension), [Posting to Social Sites](Posting-to-Social-Sites) |
+| [Backup & storage](#backup--storage) | Daily backup, your files folder, export and import, disk space, sample projects | [Where Your Files Live](Where-Your-Files-Live), [Backups](Backups) |
+| [Trash](#trash) | Deleted things, kept for 30 days | [Trash](Trash) |
+| [General](#general) | Light or dark, and starting Slopify when you log in | [Start at Login](Start-at-Login) |
+| [Remote access](#remote-access) | Opening Slopify on your phone or laptop through Tailscale | [Remote Access](Remote-Access) |
+| [AI agents](#ai-agents) | Letting Claude Code or Codex on this computer run Slopify | [Agents (MCP)](Agents-MCP) |
+| [About](#about) | Your version, updates, where to get help, Download diagnostics | [Updating and Patch Notes](Updating-and-Patch-Notes) |
+| [Usage](#usage) | What this computer made | [Costs and Run Cost](Costs-and-Run-Cost#your-usage-totals-settings--usage) |
+| [What's new](#whats-new) | What changed in each version | [Updating and Patch Notes](Updating-and-Patch-Notes) |
 
-At the top right of every Settings section.
+## Keys & services
+
+"What writes, reads aloud and draws your videos. Keys stay on this computer."
 
 | Control | What it does |
 |---|---|
-| **Download diagnostics** | Saves `slopify-diagnostics.json`: the Slopify version, your system and Node version, which providers are set up or found, the project count and the model catalogue's state. It never holds your keys, prompts or project content. Attach it to a bug report. |
+| **Article**, **Narration**, **Images** | One line each saying whether your videos have that part now (**Ready** or **Needs setup**) and why, with **Set up a voice service** (and the like) or **Show writing services** (and the like). |
+| **Check every service** | Checks every tool's sign-in, the system voice, every saved key, and whether each chosen model is still offered and reachable with your key. The result shows one row per service under it, each with **Check again**. The line beside it says when it last checked. |
+| **Writing services**, **Voice services**, **Image services** | Every supported service with how it connects (**API key**, **Sign-in** or **Built in**) and its state (**Ready**, **No key**, **Not found**, **Signed out**, **Needs fixing**, **Not installed**). Pick one to open its setup beside the list. |
+| **<Service> API key** and **Save** | Stores a key on this computer only, sent only to that service, never in backups or exports. |
+| **Test the key (free)** | Checks a pasted key before you save it (without storing it), or the saved key, with the cheapest harmless call. Nothing is billed. |
+| **Remove the key** | Deletes the saved key after you confirm. |
+| **Where to get a key** | The service's own sign-up, key and billing pages, with the permissions a key needs. |
+| **Change path** / **Executable path** / **Save path** | Where a sign-in tool is. Blank finds it in the folders your terminal searches. Shows **Managed on host** in Docker. |
+| **Add a system voice** | On **System voice**, once a speech program is found: opens Voices to pick one of its voices. |
 
-You can also press `Ctrl+K` and run **Download diagnostics** from anywhere in Settings.
-
-## General
-
-"How Slopify looks and how it starts on this computer."
-
-### Appearance
-
-| Control | What it does | Default |
-|---|---|---|
-| **Appearance** | **System**, **Dark** or **Light** colours for Slopify on this computer. System follows your operating system and changes with it. It changes at once and does not affect your videos. | System |
-
-### Start at login
-
-| Control | What it does | Default |
-|---|---|---|
-| **Start Slopify when I log in** | Slopify starts in the background when you log in, without opening a browser tab; open it from your bookmark. It uses your account's own start-up list, so no administrator password is needed, and turning it off removes exactly what it added. | Off |
-
-In Docker, this section only shows whether Docker starts at login ("Starts with Docker: yes / no / unknown"), when the installer checked, and where to change that. With Docker Desktop it names Docker Desktop's own setting: Docker Desktop → Settings → General → **Start Docker Desktop when you sign in to your computer**. Slopify starts whenever Docker does and never changes Docker's own settings. See [Start-at-Login](Start-at-Login).
-
-### Remote access
-
-"Open Slopify on your phone or laptop through Tailscale, only inside your tailnet." It is the second tab of **General**.
-
-| Control | What it does | Default |
-|---|---|---|
-| **Open on my other devices (Tailscale)** | Has the Tailscale already on this computer serve Slopify's page at `https://<computer>.<tailnet>.ts.net`, reachable only from devices signed in to your tailnet. Shows the address with **Copy address** and a QR code. Uses Tailscale Serve, never Funnel. Turning it off removes only the serve setting Slopify added. | Off |
-| **Use port 8443** | Shown when another Tailscale serve setting already uses HTTPS port 443: gives Slopify its own address on another port and leaves yours alone. | - |
-| **Check again** | Asks Tailscale again after you fixed what the notice says. | - |
-
-See [Remote-Access](Remote-Access).
-
-## Providers
-
-"Keys stay on this machine and go only to their provider. Readiness is checked again before each run."
-
-| Control | What it does |
-|---|---|
-| Provider lists (**Text**, **Speech**, **Images**) | Every supported provider with its state and kind (**Command line**, **Built in, no key** or **API key**). Pick one to open its setup. |
-| **<Provider> API key** and **Save** | Stores a key on this computer only. Never in backups or exports. |
-| **Test** | Checks a pasted key before you save it (without storing it), or the saved key when the field is empty, with the cheapest harmless call. Nothing is billed. |
-| **System voice** | Shows the speech program found on this computer and its voices, or what to install, with **Add a system voice**. See [the system voice](Providers-and-Keys#the-system-voice). |
-| **Remove** | Deletes the saved key after you confirm with **Remove key**. |
-| **Where to get a key** | The provider's own sign-up, key and billing pages, with the permissions a key needs. |
-| **Change path** / **Executable path** / **Save path** | Where a command-line tool is. Blank finds it on PATH. Shows **Managed on host** in Docker. |
-| **Check all** | Checks every tool's sign-in, the system voice, every saved key, whether each chosen model is still offered and reachable with your key (**Model reachable**). Results show under **Health check**. |
-| **Check again** | On one provider's health row: checks that provider alone. |
-
-On a first launch you may also see the welcome message about command-line tools that were found, with **Got it** to hide it. Full details: [Providers-and-Keys](Providers-and-Keys) and [AI-CLIs](AI-CLIs).
+Full details: [Keys and Services](Providers-and-Keys) and [AI CLIs](AI-CLIs).
 
 ## Voices
 
-"A wrong voice ID shows up when the audio stage uses it."
+"The voices you can pick for narration."
 
 | Control | What it does | Rules |
 |---|---|---|
-| **Voice name** | The name you pick the voice by on Play and in Edit project. | Required, up to 200 characters. |
-| **Provider** | The speech provider the ID belongs to. | Speech providers only. |
-| **Voice ID** | The provider's own ID for the voice. For **System voice** and **Google Gemini** it is a list to pick from. | Required, up to 200 characters, unique per provider. |
-| **Languages** | Codes such as `es, de`. Play lists the voice only for projects in these languages. | Blank: asked from the provider when it can say; otherwise offered for every language. |
+| **Voice service** | The service the voice belongs to. | Voice services only. |
+| **Voice** | The service's own voices to pick from, or **A voice of my own (paste its ID)**. For **System voice**, the voices found on this computer, with a filter and **Listen**. | Required, up to 200 characters, one per voice and service. |
+| **Name** | How you pick it on Create. | Required, up to 200 characters. |
+| **Languages it speaks (optional)** | Codes such as `es, de`. Create lists the voice only for projects in these languages. | Empty means any: asked from the service when it can say; otherwise offered for every language. |
 | **Add voice** | Adds the voice to the table. | |
-| **Edit** (Languages cell) | Changes a voice's languages; **Save** or **Cancel**. | |
-| **Real person** | On for a voice cloned from, or made to sound like, a real person. Prepare upload then answers Yes to YouTube's AI use question for videos it narrates. | Default: off. |
-| **Remove** | Removes the voice after **Remove voice**. Projects keep the audio they made with it. | |
+| **Edit** (Speaks cell) | Changes a voice's languages; **Save** or **Cancel**. | |
+| **Sounds like a real person** | On for a voice cloned from, or made to sound like, someone real. Copy for YouTube Studio then answers Yes to YouTube's question for videos it narrates. | Default: off. |
+| **Listen** | Reads one sentence aloud: free with the system voice, one short paid request with a service that has a key. | |
+| **Remove** | Removes the voice after you confirm. Projects keep the audio they made with it. | |
+| **Pronunciation** | Opens the narration aliases: words the narrator says differently from how they are written. | |
 
-See [Providers-and-Keys](Providers-and-Keys#add-a-voice).
+A line above the table says when a voice's service has no key yet, with a button to add it. See [Keys and Services](Providers-and-Keys#add-a-voice) and [Narration Aliases and Glossary](Narration-Aliases-and-Glossary).
 
 ## Models
 
-"New models, prices and retirements, checked once a day."
+"Which models work with your keys and sign-ins."
 
 | Control | What it does |
 |---|---|
-| **Check now** | Checks the published catalogue and OpenRouter's live list at once. Slopify also does this at start and once a day. |
-| **Replace with published file** | Overwrites your local catalogue with the published one, dropping your edits. The previous file is kept as `models.yaml.previous`. |
-| **Catalogue file**, **Verified**, **Last checked** | Where the file is, when its prices were verified, and what the last check changed. |
-| **Switch to <model>** | Replaces one retired model choice with the suggestion shown. |
-| **Switch all** | Replaces every retired choice that has a suggestion. |
-| **Check models** (per provider) | Sends each of that provider's models one tiny request to learn whether it works for your key or CLI. When that costs money the price is shown first and nothing is sent until you confirm. See [Models](Models#models-that-work-for-you). |
-| **Automatic checks** | **Free and near-free checks only** (default): free and sub-cent checks run by themselves when a key or CLI is added and weekly. **Off**: only when you choose Check models. See [Models](Models#automatic-checks). |
-| **New for you**, **Dismiss** | Models that started working for you since the first check; Dismiss clears one, **Dismiss all** every one. |
+| **Models that work for you** | One row per service with a key or sign-in: how many of its models work, how many are listed, when it was last checked and what checks cost. Pickers show working models first. |
+| **Check models** (per service) | Sends each of that service's models one tiny request to learn whether it works for your key or sign-in. When that costs money the price is shown first and nothing is sent until you confirm. See [Models](Models#models-that-work-for-you). |
+| **Automatic checks** | **Free and near-free checks only** (default): checks that cost nothing or well under a tenth of a cent run when a key is added and once a week. **Off: only when I choose Check models**. Images are never checked by themselves. See [Models](Models#automatic-checks). |
+| **New for you** | Models that started working for you since the first check, each with **Dismiss**. |
+| Retired models | Templates, schedules and drafts that pick a retired model, each with **Switch to <model>**, and **Switch all**. |
+| **Model list** → **Check for new models** | Checks the published list of models, prices and retirements at once. Slopify also does this at start and once a day; the line says when and what changed. |
+| **Catalog file** → **Replace with the published file** | Where the local copy of the published list is, and when it was published. Replacing it drops your edits; the old file is kept beside it. |
 
-Templates and schedules that pick a retired model are also flagged on their own rows, with the same **Switch to <model>**. See [Models](Models).
-
-## Agents (MCP)
-
-"Let an AI agent on this computer, such as Claude Code or Codex, run Slopify."
-
-| Control | What it does |
-|---|---|
-| **MCP address** | This install's address with `/mcp`, for example `http://127.0.0.1:6969/mcp`. No token: only requests from a web page at another address are refused. |
-| **Claude Code** → **Copy** | Copies `claude mcp add --transport http slopify <address>`. Run it once in a terminal. |
-| **Codex** → **Copy** | Copies the `[mcp_servers.slopify]` lines. Add them to `~/.codex/config.toml`. |
-| Last connected | When an agent last connected, or "No agent has connected yet." |
-| **What agents did** | The latest 20 changes agents made, with the project or schedule and the time. |
-
-There is nothing to turn on: the address works whenever Slopify runs. See [Agents (MCP)](Agents-MCP).
+See [Models](Models).
 
 ## Production defaults
 
-"How new runs pace the narration and level the volume, which model times English captions, and how this computer renders."
+"How new videos sound and render, and what template samples may spend."
 
 ### Silence between segments
 
 | Control | What it does | Default / range |
 |---|---|---|
-| **Silence between segments** | Seconds of quiet between the intro and the narration, and between the narration and the outro, in every new video, unless Play sets a different gap for one video. It only matters when an intro or outro is set; 0 runs them together. Type a whole number and choose **Save**. | 3 seconds, 0 to 30 |
+| **Silence between segments** | Seconds of quiet between the intro and the narration, and between the narration and the outro, in every new video, unless Create sets a different gap for one video. It only matters when an intro or outro is set; 0 runs them together. Type a whole number and press **Save**. | 3 seconds, 0 to 30 |
 
-Videos already started keep their own gap. A value that is not a whole number from 0 to 30 is refused with "The silence gap is a whole number of seconds between 0 and 30." See [Intros-and-Outros](Intros-and-Outros).
+Videos already started keep their own gap. A value that is not a whole number from 0 to 30 is refused. See [Intros and Outros](Intros-and-Outros).
+
+### Caption timing model
+
+| Control | What it does | Default |
+|---|---|---|
+| **Caption timing model** | The speech model that times English captions on this computer. The same model in three sizes: **Most accurate (378 MB, recommended)**, **Balanced (189 MB)** and **Smallest (95 MB, less accurate)**. Bigger hears the narration more accurately and, on most computers, also runs faster. | Most accurate |
+
+The chosen model downloads once, the first time captions are timed (or when Slopify starts, unless `SLOPIFY_NO_MODEL_PREFETCH` is set), and is kept in `<data folder>/models/english-subtitles/`. A model already downloaded stays there when you switch, so switching back costs nothing. Smallest can mishear a line and stop a run where the narration is fine. Changing the model never marks finished captions outdated, and a timing that is already running finishes with the model it started with; the next one uses the new choice. It is a setting of this computer, not of a project. Other languages use their own model and are not affected. Changes save as you make them.
 
 ### Level the volume for new runs
 
 | Control | What it does | Default / range |
 |---|---|---|
-| **Level the volume for new runs** | Whether a new run on Play (and a template or quick short) starts with **Level the volume** on. On evens out every narration piece and sets the finished files to a standard loudness. | On |
-| **Video volume** | How loud the long video and shorts are, in dB from the recommended -14 LUFS (the level YouTube and Spotify play at). Type dB or a percentage. Peaks stay under -1.5 dBTP. | 0 dB (-14 LUFS); -10 dB to +4 dB (32% to 158%) |
-| **Audio files volume** | How loud the audio-only WAV and an audiobook's MP3 and M4B are, in dB from the recommended -18 LUFS. Peaks stay under -3 dBTP. | 0 dB (-18 LUFS); -10 dB to +4 dB |
+| **Level the volume for new runs** | Whether a new run on Create (and a template or quick short) starts with **Level the volume** on. On evens out every narration piece and sets the finished files to a standard loudness. | On |
+| **Video volume** | How loud the long video and shorts are, in dB from the recommended −14 LUFS (the level YouTube and Spotify play at). Type dB or a percentage. Peaks stay under −1.5 dBTP. | 0 dB (−14 LUFS); −10 dB to +4 dB |
+| **Audio files volume** | How loud the sound-only WAV and an audiobook's MP3 and M4B are, in dB from the recommended −18 LUFS. Peaks stay under −3 dBTP. | 0 dB (−18 LUFS); −10 dB to +4 dB |
 
-The volume fields show only while the switch is on. A project keeps what it started with; change it there in **Edit project**. Levelling runs on this computer and makes no API calls. Changes save as you make them.
-
-### Subtitle timing model
-
-| Control | What it does | Default / range |
-|---|---|---|
-| **Subtitle timing model** | The speech model that times English captions on this computer. The same model in three sizes: **Most accurate (378 MB, recommended)**, **Balanced (189 MB)** and **Smallest (95 MB, less accurate)**. Bigger hears the narration more accurately and, on most computers, also runs faster. | Most accurate |
-
-The chosen model downloads once, the first time captions are timed (or when Slopify starts, unless `SLOPIFY_NO_MODEL_PREFETCH` is set), and is kept in `<data folder>/models/english-subtitles/`. A model already downloaded stays there when you switch, so switching back costs nothing. Smallest can mishear a line and stop a run with "Subtitles stopped matching the audio" where the narration is fine. Changing the model never marks finished subtitles outdated, and a timing that is already running finishes with the model it started with; the next one uses the new choice. It is a setting of this computer, not of a project. Other languages use their own model and are not affected. Changes save as you make them.
+The volume fields show only while the switch is on. A project keeps what it started with; change it there in **Edit settings**. Levelling runs on this computer and makes no service calls. Changes save as you make them.
 
 ### Rendering
 
-How this computer encodes videos and shorts. Like the subtitle timing model, these belong to the computer, not a project: no project copies them, and changing them never marks anything outdated, because they change how a video is made, not what it is. A render reads them once as it starts; one already running finishes as it began. Changes save as you make them.
-
-| Control | What it does | Default / range |
-|---|---|---|
-| **Video encoder** | What turns the frames into the finished file. **Processor (x264)** is the one every computer has. **NVIDIA graphics card (NVENC)** encodes on the card at its highest-quality settings (preset p7, tune hq, constant quality) and leaves the processor for the rest of the render. It is listed only when Slopify finds an ffmpeg with NVENC (its own, else the `ffmpeg` on your `PATH` or `/usr/bin/ffmpeg`) that passes a tiny test encode; otherwise the line under it says "No NVIDIA encoder found on this computer." | Processor (x264) |
-| **Clip encoding** | How hard the processor works on each image's clip before the captions are burned in over them. **Thorough** is x264's medium preset; **Fast** is its veryfast preset at the same quality setting (CRF 16). Only the clips under burned-in captions change; the burned-in encode that makes the finished picture is the same. Has no effect with the NVIDIA encoder. | Thorough |
-| **Render priority** | **Background (your other programs come first)** runs every ffmpeg of a video, short or audio export, its volume mastering included, below normal priority, and that of the style preview, Template Studio's free samples, designs and posts' pictures too (nice 10 on Linux and macOS, below-normal on Windows): your browser, games and other programs take the processor first and the render gets what is left. **Normal** competes with them as an equal. The finished video is the same either way. | Background |
-
-What they cost and give, measured on two minutes of a real project with captions burned in (32-core processor, RTX 5080): **Fast** halved the clips' processor time and cut the whole render's by 30% (10 to 17% less waiting), for a slightly softer picture (0.9 VMAF less) at the same file size. **NVIDIA** cut the render's processor time by 80% and its waiting by a quarter (the zoom and pan on each image still runs on the processor), at about the same file size, but with a visibly softer picture than x264 (about 2.5 VMAF less): pick it when keeping the computer free matters more than the last bit of sharpness. **Background** makes no difference to the file at all.
-
-If the NVIDIA encoder is chosen but stops working (a driver update, the card busy elsewhere), the render is made on the processor instead, never failed, and the video's section on the project page says: "This video was encoded on the processor because the NVIDIA graphics card encoder didn't work (…). Check the NVIDIA driver, or choose Processor (x264) in Settings → Production defaults → Video encoder." Slopify checks for the card once per start; restart Slopify after installing a driver or an ffmpeg with NVENC.
-
-Agents read and change these with `get_settings` and `update_settings`, and check the card with `get_video_encoders`.
-
-### Template studio
-
-| Control | What it does | Default / range |
-|---|---|---|
-| **Daily sample budget** | The most a template's samples, **Compare models** and **Make samples for all** may spend in one day, in US dollars, counted from midnight on this computer. At $0.00 no sample spends money. Below it: what the samples spent today and what is left. Type an amount and choose **Save**. | $2.00, $0 to $1,000 |
-| **Designed pieces: daily sample budget** | The most the samples of designed-piece templates (Library → Designs) may spend in one day, in US dollars, counted from midnight on this computer. It is separate from the budget above. Below it: what those samples spent today and what is left. Type an amount and choose **Save designed pieces' budget**. | $1.00, $0 to $1,000 |
-| **Samples may use my CLI plans** | Whether those samples, designed pieces' included, may run steps on your Claude Code or Codex plan. Plan usage has no dollar price, so the budgets can't limit it: off, a sample with such a step waits; on, it runs on your plan whatever the budget. | Off |
-
-A sample that would go over the budget is not made: the template's studio shows it **Waiting** with "this sample costs about $0.40 and $0.10 of today's $2.00 sample budget is left", and **Make sample** makes it once there is room again. A sample with a step on a CLI plan waits the same way while **Samples may use my CLI plans** is off. A designed piece template's sample over its own budget waits in the template's editor the same way, and **Make sample** makes it anyway. Only samples count; your projects and designed pieces never do.
-
-## Notifications
-
-"When a run finishes, fails, or waits for you."
+"How this computer encodes videos and shorts. Changing these never marks anything outdated." Like the caption timing model, these belong to the computer, not a project: no project copies them, because they change how a video is made, not what it is. A video reads them once as it starts; one already being made finishes as it began. Changes save as you make them.
 
 | Control | What it does | Default |
 |---|---|---|
-| **Browser notifications** | Shows a notification from this browser while any Slopify tab is open, even in the background. Turning it on asks the browser's permission. Applies to this browser only. | Off |
-| **Send test notification** (beside the switch) | Shows a sample notification in this browser. | |
-| **Notification URL** | An address Slopify POSTs a short plain-text message to, with no tab open, for example `https://ntfy.sh/your-topic`. Each message is sent once, with a 5 second timeout. Empty turns it off. **Save** stores it; **Send test notification** sends a sample. | Empty |
+| **Video encoder** | What turns the frames into the finished file. **Processor (x264)** is the one every computer has. **NVIDIA graphics card (NVENC)** encodes on the card at its highest-quality settings (preset p7, tune hq, constant quality) and leaves the processor for the rest. It is offered only when Slopify finds an ffmpeg with NVENC (its own, else the `ffmpeg` on your `PATH` or `/usr/bin/ffmpeg`) that passes a tiny test encode; otherwise the line under it says the card's encoder did not pass its test and videos are encoded on the processor, with **Details**. | Processor (x264) |
+| **Clip encoding** | How hard the processor works on each image's clip before the captions are drawn over them. **Thorough** is x264's medium preset; **Fast** is its veryfast preset at the same quality setting (CRF 16), about half the processor time for a slightly softer picture. Only the clips under captions in the video change. Has no effect with the NVIDIA encoder. | Thorough |
+| **Render priority** | **Background (your other programs come first)** runs every ffmpeg of a video, short or audio file, its volume mastering included, below normal priority, and that of the style preview, template samples, designs and posts' pictures too (nice 10 on Linux and macOS, below-normal on Windows): your browser, games and other programs take the processor first and the video gets what is left. **Normal** competes with them as an equal. The finished video is the same either way. | Background |
 
-Messages hold the project title and what happened, never your keys. See [Notifications](Notifications).
+What they cost and give, measured on two minutes of a real project with captions in the video (32-core processor, RTX 5080): **Fast** halved the clips' processor time and cut the whole video's by 30% (10 to 17% less waiting), for a slightly softer picture (0.9 VMAF less) at the same file size. **NVIDIA** cut the processor time by 80% and the waiting by a quarter (the zoom and pan on each image still runs on the processor), at about the same file size, but with a visibly softer picture than x264 (about 2.5 VMAF less): pick it when keeping the computer free matters more than the last bit of sharpness. **Background** makes no difference to the file at all.
 
-## Channel links
+If the NVIDIA encoder is chosen but stops working (a driver update, the card busy elsewhere), the video is encoded on the processor instead, never failed, and the project's Video part says so, with the reason and where to change it. Slopify checks for the card once per start; restart Slopify after installing a driver or an ffmpeg with NVENC.
 
-"The links a YouTube description's {{Name}} placeholders fill from."
+Agents read and change these with `get_settings` and `update_settings`, and check the card with `get_video_encoders`.
 
-Each channel now keeps its own links, on its **Brand** tab under **Channel links**. This section only says so, with **Open the default channel's links**. Links saved here in an earlier version still fill the default channel's descriptions until you save its Brand tab. See [Channels](Channels#channel-links) and [YouTube-Description](YouTube-Description).
+### PDF look
+
+"The fonts, colors and page layout of the PDFs Slopify makes." **Edit PDF looks** opens the PDF themes. See [Document Themes](Document-Themes).
+
+### Template samples
+
+"What a template's samples may spend while you edit it."
+
+| Control | What it does | Default / range |
+|---|---|---|
+| **Daily sample budget** | The most a template's samples, **Compare models** and **Make samples for all** may spend in one day, in US dollars, counted from midnight on this computer. At $0.00 no sample spends money. The line under it says what the samples spent today and what is left. Type an amount and press **Save**. | $2.00, $0 to $1,000 |
+| **Designed pieces: daily sample budget** | The most the samples of poster templates (Templates → Poster templates) may spend in one day, in US dollars. It is separate from the budget above. Type an amount and press **Save designed pieces' budget**. | $1.00, $0 to $1,000 |
+| **Samples may use my CLI plans** | Whether those samples, poster templates' included, may run steps on your Claude Code or Codex plan. Plan usage has no dollar price, so the budgets can't limit it: off, a sample with such a step waits; on, it runs on your plan whatever the budget. | Off |
+| **Samples for all templates** → **Make samples for all** | Makes every template's sample for its newest version, with the estimated cost on the button. | |
+
+A sample that would go over the budget is not made: the template's editor shows it waiting, with what it costs and what is left of today's budget, and makes it once there is room again. A sample with a step on a CLI plan waits the same way while **Samples may use my CLI plans** is off. Only samples count; your projects and posters never do. See [Template Studio](Template-Studio).
+
+## Notifications
+
+"When a run finishes, fails or waits for you." Under **Browser and phone**: when a run finishes, fails or waits for your review, Slopify sends the project's title and a link, never your keys.
+
+| Control | What it does | Default |
+|---|---|---|
+| **Browser notifications** | Shows a notification from this browser while any Slopify tab is open, even in the background. Turning it on asks the browser's permission. Applies to this browser at once. **Send test notification** beside it shows a sample. | Off |
+| **Run sounds** | A chime when a run starts and a different one when it finishes, fails or waits for you, while any Slopify tab is open. **Play start** and **Play end** let you hear them. Applies to this browser at once. | On |
+| **Notification URL** | An address Slopify sends a short plain-text message to, with no tab open, for example an ntfy topic on your phone. Saved only when you press **Save**; **Send test notification** sends a sample. Empty turns it off. | Empty |
+| **Weekly report** | Each Monday from 09:00, what was made, what failed and what it cost last week go to the Notification URL. | Off |
+
+See [Notifications](Notifications).
 
 ## YouTube Studio and posting
 
-"The playlist upload packs name, and the Studio extension's pairing for YouTube Studio and other sites."
+"The browser extension that fills YouTube Studio, release times and playlists." Slopify never uploads or publishes: a finished project's **Copy for YouTube Studio** lists everything Studio asks for, with Copy buttons, and the optional Slopify Studio browser extension fills Studio's upload dialog for you; you still press Publish.
 
 | Control | What it does | Default / limit |
 |---|---|---|
-| **Upload pack and extension** | Explains that Slopify never uploads or publishes: **Prepare upload** on a finished project lists everything Studio asks for, and the optional extension fills Studio's upload dialog from it. | |
-| **Playlists** | The YouTube playlists upload packs offer, each typed exactly as it is called in Studio. Pick **Every channel (default)** or one channel first: the default list is used by every channel without its own. **Add playlist** adds a row; **On by default** puts every project into it; **Remove** drops it; **Save playlists** stores the list. A project's **Prepare upload** changes which ones it goes into. | None; up to 20, each up to 150 characters |
-| **Extension pairing token** | A secret the Slopify Studio extension needs before it may read your upload packs. **Copy** it into the extension's options and press Pair there. | |
+| **Playlists** | The YouTube playlists a project can go into, each typed exactly as it is called in Studio. Pick **Every channel (default)** or one channel first: the default list is used by every channel without its own. **Add playlist** adds a row; ticked ones are on for every project; **Remove** drops one; **Save playlists** stores the list. A project's **Copy for YouTube Studio** changes them for that project. | None; up to 20, each up to 150 characters |
+| **Release times** | Each schedule sets when its videos and shorts go out, under **Edit** on Calendar → Schedules. | |
+| **Upload lead time** | How many hours before release the upload should happen, so YouTube's copyright and ad checks finish while the video is still private. Type it and press **Save**. | |
+| **Post and pin each video's comment once it is public** | The extension posts each video's pinned comment in your name once it is public. | Off |
+| **Extension pairing token** | A secret the Slopify Studio extension needs before it may read your projects. **Copy** it into the extension and press Pair there. The line under it says whether an extension is paired. | |
 | **New pairing token** | Makes a fresh token, unpairs the extension until you paste the new one, and clears the uploads waiting for Studio. | |
-| **Install the Studio extension** | **Chrome, Edge, Brave** or **Firefox**, then **Download for Chrome** or **Download for Firefox**, with the three install steps, and a line on allowing posting: to fill posts on X, LinkedIn, Instagram, TikTok, Reddit or Bluesky, press **Allow posting on** each site in the extension's options. | |
+| **Install the Studio extension** | **Chrome, Edge, Brave** or **Firefox** (the browser you open YouTube Studio in), then the install steps, with **Copy folder path**. Updates arrive in that folder by themselves. To fill posts on X, LinkedIn, Instagram, TikTok, Reddit or Bluesky too, press **Allow posting on** each site in the extension's options. | |
+| **Named links** | Each channel keeps its own links now, on its **Name and look** tab under Channel links. **Open the default channel's links** goes there. Links saved here before fill the default channel's descriptions until you save that tab. | |
 
-See [Studio-Extension](Studio-Extension), [Publishing-to-YouTube](Publishing-to-YouTube) and [Posting-to-Social-Sites](Posting-to-Social-Sites).
+See [Studio Extension](Studio-Extension), [Publishing to YouTube](Publishing-to-YouTube), [Posting to Social Sites](Posting-to-Social-Sites) and [Channels](Channels#channel-links).
 
 ## Backup & storage
 
-"Daily backups, export and import, and what uses disk space." Its second tab is [Trash](#trash).
+"Daily backups, export and import, and disk space."
+
+### Daily backup
+
+| Control | What it does | Default / range |
+|---|---|---|
+| **Back up now** | Writes a backup at once, whether or not the daily backup is on. Also in `Ctrl+K`. | |
+| **Back up automatically** | Turns the daily backup on or off. Each backup holds every project with its videos, so it can be many gigabytes. | Off |
+| **Time of day** | When the daily backup runs, in this browser's time zone. A backup waits while videos are being made. | 03:00 |
+| **Keep last** | How many of Slopify's own backups stay; the oldest beyond it are deleted. | 5, from 1 to 30 |
+| **Folder** | Where backups go. Empty uses the Backups folder beside your projects. | Empty |
+
+Each backup is the same file Export everything makes. See [Backups](Backups).
 
 ### Your files
 
 | Control | What it does |
 |---|---|
-| **Your files** | Where your projects, automatic backups and exports live; new installs use `Documents/Slopify`. The database, settings, keys and logs stay in Slopify's hidden data folder. |
+| **Your files** | Where your projects, automatic backups and exports are kept, with the **Projects** and **Automatic backups** folders. Your keys, settings and the database stay in Slopify's own folder. |
+| **Move to Documents/Slopify** | Shown when your files are elsewhere: moves them to the usual place. |
 | **Open folder** | Opens the folder on this computer. |
-| **Choose another folder** / **New folder** / **Move here** | Moves your files to another folder. Slopify copies every file, checks each copy, then switches, and keeps the old folder until you delete it. The new folder must be empty or not exist yet. It cannot start while a project is being made. |
+| **Choose another folder** | Moves your files to another folder. Slopify copies every file, checks each copy, then switches, and keeps the old folder until you delete it. The new folder must be empty or not exist yet. It cannot start while a project is being made. |
 
-In Docker, this shows the command to run on the computer running Docker, with **Copy command**. See [Where-Your-Files-Live](Where-Your-Files-Live).
+In Docker, this shows the command to run on the computer running Docker, with **Copy command**. See [Where Your Files Live](Where-Your-Files-Live).
 
 ### Export and import
 
 | Control | What it does |
 |---|---|
-| **Export everything** | Downloads one `.tar` file with every project (files and history), your library, templates, schedules, Play drafts, fonts, settings and usage. Never provider keys. Your browser's downloads show its progress; keep Slopify running until it finishes. |
-| **Import a backup** | Adds a `.tar` from Export everything (or a `.zip` from an older version's Export backup, up to 100 MB) to this install. It replaces nothing: projects already here are skipped, taken names arrive as "(imported)" and schedules arrive paused. Running projects must finish or pause first. A summary lists what was added and skipped. |
-| **Clear leftover files** | Deletes files in the projects folder that no project records any more, and uploaded files nothing uses. Your projects, outputs and library are never touched. Slopify also does this at each start. |
+| **Export everything** | Downloads one `.tar` file with every project (files and versions), your prompts, templates, schedules, drafts, fonts, settings and usage. Never your keys. Your browser's downloads show its progress; keep Slopify running until it finishes. |
+| **Import a backup** | Adds a `.tar` from Export everything (or a `.zip` from an older version's export, up to 100 MB) to this install. It replaces nothing: projects already here are skipped, taken names arrive as "(imported)" and schedules arrive paused. Running projects must finish or pause first. A summary lists what was added and skipped. |
+| **Clear leftover files** | Deletes files in the projects folder that no project records any more, and uploaded files nothing uses. Your projects, outputs, prompts and templates are never touched. Slopify also does this at each start. |
 
-After importing, enter your keys again in Settings → Providers. You can also run **Export everything** from `Ctrl+K`. See [Backups](Backups).
+After importing, add your keys again on Keys & services. You can also run **Export everything** from `Ctrl+K`. See [Backups](Backups).
 
 ### Disk space
 
 | Control | What it does |
 |---|---|
-| **Disk space** | What Slopify stores: the total, project files, staged uploads, and deleted projects still in the trash (freed when the trash removes them after 30 days, or with **Delete now**). |
-| Storage by project | Each project's size, split into outputs and working files, largest first. A finished project's page offers the same on its own (**Free space**, see [Project Page](Project-Page#free-space)). |
-| **Keep outputs only** | On a finished project, deletes the working files (narration parts, subtitle timing, render settings) and keeps the video, shorts, the images they show, thumbnail, article, description, document and your uploads. You confirm first. Changing the project later makes those files again, which takes time and provider credits. |
-
-### Sample projects
-
-| Control | What it does |
-|---|---|
-| **Sample projects** | Lists the three samples that come with Slopify (a narrated video, an audiobook and a podcast), with **Open** for each one in your projects. |
-| **Restore samples** | Adds back any that were deleted and puts the others back as they shipped. Your own copies of them are not touched. |
-
-### Daily backups
-
-"A daily copy of everything, in a folder you choose." On the Backup & storage tab.
-
-| Control | What it does | Default / range |
-|---|---|---|
-| **Back up now** | Writes a backup at once, whether or not the daily backup is on. Also in `Ctrl+K`. | |
-| **Back up automatically** | Turns the daily backup on or off. | Off |
-| **Time of day** | When the daily backup runs, in this browser's time zone. | 03:00 |
-| **Keep last** | How many of Slopify's own backups stay; older ones are deleted. | 5, from 1 to 30 |
-| **Folder** | Where backups go. Empty uses the Backups folder beside your projects. | Empty |
-| **Save** | Saves the four settings above. | |
-
-Each backup is the same file Export everything makes and can be many gigabytes. See [Backups](Backups).
+| **Disk space** | What Slopify stores: the total, project files and staged uploads, then what can be cleaned up, or "Nothing to clean up." |
+| **Delete all old versions** | Shown when projects keep old versions' files: deletes them all after you confirm. |
+| Storage by project | Each project's size, split into outputs and working files, largest first, with **Open** on a sample. A finished project's own **Free space** does the same for one project (see [Project Page](Project-Page#free-space)). |
+| **Keep outputs only** | On a finished project, deletes the working files (narration pieces, caption timing, video settings) and keeps the video, shorts, the images they show, thumbnail, article, description, document and your uploads. You confirm first. Changing the project later makes those files again, which takes time and service credits. |
+| **Delete old versions** | On a project with old versions: deletes their files. |
+| **Restore samples** | Puts the three finished examples that come with Slopify (a narrated video, an audiobook and a podcast) back as they shipped. Your own copies of them are not touched. |
 
 ## Trash
 
-"Deleted projects, prompts, templates and schedules, kept for 30 days." A tab of **Backup & storage**.
+"Deleted things, kept for 30 days." Deleted projects, prompts, intros and outros, templates, schedules and designs stay here for 30 days. Channels, cast members, PDF themes and episode summaries are deleted permanently and never come here.
 
 | Control | What it does |
 |---|---|
 | **Restore** | Puts an item back. If its name was taken meanwhile it comes back renamed, and a schedule comes back paused. |
 | **Delete now** | Removes an item for good at once, freeing its space. You confirm first. |
-| Checkboxes and **Select all** | Pick several items; **Restore selected** and **Delete selected** above the list act on them. **Restore all** and **Empty trash** act on everything. |
+| **Filter by kind** | Shows one kind of item, when there are several. |
+| Ticks and **Select all** | Pick several items; **Restore selected** and **Delete selected** act on them. **Restore all** and **Empty trash** act on everything. |
 
-Deleted projects, prompts, intros and outros, templates and schedules stay 30 days, then are removed for good. See [Trash](Trash).
+See [Trash](Trash).
 
-## Usage
+## General
 
-"This machine only. The same counters, anonymised, feed slopify.stream."
+"How Slopify looks and how it starts."
 
-Shows **Videos made**, **Hours of audio**, **Images made**, **Tokens used** and **Projects**, then **Tokens by stage** by provider and model, and the machine ID and version. There are no controls. Money figures are on each project's **Run cost** tab and Home's **This week**. See [Costs-and-Run-Cost](Costs-and-Run-Cost).
+| Control | What it does | Default |
+|---|---|---|
+| **Appearance** | **System**, **Dark** or **Light** colors for Slopify on this computer. System follows your computer's light or dark setting and changes with it. Your videos are not affected. | System |
+| **Start Slopify when I log in** | Slopify starts in the background when you log in, without opening a browser tab, so your bookmark always opens it. It uses your account's own start-up list, so no administrator password is needed, and turning it off removes exactly what it added. | Off |
 
-## Patch notes
+In Docker, **Start at login** only shows whether Docker starts at login, when the installer checked, and where to change that. With Docker Desktop it names Docker Desktop's own setting: Docker Desktop → Settings → General → **Start Docker Desktop when you sign in to your computer**. Slopify starts whenever Docker does and never changes Docker's own settings. See [Start at Login](Start-at-Login).
 
-"What changed in each version of Slopify."
+## Remote access
+
+"Open Slopify on your phone or laptop through Tailscale."
+
+| Control | What it does | Default |
+|---|---|---|
+| **Open on my other devices (Tailscale)** | Has the Tailscale already on this computer serve Slopify's page at `https://<computer>.<tailnet>.ts.net`, reachable only from devices signed in to your tailnet. Shows the address with **Copy address** and a QR code. Uses Tailscale Serve, never Funnel. Turning it off removes only the serve setting Slopify added. Off, the line says Slopify answers only on this computer. | Off |
+| **Use port 8443** | Shown when another Tailscale serve setting already uses HTTPS port 443: gives Slopify its own address on another port and leaves yours alone. | |
+| **Check again** | Asks Tailscale again after you fixed what the notice says. | |
+
+See [Remote Access](Remote-Access).
+
+## AI agents
+
+"Let Claude Code or Codex on this computer run Slopify." An agent can start and fix runs, edit your prompts and templates and answer checks set to External agent. It needs no key, like this page, and never uploads to YouTube. What it changes is marked by agent in the project's versions, in notifications and in the list below.
 
 | Control | What it does |
 |---|---|
-| **Latest version** | The newest notes, open. |
-| **Earlier versions** | Older versions, each opened with **Read**. |
+| **Address for agents (MCP)** | This install's address with `/mcp`, for example `http://127.0.0.1:6969/mcp`. |
+| **Claude Code** → **Copy** | Copies `claude mcp add --transport http slopify <address>`. Run it once in a terminal. |
+| **Codex** → **Copy** | Copies the `[mcp_servers.slopify]` lines. Add them to `~/.codex/config.toml`. |
+| Last connected | When an agent last connected, or "No agent has connected yet." |
+| **What agents did** | The latest changes agents made, with the project or schedule and the time. |
 
-The notes ship with the app, so they work offline. After an update, the new version's notes open by themselves once; a fresh install skips that. On a major update the What's new tour shows instead and links here. `Ctrl+K` → **Show patch notes** opens this section. See [Updating-and-Patch-Notes](Updating-and-Patch-Notes).
+There is nothing to turn on: the address works whenever Slopify runs. See [Agents (MCP)](Agents-MCP).
 
 ## About
 
-"Free and open source, running on your machine with your own keys."
+"Your version, updates and where to get help."
 
 | Control | What it does |
 |---|---|
-| **Updates** | Points to **Help → Check for updates** at the foot of the rail, which checks for a newer Slopify and installs it. **Update ready** shows in the rail while one is ready. If a video is being made, the update waits until it finishes, and you can cancel it meanwhile. Slopify restarts itself and the page reconnects. |
-| **What's new in this version** | Opens the patch notes for the version you are running. When this version has no notes of its own, it opens the newest ones. |
-| Links | GitHub (code, issues, releases), Patreon, Buy Me a Coffee, and "How I run a channel with it". |
+| Version | The version you run and whether it is up to date. |
+| **Check for updates** | Checks for a newer Slopify and installs it. **Help** at the foot of the rail does the same, and says while one is ready. If a video is being made, the update waits until it finishes, and you can cancel it meanwhile. Slopify restarts itself and the page reconnects. |
+| **Read what's new** | Opens **What's new** for the version you are running. |
+| **How I run a channel with it** | The maker's own story of running a channel with Slopify. |
+| **Something wrong?** → **Download diagnostics** | Saves `slopify-diagnostics.json`: the Slopify version, your system and Node version, which services are set up or found, the project count and the state of the model list. It never holds your keys, prompts or project content. Attach it to a bug report. Also in `Ctrl+K`. |
 
-The welcome screen (what this computer can do, the samples, a first short) opens again from **Help → Tutorials → Welcome screen** or `Ctrl+K` → **Open the welcome screen**.
+"Free. Your keys, your machine." Slopify is made by Gent Bajko under the Apache License 2.0. The welcome screen (what this computer can do, the samples, a first short) opens again from **Help** → **Tutorials** → **Welcome screen** or `Ctrl+K` → **Open the welcome screen**. See [Updating and Patch Notes](Updating-and-Patch-Notes).
 
-Slopify is made by Gent Bajko under the Apache License 2.0. See [Updating-and-Patch-Notes](Updating-and-Patch-Notes).
+## Usage
+
+"What this computer made. Slopify always adds these counts, anonymously, to slopify.stream's totals; there is no switch."
+
+Shows **Videos made**, **Hours of narration**, **Images made**, **Tokens used** and **Projects**, then **Tokens by stage** by service and model, and the machine ID and version. There are no controls. Money figures are on each project's cost line (**See the breakdown**) and Home's **This week**. See [Costs and Run Cost](Costs-and-Run-Cost).
+
+## What's new
+
+"What changed in each version." Pick a **Version** to read its notes; yours is marked. The notes ship with the app, so they work offline. After an update, the new version's notes open by themselves once; a fresh install skips that. On a major update the What's new tour shows instead and links here. `Ctrl+K` → **What's new** opens this page. See [Updating and Patch Notes](Updating-and-Patch-Notes).
 
 ## Related pages
 
-- [Providers-and-Keys](Providers-and-Keys)
-- [AI-CLIs](AI-CLIs)
+- [Keys and Services](Providers-and-Keys)
+- [AI CLIs](AI-CLIs)
 - [Models](Models)
-- [Costs-and-Run-Cost](Costs-and-Run-Cost)
-- [Keyboard-Shortcuts-and-Command-Palette](Keyboard-Shortcuts-and-Command-Palette)
-- [Where-Your-Files-Live](Where-Your-Files-Live)
+- [Costs and Run Cost](Costs-and-Run-Cost)
+- [Keyboard Shortcuts and Command Palette](Keyboard-Shortcuts-and-Command-Palette)
+- [Where Your Files Live](Where-Your-Files-Live)
 - [Backups](Backups)
 - [Troubleshooting](Troubleshooting)

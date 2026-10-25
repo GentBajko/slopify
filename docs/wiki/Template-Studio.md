@@ -65,7 +65,7 @@ Every paid sample is priced before anything is spent:
 
 - **Save** says what it costs, for example **Save · about $0.12**, or **Save · plan usage** when only a CLI plan is used. **Save without a sample** saves and makes only the free samples.
 - A sample that costs more than a quarter more (plus five cents) than the price you saw, or has a step with no known price you didn't accept, waits instead of starting, with the new price on **Make sample**.
-- **Settings → Template studio → Daily sample budget** is the most the studio may spend in one day ($2.00 by default). A sample past it waits until the next day or a higher budget. What a removed sample or a discarded comparison was charged today still counts. See [Settings-Reference](Settings-Reference#template-studio).
+- **Settings → Production defaults → Template samples → Daily sample budget** is the most the studio may spend in one day ($2.00 by default). A sample past it waits until the next day or a higher budget. What a removed sample or a discarded comparison was charged today still counts. See [Settings-Reference](Settings-Reference#template-samples).
 
 **Make samples for all** in Settings → Template studio prices the samples of every template that needs one, together, and queues the ones that fit today's budget.
 
@@ -122,4 +122,4 @@ Design templates (posters, flyers and other designed pieces) are listed on Libra
 - [Models](Models)
 - [Costs and run cost](Costs-and-Run-Cost)
 - [Narration aliases and glossary](Narration-Aliases-and-Glossary)
-- [Settings reference](Settings-Reference#template-studio)
+- [Settings reference](Settings-Reference#template-samples)

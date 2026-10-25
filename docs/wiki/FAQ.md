@@ -24,7 +24,7 @@ Yes. Sign in to Claude Code, Codex or Antigravity CLI for the text (Codex also d
 
 ### How do I know a key works before I save it?
 
-Paste it in Settings → **Providers** and press **Test**. Slopify checks the pasted key with the provider without storing it; press **Save** to keep it. See [Providers and Keys](Providers-and-Keys#test-a-key).
+Paste it in Settings → **Keys & services** and press **Test the key (free)**. Slopify checks the pasted key with the service without storing it; press **Save** to keep it. See [Keys and Services](Providers-and-Keys#test-a-key).
 
 ### Do I need an account or a login for Slopify?
 
