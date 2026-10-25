@@ -109,7 +109,11 @@ export function SpeakersEditor({
         <OptionPicker
           field="voices.format"
           label="Format"
-          tip="play.speakers.format"
+          help={
+            value === undefined
+              ? "One voice reads the article. Pick a format for an audiobook, podcast, radio drama or interview with several speakers."
+              : "Several speakers, each with a voice; the AI writer writes or splits the script for them."
+          }
           value={value?.format ?? ""}
           placeholder="Narration (one voice)"
           options={voiceFormats.map((format) => ({
@@ -123,14 +127,20 @@ export function SpeakersEditor({
           <OptionPicker
             field="voices.source"
             label="Script"
-            tip="play.speakers.script"
+            help={
+              value.source === "script"
+                ? "The article prompt must be a Script prompt: the AI writer writes speaker turns, one `Name: words` paragraph each."
+                : value.source === "adapt"
+                  ? "The article is written or pasted as usual and stays as it is; the AI writer then rewrites it as a conversation for the speakers to read."
+                  : "The article is written or pasted as usual; the AI writer then hands its narration and dialogue to the speakers."
+            }
             value={value.source}
             placeholder="Pick where the script comes from"
             options={[
               { value: "script", label: "Write a script (Script prompt)" },
               value.format === "audiobook"
-                ? { value: "attribute", label: "Split the article into speakers" }
-                : { value: "adapt", label: "Adapt the article into a conversation" },
+                ? { value: "attribute", label: "Split the article into speakers · 1 AI call" }
+                : { value: "adapt", label: "Adapt the article into a conversation · 1 AI call" },
             ]}
             problem={problem?.("voices.source")}
             onPick={(source) =>
@@ -142,20 +152,8 @@ export function SpeakersEditor({
           />
         )}
       </div>
-      {value === undefined ? (
-        <p className="text-small text-ink-2">
-          One voice reads the article. Pick a format for an audiobook, podcast, radio drama or
-          interview with several speakers.
-        </p>
-      ) : (
+      {value === undefined ? null : (
         <>
-          <p className="text-small text-ink-2">
-            {value.source === "script"
-              ? "The article prompt must be a Script prompt: the AI writer writes speaker turns, one `Name: words` paragraph each."
-              : value.source === "adapt"
-                ? "The article is written or pasted as usual and stays as it is; the AI writer then rewrites it as a conversation for the speakers to read."
-                : "The article is written or pasted as usual; the AI writer then hands its narration and dialogue to the speakers."}
-          </p>
           {problem?.("voices.speakers") === undefined ? null : (
             <p className="text-label text-danger">{problem("voices.speakers")}</p>
           )}
@@ -208,7 +206,6 @@ export function SpeakersEditor({
             </Button>
             <OptionPicker
               label="Add from the cast"
-              tip="play.speakers.add-from-cast"
               value=""
               placeholder={
                 voiced.length === 0
@@ -229,7 +226,6 @@ export function SpeakersEditor({
             <OptionPicker
               field="voices.turnGapSeconds"
               label="Gap between turns"
-              tip="play.speakers.turn-gap"
               value={String(value.turnGapSeconds)}
               placeholder="Pick a gap"
               options={turnGapSteps.map((step) => ({ value: String(step), label: `${step} s` }))}
@@ -240,19 +236,18 @@ export function SpeakersEditor({
           <div className="flex flex-col items-start gap-2">
             <Switch
               label="Speaker names on captions"
-              tip="play.speakers.name-tags"
               checked={value.nameTags}
               onChange={(nameTags) => set({ nameTags })}
             />
             <Switch
-              label="One request for consecutive turns where the voice service can (ElevenLabs v3, Gemini)"
-              tip="play.speakers.native-dialogue"
+              label="Let the voices react to each other (ElevenLabs v3, Gemini)"
+              help="Back-to-back turns go in one request, so the voices answer each other; the same characters are charged."
               checked={value.nativeDialogue}
               onChange={(nativeDialogue) => set({ nativeDialogue })}
             />
             <Switch
               label="Also make MP3 and M4B files with chapter markers"
-              tip="play.speakers.audio-files"
+              help="Made on this computer · free."
               checked={value.audioFiles}
               onChange={(audioFiles) => set({ audioFiles })}
             />
@@ -289,7 +284,7 @@ function BookFields({
     <div className="flex flex-col gap-3">
       <Switch
         label="A chapter of a book"
-        tip="play.speakers.book"
+        help="Tags the MP3 and M4B with the book and chapter; a finished chapter offers Make the next chapter."
         checked={book !== undefined}
         onChange={(on) => {
           if (on) set({ book: { title: "", chapter: 1 } });
@@ -303,7 +298,7 @@ function BookFields({
         <div className="grid grid-cols-1 gap-3 min-[700px]:grid-cols-[minmax(0,1fr)_160px]">
           <Field
             label="Book title"
-            tip="play.speakers.book-title"
+            help="The album name of the MP3 and M4B files."
             error={problem?.("voices.book.title")}
           >
             <Input
@@ -314,7 +309,7 @@ function BookFields({
           </Field>
           <Field
             label="Chapter"
-            tip="play.speakers.book-chapter"
+            help="Its track number, from 1 to 9999."
             error={problem?.("voices.book.chapter")}
           >
             <Input

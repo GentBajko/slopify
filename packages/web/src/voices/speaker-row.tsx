@@ -72,8 +72,14 @@ export function SpeakerRow({
     () => skippedSpeakerPronunciations([speaker], language ?? "und")[0]?.skipped ?? [],
     [speaker, language],
   );
+  // The speaker's colour runs down the row's edge, as it marks their turns in the script: a key,
+  // not a dot that reads like a status lamp.
   return (
-    <li className="grid grid-cols-1 gap-3 py-3 min-[700px]:grid-cols-2" data-play-field={field}>
+    <li
+      className="grid grid-cols-1 gap-3 border-l-4 py-3 pl-3 min-[700px]:grid-cols-2"
+      style={{ borderLeftColor: `var(--color-speaker-${String((index % 6) + 1)})` }}
+      data-play-field={field}
+    >
       <div className="flex min-w-0 items-end gap-2">
         {selection === undefined ? null : (
           <RowCheck
@@ -83,17 +89,7 @@ export function SpeakerRow({
             className="mb-1"
           />
         )}
-        <span
-          aria-hidden="true"
-          className="mb-2 size-3 shrink-0 rounded-full"
-          style={{ background: `var(--color-speaker-${String((index % 6) + 1)})` }}
-        />
-        <Field
-          label="Speaker name"
-          tip="play.speaker.name"
-          error={problem?.(`${field}.name`)}
-          className="min-w-0 flex-1"
-        >
+        <Field label="Speaker name" error={problem?.(`${field}.name`)} className="min-w-0 flex-1">
           <Input
             value={speaker.name}
             maxLength={40}
@@ -103,7 +99,6 @@ export function SpeakerRow({
       </div>
       <OptionPicker
         label="Role"
-        tip="play.speaker.role"
         value={speaker.role}
         placeholder="Pick a role"
         options={speakerRoles.map((role) => ({ value: role, label: roleLabels[role] }))}
@@ -142,7 +137,6 @@ export function SpeakerRow({
       <OptionPicker
         field={`${field}.pace`}
         label="Pace"
-        tip="play.speaker.pace"
         value={String(speaker.pace ?? 1)}
         placeholder="Pick a pace"
         options={paceSteps.map((step) => ({

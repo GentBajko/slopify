@@ -1,6 +1,6 @@
 import type { ProviderFamily, ProviderStatus } from "@app/slices/settings/model.js";
 import { type ReactNode, useId } from "react";
-import { Select } from "@/components/kit/field";
+import { HelpLine, Select } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import type { HelpId } from "@/help/catalog";
 import { providerUnavailableLabel } from "@/lib/provider-status";
@@ -16,6 +16,8 @@ export interface FieldProps {
   readonly problem: string | undefined;
   // The info button beside the label, from the help catalogue.
   readonly tip?: HelpId | undefined;
+  // One visible sentence under the control, in place of an info button.
+  readonly help?: ReactNode;
   // The id of the visible name of the group the control belongs to ("Read by"): the control
   // is named by both, "Read by Service", so two groups' Service selects are told apart.
   readonly group?: string | undefined;
@@ -27,6 +29,7 @@ export function LabelledField({
   field,
   problem,
   tip,
+  help,
   group,
   children,
 }: {
@@ -34,6 +37,7 @@ export function LabelledField({
   readonly label: string;
   readonly problem: string | undefined;
   readonly tip?: HelpId | undefined;
+  readonly help?: ReactNode;
   readonly group?: string | undefined;
   readonly children: (props: {
     readonly id: string;
@@ -46,6 +50,7 @@ export function LabelledField({
   const fieldId = useId();
   const labelId = useId();
   const noteId = useId();
+  const helpId = useId();
 
   const labelled = (
     <label id={labelId} htmlFor={fieldId} className="sl-field__label">
@@ -55,7 +60,7 @@ export function LabelledField({
   return (
     <div
       className="sl-field [&>span]:w-full [&>select]:w-full"
-      {...(tip === undefined ? {} : helpScope)}
+      {...(tip === undefined && help === undefined ? {} : helpScope)}
     >
       {/* The kit's field label and error, as Field draws them. */}
       {tip === undefined ? (
@@ -69,9 +74,13 @@ export function LabelledField({
       {children({
         field,
         id: fieldId,
-        describedBy: problem === undefined ? undefined : noteId,
+        describedBy:
+          [help === undefined ? undefined : helpId, problem === undefined ? undefined : noteId]
+            .filter(Boolean)
+            .join(" ") || undefined,
         labelledBy: group === undefined ? undefined : `${group} ${labelId}`,
       })}
+      {help === undefined ? null : <HelpLine id={helpId}>{help}</HelpLine>}
       {problem === undefined ? null : (
         <p id={noteId} className="sl-field__error m-0">
           {problem}
@@ -96,6 +105,7 @@ export function OptionPicker({
   options,
   disabled = false,
   tip,
+  help,
   group,
   onPick,
 }: FieldProps & {
@@ -104,7 +114,14 @@ export function OptionPicker({
   readonly disabled?: boolean | undefined;
 }) {
   return (
-    <LabelledField field={field} label={label} problem={problem} tip={tip} group={group}>
+    <LabelledField
+      field={field}
+      label={label}
+      problem={problem}
+      tip={tip}
+      help={help}
+      group={group}
+    >
       {({ id, describedBy, labelledBy }) => (
         <Select
           id={id}
