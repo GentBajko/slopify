@@ -219,26 +219,26 @@ export function estimateRun(
       if (unknown)
         requests.push({
           kind: "unknown",
-          stage: "Narration Preparation",
+          stage: "Narration preparation",
           detail:
-            "One AI call per future logical narration chunk and enabled entry; generated source length is not yet known.",
+            "One AI call per narration piece and per intro or outro written for it; how many is known once the text is written.",
         });
       else
         for (const source of known)
           text(
-            "Narration Preparation",
+            "Narration preparation",
             preparationMessages(rendered.narration ?? "", source, [], draft.language).reduce(
               (n, message) => n + message.content.length,
               0,
             ),
             2400,
-            `${known.length} AI calls: one per logical narration chunk or entry.`,
+            `${known.length} AI calls: one per narration piece or intro or outro.`,
           );
       requests.push({
         kind: "unknown",
         stage: "Delivery cue overhead",
         detail:
-          "The voice service charges for the delivery tags' characters too; their length is known after preparation.",
+          "The voice service charges per character, delivery tags included; their length is known after preparation.",
       });
     }
     // A template studio sample says only the narration's opening (`template-studio/scope.ts`).

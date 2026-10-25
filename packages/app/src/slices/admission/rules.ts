@@ -490,7 +490,7 @@ export function voicesFields(
     fields.push({
       field: "narrationPrompt",
       message:
-        "Narration preparation adds delivery cues only to speakers on Inworld's TTS-2 model, and no speaker uses it. Choose that model for a speaker under Speakers, or clear Narration Preparation under Narration → Audio Advanced.",
+        "Narration preparation adds delivery cues only to speakers on Inworld's TTS-2 model, and no speaker uses it. Choose that model for a speaker under Speakers, or set Narration preparation to Off under Narration → More narration settings.",
     });
   return fields;
 }

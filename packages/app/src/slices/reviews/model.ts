@@ -185,7 +185,7 @@ export function reviewSettingsFromForm(
     ...(valid
       ? {}
       : {
-          retriesProblem: `Enter a number of redos between ${String(reviewRetriesMin)} and ${String(reviewRetriesMax)} in the Reviews section.`,
+          retriesProblem: `Enter a number of redos between ${String(reviewRetriesMin)} and ${String(reviewRetriesMax)} under Pauses and checks → Advanced.`,
         }),
   };
 }

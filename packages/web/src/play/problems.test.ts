@@ -44,6 +44,31 @@ describe("the services a setup calls that will not answer", () => {
     ]);
   });
 
+  it("says what the computer's own voice lacks in a sentence, leaving the commands to the row", () => {
+    const system: ProviderStatus = {
+      id: "system-voice",
+      family: "tts",
+      displayName: "System voice",
+      readiness: {
+        kind: "local",
+        available: false,
+        issue:
+          "No speech program was found on this computer, so the system voice can't narrate. Install espeak-ng (for example sudo apt install espeak-ng), or add an OpenAI key.",
+      },
+    };
+    const local = { ...form, audio: { ...form.audio, provider: "system-voice" } };
+    expect(
+      readinessProblems(local, [], [...providers, system], "article").find(
+        (one) => one.row === "narration",
+      ),
+    ).toEqual({
+      row: "narration",
+      field: "audio.provider",
+      text: "No speech program was found on this computer, so the system voice can't narrate: install one, or pick another voice service.",
+      hint: "Install a speech program first",
+    });
+  });
+
   it("says nothing of a service nobody picked, one the list does not know, or one not used", () => {
     const quiet = {
       ...form,

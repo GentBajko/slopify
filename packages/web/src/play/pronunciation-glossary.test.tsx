@@ -249,21 +249,21 @@ for (const surface of surfaces) {
       expect(screen.queryByRole("combobox", { name: "Text provider" })).toBeNull();
       if (surface.name === "Play") {
         expect(
-          screen.getByRole<HTMLSelectElement>("combobox", { name: "Narration Preparation" }).value,
+          screen.getByRole<HTMLSelectElement>("combobox", { name: "Narration preparation" }).value,
         ).toBe("");
       }
     },
   );
 }
 
-it("changes pronunciation and Narration Preparation independently", async () => {
+it("changes pronunciation and narration preparation independently", async () => {
   const user = userEvent.setup();
   renderRouted(<PlaySubject preference={false} preparation="Delivery" />, deps());
   const checkbox = await screen.findByRole<HTMLInputElement>("checkbox", {
     name: "Use Pronunciation Glossary",
   });
   const preparation = screen.getByRole<HTMLSelectElement>("combobox", {
-    name: "Narration Preparation",
+    name: "Narration preparation",
   });
   await user.click(checkbox);
   expect(checkbox.checked).toBe(true);

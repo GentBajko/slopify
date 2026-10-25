@@ -71,6 +71,13 @@ export const freshDraftDocument: PlayDraftDocument = playDraftDocumentSchema.par
 export interface FreshProviderDefaults {
   readonly llm?: { readonly provider: string; readonly model: string } | undefined;
   readonly images?: { readonly provider: string; readonly model: string } | undefined;
+  // A draft made from a template only: a saved voice of a voice service that answers, with that
+  // service's first model, for a template whose own voice service can't read here (no key
+  // saved), and the voice services that do answer, whose pick is kept.
+  readonly audio?:
+    | { readonly provider: string; readonly model: string; readonly voice: string }
+    | undefined;
+  readonly voiceServices?: readonly string[] | undefined;
 }
 let providerDefaults: FreshProviderDefaults = {};
 export function setFreshProviderDefaults(defaults: FreshProviderDefaults): void {
@@ -78,7 +85,8 @@ export function setFreshProviderDefaults(defaults: FreshProviderDefaults): void 
 }
 // The first writer and image service that answers (a key saved, a tool installed), each with
 // its first listed model: what a draft made from a template takes for a kind the first launch
-// found nothing of, so keys entered in Settings count as found too.
+// found nothing of, so keys entered in Settings count as found too. With them, the voice a
+// template-made draft reads with when the template's voice service has no key here.
 let readyServices: FreshProviderDefaults = {};
 export function setReadyServices(ready: FreshProviderDefaults): void {
   readyServices = ready;
@@ -88,10 +96,17 @@ export function setReadyServices(ready: FreshProviderDefaults): void {
 export function templateProviderDefaults(
   found: FreshProviderDefaults = providerDefaults,
 ): FreshProviderDefaults {
-  return { llm: found.llm ?? readyServices.llm, images: found.images ?? readyServices.images };
+  return {
+    llm: found.llm ?? readyServices.llm,
+    images: found.images ?? readyServices.images,
+    audio: readyServices.audio,
+    voiceServices: readyServices.voiceServices,
+  };
 }
 // A writer or image service nobody has picked takes the default; one already picked is left
-// alone, and so is a document with nothing to fill (the same object comes back).
+// alone, and so is a document with nothing to fill (the same object comes back). The one voice
+// of a narrated draft takes the default voice when its service is empty or can't read here; a
+// draft with speakers keeps each speaker's own.
 export function withProviderDefaults(
   document: PlayDraftDocument,
   defaults: FreshProviderDefaults = providerDefaults,
@@ -99,13 +114,21 @@ export function withProviderDefaults(
   const { form } = document;
   const llm = form.llm.provider === "" ? defaults.llm : undefined;
   const images = form.images.provider === "" ? defaults.images : undefined;
-  if (llm === undefined && images === undefined) return document;
+  const reads = defaults.voiceServices ?? [];
+  const audio =
+    form.sources.audio === "generate" &&
+    form.voices === undefined &&
+    (form.audio.provider === "" || !reads.includes(form.audio.provider))
+      ? defaults.audio
+      : undefined;
+  if (llm === undefined && images === undefined && audio === undefined) return document;
   return {
     ...document,
     form: {
       ...form,
       ...(llm === undefined ? {} : { llm: { ...llm } }),
       ...(images === undefined ? {} : { images: { ...images } }),
+      ...(audio === undefined ? {} : { audio: { ...form.audio, ...audio } }),
     },
   };
 }

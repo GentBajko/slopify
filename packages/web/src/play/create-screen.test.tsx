@@ -3,6 +3,7 @@ import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultChannelId } from "@/channels/api";
+import { startedAt } from "@/lib/utils";
 import { type Answer, jsonAnswer, testVersion } from "@/test-app";
 import { freshDraftDocument, setFreshProviderDefaults, setReadyServices } from "./draft-state";
 import {
@@ -225,6 +226,64 @@ describe("what Create starts from", () => {
     ).toBeNull();
   });
 
+  it("reads with a saved voice whose service has a key when the template's voice service has none", async () => {
+    // The starter reads with ElevenLabs; this computer has a Cartesia key and a Cartesia voice.
+    const { session } = await mountStarter({
+      "GET /api/providers": jsonAnswer({
+        providers: [
+          {
+            id: "claude-code",
+            family: "llm",
+            displayName: "Claude Code CLI",
+            readiness: { kind: "cli", installed: true, version: "2.1.258" },
+          },
+          {
+            id: "elevenlabs",
+            family: "tts",
+            displayName: "ElevenLabs",
+            readiness: { kind: "keyed", hasKey: false },
+          },
+          {
+            id: "cartesia",
+            family: "tts",
+            displayName: "Cartesia",
+            readiness: { kind: "keyed", hasKey: true },
+          },
+          {
+            id: "fal",
+            family: "image",
+            displayName: "fal.ai",
+            readiness: { kind: "keyed", hasKey: true },
+          },
+        ],
+      }),
+      [`GET /api/project-templates/${templateId}`]: jsonAnswer({
+        id: templateId,
+        name: "Lore starter",
+        version: 1,
+        updatedAt: "2026-09-13T00:00:00.000Z",
+        document: starter,
+      }),
+    });
+    await waitFor(() => expect(startFrom().value).toBe(templateId));
+    await waitFor(() =>
+      expect(session().document.form.audio).toMatchObject({
+        provider: "cartesia",
+        model: "sonic-3.5",
+        voice: "cartesia-other",
+      }),
+    );
+    expect(
+      within(screen.getByRole("list", { name: "Setup" })).queryByRole("button", { name: /^Fix / }),
+    ).toBeNull();
+    // Nothing was changed by the person, so the row is still the template's.
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-setup-row="narration"] [data-row-origin]')?.textContent,
+      ).toBe("From Lore starter"),
+    );
+  });
+
   it("keeps a blank setup once it is picked, instead of the starter", async () => {
     const { session } = await mountStarter();
     await waitFor(() => expect(startFrom().value).toBe(templateId));
@@ -273,6 +332,29 @@ describe("what Create starts from", () => {
       model: "fal-ai/flux-2",
     });
     expect(session().document.templateSource).toBeUndefined();
+  });
+});
+
+describe("a draft Create reopens by itself", () => {
+  it("says it is the draft from earlier, with New draft beside it", async () => {
+    const id = "44444444-4444-4444-8444-444444444444";
+    window.localStorage.setItem("slopify.play-draft", id);
+    const { session } = await mountPlay();
+    const header = await waitFor(() => {
+      const meta = document.querySelector(".sl-page-header__meta");
+      if (meta === null) throw new Error("Create says nothing about the draft it reopened.");
+      return meta;
+    });
+    expect(header.textContent).toBe(`Your draft from ${startedAt("2026-09-13")}·New draft`);
+    expect(session().activeId).toBe(id);
+    await userEvent.click(within(header as HTMLElement).getByRole("button", { name: "New draft" }));
+    await waitFor(() => expect(document.querySelector(".sl-page-header__meta")).toBeNull());
+    expect(session().activeId).toBeNull();
+  });
+
+  it("says nothing on a draft the person opened or started here", async () => {
+    await mountPlay();
+    expect(document.querySelector(".sl-page-header__meta")).toBeNull();
   });
 });
 

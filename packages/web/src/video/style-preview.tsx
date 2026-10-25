@@ -185,7 +185,7 @@ export function StylePreview({
       size="small"
       disabled={!valid || state.kind === "pending"}
       disabledReason={
-        valid ? "Rendering the preview…" : "Fix the caption settings to render the preview."
+        valid ? "Making the preview…" : "Fix the caption settings to make the preview."
       }
       onClick={() => {
         void run(true);
@@ -221,7 +221,7 @@ export function StylePreview({
       )}
       {state.kind === "pending" ? (
         <p role="status" className="text-small text-ink-2">
-          Rendering the preview…
+          Making the preview…
         </p>
       ) : null}
       {state.kind === "failed" ? (
@@ -231,7 +231,7 @@ export function StylePreview({
       ) : null}
       {valid ? null : (
         <p className="text-small text-ink-2">
-          The preview renders again once the caption size is between 16 and 120.
+          The preview is made again once the caption size is between 16 and 120.
         </p>
       )}
       <p className="text-small text-ink-2">

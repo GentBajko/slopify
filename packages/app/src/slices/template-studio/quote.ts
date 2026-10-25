@@ -100,7 +100,7 @@ const sectionOfRow: Readonly<Record<string, TemplateSection>> = {
   Article: "script",
   "Intro / outro text": "script",
   "Narration descriptions": "voice",
-  "Narration Preparation": "voice",
+  "Narration preparation": "voice",
   "Delivery cue overhead": "voice",
   Narration: "voice",
   "Speaker split": "voice",

@@ -10,6 +10,8 @@ import {
   reviewerLabels,
   reviewers,
   reviewModes,
+  reviewRetriesMax,
+  reviewRetriesMin,
   reviewStageLabels,
   reviewStagesInRunOrder,
   visionStages,
@@ -17,11 +19,11 @@ import {
 import { stageMakesItems } from "@app/slices/reviews/rules.js";
 import type { ProviderStatus } from "@app/slices/settings/model.js";
 import { useQuery } from "@tanstack/react-query";
-import { type ReactElement, useId } from "react";
+import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
-import { HelpLine, Input } from "@/components/kit/field";
+import { Field, HelpLine, Input } from "@/components/kit/field";
 import { Fold } from "@/components/kit/fold";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { helpScope } from "@/components/kit/info-tip";
 import { Segmented } from "@/components/kit/switch";
 import { Picker } from "@/components/ui/picker";
 import { promptsQuery, providersQuery } from "@/queries";
@@ -36,7 +38,7 @@ const modeWords: Readonly<Record<ReviewMode, string>> = {
   redo: "Flag and redo",
 };
 
-// Play's Pauses and checks row: the draft's AI checks, saved with the draft like every other
+// Create's Pauses and checks row: the draft's AI checks, saved with the draft like every other
 // choice.
 export function PlayReviews({
   problem,
@@ -93,9 +95,9 @@ export function overallMode(
   return modes.size === 1 ? [...modes][0] : undefined;
 }
 
-// AI checks, on Play's Pauses and checks row and in Edit project → Reviews: one choice for the
-// whole run, and under Advanced who checks, how many redos, and each stage's own mode and
-// prompt. A stage this run makes nothing for has its row greyed with the reason.
+// AI checks, on Create's Pauses and checks row and in a project's Edit settings: one choice
+// for the whole run, and under Advanced who checks, how many redos, and each stage's own mode
+// and prompt. A stage this run makes nothing for has its row greyed with the reason.
 export function ReviewSettings({
   value,
   providers,
@@ -117,7 +119,6 @@ export function ReviewSettings({
   readonly disabled?: boolean | undefined;
   readonly onChange: (next: ReviewSettingsForm) => void;
 }): ReactElement {
-  const id = useId();
   const choices = prompts.filter((one) => one.kind === "review");
   const modeOf = (stage: ReviewStage): ReviewMode => value.stages[stage]?.mode ?? "off";
   const setStage = (stage: ReviewStage, mode: ReviewMode, prompt: string) =>
@@ -190,32 +191,31 @@ export function ReviewSettings({
           </HelpLine>
           <div className="sl-fields">
             <div className="block text-small">
+              {/* The group is named by its label too; this is the name a sighted person reads. */}
+              <p className="sl-field__label m-0 mb-1" aria-hidden="true">
+                Who checks
+              </p>
               <Segmented<Reviewer>
                 label="Who checks"
-                tip="play.reviews.reviewer"
+                help="A model is one paid call per item. An agent connected over MCP answers for free; a check nobody answers within 2 hours passes."
                 value={value.reviewer ?? "model"}
                 options={reviewers.map((one) => ({ value: one, label: reviewerLabels[one] }))}
                 onChange={(reviewer) => onChange({ ...value, reviewer })}
               />
             </div>
-            <div className="block space-y-1 text-small" {...helpScope}>
-              <span className="flex items-center gap-1">
-                <label htmlFor={`${id}-retries`}>Redos per item</label>
-                <InfoTip id="play.reviews.retries" className="-my-1" />
-              </span>
+            <Field
+              label="Redos per item"
+              help={`${String(reviewRetriesMin)} to ${String(reviewRetriesMax)}, ${String(defaultReviewRetries)} if empty. Each redo makes the item again at its price, plus one more check.`}
+              error={problem("reviews.retries")}
+            >
               <Input
-                id={`${id}-retries`}
                 data-play-field="reviews.retries"
                 inputMode="numeric"
                 placeholder={String(defaultReviewRetries)}
                 value={value.retries}
-                aria-invalid={problem("reviews.retries") !== undefined}
                 onChange={(event) => onChange({ ...value, retries: event.target.value })}
               />
-              {problem("reviews.retries") ? (
-                <span className="block text-danger">{problem("reviews.retries")}</span>
-              ) : null}
-            </div>
+            </Field>
           </div>
           {byAgent ? (
             <p className="m-0 text-small text-ink-2">
@@ -264,12 +264,7 @@ export function ReviewSettings({
                 return (
                   <tr key={stage} className="border-t border-line">
                     <th scope="row" className="py-2 pr-3 text-left align-top font-medium">
-                      <span className="inline-flex items-center gap-1">
-                        {reviewStageLabels[stage]}
-                        {stage === "promise" ? (
-                          <InfoTip id="play.reviews.promise" className="-my-1" />
-                        ) : null}
-                      </span>
+                      {reviewStageLabels[stage]}
                     </th>
                     <td className="py-2">
                       <div className="flex flex-wrap gap-2">
@@ -313,6 +308,11 @@ export function ReviewSettings({
                         </p>
                       ) : !available && stage === "promise" ? (
                         <p className="m-0 text-ink-3">Needs an article the AI writes.</p>
+                      ) : stage === "promise" ? (
+                        <p className="m-0 text-ink-3">
+                          One cheap call before the paid narration: the AI reads the title and the
+                          first 30 seconds and fails a slow or off-topic opening.
+                        </p>
                       ) : !available ? (
                         <p className="m-0 text-ink-3">This run makes nothing here to check.</p>
                       ) : null}

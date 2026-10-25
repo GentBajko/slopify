@@ -69,7 +69,7 @@ export function reviewFields(draft: ReviewDraft): readonly FieldError[] {
     fields.push({
       field: "reviews.provider",
       message:
-        "Automatic reviews need a reviewer model. Choose one in the Reviews section, or set every review to Off.",
+        "AI checks need a model to check with. Choose one under Pauses and checks → Advanced → Checked by, or set every check to Off.",
     });
   const retries = reviews.retries;
   if (
@@ -78,7 +78,7 @@ export function reviewFields(draft: ReviewDraft): readonly FieldError[] {
   )
     fields.push({
       field: "reviews.retries",
-      message: `Enter a number of redos between ${reviewRetriesMin} and ${reviewRetriesMax} in the Reviews section.`,
+      message: `Enter a number of redos between ${reviewRetriesMin} and ${reviewRetriesMax} under Pauses and checks → Advanced.`,
     });
   const pictures = active.filter((stage) => visionStages.includes(stage));
   if (

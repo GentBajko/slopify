@@ -34,7 +34,7 @@ export function oneOffNotes(
   ];
 }
 
-// Save as template from Play: the settings of this draft under a name, never the topic typed
+// Save as template from Create: the settings of this draft under a name, never the topic typed
 // for this one video. The server applies the same rule (`slices/project-templates/one-off.ts`).
 export function SaveTemplateDialog({
   open,
@@ -107,7 +107,7 @@ export function SaveTemplateDialog({
         if (!next) close();
       }}
       title="Save as template"
-      description="Saves the prompts, voice, images, style, extras and checks picked here as a new template. Projects you start from it, and schedules you point at it, use it; this project and earlier ones stay as they are. Schedules use each new version of it right away until you approve one in Edit template (More → Approve for schedules); from then on a new version waits for your approval."
+      description="Saves these settings as a new template. Projects you start from it and schedules that use it take its settings; videos already made stay as they are. Schedules take each new version at once until you approve one in Edit template (More → Approve for schedules); after that, new versions wait for your approval."
       footer={
         <>
           <Button variant="secondary" onClick={close}>
@@ -136,7 +136,7 @@ export function SaveTemplateDialog({
             autoFocus
             value={name}
             maxLength={templateNameMax}
-            placeholder={document.form.title.replace(/\{\{[^}]*\}\}/g, "").trim() || "My setup"}
+            placeholder={document.form.title.replace(/\{\{[^}]*\}\}/g, "").trim() || "My template"}
             onChange={(event) => setName(event.target.value)}
           />
         </Field>

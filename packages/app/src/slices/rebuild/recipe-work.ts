@@ -441,7 +441,7 @@ export function priceRecipe(
       kind: "unknown",
       stage: work.key,
       detail:
-        "Narration preparation: one AI call per future logical chunk or entry; source length is not yet known.",
+        "Narration preparation: one AI call per narration piece or intro or outro; how many is known once the text is written.",
     };
   if (input.kind === "deferred" && input.operation === "narration-description")
     return {
@@ -563,7 +563,7 @@ function cliRequest(
     detail: preparation
       ? value.input.operation === "narration-description"
         ? "Runs on your CLI plan, so it adds no charge. Narration descriptions make one call per table, figure, equation or code block; how many is known once the article is written, so no API figure is given."
-        : "Runs on your CLI plan, so it adds no charge. Narration Preparation makes one call per logical chunk or entry; how many is known when the step runs, so no API figure is given."
+        : "Runs on your CLI plan, so it adds no charge. Narration preparation makes one call per narration piece or intro or outro; how many is known when the step runs, so no API figure is given."
       : "Runs on your CLI plan, so it adds no charge. The request is built when the step runs, so its API figure uses an estimated length.",
   };
 }

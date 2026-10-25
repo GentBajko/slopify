@@ -151,10 +151,10 @@ export function SpeakersEditor({
         <>
           <p className="text-small text-ink-2">
             {value.source === "script"
-              ? "The article prompt must be a Script prompt: the text model writes speaker turns, one `Name: words` paragraph each."
+              ? "The article prompt must be a Script prompt: the AI writer writes speaker turns, one `Name: words` paragraph each."
               : value.source === "adapt"
-                ? "The article is written or pasted as usual and stays as it is; the text model then rewrites it as a conversation for the speakers to read."
-                : "The article is written or pasted as usual; the text model then hands its narration and dialogue to the speakers."}
+                ? "The article is written or pasted as usual and stays as it is; the AI writer then rewrites it as a conversation for the speakers to read."
+                : "The article is written or pasted as usual; the AI writer then hands its narration and dialogue to the speakers."}
           </p>
           {problem?.("voices.speakers") === undefined ? null : (
             <p className="text-label text-danger">{problem("voices.speakers")}</p>

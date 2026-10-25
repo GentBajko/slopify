@@ -1,4 +1,5 @@
 import { readinessIsUsable } from "@app/kernel/ports/model.js";
+import { noSpeechFix } from "@app/kernel/ports/system-speech.js";
 import type { StageSource } from "@app/slices/admission/model.js";
 import type { FieldError } from "@app/slices/admission/rules.js";
 import type { Entry } from "@app/slices/library/model.js";
@@ -100,10 +101,35 @@ export function readiness(provider: ProviderStatus): {
   if (provider.readiness.kind === "local")
     return provider.readiness.available
       ? { ok: true, text: "Ready" }
-      : { ok: false, text: provider.readiness.issue ?? "No speech program found on this computer" };
+      : { ok: false, text: speechIssue(provider.readiness.issue) };
   return provider.readiness.hasKey
     ? { ok: true, text: "Key saved" }
     : { ok: false, text: `${provider.displayName} has no key yet` };
+}
+
+// What is wrong with the computer's own voice, in its first sentence: the server's sentence goes
+// on to the commands that install a speech program, which the Narration row lists apart.
+export function speechIssue(issue: string | undefined): string {
+  const first = issue
+    ?.split(/(?<=\.)\s+/)[0]
+    ?.trim()
+    .replace(/\.$/, "");
+  return first === undefined || first === ""
+    ? "No speech program was found on this computer"
+    : first;
+}
+
+// The rest of that sentence, after its first: what the server says to do about it, for the
+// Narration row to show apart where it has no commands of its own to list. Once an OpenAI voice
+// key is saved, its "or add an OpenAI key" is left out.
+export function speechFix(issue: string | undefined, openAiKeySaved = false): string | undefined {
+  const said = openAiKeySaved ? issue?.replace(`, ${noSpeechFix}`, ".") : issue;
+  const rest = said
+    ?.split(/(?<=\.)\s+/)
+    .slice(1)
+    .join(" ")
+    .trim();
+  return rest === undefined || rest === "" ? undefined : rest;
 }
 
 const familyWords: Readonly<Record<ProviderFamily, string>> = {

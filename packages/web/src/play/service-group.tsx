@@ -102,7 +102,6 @@ export function ServiceGroup({
         providers={providers}
         value={provider}
         problem={serviceProblem}
-        placeholder="Pick a service"
         onPick={onService}
       />
       <ModelPicker

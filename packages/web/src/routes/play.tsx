@@ -17,6 +17,7 @@ import { PlayLanguage } from "@/language/play-language";
 import { usePlayDraft } from "@/lib/form-drafts";
 import { modelsKey, modelsQuery, type ProviderModels } from "@/lib/models";
 import { shortcuts } from "@/lib/shortcuts";
+import { exactTime, startedAt } from "@/lib/utils";
 import { admission, keywordOrigins } from "@/play/admission";
 import { BrandKitControls, ChannelFor, useDraftCast } from "@/play/channel-picker";
 import { checkpointTarget } from "@/play/checkpoints";
@@ -36,7 +37,7 @@ import {
 } from "@/play/outputs-section";
 import { PausesAndChecks } from "@/play/pauses-and-checks";
 import { previewImageOf } from "@/play/preview-image";
-import { readinessProblems, type SetupProblem, setupProblems } from "@/play/problems";
+import { readiness, readinessProblems, type SetupProblem, setupProblems } from "@/play/problems";
 import { ReviewSection } from "@/play/review-section";
 import { pendingReviewUpload, startLabel } from "@/play/review-state";
 import { rowOrigin, useTemplateOrigin } from "@/play/row-origin";
@@ -549,6 +550,11 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
           channelId:
             origin.channelId ?? (template === undefined ? undefined : channelOfTemplate(template)),
         };
+  // A service the template picked that can't be used here, which Create may have replaced.
+  const unusable = (service: string): boolean => {
+    const found = providerList.find((one) => one.id === service);
+    return found !== undefined && !readiness(found).ok;
+  };
   const rows: readonly SetupListRow[] = visibleRows.map((row) => ({
     id: row.id,
     label: rowLabel(row.id, kind),
@@ -557,7 +563,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     origin:
       templateSetup === undefined
         ? undefined
-        : rowOrigin(row.id, document, templateSetup) === "template"
+        : rowOrigin(row.id, document, templateSetup, unusable) === "template"
           ? `From ${template?.name ?? "the template"}`
           : "Changed here",
     editor: editors[row.id],
@@ -670,6 +676,26 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
           <span ref={heading} tabIndex={-1}>
             Create
           </span>
+        }
+        meta={
+          session.restored === undefined ? undefined : (
+            // Create reopened the draft this browser had open last: said, with the way out.
+            <span className="inline-flex flex-wrap items-center gap-x-2">
+              <span>
+                Your draft from{" "}
+                <time
+                  dateTime={session.restored.updatedAt}
+                  title={exactTime(session.restored.updatedAt)}
+                >
+                  {startedAt(session.restored.updatedAt)}
+                </time>
+              </span>
+              <span aria-hidden="true">·</span>
+              <Button variant="quiet" size="small" onClick={() => void session.newDraft()}>
+                New draft
+              </Button>
+            </span>
+          )
         }
         actions={
           <>

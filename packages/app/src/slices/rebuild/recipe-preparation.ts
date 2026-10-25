@@ -100,7 +100,7 @@ export function preparationForGroup(
     return {
       preparation,
       requests: null,
-      refusal: "Narration Preparation needs non-empty narration text.",
+      refusal: "Narration preparation needs narration text to work from.",
     };
   const logical = recipe(
     context,

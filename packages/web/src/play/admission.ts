@@ -404,7 +404,7 @@ export function keywordOrigins(input: KeywordOriginsInput): ReadonlyMap<string, 
   const { form, prompts, entries } = input;
   add(form.title, "Project title");
   if (usesNarrationPreparation(form))
-    add(bodyOf(prompts, "narration", form.narrationPrompt ?? ""), "Narration Preparation");
+    add(bodyOf(prompts, "narration", form.narrationPrompt ?? ""), "Narration preparation");
   if (form.sources.article === "generate")
     add(bodyOf(prompts, articleKind(form), form.articlePrompt), "Article");
   if (form.sources.images === "generate") {

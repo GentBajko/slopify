@@ -7,7 +7,7 @@ export const playHelp = {
   // Top of Create
   "play.title": {
     title: "Title",
-    body: "The project's name in Slopify, shown on the project and in Projects. For a YouTube video it is also the YouTube title unless the YouTube text writes its own, and YouTube takes at most 100 characters there, without < or >. Write a keyword in double braces, like {{Topic}}, and the title becomes a pattern: you type the topic per video, and Another topic queues more videos from the same setup. Up to 200 characters.",
+    body: "The project's name in Slopify, shown on the project and in Projects. For a YouTube video it is also the YouTube title unless the YouTube text writes its own, and YouTube takes at most 100 characters there, without < or >. Write a keyword in double braces, like {{Topic}}, and the title becomes a pattern: you type the topic per video, and Another topic queues more videos with the same settings. Up to 200 characters.",
     tutorial: { page: "Create-Overview", anchor: "the-topic-and-the-title" },
   },
   "play.title-pattern": {
@@ -24,24 +24,24 @@ export const playHelp = {
   // Article row
   "play.provided.article": {
     title: "Article text",
-    body: "The article you paste is narrated word for word, and no text model writes one. Include everything that should be read, headings too. The count under it helps you judge the length: about 150 words is one minute of narration.",
+    body: "The article you paste is narrated word for word, and the AI writer writes none. Include everything that should be read, headings too. The count under it helps you judge the length: about 150 words is one minute of narration.",
     tutorial: { page: "Create-Article", anchor: "paste-your-own-article" },
   },
   "play.provided.research": {
     title: "Research notes",
-    body: "Notes you paste are given to the text model with the article prompt, in place of web research. Paste facts, sources and quotes the article should draw on. Nothing is looked up.",
+    body: "Notes you paste are given to the AI writer with the article prompt, in place of web research. Paste facts, sources and quotes the article should draw on. Nothing is looked up.",
     tutorial: { page: "Create-Article", anchor: "give-your-own-research-notes" },
   },
   "play.llm.thinking": {
     title: "Thinking",
-    body: "How long the model reasons before it answers, for models that offer it. Higher levels can write more carefully but take longer and use more tokens. Model default leaves it to the provider.",
+    body: "How long the model reasons before it answers, for models that offer it. Higher levels can write more carefully but take longer and use more tokens. Model default leaves it to the service.",
     tutorial: { page: "Create-Article", anchor: "written-by" },
   },
 
   // Narration row
   "play.voice-sample": {
     title: "Try a sample of your text",
-    body: "Reads the passage you paste in the chosen voice, so you hear how it says your names before a run. Up to a few hundred characters, priced on the button; your Pronunciation list (Settings → Voices → Pronunciation) applies when the voice uses it, the Pronunciation Glossary and Narration Preparation don't. The sample is never reused in the run.",
+    body: "Reads the passage you paste in the chosen voice, so you hear how it says your names before a run. Up to a few hundred characters, priced on the button; your Pronunciation list (Settings → Voices → Pronunciation) applies when the voice uses it, the Pronunciation Glossary and narration preparation don't. The sample is never reused in the run.",
     tutorial: { page: "Create-Narration" },
   },
   "play.show-all-voices": {
@@ -59,24 +59,9 @@ export const playHelp = {
     body: "One of your outros, read after the article, such as a sign-off. A written outro is read as it is; one the AI writes is written for each video, one extra AI call. Off reads no outro. Write outros under Prompts → Intros & outros.",
     tutorial: { page: "Create-Narration", anchor: "intro-and-outro" },
   },
-  "play.chunking": {
-    title: "Split the narration by",
-    body: "How the narration is sent to the voice service. Nothing sends it in one request; Paragraph sends one per paragraph; Every N words or characters ends each at a sentence end. Split when a voice service refuses long text. Default: Nothing. It changes the number of requests, not the characters charged.",
-    tutorial: { page: "Create-Narration", anchor: "split-the-narration" },
-  },
-  "play.chunking.count": {
-    title: "Piece size",
-    body: "How long each request to the voice service may be. Each request ends at the last whole sentence that fits, so a single longer sentence stays whole. Defaults: 500 words or 3000 characters, spaces included.",
-    tutorial: { page: "Create-Narration", anchor: "split-the-narration" },
-  },
-  "play.narration-preparation": {
-    title: "Narration Preparation",
-    body: "Has the AI writer add delivery directions and sounds, such as a sigh or a laugh, following the narration prompt you pick. One AI call per narration part and per intro or outro. Needs Inworld TTS-2. The article and captions stay unchanged. Default: Off.",
-    tutorial: { page: "Create-Narration", anchor: "narration-preparation" },
-  },
   "play.pronunciation-glossary": {
     title: "Pronunciation Glossary",
-    body: "Reads names with the IPA in the article's Pronunciation Glossary, such as Arda: /ˈɑɹdə/, with no extra text-model call. In your article prompt, ask for a glossary in slash-delimited standard-English IPA (Term: /IPA/), with an English approximation for foreign names; a line with sounds English lacks is read as plain text. Works with Inworld TTS-2 and TTS-2 Flash. The written text stays unchanged. Default: on.",
+    body: "Reads names with the IPA in the article's Pronunciation Glossary, such as Arda: /ˈɑɹdə/, with no extra AI call. In your article prompt, ask for a glossary in slash-delimited standard-English IPA (Term: /IPA/), with an English approximation for foreign names; a line with sounds English lacks is read as plain text. Works with Inworld TTS-2 and TTS-2 Flash. The written text stays unchanged. Default: on.",
     tutorial: { page: "Narration-Aliases-and-Glossary", anchor: "the-pronunciation-glossary" },
   },
   "play.share-glossary": {
@@ -86,7 +71,7 @@ export const playHelp = {
   },
   "play.describe-figures": {
     title: "Describe tables and figures",
-    body: "Instead of skipping tables, pictures, equations and code or reading them cell by cell, the text model writes a short spoken passage for each (a table's pattern, what a figure or equation means, what code does) and the narration says it in its place. One extra text-model call per block, in the estimate, kept for reuse. The article and PDF keep the real table; captions show what is said. Needs a text model. Default: on.",
+    body: "Instead of skipping tables, pictures, equations and code or reading them cell by cell, the AI writer writes a short spoken passage for each (a table's pattern, what a figure or equation means, what code does) and the narration says it in its place. One extra AI call per block, in the estimate, kept for reuse. The article and PDF keep the real table; captions show what is said. Needs an AI writer. Default: on.",
     tutorial: { page: "Create-Narration", anchor: "tables-figures-and-code" },
   },
   "play.show-figures": {
@@ -108,12 +93,12 @@ export const playHelp = {
   // Speakers
   "play.speakers.format": {
     title: "Speakers format",
-    body: "Narration uses one voice. Audiobook, Podcast, Radio drama and Interview give lines to several speakers, each with a voice. Several speakers need the text model to write or split the script. A new Podcast or Interview starts with the channel's hosts (cast members marked as hosts, with a voice).",
+    body: "Narration uses one voice. Audiobook, Podcast, Radio drama and Interview give lines to several speakers, each with a voice. Several speakers need the AI writer to write or split the script. A new Podcast or Interview starts with the channel's hosts (cast members marked as hosts, with a voice).",
     tutorial: { page: "Multiple-Voices", anchor: "formats" },
   },
   "play.speakers.script": {
     title: "Script",
-    body: "Write a script has the text model write speaker turns from a Script prompt, one Name: words paragraph each. Split the article (audiobooks) keeps the article as written and has the text model hand its narration and dialogue to the speakers, one extra call. Adapt the article (podcasts, interviews, dramas) also keeps the article as written; one extra call rewrites it as a conversation for the speakers, kept beside it as the script.",
+    body: "Write a script has the AI writer write speaker turns from a Script prompt, one Name: words paragraph each. Split the article (audiobooks) keeps the article as written and has the AI writer hand its narration and dialogue to the speakers, one extra call. Adapt the article (podcasts, interviews, dramas) also keeps the article as written; one extra call rewrites it as a conversation for the speakers, kept beside it as the script.",
     tutorial: { page: "Multiple-Voices", anchor: "the-script" },
   },
   "play.speakers.add-from-cast": {
@@ -148,12 +133,12 @@ export const playHelp = {
   },
   "play.speakers.native-dialogue": {
     title: "One request for consecutive turns",
-    body: "Sends back-to-back turns as one multi-speaker request where the provider has one (ElevenLabs v3 with up to 10 voices, Gemini TTS with 2), so the voices react to each other. Fewer requests, same characters charged. Other providers read each turn on its own.",
+    body: "Sends back-to-back turns as one multi-speaker request where the voice service has one (ElevenLabs v3 with up to 10 voices, Gemini TTS with 2), so the voices react to each other. Fewer requests, same characters charged. Other voice services read each turn on its own.",
     tutorial: { page: "Multiple-Voices", anchor: "run-wide-options" },
   },
   "play.speakers.audio-files": {
     title: "MP3 and M4B files",
-    body: "Also saves the narration as an MP3 and an M4B audiobook file with a chapter marker at each chapter, beside the video. Made on this computer at no provider cost.",
+    body: "Also saves the narration as an MP3 and an M4B audiobook file with a chapter marker at each chapter, beside the video. Made on this computer at no cost.",
     tutorial: { page: "Multiple-Voices", anchor: "run-wide-options" },
   },
   "play.speaker.name": {
@@ -163,7 +148,7 @@ export const playHelp = {
   },
   "play.speaker.role": {
     title: "Role",
-    body: "What this speaker does in the format: narrator, host, guest or character. The text model is told each speaker's role when it writes or splits the script.",
+    body: "What this speaker does in the format: narrator, host, guest or character. The AI writer is told each speaker's role when it writes or splits the script.",
     tutorial: { page: "Multiple-Voices", anchor: "speaker-options" },
   },
   "play.speaker.pace": {
@@ -175,7 +160,7 @@ export const playHelp = {
   // Images row
   "play.images.effort": {
     title: "Effort",
-    body: "How long an image agent, such as the Codex CLI, reasons before it draws. Higher effort can follow the prompt more closely but takes longer and uses more tokens. Model default leaves it to the provider.",
+    body: "How long an image agent, such as the Codex CLI, reasons before it draws. Higher effort can follow the prompt more closely but takes longer and uses more tokens. Model default leaves it to the service.",
     tutorial: { page: "Create-Images", anchor: "drawing-with-the-codex-cli" },
   },
   "play.image-scale": {
@@ -190,7 +175,7 @@ export const playHelp = {
   },
   "play.image-scenes.keyword": {
     title: "Scenes on for one picture",
-    body: "This picture's prompt uses {{Slopify_Scene}}, {{Slopify_Setting}} or {{Slopify_Mood}}, so it gets its own scene even with Scenes from the article off. That is one AI call per run on the project's text model, shared by every picture. To stop it, remove the keyword from the prompt.",
+    body: "This picture's prompt uses {{Slopify_Scene}}, {{Slopify_Setting}} or {{Slopify_Mood}}, so it gets its own scene even with Scenes from the article off. That is one AI call per run, by the project's AI writer, shared by every picture. To stop it, remove the keyword from the prompt.",
     tutorial: { page: "Keywords-Slopify-Fills", anchor: "per-picture" },
   },
   "play.image-scale.rate": {
@@ -242,16 +227,6 @@ export const playHelp = {
     body: "The prompt the description is written from. Built-in asks for a short summary, 5 to 12 chapters, 3 to 5 hashtags and 15 to 25 tags. Write your own description prompt on Prompts to change the tone or add links.",
     tutorial: { page: "YouTube-Description", anchor: "turn-it-on" },
   },
-  "play.shorts.prompt": {
-    title: "Shorts prompt",
-    body: "The prompt the AI writer follows to pick the moments and write each short's title, description and hashtags. Built-in picks moments that make sense alone and open on a hook.",
-    tutorial: { page: "Shorts", anchor: "options" },
-  },
-  "play.shorts.image-style": {
-    title: "Image prompt",
-    body: "The image prompt the shorts' new vertical images are drawn from. Built-in draws cinematic, uncluttered images with the subject centered. Pick one of your image prompts to match the long video.",
-    tutorial: { page: "Shorts", anchor: "options" },
-  },
   "play.shorts.title-on-screen": {
     title: "Title on screen",
     body: "Keeps the short's title at the top for the whole clip, large and bold in the caption font, below where the apps draw their own buttons. Default: on.",
@@ -278,44 +253,27 @@ export const playHelp = {
     tutorial: { page: "PDF-Documents", anchor: "options" },
   },
 
-  // Pauses and checks row
-  "play.reviews.reviewer": {
-    title: "Who reviews",
-    body: "Model: Slopify asks the reviewer model below, one paid call per item. External agent (MCP): an agent connected in Settings → Connections → Agents (MCP) answers each review instead, at no API cost. A review nobody answers within 2 hours passes on its own, and a notification says so.",
-    tutorial: { page: "Reviews-and-Checkpoints", anchor: "advanced" },
-  },
-  "play.reviews.promise": {
-    title: "Promise check",
-    body: "One cheap call before the paid narration: the reviewer model reads the title, the thumbnail brief and the article's first 30 seconds as the voice will say them, and fails a slow, off-topic or greeting-first opening. Flag and redo writes the article again; the narration and pictures wait for the answer. Needs an article a model writes. Default: Off.",
-    tutorial: { page: "Reviews-and-Checkpoints", anchor: "the-promise-check" },
-  },
-  "play.reviews.retries": {
-    title: "Redos per item",
-    body: "How many times Flag and redo makes a failed item again before it keeps the last one and flags it, 0 to 5. Each redo costs the item again plus one more review. Default: 2.",
-    tutorial: { page: "Reviews-and-Checkpoints", anchor: "advanced" },
-  },
-
   // Channel row
   "play.channel": {
     title: "Channel",
-    body: "The channel this video belongs to. Its brand kit fills what this setup leaves at its default, and its cast of characters goes with the images. A draft that picks none runs in its template's channel, or the default one.",
+    body: "The channel this video belongs to. Its brand kit fills what these settings leave at their default, and its cast of characters goes with the images. A draft that picks none runs in its template's channel, or the default one.",
     tutorial: { page: "Create-Overview", anchor: "channel-row" },
   },
   "play.brand-kit": {
     title: "Channel's brand kit",
-    body: "Fills what this setup leaves at its default from the channel: the caption font, intro, outro, PDF theme and ambient sound. What you set here wins. Turn it off to take none of it; the cast and language still apply. Default: on.",
+    body: "Fills what these settings leave at their default from the channel: the caption font, intro, outro, PDF theme and ambient sound. What you set here wins. Turn it off to take none of it; the cast and language still apply. Default: on.",
     tutorial: { page: "Create-Overview", anchor: "channel-row" },
   },
   "play.language": {
     title: "Language",
-    body: "The language the article, narration, YouTube description and shorts titles are written in. Pick a voice that speaks it. Outside English, captions are timed with a free 248 MB model, downloaded once, where one exists. On Play, blank uses the channel's language.",
+    body: "The language the article, narration, YouTube description and shorts titles are written in. Pick a voice that speaks it. Outside English, captions are timed with a free 248 MB model, downloaded once, where one exists. In Create, blank uses the channel's language.",
     tutorial: { page: "Other-Languages", anchor: "pick-a-language-for-one-video" },
   },
 
   // Right rail and dialogs
   "play.template-name": {
     title: "Template name",
-    body: "The name the template is listed under on Play and Templates. The template keeps this setup's settings; the topic you typed and any extra videos are left out, as the list below says.",
+    body: "The name the template is listed under in Create and on Templates. The template keeps these settings; the topic you typed and any extra videos are left out, as the list below says.",
     tutorial: { page: "Create-Overview", anchor: "save-as-template" },
   },
   "play.queue": {

@@ -98,7 +98,7 @@ export function PostChoiceFields({
         <Field
           label="Post prompt"
           tip="social.prompt"
-          help="A paid call to the project's text model; Save shows its price."
+          help="A paid call to the project's AI writer; Save shows its price."
         >
           <Select
             value={choice.prompt ?? ""}

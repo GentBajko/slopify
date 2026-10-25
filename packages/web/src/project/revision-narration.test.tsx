@@ -40,9 +40,9 @@ it("retains the edited frozen prompt through Off and back without loading change
     );
   }
   renderApp(<Subject />, testDeps({}));
-  await user.selectOptions(screen.getByLabelText("Narration Preparation"), "");
+  await user.selectOptions(screen.getByLabelText("Narration preparation"), "");
   expect(latest.content.promptTemplates.narration).toBe("Edited frozen body");
-  await user.selectOptions(screen.getByLabelText("Narration Preparation"), "Saved delivery");
+  await user.selectOptions(screen.getByLabelText("Narration preparation"), "Saved delivery");
   expect(latest.config.rendered.narration).toBe("Edited frozen body");
   expect(latest.config.narrationPrompt).toBe("Saved delivery");
 });

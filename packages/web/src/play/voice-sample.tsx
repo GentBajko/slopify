@@ -72,7 +72,7 @@ export function VoiceSample({ form }: { readonly form: PlayFormState }): ReactEl
         <p className="m-0 text-small text-ink-2">
           Reads one passage of up to {String(auditionLineMax)} characters in this voice
           {useAliases ? ", with your narration aliases" : ""}. The Pronunciation Glossary and
-          Narration Preparation are not applied, and the sample is not reused in the run.
+          narration preparation are not applied, and the sample is not reused in the run.
         </p>
         <div className="flex flex-col gap-1" {...helpScope}>
           <span className="flex items-center gap-1">

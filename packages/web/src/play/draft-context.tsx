@@ -39,6 +39,8 @@ export interface PlaySession extends PlayNavigation {
   readonly edited: number;
   readonly acknowledged: number;
   readonly reveal: RevealRequest | null;
+  // The draft Create reopened by itself on arrival, while it is the open one.
+  readonly restored?: { readonly id: string; readonly updatedAt: string } | undefined;
   readonly attach: (slot: UploadSlot, files: readonly File[], replaceId?: string) => Promise<void>;
   readonly edit: (document: PlayDraftDocument) => void;
   readonly flush: () => Promise<boolean>;

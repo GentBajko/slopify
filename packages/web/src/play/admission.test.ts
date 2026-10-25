@@ -94,7 +94,7 @@ it("collects narration slots and requires the shared LLM only while preparation 
   expect(needsLlm(form, [])).toBe(true);
   expect(admission(input).blocker?.field).toBe("llm");
   expect(keywordFields(input)).toEqual([{ name: "Delivery Style", group: "text" }]);
-  expect(keywordOrigins(input).get("Delivery Style")).toEqual(["Narration Preparation"]);
+  expect(keywordOrigins(input).get("Delivery Style")).toEqual(["Narration preparation"]);
   expect(admission({ ...input, form: { ...form, llm: generated.llm } }).blocker?.field).toBe(
     "values.Delivery Style",
   );

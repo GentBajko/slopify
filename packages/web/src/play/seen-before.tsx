@@ -14,7 +14,7 @@ export interface SeenTitle {
 }
 
 // The first title this channel already has for the typed topic: a project made here, or one
-// of the channel's existing uploads (Channel → Existing videos). The same near-duplicate rule
+// of the channel's existing uploads (Channel → Titles to avoid). The same near-duplicate rule
 // the schedules use for suggested topics.
 export function seenBefore(
   typed: readonly string[],

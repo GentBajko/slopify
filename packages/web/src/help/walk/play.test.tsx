@@ -87,7 +87,7 @@ const rows = [
 
 // Controls deep in the far rows: the speakers, the establishing image, the shorts and the PDF
 // theme.
-const farControls = ["Speaker name", "Establishing prompt", "How many shorts", "PDF look"];
+const farControls = ["Speaker name", "Establishing prompt", "Shorts per video", "PDF look"];
 
 // One row at a time, as Create opens them, each with every fold inside it open. `reached`
 // collects the far controls the walk met on the way.

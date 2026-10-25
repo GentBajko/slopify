@@ -434,7 +434,7 @@ function imageIndex(key: string): number | undefined {
 
 function promptLabel(key: string, saved: readonly ImagePromptChoice[]): string {
   if (key === "article") return "Article";
-  if (key === "narration") return "Narration Preparation";
+  if (key === "narration") return "Narration preparation";
   if (key === "description") return "YouTube description";
   if (key === "shorts") return "Shorts";
   if (key === "shortsImage") return "Shorts image style";

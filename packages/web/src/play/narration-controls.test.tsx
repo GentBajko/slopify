@@ -44,16 +44,16 @@ it("shows shared text generation for a provided article and preserves preparatio
   }
   renderRouted(<Subject />, testDeps({}));
   await screen.findByLabelText("Written by Service");
-  expect((screen.getByLabelText("Narration Preparation") as HTMLSelectElement).value).toBe(
+  expect((screen.getByLabelText("Narration preparation") as HTMLSelectElement).value).toBe(
     "Delivery",
   );
   const audio = screen.getByRole("radiogroup", { name: "Narration" });
   for (const inactive of ["Off", "My own audio file"]) {
     await user.click(within(audio).getByRole("radio", { name: inactive }));
-    expect(screen.queryByLabelText("Narration Preparation")).toBeNull();
+    expect(screen.queryByLabelText("Narration preparation")).toBeNull();
     expect(screen.queryByLabelText("Written by Service")).toBeNull();
     await user.click(within(audio).getByRole("radio", { name: "AI voice (paid per character)" }));
-    expect((screen.getByLabelText("Narration Preparation") as HTMLSelectElement).value).toBe(
+    expect((screen.getByLabelText("Narration preparation") as HTMLSelectElement).value).toBe(
       "Delivery",
     );
     expect(screen.getByLabelText("Written by Service")).not.toBeNull();
