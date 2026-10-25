@@ -64,7 +64,7 @@ it("saves a title without starting any rebuild", async () => {
       }),
     }),
   );
-  await user.click(screen.getByRole("button", { name: "Edit project" }));
+  await user.click(screen.getByRole("button", { name: "Edit settings again" }));
   const title = await screen.findByRole("textbox", { name: "Project title" });
   await user.clear(title);
   await user.type(title, "Changed");
@@ -127,7 +127,7 @@ it("preserves an unsaved title when another tab advanced the base", async () => 
         ),
     }),
   );
-  await user.click(screen.getByRole("button", { name: "Edit project" }));
+  await user.click(screen.getByRole("button", { name: "Edit settings again" }));
   const title = await screen.findByRole("textbox", { name: "Project title" });
   await user.clear(title);
   await user.type(title, "Changed");
@@ -158,7 +158,7 @@ it("retries a transport failure with the original idempotency key", async () => 
       "GET /api/projects/p1": jsonAnswer(currentBody(next)),
     }),
   );
-  await user.click(screen.getByRole("button", { name: "Edit project" }));
+  await user.click(screen.getByRole("button", { name: "Edit settings again" }));
   const title = await screen.findByRole("textbox", { name: "Project title" });
   await user.clear(title);
   await user.type(title, "Changed");
@@ -184,7 +184,7 @@ it("does not adopt an old successful receipt as the current editor", async () =>
       "GET /api/projects/p1": jsonAnswer(currentBody(revisionView("r3", "Latest"))),
     }),
   );
-  await user.click(screen.getByRole("button", { name: "Edit project" }));
+  await user.click(screen.getByRole("button", { name: "Edit settings again" }));
   const title = await screen.findByRole("textbox", { name: "Project title" });
   await user.clear(title);
   await user.type(title, "Changed");
@@ -329,11 +329,11 @@ it.each(["transport", "readiness", "stale-preview", "conflict"] as const)(
         },
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Choose what to remake" }));
+    await user.click(screen.getByRole("button", { name: "Choose what to make again" }));
     await screen.findByRole("button", { name: /^Make \d+ outputs? again$/ });
-    expect(screen.getByRole("button", { name: "Edit project" }).hasAttribute("disabled")).toBe(
-      true,
-    );
+    expect(
+      screen.getByRole("button", { name: "Edit settings again" }).hasAttribute("disabled"),
+    ).toBe(true);
     expect(sent).toEqual([]);
     const acknowledgement = screen.getByRole("checkbox", { name: /cost estimates are unknown/ });
     await user.click(acknowledgement);
@@ -344,7 +344,7 @@ it.each(["transport", "readiness", "stale-preview", "conflict"] as const)(
       expect(screen.queryByRole("region", { name: "Review affected rebuild" })).toBeNull();
       await waitFor(() => expect(document.activeElement).toBe(alert));
       expect(
-        screen.getByRole("button", { name: "Choose what to remake" }).hasAttribute("disabled"),
+        screen.getByRole("button", { name: "Choose what to make again" }).hasAttribute("disabled"),
       ).toBe(false);
       return;
     }
@@ -431,7 +431,7 @@ it("says unsaved only once the draft differs from the saved revision", async () 
       "GET /api/projects/p1": jsonAnswer(currentBody(baseline)),
     }),
   );
-  await user.click(screen.getByRole("button", { name: "Edit project" }));
+  await user.click(screen.getByRole("button", { name: "Edit settings again" }));
   const title = await screen.findByRole("textbox", { name: "Project title" });
   expect(screen.getByRole("tab", { name: /^Edit/ }).textContent).not.toContain("unsaved");
   await user.type(title, "!");

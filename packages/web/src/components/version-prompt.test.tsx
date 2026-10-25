@@ -107,7 +107,7 @@ describe("the stale-version prompt", () => {
         }),
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Edit project" }));
+    await user.click(screen.getByRole("button", { name: "Edit settings again" }));
     const field = await screen.findByRole("textbox", { name: "Project title" });
     await user.clear(field);
     await user.type(field, "Half-written");

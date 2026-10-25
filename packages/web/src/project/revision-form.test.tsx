@@ -744,7 +744,7 @@ it("shows an old project's video as it was, and writes edit settings only once o
   expect(screen.getByText("Look").nextElementSibling?.textContent).toBe("Sepia");
 });
 
-it("offers this project's outro or the Library's newer one when the Library has changed it", async () => {
+it("offers this project's outro or the newer one when it has changed in Prompts", async () => {
   const user = userEvent.setup();
   const base = revisionView();
   const view: RevisionView = {
@@ -790,7 +790,7 @@ it("offers this project's outro or the Library's newer one when the Library has 
   );
   await openEditSection("Narration");
   const picker = await screen.findByRole("combobox", { name: "Outro" });
-  await screen.findByRole("option", { name: "Closing · Library version (newer)" });
+  await screen.findByRole("option", { name: "Closing · newer wording from Prompts" });
   expect(screen.getByRole("option", { name: "Closing · this project's version" })).toBeDefined();
   // It starts on the project's own wording.
   expect(screen.getByLabelText("Outro wording").textContent).toBe("Say goodbye.");

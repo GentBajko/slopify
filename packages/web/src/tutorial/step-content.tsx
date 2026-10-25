@@ -269,18 +269,17 @@ export function StepContent({
       return (
         <>
           <p>
-            The rail on the left lists the project's sections: Article, Narration, Images, Video and
-            the rest. The right rail says where the run stands and offers the one thing to do next,
-            named for its result: <strong>Pause</strong> while it runs,{" "}
-            <strong>Continue the run</strong> when it is paused, <strong>Try images again</strong>{" "}
-            when a step fails.
+            The list on the right says where each part stands and opens it: Article, Narration,
+            Images, Video and the rest. The title row offers the one thing to do next, named for its
+            result: <strong>Pause</strong> while it runs, <strong>Continue the run</strong> when it
+            is paused, <strong>Try images again</strong> when a step fails.
           </p>
           <p>
-            Press <strong>Edit settings</strong> to change providers, models, voice, prompts or
-            optional steps. <strong>Save changes</strong> keeps a new revision without starting
-            generation; what the change made outdated is then offered as the next action, such as{" "}
-            <strong>Remake 3 outdated images</strong>. Earlier revisions stay in{" "}
-            <strong>History</strong>.
+            Press <strong>Edit settings</strong> to change services, models, voice, prompts or
+            optional steps. <strong>Save changes</strong> keeps a new version without starting
+            anything; what the change made outdated is then offered as the next action, such as{" "}
+            <strong>Make the 3 outdated images again</strong>. Earlier versions stay under{" "}
+            <strong>Versions</strong>.
           </p>
           <p>
             A failed step says why beside it; open <strong>Error details</strong> for the provider's

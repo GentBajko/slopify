@@ -375,10 +375,10 @@ function ProjectWorkspace({
   });
   useCommand({
     id: "project.rebuild-review",
-    title: "Choose what to remake",
+    title: "Choose what to make again",
     group: "This project",
     context: title,
-    keywords: ["rebuild", "review", "remake", "outdated", "affected"],
+    keywords: ["rebuild", "review", "remake", "again", "outdated", "affected"],
     run: () => controller.review({ kind: "allAffected" }),
   });
   useCommand({
@@ -408,7 +408,7 @@ function ProjectWorkspace({
   const groups = outdatedGroups(outdated);
   useCommand({
     id: "project.remake-1",
-    title: groups[0]?.label ?? "Remake outdated outputs",
+    title: groups[0]?.label ?? "Make the outdated files again",
     group: "This project",
     context: title,
     keywords: ["remake", "outdated", "rebuild"],
@@ -420,7 +420,7 @@ function ProjectWorkspace({
   });
   useCommand({
     id: "project.remake-all",
-    title: "Remake everything outdated",
+    title: "Make everything outdated again",
     group: "This project",
     context: title,
     keywords: ["remake", "outdated", "rebuild", "all"],
@@ -550,13 +550,13 @@ function ProjectWorkspace({
       : listing?.uploadedAt !== null && listing?.uploadedAt !== undefined && !isSample
         ? [{ id: "uploaded", label: "Mark not uploaded", run: () => uploaded.mutate(false) }]
         : []),
-    // Only with outdated outputs: then the remake is chosen file by file.
+    // Only with outdated outputs: then what is made again is chosen file by file.
     ...(groups.length === 0
       ? []
       : [
           {
             id: "rebuild",
-            label: "Choose what to remake…",
+            label: "Choose what to make again…",
             run: () => controller.review({ kind: "allAffected" }),
             disabled: controller.busy,
           },

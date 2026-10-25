@@ -207,7 +207,10 @@ export function RevisionPrompts({
               raw={raw}
               library={libraryPrompt(edit, key, options, saved)}
               onUse={(body) =>
-                replace(setPrompt(edit, key, body), `${name} now uses the Library version.`)
+                replace(
+                  setPrompt(edit, key, body),
+                  `${name} now uses the new wording from Prompts.`,
+                )
               }
             />
             <Field
@@ -286,7 +289,7 @@ export function RevisionPrompts({
       {part !== "images" || added.length === 0 ? null : (
         <p className="m-0 text-small text-ink-2">
           {added.map((one) => `"${one.name}"`).join(", ")}{" "}
-          {added.length === 1 ? "uses its" : "use their"} Library wording. Save, then change it
+          {added.length === 1 ? "uses its" : "use their"} wording from Prompts. Save, then change it
           here.
         </p>
       )}
@@ -387,16 +390,16 @@ export function LibraryChanged({
   return (
     <Callout
       tone="info"
-      title={`The Library's "${library.name}" has changed since this project copied it`}
+      title={`"${library.name}" in Prompts has changed since this project copied it`}
       actions={
         <>
           <Button
-            aria-label={`Use the Library version for ${label}`}
+            aria-label={`Use the new wording for ${label}`}
             onClick={() => {
               onUse(library.body);
             }}
           >
-            Use the Library version
+            Use the new wording
           </Button>
           <Button
             variant="quiet"
@@ -418,8 +421,8 @@ export function LibraryChanged({
         </>
       }
     >
-      The project uses its own copy below until you choose. Using the Library version marks what it
-      wrote as outdated, to remake when you are ready.
+      The project uses its own copy below until you choose. Using the new wording marks what it
+      wrote as outdated, to make again when you are ready.
     </Callout>
   );
 }

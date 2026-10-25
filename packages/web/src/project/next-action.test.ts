@@ -405,7 +405,7 @@ describe("the next action", () => {
     expect(next?.action).toBeUndefined();
   });
 
-  it("remakes exactly the outdated images after an edit", () => {
+  it("makes exactly the outdated images again after an edit", () => {
     const next = nextActionFor(
       input({
         outdated: [
@@ -423,7 +423,7 @@ describe("the next action", () => {
       title: "3 images are outdated after your edit.",
       section: "images",
       action: {
-        label: "Remake 3 outdated images",
+        label: "Make the 3 outdated images again",
         intent: { kind: "remake", workKeys: ["image:a", "image:b", "image:c"] },
       },
     });
@@ -440,7 +440,7 @@ describe("the next action", () => {
       }),
     );
     expect(next?.action).toEqual({
-      label: "Remake the outdated video",
+      label: "Make the outdated video again",
       intent: { kind: "remake", workKeys: ["export:video", "subtitles:files"] },
     });
     expect(next?.title).toBe("The video is outdated after your edit.");
@@ -453,7 +453,7 @@ describe("the next action", () => {
         { workKey: "shorts:2:render", role: "short_video" },
         { workKey: "image:a", role: "image" },
       ]).map((group) => group.label),
-    ).toEqual(["Remake the outdated image", "Remake 2 outdated shorts"]);
+    ).toEqual(["Make the outdated image again", "Make the 2 outdated shorts again"]);
   });
 
   it("offers Copy for YouTube Studio once the video is done", () => {

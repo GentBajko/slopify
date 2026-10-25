@@ -229,7 +229,7 @@ export function costWords(estimate: CostEstimate): string {
       : `${usd(estimate.low)}–${usd(estimate.high)}`;
   if (estimate.unknown > 0)
     return estimate.high === 0
-      ? `Unknown: ${String(estimate.unknown)} ${estimate.unknown === 1 ? "step has" : "steps have"} no price yet. The remake review shows the rest before anything is charged.`
+      ? `Unknown: ${String(estimate.unknown)} ${estimate.unknown === 1 ? "step has" : "steps have"} no price yet. You see the rest before anything is charged.`
       : `About ${range}, plus ${String(estimate.unknown)} ${estimate.unknown === 1 ? "step" : "steps"} with no price yet.`;
   if (estimate.high === 0)
     return estimate.rows.some((row) => row.onPlan === true)

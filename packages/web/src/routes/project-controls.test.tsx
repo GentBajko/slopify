@@ -288,7 +288,7 @@ describe("project pause and provider changes", () => {
       ).toBe(false),
     );
     await openProjectTab("Edit");
-    expect(await screen.findByRole("form", { name: "Edit project" })).not.toBeNull();
+    expect(await screen.findByRole("form", { name: "Edit settings" })).not.toBeNull();
     expect(resume).toHaveBeenCalledTimes(2);
     expect(approve).not.toHaveBeenCalled();
     expect(fixture.start).not.toHaveBeenCalled();

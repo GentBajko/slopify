@@ -16,7 +16,7 @@ export function ScriptView({
   if (!parsed.ok)
     return (
       <p className="text-small text-danger">
-        This script can't be narrated yet: {parsed.reason} Fix it in Edit project → Article.
+        This script can't be narrated yet: {parsed.reason} Fix it in Edit settings → Article.
       </p>
     );
   const place = new Map(voices.speakers.map((speaker, index) => [speaker.id, index]));

@@ -121,7 +121,7 @@ export function RemakeOutdated({
             ? "Nothing is selected"
             : busy || checking
               ? "Working on it"
-              : "Running and sample projects can't be remade from here"
+              : "Running and sample projects can't be made again from here"
         }
         onClick={() => void check()}
       >
@@ -152,7 +152,7 @@ export function RemakeOutdated({
                 disabled={starting || pendingPlans.length === 0 || holds}
                 disabledReason={
                   pendingPlans.length === 0
-                    ? "None of the selected projects can be remade from here (reasons above)"
+                    ? "None of the selected projects can be made again from here (reasons above)"
                     : holds
                       ? "Tick the box about unknown estimates first"
                       : "Starting…"

@@ -351,9 +351,9 @@ it("shows a typed stale refusal and requires reloading before a fresh approval",
   expect(
     screen.getByRole("button", { name: "Approve and make the narration" }).hasAttribute("disabled"),
   ).toBe(true);
-  expect(screen.getByRole("button", { name: "Load the reviews again" })).not.toBeNull();
+  expect(screen.getByRole("button", { name: "Load the pauses again" })).not.toBeNull();
   expect(post).toHaveBeenCalledTimes(1);
-  fireEvent.click(screen.getByRole("button", { name: "Load the reviews again" }));
+  fireEvent.click(screen.getByRole("button", { name: "Load the pauses again" }));
   await waitFor(() =>
     expect(
       screen

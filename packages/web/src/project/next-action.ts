@@ -168,8 +168,8 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
     };
 
   if (project.status === "paused") {
-    // What the paused run had still to make, so an "Outdated" file is not taken for a remake
-    // that finished.
+    // What the paused run had still to make, so an "Outdated" file is not taken for one made
+    // again that finished.
     const left = stillToMake(input.outdated);
     return {
       situation: "paused",
@@ -385,12 +385,9 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
         group.count === 1 || group.singular
           ? `The ${group.noun} ${group.noun.endsWith("s") ? "are" : "is"} outdated after your edit.`
           : `${String(group.count)} ${group.plural} are outdated after your edit.`,
-      why: "They keep their current version until you remake them. Before anything charged starts, the remake shows what it makes again and its estimated cost; nothing else is made again.",
+      why: "They keep their current version until you make them again. Before anything charged starts, you see what is made again and its estimated cost; nothing else is made again.",
       action: {
-        label:
-          group.count === 1 || group.singular
-            ? `Remake the outdated ${group.noun}`
-            : `Remake ${String(group.count)} outdated ${group.plural}`,
+        label: makeAgainLabel(group),
         intent: { kind: "remake", workKeys: group.workKeys },
       },
       section: group.section,
@@ -469,7 +466,7 @@ function list(items: readonly string[]): string {
 }
 
 // Outdated outputs, grouped the way a person names them, in the order the run makes them.
-// Only the first group is offered: remaking it may make the next group outdated in turn,
+// Only the first group is offered: making it again may make the next group outdated in turn,
 // and the next action then names that one.
 interface OutdatedGroup {
   readonly id: string;
@@ -647,7 +644,20 @@ export function stillToMake(outdated: readonly OutdatedOutput[]): string | undef
   return named.length === 0 ? undefined : list(named);
 }
 
-// Every outdated group, for the palette: "Remake 3 outdated images", "Remake the video".
+// "Make the outdated video again", "Make the 3 outdated images again": named for its result.
+function makeAgainLabel(group: {
+  readonly noun: string;
+  readonly plural: string;
+  readonly singular: boolean;
+  readonly count: number;
+}): string {
+  return group.count === 1 || group.singular
+    ? `Make the outdated ${group.noun} again`
+    : `Make the ${String(group.count)} outdated ${group.plural} again`;
+}
+
+// Every outdated group, for the palette: "Make the 3 outdated images again", "Make the outdated
+// video again".
 export function outdatedGroups(outdated: readonly OutdatedOutput[]): readonly {
   readonly label: string;
   readonly workKeys: readonly string[];
@@ -663,10 +673,7 @@ export function outdatedGroups(outdated: readonly OutdatedOutput[]): readonly {
     );
     return [
       {
-        label:
-          count === 1 || group.singular
-            ? `Remake the outdated ${group.noun}`
-            : `Remake ${String(count)} outdated ${group.plural}`,
+        label: makeAgainLabel({ ...group, count }),
         workKeys: [...new Set(members.map((output) => output.workKey))],
         section: group.section,
         count,

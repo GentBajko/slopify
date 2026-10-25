@@ -116,7 +116,7 @@ export const settingsHelp = {
   },
   "settings.loudness": {
     title: "Level the volume for new runs",
-    body: "Whether a new video on Create (and a template or quick short) starts with Level the volume on, and at which volumes. On evens out every narration piece and sets the video to about -14 LUFS, the loudness YouTube plays at, and the audio files to -18 LUFS. A project keeps what it started with; change it there in Edit project. Default: on.",
+    body: "Whether a new video on Create (and a template or quick short) starts with Level the volume on, and at which volumes. On evens out every narration piece and sets the video to about -14 LUFS, the loudness YouTube plays at, and the audio files to -18 LUFS. A project keeps what it started with; change it there in Edit settings. Default: on.",
     tutorial: { page: "Settings-Reference", anchor: "level-the-volume-for-new-runs" },
   },
   "settings.subtitle-model": {

@@ -25,7 +25,7 @@ import { ThinkingPicker } from "@/play/thinking";
 import { SpeakersEditor } from "@/voices/speakers-editor";
 import { changeSource } from "./revision-form-state.js";
 
-// "Also use pronunciations from my other projects" in Edit project: turning it on copies the
+// "Also use pronunciations from my other projects" in Edit settings: turning it on copies the
 // other projects' glossaries into this one, and the button copies them again, so a project
 // only picks up newer pronunciations when asked (and rebuilds the narration they change).
 function useSharedGlossary(
@@ -91,9 +91,10 @@ function useSharedGlossary(
   };
 }
 
-// "Use narration aliases" in Edit project: turning it on copies Library → Narration aliases into this
-// project, and the button copies them again, so a Library edit only reaches a project that
-// asks for it (and rebuilds only the narration the changed aliases touch).
+// "Use narration aliases" in Edit settings: turning it on copies the aliases listed under
+// Settings → Voices → Pronunciation into this project, and the button copies them again, so an
+// edit there only reaches a project that asks for it (and rebuilds only the narration the
+// changed aliases touch).
 function useAliases(edit: RevisionEdit, onChange: (edit: RevisionEdit) => void) {
   const { api } = useApp();
   const [state, setState] = useState<{ busy: boolean; error?: string }>({ busy: false });
@@ -133,12 +134,12 @@ function useAliases(edit: RevisionEdit, onChange: (edit: RevisionEdit) => void) 
       audio?.useNarrationAliases === true ? (
         <p className="flex flex-wrap items-center gap-2 text-label text-ink-2">
           {state.error !== undefined
-            ? `Couldn't read Library → Narration aliases: ${state.error} Try Update from Library again.`
+            ? `Couldn't read the aliases under Settings → Voices → Pronunciation: ${state.error} Press Copy the aliases again.`
             : count === 0
-              ? "No aliases are copied yet. Add some in Library → Narration aliases."
-              : `${String(count)} ${count === 1 ? "alias" : "aliases"} copied from Library → Narration aliases.`}
+              ? "No aliases are copied yet. Add some under Settings → Voices → Pronunciation."
+              : `${String(count)} ${count === 1 ? "alias" : "aliases"} copied from Settings → Voices → Pronunciation.`}
           <Button type="button" variant="quiet" disabled={state.busy} onClick={() => void copy()}>
-            {state.busy ? "Copying…" : "Update from Library"}
+            {state.busy ? "Copying…" : "Copy the aliases again"}
           </Button>
         </p>
       ) : undefined,

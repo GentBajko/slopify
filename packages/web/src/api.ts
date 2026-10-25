@@ -1054,7 +1054,7 @@ export async function restoreLibraryVersion(
   if (response.status === 409) {
     const noun = item === "prompt" ? "prompt" : "intro or outro";
     throw new Error(
-      `Couldn't restore version ${String(version)}: another ${noun} now has the name it had. Rename that one in the Library, then press Restore again.`,
+      `Couldn't restore version ${String(version)}: another ${noun} now has the name it had. Rename that one under Prompts, then press Restore again.`,
     );
   }
   throw await failure(response);

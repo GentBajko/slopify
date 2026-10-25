@@ -352,7 +352,7 @@ export function StageFiles({
       </ButtonRow>
       {noteOlder && first !== undefined ? (
         <MetaLine>
-          {`${outdatedWords(first.role)}. The download is that previous version until you remake it.`}
+          {`${outdatedWords(first.role)}. The download is that previous version until you make it again.`}
         </MetaLine>
       ) : null}
     </>

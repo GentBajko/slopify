@@ -464,7 +464,7 @@ describe("cancelling a run", () => {
     await selectProjectStage("Article");
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
     await openProjectTab("Edit");
-    expect(await screen.findByRole("form", { name: "Edit project" })).not.toBeNull();
+    expect(await screen.findByRole("form", { name: "Edit settings" })).not.toBeNull();
   });
 });
 

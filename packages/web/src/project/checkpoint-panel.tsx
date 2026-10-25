@@ -72,9 +72,9 @@ function CurrentCheckpoints({
           {status.error?.message ??
             (result?.ok === false
               ? result.message
-              : "The pauses couldn't be loaded. Press Load the reviews again.")}
+              : "The pauses couldn't be loaded. Press Load the pauses again.")}
         </p>
-        <Button onClick={() => void reload()}>Load the reviews again</Button>
+        <Button onClick={() => void reload()}>Load the pauses again</Button>
       </section>
     );
   if (!result?.ok) return null;
@@ -82,7 +82,7 @@ function CurrentCheckpoints({
     return (
       <section aria-label="Pauses" className="flex flex-col items-start gap-3">
         <p role="alert" className="m-0 text-small text-danger">
-          The project was edited after these pauses loaded. Press Load the reviews again before
+          The project was edited after these pauses loaded. Press Load the pauses again before
           approving.
         </p>
       </section>
@@ -233,7 +233,7 @@ function Gate({
       {/* The version's id stays on hover for a bug report; the line itself says which one. */}
       {current ? null : (
         <p className="m-0 text-small text-ink-3" title={`Version ${gate.revisionId}`}>
-          Set on an earlier version. Press Load the reviews again to see the current one.
+          Set on an earlier version. Press Load the pauses again to see the current one.
         </p>
       )}
       {gate.dependents.length === 0 ? null : (
@@ -280,7 +280,7 @@ function Gate({
             if (await reload()) setOutcome(null);
           }}
         >
-          Load the reviews again
+          Load the pauses again
         </Button>
       ) : null}
     </div>

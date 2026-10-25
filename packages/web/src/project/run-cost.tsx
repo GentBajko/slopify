@@ -231,7 +231,7 @@ function Panel({ cost }: { readonly cost: RunCost }): ReactElement {
         <SectionHead
           as="h3"
           title="By step"
-          meta="What each step has cost so far, retries and remakes included; working time is how long its work ran, over every run."
+          meta="What each step has cost so far, retries and work made again included; working time is how long its work ran, over every run."
           className="pb-0"
         />
         <div className="overflow-x-auto">

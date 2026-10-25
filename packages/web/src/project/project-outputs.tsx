@@ -81,7 +81,7 @@ export function ProjectOutputs({
             disabledReason={
               revisionId === null
                 ? "This project has no saved version yet; wait for its first step to start"
-                : "Finish or close the open edit or remake first"
+                : "Finish or close the open change first"
             }
             onClick={() => setAdding(true)}
           >

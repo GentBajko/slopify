@@ -81,7 +81,7 @@ it.each(["saved replacement", "staged replacement", "text override"] as const)(
       },
     };
     const { saves } = mount(view, async () => response({ ...staged, stageKind: "audio" }));
-    await user.click(await screen.findByRole("button", { name: "Edit project" }));
+    await user.click(await screen.findByRole("button", { name: "Edit settings again" }));
     await openEditSection("Narration");
     await screen.findByLabelText("Replace narration chunk 1");
     if (scenario !== "saved replacement") {
@@ -113,7 +113,7 @@ it("discards an upload that settles after regeneration without undoing the saved
   const copied = deferred<Response>();
   const { view, key } = generatedNarration();
   const { saves, removed } = mount(view, () => copied.promise);
-  await user.click(await screen.findByRole("button", { name: "Edit project" }));
+  await user.click(await screen.findByRole("button", { name: "Edit settings again" }));
   await openEditSection("Narration");
   fireEvent.change(await screen.findByLabelText("Replace narration chunk 1"), {
     target: { files: [new File(["audio"], "replacement.mp3", { type: "audio/mpeg" })] },

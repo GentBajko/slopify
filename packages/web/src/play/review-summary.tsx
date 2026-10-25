@@ -389,7 +389,7 @@ function shortsExtrasSummary(shorts: ShortsForm, music: string | undefined): rea
     ...(speed !== undefined && speed !== 1 ? [`${speed.toFixed(2)}× speed`] : []),
     ...(music === undefined
       ? volume !== undefined && volume !== defaultMusicVolume
-        ? [`Music at ${String(volume)}% once added in Edit project`]
+        ? [`Music at ${String(volume)}% once added in Edit settings`]
         : []
       : [`Music: ${music} at ${String(volume ?? defaultMusicVolume)}%`]),
     ...(settings.fullVideoLink === undefined ? [] : [`Links ${settings.fullVideoLink}`]),

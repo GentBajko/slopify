@@ -129,7 +129,7 @@ export function PostChoiceFields({
           onCommit={(custom) => set({ custom })}
         />
       ) : null}
-      <Field label={`${site} pictures`} tip="social.pictures">
+      <Field label={`${site} images`} tip="social.pictures">
         <Select
           value={String(choice.media.pictures ?? 0)}
           disabled={disabled}
@@ -139,8 +139,7 @@ export function PostChoiceFields({
           }}
           options={pictureCounts(limits.pictures, choice.media.pictures ?? 0).map((count) => ({
             value: String(count),
-            label:
-              count === 0 ? "None" : `${String(count)} ${count === 1 ? "picture" : "pictures"}`,
+            label: count === 0 ? "None" : `${String(count)} ${count === 1 ? "image" : "images"}`,
           }))}
         />
       </Field>

@@ -149,7 +149,7 @@ export function ImageEditor({
         <h3>Images</h3>
         <HelpLine>
           Change an image's prompt, replace it with your own picture or clip, move it, delete it, or
-          mark it to be made again. Nothing is made until you save and choose what to remake.
+          mark it to be made again. Nothing is made until you save and choose what to make again.
         </HelpLine>
       </div>
       {content.imageOrder.map((key, index) => {

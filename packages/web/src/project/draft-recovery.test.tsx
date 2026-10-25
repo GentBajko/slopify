@@ -100,7 +100,7 @@ describe("a project's unsaved edit", () => {
       <RevisionWorkspace projectId="p1" currentRevisionId="r1" renderEditor={editor} />,
       testDeps(base),
     );
-    await user.click(screen.getByRole("button", { name: "Edit project" }));
+    await user.click(screen.getByRole("button", { name: "Edit settings again" }));
     const title = await screen.findByRole("textbox", { name: "Project title" });
     await user.clear(title);
     await user.type(title, "Kept title");
@@ -127,7 +127,7 @@ describe("a project's unsaved edit", () => {
       <RevisionWorkspace projectId="p1" currentRevisionId="r1" renderEditor={editor} />,
       testDeps(base),
     );
-    await user.click(screen.getByRole("button", { name: "Edit project" }));
+    await user.click(screen.getByRole("button", { name: "Edit settings again" }));
     const title = await screen.findByRole("textbox", { name: "Project title" });
     await user.clear(title);
     await user.type(title, "Second thoughts");
@@ -178,7 +178,7 @@ describe("a project's unsaved edit", () => {
         "GET /api/projects/p1": jsonAnswer(body(revisionView("r3", "Mine"))),
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Edit project" }));
+    await user.click(screen.getByRole("button", { name: "Edit settings again" }));
     const title = await screen.findByRole("textbox", { name: "Project title" });
     await user.clear(title);
     await user.type(title, "Mine");
@@ -299,7 +299,7 @@ describe("a remake asked for from a button", () => {
     const user = userEvent.setup();
     const start = render(preview(0.04, "provider"));
     await user.click(await screen.findByRole("button", { name: "Regenerate image a" }));
-    expect(await screen.findByRole("dialog", { name: "Choose what to remake" })).toBeTruthy();
+    expect(await screen.findByRole("dialog", { name: "Choose what to make again" })).toBeTruthy();
     expect(screen.getByText("$0.04")).toBeTruthy();
     expect(start).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Make 1 output again" }));
@@ -310,7 +310,7 @@ describe("a remake asked for from a button", () => {
     const user = userEvent.setup();
     const start = render(preview(0.4, "provider"), 0.04);
     await user.click(await screen.findByRole("button", { name: "Regenerate image a" }));
-    expect(await screen.findByRole("dialog", { name: "Choose what to remake" })).toBeTruthy();
+    expect(await screen.findByRole("dialog", { name: "Choose what to make again" })).toBeTruthy();
     expect(start).not.toHaveBeenCalled();
   });
 
@@ -319,7 +319,7 @@ describe("a remake asked for from a button", () => {
     const start = render(preview(0, "local"));
     await user.click(await screen.findByRole("button", { name: "Regenerate image a" }));
     await waitFor(() => expect(start).toHaveBeenCalledTimes(1));
-    expect(screen.queryByRole("dialog", { name: "Choose what to remake" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "Choose what to make again" })).toBeNull();
   });
 });
 

@@ -328,7 +328,7 @@ export function RevisionForm(
                 error={problem("content.articleMarkdown") ?? problem("provided.article")}
                 help={
                   edit.content.articleEdited
-                    ? "Your edited article is kept when other settings change. Writing it again replaces it after the remake review."
+                    ? "Your edited article is kept when other settings change. Writing the article again replaces it."
                     : undefined
                 }
                 value={
@@ -359,7 +359,7 @@ export function RevisionForm(
                     Write the article again after review
                   </Button>
                   <HelpLine>
-                    Paid writing calls when you remake; the remake shows their cost first. It
+                    Paid writing calls when you make it again, with their cost shown first. It
                     replaces your edits to the article.
                   </HelpLine>
                 </div>
@@ -745,7 +745,7 @@ function IntroOutro({
           .map((entry) => (
             <option key={entry.id} value={entry.name}>
               {split && entry.name === chosen
-                ? `${entry.name} · Library version (newer)`
+                ? `${entry.name} · newer wording from Prompts`
                 : entry.name}
             </option>
           ))}

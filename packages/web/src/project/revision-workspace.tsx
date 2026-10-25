@@ -75,7 +75,11 @@ export function RebuildDrawer({
 }): ReactElement | null {
   const c = controller;
   return (
-    <Drawer open={c.preview !== undefined} title="Choose what to remake" onClose={c.closePreview}>
+    <Drawer
+      open={c.preview !== undefined}
+      title="Choose what to make again"
+      onClose={c.closePreview}
+    >
       {c.preview === undefined ? null : (
         <RebuildReview
           key={c.preview.id}

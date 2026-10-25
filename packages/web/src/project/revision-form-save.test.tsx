@@ -65,7 +65,7 @@ function generatedArticle(): RevisionView {
 it("opens regenerated article text, keeps title-only saves generated, and retains manual drafts", async () => {
   const user = userEvent.setup();
   const saves = mount(generatedArticle());
-  await user.click(await screen.findByRole("button", { name: "Edit project" }));
+  await user.click(await screen.findByRole("button", { name: "Edit settings again" }));
   await openEditSection("Article");
   const article = await screen.findByRole<HTMLTextAreaElement>("textbox", { name: "Article text" });
   expect(article.value).toBe("Newly regenerated article.");
@@ -88,7 +88,7 @@ it.each([false, true])(
   async (manual) => {
     const user = userEvent.setup();
     const saves = mount(generatedArticle());
-    await user.click(await screen.findByRole("button", { name: "Edit project" }));
+    await user.click(await screen.findByRole("button", { name: "Edit settings again" }));
     await openEditSection("Article");
     const article = await screen.findByRole<HTMLTextAreaElement>("textbox", {
       name: "Article text",
@@ -146,7 +146,7 @@ it.each([
         },
       },
     });
-    await user.click(await screen.findByRole("button", { name: "Edit project" }));
+    await user.click(await screen.findByRole("button", { name: "Edit settings again" }));
     await openEditSection(sections[source]);
     await user.click(
       within(screen.getByRole("radiogroup", { name: stageWords[source] })).getByRole("radio", {
