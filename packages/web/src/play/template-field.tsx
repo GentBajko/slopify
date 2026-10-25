@@ -1,7 +1,7 @@
 import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import { topicKeywords } from "@app/slices/project-templates/one-off.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactElement, useEffect, useId, useRef, useState } from "react";
+import { type ReactElement, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { HelpLine } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
@@ -86,10 +86,12 @@ export function useStarterPick(paused: boolean): {
     onlyTopicTyped(session.document);
   const coming = fresh && (!settled || starter !== undefined);
   const { holdFresh } = session;
-  useEffect(() => {
+  // In the same task as the page is drawn, before any key can reach the box: a key typed in
+  // the gap would save the fresh form on its own, and the starter would then not apply.
+  useLayoutEffect(() => {
     holdFresh?.(coming);
   }, [coming, holdFresh]);
-  useEffect(() => () => holdFresh?.(false), [holdFresh]);
+  useLayoutEffect(() => () => holdFresh?.(false), [holdFresh]);
   return { fresh, coming, onTried: setTried };
 }
 

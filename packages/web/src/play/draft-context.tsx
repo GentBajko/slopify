@@ -48,6 +48,9 @@ export interface PlaySession extends PlayNavigation {
   readonly restored?: { readonly id: string; readonly updatedAt: string } | undefined;
   readonly attach: (slot: UploadSlot, files: readonly File[], replaceId?: string) => Promise<void>;
   readonly edit: (document: PlayDraftDocument) => void;
+  // The draft as it is now, with edits and fills not drawn yet: what a change made from the
+  // last drawing of the page applies to, so it never undoes them.
+  readonly latest?: () => PlayDraftDocument;
   readonly flush: () => Promise<boolean>;
   readonly open: (
     id: string,

@@ -402,6 +402,7 @@ export function useDraftSession(): PlaySession {
         return created;
       },
       edit,
+      latest: () => state.current.document,
       flush,
       open,
       newDraft,
@@ -481,6 +482,7 @@ export function useDraftSession(): PlaySession {
     reveal: current.reveal,
     restored: current.restored?.id === current.id ? current.restored : undefined,
     edit: owner.edit,
+    latest: owner.latest,
     flush: owner.flush,
     open: owner.open,
     generation: owner.generation,

@@ -55,8 +55,11 @@ export function TopicFields({
     )
       target.focus({ preventScroll: true });
   }, []);
-  const setForm = (next: typeof form): void => {
-    session.edit({ ...document, form: next });
+  // Each key changes the topic of the draft as it is now, not as it was when the box was last
+  // drawn: what Create filled in meanwhile (the found services, the starter's draft) stays.
+  const change = (next: (now: typeof form) => typeof form): void => {
+    const now = session.latest?.() ?? document;
+    session.edit({ ...now, form: next(now.form) });
     session.invalidateReview(true);
   };
   // The project's title is also the YouTube title when the video goes there and no YouTube
@@ -86,7 +89,10 @@ export function TopicFields({
             spellCheck
             maxLength={titleMax}
             aria-invalid={problem("title") !== undefined}
-            onChange={(event) => setForm({ ...form, title: event.target.value })}
+            onChange={(event) => {
+              const title = event.target.value;
+              change((now) => ({ ...now, title }));
+            }}
           />
         </Field>
       </div>
@@ -129,9 +135,10 @@ export function TopicFields({
               // A topic is words ("The Library of Alexandria"), so spelling is checked.
               spellCheck
               aria-invalid={problem(`values.${name}`) !== undefined}
-              onChange={(event) =>
-                setForm({ ...form, values: { ...form.values, [name]: event.target.value } })
-              }
+              onChange={(event) => {
+                const value = event.target.value;
+                change((now) => ({ ...now, values: { ...now.values, [name]: value } }));
+              }}
             />
           </Field>
         );

@@ -252,6 +252,21 @@ describe("the topic box", () => {
     }
   });
 
+  it("keeps what came in since the page was last drawn when a key is typed", async () => {
+    // A key handled before the page draws a change Create just made (the found services
+    // filled in on arrival) must not put the draft back to what the page last drew.
+    const { session } = await mountPlay();
+    const box = screen.getByLabelText(topicLabel);
+    const drawn = session().document;
+    session().edit({
+      ...drawn,
+      form: { ...drawn.form, llm: { provider: "openrouter", model: "a-model" } },
+    });
+    fireEvent.input(box, { target: { value: "Rope" } });
+    expect(session().latest?.().form.llm).toEqual({ provider: "openrouter", model: "a-model" });
+    expect(session().latest?.().form.title).toBe("Rope");
+  });
+
   it("stays quiet when the person only goes in and out of it, and says the hint's words once typed in", async () => {
     await mountPlay({}, { ...generatedRun, form: { ...generatedRun.form, title: "" } });
     const box = screen.getByLabelText(topicLabel);
