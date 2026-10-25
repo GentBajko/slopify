@@ -1,8 +1,8 @@
-# Template studio
+# Edit template
 
-The template studio is where a template is set up once, section by section, with a live sample beside every setting, then marked ready for its schedules. Each change you save is made again on a short hidden sample, so you see and hear what the next video will be like before a schedule spends anything on it.
+**Edit template** is where a template is set up once, section by section, with a live sample beside every setting, then approved for its schedules. Each change you save is made again on a short hidden sample, so you see and hear what the next video will be like before a schedule spends anything on it.
 
-**Where to find it:** **Library → Templates**, then **Open studio** on a template's row. Saving a setup as a template from Play or a project opens its studio too.
+**Where to find it:** **Templates**, then **Edit template** on a template's row. **Save as template** on a project opens it too.
 
 ## The sections
 
@@ -22,11 +22,11 @@ The rail on the left lists the template's sections in the order a run makes them
 | **YouTube description and posts** | The YouTube description, chapters and tags, and the other sites the projects post to (**Post to**), each with its text and main media. The sample shows each site's post as the site shows it. See [Posting to social sites](Posting-to-Social-Sites). |
 | **Schedule** | The next five runs of each schedule that uses the template, and what they cost a month |
 
-Each section leads with two to four settings. The rest are in the fold under them (**All … settings**, or **More … settings** where the fold leaves out what the section leads with), which holds Create's own editor for that section, so no setting is lost. Create and a project's **Edit settings** use the same section names, with Thumbnail, Shorts, PDF and the YouTube description together under **Extras**. **Made with OpenRouter · model · Change** says which provider makes the section; **Change** opens Fine-tune.
+Each section leads with two to four settings. The rest are in the fold under them (**All … settings**, or **More … settings** where the fold leaves out what the section leads with), which holds Create's own editor for that section, so no setting is lost. Create and a project's **Edit settings** use the same section names, with Thumbnail, Shorts, PDF and the YouTube description together under **Extras**. **Made with OpenRouter · model · Change** says which service makes the section; **Change** opens the fold. While nobody chose the article's writer or the image service (and this computer has no default for it), the section leads with Create's **Written by** or **Images by** group instead, and the fold, then **More … settings**, leaves it out.
 
-Each section's lamp says where its sample is: **Current** (made for this version), **Making**, **Waiting** (queued, or held with the reason), **Needs a fix** (the failed step's own sentence and the button that fixes it), **No current sample** (made for an older version, or none yet), **Off**, or **Provided** (you add the file in Play for each video, so there is no sample to make).
+Each section's lamp says where its sample is: **Current** (made for this version), **Making**, **Waiting** (queued, or held with the reason), **Needs a fix** (the failed step's own sentence and the button that fixes it), **No current sample** (made for an older version, or none yet), **Off**, or **Provided** (you add the file on Create for each video, so there is no sample to make).
 
-On a narrow window the studio shows **Sections · Settings · Sample** tabs instead of three columns.
+On a narrow window Edit template shows **Sections · Settings · Sample** tabs instead of three columns.
 
 ## Samples
 
@@ -39,7 +39,7 @@ Two kinds of sample are made for each version.
 - the outline and chapter 1 of the script (or the full script, see below),
 - about 30 seconds of narration,
 - up to 4 pictures, 1 thumbnail and 1 short,
-- no checkpoints; an agent's reviews are not asked.
+- no pauses; an agent's checks are not asked.
 
 After the first one, a Save makes again only what the change outdates. Work already going is never stopped: a newer Save waits for it.
 
@@ -49,11 +49,11 @@ The chip in the header, **Sample topic: The history of the lighthouse**, is what
 
 ### Write the full script in the sample
 
-Under **Script**, **Write the full script in the sample** has the sample write the whole script instead of the outline and chapter 1, priced on the switch. Only the script and what is made from it are made again. Your videos always get the full script.
+Under **Article**, **Write the full script in the sample** has the sample write the whole script instead of the outline and chapter 1, priced on the switch. Only the script and what is made from it are made again. Your videos always get the full script.
 
 ### Say it as
 
-Under **Voice**, **Say it as** lists the names the sample's script says that a voice may get wrong, each with the line it is in. **Play** one to hear it, type how it should be said and press **Save**: that writes a Library → Narration aliases row (used by every project started after it) and voices again only the sample's lines that say it, priced on the button. **Another word to check** adds a name of your own.
+Under **Narration**, **Say it as** lists the names the sample's script says that a voice may get wrong, each with the line it is in. **Play** one to hear it, type how it should be said and press **Save**: that writes a row of your Pronunciation list (Settings → Voices → Pronunciation, used by every project started after it) and voices again only the sample's lines that say it, priced on the button. **Another word to check** adds a name of your own.
 
 ### Prompt anatomy
 
@@ -63,28 +63,28 @@ Under **Voice**, **Say it as** lists the names the sample's script says that a v
 
 Every paid sample is priced before anything is spent:
 
-- **Save** says what it costs, for example **Save · about $0.12**, or **Save · plan usage** when only a CLI plan is used. **Save without a sample** saves and makes only the free samples.
+- **Save** never spends: it keeps the change as the template's next version and makes the free samples again. The paid sample waits for **Make sample**, priced on the button, for example **Make sample · about $0.12**.
 - A sample that costs more than a quarter more (plus five cents) than the price you saw, or has a step with no known price you didn't accept, waits instead of starting, with the new price on **Make sample**.
-- **Settings → Template studio → Daily sample budget** is the most the studio may spend in one day ($2.00 by default). A sample past it waits until the next day or a higher budget. What a removed sample or a discarded comparison was charged today still counts. See [Settings-Reference](Settings-Reference#template-studio).
+- The daily sample budget under **Settings → Production defaults** is the most the samples may spend in one day ($2.00 by default). A sample past it waits until the next day or a higher budget. What a removed sample or a discarded comparison was charged today still counts. See [Settings-Reference](Settings-Reference#template-studio).
 
-**Make samples for all** in Settings → Template studio prices the samples of every template that needs one, together, and queues the ones that fit today's budget.
+**Make samples for all**, under **Samples for all templates** in Settings → Production defaults, prices the samples of every template that needs one, together, and queues the ones that fit today's budget.
 
-## Mark ready
+## Approve for schedules
 
-Until you mark a version of a template ready for the first time, its schedules run its newest version, checked or not, as they always did, and the header says **Not checked in the studio: schedules run the newest version**. Pressing **Mark ready** once turns the check on for that template: from then on a schedule runs only a version marked ready (or one saved before the studio existed, or one Slopify carried over), and every version you save later waits for **Mark ready**.
+Until you approve a version of a template for schedules for the first time, its schedules run each version as you save it, and the header says **Schedules run each version you save**. Once a schedule runs the template, **More → Approve for schedules** approves the version you are editing, after a dialog that says what it changes: from then on a schedule runs only an approved version (or one saved before approvals existed, or one Slopify carried over), and every version you save later waits for your approval. The header then says **Ready for schedules**, or **Not ready for schedules** with the version the schedules run until you approve this one.
 
-**Mark ready** in the header is greyed, with the reason, until:
+**Approve for schedules** is greyed, saying what to do first (save your changes, fix the failing checks, look over a current sample), until:
 
-- every free check passes: keywords are filled, the providers are set up, the narration's voice is one of yours (Settings → Voices), each run has release times, the monthly cost is known, and someone answers each checkpoint (a notification address, or an agent seen in the last week),
+- every free check passes: keywords are filled, the services are set up, the narration's voice is one of yours (Settings → Voices), each run has release times, the monthly cost is known, and someone answers each pause (a notification address, or an agent seen in the last week),
 - and every section's sample is current, off or provided.
 
-Each failing check names what is wrong with a button to the place it is fixed. Once marked, schedules run that version from their next run. Saving again makes a new version that waits to be marked ready; until then the schedules keep running the one marked ready, and the header says **Not checked in the studio · schedules run version 6**.
+Each failing check names what is wrong with a button to the place it is fixed. Once approved, schedules run that version from their next run. Saving again makes a new version that waits for your approval; until then the schedules keep running the approved one.
 
-When Slopify changes a template itself (a retired model switched in Settings → Models, a restore from the trash under a new name), the new version keeps the ready mark of the one it came from, and its changed sections say who made the change. A retired model is switched in the version your schedules run too, even while a newer version waits to be marked ready.
+When Slopify changes a template itself (a retired model switched in Settings → Models, a restore from the trash under a new name), the new version keeps the approval of the one it came from, and its changed sections say who made the change. A retired model is switched in the version your schedules run too, even while a newer version waits for your approval.
 
 ## Compare models
 
-**Compare models**, beside the model of **Script**, **Voice** or **Pictures**, makes that section's sample again with one or two other models, each on a hidden copy of the sample, so you can compare what each one makes, what it was charged and how long it took, beside the model the template uses now.
+**Compare models**, beside the model of **Article**, **Narration** or **Images**, makes that section's sample again with one or two other models, each on a hidden copy of the sample, so you can compare what each one makes, what it was charged and how long it took, beside the model the template uses now.
 
 1. Save first: models are compared on the saved version's sample, so it must be current.
 2. Press **Compare models** and pick one or two models. The list shows the models that work for your key or CLI first. Voice models are compared within the template's voice provider, because a voice is chosen per provider.
@@ -94,26 +94,26 @@ When Slopify changes a template itself (a retired model switched in Settings →
 
 Only the section's own work runs on each copy. A comparison is held, spending nothing, on the same rules as a sample (a higher price, an unknown price you didn't accept, past today's budget), and a Save made before it starts takes its place. Work already going is never stopped, so **Discard** waits until it finishes.
 
-**Settings → Models → New for you** has **Compare on a sample** on each new model: pick a template and its studio opens with Compare models ready for that model.
+**Settings → Models → New for you** has **Compare on a sample** on each new model: pick a template and Edit template opens with Compare models ready for that model.
 
 ## Template packs
 
 A template pack is a template as one .zip file, to share with someone else or move to another computer.
 
-**Export pack** in the studio's header saves the version marked ready (the button says which when a newer one waits): its prompts' and intros' text as your Library has them now, the voice it picks, the Look, the PDF theme, and its sample's thumbnail, up to four pictures and its narration. No key, login or other file of yours goes in; a template whose text looks like a key is refused, with where to remove it. A template with no version marked ready (and none saved before the studio) can't be exported yet.
+**More → Export as a file (.zip)** in Edit template saves the version your schedules run (it names that version when a newer one waits): its prompts' and intros' text as Prompts has them now, the voice it picks, the Look, the PDF look, and its sample's thumbnail, up to four pictures and its narration. No key, login or other file of yours goes in; a template whose text looks like a key is refused, with where to remove it. A template its schedules can't run yet (no version approved, and none saved before approvals existed) can't be exported yet.
 
-**Import template pack** on Library → Templates makes a new template from a pack:
+**Import a template file (.zip)** on Templates makes a new template from a pack:
 
-- Its prompts and intros join your Library. One whose name your Library already uses for other text comes in as "name (2)", and the template uses that one.
-- Its voice is used as it is. When Settings → Voices has no voice with that ID, the studio's Voice check says so: add the voice there under that ID, or choose one of yours.
-- It opens in its studio with **Samples from the pack**, what the person who exported it got, until your own samples are made.
-- It is not checked in the studio yet: look it over and press **Mark ready**.
+- Its prompts and intros join yours under Prompts. One whose name you already use for other text comes in as "name (2)", and the template uses that one.
+- Its voice is used as it is. When Settings → Voices has no voice with that ID, Edit template's voice check says so: add the voice there under that ID, or choose one of yours.
+- It opens in Edit template with **Samples from the pack**, what the person who exported it got, until your own samples are made.
+- It is not approved for schedules yet: look it over before you approve it.
 
 A file larger than 30 MB, one that isn't a pack, one made by a newer Slopify, or one holding anything that looks like a key is refused, and nothing is imported.
 
-## Design templates
+## Poster templates
 
-Design templates (posters, flyers and other designed pieces) are listed on Library → Templates below the project templates, each with **Open studio**. Their studio has four sections, **Picture**, **Text layout**, **Formats** and **Schedule**, with the same rail of lamps, a live sample and Mark ready. See [Templates](Templates).
+Poster templates (posters, flyers and other designed pieces) are under **Templates → Poster templates**, each with its own editor of four sections, **Picture**, **Text layout**, **Formats** and **Schedule**, with the same rail of lamps, a live sample and **Approve for schedules**. See [Templates](Templates).
 
 ## Related pages
 

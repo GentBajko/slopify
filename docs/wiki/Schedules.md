@@ -44,7 +44,7 @@ Each run takes the first topic, starts one project with it and removes it from t
 
 **Each topic fills** is the template keyword a topic replaces, such as `{{Topic}}`. By default it is the keyword the template's project title uses, or else the first one. If the title doesn't use this keyword, every project gets the same title.
 
-Every other keyword of the template has an every-run value: the value it gets on every run, such as a word count. The fields are labelled `<keyword> (every run)` and use the same keyword list as Play, Edit project and templates: the line under each says which prompts it feeds ("Feeds …"), or "Not used by any picked prompt". The default is the template's own value. A topic can set its own value for any keyword, which wins for that one run; the field then notes "Unless a topic sets its own."
+Every other keyword of the template has an every-run value: the value it gets on every run, such as a word count. The fields are labelled `<keyword> (every run)` and use the same keyword list as Create, a project's Edit settings and Edit template: the line under each says which prompts it feeds ("Feeds …"), or "Not used by any picked prompt". The default is the template's own value. A topic can set its own value for any keyword, which wins for that one run; the field then notes "Unless a topic sets its own."
 
 ### Three ways to write the list
 
@@ -90,12 +90,12 @@ A scheduled video can be made ahead of its day, so the day only puts the video t
 1. Open **Calendar** and find the topic's run (either view).
 2. Press **Make ahead**, read what it does and spends, and press **Make ahead (paid)**.
 
-Slopify makes the project now, exactly as the schedule would on the day (the template as it is now, the topic and the schedule's values), and runs everything but the video: research, the article, narration, images, the thumbnail and the PDF. It then holds at a **Before Video** checkpoint, and the run shows **Waiting for its day** with **Open**.
+Slopify makes the project now, exactly as the schedule would on the day (the template as it is now, the topic and the schedule's values), and runs everything but the video: research, the article, narration, images, the thumbnail and the PDF. It then pauses before the video, and the run shows **Waiting for its day** with **Open**.
 
 On the scheduled day the schedule finds that project by its title and continues it instead of making another: the hold is lifted and the video, its captions, shorts and YouTube description are made. The same goes for an unfinished project you made yourself under the same title. A finished one counts as a video already made, and the day makes a new one.
 
 - You can open the project made ahead and change anything before its day, for example with Edit settings.
-- A **Before Video** checkpoint the template already has stays: the day waits for you to approve it, and the project reads **Waiting for your review** and is listed under **Needs you** (and for a connected [agent](Agents-MCP)). A project held only by Make ahead's own hold reads **Waiting for its day** and is not listed as waiting anywhere: it waits for its day, not for you.
+- A pause before the video that the template already has (**Pause after the images (before the video)**) stays: the day waits for you to approve it, and the project reads **Waiting for your review** and is listed under **Needs you** (and for a connected [agent](Agents-MCP)). A project held only by Make ahead's own hold reads **Waiting for its day** and is not listed as waiting anywhere: it waits for its day, not for you.
 - A setup that makes no video has nothing to hold back, so Make ahead runs it to the end.
 - A schedule without topics gives every run the same title, so only a project made ahead continues there.
 - The spend limit applies to Make ahead as it does to a scheduled run.
@@ -171,13 +171,13 @@ Pick a schedule in the list to see its detail: **When**, **Timezone**, **Next ru
 
 ## When you edit the template
 
-A schedule runs the newest version of its template, so a change you save applies from the next run, as before. The schedule's **Template** line says **Runs the newest version · Not checked in the studio**.
+A schedule runs the newest version of its template, so a change you save applies from the next run, as before. The schedule's **Template** line says **Runs each version you save**.
 
-That changes once you press **Mark ready** on a version in the template's [Template studio](Template-Studio#mark-ready) for the first time. From then on the schedule runs the newest version marked ready (or one Slopify carried over from it), and a version you save later waits until you look it over and press **Mark ready**. The line then says, for example, **Runs version 6 · version 7 not ready yet**. The schedule is never stopped or switched to an unchecked version by itself. If the change adds a keyword the schedule has no value for, fill it in under the schedule's topics or every-run values.
+That changes once you approve a version for schedules in [Edit template](Template-Studio#approve-for-schedules) (**More → Approve for schedules**) for the first time. From then on the schedule runs the newest approved version (or one Slopify carried over from it), and a version you save later waits until you look it over and approve it. The line then says, for example, **Runs version 6 · version 7 waits for your approval**. The schedule is never stopped or switched to an unchecked version by itself. If the change adds a keyword the schedule has no value for, fill it in under the schedule's topics or every-run values.
 
 ## Tips
 
-- Try the template once from Play before scheduling it, so you know what one run costs. Then set the **Spend ceiling** a little above that.
+- Try the template once from Create before scheduling it, so you know what one run costs. Then set the **Spend ceiling** a little above that.
 - Hold generated topics for approval at first. Once you trust the suggestions, switch to queue directly.
 - Write a clear series brief: what the series covers, the tone, and what makes a topic worth a video. Add your older videos under the channel's **Existing videos** so they aren't suggested again.
 
