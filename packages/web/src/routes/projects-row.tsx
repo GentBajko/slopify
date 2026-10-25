@@ -74,8 +74,9 @@ export function ProjectRow({
   // The server refuses a delete while the project is running, so a running row offers none.
   const running = project.status === "running";
   const sample = project.sample === true;
+  // A narrow row wraps its facts; the finish date's two words stay together ("Sep 27").
   const meta = finished(project)
-    ? finishedLine(project)
+    ? finishedLine(project).replace(/(finished \S+) (\S+)$/, "$1\u00a0$2")
     : `${madeOf(project)} · started ${startedAt(project.createdAt)}`;
   const done = `${String(Math.round(project.progress * 100))}% done`;
   return (
