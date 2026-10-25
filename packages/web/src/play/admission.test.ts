@@ -220,6 +220,35 @@ describe("the hint names the first missing item", () => {
     expect(framed.ok ? [] : framed.fields.map((one) => one.field)).toContain("audio");
   });
 
+  it("asks for a speaker's voice service, then its model, then the voice, by the speaker's name", () => {
+    const podcast = defaultVoicesSettings("podcast", []);
+    const first = podcast.speakers[0]?.name ?? "";
+    const withVoice = (voice: { provider: string; model: string; voice: string }) => ({
+      ...freshForm,
+      articlePrompt: "Dossier",
+      voices: {
+        ...podcast,
+        speakers: podcast.speakers.map((speaker, at) =>
+          at === 0
+            ? { ...speaker, voice }
+            : {
+                ...speaker,
+                voice: { provider: "elevenlabs", model: "eleven_v3", voice: "Narrator" },
+              },
+        ),
+      },
+    });
+    expect(ask(withVoice({ provider: "", model: "", voice: "" })).blocker?.hint).toBe(
+      `Pick a voice service for ${first} first`,
+    );
+    expect(ask(withVoice({ provider: "cartesia", model: "", voice: "" })).blocker?.hint).toBe(
+      `Pick a voice model for ${first} first`,
+    );
+    expect(
+      ask(withVoice({ provider: "cartesia", model: "sonic-3", voice: "" })).blocker?.hint,
+    ).toBe(`Pick a voice for ${first} first`);
+  });
+
   it("asks for the title after every rail, because the cue sheet is read last", () => {
     const { blocker } = ask({ ...generated, title: "   ", values: {} });
 

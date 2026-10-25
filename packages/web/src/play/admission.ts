@@ -293,6 +293,16 @@ export function fixOf(form: PlayFormState, error: FieldError): string | undefine
       ? `Set how many images, from 1 to ${String(numberPerPromptMax)}`
       : "Pick an image prompt";
   }
+  // A speaker's voice, asked for as the one voice is: the service, then its model, then the voice.
+  const speaker = /^voices\.speakers\.(\d+)\.voice(\.voice)?$/.exec(error.field);
+  if (speaker !== null) {
+    const one = form.voices?.speakers[Number(speaker[1])];
+    const name = one?.name.trim() || "this speaker";
+    if (speaker[2] !== undefined) return `Pick a voice for ${name}`;
+    return one === undefined || one.voice.provider === ""
+      ? `Pick a voice service for ${name}`
+      : `Pick a voice model for ${name}`;
+  }
   switch (error.field) {
     case "title":
       return form.title.trim() === ""
