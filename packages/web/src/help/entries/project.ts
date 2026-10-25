@@ -95,7 +95,7 @@ export const projectHelp = {
   },
   "project.prompts.template": {
     title: "Use a saved prompt",
-    body: "Copies one of your saved prompts into this project, replacing the raw prompt below. The project keeps its own copy, so later edits to the saved prompt reach it only when you pick it again or press Use the saved prompt's wording. What was made from the old wording turns outdated; nothing is made again until you choose.",
+    body: "Copies one of your saved prompts into this project, replacing the raw prompt below. The project keeps its own copy, so later edits to the saved prompt reach it only when you pick it again or press Use the new wording. What was made from the old wording turns outdated; nothing is made again until you choose.",
     tutorial: { page: "Editing-a-Project", anchor: "prompts" },
   },
   "project.prompts.raw": {
