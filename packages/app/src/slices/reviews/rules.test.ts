@@ -25,9 +25,9 @@ describe("review admission", () => {
         }),
       );
       expect(fields).toEqual([expect.objectContaining({ field: "reviews.provider" })]);
-      expect(fields[0]?.message).toContain("Images, Thumbnail checks look at pictures");
+      expect(fields[0]?.message).toContain("Images, Thumbnail checks look at images");
       expect(fields[0]?.message).toContain(
-        "Under Pauses and checks → Advanced → Checked by, choose Claude Code or Codex",
+        "Under Pauses and checks → Checker and stages → Checked by, choose Claude Code or Codex",
       );
     }
   });

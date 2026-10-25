@@ -18,12 +18,13 @@ export const reviewStages = [
   "promise",
 ] as const;
 export type ReviewStage = (typeof reviewStages)[number];
-// The stages in the order a run reaches them, as the Reviews rows list them.
+// The stages in the order a run reaches them, as the Reviews rows list them: the narration is
+// made before the images (`kernel/pipeline.ts`), as the pause ticks say.
 export const reviewStagesInRunOrder: readonly ReviewStage[] = [
   "article",
   "promise",
-  "images",
   "narration",
+  "images",
   "thumbnail",
   "shorts",
 ];
@@ -42,9 +43,11 @@ export type Reviewer = (typeof reviewers)[number];
 export const reviewAnswerers = ["model", "agent", "person", "nobody"] as const;
 export type ReviewAnswerer = (typeof reviewAnswerers)[number];
 
+// Said to a person who never heard of MCP: a model Slopify pays per check, or an AI agent they
+// connected themselves (Settings → Agents), which answers for free.
 export const reviewerLabels: Readonly<Record<Reviewer, string>> = {
-  model: "Model",
-  agent: "External agent (MCP)",
+  model: "An AI model",
+  agent: "Your own AI agent",
 };
 
 export interface ReviewStageSettings {
@@ -185,7 +188,7 @@ export function reviewSettingsFromForm(
     ...(valid
       ? {}
       : {
-          retriesProblem: `Enter a number of redos between ${String(reviewRetriesMin)} and ${String(reviewRetriesMax)} under Pauses and checks → Advanced.`,
+          retriesProblem: `Enter a number of redos between ${String(reviewRetriesMin)} and ${String(reviewRetriesMax)} under Pauses and checks → Checker and stages.`,
         }),
   };
 }
