@@ -295,9 +295,9 @@ describe("Channels", () => {
       "primary",
     );
     await user.type(screen.getByLabelText("End screen text"), "!");
-    expect(
-      screen.getByRole("button", { name: "Save channel" }).getAttribute("data-variant"),
-    ).toBe("primary");
+    expect(screen.getByRole("button", { name: "Save channel" }).getAttribute("data-variant")).toBe(
+      "primary",
+    );
     expect(screen.getByText("Unsaved changes. Press Save channel to keep them.")).not.toBeNull();
     expect(screen.getByRole("link", { name: "Make a video" }).getAttribute("data-variant")).toBe(
       "secondary",

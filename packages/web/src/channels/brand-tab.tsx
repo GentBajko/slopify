@@ -220,11 +220,7 @@ export function BrandTab({
               options={fontOptions}
               onPick={set("captionFontId")}
             />
-            <Colour
-              label="Caption color"
-              value={kit.captionColor}
-              onChange={set("captionColor")}
-            />
+            <Colour label="Caption color" value={kit.captionColor} onChange={set("captionColor")} />
             <Colour
               label="Caption outline"
               value={kit.captionOutlineColor}

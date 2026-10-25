@@ -486,7 +486,9 @@ it("lists the names to check, prices a Say it as, and refuses one that would cha
   });
   expect(refused.status).toBe(400);
   expect(await refused.json()).toMatchObject({
-    detail: expect.stringContaining("Turn on Use your pronunciation list under All Narration settings"),
+    detail: expect.stringContaining(
+      "Turn on Use your pronunciation list under All Narration settings",
+    ),
   });
   expect(
     (await h.post("/say-it-as", { written: "", spoken: "x", acknowledgedHigh: 0 })).status,
