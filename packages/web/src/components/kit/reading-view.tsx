@@ -405,17 +405,18 @@ export function ReadingView({
           <span className="min-w-[9ch] text-small text-ink-3 tabular-nums" aria-live="polite">
             {count}
           </span>
-          <IconButton
-            label="Previous match"
-            size="small"
-            disabled={hits === 0}
-            onClick={() => step(-1)}
-          >
-            <ChevronUpIcon aria-hidden="true" strokeWidth={1.75} />
-          </IconButton>
-          <IconButton label="Next match" size="small" disabled={hits === 0} onClick={() => step(1)}>
-            <ChevronDownIcon aria-hidden="true" strokeWidth={1.75} />
-          </IconButton>
+          {/* Stepping through hits needs hits: the arrows appear with them rather than sitting
+              greyed out before anything is typed. */}
+          {hits === 0 ? null : (
+            <>
+              <IconButton label="Previous match" size="small" onClick={() => step(-1)}>
+                <ChevronUpIcon aria-hidden="true" strokeWidth={1.75} />
+              </IconButton>
+              <IconButton label="Next match" size="small" onClick={() => step(1)}>
+                <ChevronDownIcon aria-hidden="true" strokeWidth={1.75} />
+              </IconButton>
+            </>
+          )}
           {copyAll ? (
             <Button
               variant="quiet"

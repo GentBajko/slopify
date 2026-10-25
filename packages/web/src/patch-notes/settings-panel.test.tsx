@@ -50,7 +50,7 @@ describe("Settings → What's new", () => {
     // One h1 on the page: the notes' own title is the select's choice, not a second heading.
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getByText(/The version you are running\./)).not.toBeNull();
-    expect(screen.getByRole("searchbox", { name: "Search the patch notes" })).not.toBeNull();
+    expect(screen.getByRole("searchbox", { name: "Search the notes" })).not.toBeNull();
 
     const version = screen.getByLabelText("Version") as HTMLSelectElement;
     expect([...version.options].map((option) => option.text)).toEqual([
@@ -81,10 +81,7 @@ describe("Settings → What's new", () => {
         .getAllByRole("link")
         .map((link) => link.textContent),
     ).toEqual(["Highlights", "Fixes"]);
-    await userEvent.type(
-      screen.getByRole("searchbox", { name: "Search the patch notes" }),
-      "shorts",
-    );
+    await userEvent.type(screen.getByRole("searchbox", { name: "Search the notes" }), "shorts");
     expect(await screen.findByText("1 match")).not.toBeNull();
 
     await userEvent.selectOptions(screen.getByLabelText("Version"), "3.0.0");

@@ -35,6 +35,8 @@ export function PatchNoteReader({
     <ReadingView
       markdown={untitled ? withoutTitle(note.data ?? "") : (note.data ?? "")}
       label="Patch notes"
+      // Read on What's new: search and copy name them "the notes".
+      what="notes"
       anchorPrefix={`patch-${id}-`}
       {...(className === undefined ? {} : { className })}
     >

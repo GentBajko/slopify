@@ -603,6 +603,8 @@ Again.
     const user = userEvent.setup();
     const { container } = render(<ReadingView markdown={markdown} label="Article" />);
     const search = screen.getByLabelText("Search the article");
+    // Nothing to step through before a search: no greyed arrows at rest.
+    expect(screen.queryByRole("button", { name: "Next match" })).toBeNull();
     await user.type(search, "cleopatra");
     await waitFor(() => expect(screen.getByText("2 matches")).not.toBeNull());
     await user.click(screen.getByRole("button", { name: "Next match" }));
@@ -614,6 +616,7 @@ Again.
     await user.clear(search);
     await user.type(search, "steel");
     expect(await screen.findByText("No matches")).not.toBeNull();
+    expect(screen.queryByRole("button", { name: "Previous match" })).toBeNull();
   });
 
   it("hands copies to the caller, prefixes its anchors and scrolls in a named region", async () => {
