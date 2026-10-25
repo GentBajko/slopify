@@ -50,7 +50,7 @@ describe("Brand tab", () => {
     const user = userEvent.setup();
     const saved: unknown[] = [];
     renderRouted(<BrandTab channel={channel} />, routes(saved));
-    const colour = await screen.findByLabelText("Caption colour");
+    const colour = await screen.findByLabelText("Caption color");
     await user.type(colour, "#ff");
     expect(screen.getByText(/3 or 6 hex digits/)).not.toBeNull();
     expect((colour as HTMLInputElement).value).toBe("#ff");
@@ -59,7 +59,7 @@ describe("Brand tab", () => {
     );
     await user.type(colour, "0");
     await user.type(screen.getByLabelText("Caption outline"), "#fe0");
-    expect(screen.getByText(/Hard to read on the caption colour/)).not.toBeNull();
+    expect(screen.getByText(/Hard to read on the caption color/)).not.toBeNull();
     await user.clear(screen.getByLabelText("Caption outline"));
     await user.type(screen.getByLabelText("Caption outline"), "#000");
     await user.click(screen.getByRole("button", { name: "Save channel" }));

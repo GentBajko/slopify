@@ -85,6 +85,8 @@ export function ChannelRoute({
   const [deleting, setDeleting] = useState(false);
   // The cast member shown in the editor beside the cast: "new" while adding one.
   const [castSelected, setCastSelected] = useState<string | null>(null);
+  // Whether Name and look holds a change: its Save channel then takes the lime.
+  const [brandChanged, setBrandChanged] = useState(false);
   const remove = useMutation({
     mutationFn: () => deleteChannel(api, channelId),
     onSuccess: async () => {
@@ -146,9 +148,10 @@ export function ChannelRoute({
   // for an empty cast) its own Add to cast is the one button, so the header's goes.
   const addShown = tab === "cast" && cast.length > 0 && castSelected !== "new";
   // The tab's own next step wears the accent where it has one: Save channel on Name and look
-  // (its action bar), Add to cast on Cast, New schedule on Schedules, Add titles (pasted or
+  // once something changed (its action bar), Add to cast on Cast, New schedule on Schedules, Add titles (pasted or
   // ticked in a CSV) on Titles to avoid. Elsewhere it is Make a video.
-  const makeIsNext = tab !== "cast" && tab !== "brand" && tab !== "schedules" && tab !== "videos";
+  const makeIsNext =
+    tab !== "cast" && (tab !== "brand" || !brandChanged) && tab !== "schedules" && tab !== "videos";
   return (
     <div>
       <PageHeader
@@ -212,7 +215,11 @@ export function ChannelRoute({
       {channel ? (
         <>
           <TabPanel idPrefix="channel" id="brand" active={tab === "brand"}>
-            <BrandTab key={`${channel.id}:${String(channel.version)}`} channel={channel} />
+            <BrandTab
+              key={`${channel.id}:${String(channel.version)}`}
+              channel={channel}
+              onChanged={setBrandChanged}
+            />
           </TabPanel>
           <TabPanel idPrefix="channel" id="cast" active={tab === "cast"}>
             <CastTab
