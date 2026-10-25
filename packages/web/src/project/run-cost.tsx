@@ -133,7 +133,8 @@ function Panel({ cost }: { readonly cost: RunCost }): ReactElement {
   if (cost.calls === 0 && cost.byStage.length === 0)
     return (
       <p className="m-0 text-body text-ink-2">
-        Nothing has been spent yet. The cost of each provider call appears here as the run makes it.
+        Nothing has been spent yet. The cost of each call to an AI service appears here as the run
+        makes it.
       </p>
     );
   const onPlan = cost.byModel.some((row) => row.onPlan);
@@ -149,7 +150,9 @@ function Panel({ cost }: { readonly cost: RunCost }): ReactElement {
         <Stats className="[grid-template-columns:repeat(auto-fit,minmax(140px,max-content))] gap-x-12">
           <Stat
             value={usd(cost.cost)}
-            label={cost.unpriced > 0 ? "known cost, paid to providers" : "paid to providers"}
+            label={
+              cost.unpriced > 0 ? "known cost, paid to the AI services" : "paid to the AI services"
+            }
           />
           {cost.apiEquivalent === null ? null : (
             <Stat value={`~${usd(cost.apiEquivalent)}`} label="same work via API" />
