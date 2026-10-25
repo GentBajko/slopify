@@ -847,6 +847,17 @@
     width: 14px;
     height: 14px;
   }
+  /* A crumb is the way back, not a link in a sentence: it reads in the crumb's ink-3 whether the
+     page wrote it as a TextLink or a bare router Link, and darkens and underlines on hover. */
+  .sl-crumb a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .sl-crumb a:hover {
+    color: var(--color-ink);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
   .sl-bottomnav {
     display: none;
   }
