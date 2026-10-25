@@ -28,7 +28,7 @@ export function PauseControls({
     <div className="sl-fields">
       <Field
         label="Pause between sentences (seconds)"
-        help={`${range}; ${String(defaultSentencePauseSeconds)} is the default. 0 leaves the voice's own.`}
+        help={`${range}; ${String(defaultSentencePauseSeconds)} (the default) sounds natural, 0.5 to 0.8 like a relaxed audiobook. 0 leaves the voice's own.`}
         error={problem("sentencePauseSeconds")}
       >
         <Input
@@ -42,7 +42,7 @@ export function PauseControls({
       </Field>
       <Field
         label="Pause between paragraphs (seconds)"
-        help={`${range}; 0 (the default) keeps the sentence pause.`}
+        help={`${range}; 0 (the default) keeps the sentence pause. Try 0.8 to 1.2 for a slower read.`}
         error={problem("paragraphPauseSeconds")}
       >
         <Input
@@ -108,7 +108,7 @@ export function LevelSentencesSwitch({
       value={value}
       onChange={onChange}
       label="Level each sentence"
-      line="Holds each sentence to the ones around it, so no line jumps out or drops away. Needs Level the volume. Free, done on this computer."
+      line="Holds each sentence to the ones around it, so no line jumps out or drops away. Needs Level the volume and one voice, not speakers. Free, done on this computer."
     />
   );
 }
