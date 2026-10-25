@@ -22,7 +22,7 @@ From top to bottom:
 | **Search** | Opens the command palette (`Ctrl+K`). |
 | **Assistant** | Opens the assistant beside the page. See [Assistant](Assistant). |
 | **Help** | **Start the tour** (the interactive tutorial), **Tutorials** (the guides, whose page also has **Welcome screen**), **Keyboard shortcuts**, **What's new** (the patch notes) and **Check for updates**, with the version you are running. |
-| **Support** | **GitHub**, **Patreon** and **Buy Me a Coffee**, each opening in a new tab. |
+| **Support Slopify** | **GitHub**, **Patreon** and **Buy Me a Coffee**, each opening in a new tab. |
 
 ### On a phone
 

@@ -564,8 +564,8 @@ a 12px word. Top to bottom: the logo (goes Home); the lime Create key, 60px tall
 channels) and Settings; "● 2 running" while runs are active (the lamp and count over the word,
 to Home's Running); then, after a hairline at the foot, the update item (only while an update is
 ready, waiting, installing or failed, in words), Search (opens Ctrl+K), Assistant, Help (a menu)
-and Support (a menu). Nothing else goes in the rail, and nothing in it but the logo is a bare
-icon. The page fills the rest, up to 1680px.
+and Support Slopify (a menu; its word wraps onto two lines). Nothing else goes in the rail, and
+nothing in it but the logo is a bare icon. The page fills the rest, up to 1680px.
 
 Below 760px tall the rail closes up (42px items, an 18px icon, a 48px Create key), and its foot
 stays pinned to the bottom, so Help is always in view; in a window shorter still the
@@ -582,12 +582,13 @@ Templates and lit as Templates.
 
 **Help** holds Start the tour, Tutorials, Keyboard shortcuts (desktop only), What's new, a
 separator, then the update sentence and its one row (Check for updates, or Install update after
-"Installing restarts Slopify; anything running finishes first."). **Support** holds a "Support
-Slopify" heading over GitHub, Patreon and Buy Me a Coffee. The slogan and the version are not in
+"Installing restarts Slopify; anything running finishes first."), then Download diagnostics (the
+file a bug report needs, the same one Settings → About saves). **Support Slopify** holds a
+"Support Slopify" heading over GitHub, Patreon and Buy Me a Coffee. The slogan and the version are not in
 the rail; they are in Settings → About.
 
-**On a phone** (below 768px) a top bar holds the logo and wordmark, "● N running", Search and
-Help, all as words; Help also holds the Assistant, the update row and the support links, and
+**On a phone** (below 768px) a top bar holds the logo and wordmark (the logo alone at 380px and
+narrower), "● N running", Search and Help, all as words; Help also holds the Assistant, the update row and the support links, and
 turns accent-ink while an update is ready. A bottom bar of five, about 60px tall: Home,
 Projects, the lime Create in the centre, Prompts, and More (Templates, Calendar, Channels,
 Settings). Nothing is reachable only through Ctrl+K.

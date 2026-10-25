@@ -70,7 +70,7 @@ import { WhatsNewTour } from "@/whats-new/tour";
 // The shell (docs/design-system.md, Shell). From 768px up: a --rail-width (76px) rail of icons
 // with a word under each, on every page. Top to bottom: the logo, the lime Create key, the
 // destinations, "N running" while runs are active, and at the foot Search, Assistant, Help and
-// Support. Below 768px: a top bar (logo, Search, Help) and a bottom bar with Create in the
+// Support Slopify. Below 768px: a top bar (logo, Search, Help) and a bottom bar with Create in the
 // centre. Nothing else lives in the rail; a page's own controls stay on the page.
 //
 // `match` lists the paths a destination stays lit for.
@@ -309,7 +309,7 @@ function SupportMenu(): ReactElement {
     <Menu modal={false}>
       <MenuTrigger className="sl-navrail__item">
         <HandHeartIcon {...iconProps} />
-        <span>Support</span>
+        <span>Support Slopify</span>
       </MenuTrigger>
       <MenuContent side="right" align="end">
         <SupportRows />
