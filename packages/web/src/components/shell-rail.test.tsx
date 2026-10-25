@@ -66,7 +66,7 @@ describe("the rail", () => {
       ]),
     );
     expect(within(rail).queryByRole("combobox")).toBeNull();
-    for (const name of ["Search", "Assistant", "Help", "Support"])
+    for (const name of ["Search", "Assistant", "Help", "Support Slopify"])
       expect(within(rail).getByRole("button", { name })).not.toBeNull();
     // No donation rows, slogan, version or bare glyphs before anything is opened.
     expect(within(rail).queryByRole("link", { name: "GitHub" })).toBeNull();
@@ -151,8 +151,8 @@ describe("the rail", () => {
   it("opens Support on the three links, each in a new tab", async () => {
     const user = userEvent.setup();
     mount();
-    await user.click(await screen.findByRole("button", { name: "Support" }));
-    const menu = await screen.findByRole("menu", { name: "Support" });
+    await user.click(await screen.findByRole("button", { name: "Support Slopify" }));
+    const menu = await screen.findByRole("menu", { name: "Support Slopify" });
     expect(within(menu).getByText("Support Slopify")).not.toBeNull();
     const links = within(menu).getAllByRole("menuitem");
     expect(names(links)).toEqual(["GitHub", "Patreon", "Buy Me a Coffee"]);

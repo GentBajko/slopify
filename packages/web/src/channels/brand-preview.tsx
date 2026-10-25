@@ -5,7 +5,7 @@ import { fontUrl } from "@/subtitles/api";
 
 // A video frame drawn with the channel's look as it is being edited: a caption in the caption
 // font, colour and outline, and the end screen text in the title font and colour, so "Caption
-// outline" or "Title colour" can be seen before any video is made. The caption is drawn larger
+// outline" or "Title color" can be seen before any video is made. The caption is drawn larger
 // than a video's, so its font and outline read on a small frame. A setting left Not set draws
 // the usual white text with a dark outline, which a template may change.
 

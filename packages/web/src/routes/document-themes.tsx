@@ -17,7 +17,7 @@ import { Swatches, ThemeDetail, themeMeta } from "@/library/document-theme-parts
 import { EditorCrumb } from "@/library/editor-frame";
 import { ListSkeleton, LoadError, libraryListDetail, libraryRow } from "@/library/list-states";
 import { useLibraryItem } from "@/library/list-url";
-import { LibraryRowActions } from "@/library/row-actions";
+import { DuplicateLabel, LibraryRowActions } from "@/library/row-actions";
 import { sortLibrary, useLibrarySort } from "@/library/sort";
 import { SortMenu } from "@/library/sort-menu";
 import { Stamp } from "@/library/time";
@@ -26,7 +26,7 @@ import { refusalOf, useLibraryBulk } from "@/library/use-library-bulk";
 import { useLibraryTransfer } from "@/library/use-library-transfer";
 import { documentThemesQuery, keys } from "@/queries";
 
-// PDF themes: the looks a project's PDF can take, beside the selected one's colours, fonts and
+// PDF looks (saved as document themes): the looks a project's PDF can take, beside the selected one's colours, fonts and
 // page. Reached from Create's PDF choice and Settings → Production defaults. The built-ins
 // can't be changed, only copied; a saved theme is edited here and picked when a video is
 // created or in its settings, which each keep their own copy.
@@ -75,7 +75,7 @@ export function DocumentThemesRoute() {
   const transfer = useLibraryTransfer({
     section: "documentThemes",
     pack: (items) => ({ documentThemes: items }),
-    stem: "pdf-themes",
+    stem: "pdf-looks",
     noun: themeNoun,
     listKey: keys.documentThemes,
     existing: yours,
@@ -94,16 +94,16 @@ export function DocumentThemesRoute() {
             </Link>
           </EditorCrumb>
         }
-        title="PDF themes"
+        title="PDF looks"
         meta="How a project's PDF looks"
         actions={
           <>
             <TransferMenu
-              what="PDF themes"
+              what="PDF looks"
               disabled={data === undefined || transfer.importing}
               exports={[
                 {
-                  label: `Export all ${counted(yours.length, "theme", "themes")} of yours`,
+                  label: `Export all ${counted(yours.length, "look", "looks")} of yours`,
                   run: () => transfer.exportItems(yours),
                   disabled: yours.length === 0,
                 },
@@ -112,7 +112,7 @@ export function DocumentThemesRoute() {
               onFile={transfer.importFile}
             />
             <ButtonLink to="/document-themes/new" search={{}} variant="primary">
-              New theme
+              New look
             </ButtonLink>
           </>
         }
@@ -120,7 +120,7 @@ export function DocumentThemesRoute() {
 
       {listing.error === null ? null : (
         <LoadError
-          what="PDF themes"
+          what="PDF looks"
           message={listing.error.message}
           onRetry={() => void listing.refetch()}
         />
@@ -128,39 +128,44 @@ export function DocumentThemesRoute() {
 
       {data === undefined ? (
         listing.error === null ? (
-          <ListSkeleton label="PDF themes" />
+          <ListSkeleton label="PDF looks" />
         ) : null
       ) : (
-        <ListDetail
-          className={libraryListDetail}
-          list={
-            <div className="flex flex-col gap-6">
-              <section className="flex flex-col gap-2">
-                <SectionHead title="Your themes" as="h3" className="pb-0">
-                  {yours.length > 1 ? (
-                    <SortMenu what="your themes" sort={sort} onSort={setSort} />
-                  ) : null}
-                </SectionHead>
-                <HelpLine>
-                  Pick one when you create a video with a PDF, or in a project's settings. A project
-                  keeps its own copy, so a change here never alters a PDF already made.
-                </HelpLine>
-                {data.themes.length === 0 ? (
-                  <p className="m-0 text-small text-ink-2">
-                    No themes of your own yet. Copy a built-in below to start one.
-                  </p>
-                ) : (
-                  <SelectionArea selection={selection}>
-                    <LibraryBulkBar
-                      selection={selection}
-                      total={yours.length}
-                      noun={themeNoun}
-                      busy={bulk.busy}
-                      onDuplicate={() => bulk.duplicate(chosen)}
-                      onExport={() => transfer.exportItems(chosen)}
-                      onDelete={() => setConfirming(true)}
-                    />
-                    <List label="Your themes">
+        // The selection bar spans the list and the detail, so its line has room for every
+        // action once a look of yours is ticked, and ticking one never moves a row.
+        <SelectionArea selection={selection}>
+          {data.themes.length === 0 ? null : (
+            <LibraryBulkBar
+              selection={selection}
+              total={yours.length}
+              noun={themeNoun}
+              scope="Select all of yours"
+              busy={bulk.busy}
+              onDuplicate={() => bulk.duplicate(chosen)}
+              onExport={() => transfer.exportItems(chosen)}
+              onDelete={() => setConfirming(true)}
+            />
+          )}
+          <ListDetail
+            className={libraryListDetail}
+            list={
+              <div className="flex flex-col gap-6">
+                <section className="flex flex-col gap-2">
+                  <SectionHead title="Your looks" as="h3" className="pb-0">
+                    {yours.length > 1 ? (
+                      <SortMenu what="your looks" sort={sort} onSort={setSort} />
+                    ) : null}
+                  </SectionHead>
+                  <HelpLine>
+                    Pick one when you create a video with a PDF, or in a project's settings. A
+                    project keeps its own copy, so a change here never alters a PDF already made.
+                  </HelpLine>
+                  {data.themes.length === 0 ? (
+                    <p className="m-0 text-small text-ink-2">
+                      No looks of your own yet. Copy a built-in one below to start one.
+                    </p>
+                  ) : (
+                    <List label="Your looks">
                       {yours.map((theme) => (
                         <ListRow
                           key={theme.id}
@@ -195,15 +200,14 @@ export function DocumentThemesRoute() {
                                 </ButtonLink>
                               }
                               duplicate={
-                                <ButtonLink
+                                <Link
                                   to="/document-themes/new"
                                   search={{ from: theme.id }}
                                   aria-label={`Duplicate ${theme.name}`}
-                                  variant="quiet"
-                                  size="small"
+                                  className="no-underline"
                                 >
-                                  Duplicate
-                                </ButtonLink>
+                                  <DuplicateLabel />
+                                </Link>
                               }
                               onDelete={() => setDeleting(theme)}
                             />
@@ -211,95 +215,95 @@ export function DocumentThemesRoute() {
                         />
                       ))}
                     </List>
-                  </SelectionArea>
-                )}
-              </section>
+                  )}
+                </section>
 
-              <section className="flex flex-col gap-2">
-                <SectionHead title="Built in" as="h3" className="pb-0" />
-                <HelpLine>These can't be changed. Copy one to make a theme of your own.</HelpLine>
-                <List label="Built-in themes">
-                  {data.builtIns.map((theme) => (
-                    <ListRow
-                      key={theme.name}
-                      className={libraryRow}
-                      lead={<Swatches colors={theme.values.colors} />}
-                      title={theme.label}
-                      meta={themeMeta(theme.values)}
-                      selected={theme.name === shownBuiltIn?.name}
-                      onSelect={() => setPicked(theme.name)}
-                      actions={
-                        <ButtonLink
-                          to="/document-themes/new"
-                          search={{ from: theme.name }}
-                          aria-label={`Copy ${theme.label}`}
-                          variant="quiet"
-                          size="small"
-                        >
-                          Copy
-                        </ButtonLink>
-                      }
-                    />
-                  ))}
-                </List>
-              </section>
-            </div>
-          }
-          detail={
-            shownSaved !== undefined ? (
-              <ThemeDetail
-                name={shownSaved.name}
-                kicker="Your theme"
-                meta={
-                  <>
-                    Updated <Stamp iso={shownSaved.updatedAt} />
-                  </>
-                }
-                values={shownSaved.values}
-                action={
-                  <ButtonLink
-                    to="/document-themes/$themeId"
-                    params={{ themeId: shownSaved.id }}
-                    size="small"
-                  >
-                    Edit theme
-                  </ButtonLink>
-                }
-              />
-            ) : shownBuiltIn !== undefined ? (
-              <ThemeDetail
-                name={shownBuiltIn.label}
-                kicker="Built in"
-                meta="Built-in themes can't be changed. Copy one to make it yours."
-                values={shownBuiltIn.values}
-                action={
-                  <ButtonLink
-                    to="/document-themes/new"
-                    search={{ from: shownBuiltIn.name }}
-                    size="small"
-                  >
-                    Copy theme
-                  </ButtonLink>
-                }
-              />
-            ) : null
-          }
-        />
+                <section className="flex flex-col gap-2">
+                  <SectionHead title="Built in" as="h3" className="pb-0" />
+                  <HelpLine>These can't be changed. Copy one to make a look of your own.</HelpLine>
+                  <List label="Built-in looks">
+                    {data.builtIns.map((theme) => (
+                      <ListRow
+                        key={theme.name}
+                        className={libraryRow}
+                        lead={<Swatches colors={theme.values.colors} />}
+                        title={theme.label}
+                        meta={themeMeta(theme.values)}
+                        selected={theme.name === shownBuiltIn?.name}
+                        onSelect={() => setPicked(theme.name)}
+                        actions={
+                          <ButtonLink
+                            to="/document-themes/new"
+                            search={{ from: theme.name }}
+                            aria-label={`Copy ${theme.label}`}
+                            variant="quiet"
+                            size="small"
+                          >
+                            Copy
+                          </ButtonLink>
+                        }
+                      />
+                    ))}
+                  </List>
+                </section>
+              </div>
+            }
+            detail={
+              shownSaved !== undefined ? (
+                <ThemeDetail
+                  name={shownSaved.name}
+                  kicker="Your look"
+                  meta={
+                    <>
+                      Updated <Stamp iso={shownSaved.updatedAt} />
+                    </>
+                  }
+                  values={shownSaved.values}
+                  action={
+                    <ButtonLink
+                      to="/document-themes/$themeId"
+                      params={{ themeId: shownSaved.id }}
+                      size="small"
+                    >
+                      Edit look
+                    </ButtonLink>
+                  }
+                />
+              ) : shownBuiltIn !== undefined ? (
+                <ThemeDetail
+                  name={shownBuiltIn.label}
+                  kicker="Built in"
+                  meta="Built-in looks can't be changed. Copy one to make it yours."
+                  values={shownBuiltIn.values}
+                  action={
+                    <ButtonLink
+                      to="/document-themes/new"
+                      search={{ from: shownBuiltIn.name }}
+                      size="small"
+                    >
+                      Copy look
+                    </ButtonLink>
+                  }
+                />
+              ) : null
+            }
+          />
+        </SelectionArea>
       )}
 
       {remove.error === null ? null : (
-        <Callout tone="danger" title="The theme wasn't deleted." className="mt-4">
+        <Callout tone="danger" title="The look wasn't deleted." className="mt-4">
           {remove.error.message}
         </Callout>
       )}
 
       <ConfirmDialog
         open={deleting !== undefined}
-        title={`Delete the PDF theme “${deleting?.name ?? ""}”?`}
+        title={`Delete the PDF look “${deleting?.name ?? ""}”?`}
         // Document themes have no Trash (slices/trash supports projects, prompts, intros and
         // outros, templates and schedules), so this delete is final.
         consequence={deleteConsequence}
-        confirmLabel="Delete theme permanently"
+        confirmLabel="Delete look permanently"
         pending={remove.isPending}
         onConfirm={() => {
           if (deleting !== undefined) remove.mutate(deleting.id);
@@ -309,9 +313,9 @@ export function DocumentThemesRoute() {
 
       <ConfirmDialog
         open={confirming}
-        title={`Delete ${counted(chosen.length, "PDF theme", "PDF themes")} permanently?`}
-        consequence={`${chosen.length === 1 ? `“${chosen[0]?.name ?? ""}” is` : `These ${String(chosen.length)} themes are`} deleted permanently: PDF themes do not go to the trash, so they cannot be restored. Projects that used them keep their own copy of the settings.`}
-        confirmLabel={`Delete ${counted(chosen.length, "theme", "themes")} permanently`}
+        title={`Delete ${counted(chosen.length, "PDF look", "PDF looks")} permanently?`}
+        consequence={`${chosen.length === 1 ? `“${chosen[0]?.name ?? ""}” is` : `These ${String(chosen.length)} looks are`} deleted permanently: PDF looks do not go to the trash, so they cannot be restored. Projects that used them keep their own copy of the settings.`}
+        confirmLabel={`Delete ${counted(chosen.length, "look", "looks")} permanently`}
         cancelLabel="Keep them"
         pending={bulk.busy}
         onConfirm={() => {
@@ -324,7 +328,7 @@ export function DocumentThemesRoute() {
   );
 }
 
-const themeNoun = ["PDF theme", "PDF themes"] as const;
+const themeNoun = ["PDF look", "PDF looks"] as const;
 
 export const deleteConsequence =
-  "It is deleted permanently: PDF themes do not go to the trash, so it cannot be restored. Projects that used it keep their own copy of its settings.";
+  "It is deleted permanently: PDF looks do not go to the trash, so it cannot be restored. Projects that used it keep their own copy of its settings.";

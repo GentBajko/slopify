@@ -46,7 +46,7 @@ Each row's title line sums it up, for example "Says Dr. as Doctor · whole word"
 ### Use aliases in a video
 
 1. On Create, open the **Narration** row with **Change**, then **More narration settings**.
-2. Keep **Use narration aliases** on (the default for new drafts).
+2. Keep **Use your pronunciation list** on (the default for new drafts).
 3. Start the run.
 
 A project copies your Pronunciation list when it starts. Editing the list later never changes a started project until you open its **Edit settings** → **Narration** and press **Copy the list again** beside the aliases switch. Only the parts of the narration where a changed alias appears are made again.

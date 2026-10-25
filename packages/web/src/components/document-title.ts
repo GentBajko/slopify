@@ -51,7 +51,7 @@ export function titleForPath(pathname: string): string | undefined {
     [/^\/designs\/?$/, "Templates · Designs"],
     [/^\/designs\/[^/]+/, "Design"],
     [/^\/design-templates\/[^/]+/, "Design template"],
-    [/^\/document-themes/, "PDF themes"],
+    [/^\/document-themes/, "PDF looks"],
     [/^\/narration-aliases/, "Pronunciation"],
     [/^\/ab-results/, "What worked on YouTube"],
     [/^\/settings/, "Settings"],

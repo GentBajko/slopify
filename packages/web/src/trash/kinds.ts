@@ -30,7 +30,7 @@ export const kindFilters: readonly { readonly value: TrashKind; readonly label: 
 export const whatComesHere =
   "Deleted projects, prompts, intros and outros, templates, schedules and designs stay here for 30 days.";
 export const whatDoesNot =
-  "Channels, cast members, PDF themes and episode summaries are deleted permanently and never come here.";
+  "Channels, cast members, PDF looks and episode summaries are deleted permanently and never come here.";
 
 export function kindOf(item: TrashItem): string {
   if (item.kind === "entry" && item.detail !== null)

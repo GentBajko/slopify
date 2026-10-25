@@ -76,11 +76,15 @@ export function RailLink({
   exact = false,
   resetScroll,
   className,
+  onClick,
   children,
   "data-tour": tour,
 }: {
   readonly to: string;
   readonly search?: Readonly<Record<string, string>>;
+  // Runs before the router follows the link: Prompts' kinds end a search this way, even the
+  // kind already on show.
+  readonly onClick?: (() => void) | undefined;
   // False for a section of the same page: the page stays where it was scrolled to.
   readonly resetScroll?: boolean;
   // The interactive tutorial's target name.
@@ -98,6 +102,8 @@ export function RailLink({
     to,
     ...(search ? { search } : {}),
     ...(resetScroll === undefined ? {} : { resetScroll }),
+    // The router runs it before it follows the link.
+    ...(onClick === undefined ? {} : { onClick }),
     activeOptions: { exact, includeSearch: false },
     // No "active" class: aria-current is what lights an item (kit.css).
     activeProps: {},

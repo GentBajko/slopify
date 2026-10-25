@@ -89,7 +89,7 @@ describe("the library file", () => {
     ).toMatchObject({ ok: false, message: expect.stringContaining("newer Slopify") });
     expect(
       readLibraryFile(JSON.stringify(libraryFile({ aliases: [] }, now)), "documentThemes"),
-    ).toMatchObject({ ok: false, message: expect.stringContaining("holds no PDF themes") });
+    ).toMatchObject({ ok: false, message: expect.stringContaining("holds no PDF looks") });
   });
 });
 

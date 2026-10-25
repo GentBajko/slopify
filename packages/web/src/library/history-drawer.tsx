@@ -23,7 +23,7 @@ export const historyKeys = {
 };
 
 // The saved versions of one prompt or intro/outro, newest first. The detail beside the list and
-// the History drawer share the one query, so opening the drawer never refetches.
+// the Versions drawer share the one query, so opening the drawer never refetches.
 export function useLibraryHistory(item: LibraryItemKind, id: string) {
   const { api } = useApp();
   return useQuery({
@@ -40,7 +40,7 @@ export function useLibraryUsedBy(item: LibraryItemKind, id: string) {
   });
 }
 
-// Prompts → History: every saved version of one prompt or intro/outro, any two of them side by
+// Prompts → Versions: every saved version of one prompt or intro/outro, any two of them side by
 // side with the changed words marked, and Restore for an older one. A drawer, so the list it
 // was opened from stays in view; what uses the item is in the detail beside the list.
 export function HistoryDrawer({
@@ -83,14 +83,14 @@ export function HistoryDrawer({
   return (
     <Drawer
       open
-      title={`History of ${name}`}
+      title={`Versions of ${name}`}
       onClose={onClose}
       className="sm:w-[min(1080px,100vw)]"
     >
       <div className="flex flex-col gap-8">
         {history.error === null ? null : (
           <p className="m-0 text-body text-danger">
-            {`The history couldn't be read: ${history.error.message}`}
+            {`The versions couldn't be read: ${history.error.message}`}
           </p>
         )}
         <section className="flex flex-col gap-3">
@@ -147,12 +147,12 @@ export function HistoryDrawer({
         </section>
 
         <section className="flex flex-col gap-2">
-          <SectionHead title="Versions" as="h3" />
+          <SectionHead title="Every version" as="h3" />
           <HelpLine>
             Restore saves an older version again as the newest, so nothing after it is lost.
             Projects already made keep their text.
           </HelpLine>
-          <List label={`Versions of ${name}`}>
+          <List label={`Every version of ${name}`}>
             {versions.map((one) => (
               <ListRow
                 key={one.version}

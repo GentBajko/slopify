@@ -1,10 +1,10 @@
 # Keywords Slopify fills
 
-Most `{{keywords}}` in a prompt are yours: each becomes a field on Create that you fill in once per video. The keywords on this page are different. Slopify fills them itself, so they never become fields, and each one is written with the `Slopify_` prefix, like `{{Slopify_Title}}` or `{{Slopify_Thumbnail_Text}}`.
+Most `{{keywords}}` in a prompt are yours: each becomes a question on Create that you answer once per video. The keywords on this page are different. Slopify fills them itself, so they never become questions, and each one is written with the `Slopify_` prefix, like `{{Slopify_Title}}` or `{{Slopify_Thumbnail_Text}}`.
 
 The whole `Slopify_` prefix is Slopify's. `{{Title}}`, `{{Channel}}` and `{{Date}}` stay ordinary keywords of your own, so no prompt you already have changes meaning.
 
-In the prompt editor, the **Insert** bar above the text lists the keywords the prompt's kind can use; click one to put it where the cursor is. Hover a keyword in the bar or in the text to see what it fills in, an example, when it exists, which prompts can use it and what it costs.
+In the prompt editor, **Insert a keyword Slopify fills** above the text lists the keywords the prompt's kind can use, each written as it goes in (`{{Slopify_Title}}`) over what it fills in and, for the ones made by an AI call, that call; pick one to put it where the cursor is. Hover a keyword in the text to see what it fills in, an example, when it exists, which prompts can use it and what it costs.
 
 ## How they work
 
@@ -23,14 +23,14 @@ Free: no AI call. Copied when the run starts, so later changes to the channel or
 | --- | --- | --- | --- |
 | `{{Slopify_Title}}` | The video's title, with its keywords filled in | How Lighthouses Were Built on Bare Rock | Every prompt, intro and outro |
 | `{{Slopify_Channel}}` | The project's channel name | Quiet Histories | Every prompt, intro and outro |
-| `{{Slopify_Series}}` | The channel's series brief (Channels → Edit) | Calm histories of how things were made | Every prompt, intro and outro |
+| `{{Slopify_Series}}` | The channel's series brief (the channel's page, Name and look) | Calm histories of how things were made | Every prompt, intro and outro |
 | `{{Slopify_Links}}` | The channel's links, one per line | Website: https://example.com | Every prompt, intro and outro |
 | `{{Slopify_Previous_Video}}` | Title and link of the channel's previous video in the same series | The Canal Age – https://youtu.be/abc123 | Every prompt, intro and outro |
 | `{{Slopify_Next_Video}}` | Title of the next planned video in the same series and posting plan line | Tea Clippers and the Race Home | Every prompt, intro and outro |
 | `{{Slopify_Episode}}` | This video's number in its series on the channel | 7 | Every prompt, intro and outro |
 | `{{Slopify_Cast}}` | The channel's cast members with their descriptions | Mira: a keeper's daughter who kept the logbook | Every prompt, intro and outro |
 | `{{Slopify_Covered_Before}}` | The titles the channel already made, so the article avoids repeating them | The Canal Age | Every prompt, intro and outro |
-| `{{Slopify_Brand}}` | The brand kit's caption and title colours and font names | Colours: #F5C542. Fonts: Barlow. | Image and Thumbnail prompts |
+| `{{Slopify_Brand}}` | The brand kit's caption and title colors and font names | Colors: #F5C542. Fonts: Barlow. | Image and Thumbnail prompts |
 | `{{Slopify_Release_Date}}` | The release date from the posting plan, read when the step runs | Thursday 22 October 2026 | Every prompt, intro and outro |
 | `{{Slopify_Chapters}}` | The article's chapter titles, one per line | The first lamps | Every prompt except Article and Script |
 | `{{Slopify_Duration}}` | The finished video's length | 42 min 10 s | Description, Shorts, Review and Post prompts |
@@ -63,7 +63,7 @@ Written for each picture by one AI call that reads the article, like the scenes 
 | --- | --- | --- | --- |
 | `{{Slopify_Scene}}` | What this picture shows: a moment of the article | A keeper climbs the spiral stair at dusk | Image and Thumbnail prompts |
 | `{{Slopify_Setting}}` | The era and place of that moment, so the picture stays period-correct | A rocky Scottish coast, early 19th century | Image and Thumbnail prompts |
-| `{{Slopify_Mood}}` | The feeling of that moment, for light and colour | tense | Image and Thumbnail prompts |
+| `{{Slopify_Mood}}` | The feeling of that moment, for light and color | tense | Image and Thumbnail prompts |
 | `{{Slopify_Appearance}}` | How the video's subject and the characters in the picture look, looked up on the web | Mira: a wool coat and oilskin hat, a brass lamp | Image and Thumbnail prompts |
 
 - `{{Slopify_Scene}}`, `{{Slopify_Setting}}` and `{{Slopify_Mood}}` turn scenes on for the picture whose prompt uses them, even with Images → **Scenes from the article** off. That costs one AI call per run, shared by every picture.

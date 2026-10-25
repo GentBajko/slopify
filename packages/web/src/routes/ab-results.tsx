@@ -5,14 +5,15 @@ import { CopyIcon } from "lucide-react";
 import type { ReactElement } from "react";
 import { readAbResults } from "@/api";
 import { useApp } from "@/app-context";
+import { channelsQuery } from "@/channels/api";
 import { Button } from "@/components/kit/button";
 import { PageHeader } from "@/components/kit/layout";
 import { LoadingBlock, QueryState } from "@/components/kit/query-state";
 import { useToast } from "@/components/kit/toast";
 import { EditorCrumb } from "@/library/editor-frame";
 
-// What worked on YouTube (a channel's page links here): every finished A/B test the extension
-// read from Studio, the winner first, with each variant's share of watch time. Copy as prompt
+// What worked on YouTube (a channel's page links here): every finished title and thumbnail test
+// the extension read from Studio, the winner first, with each variant's share of watch time. Copy as prompt
 // notes turns them into a short summary to paste into the prompts that write titles and
 // thumbnails; nothing changes a prompt by itself. With no finished test there is nothing to
 // copy, so the button is not drawn.
@@ -81,16 +82,19 @@ export function AbResultsRoute(): ReactElement {
     queryFn: () => readAbResults(api),
   });
   const list = results.data ?? [];
+  // The way back is the channel page this is opened from: Channels with several, and with one,
+  // where Settings → Your channel goes (the rail lights Settings for it).
+  const several = (useQuery(channelsQuery(api)).data?.length ?? 0) > 1;
   return (
     <div>
       <PageHeader
         crumb={
           <EditorCrumb>
-            <Link to="/channels">Channels</Link>
+            <Link to="/channels">{several ? "Channels" : "Your channel"}</Link>
           </EditorCrumb>
         }
         title="What worked on YouTube"
-        meta="Finished A/B tests, the winner first"
+        meta="Which title or thumbnail won each test YouTube ran, the winner first"
         actions={
           list.length === 0 ? undefined : (
             <Button
@@ -118,14 +122,15 @@ export function AbResultsRoute(): ReactElement {
       </p>
       <QueryState
         query={results}
-        what="The A/B results"
-        loading={<LoadingBlock label="Loading the A/B results…" rows={3} rowClassName="h-14" />}
+        what="The test results"
+        loading={<LoadingBlock label="Loading the test results…" rows={3} rowClassName="h-14" />}
       >
         {(loaded) =>
           loaded.length === 0 ? (
-            <p className="m-0 text-small text-ink-2">
-              No finished A/B tests yet. Start one from a project's Video section (On YouTube → A/B
-              test); its result shows here once YouTube Studio has one.
+            <p className="m-0 max-w-[var(--measure)] text-small text-ink-2">
+              No finished tests yet. Once a project's video is on YouTube, start one from its
+              YouTube section: under YouTube links, open Test other titles and thumbnails. Its
+              result shows here once YouTube Studio has one.
             </p>
           ) : (
             <ResultList results={loaded} />

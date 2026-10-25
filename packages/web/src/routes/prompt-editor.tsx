@@ -4,12 +4,8 @@ import {
   type PromptDraft,
   type PromptKind,
 } from "@app/slices/library/model.js";
-import { defaultShortsPrompt } from "@app/slices/shorts/model.js";
-import { defaultPostPrompt } from "@app/slices/social/post-prompt.js";
-import { defaultDescriptionPrompt } from "@app/slices/youtube/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ChevronDownIcon } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import type { FieldError } from "@/api";
 import { removePrompt, savePrompt, setPromptPhotorealistic } from "@/api";
@@ -24,11 +20,11 @@ import { Field, HelpLine, Input } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
 import { ButtonLink } from "@/components/kit/link";
-import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/kit/menu";
 import { Switch } from "@/components/kit/switch";
 import { LabelledSwitch } from "@/components/labelled-switch";
 import { useLeaveWhenSaved } from "@/components/saved-tick";
 import { SlotBody } from "@/components/slot-body";
+import { StartFromExample } from "@/components/start-from-example";
 import type { HelpId } from "@/help/catalog";
 import {
   bodyProblems,
@@ -39,7 +35,7 @@ import {
   slotNames,
 } from "@/lib/draft-lint";
 import { usePromptDraft } from "@/lib/form-drafts";
-import { narrationStarter } from "@/lib/narration-starter";
+import { exampleGroups, type PromptExample } from "@/lib/prompt-examples";
 import {
   kindAbout,
   kindLabel,
@@ -58,13 +54,6 @@ import {
 } from "@/library/editor-frame";
 import { promptsQuery } from "@/queries";
 import { useTutorialEvent, useTutorialProgress } from "@/tutorial/context";
-
-// A text the body can start from: a saved prompt of the same kind, or the built-in wording.
-interface Example {
-  readonly key: string;
-  readonly name: string;
-  readonly body: string;
-}
 
 // One prompt: a name, its kind on one line (changed on request), and its instructions, whose
 // `{{keywords}}` are listed beside them as they are typed. Every rule the Save obeys is the
@@ -105,7 +94,7 @@ export function PromptEditorRoute({
   // Where a successful save goes: back to the list, or on to Create with the prompt picked.
   const [then, setThen] = useState<"leave" | "make">("leave");
   const [deleting, setDeleting] = useState(false);
-  const [replacing, setReplacing] = useState<Example | undefined>(undefined);
+  const [replacing, setReplacing] = useState<PromptExample | undefined>(undefined);
   const [kindOpen, setKindOpen] = useState(false);
   // A missing name or text is said only once it matters: after the name was left empty, or
   // after a press of Save.
@@ -247,14 +236,13 @@ export function PromptEditorRoute({
     );
   }
 
-  const starter = starterOf(draft.kind);
-  const examples: readonly Example[] = [
-    ...(starter === undefined ? [] : [{ key: "starter", name: starter.label, body: starter.body }]),
-    ...(rows ?? [])
-      .filter((prompt) => prompt.kind === draft.kind && prompt.id !== promptId)
-      .map((prompt) => ({ key: prompt.id, name: prompt.name, body: prompt.body })),
-  ];
-  const pickExample = (example: Example): void => {
+  // Every kind has texts to start from, saved prompts of it or not: Slopify's own wording and the
+  // starter templates' prompts (built in), then your own saved ones of the kind.
+  const yours = (rows ?? [])
+    .filter((prompt) => prompt.kind === draft.kind && prompt.id !== promptId)
+    .map((prompt) => ({ key: prompt.id, name: prompt.name, body: prompt.body }));
+  const examples = exampleGroups(draft.kind, yours);
+  const pickExample = (example: PromptExample): void => {
     if (draft.body.trim() !== "" && draft.body !== example.body) setReplacing(example);
     else editBody(example.body);
   };
@@ -274,7 +262,7 @@ export function PromptEditorRoute({
 
       <div
         data-tour="prompt-editor"
-        className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]"
+        className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,80ch)_320px]"
       >
         <div className={`${editorSurface} flex min-w-0 flex-col gap-4`}>
           <div className="flex max-w-[80ch] flex-wrap items-start gap-4">
@@ -344,23 +332,7 @@ export function PromptEditorRoute({
                   className="-my-1"
                 />
               </span>
-              {examples.length === 0 ? null : (
-                <Menu>
-                  <MenuTrigger asChild>
-                    <Button variant="quiet" size="small">
-                      Start from an example
-                      <ChevronDownIcon aria-hidden="true" />
-                    </Button>
-                  </MenuTrigger>
-                  <MenuContent align="end">
-                    {examples.map((example) => (
-                      <MenuItem key={example.key} onSelect={() => pickExample(example)}>
-                        {example.name}
-                      </MenuItem>
-                    ))}
-                  </MenuContent>
-                </Menu>
-              )}
+              <StartFromExample groups={examples} onPick={pickExample} />
             </div>
             {/* The open kind choice says the same under it. */}
             {kindOpen ? null : <HelpLine className="mb-1">{kindAbout(draft.kind)}</HelpLine>}
@@ -518,19 +490,6 @@ export function nameFromText(body: string): string {
     .join(" ")
     .replace(/[\s.,:;!?…–—-]+$/u, "")
     .slice(0, nameMax);
-}
-
-// The kinds with a built-in text to start from: the documentary delivery cues, and the wording
-// the YouTube description, the shorts and the posts use when a project picks no prompt.
-export function starterOf(
-  kind: PromptKind,
-): { readonly label: string; readonly body: string } | undefined {
-  if (kind === "narration")
-    return { label: "Documentary delivery (built in)", body: narrationStarter };
-  if (kind === "description") return { label: "Built-in wording", body: defaultDescriptionPrompt };
-  if (kind === "shorts") return { label: "Built-in wording", body: defaultShortsPrompt };
-  if (kind === "post") return { label: "Built-in wording", body: defaultPostPrompt };
-  return undefined;
 }
 
 function Notice({ kind, children }: { readonly kind: PromptKind; readonly children: string }) {

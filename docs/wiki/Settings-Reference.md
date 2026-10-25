@@ -126,7 +126,7 @@ Agents read and change these with `get_settings` and `update_settings`, and chec
 
 ### PDF look
 
-"The fonts, colors and page layout of the PDFs Slopify makes." **Edit PDF looks** opens the PDF themes. See [Document Themes](Document-Themes).
+"The fonts, colors and page layout of the PDFs Slopify makes." **Edit PDF looks** opens the PDF looks. See [PDF looks](Document-Themes).
 
 ### Template samples
 
@@ -221,7 +221,7 @@ After importing, add your keys again on Keys & services. You can also run **Expo
 
 ## Trash
 
-"Deleted things, kept for 30 days." Deleted projects, prompts, intros and outros, templates, schedules and designs stay here for 30 days. Channels, cast members, PDF themes and episode summaries are deleted permanently and never come here.
+"Deleted things, kept for 30 days." Deleted projects, prompts, intros and outros, templates, schedules and designs stay here for 30 days. Channels, cast members, PDF looks and episode summaries are deleted permanently and never come here.
 
 | Control | What it does |
 |---|---|

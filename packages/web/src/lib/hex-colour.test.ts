@@ -16,9 +16,9 @@ describe("hex colours", () => {
   it("measures contrast and warns only below the minimum", () => {
     expect(contrastRatio("#000", "#fff")).toBeCloseTo(21, 0);
     expect(contrastRatio("#777", "#12")).toBeUndefined();
-    expect(contrastWarning("#000000", "#ffffff", "the page colour", 4.5)).toBeUndefined();
-    expect(contrastWarning("#eeeeee", "#ffffff", "the page colour", 4.5)).toMatch(
-      /^Hard to read on the page colour: contrast 1\.2:1/,
+    expect(contrastWarning("#000000", "#ffffff", "the page color", 4.5)).toBeUndefined();
+    expect(contrastWarning("#eeeeee", "#ffffff", "the page color", 4.5)).toMatch(
+      /^Hard to read on the page color: contrast 1\.2:1/,
     );
   });
 });

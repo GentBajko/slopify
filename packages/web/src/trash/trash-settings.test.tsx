@@ -40,10 +40,10 @@ it("lists each item with its kind, deletion date and days left, and real buttons
 it("says so when the trash is empty, and what never comes here", async () => {
   renderApp(<TrashSettings />, testDeps({ "GET /api/trash": jsonAnswer({ items: [] }) }));
   expect(await screen.findByText("The trash is empty")).not.toBeNull();
-  // F6: not "anything you delete": channels, cast, PDF themes and summaries are permanent.
+  // F6: not "anything you delete": channels, cast, PDF looks and summaries are permanent.
   expect(screen.queryByText(/Anything you delete/)).toBeNull();
   expect(
-    screen.getByText(/Channels, cast members, PDF themes and episode summaries/),
+    screen.getByText(/Channels, cast members, PDF looks and episode summaries/),
   ).not.toBeNull();
   // Nothing to restore or empty, so neither button is drawn.
   expect(screen.queryByRole("button", { name: "Empty trash" })).toBeNull();

@@ -3,7 +3,7 @@ import type { AiDisclosureSetting } from "@app/slices/studio/disclosure.js";
 import { aiDisclosureLabels } from "@app/slices/studio/disclosure.js";
 import type { ChannelLink } from "@app/slices/youtube/placeholders.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactElement, useState } from "react";
+import { type ReactElement, useEffect, useState } from "react";
 import { readChannelLinks } from "@/api";
 import { useApp } from "@/app-context";
 import { ColourInput } from "@/components/colour-input";
@@ -61,8 +61,16 @@ function draftOf(brand: BrandKit): Draft {
 // beside a frame drawn with it, its intro, outro, PDF look and ambient sound, and folded
 // below, its named links and how it posts (the YouTube AI disclosure, the X subscription and
 // its accounts). Every look field is optional: Not set leaves the template's own setting alone.
-// One Save channel saves all of it.
-export function BrandTab({ channel }: { readonly channel: Channel }): ReactElement {
+// One Save channel saves all of it, and waits for a change: its bar is there only once something
+// differs from the saved channel, and `onChanged` tells the page, whose Make a video wears the
+// lime until then.
+export function BrandTab({
+  channel,
+  onChanged,
+}: {
+  readonly channel: Channel;
+  readonly onChanged?: ((changed: boolean) => void) | undefined;
+}): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
   const notify = useToast();
@@ -146,6 +154,18 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
     ...(themes.data?.themes ?? []).map((theme) => ({ value: theme.id, label: theme.name })),
   ];
   const accounts = accountCount(posting);
+  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+  const changed =
+    name !== channel.name ||
+    brief !== channel.seriesBrief ||
+    !same(kit, draftOf(channel.brand)) ||
+    !same(bed, channelBedForm(channel.brand)) ||
+    disclosure !== channel.aiDisclosure ||
+    posting.xTier !== (channel.xTier ?? "free") ||
+    !same(posting.accounts, channel.socialAccounts ?? {}) ||
+    (linksDraft !== undefined && !same(linksDraft, channel.brand.links ?? legacyLinks.data ?? []));
+  useEffect(() => onChanged?.(changed), [changed, onChanged]);
+  const barShown = changed || save.isPending || save.error !== null;
   return (
     <form
       aria-label="Name and look"
@@ -200,11 +220,7 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
               options={fontOptions}
               onPick={set("captionFontId")}
             />
-            <Colour
-              label="Caption colour"
-              value={kit.captionColor}
-              onChange={set("captionColor")}
-            />
+            <Colour label="Caption color" value={kit.captionColor} onChange={set("captionColor")} />
             <Colour
               label="Caption outline"
               value={kit.captionOutlineColor}
@@ -212,7 +228,7 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
               contrast={contrastWarning(
                 kit.captionColor,
                 kit.captionOutlineColor,
-                "the caption colour",
+                "the caption color",
                 3,
               )}
             />
@@ -222,7 +238,7 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
               options={fontOptions}
               onPick={set("titleFontId")}
             />
-            <Colour label="Title colour" value={kit.titleColor} onChange={set("titleColor")} />
+            <Colour label="Title color" value={kit.titleColor} onChange={set("titleColor")} />
             <Field label="End screen text" help="Shown over the last 5 seconds.">
               <Input
                 value={kit.endScreenText}
@@ -297,32 +313,35 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
           </div>
         </Fold>
       </div>
-      <ActionBar
-        status={
-          <StatusSlot tone={save.error ? "error" : "info"}>
-            {save.error?.message ?? (save.isPending ? "Saving…" : undefined)}
-          </StatusSlot>
-        }
-      >
-        <Button
-          type="submit"
-          variant="primary"
-          disabled={
-            save.isPending || name.trim() === "" || bedSave.blocked || badColour || badAccount
-          }
-          disabledReason={
-            name.trim() === ""
-              ? "Give the channel a name"
-              : badColour
-                ? "Fix the colour marked above"
-                : badAccount
-                  ? "Fix the account name marked under Posting"
-                  : "Fix the ambient sound settings above"
+      {barShown ? (
+        <ActionBar
+          status={
+            <StatusSlot tone={save.error ? "error" : "info"}>
+              {save.error?.message ??
+                (save.isPending ? "Saving…" : "Unsaved changes. Press Save channel to keep them.")}
+            </StatusSlot>
           }
         >
-          Save channel
-        </Button>
-      </ActionBar>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={
+              save.isPending || name.trim() === "" || bedSave.blocked || badColour || badAccount
+            }
+            disabledReason={
+              name.trim() === ""
+                ? "Give the channel a name"
+                : badColour
+                  ? "Fix the color marked above"
+                  : badAccount
+                    ? "Fix the account name marked under Posting"
+                    : "Fix the ambient sound settings above"
+            }
+          >
+            Save channel
+          </Button>
+        </ActionBar>
+      ) : null}
     </form>
   );
 }

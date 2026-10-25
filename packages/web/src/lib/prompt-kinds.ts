@@ -21,9 +21,34 @@ export function kindLabel(kind: PromptKind): string {
     case "review":
       return "Review";
     case "script":
-      return "Script (speakers)";
+      return "Script";
     case "post":
       return "Post";
+  }
+}
+
+// What a prompt of the kind writes, in a few words: the second line of each kind in the Prompts
+// list, so a name like "Review" says what it is before it is clicked.
+export function kindWrites(kind: PromptKind): string {
+  switch (kind) {
+    case "article":
+      return "The text the narrator reads";
+    case "image":
+      return "The pictures in the video";
+    case "thumbnail":
+      return "The video's thumbnail";
+    case "narration":
+      return "Pauses and stress";
+    case "description":
+      return "Description, chapters, tags";
+    case "shorts":
+      return "Moments cut as shorts";
+    case "review":
+      return "What the AI checks";
+    case "script":
+      return "Lines for several voices";
+    case "post":
+      return "Posts for social sites";
   }
 }
 

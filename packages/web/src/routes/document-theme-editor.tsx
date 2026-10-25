@@ -11,7 +11,8 @@ import { useApp } from "@/app-context";
 import { EditorActions } from "@/components/editor-actions";
 import { EditorSkeleton } from "@/components/editor-states";
 import { ConfirmDialog } from "@/components/kit/dialog";
-import { Field, Input } from "@/components/kit/field";
+import { Field, HelpLine, Input } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
 import { ButtonLink, FileLink } from "@/components/kit/link";
 import { SectionHead } from "@/components/kit/section-head";
@@ -73,7 +74,7 @@ export function DocumentThemeEditorRoute({
               ? source.name
               : from === undefined
                 ? freeName(
-                    "My theme",
+                    "My look",
                     (data?.themes ?? []).map((theme) => theme.name),
                   )
                 : `${"label" in source ? source.label : source.name} copy`,
@@ -124,7 +125,7 @@ export function DocumentThemeEditorRoute({
   if (listing.error !== null) return <Notice>{listing.error.message}</Notice>;
   if (data === undefined) return <EditorSkeleton />;
   if (draft === undefined)
-    return <Notice>That theme is gone. It may have been deleted in another tab.</Notice>;
+    return <Notice>That look is gone. It may have been deleted in another tab.</Notice>;
 
   const edit = (next: Draft, field: string): void => {
     setEdited(next);
@@ -142,7 +143,7 @@ export function DocumentThemeEditorRoute({
   const flagged = groupStates.filter((group) => group.problems > 0).map((group) => group.title);
   const blocked =
     draft.name.trim() === ""
-      ? "Give the theme a name."
+      ? "Give the look a name."
       : problems.length > 0
         ? flagged.length === 0
           ? "Fix the highlighted settings first."
@@ -155,10 +156,10 @@ export function DocumentThemeEditorRoute({
       <PageHeader
         crumb={
           <EditorCrumb>
-            <Link to="/document-themes">PDF themes</Link>
+            <Link to="/document-themes">PDF looks</Link>
           </EditorCrumb>
         }
-        title={themeId === undefined ? "New PDF theme" : "Edit PDF theme"}
+        title={themeId === undefined ? "New PDF look" : "Edit PDF look"}
       />
       {/* The section list joins the form and the preview only where the form keeps room for
           two settings a row; on a narrower window the sections' own titles are the list. */}
@@ -221,19 +222,24 @@ export function DocumentThemeEditorRoute({
                   {group.title}
                   <GroupMarks problems={state?.problems ?? 0} changed={state?.changed ?? 0} />
                 </summary>
-                <div className="grid grid-cols-[minmax(0,1fr)] gap-x-5 gap-y-4 pb-4 sm:grid-cols-2">
-                  {group.fields.map((field) => (
-                    <Setting
-                      key={field.path.join(".")}
-                      field={field}
-                      theme={draft.values}
-                      original={base?.values ?? draft.values}
-                      problem={problemFor(problems, field.path)}
-                      onChange={(values) => {
-                        edit({ ...draft, values }, fieldKey(field.path));
-                      }}
-                    />
-                  ))}
+                {/* One line says what the section's settings place and in what unit, so a
+                    setting whose label says the rest needs nothing beside it. */}
+                <div className="flex flex-col gap-3 pb-4" {...helpScope}>
+                  <HelpLine>{group.help}</HelpLine>
+                  <div className="grid grid-cols-[minmax(0,1fr)] gap-x-5 gap-y-4 sm:grid-cols-2">
+                    {group.fields.map((field) => (
+                      <Setting
+                        key={field.path.join(".")}
+                        field={field}
+                        theme={draft.values}
+                        original={base?.values ?? draft.values}
+                        problem={problemFor(problems, field.path)}
+                        onChange={(values) => {
+                          edit({ ...draft, values }, fieldKey(field.path));
+                        }}
+                      />
+                    ))}
+                  </div>
                 </div>
               </details>
             );
@@ -272,7 +278,7 @@ export function DocumentThemeEditorRoute({
         open={deleting}
         title={`Delete "${draft.name}"?`}
         consequence="Projects that used it keep their own copy of its settings."
-        confirmLabel="Delete theme"
+        confirmLabel="Delete look"
         pending={remove.isPending}
         onConfirm={() => {
           if (themeId !== undefined) remove.mutate(themeId);
@@ -341,7 +347,7 @@ function Preview({ values }: { readonly values: DocumentTheme | undefined }) {
           ? `The preview couldn't be made: ${failure ?? "Slopify didn't answer."} Change a setting to try again.`
           : state === "undrawn"
             ? "The preview can't be drawn in this browser. Full size opens the same PDF in a new tab."
-            : "A sample article with this theme. Your projects use their own text and thumbnail.";
+            : "A sample article with this look. Your projects use their own text and thumbnail.";
 
   return (
     <div className={editorAside}>
@@ -362,7 +368,7 @@ function Preview({ values }: { readonly values: DocumentTheme | undefined }) {
       <div className="max-h-[calc(100vh-220px)] min-h-[320px] overflow-y-auto rounded-media bg-sunken p-3">
         <PdfPages
           data={pdf?.bytes}
-          label="The sample article laid out with this theme"
+          label="The sample article laid out with this look"
           onDrawn={drawn}
         />
       </div>
@@ -382,7 +388,7 @@ function Preview({ values }: { readonly values: DocumentTheme | undefined }) {
 
 function Notice({ children }: { readonly children: string }) {
   return (
-    <EditorProblem back={<Link to="/document-themes">Back to PDF themes</Link>}>
+    <EditorProblem back={<Link to="/document-themes">Back to PDF looks</Link>}>
       {children}
     </EditorProblem>
   );

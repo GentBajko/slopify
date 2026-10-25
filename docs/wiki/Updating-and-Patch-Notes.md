@@ -107,7 +107,7 @@ To open the notes for the version you are running, go to Settings → **About** 
 ## Tips
 
 - Keep Slopify running overnight? Updates wait for running work, so you can press **Install update** at any time and it installs when the current video is done.
-- Settings → **About** has the same explanation of updates. GitHub, Patreon and Buy Me a Coffee are under **Support** at the foot of the rail.
+- Settings → **About** has the same explanation of updates. GitHub, Patreon and Buy Me a Coffee are under **Support Slopify** at the foot of the rail.
 - Updating doesn't touch your projects folder. For extra safety before a big update, use **Export everything** or turn on [Backups](Backups).
 
 ## Related pages

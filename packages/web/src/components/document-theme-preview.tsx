@@ -58,14 +58,14 @@ export function DocumentThemePreview({
 
   const status =
     values === undefined
-      ? "This theme has no preview: it is retired. Pick another theme to see it."
+      ? "This look has no preview: it is retired. Pick another look to see it."
       : state === "busy"
         ? "Laying out the sample article…"
         : state === "failed"
           ? `The preview couldn't be made: ${failure ?? "Slopify didn't answer."} Close and press Preview again.`
           : state === "undrawn"
-            ? "The preview can't be drawn in this browser. The theme still makes the PDF as usual."
-            : `The sample article takes ${String(pages ?? 0)} page${pages === 1 ? "" : "s"} with this theme. Your project uses its own text, so its count differs.`;
+            ? "The preview can't be drawn in this browser. The look still makes the PDF as usual."
+            : `The sample article takes ${String(pages ?? 0)} page${pages === 1 ? "" : "s"} with this look. Your project uses its own text, so its count differs.`;
 
   return (
     <Drawer open={open} title={`Preview: ${name}`} onClose={onClose}>

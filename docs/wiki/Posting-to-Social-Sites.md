@@ -106,7 +106,7 @@ In **Channels** → your channel → **Name and look** → **Posting**:
 
 ## Post prompts
 
-Write your own in **Prompts**, kind **Post** (**Start from an example** → **Built-in wording** fills in Slopify's own wording). Slopify gives it the site's length limit and asks again when the answer is over it, then adds the hashtags and link itself. Pick it for a site in Edit template's **YouTube description and posts** by choosing **Written by a post prompt** as its text.
+Write your own in **Prompts**, kind **Post** (**Start from an example** → **Slopify's own wording** fills in the wording Slopify uses). Slopify gives it the site's length limit and asks again when the answer is over it, then adds the hashtags and link itself. Pick it for a site in Edit template's **YouTube description and posts** by choosing **Written by a post prompt** as its text.
 
 ## Agents
 

@@ -403,7 +403,7 @@ export function ImportResult({
     counted("Cast members", result.cast),
     counted("Episode memories", result.episodeMemories),
     counted("Titles to avoid", result.channelVideos),
-    counted("PDF themes", result.documentThemes),
+    counted("PDF looks", result.documentThemes),
     counted("Templates", result.templates),
     counted("Schedules", result.schedules),
     result.schedules.paused > 0

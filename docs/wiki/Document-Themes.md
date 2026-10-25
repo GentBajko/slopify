@@ -1,40 +1,40 @@
-# Document Themes
+# PDF Looks
 
-A document theme is the look of the PDF Slopify makes from the article: paper size, colours, fonts, spacing, the title page, contents, sources and closing pages, headers and page numbers. Slopify ships three ready looks, **Plain**, **Book** and **Modern**. Copy one to make themes of your own, with a live preview as you edit.
+A PDF look (saved as a document theme) is how the PDF Slopify makes from the article looks: paper size, colors, fonts, spacing, the title page, contents, sources and closing pages, headers and page numbers. Slopify ships three ready looks, **Plain**, **Book** and **Modern**. Copy one to make looks of your own, with a live preview as you edit.
 
 **Where to find it:** **Edit PDF looks** beside the **PDF look** on Create's **Extras** row, in Edit template's **PDF** section or under **Settings → Production defaults**. Pick a look on Create, in a project's **Edit settings**, or as a channel's default in its brand kit.
 
-## Built-in and your own themes
+## Built-in and your own looks
 
 | List | What it holds |
 |---|---|
-| **Built-in themes** | Looks that ship with Slopify and can't be changed. **Plain** is an unbranded flat page and what a new project gets; **Book** is book type on parchment; **Modern** is a sans-serif on white. Press **Copy theme** to make an editable copy. |
-| **Your themes** | Themes you made or copied. Each has **Edit**, **Duplicate** and **Delete**. |
+| **Built in** | Looks that ship with Slopify and can't be changed. **Plain** is an unbranded flat page and what a new project gets; **Book** is book type on parchment; **Modern** is a sans-serif on white. Press **Copy look** to make an editable copy. |
+| **Your looks** | Looks you made or copied. Each has **Edit**, **Duplicate** and **Delete**. |
 
-A project keeps its own copy of the theme's settings. Editing or deleting a theme never changes a PDF already made or queued.
+A project keeps its own copy of the look's settings. Editing or deleting a look never changes a PDF already made or queued.
 
-## Make a theme
+## Make a look
 
-1. Open **PDF themes** (Settings → Production defaults → PDF look → **Edit PDF looks**).
-2. Press **New theme** (it starts from Plain), or pick a built-in theme and press **Copy theme**, or press **Duplicate** on one of your themes.
+1. Open **PDF looks** (Settings → Production defaults → PDF look → **Edit PDF looks**).
+2. Press **New look** (it starts from Plain), or pick a built-in look and press **Copy look**, or press **Duplicate** on one of your looks.
 3. Type a **Name** (up to 80 characters). This is what the **PDF look** picker on Create and a project's Edit settings shows.
-4. Open the groups on the left and change what you like (every setting is listed below). The first two groups start open.
-5. Watch the **Preview** on the right. It lays out a sample article with this theme using the same renderer that makes a project's PDF, redrawn about half a second after you stop typing. It runs on your computer and costs nothing.
+4. Open the groups on the left and change what you like (every setting is listed below). The first two groups start open. One line under each group's title says what its settings place and in what unit, and a setting that needs more says it under its box. A changed setting offers a reset back to where it started.
+5. Watch the **Preview** on the right. It lays out a sample article with this look using the same renderer that makes a project's PDF, redrawn about half a second after you stop typing. It runs on your computer and costs nothing.
 6. Press **Save**. If a setting is out of range it is highlighted, and Save says "Fix the highlighted settings first."
 
-## Use a theme
+## Use a look
 
 - **On Create:** open the **Extras** row, tick **PDF of the article** and pick the **PDF look**. See [PDF documents](PDF-Documents).
-- **On a finished project:** open **Edit settings** → **Extras**, pick the theme under **PDF look**, press **Save changes**, then **Make the PDF again (free)**.
-- **For a channel:** set **PDF look** in the channel's brand kit. Videos whose template picks no theme get it. See [Channels](Channels).
+- **On a finished project:** open **Edit settings** → **Extras**, pick the look under **PDF look**, press **Save changes**, then **Make the PDF again (free)**.
+- **For a channel:** set **PDF look** in the channel's brand kit. Videos whose template picks no look get it. See [Channels](Channels).
 
-## Delete a theme
+## Delete a look
 
-Press **Delete** on the theme and confirm. Projects that used it keep their own copy of its settings. A channel whose brand kit named it skips it.
+Press **Delete** on the look and confirm. Projects that used it keep their own copy of its settings. A channel whose brand kit named it skips it.
 
 ## Every setting
 
-Sizes are in millimetres (mm) unless marked pt (points; 1 pt is about 0.35 mm). Defaults are the Plain theme's.
+Sizes are in millimeters (mm) unless marked pt (points; 1 pt is about 0.35 mm). Defaults are the Plain look's.
 
 ### Page
 
@@ -43,21 +43,21 @@ Sizes are in millimetres (mm) unless marked pt (points; 1 pt is about 0.35 mm). 
 | **Paper size** | A4 (210 × 297 mm) for most of the world, US Letter (216 × 279 mm) for the US and Canada. | A4 | |
 | **Margins** | Blank space on every edge of each page. Wider margins mean shorter lines and more pages. | 22 mm | 5 to 60 |
 | **Text starts at** | How far from the top the text begins on pages with the running header. Raise it when text crowds the header. | 32 mm | 5 to 80 |
-| **Background** | **Parchment texture** stretches an aged-paper picture over every page. **Flat colour** fills each page with the Page colour, slightly darker at the edges. | Flat colour | |
-| **Page colour** | The page colour with Flat colour. Type a hex code or use the picker. | `#fdfaf3` (warm off-white) | |
+| **Background** | **Parchment texture** stretches an aged-paper picture over every page. **Flat color** fills each page with the Page color, slightly darker at the edges. | Flat color | |
+| **Page color** | The page color with Flat color. Type a hex code or use the picker. | `#fdfaf3` (warm off-white) | |
 
-### Colours
+### Colors
 
-| Setting | What it colours | Default |
+| Setting | What it colors | Default |
 |---|---|---|
-| **Heading colour** | Headings, drop caps, the brand name and links | `#1f3a5f` (dark blue) |
-| **Body text colour** | Paragraphs, lists, bold and italic text. Keep it dark against the page. | `#1a1a1a` (near black) |
-| **Muted colour** | Dates, bullets, quotes and the dotted lines on the contents page | `#555555` (mid grey) |
-| **Faint colour** | The running header and page numbers | `#888888` (light grey) |
+| **Heading color** | Headings, drop caps, the brand name and links | `#1f3a5f` (dark blue) |
+| **Body text color** | Paragraphs, lists, bold and italic text. Keep it dark against the page. | `#1a1a1a` (near black) |
+| **Muted color** | Dates, bullets, quotes and the dotted lines on the contents page | `#555555` (mid gray) |
+| **Faint color** | The running header and page numbers | `#888888` (light gray) |
 
 ### Fonts
 
-Each font has three controls: the family, its weight or italic, and **Letter spacing (mm)** from −0.5 to 2. The families are **Cinzel** (bundled; four weights, no italics), **Literata** (bundled; a text face made for long reading, in regular, bold, italic and bold italic) and **Times**, **Helvetica** and **Courier** (built into every PDF reader).
+Each font has three controls: the family, its weight or italic, and the space between its letters, in the box marked **mm between letters**, from −0.5 to 2. The families are **Cinzel** (bundled; four weights, no italics), **Literata** (bundled; a text face made for long reading, in regular, bold, italic and bold italic) and **Times**, **Helvetica** and **Courier** (built into every PDF reader).
 
 | Setting | Where it is used | Default |
 |---|---|---|
@@ -95,7 +95,7 @@ Each font has three controls: the family, its weight or italic, and **Letter spa
 | **After a list item** | Extra space after each bulleted or numbered item | 0.2 | 0 to 3 |
 | **List indent** | How far lists are pushed in from the left margin | 6 mm | 0 to 30 |
 | **Quote indent** | How far quotes are pushed in | 8 mm | 0 to 40 |
-| **Divider width** | The width of the short centred line a `---` in the article becomes | 30 mm | 0 to 150 |
+| **Divider width** | The width of the short centered line a `---` in the article becomes | 30 mm | 0 to 150 |
 
 ### Drop caps
 

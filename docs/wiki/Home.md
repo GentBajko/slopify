@@ -99,11 +99,11 @@ These pages cover Slopify 3.0: every screen, every setting and every workflow, s
 ### Prompts and templates
 | Page | What it covers |
 |---|---|
-| [Prompts and Templates](Prompts-and-Templates) | Where prompts, templates, PDF themes and aliases are |
+| [Prompts and Templates](Prompts-and-Templates) | Where prompts, templates, PDF looks and the Pronunciation list are |
 | [Prompts](Prompts) | Writing prompts, keywords, history and restore |
 | [Intros and outros](Intros-and-Outros) | Reusable openings and closings |
 | [Aliases and glossary](Narration-Aliases-and-Glossary) | How the narrator says words |
-| [Document themes](Document-Themes) | The look of the PDF |
+| [PDF looks](Document-Themes) | The look of the PDF |
 
 ### Reference
 | Page | What it covers |

@@ -74,7 +74,7 @@ export const documentThemeNameMax = 80;
 // The editor's sentences for a name, shared so the page refuses what the server would.
 export function documentThemeNameProblems(name: string): readonly FieldError[] {
   const trimmed = name.trim();
-  if (trimmed === "") return [{ field: "name", message: "Give the theme a name." }];
+  if (trimmed === "") return [{ field: "name", message: "Give the look a name." }];
   if (trimmed.length > documentThemeNameMax)
     return [
       {

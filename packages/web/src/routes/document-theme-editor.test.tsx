@@ -39,10 +39,10 @@ describe("document theme editor", () => {
     await user.type(text, "#12");
     expect((text as HTMLInputElement).value).toBe("#12");
     const sections = screen.getByRole("navigation", { name: "Theme sections" });
-    expect(within(sections).getByRole("button", { name: /^Colours/ }).textContent).toBe(
-      "Colours, 1 to fix · 1 changed",
+    expect(within(sections).getByRole("button", { name: /^Colors/ }).textContent).toBe(
+      "Colors, 1 to fix · 1 changed",
     );
-    expect(screen.getAllByText(/in Colours\./).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/in Colors\./).length).toBeGreaterThan(0);
   });
 
   it("warns about hard-to-read text and resets a changed setting", async () => {
@@ -56,10 +56,10 @@ describe("document theme editor", () => {
     const before = (text as HTMLInputElement).value;
     await user.clear(text);
     await user.type(text, "#eeeeee");
-    expect(screen.getByText(/Hard to read on the page colour/)).not.toBeNull();
+    expect(screen.getByText(/Hard to read on the page color/)).not.toBeNull();
     await user.click(screen.getByRole("button", { name: `Reset Body text to ${before}` }));
     expect((text as HTMLInputElement).value).toBe(before);
-    expect(screen.queryByText(/Hard to read on the page colour/)).toBeNull();
+    expect(screen.queryByText(/Hard to read on the page color/)).toBeNull();
   });
 
   it("lists the theme's sections down the left, and a press opens the section", async () => {
@@ -86,8 +86,8 @@ describe("document theme editor", () => {
       <DocumentThemeEditorRoute themeId={undefined} from={undefined} onLeave={vi.fn()} />,
       deps(),
     );
-    expect(await screen.findByDisplayValue("My theme")).not.toBeNull();
-    expect(screen.getByRole("link", { name: "PDF themes" }).getAttribute("href")).toBe(
+    expect(await screen.findByDisplayValue("My look")).not.toBeNull();
+    expect(screen.getByRole("link", { name: "PDF looks" }).getAttribute("href")).toBe(
       "/document-themes",
     );
     cleanup();

@@ -191,7 +191,7 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
   add("Narration preparation", before.narrationPrompt, after.narrationPrompt);
   add("Narration chunking", before.chunking, after.chunking);
   add(
-    "Narration aliases",
+    "Pronunciation list",
     before.audio?.useNarrationAliases === true ? aliasLines(before.narrationAliases) : "Off",
     after.audio?.useNarrationAliases === true ? aliasLines(after.narrationAliases) : "Off",
   );
@@ -321,12 +321,12 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
   for (const [label, value] of editBefore) add(label, value, editAfter.get(label));
   add("Intro", before.intro, after.intro);
   add("Outro", before.outro, after.outro);
-  add("Subtitle settings", before.subtitles, after.subtitles);
+  add("Caption settings", before.subtitles, after.subtitles);
   const themeBefore = documentThemeLabel(before.document);
   const themeAfter = documentThemeLabel(after.document);
   // A Library theme saved again under the same name still changes the document.
   add(
-    "Document theme",
+    "PDF look",
     themeBefore,
     themeBefore === themeAfter &&
       JSON.stringify(before.document?.custom?.values) !==

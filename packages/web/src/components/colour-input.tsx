@@ -15,7 +15,7 @@ export function ColourInput({
 }: Omit<ComponentProps<"input">, "value" | "onChange" | "type"> & {
   readonly value: string;
   readonly onChange: (value: string) => void;
-  // The swatch's name: "Caption colour picker".
+  // The swatch's name: "Caption color picker".
   readonly pickerLabel: string;
 }): ReactElement {
   const whole = parseHex(value);

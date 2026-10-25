@@ -60,7 +60,7 @@ describe("the intros and outros list", () => {
     const kinds = screen.getByRole("navigation", { name: "Kinds of prompt" });
     const outros = within(kinds).getByRole("link", { name: /^Outros/u });
     expect(outros.getAttribute("aria-current")).toBe("page");
-    await waitFor(() => expect(outros.textContent).toBe("Outros, 1"));
+    await waitFor(() => expect(outros.textContent).toBe("OutrosSaid after the video, 1"));
     expect(
       within(kinds)
         .getByRole("link", { name: /^Intros/u })
@@ -99,7 +99,8 @@ describe("the intros and outros list", () => {
     expect(detail.querySelector("[data-slot=prompt-text]")?.textContent).toBe(
       "Today on the channel: {{topic}}.",
     );
-    expect(within(detail).getByText("Intro · Say these exact words")).not.toBeNull();
+    // The list head names the kind; the detail's line says how it is read.
+    expect(within(detail).getByText(/^Say these exact words · Updated/u)).not.toBeNull();
     expect(
       within(within(detail).getByRole("list", { name: "Keywords" })).getByText("topic"),
     ).not.toBeNull();
@@ -116,16 +117,35 @@ describe("the intros and outros list", () => {
     expect(first.getAttribute("aria-current")).toBeNull();
   });
 
-  it("searches intros and outros both, by name and words, and says each hit's kind", async () => {
+  it("searches intros, outros and every kind of prompt, by name and words, and says each hit's kind", async () => {
     const user = userEvent.setup();
     const second: Entry = { ...coldOpen, id: "e3", name: "Warm open", body: "Hello friends." };
-    renderRouted(<Screen />, deps([coldOpen, second, written]));
+    renderRouted(
+      <Screen />,
+      deps([coldOpen, second, written], {
+        "GET /api/prompts": jsonAnswer({
+          prompts: [
+            {
+              id: "p1",
+              kind: "article",
+              name: "Friends of history",
+              body: "Write about {{topic}}.",
+              slots: ["topic"],
+              updatedAt: "2026-09-01T10:00:00.000Z",
+            },
+          ],
+        }),
+      }),
+    );
 
     await findRow("Cold open");
-    const search = screen.getByRole("searchbox", { name: "Search intros and outros" });
+    const search = screen.getByRole("searchbox", { name: "Search prompts, intros and outros" });
     await user.type(search, "friends");
     expect(screen.queryByRole("button", { name: "Cold open" })).toBeNull();
     expect(await findRow("Warm open")).not.toBeNull();
+    const prompt = await findRow("Friends of history");
+    expect(prompt.querySelector(".sl-row__meta")?.textContent).toMatch(/^Article · /u);
+    expect(screen.getByRole("heading", { name: "2 matches for “friends”" })).not.toBeNull();
 
     await user.clear(search);
     await user.type(search, "sign-off");

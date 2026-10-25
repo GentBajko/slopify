@@ -1,4 +1,4 @@
-import { HistoryIcon, MoreHorizontalIcon, Trash2Icon } from "lucide-react";
+import { CopyIcon, HistoryIcon, MoreHorizontalIcon, Trash2Icon } from "lucide-react";
 import type { ReactElement, ReactNode } from "react";
 import { Button, IconButton } from "@/components/kit/button";
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/components/kit/menu";
@@ -6,28 +6,30 @@ import { cn } from "@/lib/utils";
 
 // The actions of one list row, in the same order on every list. What a row is for stays on it:
 // Edit (a link to the editor) and Make a video (opens Create with it picked). The occasional
-// ones (Duplicate, History, Delete) sit behind one More button, so a long list doesn't repeat
-// five controls on every line. A list leaves out what its rows can't do (a PDF theme makes no
-// video and keeps no history).
+// ones (Duplicate, Versions, Delete) sit behind one More button, so a long list doesn't repeat
+// five controls on every line. A list leaves out what its rows can't do (a PDF look makes no
+// video and keeps no versions).
 export function LibraryRowActions({
   name,
   edit,
   duplicate,
   play,
-  onHistory,
+  onVersions,
   onDelete,
   className,
 }: {
   readonly name: string;
-  // The Edit and Duplicate links: a small quiet `Button asChild` around a router `Link`.
+  // The Edit link: a small quiet `ButtonLink` to the editor.
   readonly edit: ReactNode;
+  // The Duplicate link: a plain router `Link` holding `<DuplicateLabel />`, drawn as a menu
+  // item like Versions and Delete beside it.
   readonly duplicate: ReactNode;
   // Make a video: `run` is undefined while the screen has no Create to hand to, and `blocked`
   // says why it is unavailable right now (shown as the button's title).
   readonly play?:
     | { readonly run: (() => void) | undefined; readonly blocked?: string | undefined }
     | undefined;
-  readonly onHistory?: (() => void) | undefined;
+  readonly onVersions?: (() => void) | undefined;
   readonly onDelete: () => void;
   readonly className?: string;
 }): ReactElement {
@@ -59,10 +61,10 @@ export function LibraryRowActions({
         </MenuTrigger>
         <MenuContent>
           <MenuItem asChild>{duplicate}</MenuItem>
-          {onHistory === undefined ? null : (
-            <MenuItem aria-label={`History of ${name}`} onSelect={onHistory}>
+          {onVersions === undefined ? null : (
+            <MenuItem aria-label={`Versions of ${name}`} onSelect={onVersions}>
               <HistoryIcon aria-hidden="true" className="size-4" />
-              History
+              Versions
             </MenuItem>
           )}
           <MenuSeparator />
@@ -73,5 +75,15 @@ export function LibraryRowActions({
         </MenuContent>
       </Menu>
     </div>
+  );
+}
+
+// What a row's Duplicate link says, with the same icon column as the menu's other items.
+export function DuplicateLabel(): ReactElement {
+  return (
+    <>
+      <CopyIcon aria-hidden="true" className="size-4" />
+      Duplicate
+    </>
   );
 }

@@ -8,7 +8,7 @@ Slopify can lay out your article as a styled PDF: a title page with the thumbnai
 
 1. On Create, open the **Extras** row.
 2. Tick **PDF of the article**.
-3. Pick a **PDF look**: one of the three ready looks, **Plain**, **Book** or **Modern** (**Preview** shows it), or one of your own PDF themes.
+3. Pick a **PDF look**: one of the three ready looks, **Plain**, **Book** or **Modern** (**Preview** shows it), or one of your own PDF looks.
 4. Make the video.
 
 The Document stage runs after the article (and the thumbnail, if there is one) is ready. A thumbnail that failed or was canceled doesn't hold it back: the PDF is then laid out without a cover. It needs an article with some text; an empty article stops the stage with a message pointing you to **Edit settings** → **Article**.
@@ -18,9 +18,9 @@ The Document stage runs after the article (and the thumbnail, if there is one) i
 | Option | What it does | Default |
 |---|---|---|
 | **PDF of the article** | Lays out a PDF of the article and title on this computer, in the look you pick. It needs no service and costs nothing. | Off |
-| **PDF look** | How the PDF looks: a ready look (**Plain**, **Book** or **Modern**), or one of your PDF themes. **Edit PDF looks** opens the list. | Plain, or the channel's PDF look |
+| **PDF look** | How the PDF looks: a ready look (**Plain**, **Book** or **Modern**), or one of your own PDF looks. **Edit PDF looks** opens the list. | Plain, or the channel's PDF look |
 
-A theme of yours is copied into the project when you pick it. Editing the theme later leaves this project alone until you pick it again, so a PDF already made or queued never changes by surprise. A channel's brand kit can set a **PDF look** for its videos whose template picks none; see [Channels](Channels).
+A look of yours is copied into the project when you pick it. Editing the look later leaves this project alone until you pick it again, so a PDF already made or queued never changes by surprise. A channel's brand kit can set a **PDF look** for its videos whose template picks none; see [Channels](Channels).
 
 ## What's in the PDF
 
@@ -28,11 +28,11 @@ In order:
 
 | Part | What it holds |
 |---|---|
-| **Title page** | The theme's brand name and tagline (if the theme sets them), the video's title, the project's thumbnail as a cover, then the date and word count. |
-| **Table of Contents** | Headings from the article, down to the level the theme sets (two levels in Plain), with page numbers. |
+| **Title page** | The look's brand name and tagline (if the look sets them), the video's title, the project's thumbnail as a cover, then the date and word count. |
+| **Table of Contents** | Headings from the article, down to the level the look sets (two levels in Plain), with page numbers. |
 | **Body** | The article: headings, paragraphs with a drop cap after headings, bold and italic, links, lists, quotes and rules. |
 | **Sources Consulted** | The article's "Sources Consulted" section, then any other web link cited in the research notes. Links stay clickable. |
-| **Closing page** | Optional: the theme's own lines, the document's details (written on, total words, total pages), a link and a closing line. Off in Plain. |
+| **Closing page** | Optional: the look's own lines, the document's details (written on, total words, total pages), a link and a closing line. Off in Plain. |
 
 Every page after the title page has a running header ("Brand | Title", or the title alone) and a page number in the footer.
 
@@ -49,9 +49,9 @@ The title page uses the project's thumbnail as its cover when:
 
 - the project makes or uploads a thumbnail (its Thumbnail source is not Off),
 - the thumbnail is a PNG, JPEG or WebP image, and
-- the theme's cover setting is on (it is in Plain).
+- the look's cover setting is on (it is in Plain).
 
-Otherwise the title page has no cover and the details sit in the theme's usual place. That includes a thumbnail step that failed or was canceled: the PDF is made anyway, without a cover. If you make the thumbnail later, the PDF is marked outdated, so you can make it again with the cover. If the thumbnail file can't be read, the PDF stage stops and asks you to make or upload the thumbnail again, then use **Try again** on the PDF.
+Otherwise the title page has no cover and the details sit in the look's usual place. That includes a thumbnail step that failed or was canceled: the PDF is made anyway, without a cover. If you make the thumbnail later, the PDF is marked outdated, so you can make it again with the cover. If the thumbnail file can't be read, the PDF stage stops and asks you to make or upload the thumbnail again, then use **Try again** on the PDF.
 
 ### Sources
 
@@ -72,7 +72,7 @@ Three looks come with Slopify, all unbranded A4 pages with a table of contents a
 | **Book** | The article set like a novel in Literata on a parchment texture, Cinzel headings and drop caps in warm brown. |
 | **Modern** | A sans-serif on a white page, blue headings and no drop caps, like a report. |
 
-To change fonts, colours, paper size (A4 or Letter), page parts and the closing page, make your own theme. See [Document-Themes](Document-Themes).
+To change fonts, colors, paper size (A4 or Letter), page parts and the closing page, make your own PDF look. See [PDF looks](Document-Themes).
 
 ## Open and download the PDF
 
@@ -86,7 +86,7 @@ A line under them gives the file's size and the look's name (for example **Plain
 
 While the stage runs it says "The PDF will be saved when it is made." The file lives in the project's folder; see [Where-Your-Files-Live](Where-Your-Files-Live).
 
-## Change the theme of a finished project
+## Change the look of a finished project
 
 1. Open the project and press **Edit settings**.
 2. Open **Extras**. Turn on **PDF of the article** if it was off.
@@ -95,7 +95,7 @@ While the stage runs it says "The PDF will be saved when it is made." The file l
 
 ## Tips
 
-- Use the live preview on the PDF themes page (Settings → Production defaults → PDF look → Edit PDF looks) to try a theme on a sample article before you pick it for a project.
+- Use the live preview on the PDF looks page (Settings → Production defaults → PDF look → Edit PDF looks) to try a look on a sample article before you pick it for a project.
 - If a PDF has no cover, check that the project has a thumbnail and that it is a PNG, JPEG or WebP image.
 - Want the sources page filled? Make sure your Article prompt asks for a "Sources Consulted" section, and consider turning on research.
 

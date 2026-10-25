@@ -621,8 +621,8 @@ function chosen(choice: ProviderChoice | undefined): boolean {
   return choice !== undefined && choice.provider.trim() !== "" && choice.model.trim() !== "";
 }
 
-// The aliases a run narrates with: its copied Library → Aliases while Use narration aliases is
-// on for generated audio, otherwise none. Any voice provider: an alias is plain text.
+// The aliases a run narrates with: its copied Pronunciation list while Use your pronunciation
+// list is on for generated audio, otherwise none. Any voice provider: an alias is plain text.
 export function narrationAliasesOf(
   draft: Pick<RunDraft, "sources" | "audio" | "narrationAliases">,
 ): readonly NarrationAlias[] {

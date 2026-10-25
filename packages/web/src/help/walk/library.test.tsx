@@ -20,12 +20,12 @@ import { selfExplanatory, unexplainedControls } from "../coverage.js";
 
 afterEach(cleanup);
 
-// What Prompts, PDF themes, Pronunciation and Templates may show with neither a help line nor an
+// What Prompts, PDF looks, Pronunciation and Templates may show with neither a help line nor an
 // info button beside it, each because its label says what it does.
 const libraryAllow: readonly (string | RegExp)[] = [
   // A name field: what the thing is called. A taken name is said under it as an error.
   "Name",
-  // History's two versions to compare, under the heading "Compare two versions".
+  // The Versions drawer's two versions to compare, under the heading "Compare two versions".
   "Older",
   "Newer",
   // The intro and outro editor's choice, whose options say where each is spoken.
@@ -112,8 +112,8 @@ function EntriesScreen({ category }: { readonly category: EntryCategory }) {
   return <EntriesRoute category={category} />;
 }
 
-describe("every control on Prompts, Templates, PDF themes and Pronunciation is explained", () => {
-  it("on the prompt list of every kind, its detail and its History drawer", async () => {
+describe("every control on Prompts, Templates, PDF looks and Pronunciation is explained", () => {
+  it("on the prompt list of every kind, its detail and its Versions drawer", async () => {
     const user = userEvent.setup();
     for (const prompt of prompts) {
       renderRouted(<PromptsScreen kind={prompt.kind} />, testDeps(libraryRoutes()));
@@ -125,8 +125,8 @@ describe("every control on Prompts, Templates, PDF themes and Pronunciation is e
     renderRouted(<PromptsScreen kind={last.kind} />, testDeps(libraryRoutes()));
     await screen.findByRole("region", { name: `${last.name} details` });
     await user.click(screen.getByRole("button", { name: `More actions for ${last.name}` }));
-    await user.click(await screen.findByRole("menuitem", { name: `History of ${last.name}` }));
-    const drawer = await screen.findByRole("dialog", { name: `History of ${last.name}` });
+    await user.click(await screen.findByRole("menuitem", { name: `Versions of ${last.name}` }));
+    const drawer = await screen.findByRole("dialog", { name: `Versions of ${last.name}` });
     await within(drawer).findByRole("button", { name: "Restore version 1" });
     expectExplained();
   });
@@ -177,8 +177,8 @@ describe("every control on Prompts, Templates, PDF themes and Pronunciation is e
     renderRouted(<EntriesScreen category="outro" />, testDeps(libraryRoutes()));
     await screen.findByRole("region", { name: "Sign-off details" });
     await user.click(screen.getByRole("button", { name: "More actions for Sign-off" }));
-    await user.click(await screen.findByRole("menuitem", { name: "History of Sign-off" }));
-    await screen.findByRole("dialog", { name: "History of Sign-off" });
+    await user.click(await screen.findByRole("menuitem", { name: "Versions of Sign-off" }));
+    await screen.findByRole("dialog", { name: "Versions of Sign-off" });
     expectExplained();
     cleanup();
 
@@ -259,11 +259,10 @@ describe("every control on Prompts, Templates, PDF themes and Pronunciation is e
       themes(),
     );
     await screen.findByDisplayValue("Night reading");
-    // Every group's settings, whether or not its section starts open. The name and the
-    // preview's heading carry none: neither needs a paragraph.
-    const buttons = document.querySelectorAll("[data-help-id]").length;
-    const settings = themeGroups.flatMap((group) => group.fields).length;
-    expect(buttons).toBeGreaterThanOrEqual(settings);
+    // No setting has a cost or a side effect a line can't say, so none carries an info button:
+    // each section's one line explains the settings whose labels say the rest.
+    expect(document.querySelectorAll("[data-help-id]")).toHaveLength(0);
+    for (const group of themeGroups) expect(screen.getByText(group.help)).not.toBeNull();
     expect(screen.getByLabelText("Link address")).not.toBeNull();
     expect(screen.getByLabelText("Body font")).not.toBeNull();
     expectExplained();

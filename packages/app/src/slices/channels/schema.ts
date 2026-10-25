@@ -16,7 +16,7 @@ import { castKinds } from "./model.js";
 const id = z.uuid();
 const colour = z
   .string()
-  .regex(/^#[0-9a-fA-F]{6}$/, "Use a colour like #FFD700.")
+  .regex(/^#[0-9a-fA-F]{6}$/, "Use a color like #FFD700.")
   .transform((value) => value.toUpperCase());
 const optionalText = (max: number) => z.string().trim().max(max).optional();
 const fontId = z

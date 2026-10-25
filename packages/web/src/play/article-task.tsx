@@ -82,7 +82,7 @@ export function ArticleTaskSwitch({
 
 // The words the narrator will say for text read as written: the article without its end matter
 // (sources and the Pronunciation Glossary are never read), flattened, with Library → Aliases
-// applied while Use narration aliases is on. Folded; it is there to check, not to edit.
+// applied while Use your pronunciation list is on. Folded; it is there to check, not to edit.
 export function spokenText(
   article: string,
   aliases: Parameters<typeof applyAliases>[1] | undefined,
@@ -112,7 +112,7 @@ export function SpokenText({ form }: { readonly form: PlayFormState }): ReactEle
   );
   if (!narrated || article.trim() === "") return null;
   const notes = [
-    useAliases ? "Your narration aliases are applied." : undefined,
+    useAliases ? "Your pronunciation list is applied." : undefined,
     spoken.glossary ? "The Pronunciation Glossary at the end is used, not read." : undefined,
     form.narrationPrompt
       ? "Narration preparation adds delivery cues; the words stay as shown."

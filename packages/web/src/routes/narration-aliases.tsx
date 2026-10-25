@@ -26,6 +26,9 @@ import { UnsavedLeaveGuard } from "./unsaved-leave-guard.js";
 
 const blank = { written: "", spoken: "", wholeWord: true, caseSensitive: false };
 
+// Up to this many aliases fit on one screen, and the list has no search box.
+const searchFrom = 8;
+
 const plain = (rows: readonly AliasRow[]): readonly NarrationAlias[] =>
   rows.map(({ written, spoken, wholeWord, caseSensitive }) => ({
     written,
@@ -36,7 +39,7 @@ const plain = (rows: readonly AliasRow[]): readonly NarrationAlias[] =>
 
 // Pronunciation (Settings → Voices links here): words the narrator says differently from how
 // they are written ("Dr." as "Doctor"). One list, saved as a whole. A project takes a copy when
-// it starts, and only uses it while Use narration aliases is on; the article and the captions
+// it starts, and only uses it while Use your pronunciation list is on; the article and the captions
 // keep the written words. Add alias is the page's one lime button until something changes;
 // then the Save bar appears with the lime Save.
 export function NarrationAliasesRoute(): ReactElement {
@@ -266,14 +269,17 @@ export function NarrationAliasesRoute(): ReactElement {
         </EmptyState>
       ) : (
         <div className="flex max-w-[960px] flex-col gap-3">
-          <Input
-            type="search"
-            aria-label="Search aliases"
-            placeholder="Search aliases"
-            value={query}
-            className="w-full min-w-0 sm:w-64"
-            onChange={(event) => setQuery(event.target.value)}
-          />
+          {/* A short list is read at a glance: the search comes once there is a list to search. */}
+          {shown.length > searchFrom || query !== "" ? (
+            <Input
+              type="search"
+              aria-label="Search aliases"
+              placeholder="Search aliases"
+              value={query}
+              className="w-full min-w-0 sm:w-64"
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          ) : null}
           {visible.length === 0 ? (
             <EmptyState title="No alias matches">
               {`Nothing in the ${String(shown.length)} aliases contains “${query.trim()}”. Clear the search to see them all.`}

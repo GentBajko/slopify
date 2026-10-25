@@ -66,11 +66,18 @@ function promptDeps(extra: Readonly<Record<string, Answer>> = {}) {
 const box = (name: string) => screen.findByRole("checkbox", { name: `Select row: ${name}` });
 
 describe("selecting prompts", () => {
-  it("keeps the bar away until a row is ticked, and Esc clears the selection", async () => {
+  it("keeps Select all and the count on one bar at rest, so ticking a row moves nothing, and Esc clears", async () => {
     const user = userEvent.setup();
     renderRouted(withToasts(<PromptsRoute kind="article" />), promptDeps());
+    await box("Dossier");
+    // At rest: Select all and how many, no action that would apply to nothing.
+    const bar = document.querySelector("[data-slot=selection-bar]");
+    expect(bar?.textContent).toBe("Select all2 prompts");
+    expect(screen.queryByRole("button", { name: /Delete selected/u })).toBeNull();
     await user.click(await box("Dossier"));
     expect(screen.queryByText("1 of 2 prompts selected")).not.toBeNull();
+    // The same bar, not one inserted above the rows.
+    expect(document.querySelector("[data-slot=selection-bar]")).toBe(bar);
     const all = screen.getByRole("checkbox", { name: "Select all" }) as HTMLInputElement;
     expect(all.indeterminate).toBe(true);
     await user.click(all);
@@ -188,7 +195,7 @@ const theme = (id: string, name: string): SavedDocumentTheme => ({
   updatedAt: "2026-09-01T10:00:00.000Z",
 });
 
-describe("PDF themes", () => {
+describe("PDF looks", () => {
   it("asks before deleting the selected themes, in permanent words", async () => {
     const user = userEvent.setup();
     const seen = recorder();
@@ -207,8 +214,8 @@ describe("PDF themes", () => {
     await user.click(screen.getByRole("button", { name: /Delete selected/u }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText(/deleted permanently/u)).not.toBeNull();
-    await user.click(within(dialog).getByRole("button", { name: "Delete 1 theme permanently" }));
-    expect(await screen.findByText("Deleted 1 PDF theme permanently.")).not.toBeNull();
+    await user.click(within(dialog).getByRole("button", { name: "Delete 1 look permanently" }));
+    expect(await screen.findByText("Deleted 1 PDF look permanently.")).not.toBeNull();
     expect(seen.calls).toEqual(["DELETE /api/document-themes/d1"]);
   });
 });

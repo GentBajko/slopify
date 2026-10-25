@@ -120,7 +120,7 @@ Where the scene goes:
 - With the switch off, a line holding `{{Scene}}` is left out and the prompt is drawn as it always was.
 - A **thumbnail** prompt with `{{Scene}}` gets a scene from a call of its own (one more AI call, in the Thumbnail step, so changing the thumbnail never makes the images again): the article's most striking moment, the one that would make someone click, taken from anywhere in the article. With **How many thumbnails** set to 3, each thumbnail gets a different moment, so the A/B test compares ideas as well as compositions. A thumbnail prompt without `{{Scene}}` is drawn as it always was.
 
-A prompt using `{{Slopify_Scene}}`, `{{Slopify_Setting}}` or `{{Slopify_Mood}}` gets its scene even with the switch off, and the switch shows it as on for that prompt. `{{Slopify_Setting}}` adds the era and place of each moment, so the picture stays true to its period, and `{{Slopify_Mood}}` its feeling, for light and colour; both are written by the same call. See [Keywords Slopify fills](Keywords-Slopify-Fills#per-picture).
+A prompt using `{{Slopify_Scene}}`, `{{Slopify_Setting}}` or `{{Slopify_Mood}}` gets its scene even with the switch off, and the switch shows it as on for that prompt. `{{Slopify_Setting}}` adds the era and place of each moment, so the picture stays true to its period, and `{{Slopify_Mood}}` its feeling, for light and color; both are written by the same call. See [Keywords Slopify fills](Keywords-Slopify-Fills#per-picture).
 
 The style, composition and everything else in the prompt stay as written; only the scene changes from image to image. The scenes are written once the article exists, and each image waits for them. Switching it on or off in a project's **Edit settings** makes the images again.
 
@@ -128,7 +128,7 @@ The style, composition and everything else in the prompt stay as written; only t
 
 An image model draws a named figure from whatever it half remembers, so the same character can look different in every image. Put `{{Appearance}}` in an image, thumbnail, establishing or shorts image prompt, for example a line `Looks: {{Appearance}}`, and Slopify looks the looks up instead.
 
-- Once the article exists, one call to the AI writer **searches the web** for how the video's subject and every named character in the article look: build, face, clothing, colours and the marks that make them recognisable. Where depictions disagree, it describes the most iconic one.
+- Once the article exists, one call to the AI writer **searches the web** for how the video's subject and every named character in the article look: build, face, clothing, colors and the marks that make them recognizable. Where depictions disagree, it describes the most iconic one.
 - With **Scenes from the article** on, each picture gets the looks of the figures its scene names (up to three besides the subject), so a scene of a place or of someone else isn't redrawn with the subject in it; a scene that names no one leaves the looks line out. A thumbnail always gets the subject's look. Without scenes, every picture gets the subject's look.
 - There is no switch: a prompt with `{{Appearance}}` turns it on, and prompts without it are drawn as they always were. `{{Appearance}}` is never a keyword to fill in.
 - It costs one more AI call per run, with web search. The pictures that use it wait for it.

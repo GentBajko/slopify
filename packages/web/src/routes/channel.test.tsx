@@ -227,7 +227,7 @@ describe("Channels", () => {
         [`PUT /api/channels/${id}`]: recording(jsonAnswer({ ...channel, version: 4 }), seen),
       }),
     );
-    await user.type(await screen.findByLabelText("Caption colour"), "#ffd700");
+    await user.type(await screen.findByLabelText("Caption color"), "#ffd700");
     await user.clear(screen.getByLabelText("End screen text"));
     await user.click(screen.getByRole("button", { name: "Save channel" }));
     await waitFor(() => expect(seen).toHaveLength(1));
@@ -283,6 +283,28 @@ describe("Channels", () => {
     expect(disclosed).toEqual([{ aiDisclosure: "no" }]);
     // First, so a refused disclosure saves nothing and the rest can still be saved.
     expect(order).toEqual(["disclosure", "channel"]);
+  });
+
+  it("keeps the lime on Make a video until Name and look holds a change, then on Save channel", async () => {
+    const user = userEvent.setup();
+    renderRouted(<Page />, testDeps(common));
+    await screen.findByLabelText("Channel name");
+    // Nothing changed: nothing to save, and the header's Make a video is the next step.
+    expect(screen.queryByRole("button", { name: "Save channel" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Make a video" }).getAttribute("data-variant")).toBe(
+      "primary",
+    );
+    await user.type(screen.getByLabelText("End screen text"), "!");
+    expect(screen.getByRole("button", { name: "Save channel" }).getAttribute("data-variant")).toBe(
+      "primary",
+    );
+    expect(screen.getByText("Unsaved changes. Press Save channel to keep them.")).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Make a video" }).getAttribute("data-variant")).toBe(
+      "secondary",
+    );
+    // Typed back to what is saved: no change, so no Save again.
+    await user.type(screen.getByLabelText("End screen text"), "{Backspace}");
+    expect(screen.queryByRole("button", { name: "Save channel" })).toBeNull();
   });
 
   it("offers Make a video in the header and names its tabs in plain words", async () => {

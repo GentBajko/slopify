@@ -38,6 +38,16 @@ export function categoryAbout(category: EntryCategory): string {
   }
 }
 
+// Its second line in the Prompts page's list of kinds, as each prompt kind says what it writes.
+export function categoryWrites(category: EntryCategory): string {
+  switch (category) {
+    case "intro":
+      return "Said before the video";
+    case "outro":
+      return "Said after the video";
+  }
+}
+
 // What the narrator reads: the words as they stand, or an answer the AI writes from them.
 export function modeLabel(mode: EntryMode): string {
   switch (mode) {

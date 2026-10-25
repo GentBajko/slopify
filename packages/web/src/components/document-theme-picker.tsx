@@ -102,7 +102,7 @@ export function DocumentThemePicker({
           ) : null}
         </optgroup>
         {saved.length === 0 && !kept ? null : (
-          <optgroup label="Your themes">
+          <optgroup label="Your looks">
             {kept ? <option value="kept">{`${custom.name} (this project's copy)`}</option> : null}
             {saved.map((theme) => (
               <option key={theme.id} value={`custom:${theme.id}`}>
@@ -116,7 +116,7 @@ export function DocumentThemePicker({
         variant="quiet"
         size="small"
         disabled={listing.data === undefined}
-        aria-label={`Preview the ${shown.name} theme`}
+        aria-label={`Preview the ${shown.name} look`}
         onClick={() => setPreviewing(true)}
       >
         <EyeIcon aria-hidden="true" strokeWidth={1.75} />
