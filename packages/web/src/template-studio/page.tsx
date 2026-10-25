@@ -41,7 +41,7 @@ import { SaveBar } from "./save-bar";
 import { ScheduleSection } from "./schedule-section";
 import { SectionRail } from "./section-rail";
 import { TemplateSession } from "./session";
-import { VisibleControls } from "./visible";
+import { leadsWithService, VisibleControls } from "./visible";
 
 type Pane = "sections" | "settings" | "sample";
 
@@ -185,6 +185,8 @@ function Studio({
   const unchosen = { llm: filled.llm.provider === "", images: filled.images.provider === "" };
   const pickerShown =
     (current.id === "script" && unchosen.llm) || (current.id === "pictures" && unchosen.images);
+  // Those pickers show once: the fold under them leaves its own out, so it holds the rest.
+  const withoutService = leadsWithService(current.id, document.form, unchosen);
   const scheduled = view.gated || view.schedule.cost !== null;
   const gate = scheduled ? gateLine(view) : undefined;
   const line =
@@ -318,10 +320,10 @@ function Studio({
             <AllSettings
               key={`${current.id}:${String(fineTune)}`}
               label={current.label}
-              more={rest.includes(current.id)}
+              more={rest.includes(current.id) || withoutService}
               open={fineTune > 0}
             >
-              <FineTune section={current.id} onFiles={onFiles} />
+              <FineTune section={current.id} withoutService={withoutService} onFiles={onFiles} />
             </AllSettings>
           )}
           <PromptAnatomy view={view} section={current.id} />

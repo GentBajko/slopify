@@ -299,11 +299,39 @@ it("draws the writer's pickers where the check's link lands when there is no cho
     }),
   });
   const panel = await screen.findByRole("region", { name: "Article settings" });
-  // The lead pickers, and the same group again in the section's whole editor under the fold.
-  expect(within(panel).getAllByRole("group", { name: "Written by" })).toHaveLength(2);
+  // The lead pickers, once: the fold under them holds the rest of the Article settings.
+  expect(within(panel).getAllByRole("group", { name: "Written by" })).toHaveLength(1);
   expect(
-    within(panel).getAllByText("No writing service is chosen, so a run can't start.").length,
-  ).toBeGreaterThan(0);
+    within(panel).getAllByText("No writing service is chosen, so a run can't start."),
+  ).toHaveLength(1);
+  await waitFor(() =>
+    expect(panel.querySelector("details > summary")?.textContent).toMatch(
+      /^More Article settings \(\d+\)$/,
+    ),
+  );
+});
+
+it("draws the image service's pickers once, over the fold, when nobody chose one", async () => {
+  open("pictures", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({
+      ...view,
+      template: {
+        ...view.template,
+        document: {
+          ...view.template.document,
+          form: { ...view.template.document.form, images: { provider: "", model: "" } },
+        },
+      },
+    }),
+  });
+  const panel = await screen.findByRole("region", { name: "Images settings" });
+  expect(
+    await within(panel).findByText("No image service is chosen, so a run can't start."),
+  ).not.toBeNull();
+  const fold = panel.querySelector("details");
+  if (fold !== null) fold.open = true;
+  expect(within(panel).getAllByRole("group", { name: "Images by" })).toHaveLength(1);
+  expect(within(panel).getAllByRole("combobox", { name: /Service$/ })).toHaveLength(1);
 });
 
 it("shows the page at once while its checks are still being looked up", async () => {

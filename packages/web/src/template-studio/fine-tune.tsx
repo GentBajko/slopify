@@ -32,9 +32,12 @@ import { StylePreview } from "@/video/style-preview";
 // the editors to the template.
 export function FineTune({
   section,
+  withoutService = false,
   onFiles,
 }: {
   readonly section: TemplateSection;
+  // The section leads with who makes it (`leadsWithService`), so its editor leaves that out.
+  readonly withoutService?: boolean;
   readonly onFiles: () => void;
 }): ReactElement | null {
   const { api } = useApp();
@@ -83,6 +86,7 @@ export function FineTune({
     onPickFiles: onFiles,
     onRemoveFile,
     onReattachFile: onFiles,
+    withoutService,
   };
   const topics = topicKeywords(form.title);
   const written = form.sources.article !== "off";

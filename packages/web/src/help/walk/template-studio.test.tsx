@@ -30,7 +30,7 @@ const studioAllow: readonly (string | RegExp)[] = [
   "PDF",
   "Soften breaths",
   "Soften S sounds",
-  // The service and model pickers under "Made by" when nothing makes the images yet: their
+  // The service and model pickers under "Images by" when nothing makes the images yet: their
   // red line says why they matter.
   "Service",
   "Model",

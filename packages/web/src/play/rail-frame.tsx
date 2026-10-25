@@ -38,6 +38,9 @@ export interface RailProps {
   // True where the screen already draws the stage's switch and its lead settings (Edit
   // template's section, over its fold): the editor draws only the rest, so nothing shows twice.
   readonly bare?: boolean | undefined;
+  // True where the screen already draws who makes the stage (Edit template's section, while
+  // nobody chose its writer or image service): the editor leaves its own service group out.
+  readonly withoutService?: boolean | undefined;
 }
 
 // The id of the visible name a stage's switch is labelled by: its rail's name, or the tick of
