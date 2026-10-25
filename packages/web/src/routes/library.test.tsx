@@ -10,7 +10,7 @@ import { LibraryLayout } from "./library.js";
 
 afterEach(cleanup);
 
-describe("the layout around Prompts, Templates, PDF themes and Pronunciation", () => {
+describe("the layout around Prompts, Templates, PDF looks and Pronunciation", () => {
   it("is no page of its own: no Library title and no tab bar over the page", async () => {
     const registry = new CommandRegistry();
     renderRouted(
@@ -41,8 +41,9 @@ describe("the layout around Prompts, Templates, PDF themes and Pronunciation", (
         .list()
         .filter((command) => command.group === group)
         .map((command) => command.title);
-    expect(titles("Prompts")).toEqual(["New prompt", "New intro", "Open intros and outros"]);
-    expect(titles("PDF themes")).toEqual(["New PDF theme", "Open PDF themes"]);
+    expect(titles("Prompts")).toEqual(["New prompt", "New intro"]);
+    // A new PDF look and the pages that left Library are the shell's, found from anywhere.
+    expect(titles("PDF looks")).toEqual([]);
     // Open Prompts and Open Templates are the rail's commands; no second copy here.
     expect(titles("Templates")).toEqual([]);
     expect(titles("Library")).toEqual([]);
@@ -51,8 +52,6 @@ describe("the layout around Prompts, Templates, PDF themes and Pronunciation", (
       matchCommands(registry.list(), "")
         .filter((command) => command.id.startsWith("library."))
         .map((command) => command.title),
-    ).toEqual(["New prompt", "New intro", "New PDF theme"]);
-    expect(matchCommands(registry.list(), "intros")[0]?.title).toBe("Open intros and outros");
-    expect(matchCommands(registry.list(), "pdf themes")[0]?.title).toBe("Open PDF themes");
+    ).toEqual(["New prompt", "New intro"]);
   });
 });

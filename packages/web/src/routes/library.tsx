@@ -7,9 +7,10 @@ import { kindOf } from "@/lib/prompt-kinds";
 import { cn } from "@/lib/utils";
 
 // The pages that hold what a video is made from: Prompts (with intros and outros), Templates
-// and Designs, PDF themes, pronunciation aliases and A/B results. There is no Library page: each
-// is reached on its own (the rail, Settings, a channel) and draws its own header. This layout
-// only keeps their shared commands in Ctrl+K while one of them is open.
+// and Designs, PDF looks, Pronunciation and What worked on YouTube. There is no Library page:
+// each is reached on its own (the rail, Settings, a channel) and draws its own header, and each
+// is found by name in Ctrl+K from anywhere (components/shell-commands.tsx). This layout only
+// keeps New prompt and New intro or outro in Ctrl+K while one of them is open.
 export function LibraryLayout(): ReactElement {
   return (
     <>
@@ -19,9 +20,9 @@ export function LibraryLayout(): ReactElement {
   );
 }
 
-// The frequent actions in Ctrl+K: a new prompt, intro or outro (on the kind or list showing)
-// and a new PDF theme. The intros and outros and the PDF themes are found by name; Open Prompts
-// and Open Templates are the rail's own (components/shell-commands.tsx), listed once.
+// The frequent actions in Ctrl+K: a new prompt, intro or outro (on the kind or list showing).
+// Open Prompts and Open Templates are the rail's own (components/shell-commands.tsx), listed
+// once.
 function LibraryCommands(): null {
   const navigate = useNavigate();
   const location = useRouterState({ select: (state) => state.location });
@@ -44,35 +45,6 @@ function LibraryCommands(): null {
     keywords: ["create", "intro", "outro"],
     run: () => {
       void navigate({ to: "/entries/new", search: { category } });
-    },
-  });
-  useCommand({
-    id: "library.new-document-theme",
-    title: "New PDF theme",
-    group: "PDF themes",
-    keywords: ["create", "pdf", "theme", "document"],
-    run: () => {
-      void navigate({ to: "/document-themes/new", search: {} });
-    },
-  });
-  useCommand({
-    id: "library.open-entries",
-    title: "Open intros and outros",
-    group: "Prompts",
-    keywords: ["entries"],
-    searchOnly: true,
-    run: () => {
-      void navigate({ to: "/entries", search: { category: "intro" } });
-    },
-  });
-  useCommand({
-    id: "library.open-document-themes",
-    title: "Open PDF themes",
-    group: "PDF themes",
-    keywords: ["pdf", "documents", "document themes", "pdf look"],
-    searchOnly: true,
-    run: () => {
-      void navigate({ to: "/document-themes" });
     },
   });
   return null;

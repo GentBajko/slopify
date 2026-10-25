@@ -69,6 +69,26 @@ it("lists Channels where the rail does, and each channel to switch to, with two 
   );
 });
 
+it("finds the pages that left Library from anywhere, by their names and the words for them", async () => {
+  const registry = await mount();
+  const first = (typed: string) => matchCommands(registry.list(), typed)[0]?.title;
+  expect(first("pronunciation")).toBe("Open Pronunciation");
+  expect(first("aliases")).toBe("Open Pronunciation");
+  expect(first("what worked")).toBe("Open What worked on YouTube");
+  expect(first("a/b")).toBe("Open What worked on YouTube");
+  expect(first("intros")).toBe("Open intros and outros");
+  expect(first("pdf looks")).toBe("Open PDF looks");
+  expect(first("pdf themes")).toBe("Open PDF looks");
+  expect(
+    matchCommands(registry.list(), "pdf")
+      .map((command) => command.title)
+      .slice(0, 2),
+  ).toEqual(expect.arrayContaining(["Open PDF looks", "New PDF look"]));
+  // None of them crowds the empty palette.
+  expect(listed(registry)).not.toContain("Open PDF looks");
+  expect(listed(registry)).not.toContain("New PDF look");
+});
+
 it("lands a Settings section's name on that section, not on Settings' first one", async () => {
   const registry = await mount();
   expect(matchCommands(registry.list(), "appearance")[0]?.id).toBe("settings.section.general");

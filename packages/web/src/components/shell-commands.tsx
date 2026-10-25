@@ -11,12 +11,15 @@ import { useTutorial } from "@/tutorial/context";
 // rail's order and words (Home, Projects, Prompts, Templates, Calendar, Channels with two or more
 // channels, Settings). Searched only: schedules, usage, tutorials, each Settings section by its
 // name and the words people use for it ("appearance" lands on the section with the theme), the
-// welcome screen and the tour. With two or more channels, each channel to switch to.
+// pages that left Library (intros and outros, PDF looks, Pronunciation, What worked on YouTube)
+// and a new PDF look, the welcome screen and the tour. With two or more channels, each channel
+// to switch to.
 export function ShellCommands(): ReactElement {
   const several = useCurrentChannel().channels.length > 1;
   return (
     <>
       <NavigationCommands several={several} />
+      <LibraryPageCommands />
       {several ? <ChannelCommands /> : null}
       {settingsSections.map((section) => (
         <SettingsSectionCommand key={section.id} id={section.id} label={section.label} />
@@ -223,6 +226,63 @@ function SettingsSectionCommand({
     searchOnly: true,
     run: () => {
       void navigate({ to: "/settings", search: { section: id } });
+    },
+  });
+  return null;
+}
+
+// The pages reached from inside another (Prompts' kinds, Settings, a channel) rather than the
+// rail, found by name from anywhere, as each was when Library listed them.
+function LibraryPageCommands(): null {
+  const navigate = useNavigate();
+  useCommand({
+    id: "library.open-entries",
+    title: "Open intros and outros",
+    group: "Go to",
+    searchOnly: true,
+    keywords: ["entries", "intro", "outro", "welcome", "sign-off"],
+    run: () => {
+      void navigate({ to: "/entries", search: { category: "intro" } });
+    },
+  });
+  useCommand({
+    id: "library.open-document-themes",
+    title: "Open PDF looks",
+    group: "Go to",
+    searchOnly: true,
+    keywords: ["pdf", "documents", "document themes", "pdf themes", "pdf look"],
+    run: () => {
+      void navigate({ to: "/document-themes" });
+    },
+  });
+  useCommand({
+    id: "library.new-document-theme",
+    title: "New PDF look",
+    group: "PDF looks",
+    searchOnly: true,
+    keywords: ["create", "pdf", "theme", "document"],
+    run: () => {
+      void navigate({ to: "/document-themes/new", search: {} });
+    },
+  });
+  useCommand({
+    id: "library.open-pronunciation",
+    title: "Open Pronunciation",
+    group: "Go to",
+    searchOnly: true,
+    keywords: ["aliases", "narration aliases", "say it as", "pronounce", "dr. doctor"],
+    run: () => {
+      void navigate({ to: "/narration-aliases" });
+    },
+  });
+  useCommand({
+    id: "library.open-ab-results",
+    title: "Open What worked on YouTube",
+    group: "Go to",
+    searchOnly: true,
+    keywords: ["a/b", "ab test", "test and compare", "thumbnail test", "title test", "results"],
+    run: () => {
+      void navigate({ to: "/ab-results" });
     },
   });
   return null;
