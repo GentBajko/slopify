@@ -512,7 +512,7 @@ describe("the prompts list", () => {
     expect(within(users).getByRole("link", { name: "Cats" }).getAttribute("href")).toBe(
       "/projects/x1",
     );
-    expect(within(users).getByText(/2 of 3 revisions, including the current one/u)).not.toBeNull();
+    expect(within(users).getByText(/2 of 3 versions, including the current one/u)).not.toBeNull();
     expect(within(users).getByText("Schedule · paused")).not.toBeNull();
 
     await user.click(

@@ -171,7 +171,7 @@ function UsedByList({ usedBy }: { readonly usedBy: UsedBy }): ReactElement {
             meta={`Project${
               one.totalRevisions === 0
                 ? ""
-                : ` · ${String(one.revisions)} of ${String(one.totalRevisions)} ${one.totalRevisions === 1 ? "revision" : "revisions"}${one.current ? ", including the current one" : ", not the current one"}`
+                : ` · ${String(one.revisions)} of ${String(one.totalRevisions)} ${one.totalRevisions === 1 ? "version" : "versions"}${one.current ? ", including the current one" : ", not the current one"}`
             }`}
           />
         ))}
