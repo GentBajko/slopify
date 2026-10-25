@@ -203,6 +203,22 @@ describe("freeChecks", () => {
       ]);
     });
 
+    it("reads an unchosen writer as the default kind by kind, where the images were picked", () => {
+      const half = {
+        ...document,
+        form: { ...document.form, llm: { provider: "", model: "" } },
+      };
+      expect(
+        providerLines({
+          document: half,
+          defaults: { llm: { provider: "claude-code", model: "sonnet" } },
+          providers: new Map([...ready, ["claude-code", { name: "Claude Code CLI", ready: true }]]),
+        }),
+      ).toEqual([
+        { id: "providers", ok: true, sentence: "Every service this template uses is set up." },
+      ]);
+    });
+
     it("ignores the provider of a stage that is off or provided", () => {
       const off = {
         ...document,

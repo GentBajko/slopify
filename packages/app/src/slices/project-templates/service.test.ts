@@ -243,13 +243,18 @@ it("gives a draft made from a template nobody picked a writer or image service i
     const saved = readTemplate(h.deps, id);
     expect(saved.ok && saved.value.document.form.llm.provider).toBe("");
 
+    // Kind by kind, as Create fills a draft: the writer nobody picked takes the default, and
+    // the image service someone picked is kept.
     const chosen = randomUUID();
     const half = { ...blank, form: { ...blank.form, images: { provider: "fal", model: "flux" } } };
     expect(createTemplate(h.deps, { id: chosen, name: "Half", document: half }).ok).toBe(true);
     const kept = instantiateTemplate(h.deps, { templateId: chosen, id: randomUUID(), version: 1 });
     if (!kept.ok) throw new Error("Template did not instantiate");
-    expect(kept.value.draft.document.form.llm.provider).toBe("");
-    expect(kept.value.draft.document.form.images.provider).toBe("fal");
+    expect(kept.value.draft.document.form.llm).toEqual({
+      provider: "claude-code",
+      model: "sonnet",
+    });
+    expect(kept.value.draft.document.form.images).toEqual({ provider: "fal", model: "flux" });
   } finally {
     h.close();
   }
