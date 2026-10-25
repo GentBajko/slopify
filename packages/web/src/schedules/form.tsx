@@ -535,6 +535,9 @@ function focusField(id: string): void {
 
 const localZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
+// A count as a sentence, "12 of 4,000 characters.": an over-limit count ends in its own stop.
+const sentence = (text: string): string => (text.endsWith(".") ? text : `${text}.`);
+
 // The series brief and whether the schedule asks an LLM for its next topics.
 function GenerationFields({
   problems,
@@ -570,7 +573,7 @@ function GenerationFields({
       <Field
         label="Series brief (optional)"
         id="schedule-brief"
-        help={`Empty uses the channel's series brief. ${limitCount(brief.length, briefMax, "characters")}.`}
+        help={`Empty uses the channel's series brief. ${sentence(limitCount(brief.length, briefMax, "characters"))}`}
         error={problems.brief}
       >
         <Textarea
@@ -587,8 +590,10 @@ function GenerationFields({
           id="schedule-generation"
           help={
             generation.mode === "hold"
-              ? "They wait under Topics waiting until you approve them."
-              : "Generating more is one AI call each time."
+              ? "They wait under Topics waiting until you approve them. Each batch is one AI call."
+              : generation.mode === "queue"
+                ? "They join the end of the queue. Each batch is one AI call."
+                : "Or have the AI suggest topics, one AI call per batch."
           }
           error={problems.generation}
         >
@@ -681,7 +686,11 @@ function GenerationFields({
                 : ""}
             </label>
           </div>
-          <HelpLine>Untick to pick another, such as a cheaper model.</HelpLine>
+          <HelpLine>
+            {own === null
+              ? "Untick to pick another, such as a cheaper model."
+              : "Topics are suggested by the service and model below."}
+          </HelpLine>
           {own === null ? null : (
             <div className="grid gap-4 min-[700px]:grid-cols-2">
               <ProviderPicker

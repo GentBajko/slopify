@@ -91,3 +91,28 @@ it("ranks topics with or without generated ones, and says what search sends", as
     ),
   ).toBeTruthy();
 });
+
+// Each choice's line says what it does and what it spends, not what another choice would.
+it("says under New topics and the AI model what the picked choice does", async () => {
+  const user = userEvent.setup();
+  renderRouted(
+    <SchedulesView />,
+    deps(() => Response.json({})),
+  );
+  await user.click(await screen.findByRole("button", { name: "New schedule" }));
+  const mode = screen.getByLabelText("New topics");
+  expect(screen.getByText("Or have the AI suggest topics, one AI call per batch.")).toBeTruthy();
+  await user.selectOptions(mode, "queue");
+  expect(
+    screen.getByText("They join the end of the queue. Each batch is one AI call."),
+  ).toBeTruthy();
+  await user.selectOptions(mode, "hold");
+  expect(
+    screen.getByText(
+      "They wait under Topics waiting until you approve them. Each batch is one AI call.",
+    ),
+  ).toBeTruthy();
+  expect(screen.getByText("Untick to pick another, such as a cheaper model.")).toBeTruthy();
+  await user.click(screen.getByRole("checkbox", { name: /Use the template's AI model/ }));
+  expect(screen.getByText("Topics are suggested by the service and model below.")).toBeTruthy();
+});
