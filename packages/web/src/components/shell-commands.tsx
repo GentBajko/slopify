@@ -175,7 +175,9 @@ function ChannelCommands(): ReactElement {
   );
 }
 
-// Words people type for a section that its name and line do not hold.
+// Words people type for a section that its name and line do not hold. "studio" on its own is a
+// word of YouTube Studio and posting's name, listed so the former name "Template studio" (now
+// Production defaults) does not outrank it.
 const sectionWords: Readonly<Record<string, readonly string[]>> = {
   general: ["appearance", "theme", "dark", "light", "start at login", "autostart"],
   providers: [
@@ -194,7 +196,7 @@ const sectionWords: Readonly<Record<string, readonly string[]>> = {
   agents: ["mcp", "claude code", "codex", "agent"],
   playback: ["pace", "loudness", "volume", "narration", "template studio"],
   notifications: ["webhook", "ntfy", "alerts"],
-  studio: ["extension", "playlist", "youtube"],
+  studio: ["studio", "extension", "playlist", "youtube"],
   storage: ["export", "import", "disk", "space"],
   backups: ["daily copy", "restore"],
   trash: ["deleted", "restore", "undelete"],
