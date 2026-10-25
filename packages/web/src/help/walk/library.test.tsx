@@ -259,11 +259,10 @@ describe("every control on Prompts, Templates, PDF themes and Pronunciation is e
       themes(),
     );
     await screen.findByDisplayValue("Night reading");
-    // Every group's settings, whether or not its section starts open. The name and the
-    // preview's heading carry none: neither needs a paragraph.
-    const buttons = document.querySelectorAll("[data-help-id]").length;
-    const settings = themeGroups.flatMap((group) => group.fields).length;
-    expect(buttons).toBeGreaterThanOrEqual(settings);
+    // No setting has a cost or a side effect a line can't say, so none carries an info button:
+    // each section's one line explains the settings whose labels say the rest.
+    expect(document.querySelectorAll("[data-help-id]")).toHaveLength(0);
+    for (const group of themeGroups) expect(screen.getByText(group.help)).not.toBeNull();
     expect(screen.getByLabelText("Link address")).not.toBeNull();
     expect(screen.getByLabelText("Body font")).not.toBeNull();
     expectExplained();

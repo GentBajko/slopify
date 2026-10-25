@@ -11,7 +11,8 @@ import { useApp } from "@/app-context";
 import { EditorActions } from "@/components/editor-actions";
 import { EditorSkeleton } from "@/components/editor-states";
 import { ConfirmDialog } from "@/components/kit/dialog";
-import { Field, Input } from "@/components/kit/field";
+import { Field, HelpLine, Input } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
 import { ButtonLink, FileLink } from "@/components/kit/link";
 import { SectionHead } from "@/components/kit/section-head";
@@ -221,19 +222,24 @@ export function DocumentThemeEditorRoute({
                   {group.title}
                   <GroupMarks problems={state?.problems ?? 0} changed={state?.changed ?? 0} />
                 </summary>
-                <div className="grid grid-cols-[minmax(0,1fr)] gap-x-5 gap-y-4 pb-4 sm:grid-cols-2">
-                  {group.fields.map((field) => (
-                    <Setting
-                      key={field.path.join(".")}
-                      field={field}
-                      theme={draft.values}
-                      original={base?.values ?? draft.values}
-                      problem={problemFor(problems, field.path)}
-                      onChange={(values) => {
-                        edit({ ...draft, values }, fieldKey(field.path));
-                      }}
-                    />
-                  ))}
+                {/* One line says what the section's settings place and in what unit, so a
+                    setting whose label says the rest needs nothing beside it. */}
+                <div className="flex flex-col gap-3 pb-4" {...helpScope}>
+                  <HelpLine>{group.help}</HelpLine>
+                  <div className="grid grid-cols-[minmax(0,1fr)] gap-x-5 gap-y-4 sm:grid-cols-2">
+                    {group.fields.map((field) => (
+                      <Setting
+                        key={field.path.join(".")}
+                        field={field}
+                        theme={draft.values}
+                        original={base?.values ?? draft.values}
+                        problem={problemFor(problems, field.path)}
+                        onChange={(values) => {
+                          edit({ ...draft, values }, fieldKey(field.path));
+                        }}
+                      />
+                    ))}
+                  </div>
                 </div>
               </details>
             );

@@ -1,6 +1,6 @@
 # Document Themes
 
-A document theme is the look of the PDF Slopify makes from the article: paper size, colours, fonts, spacing, the title page, contents, sources and closing pages, headers and page numbers. Slopify ships three ready looks, **Plain**, **Book** and **Modern**. Copy one to make themes of your own, with a live preview as you edit.
+A document theme is the look of the PDF Slopify makes from the article: paper size, colors, fonts, spacing, the title page, contents, sources and closing pages, headers and page numbers. Slopify ships three ready looks, **Plain**, **Book** and **Modern**. Copy one to make themes of your own, with a live preview as you edit.
 
 **Where to find it:** **Edit PDF looks** beside the **PDF look** on Create's **Extras** row, in Edit template's **PDF** section or under **Settings → Production defaults**. Pick a look on Create, in a project's **Edit settings**, or as a channel's default in its brand kit.
 
@@ -18,7 +18,7 @@ A project keeps its own copy of the theme's settings. Editing or deleting a them
 1. Open **PDF themes** (Settings → Production defaults → PDF look → **Edit PDF looks**).
 2. Press **New theme** (it starts from Plain), or pick a built-in theme and press **Copy theme**, or press **Duplicate** on one of your themes.
 3. Type a **Name** (up to 80 characters). This is what the **PDF look** picker on Create and a project's Edit settings shows.
-4. Open the groups on the left and change what you like (every setting is listed below). The first two groups start open.
+4. Open the groups on the left and change what you like (every setting is listed below). The first two groups start open. One line under each group's title says what its settings place and in what unit, and a setting that needs more says it under its box. A changed setting offers a reset back to where it started.
 5. Watch the **Preview** on the right. It lays out a sample article with this theme using the same renderer that makes a project's PDF, redrawn about half a second after you stop typing. It runs on your computer and costs nothing.
 6. Press **Save**. If a setting is out of range it is highlighted, and Save says "Fix the highlighted settings first."
 
@@ -34,7 +34,7 @@ Press **Delete** on the theme and confirm. Projects that used it keep their own 
 
 ## Every setting
 
-Sizes are in millimetres (mm) unless marked pt (points; 1 pt is about 0.35 mm). Defaults are the Plain theme's.
+Sizes are in millimeters (mm) unless marked pt (points; 1 pt is about 0.35 mm). Defaults are the Plain theme's.
 
 ### Page
 
@@ -43,21 +43,21 @@ Sizes are in millimetres (mm) unless marked pt (points; 1 pt is about 0.35 mm). 
 | **Paper size** | A4 (210 × 297 mm) for most of the world, US Letter (216 × 279 mm) for the US and Canada. | A4 | |
 | **Margins** | Blank space on every edge of each page. Wider margins mean shorter lines and more pages. | 22 mm | 5 to 60 |
 | **Text starts at** | How far from the top the text begins on pages with the running header. Raise it when text crowds the header. | 32 mm | 5 to 80 |
-| **Background** | **Parchment texture** stretches an aged-paper picture over every page. **Flat colour** fills each page with the Page colour, slightly darker at the edges. | Flat colour | |
-| **Page colour** | The page colour with Flat colour. Type a hex code or use the picker. | `#fdfaf3` (warm off-white) | |
+| **Background** | **Parchment texture** stretches an aged-paper picture over every page. **Flat color** fills each page with the Page color, slightly darker at the edges. | Flat color | |
+| **Page color** | The page color with Flat color. Type a hex code or use the picker. | `#fdfaf3` (warm off-white) | |
 
-### Colours
+### Colors
 
-| Setting | What it colours | Default |
+| Setting | What it colors | Default |
 |---|---|---|
-| **Heading colour** | Headings, drop caps, the brand name and links | `#1f3a5f` (dark blue) |
-| **Body text colour** | Paragraphs, lists, bold and italic text. Keep it dark against the page. | `#1a1a1a` (near black) |
-| **Muted colour** | Dates, bullets, quotes and the dotted lines on the contents page | `#555555` (mid grey) |
-| **Faint colour** | The running header and page numbers | `#888888` (light grey) |
+| **Heading color** | Headings, drop caps, the brand name and links | `#1f3a5f` (dark blue) |
+| **Body text color** | Paragraphs, lists, bold and italic text. Keep it dark against the page. | `#1a1a1a` (near black) |
+| **Muted color** | Dates, bullets, quotes and the dotted lines on the contents page | `#555555` (mid gray) |
+| **Faint color** | The running header and page numbers | `#888888` (light gray) |
 
 ### Fonts
 
-Each font has three controls: the family, its weight or italic, and **Letter spacing (mm)** from −0.5 to 2. The families are **Cinzel** (bundled; four weights, no italics), **Literata** (bundled; a text face made for long reading, in regular, bold, italic and bold italic) and **Times**, **Helvetica** and **Courier** (built into every PDF reader).
+Each font has three controls: the family, its weight or italic, and the space between its letters, in the box marked **mm between letters**, from −0.5 to 2. The families are **Cinzel** (bundled; four weights, no italics), **Literata** (bundled; a text face made for long reading, in regular, bold, italic and bold italic) and **Times**, **Helvetica** and **Courier** (built into every PDF reader).
 
 | Setting | Where it is used | Default |
 |---|---|---|
