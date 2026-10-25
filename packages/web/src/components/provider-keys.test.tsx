@@ -568,6 +568,23 @@ describe("Keys & services' lists", () => {
     expect(await screen.findByLabelText("OpenAI API key")).not.toBeNull();
   });
 
+  it("offers no OpenAI key from the system voice once OpenAI has one", async () => {
+    renderRouted(
+      <ProviderKeys focus={{ family: "tts", provider: "system-voice", arrival: true }} />,
+      deps([
+        keyed("openai-tts", "tts", "OpenAI", true),
+        {
+          id: "system-voice",
+          family: "tts",
+          displayName: "System voice",
+          readiness: { kind: "local", available: false },
+        },
+      ]),
+    );
+    expect(await screen.findByRole("button", { name: "Check again" })).not.toBeNull();
+    expect(screen.queryByRole("button", { name: "Add an OpenAI key instead" })).toBeNull();
+  });
+
   it("on one column, opens a service's setup under its own line and keeps the lists together", async () => {
     const user = userEvent.setup();
     const matchMedia = window.matchMedia;

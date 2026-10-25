@@ -219,7 +219,11 @@ export function ProviderKeys({
         key={provider.id}
         provider={provider}
         readiness={provider.readiness}
-        {...(listed.some((one) => one.id === openAiVoice)
+        // Only while OpenAI has no key: with one, narration needs no speech program already.
+        {...(listed.some(
+          (one) =>
+            one.id === openAiVoice && one.readiness.kind === "keyed" && !one.readiness.hasKey,
+        )
           ? { onUseKey: () => setPicked(openAiVoice) }
           : {})}
       />
