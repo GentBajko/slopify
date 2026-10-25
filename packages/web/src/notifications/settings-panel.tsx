@@ -96,22 +96,23 @@ function BrowserNotifications() {
           disabled={asking}
           onChange={(next) => void turn(next)}
         />
-        <Button
-          variant="quiet"
-          disabled={!active}
-          disabledReason={`Turn ${browserLabel} on first.`}
-          onClick={() => {
-            setProblem(undefined);
-            try {
-              showBrowserNotification({ projectId: "test", text: testNotice }, () => {});
-              notify("Test notification sent to this browser.", "success");
-            } catch {
-              setProblem(cantShow);
-            }
-          }}
-        >
-          Send test notification
-        </Button>
+        {/* Only once the switch is on: before that a test has nowhere to show. */}
+        {active ? (
+          <Button
+            variant="quiet"
+            onClick={() => {
+              setProblem(undefined);
+              try {
+                showBrowserNotification({ projectId: "test", text: testNotice }, () => {});
+                notify("Test notification sent to this browser.", "success");
+              } catch {
+                setProblem(cantShow);
+              }
+            }}
+          >
+            Send test notification
+          </Button>
+        ) : null}
       </div>
       {problem === undefined ? null : (
         <p role="alert" className="m-0 text-small text-danger">
@@ -130,7 +131,7 @@ function RunSounds() {
     <div className="flex flex-wrap items-start gap-x-6 gap-y-2">
       <Switch
         label="Play a sound when a run starts and ends"
-        help="A longer one when it finishes, fails or waits for you, in this browser while any Slopify tab is open. Your computer's volume sets how loud."
+        help="The end sound also plays when a run fails or waits for you. You hear them in this browser while a Slopify tab is open and has been clicked once."
         checked={on}
         onChange={setRunSounds}
       />
