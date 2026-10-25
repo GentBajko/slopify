@@ -111,6 +111,9 @@ it("saves a template from Play with the topic empty and the settings kept", asyn
   const dialog = await screen.findByRole("dialog", { name: "Save as template" });
   expect(within(dialog).getByText(/topic is left empty in the template/)).not.toBeNull();
   expect(within(dialog).getByText("The other video queued here is not saved.")).not.toBeNull();
+  // Save is never greyed: pressed without a name, it says what is missing under the name.
+  await userEvent.click(within(dialog).getByRole("button", { name: "Save template" }));
+  expect(within(dialog).getByText("Name the template first.")).not.toBeNull();
   await userEvent.type(within(dialog).getByLabelText("Template name"), "History");
   await userEvent.click(within(dialog).getByRole("button", { name: "Save template" }));
   await waitFor(() =>

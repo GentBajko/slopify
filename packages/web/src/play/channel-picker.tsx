@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { type ReactElement, useId } from "react";
 import { useApp } from "@/app-context";
 import { type CastMember, channelQuery, channelsQuery, defaultChannelId } from "@/channels/api";
 import { channelOfTemplate } from "@/channels/members-tabs";
+import { TextLink } from "@/components/kit/link";
 import { Switch } from "@/components/kit/switch";
 import { templatesQuery } from "@/templates/api";
 import { usePlaySession } from "./draft-context";
@@ -53,7 +53,8 @@ export function ChannelFor({
         id={id}
         data-play-field="channelId"
         aria-label="For channel"
-        className="sl-select sl-select--compact min-w-0 max-w-[240px]"
+        // Wide enough for a long channel name, as the row has room for it.
+        className="sl-select sl-select--compact min-w-0 max-w-[min(28rem,100%)]"
         value={current}
         disabled={disabled}
         onChange={(event) => {
@@ -100,9 +101,10 @@ export function BrandKitControls({
       />
       {channel ? (
         <p className="m-0 text-small text-ink-2">
-          <Link to="/channels/$channelId" params={{ channelId: channel.id }} className="underline">
-            Open {channel.name}
-          </Link>
+          {/* It leaves Create, as every link marked ↗ here does; the draft is kept. */}
+          <TextLink to="/channels/$channelId" params={{ channelId: channel.id }}>
+            Open {channel.name} ↗
+          </TextLink>
           {useKit ? "" : " · its cast is still used"}
         </p>
       ) : null}

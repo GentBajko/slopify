@@ -7,7 +7,6 @@ import { StageGlyph } from "@/components/glyph";
 import { HelpLine } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
 import { stageWords } from "@/lib/stage-words";
-import { cn } from "@/lib/utils";
 import type { PlayFormState, UploadSlot } from "@/play/state";
 import { sourceOptions } from "@/play/state";
 import { InlineSwitch } from "@/play/switches";
@@ -54,7 +53,6 @@ export const RailName = createContext<string | undefined>(undefined);
 export function StageRail({
   kind,
   name,
-  dim,
   titled = true,
   bare = false,
   source,
@@ -63,7 +61,6 @@ export function StageRail({
 }: {
   readonly kind: StageKind;
   readonly name: string;
-  readonly dim: boolean;
   readonly titled?: boolean | undefined;
   // No name and no switch: only the stage's settings (RailProps `bare`).
   readonly bare?: boolean | undefined;
@@ -87,8 +84,10 @@ export function StageRail({
         >
           {titled ? (
             <>
-              <StageGlyph kind={kind} className={dim ? "text-ink-3" : "text-ink-2"} />
-              <h3 id={nameId} className={cn("m-0 text-title-3", dim ? "text-ink-3" : undefined)}>
+              {/* Never dimmed when the stage is off: a grey name beside its icon read as an
+                  empty search box. The switch beside it says Off. */}
+              <StageGlyph kind={kind} className="text-ink-2" />
+              <h3 id={nameId} className="m-0 text-title-3">
                 {name}
               </h3>
             </>

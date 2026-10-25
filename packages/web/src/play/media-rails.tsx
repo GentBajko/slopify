@@ -114,7 +114,6 @@ export function AudioRail({
     <StageRail
       kind="audio"
       name="Narration"
-      dim={form.sources.audio === "off"}
       titled={titled}
       source={<SourceSwitch kind="audio" form={form} update={update} />}
     >
@@ -284,7 +283,6 @@ export function ImagesRail({
     <StageRail
       kind="images"
       name="Images"
-      dim={form.sources.images === "off"}
       titled={titled}
       bare={bare}
       source={<SourceSwitch kind="images" form={form} update={update} />}

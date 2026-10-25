@@ -36,7 +36,6 @@ export function ResearchRail({ form, problem, update }: RailProps) {
     <StageRail
       kind="research"
       name="Research"
-      dim={form.sources.research === "off"}
       source={<SourceSwitch kind="research" form={form} update={update} />}
       note={
         form.sources.research === "generate"
@@ -66,7 +65,6 @@ export function ArticleRail({ form, prompts, problem, update, titled }: RailProp
     <StageRail
       kind="article"
       name="Article"
-      dim={false}
       titled={titled}
       source={<ArticleTaskSwitch form={form} update={update} />}
     >
@@ -253,7 +251,6 @@ export function VideoRail({ form, update, titled }: Pick<RailProps, "form" | "up
     <StageRail
       kind="video"
       name="Video"
-      dim={form.sources.video === "off"}
       titled={titled}
       source={<SourceSwitch kind="video" form={form} update={update} />}
       note={note}
