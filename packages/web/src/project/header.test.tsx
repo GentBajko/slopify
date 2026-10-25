@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { body, stage } from "@/routes/project-fixtures";
 import { renderRouted, testDeps } from "@/test-app";
-import { finishedAt, ProjectHeader, runLength } from "./header";
+import { finishedAt, ProjectHeader, runLength, runStart } from "./header";
 import { NextChapterOffer } from "./next-action-view";
 
 afterEach(cleanup);
@@ -157,6 +157,29 @@ it("says a held or prepared project's state as Projects and the agent tools do",
   expect(screen.getByText("Waiting for its day")).not.toBeNull();
   expect(screen.getByText("Queued")).not.toBeNull();
   expect(screen.getByText("Waiting for the agent")).not.toBeNull();
+});
+
+// A remake of the video on a copy said "started" at the copy's creation, minutes before the
+// remake began.
+it("starts a run at the first step it makes, with the steps that ran just before it", () => {
+  const remake = [
+    stage("article", "done", {
+      startedAt: "2026-09-27T17:15:00.000Z",
+      finishedAt: "2026-09-27T17:16:00.000Z",
+    }),
+    stage("video", "running", { startedAt: "2026-09-28T09:00:00.000Z" }),
+  ];
+  expect(runStart(remake)).toBe("2026-09-28T09:00:00.000Z");
+  // One run: the article finished seconds before the narration started.
+  const first = [
+    stage("article", "done", {
+      startedAt: "2026-09-27T17:15:00.000Z",
+      finishedAt: "2026-09-27T17:16:00.000Z",
+    }),
+    stage("audio", "running", { startedAt: "2026-09-27T17:16:02.000Z" }),
+  ];
+  expect(runStart(first)).toBe("2026-09-27T17:15:00.000Z");
+  expect(runStart(ran)).toBeUndefined();
 });
 
 it("reads when a run finished and how long it took from its steps", () => {

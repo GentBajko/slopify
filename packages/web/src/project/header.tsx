@@ -191,7 +191,7 @@ function facts(
     book === undefined ? undefined : bookLabel(book),
     finished && end !== undefined
       ? `finished ${startedAt(end)}${took === undefined ? "" : `, ${took}`}`
-      : `started ${startedAt(project.createdAt)}`,
+      : `started ${startedAt(runStart(stages) ?? project.createdAt)}`,
     channel,
     uploadedAt === null || uploadedAt === undefined
       ? undefined
@@ -227,6 +227,33 @@ export function finishedAt(stages: readonly Stage[]): string | undefined {
   });
   return ends.length === 0 ? undefined : new Date(Math.max(...ends)).toISOString();
 }
+
+// When the run now going (or stopped) began: the first step it is making, and before it the
+// steps that ran one after another up to it. A remake of the video days after the first run
+// starts at its own render, not when the project (or the copy) was made. Undefined when no step
+// still to finish has started.
+export function runStart(stages: readonly Stage[]): string | undefined {
+  const started = stages.flatMap((stage) => {
+    const at = timeOf(stage.startedAt);
+    return at === undefined ? [] : [{ stage, at }];
+  });
+  const going = started.filter(({ stage }) => stage.state !== "done" && stage.state !== "provided");
+  if (going.length === 0) return undefined;
+  let start = Math.min(...going.map(({ at }) => at));
+  // A step that finished at most a few minutes before the run's start was part of it.
+  const before = started
+    .filter(({ stage }) => stage.state === "done" || stage.state === "provided")
+    .toSorted((a, b) => b.at - a.at);
+  for (const { stage, at } of before) {
+    const end = timeOf(stage.finishedAt);
+    if (end === undefined || end > start || start - end > chainGapMs) continue;
+    start = Math.min(start, at);
+  }
+  return new Date(start).toISOString();
+}
+
+// Steps of one run follow each other within seconds; a later remake comes minutes or days on.
+const chainGapMs = 5 * 60_000;
 
 // "3 min", "41 s", "1 h 12 min": from the first step's start to the last one's end.
 export function runLength(stages: readonly Stage[]): string | undefined {
