@@ -29,7 +29,7 @@ it("previews the picked theme's sample article in a drawer before a render", asy
       },
     }),
   );
-  const preview = await screen.findByRole("button", { name: "Preview the Plain theme" });
+  const preview = await screen.findByRole("button", { name: "Preview the Plain look" });
   await waitFor(() => expect(preview.hasAttribute("disabled")).toBe(false));
   await user.click(preview);
   expect(screen.getByRole("dialog", { name: "Preview: Plain" })).not.toBeNull();

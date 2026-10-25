@@ -347,7 +347,7 @@ function Preview({ values }: { readonly values: DocumentTheme | undefined }) {
           ? `The preview couldn't be made: ${failure ?? "Slopify didn't answer."} Change a setting to try again.`
           : state === "undrawn"
             ? "The preview can't be drawn in this browser. Full size opens the same PDF in a new tab."
-            : "A sample article with this theme. Your projects use their own text and thumbnail.";
+            : "A sample article with this look. Your projects use their own text and thumbnail.";
 
   return (
     <div className={editorAside}>
