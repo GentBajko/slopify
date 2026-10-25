@@ -85,7 +85,7 @@ export const projectHelp = {
   },
   "project.edit.show-figures": {
     title: "Show tables and figures on screen",
-    body: "Shows each described table, figure, equation and code block in the video while its description is spoken, as the article's picture or a card drawn on this computer at no cost. Turning it on or off renders the video again, and any Shorts that include a card; the narration is kept. The cards appear under Images, From the article, and can be made again there.",
+    body: "Shows each described table, figure, equation and code block in the video while its description is spoken, as the article's picture or a card drawn on this computer at no cost. Turning it on or off makes the video again, and any Shorts that include a card; the narration is kept. The cards appear under Images, From the article, and can be made again there.",
     tutorial: { page: "Create-Narration", anchor: "tables-figures-and-code" },
   },
   "project.edit.describe-figures": {
