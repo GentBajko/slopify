@@ -57,6 +57,8 @@ export function SubtitleControls({
   const fontProblem = problem?.("subtitles.fontId");
   const sizeProblem = problem?.("subtitles.fontSize");
   const modeProblem = problem?.("subtitles.mode") ?? problem?.("subtitles");
+  // A refused or unfinished font upload: the upload control it names stays in reach.
+  const uploadProblem = problem?.("fontUpload") ?? problem?.("subtitles.fontUpload");
   const facts = subtitleFacts(language);
   const sizeShown = rawFontSize?.value ?? String(value.fontSize);
   const sizeChanged = sizeShown.trim() !== String(defaultSubtitles.fontSize);
@@ -73,6 +75,7 @@ export function SubtitleControls({
         (!validSubtitleStyle(value) ||
           sizeProblem !== undefined ||
           fontProblem !== undefined ||
+          uploadProblem !== undefined ||
           fontUpload?.pending === true ||
           uploading)));
   return (
