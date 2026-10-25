@@ -27,9 +27,9 @@ import { overallProgress } from "./workspace.js";
 
 // Progress: watching the run while it goes. A headline with where the run stands and its time
 // left ("Making your video · Step 3 of 5 · about 6 min left", counted as the title row counts)
-// over one bar, the steps with their times, one per section, then what each makes as it lands: the article as it is written, the narration's
-// waveform growing, the images as they are drawn and the video while it renders, which becomes
-// its player the moment the file is there. A finished step says so in the past tense. Fed by
+// over one bar, the steps with their times, one per section, then what each makes as it lands:
+// the article as it is written, the narration's waveform growing, the images as they are drawn
+// and the video while it renders, which becomes its player the moment the file is there. A finished step says so in the past tense. Fed by
 // the page's event stream; nothing here starts or changes work.
 export function LiveBuild({
   project,

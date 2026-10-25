@@ -146,9 +146,10 @@ export function runSectionSteps(
     readonly outdated?: ((section: SectionId) => number) | undefined;
   },
 ): readonly Step[] {
-  const shownStages = input.stages.filter((one) => one.state !== "skipped");
+  // `runSteps` gives one step per stage that is not skipped, in order.
+  const shown = input.stages.filter((stage) => stage.state !== "skipped");
   const steps = runSteps(input).map((step, at): Step => {
-    const stage = shownStages[at];
+    const stage = shown[at];
     if (
       stage === undefined ||
       step.tone !== "off" ||
@@ -158,7 +159,6 @@ export function runSectionSteps(
     const { detail: _waits, ...rest } = step;
     return { ...rest, tone: "info", state: "Outdated" };
   });
-  const shown = input.stages.filter((stage) => stage.state !== "skipped");
   const stepOf = new Map<StageKind, Step>();
   shown.forEach((stage, at) => {
     const step = steps[at];

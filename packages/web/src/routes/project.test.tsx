@@ -724,7 +724,7 @@ describe("Progress", () => {
   });
 });
 
-describe("the title row's More", () => {
+describe("the project's actions under its status", () => {
   it("renames from the settings' title, and deletes after asking, with Undo", async () => {
     const removed = vi.fn();
     const fixture = revisionRouteFixture(finished);
