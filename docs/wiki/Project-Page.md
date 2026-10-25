@@ -183,7 +183,7 @@ While the run goes, **Progress** leads the status list and shows the run as it i
 
 **Edit settings** in the title row opens the project's settings in the main column, in the same order and words as Create's rows, with two tabs:
 
-- **Settings**: every setting of the project, section by section, with **Save changes** and **Discard changes**. Saving keeps a new version without making anything; what the change made outdated is then the next action. Pauses and checks is one of the sections: the pauses for this run (**Pause after the article (before the narration)** and the others) with **Save pauses**, and whether an AI checks the results. See [Editing a Project](Editing-a-Project) and [Reviews and Checkpoints](Reviews-and-Checkpoints).
+- **Settings**: every setting of the project, section by section, with **Save changes** and **Discard changes**. Saving keeps a new version without making anything; what the change made outdated is then the next action. Pauses and checks is one of the sections: the pauses for this run (**Pause after the article (before the narration)** and the others) with **Save pauses**, and whether an AI checks the results. See [Editing a Project](Editing-a-Project) and [Pauses and Checks](Reviews-and-Checkpoints).
 - **Versions**: every saved version and its files (**Show its files**), **Free space** on a finished project, and the **Project ID** with **Copy project ID**. See [Editing a Project](Editing-a-Project#versions).
 
 Press **Edit settings** again to close the settings.
@@ -226,7 +226,7 @@ Press `Ctrl+K` on a project page. Under **This project** you get the next action
 - [Editing a Project](Editing-a-Project)
 - [Video Editing](Video-Editing)
 - [Recovery and Retries](Recovery-and-Retries)
-- [Reviews and Checkpoints](Reviews-and-Checkpoints)
+- [Pauses and Checks](Reviews-and-Checkpoints)
 - [Costs and Run Cost](Costs-and-Run-Cost)
 - [Publishing to YouTube](Publishing-to-YouTube)
 - [Home and Projects](Home-and-Projects)

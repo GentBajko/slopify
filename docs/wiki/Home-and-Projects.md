@@ -80,7 +80,7 @@ The things that don't move on until you act:
 
 A held run also offers **Keep as is**, which takes it off Needs you and leaves the rest unmade (with **Undo**); editing the project brings it back. A run waiting for an [agent's review](Agents-MCP#the-external-agent-reviewer) is not here: it goes on by itself, so it shows under Running. A step that failed while the run waits on something else shows here as a failed item. Up to 4 failed runs show; **See all N failed** opens Projects filtered to them.
 
-Only one button in the column is lime: the first decision's when there is one, otherwise **Watch** on the newest video. With nothing finished, waiting or running, Home says so, with **Make a video**. See [Reviews and Checkpoints](Reviews-and-Checkpoints), [Schedules](Schedules) and [Recovery and Retries](Recovery-and-Retries).
+Only one button in the column is lime: the first decision's when there is one, otherwise **Watch** on the newest video. With nothing finished, waiting or running, Home says so, with **Make a video**. See [Pauses and Checks](Reviews-and-Checkpoints), [Schedules](Schedules) and [Recovery and Retries](Recovery-and-Retries).
 
 ### Running
 
@@ -230,6 +230,6 @@ Projects shows **No projects yet**, "Every video you make is kept here with its 
 - [Channels](Channels)
 - [Calendar](Calendar)
 - [Schedules](Schedules)
-- [Reviews and Checkpoints](Reviews-and-Checkpoints)
+- [Pauses and Checks](Reviews-and-Checkpoints)
 - [Publishing to YouTube](Publishing-to-YouTube)
 - [Keyboard Shortcuts and Command Palette](Keyboard-Shortcuts-and-Command-Palette)

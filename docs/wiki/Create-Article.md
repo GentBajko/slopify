@@ -99,7 +99,7 @@ Folded, the Article row says what will happen, for example `Written by Claude Co
 
 - Ask for a Pronunciation Glossary at the end of your article prompt if the topic has unusual names. See [Narration](Create-Narration#pronunciation-glossary).
 - **See everything this run will do** → **The prompts as they will be sent** shows the article prompt exactly as it goes out, keywords filled in.
-- An AI check can read the article after it is written. See [Reviews and Checkpoints](Reviews-and-Checkpoints).
+- An AI check can read the article after it is written. See [Pauses and Checks](Reviews-and-Checkpoints).
 - To change the article after the run, edit it on the project page. See [Editing a Project](Editing-a-Project).
 
 ## Related pages

@@ -164,7 +164,7 @@ Folded, the Narration row says who reads it, for example `Read by Ada, an Inworl
 
 - If a service refuses long requests, set **Split the narration by** to **Paragraph** or **Every 500 words**. The characters charged stay the same.
 - Listen to the narration on the project page before publishing. Fix a single piece there instead of making everything again. See [Editing a Project](Editing-a-Project).
-- An AI check can listen for missing or garbled passages. See [Reviews and Checkpoints](Reviews-and-Checkpoints).
+- An AI check can listen for missing or garbled passages. See [Pauses and Checks](Reviews-and-Checkpoints).
 
 ## Related pages
 

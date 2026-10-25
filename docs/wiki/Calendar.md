@@ -30,7 +30,7 @@ Above the weeks, **Needs you** lists what cannot move on without you, then what 
 | A project held at a review checkpoint, or with an automatic review that flagged an item and waits for **Overrule** or **Redo** | **Waiting for your review** | **Open to review** |
 | A finished video not marked uploaded | **Ready to upload** | **Copy for YouTube Studio** |
 
-The bundled samples never show here. A press anywhere on an entry opens its project. See [Reviews and Checkpoints](Reviews-and-Checkpoints) and [Publishing to YouTube](Publishing-to-YouTube).
+The bundled samples never show here. A press anywhere on an entry opens its project. See [Pauses and Checks](Reviews-and-Checkpoints) and [Publishing to YouTube](Publishing-to-YouTube).
 
 ## The batch queue
 

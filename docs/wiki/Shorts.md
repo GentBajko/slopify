@@ -112,5 +112,5 @@ A clip must stay between the shortest and longest length you set and must not ov
 - [Video-Editing](Video-Editing)
 - [Editing-a-Project](Editing-a-Project)
 - [Publishing-to-YouTube](Publishing-to-YouTube)
-- [Reviews-and-Checkpoints](Reviews-and-Checkpoints)
+- [Pauses and Checks](Reviews-and-Checkpoints)
 - [Costs-and-Run-Cost](Costs-and-Run-Cost)

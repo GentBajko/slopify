@@ -97,7 +97,7 @@ See [PDF Documents](PDF-Documents) and [Document Themes](Document-Themes).
 ## Tips
 
 - The YouTube description and shorts need the captions' timing but not captions in the video; you can leave **Captions** off.
-- AI checks can look at the thumbnail at phone size and each short's images. See [Reviews and Checkpoints](Reviews-and-Checkpoints).
+- AI checks can look at the thumbnail at phone size and each short's images. See [Pauses and Checks](Reviews-and-Checkpoints).
 - A PDF is free, so switch it on whenever the article is worth reading on its own.
 
 ## Related pages

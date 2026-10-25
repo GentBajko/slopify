@@ -142,7 +142,7 @@ On Home.
 | **Approve the article and record**, **Approve and draw the images**, **Approve and render** | Approves a run held at a review. One per held project; **Open the held run** when there is nothing to approve here. |
 | **Mark uploaded** | Takes a finished video off the Ready to upload list. One per video. |
 
-See [Home-and-Projects](Home-and-Projects) and [Reviews-and-Checkpoints](Reviews-and-Checkpoints).
+See [Home-and-Projects](Home-and-Projects) and [Pauses and Checks](Reviews-and-Checkpoints).
 
 ### Projects
 

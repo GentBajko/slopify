@@ -238,7 +238,7 @@ Every Create action is in the command palette (`Ctrl+K`), under **Create**:
 - [Images](Create-Images)
 - [Video and style](Create-Video-and-Style)
 - [Extras](Create-Extras)
-- [Reviews and Checkpoints](Reviews-and-Checkpoints)
+- [Pauses and Checks](Reviews-and-Checkpoints)
 - [Templates](Templates)
 - [Costs and Run Cost](Costs-and-Run-Cost)
 - [Keyboard Shortcuts and Command Palette](Keyboard-Shortcuts-and-Command-Palette)

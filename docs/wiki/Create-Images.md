@@ -149,7 +149,7 @@ Folded, the Images row says what will be drawn, for example `16 images from “S
 ## Tips
 
 - Keep one style across the video with an establishing image, instead of repeating the style in every image prompt.
-- Picture checks can look at each image for malformed hands, stray text and a match with its brief. They need Claude Code or Codex as the checker. See [Reviews and Checkpoints](Reviews-and-Checkpoints).
+- Picture checks can look at each image for malformed hands, stray text and a match with its brief. They need Claude Code or Codex as the checker. See [Pauses and Checks](Reviews-and-Checkpoints).
 - After the run, you can add, remove or make single images again on the project page. See [Editing a Project](Editing-a-Project).
 
 ## Related pages

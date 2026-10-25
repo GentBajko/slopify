@@ -120,11 +120,11 @@ A failed step stops only the steps that need its output. The video never reads t
 - **Continue the run** on the canceled project makes everything that is missing.
 - If you took one step up again after the cancel (with **Try ... again**), **Continue the run** carries on only that work. The steps you canceled stay canceled until you take them up too.
 
-A canceled run's reviews waiting for an agent stop, and never pass on their own. See [Reviews and Checkpoints](Reviews-and-Checkpoints#the-external-agent-reviewer).
+A canceled run's reviews waiting for an agent stop, and never pass on their own. See [Pauses and Checks](Reviews-and-Checkpoints#the-external-agent-reviewer).
 
 ## Checkpoints and paused runs
 
-A checkpoint holds the run before a step so you can check what came before it. While held, the project shows **Waiting for your review** and an **Approve ...** button; nothing after it runs until you approve. Checkpoints are stored with the project, so a restart does not lose them; when you save a new revision, a checkpoint whose reviewed inputs changed asks for your review again (the Checkpoints view says "Inputs changed. Review the current revision before approving."). See [Reviews and Checkpoints](Reviews-and-Checkpoints).
+A checkpoint holds the run before a step so you can check what came before it. While held, the project shows **Waiting for your review** and an **Approve ...** button; nothing after it runs until you approve. Checkpoints are stored with the project, so a restart does not lose them; when you save a new revision, a checkpoint whose reviewed inputs changed asks for your review again (the Checkpoints view says "Inputs changed. Review the current revision before approving."). See [Pauses and Checks](Reviews-and-Checkpoints).
 
 A paused project keeps everything. **Continue the run** picks up where it stopped. See [Project Page](Project-Page#pause-continue-and-cancel-a-run). A connected [agent](Agents-MCP) may continue any paused run once nothing else on it needs fixing; cancel instead of pausing if you want a run to stay put.
 
@@ -151,5 +151,5 @@ When an update or install cannot finish, Slopify puts the previous version back.
 - [Editing a Project](Editing-a-Project)
 - [Keys and Services](Providers-and-Keys)
 - [AI CLIs](AI-CLIs)
-- [Reviews and Checkpoints](Reviews-and-Checkpoints)
+- [Pauses and Checks](Reviews-and-Checkpoints)
 - [Agents (MCP)](Agents-MCP)

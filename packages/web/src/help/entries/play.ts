@@ -282,7 +282,7 @@ export const playHelp = {
   "play.reviews.reviewer": {
     title: "Who reviews",
     body: "Model: Slopify asks the reviewer model below, one paid call per item. External agent (MCP): an agent connected in Settings → Connections → Agents (MCP) answers each review instead, at no API cost. A review nobody answers within 2 hours passes on its own, and a notification says so.",
-    tutorial: { page: "Reviews-and-Checkpoints", anchor: "set-up-automatic-reviews" },
+    tutorial: { page: "Reviews-and-Checkpoints", anchor: "advanced" },
   },
   "play.reviews.promise": {
     title: "Promise check",
@@ -292,7 +292,7 @@ export const playHelp = {
   "play.reviews.retries": {
     title: "Redos per item",
     body: "How many times Flag and redo makes a failed item again before it keeps the last one and flags it, 0 to 5. Each redo costs the item again plus one more review. Default: 2.",
-    tutorial: { page: "Reviews-and-Checkpoints", anchor: "set-up-automatic-reviews" },
+    tutorial: { page: "Reviews-and-Checkpoints", anchor: "advanced" },
   },
 
   // Channel row
