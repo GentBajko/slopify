@@ -57,11 +57,11 @@ function draftOf(brand: BrandKit): Draft {
   return Object.fromEntries(fields.map((field) => [field, brand[field] ?? ""])) as Draft;
 }
 
-// The Name and look tab: the channel's name, language and series brief first, then its look
-// beside a frame drawn with it, its intro, outro, PDF look and ambient sound, and folded
+// The Name and look tab: the channel's name, language and series brief first, then its look,
+// intro, outro and PDF look beside a frame drawn with it and its ambient sound, and folded
 // below, its named links and how it posts (the YouTube AI disclosure, the X subscription and
 // its accounts). Every look field is optional: Not set leaves the template's own setting alone.
-// One Save channel saves all of it.
+// One Save channel saves all of it, once something changed.
 export function BrandTab({ channel }: { readonly channel: Channel }): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
@@ -146,6 +146,16 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
     ...(themes.data?.themes ?? []).map((theme) => ({ value: theme.id, label: theme.name })),
   ];
   const accounts = accountCount(posting);
+  // Save channel waits for a change: until one, it says there is nothing to save.
+  const changed =
+    name !== channel.name ||
+    brief !== channel.seriesBrief ||
+    fields.some((field) => kit[field] !== draftOf(channel.brand)[field]) ||
+    JSON.stringify(bed) !== JSON.stringify(channelBedForm(channel.brand)) ||
+    disclosure !== channel.aiDisclosure ||
+    posting.xTier !== (channel.xTier ?? "free") ||
+    JSON.stringify(posting.accounts) !== JSON.stringify(channel.socialAccounts ?? {}) ||
+    linksDraft !== undefined;
   return (
     <form
       aria-label="Name and look"
@@ -231,40 +241,41 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
                 onChange={(event) => set("endScreenText")(event.target.value)}
               />
             </Field>
+            <Choice
+              label="Intro"
+              help="Narrated before each video: one voice request."
+              value={kit.intro}
+              options={entryOptions("intro")}
+              onPick={set("intro")}
+            />
+            <Choice
+              label="Outro"
+              help="Narrated after each video: one voice request."
+              value={kit.outro}
+              options={entryOptions("outro")}
+              onPick={set("outro")}
+            />
+            <Choice
+              label="PDF look"
+              help="For videos that also make a PDF."
+              value={kit.documentTheme}
+              options={themeOptions}
+              onPick={set("documentTheme")}
+            />
           </div>
-          <BrandPreview
-            captionFontId={kit.captionFontId}
-            titleFontId={kit.titleFontId}
-            captionColor={kit.captionColor}
-            captionOutlineColor={kit.captionOutlineColor}
-            titleColor={kit.titleColor}
-            endScreenText={kit.endScreenText}
-          />
+          {/* The sound under the frame, so the two columns end together with no blank band. */}
+          <div className="flex min-w-0 flex-col gap-4">
+            <BrandPreview
+              captionFontId={kit.captionFontId}
+              titleFontId={kit.titleFontId}
+              captionColor={kit.captionColor}
+              captionOutlineColor={kit.captionOutlineColor}
+              titleColor={kit.titleColor}
+              endScreenText={kit.endScreenText}
+            />
+            <ChannelAmbientBed value={bed} onChange={setBed} />
+          </div>
         </div>
-        <div className="sl-fields">
-          <Choice
-            label="Intro"
-            help="Narrated before each video: one voice request."
-            value={kit.intro}
-            options={entryOptions("intro")}
-            onPick={set("intro")}
-          />
-          <Choice
-            label="Outro"
-            help="Narrated after each video: one voice request."
-            value={kit.outro}
-            options={entryOptions("outro")}
-            onPick={set("outro")}
-          />
-          <Choice
-            label="PDF look"
-            help="For videos that also make a PDF."
-            value={kit.documentTheme}
-            options={themeOptions}
-            onPick={set("documentTheme")}
-          />
-        </div>
-        <ChannelAmbientBed value={bed} onChange={setBed} />
       </section>
       <div className="flex flex-col gap-2 border-t border-line pt-4">
         <Fold
@@ -300,7 +311,12 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
       <ActionBar
         status={
           <StatusSlot tone={save.error ? "error" : "info"}>
-            {save.error?.message ?? (save.isPending ? "Saving…" : undefined)}
+            {save.error?.message ??
+              (save.isPending
+                ? "Saving…"
+                : changed
+                  ? undefined
+                  : "Nothing to save yet: change a setting first.")}
           </StatusSlot>
         }
       >
@@ -308,16 +324,23 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
           type="submit"
           variant="primary"
           disabled={
-            save.isPending || name.trim() === "" || bedSave.blocked || badColour || badAccount
+            save.isPending ||
+            !changed ||
+            name.trim() === "" ||
+            bedSave.blocked ||
+            badColour ||
+            badAccount
           }
           disabledReason={
-            name.trim() === ""
-              ? "Give the channel a name"
-              : badColour
-                ? "Fix the colour marked above"
-                : badAccount
-                  ? "Fix the account name marked under Posting"
-                  : "Fix the ambient sound settings above"
+            !changed
+              ? "Nothing to save yet: change a setting first."
+              : name.trim() === ""
+                ? "Give the channel a name"
+                : badColour
+                  ? "Fix the colour marked above"
+                  : badAccount
+                    ? "Fix the account name marked under Posting"
+                    : "Fix the ambient sound settings above"
           }
         >
           Save channel

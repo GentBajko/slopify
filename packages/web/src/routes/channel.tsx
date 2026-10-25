@@ -149,6 +149,10 @@ export function ChannelRoute({
   // (its action bar), Add to cast on Cast, New schedule on Schedules, Add titles (pasted or
   // ticked in a CSV) on Titles to avoid. Elsewhere it is Make a video.
   const makeIsNext = tab !== "cast" && tab !== "brand" && tab !== "schedules" && tab !== "videos";
+  // On Templates each row has its own Make a video, opening Create with that template; a second
+  // one in the header opening a blank Create would share its name and go elsewhere.
+  const templatesHere = channels.data?.find((one) => one.id === channelId)?.templates ?? 0;
+  const makeShown = tab !== "templates" || templatesHere === 0;
   return (
     <div>
       <PageHeader
@@ -174,13 +178,15 @@ export function ChannelRoute({
               </Button>
             ) : null}
             {actions}
-            <ButtonLink
-              to="/play"
-              variant={makeIsNext ? "primary" : "secondary"}
-              onClick={make.inChannel}
-            >
-              Make a video
-            </ButtonLink>
+            {makeShown ? (
+              <ButtonLink
+                to="/play"
+                variant={makeIsNext ? "primary" : "secondary"}
+                onClick={make.inChannel}
+              >
+                Make a video
+              </ButtonLink>
+            ) : null}
             {addShown && channel ? (
               <Button variant="primary" onClick={addToCast}>
                 <PlusIcon aria-hidden="true" className="size-4" strokeWidth={1.75} />

@@ -38,6 +38,20 @@ function routes(saved: unknown[], disclosed: unknown[] = []) {
 }
 
 describe("Brand tab", () => {
+  // Save waits for a change: at rest the bar's one lime would do nothing, so it says so.
+  it("holds Save channel until something changed, and says why", async () => {
+    const user = userEvent.setup();
+    renderRouted(<BrandTab channel={channel} />, routes([]));
+    const save = await screen.findByRole("button", { name: "Save channel" });
+    expect(save.hasAttribute("disabled")).toBe(true);
+    expect(
+      screen.getAllByText("Nothing to save yet: change a setting first.").length,
+    ).toBeGreaterThan(0);
+    await user.type(screen.getByLabelText("Series brief"), " More.");
+    expect(save.hasAttribute("disabled")).toBe(false);
+    expect(screen.queryByText("Nothing to save yet: change a setting first.")).toBeNull();
+  });
+
   it("counts the series brief as it is typed", async () => {
     const user = userEvent.setup();
     renderRouted(<BrandTab channel={channel} />, routes([]));

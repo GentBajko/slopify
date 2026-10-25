@@ -341,6 +341,7 @@ describe("Channels", () => {
               channelId: id,
               finishedAt: "2026-09-27T10:00:00.000Z",
               durationSeconds: 185,
+              outputs: { video: true, shorts: 0, pdf: false, audio: false },
             },
             {
               ...listing("p2", "The Library Burns"),
@@ -362,7 +363,7 @@ describe("Channels", () => {
     expect(within(rows[0] as HTMLElement).getByText("Running")).not.toBeNull();
     // A finished one says its length and when it finished.
     expect(
-      within(rows[1] as HTMLElement).getByText(/^3:05 · 16:9 · finished Sep 27/),
+      within(rows[1] as HTMLElement).getByText(/^3:05 · 16:9 · video · finished Sep 27/),
     ).not.toBeNull();
     expect(within(rows[0] as HTMLElement).queryByRole("link", { name: /^Watch/ })).toBeNull();
     expect(
@@ -370,6 +371,40 @@ describe("Channels", () => {
         .getByRole("link", { name: "Watch Cleopatra Awakens" })
         .getAttribute("href"),
     ).toBe("/projects/p1?section=video");
+    // The words and the buttons of Home and Projects: Ready to upload, and Download video.
+    expect(within(rows[1] as HTMLElement).getByText("Ready to upload")).not.toBeNull();
+    expect(
+      within(rows[1] as HTMLElement)
+        .getByRole("link", { name: "Download video: Cleopatra Awakens" })
+        .getAttribute("href"),
+    ).toMatch(/\/files\/p1\/video$/);
+    // Started at a time, as Projects says it.
+    expect(rows[0]?.textContent).toMatch(/· started [^·]*\d:\d\d/);
+  });
+
+  // Each template row has its own Make a video, opening Create with it; a header button of the
+  // same name opening a blank Create is not offered beside them.
+  it("leaves the header's Make a video off a Templates tab whose rows have their own", async () => {
+    renderRouted(
+      <Page start="templates" />,
+      testDeps({
+        ...common,
+        "GET /api/channels": jsonAnswer({ channels: [{ ...channel, templates: 1, cast: 1 }] }),
+        "GET /api/project-templates": jsonAnswer({
+          templates: [
+            { id: templateId, name: "History starter", version: 1, updatedAt: "a", channelId: id },
+          ],
+        }),
+        "GET /api/schedules": jsonAnswer({ schedules: [] }),
+      }),
+    );
+    const list = await screen.findByRole("list", { name: "Channel templates" });
+    expect(
+      within(list)
+        .getByRole("link", { name: "Edit template History starter" })
+        .getAttribute("href"),
+    ).toBe(`/templates/${templateId}`);
+    await waitFor(() => expect(screen.queryByRole("link", { name: "Make a video" })).toBeNull());
   });
 
   it("lists the channel's templates with Make a video, their schedules and New schedule", async () => {
