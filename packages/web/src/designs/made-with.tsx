@@ -48,7 +48,7 @@ export function MadeWith({
           {refusal === "No key" ? `${providerName} has no key yet` : `${providerName}: ${refusal}`}
           {" · "}
           <TextLink to="/settings" search={{ section: "providers", family: "image" }}>
-            Add an image key ↗
+            {refusal === "No key" ? "Add an image key ↗" : `Set up ${providerName} ↗`}
           </TextLink>
         </span>
       )}

@@ -42,14 +42,13 @@ export function SamplePanel({ template }: { readonly template: TemplateView }): 
   const quote = useQuery(pieceQuoteQuery(api, template.id, template.headVersion));
   const providers = useQuery(providersQuery(api));
   // Artwork drawn by a service this computer can't use yet: Make sample would only fail, so the
-  // way to its key stands in its place.
+  // way to its key (or its setup, for a program) stands in its place.
   const { picture: art } = template.document;
   const service =
     art.source === "generate"
       ? providers.data?.providers.find((one) => one.id === art.provider)
       : undefined;
-  const unusable =
-    service === undefined ? undefined : providerUnavailableLabel(service.readiness) !== undefined;
+  const refusal = service === undefined ? undefined : providerUnavailableLabel(service.readiness);
   const make = useMutation({
     // The button says when the price is unknown: pressing it accepts that.
     mutationFn: () =>
@@ -124,9 +123,11 @@ export function SamplePanel({ template }: { readonly template: TemplateView }): 
                   : `The sample shows version ${String(sample.version)}.`
           }
           actions={
-            unusable === true ? (
+            refusal !== undefined ? (
               <TextLink to="/settings" search={{ section: "providers", family: "image" }}>
-                {`Add a ${service?.displayName ?? "image service"} key first ↗`}
+                {refusal === "No key"
+                  ? `Add a ${service?.displayName ?? "image service"} key first ↗`
+                  : `Set up ${service?.displayName ?? "the image service"} first ↗`}
               </TextLink>
             ) : (
               <Button
