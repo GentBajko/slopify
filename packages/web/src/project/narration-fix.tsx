@@ -11,6 +11,10 @@ export interface Passage {
   readonly calls: number;
   // The whole narration is one passage: reading it again reads all of it.
   readonly whole: boolean;
+  // The project's narration prompt has an AI prepare each passage for the voice: corrected
+  // words go through it first (one AI call), and how many voice calls follow is known only
+  // then. The same words read again reuse what it prepared.
+  readonly prepared: boolean;
 }
 
 // Fix this line, in place under the line's paragraph: the passage's words to correct, and one
@@ -38,7 +42,10 @@ export function LineFix({
     if (at !== -1) field.setSelectionRange(at, at + line.trim().length);
   }, [passage.text, line]);
   const changed = words.trim() !== passage.text.trim();
-  const calls = `${String(passage.calls)} voice ${passage.calls === 1 ? "call" : "calls"}`;
+  const viaAi = changed && passage.prepared;
+  const calls = viaAi
+    ? "1 AI call and voice calls"
+    : `${String(passage.calls)} voice ${passage.calls === 1 ? "call" : "calls"}`;
   return (
     <fieldset
       aria-label="Fix this line"
@@ -76,8 +83,11 @@ export function LineFix({
         </Button>
       </ButtonRow>
       <HelpLine>
-        The voice service's price isn't known in advance. The video keeps the current narration
-        until you make it again (free), and the old narration stays under Versions.
+        {viaAi
+          ? "Your narration prompt has the AI prepare your words for the voice first. Neither service's price is known in advance."
+          : "The voice service's price isn't known in advance."}{" "}
+        The video keeps the current narration until you make it again (free), and the old narration
+        stays under Versions.
       </HelpLine>
     </fieldset>
   );

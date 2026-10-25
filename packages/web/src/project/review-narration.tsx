@@ -1,4 +1,5 @@
 import type { ProjectSummary } from "@app/slices/admission/model.js";
+import { usesNarrationPreparation } from "@app/slices/admission/rules.js";
 import type { RevisionEdit } from "@app/slices/revisions/model.js";
 import type { Output, OutputRole } from "@app/slices/storage/model.js";
 import { useQuery } from "@tanstack/react-query";
@@ -109,6 +110,7 @@ function useNarrationChunks(): {
   return useMemo(() => {
     const groups = view === undefined ? [] : orderedGroups(narrationGroups(view).groups, order);
     const overrides = view?.revision.content.narrationOverrides ?? {};
+    const prepared = view !== undefined && usesNarrationPreparation(view.revision.config);
     const chunks = groups.map((group) => {
       const override = overrides[group.key];
       return {
@@ -116,6 +118,7 @@ function useNarrationChunks(): {
         text: override?.kind === "text" ? override.text : group.text,
         calls: group.parts,
         whole: groups.length === 1,
+        prepared,
       };
     });
     const generated = view?.revision.config.sources.audio === "generate";
@@ -125,8 +128,9 @@ function useNarrationChunks(): {
         regenerateNow === undefined || !generated
           ? undefined
           : (passage: Passage, words: string) =>
-              // Saved as a version, then started at once: the form named the voice calls and
-              // said their price isn't known in advance.
+              // Saved as a version, then started at once: the form named the calls (an AI call
+              // first for corrected words under a narration prompt) and said their price isn't
+              // known in advance.
               regenerateNow([], {
                 change: passageAgain(passage, words),
                 starts: (work) =>

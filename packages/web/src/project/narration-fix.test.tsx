@@ -13,6 +13,7 @@ const passage: Passage = {
   text: "Ptolemy ordered every ship searched. The books were copied.",
   calls: 1,
   whole: false,
+  prepared: false,
 };
 
 it("shows the passage's words with the pressed line selected, and names what the button makes", async () => {
@@ -35,6 +36,29 @@ it("shows the passage's words with the pressed line selected, and names what the
     screen.getByRole("button", { name: "Make this passage again with your words · 1 voice call" }),
   );
   expect(make).toHaveBeenCalledWith("Ptolemy had every ship searched.");
+});
+
+it("names the AI call that prepares corrected words under a narration prompt", async () => {
+  const user = userEvent.setup();
+  render(
+    <LineFix
+      passage={{ ...passage, prepared: true }}
+      line="The books were copied."
+      onMake={vi.fn()}
+      onClose={vi.fn()}
+    />,
+  );
+  // The same words read again reuse what the AI prepared: voice calls only.
+  expect(
+    screen.getByRole("button", { name: "Make this passage again · 1 voice call" }),
+  ).toBeTruthy();
+  await user.type(screen.getByRole("textbox", { name: "The words of this passage" }), " Indeed.");
+  expect(
+    screen.getByRole("button", {
+      name: "Make this passage again with your words · 1 AI call and voice calls",
+    }),
+  ).toBeTruthy();
+  expect(screen.getByText(/the AI prepare your words for the voice first/)).toBeTruthy();
 });
 
 it("saves corrected words as the passage's text, or the same words to be read again", () => {
