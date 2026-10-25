@@ -130,7 +130,7 @@ export async function startRemakes(
   return { started, failed };
 }
 
-// "Made again: 12 narration requests, Video export." and "Then rebuilt on this computer, free: …".
+// "Made again: 12 narration parts, Video export." and "Then rebuilt on this computer, free: …".
 export function scopeLines(preview: RebuildPreview): readonly string[] {
   const label = workLabels(preview);
   const of = (disposition: RebuildPreview["work"][number]["disposition"]) =>

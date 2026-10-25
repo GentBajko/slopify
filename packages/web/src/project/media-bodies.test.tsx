@@ -126,7 +126,7 @@ it("shows the images in one grid, each with its actions in words at rest and at 
   );
   // A project without saved versions asks first, price first, then makes the picture shown.
   const dialog = await screen.findByRole("dialog", { name: "Make this image again?" });
-  expect(dialog.textContent).toContain("one paid image call");
+  expect(dialog.textContent).toContain("1 paid image call");
   await userEvent.click(within(dialog).getByRole("button", { name: "Make it again" }));
   expect(run).toHaveBeenCalledWith({ kind: "regenerate-image", outputId: "o-image-2" });
 });
@@ -213,8 +213,13 @@ it("makes every image again from the head's one button, with or without the vide
   await userEvent.click(within(dialog).getByRole("checkbox"));
   expect(dialog.textContent).toContain("the video keeps the current pictures");
   await userEvent.click(within(dialog).getByRole("button", { name: "Make all 2 images again" }));
+  // No price on record: the dialog said so, and pressing on accepts it.
+  expect(dialog.textContent).toContain(
+    "2 paid image calls; the image service's price isn't known in advance. Draws every image again now",
+  );
   expect(regenerateNow).toHaveBeenCalledWith(["image:key-1", "image:key-2"], {
     approvedUpTo: undefined,
+    unknownPrices: true,
   });
   // Nothing opens the settings on the way.
   expect(requests).toEqual([]);
@@ -229,8 +234,15 @@ it("makes one image again at once on a project with saved versions, leaving the 
   expect(dialog.textContent).toContain(
     "the video keeps the current one until the video is made again",
   );
+  expect(dialog.textContent).toContain(
+    "1 paid image call; the image service's price isn't known in advance.",
+  );
+  expect(dialog.textContent).toContain("the old image stays under Versions");
   await userEvent.click(within(dialog).getByRole("button", { name: "Make it again" }));
-  expect(regenerateNow).toHaveBeenCalledWith(["image:key-2"], { approvedUpTo: undefined });
+  expect(regenerateNow).toHaveBeenCalledWith(["image:key-2"], {
+    approvedUpTo: undefined,
+    unknownPrices: true,
+  });
   expect(run).not.toHaveBeenCalled();
   expect(requests).toEqual([]);
 });

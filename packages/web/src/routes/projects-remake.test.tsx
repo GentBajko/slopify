@@ -190,7 +190,7 @@ describe("Make outdated parts again for the ticked projects", () => {
     const total = within(review).getByRole("region", { name: "What it costs" });
     expect(within(total).getByText("About $0.04–$0.06")).not.toBeNull();
     const toMake = within(review).getByRole("list", { name: "Projects to make again" });
-    expect(within(toMake).getByText("Made again: Image request.")).not.toBeNull();
+    expect(within(toMake).getByText("Made again: Image.")).not.toBeNull();
     expect(
       within(toMake).getByText("Then rebuilt on this computer, free: Video export."),
     ).not.toBeNull();

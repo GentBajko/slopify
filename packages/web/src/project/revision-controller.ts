@@ -7,7 +7,7 @@ import { useApp } from "@/app-context";
 import { copyText } from "@/fixes/fix-actions";
 import { keys } from "@/queries";
 import { describeEdit, reapplyEdit } from "./draft-merge.js";
-import { startsWithoutReview } from "./rebuild-consent.js";
+import { type ButtonConsent, startsWithoutReview } from "./rebuild-consent.js";
 import type { RebuildConsent } from "./rebuild-review.js";
 import {
   prepareRevision,
@@ -18,7 +18,12 @@ import {
   startProjectRebuild,
   viewOf,
 } from "./revision-api.js";
-import type { DraftNotice, EditSection, RevisionController } from "./revision-controller-types.js";
+import type {
+  DraftNotice,
+  EditSection,
+  RegenerateOptions,
+  RevisionController,
+} from "./revision-controller-types.js";
 import { type RequestMemory, requestFor } from "./revision-requests.js";
 import { useDurableDraft } from "./use-durable-draft.js";
 
@@ -71,6 +76,11 @@ export function useRevisionController(
   const saveMemory = useRef<RequestMemory | undefined>(undefined);
   const restoreMemory = useRef<RequestMemory | undefined>(undefined);
   const startMemory = useRef<RequestMemory | undefined>(undefined);
+  // A make-again saved a version before its preview asked for a look: closing that preview
+  // without starting puts back the version from before the press.
+  const putBack = useRef<{ readonly previewId: string; readonly revisionId: string } | undefined>(
+    undefined,
+  );
   const openEdit = useRef(options.onOpenEdit);
   openEdit.current = options.onOpenEdit;
   // Open is not the same as changed: the editor starts from a copy of the saved revision, so
@@ -193,13 +203,16 @@ export function useRevisionController(
       return;
     }
     startMemory.current = undefined;
+    putBack.current = undefined;
     setPreview(undefined);
     await client.invalidateQueries({ queryKey: keys.project(projectId) });
   }
+  // `consent` is what the button that asked accepted; without it the review always opens.
+  // `before` is the version a make-again saved over, put back if its review is closed.
   async function review(
     selection: RebuildSelection,
-    autoStart: boolean,
-    approvedUpTo?: number,
+    consent: ButtonConsent | undefined,
+    before?: string,
   ): Promise<void> {
     const current = await prepare(false);
     if (current === undefined) return;
@@ -213,11 +226,67 @@ export function useRevisionController(
     }
     const shown = result.value.value;
     startMemory.current = undefined;
-    if (autoStart && startsWithoutReview(shown, approvedUpTo)) {
-      await start({ acknowledgeUnknownCosts: false, confirmedProvidedWorkKeys: [] }, shown);
+    if (consent !== undefined && startsWithoutReview(shown, consent)) {
+      await start(
+        {
+          acknowledgeUnknownCosts: consent.unknownPrices === true && shown.costs.unknown > 0,
+          confirmedProvidedWorkKeys: [],
+        },
+        shown,
+      );
       return;
     }
+    putBack.current =
+      before === undefined ? undefined : { previewId: shown.id, revisionId: before };
     setPreview(shown);
+  }
+  // Makes the marked work again now: a version saved with the marks, then only that work.
+  async function regenerate(
+    workKeys: readonly string[],
+    options: RegenerateOptions,
+  ): Promise<void> {
+    const marked = (draft: RevisionEdit): RevisionEdit => {
+      const changed = options.change?.(draft) ?? draft;
+      return {
+        ...changed,
+        regenerate: [...new Set([...(changed.regenerate ?? []), ...workKeys])],
+      };
+    };
+    if (edit !== undefined && unsaved) {
+      setEdit(marked(edit));
+      setFocus({ section: options.section ?? "images" });
+      openEdit.current?.();
+      return;
+    }
+    const base = await prepare(false);
+    if (base === undefined) return;
+    const result = await saveProjectRevision(api, projectId, {
+      baseRevisionId: base.revision.id,
+      edit: marked(fresh(base)),
+      idempotencyKey: crypto.randomUUID(),
+    });
+    if (!result.ok) {
+      setRefusal(result);
+      return;
+    }
+    const saved = result.value.view;
+    if (!(await accepted(saved))) return;
+    const starts = options.starts;
+    const work =
+      starts === undefined
+        ? workKeys
+        : [
+            ...new Set(
+              saved.outputs
+                .filter((row) => row.selected && row.state === "outdated" && starts(row))
+                .map((row) => row.workKey),
+            ),
+          ];
+    await review(
+      work.length === 0 ? { kind: "allAffected" } : { kind: "selected", workKeys: work },
+      work.length === 0 ? undefined : options,
+      base.revision.id,
+    );
   }
   async function restore(targetRevisionId: string): Promise<void> {
     const current = view ?? saved.data ?? (await prepare(false));
@@ -329,41 +398,30 @@ export function useRevisionController(
         setFocus({ section: request.section });
         openEdit.current?.();
       }),
-    regenerateNow: (workKeys, regenerate) =>
-      void perform(async () => {
-        const marked = (draft: RevisionEdit): RevisionEdit => ({
-          ...draft,
-          regenerate: [...new Set([...(draft.regenerate ?? []), ...workKeys])],
-        });
-        if (edit !== undefined && unsaved) {
-          setEdit(marked(edit));
-          setFocus({ section: "images" });
-          openEdit.current?.();
-          return;
-        }
-        const base = await prepare(false);
-        if (base === undefined) return;
-        const result = await saveProjectRevision(api, projectId, {
-          baseRevisionId: base.revision.id,
-          edit: marked(fresh(base)),
-          idempotencyKey: crypto.randomUUID(),
-        });
-        if (!result.ok) {
-          setRefusal(result);
-          return;
-        }
-        if (await accepted(result.value.view))
-          await review({ kind: "selected", workKeys }, true, regenerate?.approvedUpTo);
-      }),
+    regenerateNow: (workKeys, options) => void perform(() => regenerate(workKeys, options ?? {})),
     review: (selection, reviewOptions) =>
       void perform(() =>
-        review(selection, reviewOptions?.autoStart === true, reviewOptions?.approvedUpTo),
+        review(
+          selection,
+          reviewOptions?.autoStart === true
+            ? {
+                approvedUpTo: reviewOptions.approvedUpTo,
+                unknownPrices: reviewOptions.unknownPrices,
+              }
+            : undefined,
+        ),
       ),
     start: (consent) => void perform(() => start(consent)),
     closePreview: () => {
       if (pending) return;
+      const back = putBack.current;
+      putBack.current = undefined;
       setPreview(undefined);
       startMemory.current = undefined;
+      // Keep things as they are after a make-again: the version saved for it goes, and the
+      // project is as it was before the press, its next action and files included.
+      if (back !== undefined && back.previewId === preview?.id)
+        void perform(() => restore(back.revisionId));
     },
     restore: (id) => void perform(() => restore(id)),
   };

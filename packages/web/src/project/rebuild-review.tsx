@@ -35,13 +35,22 @@ export function RebuildReview({
   const holdId = useId();
   const blocked = preview.work.filter((work) => work.disposition === "blocked");
   const unconfirmed = preview.providedReuseRequired.filter((key) => !confirmed.includes(key));
-  const making = preview.work.filter(
+  const made = preview.work.filter(
     (work) =>
       work.disposition === "generate" ||
       work.disposition === "local" ||
       work.disposition === "review",
-  ).length;
-  const verb = making === 1 ? "Make 1 output again" : `Make ${String(making)} outputs again`;
+  );
+  // Named for what it makes: "Make image 2 again", or how many things when there are several.
+  const only = made.length === 1 ? label(made[0]?.key ?? "") : undefined;
+  const verb =
+    only === undefined || only.includes(":")
+      ? `Make ${String(made.length)} ${made.length === 1 ? "item" : "items"} again`
+      : `Make ${lowerFirst(only)} again`;
+  const unknownWords =
+    preview.costs.unknown === 1
+      ? "Start even though 1 call's price isn't known"
+      : `Start even though ${String(preview.costs.unknown)} calls' prices aren't known`;
   // Each thing still holding Start back, said next to the button so it is never a mystery.
   const holds = [
     ...(blocked.length === 0
@@ -50,9 +59,7 @@ export function RebuildReview({
           `${blocked.length === 1 ? "1 item is" : `${blocked.length} items are`} unavailable (reasons above)`,
         ]),
     ...unconfirmed.map((key) => `tick “Keep the provided content for ${label(key)}”`),
-    ...(preview.costs.unknown === 0 || unknown
-      ? []
-      : [`tick “I understand that ${preview.costs.unknown} cost estimates are unknown”`]),
+    ...(preview.costs.unknown === 0 || unknown ? [] : [`tick “${unknownWords}”`]),
   ];
   const allowed = holds.length === 0;
   const counts = dispositionOrder
@@ -75,10 +82,13 @@ export function RebuildReview({
         ))}
         <div className="flex flex-col">
           <dt className="order-2 text-small text-ink-2">
-            {preview.costs.unknown > 0 ? "known cost" : "cost"}
+            {preview.costs.unknown > 0 && preview.costs.high > 0 ? "known cost" : "cost"}
           </dt>
           <dd className="order-1 m-0 font-condensed text-title-2 tabular-nums">
-            {range(preview.costs.low, preview.costs.high)}
+            {/* A price nobody knows is not $0. */}
+            {preview.costs.unknown > 0 && preview.costs.high === 0
+              ? "Not known"
+              : range(preview.costs.low, preview.costs.high)}
           </dd>
         </div>
       </dl>
@@ -131,12 +141,7 @@ export function RebuildReview({
             </dl>
           </Fold>
         ) : null}
-        <Fold
-          summary={`Work items (${preview.work.length}): ${
-            counts.map((row) => `${row.count} ${dispositions[row.disposition]}`).join(", ") ||
-            "none"
-          }`}
-        >
+        <Fold summary={`Item by item (${String(preview.work.length)})`}>
           {preview.changedInputs.length === 0 ? null : (
             <ul className="m-0 mb-3 flex flex-col gap-1 pl-5">
               {preview.changedInputs.map((change) => (
@@ -229,7 +234,7 @@ export function RebuildReview({
                     checked={unknown}
                     onChange={(event) => setUnknown(event.target.checked)}
                   />
-                  <span>I understand that {preview.costs.unknown} cost estimates are unknown.</span>
+                  <span>{unknownWords}</span>
                 </label>
                 <InfoTip id="project.rebuild.unknown-costs" className="-my-1" />
               </div>
@@ -284,7 +289,10 @@ function Before({ label, text }: { readonly label: string; readonly text: string
   );
 }
 
-const money = (value: number | null) => (value === null ? "Unknown" : usd(value));
+const money = (value: number | null) => (value === null ? "Not known" : usd(value));
+
+const lowerFirst = (text: string): string =>
+  /^[A-Z]{2}/u.test(text) ? text : `${text.charAt(0).toLowerCase()}${text.slice(1)}`;
 
 function range(low: number | null, high: number | null): string {
   if (low === high) return money(low);
@@ -305,7 +313,7 @@ function rowCost(row: RebuildPreview["costs"]["rows"][number]): string {
 }
 
 const dispositionOrder = ["generate", "local", "review", "reuse", "blocked"] as const;
-// Blocked work grouped by its reason: 24 narration requests refused for one cause read as one
+// Blocked work grouped by its reason: 24 narration parts refused for one cause read as one
 // line, not 24.
 function blockedReasons(
   blocked: readonly RebuildPreview["work"][number][],

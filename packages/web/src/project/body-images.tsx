@@ -31,7 +31,7 @@ import { TileMore } from "./review-image-actions.js";
 import { ReviewActions, ReviewChip, reviewFor, useReviews } from "./review-verdict.js";
 import { useOutputMedia, useOutputMediaList } from "./revision-media.js";
 import { SetDownload } from "./set-download.js";
-import { rerunPrice, useRunCost } from "./stage-price.js";
+import { imageCallsLine, imagePrice, useRunCost } from "./stage-price.js";
 import { useRerunnable } from "./stage-section.js";
 
 // Images: one grid, the thumbnail first (badged Thumbnail) and then the slideshow images,
@@ -344,10 +344,11 @@ function ImagesAgain({
     actions.pending || project.status === "running" || stage.state === "running" || busy;
   const many = count === 1 ? "the image" : `all ${String(count)} images`;
   const calls = `${String(count)} image ${count === 1 ? "call" : "calls"}`;
-  const price = videoToo ? rerunPrice(cost, "images") : now?.price?.text;
+  // The dialog leads with the calls it makes and their price.
+  const price = now?.price ?? imageCallsLine(imagePrice(cost, "images", count), count);
   const consequence = videoToo
     ? confirmationFor({ kind: "rerun", stage: "images", price }).consequence
-    : `${price === undefined ? "" : `${price} `}Draws every image again now, one paid image call each; the video keeps the current pictures until you make it again.`;
+    : `${price} Draws every image again now; the video keeps the current pictures until you make it again, and the current images stay under Versions.`;
   return (
     <>
       <Button
@@ -585,7 +586,7 @@ function ReferencePanel({
         open={change.asking !== undefined}
         tone="primary"
         title="Make the establishing image again?"
-        consequence={`${change.price === undefined ? "" : `${change.price} `}A new establishing image replaces this one${affected > 0 ? `, and the ${String(affected)} images drawn from it become outdated until you make them again` : ""}; the old one stays under Versions.`}
+        consequence={`${change.price} A new establishing image replaces this one${affected > 0 ? `, and the ${String(affected)} images drawn from it become outdated until you make them again` : ""}; the old one stays under Versions.`}
         confirmLabel="Make it again"
         cancelLabel="Keep this one"
         pending={actions.pending}

@@ -312,14 +312,14 @@ it.each(["transport", "readiness", "stale-preview", "conflict"] as const)(
       }),
     );
     await user.click(await screen.findByRole("button", { name: "Choose what to make again" }));
-    await screen.findByRole("button", { name: /^Make \d+ outputs? again$/ });
+    await screen.findByRole("button", { name: /^Make \d+ items? again$/ });
     expect(
       screen.getByRole("button", { name: "Edit settings again" }).hasAttribute("disabled"),
     ).toBe(true);
     expect(sent).toEqual([]);
-    const acknowledgement = screen.getByRole("checkbox", { name: /cost estimates are unknown/ });
+    const acknowledgement = screen.getByRole("checkbox", { name: /price isn't known/ });
     await user.click(acknowledgement);
-    await user.click(screen.getByRole("button", { name: /^Make \d+ outputs? again$/ }));
+    await user.click(screen.getByRole("button", { name: /^Make \d+ items? again$/ }));
     if (failure === "stale-preview" || failure === "conflict") {
       const alert = await screen.findByRole("alert");
       expect(alert.textContent).toContain("Review this project again.");
@@ -337,7 +337,7 @@ it.each(["transport", "readiness", "stale-preview", "conflict"] as const)(
     );
     await waitFor(() => expect(document.activeElement).toBe(alert));
     expect(acknowledgement instanceof HTMLInputElement && acknowledgement.checked).toBe(true);
-    await user.click(screen.getByRole("button", { name: /^Make \d+ outputs? again$/ }));
+    await user.click(screen.getByRole("button", { name: /^Make \d+ items? again$/ }));
     await waitFor(() => expect(sent).toHaveLength(2));
     expect(sent[0]).toBe(sent[1]);
   },
@@ -507,4 +507,107 @@ it("makes pictures again at once when the charge shown at the button covers the 
   ]);
   // Nothing opened the settings.
   expect(screen.queryByRole("textbox", { name: "Project title" })).toBeNull();
+});
+
+// A make-again whose saved version waits on a preview: the head moves to r2 on save and back on
+// restore, and every request is kept for the assertions.
+function remakeRoutes(costs: { readonly high: number; readonly unknown: number }) {
+  const baseline = revisionView();
+  const next = revisionView("r2", "Saved");
+  let head = baseline;
+  const saved: unknown[] = [];
+  const restored: unknown[] = [];
+  const started: unknown[] = [];
+  const preview = {
+    id: "pv1",
+    projectId: "p1",
+    baseRevisionId: "r2",
+    planFingerprint: "f1",
+    selection: { kind: "selected", workKeys: ["image:a"] },
+    changedInputs: [],
+    retained: [],
+    warnings: [],
+    work: [],
+    wholeRequestNotice: null,
+    providedReuseRequired: [],
+    costs: {
+      currency: "USD",
+      rows: [],
+      low: costs.high,
+      high: costs.high,
+      unknown: costs.unknown,
+      expectedWords: 0,
+      catalogueDate: null,
+      assumptions: [],
+    },
+  };
+  const routes = {
+    ...settingsRoutes,
+    "GET /api/projects/p1/revisions/r1": jsonAnswer({ view: baseline }),
+    "GET /api/projects/p1/revisions/r2": jsonAnswer({ view: next }),
+    "POST /api/projects/p1/revisions/prepare": () =>
+      jsonAnswer({ ok: true, view: head, created: false })(new Request("http://x")),
+    "POST /api/projects/p1/revisions": async (request: Request) => {
+      saved.push(saveRevisionSchema.parse(await request.json()));
+      head = next;
+      return jsonAnswer({ ok: true, view: next, duplicate: false })(request);
+    },
+    "POST /api/projects/p1/revisions/restore": async (request: Request) => {
+      restored.push(restoreRevisionSchema.parse(await request.json()));
+      head = revisionView("r3", "Restored");
+      return jsonAnswer({ ok: true, view: head, duplicate: false })(request);
+    },
+    "GET /api/projects/p1": () => jsonAnswer(currentBody(head))(new Request("http://x")),
+    "POST /api/projects/p1/rebuild/preview": jsonAnswer({ ok: true, value: preview }),
+    "POST /api/projects/p1/rebuild": async (request: Request) => {
+      started.push(startRebuildSchema.parse(await request.json()));
+      return jsonAnswer(
+        {
+          ok: true,
+          value: { revisionId: "r2", admissionId: "a1", workIds: ["w1"], replayed: false },
+        },
+        202,
+      )(request);
+    },
+  };
+  return { routes, saved, restored, started };
+}
+
+function UnknownPriceButton(): ReactElement {
+  const regenerateNow = use(RegenerateNowContext);
+  return (
+    <button
+      type="button"
+      disabled={regenerateNow === undefined}
+      onClick={() => regenerateNow?.(["image:a"], { unknownPrices: true })}
+    >
+      Make image a again
+    </button>
+  );
+}
+
+it("makes a picture again at once when its dialog said the price isn't known", async () => {
+  const user = userEvent.setup();
+  const { routes, saved, started } = remakeRoutes({ high: 0, unknown: 1 });
+  renderRouted(<ProjectSettings beside={<UnknownPriceButton />} />, testDeps(routes));
+  await user.click(await screen.findByRole("button", { name: "Make image a again" }));
+  await waitFor(() => expect(started).toHaveLength(1));
+  expect(saved).toHaveLength(1);
+  // The press acknowledged the unknown price; no second review asked for it again.
+  expect(started[0]).toMatchObject({ acknowledgeUnknownCosts: true });
+  expect(screen.queryByRole("region", { name: "Review affected rebuild" })).toBeNull();
+});
+
+it("puts the version from before the press back when its review is closed without starting", async () => {
+  const user = userEvent.setup();
+  // Dearer than the $0.05 the button showed: the review opens.
+  const { routes, saved, restored, started } = remakeRoutes({ high: 0.5, unknown: 0 });
+  renderRouted(<ProjectSettings beside={<RegenerateButton />} />, testDeps(routes));
+  await user.click(await screen.findByRole("button", { name: "Regenerate image a" }));
+  const review = await screen.findByRole("region", { name: "Review affected rebuild" });
+  expect(saved).toHaveLength(1);
+  await user.click(within(review).getByRole("button", { name: "Keep things as they are" }));
+  await waitFor(() => expect(restored).toHaveLength(1));
+  expect(restored[0]).toMatchObject({ baseRevisionId: "r2", targetRevisionId: "r1" });
+  expect(started).toEqual([]);
 });

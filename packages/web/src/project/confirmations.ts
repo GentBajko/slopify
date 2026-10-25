@@ -10,7 +10,7 @@ import type { StageKind } from "@app/kernel/pipeline.js";
 
 export type Destructive =
   | { readonly kind: "cancel" }
-  // `price`: what it is likely to cost (`stage-price.ts`), when that can be said honestly.
+  // `price`: the line the dialog opens with, the paid calls and what they cost (`stage-price.ts`).
   | { readonly kind: "rerun"; readonly stage: StageKind; readonly price?: string | undefined }
   | { readonly kind: "delete-image"; readonly outputId: string }
   // `now`: a project with saved versions makes the picture at once and leaves the video
@@ -36,8 +36,8 @@ export interface Confirmation {
   readonly dismiss: string;
 }
 
-// What making a whole stage again does, in one sentence. The price, where it is known, comes
-// first (`withPrice`), so the dialog leads with what it costs.
+// What making a whole stage again does, in one sentence. The paid calls and their price
+// (`stage-price.ts`) come first (`withPrice`), so the dialog leads with what it costs.
 const rerunConsequence: Readonly<Record<StageKind, string>> = {
   research:
     "Researches the topic again, then writes again the article, narration and files that follow from it; the current ones stay under Versions.",
@@ -46,11 +46,13 @@ const rerunConsequence: Readonly<Record<StageKind, string>> = {
   audio:
     "Records the narration again with the same voice, then makes the video again with it; the current one stays under Versions.",
   images:
-    "Draws every image made from a prompt again, then makes the video again with them; pictures you supplied stay as they are.",
-  thumbnail: "Draws the thumbnail again; the video and shorts are not touched.",
+    "Draws every image made from a prompt again, then makes the video again with them; pictures you supplied stay as they are, and the current images stay under Versions.",
+  thumbnail:
+    "Draws the thumbnail again; the video and shorts are not touched, and the current one stays under Versions.",
   video:
-    "Makes the video file again from the narration and images you already have; nothing is drawn or recorded again.",
-  document: "Makes the PDF again from the saved article and title; nothing else is made again.",
+    "Makes the video file again from the narration and images you already have; nothing is drawn or recorded again, and the current video stays under Versions.",
+  document:
+    "Makes the PDF again from the saved article and title; nothing else is made again, and the current PDF stays under Versions.",
 };
 
 function withPrice(consequence: string, price: string | undefined): string {
@@ -85,7 +87,7 @@ export function confirmationFor(action: Destructive): Confirmation {
         return {
           title: "Make the thumbnail again?",
           consequence: withPrice(
-            "Draws a new thumbnail from its prompt, one paid image call; the video and shorts are not touched, and the old one stays under Versions.",
+            "Draws a new thumbnail from its prompt; the video and shorts are not touched, and the old one stays under Versions.",
             action.price,
           ),
           verb: "Make it again",
@@ -95,8 +97,8 @@ export function confirmationFor(action: Destructive): Confirmation {
         title: "Make this image again?",
         consequence: withPrice(
           action.now
-            ? "Draws a new image from its prompt, one paid image call; the video keeps the current one until the video is made again."
-            : "Draws a new image from its prompt, one paid image call, and makes the video again with it when the video is on.",
+            ? "Draws a new image from its prompt; the video keeps the current one until the video is made again, and the old image stays under Versions."
+            : "Draws a new image from its prompt and makes the video again with it when the video is on.",
           action.price,
         ),
         verb: "Make it again",

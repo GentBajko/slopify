@@ -45,11 +45,11 @@ it("requires all confirmations and starts only on explicit approval", async () =
   const user = userEvent.setup();
   const start = vi.fn();
   render(<RebuildReview preview={preview} pending={false} onStart={start} onCancel={() => {}} />);
-  const button = screen.getByRole("button", { name: "Make 1 output again" });
+  const button = screen.getByRole("button", { name: "Make provided narration again" });
   expect(button.hasAttribute("disabled")).toBe(true);
   await user.click(screen.getByRole("checkbox", { name: /Keep the provided/ }));
   expect(button.hasAttribute("disabled")).toBe(true);
-  await user.click(screen.getByRole("checkbox", { name: /I understand/ }));
+  await user.click(screen.getByRole("checkbox", { name: /price isn't known/ }));
   expect(start).not.toHaveBeenCalled();
   await user.click(button);
   expect(start).toHaveBeenCalledWith({
@@ -178,19 +178,19 @@ it("says why Start is off: each blocked reason once, and the unticked boxes", as
   );
   const alert = screen.getByRole("alert");
   expect(alert.textContent).toContain("3 items can’t run");
-  expect(alert.textContent).toContain(`3 narration requests: ${reason}`);
+  expect(alert.textContent).toContain(`3 narration parts: ${reason}`);
   expect(alert.textContent?.split(reason)).toHaveLength(2);
   // The per-item list is folded away behind its counts.
-  expect(screen.getByText("Work items (4): 1 built on this computer, 3 can't run")).toBeTruthy();
-  const button = screen.getByRole("button", { name: "Make 1 output again" });
+  expect(screen.getByText("Item by item (4)")).toBeTruthy();
+  const button = screen.getByRole("button", { name: "Make audio export (WAV) again" });
   expect(button.hasAttribute("disabled")).toBe(true);
   const why = document.getElementById(button.getAttribute("aria-describedby") ?? "");
   expect(why?.textContent).toBe(
-    "Make 1 output again is off until: 3 items are unavailable (reasons above); tick “I understand that 1 cost estimates are unknown”.",
+    "Make audio export (WAV) again is off until: 3 items are unavailable (reasons above); tick “Start even though 1 call's price isn't known”.",
   );
-  await user.click(screen.getByRole("checkbox", { name: /I understand/ }));
+  await user.click(screen.getByRole("checkbox", { name: /price isn't known/ }));
   expect(why?.textContent).toBe(
-    "Make 1 output again is off until: 3 items are unavailable (reasons above).",
+    "Make audio export (WAV) again is off until: 3 items are unavailable (reasons above).",
   );
   expect(button.hasAttribute("disabled")).toBe(true);
 });
@@ -233,15 +233,13 @@ it("counts each disposition and prices CLI work as $0 on plan, not unknown", () 
     />,
   );
   const review = screen.getByRole("region", { name: "Review affected rebuild" });
-  expect(review.textContent).toContain(
-    "Work items (4): 2 to make, 1 built on this computer, 1 kept as they are",
-  );
+  expect(review.textContent).toContain("Item by item (4)");
   expect(review.textContent).toContain("to make2built on this computer1kept as they are1cost$0");
   expect(review.textContent).toContain("CLI work: $0 on your plan · ~$0.20–$0.40 via API.");
   expect(review.textContent).toContain("$0 on plan · ~$0.20–$0.40 via API. 2 images on Codex");
   expect(review.textContent).not.toContain("Unknown");
-  expect(screen.queryByRole("checkbox", { name: /I understand/ })).toBeNull();
-  const start = screen.getByRole("button", { name: "Make 3 outputs again" });
+  expect(screen.queryByRole("checkbox", { name: /price isn't known/ })).toBeNull();
+  const start = screen.getByRole("button", { name: "Make 3 items again" });
   expect(start.hasAttribute("disabled")).toBe(false);
 });
 
@@ -255,19 +253,19 @@ it("puts every requirement beside Start and lifts each as it is met", async () =
       onCancel={() => undefined}
     />,
   );
-  const start = screen.getByRole("button", { name: "Make 1 output again" });
+  const start = screen.getByRole("button", { name: "Make provided narration again" });
   const note = () => document.getElementById(start.getAttribute("aria-describedby") ?? "");
   expect(note()?.textContent).toBe(
-    "Make 1 output again is off until: tick “Keep the provided content for Provided narration”; tick “I understand that 1 cost estimates are unknown”.",
+    "Make provided narration again is off until: tick “Keep the provided content for Provided narration”; tick “Start even though 1 call's price isn't known”.",
   );
   // The boxes sit in the same bar as the button.
   const bar = start.closest("div.sticky");
-  expect(bar?.contains(screen.getByRole("checkbox", { name: /I understand/ }))).toBe(true);
+  expect(bar?.contains(screen.getByRole("checkbox", { name: /price isn't known/ }))).toBe(true);
   await user.click(screen.getByRole("checkbox", { name: /Keep the provided/ }));
   expect(note()?.textContent).toBe(
-    "Make 1 output again is off until: tick “I understand that 1 cost estimates are unknown”.",
+    "Make provided narration again is off until: tick “Start even though 1 call's price isn't known”.",
   );
-  await user.click(screen.getByRole("checkbox", { name: /I understand/ }));
+  await user.click(screen.getByRole("checkbox", { name: /price isn't known/ }));
   expect(start.hasAttribute("disabled")).toBe(false);
   expect(start.getAttribute("aria-describedby")).toBeNull();
 });
@@ -308,8 +306,8 @@ it("says what is made again, what is rebuilt on this computer and what stays", (
     />,
   );
   const scope = screen.getByRole("list", { name: "What this does" });
-  expect(scope.textContent).toContain("Made again, charged: Image request 1.");
+  expect(scope.textContent).toContain("Made again, charged: Image 1.");
   expect(scope.textContent).toContain("Then rebuilt on this computer, free: Video export.");
-  expect(scope.textContent).toContain("Stays as it is: 2 image requests.");
+  expect(scope.textContent).toContain("Stays as it is: 2 images.");
   expect(scope.textContent).toContain("the current version stays in use");
 });
