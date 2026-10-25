@@ -1,13 +1,13 @@
 import type { HelpEntry } from "../entry.js";
 
-// Play's setup, top to bottom, and the pieces Edit project draws with the same components
-// (speakers, shorts, reviews, the establishing image, the language). Settings → Voices'
-// table is here too, as it lives in the same voice components.
+// Create's settings, top to bottom, and the pieces a project's Edit settings draws with the
+// same components (speakers, shorts, pauses and checks, the establishing image, the language).
+// Settings → Voices' table is here too, as it lives in the same voice components.
 export const playHelp = {
   // Top of Create
   "play.title": {
     title: "Title",
-    body: "The project's name in Slopify, shown on the project and in Projects. For a YouTube video it is also the YouTube title unless the YouTube text writes its own, and YouTube takes at most 100 characters there, without < or >. Write a keyword in double braces, like {{Topic}}, and the title becomes a pattern: you type the topic per video, and Another topic queues more videos from the same setup. Up to 200 characters.",
+    body: "The project's name in Slopify, shown on the project and in Projects. For a YouTube video it is also the YouTube title unless the YouTube text writes its own, and YouTube takes at most 100 characters there, without < or >. Write a keyword in double braces, like {{Topic}}, and the title becomes a pattern: you type the topic per video, and Another topic queues more videos with the same settings. Up to 200 characters.",
     tutorial: { page: "Play-Overview", anchor: "title-title-pattern-and-topic" },
   },
   "play.title-pattern": {
@@ -360,24 +360,24 @@ export const playHelp = {
   // Channel row
   "play.channel": {
     title: "Channel",
-    body: "The channel this video belongs to. Its brand kit fills what this setup leaves at its default, and its cast of characters goes with the images. A draft that picks none runs in its template's channel, or the default one.",
+    body: "The channel this video belongs to. Its brand kit fills what these settings leave at their default, and its cast of characters goes with the images. A draft that picks none runs in its template's channel, or the default one.",
     tutorial: { page: "Play-Overview", anchor: "channel-row" },
   },
   "play.brand-kit": {
     title: "Channel's brand kit",
-    body: "Fills what this setup leaves at its default from the channel: the caption font, intro, outro, PDF theme and ambient sound. What you set here wins. Turn it off to take none of it; the cast and language still apply. Default: on.",
+    body: "Fills what these settings leave at their default from the channel: the caption font, intro, outro, PDF theme and ambient sound. What you set here wins. Turn it off to take none of it; the cast and language still apply. Default: on.",
     tutorial: { page: "Play-Overview", anchor: "channel-row" },
   },
   "play.language": {
     title: "Language",
-    body: "The language the article, narration, YouTube description and shorts titles are written in. Pick a voice that speaks it. Outside English, captions are timed with a free 248 MB model, downloaded once, where one exists. On Play, blank uses the channel's language.",
+    body: "The language the article, narration, YouTube description and shorts titles are written in. Pick a voice that speaks it. Outside English, captions are timed with a free 248 MB model, downloaded once, where one exists. In Create, blank uses the channel's language.",
     tutorial: { page: "Other-Languages", anchor: "pick-a-language-for-one-video" },
   },
 
   // Right rail and dialogs
   "play.template-name": {
     title: "Template name",
-    body: "The name the template is listed under on Play and Templates. The template keeps this setup's settings; the topic you typed and any extra videos are left out, as the list below says.",
+    body: "The name the template is listed under in Create and on Templates. The template keeps these settings; the topic you typed and any extra videos are left out, as the list below says.",
     tutorial: { page: "Play-Overview", anchor: "save-as-template" },
   },
   "play.queue": {
