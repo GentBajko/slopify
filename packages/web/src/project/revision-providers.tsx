@@ -226,6 +226,9 @@ export function RevisionProviders({
             <ServiceGroup
               family="tts"
               label={config.voices === undefined ? "Read by" : "Intro and outro read by"}
+              // Two to a row: a voice model's name and price ("Inworld TTS-2 · $17.5 per 1M
+              // characters") is read whole, the Voice under them.
+              className="[grid-template-columns:repeat(auto-fill,minmax(min(100%,20rem),1fr))]"
               providers={providers}
               provider={audio.provider}
               model={audio.model}

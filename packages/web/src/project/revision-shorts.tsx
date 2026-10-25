@@ -480,7 +480,11 @@ function ClipRow({
                   key={end}
                   id={`${id}-${end}`}
                   label={end === "first" ? "Start sentence" : "End sentence"}
-                  tip="project.shorts.range"
+                  help={
+                    end === "first"
+                      ? "The narration's sentence the short starts on."
+                      : "Within the length set for shorts, and not over another clip."
+                  }
                 >
                   <Select
                     value={String(clip[end])}

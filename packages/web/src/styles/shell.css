@@ -1101,6 +1101,12 @@
       max-height: none;
       overflow: visible;
     }
+    /* While the settings are open the status column would follow them, and the settings' Save
+       bar, which sticks only within them, would stop mid-page above it. Close settings brings
+       it back. */
+    .sl-project:has([data-slot="project-settings"]:not([hidden])) .sl-workspace__aside {
+      display: none;
+    }
   }
   /* Phones: the title and its meta wrap, the actions go under them, and nothing scrolls
      sideways. */

@@ -604,15 +604,15 @@ function ProjectWorkspace({
             },
           ]
         : []),
-    // Only with outdated outputs: then what is made again is chosen file by file.
-    ...(groups.length === 0
+    // Only with outdated outputs: then what is made again is chosen file by file. Not while a
+    // settings draft is open or a change is being saved: it reviews the saved version.
+    ...(groups.length === 0 || controller.busy
       ? []
       : [
           {
             id: "rebuild",
             label: "Choose what to make again…",
             run: () => controller.review({ kind: "allAffected" }),
-            disabledReason: controller.busy ? "Wait until the last change is saved" : undefined,
           },
         ]),
     // The title is the first setting: Rename opens the settings there, the field in focus.
