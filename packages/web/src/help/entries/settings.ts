@@ -106,7 +106,7 @@ export const settingsHelp = {
   },
   "settings.template-studio.design-budget": {
     title: "Designed pieces: daily sample budget",
-    body: "The most the samples of designed-piece templates (Library → Designs) may spend in one day, in US dollars, from midnight on this computer; separate from the studio's budget. A sample over it waits in the template's editor: press Make sample to make it anyway, or raise this. Samples may use my CLI plans decides steps on a plan. Default: $1.00, from $0 to $1,000.",
+    body: "The most the samples of poster templates (Templates → Poster templates) may spend in one day, in US dollars, from midnight on this computer; separate from the studio's budget. A sample over it waits in the template's editor: press Make sample to make it anyway, or raise this. Samples may use my CLI plans decides steps on a plan. Default: $1.00, from $0 to $1,000.",
     tutorial: { page: "Settings-Reference", anchor: "template-studio" },
   },
   "settings.template-studio.plans": {
@@ -163,7 +163,7 @@ export const settingsHelp = {
   },
   "settings.agents": {
     title: "Agents (MCP)",
-    body: "An AI agent on this computer, such as Claude Code or Codex, can run Slopify through this address: start and fix runs, edit the Library and answer reviews set to External agent. It needs no key, like this page, and never uploads to YouTube. What it changes is marked by agent in the project's history, in notifications and in the list below.",
+    body: "An AI agent on this computer, such as Claude Code or Codex, can run Slopify through this address: start and fix runs, edit your prompts and templates, and answer reviews set to External agent. It needs no key, like this page, and never uploads to YouTube. What it changes is marked by agent in the project's history, in notifications and in the list below.",
     tutorial: { page: "Agents-MCP", anchor: "connect-an-agent" },
   },
 

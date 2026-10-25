@@ -85,7 +85,7 @@ export const templateStudioTools: readonly RouteTool[] = [
     route: "GET /api/template-studio/:id/pronunciations",
     title: "Read the names a template's voice may say wrong",
     description:
-      "The names the template's sample script says that a voice may get wrong (its Pronunciation Glossary, and words Library → Narration aliases already change), each with its IPA, the first line it is said in and the alias it has (spokenAs). aliasesOn says whether the template's voice uses Library → Narration aliases.",
+      "The names the template's sample script says that a voice may get wrong (its Pronunciation Glossary, and words the Pronunciation list (Settings → Voices → Pronunciation) already changes), each with its IPA, the first line it is said in and the alias it has (spokenAs). aliasesOn says whether the template's voice uses the Pronunciation list.",
   },
   {
     name: "quote_say_it_as",
@@ -101,7 +101,7 @@ export const templateStudioTools: readonly RouteTool[] = [
     body: sayItAsSchema,
     title: "Say a word another way",
     description:
-      "Writes a Library → Narration aliases row (written said as spoken, whole word, any case; it replaces one for the same word) and voices again only the template sample's lines that say it, which spends money: price it first with quote_say_it_as and pass its high as acknowledgedHigh. The alias applies to every project started after it. Refused, writing nothing, at a higher price, with unaccepted unknown prices, past today's budget, or when the template's voice doesn't use aliases.",
+      "Writes a row of the Pronunciation list (Settings → Voices → Pronunciation) (written said as spoken, whole word, any case; it replaces one for the same word) and voices again only the template sample's lines that say it, which spends money: price it first with quote_say_it_as and pass its high as acknowledgedHigh. The alias applies to every project started after it. Refused, writing nothing, at a higher price, with unaccepted unknown prices, past today's budget, or when the template's voice doesn't use aliases.",
   },
   {
     name: "get_template_studio_settings",
