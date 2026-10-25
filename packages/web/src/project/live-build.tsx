@@ -16,6 +16,7 @@ import { OpenProjectTab } from "./fix-it.js";
 import { LiveAudio } from "./live-audio.js";
 import { LiveWriting } from "./live-writing.js";
 import { runStep } from "./measured-eta.js";
+import type { SectionId } from "./next-action.js";
 import { useOutputMedia } from "./revision-media.js";
 import { runSectionSteps } from "./run-aside.js";
 import { workDuration } from "./run-cost.js";
@@ -37,6 +38,7 @@ export function LiveBuild({
   outputs,
   resumable,
   holding,
+  outdated,
 }: {
   readonly project: ProjectSummary;
   readonly revisionId: string | null;
@@ -44,11 +46,13 @@ export function LiveBuild({
   readonly outputs: readonly Output[];
   readonly resumable: boolean;
   readonly holding: readonly CheckpointHold[];
+  // Outdated outputs per section, as the status list reads them.
+  readonly outdated?: ((section: SectionId) => number) | undefined;
 }): ReactElement {
   const now = useNow(project.status === "running");
   const overall = overallProgress(stages);
   const left = project.status === "paused" ? undefined : timeLeft(stages, now);
-  const steps = runSectionSteps({ stages, outputs, project, resumable, holding, now });
+  const steps = runSectionSteps({ stages, outputs, project, resumable, holding, now, outdated });
   // In the order they are shown, not the order they happened to land in.
   const images = outputs
     .filter((output) => output.role === "image")

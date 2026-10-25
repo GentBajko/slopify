@@ -859,6 +859,7 @@ function ProjectWorkspace({
                             outputs={outputs}
                             resumable={project.data.resumable}
                             holding={project.data.holding}
+                            outdated={outdatedIn}
                           />
                         ) : null}
                       </View>

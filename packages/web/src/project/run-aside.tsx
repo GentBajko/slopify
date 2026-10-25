@@ -21,7 +21,7 @@ import { usd } from "@/lib/format";
 import { stageWords } from "@/lib/stage-words";
 import { retryingWord } from "@/lib/state-words";
 import { measuredEta } from "./measured-eta.js";
-import type { SectionId } from "./next-action.js";
+import { type SectionId, sectionForStage } from "./next-action.js";
 import { workDuration } from "./run-cost.js";
 import { sectionLead, sectionsOf } from "./sections.js";
 import type { StatusRow } from "./status-rows.js";
@@ -139,8 +139,25 @@ const loudness: Readonly<Record<Tone, number>> = {
 // The run's steps as the page counts them, one per section (`overallProgress`, the title row's
 // "Step 3 of 4"): research inside Article, the thumbnail inside Images. A section of two stages
 // stands as the one that needs the reader most; once both are done it says what each made.
-export function runSectionSteps(input: Parameters<typeof runSteps>[0]): readonly Step[] {
-  const steps = runSteps(input);
+export function runSectionSteps(
+  input: Parameters<typeof runSteps>[0] & {
+    // Outdated outputs per section, from the saved version: a made step an edit sent back to
+    // waiting reads Outdated, as the status list says it.
+    readonly outdated?: ((section: SectionId) => number) | undefined;
+  },
+): readonly Step[] {
+  const shownStages = input.stages.filter((one) => one.state !== "skipped");
+  const steps = runSteps(input).map((step, at): Step => {
+    const stage = shownStages[at];
+    if (
+      stage === undefined ||
+      step.tone !== "off" ||
+      (input.outdated?.(sectionForStage(stage.kind)) ?? 0) === 0
+    )
+      return step;
+    const { detail: _waits, ...rest } = step;
+    return { ...rest, tone: "info", state: "Outdated" };
+  });
   const shown = input.stages.filter((stage) => stage.state !== "skipped");
   const stepOf = new Map<StageKind, Step>();
   shown.forEach((stage, at) => {

@@ -54,6 +54,29 @@ describe("the measured time left", () => {
     expect(measuredEta(at(10), t0 + 80_000, memory)).toEqual({ basis: "progress", seconds: 90 });
   });
 
+  // Named but not measured yet: the render before its first percent said "under a minute
+  // left" from the stage's count of steps.
+  it("says nothing about a named step's time until it has a measure, and counts things done", () => {
+    const memory = new Map();
+    const named = stage("video", "running", {
+      startedAt: "2026-09-03T00:09:50.000Z",
+      progressCurrent: 1,
+      progressTotal: 2,
+      activity: { label: "rendering the video" },
+    });
+    expect(measuredEta(named, t0, memory)).toEqual({ basis: "unknown" });
+    const drawing = (done: number) =>
+      stage("video", "running", {
+        activity: { label: "drawing the shorts' pictures", done, total: 10 },
+      });
+    expect(measuredEta(drawing(2), t0, memory)).toEqual({ basis: "unknown" });
+    // 2 more of 10 in 40 s: the last 6 take about 2 minutes.
+    expect(measuredEta(drawing(4), t0 + 40_000, memory)).toEqual({
+      basis: "progress",
+      seconds: 120,
+    });
+  });
+
   it("keeps the stage's own estimate for a step without a percent", () => {
     const counted = stage("images", "running", {
       startedAt: "2026-09-03T00:09:00.000Z",

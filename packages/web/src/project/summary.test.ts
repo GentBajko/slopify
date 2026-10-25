@@ -215,7 +215,7 @@ describe("the summary in a rundown row", () => {
     expect(summaryOf(stage("research", "done"), [], project)).toBe("Notes ready");
     expect(summaryOf(stage("thumbnail", "done"), [], project)).toBe("Thumbnail ready");
     expect(summaryOf(stage("thumbnail", "done"), [output("thumbnail", "thumbnail")], project)).toBe(
-      "1 image",
+      "1 thumbnail",
     );
   });
 

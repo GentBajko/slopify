@@ -18,8 +18,17 @@ interface Sample {
 const seen = new Map<string, Sample>();
 
 export function measuredEta(stage: Stage, now: number, memory = seen): Eta | undefined {
-  const percent = stage.activity?.percent;
-  if (stage.state !== "running" || percent === undefined) return stageEta(stage, now);
+  const activity = stage.activity;
+  if (stage.state !== "running" || activity === undefined) return stageEta(stage, now);
+  // A named step's own measure: its percent, or how many of its things are done.
+  const percent =
+    activity.percent ??
+    (activity.done !== undefined && activity.total !== undefined && activity.total > 0
+      ? (activity.done / activity.total) * 100
+      : undefined);
+  // Named but not measured yet (the render before its first percent): the stage's count of
+  // steps is no guide to it either.
+  if (percent === undefined) return { basis: "unknown" };
   const key = `${stage.id}\0${stage.activity?.label ?? ""}`;
   const first = memory.get(key);
   // The first reading, or the measure started again (a second render): the clock starts here.

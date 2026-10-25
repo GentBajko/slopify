@@ -107,3 +107,22 @@ it("lists one step per section, named as the status list names it", () => {
     ["Audiobook", "Not started"],
   ]);
 });
+
+// A step made before that an edit sent back to waiting reads Outdated, as the status list
+// says it, not "Not started".
+it("says Outdated for a made step waiting after an edit", () => {
+  const listed = runSectionSteps({
+    stages: [stage("article", "done"), stage("video", "running"), stage("document", "pending")],
+    outputs: [],
+    project,
+    resumable: false,
+    holding: [],
+    now: 0,
+    outdated: (section) => (section === "document" ? 1 : 0),
+  });
+  expect(listed.map((step) => [step.name, step.state, step.detail])).toEqual([
+    ["Article", "Done", expect.anything()],
+    ["Video", "Running", expect.anything()],
+    ["PDF", "Outdated", undefined],
+  ]);
+});
