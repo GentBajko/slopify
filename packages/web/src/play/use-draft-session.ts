@@ -77,6 +77,8 @@ export function useDraftSession(): PlaySession {
       publish({ status: reply.reason === "conflict" ? "conflict" : "error", error: reply.message });
       return false;
     };
+    // The remembered draft `start` is reopening, which says so once it is on the page.
+    let restoring: string | null = null;
     const install = (view: DraftView) => {
       review.restore(view);
       publish({
@@ -86,6 +88,9 @@ export function useDraftSession(): PlaySession {
         id: view.draft.id,
         clock: { edited: 0, acknowledged: 0, version: view.draft.version },
         status: "saved",
+        ...(restoring === view.draft.id
+          ? { restored: { id: view.draft.id, updatedAt: view.draft.updatedAt } }
+          : {}),
       });
       rememberDraft(view.draft.id);
       invalidate();
@@ -392,10 +397,9 @@ export function useDraftSession(): PlaySession {
         alive = true;
         const id = rememberedDraft();
         if (!id) return;
-        void open(id).then((opened) => {
-          const view = state.current.view;
-          if (opened && view !== null && view.draft.id === id)
-            publish({ restored: { id, updatedAt: view.draft.updatedAt } });
+        restoring = id;
+        void open(id).finally(() => {
+          restoring = null;
         });
       },
       stop: () => {
