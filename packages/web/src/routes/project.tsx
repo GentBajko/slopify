@@ -278,7 +278,10 @@ function ProjectWorkspace({
     mutationFn: (mark: boolean) => markUploaded(api, projectId, mark),
     onSuccess: (_, mark) =>
       notify(
-        mark ? `Marked uploaded: ${title}.` : `${title} is back on Ready to upload.`,
+        mark
+          ? `Marked uploaded: ${title}.`
+          : // The long video's YouTube link and the mark are one fact (`studio/videos.ts`).
+            `${title} is back on Ready to upload, and any YouTube link saved for its video is forgotten.`,
         "success",
         mark ? { label: "Undo", run: () => uploaded.mutate(false) } : undefined,
       ),

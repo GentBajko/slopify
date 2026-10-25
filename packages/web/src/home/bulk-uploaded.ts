@@ -54,7 +54,7 @@ export function useBulkMarkUploaded({
         notify(
           input.on
             ? `Marked ${videosWord(done.length, noun)} uploaded.`
-            : `${videosWord(done.length, noun)} back on Ready to upload.`,
+            : `${videosWord(done.length, noun)} back on Ready to upload, and any YouTube links saved for their videos forgotten.`,
           "success",
           { label: "Undo", run: () => mark.mutate({ list: done, on: !input.on }) },
         );
