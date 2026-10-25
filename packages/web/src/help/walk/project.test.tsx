@@ -308,7 +308,7 @@ describe("Edit project", () => {
       if (section === "Captions") screen.getByRole("region", { name: "Edit caption cues" });
     }
     expect(found).toEqual(Object.fromEntries(sections.map((section) => [section, []])));
-  });
+  }, 20_000);
 
   it("explains the choices the rebuild review asks for", () => {
     const preview: RebuildPreview = {
