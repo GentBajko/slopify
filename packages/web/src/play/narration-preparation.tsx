@@ -1,9 +1,13 @@
 import type { Prompt } from "@app/slices/library/model.js";
 import { type ReactElement, useId } from "react";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { HelpLine } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { TextLink } from "@/components/kit/link";
 import { Picker } from "@/components/ui/picker";
 
+// Narration preparation: a narration prompt the AI follows to add delivery directions before
+// the voice reads, or Off. The line under the select says what it adds and costs, and what it
+// needs; a refusal goes under that line.
 export function NarrationPreparation({
   value,
   prompts,
@@ -27,17 +31,14 @@ export function NarrationPreparation({
     (value !== "" && !supported ? "Choose Inworld TTS-2 or turn preparation Off." : undefined);
   return (
     <div className="col-span-full min-w-0 space-y-2" {...helpScope}>
-      <span className="flex items-center gap-1">
-        <label htmlFor={id} className="sl-field__label">
-          Narration Preparation
-        </label>
-        <InfoTip id="play.narration-preparation" />
-      </span>
+      <label htmlFor={id} className="sl-field__label">
+        Narration preparation
+      </label>
       <Picker
         id={id}
         data-play-field="narrationPrompt"
         value={value}
-        aria-describedby={issue ? `${id}-error` : undefined}
+        aria-describedby={issue ? `${id}-help ${id}-error` : `${id}-help`}
         aria-invalid={issue === undefined ? undefined : true}
         onChange={(event) => onChange(event.target.value)}
       >
@@ -51,16 +52,15 @@ export function NarrationPreparation({
           </option>
         ))}
       </Picker>
+      <HelpLine id={`${id}-help`}>
+        Adds delivery directions, such as a sigh or a laugh, before the voice reads: one AI call per
+        narration piece. Needs Inworld TTS-2. The words stay the same.
+      </HelpLine>
       {issue ? (
-        <p id={`${id}-error`} className="text-small text-danger">
+        <p id={`${id}-error`} className="m-0 text-small text-danger">
           {issue}
         </p>
-      ) : (
-        <p className="m-0 text-small text-ink-2">
-          Adds delivery directions, such as a sigh or a laugh, before the voice reads. The words
-          stay the same.
-        </p>
-      )}
+      ) : null}
       {libraryLinks ? (
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-small">
           {selected ? (

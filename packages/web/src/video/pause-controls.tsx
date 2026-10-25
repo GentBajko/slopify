@@ -3,7 +3,7 @@ import {
   pauseSecondsMax,
   pauseSecondsStep,
 } from "@app/slices/narration/pauses-model.js";
-import { type ReactElement, useId } from "react";
+import type { ReactElement } from "react";
 import { Field, Input } from "@/components/kit/field";
 import { Switch } from "@/components/kit/switch";
 
@@ -28,7 +28,6 @@ export function PauseControls({
     <div className="sl-fields">
       <Field
         label="Pause between sentences (seconds)"
-        tip="project.pause.sentence"
         help={`${range}; ${String(defaultSentencePauseSeconds)} is the default. 0 leaves the voice's own.`}
         error={problem("sentencePauseSeconds")}
       >
@@ -43,7 +42,6 @@ export function PauseControls({
       </Field>
       <Field
         label="Pause between paragraphs (seconds)"
-        tip="project.pause.paragraph"
         help={`${range}; 0 (the default) keeps the sentence pause.`}
         error={problem("paragraphPauseSeconds")}
       >
@@ -74,8 +72,7 @@ export function SoftenBreathsSwitch({
       value={value}
       onChange={onChange}
       label="Soften breaths"
-      tip="project.remove-breaths"
-      line="Turns the audible breaths between sentences down. Words and timing stay the same."
+      line="Turns the audible breaths between sentences down. Words and timing stay the same. Free, done on this computer."
     />
   );
 }
@@ -92,8 +89,7 @@ export function SoftenSSwitch({
       value={value}
       onChange={onChange}
       label="Soften S sounds"
-      tip="project.soften-s"
-      line="Takes the sharp edge off s and sh sounds; very light, the voice keeps its brightness."
+      line="Takes the sharp edge off s and sh sounds; very light, the voice keeps its brightness. Free, done on this computer."
     />
   );
 }
@@ -112,40 +108,24 @@ export function LevelSentencesSwitch({
       value={value}
       onChange={onChange}
       label="Level each sentence"
-      tip="project.level-sentences"
-      line="Holds each sentence to the ones around it, so no line jumps out or drops away. Needs Level the volume."
+      line="Holds each sentence to the ones around it, so no line jumps out or drops away. Needs Level the volume. Free, done on this computer."
     />
   );
 }
 
+// A switch whose line under it says what it does and that it costs nothing.
 function CleanSwitch({
   value,
   onChange,
   label,
-  tip,
   line,
 }: {
   readonly value: boolean;
   readonly onChange: (next: boolean) => void;
   readonly label: string;
-  readonly tip: "project.remove-breaths" | "project.soften-s" | "project.level-sentences";
   readonly line: string;
 }): ReactElement {
-  const id = useId();
-  return (
-    <div className="flex min-w-0 flex-col items-start gap-1">
-      <Switch
-        checked={value}
-        label={label}
-        tip={tip}
-        describedBy={`${id}-line`}
-        onChange={onChange}
-      />
-      <p id={`${id}-line`} className="m-0 text-label text-ink-3">
-        {line}
-      </p>
-    </div>
-  );
+  return <Switch checked={value} label={label} help={line} onChange={onChange} />;
 }
 
 // Typed text as seconds, or undefined while it is not a number.

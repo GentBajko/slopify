@@ -93,7 +93,7 @@ export const playHelp = {
   },
   "play.tts.model": {
     title: "Voice model",
-    body: "The voice service's speech model. Models differ in quality, languages, speed and price per character. Some features need a particular model: Narration Preparation needs Inworld TTS-2. Settings → Models refreshes the list.",
+    body: "The voice service's speech model. Models differ in quality, languages, speed and price per character. Some features need a particular model: narration preparation needs Inworld TTS-2. Settings → Models refreshes the list.",
     tutorial: { page: "Play-Narration", anchor: "pick-a-voice" },
   },
   "play.voice": {
@@ -103,7 +103,7 @@ export const playHelp = {
   },
   "play.voice-sample": {
     title: "Try a sample of your text",
-    body: "Reads the passage you paste in the chosen voice, so you hear how it says your names before a run. Up to a few hundred characters, priced on the button; Library → Narration aliases apply when the voice uses them, the Pronunciation Glossary and Narration Preparation don't. The sample is never reused in the run.",
+    body: "Reads the passage you paste in the chosen voice, so you hear how it says your names before a run. Up to a few hundred characters, priced on the button; Library → Narration aliases apply when the voice uses them, the Pronunciation Glossary and narration preparation don't. The sample is never reused in the run.",
     tutorial: { page: "Play-Narration" },
   },
   "play.show-all-voices": {
@@ -120,21 +120,6 @@ export const playHelp = {
     title: "Outro",
     body: "A Library entry read after the article, such as a sign-off. A text entry is read as written; an LLM entry is written by the text model for each video, one extra call. Off reads no outro.",
     tutorial: { page: "Play-Narration", anchor: "intro-and-outro" },
-  },
-  "play.chunking": {
-    title: "Split the narration by",
-    body: "How the narration is sent to the voice service. Nothing sends it in one request; Paragraph sends one per paragraph; Every N words or characters ends each at a sentence end. Split when a voice service refuses long text. Default: Nothing. It changes the number of requests, not the characters charged.",
-    tutorial: { page: "Play-Narration", anchor: "chunking" },
-  },
-  "play.chunking.count": {
-    title: "Piece size",
-    body: "How long each request to the voice service may be. Each request ends at the last whole sentence that fits, so a single longer sentence stays whole. Defaults: 500 words or 3000 characters, spaces included.",
-    tutorial: { page: "Play-Narration", anchor: "chunking" },
-  },
-  "play.narration-preparation": {
-    title: "Narration Preparation",
-    body: "Has the text model add delivery directions and sounds, such as a sigh or a laugh, following the Library narration prompt you pick. One text-model call per narration chunk and per entry. Needs Inworld TTS-2. The article and captions stay unchanged. Default: Off.",
-    tutorial: { page: "Play-Narration", anchor: "narration-preparation" },
   },
   "play.pronunciation-glossary": {
     title: "Pronunciation Glossary",

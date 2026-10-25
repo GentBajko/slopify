@@ -1,6 +1,7 @@
 import type { Chunking, ChunkMode } from "@app/slices/narration/chunk.js";
 import { defaultChunkCharacters, defaultChunkWords } from "@app/slices/narration/chunk.js";
-import { Input } from "@/components/kit/field";
+import { HelpLine, Input } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { LabelledField } from "@/play/pickers";
 import { InlineSwitch } from "@/play/switches";
 
@@ -18,6 +19,8 @@ export function chunkingWords(value: Chunking): string {
   }
 }
 
+// How the narration is sent to the voice service, with one line on when to split and what it
+// changes, and the piece size once it is split by words or characters.
 export function ChunkingControl({
   value,
   onPick,
@@ -37,11 +40,10 @@ export function ChunkingControl({
   const characterMode = value.mode === "characters";
   const count = characterMode ? value.characters : value.words;
   return (
-    <>
+    <div className="col-span-full flex min-w-0 flex-col gap-2" {...helpScope}>
       <InlineSwitch<ChunkMode>
         field="chunking.mode"
         label="Split the narration by"
-        tip="play.chunking"
         className="min-w-0 max-w-full flex-wrap [&_[data-slot=toggle-group]]:max-w-full [&_[data-slot=toggle-group]]:flex-wrap"
         value={value.mode}
         options={[
@@ -70,12 +72,12 @@ export function ChunkingControl({
           );
         }}
       />
+      <HelpLine>
+        Split it when a voice service refuses long text. It changes the number of requests, not the
+        price.
+      </HelpLine>
       {counted ? (
-        <LabelledField
-          label={characterMode ? "Characters" : "Words"}
-          tip="play.chunking.count"
-          problem={undefined}
-        >
+        <LabelledField label={characterMode ? "Characters" : "Words"} problem={undefined}>
           {({ id }) => (
             <Input
               id={id}
@@ -115,6 +117,7 @@ export function ChunkingControl({
           )}
         </LabelledField>
       ) : null}
-    </>
+      {counted ? <HelpLine>Each piece ends at the last whole sentence that fits.</HelpLine> : null}
+    </div>
   );
 }

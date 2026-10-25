@@ -18,31 +18,6 @@ export const projectHelp = {
     body: "Turns some images into 5-second moving clips with an image-to-video model on your image provider (fal.ai or Replicate). Chapter openers animates the first image of each chapter; Every Nth image animates every 2nd to 10th. Each clip is one paid call, shown in the estimate. An image that cannot be animated stays still. Default: Off.",
     tutorial: { page: "Video-Editing", anchor: "the-look" },
   },
-  "project.pause.sentence": {
-    title: "Pause between sentences",
-    body: "The least quiet after each sentence, in seconds. Some voices barely breathe between sentences; this adds silence where the pause is shorter, never shortening one or cutting a word, and the captions follow. About 0.25 s is brisk, 0.35 to 0.45 natural or documentary, 0.5 to 0.8 an audiobook's relaxed pace, 0.8 and up sleep content. Default: 0.4; 0 keeps the voice's own.",
-    tutorial: { page: "Editing-a-Project", anchor: "pauses-and-volume" },
-  },
-  "project.pause.paragraph": {
-    title: "Pause between paragraphs",
-    body: "The least quiet at the end of a paragraph, in seconds, when you want more than between sentences. Usually the narration prompt and the voice pace paragraphs well already, so it is 0 by default: paragraphs get the sentence pause. Try 0.8 to 1.2 for a slower read. A speaker's turn gap is set under Speakers instead. Runs on this computer.",
-    tutorial: { page: "Editing-a-Project", anchor: "pauses-and-volume" },
-  },
-  "project.remove-breaths": {
-    title: "Soften breaths",
-    body: "Turns the audible in-breaths between sentences and after commas down by 12 dB, with soft fades. A breath with any word sound in it is left as it is, and every word, pause and caption stays where it was. Runs on this computer, no API calls; turning it on joins the narration again from its pieces, never makes the speech again. Default: off.",
-    tutorial: { page: "Editing-a-Project", anchor: "pauses-and-volume" },
-  },
-  "project.soften-s": {
-    title: "Soften S sounds",
-    body: "Puts each narration piece through a very light de-esser, which takes the sharp edge off s and sh sounds while the voice keeps its brightness. Works with or without Soften breaths. Runs on this computer, no API calls; turning it on joins the narration again from the pieces it already has, never makes the speech again. Default: off.",
-    tutorial: { page: "Editing-a-Project", anchor: "pauses-and-volume" },
-  },
-  "project.level-sentences": {
-    title: "Level each sentence",
-    body: "Holds each sentence to the sentences in the minute around it, so no line jumps out or drops away: loud ones come down by up to 6 dB, quiet ones up by up to 3 dB, and the volume only changes in the pauses. Runs before Soften breaths and Soften S sounds. Needs Level the volume and one voice. Joins the narration again, never makes the speech again. Default: off.",
-    tutorial: { page: "Editing-a-Project", anchor: "pauses-and-volume" },
-  },
   "project.loudness": {
     title: "Level the volume",
     body: "Brings every narration piece (each chunk, and each speaker's turn) to one loudness before they are joined, so the voice stops jumping between quiet and loud. Then the video, the shorts and the audio files are each set to a finished loudness. Runs on this computer, no API calls; turning it on remakes the levelled narration and the exports, never the speech. Default: on for new runs.",
