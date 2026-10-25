@@ -23,7 +23,7 @@ Free: no AI call. Copied when the run starts, so later changes to the channel or
 | --- | --- | --- | --- |
 | `{{Slopify_Title}}` | The video's title, with its keywords filled in | How Lighthouses Were Built on Bare Rock | Every prompt, intro and outro |
 | `{{Slopify_Channel}}` | The project's channel name | Quiet Histories | Every prompt, intro and outro |
-| `{{Slopify_Series}}` | The channel's series brief (Channels → Edit) | Calm histories of how things were made | Every prompt, intro and outro |
+| `{{Slopify_Series}}` | The channel's series brief (the channel's page, Name and look) | Calm histories of how things were made | Every prompt, intro and outro |
 | `{{Slopify_Links}}` | The channel's links, one per line | Website: https://example.com | Every prompt, intro and outro |
 | `{{Slopify_Previous_Video}}` | Title and link of the channel's previous video in the same series | The Canal Age – https://youtu.be/abc123 | Every prompt, intro and outro |
 | `{{Slopify_Next_Video}}` | Title of the next planned video in the same series and posting plan line | Tea Clippers and the Race Home | Every prompt, intro and outro |

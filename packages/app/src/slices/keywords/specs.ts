@@ -47,7 +47,7 @@ export const keywordSpecs: readonly KeywordSpec[] = [
     name: "Slopify_Series",
     filler: "facts",
     fills:
-      "The channel's series brief from Channels → Edit. A line with an empty brief is left out.",
+      "The channel's series brief, from the channel's page under Name and look. A line with an empty brief is left out.",
     example: "Calm histories of how things were made, one invention at a time.",
     available: atStart,
     places: everywhere,
@@ -101,7 +101,7 @@ export const keywordSpecs: readonly KeywordSpec[] = [
     name: "Slopify_Release_Date",
     filler: "release",
     fills:
-      "The release date from the posting plan. A line with no date is left out; moving the date later doesn't remake anything.",
+      "The release date from the posting plan. A line with no date is left out; moving the date later makes nothing again.",
     example: "Thursday 22 October 2026",
     available: "When the step runs.",
     places: everywhere,
