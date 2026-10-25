@@ -133,11 +133,9 @@ it("offers the motion beside the zoom and keeps the pick through save/reload", a
     "Mix of both",
     "Still",
   ]);
-  // Its label says it; the one line under Images and cuts says how the cuts and images run.
+  // Its label says it; the line under Cuts says how the cuts and images run.
   expect(screen.queryByRole("button", { name: "About Motion" })).toBeNull();
-  expect(
-    screen.getByText(/^Cuts that follow the narration wait for a sentence to end/),
-  ).toBeDefined();
+  expect(screen.getByText(/^Follow the narration cuts at a sentence end/)).toBeDefined();
   fireEvent.change(motion, { target: { value: "pan" } });
   await waitFor(() => expect(h.session().document.form.motionStyle).toBe("pan"));
   await act(async () => {
