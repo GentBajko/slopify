@@ -1,12 +1,12 @@
 import { pickerEntries } from "@app/slices/model-checks/rules.js";
 import type { DraftView, PlayDraftDocument } from "@app/slices/play-drafts/model.js";
-import type { ProviderFamily } from "@app/slices/settings/model.js";
+import { type ProviderFamily, systemVoiceProvider } from "@app/slices/settings/model.js";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useReducer, useRef } from "react";
 import { useApp } from "@/app-context";
 import { readFirstRun, upkeepKeys } from "@/components/provider-upkeep-api";
 import { modelsQuery } from "@/lib/models";
-import { keys, providersQuery } from "@/queries";
+import { keys, providersQuery, voicesQuery } from "@/queries";
 import type { DraftReply } from "./draft-api";
 import {
   createPlayDraft,
@@ -448,8 +448,10 @@ export function useDraftSession(): PlaySession {
 // session: a fresh draft and a draft just made from a template start with them picked. For a
 // kind the first launch found nothing of, a draft made from a template takes the first service
 // of that kind that answers (a key saved in Settings), with its first listed model; those lists
-// are asked for only while `templates` says a template-made draft is open or on its way. True
-// once every answer (or a failure) has arrived.
+// are asked for only while `templates` says a template-made draft is open or on its way. Such a
+// draft whose voice service can't read here takes a saved voice of one that can (a keyed
+// service first, the computer's own voice last), with that service's first model. True once
+// every answer (or a failure) has arrived.
 export function useFirstRunDefaults(
   session: Pick<PlaySession, "adoptDefaults">,
   templates: boolean,
@@ -462,19 +464,32 @@ export function useFirstRunDefaults(
     staleTime: Number.POSITIVE_INFINITY,
   });
   const providers = useQuery(providersQuery(api));
+  const voices = useQuery({ ...voicesQuery(api), enabled: templates });
   const found = status.data?.defaults;
   const known =
     (status.isSuccess || status.isError) &&
-    (!templates || providers.isSuccess || providers.isError);
+    (!templates ||
+      ((providers.isSuccess || providers.isError) && (voices.isSuccess || voices.isError)));
   const readyOf = (family: ProviderFamily): string | undefined =>
     providers.data?.providers.find(
       (provider) => provider.family === family && readiness(provider).ok,
     )?.id;
+  const voiceServices = (providers.data?.providers ?? [])
+    .filter((provider) => provider.family === "tts" && readiness(provider).ok)
+    .map((provider) => provider.id);
+  const readable = (voices.data?.voices ?? []).filter((voice) =>
+    voiceServices.includes(voice.provider),
+  );
+  const voice =
+    templates && known
+      ? (readable.find((one) => one.provider !== systemVoiceProvider) ?? readable[0])
+      : undefined;
   const spare = {
     llm: templates && known && found?.llm === undefined ? readyOf("llm") : undefined,
     images: templates && known && found?.images === undefined ? readyOf("image") : undefined,
+    audio: voice?.provider,
   };
-  const asked = [spare.llm, spare.images].filter((id) => id !== undefined);
+  const asked = [spare.llm, spare.images, spare.audio].filter((id) => id !== undefined);
   const lists = useQueries({
     queries: asked.map((provider) => ({
       ...modelsQuery(api, provider),
@@ -490,11 +505,18 @@ export function useFirstRunDefaults(
       .entries[0]?.model.id;
     return model === undefined ? undefined : { provider, model };
   };
+  const reader = choice(spare.audio);
   // One hand-over once everything is known, so a draft is filled once, with all of it.
   const handOver = settled
     ? JSON.stringify({
         found: found ?? {},
-        ready: { llm: choice(spare.llm), images: choice(spare.images) },
+        ready: {
+          llm: choice(spare.llm),
+          images: choice(spare.images),
+          ...(reader === undefined || voice === undefined
+            ? {}
+            : { audio: { ...reader, voice: voice.voiceId }, voiceServices }),
+        },
       })
     : undefined;
   const { adoptDefaults } = session;

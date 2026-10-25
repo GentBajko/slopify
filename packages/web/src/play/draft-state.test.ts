@@ -205,6 +205,28 @@ describe("the services a new or template-made draft starts with", () => {
     expect(withProviderDefaults(picked, defaults)).toBe(picked);
     expect(withProviderDefaults(freshDraftDocument, {})).toBe(freshDraftDocument);
   });
+  it("gives the one voice a voice that reads when its service can't, and keeps one that can", () => {
+    const reader = { provider: "cartesia", model: "sonic-3.5", voice: "c1" };
+    const narrated = {
+      ...freshDraftDocument,
+      form: {
+        ...freshDraftDocument.form,
+        audio: { ...freshDraftDocument.form.audio, provider: "openai-tts", model: "m", voice: "v" },
+      },
+    };
+    const swapped = withProviderDefaults(narrated, { audio: reader, voiceServices: ["cartesia"] });
+    expect(swapped.form.audio).toMatchObject(reader);
+    // The glossary and the other voice settings stay as they were.
+    expect(swapped.form.audio.usePronunciationGlossary).toBe(true);
+    const reads = { audio: reader, voiceServices: ["cartesia", "openai-tts"] };
+    expect(withProviderDefaults(narrated, reads)).toBe(narrated);
+    // Speakers keep their own voices, and a silent draft needs none.
+    const silent = {
+      ...narrated,
+      form: { ...narrated.form, sources: { ...narrated.form.sources, audio: "off" as const } },
+    };
+    expect(withProviderDefaults(silent, { audio: reader, voiceServices: [] })).toBe(silent);
+  });
   it("gives a template-made draft what the first launch found, else the service whose key is saved", () => {
     const keyed = {
       llm: { provider: "openrouter", model: "google/gemini-3.8-flash" },
