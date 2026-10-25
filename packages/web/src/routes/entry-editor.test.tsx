@@ -385,12 +385,13 @@ describe("the entry editor's keywords Slopify fills", () => {
   it("offers the keywords an intro can use above the text and puts one at the caret", async () => {
     const user = userEvent.setup();
     await newEditor();
-    const bar = screen.getByRole("toolbar", { name: "Insert a keyword Slopify fills" });
-    expect(within(bar).queryByRole("button", { name: "Insert Scene" })).toBeNull();
     await fill(user, body, "Welcome to .");
     const box = bodyBox() as HTMLTextAreaElement;
     box.setSelectionRange(11, 11);
-    await user.click(within(bar).getByRole("button", { name: "Insert Channel" }));
+    await user.click(screen.getByRole("button", { name: "Insert a keyword Slopify fills" }));
+    const menu = await screen.findByRole("menu", { name: "Insert a keyword Slopify fills" });
+    expect(within(menu).queryByRole("menuitem", { name: /^\{\{Slopify_Scene\}\}/u })).toBeNull();
+    await user.click(within(menu).getByRole("menuitem", { name: /^\{\{Slopify_Channel\}\}/u }));
     expect(box.value).toBe("Welcome to {{Slopify_Channel}}.");
   });
 });

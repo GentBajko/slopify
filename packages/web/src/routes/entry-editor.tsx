@@ -176,7 +176,7 @@ export function EntryEditorRoute({
         title={`${entryId === undefined ? "New" : "Edit"} ${draft.category}`}
       />
 
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,80ch)_320px]">
         <div className={`${editorSurface} flex min-w-0 flex-col gap-4`}>
           <div className="flex max-w-[80ch] flex-wrap items-start gap-4">
             <div className="min-w-[200px] flex-1">

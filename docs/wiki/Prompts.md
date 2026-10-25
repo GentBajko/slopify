@@ -27,7 +27,7 @@ See [Create: Article](Create-Article), [Create: Images](Create-Images), [Create:
 1. Open **Prompts** and pick the kind on the left.
 2. Press **New prompt**.
 3. Type a **Name**: up to 200 characters, unique within its kind. Create and a project's Edit settings list the prompt by this name.
-4. Write the instructions (the box is named for the kind, for example **Article prompt instructions**), up to 100,000 characters. **Start from an example** fills it from the built-in wording (where the kind has one) or from one of your prompts of that kind. Put a keyword in double braces wherever the subject goes, for example:
+4. Write the instructions (the box is named for the kind, for example **Article prompt instructions**), up to 100,000 characters. **Start from an example** fills it from a built-in text of the kind or from one of your prompts of that kind. Put a keyword in double braces wherever the subject goes, for example:
 
    ```
    Write a 1,500-word documentary narration about {{Topic}} for a general audience.
@@ -42,11 +42,10 @@ If **Save** won't go, the sentence beside it names the first problem, such as "E
 
 ### Start from an example
 
-**Start from an example**, beside the instructions, lists text to start from:
+**Start from an example**, beside the instructions, lists text to start from, for every kind, whether or not you added starter templates:
 
-- **Narration preparation:** **Documentary delivery (built in)** fills in documentary delivery cues.
-- **YouTube Description**, **Shorts** and **Post:** **Built-in wording** fills in the wording Slopify uses when no prompt is picked.
-- Every kind: your other prompts of the same kind, by name.
+- **Built in**: the starter templates' prompts of the kind (for example **Sleep lore · Story (built in)** for an Article prompt), and Slopify's own wording where the kind has one: **Documentary delivery (built in)** for Narration preparation, **Built-in wording** for YouTube description, Shorts and Post, a check for each stage for Review (**Article check (built in)**, **Image check (built in)** and so on), and **Two-voice conversation (built in)** for Script.
+- **Your prompts**: your other prompts of the same kind, by name. A starter template's prompt you added is listed once, here.
 
 When the box already has text, Slopify asks "Replace the text with “…”?" first. Nothing is saved until you press **Save**.
 
@@ -67,7 +66,7 @@ Mistakes the editor refuses, with the line and column:
 
 ### Keywords Slopify fills
 
-Keywords written with the `Slopify_` prefix, like `{{Slopify_Title}}`, `{{Slopify_Summary}}` or `{{Slopify_Setting}}`, never become fields either: Slopify fills them itself, and the editor's **Insert** bar lists the ones each kind of prompt can use. See [Keywords Slopify fills](Keywords-Slopify-Fills) for every one, where it works and what it costs. Any other name starting with `Slopify_` is refused when you save.
+Keywords written with the `Slopify_` prefix, like `{{Slopify_Title}}`, `{{Slopify_Summary}}` or `{{Slopify_Setting}}`, never become fields either: Slopify fills them itself, and the editor's **Insert a keyword Slopify fills** menu lists the ones each kind of prompt can use. See [Keywords Slopify fills](Keywords-Slopify-Fills) for every one, where it works and what it costs. Any other name starting with `Slopify_` is refused when you save.
 
 `{{Scene}}` and `{{Appearance}}` are the old names of `{{Slopify_Scene}}` and `{{Slopify_Appearance}}`. They never become fields. The project's AI model writes them during the run, once the article exists, and the picture waits for them:
 

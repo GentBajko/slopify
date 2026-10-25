@@ -1,5 +1,5 @@
 import { keywordsFor } from "@app/slices/keywords/specs.js";
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -32,92 +32,76 @@ function box(): HTMLTextAreaElement {
   return screen.getByRole("textbox", { name: "Body" }) as HTMLTextAreaElement;
 }
 
-describe("the Insert bar", () => {
-  it("lists only the keywords this kind can use", () => {
+const user = () => userEvent.setup();
+
+async function openMenu(clicker: ReturnType<typeof userEvent.setup>): Promise<HTMLElement> {
+  await clicker.click(screen.getByRole("button", { name: "Insert a keyword Slopify fills" }));
+  return screen.findByRole("menu", { name: "Insert a keyword Slopify fills" });
+}
+
+// A keyword's row, named by exactly what it inserts.
+const row = (menu: HTMLElement, name: string) =>
+  within(menu).getByRole("menuitem", { name: new RegExp(`^\\{\\{${name}\\}\\}`, "u") });
+
+describe("the Insert menu", () => {
+  it("lists only the keywords this kind can use, each as exactly what it inserts", async () => {
+    const clicker = user();
     render(<Editor start="" place="article" />);
-    const bar = screen.getByRole("toolbar", { name: "Insert a keyword Slopify fills" });
-    const names = within(bar)
-      .getAllByRole("button")
-      .map((button) => button.getAttribute("data-keyword"));
+    const menu = await openMenu(clicker);
+    const names = within(menu)
+      .getAllByRole("menuitem")
+      .map((item) => item.getAttribute("data-keyword"));
     expect(names).toEqual(keywordsFor("article").map((spec) => spec.name));
     expect(names).not.toContain("Slopify_Summary");
-    // Said in words before the chips, in the colour those keywords take in the text.
-    expect(screen.getByText("Slopify fills these in:")).not.toBeNull();
-    expect(within(bar).getByRole("button", { name: "Insert Title" }).className).toContain(
-      "text-accent-ink",
-    );
+    // The token in the color that keyword takes in the text.
+    const title = row(menu, "Slopify_Title");
+    expect(title.querySelector(".font-mono")?.textContent).toBe("{{Slopify_Title}}");
+    expect(title.querySelector(".font-mono")?.className).toContain("text-accent-ink");
   });
 
-  // A sideways scroll hid the last chips with no cue; every chip is on screen instead, and the
-  // bar is never wider than the editor under it (`slot-body.tsx`, 80ch).
-  it("wraps its chips within the editor's width instead of scrolling sideways", () => {
-    render(<Editor start="" place="image" />);
-    const bar = screen.getByRole("toolbar", { name: "Insert a keyword Slopify fills" });
-    expect(bar.className).toContain("flex-wrap");
-    expect(bar.className).not.toContain("overflow-x-auto");
-    expect(bar.parentElement?.className).toContain("max-w-[80ch]");
+  it("says what each fills in, and the AI call it is part of, before it is picked", async () => {
+    const clicker = user();
+    render(<Editor start="" />);
+    const menu = await openMenu(clicker);
+    const thumbnailText = row(menu, "Slopify_Thumbnail_Text");
+    expect(thumbnailText.textContent).toContain("Two to four words");
+    expect(thumbnailText.textContent).toContain("Part of one AI call per run: the keyword digest");
+    // A free keyword says nothing about a call.
+    expect(row(menu, "Slopify_Title").textContent).not.toContain("AI call");
   });
 
   it("inserts at the caret and leaves the caret after the keyword, focus in the text", async () => {
-    const user = userEvent.setup();
+    const clicker = user();
     render(<Editor start="A picture of ." />);
     box().setSelectionRange(13, 13);
-    await user.click(screen.getByRole("button", { name: "Insert Scene" }));
+    const menu = await openMenu(clicker);
+    await clicker.click(row(menu, "Slopify_Scene"));
     expect(box().value).toBe("A picture of {{Slopify_Scene}}.");
+    // The closing menu leaves the focus in the text, after the keyword.
+    await new Promise((done) => setTimeout(done, 20));
     expect(document.activeElement).toBe(box());
     expect([box().selectionStart, box().selectionEnd]).toEqual([30, 30]);
   });
 
   it("replaces the selected text", async () => {
-    const user = userEvent.setup();
+    const clicker = user();
     render(<Editor start="Draw OLD now" />);
     box().setSelectionRange(5, 8);
-    await user.click(screen.getByRole("button", { name: "Insert Mood" }));
+    const menu = await openMenu(clicker);
+    await clicker.click(row(menu, "Slopify_Mood"));
     expect(box().value).toBe("Draw {{Slopify_Mood}} now");
   });
 
-  it("shows what a keyword fills in, an example, when, where and its cost on hover and focus", async () => {
-    render(<Editor start="" />);
-    const chip = screen.getByRole("button", { name: "Insert Thumbnail Text" });
-    fireEvent.pointerEnter(chip);
-    const card = await screen.findByRole("tooltip");
-    expect(card.textContent).toContain("{{Slopify_Thumbnail_Text}}");
-    expect(card.textContent).toContain("Two to four words");
-    expect(card.textContent).toContain("Example");
-    expect(card.textContent).toContain("Works in");
-    expect(card.textContent).toContain("Image, Thumbnail, Description, Shorts, Review and Post");
-    expect(card.textContent).toContain("Part of one AI call per run: the keyword digest");
-    expect(chip.getAttribute("aria-describedby")).toBe(card.id);
-    fireEvent.pointerLeave(chip);
-    expect(screen.queryByRole("tooltip")).toBeNull();
-
-    act(() => {
-      screen.getByRole("button", { name: "Insert Title" }).focus();
-    });
-    expect((await screen.findByRole("tooltip")).textContent).toContain("Free: no AI call.");
-  });
-
-  it("is one tab stop, moved through with the arrow keys, Home and End", async () => {
-    const user = userEvent.setup();
+  it("is one button above the text, no wider than the editor", () => {
     render(<Editor start="" place="intro" />);
-    const chips = within(screen.getByRole("toolbar")).getAllByRole("button");
-    expect(chips.filter((chip) => chip.tabIndex === 0)).toHaveLength(1);
-    act(() => {
-      chips[0]?.focus();
-    });
-    await user.keyboard("{ArrowRight}");
-    expect(document.activeElement).toBe(chips[1]);
-    await user.keyboard("{ArrowLeft}{ArrowLeft}");
-    expect(document.activeElement).toBe(chips.at(-1));
-    await user.keyboard("{Home}");
-    expect(document.activeElement).toBe(chips[0]);
-    await user.keyboard("{End}");
-    expect(document.activeElement).toBe(chips.at(-1));
-    expect(chips.at(-1)?.tabIndex).toBe(0);
+    const opener = screen.getByRole("button", { name: "Insert a keyword Slopify fills" });
+    expect(opener.parentElement?.className).toContain("max-w-[80ch]");
+    // The keywords themselves wait in the menu: nothing else to tab through on the way in.
+    expect(screen.queryAllByRole("menuitem")).toHaveLength(0);
   });
 
   it("adds the keyword at the end when the text isn't on the page", async () => {
-    const user = userEvent.setup();
+    const clicker = user();
     const changes: string[] = [];
     render(
       <KeywordInsertBar
@@ -127,7 +111,8 @@ describe("the Insert bar", () => {
         onChange={(next) => changes.push(next)}
       />,
     );
-    await user.click(screen.getByRole("button", { name: "Insert Scene" }));
+    const menu = await openMenu(clicker);
+    await clicker.click(row(menu, "Slopify_Scene"));
     expect(changes).toEqual(["x{{Slopify_Scene}}"]);
   });
 });

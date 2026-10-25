@@ -4,8 +4,8 @@ import { type ReactElement, useRef } from "react";
 import { Fact, Facts } from "@/components/kit/facts";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/kit/popover";
 
-// What one keyword Slopify fills does, wherever it is met: in the Insert bar and over the
-// keyword in a prompt's text. The words are the keyword table's own (`keywords/specs.ts`), so
+// What one keyword Slopify fills does, over the keyword in a prompt's text (the Insert menu
+// says the same in its rows). The words are the keyword table's own (`keywords/specs.ts`), so
 // the editor, the wiki page and the lint never tell two stories. `problem` is the lint's
 // sentence when the keyword is misused here.
 export function KeywordCard({
@@ -54,8 +54,8 @@ export interface Measurable {
   getBoundingClientRect(): DOMRect;
 }
 
-// The keyword shown, and what the card sits by: a chip in the Insert bar, or the keyword's own
-// span in the text behind a prompt's textarea.
+// The keyword shown, and what the card sits by: the keyword's own span in the text behind a
+// prompt's textarea.
 export interface ShownKeyword {
   readonly name: string;
   readonly problem?: string | undefined;

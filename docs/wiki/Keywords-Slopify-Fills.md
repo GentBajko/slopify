@@ -4,7 +4,7 @@ Most `{{keywords}}` in a prompt are yours: each becomes a field on Create that y
 
 The whole `Slopify_` prefix is Slopify's. `{{Title}}`, `{{Channel}}` and `{{Date}}` stay ordinary keywords of your own, so no prompt you already have changes meaning.
 
-In the prompt editor, the **Insert** bar above the text lists the keywords the prompt's kind can use; click one to put it where the cursor is. Hover a keyword in the bar or in the text to see what it fills in, an example, when it exists, which prompts can use it and what it costs.
+In the prompt editor, **Insert a keyword Slopify fills** above the text lists the keywords the prompt's kind can use, each written as it goes in (`{{Slopify_Title}}`) over what it fills in and, for the ones made by an AI call, that call; pick one to put it where the cursor is. Hover a keyword in the text to see what it fills in, an example, when it exists, which prompts can use it and what it costs.
 
 ## How they work
 

@@ -28,9 +28,10 @@ import {
   slotNames,
 } from "@/lib/draft-lint";
 import { usePromptDraft } from "@/lib/form-drafts";
+import { examplesWith } from "@/lib/prompt-examples";
 import { kindAbout, kindNameExample, kindNoun, kindPlaceholder } from "@/lib/prompt-kinds";
 import { promptsQuery } from "@/queries";
-import { nameFromText, starterOf } from "@/routes/prompt-editor";
+import { nameFromText } from "@/routes/prompt-editor";
 
 // New prompt from Create (and Edit template, which draws the same rows): the prompt editor's
 // name and text in a drawer beside the setup, so nothing is left behind. Save keeps the prompt
@@ -113,17 +114,15 @@ export function NewPromptDrawer({
   const held = blocked !== undefined || save.isPending;
   const failure = save.error?.message;
 
-  const starter = starterOf(kind);
-  // An example fills an empty text; replacing a typed one is the full editor's.
+  // An example fills an empty text; replacing a typed one is the full editor's. Every kind has
+  // built-in ones (lib/prompt-examples.ts), then your saved prompts of it.
   const examples = bodyEmpty
-    ? [
-        ...(starter === undefined
-          ? []
-          : [{ key: "starter", name: starter.label, body: starter.body }]),
-        ...(prompts.data?.prompts ?? [])
+    ? examplesWith(
+        kind,
+        (prompts.data?.prompts ?? [])
           .filter((prompt) => prompt.kind === kind)
           .map((prompt) => ({ key: prompt.id, name: prompt.name, body: prompt.body })),
-      ]
+      )
     : [];
 
   const attempt = (): void => {

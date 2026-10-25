@@ -1,31 +1,26 @@
 import type { KeywordPlace } from "@app/slices/keywords/model.js";
-import { reservedPrefix } from "@app/slices/keywords/model.js";
+import { costLabel, reservedPrefix } from "@app/slices/keywords/model.js";
 import { keywordsFor } from "@app/slices/keywords/specs.js";
-import {
-  type KeyboardEvent,
-  type ReactElement,
-  useId,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { ChevronDownIcon } from "lucide-react";
+import { type ReactElement, useRef } from "react";
 import { Button } from "@/components/kit/button";
-import { KeywordPopover, type ShownKeyword } from "./keyword-card";
+import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/kit/menu";
 
 // The places an editor body can be: every prompt kind and both entry categories.
 export type BodyKeywordPlace = Exclude<KeywordPlace, "title">;
 
-// "Thumbnail Text" for {{Slopify_Thumbnail_Text}}: the chip's short name.
+// "Thumbnail Text" for {{Slopify_Thumbnail_Text}}: the keyword's short name where the text is
+// described (the editor's aside, a prompt's detail), never on what inserts it.
 export function keywordLabel(name: string): string {
   return name.slice(reservedPrefix.length).replaceAll("_", " ");
 }
 
-// The keywords Slopify fills that this body can use, above the text, under the words "Slopify
-// fills these in". Each chip is in the colour that keyword takes in the text, so what you write
-// and what Slopify writes read as two things. The chips wrap onto more lines rather than scroll
-// out of sight, and the bar is no wider than the editor (80ch). A press puts `{{Slopify_X}}`
-// where the caret is, over the selection, and hands the caret back after it; pointing at a chip
-// shows what it fills in. The row is one tab stop; the arrow keys, Home and End move along it.
+// The keywords Slopify fills that this body can use, behind one button above the text: each is
+// listed as exactly what goes in ({{Slopify_Title}}), in the color that keyword takes in the
+// text, over what it fills in and, when it is part of an AI call, that call. So what a pick
+// inserts is what it said, and what each fills in is read before it is picked, not on a hover.
+// A pick puts the keyword where the caret was, over the selection, and hands the caret back
+// after it.
 export function KeywordInsertBar({
   place,
   targetId,
@@ -38,25 +33,12 @@ export function KeywordInsertBar({
   readonly value: string;
   readonly onChange: (next: string) => void;
 }): ReactElement {
-  const cardId = useId();
-  const row = useRef<HTMLDivElement>(null);
+  // Where the caret goes once a pick's text is on the page: after the keyword.
   const caret = useRef<number | undefined>(undefined);
-  const [current, setCurrent] = useState(0);
-  const [shown, setShown] = useState<ShownKeyword | undefined>(undefined);
   const specs = keywordsFor(place);
-  const focusAt = Math.min(current, Math.max(specs.length - 1, 0));
 
-  // The text is the parent's state, so the caret is placed once the new text is on the page.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the inserted text lands.
-  useLayoutEffect(() => {
-    const at = caret.current;
-    caret.current = undefined;
-    const box = textareaOf(targetId);
-    if (at === undefined || box === undefined) return;
-    box.focus();
-    box.setSelectionRange(at, at);
-  }, [value, targetId]);
-
+  // A text box keeps its selection while the menu has the focus, so the keyword lands where
+  // the caret was.
   const insert = (name: string): void => {
     const text = `{{${name}}}`;
     const box = textareaOf(targetId);
@@ -66,65 +48,51 @@ export function KeywordInsertBar({
     onChange(`${value.slice(0, start)}${text}${value.slice(end)}`);
   };
 
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
-    const last = specs.length - 1;
-    const next =
-      event.key === "ArrowRight"
-        ? focusAt === last
-          ? 0
-          : focusAt + 1
-        : event.key === "ArrowLeft"
-          ? focusAt === 0
-            ? last
-            : focusAt - 1
-          : event.key === "Home"
-            ? 0
-            : event.key === "End"
-              ? last
-              : undefined;
-    if (next === undefined) return;
-    event.preventDefault();
-    setCurrent(next);
-    row.current?.querySelectorAll<HTMLElement>("[data-keyword]")[next]?.focus();
-  };
-
-  const show = (name: string, anchor: HTMLElement): void => setShown({ name, anchor });
-  const hide = (name: string): void => setShown((now) => (now?.name === name ? undefined : now));
-
   return (
-    <div className="mb-1 flex min-w-0 max-w-[80ch] items-start gap-2">
-      <span className="shrink-0 py-1 text-small text-ink-2">Slopify fills these in:</span>
-      <div
-        ref={row}
-        role="toolbar"
-        aria-label="Insert a keyword Slopify fills"
-        onKeyDown={onKeyDown}
-        className="flex min-w-0 flex-1 flex-wrap gap-1 py-1"
-      >
-        {specs.map((spec, index) => (
-          <Button
-            key={spec.name}
-            variant="quiet"
-            size="small"
-            data-keyword={spec.name}
-            aria-label={`Insert ${keywordLabel(spec.name)}`}
-            aria-describedby={shown?.name === spec.name ? cardId : undefined}
-            tabIndex={index === focusAt ? 0 : -1}
-            className="shrink-0 text-accent-ink"
-            onClick={() => insert(spec.name)}
-            onPointerEnter={(event) => show(spec.name, event.currentTarget)}
-            onPointerLeave={() => hide(spec.name)}
-            onFocus={(event) => {
-              setCurrent(index);
-              show(spec.name, event.currentTarget);
-            }}
-            onBlur={() => hide(spec.name)}
-          >
-            {keywordLabel(spec.name)}
+    <div className="mb-1 flex min-w-0 max-w-[80ch] items-center">
+      <Menu>
+        <MenuTrigger asChild>
+          <Button variant="quiet" size="small" className="text-accent-ink">
+            Insert a keyword Slopify fills
+            <ChevronDownIcon aria-hidden="true" />
           </Button>
-        ))}
-      </div>
-      <KeywordPopover id={cardId} shown={shown} onDismiss={() => setShown(undefined)} />
+        </MenuTrigger>
+        <MenuContent
+          align="start"
+          className="max-h-[min(60vh,520px)] w-[min(30rem,calc(100vw-32px))] overflow-y-auto"
+          // After a pick the focus goes back into the text, after the keyword, not onto the
+          // button that opened the menu. The menu holds the focus until it has closed, so this
+          // is where the text can take it (the new text is on the page by then).
+          onCloseAutoFocus={(event) => {
+            const at = caret.current;
+            caret.current = undefined;
+            const box = textareaOf(targetId);
+            if (at === undefined || box === undefined) return;
+            event.preventDefault();
+            box.focus();
+            box.setSelectionRange(at, at);
+          }}
+        >
+          {specs.map((spec) => (
+            <MenuItem
+              key={spec.name}
+              data-keyword={spec.name}
+              className="items-start"
+              onSelect={() => insert(spec.name)}
+            >
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="font-mono text-small text-accent-ink">{`{{${spec.name}}}`}</span>
+                <span className="whitespace-normal text-small text-ink-2">{spec.fills}</span>
+                {spec.cost === "free" ? null : (
+                  <span className="whitespace-normal text-small text-ink-3">
+                    {costLabel(spec.cost)}
+                  </span>
+                )}
+              </span>
+            </MenuItem>
+          ))}
+        </MenuContent>
+      </Menu>
     </div>
   );
 }
