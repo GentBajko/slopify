@@ -155,7 +155,9 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
     disclosure !== channel.aiDisclosure ||
     posting.xTier !== (channel.xTier ?? "free") ||
     JSON.stringify(posting.accounts) !== JSON.stringify(channel.socialAccounts ?? {}) ||
-    linksDraft !== undefined;
+    linksDraft !== undefined ||
+    // The default channel's links from Settings, shown here, are saved as its own on Save.
+    (channel.brand.links === undefined && (legacyLinks.data?.length ?? 0) > 0);
   return (
     <form
       aria-label="Name and look"

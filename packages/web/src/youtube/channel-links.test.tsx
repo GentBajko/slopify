@@ -69,6 +69,23 @@ it("shows the default channel the links saved in Settings before, and saves them
   });
 });
 
+// Links from Settings shown on the default channel are not its own yet: there is something to
+// save, so Save channel does not wait for another change.
+it("offers Save channel at once to keep the links Settings held as the channel's own", async () => {
+  const user = userEvent.setup();
+  const seen = brandTab(main, {
+    "GET /api/settings/channel-links": jsonAnswer({
+      links: [{ name: "Patreon", url: "https://patreon.com/me" }],
+    }),
+  });
+  await screen.findByRole("textbox", { name: "Name of link 1" });
+  await user.click(screen.getByRole("button", { name: "Save channel" }));
+  await waitFor(() => expect(seen).toHaveLength(1));
+  expect(seen[0]).toMatchObject({
+    brand: { links: [{ name: "Patreon", url: "https://patreon.com/me" }] },
+  });
+});
+
 it("keeps each channel's own links, and saves an emptied list as empty", async () => {
   const user = userEvent.setup();
   const seen = brandTab(
@@ -96,7 +113,9 @@ it("keeps each channel's own links, and saves an emptied list as empty", async (
 it("leaves the links out for a channel that never had any", async () => {
   const user = userEvent.setup();
   const seen = brandTab({ ...main, id: otherId, isDefault: false }, {});
-  await user.click(await screen.findByRole("button", { name: "Save channel" }));
+  // Save channel waits for a change: one that has nothing to do with links.
+  await user.type(await screen.findByLabelText("Series brief"), "Calm stories.");
+  await user.click(screen.getByRole("button", { name: "Save channel" }));
   await waitFor(() => expect(seen).toHaveLength(1));
   expect(seen[0]).toMatchObject({ brand: {} });
   expect((seen[0] as { brand: object }).brand).not.toHaveProperty("links");
