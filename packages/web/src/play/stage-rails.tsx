@@ -469,6 +469,7 @@ export function NumberField({
   field,
   label,
   tip,
+  help,
   placeholder,
   step,
   problem,
@@ -478,6 +479,8 @@ export function NumberField({
   readonly field: string;
   readonly label: string;
   readonly tip?: HelpId | undefined;
+  // One visible sentence under the box, in place of the info button.
+  readonly help?: string | undefined;
   readonly placeholder?: string | undefined;
   readonly step: number;
   readonly problem: string | undefined;
@@ -485,7 +488,7 @@ export function NumberField({
   readonly onChange: (value: string) => void;
 }) {
   return (
-    <LabelledField label={label} tip={tip} problem={problem}>
+    <LabelledField label={label} tip={tip} help={help} problem={problem}>
       {({ id, describedBy }) => (
         <Input
           id={id}
