@@ -87,7 +87,7 @@ function NavigationCommands({ several }: { readonly several: boolean }): null {
     group: "Go to",
     rank: goRank("templates"),
     run: go("/templates"),
-    keywords: ["library", "designs", "posters"],
+    keywords: ["library", "designs", "posters", "setups"],
     shortcut: shortcuts.goTemplates,
   });
   useCommand({
@@ -175,15 +175,28 @@ function ChannelCommands(): ReactElement {
   );
 }
 
-// Words people type for a section that its name and line do not hold.
+// Words people type for a section that its name and line do not hold. "studio" on its own is a
+// word of YouTube Studio and posting's name, listed so the former name "Template studio" (now
+// Production defaults) does not outrank it.
 const sectionWords: Readonly<Record<string, readonly string[]>> = {
   general: ["appearance", "theme", "dark", "light", "start at login", "autostart"],
-  providers: ["api keys", "sign in", "openai", "gemini", "antigravity", "agy", "claude", "codex"],
+  providers: [
+    "providers",
+    "keys",
+    "api keys",
+    "sign in",
+    "openai",
+    "gemini",
+    "antigravity",
+    "agy",
+    "claude",
+    "codex",
+  ],
   voices: ["voice id", "elevenlabs", "tts"],
   agents: ["mcp", "claude code", "codex", "agent"],
-  playback: ["pace", "loudness", "volume", "narration"],
+  playback: ["pace", "loudness", "volume", "narration", "template studio"],
   notifications: ["webhook", "ntfy", "alerts"],
-  studio: ["extension", "playlist", "youtube"],
+  studio: ["studio", "extension", "playlist", "youtube"],
   storage: ["export", "import", "disk", "space"],
   backups: ["daily copy", "restore"],
   trash: ["deleted", "restore", "undelete"],

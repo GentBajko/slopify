@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { useLinkProps } from "@tanstack/react-router";
 import type { ReactElement, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Lamp, type Tone } from "./status.js";
@@ -94,32 +94,30 @@ export function RailLink({
   readonly className?: string;
   readonly children: ReactNode;
 } & Standing): ReactElement {
+  const link = useLinkProps({
+    to,
+    ...(search ? { search } : {}),
+    ...(resetScroll === undefined ? {} : { resetScroll }),
+    activeOptions: { exact, includeSearch: false },
+    // No "active" class: aria-current is what lights an item (kit.css).
+    activeProps: {},
+  });
+  // The router marks a link that matches the address as the page, after any prop it is given,
+  // so a forced mark (`current={false}` on an item the address matches too) replaces the
+  // router's on the element itself.
   const forced =
     current === undefined
-      ? undefined
-      : current === false
-        ? undefined
-        : current === true
-          ? "page"
-          : current;
+      ? {}
+      : {
+          "aria-current": current === false ? undefined : current === true ? "page" : current,
+          "data-status": undefined,
+        };
   return (
-    <Link
-      to={to}
-      {...(search ? { search } : {})}
-      {...(resetScroll === undefined ? {} : { resetScroll })}
-      data-tour={tour}
-      className={cn("sl-rail__item", className)}
-      {...(current === undefined
-        ? {
-            activeOptions: { exact, includeSearch: false },
-            activeProps: { "aria-current": "page" as const },
-          }
-        : { "aria-current": forced })}
-    >
+    <a {...link} {...forced} data-tour={tour} className={cn("sl-rail__item", className)}>
       <Inner icon={icon} meta={meta} tone={tone} state={state}>
         {children}
       </Inner>
-    </Link>
+    </a>
   );
 }
 

@@ -157,17 +157,17 @@ On the Projects list.
 | **Show failed projects** | Filters to failed projects. |
 | **Search projects** (`/`) | Puts the cursor in the search box. |
 
-### Library
+### Prompts, templates and PDF themes
 
-On any Library tab.
+On Prompts (with its intros and outros), PDF themes, Pronunciation and What worked on YouTube, except where a row says otherwise.
 
 | Command | What it does |
 |---|---|
-| **New prompt** | Starts a new prompt (of the kind the tab shows). |
-| **New intro or outro** | Starts a new intro or outro. |
-| **New document theme** | Starts a new document theme. |
-| **Open prompts**, **Open intros and outros**, **Open templates**, **Open document themes** | Switches tab. |
-| **Save a setup as a template** | On the Templates tab: saves a Play setup as a template. |
+| **New prompt** | Starts a new prompt (of the kind Prompts shows). |
+| **New intro** / **New outro** | Starts a new intro or outro (whichever list is showing). |
+| **New PDF theme** | Starts a new PDF theme. |
+| **Open intros and outros**, **Open PDF themes** | Opens that list (found by typing). **Open Prompts** and **Open Templates** are under Go to. |
+| **Add starter templates** | On Templates: opens the starter templates to add. |
 
 See [Library-Overview](Library-Overview).
 

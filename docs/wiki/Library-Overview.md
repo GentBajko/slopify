@@ -48,7 +48,7 @@ In the prompt, intro and outro and document theme editors, `Ctrl+S` (`Cmd+S`) sa
 
 ## Command palette shortcuts
 
-Press `Ctrl+K` anywhere and type to find **New prompt**, **New intro or outro**, **New PDF theme**, **Open prompts**, **Open intros and outros**, **Open templates** or **Open PDF themes**, or a saved item by name: **Open template <name>** (Templates with it shown beside the list), **Edit prompt <name>**, **Edit intro <name>** / **Edit outro <name>** and **Edit PDF theme <name>**. See [Keyboard and Ctrl+K](Keyboard-Shortcuts-and-Command-Palette).
+Press `Ctrl+K` anywhere and type to find **New prompt**, **New intro** or **New outro**, **New PDF theme**, **Open intros and outros** or **Open PDF themes** (**Open Prompts** and **Open Templates** are under Go to), or a saved item by name: **Open template <name>** (Templates with it shown beside the list), **Edit prompt <name>**, **Edit intro <name>** / **Edit outro <name>** and **Edit PDF theme <name>**. See [Keyboard and Ctrl+K](Keyboard-Shortcuts-and-Command-Palette).
 
 ## Starter packs
 

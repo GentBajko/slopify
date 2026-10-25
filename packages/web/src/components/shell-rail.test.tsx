@@ -103,7 +103,7 @@ describe("the rail", () => {
     expect(within(nav).getByRole("link", { name: "Home" }).getAttribute("aria-current")).toBeNull();
   });
 
-  it("opens Help on the tour, the guides, the keys, what's new and the update check", async () => {
+  it("opens Help on the tour, the guides, the keys, what's new, the update check and the diagnostics", async () => {
     const user = userEvent.setup();
     mount();
     await user.click(await screen.findByRole("button", { name: "Help" }));
@@ -114,8 +114,13 @@ describe("the rail", () => {
       "Keyboard shortcuts",
       "What's new",
       "Check for updates",
+      "Download diagnostics",
     ]);
     expect(menu.textContent).toContain("You have Slopify 4.0.0.");
+    // The same file Settings → About saves, for a bug report.
+    const diagnostics = within(menu).getByRole("menuitem", { name: "Download diagnostics" });
+    expect(diagnostics.getAttribute("href")).toBe("http://slopify.test/api/diagnostics");
+    expect(diagnostics.getAttribute("download")).toBe("slopify-diagnostics.json");
     await user.click(within(menu).getByRole("menuitem", { name: "Keyboard shortcuts" }));
     expect(await screen.findByRole("dialog", { name: "Keyboard shortcuts" })).not.toBeNull();
   });
@@ -221,6 +226,7 @@ describe("on a phone", () => {
       "What's new",
       "Assistant",
       "Check for updates",
+      "Download diagnostics",
       "GitHub",
       "Patreon",
       "Buy Me a Coffee",

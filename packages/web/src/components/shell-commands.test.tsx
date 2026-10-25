@@ -76,6 +76,17 @@ it("lands a Settings section's name on that section, not on Settings' first one"
   expect(matchCommands(registry.list(), "api keys")[0]?.title).toBe(
     "Open Settings: Keys & services",
   );
+  // The pages' former names and the plain words for them land there too.
+  for (const typed of ["providers", "keys"])
+    expect(matchCommands(registry.list(), typed)[0]?.title).toBe("Open Settings: Keys & services");
+  expect(matchCommands(registry.list(), "template studio")[0]?.title).toBe(
+    "Open Settings: Production defaults",
+  );
+  // A former name does not outrank a page whose name holds the word now.
+  for (const typed of ["studio", "studio settings"])
+    expect(matchCommands(registry.list(), typed)[0]?.title).toBe(
+      "Open Settings: YouTube Studio and posting",
+    );
 });
 
 it("reopens the welcome screen and offers the tour", async () => {
