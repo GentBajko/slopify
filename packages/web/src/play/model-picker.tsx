@@ -187,9 +187,7 @@ function ProviderModelPicker({
                 >
                   <option value="">
                     {provider === ""
-                      ? quiet
-                        ? "Pick a service first"
-                        : "Pick a provider first"
+                      ? "Pick a service first"
                       : catalogue.isPending
                         ? "Loading models…"
                         : "Pick a model"}

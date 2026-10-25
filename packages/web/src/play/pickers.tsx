@@ -167,12 +167,10 @@ export function ProviderPicker({
   problem,
   tip,
   group,
-  placeholder = "Pick a provider",
   onPick,
 }: FieldProps & {
   readonly family: ProviderFamily;
   readonly providers: readonly ProviderStatus[];
-  readonly placeholder?: string;
 }) {
   return (
     <OptionPicker
@@ -182,10 +180,10 @@ export function ProviderPicker({
       problem={problem}
       tip={tip}
       group={group}
-      placeholder={placeholder}
+      placeholder="Pick a service"
       options={[
         ...(value !== "" && !providers.some((one) => one.id === value && one.family === family)
-          ? [{ value, label: `${value} (saved provider)`, disabled: true }]
+          ? [{ value, label: `${value} (saved service)`, disabled: true }]
           : []),
         ...providerOptions(providers, family),
       ]}
