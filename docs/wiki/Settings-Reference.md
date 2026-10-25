@@ -4,7 +4,7 @@ Every page of Settings, what each control does and its default. Pages with a tut
 
 **Where to find it:** **Settings** in the rail, or press `Ctrl+K` and run **Open Settings** (or type a page's name, such as "voices"). `G` then `,` opens it too. Settings opens on **Keys & services**.
 
-Settings is one list of pages down the left, each named once: the name in the list is the page's title. The list comes in four runs with a little space between them: what makes the videos, how new videos are made and published, this computer, and Slopify itself. Each page's header says in one line what it holds. On a phone, a **Settings page** picker replaces the list. An old link to a page that was folded into another (`?section=backups`, `?section=template-studio`, `?section=channel-links`) opens the page that holds it now.
+Settings is one list of pages down the left, each named once: the name in the list is the page's title. The list comes in four runs with a little space between them: what makes the videos, how new videos are made and published, this computer, and Slopify itself. With only one channel, **Your channel** follows YouTube Studio and posting in the list: it opens the channel's own page (with two or more, **Channels** in the rail does). Each page's header says in one line what it holds. On a phone, a **Settings page** picker replaces the list. An old link to a page that was folded into another (`?section=backups`, `?section=template-studio`, `?section=channel-links`) opens the page that holds it now.
 
 ## Pages at a glance
 
@@ -134,12 +134,12 @@ Agents read and change these with `get_settings` and `update_settings`, and chec
 
 | Control | What it does | Default / range |
 |---|---|---|
-| **Daily sample budget** | The most a template's samples, **Compare models** and **Make samples for all** may spend in one day, in US dollars, counted from midnight on this computer. At $0.00 no sample spends money. The line under it says what the samples spent today and what is left. Type an amount and press **Save**. | $2.00, $0 to $1,000 |
-| **Designed pieces: daily sample budget** | The most the samples of poster templates (Templates → Poster templates) may spend in one day, in US dollars. It is separate from the budget above. Type an amount and press **Save designed pieces' budget**. | $1.00, $0 to $1,000 |
-| **Samples may use my CLI plans** | Whether those samples, poster templates' included, may run steps on your Claude Code or Codex plan. Plan usage has no dollar price, so the budgets can't limit it: off, a sample with such a step waits; on, it runs on your plan whatever the budget. | Off |
+| **Video templates: daily budget** | The most video templates' samples, **Compare models** and **Make samples for all** may spend in one day, in US dollars, counted from midnight on this computer; one over it waits for tomorrow or a higher budget. At $0.00 no sample spends money. The line under it says what the samples spent today and what is left. Type an amount and press **Save video budget**. | $2.00, $0 to $1,000 |
+| **Poster templates: daily budget** | The most the samples of poster templates (Templates → Poster templates) may spend in one day, in US dollars. It is separate from the budget above. Type an amount and press **Save poster budget**. | $1.00, $0 to $1,000 |
+| **Let samples use my Claude Code or Codex plan** | Whether those samples, poster samples included, may run steps on your Claude Code or Codex plan. Plan usage has no dollar price, so the budgets can't limit it: off, a sample that needs your plan waits until you turn this on; on, it runs on your plan whatever the budget. The line under the switch says which. | Off |
 | **Samples for all templates** → **Make samples for all** | Makes every template's sample for its newest version, with the estimated cost on the button. | |
 
-A sample that would go over the budget is not made: the template's editor shows it waiting, with what it costs and what is left of today's budget, and makes it once there is room again. A sample with a step on a CLI plan waits the same way while **Samples may use my CLI plans** is off. Only samples count; your projects and posters never do. See [Template Studio](Template-Studio).
+A sample that would go over the budget is not made: the template's editor shows it waiting, with what it costs and what is left of today's budget, and makes it once there is room again. A sample with a step on a Claude Code or Codex plan waits the same way while **Let samples use my Claude Code or Codex plan** is off. Only samples count; your projects and posters never do. See [Edit template](Template-Studio).
 
 ## Notifications
 
@@ -147,9 +147,9 @@ A sample that would go over the budget is not made: the template's editor shows 
 
 | Control | What it does | Default |
 |---|---|---|
-| **Browser notifications** | Shows a notification from this browser while any Slopify tab is open, even in the background. Turning it on asks the browser's permission. Applies to this browser at once. **Send test notification** beside it shows a sample. | Off |
-| **Run sounds** | A chime when a run starts and a different one when it finishes, fails or waits for you, while any Slopify tab is open. **Play start** and **Play end** let you hear them. Applies to this browser at once. | On |
-| **Notification URL** | An address Slopify sends a short plain-text message to, with no tab open, for example an ntfy topic on your phone. Saved only when you press **Save**; **Send test notification** sends a sample. Empty turns it off. | Empty |
+| **Notify me in this browser** | Shows a notification on this computer when a run finishes, fails or waits for you, while any Slopify tab is open, even in the background. Turning it on asks the browser's permission. Applies to this browser at once. Once it is on, **Send test notification** beside it shows a sample. | Off |
+| **Play a sound when a run starts and ends** | A chime when a run starts and a different one when it ends; the end sound also plays when a run fails or waits for you. You hear them in this browser while a Slopify tab is open and has been clicked once. **Hear the start sound** and **Hear the end sound** play them. Applies to this browser at once. | On |
+| **Notification URL** | An address Slopify sends a short plain-text message to, with no tab open, for example an ntfy topic on your phone. Saved only when you press **Save**; once there is an address, **Send test notification** sends a sample. Empty turns it off. | Empty |
 | **Weekly report** | Each Monday from 09:00, what was made, what failed and what it cost last week go to the Notification URL. | Off |
 
 See [Notifications](Notifications).
@@ -257,7 +257,7 @@ See [Remote Access](Remote-Access).
 
 ## AI agents
 
-"Let Claude Code or Codex on this computer run Slopify." An agent can start and fix runs, edit your prompts and templates and answer checks set to External agent. It needs no key, like this page, and never uploads to YouTube. What it changes is marked by agent in the project's versions, in notifications and in the list below.
+"Let Claude Code or Codex on this computer run Slopify for you." An agent can start and fix runs, edit your prompts and templates and answer checks set to External agent. It needs no key, like this page, and never uploads to YouTube. What it changes is marked by agent in the project's versions, in notifications and in the list below.
 
 | Control | What it does |
 |---|---|

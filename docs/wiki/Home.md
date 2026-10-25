@@ -54,7 +54,7 @@ These pages cover Slopify 3.0: every screen, every setting and every workflow, s
 | [Create: Images](Create-Images) | Image prompts, the establishing image, cast, image pacing, Codex |
 | [Create: Video and Style](Create-Video-and-Style) | Cuts, the Look, transitions, chapter cards, motion, captions, ambient sound |
 | [Create: Extras](Create-Extras) | Video, shorts, description, PDF, thumbnails and audio exports |
-| [Reviews and checkpoints](Reviews-and-Checkpoints) | Automatic reviews and pausing a run for you to check |
+| [Pauses and checks](Reviews-and-Checkpoints) | Automatic reviews and pausing a run for you to check |
 
 ### Formats and outputs
 | Page | What it covers |
