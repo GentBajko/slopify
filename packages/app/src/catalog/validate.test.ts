@@ -83,8 +83,10 @@ it("refuses an establishing image for a model that can't take one, naming the co
       (field) => field.field === "reference.source",
     );
     expect(refused?.message).toContain("can't use an establishing image");
-    expect(refused?.message).toContain("Images → Model");
-    expect(refused?.message).toContain("set Establishing image to Off in the Images section");
+    expect(refused?.message).toContain("Create → Images");
+    expect(refused?.message).toContain(
+      "Edit settings → Images, or set Establishing image to Off there",
+    );
     // The models the catalogue marks as taking a reference, and the Codex CLI, are accepted.
     for (const images of [
       { provider: "openai-image", model: "gpt-image-2" },

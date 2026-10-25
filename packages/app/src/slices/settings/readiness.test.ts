@@ -191,7 +191,9 @@ describe("providerStatuses", () => {
     expect(statusOf(found, "system-voice").readiness).toMatchObject({
       kind: "local",
       available: false,
-      issue: expect.stringMatching(/Docker.*docker compose pull.*Settings → Keys & services/),
+      issue: expect.stringMatching(
+        /Docker.*Update Slopify's Docker image.*Settings → Keys & services/,
+      ),
     });
   });
 

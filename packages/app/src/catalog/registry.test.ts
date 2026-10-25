@@ -56,7 +56,7 @@ describe("curated provider requests", () => {
     };
     await consume("low");
     expect(requests[0]?.thinkingConfig).toEqual({ effort: "low" });
-    await expect(consume("off")).rejects.toThrow(/thinking/);
+    await expect(consume("off")).rejects.toThrow(/Thinking level/);
     expect(requests).toHaveLength(1);
   });
   it("refuses web research on a tool that cannot search, before any call", async () => {
@@ -364,7 +364,7 @@ describe("curated provider requests", () => {
         reference,
         signal: new AbortController().signal,
       }),
-    ).rejects.toThrow(/Establishing image to Off in the Images section/);
+    ).rejects.toThrow(/Edit settings → Images, or set Establishing image to Off there/);
     expect(requests).toEqual([]);
   });
 
