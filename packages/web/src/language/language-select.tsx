@@ -37,7 +37,12 @@ export function LanguageSelect({
 }): ReactElement {
   const effective = value ?? inherited?.language;
   return (
-    <Field label={label} tip={tip ?? undefined} help={languageHelp(effective)} error={error}>
+    <Field
+      label={label}
+      {...(tip === null ? {} : { tip })}
+      help={languageHelp(effective)}
+      error={error}
+    >
       <Select
         data-play-field="language"
         value={value ?? (inherited === undefined ? "en" : "")}
