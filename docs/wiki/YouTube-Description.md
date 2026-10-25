@@ -2,7 +2,7 @@
 
 Slopify can write your video's YouTube description for you: a short summary, chapters at the narration's real times, hashtags, and a separate list of search tags. Each part has a Copy button and can be edited in place, and your edits survive when the description is written again.
 
-**Where to find it:** Create → **Extras** row → **YouTube description**. On a finished project: the **YouTube** section (Description, Tags, Pinned comment and Other titles), and Edit project → **Prompts**.
+**Where to find it:** Create → **Extras** row → **YouTube description**. On a finished project: the **YouTube** part (Description, Tags, Pinned comment and Other titles), and **Edit settings** → **Extras**.
 
 ## What you get
 
@@ -24,14 +24,14 @@ Slopify lays out the description itself (summary, blank line, one chapter per li
 3. Pick a **Description prompt**, or leave it on **Built-in**.
 4. Start the run.
 
-The description is written after the video's subtitle timing, beside the render, in one text-model call. The project language decides the language it is written in; see [Other-Languages](Other-Languages).
+The description is written once the captions are timed, while the video is put together, in one AI call. The project language decides the language it is written in; see [Other-Languages](Other-Languages).
 
 ## Options
 
 | Option | What it does | Default |
 |---|---|---|
-| **YouTube description** | Writes the description, chapters, hashtags and tags after subtitle timing. One text-model call. Needs narration. | Off |
-| **Description prompt** | The Library prompt the description is written from. | **Built-in** |
+| **YouTube description** | Writes the description, chapters, hashtags and tags once the captions are timed. One AI call. Needs narration. | Off |
+| **Description prompt** | Your Description prompt the description is written from. | **Built-in** |
 
 The **Built-in** prompt asks for:
 
@@ -55,7 +55,7 @@ When the step has run, the project page's **YouTube** section shows four parts. 
 
 You can also run **Copy description** (`Shift+D`), **Copy tags** and **Copy pinned comment** from the command palette (`Ctrl+K`) while the project is open. The **YouTube description (.txt)** and **YouTube tags (.txt)** downloads are the text exactly as the page shows it: your edits, the fitted chapters and the filled links. See [Keyboard-Shortcuts-and-Command-Palette](Keyboard-Shortcuts-and-Command-Palette).
 
-While the stage is running the parts say "Written after the subtitle timing."; before it starts they say "Not written yet. It is made with the video."
+While the stage is running the parts say "Written once the captions are timed."; before it starts they say "Not written yet. It is made with the video."
 
 ## Edit a part
 
@@ -107,16 +107,16 @@ Because placeholders are filled when shown or copied, changing a channel's link 
 
 ## Write it again, or turn it on later
 
-To write a description again, press **Write again** beside **Description** in the project's YouTube section, then confirm. Only this step runs. A description written before pinned comments and other titles existed shows neither until it is written again this way.
+To write a description again, press **Write the description again · 1 AI call** in the project's YouTube part, then confirm. Only this step runs. A description written before pinned comments and other titles existed shows neither until it is written again this way.
 
 To turn it on, or to change its prompt first:
 
-1. Open the project and press **Edit project**.
-2. Open **Prompts**. Tick **YouTube description** if it was off, and pick a **Description prompt**.
+1. Open the project and press **Edit settings**.
+2. Open **Extras**. Tick **YouTube description** if it was off, and pick a **Description prompt**.
 3. To replace a description that is already written, press **Write the description again after review**. **Keep the current description** cancels it.
-4. Save, then continue the run or start the rebuild review.
+4. Press **Save changes**, then make the outdated description again (the title row's next action, or **Choose what to make again**).
 
-Writing it again is one paid text-model call. The description you have now is replaced, except for parts you edited, which stay yours with the new text offered beside them.
+Writing it again is one paid AI call. The description you have now is replaced, except for parts you edited, which stay yours with the new text offered beside them.
 
 ## Limits
 

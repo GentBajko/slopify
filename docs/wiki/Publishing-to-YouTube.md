@@ -45,11 +45,11 @@ With the extension installed and paired, press **Fill in YouTube Studio** instea
 If a part isn't made yet, Copy for YouTube Studio says so at the top under "Some of it isn't made yet." and tells you what to do, for example:
 
 - The video isn't made yet: let the Video stage finish (or use Continue the run), then open Copy for YouTube Studio again.
-- No YouTube description is written: turn on **YouTube description** in Edit project → **Prompts** to have one written with chapters and tags.
-- The thumbnail isn't made yet, or only 1 of 3 thumbnails is made: regenerate the missing ones in the project's Images section.
+- No YouTube description is written: turn on **YouTube description** in **Edit settings** → **Extras** to have one written with chapters and tags.
+- The thumbnail isn't made yet, or only 1 of 3 thumbnails is made: make the missing ones in the project's Images part (**Make the thumbnail again**).
 - This project makes no thumbnail, so YouTube will pick a frame.
 - No playlist is set: set one in Settings → YouTube Studio and posting.
-- A short isn't rendered yet.
+- A short isn't made yet.
 
 ## AI use disclosure
 
@@ -67,7 +67,7 @@ Slopify answers **Yes only when one of those three cases applies**, and **No** o
 |---|---|---|
 | 1. A voice that imitates a real person | **Real person** on a voice cloned from, or made to sound like, a real person. A video or short narrated by that voice (the narration voice or any speaker) gets Yes. | Settings → **Voices**, the Real person column |
 | 2. Real footage that is altered | In Copy for YouTube Studio's AI use step, the switch **The uploaded clip is real footage (filmed, not made by AI)** (or "The N uploaded clips are…"). It appears when the project's images include uploaded video clips. With it on, the video gets Yes when the Look's **Atmosphere** overlay (embers, dust or fog) is laid over them. A colour grade, vignette or grain alone counts as a minor edit and stays No. | Copy for YouTube Studio, per project |
-| 3. Photorealistic AI pictures | **Draws photorealistic pictures** on an Image prompt whose style looks like real photos or film. A video whose images are drawn from such a prompt, or a short whose **Image style** is one, gets Yes. The Built-in shorts style is not photorealistic. | Library → **Prompts**, in the Image prompt's editor (save the prompt first) |
+| 3. Photorealistic AI pictures | **Draws photorealistic pictures** on an Image prompt whose style looks like real photos or film. A video whose images are drawn from such a prompt, or a short whose **Image prompt** is one, gets Yes. The Built-in shorts style is not photorealistic. | Library → **Prompts**, in the Image prompt's editor (save the prompt first) |
 
 The AI use step shows the answer and why, naming the case in YouTube's words, for example that the narration uses a named voice marked in Settings → Voices as imitating a real person. When none applies, it says No and lists what was checked.
 
@@ -101,11 +101,11 @@ Copy for YouTube Studio shows what the project has; it has no editor of its own.
 3. For a link, paste it under **Previous video for this project** and press **Save links**, or add it under **Channel links** on the channel's Name and look tab.
 4. Open Copy for YouTube Studio again; it shows your edits.
 
-A short's title, description and hashtags come from the shorts pick; to change which moments are used, see [Shorts](Shorts). Its full video line comes from **Full video link** in Edit project → **Shorts**.
+A short's title, description and hashtags come from the shorts pick; to change which moments are used, see [Shorts](Shorts). Its full video line comes from **Full video link** in **Edit settings** → **Extras** → **Shorts**.
 
 ## Three thumbnails
 
-With **Thumbnails** set to 3 on Create or in Edit project → Images, Slopify draws the thumbnail prompt twice more with a different composition each time, for YouTube's A/B Testing (it replaced Test & compare). Copy for YouTube Studio lists all three. In Studio, set the first under **Thumbnail**, then add all three with the **A/B Testing** button beside the title. Each extra thumbnail costs one image. See [Create: Extras](Create-Extras).
+With **How many thumbnails** set to 3 on Create or in **Edit settings** → **Extras**, Slopify draws the thumbnail prompt twice more with a different composition each time, for YouTube's A/B Testing (it replaced Test & compare). Copy for YouTube Studio lists all three. In Studio, set the first under **Thumbnail**, then add all three with the **A/B Testing** button beside the title. Each extra thumbnail costs one image. See [Create: Extras](Create-Extras).
 
 ## Mark a video uploaded
 

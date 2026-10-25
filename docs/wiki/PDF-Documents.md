@@ -11,13 +11,13 @@ Slopify can lay out your article as a styled PDF: a title page with the thumbnai
 3. Pick a **PDF look**: one of the three ready looks, **Plain**, **Book** or **Modern** (**Preview** shows it), or one of your own PDF themes.
 4. Make the video.
 
-The Document stage runs after the article (and the thumbnail, if there is one) is ready. A thumbnail that failed or was canceled doesn't hold it back: the PDF is then laid out without a cover. It needs an article with some text; an empty article stops the stage with a message pointing you to Edit project → Article.
+The Document stage runs after the article (and the thumbnail, if there is one) is ready. A thumbnail that failed or was canceled doesn't hold it back: the PDF is then laid out without a cover. It needs an article with some text; an empty article stops the stage with a message pointing you to **Edit settings** → **Article**.
 
 ## Options
 
 | Option | What it does | Default |
 |---|---|---|
-| **Document** source | **Generate** lays out a PDF of the article and title on this computer, in the theme you pick. It needs no provider and costs nothing. | Off |
+| **PDF of the article** | Lays out a PDF of the article and title on this computer, in the look you pick. It needs no service and costs nothing. | Off |
 | **PDF look** | How the PDF looks: a ready look (**Plain**, **Book** or **Modern**), or one of your PDF themes. **Edit PDF looks** opens the list. | Plain, or the channel's PDF look |
 
 A theme of yours is copied into the project when you pick it. Editing the theme later leaves this project alone until you pick it again, so a PDF already made or queued never changes by surprise. A channel's brand kit can set a **PDF look** for its videos whose template picks none; see [Channels](Channels).
@@ -51,7 +51,7 @@ The title page uses the project's thumbnail as its cover when:
 - the thumbnail is a PNG, JPEG or WebP image, and
 - the theme's cover setting is on (it is in Plain).
 
-Otherwise the title page has no cover and the details sit in the theme's usual place. That includes a thumbnail step that failed or was canceled: the PDF is made anyway, without a cover. If you make the thumbnail later, the PDF is marked outdated, so you can remake it with the cover. If the thumbnail file can't be read, the Document stage stops and asks you to regenerate or upload the thumbnail again, then use **Try again** on Document.
+Otherwise the title page has no cover and the details sit in the theme's usual place. That includes a thumbnail step that failed or was canceled: the PDF is made anyway, without a cover. If you make the thumbnail later, the PDF is marked outdated, so you can make it again with the cover. If the thumbnail file can't be read, the PDF stage stops and asks you to make or upload the thumbnail again, then use **Try again** on the PDF.
 
 ### Sources
 
@@ -76,19 +76,22 @@ To change fonts, colours, paper size (A4 or Letter), page parts and the closing 
 
 ## Open and download the PDF
 
-On the project page, the **Document** section shows the theme's name (for example **Plain theme**) and, once the PDF is made:
+On the project page, the **PDF** part shows the PDF itself (where the browser can show PDFs) and, beside it:
 
-- **Open PDF** opens it in a new browser tab.
 - **Download PDF** saves the file to your computer.
+- **Open in a new tab** opens it in a new browser tab.
+- **Open folder** opens the project's folder.
 
-While the stage runs it says "The PDF will be saved when rendering finishes." The file lives in the project's folder; see [Where-Your-Files-Live](Where-Your-Files-Live).
+A line under them gives the file's size and the look's name (for example **Plain theme**).
+
+While the stage runs it says "The PDF will be saved when it is made." The file lives in the project's folder; see [Where-Your-Files-Live](Where-Your-Files-Live).
 
 ## Change the theme of a finished project
 
-1. Open the project and press **Edit project**.
-2. Open **Inputs**. Under **Stages**, set the Document source to Generate if it was Off.
-3. Pick a **Document theme**.
-4. Save. The rebuild review lists the PDF to be made again; it costs nothing.
+1. Open the project and press **Edit settings**.
+2. Open **Extras**. Turn on **PDF of the article** if it was off.
+3. Pick a **PDF look**.
+4. Press **Save changes**, then **Make the PDF again (free)** (or the title row's next action).
 
 ## Tips
 

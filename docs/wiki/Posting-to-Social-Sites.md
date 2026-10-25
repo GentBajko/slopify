@@ -2,14 +2,14 @@
 
 Slopify can get a project's post ready for **X, LinkedIn, Instagram, TikTok, Reddit and Bluesky**, beside its YouTube upload. Slopify prepares each site's post (its words, hashtags, link, pictures or video in the site's shape, and when it goes out). It never posts for you: there is no sign-in and no site API. The optional [Studio extension](Studio-Extension) fills each site's own post form in your browser, sets the site's scheduler where it has one, and turns the site's AI label on. You check the post and press **Post** yourself.
 
-**Where to find it:** a finished project → **Copy for YouTube Studio** → **Where** (shown once the project posts to at least one site). A template's sites are set in **Templates → Edit template → Upload pack**, or on Create in the **Extras** row under **Post to other sites**. Each channel's **Name and look** tab holds its account names and X subscription.
+**Where to find it:** a finished project → **Copy for YouTube Studio** → **Where** (shown once the project posts to at least one site). A template's sites are set in **Templates → Edit template → YouTube description and posts**, or on Create in the **Extras** row under **Post to other sites**. Each channel's **Name and look** tab holds its account names and X subscription.
 
 ## Turn posting on
 
-1. Open the template in **Template Studio** and go to **Upload pack**.
+1. Open the template with **Edit template** and go to **YouTube description and posts**.
 2. Under **Post to**, turn on each site. Each one starts with the defaults below.
-3. Change the **text** and the **video** or **pictures** of each site there; hashtags, the thumbnail and the YouTube link are under **Fine-tune**.
-4. Press **Save**. A site whose words come from a post prompt is a paid step, so Save shows its price like any other (the **Posts** line).
+3. Change the **text** and the **video** or **pictures** of each site there; hashtags, the thumbnail and the YouTube link are in the section's fold (**More … settings**).
+4. Press **Save**. A site whose words come from a post prompt is a paid step, so the sample's **Make sample** shows its price like any other (the **Posts** line).
 
 A project or template with no site turned on works exactly as before: Copy for YouTube Studio shows YouTube alone.
 
@@ -41,11 +41,11 @@ Choose a site under **Where**. Its panel shows, top to bottom:
 | Summary | The keyword digest's summary when the run wrote one, otherwise the YouTube description's first paragraph (the default) | Free |
 | YouTube description | The description without its chapters and hashtags | Free |
 | Title | The video's title | Free |
-| Written by a post prompt | A post written from the article by a Library prompt of kind Post (or the built-in one) | One text-model call per site; it shows in the estimate as **Posts** |
+| Written by a post prompt | A post written from the article by one of your prompts of kind Post (or the built-in one) | One AI call per site; it shows in the estimate as **Posts** |
 | My own text | Your text, with `{{Slopify_Title}}`, `{{Slopify_Summary}}` and the other [keywords Slopify fills](Keywords-Slopify-Fills) | Free |
 | No text | Nothing | Free |
 
-A post prompt is a paid step, so it is picked in the template's Upload pack (or on Create), where Save shows its cost. Copy for YouTube Studio can switch a site between the free sources.
+A post prompt is a paid step, so it is picked in Edit template's **YouTube description and posts** (or on Create), where the estimate shows its cost. Copy for YouTube Studio can switch a site between the free sources.
 
 Hashtags come from the video's YouTube tags, then the shorts' hashtags, up to each site's most. The YouTube link is added, when asked, once the video is on YouTube. Text longer than the site takes is cut at the last whole sentence that fits, and the post says so.
 
@@ -106,7 +106,7 @@ In **Channels** → your channel → **Name and look** → **Posting**:
 
 ## Post prompts
 
-Write your own in **Prompts**, kind **Post** (**Use Built-in Starter** fills in Slopify's own wording). Slopify gives it the site's length limit and asks again when the answer is over it, then adds the hashtags and link itself. Pick it for a site in Edit template's Upload pack by choosing **Written by a post prompt** as its text.
+Write your own in **Prompts**, kind **Post** (**Start from an example** → **Built-in wording** fills in Slopify's own wording). Slopify gives it the site's length limit and asks again when the answer is over it, then adds the hashtags and link itself. Pick it for a site in Edit template's **YouTube description and posts** by choosing **Written by a post prompt** as its text.
 
 ## Agents
 
@@ -116,6 +116,6 @@ Agents read and prepare posts (`get_post_packs`, `set_post_choice`, `edit_post_t
 
 - [Publishing to YouTube](Publishing-to-YouTube)
 - [Studio extension](Studio-Extension)
-- [Template studio](Template-Studio)
+- [Edit template](Template-Studio)
 - [Channels](Channels)
 - [Prompts](Prompts)
