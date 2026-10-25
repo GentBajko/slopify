@@ -1,17 +1,17 @@
 # Costs and Run Cost
 
-Slopify shows what a run is likely to cost before you start it, what it actually cost once it ran, and, for runs on a command-line plan, what the same work would have cost with API keys and how much of your plan it used. All figures are in US dollars, from the providers' published prices.
+Slopify shows what a run is likely to cost before you start it, what it actually cost once it ran, and, for runs on a command-line plan, what the same work would have cost with API keys and how much of your plan it used. All figures are in US dollars, from the services' published prices.
 
 **Where to find it:** Create → **Estimated cost** in the rail; a project → the cost line under its status list, and **See the breakdown**; Home → **This week**; Settings → **Usage**.
 
 ## Where costs come from
 
-- Every successful provider call is recorded against its project with what it used: tokens in and out (and how many were cached) for text, characters for narration, images per model, seconds of animated video, and how long the call took.
+- Every successful call to a service is recorded against its project with what it used: tokens in and out (and how many were cached) for text, characters for narration, images per model, seconds of animated video, and how long the call took.
 - Each call is priced when it finishes, from the model catalogue (see [Models](Models)). The rates are stored with the call, so a later price change never rewrites a finished run.
-- A model the catalogue has no price for, or a call whose provider reported no usage, is counted as unknown, never as free. Per-minute voices are left unpriced rather than guessed.
-- Failed calls are not charged here. Taxes and credits included in your provider plan are not counted.
+- A model the catalogue has no price for, or a call whose service reported no usage, is counted as unknown, never as free. Per-minute voices are left unpriced rather than guessed.
+- Failed calls are not charged here. Taxes and credits included in your plan with a service are not counted.
 
-Your provider bills you directly; Slopify never handles payment. The figures are for planning and checking, not a bill.
+Each service bills you directly; Slopify never handles payment. The figures are for planning and checking, not a bill.
 
 ## Command-line runs: $0 on your plan
 
@@ -35,13 +35,13 @@ The rail on Create shows **Estimated cost** once the setup is complete. Until th
 
 **Expected article words per video** drives the estimate for generated articles (and how many images **More images for long videos** adds). About 150 words is one minute. Default: 1500. Once the article is written, its real length is used.
 
-The estimate is what the providers are likely to charge, from their published prices. Actual usage can differ, and the estimate does not cap spending.
+The estimate is what the services are likely to charge, from their published prices. Actual usage can differ, and the estimate does not cap spending.
 
 ## While a run is going: Cost so far
 
 On a running project, the side panel shows **Cost so far**:
 
-- **spent**: what has been paid to providers so far ("known, spent" when some calls have no price).
+- **spent**: what has been paid to the services so far ("known, spent" when some calls have no price).
 - **same work via API**: the API equivalent of the CLI calls.
 - One meter per plan window a CLI reported, such as "Codex: 14% of your weekly limit". The meter turns amber once the plan is at 80% or more.
 
@@ -65,7 +65,7 @@ If nothing has been spent yet, it says "Nothing has been spent yet. The cost of 
 | **paid to providers** | The total cost of this project's calls. Reads "known cost, paid to providers" when some calls have no price, with a line "Plus N calls the model catalogue has no price for." |
 | **same work via API** | The API equivalent of the calls that ran on a CLI plan. |
 | Plan meters | One per plan window a CLI reported, for example "3% of weekly Codex limit". Hover or read the line below for the level it is at now. |
-| **this run's working time** | How long some step of the run was working. Waiting on a review, a limit or a pause never counts, and steps that ran side by side count once. Each save that remakes something starts a new run. |
+| **this run's working time** | How long some step of the run was working. Waiting on a review, a limit or a pause never counts, and steps that ran side by side count once. Each save that makes something again starts a new run. |
 
 Lines under the summary:
 
@@ -75,7 +75,7 @@ Lines under the summary:
 
 ### By stage
 
-**Cost by stage**: what each stage has cost so far, from every provider call it made, retries and remakes included.
+**Cost by stage**: what each stage has cost so far, from every call it made to a service, retries and everything made again included.
 
 | Column | What it shows |
 |---|---|
@@ -87,7 +87,7 @@ Lines under the summary:
 
 ### By model
 
-**Cost by model**: the same spending split by provider and model, with **Cost**, **Via API**, **Usage** and **Calls**. A CLI model shows the API model it was priced as, in brackets after "as". The CLI's own default model shows as "default model".
+**Cost by model**: the same spending split by service and model, with **Cost**, **Via API**, **Usage** and **Calls**. A CLI model shows the API model it was priced as, in brackets after "as". The CLI's own default model shows as "default model".
 
 The last lines give the total usage and the working time over every run, and "Priced from the model catalogue of <date> when each call finished."
 
