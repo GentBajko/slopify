@@ -41,12 +41,12 @@ const toneOf = (stage: Stage): Tone => {
 };
 
 // What a step waits for when the run is held there: the person's review at its checkpoint, the
-// schedule's day (Prepared), or an agent's review of what was made.
+// schedule's day (Waiting for its day), or an agent's review of what was made.
 type StepHold = CheckpointHold["waitsFor"] | "agent";
 
 const holdLook: Readonly<Record<StepHold, { readonly state: string; readonly detail: string }>> = {
   person: { state: heldWord, detail: "Press Approve at the top to carry on." },
-  day: { state: preparedWord, detail: "Its schedule makes it on its day." },
+  day: { state: preparedWord, detail: "Its schedule makes it then." },
   agent: { state: waitingForAgentWord, detail: "Goes on once the agent answers." },
 };
 

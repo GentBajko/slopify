@@ -169,7 +169,7 @@ describe("the projects list", () => {
     );
     expect(await screen.findByText("Waiting for your review")).not.toBeNull();
     expect(screen.getByText("Bends").closest("li")?.textContent).toContain("Stopped");
-    expect(screen.getByText("Prepared")).not.toBeNull();
+    expect(screen.getByText("Waiting for its day")).not.toBeNull();
     expect(screen.getByText("Waiting for the agent")).not.toBeNull();
     expect(screen.getByText("Hitches").closest("li")?.textContent).toContain("Queued");
     expect(screen.queryByText("Waiting for you")).toBeNull();

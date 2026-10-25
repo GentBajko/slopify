@@ -247,7 +247,8 @@ function routes(deps: ScheduleDeps | undefined) {
       .get("/:id/prepared", zValidator("param", id, onInvalid), (c) =>
         c.json({ prepared: preparedTopics(service(), c.req.valid("param").id) }),
       )
-      // Prepare one queued topic now: everything but the video, which its scheduled day renders.
+      // Make ahead one queued topic: everything but the video now, which its scheduled day puts
+      // together.
       .post(
         "/:id/topics/prepare",
         zValidator("param", id, onInvalid),
@@ -262,15 +263,15 @@ function routes(deps: ScheduleDeps | undefined) {
             "not-found":
               "This topic is no longer in the schedule's queue. Reload the page to see the queue as it is now.",
             "already-prepared":
-              "This topic is already prepared: its project is in Projects under the same title.",
+              "This topic is already made ahead: its project is in Projects under the same title.",
             paused:
-              "Its schedule is paused, so it makes nothing, ahead or on its day. Resume it under Calendar → Schedules, then press Prepare again.",
+              "Its schedule is paused, so it makes nothing, ahead or on its day. Resume it under Calendar → Schedules, then press Make ahead again.",
             "missing-template":
-              "This schedule's template was deleted, so there is nothing to prepare from. Choose another template under Edit.",
+              "This schedule's template was deleted, so there is nothing to make it from. Choose another template under Edit.",
             "spend-limit":
-              "Preparing it would go over this schedule's spend limit. Raise the limit under Edit, or prepare it from Play instead.",
+              "Making it ahead would go over this schedule's spend limit. Raise the limit under Edit, or make it from Create instead.",
             design:
-              "A design schedule makes each piece on its day, so there is nothing to prepare ahead. To have a piece now, open the design template (Library → Designs → Templates) and press Make a piece; to have it sooner on a schedule, give its row an earlier date in the Schedule section.",
+              "A design schedule makes each piece on its day, so there is nothing to make ahead. To have a piece now, open its poster template (Templates → Poster templates) and press Make a piece; to have it sooner on a schedule, give its row an earlier date in the Schedule section.",
           };
           return problem(c, {
             status: result.reason === "not-found" ? 404 : 409,
@@ -278,8 +279,8 @@ function routes(deps: ScheduleDeps | undefined) {
               (result.reason === "not-ready" ? result.detail : undefined) ??
               detail[result.reason] ??
               (result.detail === undefined
-                ? `This topic couldn't be prepared (${result.reason}). Open Play with the schedule's template to see what the setup needs, then try again.`
-                : `This topic couldn't be prepared: ${result.detail} Fix it in the schedule's template (Library → Templates), then try again.`),
+                ? `This topic couldn't be made ahead (${result.reason}). Open Create with the schedule's template to see what the setup needs, then try again.`
+                : `This topic couldn't be made ahead: ${result.detail} Fix it in the schedule's template (Templates → Edit template), then try again.`),
             extensions: { reason: result.reason },
           });
         },

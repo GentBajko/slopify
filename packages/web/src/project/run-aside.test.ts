@@ -59,12 +59,12 @@ it("says a step waits for the person only at a checkpoint that holds the run", (
   ]);
 });
 
-it("reads a prepared project's video as Prepared, not as a review to approve", () => {
+it("reads a made-ahead project's video as Waiting for its day, not as a review to approve", () => {
   expect(
     steps({ prepared: true }, [
       { checkpointId: "video-gate", stage: "video", waitsFor: "day", ...gate },
     ])[2],
-  ).toEqual(["Video", "Prepared", "Its schedule makes it on its day."]);
+  ).toEqual(["Video", "Waiting for its day", "Its schedule makes it then."]);
 });
 
 it("says every step left waits for the agent while its review holds the run", () => {

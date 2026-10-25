@@ -206,7 +206,7 @@ describe("the next action", () => {
     });
   });
 
-  it("says a schedule's prepared project is Prepared while its video waits for its day", () => {
+  it("says a schedule's project made ahead is Waiting for its day while its video waits", () => {
     const gate = { checkpointId: "c1", stage: "video" as const, dependents: [] };
     const next = nextActionFor(
       input({
@@ -217,12 +217,12 @@ describe("the next action", () => {
     );
     expect(next).toMatchObject({
       situation: "held",
-      status: "Prepared",
-      title: "Everything but the video is made; its schedule renders the video on its day.",
+      status: "Waiting for its day",
+      title: "Everything but the video is made; its schedule puts the video together on its day.",
     });
   });
 
-  // The server reads it Prepared only while nothing but the schedule's own hold holds it.
+  // The server reads it Waiting for its day only while nothing but the schedule's own hold holds it.
   it("asks for the review of a prepared project held at an earlier checkpoint", () => {
     const gate = { checkpointId: "c1", stage: "images" as const, dependents: ["video" as const] };
     const next = nextActionFor(

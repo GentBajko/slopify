@@ -83,22 +83,22 @@ Pick a schedule in the list to see its **Queued topics · N**. You can change th
 
 Each change saves at once and says so, for example "Renamed to “Hypatia of Alexandria”.", with **Undo** on the notice. Only the queue changes; the next run and the other settings stay as they are. If the schedule changed in another tab meanwhile, the change is refused with the reason; reload and try again.
 
-## Prepare a video ahead
+## Make a video ahead
 
-A scheduled video can be made ahead of its day, so the day only renders it: useful before a trip, or to read the article and listen to the narration first.
+A scheduled video can be made ahead of its day, so the day only puts the video together: useful before a trip, or to read the article and listen to the narration first.
 
 1. Open **Calendar** and find the topic's run (either view).
-2. Press **Prepare**.
+2. Press **Make ahead**, read what it does and spends, and press **Make ahead (paid)**.
 
-Slopify makes the project now, exactly as the schedule would on the day (the template as it is now, the topic and the schedule's values), and runs everything but the video: research, the article, narration, images, the thumbnail and the PDF. It then holds at a **Before Video** checkpoint, and the run shows **Prepared** with **Open**.
+Slopify makes the project now, exactly as the schedule would on the day (the template as it is now, the topic and the schedule's values), and runs everything but the video: research, the article, narration, images, the thumbnail and the PDF. It then holds at a **Before Video** checkpoint, and the run shows **Waiting for its day** with **Open**.
 
 On the scheduled day the schedule finds that project by its title and continues it instead of making another: the hold is lifted and the video, its captions, shorts and YouTube description are made. The same goes for an unfinished project you made yourself under the same title. A finished one counts as a video already made, and the day makes a new one.
 
-- You can open the prepared project and change anything before its day, for example with Edit project.
-- A **Before Video** checkpoint the template already has stays: the day waits for you to approve it, and the project reads **Waiting for your review** and is listed under **Needs you** (and for a connected [agent](Agents-MCP)). A project held only by Prepare's own hold reads **Prepared** and is not listed as waiting anywhere: it waits for its day, not for you.
-- A setup that makes no video has nothing to hold back, so Prepare runs it to the end.
-- A schedule without topics gives every run the same title, so only a prepared project continues there.
-- The spend limit applies to Prepare as it does to a scheduled run.
+- You can open the project made ahead and change anything before its day, for example with Edit settings.
+- A **Before Video** checkpoint the template already has stays: the day waits for you to approve it, and the project reads **Waiting for your review** and is listed under **Needs you** (and for a connected [agent](Agents-MCP)). A project held only by Make ahead's own hold reads **Waiting for its day** and is not listed as waiting anywhere: it waits for its day, not for you.
+- A setup that makes no video has nothing to hold back, so Make ahead runs it to the end.
+- A schedule without topics gives every run the same title, so only a project made ahead continues there.
+- The spend limit applies to Make ahead as it does to a scheduled run.
 
 ## Topics that find themselves
 

@@ -33,7 +33,9 @@ export const stageStateWords: Readonly<Record<StageState, string>> = {
 export const heldWord = "Waiting for your review";
 export const waitingForAgentWord = "Waiting for the agent";
 export const stoppedWord = "Stopped";
-export const preparedWord = "Prepared";
+// Made ahead by its schedule (Make ahead): everything but the video is made, and the video is
+// put together on the run's day.
+export const preparedWord = "Waiting for its day";
 export const keptAsIsWord = "Kept as is";
 export const heldStateWords = [
   heldWord,
