@@ -377,7 +377,7 @@ function monthlyCostCheck(input: FreeCheckInput): Check {
   const paused = cost.paused?.schedules ?? 0;
   const resumed = `up to about $${(cost.paused?.high ?? 0).toFixed(2)} a month when resumed`;
   const many = (n: number) => `${String(n)} paused ${n === 1 ? "schedule" : "schedules"}`;
-  const activeCost = `Its schedules cost ${cost.unknown === 0 ? "up to" : "at least"} about $${cost.high.toFixed(2)} a month`;
+  const activeCost = `Its schedules cost ${cost.unknown === 0 ? "up to about" : "at least"} $${cost.high.toFixed(2)} a month`;
   const sentence =
     paused === 0
       ? `${activeCost}.`

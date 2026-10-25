@@ -347,7 +347,7 @@ describe("freeChecks", () => {
         id: "monthly-cost",
         ok: true,
         sentence:
-          "Its schedules cost at least about $6.08 a month. Not counted, with no known price: Narration descriptions and Delivery cue overhead.",
+          "Its schedules cost at least $6.08 a month. Not counted, with no known price: Narration descriptions and Delivery cue overhead.",
       });
     });
 
@@ -410,7 +410,7 @@ describe("freeChecks", () => {
         id: "monthly-cost",
         ok: true,
         sentence:
-          "Its schedules cost at least about $3.00 a month. 2 steps have no known price and aren't counted.",
+          "Its schedules cost at least $3.00 a month. 2 steps have no known price and aren't counted.",
       });
     });
 

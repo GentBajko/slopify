@@ -82,11 +82,13 @@ function costWords(cost: Cost): string {
       : cost.unpriced.length === 0
         ? ` ${String(cost.unknown)} ${cost.unknown === 1 ? "step has" : "steps have"} no known price and ${cost.unknown === 1 ? "isn't" : "aren't"} counted.`
         : ` Not counted, with no known price: ${listOf(cost.unpriced)}.`;
-  const bound = cost.unknown === 0 ? "at most" : "at least";
-  const active = `About ${usd(cost.high)} a month ${bound}, for ${runsWord(cost.runs)}.`;
+  // "About $4.35 a month at most", or with steps left out, "At least $6.08 a month".
+  const sum = (high: number) =>
+    cost.unknown === 0 ? `about ${usd(high)} a month at most` : `at least ${usd(high)} a month`;
+  const active = `${capital(sum(cost.high))}, for ${runsWord(cost.runs)}.`;
   const { paused } = cost;
   if (paused.schedules === 0) return `${active}${unpriced}`;
-  const resumed = `about ${usd(paused.high)} a month ${bound}, for ${runsWord(paused.runs)}`;
+  const resumed = `${sum(paused.high)}, for ${runsWord(paused.runs)}`;
   if (cost.runs === 0)
     return `${
       paused.schedules === 1
@@ -95,6 +97,8 @@ function costWords(cost: Cost): string {
     }${unpriced}`;
   return `${active} ${paused.schedules === 1 ? "1 paused schedule" : `${String(paused.schedules)} paused schedules`} would add ${resumed}, once resumed.${unpriced}`;
 }
+
+const capital = (text: string): string => `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
 
 function listOf(names: readonly string[]): string {
   if (names.length <= 1) return names.join("");
