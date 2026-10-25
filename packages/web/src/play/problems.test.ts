@@ -49,18 +49,16 @@ describe("the services a setup calls that will not answer", () => {
     const podcast = defaultVoicesSettings("podcast", []);
     const speakers = podcast.speakers.map((speaker, at) => ({
       ...speaker,
-      voice: { provider: at === 0 ? "fal-voice" : "", model: "", voice: "" },
+      voice: { provider: at === 0 ? "elevenlabs" : "", model: "", voice: "" },
     }));
     const twoVoices: PlayFormState = { ...form, voices: { ...podcast, speakers } };
-    const withVoice = [
-      ...providers,
-      {
-        id: "fal-voice",
-        family: "tts" as const,
-        displayName: "Voices",
-        readiness: { kind: "keyed" as const, hasKey: false },
-      },
-    ];
+    const eleven: ProviderStatus = {
+      id: "elevenlabs",
+      family: "tts",
+      displayName: "ElevenLabs",
+      readiness: { kind: "keyed", hasKey: false },
+    };
+    const withVoice = [...providers, eleven];
     // The hidden voice (OpenAI, no key) is not asked for; the first speaker's service is.
     expect(
       readinessProblems(twoVoices, [], withVoice, "article")
