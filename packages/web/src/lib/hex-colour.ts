@@ -13,7 +13,7 @@ export function parseHex(text: string): string | undefined {
   return `#${six.toLowerCase()}`;
 }
 
-export const hexHint = "Write the colour as # and 3 or 6 hex digits, like #8c1e14 or #fff.";
+export const hexHint = "Write the color as # and 3 or 6 hex digits, like #8c1e14 or #fff.";
 
 export function hexProblem(text: string): string | undefined {
   if (text.trim() === "") return undefined;
@@ -50,5 +50,5 @@ export function contrastWarning(
 ): string | undefined {
   const ratio = contrastRatio(colour, against);
   if (ratio === undefined || ratio >= minimum) return undefined;
-  return `Hard to read on ${againstName}: contrast ${ratio.toFixed(1)}:1, below the ${String(minimum)}:1 text needs. Pick a lighter or darker colour.`;
+  return `Hard to read on ${againstName}: contrast ${ratio.toFixed(1)}:1, below the ${String(minimum)}:1 text needs. Pick a lighter or darker color.`;
 }

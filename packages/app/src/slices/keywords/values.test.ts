@@ -31,7 +31,7 @@ describe("factValues", () => {
       Slopify_Cast: "Mira: a lighthouse keeper\nTom",
       Slopify_Covered_Before: "The Bridge\nThe Well",
       Slopify_Episode: "7",
-      Slopify_Brand: "Colours: #ffffff, #101010. Fonts: Barlow.",
+      Slopify_Brand: "Colors: #ffffff, #101010. Fonts: Barlow.",
     });
   });
 
@@ -64,7 +64,7 @@ describe("factValues", () => {
     );
     expect(
       factValues({ brand: { colours: ["#000000"], fonts: [] } }, "T", "image").Slopify_Brand,
-    ).toBe("Colours: #000000.");
+    ).toBe("Colors: #000000.");
   });
 });
 

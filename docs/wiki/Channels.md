@@ -58,10 +58,10 @@ Mark voices in **Settings → Voices** and Image prompts in **Prompts**. See [Pu
 | Field | What it does |
 |---|---|
 | **Caption font** | The caption font for videos whose template leaves the font at its default. Fonts you upload in the **Caption font** picker on Create appear here. |
-| **Caption colour** | The captions' text colour as `#` and six hex digits, such as `#FFFFFF`. |
-| **Caption outline** | The colour of the line around each caption letter, such as `#000000`. A dark outline keeps light captions readable on bright pictures. |
+| **Caption color** | The captions' text color as `#` and six hex digits, such as `#FFFFFF`. |
+| **Caption outline** | The color of the line around each caption letter, such as `#000000`. A dark outline keeps light captions readable on bright pictures. |
 | **Title font** | The font of chapter cards and the end screen, for videos whose template sets no title style. |
-| **Title colour** | The text colour of chapter cards and the end screen, such as `#FFD700`. |
+| **Title color** | The text color of chapter cards and the end screen, such as `#FFD700`. |
 | **End screen text** | A line shown centred over the last 5 seconds of every video, such as "Subscribe for more". Up to 200 characters. Blank shows none. |
 | **Intro** / **Outro** | An entry from **Prompts → Intros** and **Outros**, narrated before or after the body of every video whose template has none. Each is narrated with the video's voice, so each costs one voice request per video (plus an AI call for one the AI writes), and it shows in the estimate. See [Intros and outros](Intros-and-Outros). |
 | **PDF look** | The look of the PDF for videos whose template picks none. A saved theme that was deleted is skipped. |

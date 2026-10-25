@@ -10,7 +10,7 @@ const mm = (min: number, max: number) => {
   const range = { error: `Use a value from ${String(min)} to ${String(max)}.` };
   return z.number({ error: "Enter a number." }).finite(range).min(min, range).max(max, range);
 };
-const color = z.string().regex(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i, "Use a colour like #8c1e14.");
+const color = z.string().regex(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i, "Use a color like #8c1e14.");
 const line = z.string().max(300, { error: "Keep this under 300 characters." });
 const nullableLine = line.nullable();
 const url = z.string().max(500, { error: "Keep this under 500 characters." }).nullable();

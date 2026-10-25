@@ -82,7 +82,7 @@ describe("channel routes", () => {
       baseVersion: 2,
     });
     expect(refused.status).toBe(400);
-    expect(await refused.json()).toMatchObject({ detail: "Use a colour like #FFD700." });
+    expect(await refused.json()).toMatchObject({ detail: "Use a color like #FFD700." });
     const gone = await send(app, "DELETE", `/api/channels/${defaultChannelId}`);
     expect(gone.status).toBe(400);
     expect(((await gone.json()) as { detail: string }).detail).toContain("Rename it");

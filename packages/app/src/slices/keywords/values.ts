@@ -63,7 +63,7 @@ export function factValues(
 function brandText(brand: KeywordFacts["brand"]): string {
   if (brand === undefined) return "";
   const parts = [
-    ...(brand.colours.length === 0 ? [] : [`Colours: ${brand.colours.join(", ")}.`]),
+    ...(brand.colours.length === 0 ? [] : [`Colors: ${brand.colours.join(", ")}.`]),
     ...(brand.fonts.length === 0 ? [] : [`Fonts: ${brand.fonts.join(", ")}.`]),
   ];
   return parts.join(" ");

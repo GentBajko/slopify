@@ -154,8 +154,8 @@ export const keywordSpecs: readonly KeywordSpec[] = [
     name: "Slopify_Brand",
     filler: "facts",
     fills:
-      "The brand kit's caption and title colours and font names. A line with an empty kit is left out.",
-    example: "Colours: #f5c542, #101010. Fonts: Barlow Condensed",
+      "The brand kit's caption and title colors and font names. A line with an empty kit is left out.",
+    example: "Colors: #f5c542, #101010. Fonts: Barlow Condensed",
     available: atStart,
     places: pictures,
     cost: "free",
@@ -246,7 +246,7 @@ export const keywordSpecs: readonly KeywordSpec[] = [
   {
     name: "Slopify_Mood",
     filler: "scenes",
-    fills: "The feeling of this picture's moment, for its light and colour.",
+    fills: "The feeling of this picture's moment, for its light and color.",
     example: "tense",
     available: sceneAvailable,
     places: pictures,
