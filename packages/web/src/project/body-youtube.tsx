@@ -494,7 +494,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
         </div>
         <div className="flex min-w-0 flex-col gap-4">
           {sample ? (
-            <SampleNote projectId={project.id} />
+            <SampleNote />
           ) : (
             <>
               <ReleaseTimes projectId={project.id} />
