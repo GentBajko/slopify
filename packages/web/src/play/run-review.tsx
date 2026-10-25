@@ -59,8 +59,6 @@ export function RunReview({
 }: {
   readonly estimates: readonly CostEstimate[];
 }): ReactElement {
-  const low = estimates.reduce((n, e) => n + e.low, 0);
-  const high = estimates.reduce((n, e) => n + e.high, 0);
   const rows =
     estimates[0]?.rows.map((r, i) => ({
       ...r,
@@ -81,15 +79,8 @@ export function RunReview({
   const apiLow = estimates.reduce((n, e) => n + (e.apiLow ?? 0), 0);
   const apiHigh = estimates.reduce((n, e) => n + (e.apiHigh ?? 0), 0);
   if (estimates.length === 0) return <div />;
-  // The stages with no price here, by name, once however many videos: a run with any of them
-  // never reads as a total, and never as free.
-  const unpriced = [...new Set(rows.filter((r) => r.low === null).map((r) => r.stage))];
-  const headline =
-    unpriced.length === 0
-      ? `Estimated cost: ${money(low, high)}`
-      : high > 0
-        ? `Estimated cost: at least ${usd(low)}`
-        : "Estimated cost: not known";
+  const unpriced = unpricedStages(estimates);
+  const headline = estimateHeadline(estimates);
   // The total is what decides a run; the stages, what each assumes and where the prices come
   // from fold away under it.
   return (
@@ -144,6 +135,23 @@ export function RunReview({
       </Fold>
     </div>
   );
+}
+// The stages with no price here, by name, once however many videos: a run with any of them
+// never reads as a total, and never as free.
+function unpricedStages(estimates: readonly CostEstimate[]): readonly string[] {
+  const stages = estimates[0]?.rows.map((row) => row.stage) ?? [];
+  return [
+    ...new Set(
+      stages.filter((_stage, index) => estimates.some((one) => one.rows[index]?.low === null)),
+    ),
+  ];
+}
+// "Estimated cost: $0.40 – $1.20", "Estimated cost: at least $0.40" or "not known".
+export function estimateHeadline(estimates: readonly CostEstimate[]): string {
+  const low = estimates.reduce((n, e) => n + e.low, 0);
+  const high = estimates.reduce((n, e) => n + e.high, 0);
+  if (unpricedStages(estimates).length === 0) return `Estimated cost: ${money(low, high)}`;
+  return high > 0 ? `Estimated cost: at least ${usd(low)}` : "Estimated cost: not known";
 }
 function money(low: number, high: number): string {
   return low === high ? usd(low) : `${usd(low)} – ${usd(high)}`;

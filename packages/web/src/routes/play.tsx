@@ -54,7 +54,7 @@ import {
   type SetupRowId,
   setupRows,
 } from "@/play/setup-rows";
-import { MakeButton, StartRail, useNarrow } from "@/play/start-rail";
+import { MakeBar, MakeButton, StartRail, useNarrow, usePhone } from "@/play/start-rail";
 import { llmUsesOf, type PlayFormState, type Upload, type UploadSlot } from "@/play/state";
 import { TemplateField, useStarterPick } from "@/play/template-field";
 import { templateLibrary } from "@/play/template-library";
@@ -148,6 +148,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   // picked for the next draft from here.
   const leaving = useRef(false);
   const narrow = useNarrow();
+  const phone = usePhone();
   // Whether the open summary drawer covers the rail's Make button: a window too narrow for
   // both side by side. Then the drawer carries the button in its foot, as on a phone.
   const summaryOpen = session.section === "review";
@@ -722,12 +723,16 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
         }
         actions={
           <>
-            <Button variant="quiet" onClick={() => setSaving(true)}>
-              Save as template
-            </Button>
-            <DraftList />
+            {phone ? null : (
+              <Button variant="quiet" onClick={() => setSaving(true)}>
+                Save as template
+              </Button>
+            )}
+            <DraftList {...(phone ? { onSaveTemplate: () => setSaving(true) } : {})} />
           </>
         }
+        // On a phone the title and the Draft menu share one line.
+        className="max-md:flex-nowrap max-md:[&_.sl-page-header__lead]:basis-auto"
       />
       <Workspace
         className="sl-workspace--play"
@@ -740,6 +745,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
             onWholeSetup={openSummary}
             preview={preview}
             previewLine={previewLine}
+            keyHere={!phone}
           />
         }
         asideLabel="Length, cost and the Make button"
@@ -793,7 +799,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
         // Beside the rail where there is room, so the Make button and the estimate stay in
         // view (styles/shell.css places it); where it covers the button (narrow windows), with
         // the button in its foot.
-        className="min-[900px]:right-[var(--play-drawer-right)]"
+        className="min-[1024px]:right-[var(--play-drawer-right)]"
         // Closing it goes back to the form as it was: no row opens.
         onClose={() => {
           void session.navigate("content" satisfies PlaySection, undefined, { reveal: false });
@@ -810,6 +816,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
           onReveal={revealField}
         />
       </Drawer>
+      {phone ? <MakeBar problems={problems} onStart={start} onFix={onFix} /> : null}
       <SaveTemplateDialog open={saving} onClose={() => setSaving(false)} />
       {visibleRows.map((row) => (
         <RowCommand key={row.id} id={row.id} label={rowLabel(row.id, kind)} onOpen={setRow} />

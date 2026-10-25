@@ -38,7 +38,12 @@ const saved: Readonly<Record<string, string>> = {
 // "Draft: Untitled ▾" in Create's header: the draft being set up, and a menu with whether it
 // is saved, New draft, and the saved drafts to open again or delete. Only a draft that could
 // not be saved, or was changed in another tab, says so beside it, with the way out.
-export function DraftList(): ReactElement {
+export function DraftList({
+  onSaveTemplate,
+}: {
+  // On a phone, Save as template sits in this menu rather than in the page header.
+  readonly onSaveTemplate?: () => void;
+} = {}): ReactElement {
   const { api } = useApp();
   const session = usePlaySession();
   const queryClient = useQueryClient();
@@ -120,7 +125,7 @@ export function DraftList(): ReactElement {
       ) : null}
       <Popover open={menu} onOpenChange={setMenu}>
         <PopoverTrigger asChild>
-          <Button variant="quiet" className="max-w-[280px]">
+          <Button variant="quiet" className="min-w-0 max-w-[280px]">
             <span className="truncate">Draft: {name}</span>
             <ChevronDownIcon aria-hidden="true" className="size-4 shrink-0" />
           </Button>
@@ -130,16 +135,30 @@ export function DraftList(): ReactElement {
             <p role="status" className="m-0 text-small text-ink-2">
               {saved[session.status]}
             </p>
-            <Button
-              size="small"
-              onClick={() => {
-                setMenu(false);
-                void session.newDraft();
-              }}
-            >
-              <PlusIcon aria-hidden="true" strokeWidth={1.75} />
-              New draft
-            </Button>
+            <div className="flex flex-wrap justify-end gap-2">
+              {onSaveTemplate === undefined ? null : (
+                <Button
+                  variant="quiet"
+                  size="small"
+                  onClick={() => {
+                    setMenu(false);
+                    onSaveTemplate();
+                  }}
+                >
+                  Save as template
+                </Button>
+              )}
+              <Button
+                size="small"
+                onClick={() => {
+                  setMenu(false);
+                  void session.newDraft();
+                }}
+              >
+                <PlusIcon aria-hidden="true" strokeWidth={1.75} />
+                New draft
+              </Button>
+            </div>
           </div>
           {list.isPending ? (
             <p role="status" className="m-0 border-t border-line px-3 py-2">

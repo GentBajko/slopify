@@ -48,7 +48,7 @@ export function OutputPicker({
         type="single"
         value={current}
         aria-label="What are you making?"
-        className="grid w-full grid-cols-2 gap-2 overflow-visible border-0 @min-[440px]:grid-cols-3 @min-[640px]:grid-cols-5"
+        className="grid w-full grid-cols-2 gap-2 overflow-visible border-0 @min-[340px]:grid-cols-3 @min-[640px]:grid-cols-5"
         onValueChange={(next) => {
           const picked = outputKinds.find((kind) => kind === next);
           if (picked === undefined || picked === current) return;

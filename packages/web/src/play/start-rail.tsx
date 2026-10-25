@@ -12,14 +12,14 @@ import { Callout } from "@/components/kit/callout";
 import { ariaKeyShortcuts } from "@/components/kit/command-palette";
 import { Dialog } from "@/components/kit/dialog";
 import { Field, Input } from "@/components/kit/field";
-import { Switch } from "@/components/kit/switch";
+import { Segmented } from "@/components/kit/switch";
 import { shortcuts } from "@/lib/shortcuts";
 import { usePlaySession } from "./draft-context";
 import { outputCount, outputKindOf } from "./output-kind";
 import { PlanAllowance } from "./plan-allowance";
 import type { SetupProblem } from "./problems";
 import { pageVideos, pendingReviewUpload, queued, startLabel } from "./review-state";
-import { RunReview } from "./run-review";
+import { estimateHeadline, RunReview } from "./run-review";
 
 // One spoken minute is about this many words, so the expected length reads in minutes.
 const wordsPerMinute = 150;
@@ -65,6 +65,7 @@ export function StartRail({
   onWholeSetup,
   preview,
   previewLine,
+  keyHere = true,
 }: {
   readonly problems: readonly SetupProblem[];
   readonly saveProblem: string | undefined;
@@ -77,6 +78,8 @@ export function StartRail({
   readonly preview?: ReactNode;
   // What the preview shows, in words: "Captions: Barlow 48, at the bottom".
   readonly previewLine?: string | undefined;
+  // False on a phone, where the Make button rides in the bar at the bottom (MakeBar).
+  readonly keyHere?: boolean;
 }): ReactElement {
   const session = usePlaySession();
   const { document, review } = session;
@@ -124,16 +127,21 @@ export function StartRail({
         <div className="flex min-h-8 flex-wrap items-center justify-between gap-x-3 gap-y-1">
           <span className="font-semibold">{outputCount(kind, count)}</span>
           {count > 1 ? (
-            <Switch
-              label="One after another"
+            // A choice of two, not a lime switch: the Make button under it is the one lime
+            // control here.
+            <Segmented
+              label="How they run"
+              value={queued(document) ? "queue" : "together"}
+              options={[
+                { value: "queue", label: "One after another", disabled: locked },
+                { value: "together", label: "All at once", disabled: locked },
+              ]}
               help={
                 queued(document)
                   ? "Each starts when the one before finishes."
-                  : "Off: they all start at once."
+                  : "They all start together."
               }
-              checked={queued(document)}
-              disabled={locked}
-              onChange={(next) => session.edit({ ...document, queue: next })}
+              onChange={(next) => session.edit({ ...document, queue: next === "queue" })}
             />
           ) : null}
         </div>
@@ -141,7 +149,7 @@ export function StartRail({
           <ExpectedLength narrated={document.form.sources.audio !== "off"} locked={locked} />
         ) : null}
         {saveProblem ? <Callout tone="danger" title={saveProblem} /> : null}
-        <MakeButton problems={problems} onStart={onStart} onFix={onFix} tour />
+        {keyHere ? <MakeButton problems={problems} onStart={onStart} onFix={onFix} tour /> : null}
         {/* Under the button, so the button never moves when the estimate arrives or its
             stages open. */}
         <div className="flex min-w-0 flex-col gap-2">
@@ -246,19 +254,55 @@ export function MakeButton({
   );
 }
 
-// Below 900px the summary drawer covers the whole window, rail and all.
-const narrowQuery = "(max-width: 899px)";
-function subscribeNarrow(listener: () => void): () => void {
-  if (typeof window.matchMedia !== "function") return () => {};
-  const query = window.matchMedia(narrowQuery);
-  query.addEventListener("change", listener);
-  return () => query.removeEventListener("change", listener);
+function useMedia(query: string): boolean {
+  return useSyncExternalStore(
+    (listener) => {
+      if (typeof window.matchMedia !== "function") return () => {};
+      const list = window.matchMedia(query);
+      list.addEventListener("change", listener);
+      return () => list.removeEventListener("change", listener);
+    },
+    () => typeof window.matchMedia === "function" && window.matchMedia(query).matches,
+    () => false,
+  );
 }
-function isNarrow(): boolean {
-  return typeof window.matchMedia === "function" && window.matchMedia(narrowQuery).matches;
-}
+// Below 1024px there is no room for the summary drawer beside the rail (it would cover half of
+// it), so it covers the whole window, rail and all, with the Make button in its foot.
 export function useNarrow(): boolean {
-  return useSyncExternalStore(subscribeNarrow, isNarrow, () => false);
+  return useMedia("(max-width: 1023px)");
+}
+// A phone: the rail follows the whole form, so the Make button rides in a bar pinned above the
+// bottom navigation instead, in reach from the topic on.
+export function usePhone(): boolean {
+  return useMedia("(max-width: 767px)");
+}
+
+// The Make button pinned to the bottom of a phone's screen, over the form, with the one next
+// thing to do (or what it costs) under it.
+export function MakeBar({
+  problems,
+  onStart,
+  onFix,
+}: {
+  readonly problems: readonly SetupProblem[];
+  readonly onStart: () => void;
+  readonly onFix: (problem: SetupProblem) => void;
+}): ReactElement {
+  const { review } = usePlaySession();
+  const ready = review.valid && review.receipt !== null && problems.length === 0;
+  return (
+    <div
+      data-slot="make-bar"
+      className="sticky bottom-[calc(48px+max(12px,env(safe-area-inset-bottom)))] z-20 -mx-4 mt-4 flex flex-col gap-1 border-t border-line bg-surface px-4 py-2"
+    >
+      <MakeButton problems={problems} onStart={onStart} onFix={onFix} tour />
+      {ready && review.receipt ? (
+        <p className="m-0 text-center text-small text-ink-2">
+          {estimateHeadline(review.receipt.estimates)}
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 // "Expected length: about 10 min · 1,500 words", and the pencil to change the words. It only
@@ -343,7 +387,16 @@ function StylePreviewEntry({
       <Button variant="quiet" size="small" onClick={() => setOpen(true)}>
         Watch a 6-second preview
       </Button>
-      <Dialog open={open} onOpenChange={setOpen} title="Preview with your captions and look">
+      <Dialog
+        open={open}
+        onOpenChange={setOpen}
+        title="Preview with your captions and look"
+        footer={
+          <Button variant="secondary" onClick={() => setOpen(false)}>
+            Close
+          </Button>
+        }
+      >
         {open ? children : null}
       </Dialog>
     </section>
