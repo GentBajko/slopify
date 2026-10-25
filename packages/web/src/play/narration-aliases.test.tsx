@@ -52,7 +52,7 @@ function ProjectSubject({ use }: { readonly use: boolean | undefined }): ReactEl
   );
 }
 
-it("copies the aliases into a project when turned on in Edit settings, and drops them when off", async () => {
+it("copies the Pronunciation list into a project when turned on in Edit settings, and drops it when off", async () => {
   const user = userEvent.setup();
   let aliases = [doctor];
   renderRouted(
@@ -73,9 +73,9 @@ it("copies the aliases into a project when turned on in Edit settings, and drops
     use: true,
     aliases: [doctor],
   });
-  // A Library edit reaches the project only when asked.
+  // An edit to the list reaches the project only when asked.
   aliases = [doctor, { ...doctor, written: "Ms.", spoken: "Miss" }];
-  await user.click(screen.getByRole("button", { name: "Copy the aliases again" }));
+  await user.click(screen.getByRole("button", { name: "Copy the list again" }));
   expect(
     await screen.findByText("2 aliases copied from Settings → Voices → Pronunciation."),
   ).toBeTruthy();

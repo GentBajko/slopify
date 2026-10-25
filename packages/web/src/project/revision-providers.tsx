@@ -91,10 +91,10 @@ function useSharedGlossary(
   };
 }
 
-// "Use narration aliases" in Edit settings: turning it on copies the aliases listed under
-// Settings → Voices → Pronunciation into this project, and the button copies them again, so an
-// edit there only reaches a project that asks for it (and rebuilds only the narration the
-// changed aliases touch).
+// "Use narration aliases" in Edit settings: turning it on copies the Pronunciation list (Settings →
+// Voices → Pronunciation) into this project, and the button copies it again, so an edit there
+// only reaches a project that asks for it (and rebuilds only the narration the changed aliases
+// touch).
 function useAliases(edit: RevisionEdit, onChange: (edit: RevisionEdit) => void) {
   const { api } = useApp();
   const [state, setState] = useState<{ busy: boolean; error?: string }>({ busy: false });
@@ -134,12 +134,12 @@ function useAliases(edit: RevisionEdit, onChange: (edit: RevisionEdit) => void) 
       audio?.useNarrationAliases === true ? (
         <p className="flex flex-wrap items-center gap-2 text-label text-ink-2">
           {state.error !== undefined
-            ? `Couldn't read the aliases under Settings → Voices → Pronunciation: ${state.error} Press Copy the aliases again.`
+            ? `Couldn't read your Pronunciation list: ${state.error} Press Copy the list again.`
             : count === 0
-              ? "No aliases are copied yet. Add some under Settings → Voices → Pronunciation."
+              ? "No aliases are copied yet. Add some in Settings → Voices → Pronunciation."
               : `${String(count)} ${count === 1 ? "alias" : "aliases"} copied from Settings → Voices → Pronunciation.`}
           <Button type="button" variant="quiet" disabled={state.busy} onClick={() => void copy()}>
-            {state.busy ? "Copying…" : "Copy the aliases again"}
+            {state.busy ? "Copying…" : "Copy the list again"}
           </Button>
         </p>
       ) : undefined,
