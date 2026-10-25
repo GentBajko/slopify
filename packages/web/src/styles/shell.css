@@ -156,11 +156,13 @@
   .sl-hit:has(:is(.sl-hit__target, .sl-row__title a)) {
     cursor: pointer;
   }
-  .sl-hit
-    :is(a, button, input, select, textarea, label, summary, [tabindex], .sl-row__body):not(
-      .sl-hit__target,
-      .sl-row__title a
-    ) {
+  /* Without specificity (:where), so it lifts a control that has no position of its own and
+     never moves one its component placed itself: a frame's Full size button in its corner, the
+     picture's own hit layer. */
+  :where(.sl-hit)
+  :where(a, button, input, select, textarea, label, summary, [tabindex], .sl-row__body):where(
+    :not(.sl-hit__target, .sl-row__title a)
+  ) {
     position: relative;
     z-index: 1;
   }

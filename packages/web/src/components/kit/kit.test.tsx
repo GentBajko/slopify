@@ -399,10 +399,13 @@ describe("rows and tiles are one target", () => {
     expect(css).toMatch(
       /\.sl-hit :is\(\.sl-hit__target, \.sl-row__title a\)::after \{\s*content: "";\s*position: absolute;\s*inset: 0;/,
     );
-    // The row's other controls sit above the stretch, and the target keeps the focus ring.
+    // The row's other controls sit above the stretch, and the target keeps the focus ring. The
+    // lift has no specificity, so a control its component positioned (a frame's Full size button
+    // in its corner) stays where it was put.
     expect(css).toMatch(
-      /:not\(\s*\.sl-hit__target,\s*\.sl-row__title a\s*\) \{\s*position: relative;\s*z-index: 1;/,
+      /:where\(\s*:not\(\.sl-hit__target, \.sl-row__title a\)\s*\) \{\s*position: relative;\s*z-index: 1;/,
     );
+    expect(css).toMatch(/:where\(\.sl-hit\)\s*:where\(a, button,/);
     expect(css).toMatch(/\.sl-hit:has\(:is\(\.sl-hit__target, \.sl-row__title a\):focus-visible\)/);
   });
 
