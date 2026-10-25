@@ -211,7 +211,7 @@ export function ProjectsBulkBar({
             {current.channels.length < 2 ? null : (
               <Select
                 aria-label="Move the selected projects to a channel"
-                className="w-[180px] max-md:w-[150px]"
+                className="w-[180px] max-md:w-[168px]"
                 value={target}
                 disabled={busy}
                 onChange={(event) => {
