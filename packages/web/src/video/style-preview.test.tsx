@@ -59,7 +59,7 @@ it("renders the preview with the settings and plays it", async () => {
   expect(
     screen.getByText("6 seconds of the sample with your settings, made free on this computer"),
   ).toBeTruthy();
-  expect(await screen.findByRole("status")).toHaveProperty("textContent", "Rendering the preview…");
+  expect(await screen.findByRole("status")).toHaveProperty("textContent", "Making the preview…");
   release();
   const video = await screen.findByLabelText("Style preview", { selector: "video" });
   expect(video.getAttribute("src")).toBe(`${testOrigin}/api/style-preview/${hash}.mp4?v=1`);
@@ -107,7 +107,7 @@ it("waits for a valid caption size before rendering", async () => {
   );
   expect(
     await screen.findByText(
-      "The preview renders again once the caption size is between 16 and 120.",
+      "The preview is made again once the caption size is between 16 and 120.",
     ),
   ).toBeTruthy();
   await new Promise((resolve) => setTimeout(resolve, 800));
