@@ -298,7 +298,7 @@ export function ScheduleRows({
         <p role="status" className="m-0 min-w-0 text-small text-ink-2">
           {message ??
             (template.readyVersion === null
-              ? "Nothing is made until a version is marked ready."
+              ? "Nothing is made until you approve a version for schedules."
               : `Pieces are made from version ${String(template.readyVersion)}.`)}
         </p>
       </div>

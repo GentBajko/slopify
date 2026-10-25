@@ -106,7 +106,7 @@ export function warningsOf(
       found.push({
         key: `template-not-ready:${schedule.id}`,
         severity: "problem",
-        text: `“${schedule.name}” skips its runs because its template “${schedule.notReadyTemplate}” has no version marked ready. Open it in Library → Templates → Open studio and press Mark ready.`,
+        text: `“${schedule.name}” skips its runs because its template “${schedule.notReadyTemplate}” has no version approved for schedules. Open it from Templates with Edit template, then choose More → Approve for schedules.`,
         fix: { kind: "templates", label: "Open Templates" },
       });
     if (schedule.topicsError !== null && schedule.generation !== "off")

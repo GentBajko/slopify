@@ -323,7 +323,7 @@ it("says which template version the schedule runs, and what to press when none i
   );
   const detail = await screen.findByRole("region", { name: "Morning stories detail" });
   expect(
-    within(detail).getByText("Its runs are skipped: no version of its template is marked ready"),
+    within(detail).getByText("Its runs are skipped: no version of its template is approved for schedules"),
   ).toBeTruthy();
   expect(within(detail).getByRole("link", { name: "Edit template" }).getAttribute("href")).toBe(
     `/templates/${templateId}`,

@@ -209,7 +209,7 @@ describe("the planning screens explain every control", () => {
   it("walks Schedules: the list, the detail and the form with every option open", async () => {
     const user = userEvent.setup();
     renderRouted(<SchedulesView />, testDeps(planningRoutes));
-    await screen.findByText("Its runs are skipped: no version of its template is marked ready");
+    await screen.findByText("Its runs are skipped: no version of its template is approved for schedules");
     const waiting = await screen.findByRole("list", { name: "Topics waiting" });
     await user.click(within(waiting).getByRole("button", { name: "Edit" }));
     await screen.findByLabelText("Edit Pyramids");

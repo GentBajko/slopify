@@ -94,9 +94,11 @@ export function MakePieceDrawer({
           {`One piece from version ${String(template.headVersion)}, with the words below. You can change them on its page afterwards.`}
         </p>
         {template.readyVersion === template.headVersion ? null : (
-          <Callout tone="info" title={`Version ${String(template.headVersion)} isn't marked ready`}>
-            You can still make a piece from it by hand. Only schedules wait for a version marked
-            ready.
+          <Callout
+            tone="info"
+            title={`Version ${String(template.headVersion)} isn't approved for schedules`}
+          >
+            You can still make a piece from it by hand. Only schedules wait for an approved version.
           </Callout>
         )}
         <ValueFields

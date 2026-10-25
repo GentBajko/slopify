@@ -91,7 +91,7 @@ function refused(c: Context, result: Extract<ScheduleResult<never>, { ok: false 
       "This topic was already approved, turned down or used. Reload the page to see the topics waiting now.",
     busy: "Slopify is already generating topics for this schedule. Wait for it to finish, then try again.",
     "not-ready":
-      "This schedule's template has no version marked ready. Open it in Library → Templates → Open studio and press Mark ready.",
+      "This schedule's template has no version approved for schedules. Open it from Templates with Edit template, then choose More → Approve for schedules.",
     "invalid-topics":
       "Some topics name keywords this template does not use. Check each topic under Schedules → Edit and save again.",
   };

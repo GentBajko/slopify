@@ -111,7 +111,7 @@ describe("warningsOf", () => {
       {
         key: "template-not-ready:s1",
         severity: "problem",
-        text: "“Canals” skips its runs because its template “Waterways” has no version marked ready. Open it in Library → Templates → Open studio and press Mark ready.",
+        text: "“Canals” skips its runs because its template “Waterways” has no version approved for schedules. Open it from Templates with Edit template, then choose More → Approve for schedules.",
         fix: { kind: "templates", label: "Open Templates" },
       },
     ]);
