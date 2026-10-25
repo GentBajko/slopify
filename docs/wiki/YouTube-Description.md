@@ -44,7 +44,7 @@ To change the tone or add your own links, write a prompt of the kind **YouTube D
 
 ## Read and copy it
 
-When the step has run, the project page's **YouTube** section shows four parts. A finished project with a written description opens on this section, so copying it is one press:
+When the step has run, the project page's **YouTube** part shows four pieces. A finished project with a written description opens on this section, so copying it is one press:
 
 - **Description**, with the Summary, Chapters and Hashtags, a character count such as `1,240 / 5000 characters`, and **Copy**.
 - **Tags**, shown as chips, with a count against YouTube's 500-character limit and **Copy**.

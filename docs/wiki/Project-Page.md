@@ -61,7 +61,7 @@ The title row shows at most one lime button, named for what it will do. It is th
 | Queued | None. Videos queued together run one at a time, in the order they were added; Home shows which one is running now. |
 | An edit made files outdated | Makes the outdated ones again, for example the outdated narration or 4 outdated images. Before anything paid starts, it shows what it makes again and the estimated cost. |
 | A 60-second short is finished | **Make the full video on this topic** (opens Create set up for a long video on the same topic; see [Your First Short](Your-First-Short#make-the-full-video-next)) |
-| The video is finished (uploaded or not) | **Download video**. **Copy for YouTube Studio** sits in the Video part's heading, beside the player (see [Publishing to YouTube](Publishing-to-YouTube)). |
+| The video is finished (uploaded or not) | **Download video**. **Copy for YouTube Studio** sits in the Video part's heading, beside the player, and in the YouTube part's heading (see [Publishing to YouTube](Publishing-to-YouTube)). |
 
 `Shift+N` runs the next action from anywhere on the page.
 

@@ -2,7 +2,7 @@
 
 Slopify never uploads or publishes for you: there is no YouTube sign-in and no upload API. Instead, **Copy for YouTube Studio** lists everything YouTube Studio asks for, in the order it asks, with a Copy button for each value, for the long video and for every short. You upload in Studio in your own browser and press Publish yourself. The optional [Studio-Extension](Studio-Extension) can fill Studio's upload dialog from the same list.
 
-**Where to find it:** a finished project → **Copy for YouTube Studio** (in the title row, and in the **YouTube** section), or the Calendar's **Needs you** → **Copy for YouTube Studio**. Settings → **YouTube Studio and posting** holds the playlists, and each channel's **Name and look** tab holds the links it uses.
+**Where to find it:** a finished project → **Copy for YouTube Studio**, in the heading of its **Video** part and of its **YouTube** part, or `Ctrl+K` → **Copy for YouTube Studio** on the project. Settings → **YouTube Studio and posting** holds the playlists, and each channel's **Name and look** tab holds the links it uses.
 
 ## Before your first upload
 
@@ -97,7 +97,7 @@ Its chapters are fitted to YouTube's rules first (the first at 0:00, at least th
 Copy for YouTube Studio shows what the project has; it has no editor of its own.
 
 1. Close Copy for YouTube Studio.
-2. In the project's **YouTube** section, press **Edit** beside Summary, Chapters, Hashtags or Tags, change it and save.
+2. In the project's **YouTube** part, press **Edit** beside Summary, Chapters, Hashtags or Tags, change it and save.
 3. For a link, paste it under **Previous episode** in the project's YouTube part and press **Save**, or add it under **Channel links** on the channel's Name and look tab.
 4. Open Copy for YouTube Studio again; it shows your edits.
 
