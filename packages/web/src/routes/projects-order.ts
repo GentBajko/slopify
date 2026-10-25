@@ -1,11 +1,6 @@
 import type { ProjectState } from "@app/kernel/pipeline.js";
 import type { ProjectListing } from "@app/slices/admission/model.js";
-import {
-  failedRun,
-  queuedRun,
-  runningNow,
-  waitsForPerson,
-} from "@app/slices/admission/state-words.js";
+import { failedRun, needsYou, queuedRun, runningNow } from "@app/slices/admission/state-words.js";
 import { isReadyToUpload } from "@/home/ready";
 
 const filterValues = ["all", "running", "queued", "waiting", "ready", "failed"] as const;
@@ -16,10 +11,11 @@ export function projectFilterOf(value: unknown): ProjectFilter | undefined {
   return filterValues.find((one) => one === value);
 }
 
-// The same words as Home's sections and each row's state: Needs you holds decisions, Ready to
-// upload the finished videos not marked uploaded (never a sample), Failed the runs that stopped
-// on an error. A video that lost a step but was made reads Done with problems and is under
-// Ready to upload only, so no run is counted twice.
+// The same words and the same sets as Home's sections and each row's state: Needs you holds
+// what Home's Needs you lists (the decisions and the failures to fix), Ready to upload the
+// finished videos not marked uploaded (never a sample), Failed the runs that stopped on an error,
+// the failures alone. A video that lost a step but was made reads Done with problems and is
+// under Ready to upload only.
 export const filters: readonly { readonly value: ProjectFilter; readonly label: string }[] = [
   { value: "all", label: "All" },
   { value: "running", label: "Running" },
@@ -39,7 +35,7 @@ export function matches(project: ProjectListing, filter: ProjectFilter): boolean
     case "queued":
       return queuedRun(project);
     case "waiting":
-      return waitsForPerson(project);
+      return needsYou(project);
     case "ready":
       return isReadyToUpload(project);
     case "failed":
@@ -89,7 +85,7 @@ const statusRank: Readonly<Record<ProjectState, number>> = {
 };
 
 function rankOf(project: ProjectListing): number {
-  return waitsForPerson(project) ? 0 : statusRank[project.status];
+  return needsYou(project) ? 0 : statusRank[project.status];
 }
 
 const newestFirst = (a: ProjectListing, b: ProjectListing): number =>

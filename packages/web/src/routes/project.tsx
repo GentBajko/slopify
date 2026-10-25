@@ -670,6 +670,7 @@ function ProjectWorkspace({
                       project={summary}
                       progress={progressOf(stages)}
                       stages={stages}
+                      holding={project.data.holding}
                       channel={channel}
                       uploadedAt={isSample ? null : listing?.uploadedAt}
                       primary={<NextActionButton state={next} />}

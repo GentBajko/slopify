@@ -27,6 +27,7 @@ const standingRow = z.object({
   progress_current: z.number().nullable(),
   progress_total: z.number().nullable(),
   source: z.enum(stageSources),
+  retry_at: z.string().nullable(),
   admitted: z.number(),
   parked: z.number(),
 });
@@ -114,17 +115,18 @@ export function listProjects(db: DatabaseSync): Project[] {
     .map((row) => toProject(projectRow.parse(row)));
 }
 
-// What 07 Projects needs of every project's stages and no more: the state each one is in
-// and how far through itself a running one is. One statement for the whole list rather
-// than `stagesOf` per row, and five columns rather than the whole stage table, because
-// the screen shows a status word and a meter and reads nothing else from a stage. One project's
-// alone when `projectId` is given.
+// What 07 Projects needs of every project's stages and no more: the state each one is in,
+// how far through itself a running one is, and when one waiting to run again by itself tries
+// (without it, `derive` reads that run as waiting its turn while its own page says Running).
+// One statement for the whole list rather than `stagesOf` per row, and a few columns rather
+// than the whole stage table, because the screen shows a status word and a meter and reads
+// nothing else from a stage. One project's alone when `projectId` is given.
 export function stageStandingsByProject(
   db: DatabaseSync,
   projectId?: string,
 ): Map<string, StageProgress[]> {
   const grouped = new Map<string, StageProgress[]>();
-  const select = `SELECT project_id, kind, state, progress_current, progress_total, source, ${admittedInItsState("stages")} AS admitted, ${parkedOnReview("stages")} AS parked FROM stages${
+  const select = `SELECT project_id, kind, state, progress_current, progress_total, source, retry_at, ${admittedInItsState("stages")} AS admitted, ${parkedOnReview("stages")} AS parked FROM stages${
     projectId === undefined ? "" : " WHERE project_id=?"
   } ORDER BY rowid`;
   const rows =
@@ -137,6 +139,7 @@ export function stageStandingsByProject(
       progressCurrent: parsed.progress_current,
       progressTotal: parsed.progress_total,
       source: parsed.source,
+      ...(parsed.retry_at === null ? {} : { retryAt: parsed.retry_at }),
       ...(parsed.admitted === 1 ? { admitted: true } : {}),
       ...(parsed.parked === 1 ? { parked: true } : {}),
     };

@@ -191,7 +191,7 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
   }
 
   // A step that stopped and will not try again by itself.
-  const failed = stages.find((stage) => stage.state === "failed" && stage.retryAt === undefined);
+  const failed = stages.find((stage) => stage.state === "failed");
   if (failed !== undefined) {
     const stageLabel = name(failed.kind);
     const fix = input.fixOf(failed);
@@ -295,7 +295,8 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
     };
   }
 
-  const retrying = stages.find((stage) => stage.state === "failed" && stage.retryAt !== undefined);
+  // A step that failed on something time can fix is pending again, with when it tries.
+  const retrying = stages.find((stage) => stage.state === "pending" && stage.retryAt !== undefined);
   const wait = input.waits[0];
   if (wait !== undefined || retrying !== undefined) {
     if (wait !== undefined) {

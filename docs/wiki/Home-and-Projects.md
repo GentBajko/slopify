@@ -145,11 +145,11 @@ Every run ever started, newest first unless you pick another order, for the chan
 | **All** | Everything. |
 | **Running** | Projects running, and those **Waiting for the agent**: the same runs Home's **See all N running** counts. |
 | **Queued** | Projects waiting for their turn in the video queue, in the order they will start, each with **Earlier**, **Later** and **Remove**. |
-| **Needs you** | Projects waiting for you: at a review or held step, paused, or **Stopped**. |
+| **Needs you** | What Home's **Needs you** lists: projects waiting for you (at a review or held step, paused, or **Stopped**) and the failures to fix. |
 | **Ready to upload** | Finished videos not marked uploaded, including those **Done with problems**. Never a sample. |
 | **Failed** | Failed projects, and runs with a failed step that still wait on something else. |
 
-3. Pick an order beside the filter: **Newest first**, **Finished first**, **Recently changed**, **Name (A–Z)** or **Status** (waiting for you first, then running, queued, failed and finished).
+3. Pick an order beside the filter: **Newest first**, **Finished first**, **Recently changed**, **Name (A–Z)** or **Status** (what needs you first, then running, queued and finished).
 
 The search, the filter and the order are part of the address, so Back from a project, a reload or a link opens Projects the same way: `/projects?show=running` (`queued`, `waiting` for Needs you, `ready` or `failed`), `?q=` for the search words and `?sort=finished`, `changed`, `name` or `status`. The list draws 50 projects at a time; **Show N more** under it adds the next ones. Press `/` to jump to the search box. The command palette has shortcuts: **Show projects that need you**, **Show videos ready to upload** and **Show failed projects**.
 
@@ -166,6 +166,7 @@ If nothing matches, the list says **No project matches. Clear the search or pick
 | State | Meaning |
 | --- | --- |
 | **Running** | A step is being made. A run waiting for a CLI plan says **Waiting for Codex limits (resets at 14:00)** instead. |
+| **Waiting to try again** | A step failed on something time fixes (a rate limit, a dropped connection) and runs again by itself at the time its step names. Nothing to do. |
 | **Paused** | Paused by you or an agent; nothing runs until it is continued. |
 | **Queued** | Waiting for its turn in the video queue. |
 | **Waiting for your review** | Held at a pause for your approval. |

@@ -324,8 +324,9 @@ describe("needs you", () => {
   });
 
   // A step failed beside another that still waits: the run reads by that wait (Running for the
-  // agent's, Needs you for the person's) and is listed under Failed too. A run that made its
-  // video and lost another step reads Done with problems and is ready to upload, not failed.
+  // agent's, Needs you for the person's) and is listed under Failed too. Its failed step is the
+  // person's to fix, so it is under Needs you as on Home. A run that made its video and lost
+  // another step reads Done with problems and is ready to upload, not failed.
   it("lists a run whose step failed beside a wait by that wait and under Failed", () => {
     const agent = listing("p1", "Agent one", "pending", {
       waitingForAgent: true,
@@ -333,7 +334,7 @@ describe("needs you", () => {
     });
     expect(projectStateOf(agent).word).toBe("Waiting for the agent");
     expect(matches(agent, "running")).toBe(true);
-    expect(matches(agent, "waiting")).toBe(false);
+    expect(matches(agent, "waiting")).toBe(true);
     expect(matches(agent, "failed")).toBe(true);
     const person = listing("p2", "Held one", "pending", { stepFailed: true });
     expect(projectStateOf(person).word).toBe("Waiting for your review");
@@ -344,6 +345,44 @@ describe("needs you", () => {
     const partial = listing("p4", "Partly", "partial", { failedSteps: ["document"] });
     expect(matches(partial, "failed")).toBe(false);
     expect(matches(partial, "ready")).toBe(true);
+  });
+
+  // Home's Needs you lists the decisions and the failures; the filter of the same name holds the
+  // same runs, and Failed the failures alone.
+  it("holds under Needs you what Home's Needs you lists, failures included", () => {
+    const projects = [
+      listing("p1", "Held one", "pending", { progress: 0.4 }),
+      listing("p2", "Broken", "failed", { progress: 0.4 }),
+      listing("p3", "Going", "running", { progress: 0.5 }),
+    ];
+    expect(projects.filter((one) => matches(one, "waiting")).map((one) => one.title)).toEqual([
+      "Held one",
+      "Broken",
+    ]);
+    expect(projects.filter((one) => matches(one, "failed")).map((one) => one.title)).toEqual([
+      "Broken",
+    ]);
+  });
+
+  // Held at a checkpoint with every step before it supplied: it made nothing, and still waits for
+  // the person, not its turn in the queue.
+  it("lists a run held before it made anything under Needs you, not Queued", () => {
+    const held = listing("p1", "Coral", "pending", {
+      progress: 0,
+      holding: [
+        {
+          checkpointId: "video-gate",
+          stage: "video",
+          waitsFor: "person",
+          revisionId: "r1",
+          fingerprint: "a".repeat(64),
+          since: "2026-09-01T00:00:00.000Z",
+        },
+      ],
+    });
+    expect(projectStateOf(held).word).toBe("Waiting for your review");
+    expect(matches(held, "waiting")).toBe(true);
+    expect(matches(held, "queued")).toBe(false);
   });
 
   // Parked on an agent's review before anything was made: it waits for the agent, not its turn.
@@ -524,8 +563,9 @@ describe("ordering and paging", () => {
     expect(names()).toEqual(["alpha", "Beta", "Gamma"]);
     await user.selectOptions(sort, "changed");
     expect(names()).toEqual(["alpha", "Beta", "Gamma"]);
+    // What needs a hand first (the failure to fix, as on Home's Needs you), then what moves.
     await user.selectOptions(sort, "status");
-    expect(names()).toEqual(["Gamma", "alpha", "Beta"]);
+    expect(names()).toEqual(["alpha", "Gamma", "Beta"]);
     expect(picked).toEqual(["name", "changed", "status"]);
     expect(projectsSearchOf({ sort: "name" })).toEqual({ sort: "name" });
     expect(projectsSearchOf({ sort: "newest" })).toEqual({});
@@ -774,6 +814,7 @@ describe("on a phone", () => {
       const show = await screen.findByRole("combobox", { name: "Show" });
       expect([...(show as HTMLSelectElement).options].map((option) => option.textContent)).toEqual([
         "All (2)",
+        "Needs you (1)",
         "Ready to upload (1)",
         "Failed (1)",
       ]);

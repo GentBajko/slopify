@@ -329,7 +329,8 @@ describe("the next action", () => {
       input({
         project: { status: "running", config },
         stages: [
-          stage("audio", "failed", {
+          // The server's own shape: the step is pending again, with when it tries and why.
+          stage("audio", "pending", {
             retryAt: "2026-09-27T09:30:00.000Z",
             failureReason: "Rate limited",
           }),
