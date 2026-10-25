@@ -156,6 +156,8 @@ describe("the system voice's speech programs", () => {
       env: {},
     });
     expect(none.engines).toEqual([]);
-    expect(none.issue).toMatch(/Install espeak-ng.*Settings → Providers/);
+    expect(none.issue).toMatch(/Install the free program eSpeak NG.*Settings → Keys & services/);
+    // The commands are speechInstall's, listed apart; the sentence carries none.
+    expect(none.issue).not.toMatch(/sudo/);
   });
 });
