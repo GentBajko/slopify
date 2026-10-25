@@ -27,7 +27,9 @@ export function PlayLanguage({ disabled = false }: { readonly disabled?: boolean
   const { document } = session;
   return (
     <div>
+      {/* The line under it says what the language changes; no info button on Create. */}
       <LanguageSelect
+        tip={null}
         value={document.form.language}
         inherited={{ label: "Channel's language", language: channel?.brand.language }}
         disabled={disabled}

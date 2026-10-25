@@ -382,7 +382,7 @@ export function ImageProviderControls({
       <ThinkingPicker
         field="images.thinking"
         label="Effort"
-        tip="play.images.effort"
+        help="How long the image agent thinks before it draws: higher follows the prompt more closely, and is slower."
         choice={form.images}
         problem={problem("images.thinking")}
         onChange={(images) => update({ images })}

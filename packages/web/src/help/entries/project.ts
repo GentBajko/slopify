@@ -33,16 +33,6 @@ export const projectHelp = {
     body: "How loud the audio-only WAV and an audiobook's MP3 and M4B are, in dB from -18 LUFS, the level audiobook shops such as ACX ask for (-18 to -23 LUFS). LUFS is how loud a file sounds on average. Type dB or a percentage of the recommended level; peaks always stay under -3 dBTP, which those shops require.",
     tutorial: { page: "Editing-a-Project", anchor: "pauses-and-volume" },
   },
-  "project.subtitles.mode": {
-    title: "Captions",
-    body: "Off makes none. Show captions in the video draws them into the picture and also makes .srt and .vtt files; it needs a video. Caption files only gives you the files to upload beside the video. Captions are timed from your narration on this computer, with no paid API; the first use downloads a speech model of about 378 MB (Settings → Production defaults offers smaller ones). Default: Off.",
-    tutorial: { page: "Video-Editing", anchor: "captions" },
-  },
-  "project.subtitles.font": {
-    title: "Caption font",
-    body: "The typeface of captions shown in the video and of chapter cards. Pick a bundled font or one you uploaded (.ttf or .otf); uploaded fonts stay available to every project. Caption files carry no font, since players style them. Changing it makes only the video again. Default: the bundled font.",
-    tutorial: { page: "Video-Editing", anchor: "captions" },
-  },
   "project.edit.article-text": {
     title: "Article text",
     body: "The script the narrator reads, in Markdown. Your edits are kept when other settings change and are saved as a new version; the narration, images and video made from the old text turn outdated and are made again when you choose. Headings become chapters.",

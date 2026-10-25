@@ -14,6 +14,7 @@ export function ThinkingPicker({
   field = "llm.thinking",
   label = "Thinking",
   tip = "play.llm.thinking",
+  help,
   problem,
 }: {
   readonly choice: ProviderChoice;
@@ -21,6 +22,8 @@ export function ThinkingPicker({
   readonly field?: string;
   readonly label?: string;
   readonly tip?: HelpId;
+  // A visible sentence under the control instead of the info button (Create).
+  readonly help?: string;
   // A sentence the rule or the server said about this control.
   readonly problem?: string | undefined;
 }) {
@@ -34,7 +37,7 @@ export function ThinkingPicker({
       <OptionPicker
         field={field}
         label={label}
-        tip={tip}
+        {...(help === undefined ? { tip } : { help })}
         value={choice.thinking ?? "default"}
         placeholder="Model default"
         problem={

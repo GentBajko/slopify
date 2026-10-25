@@ -4,7 +4,7 @@ import { defaultSubtitles, subtitlePositions } from "@app/slices/subtitles/model
 import { type ReactElement, useId, useState } from "react";
 import { Button } from "@/components/kit/button";
 import { HelpLine, Input } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { helpScope } from "@/components/kit/info-tip";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { validSubtitleStyle } from "./config";
 import { type ControlledFontUpload, FontPicker } from "./font-picker";
@@ -70,13 +70,14 @@ export function SubtitleControls({
         disabled={disabled || !audioEnabled}
         className="flex min-w-0 flex-col gap-3 disabled:opacity-60"
       >
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-0 max-w-[22rem] flex-1" {...helpScope}>
+        {/* The options say what each makes, and the line beside them how they are timed and
+            what that costs: nothing to open to find out. */}
+        <div className="flex flex-wrap items-end gap-3" {...helpScope}>
+          <div className="min-w-0 max-w-[22rem] flex-1">
             <div className="mb-1 flex items-center gap-1">
               <label htmlFor={id} className="sl-field__label block">
                 Captions
               </label>
-              <InfoTip id="project.subtitles.mode" className="-my-1" />
             </div>
             <select
               id={id}
@@ -97,7 +98,9 @@ export function SubtitleControls({
               <option value="files">Caption files only (.srt + .vtt)</option>
             </select>
           </div>
-          <span className="pb-1 text-label text-ink-3">{facts.tag}</span>
+          <span data-help-text="" className="pb-1 text-label text-ink-3">
+            {facts.tag}
+          </span>
         </div>
         {value.mode !== "off" && audioEnabled ? (
           <div className="flex min-w-0 flex-col gap-3" {...helpScope}>
