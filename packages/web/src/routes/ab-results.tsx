@@ -128,9 +128,9 @@ export function AbResultsRoute(): ReactElement {
         {(loaded) =>
           loaded.length === 0 ? (
             <p className="m-0 text-small text-ink-2">
-              No finished tests yet. Start one from a project's YouTube section: under YouTube
-              links, open Test other titles and thumbnails. Its result shows here once YouTube
-              Studio has one.
+              No finished tests yet. Once a project's video is on YouTube, start one from its
+              YouTube section: under YouTube links, open Test other titles and thumbnails. Its
+              result shows here once YouTube Studio has one.
             </p>
           ) : (
             <ResultList results={loaded} />

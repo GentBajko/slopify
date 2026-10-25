@@ -75,7 +75,7 @@ export function DocumentThemesRoute() {
   const transfer = useLibraryTransfer({
     section: "documentThemes",
     pack: (items) => ({ documentThemes: items }),
-    stem: "pdf-themes",
+    stem: "pdf-looks",
     noun: themeNoun,
     listKey: keys.documentThemes,
     existing: yours,
