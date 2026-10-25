@@ -77,7 +77,14 @@ export function projectOutputs(input: OutputsInput): readonly ProjectOutput[] {
     output === undefined ? [] : [{ output, label: `${name}${extensionOf(output)}` }];
   // A provided article is kept as the text it was given; a written one also has Markdown.
   const article = role("article_md") ?? role("article_txt");
-  const narration = role("audio_export") ?? role("audio_body");
+  // The narration the Narration section plays and downloads: its evened-out recording when
+  // the volume was levelled, so the two name one file.
+  const narration =
+    role("audio_export") ??
+    outputs.find(
+      (output) => output.role === "audio_levelled" && (output.meta.segment ?? "body") === "body",
+    ) ??
+    role("audio_body");
   const voiced = config.voices !== undefined && config.sources.audio === "generate";
   const list: ProjectOutput[] = [];
   const build = (
@@ -120,7 +127,7 @@ export function projectOutputs(input: OutputsInput): readonly ProjectOutput[] {
 
   if (on("article") || on("research") || article !== undefined)
     build("article", "Article", "article", ["research", "article"], article, {
-      primary: file(article, article?.role === "article_md" ? "Markdown" : "Plain text")[0],
+      primary: file(article, "Article")[0],
       // The PDF has its own row.
       alternatives: [
         ...(article?.role === "article_md" ? file(role("article_txt"), "Plain text") : []),

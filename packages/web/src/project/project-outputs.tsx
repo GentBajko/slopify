@@ -195,15 +195,18 @@ function PrimaryDownload({
 }): ReactElement | null {
   const media = useOutputMedia(file.output);
   if (media === undefined) return null;
+  // Named with its verb like every download button on the page: "Download video (.mp4)",
+  // "Download PDF (.pdf)", "Download all 4 images (.zip)".
+  const words = `Download ${/^[A-Z]{2}/u.test(file.label) ? file.label : `${file.label.charAt(0).toLowerCase()}${file.label.slice(1)}`}`;
   return (
     <FileLink
       href={media.url}
       download
       variant="secondary"
-      title={older ? `${file.label}, the previous version` : file.label}
+      title={older ? `${words}, the previous version` : words}
     >
       <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
-      {older ? `${file.label} · previous version` : file.label}
+      {older ? `${words} · previous version` : words}
     </FileLink>
   );
 }

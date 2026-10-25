@@ -162,3 +162,45 @@ it("downloads a set as one zip at once, and lists its files first once one is ou
     `${zip}?only=rec-2`,
   );
 });
+
+it("names every download button with its verb, and offers no zip of one file", async () => {
+  const video = output("video", "video", { id: "o-video" });
+  const short = output("short_video", "video", { id: "o-short", meta: { short: 1 } });
+  const pdf = output("document_pdf", "document", { id: "o-pdf" });
+  renderRouted(
+    <RevisionMedia projectId="p1" revisionId="r1">
+      <ProjectOutputs
+        projectId="p1"
+        revisionId="r1"
+        config={{
+          ...config,
+          sources: { ...config.sources, video: "generate", document: "generate" },
+          shorts: { enabled: true, count: 1, minSeconds: 30, maxSeconds: 60 },
+        }}
+        stages={[stage("article", "provided"), stage("video", "done"), stage("document", "done")]}
+        outputs={[article, video, short, pdf]}
+        controller={{ review: vi.fn(), requestEdit: vi.fn(), busy: false }}
+      />
+    </RevisionMedia>,
+    testDeps({
+      "GET /api/projects/p1/revisions/r1": jsonAnswer({
+        view: {
+          ...view,
+          outputs: [
+            record(article, "rec-article", "article:md"),
+            record(video, "rec-video", "export:video"),
+            record(short, "rec-short", "shorts:1:render"),
+            record(pdf, "rec-pdf", "document:pdf"),
+          ],
+        },
+      }),
+    }),
+  );
+  expect(await screen.findByRole("link", { name: /^Download video \(\./ })).not.toBeNull();
+  expect(screen.getByRole("link", { name: /^Download article \(\./ })).not.toBeNull();
+  // An acronym keeps its capitals.
+  expect(screen.getByRole("link", { name: /^Download PDF \(\./ })).not.toBeNull();
+  // One short: its own file, and no "Download all 1 shorts (.zip)".
+  expect(screen.queryByRole("link", { name: /\.zip/ })).toBeNull();
+  expect(screen.getByRole("link", { name: /^Short 1/ })).not.toBeNull();
+});

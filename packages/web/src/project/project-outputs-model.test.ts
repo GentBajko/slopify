@@ -24,7 +24,7 @@ describe("projectOutputs", () => {
     expect(article?.state).toBe("current");
     // The lamp and Done say it is the current file; no fourth word for finished.
     expect(article?.stateWords).toBe("Done");
-    expect(article?.primary?.label).toBe("Markdown (.bin)");
+    expect(article?.primary?.label).toBe("Article (.bin)");
     expect(article?.alternatives.map((one) => one.label)).toEqual(["Plain text (.bin)"]);
     expect(article?.version).toMatch(/^made (Oct \d+|\d+ Oct)/);
   });
@@ -37,7 +37,7 @@ describe("projectOutputs", () => {
       outputs: [txt],
     });
     expect(article?.state).toBe("current");
-    expect(article?.primary?.label).toBe("Plain text (.bin)");
+    expect(article?.primary?.label).toBe("Article (.bin)");
     expect(article?.alternatives).toEqual([]);
   });
 

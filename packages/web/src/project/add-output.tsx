@@ -143,7 +143,7 @@ export function AddOutputDialog({
             }
             onClick={() => void add()}
           >
-            {`Add ${label.toLowerCase()}`}
+            {`Add ${lowerFirst(label)}`}
           </Button>
         </>
       }
@@ -177,7 +177,7 @@ export function AddOutputDialog({
           <p className="m-0 text-small text-ink-2">Working out what it needs…</p>
         ) : null
       ) : (
-        <Facts label={`What adding ${label.toLowerCase()} does`}>
+        <Facts label={`What adding ${lowerFirst(label)} does`}>
           <Fact label="Reused as it is">{shown.reused.join(", ")}</Fact>
           <Fact label="Made new">{shown.created.join(", ")}</Fact>
           <Fact label="Your text">{shown.textUse}</Fact>
@@ -214,7 +214,7 @@ export function AddOutputDialog({
               });
             }}
           >
-            {`Open Settings with ${label.toLowerCase()} switched on`}
+            {`Open Settings with ${lowerFirst(label)} switched on`}
           </Button>
         </div>
       ) : null}
@@ -253,4 +253,9 @@ function sectionFor(field: string): EditSection {
   if (field.startsWith("llm") || field === "articlePrompt") return "article";
   if (field.endsWith("Prompt") || field.startsWith("shorts")) return "outputs";
   return "title";
+}
+
+// "podcast", "narration", but "PDF": a name in a sentence keeps an acronym as it is.
+function lowerFirst(text: string): string {
+  return /^[A-Z]{2}/u.test(text) ? text : `${text.charAt(0).toLowerCase()}${text.slice(1)}`;
 }
