@@ -287,6 +287,7 @@ function KeysAndServices({
     <>
       <ConnectionReadiness
         health={health}
+        back={back}
         onShow={(shown) => setFocus({ family: shown, provider: undefined, arrival: false })}
       />
       <ProviderKeys focus={focus} back={back} />

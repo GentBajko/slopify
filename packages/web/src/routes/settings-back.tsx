@@ -1,5 +1,8 @@
+import type { ProviderFamily } from "@app/slices/settings/model.js";
+import { useRouterState } from "@tanstack/react-router";
 import type { ReactElement, ReactNode } from "react";
-import { ButtonLink } from "@/components/kit/link";
+import { ButtonLink, TextLink } from "@/components/kit/link";
+import type { SettingsSection } from "./settings-sections";
 
 // Where a person came to Settings from, to add a key on the way: the welcome (at a step) or
 // Create. While it is set, Settings offers the way back (`?return=welcome&step=make`).
@@ -21,6 +24,36 @@ export function backSearch(back: SettingsBack | undefined): {
 } {
   if (back === undefined) return {};
   return back.step === undefined ? { return: back.to } : { return: back.to, step: back.step };
+}
+
+// What a link into Settings adds so Settings offers the way back: `return=play` from Create,
+// where the setup being made waits as a draft. The pickers that link to Settings are shared
+// with Edit template, the cast editor and a project's settings, which keep no such way back,
+// so the page the link sits on decides.
+function useSettingsReturn(): { readonly return?: "play" } {
+  const onCreate = useRouterState({ select: (state) => state.location.pathname === "/play" });
+  return onCreate ? { return: "play" } : {};
+}
+
+// A link into Settings from a control several screens share: on Create it carries the way
+// back, so Settings offers "Back to Create" and a saved key "Done · back to Create".
+export function SettingsLink({
+  search,
+  children,
+}: {
+  readonly search: {
+    readonly section: SettingsSection;
+    readonly family?: ProviderFamily;
+    readonly provider?: string;
+  };
+  readonly children: ReactNode;
+}): ReactElement {
+  const back = useSettingsReturn();
+  return (
+    <TextLink to="/settings" search={{ ...search, ...back }}>
+      {children}
+    </TextLink>
+  );
 }
 
 // The welcome's own validator keeps a step it knows and drops any other, so the step goes back

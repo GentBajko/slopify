@@ -3,9 +3,9 @@ import { type ReactElement, type ReactNode, useId } from "react";
 import { Button } from "@/components/kit/button";
 import { HelpLine } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
-import { TextLink } from "@/components/kit/link";
 import { providerUnavailableLabel } from "@/lib/provider-status";
 import { cn } from "@/lib/utils";
+import { SettingsLink } from "@/routes/settings-back";
 import { ModelPicker, ProviderPicker, providerOptions } from "./pickers";
 
 // Who does a stage, asked the same way on every row: a group named for the stage ("Written
@@ -22,13 +22,6 @@ const words: Readonly<
   tts: { group: "Read by", key: "Add a voice key", none: "None of these has a key yet" },
   image: { group: "Images by", key: "Add an image key", none: "None of these has a key yet" },
 };
-
-// Settings → Providers opened at a family, once that page reads it; until then it opens on
-// Providers.
-function keysSearch(family: ProviderFamily) {
-  const search = { section: "providers" as const, family };
-  return search;
-}
 
 export function ServiceGroup({
   family,
@@ -119,9 +112,9 @@ export function ServiceGroup({
         <div className="sl-fields__wide flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
           <HelpLine>
             {blocked ? words[family].none : pickedProblem} ·{" "}
-            <TextLink to="/settings" search={keysSearch(family)}>
+            <SettingsLink search={{ section: "providers", family }}>
               {words[family].key} ↗
-            </TextLink>
+            </SettingsLink>
             {leaveOut === undefined || !blocked ? null : " · or"}
           </HelpLine>
           {leaveOut === undefined || !blocked ? null : (

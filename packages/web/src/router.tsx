@@ -49,6 +49,7 @@ import {
   settingsSectionOf,
   settingsSections,
 } from "@/routes/settings";
+import { keysArrival } from "@/routes/settings-sections";
 import { TemplatesRoute, type TemplatesTab, templatesTabOf } from "@/routes/templates";
 import { TutorialsRoute } from "@/routes/tutorials";
 import { WelcomeRoute, type WelcomeStep, welcomeSteps } from "@/routes/welcome";
@@ -909,8 +910,11 @@ export function createAppRouter() {
   return createRouter({
     routeTree,
     defaultErrorComponent: RouteError,
-    // Back and Forward return to where the page was scrolled; a new screen starts at the top.
-    scrollRestoration: true,
+    // Back and Forward return to where the page was scrolled; a new screen starts at the top,
+    // except a link to a service on Keys & services, which scrolls to that service's setup
+    // itself (`keysArrival`): a reset landing after that scroll would undo it.
+    scrollRestoration: ({ location }) =>
+      !keysArrival(location.pathname, location.search as Readonly<Record<string, unknown>>),
   });
 }
 

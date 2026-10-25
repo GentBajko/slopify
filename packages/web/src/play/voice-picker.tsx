@@ -1,16 +1,9 @@
 import type { ProviderStatus, Voice } from "@app/slices/settings/model.js";
 import type { ReactElement } from "react";
 import { HelpLine } from "@/components/kit/field";
-import { TextLink } from "@/components/kit/link";
 import { useVoicesForLanguage, VoiceLanguageNote } from "@/language/voice-language";
+import { SettingsLink } from "@/routes/settings-back";
 import { OptionPicker } from "./pickers";
-
-// Settings → Voices opened at a service, once that page reads it; until then it opens on
-// Voices.
-function voicesSearch(provider: string) {
-  const search = { section: "voices" as const, ...(provider === "" ? {} : { provider }) };
-  return search;
-}
 
 // Who reads: the voices added under Settings → Voices for the picked voice service, filtered to
 // the project's language. Its first entry says what to do next: pick the service first, pick a
@@ -69,9 +62,9 @@ export function VoicePicker({
         />
         {none ? (
           <HelpLine className="mt-1">
-            <TextLink to="/settings" search={voicesSearch(provider)}>
+            <SettingsLink search={{ section: "voices", ...(provider === "" ? {} : { provider }) }}>
               Add a voice for {service} ↗
-            </TextLink>
+            </SettingsLink>
           </HelpLine>
         ) : null}
       </div>

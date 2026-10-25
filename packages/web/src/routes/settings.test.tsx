@@ -3,7 +3,7 @@ import { useRouterState } from "@tanstack/react-router";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { CommandPaletteProvider, CommandRegistry } from "@/components/kit/command-palette";
 import { AppearanceSkin } from "@/components/theme";
 import type { Answer } from "@/test-app";
@@ -297,6 +297,26 @@ describe("the settings screen", () => {
                 state: "ok",
                 checks: [{ label: "Signed in", state: "ok", detail: "Signed in as you." }],
               },
+              {
+                id: "openai-tts",
+                displayName: "OpenAI",
+                family: "tts",
+                state: "no-key",
+                checks: [
+                  {
+                    label: "Key",
+                    state: "problem",
+                    detail: "None is saved, and OpenAI is chosen for gpt-4o-mini-tts.",
+                  },
+                ],
+              },
+              {
+                id: "openai-image",
+                displayName: "OpenAI",
+                family: "image",
+                state: "unused",
+                checks: [],
+              },
             ],
           })(request);
         },
@@ -304,7 +324,17 @@ describe("the settings screen", () => {
     );
     expect(await screen.findByText("Last checked: not yet.")).not.toBeNull();
     await user.click(screen.getByRole("button", { name: "Check every service" }));
-    expect(await screen.findByText("Signed in as you.")).not.toBeNull();
+    // Only what needs something is listed with its checks, in the lists' own state words; a
+    // name two kinds share says which.
+    const listed = await screen.findByRole("list", { name: "Check by service" });
+    expect(within(listed).getByText("OpenAI (voices)")).not.toBeNull();
+    expect(within(listed).getByText("No key")).not.toBeNull();
+    expect(
+      within(listed).getByText("None is saved, and OpenAI is chosen for gpt-4o-mini-tts."),
+    ).not.toBeNull();
+    expect(screen.getByText("Ready: Codex CLI.")).not.toBeNull();
+    expect(screen.queryByText("Signed in as you.")).toBeNull();
+    expect(screen.getByText("Not set up and not used anywhere: OpenAI (images).")).not.toBeNull();
     expect(screen.getByText(/^Last checked at /)).not.toBeNull();
     expect(checks).toBe(1);
   });
@@ -316,6 +346,58 @@ describe("the settings screen", () => {
     );
     const back = await screen.findByRole("link", { name: "Back to the welcome" });
     expect(back.getAttribute("href")).toBe("/welcome?step=make");
+  });
+
+  it("scrolls to the setup a welcome link opens only once the readiness lines above are drawn", async () => {
+    const scrolled = vi.spyOn(window, "scrollBy").mockImplementation(() => {});
+    vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      top: 1400,
+      bottom: 1700,
+    } as DOMRect);
+    let answer = () => {};
+    const voices = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    try {
+      renderRouted(
+        <SettingsRoute
+          section="providers"
+          family="image"
+          provider="openai-image"
+          back={{ to: "welcome", step: "make" }}
+        />,
+        deps({
+          "GET /api/providers": jsonAnswer({
+            providers: [
+              {
+                id: "openai-image",
+                family: "image",
+                displayName: "OpenAI",
+                readiness: { kind: "keyed", hasKey: false },
+              },
+            ],
+          }),
+          // The readiness lines wait for the voices; they come last.
+          "GET /api/settings/voices": async (request) => {
+            await voices;
+            return jsonAnswer({ voices: [] })(request);
+          },
+          // The welcome's picks never answer: the lines do not wait for them.
+          "GET /api/providers/first-run": () => new Promise(() => {}),
+        }),
+      );
+      expect(await screen.findByLabelText("OpenAI API key")).not.toBeNull();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(screen.queryByRole("list", { name: "What your videos have" })).toBeNull();
+      // Measured now, the lines still to come above would push the key box back out of view.
+      expect(scrolled).not.toHaveBeenCalled();
+      answer();
+      expect(await screen.findByRole("list", { name: "What your videos have" })).not.toBeNull();
+      await waitFor(() => expect(scrolled).toHaveBeenCalledTimes(1));
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 
   it("offers the way back to Create, and nothing without a return", async () => {

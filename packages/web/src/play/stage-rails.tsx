@@ -19,6 +19,7 @@ import { promptNames, SourceSwitch, StageRail } from "@/play/rail-frame";
 import { freshShorts, Shorts, shortsPreviewOf } from "@/play/shorts";
 import { shortsOn } from "@/play/state";
 import { YoutubeDescription } from "@/play/youtube-description";
+import { SettingsLink } from "@/routes/settings-back";
 import { PostSettings } from "@/social/post-settings";
 import { formSocial, shortsOf } from "@/social/studio-post-settings";
 import { studioSettingsKey } from "@/studio/settings-panel";
@@ -374,9 +375,7 @@ function PostToSites({
           <>
             Drafts only: Slopify fills each post and you press Post. It needs the Slopify Studio
             extension, which isn't set up yet ·{" "}
-            <TextLink to="/settings" search={{ section: "studio" }}>
-              Set it up ↗
-            </TextLink>
+            <SettingsLink search={{ section: "studio" }}>Set it up ↗</SettingsLink>
           </>
         ) : (
           "Drafts only: Slopify fills each post and you press Post."
