@@ -220,7 +220,8 @@ const stageSourceWords: Readonly<
     prompt_by_llm: "Let the AI write the prompt",
     provide: "Upload mine",
   },
-  video: { off: "Off (sound only)", generate: "Make the video" },
+  // Not "Make the video": that is the main button's name, and this choice starts nothing.
+  video: { off: "Off (sound only)", generate: "On (free)" },
   document: { off: "Off", generate: "Make a PDF" },
 };
 

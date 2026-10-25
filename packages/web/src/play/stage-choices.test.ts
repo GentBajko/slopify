@@ -35,7 +35,7 @@ describe("each stage's choices in its own words", () => {
   it("calls a video that is off a sound-only run only while there is narration", () => {
     expect(sourceLabel("video", "off")).toBe("Off (sound only)");
     expect(sourceLabel("video", "off", false)).toBe("Off");
-    expect(sourceLabel("video", "generate")).toBe("Make the video");
+    expect(sourceLabel("video", "generate")).toBe("On (free)");
   });
 });
 

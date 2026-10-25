@@ -17,6 +17,7 @@ import type { DraftInput, PlayFormState, Upload } from "@/play/state";
 import { ambientUploadOn, draftOf, shortsOn, stagedOf } from "@/play/state";
 import { validSubtitleStyle } from "@/subtitles/config";
 import { articleKind } from "./article-kind";
+import { imageServiceUsers, listed } from "./image-needs";
 import { outputKindOf, outputNoun } from "./output-kind";
 import { placedBodies, textEntryRefusals } from "./placed-bodies";
 
@@ -117,11 +118,33 @@ export function admission(input: AdmissionInput): Admission {
           message: "Choose a whole caption font size from 16 to 120.",
         },
       ];
-  const refused = [...misplaced, ...(admitted.ok ? [] : admitted.fields), ...subtitles];
+  const refused = withoutUnusedVoice(input.form, [
+    ...misplaced,
+    ...(admitted.ok ? [] : admitted.fields),
+    ...subtitles,
+  ]);
   const result: AdmissionResult =
     admitted.ok && refused.length === 0 ? admitted : { ok: false, fields: refused };
 
   return { fields, draft, result, blocker: firstBlocker(input.form, result) };
+}
+
+// With several speakers and no intro or outro, the run's one voice reads nothing: Narration keeps
+// it as the first speaker's voice once a speaker has one (play/media-rails.tsx), and shows no
+// control for it. Until then the speakers' own refusals say what to pick, so the rule's sentence
+// about that hidden voice is left out rather than asking for a control that isn't there.
+function withoutUnusedVoice(
+  form: PlayFormState,
+  fields: readonly FieldError[],
+): readonly FieldError[] {
+  const unused =
+    form.voices !== undefined &&
+    form.sources.audio === "generate" &&
+    form.intro === "" &&
+    form.outro === "" &&
+    fields.some((one) => one.field.startsWith("voices."));
+  if (!unused) return fields;
+  return fields.filter((one) => one.field !== "audio" && !one.field.startsWith("audio."));
 }
 
 // The rails top to bottom, then the cue sheet: the order the screen is read in, which is the
@@ -284,11 +307,15 @@ export function fixOf(form: PlayFormState, error: FieldError): string | undefine
     case "articlePrompt":
       return articleKind(form) === "script" ? "Pick a script prompt" : "Pick an article prompt";
     case "audio":
-      return "Pick a voice service";
+      return form.audio.provider === "" ? "Pick a voice service" : "Pick a voice model";
     case "audio.voice":
       return "Pick a voice";
-    case "images":
-      return "Pick an image service and model";
+    case "images": {
+      // With no images drawn here, the thumbnail or the shorts are what need the service.
+      const users = form.sources.images === "generate" ? [] : imageServiceUsers(form);
+      const what = form.images.provider === "" ? "an image service" : "an image model";
+      return users.length === 0 ? `Pick ${what}` : `Pick ${what} for ${listed(users)}`;
+    }
     case "thumbnailPrompt":
       return "Pick a thumbnail prompt";
     case "youtubeDescription":

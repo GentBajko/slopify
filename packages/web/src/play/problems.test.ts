@@ -101,8 +101,9 @@ describe("one list of what stops the Make button", () => {
     expect(problems.map((one) => [one.row, one.hint])).toEqual([
       ["topic", "Type what the video is about first"],
       ["article", "Pick an article prompt first"],
-      ["narration", "Pick a voice service first"],
-      ["images", "Pick an image service and model first"],
+      // The form has its services picked, so what is missing is each model.
+      ["narration", "Pick a voice model first"],
+      ["images", "Pick an image model first"],
     ]);
     // The row says the same thing to do, without "first".
     expect(problems[1]?.text).toBe("Pick an article prompt");
@@ -139,7 +140,7 @@ describe("one list of what stops the Make button", () => {
     });
     expect(problems.map((one) => one.hint)).toEqual([
       "Wait for the uploads to finish first",
-      "Pick a voice service first",
+      "Pick a voice model first",
       "A new rule requires attention.",
     ]);
   });

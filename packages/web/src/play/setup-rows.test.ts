@@ -73,6 +73,10 @@ describe("each setup row's one sentence", () => {
     expect(summary("narration", { sources: { ...form.sources, audio: "off" } })).toBe(
       "None: a silent video.",
     );
+    // A service picked with no model yet asks for the model, not the service it shows.
+    expect(summary("narration", { audio: { ...form.audio, model: "", voice: "" } })).toBe(
+      "OpenAI: no voice model picked yet.",
+    );
   });
 
   it("counts the images, names their prompts and who draws them", () => {
@@ -83,9 +87,24 @@ describe("each setup row's one sentence", () => {
     );
   });
 
+  it("says what still needs an image service when the images are off", () => {
+    const thumbnail = {
+      ...form.sources,
+      images: "off",
+      video: "off",
+      thumbnail: "from_prompt",
+    } as const;
+    expect(summary("images", { sources: { ...thumbnail } })).toBe(
+      "No images. The thumbnail drawn by fal.ai (FLUX.2).",
+    );
+    expect(
+      summary("images", { sources: { ...thumbnail }, images: { provider: "", model: "" } }),
+    ).toBe("No images. The thumbnail still needs an image service.");
+  });
+
   it("says the shape, the cuts, the look and the captions in words", () => {
     expect(summary("video", { videoEdit: defaultVideoEdit })).toBe(
-      "Landscape 16:9, a new image at each sentence, no effects, no captions.",
+      "Landscape 16:9, a new image about every 15 s, at the end of a sentence, no effects, no captions.",
     );
     expect(
       summary("video", {
@@ -93,7 +112,12 @@ describe("each setup row's one sentence", () => {
         subtitles: { ...form.subtitles, mode: "burn-in" },
         videoEdit: { ...defaultVideoEdit, transition: "crossfade", transitionSeconds: 1 },
       }),
-    ).toBe("Portrait 9:16, a new image at each sentence, a 1 s crossfade, captions in Barlow.");
+    ).toBe(
+      "Portrait 9:16, a new image about every 15 s, at the end of a sentence, a 1 s crossfade, captions in Barlow.",
+    );
+    expect(
+      summary("video", { videoEdit: { ...defaultVideoEdit, cuts: "interval" }, imageSeconds: 8 }),
+    ).toBe("Landscape 16:9, a new image every 8 s, no effects, no captions.");
   });
 
   it("lists what else is made, and says so when it is the video only", () => {

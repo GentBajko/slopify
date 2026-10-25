@@ -39,14 +39,14 @@ it("offers Article Off and pairs Images Off with Video Off", async () => {
   await openEditSection("Images");
   await user.click(strip("Images").getByRole("radio", { name: "Made by AI (paid)" }));
   await openEditSection("Video and style");
-  await user.click(strip("Video").getByRole("radio", { name: "Make the video" }));
+  await user.click(strip("Video").getByRole("radio", { name: "On (free)" }));
   await openEditSection("Images");
   await user.click(strip("Images").getByRole("radio", { name: "None" }));
   await openEditSection("Video and style");
   expect(picked("Video", /^Off/)).toBe(true);
-  expect(
-    strip("Video").getByRole<HTMLButtonElement>("radio", { name: "Make the video" }).disabled,
-  ).toBe(true);
+  expect(strip("Video").getByRole<HTMLButtonElement>("radio", { name: "On (free)" }).disabled).toBe(
+    true,
+  );
   // The line under the strip says why.
   expect(screen.getByText(/A video needs images first\./)).not.toBeNull();
   // The silences are sound polish, folded under the video's style.
@@ -738,7 +738,7 @@ it("shows an old project's video as it was, and writes edit settings only once o
   await openEditSection("Images");
   await user.click(strip("Images").getByRole("radio", { name: "Made by AI (paid)" }));
   await openEditSection("Video and style");
-  await user.click(strip("Video").getByRole("radio", { name: "Make the video" }));
+  await user.click(strip("Video").getByRole("radio", { name: "On (free)" }));
   // Saved before the settings: cuts every N seconds, a plain Look, and nothing written.
   expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "Cuts" }).value).toBe("interval");
   expect(screen.getByText("Plain cuts, no effects")).not.toBeNull();

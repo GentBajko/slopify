@@ -10,6 +10,7 @@ import type { RailProps } from "@/play/rail-frame";
 import { SourceSwitch, StageRail } from "@/play/rail-frame";
 import { SpeakersEditor, voiceFormatLabel } from "@/voices/speakers-editor";
 import { DescribeFiguresToggle } from "./describe-figures.js";
+import { aKind, imageServiceUsers, kindAfterOff, listed } from "./image-needs";
 import { NarrationAliasesToggle } from "./narration-aliases.js";
 import { NarrationPreparation } from "./narration-preparation";
 import { readiness } from "./problems";
@@ -52,12 +53,13 @@ export function AudioRail({
 }) {
   // With several speakers each one has its own voice, and the voice here only reads the intro
   // and outro. Without either, it reads nothing: it is kept as the first speaker's voice (the
-  // run still records one) and not shown, so it can't pass for the book's narrator.
+  // run still records one) and not shown, so it can't pass for the book's narrator. Until a
+  // speaker has a voice, the speakers' own lines say what to pick (`play/admission.ts`).
   const lead = form.voices?.speakers.find(
     (speaker) => speaker.voice.provider && speaker.voice.model && speaker.voice.voice,
   )?.voice;
   const framed = form.intro !== "" || form.outro !== "";
-  const hidden = form.voices !== undefined && !framed && lead !== undefined;
+  const hidden = form.voices !== undefined && !framed;
   useEffect(() => {
     if (!hidden || lead === undefined) return;
     const now = form.audio;
@@ -110,6 +112,9 @@ export function AudioRail({
         }
       : undefined;
 
+  // Turning narration off can change what is being made (an audiobook becomes an article):
+  // the switch and its way out say so before it happens.
+  const offMakes = form.sources.audio === "off" ? undefined : kindAfterOff(form, "audio");
   return (
     <StageRail
       kind="audio"
@@ -117,6 +122,7 @@ export function AudioRail({
       dim={form.sources.audio === "off"}
       titled={titled}
       source={<SourceSwitch kind="audio" form={form} update={update} />}
+      note={offMakes === undefined ? undefined : `Off makes ${aKind(offMakes)} instead.`}
     >
       {form.sources.audio === "generate" ? (
         <>
@@ -132,7 +138,10 @@ export function AudioRail({
               serviceProblem={problem("audio")}
               modelProblem={problem("audio.model")}
               leaveOut={{
-                label: "Set Narration to Off",
+                label:
+                  offMakes === undefined
+                    ? "Set Narration to Off"
+                    : `Set Narration to Off (makes ${aKind(offMakes)})`,
                 onLeave: () => update({ sources: { ...form.sources, audio: "off" } }),
               }}
               onService={(provider) =>
@@ -280,6 +289,11 @@ export function ImagesRail({
   // Controls shown under the prompts while images are generated: more images for long videos.
   readonly more?: ReactNode;
 }) {
+  // Images None leaves the video out too, which can change what is being made: the switch says
+  // so before it is pressed. With no images drawn here, the thumbnail and the shorts may still
+  // be, so their image service stays in reach under the switch.
+  const offMakes = form.sources.images === "off" ? undefined : kindAfterOff(form, "images");
+  const users = form.sources.images === "generate" ? [] : imageServiceUsers(form);
   return (
     <StageRail
       kind="images"
@@ -288,7 +302,22 @@ export function ImagesRail({
       titled={titled}
       bare={bare}
       source={<SourceSwitch kind="images" form={form} update={update} />}
+      note={
+        offMakes !== undefined
+          ? `None leaves the video out: this makes ${aKind(offMakes)} instead.`
+          : form.sources.images === "off" && form.sources.audio !== "off"
+            ? "No images, so no video: the narration is made as sound."
+            : undefined
+      }
     >
+      {users.length > 0 && withoutService !== true ? (
+        <ImageProviderControls
+          form={form}
+          providers={providers}
+          problem={problem}
+          update={update}
+        />
+      ) : null}
       {form.sources.images === "generate" ? (
         <>
           {withoutService === true ? null : (
@@ -346,7 +375,9 @@ export function ImagesRail({
 }
 
 // Who draws the images (and the thumbnail and the shorts' pictures): the image service, its
-// model and, for an image agent, its effort.
+// model and, for an image agent, its effort. Under Images, the group says what else it draws
+// while the images themselves are not drawn, and its way out (no image service can be used)
+// turns off everything that needs one, named on the button.
 export function ImageProviderControls({
   form,
   providers,
@@ -357,10 +388,45 @@ export function ImageProviderControls({
   // The group's name where it is not the images' own: the thumbnail's "Drawn by".
   readonly label?: string;
 }) {
+  const generating = form.sources.images === "generate";
+  const users = imageServiceUsers(form);
+  const offMakes = generating ? kindAfterOff(form, "images") : undefined;
+  // Images None takes the video, and so its animated images, with it.
+  const leaving = generating
+    ? ["images", ...users.filter((part) => part !== "the animated images")]
+    : users;
+  const leaveLabel =
+    leaving.length === 1 && generating
+      ? "Set Images to None"
+      : `Turn off ${listed(leaving.map((part) => part.replace(/^the /, "")))}`;
+  const leaveOut =
+    label !== undefined || leaving.length === 0
+      ? undefined
+      : {
+          label: offMakes === undefined ? leaveLabel : `${leaveLabel} (makes ${aKind(offMakes)})`,
+          onLeave: () =>
+            update({
+              sources: {
+                ...form.sources,
+                ...(generating ? { images: "off" as const, video: "off" as const } : {}),
+                ...(form.sources.thumbnail === "from_prompt" ||
+                form.sources.thumbnail === "prompt_by_llm"
+                  ? { thumbnail: "off" as const }
+                  : {}),
+              },
+              ...(form.shorts === undefined ? {} : { shorts: { ...form.shorts, enabled: false } }),
+              ...(form.videoEdit === undefined
+                ? {}
+                : { videoEdit: { ...form.videoEdit, animate: "off" as const } }),
+            }),
+        };
   return (
     <ServiceGroup
       family="image"
       {...(label === undefined ? {} : { label })}
+      {...(label === undefined && !generating && users.length > 0
+        ? { meta: `for ${listed(users)}` }
+        : {})}
       providers={providers}
       provider={form.images.provider}
       model={form.images.model}
@@ -368,14 +434,7 @@ export function ImageProviderControls({
       modelField="images.model"
       serviceProblem={problem("images")}
       modelProblem={problem("images.model")}
-      leaveOut={
-        form.sources.images === "generate"
-          ? {
-              label: "Set Images to None",
-              onLeave: () => update({ sources: { ...form.sources, images: "off", video: "off" } }),
-            }
-          : undefined
-      }
+      leaveOut={leaveOut}
       onService={(provider) => update({ images: { provider, model: "" } })}
       onModel={(model) => update({ images: { ...form.images, model } })}
     >
