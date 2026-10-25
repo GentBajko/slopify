@@ -76,11 +76,11 @@ describe("Settings → Notifications", () => {
         testDeps({ "GET /api/settings/notifications": jsonAnswer({ url: null }) }),
       );
       await screen.findByLabelText("Notification URL");
-      // Off: nothing to test yet, so only the Notification URL's test is offered.
-      expect(screen.getAllByRole("button", { name: "Send test notification" })).toHaveLength(1);
+      // Off, and with no Notification URL, there is nothing to test yet.
+      expect(screen.queryAllByRole("button", { name: "Send test notification" })).toHaveLength(0);
       await user.click(screen.getByRole("switch", { name: "Notify me in this browser" }));
       const tests = await screen.findAllByRole("button", { name: "Send test notification" });
-      expect(tests).toHaveLength(2);
+      expect(tests).toHaveLength(1);
       await user.click(tests[0] as HTMLElement);
       expect(shown).toHaveLength(1);
       expect(await screen.findByText("Test notification sent to this browser.")).not.toBeNull();

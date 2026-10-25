@@ -224,13 +224,17 @@ function NotificationUrl() {
         >
           Save
         </Button>
-        <Button
-          variant="quiet"
-          disabled={busy || problem !== undefined || value.trim() === ""}
-          onClick={() => test.mutate(value)}
-        >
-          Send test notification
-        </Button>
+        {/* Only once there is an address to send to. */}
+        {value.trim() === "" ? null : (
+          <Button
+            variant="quiet"
+            disabled={busy || problem !== undefined}
+            disabledReason="Fix the address first."
+            onClick={() => test.mutate(value)}
+          >
+            Send test notification
+          </Button>
+        )}
       </form>
       <UnsavedStatus
         dirty={dirty}
