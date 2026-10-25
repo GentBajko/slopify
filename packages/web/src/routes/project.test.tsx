@@ -151,7 +151,7 @@ describe("the project workspace", () => {
     const cost = (await screen.findByText(/^Cost \$1\.25/)).closest("p");
     expect(cost?.textContent).toBe("Cost $1.25 · 1 min 30 s of working time · See the breakdown");
     await userEvent.click(screen.getByRole("link", { name: "See the breakdown" }));
-    expect(await screen.findByRole("region", { name: "Run cost summary" })).not.toBeNull();
+    expect(await screen.findByRole("table", { name: "Run cost by step" })).not.toBeNull();
     // The breakdown is on screen: the line no longer offers it.
     expect(screen.queryByRole("link", { name: "See the breakdown" })).toBeNull();
   });
