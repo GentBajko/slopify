@@ -6,7 +6,7 @@ import { type ReactElement, useState } from "react";
 import { readStudioSettings } from "@/api";
 import { useApp } from "@/app-context";
 import { DocumentThemePicker } from "@/components/document-theme-picker";
-import { HelpLine, Input } from "@/components/kit/field";
+import { Input } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
 import { TextLink } from "@/components/kit/link";
 import { Picker } from "@/components/ui/picker";
@@ -247,7 +247,7 @@ export function VideoRail({ form, update, titled }: Pick<RailProps, "form" | "up
       : narrated
         ? "Sound only: the narration as one audio file."
         : "Each finished stage downloads on its own.";
-  // Make the video is greyed while there are no images; the line says why.
+  // On is greyed while there are no images; the line says why.
   const note = form.sources.images === "off" ? `${made} A video needs images first.` : made;
   return (
     <StageRail
@@ -331,10 +331,6 @@ export function ImagesAndCuts({
         </LabelledField>
         {edit.cuts}
       </div>
-      <HelpLine>
-        Cuts that follow the narration wait for a sentence to end; when the images run out they
-        start again.
-      </HelpLine>
       {edit.look}
       {form.sources.audio !== "off" ? (
         <PlayAmbientBed

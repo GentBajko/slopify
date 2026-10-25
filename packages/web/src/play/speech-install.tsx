@@ -37,7 +37,7 @@ export function SpeechInstall({
   const rest = speechFix(issue, openAiKeySaved);
   if (install === undefined && rest === undefined) return null;
   return (
-    <Fold summary="Install a speech program" className="sl-fields__wide">
+    <Fold summary="Speech program to install" className="sl-fields__wide">
       <div className="flex min-w-0 flex-col gap-2 pt-1 pb-2">
         {install === undefined ? (
           <p className="m-0 text-small text-ink-2">{rest}</p>

@@ -5,6 +5,21 @@ import type { HelpId } from "@/help/catalog";
 import { modelsQuery } from "@/lib/models";
 import { OptionPicker } from "./pickers";
 
+// A thinking level in words: "Extra high" rather than the service's "xhigh".
+const levelWords: Readonly<Record<string, string>> = {
+  off: "Off",
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  xhigh: "Extra high",
+  max: "Maximum",
+  ultra: "Ultra",
+};
+
+export function thinkingLabel(mode: string): string {
+  return levelWords[mode] ?? `${mode.charAt(0).toUpperCase()}${mode.slice(1)}`;
+}
+
 // The text model's Thinking, and the same control for images as Effort: the Codex CLI's
 // reasoning effort for the image agent. Drawn only when the chosen model lists modes, so an
 // image model without an effort setting shows nothing.
@@ -35,7 +50,8 @@ export function ThinkingPicker({
         field={field}
         label={label}
         tip={tip}
-        value={choice.thinking ?? "default"}
+        // The empty first entry is the model's own default: no second "default" entry.
+        value={choice.thinking ?? ""}
         placeholder="Model default"
         problem={
           choice.thinking && !modes.includes(choice.thinking)
@@ -43,14 +59,15 @@ export function ThinkingPicker({
             : problem
         }
         options={[
-          { value: "default", label: "Model default" },
           ...(choice.thinking && !modes.includes(choice.thinking)
-            ? [{ value: choice.thinking, label: `${choice.thinking} (saved level)` }]
+            ? [
+                {
+                  value: choice.thinking,
+                  label: `${thinkingLabel(choice.thinking)} (saved level)`,
+                },
+              ]
             : []),
-          ...modes.map((mode) => ({
-            value: mode,
-            label: mode === "off" ? "Off" : mode.charAt(0).toUpperCase() + mode.slice(1),
-          })),
+          ...modes.map((mode) => ({ value: mode, label: thinkingLabel(mode) })),
         ]}
         onPick={(value) => {
           const thinking = modes.find((mode) => mode === value);

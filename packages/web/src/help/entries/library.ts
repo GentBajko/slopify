@@ -59,7 +59,7 @@ export const libraryHelp = {
   // ── Pronunciation ────────────────────────────────────────────────────────────────────
   "library.aliases": {
     title: "Pronunciation aliases",
-    body: "Words the narrator says differently from how they are written, such as Dr. as Doctor. Only what the voice and narration preparation receive changes; the article and captions keep the written words. A project copies this list when it starts and uses it while Use narration aliases is on. Up to 1000 aliases, saved as a whole.",
+    body: "Words the narrator says differently from how they are written, such as Dr. as Doctor. Only what the voice and narration preparation receive changes; the article and captions keep the written words. A project copies this list when it starts and uses it while Use my Pronunciation list is on. Up to 1000 aliases, saved as a whole.",
     tutorial: { page: "Narration-Aliases-and-Glossary", anchor: "narration-aliases" },
   },
   // ── PDF themes ───────────────────────────────────────────────────────────────────────

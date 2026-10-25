@@ -4,9 +4,9 @@ import { type ReactElement, useEffect, useId, useState } from "react";
 import { quoteAuditions, speakAudition } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
-import { Textarea } from "@/components/kit/field";
+import { HelpLine, Textarea } from "@/components/kit/field";
 import { Fold } from "@/components/kit/fold";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { helpScope } from "@/components/kit/info-tip";
 import { usd } from "@/lib/format";
 import { narrationAliasesQuery } from "@/queries";
 import { spokenText } from "./article-task";
@@ -67,20 +67,18 @@ export function VoiceSample({ form }: { readonly form: PlayFormState }): ReactEl
         ? "price unknown"
         : `about ${usd(estimate.high)}`;
   return (
-    <Fold className="col-span-full" summary="Hear a sample of your text in this voice">
+    <Fold className="col-span-full" summary="Sample of your text in this voice">
       <div className="flex flex-col gap-3 pt-2 pb-3">
-        <p className="m-0 text-small text-ink-2">
-          Reads one passage of up to {String(auditionLineMax)} characters in this voice
-          {useAliases ? ", with your narration aliases" : ""}. The Pronunciation Glossary and
-          narration preparation are not applied, and the sample is not reused in the run.
-        </p>
         <div className="flex flex-col gap-1" {...helpScope}>
-          <span className="flex items-center gap-1">
-            <label htmlFor={id} className="sl-field__label">
-              Passage
-            </label>
-            <InfoTip id="play.voice-sample" label="Passage" className="-my-1" />
-          </span>
+          <label htmlFor={id} className="sl-field__label">
+            Passage
+          </label>
+          <HelpLine>
+            Up to {String(auditionLineMax)} characters, read in this voice
+            {useAliases ? " with your Pronunciation list" : ""}. The article's pronunciation
+            glossary and narration preparation are not applied, and the sample is not reused in the
+            run.
+          </HelpLine>
           <Textarea
             id={id}
             rows={3}
@@ -108,7 +106,11 @@ export function VoiceSample({ form }: { readonly form: PlayFormState }): ReactEl
               ? `The sample wasn't spoken. ${speak.error.message}`
               : url !== undefined
                 ? "Playing the sample."
-                : null}
+                : !ready
+                  ? "Pick a voice service, model and voice first."
+                  : said === ""
+                    ? "Type a passage first."
+                    : null}
           </span>
         </div>
       </div>

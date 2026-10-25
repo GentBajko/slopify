@@ -3,11 +3,6 @@ import type { HelpEntry } from "../entry.js";
 // The project page, Edit settings and the video, caption and upload screens it opens.
 export const projectHelp = {
   // Video edit: cuts and the Look (video/edit-controls.tsx), shared by Play and Edit settings.
-  "project.video.cuts": {
-    title: "Cuts",
-    body: "Every N seconds holds each image for Seconds per image. Follow the narration cuts in the pause after a sentence, as close to that length as the sentences allow (never under 40% of it), and starts a new image at every chapter. It needs word timing, so it works in English and the languages that have it. New projects default to Follow the narration.",
-    tutorial: { page: "Video-Editing", anchor: "cuts" },
-  },
   "project.video.chapter-cards": {
     title: "Chapter cards",
     body: "Shows each chapter's title in the middle of the picture for 2.5 seconds as the chapter starts, in the caption font. Chapters come from the YouTube description when that step runs, otherwise from the article's headings. Needs narration. Default: off.",

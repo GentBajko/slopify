@@ -39,11 +39,6 @@ export const playHelp = {
   },
 
   // Narration row
-  "play.voice-sample": {
-    title: "Try a sample of your text",
-    body: "Reads the passage you paste in the chosen voice, so you hear how it says your names before a run. Up to a few hundred characters, priced on the button; your Pronunciation list (Settings → Voices → Pronunciation) applies when the voice uses it, the Pronunciation Glossary and narration preparation don't. The sample is never reused in the run.",
-    tutorial: { page: "Create-Narration" },
-  },
   "play.show-all-voices": {
     title: "Show all voices",
     body: "The voice list hides voices listed for other languages than the project's. Tick this to pick one anyway, for example a multilingual voice whose languages are listed wrong. A voice with unknown languages is always shown.",
@@ -60,7 +55,7 @@ export const playHelp = {
     tutorial: { page: "Create-Narration", anchor: "intro-and-outro" },
   },
   "play.pronunciation-glossary": {
-    title: "Pronunciation Glossary",
+    title: "Pronunciation glossary",
     body: "Reads names with the IPA in the article's Pronunciation Glossary, such as Arda: /ˈɑɹdə/, with no extra AI call. In your article prompt, ask for a glossary in slash-delimited standard-English IPA (Term: /IPA/), with an English approximation for foreign names; a line with sounds English lacks is read as plain text. Works with Inworld TTS-2 and TTS-2 Flash. The written text stays unchanged. Default: on.",
     tutorial: { page: "Narration-Aliases-and-Glossary", anchor: "the-pronunciation-glossary" },
   },
@@ -78,16 +73,6 @@ export const playHelp = {
     title: "Show tables and figures on screen",
     body: "Each table, figure, equation and code block the narration describes is also shown in the video while it is described: the article's own picture for a figure, a card drawn in your brand kit's title font and color for the rest. The images take turns around them, and Shorts that include one show it upright. Drawn on this computer at no cost. Needs Describe tables and figures. Default: on.",
     tutorial: { page: "Create-Narration", anchor: "tables-figures-and-code" },
-  },
-  "play.skip-code": {
-    title: "Leave code out",
-    body: "Drops code blocks from the narration instead of summarising each in a sentence or two. Tables, figures and equations are still described. Default: off.",
-    tutorial: { page: "Create-Narration", anchor: "tables-figures-and-code" },
-  },
-  "play.narration-aliases": {
-    title: "Narration aliases",
-    body: "Says the words listed in Settings → Voices → Pronunciation the way they are written there, such as Dr. as Doctor, with any generated voice. They are copied when the project starts. The article and captions keep the written words. Default: on.",
-    tutorial: { page: "Narration-Aliases-and-Glossary", anchor: "use-aliases-in-a-video" },
   },
 
   // Speakers
@@ -217,11 +202,6 @@ export const playHelp = {
     body: "Your thumbnail prompt, keywords filled in. From my thumbnail prompt sends it to the image service as it is; Let the AI write the prompt gives it to the AI writer with the title and article to write the image prompt. Write prompts on Prompts.",
     tutorial: { page: "Create-Extras", anchor: "thumbnail" },
   },
-  "play.thumbnail-count": {
-    title: "How many thumbnails",
-    body: "Three makes two more thumbnails from the same prompt with different compositions, for YouTube's Test & compare. Each costs one more image, so 3 thumbnails are 3 image calls. You can make each again on its own on the project page. Default: 1.",
-    tutorial: { page: "Create-Extras", anchor: "make-three-thumbnails-for-test--compare" },
-  },
   "play.description-prompt": {
     title: "Description prompt",
     body: "The prompt the description is written from. Built-in asks for a short summary, 5 to 12 chapters, 3 to 5 hashtags and 15 to 25 tags. Write your own description prompt on Prompts to change the tone or add links.",
@@ -263,11 +243,6 @@ export const playHelp = {
     title: "Channel's brand kit",
     body: "Fills what these settings leave at their default from the channel: the caption font, intro, outro, PDF theme and ambient sound. What you set here wins. Turn it off to take none of it; the cast and language still apply. Default: on.",
     tutorial: { page: "Create-Overview", anchor: "channel-row" },
-  },
-  "play.language": {
-    title: "Language",
-    body: "The language the article, narration, YouTube description and shorts titles are written in. Pick a voice that speaks it. Outside English, captions are timed with a free 248 MB model, downloaded once, where one exists. In Create, blank uses the channel's language.",
-    tutorial: { page: "Other-Languages", anchor: "pick-a-language-for-one-video" },
   },
 
   // Right rail and dialogs

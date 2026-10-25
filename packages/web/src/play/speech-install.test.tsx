@@ -71,7 +71,7 @@ it("lists the install commands apart, and looks again when asked", async () => {
       },
     }),
   );
-  await userEvent.click(await screen.findByText("Install a speech program"));
+  await userEvent.click(await screen.findByText("Speech program to install"));
   expect(screen.getByText(/sudo apt install espeak-ng/).textContent).toBe(
     "sudo apt install espeak-ng\nsudo dnf install espeak-ng",
   );
@@ -90,7 +90,7 @@ it("says the server's way out where the checklist lists no commands", async () =
     />,
     testDeps({ "GET /api/onboarding": jsonAnswer(view(null)) }),
   );
-  await userEvent.click(await screen.findByText("Install a speech program"));
+  await userEvent.click(await screen.findByText("Speech program to install"));
   expect(
     screen.getByText("Check that /usr/bin/say runs in Terminal, or add an OpenAI key."),
   ).not.toBeNull();

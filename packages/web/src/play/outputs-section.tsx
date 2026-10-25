@@ -1,6 +1,7 @@
 import type { Entry } from "@app/slices/library/model.js";
 import type { ReactElement } from "react";
 import { Fold } from "@/components/kit/fold";
+import { TextLink } from "@/components/kit/link";
 import { useDraftLanguage } from "@/language/play-language";
 import { useDraftCast } from "./channel-picker";
 import { usePlaySession } from "./draft-context";
@@ -66,21 +67,36 @@ export function NarrationSection(
       }}
       advanced={
         <>
-          {(["intro", "outro"] as const).map((kind) => (
-            <OptionPicker
-              key={kind}
-              field={kind}
-              label={kind === "intro" ? "Intro" : "Outro"}
-              tip={kind === "intro" ? "play.intro" : "play.outro"}
-              value={form[kind]}
-              placeholder="Off"
-              options={entries
-                .filter((entry) => entry.category === kind)
-                .map((entry) => ({ value: entry.name, label: entry.name }))}
-              problem={problem(kind)}
-              onPick={(value) => update({ [kind]: value })}
-            />
-          ))}
+          {/* An Intro or Outro select is drawn only when there is one to pick (or one is
+              picked): with none saved, one line says where they are written. */}
+          {(["intro", "outro"] as const).map((kind) => {
+            const options = entries
+              .filter((entry) => entry.category === kind)
+              .map((entry) => ({ value: entry.name, label: entry.name }));
+            if (options.length === 0 && form[kind] === "" && problem(kind) === undefined)
+              return null;
+            return (
+              <OptionPicker
+                key={kind}
+                field={kind}
+                label={kind === "intro" ? "Intro" : "Outro"}
+                tip={kind === "intro" ? "play.intro" : "play.outro"}
+                value={form[kind]}
+                placeholder="Off"
+                options={options}
+                problem={problem(kind)}
+                onPick={(value) => update({ [kind]: value })}
+              />
+            );
+          })}
+          {entries.length === 0 && form.intro === "" && form.outro === "" ? (
+            <p className="col-span-full m-0 text-small text-ink-2">
+              No intros or outros yet ·{" "}
+              <TextLink to="/entries" search={{ category: "intro" }}>
+                Write one on Prompts ↗
+              </TextLink>
+            </p>
+          ) : null}
           <div className="col-span-full empty:hidden">
             <TextGenerationIn {...props} section="narration" />
           </div>

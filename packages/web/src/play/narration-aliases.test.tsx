@@ -62,7 +62,7 @@ it("copies the Pronunciation list into a project when turned on in Edit settings
       "GET /api/providers/voice/models": jsonAnswer({ models: [], allowsCustom: true }),
     }),
   );
-  const toggle = await screen.findByRole("checkbox", { name: "Use narration aliases" });
+  const toggle = await screen.findByRole("checkbox", { name: "Use my Pronunciation list" });
   // A project from before aliases reads as off and carries none.
   expect((toggle as HTMLInputElement).checked).toBe(false);
   await user.click(toggle);

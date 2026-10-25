@@ -91,7 +91,7 @@ function useSharedGlossary(
   };
 }
 
-// "Use narration aliases" in Edit settings: turning it on copies the Pronunciation list (Settings →
+// "Use my Pronunciation list" in Edit settings: turning it on copies the Pronunciation list (Settings →
 // Voices → Pronunciation) into this project, and the button copies it again, so an edit there
 // only reaches a project that asks for it (and rebuilds only the narration the changed aliases
 // touch).

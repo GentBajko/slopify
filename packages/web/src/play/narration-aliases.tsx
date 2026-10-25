@@ -1,9 +1,11 @@
 import { type ReactElement, type ReactNode, useId } from "react";
-import { Checkbox } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { Checkbox, HelpLine } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 
-// "Use narration aliases": say Library → Aliases' words the way they are listed ("Dr." as
-// "Doctor"). Any generated voice; the article and the captions keep the written words.
+// "Use my Pronunciation list": say the words of Settings → Voices → Pronunciation the way they
+// are listed there ("Dr." as "Doctor"). Any generated voice; the article and the captions keep
+// the written words. Named for the page it uses, so it is never confused with the article's
+// pronunciation glossary beside it.
 export function NarrationAliasesToggle({
   value,
   onChange,
@@ -29,10 +31,13 @@ export function NarrationAliasesToggle({
             checked={value === true}
             onChange={(event) => onChange(event.currentTarget.checked)}
           />
-          Use narration aliases
+          Use my Pronunciation list
         </label>
-        <InfoTip id="play.narration-aliases" />
       </span>
+      <HelpLine className="pl-7">
+        Says words the way Settings → Voices → Pronunciation lists them, such as Dr. as Doctor. The
+        article and captions keep the written words.
+      </HelpLine>
       {note === undefined ? null : <div className="pl-7">{note}</div>}
     </div>
   );

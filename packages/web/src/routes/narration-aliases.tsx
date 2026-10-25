@@ -36,7 +36,7 @@ const plain = (rows: readonly AliasRow[]): readonly NarrationAlias[] =>
 
 // Pronunciation (Settings → Voices links here): words the narrator says differently from how
 // they are written ("Dr." as "Doctor"). One list, saved as a whole. A project takes a copy when
-// it starts, and only uses it while Use narration aliases is on; the article and the captions
+// it starts, and only uses it while Use my Pronunciation list is on; the article and the captions
 // keep the written words. Add alias is the page's one lime button until something changes;
 // then the Save bar appears with the lime Save.
 export function NarrationAliasesRoute(): ReactElement {

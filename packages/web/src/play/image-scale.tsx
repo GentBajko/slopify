@@ -65,6 +65,7 @@ export function ImageScaleControl({
         checked={scale !== undefined}
         label="More images for long videos"
         tip="play.image-scale"
+        help="Adds images as the narration gets longer: up to 240 image calls in all."
         describedBy={`${id}-line`}
         onChange={(on) => edit(on ? firstScale : undefined)}
       />

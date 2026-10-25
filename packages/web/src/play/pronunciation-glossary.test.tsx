@@ -18,6 +18,8 @@ import { TextGenerationIn } from "./text-generation";
 
 afterEach(cleanup);
 
+const glossaryLabel = "Use the article's pronunciation glossary";
+
 const providers: readonly ProviderStatus[] = [
   {
     id: "inworld",
@@ -152,7 +154,7 @@ it("uses an explicitly typed native checkbox with an associated label and help",
   const onChange = vi.fn();
   render(<PronunciationGlossary value={undefined} supported onChange={onChange} />);
   const input = screen.getByRole<HTMLInputElement>("checkbox", {
-    name: "Use Pronunciation Glossary",
+    name: "Use the article's pronunciation glossary",
   });
   expect(input.tagName).toBe("INPUT");
   expect(input.type).toBe("checkbox");
@@ -161,7 +163,7 @@ it("uses an explicitly typed native checkbox with an associated label and help",
   // Its info button says what it reads and what to ask the article prompt for, so the
   // glossary is one narration can use.
   const help = helpEntry("play.pronunciation-glossary").body;
-  expect(screen.getByRole("button", { name: "About Pronunciation Glossary" })).not.toBeNull();
+  expect(screen.getByRole("button", { name: "About Pronunciation glossary" })).not.toBeNull();
   expect(help).toContain("Arda: /ˈɑɹdə/");
   expect(help).toContain("slash-delimited standard-English IPA (Term: /IPA/)");
   expect(help).toContain("English approximation for foreign names");
@@ -179,24 +181,22 @@ for (const surface of surfaces) {
     async (preference) => {
       const user = userEvent.setup();
       renderRouted(<Subject preference={preference} />, deps());
-      const checkbox = await screen.findByRole<HTMLInputElement>("checkbox", {
-        name: "Use Pronunciation Glossary",
+      let checkbox = await screen.findByRole<HTMLInputElement>("checkbox", {
+        name: glossaryLabel,
       });
       expect(checkbox.checked).toBe(preference === true);
-      expect(checkbox.disabled).toBe(false);
       expect(screen.getByLabelText("Saved audio").textContent).toBe(
         JSON.stringify(audioFor(preference)),
       );
       const model = screen.getByRole<HTMLSelectElement>("combobox", { name: surface.modelLabel });
       await within(model).findByRole("option", { name: "Unsupported model" });
       await user.selectOptions(model, "unsupported-model");
-      expect(checkbox.disabled).toBe(true);
-      expect(checkbox.checked).toBe(preference === true);
-      await user.click(checkbox);
+      // A voice that can't read the glossary hides the tick rather than greying it; the
+      // choice stays on the draft.
+      expect(screen.queryByRole("checkbox", { name: glossaryLabel })).toBeNull();
       expect(screen.getByLabelText("Saved audio").textContent).toBe(
         JSON.stringify({ ...audioFor(preference), model: "unsupported-model" }),
       );
-      expect(screen.getByText(/your choice is kept for when you pick one/)).not.toBeNull();
       await user.selectOptions(
         screen.getByRole("combobox", { name: surface.providerLabel }),
         "cartesia",
@@ -204,7 +204,7 @@ for (const surface of surfaces) {
       const otherModel = screen.getByRole("combobox", { name: surface.modelLabel });
       await within(otherModel).findByRole("option", { name: "Sonic 3.5" });
       await user.selectOptions(otherModel, "sonic-3.5");
-      expect(checkbox.disabled).toBe(true);
+      expect(screen.queryByRole("checkbox", { name: glossaryLabel })).toBeNull();
       expect(screen.getByLabelText("Saved audio").textContent).toBe(
         JSON.stringify({
           ...audioFor(preference),
@@ -220,7 +220,7 @@ for (const surface of surfaces) {
       const returnedModel = screen.getByRole("combobox", { name: surface.modelLabel });
       await within(returnedModel).findByRole("option", { name: "TTS-2 Flash" });
       await user.selectOptions(returnedModel, "inworld-tts-2-flash");
-      expect(checkbox.disabled).toBe(false);
+      checkbox = screen.getByRole<HTMLInputElement>("checkbox", { name: glossaryLabel });
       expect(checkbox.checked).toBe(preference === true);
       expect(screen.getByLabelText("Saved audio").textContent).toBe(
         JSON.stringify({ ...audioFor(preference), model: "inworld-tts-2-flash", voice: "" }),
@@ -260,7 +260,7 @@ it("changes pronunciation and narration preparation independently", async () => 
   const user = userEvent.setup();
   renderRouted(<PlaySubject preference={false} preparation="Delivery" />, deps());
   const checkbox = await screen.findByRole<HTMLInputElement>("checkbox", {
-    name: "Use Pronunciation Glossary",
+    name: "Use the article's pronunciation glossary",
   });
   const preparation = screen.getByRole<HTMLSelectElement>("combobox", {
     name: "Narration preparation",
@@ -281,16 +281,19 @@ it("changes pronunciation and narration preparation independently", async () => 
 it("retains Play's preference when Audio is Off or Provide and restores it on Generate", async () => {
   const user = userEvent.setup();
   renderRouted(<PlaySubject preference={true} />, deps());
-  await screen.findByRole("checkbox", { name: "Use Pronunciation Glossary" });
+  await screen.findByRole("checkbox", { name: "Use the article's pronunciation glossary" });
   const sources = screen.getByRole("radiogroup", { name: "Narration" });
   for (const source of ["Off", "My own audio file"]) {
     await user.click(within(sources).getByRole("radio", { name: source }));
-    expect(screen.queryByRole("checkbox", { name: "Use Pronunciation Glossary" })).toBeNull();
+    expect(
+      screen.queryByRole("checkbox", { name: "Use the article's pronunciation glossary" }),
+    ).toBeNull();
     expect(screen.getByLabelText("Saved audio").textContent).toBe(JSON.stringify(audioFor(true)));
     await user.click(within(sources).getByRole("radio", { name: "AI voice (paid per character)" }));
     expect(
-      screen.getByRole<HTMLInputElement>("checkbox", { name: "Use Pronunciation Glossary" })
-        .checked,
+      screen.getByRole<HTMLInputElement>("checkbox", {
+        name: "Use the article's pronunciation glossary",
+      }).checked,
     ).toBe(true);
   }
 });
