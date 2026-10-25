@@ -596,7 +596,7 @@ it("sets the Shorts in their own section: numbers, prompts and the more options"
   const user = userEvent.setup();
   const state = mountShorts(shortsView());
   await openEditSection("Outputs");
-  const count = screen.getByRole<HTMLInputElement>("textbox", { name: "How many shorts" });
+  const count = screen.getByRole<HTMLInputElement>("textbox", { name: "Shorts per video" });
   expect(count.value).toBe("2");
   await user.clear(count);
   await user.type(count, "5");

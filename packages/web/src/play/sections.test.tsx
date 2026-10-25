@@ -261,10 +261,10 @@ it("switches Shorts on, sets how many and how long, picks both prompts and saves
   await openRow("Extras");
   const on = screen.getByRole<HTMLInputElement>("checkbox", { name: /^Shorts/ });
   expect(on.checked).toBe(false);
-  expect(screen.queryByRole("textbox", { name: "How many shorts" })).toBeNull();
+  expect(screen.queryByRole("textbox", { name: "Shorts per video" })).toBeNull();
   expect(outputsSummary()).not.toMatch(/\d shorts/);
   await userEvent.click(on);
-  const count = screen.getByRole<HTMLInputElement>("textbox", { name: "How many shorts" });
+  const count = screen.getByRole<HTMLInputElement>("textbox", { name: "Shorts per video" });
   const prompt = screen.getByRole<HTMLSelectElement>("combobox", { name: "Shorts prompt" });
   const style = screen.getByRole<HTMLSelectElement>("combobox", { name: "Image prompt" });
   expect(count.value).toBe("3");

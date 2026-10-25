@@ -17,7 +17,6 @@ import { Checkbox, Input } from "@/components/kit/field";
 import { Fold } from "@/components/kit/fold";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Picker } from "@/components/ui/picker";
-import type { HelpId } from "@/help/catalog";
 import type { ShortsForm } from "@/play/state";
 import type { StylePreviewSettings } from "@/video/style-preview";
 import { GridField } from "./grid-field";
@@ -144,8 +143,8 @@ export function Shorts({
       onChange={(enabled) => onChange({ ...value, enabled })}
     >
       <div className="sl-fields">
-        <GridField htmlFor={`${id}-count`} label="How many">
-          {number("count", "How many shorts", shortsCountMin, shortsCountMax)}
+        <GridField htmlFor={`${id}-count`} label="Shorts per video">
+          {number("count", "Shorts per video", shortsCountMin, shortsCountMax)}
         </GridField>
         <GridField htmlFor={`${id}-minSeconds`} label="Length">
           {number("minSeconds", "Shortest short, in seconds", shortsSecondsMin, shortsSecondsMax)}
@@ -157,7 +156,6 @@ export function Shorts({
           id={`${id}-prompt`}
           field="shorts.prompt"
           label="Shorts prompt"
-          tip="play.shorts.prompt"
           kind="shorts"
           value={value.prompt}
           prompts={prompts}
@@ -167,7 +165,6 @@ export function Shorts({
           id={`${id}-image`}
           field="shorts.imagePrompt"
           label="Image prompt"
-          tip="play.shorts.image-style"
           kind="image"
           value={value.imagePrompt}
           prompts={prompts}
@@ -261,13 +258,13 @@ export function Shorts({
   );
 }
 
-// One Library prompt of a kind, or Built-in; a name the Library no longer holds stays
-// choosable as the saved choice, like the description's.
+// One saved prompt of a kind, or Built-in; a name Prompts no longer holds stays choosable as
+// the saved choice, like the description's. The Shorts tick's line above says what the shorts
+// are, so the two names need no line of their own.
 function PromptPicker({
   id,
   field,
   label,
-  tip,
   kind,
   value,
   prompts,
@@ -276,7 +273,6 @@ function PromptPicker({
   readonly id: string;
   readonly field: string;
   readonly label: string;
-  readonly tip: HelpId;
   readonly kind: PromptKind;
   readonly value: string;
   readonly prompts: readonly Prompt[];
@@ -285,7 +281,7 @@ function PromptPicker({
   const choices = prompts.filter((one) => one.kind === kind);
   const saved = value !== "" && !choices.some((one) => one.name === value);
   return (
-    <GridField htmlFor={id} label={label} tip={tip}>
+    <GridField htmlFor={id} label={label}>
       <Picker
         id={id}
         data-play-field={field}

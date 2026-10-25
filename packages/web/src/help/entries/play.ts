@@ -314,16 +314,6 @@ export const playHelp = {
     body: "The Library prompt the description is written from. Built-in asks for a short summary, 5 to 12 chapters, 3 to 5 hashtags and 15 to 25 tags. Write your own description prompt on Prompts to change the tone or add links.",
     tutorial: { page: "YouTube-Description", anchor: "turn-it-on" },
   },
-  "play.shorts.prompt": {
-    title: "Shorts prompt",
-    body: "The Library prompt the text model follows to pick the moments and write each short's title, description and hashtags. Built-in picks moments that make sense alone and open on a hook.",
-    tutorial: { page: "Shorts", anchor: "options" },
-  },
-  "play.shorts.image-style": {
-    title: "Image prompt",
-    body: "The Library image prompt the shorts' new vertical images are drawn from. Built-in draws cinematic, uncluttered images with the subject centered. Pick one of your image prompts to match the long video.",
-    tutorial: { page: "Shorts", anchor: "options" },
-  },
   "play.shorts.title-on-screen": {
     title: "Title on screen",
     body: "Keeps the short's title at the top for the whole clip, large and bold in the caption font, below where the apps draw their own buttons. Default: on.",
