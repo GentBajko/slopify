@@ -5,7 +5,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CastMember } from "@/channels/api";
 import { renderApp, testDeps } from "@/test-app";
 import { editPreviewImageOf } from "./edit-preview-image.js";
-import { EditAmbientBed, EditImageScale, EditImageScenes } from "./edit-sound-and-scale.js";
+import {
+  EditAmbientBed,
+  EditImageScale,
+  EditImageScenes,
+  EditLoudness,
+} from "./edit-sound-and-scale.js";
 import { revisionView } from "./revision-fixture.js";
 
 afterEach(cleanup);
@@ -56,6 +61,32 @@ describe("Edit project's ambient sound", () => {
       testDeps({}),
     );
     expect(screen.getByRole("option", { name: "My own file" })).not.toBeNull();
+  });
+});
+
+describe("Edit settings' Level the volume", () => {
+  const loudness = { videoLufs: -14, audioFilesLufs: -16 };
+  const levelled = (video: "generate" | "off") => {
+    const edit = editOf({ loudness });
+    return { ...edit, config: { ...edit.config, sources: { ...edit.config.sources, video } } };
+  };
+
+  it("asks both volumes of a project that makes a video", () => {
+    renderApp(
+      <EditLoudness edit={levelled("generate")} problem={() => undefined} onChange={vi.fn()} />,
+      testDeps({}),
+    );
+    expect(screen.getByText("Video volume")).not.toBeNull();
+    expect(screen.getByText("Audio files volume")).not.toBeNull();
+  });
+
+  it("asks only the audio files' volume of a sound-only project", () => {
+    renderApp(
+      <EditLoudness edit={levelled("off")} problem={() => undefined} onChange={vi.fn()} />,
+      testDeps({}),
+    );
+    expect(screen.queryByText("Video volume")).toBeNull();
+    expect(screen.getByText("Audio files volume")).not.toBeNull();
   });
 });
 
