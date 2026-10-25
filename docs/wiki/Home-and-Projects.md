@@ -53,7 +53,7 @@ On a fresh install, Home sends you to the first-run screen once. See [First Laun
 Until you have a project of your own, Home shows:
 
 - **Your first video**: what a video needs on this computer (Script, Voice, Images), each with its state (**Ready** or **Not connected**) and the button that fixes it, the same list as the first-run screen. **Make your first video** opens Create; it is lime once nothing is missing.
-- **Finished samples**: the bundled samples, each with its picture, its length, what it made and **Watch**. They stay on Home until you have finished a video of your own.
+- **Finished samples**: the bundled samples, each with its picture, its length, what it made, **Watch** and **Download video**. They stay on Home until you have finished a video of your own.
 
 ### Finished
 

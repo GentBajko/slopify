@@ -637,6 +637,29 @@ describe("home", () => {
     expect(within(needs).getByRole("link", { name: "Open to retry" })).not.toBeNull();
   });
 
+  // Home has room for the error whole, and its fix is at its end: never cut. The item it failed
+  // on stands beside the state word, so the line starts with the sentence.
+  it("says a failed step's error whole, with the item it failed on beside Failed", async () => {
+    const sentence = `The chosen Codex model for images is not in the Codex CLI's model list on your computer. Update Codex CLI, or pick another image model in Settings → Keys & services.`;
+    const failed = body({
+      status: "failed",
+      stages: [stage("images", "failed", { failureReason: `Image 1: ${sentence}\nstack` })],
+      outputs: [],
+    });
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/projects/p-fail": jsonAnswer({
+          ...failed,
+          project: { ...failed.project, id: "p-fail" },
+        }),
+      }),
+    );
+    const needs = await screen.findByRole("region", { name: "Needs you" });
+    expect(await within(needs).findByText(sentence)).not.toBeNull();
+    expect(within(needs).getByText("Failed · Image 1")).not.toBeNull();
+  });
+
   // Kept as is wins over waiting for the agent, as in its state word: nothing of it runs.
   it("leaves a run Kept as is out of Running while an agent's review waits", async () => {
     renderRouted(

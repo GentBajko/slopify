@@ -474,8 +474,14 @@ describe("an empty calendar", () => {
             finished("p-new", "The Library of Alexandria", {
               finishedAt: "2026-09-27T10:00:00.000Z",
               durationSeconds: 185,
+              outputs: { video: true, shorts: 0, pdf: false, audio: false },
             }),
             finished("p-run", "Still going", { status: "running", progress: 0.4 }),
+            // A bundled sample is not the person's work: it never pushes their own out.
+            finished("p-sample", "The Antikythera Mechanism", {
+              sample: true,
+              finishedAt: "2026-09-28T10:00:00.000Z",
+            }),
           ],
         }),
       }),
@@ -489,7 +495,7 @@ describe("an empty calendar", () => {
     // Its length, what it is and when it finished; a run with a failed step says so in its
     // state word.
     expect(
-      within(tiles[0] as HTMLElement).getByText(/^3:05 · 16:9 · finished Sep 27/),
+      within(tiles[0] as HTMLElement).getByText(/^3:05 · 16:9 · video · finished Sep 27/),
     ).not.toBeNull();
     expect(within(tiles[1] as HTMLElement).getByText("Done with problems")).not.toBeNull();
     expect(within(strip).queryByText(/a step failed/)).toBeNull();
@@ -498,6 +504,13 @@ describe("an empty calendar", () => {
         .getByRole("link", { name: "Watch The Library of Alexandria" })
         .getAttribute("href"),
     ).toBe("/projects/p-new?section=video");
+    // Watch and Download video, as every list of finished work offers them.
+    expect(
+      within(strip)
+        .getByRole("link", { name: "Download video: The Library of Alexandria" })
+        .getAttribute("href"),
+    ).toMatch(/\/files\/p-new\/video$/);
+    expect(within(strip).queryByText("The Antikythera Mechanism")).toBeNull();
   });
 
   it("keeps the drag sentence for a topic that can be picked up", async () => {

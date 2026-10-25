@@ -155,8 +155,9 @@ describe("Finished on Home", () => {
     );
   });
 
-  // The section's name says they are samples; each row says Done like any finished run.
-  it("shows a sample as Done, with Watch only", async () => {
+  // The section's name says they are samples; each row says Done like any finished run, with
+  // Watch and Download video like every list of finished work.
+  it("shows a sample as Done, with Watch and Download video", async () => {
     renderRouted(
       <FinishedList
         title="Finished samples"
@@ -171,7 +172,11 @@ describe("Finished on Home", () => {
     expect(
       within(item).getByRole("link", { name: "Watch The Library of Alexandria" }),
     ).not.toBeNull();
-    expect(within(section).queryByRole("link", { name: /^Download video/ })).toBeNull();
+    expect(
+      within(section)
+        .getByRole("link", { name: "Download video: The Library of Alexandria" })
+        .getAttribute("href"),
+    ).toMatch(/\/files\/s1\/video$/);
   });
 
   it("shows six and links to the rest", async () => {

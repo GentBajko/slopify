@@ -107,7 +107,7 @@ export function FinishedItem({
           >
             {video ? "Watch" : "Open"}
           </ButtonLink>
-          {project.sample === true || project.outputs?.video !== true ? null : (
+          {project.outputs?.video !== true ? null : (
             <FileLink
               href={fileUrl(api, project.id, "video")}
               download

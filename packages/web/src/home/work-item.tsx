@@ -26,7 +26,8 @@ export function WorkItem({
       {lead}
       <div className="sl-home-item__body">
         <div className="sl-home-item__text flex flex-col gap-0.5">
-          <div className="sl-row__title">{title}</div>
+          {/* A long title wraps rather than ending in an ellipsis, on a phone too. */}
+          <div className="sl-row__title whitespace-normal">{title}</div>
           <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5 text-small text-ink-2">
             {status}
             {detail === undefined ? null : <span className="min-w-0">{detail}</span>}
