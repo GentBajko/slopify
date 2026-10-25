@@ -6,6 +6,7 @@ import { Fold } from "@/components/kit/fold";
 import { ButtonLink, TextLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { Status } from "@/components/kit/status";
+import { stageWords } from "@/lib/stage-words";
 import { cn } from "@/lib/utils";
 import {
   checkFirstRun,
@@ -23,11 +24,18 @@ export interface ChecklistBack {
 }
 
 type Need = ShortGap["need"];
+// The stage each part makes, named as Settings and the project page name it.
 const needNames: Readonly<Record<Need, string>> = {
-  text: "Script",
-  voice: "Voice",
-  images: "Images",
+  text: stageWords.article,
+  voice: stageWords.audio,
+  images: stageWords.images,
 };
+
+// What a gap lacks, in the words Keys & services uses for the same state: a voice service with
+// a key and no voice saved, or no key (nor sign-in) for that part at all.
+export function gapWord(fix: ShortGap["fix"]): string {
+  return fix === "saved-voice" ? "No voice saved" : "No key";
+}
 
 // "Claude Code CLI" is "Claude Code" to a person: the tool, not how Slopify talks to it.
 export const plainName = (name: string): string => name.replace(/ CLI$/, "");
@@ -43,9 +51,10 @@ function readyLine(need: Need, part: FirstRunView["needs"]["text"]): string {
     : `${by} reads it aloud with ${means}.`;
 }
 
-// The one button that fixes a gap: a key for that part, opened at its service in Settings
+// The button that fixes a gap: a key for that part, opened at its service in Settings
 // (OpenAI first for the voice: the voices Slopify sets up are OpenAI's, so its key works at
-// once), or the Voices page when a voice service has a key but no voice saved.
+// once). A voice service with a key but no voice saved gets both fixes its line names: the
+// Voices page, and an OpenAI key.
 function FixLink({
   need,
   fix,
@@ -60,9 +69,18 @@ function FixLink({
   const from = back ?? {};
   if (fix === "saved-voice")
     return (
-      <ButtonLink variant={variant} to="/settings" search={{ section: "voices", ...from }}>
-        Save a voice
-      </ButtonLink>
+      <span className="flex flex-wrap items-center gap-2">
+        <ButtonLink variant={variant} to="/settings" search={{ section: "voices", ...from }}>
+          Save a voice
+        </ButtonLink>
+        <ButtonLink
+          variant="quiet"
+          to="/settings"
+          search={{ section: "providers", family: "tts", provider: "openai-tts", ...from }}
+        >
+          Add an OpenAI key
+        </ButtonLink>
+      </span>
     );
   const where = {
     text: { family: "llm", provider: "openrouter", words: "Add a key for writing" },
@@ -106,11 +124,7 @@ function GapRow({
   return (
     <NeedRow
       need={gap.need}
-      status={
-        <Status tone="waiting">
-          {gap.fix === "saved-voice" ? "No voice saved" : "Not connected"}
-        </Status>
-      }
+      status={<Status tone="waiting">{gapWord(gap.fix)}</Status>}
       line={gap.message}
       action={<FixLink need={gap.need} fix={gap.fix} back={back} />}
       more={gap.install === undefined ? undefined : <InstallFold install={gap.install} />}
@@ -135,14 +149,14 @@ function NeedRow({
     <ListRow
       title={
         <span className="flex items-center gap-3">
-          <span className="w-16 shrink-0">{needNames[need]}</span>
+          <span className="w-20 shrink-0">{needNames[need]}</span>
           {status}
         </span>
       }
-      meta={<span className="block pl-19 max-sm:pl-0">{line}</span>}
+      meta={<span className="block pl-23 max-sm:pl-0">{line}</span>}
       actions={action}
     >
-      {more === undefined ? null : <div className="pl-19 max-sm:pl-0">{more}</div>}
+      {more === undefined ? null : <div className="pl-23 max-sm:pl-0">{more}</div>}
     </ListRow>
   );
 }

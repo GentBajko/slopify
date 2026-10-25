@@ -14,7 +14,7 @@ const voiceGap: ShortGap = {
   need: "voice",
   fix: "key",
   message:
-    "Nothing can read the script aloud yet. Add a voice key: an OpenAI key works at once with the voices Slopify sets up.",
+    "Nothing can read the article aloud yet. Add a voice key: an OpenAI key works at once with the voices Slopify sets up.",
   install: {
     text: "Install espeak-ng with one of these:",
     commands: ["sudo apt install espeak-ng", "sudo pacman -S espeak-ng"],
@@ -24,7 +24,7 @@ const imagesGap: ShortGap = {
   need: "images",
   fix: "key",
   message:
-    "Nothing can make the images yet. Add an image key (OpenAI, Google, fal.ai or Replicate), or sign in to Codex CLI on this computer.",
+    "Nothing can make the images yet. Add an image key (OpenAI, Google, fal.ai or Replicate), or sign in to Codex on this computer.",
 };
 
 // Claude Code found and signed in; no voice and nothing to make the images.
@@ -91,14 +91,17 @@ const row = (name: string) => {
 };
 
 describe("step 1: what a short needs", () => {
-  it("lists the script, the voice and the images, each with its state and its fix", async () => {
+  it("lists the article, the narration and the images, each with its state and its fix", async () => {
     renderRouted(<WelcomeRoute />, testDeps({ "GET /api/onboarding": jsonAnswer(view) }));
     expect(await screen.findByText("Claude Code writes it with your sign-in.")).not.toBeNull();
     expect(screen.getByRole("heading", { name: "What a short needs" })).not.toBeNull();
     expect(screen.getByText("Step 1 of 3")).not.toBeNull();
-    expect(within(row("Script")).getByText("Ready")).not.toBeNull();
-    expect(within(row("Voice")).getByText("Not connected")).not.toBeNull();
-    expect(within(row("Images")).getByText("Not connected")).not.toBeNull();
+    // The stages and the state words are the ones Keys & services uses.
+    expect(within(row("Article")).getByText("Ready")).not.toBeNull();
+    expect(within(row("Narration")).getByText("No key")).not.toBeNull();
+    expect(within(row("Images")).getByText("No key")).not.toBeNull();
+    // No tool is named by how Slopify talks to it.
+    expect(screen.queryByText(/CLI/)).toBeNull();
     // Each fix opens Settings at the service that works at once, and says where to come back.
     const voiceKey = screen.getByRole("link", { name: "Add a voice key" });
     expect(voiceKey.getAttribute("href")).toBe(
@@ -159,9 +162,9 @@ describe("step 1: what a short needs", () => {
         "Your computer's own voice (eSpeak NG) reads it aloud, for free. A voice key sounds better.",
       ),
     ).not.toBeNull();
-    expect(within(row("Voice")).getByRole("link", { name: "Add a voice key" }).className).toContain(
-      "sl-btn--quiet",
-    );
+    expect(
+      within(row("Narration")).getByRole("link", { name: "Add a voice key" }).className,
+    ).toContain("sl-btn--quiet");
     cleanup();
     renderRouted(
       <WelcomeRoute />,
@@ -184,6 +187,10 @@ describe("step 1: what a short needs", () => {
     expect(await screen.findByText("No voice saved")).not.toBeNull();
     expect(screen.getByRole("link", { name: "Save a voice" }).getAttribute("href")).toBe(
       "/settings?section=voices&return=welcome&step=found",
+    );
+    // The line also offers the OpenAI key it names, which narrates at once.
+    expect(screen.getByRole("link", { name: "Add an OpenAI key" }).getAttribute("href")).toBe(
+      "/settings?section=providers&family=tts&provider=openai-tts&return=welcome&step=found",
     );
   });
 });
@@ -288,7 +295,7 @@ describe("step 3: make the first short", () => {
     await user.click(screen.getByRole("button", { name: "Make a 60-second short" }));
     expect(
       await screen.findByText(
-        "The short didn't start. Fix what is marked Not connected above, then press Make a 60-second short again.",
+        "The short didn't start. Fix the lines below that are not Ready, then press Make a 60-second short again.",
       ),
     ).not.toBeNull();
     refuse = false;
