@@ -131,7 +131,7 @@ export function PostingPlanSettings({
         disabled={comment.isPending || autoComment === undefined}
         onChange={(on) => comment.mutate(on)}
         label="Post and pin each video's comment"
-        help="Once the video is public, the extension posts its pinned comment in your name and pins it."
+        help="Once the video is public, the extension posts its comment in your name and pins it."
       />
     </section>
   );
