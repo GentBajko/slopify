@@ -111,7 +111,7 @@ export function ProjectRow({
               </span>
             </Status>
             {/* Wraps rather than cuts: the finish date at its end is what tells rows apart. */}
-            <span className="min-w-0">
+            <span className="min-w-0 whitespace-normal">
               {meta}
               {project.status === "partial" ? (
                 <>
