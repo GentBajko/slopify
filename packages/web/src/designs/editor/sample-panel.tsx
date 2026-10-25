@@ -6,9 +6,11 @@ import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { Select } from "@/components/kit/field";
+import { TextLink } from "@/components/kit/link";
 import { MediaFrame } from "@/components/kit/media";
 import { SectionHead } from "@/components/kit/section-head";
-import { keys } from "@/queries";
+import { providerUnavailableLabel } from "@/lib/provider-status";
+import { keys, providersQuery } from "@/queries";
 import { designFileUrl, makeSample, pieceQuoteQuery, priceWords, type TemplateView } from "../api";
 import { formatName } from "../document";
 
@@ -38,6 +40,16 @@ export function SamplePanel({ template }: { readonly template: TemplateView }): 
   const format = picked !== undefined && formats.includes(picked) ? picked : (formats[0] ?? "a4");
   const [problem, setProblem] = useState<string | null>(null);
   const quote = useQuery(pieceQuoteQuery(api, template.id, template.headVersion));
+  const providers = useQuery(providersQuery(api));
+  // Artwork drawn by a service this computer can't use yet: Make sample would only fail, so the
+  // way to its key stands in its place.
+  const { picture: art } = template.document;
+  const service =
+    art.source === "generate"
+      ? providers.data?.providers.find((one) => one.id === art.provider)
+      : undefined;
+  const unusable =
+    service === undefined ? undefined : providerUnavailableLabel(service.readiness) !== undefined;
   const make = useMutation({
     // The button says when the price is unknown: pressing it accepts that.
     mutationFn: () =>
@@ -54,9 +66,10 @@ export function SamplePanel({ template }: { readonly template: TemplateView }): 
     },
   });
   const picture = format === "brochure" ? "a4" : format;
-  const drawn =
-    sample?.designId != null &&
-    (sample.state === "done" || sample.state === "making" || sample.state === "queued");
+  const making = sample?.state === "making" || sample?.state === "queued";
+  // Only a drawn sample, or one being drawn, takes the frame: the line under it says when
+  // there is none, without a lamp that would read as work going on.
+  const shown = sample?.designId != null && sample.state === "done";
   return (
     <section aria-label="Sample" className="flex min-w-0 flex-col gap-3">
       <SectionHead
@@ -77,23 +90,24 @@ export function SamplePanel({ template }: { readonly template: TemplateView }): 
           options={formats.map((one) => ({ value: one, label: formatName(one) }))}
         />
       ) : null}
-      <MediaFrame
-        aspect={formatAspect(picture)}
-        alt={`Sample of ${template.name}, ${formatName(format)}`}
-        {...(drawn && sample?.designId != null && sample.state === "done"
-          ? {
-              src: designFileUrl(api, sample.designId, picture, "png", `${String(sample.version)}`),
-            }
-          : {
-              generating:
-                sample === null
-                  ? "No sample yet"
-                  : sample.state === "making" || sample.state === "queued"
-                    ? "Making the sample's artwork…"
-                    : "No sample for this version",
-            })}
-        className={`mx-auto w-full [&_img]:object-contain ${sampleWidth[formatAspect(picture)]}`}
-      />
+      {shown || making ? (
+        <MediaFrame
+          aspect={formatAspect(picture)}
+          alt={`Sample of ${template.name}, ${formatName(format)}`}
+          {...(shown && sample?.designId != null
+            ? {
+                src: designFileUrl(
+                  api,
+                  sample.designId,
+                  picture,
+                  "png",
+                  `${String(sample.version)}`,
+                ),
+              }
+            : { generating: "Making the sample's artwork…" })}
+          className={`mx-auto w-full [&_img]:object-contain ${sampleWidth[formatAspect(picture)]}`}
+        />
+      ) : null}
       {sample?.state === "held" ||
       sample?.state === "failed" ||
       sample === null ||
@@ -110,12 +124,18 @@ export function SamplePanel({ template }: { readonly template: TemplateView }): 
                   : `The sample shows version ${String(sample.version)}.`
           }
           actions={
-            <Button
-              disabled={make.isPending || quote.data === undefined}
-              onClick={() => make.mutate()}
-            >
-              {`Make sample · ${priceWords(quote.data)}`}
-            </Button>
+            unusable === true ? (
+              <TextLink to="/settings" search={{ section: "providers", family: "image" }}>
+                {`Add a ${service?.displayName ?? "image service"} key first ↗`}
+              </TextLink>
+            ) : (
+              <Button
+                disabled={make.isPending || quote.data === undefined}
+                onClick={() => make.mutate()}
+              >
+                {`Make sample · ${priceWords(quote.data)}`}
+              </Button>
+            )
           }
         >
           {problem ?? sample?.heldReason ?? undefined}

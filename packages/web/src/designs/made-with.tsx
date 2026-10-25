@@ -3,12 +3,15 @@ import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
+import { TextLink } from "@/components/kit/link";
 import { modelsQuery } from "@/lib/models";
+import { providerUnavailableLabel } from "@/lib/provider-status";
 import { ModelPicker, ProviderPicker } from "@/play/pickers";
 import { providersQuery } from "@/queries";
 
 // "Made with FLUX.2 on fal.ai · Change": the image service and model a paid picture uses, one
-// line, with the pickers behind it in a drawer.
+// line, with the pickers behind it in a drawer. A service this computer can't use yet says so
+// on the line, with the way to its key, before anything is pressed.
 export function MadeWith({
   provider,
   model,
@@ -24,9 +27,10 @@ export function MadeWith({
   const [open, setOpen] = useState(false);
   const providers = useQuery(providersQuery(api));
   const models = useQuery(modelsQuery(api, provider));
-  const providerName =
-    providers.data?.providers.find((one) => one.id === provider)?.displayName ?? provider;
+  const status = providers.data?.providers.find((one) => one.id === provider);
+  const providerName = status?.displayName ?? provider;
   const modelName = models.data?.models.find((one) => one.id === model)?.name ?? model;
+  const refusal = status === undefined ? undefined : providerUnavailableLabel(status.readiness);
   return (
     <>
       <span
@@ -39,6 +43,15 @@ export function MadeWith({
           Change
         </Button>
       </span>
+      {refusal === undefined ? null : (
+        <span className="text-small text-danger">
+          {refusal === "No key" ? `${providerName} has no key yet` : `${providerName}: ${refusal}`}
+          {" · "}
+          <TextLink to="/settings" search={{ section: "providers", family: "image" }}>
+            Add an image key ↗
+          </TextLink>
+        </span>
+      )}
       <Drawer
         open={open}
         title="Image service and model"

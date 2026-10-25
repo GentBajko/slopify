@@ -85,7 +85,7 @@ export function makeFromTemplate(
     return {
       ok: false,
       reason: "invalid",
-      message: `The piece can't be made: ${parsed.error.issues[0]?.message ?? "a field is missing"}.`,
+      message: `The poster can't be made: ${parsed.error.issues[0]?.message ?? "a keyword is missing"}.`,
     };
   const input = parsed.data;
   const template = getTemplate(deps.service.db, templateId);
@@ -112,7 +112,7 @@ export function makeFromTemplate(
     return {
       ok: false,
       reason: "cost-changed",
-      message: costChangedMessage(quote, "this piece"),
+      message: costChangedMessage(quote, "this poster"),
       current: quote,
     };
   const own = doc.picture.source === "picture" ? doc.picture.sha256 : undefined;

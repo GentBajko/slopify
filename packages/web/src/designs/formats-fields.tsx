@@ -1,12 +1,12 @@
 import { type DesignFormat, designFormats } from "@app/slices/designs/model.js";
 import type { DesignDocument } from "@app/slices/designs/schema.js";
 import type { ReactElement } from "react";
-import { Field, Input, Textarea } from "@/components/kit/field";
+import { Field, HelpLine, Input, Textarea } from "@/components/kit/field";
 import { Fold } from "@/components/kit/fold";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { helpScope } from "@/components/kit/info-tip";
 import { formatName, toggleFormat } from "./document";
 
-// Which formats a piece is drawn in, where each crops the one artwork (its focus), and a
+// Which formats a poster is drawn in, where each crops the one artwork (its focus), and a
 // brochure's inside pages. The artwork is made once; every other format is a crop of it.
 
 export function FormatsFields({
@@ -30,26 +30,26 @@ export function FormatsFields({
         className="m-0 grid min-w-0 grid-cols-2 gap-x-4 gap-y-2 border-0 p-0 sm:grid-cols-3"
         {...helpScope}
       >
-        <legend className="sl-field__label mb-1 flex items-center gap-1">
-          Formats
-          <InfoTip id="library.design.formats" className="-my-1" />
-        </legend>
+        <legend className="sl-field__label mb-1">Formats</legend>
         {designFormats.map((format) => (
           <label key={format} className="flex min-h-8 items-center gap-2 text-small">
             <input
               type="checkbox"
               checked={chosen.has(format)}
-              // The last format can't be unticked: a piece is drawn in at least one.
+              // The last format can't be unticked: a poster is drawn in at least one.
               disabled={chosen.has(format) && chosen.size === 1}
               onChange={() => onChange(toggleFormat(doc, format))}
             />
             {formatName(format)}
           </label>
         ))}
+        <HelpLine className="col-span-full">
+          The artwork is made once and cropped for each format, so more formats cost nothing more.
+        </HelpLine>
       </fieldset>
       {doc.brochure === undefined ? null : (
         <div className="grid min-w-0 gap-3">
-          <Field label="Brochure title" tip="library.design.brochure">
+          <Field label="Brochure title">
             <Input
               value={doc.brochure.title}
               maxLength={200}
@@ -62,8 +62,7 @@ export function FormatsFields({
           </Field>
           <Field
             label="Brochure pages"
-            help="Markdown; keywords such as {{Event}} are filled in."
-            tip="library.design.brochure"
+            help="The inside pages, after the cover. Markdown; keywords such as {{Event}} are filled in."
           >
             <Textarea
               rows={6}
@@ -77,12 +76,12 @@ export function FormatsFields({
           </Field>
         </div>
       )}
-      <Fold summary="Fine-tune crops · where each format centres the picture">
+      <Fold summary="Where each format crops the picture">
         <div className="grid min-w-0 gap-3" {...helpScope}>
-          <p className="m-0 flex items-center gap-1 text-small text-ink-2">
-            Across and Down move each crop; the middle is the picture's centre.
-            <InfoTip id="library.design.focus" className="-my-1" />
-          </p>
+          <HelpLine>
+            Across and Down move each crop; the middle is the picture's center. Move one when a
+            format cuts off a face.
+          </HelpLine>
           {doc.formats.map((one) => (
             <div key={one.format} className="grid min-w-0 grid-cols-[8rem_minmax(0,1fr)] gap-2">
               <span className="text-small font-semibold">{formatName(one.format)}</span>

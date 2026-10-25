@@ -37,26 +37,24 @@ export function PictureSection({
   const picture = doc.picture;
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      <Field label="Template name" tip="library.design.template-name">
+      <Field label="Template name">
         <Input value={name} maxLength={200} onChange={(event) => onName(event.target.value)} />
       </Field>
-      <Field label="Artwork" tip="library.design.source">
-        <Segmented
-          label="Artwork"
-          value={picture.source}
-          options={[
-            { value: "generate", label: "The AI draws it for each piece" },
-            { value: "picture", label: "My own picture" },
-          ]}
-          onChange={(source) => onChange({ ...doc, picture: { ...picture, source } })}
-        />
-      </Field>
+      <Segmented
+        label="Artwork"
+        help="The AI draws a new paid picture for each poster; your own picture costs nothing."
+        value={picture.source}
+        options={[
+          { value: "generate", label: "The AI draws it for each poster" },
+          { value: "picture", label: "My own picture" },
+        ]}
+        onChange={(source) => onChange({ ...doc, picture: { ...picture, source } })}
+      />
       {picture.source === "generate" ? (
         <>
           <Field
             label="Describe the artwork"
-            help="Fields such as {{Event}} are filled for each piece. No words: Slopify adds the text."
-            tip="library.design.artwork"
+            help="Keywords such as {{Event}} are filled for each poster. Describe the picture only: Slopify adds the words."
           >
             <Textarea
               rows={4}
@@ -75,9 +73,7 @@ export function PictureSection({
         </>
       ) : (
         <Field
-          label="The picture every piece uses"
-          tip="library.design.source"
-          tipLabel="the picture every piece uses"
+          label="The picture every poster uses"
           help={picture.sha256 === undefined ? "None yet." : "Saved with the template."}
           error={problem ?? undefined}
         >
@@ -117,17 +113,17 @@ export function TextSection({ doc, onChange }: SectionProps): ReactElement {
       />
       <ValueFields
         label="Sample values"
-        tip="library.design.sample-values"
+        help="They draw the sample. A schedule fills each poster from its own row."
         fields={fields}
         values={doc.samples}
         dateField={doc.schedule?.dateField}
         onChange={(samples) => onChange({ ...doc, samples })}
       />
-      <Fold summary={`More · the AI draws the text: ${doc.picture.aiText ? "on" : "off"}`}>
+      <Fold summary="Text drawn by the AI" state={doc.picture.aiText ? "On" : "Off"}>
         <div className="flex flex-col gap-3">
           <Switch
             label="Let the AI draw the text"
-            tip="library.design.ai-text"
+            help="The AI paints your lines into the picture, instead of Slopify setting them in real fonts."
             checked={doc.picture.aiText}
             onChange={(aiText) => onChange({ ...doc, picture: { ...doc.picture, aiText } })}
           />
@@ -146,9 +142,13 @@ export function ScheduleSettings({ doc, onChange }: SectionProps): ReactElement 
   const fields = designFields(doc);
   const schedule = doc.schedule;
   const { schedule: _off, ...withoutSchedule } = doc;
+  // Days ahead and At set when a schedule makes each poster: with No schedule they are left out.
   return (
     <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-3">
-      <Field label="Each piece's date is in" tip="library.design.date-field">
+      <Field
+        label="Each poster's date is in"
+        help="A schedule makes each row's poster ahead of that date. No schedule: you make them by hand."
+      >
         <Select
           value={schedule?.dateField ?? ""}
           onChange={(event) =>
@@ -171,17 +171,16 @@ export function ScheduleSettings({ doc, onChange }: SectionProps): ReactElement 
           ]}
         />
       </Field>
-      <Field label="Days ahead" tip="library.design.days-ahead">
-        <Input
-          type="number"
-          min={0}
-          max={daysBeforeMax}
-          disabled={schedule === undefined}
-          value={schedule?.daysBefore ?? 7}
-          onChange={(event) =>
-            schedule === undefined
-              ? undefined
-              : onChange({
+      {schedule === undefined ? null : (
+        <>
+          <Field label="Days ahead" help="0 makes each poster on its date.">
+            <Input
+              type="number"
+              min={0}
+              max={daysBeforeMax}
+              value={schedule.daysBefore}
+              onChange={(event) =>
+                onChange({
                   ...doc,
                   schedule: {
                     ...schedule,
@@ -191,21 +190,22 @@ export function ScheduleSettings({ doc, onChange }: SectionProps): ReactElement 
                     ),
                   },
                 })
-          }
-        />
-      </Field>
-      <Field label="At" tip="library.design.time" tipLabel="the time a piece is made">
-        <Input
-          type="time"
-          disabled={schedule === undefined}
-          value={schedule?.time ?? "09:00"}
-          onChange={(event) =>
-            schedule === undefined || !/^\d{2}:\d{2}$/.test(event.target.value)
-              ? undefined
-              : onChange({ ...doc, schedule: { ...schedule, time: event.target.value } })
-          }
-        />
-      </Field>
+              }
+            />
+          </Field>
+          <Field label="At" help="This computer's time, while Slopify is open.">
+            <Input
+              type="time"
+              value={schedule.time}
+              onChange={(event) =>
+                /^\d{2}:\d{2}$/.test(event.target.value)
+                  ? onChange({ ...doc, schedule: { ...schedule, time: event.target.value } })
+                  : undefined
+              }
+            />
+          </Field>
+        </>
+      )}
     </div>
   );
 }

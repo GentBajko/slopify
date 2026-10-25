@@ -21,8 +21,15 @@ afterEach(() => {
 // opens each tab and section the way a person would. The same check finds jargon in a label,
 // an info button beside a button, a heading or a row (or a field's second one), and a second
 // lime button in one area.
+// Names that say what they set: the template's own name, and each text line's size, font and
+// color, in their own fold.
+const designsAllow: readonly (string | RegExp)[] = [
+  "Template name",
+  /^Line \d+ (size|font|color)$/,
+];
+
 function expectExplained(): void {
-  expect(unexplainedControls(document.body, [...selfExplanatory])).toEqual([]);
+  expect(unexplainedControls(document.body, [...selfExplanatory, ...designsAllow])).toEqual([]);
 }
 
 const at = "2026-10-18T10:00:00.000Z";
@@ -193,13 +200,13 @@ describe("Library → Designs explains every control", () => {
     for (const section of ["Picture", "Text layout", "Formats", "Schedule"]) {
       await user.click(await screen.findByRole("button", { name: new RegExp(`^${section}( |$)`) }));
       await screen.findByRole("region", { name: section });
-      // The schedule's rows and spend ceiling show once the schedule has loaded.
-      if (section === "Schedule") await screen.findByRole("button", { name: "Save schedule" });
+      // The schedule's rows and spend ceiling show once the schedule has loaded: Pause with it.
+      if (section === "Schedule") await screen.findByRole("button", { name: "Pause" });
       expectExplained();
     }
   });
 
-  it("in the Make a piece drawer, with an unknown price to accept", async () => {
+  it("in the Make a poster drawer, with an unknown price to accept", async () => {
     const user = userEvent.setup();
     renderRouted(
       <DesignTemplateRoute templateId="t1" />,
@@ -212,8 +219,8 @@ describe("Library → Designs explains every control", () => {
         ...providers,
       }),
     );
-    await user.click(await screen.findByRole("button", { name: "Make a piece" }));
-    await screen.findByRole("dialog", { name: "Make a piece" });
+    await user.click(await screen.findByRole("button", { name: "Make a poster" }));
+    await screen.findByRole("dialog", { name: "Make a poster" });
     await screen.findByRole("switch", { name: /I accept/ });
     expectExplained();
   });

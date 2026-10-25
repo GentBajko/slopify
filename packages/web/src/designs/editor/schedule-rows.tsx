@@ -2,10 +2,10 @@ import { designFields } from "@app/slices/designs/fields.js";
 import type { DesignDocument } from "@app/slices/designs/schema.js";
 import type { ScheduleSummary } from "@app/slices/schedules/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PlusIcon, Trash2Icon } from "lucide-react";
+import { PlusIcon } from "lucide-react";
 import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
-import { Button, IconButton } from "@/components/kit/button";
+import { Button } from "@/components/kit/button";
 import { Field, HelpLine, Input, Select } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
@@ -21,9 +21,10 @@ import {
 import { centsToDollars, dollarsToCents } from "@/schedules/form-checks";
 import type { TemplateView } from "../api";
 
-// A design template's schedule: one row per piece, each with its fields and its date. Slopify
-// makes each row's piece the set number of days ahead of its date, from the version marked
-// ready, and takes the row off the table. The rows are the schedule's own, saved here.
+// A design template's schedule: one row per poster, each with its keywords and its date.
+// Slopify makes each row's poster the set number of days ahead of its date, from the version
+// approved for schedules, and takes the row off the table. The rows are the schedule's own,
+// saved here.
 
 type Row = Readonly<Record<string, string>> & { readonly _key: string };
 
@@ -36,14 +37,14 @@ function rowsOf(schedule: ScheduleSummary | undefined): Row[] {
   }));
 }
 
-// A row's title is its first field that isn't the date: the name a piece gets.
+// A row's title is its first keyword that isn't the date: the name a poster gets.
 function titleOf(
   row: Readonly<Record<string, string>>,
   fields: readonly string[],
   dateField: string,
 ): string {
   const named = fields.filter((name) => name !== dateField).map((name) => (row[name] ?? "").trim());
-  return (named.find((value) => value !== "") ?? row[dateField] ?? "Piece").slice(0, 200);
+  return (named.find((value) => value !== "") ?? row[dateField] ?? "Poster").slice(0, 200);
 }
 
 export function ScheduleRows({
@@ -132,7 +133,7 @@ export function ScheduleRows({
       setMessage(
         result.value.nextRunAt === null
           ? "Saved. No row has a date still to come."
-          : `Saved. The next piece is made ${new Date(result.value.nextRunAt).toLocaleString()}.`,
+          : `Saved. The next poster is made ${new Date(result.value.nextRunAt).toLocaleString()}.`,
       );
       await client.invalidateQueries({ queryKey: schedulesKey });
       await client.invalidateQueries({ queryKey: keys.calendar });
@@ -153,13 +154,14 @@ export function ScheduleRows({
   });
   const set = (key: string, name: string, value: string) =>
     setRows(shown.map((row) => (row._key === key ? { ...row, [name]: value } : row)));
+  // Why the schedule can't be saved yet, said beside its button rather than in a tooltip; with
+  // nothing changed there is nothing to save, so the button isn't drawn at all.
   const blocked = dirty
     ? "Save the template first: the rows follow its saved keywords."
     : dateField === undefined
       ? "Choose which keyword holds each date above, then save the template."
-      : rows === null && spend === null && missed === null
-        ? "Change a row, the spend ceiling or the missed run first."
-        : undefined;
+      : undefined;
+  const changed = rows !== null || spend !== null || missed !== null;
   return (
     // One scope: the line under the Rows heading explains every row's cells.
     <div data-setting="rows" className="flex min-w-0 flex-col gap-3" {...helpScope}>
@@ -174,7 +176,7 @@ export function ScheduleRows({
               ? "Paused: nothing is made until you resume."
               : schedule.nextRunAt === null
                 ? "Waiting for a row with a date still to come."
-                : `Next piece: ${new Date(schedule.nextRunAt).toLocaleString()}`
+                : `Next poster: ${new Date(schedule.nextRunAt).toLocaleString()}`
         }
         status={
           schedule === undefined ? undefined : (
@@ -196,7 +198,7 @@ export function ScheduleRows({
         )}
       </SectionHead>
       <HelpLine>
-        Each row is one piece, made the set number of days before its date and then taken off this
+        Each row is one poster, made the set number of days before its date and then taken off this
         table.
       </HelpLine>
       {/* One group a row, its fields wrapping to the column's width: every field and the
@@ -224,21 +226,21 @@ export function ScheduleRows({
                   />
                 </div>
               ))}
-              <IconButton
-                label={`Remove row ${String(index + 1)}`}
+              <Button
+                size="small"
+                variant="quiet"
+                aria-label={`Remove row ${String(index + 1)}`}
                 onClick={() => setRows(shown.filter((one) => one._key !== row._key))}
               >
-                <Trash2Icon aria-hidden="true" className="size-4" />
-              </IconButton>
+                Remove
+              </Button>
             </li>
           ))}
         </ul>
       )}
       <Field
-        label="Spend ceiling per piece (US$, optional)"
-        tip="library.design.spend"
-        tipLabel="Spend ceiling"
-        help="In dollars, such as 1 or 0.50. Empty means no ceiling."
+        label="Spend ceiling per poster (US$, optional)"
+        help="Such as 1 or 0.50; empty is no ceiling. A poster priced over it, or with no known price, isn't made."
         error={spendProblem ?? undefined}
         className="max-w-[16rem]"
       >
@@ -254,8 +256,7 @@ export function ScheduleRows({
       </Field>
       <Field
         label="Missed run"
-        tip="planning.schedule.missed"
-        help="When Slopify was closed at the time a piece was due."
+        help="When Slopify was closed at the time a poster was due."
         className="max-w-[20rem]"
       >
         <Select
@@ -283,23 +284,28 @@ export function ScheduleRows({
           <PlusIcon aria-hidden="true" className="size-4" />
           Add a row
         </Button>
-        <Button
-          size="small"
-          disabled={blocked !== undefined || save.isPending}
-          disabledReason={blocked}
-          focusableWhenDisabled
-          onClick={() => {
-            setMessage(null);
-            save.mutate();
-          }}
-        >
-          {schedule === undefined ? "Start the schedule" : "Save schedule"}
-        </Button>
+        {blocked === undefined && !changed ? null : (
+          <Button
+            size="small"
+            disabled={blocked !== undefined || save.isPending}
+            disabledReason={blocked}
+            focusableWhenDisabled
+            onClick={() => {
+              setMessage(null);
+              save.mutate();
+            }}
+          >
+            {schedule === undefined ? "Start the schedule" : "Save schedule"}
+          </Button>
+        )}
         <p role="status" className="m-0 min-w-0 text-small text-ink-2">
           {message ??
-            (template.readyVersion === null
-              ? "Nothing is made until you approve a version for schedules."
-              : `Pieces are made from version ${String(template.readyVersion)}.`)}
+            blocked ??
+            (changed
+              ? undefined
+              : template.readyVersion === null
+                ? "Nothing is made until you press Approve for schedules, below."
+                : `Posters are made from version ${String(template.readyVersion)}.`)}
         </p>
       </div>
     </div>

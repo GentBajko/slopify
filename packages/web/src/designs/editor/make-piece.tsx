@@ -8,20 +8,21 @@ import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { Drawer } from "@/components/kit/drawer";
 import { Switch } from "@/components/kit/switch";
-import { makePiece, pieceQuoteQuery, priceWords, type TemplateView } from "../api";
+import { type DesignTemplate, makePiece, pieceQuoteQuery, priceWords } from "../api";
 import { ValueFields } from "../text-fields";
 
-// A one-off piece from the saved template: one input per field, prefilled from the sample
-// values, then the same paid artwork a schedule makes. The server makes it from the newest
-// saved version whether or not that version is marked ready (only schedules wait for ready),
-// so the drawer says so instead of blocking.
+// Make a poster: one poster from the saved template, one input per keyword, prefilled from the
+// sample values, then the same paid artwork a schedule makes. The server makes it from the
+// newest saved version whether or not that version is marked ready (only schedules wait for
+// ready), so the drawer says so instead of blocking. Opened from the editor and from the
+// template's row in Templates → Poster templates.
 
 export function MakePieceDrawer({
   template,
   open,
   onClose,
 }: {
-  readonly template: TemplateView;
+  readonly template: DesignTemplate;
   readonly open: boolean;
   readonly onClose: () => void;
 }): ReactElement | null {
@@ -67,12 +68,12 @@ export function MakePieceDrawer({
       : unknown && !accepted
         ? "Accept that the price is unknown first."
         : make.isPending
-          ? "Making the piece…"
+          ? "Making the poster…"
           : undefined;
   return (
     <Drawer
       open={open}
-      title="Make a piece"
+      title="Make a poster"
       onClose={onClose}
       footer={
         <Button
@@ -85,20 +86,21 @@ export function MakePieceDrawer({
             make.mutate();
           }}
         >
-          {`Make · ${priceWords(quote)}`}
+          {`Make the poster · ${priceWords(quote)}`}
         </Button>
       }
     >
       <div className="flex min-w-0 flex-col gap-4">
         <p className="m-0 text-ink-2">
-          {`One piece from version ${String(template.headVersion)}, with the words below. You can change them on its page afterwards.`}
+          {`One poster from version ${String(template.headVersion)}, with the words below. You can change them on its page afterwards.`}
         </p>
         {template.readyVersion === template.headVersion ? null : (
           <Callout
             tone="info"
             title={`Version ${String(template.headVersion)} isn't approved for schedules`}
           >
-            You can still make a piece from it by hand. Only schedules wait for an approved version.
+            You can still make a poster from it by hand. Only schedules wait for an approved
+            version.
           </Callout>
         )}
         <ValueFields
@@ -107,18 +109,18 @@ export function MakePieceDrawer({
           dateField={doc.schedule?.dateField}
           onChange={setValues}
           label="Keywords"
-          tip="library.design.make-values"
+          help="They start as the template's sample values. Nothing here changes the template."
         />
         {unknown ? (
           <Switch
             label="I accept that the price is unknown"
+            help="The poster then costs whatever the image service charges for its artwork."
             checked={accepted}
             onChange={setAccepted}
-            tip="library.design.accept-unknown"
           />
         ) : null}
         {problem === null ? null : (
-          <Callout tone="danger" title="The piece wasn't made">
+          <Callout tone="danger" title="The poster wasn't made">
             {problem}
           </Callout>
         )}

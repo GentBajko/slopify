@@ -1,7 +1,8 @@
 import type { DesignView } from "@app/slices/designs/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import { EllipsisIcon } from "lucide-react";
+import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { EmptyState } from "@/components/kit/empty-state";
@@ -9,10 +10,12 @@ import { PageHeader } from "@/components/kit/layout";
 import { ButtonLink, TextLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { MediaFrame, MediaGrid } from "@/components/kit/media";
+import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/kit/menu";
 import { LoadFailed, LoadingBlock } from "@/components/kit/query-state";
 import { Badge } from "@/components/kit/status";
 import { keys } from "@/queries";
 import {
+  type DesignTemplate,
   deleteDesign,
   deleteDesignTemplate,
   designsQuery,
@@ -20,6 +23,7 @@ import {
   stepPictureUrl,
 } from "./api";
 import { headStep } from "./design-picture";
+import { MakePieceDrawer } from "./editor/make-piece";
 import { useDesignStarts } from "./start";
 
 // Designs: the pictures edited and the pieces designed, each opened on its own page. The start
@@ -132,11 +136,13 @@ function DesignGallery(): ReactElement {
   );
 }
 
-// The poster templates, each set up in its own editor (Templates → Poster templates).
+// The poster templates, each set up in its own editor (Templates → Poster templates), as the
+// video templates are: Make a poster, Edit template, and the rest under ⋯.
 export function DesignTemplateList({ onNew }: { readonly onNew: () => void }): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
   const query = useQuery(designTemplatesQuery(api));
+  const [making, setMaking] = useState<DesignTemplate | null>(null);
   const remove = useMutation({
     mutationFn: (id: string) => deleteDesignTemplate(api, id),
     onSuccess: () => client.invalidateQueries({ queryKey: keys.designTemplates }),
@@ -165,53 +171,78 @@ export function DesignTemplateList({ onNew }: { readonly onNew: () => void }): R
       </EmptyState>
     );
   return (
-    <List label="Poster templates">
-      {query.data.map((template) => {
-        const scheduled = template.document.schedule !== undefined;
-        return (
-          <ListRow
-            key={template.id}
-            title={
-              <Link to="/design-templates/$templateId" params={{ templateId: template.id }}>
-                {template.name}
-              </Link>
-            }
-            meta={
-              <span className="flex flex-wrap items-center gap-2">
-                {`Version ${String(template.headVersion)}${scheduled ? " · made ahead of each date" : ""}`}
-                {scheduled ? (
-                  template.readyVersion === null ? (
-                    <Badge tone="waiting">Not ready for schedules</Badge>
-                  ) : (
-                    <Badge tone="running">Ready for schedules</Badge>
-                  )
-                ) : null}
-              </span>
-            }
-            actions={
-              <>
-                <ButtonLink
-                  to="/design-templates/$templateId"
-                  params={{ templateId: template.id }}
-                  size="small"
-                  aria-label={`Edit template ${template.name}`}
-                >
-                  Edit template
-                </ButtonLink>
-                <Button
-                  size="small"
-                  variant="quiet"
-                  aria-label={`Delete ${template.name}`}
-                  disabled={remove.isPending}
-                  onClick={() => remove.mutate(template.id)}
-                >
-                  Delete
-                </Button>
-              </>
-            }
-          />
-        );
-      })}
-    </List>
+    <>
+      <List label="Poster templates">
+        {query.data.map((template) => {
+          const scheduled = template.document.schedule !== undefined;
+          return (
+            <ListRow
+              key={template.id}
+              title={
+                <Link to="/design-templates/$templateId" params={{ templateId: template.id }}>
+                  {template.name}
+                </Link>
+              }
+              meta={
+                <span className="flex flex-wrap items-center gap-2">
+                  {`Version ${String(template.headVersion)}${scheduled ? " · made ahead of each date" : ""}`}
+                  {scheduled ? (
+                    template.readyVersion === null ? (
+                      <Badge tone="waiting">Not ready for schedules</Badge>
+                    ) : (
+                      <Badge tone="running">Ready for schedules</Badge>
+                    )
+                  ) : null}
+                </span>
+              }
+              actions={
+                <>
+                  <Button
+                    variant="primary"
+                    size="small"
+                    aria-label={`Make a poster with ${template.name}`}
+                    onClick={() => setMaking(template)}
+                  >
+                    Make a poster
+                  </Button>
+                  <ButtonLink
+                    to="/design-templates/$templateId"
+                    params={{ templateId: template.id }}
+                    size="small"
+                    aria-label={`Edit template ${template.name}`}
+                  >
+                    Edit template
+                  </ButtonLink>
+                  <Menu>
+                    <MenuTrigger asChild>
+                      <Button size="small" variant="quiet" aria-label={`More for ${template.name}`}>
+                        <EllipsisIcon aria-hidden="true" className="size-4" strokeWidth={1.75} />
+                      </Button>
+                    </MenuTrigger>
+                    <MenuContent>
+                      <MenuItem
+                        aria-label={`Delete ${template.name}`}
+                        disabled={remove.isPending}
+                        onSelect={() => remove.mutate(template.id)}
+                      >
+                        Delete
+                      </MenuItem>
+                    </MenuContent>
+                  </Menu>
+                </>
+              }
+            />
+          );
+        })}
+      </List>
+      {making === null ? null : (
+        <MakePieceDrawer
+          key={`${making.id}:${String(making.headVersion)}`}
+          template={making}
+          open
+          onClose={() => setMaking(null)}
+        />
+      )}
+    </>
   );
 }

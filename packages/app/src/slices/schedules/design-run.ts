@@ -88,7 +88,7 @@ export function claimDesignRun(deps: ScheduleDeps, schedule: ScheduleSummary, no
     if (current.missedPolicy === "skip" && now.valueOf() - scheduledFor.valueOf() > missedGraceMs)
       return keep(
         "skipped",
-        `Skipped: Slopify wasn't open at ${time} when ${row.title}'s piece was due, and this schedule skips the runs it misses. It tries again at ${time} tomorrow; to make a missed piece as soon as Slopify opens, set Missed run to Run once when Slopify reopens in Templates → Poster templates → ${plan.name} → Schedule.`,
+        `Skipped: Slopify wasn't open at ${time} when ${row.title}'s poster was due, and this schedule skips the runs it misses. It tries again at ${time} tomorrow; to make a missed poster as soon as Slopify opens, set Missed run to Run once when Slopify reopens in Templates → Poster templates → ${plan.name} → Schedule.`,
       );
     if (designs === undefined)
       return keep(
@@ -115,7 +115,7 @@ export function claimDesignRun(deps: ScheduleDeps, schedule: ScheduleSummary, no
     )
       return keep(
         "failed",
-        `Not started: ${row.title}'s piece costs up to $${quote.high.toFixed(2)}${quote.unknown > 0 ? " and some prices are unknown" : ""}, over this schedule's spend limit. Raise the spend limit or choose an image model with a known, lower price.`,
+        `Not started: ${row.title}'s poster costs up to $${quote.high.toFixed(2)}${quote.unknown > 0 ? " and some prices are unknown" : ""}, over this schedule's spend limit. Raise the spend limit or choose an image model with a known, lower price.`,
       );
     const started = run("running", null);
     if (!insertRun(deps.db, started)) return;
