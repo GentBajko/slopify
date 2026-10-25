@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { modelOptionLabel, modelPriceLabel } from "./model-label";
+import { modelChoiceLabel, modelOptionLabel, modelPriceLabel } from "./model-label";
 
 describe("modelOptionLabel", () => {
   it("adds the token price and context size to the name", () => {
@@ -20,5 +20,27 @@ describe("modelOptionLabel", () => {
   it("names the unit for image and speech prices", () => {
     expect(modelPriceLabel({ perImage: 0.04 })).toBe("$0.04 per image");
     expect(modelPriceLabel({ perMillionCharacters: 30 })).toBe("$30 per 1M characters");
+  });
+});
+
+describe("modelChoiceLabel", () => {
+  it("names a text model plainly, without token prices or context size", () => {
+    expect(
+      modelChoiceLabel({
+        id: "g",
+        name: "Google: Gemini 3.8 Flash",
+        price: { inputPerMillionTokens: 0.75, outputPerMillionTokens: 3.75 },
+        contextTokens: 1_048_576,
+      }),
+    ).toBe("Google: Gemini 3.8 Flash");
+  });
+
+  it("keeps a price a person reads as one: per image or per minute", () => {
+    expect(modelChoiceLabel({ id: "f", name: "FLUX.2", price: { perImage: 0.04 } })).toBe(
+      "FLUX.2 · $0.04 per image",
+    );
+    expect(modelChoiceLabel({ id: "v", name: "Voice", price: { perMillionCharacters: 30 } })).toBe(
+      "Voice",
+    );
   });
 });

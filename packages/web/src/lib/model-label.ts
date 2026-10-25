@@ -32,3 +32,18 @@ export function modelOptionLabel(model: ModelInfo): string {
       : `${compact.format(model.contextTokens)} context`;
   return [model.name, price, context].filter((part) => part !== undefined).join(" · ");
 }
+
+// Create's entry for a model: its name, and its price only where a person reads it as a price
+// (per image, per minute). Token prices and context sizes are jargon there and cut the closed
+// select short; the run's estimate beside the Make button says what the choice costs.
+export function modelChoiceLabel(model: ModelInfo): string {
+  const price = model.price;
+  const plain =
+    price?.perImage !== undefined || price?.perMinute !== undefined
+      ? modelPriceLabel({
+          ...(price.perImage === undefined ? {} : { perImage: price.perImage }),
+          ...(price.perMinute === undefined ? {} : { perMinute: price.perMinute }),
+        })
+      : undefined;
+  return plain === undefined ? model.name : `${model.name} · ${plain}`;
+}
