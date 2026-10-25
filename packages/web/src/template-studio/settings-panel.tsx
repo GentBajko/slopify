@@ -4,7 +4,6 @@ import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Field, Input } from "@/components/kit/field";
 import { Switch } from "@/components/kit/switch";
-import type { HelpId } from "@/help/catalog";
 import { usd } from "@/lib/format";
 import {
   about,
@@ -16,10 +15,13 @@ import {
   studioSettingsKey,
   writeStudioSettings,
 } from "./api";
+import { plansLabel } from "./budget-words";
 
-// Settings → Template studio: the most the studio's samples, and designed pieces' template
-// samples, may spend in one day, in dollars, and whether they may run on a CLI plan at all. A sample that would go over either waits,
-// saying so, until the next day, a higher budget or plans allowed.
+// Settings → Production defaults → Template samples: the most the samples of video templates,
+// and of poster templates, may spend in one day, in dollars, and whether they may run on a
+// Claude Code or Codex plan at all. A sample that would go over either waits, saying so, until
+// the next day, a higher budget or plans allowed. Each line under a control says this; no info
+// button is needed.
 export function TemplateStudioSettings(): ReactElement {
   return (
     <div className="flex flex-col gap-6">
@@ -57,10 +59,9 @@ function BudgetField(): ReactElement {
   return (
     <>
       <DailyBudget
-        label="Daily sample budget"
-        tip="settings.template-studio.budget"
-        saveLabel="Save"
-        help={`The most the studio's samples may spend in one day, in US dollars; at $0.00 no sample spends money. Spent today: ${usd(data.today.spent)}${unpriced}; left: ${usd(data.today.left)}.`}
+        label="Video templates: daily budget"
+        saveLabel="Save video budget"
+        help={`The most video template samples may spend in one day, in US dollars; one over it waits for tomorrow or a higher budget. Spent today: ${usd(data.today.spent)}${unpriced}; left: ${usd(data.today.left)}.`}
         stored={data.dailyBudget}
         pending={save.isPending}
         error={
@@ -71,37 +72,33 @@ function BudgetField(): ReactElement {
         onSave={(dailyBudget, done) => save.mutate({ dailyBudget }, { onSuccess: done })}
       />
       <DailyBudget
-        label="Designed pieces: daily sample budget"
-        tip="settings.template-studio.design-budget"
-        saveLabel="Save designed pieces' budget"
-        help={`The most the samples of poster templates (Templates → Poster templates) may spend in one day, in US dollars; at $0.00 no sample spends money.${data.designToday === undefined ? "" : ` Spent today: ${usd(data.designToday.spent)}; left: ${usd(data.designToday.left)}.`}`}
+        label="Poster templates: daily budget"
+        saveLabel="Save poster budget"
+        help={`The most poster template samples may spend in one day, in US dollars; one over it waits for tomorrow or a higher budget.${data.designToday === undefined ? "" : ` Spent today: ${usd(data.designToday.spent)}; left: ${usd(data.designToday.left)}.`}`}
         stored={data.designDailyBudget}
         pending={save.isPending}
         error={
           save.error && saved?.designDailyBudget !== undefined
-            ? `The designed pieces' budget wasn't saved: ${save.error.message}`
+            ? `The poster budget wasn't saved: ${save.error.message}`
             : undefined
         }
         onSave={(designDailyBudget, done) =>
           save.mutate({ designDailyBudget }, { onSuccess: done })
         }
       />
-      <div className="flex flex-col gap-1">
-        <Switch
-          label="Samples may use my CLI plans"
-          tip="settings.template-studio.plans"
-          checked={data.samplesUsePlans}
-          disabled={save.isPending}
-          onChange={(samplesUsePlans) =>
-            save.mutate({ dailyBudget: data.dailyBudget, samplesUsePlans })
-          }
-        />
-        <p className="m-0 text-small text-ink-2">
-          {data.samplesUsePlans
-            ? "On: samples, designed pieces' too, may run steps on your Claude Code or Codex plan. That usage has no dollar price, so the budgets above don't limit it."
-            : "Off: no sample, designed pieces' included, runs a step on your Claude Code or Codex plan; such a sample waits until you turn this on."}
-        </p>
-      </div>
+      <Switch
+        label={plansLabel}
+        help={
+          data.samplesUsePlans
+            ? "On: samples, posters' too, may run steps on your plan. That usage has no dollar price, so the budgets above don't limit it."
+            : "Off: no sample, posters' included, runs a step on your plan; such a sample waits until you turn this on."
+        }
+        checked={data.samplesUsePlans}
+        disabled={save.isPending}
+        onChange={(samplesUsePlans) =>
+          save.mutate({ dailyBudget: data.dailyBudget, samplesUsePlans })
+        }
+      />
     </>
   );
 }
@@ -109,7 +106,6 @@ function BudgetField(): ReactElement {
 // A dollar amount from $0 to $1,000 with its own Save, kept as typed until saved.
 function DailyBudget(props: {
   readonly label: string;
-  readonly tip: HelpId;
   readonly saveLabel: string;
   readonly help: string;
   readonly stored: number;
@@ -125,7 +121,7 @@ function DailyBudget(props: {
       ? "Enter an amount between $0.00 and $1,000.00."
       : undefined;
   return (
-    <Field label={props.label} tip={props.tip} help={props.help} error={problem ?? props.error}>
+    <Field label={props.label} help={props.help} error={problem ?? props.error}>
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-small text-ink-2">$</span>
         <Input

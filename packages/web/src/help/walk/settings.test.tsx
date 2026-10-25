@@ -227,7 +227,7 @@ const loaded: Readonly<Record<SettingsSection, () => Promise<unknown>>> = {
   models: () => screen.findByText("/data/catalogue.json"),
   agents: () => screen.findByText("No agent has connected yet."),
   playback: () => screen.findByLabelText("Silence between segments"),
-  "template-studio": () => screen.findByLabelText("Daily sample budget"),
+  "template-studio": () => screen.findByLabelText("Video templates: daily budget"),
   notifications: () => screen.findByDisplayValue("https://ntfy.sh/slopify-runs"),
   "channel-links": () => screen.findByRole("link", { name: "Open the default channel's links" }),
   studio: () => screen.findByDisplayValue("Lore"),

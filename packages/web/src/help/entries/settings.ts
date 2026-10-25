@@ -99,21 +99,6 @@ export const settingsHelp = {
     body: "Seconds of quiet between the intro and the narration, and between the narration and the outro, in every new video, unless Create sets a different gap for one video. It only matters when an intro or outro is set; 0 runs them together. Default: 3 seconds, from 0 to 30. Videos already started keep their own gap.",
     tutorial: { page: "Settings-Reference", anchor: "silence-between-segments" },
   },
-  "settings.template-studio.budget": {
-    title: "Daily sample budget",
-    body: "The most the studio's samples may spend in one day, in US dollars, from midnight on this computer; at $0.00 none spends money. A sample over it waits in the studio and says so: press Make sample once there is room, or raise the budget. Steps on a CLI plan have no dollar price; Samples may use my CLI plans decides those. Default: $2.00, from $0 to $1,000.",
-    tutorial: { page: "Settings-Reference", anchor: "template-studio" },
-  },
-  "settings.template-studio.design-budget": {
-    title: "Designed pieces: daily sample budget",
-    body: "The most the samples of designed-piece templates (Library → Designs) may spend in one day, in US dollars, from midnight on this computer; separate from the studio's budget. A sample over it waits in the template's editor: press Make sample to make it anyway, or raise this. Samples may use my CLI plans decides steps on a plan. Default: $1.00, from $0 to $1,000.",
-    tutorial: { page: "Settings-Reference", anchor: "template-studio" },
-  },
-  "settings.template-studio.plans": {
-    title: "Samples may use my CLI plans",
-    body: "Whether a template's samples, Compare models, Make samples for all and the samples of designed-piece templates may run steps on your Claude Code or Codex plan. Off, a sample with such a step waits in the studio and says so, whatever the daily budget; nothing on your plan is used. On, those steps run and use your plan's allowance, which the daily budget doesn't limit because it has no dollar price. Default: off.",
-    tutorial: { page: "Settings-Reference", anchor: "template-studio" },
-  },
   "settings.loudness": {
     title: "Level the volume for new runs",
     body: "Whether a new video on Create (and a template or quick short) starts with Level the volume on, and at which volumes. On evens out every narration piece and sets the video to about -14 LUFS, the loudness YouTube plays at, and the audio files to -18 LUFS. A project keeps what it started with; change it there in Edit project. Default: on.",
