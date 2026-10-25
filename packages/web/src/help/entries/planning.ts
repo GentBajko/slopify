@@ -1,7 +1,7 @@
 import type { HelpEntry } from "../entry.js";
 
-// Schedules and channels (the current channel, its language and YouTube AI disclosure). The
-// cast editor says what each field does in a line under it.
+// Schedules and channels (the YouTube AI disclosure). The schedule form, the channel's language
+// and the cast editor say what each field does in a line under it.
 export const planningHelp = {
   // Schedules
   "planning.schedule.missed": {
@@ -45,10 +45,5 @@ export const planningHelp = {
     title: "YouTube AI disclosure",
     body: "Studio's AI use answer for this channel's videos and Shorts, given by Copy for YouTube Studio and the Studio extension. Automatic says Yes only for YouTube's three cases: a voice marked as imitating a real person, real footage altered, or photorealistic AI pictures from a marked Image prompt. Mark voices in Settings → Voices and image prompts in Prompts. Default: Automatic.",
     tutorial: { page: "Publishing-to-YouTube", anchor: "override-per-channel" },
-  },
-  "planning.channel.language": {
-    title: "Language of new projects",
-    body: "The language this channel's new projects are written and narrated in when Create or the template picks none. It applies with the channel's look turned off too, since it is not styling. Pick voices that speak it. Not set means English. Projects already made keep their language.",
-    tutorial: { page: "Other-Languages", anchor: "set-a-channels-language" },
   },
 } as const satisfies Readonly<Record<string, HelpEntry>>;

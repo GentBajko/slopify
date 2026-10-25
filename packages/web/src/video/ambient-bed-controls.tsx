@@ -11,7 +11,6 @@ import {
 } from "@app/slices/video/ambient-bed.js";
 import type { ReactElement, ReactNode } from "react";
 import { Field, Input, Select } from "@/components/kit/field";
-import type { HelpId } from "@/help/catalog";
 import { ResetToDefault } from "./reset-to-default";
 
 // The ambient bed's settings: Play's (with None and My own file) and the channel brand kit's
@@ -56,10 +55,9 @@ export function AmbientBedControls({
     field: "level" | "fadeIn" | "tail",
     label: string,
     hint: string,
-    tip: HelpId,
   ): ReactElement | null =>
     value === undefined || !playing ? null : (
-      <Field label={label} help={hint} tip={tip} error={problem(field)}>
+      <Field label={label} help={hint} error={problem(field)}>
         <Input
           data-play-field={`${fieldPrefix}.${field}`}
           type="text"
@@ -80,7 +78,11 @@ export function AmbientBedControls({
     );
   return (
     <div className="sl-fields">
-      <Field label="Ambient sound" tip="project.ambient.source" error={problem("source")}>
+      <Field
+        label="Ambient sound"
+        help="Played quietly under the narration, dipping while the narrator speaks · free. Shorts never get it."
+        error={problem("source")}
+      >
         <Select
           data-play-field={`${fieldPrefix}.source`}
           value={value?.source ?? ""}
@@ -103,19 +105,16 @@ export function AmbientBedControls({
             "level",
             "Level (dB)",
             `${String(ambientLevelMin)} to ${String(ambientLevelMax)}; 0 is about as loud as the voice.`,
-            "project.ambient.level",
           )}
           {number(
             "fadeIn",
             "Fade in (seconds)",
-            `0 to ${String(ambientFadeMax)}.`,
-            "project.ambient.fade-in",
+            `0 to ${String(ambientFadeMax)}, rising from silence at the start.`,
           )}
           {number(
             "tail",
             "Tail after the narration (seconds)",
-            `0 to ${String(ambientTailMax)}, fading out.`,
-            "project.ambient.tail",
+            `0 to ${String(ambientTailMax)}, fading out; longer than the silence at the end makes the video longer.`,
           )}
         </div>
       ) : null}

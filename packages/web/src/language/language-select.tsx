@@ -23,8 +23,9 @@ export function LanguageSelect({
   disabled = false,
   tip = "play.language",
 }: {
-  // The info button; a screen where the language means something else passes its own.
-  readonly tip?: HelpId;
+  // The info button; a screen where the language means something else passes its own, and one
+  // whose label and line under it say enough passes null for none.
+  readonly tip?: HelpId | null;
   readonly value: string | undefined;
   readonly onChange: (language: LanguageCode | undefined) => void;
   // What "not chosen here" resolves to, named in its option ("Channel's language (German)").
@@ -36,7 +37,7 @@ export function LanguageSelect({
 }): ReactElement {
   const effective = value ?? inherited?.language;
   return (
-    <Field label={label} tip={tip} help={languageHelp(effective)} error={error}>
+    <Field label={label} tip={tip ?? undefined} help={languageHelp(effective)} error={error}>
       <Select
         data-play-field="language"
         value={value ?? (inherited === undefined ? "en" : "")}
