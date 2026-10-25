@@ -325,6 +325,7 @@ function ShortCard({
             src={media.url}
             label={`Short ${number}`}
             portrait
+            quiet
             {...(poster === undefined ? {} : { poster: poster.url })}
           />
           {safeZone ? <ShortsSafeZone /> : null}

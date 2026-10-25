@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { ProjectRoute } from "@/routes/project";
@@ -43,6 +45,17 @@ function shown(selector: string): readonly Element[] {
   );
 }
 
+// What wears the lime: primary buttons and keys, and a player's big play key unless the player
+// is a quiet one (the shorts'). The video's own player is the one exception the design keeps.
+function lime(): readonly string[] {
+  return [
+    ...shown(".sl-btn--primary, .sl-key").map((one) => one.textContent?.trim() ?? ""),
+    ...shown(".sl-player:not(.sl-player--quiet) .sl-player__big")
+      .filter((key) => key.closest('section[aria-label="Video"]') === null)
+      .map((key) => key.getAttribute("aria-label") ?? ""),
+  ];
+}
+
 describe("a finished project's sections", () => {
   it("show at most one Open folder each, and the page one lime button", async () => {
     renderRouted(
@@ -60,10 +73,7 @@ describe("a finished project's sections", () => {
       }).toEqual({ name, folders: 1 });
       // The next action, the video's download, is the one lime button; every section's own
       // download is secondary.
-      expect({
-        name,
-        primaries: shown(".sl-btn--primary, .sl-key").map((one) => one.textContent?.trim()),
-      }).toEqual({ name, primaries: ["Download video"] });
+      expect({ name, primaries: lime() }).toEqual({ name, primaries: ["Download video"] });
     }
   });
 
@@ -117,5 +127,21 @@ describe("a finished project's sections", () => {
     await openProjectSection("Article");
     await screen.findByRole("region", { name: "Article" });
     expect(shown(".sl-btn--primary, .sl-key").length).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("the players' play keys", () => {
+  // jsdom applies no style sheet, so the colours are read where they are set.
+  const css = readFileSync(join(import.meta.dirname, "../styles/kit.css"), "utf8");
+  const block = (selector: string) => {
+    const at = css.indexOf(`${selector} {`);
+    return at === -1 ? "" : css.slice(at, css.indexOf("}", at));
+  };
+
+  it("are light, not lime, for a narration and for a grid of shorts", () => {
+    expect(block(".sl-audio .sl-audio__key.sl-btn")).toContain("background: var(--player-ink)");
+    expect(css).toMatch(
+      /\.sl-player--quiet \.sl-player__big\.sl-btn,[^{]*\{\s*background: var\(--player-ink\)/u,
+    );
   });
 });

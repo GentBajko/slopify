@@ -827,6 +827,12 @@
     background: #b6e070;
     color: #101010;
   }
+  /* A grid of players (the shorts) keeps its keys light: the lime is the page's next action. */
+  .sl-player--quiet .sl-player__big.sl-btn,
+  .sl-player--quiet .sl-player__big.sl-btn:hover {
+    background: var(--player-ink);
+    color: #101010;
+  }
   .sl-player__big svg {
     width: 26px;
     height: 26px;
@@ -1080,15 +1086,16 @@
   .sl-audio audio {
     display: none;
   }
+  /* Light, not lime: a narration's play key sits beside the page's one lime action. */
   .sl-audio .sl-audio__key.sl-btn {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: var(--player-lime);
+    background: var(--player-ink);
     color: #101010;
   }
   .sl-audio .sl-audio__key.sl-btn:hover {
-    background: #b6e070;
+    background: #ffffff;
     color: #101010;
   }
   .sl-audio__key svg {
