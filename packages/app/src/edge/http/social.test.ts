@@ -6,6 +6,7 @@ import type { Log } from "../../kernel/log.js";
 import type { RunConfig } from "../../slices/admission/model.js";
 import type { SendNotification } from "../../slices/notifications/send.js";
 import { saveNotificationUrl } from "../../slices/notifications/settings.js";
+import { setupSectionNames } from "../../slices/project-templates/setup-sections.js";
 import { defaultChoices } from "../../slices/social/defaults.js";
 import type { ActivePost, FillResponse, SocialPacksResponse } from "../../slices/social/model.js";
 import type { Reshaper } from "../../slices/social/reshape.js";
@@ -118,7 +119,7 @@ describe("the page's routes", () => {
     });
     expect(response.status).toBe(409);
     expect(await detail(response)).toBe(
-      "A post written by a post prompt is a paid step, so it is picked in the template, in Edit template → YouTube description & posts, where Save shows its cost. For this project, pick a free text source in Copy for YouTube Studio → X → Settings.",
+      `A post written by a post prompt is a paid step, so it is picked in the template, in Edit template → ${setupSectionNames.youtube}, where Save shows its cost. For this project, pick a free text source in Copy for YouTube Studio → X → Settings.`,
     );
   });
 
@@ -150,7 +151,7 @@ describe("the page's routes", () => {
     const notThere = await send("PUT", "/social/packs/p1/tiktok/text", { text: "a", base: "b" });
     expect(notThere.status).toBe(404);
     expect(await detail(notThere)).toBe(
-      "This project doesn't post to TikTok. A project's sites come from its template: tick TikTok under Post to in Edit template → YouTube description & posts, or under Post to other sites in Create, for the projects it makes next.",
+      `This project doesn't post to TikTok. A project's sites come from its template: tick TikTok under Post to in Edit template → ${setupSectionNames.youtube}, or under Post to other sites in Create, for the projects it makes next.`,
     );
   });
 

@@ -44,7 +44,7 @@ interface Skip {
 }
 
 // The same steps as the page's Remake outdated (`web/src/routes/projects-remake.ts`): the
-// project's own version, then Choose what to remake for every outdated output.
+// project's own version, then Choose what to make again for every outdated output.
 async function planOne(deps: RouteCallDeps, projectId: string): Promise<Plan | Skip> {
   const at = `/api/projects/${encodeURIComponent(projectId)}`;
   const unread = (message: string): Skip => ({
@@ -114,7 +114,7 @@ export function registerRemakeTools(server: McpServer, deps: RouteCallDeps): voi
     {
       title: remakeTool.title,
       description:
-        "Make outdated parts again for several projects, like the Projects list's selection bar: each project's Choose what to remake for every outdated output with its estimate, the projects it leaves out and why, and the single total. Nothing starts here.",
+        "Make outdated parts again for several projects, like the Projects list's selection bar: each project's Choose what to make again for every outdated output with its estimate, the projects it leaves out and why, and the single total. Nothing starts here.",
       inputSchema: { projectIds: z.array(pathParam).min(1).max(2000) },
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     },

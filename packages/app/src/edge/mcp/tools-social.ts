@@ -1,8 +1,9 @@
+import { setupSectionNames } from "../../slices/project-templates/setup-sections.js";
 import { choiceBody, linkBody, redditBody, textBody } from "../../slices/social/schema.js";
 import type { RouteTool } from "./route-tool.js";
 
-// A project's posts to X, LinkedIn, Instagram, TikTok, Reddit and Bluesky, as Prepare upload
-// shows them. Agents prepare them; Fill in <site> and posting are the person's.
+// A project's posts to X, LinkedIn, Instagram, TikTok, Reddit and Bluesky, as Copy for YouTube
+// Studio shows them. Agents prepare them; Fill in <site> and posting are the person's.
 export const socialTools: readonly RouteTool[] = [
   {
     name: "get_post_packs",
@@ -15,8 +16,7 @@ export const socialTools: readonly RouteTool[] = [
     name: "set_post_choice",
     route: "PUT /api/social/packs/:projectId/:platform/choice",
     title: "Change what a post carries",
-    description:
-      "The project's own settings for one site (platform: x, linkedin, instagram, tiktok, reddit or bluesky): its text source, media, hashtags and link; {off: true} to not post there; null to go back to the template's. A post prompt (text \"prompt\") is a paid step picked only in the template (Edit template → YouTube description & posts) or in Create, where Save shows its cost. Body: {choice}.",
+    description: `The project's own settings for one site (platform: x, linkedin, instagram, tiktok, reddit or bluesky): its text source, media, hashtags and link; {off: true} to not post there; null to go back to the template's. A post prompt (text "prompt") is a paid step picked only in the template (Edit template → ${setupSectionNames.youtube}) or in Create, where Save shows its cost. Body: {choice}.`,
     body: choiceBody,
   },
   {

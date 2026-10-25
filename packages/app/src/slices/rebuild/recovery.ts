@@ -217,7 +217,7 @@ export async function recoverProject(
           fields: preview.value.preview.providedReuseRequired.map((key) => ({
             field: key,
             message:
-              "Look over the changed content you supplied, or the captions you edited, in Edit settings or in Choose what to remake.",
+              "Look over the changed content you supplied, or the captions you edited, in Edit settings or in Choose what to make again.",
           })),
         });
       const blocked = preview.value.preview.work.filter((row) => row.disposition === "blocked");

@@ -117,7 +117,7 @@ async function timing(
   const audio = await revisionAudio(deps, context, snapshot.view);
   if (audio.length === 0)
     throw new Error(
-      `Captions and the YouTube description need narration audio, but this project has none. Turn captions off in ${editSettings.captions} and the YouTube description off in ${editSettings.outputs}, or turn narration on, then Try again.`,
+      `Captions and the YouTube description need narration audio, but this project has none. Turn captions off in ${editSettings.captions} and the YouTube description off in ${editSettings.extras}, or turn narration on, then Try again.`,
     );
   const alignSubtitles = deps.alignSubtitles;
   if (alignSubtitles === undefined)

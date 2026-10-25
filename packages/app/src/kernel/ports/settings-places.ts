@@ -16,9 +16,9 @@ export const editSettings = {
   look: "Edit settings → Video and style → Look",
   sound: "Edit settings → Video and style → Sound polish",
   captions: "Edit settings → Captions",
-  // The thumbnail, the YouTube description, the shorts and the PDF.
-  outputs: "Edit settings → Outputs",
-  shorts: "Edit settings → Outputs → Shorts",
+  // The thumbnail, the YouTube description, the shorts and the PDF, together as in Create.
+  extras: "Edit settings → Extras",
+  shorts: "Edit settings → Extras → Shorts",
   checks: "Edit settings → Pauses and checks",
   channel: "Edit settings → Channel",
   language: "Edit settings → Channel → Language",

@@ -51,7 +51,7 @@ export async function executeDocumentRecipe(
       );
     } catch (error) {
       throw new Error(
-        `The document's cover is the project's thumbnail, and its file can't be read (${errorText(error)}). Make the thumbnail again in the project's Images section, or upload it again in ${editSettings.outputs}, then use Try again on PDF.`,
+        `The document's cover is the project's thumbnail, and its file can't be read (${errorText(error)}). Make the thumbnail again in the project's Images section, or upload it again in ${editSettings.extras}, then use Try again on PDF.`,
         { cause: error },
       );
     }
@@ -107,7 +107,7 @@ function documentView(
   );
   if (recipe === undefined || recipe.unresolved)
     throw new Error(
-      "The project changed after this document was queued, so it no longer matches the saved article. Use Choose what to remake (in the project's More menu) (or Try again on PDF) to make it from the current version.",
+      "The project changed after this document was queued, so it no longer matches the saved article. Use Choose what to make again (in the project's More menu) (or Try again on PDF) to make it from the current version.",
     );
   return view;
 }

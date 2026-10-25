@@ -144,7 +144,7 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
     missing.push(
       config.youtubeDescription === true
         ? "The YouTube description isn't written yet. It is written after the video's subtitle timing; wait for the Video stage to finish."
-        : `No YouTube description is written for this project. Turn on YouTube description in ${editSettings.outputs} to have one written with chapters and tags.`,
+        : `No YouTube description is written for this project. Turn on YouTube description in ${editSettings.extras} to have one written with chapters and tags.`,
     );
   const count = thumbnailCountOf(config);
   // The first thumbnail, then the second and third, and never one left from when the project
@@ -155,7 +155,7 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
   if (thumbnails.length === 0)
     missing.push(
       config.sources.thumbnail === "off"
-        ? `This project makes no thumbnail, so YouTube will pick a frame. Set Thumbnail source in ${editSettings.outputs} to make or upload one.`
+        ? `This project makes no thumbnail, so YouTube will pick a frame. Set Thumbnail source in ${editSettings.extras} to make or upload one.`
         : "The thumbnail isn't made yet. Let the Thumbnail stage finish, then open Copy for YouTube Studio again.",
     );
   else if (thumbnails.length < count)

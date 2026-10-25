@@ -115,7 +115,7 @@ export function actionRoutes(deps: AppDeps) {
       "idempotency-conflict":
         "This action was already sent with different details. Reload the page, then try again.",
       "rebuild-required":
-        "This change needs some outputs to be made again. Use Choose what to remake (in the project's More menu) to see what will be made again and what it costs.",
+        "This change needs some outputs to be made again. Use Choose what to make again (in the project's More menu) to see what will be made again and what it costs.",
     };
     return problem(c, {
       status: codes[result.reason],
@@ -165,9 +165,9 @@ export function actionRoutes(deps: AppDeps) {
       "invalid-selection":
         "This section has nothing generated to make again because its content was supplied by you. To change it, use Edit settings.",
       "review-required":
-        "Content you supplied or captions you edited by hand would be replaced. Change them in Edit settings, or use Choose what to remake (in the project's More menu) to confirm the replacement.",
+        "Content you supplied or captions you edited by hand would be replaced. Change them in Edit settings, or use Choose what to make again (in the project's More menu) to confirm the replacement.",
       "cost-ack-required":
-        "Making this again needs you to review its cost first. Use Choose what to remake (in the project's More menu).",
+        "Making this again needs you to review its cost first. Use Choose what to make again (in the project's More menu).",
       readiness:
         "Slopify cannot run this yet. Check the provider, model, voice and any files you supplied, then use Continue the run.",
       running:

@@ -157,7 +157,7 @@ export function mediaFor(
   if (choice.thumbnail === true) {
     if (sources.thumbnail === null)
       missing(
-        `The thumbnail isn't made yet. Let the Thumbnail stage finish, or set Thumbnail source in ${editSettings.outputs}.`,
+        `The thumbnail isn't made yet. Let the Thumbnail stage finish, or set Thumbnail source in ${editSettings.extras}.`,
       );
     else media.push(still(sources, "thumbnail", sources.thumbnail, shape));
   }

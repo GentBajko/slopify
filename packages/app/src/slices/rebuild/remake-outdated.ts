@@ -31,9 +31,9 @@ export function previewBlocker(
     return "Nothing in it is outdated, so there is nothing to remake.";
   const blocked = preview.work.find((work) => work.disposition === "blocked");
   if (blocked !== undefined)
-    return `${label(blocked.key)} can't run: ${blocked.reason.trim() || "no reason was given."} Open the project and press Choose what to remake to see what to fix.`;
+    return `${label(blocked.key)} can't run: ${blocked.reason.trim() || "no reason was given."} Open the project and press Choose what to make again to see what to fix.`;
   if (preview.providedReuseRequired.length > 0)
-    return "It uses content you supplied, which you confirm on the project itself: open it and press Choose what to remake.";
+    return "It uses content you supplied, which you confirm on the project itself: open it and press Choose what to make again.";
   return undefined;
 }
 

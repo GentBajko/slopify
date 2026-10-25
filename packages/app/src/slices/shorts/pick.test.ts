@@ -173,10 +173,10 @@ describe("the pick's messages", () => {
 
   it("says what to change when nothing usable came back", () => {
     expect(noPicksMessage(["Clip 1 is too short."], limits)).toBe(
-      "The AI model didn't pick any clip Slopify could use as a short, twice (Clip 1 is too short.). Try again; if it keeps happening, widen the Length range in Edit settings → Outputs → Shorts, or choose another model in Edit settings → Article → Written by.",
+      "The AI model didn't pick any clip Slopify could use as a short, twice (Clip 1 is too short.). Try again; if it keeps happening, widen the Length range in Edit settings → Extras → Shorts, or choose another model in Edit settings → Article → Written by.",
     );
     expect(noPicksMessage([], { ...limits, durationSeconds: 12 })).toBe(
-      "The narration is 12 seconds long, shorter than the 20-second minimum for a short, so there is nothing to cut. Lower the shortest Length in Edit settings → Outputs → Shorts, then Try again.",
+      "The narration is 12 seconds long, shorter than the 20-second minimum for a short, so there is nothing to cut. Lower the shortest Length in Edit settings → Extras → Shorts, then Try again.",
     );
   });
 });

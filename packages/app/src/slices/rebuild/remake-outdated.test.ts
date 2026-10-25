@@ -31,7 +31,7 @@ it("leaves out a project with nothing outdated, blocked work, or supplied conten
       label,
     ),
   ).toBe(
-    "“audio:body” can't run: The voice was removed. Open the project and press Choose what to remake to see what to fix.",
+    "“audio:body” can't run: The voice was removed. Open the project and press Choose what to make again to see what to fix.",
   );
   expect(
     previewBlocker(
