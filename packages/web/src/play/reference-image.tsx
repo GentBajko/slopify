@@ -52,7 +52,7 @@ export function ReferenceImage({
       <div className="min-w-0">
         <OptionPicker
           field="reference.source"
-          label="Establishing image (keeps characters and style the same)"
+          label="Establishing image"
           value={off ? "" : value.source}
           placeholder="Off"
           options={sources}
@@ -82,7 +82,7 @@ export function ReferenceImage({
       )}
       <HelpLine className="sl-fields__wide">
         {off
-          ? "Off: each image is drawn on its own."
+          ? "Off: each image is drawn on its own. Pick one to keep characters and style the same."
           : value.source === "prompt"
             ? "Drawn first and never shown; every other image copies its characters and style · one more image call."
             : "Never shown; every other image copies its characters and style."}
@@ -101,7 +101,9 @@ export function ReferenceImage({
             />
             Use it as a reference for the thumbnail too
           </label>
-          <HelpLine className="pl-7">The thumbnail itself has its own switch, Thumbnail.</HelpLine>
+          <HelpLine className="pl-7">
+            The thumbnail itself is set under Extras → Thumbnail.
+          </HelpLine>
         </div>
       )}
     </div>

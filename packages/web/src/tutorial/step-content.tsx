@@ -155,7 +155,7 @@ export function StepContent({
           <p>
             Leave <strong>Images</strong> on <strong>Made by AI (paid)</strong>. Under{" "}
             <strong>Images by</strong>, pick the <strong>Service</strong> and <strong>Model</strong>
-            , tick your image prompt under <strong>Which image style?</strong>, and type{" "}
+            , tick your image prompt under <strong>Image prompts</strong>, and type{" "}
             <strong>2</strong> in its <strong>How many images</strong> box for a small first run.
           </p>
           <p>

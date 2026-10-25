@@ -75,7 +75,13 @@ describe("the image prompt tick list", () => {
     expect(screen.queryByLabelText("How many images for Portraits")).toBeNull();
     expect(numberFor("Oils").value).toBe("8");
     expect(screen.getByText("How many images")).not.toBeNull();
-    expect(screen.getByText("Which image style?")).not.toBeNull();
+    expect(screen.getByText("Image prompts")).not.toBeNull();
+  });
+
+  it("says under each name what the prompt draws, from its first sentence", () => {
+    list([]);
+    expect(screen.getByText("A picture of the topic as Oils")).not.toBeNull();
+    expect(screen.getByText("A picture of the topic as Maps")).not.toBeNull();
   });
 
   it("starts a newly ticked prompt where the editor says", async () => {
