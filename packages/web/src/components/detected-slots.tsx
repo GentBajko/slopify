@@ -78,7 +78,7 @@ export function DetectedSlots({
 
       {filled.length === 0 ? null : (
         <div className="flex flex-col gap-2">
-          <span className="sl-kicker">Slopify fills in</span>
+          <span className="sl-field__label">Slopify fills in</span>
           <ul
             aria-label="Keywords Slopify fills"
             className="m-0 flex list-none flex-wrap gap-2 p-0"
@@ -101,7 +101,7 @@ export function DetectedSlots({
 
       {warnings.length === 0 ? null : (
         <div className="flex flex-col gap-2 border-t border-line pt-3">
-          <span className="sl-kicker text-waiting">
+          <span className="text-small font-semibold text-waiting">
             {warnings.length === 1
               ? "1 keyword warning"
               : `${String(warnings.length)} keyword warnings`}
@@ -114,7 +114,7 @@ export function DetectedSlots({
 
       {lint.length === 0 ? null : (
         <div id={lintId} className="flex flex-col gap-2 border-t border-line pt-3">
-          <span className="sl-kicker text-danger">
+          <span className="text-small font-semibold text-danger">
             {lint.length === 1 ? "1 keyword error" : `${String(lint.length)} keyword errors`}
           </span>
           {lint.map((problem) => (

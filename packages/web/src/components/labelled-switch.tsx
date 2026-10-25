@@ -1,12 +1,12 @@
 import { type ReactNode, useId } from "react";
 import { HelpLine } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
-import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { HelpId } from "@/help/catalog";
 
-// A segmented switch with its engraved label above it: the prompt editor's Kind, and the
-// entry editor's Category and Mode. Every input in this app carries a label above it.
+// A segmented switch with its label above it, in the same sentence-case field label as the Name
+// and the text box beside it: the prompt editor's Kind, and the entry editor's Category and
+// Mode. Every input in this app carries a label above it.
 //
 // Radix hands `onValueChange` the raw string of the pressed item and an empty string when
 // a press deselects, so every call site had the same lookup guarding the same union. It
@@ -38,7 +38,9 @@ export function LabelledSwitch<T extends string>({
   return (
     <div {...helpScope}>
       <div className="mb-1 flex items-center gap-1">
-        <Label id={labelId}>{label}</Label>
+        <span id={labelId} className="sl-field__label">
+          {label}
+        </span>
         {tip === undefined ? null : <InfoTip id={tip} label={label} className="-my-1" />}
       </div>
       <ToggleGroup
