@@ -402,8 +402,8 @@ export function ImportResult({
     counted("Channels", result.channels),
     counted("Cast members", result.cast),
     counted("Episode memories", result.episodeMemories),
-    counted("Titles to avoid", result.channelVideos),
-    counted("PDF looks", result.documentThemes),
+    counted("Existing videos", result.channelVideos),
+    counted("PDF themes", result.documentThemes),
     counted("Templates", result.templates),
     counted("Schedules", result.schedules),
     result.schedules.paused > 0

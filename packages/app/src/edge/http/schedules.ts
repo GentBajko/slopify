@@ -270,7 +270,7 @@ function routes(deps: ScheduleDeps | undefined) {
             "spend-limit":
               "Preparing it would go over this schedule's spend limit. Raise the limit under Edit, or prepare it from Play instead.",
             design:
-              "A design schedule makes each piece on its day, so there is nothing to prepare ahead. To have a piece now, open the design template (Templates → Poster templates) and press Make a piece; to have it sooner on a schedule, give its row an earlier date in the Schedule section.",
+              "A design schedule makes each piece on its day, so there is nothing to make ahead. To have a piece now, open its poster template (Templates → Poster templates) and press Make a piece; to have it sooner on a schedule, give its row an earlier date in the Schedule section.",
           };
           return problem(c, {
             status: result.reason === "not-found" ? 404 : 409,
@@ -278,8 +278,8 @@ function routes(deps: ScheduleDeps | undefined) {
               (result.reason === "not-ready" ? result.detail : undefined) ??
               detail[result.reason] ??
               (result.detail === undefined
-                ? `This topic couldn't be prepared (${result.reason}). Open Play with the schedule's template to see what the setup needs, then try again.`
-                : `This topic couldn't be prepared: ${result.detail} Fix it in the schedule's template (Templates → Edit template), then try again.`),
+                ? `This topic couldn't be made ahead (${result.reason}). Open Create with the schedule's template to see what the setup needs, then try again.`
+                : `This topic couldn't be made ahead: ${result.detail} Fix it in the schedule's template (Templates → Edit template), then try again.`),
             extensions: { reason: result.reason },
           });
         },

@@ -18,7 +18,7 @@ export const socialHelp = {
   },
   "social.prompt": {
     title: "Post prompt",
-    body: "The prompt (kind Post) that writes this site's post from the article. Built-in uses Slopify's own wording. It is one call to the project's text model per site, so Save in Edit template and the run's estimate show its price. Write your own in Prompts → Post.",
+    body: "The post prompt that writes this site's post from the article. Built-in uses Slopify's own wording. It is one AI call per site, so a template's sample and the run's estimate include its price. Write your own under Prompts → Post.",
     tutorial: posting("post-prompts"),
   },
   "social.custom": {

@@ -88,7 +88,7 @@ export const scheduleTools: readonly RouteTool[] = [
     body: prepareTopicBody,
     title: "Prepare a topic",
     description:
-      "Prepare, from the schedule's topics or Open on calendar: makes the topic's project now, exactly as the schedule would, and runs everything but the video, which its scheduled day renders. It spends what Create's review estimates and is refused over the schedule's spend limit and while the schedule is paused. Body: {topic: the topic's title}.",
+      "Make ahead, on a topic in the calendar: makes the topic's project now, exactly as the schedule would, and runs everything but the video, which its scheduled day puts together. It spends what Create's estimate says and is refused over the schedule's spend limit and while the schedule is paused. Body: {topic: the topic's title}.",
   },
   {
     name: "generate_topics",
