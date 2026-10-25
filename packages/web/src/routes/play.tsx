@@ -681,9 +681,10 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
         const field = (event.target as HTMLElement).dataset.playField;
         if (field) setTouched((current) => new Set([...current, field]));
       }}
-      // Only the typed boxes: a select's input event comes before its change, and drawing the
-      // page between them would put its old value back.
-      onInputCapture={(event) => {
+      // After the box's own change, never before it: a page drawn between the key and the
+      // box's change puts the box's old value back and the key is lost (React keeps a value
+      // it set as the one the change is measured against). Only the typed boxes count.
+      onChange={(event) => {
         const field = (event.target as HTMLElement).dataset.playField;
         if (
           field !== undefined &&

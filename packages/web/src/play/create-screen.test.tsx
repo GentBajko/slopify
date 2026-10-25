@@ -1,6 +1,7 @@
 import type { DraftView, PlayDraftDocument } from "@app/slices/play-drafts/model.js";
-import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { flushSync } from "react-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultChannelId } from "@/channels/api";
 import { startedAt } from "@/lib/utils";
@@ -212,6 +213,45 @@ describe("what is being made", () => {
 });
 
 describe("the topic box", () => {
+  it("keeps the very first key typed into it", async () => {
+    // A browser runs React's pending work between the page's capture and bubble listeners of a
+    // key's input event (a microtask checkpoint after each listener); jsdom does not. Doing the
+    // same here caught a capture handler on the page whose update drew the box back to empty
+    // before the box's own change saw the key, so the first key typed was lost.
+    const target = Object.getPrototypeOf(window.Node.prototype) as EventTarget;
+    const add = target.addEventListener;
+    target.addEventListener = function (
+      this: EventTarget,
+      type: string,
+      listener: EventListenerOrEventListenerObject | null,
+      options?: boolean | AddEventListenerOptions,
+    ): void {
+      if (type !== "input" || typeof listener !== "function") {
+        add.call(this, type, listener, options);
+        return;
+      }
+      add.call(
+        this,
+        type,
+        function (this: EventTarget, event: Event) {
+          listener.call(this, event);
+          flushSync(() => {});
+        },
+        options,
+      );
+    };
+    try {
+      await mountPlay();
+    } finally {
+      target.addEventListener = add;
+    }
+    const box = screen.getByLabelText(topicLabel) as HTMLInputElement;
+    for (const value of ["V", "Vo", "Vol"]) {
+      fireEvent.input(box, { target: { value } });
+      expect(box.value).toBe(value);
+    }
+  });
+
   it("stays quiet when the person only goes in and out of it, and says the hint's words once typed in", async () => {
     await mountPlay({}, { ...generatedRun, form: { ...generatedRun.form, title: "" } });
     const box = screen.getByLabelText(topicLabel);
