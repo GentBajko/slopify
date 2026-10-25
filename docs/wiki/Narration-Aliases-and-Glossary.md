@@ -46,7 +46,7 @@ Each row's title line sums it up, for example "Says Dr. as Doctor · whole word"
 ### Use aliases in a video
 
 1. On Create, open the **Narration** row with **Change**, then **More narration settings**.
-2. Keep **Use narration aliases** on (the default for new drafts).
+2. Keep **Use my Pronunciation list** on (the default for new drafts).
 3. Start the run.
 
 A project copies your Pronunciation list when it starts. Editing the list later never changes a started project until you open its **Edit settings** → **Narration** and press **Copy the list again** beside the aliases switch. Only the parts of the narration where a changed alias appears are made again.
@@ -87,7 +87,7 @@ A table with `Term | IPA` columns works too. If you paste your own article, add 
 ### Turn it on
 
 1. On Create, open **Narration → Change → More narration settings**.
-2. Keep **Use Pronunciation Glossary** on (the default).
+2. Keep **Use the article's pronunciation glossary** on (the default). It shows only while the voice is one that reads it.
 3. Optional: keep **Also use pronunciations from my other projects** on (the default). It adds every term from your other projects' glossaries, copied when this project starts. This project's own glossary wins where they differ. Turn it off to use only this article's glossary.
 
 ### Entries that are skipped

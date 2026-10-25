@@ -85,7 +85,7 @@ A pronunciation line the voice can't use (no slashes, ARPAbet, or sounds the pro
 |---|---|---|
 | **Gap between turns** | The pause between one speaker's turn and the next. Longer feels calmer; shorter feels like a lively talk. | 0.35 s; choose 0, 0.2, 0.35, 0.5, 0.8 or 1.2 s |
 | **Speaker names on captions** | Puts the speaker's name before their captions, like `Ada:` and their words. In the VTT file it is written as `<v Name>`. | On for Podcast and Interview, off otherwise |
-| **One request for consecutive turns where the voice service can (ElevenLabs v3, Gemini)** | Sends back-to-back turns as one multi-speaker request where the voice service has one, so the voices react to each other: ElevenLabs v3 with up to 10 voices, Google Gemini with 2 (a third voice starts a new request). Fewer requests, same characters charged. Other services read each turn on its own. | On |
+| **Let the voices react to each other (ElevenLabs v3, Gemini)** | Sends back-to-back turns as one multi-speaker request where the voice service has one, so the voices react to each other: ElevenLabs v3 with up to 10 voices, Google Gemini with 2 (a third voice starts a new request). Fewer requests, same characters charged. Other services read each turn on its own. | On |
 | **Also make MP3 and M4B files with chapter markers** | Saves the whole narration as `narration.mp3` (ID3 chapters) and `audiobook.m4b` (AAC with chapter markers), one chapter per script section. Made on your computer at no cost. | On |
 
 The MP3 and M4B appear with the Video part's downloads on the project page, and play in Slopify's own audio player with the chapter marks on its track. Slopify does not publish them anywhere.

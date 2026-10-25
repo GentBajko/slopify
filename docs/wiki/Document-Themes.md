@@ -43,17 +43,17 @@ Sizes are in millimetres (mm) unless marked pt (points; 1 pt is about 0.35 mm). 
 | **Paper size** | A4 (210 × 297 mm) for most of the world, US Letter (216 × 279 mm) for the US and Canada. | A4 | |
 | **Margins** | Blank space on every edge of each page. Wider margins mean shorter lines and more pages. | 22 mm | 5 to 60 |
 | **Text starts at** | How far from the top the text begins on pages with the running header. Raise it when text crowds the header. | 32 mm | 5 to 80 |
-| **Background** | **Parchment texture** stretches an aged-paper picture over every page. **Flat colour** fills each page with the Page colour, slightly darker at the edges. | Flat colour | |
-| **Page colour** | The page colour with Flat colour. Type a hex code or use the picker. | `#fdfaf3` (warm off-white) | |
+| **Background** | **Parchment texture** stretches an aged-paper picture over every page. **Flat color** fills each page with the Page color, slightly darker at the edges. | Flat color | |
+| **Page color** | The page color with Flat color. Type a hex code or use the picker. | `#fdfaf3` (warm off-white) | |
 
-### Colours
+### Colors
 
-| Setting | What it colours | Default |
+| Setting | What it colors | Default |
 |---|---|---|
-| **Heading colour** | Headings, drop caps, the brand name and links | `#1f3a5f` (dark blue) |
-| **Body text colour** | Paragraphs, lists, bold and italic text. Keep it dark against the page. | `#1a1a1a` (near black) |
-| **Muted colour** | Dates, bullets, quotes and the dotted lines on the contents page | `#555555` (mid grey) |
-| **Faint colour** | The running header and page numbers | `#888888` (light grey) |
+| **Heading color** | Headings, drop caps, the brand name and links | `#1f3a5f` (dark blue) |
+| **Body text color** | Paragraphs, lists, bold and italic text. Keep it dark against the page. | `#1a1a1a` (near black) |
+| **Muted color** | Dates, bullets, quotes and the dotted lines on the contents page | `#555555` (mid grey) |
+| **Faint color** | The running header and page numbers | `#888888` (light grey) |
 
 ### Fonts
 

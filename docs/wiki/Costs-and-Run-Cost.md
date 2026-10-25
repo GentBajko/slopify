@@ -53,13 +53,13 @@ When a CLI's plan is used up, the run waits instead of failing: the state reads 
 1. Open the project from **Projects** or **Home**.
 2. Press **See the breakdown** on the cost line.
 
-If nothing has been spent yet, it says "Nothing has been spent yet. The cost of each provider call appears here as the run makes it."
+If nothing has been spent yet, it says "Nothing has been spent yet. The cost of each call to an AI service appears here as the run makes it."
 
 ### Summary
 
 | Figure | What it is |
 |---|---|
-| **paid to providers** | The total cost of this project's calls. Reads "known cost, paid to providers" when some calls have no price, with a line "Plus N calls the model catalogue has no price for." |
+| **paid to the AI services** | The total cost of this project's calls. Reads "known cost, paid to the AI services" when some calls have no price, with a line "Plus N calls the model catalogue has no price for." |
 | **same work via API** | The API equivalent of the calls that ran on a CLI plan. |
 | Plan meters | One per plan window a CLI reported, for example "3% of weekly Codex limit". Hover or read the line below for the level it is at now. |
 | **this run's working time** | How long some step of the run was working. Waiting on a review, a limit or a pause never counts, and steps that ran side by side count once. Each save that makes something again starts a new run. |

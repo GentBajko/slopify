@@ -83,7 +83,7 @@ A CLI's model list comes from the tool installed on your computer, not from the 
 
 1. Pick the tool as the **Service** under **Written by** (or Codex CLI under **Images by** for images).
 2. Pick a **Text model** from the list. The refresh button beside it (**Refresh models**) asks the tool for its current list; **Custom ID** lets you type a model the list does not show.
-3. If the model offers it, pick **Thinking** (text) or **Effort** (images). **Model default** leaves it to the tool. The levels come from the model: for example Low, Medium, High and Xhigh. Higher levels can write or draw more carefully, but take longer and use more of your plan.
+3. If the model offers it, pick **Thinking** (text) or **Effort** (images). **Model default** leaves it to the tool. The levels come from the model: for example Low, Medium, High and Extra high. Higher levels can write or draw more carefully, but take longer and use more of your plan.
 
 If a model is missing when a run reaches it, the run stops with "The chosen model is not available in the AI command-line tool on your computer." Update the tool, or pick another model in **Edit settings** (under **Written by**, or **Images by** for Codex images), then **Continue the run**. A thinking level the model does not support stops the same way.
 

@@ -32,7 +32,7 @@ With **My own audio file**, the file is used as it is; include any intro and out
 
 ### Hear a sample
 
-**Hear a sample of your text in this voice** folds out a **Passage** box and **Hear the sample**. It reads one passage of up to 300 characters in the picked voice, at the service's price for those characters (free with the system voice). The Pronunciation Glossary and narration preparation are not applied, and the sample is not reused in the run.
+**Sample of your text in this voice** folds out a **Passage** box and **Hear the sample**. It reads one passage of up to 300 characters in the picked voice, at the service's price for those characters (free with the system voice). The article's pronunciation glossary and narration preparation are not applied, and the sample is not reused in the run. Until a voice is picked and a passage typed, the line beside **Hear the sample** says which is missing.
 
 ### Speakers
 
@@ -83,7 +83,7 @@ It needs the Inworld TTS-2 model. With several speakers it works per speaker: ea
 
 | Option | What it does | Default |
 | --- | --- | --- |
-| **Use Pronunciation Glossary** | Reads names with the IPA in the article's Pronunciation Glossary, such as `Arda: /ˈɑɹdə/`, with no extra AI call. Works with Inworld TTS-2 and TTS-2 Flash. The written text stays unchanged. | On |
+| **Use the article's pronunciation glossary** | Shown only for voices that read it. Reads names with the IPA in the article's Pronunciation Glossary, such as `Arda: /ˈɑɹdə/`, with no extra AI call. Works with Inworld TTS-2 and TTS-2 Flash. The written text stays unchanged. | On |
 | **Also use pronunciations from my other projects** | Adds every term from your other projects' glossaries, copied when this project starts. This project's own glossary wins where they differ. Turn it off to use only this article's glossary. | On |
 
 With another service or model, the line under it says "Only Inworld TTS-2 voices read it; your choice is kept for when you pick one."
@@ -94,7 +94,7 @@ To get a glossary, ask for one in your article prompt: a section in slash-delimi
 
 | Option | What it does | Default |
 | --- | --- | --- |
-| **Use narration aliases** | Says the words listed under Settings → Voices → **Pronunciation** the way they are written there, such as `Dr.` as `Doctor`, with any AI voice. They are copied when the project starts. The article and captions keep the written words. | On |
+| **Use my Pronunciation list** | Says the words listed under Settings → Voices → **Pronunciation** the way they are written there, such as `Dr.` as `Doctor`, with any AI voice. They are copied when the project starts. The article and captions keep the written words. | On |
 
 Manage the list in [Narration Aliases and Glossary](Narration-Aliases-and-Glossary).
 
