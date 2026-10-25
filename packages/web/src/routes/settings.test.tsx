@@ -1,4 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
+import { useRouterState } from "@tanstack/react-router";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
@@ -203,6 +204,44 @@ describe("the settings screen", () => {
     expect(select.value).toBe("trash");
     await userEvent.selectOptions(select, "about");
     expect(picked).toEqual(["about"]);
+  });
+
+  it("links to the channel's page from the list when there is only one channel", async () => {
+    const one = { id: "c1", name: "My channel", isDefault: true };
+    function Where() {
+      return <output aria-label="Where">{useRouterState().location.pathname}</output>;
+    }
+    renderRouted(
+      <>
+        <SettingsRoute section="providers" />
+        <Where />
+      </>,
+      deps({ "GET /api/channels": jsonAnswer({ channels: [one] }) }),
+    );
+    const nav = await screen.findByRole("navigation", { name: "Settings pages" });
+    const link = await within(nav).findByRole("link", { name: "Your channel" });
+    expect(link.getAttribute("href")).toBe("/channels");
+    // It sits after the publishing pages, as a link: the list's pages stay buttons.
+    expect(link.previousElementSibling?.textContent).toBe("YouTube Studio and posting");
+    // On a phone the page select carries it too, and picking it opens the channel.
+    const select = screen.getByLabelText("Settings page") as HTMLSelectElement;
+    await userEvent.selectOptions(select, "Your channel");
+    await waitFor(() => expect(screen.getByLabelText("Where").textContent).toBe("/channels"));
+  });
+
+  it("leaves the channel out of the list once Channels is in the app's own rail", async () => {
+    const channels = [
+      { id: "c1", name: "My channel", isDefault: true },
+      { id: "c2", name: "Sleep", isDefault: false },
+    ];
+    renderRouted(
+      <SettingsRoute section="providers" />,
+      deps({ "GET /api/channels": jsonAnswer({ channels }) }),
+    );
+    // The services are listed once the answers are in, the channels' among them.
+    await screen.findByRole("heading", { name: "Voice services" });
+    expect(screen.queryByRole("link", { name: "Your channel" })).toBeNull();
+    expect(screen.queryByRole("option", { name: "Your channel" })).toBeNull();
   });
 
   it.each([
