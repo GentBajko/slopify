@@ -62,7 +62,7 @@ it("shows each release with its state, and puts a finished project into a free t
   );
   // The project's words, each beside its lamp: Uploaded, Late.
   expect(await screen.findByText("Uploaded")).toBeTruthy();
-  expect(screen.getByText("Late · upload it now")).toBeTruthy();
+  expect(screen.getByText("Late · upload now")).toBeTruthy();
   expect(screen.getByText("Uploaded").closest("[data-slot=status]")).not.toBeNull();
   expect(screen.getByText("The keeper's lamp")).toBeTruthy();
   const user = userEvent.setup();

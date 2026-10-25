@@ -44,7 +44,7 @@ function look(item: CalendarItem): { readonly tone: Tone; readonly word: string 
     case "filled":
       return { tone: "waiting", word: "Filled in Studio, not scheduled" };
     case "late":
-      return { tone: "failed", word: "Late · upload it now" };
+      return { tone: "failed", word: "Late · upload now" };
     case "not-ready":
       return { tone: "off", word: "Not made yet" };
     default:
