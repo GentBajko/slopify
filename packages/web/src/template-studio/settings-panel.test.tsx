@@ -53,7 +53,7 @@ it("shows the total first and makes the samples for all at that total", async ()
   ).toBeTruthy();
 });
 
-it("keeps the button visible but disabled, saying why, when nothing needs a sample", async () => {
+it("says there is nothing to make, with no button and no $0 price, when nothing needs a sample", async () => {
   renderRouted(
     <TemplateStudioSettings />,
     testDeps({
@@ -66,8 +66,12 @@ it("keeps the button visible but disabled, saying why, when nothing needs a samp
       }),
     }),
   );
-  const button = await screen.findByRole("button", { name: "Make samples for all" });
-  await waitFor(() => expect(button.getAttribute("aria-disabled")).toBe("true"));
+  expect(
+    await screen.findByText(
+      "Every template's sample is made for its newest version. Nothing to make.",
+    ),
+  ).not.toBeNull();
+  expect(screen.queryByRole("button", { name: /^Make samples for all/ })).toBeNull();
 });
 
 it("shows the refusal's own sentence when the total went up", async () => {

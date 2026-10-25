@@ -96,9 +96,11 @@ export type NvencStatus =
 // Runs a program to its end and answers what it printed on stdout; throws when it fails.
 export type NvencExec = (bin: string, args: readonly string[]) => Promise<string>;
 
-export const noNvenc = "No NVIDIA graphics card encoder was found on this computer.";
-export const failedNvenc =
-  "This computer's NVIDIA graphics card encoder did not pass its test, so it is not used.";
+// Said to a person who may have no NVIDIA card at all: stock ffmpeg builds list the NVIDIA
+// encoder everywhere, so a failed test usually means there is no card, not a broken one. What
+// the test printed goes under Details (`detail`), never into these sentences.
+export const noNvenc = "No NVIDIA graphics card was found on this computer.";
+export const failedNvenc = "No working NVIDIA graphics card was found on this computer.";
 
 // The reason with the test's output, for the log and a run's notice.
 export function nvencWhy(status: { readonly reason: string; readonly detail?: string }): string {

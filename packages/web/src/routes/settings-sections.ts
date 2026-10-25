@@ -28,7 +28,7 @@ export const settingsSections = [
     id: "playback",
     label: "Production defaults",
     formerly: ["Template studio"],
-    meta: "How new videos sound and render, and what template samples may spend.",
+    meta: "How new videos sound and are encoded, and what template samples may spend.",
     run: 1,
   },
   {

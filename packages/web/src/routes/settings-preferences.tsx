@@ -119,8 +119,7 @@ export function ProductionDefaults(): ReactElement {
     <div className="grid items-start gap-6 md:grid-cols-2">
       <Field
         label="Silence between segments"
-        tip="settings.playback.silence-gap"
-        help="Seconds of quiet between narrated segments."
+        help="Seconds of quiet between the intro, the narration and the outro of new videos; 0 runs them together."
         error={problem ?? save.error?.message}
       >
         <div className="flex flex-wrap items-center gap-2">
@@ -167,7 +166,6 @@ export function ProductionDefaults(): ReactElement {
 
       <Field
         label="Caption timing model"
-        tip="settings.subtitle-model"
         help="Bigger hears the narration more accurately and, on most computers, is also faster. It downloads once, the first time captions are timed."
         error={
           save.error && save.variables?.subtitleModel !== current.subtitleModel
@@ -194,7 +192,8 @@ export function ProductionDefaults(): ReactElement {
           // A settings answer from before the setting reads as its default.
           value={current.loudness ?? defaultLoudness}
           switchLabel="Level the volume for new runs"
-          switchTip="settings.loudness"
+          switchTip={null}
+          switchHelp="Evens out the narration and sets new videos to the loudness YouTube plays at. A project keeps what it started with."
           onChange={(loudness) => {
             save.mutate({ ...current, loudness });
           }}
@@ -206,7 +205,7 @@ export function ProductionDefaults(): ReactElement {
   );
 }
 
-// Settings → Production defaults → Rendering: how this computer encodes videos. Machine-wide,
+// Settings → Production defaults → Encoding: how this computer encodes videos. Machine-wide,
 // never copied into a project, and changing them never marks anything outdated.
 function RenderSettings({
   current,
@@ -243,14 +242,13 @@ function RenderSettings({
     <div className="grid gap-4 md:col-span-2" {...helpScope}>
       <SectionHead
         as="h3"
-        title="Rendering"
-        meta="How this computer encodes videos and shorts. Changing these never marks anything outdated."
+        title="Encoding"
+        meta="How this computer turns videos and shorts into files. Changing these never marks anything outdated."
       />
       <div className="grid items-start gap-6 md:grid-cols-3">
         <div className="flex min-w-0 flex-col gap-1">
           <Field
             label="Video encoder"
-            tip="settings.video-encoder"
             help={encoderHelp}
             error={failed("videoEncoder", "video encoder")}
           >
@@ -274,7 +272,6 @@ function RenderSettings({
         </div>
         <Field
           label="Clip encoding"
-          tip="settings.clip-encoding"
           help={clipEncodingHelp}
           error={failed("clipEncodeSpeed", "clip encoding")}
         >
@@ -289,10 +286,9 @@ function RenderSettings({
           />
         </Field>
         <Field
-          label="Render priority"
-          tip="settings.render-priority"
-          help="Background lets your other programs run first; a render takes longer while they are busy."
-          error={failed("renderPriority", "render priority")}
+          label="Encoding priority"
+          help="Background lets your other programs run first; a video takes longer to make while they are busy."
+          error={failed("renderPriority", "encoding priority")}
         >
           <Select
             className="self-start"

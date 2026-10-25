@@ -7,9 +7,7 @@ import {
   loudnessDbMin,
   lufsOfDb,
   percentOfDb,
-  recommendedLufs,
   snapDb,
-  truePeakOf,
 } from "@app/slices/loudness/model.js";
 import { type ReactElement, useId, useState } from "react";
 import { Field, Input } from "@/components/kit/field";
@@ -33,6 +31,7 @@ export function LoudnessControls({
   onChange,
   problem,
   switchTip = "project.loudness",
+  switchHelp,
   switchLabel = "Level the volume",
   defaults = defaultLoudness,
   video = true,
@@ -41,7 +40,9 @@ export function LoudnessControls({
   readonly onChange: (next: LoudnessValue) => void;
   // The server's words for a refused target, by field ("videoLufs", "audioFilesLufs").
   readonly problem?: ((field: "videoLufs" | "audioFilesLufs") => string | undefined) | undefined;
-  readonly switchTip?: HelpId;
+  // The switch's info button, or (null) its one visible sentence instead (`switchHelp`).
+  readonly switchTip?: HelpId | null;
+  readonly switchHelp?: string;
   readonly switchLabel?: string;
   // What Reset puts each volume back to: the recommended levels, or on Play the Settings ones.
   readonly defaults?: Pick<LoudnessValue, "videoLufs" | "audioFilesLufs">;
@@ -54,7 +55,8 @@ export function LoudnessControls({
       <Switch
         checked={value.enabled}
         label={switchLabel}
-        tip={switchTip}
+        {...(switchTip === null ? {} : { tip: switchTip })}
+        {...(switchHelp === undefined ? {} : { help: switchHelp })}
         onChange={(enabled) => onChange({ ...value, enabled })}
       />
       {value.enabled ? (
@@ -63,7 +65,7 @@ export function LoudnessControls({
             <VolumeField
               target="video"
               label="Video volume"
-              tip="project.loudness.video"
+              help="0 dB is the loudness YouTube plays videos at; −6 dB is about half as loud."
               lufs={value.videoLufs}
               defaultLufs={defaults.videoLufs}
               error={problem?.("videoLufs")}
@@ -73,7 +75,7 @@ export function LoudnessControls({
           <VolumeField
             target="audioFiles"
             label="Audio files volume"
-            tip="project.loudness.audio-files"
+            help="0 dB is the loudness audiobook shops ask for; −6 dB is about half as loud."
             lufs={value.audioFilesLufs}
             defaultLufs={defaults.audioFilesLufs}
             error={problem?.("audioFilesLufs")}
@@ -101,10 +103,12 @@ export function typedDb(text: string, unit: "db" | "percent"): number | undefine
   return snapDb(db);
 }
 
+// A volume in words a person reads: dB from the recommended level and a percentage of it. The
+// LUFS it stands for, and the peak limit, are the export's details, not the field's.
 function VolumeField({
   target,
   label,
-  tip,
+  help,
   lufs,
   defaultLufs,
   error,
@@ -112,7 +116,7 @@ function VolumeField({
 }: {
   readonly target: LoudnessTarget;
   readonly label: string;
-  readonly tip: HelpId;
+  readonly help: string;
   readonly lufs: number;
   readonly defaultLufs: number;
   readonly error: string | undefined;
@@ -131,12 +135,7 @@ function VolumeField({
   const dbText = typed?.unit === "db" ? typed.text : signed(db);
   const percentText = typed?.unit === "percent" ? typed.text : String(percentOfDb(db));
   return (
-    <Field
-      label={label}
-      tip={tip}
-      help={`0 dB is the recommended ${minus(recommendedLufs(target))} LUFS; this is ${minus(lufs)} LUFS. Peaks stay under ${minus(truePeakOf(target))} dBTP.`}
-      error={local ? error : rangeMessage}
-    >
+    <Field label={label} help={help} error={local ? error : rangeMessage}>
       <span className="flex flex-wrap items-center gap-2 text-small">
         <Input
           type="text"
@@ -160,15 +159,18 @@ function VolumeField({
         />
         <span>%</span>
       </span>
-      <ResetToDefault
-        changed={Math.abs(lufs - defaultLufs) > 0.01}
-        defaultText={`${signed(dbOfLufs(defaultLufs, target))} dB`}
-        label={label.toLowerCase()}
-        onReset={() => {
-          setTyped(undefined);
-          onChange(defaultLufs);
-        }}
-      />
+      {/* Said only once the volume left its default: at the default there is nothing to say. */}
+      {Math.abs(lufs - defaultLufs) > 0.01 ? (
+        <ResetToDefault
+          changed
+          defaultText={`${signed(dbOfLufs(defaultLufs, target))} dB`}
+          label={label.toLowerCase()}
+          onReset={() => {
+            setTyped(undefined);
+            onChange(defaultLufs);
+          }}
+        />
+      ) : null}
     </Field>
   );
 }

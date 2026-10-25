@@ -94,36 +94,6 @@ export const settingsHelp = {
   },
 
   // Playback & appearance
-  "settings.playback.silence-gap": {
-    title: "Silence between segments",
-    body: "Seconds of quiet between the intro and the narration, and between the narration and the outro, in every new video, unless Create sets a different gap for one video. It only matters when an intro or outro is set; 0 runs them together. Default: 3 seconds, from 0 to 30. Videos already started keep their own gap.",
-    tutorial: { page: "Settings-Reference", anchor: "silence-between-segments" },
-  },
-  "settings.loudness": {
-    title: "Level the volume for new runs",
-    body: "Whether a new video on Create (and a template or quick short) starts with Level the volume on, and at which volumes. On evens out every narration piece and sets the video to about -14 LUFS, the loudness YouTube plays at, and the audio files to -18 LUFS. A project keeps what it started with; change it there in Edit settings. Default: on.",
-    tutorial: { page: "Settings-Reference", anchor: "level-the-volume-for-new-runs" },
-  },
-  "settings.subtitle-model": {
-    title: "Caption timing model",
-    body: "The speech model that times English captions on this computer. Most accurate (378 MB) hears the narration best and on most computers runs faster too; Smallest (95 MB) can mishear a line and stop the run. The chosen model downloads once, on first use; switching back reuses one already downloaded. Changing it never marks captions outdated. Default: Most accurate.",
-    tutorial: { page: "Settings-Reference", anchor: "caption-timing-model" },
-  },
-  "settings.video-encoder": {
-    title: "Video encoder",
-    body: "What turns the frames into the finished file on this computer. Processor (x264) works everywhere. NVIDIA graphics card (NVENC) is offered only when its encoder passes a test encode: about 80% less processor time, same file size, slightly softer picture. If the card fails, the processor makes the video and the project page says so. Never marks anything outdated. Default: Processor.",
-    tutorial: { page: "Settings-Reference", anchor: "rendering" },
-  },
-  "settings.clip-encoding": {
-    title: "Clip encoding",
-    body: "How hard the processor works on each image's clip before the captions are burned in. Thorough is x264's medium preset; Fast is veryfast at the same quality setting: half the processor time for those clips, a slightly softer picture. Only matters with burned-in captions on the processor. Never marks anything outdated. Default: Thorough.",
-    tutorial: { page: "Settings-Reference", anchor: "rendering" },
-  },
-  "settings.render-priority": {
-    title: "Render priority",
-    body: "Background runs every ffmpeg of a video, short or audio export below normal priority, and that of Edit template's free samples, the style preview, designs and posts' pictures too, so your other programs come first and the render takes the processor time they leave; on an idle computer it is as fast. Normal competes with them as an equal. The finished video is the same either way. Default: Background.",
-    tutorial: { page: "Settings-Reference", anchor: "rendering" },
-  },
 
   // Notifications
   "settings.notifications.url": {

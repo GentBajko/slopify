@@ -32,7 +32,7 @@ function deps(extra: Readonly<Record<string, Answer>> = {}) {
     "GET /api/settings/encoders": jsonAnswer({
       nvidia: {
         available: false,
-        reason: "No NVIDIA graphics card encoder was found on this computer.",
+        reason: "No NVIDIA graphics card was found on this computer.",
       },
     }),
     // Backup & storage shows the daily backups first.
@@ -485,13 +485,13 @@ describe("the settings screen", () => {
   it("shows the render settings at their defaults, without NVIDIA where there is none", async () => {
     renderRouted(<SettingsRoute section="playback" />, deps());
 
-    expect(await screen.findByRole("heading", { name: "Rendering" })).not.toBeNull();
+    expect(await screen.findByRole("heading", { name: "Encoding" })).not.toBeNull();
     const encoder = (await screen.findByLabelText("Video encoder")) as HTMLSelectElement;
     expect(encoder.value).toBe("cpu");
     expect([...encoder.options].map((option) => option.text)).toEqual(["Processor (x264)"]);
     expect(
       await screen.findByText(
-        "No NVIDIA graphics card encoder was found on this computer. Videos are encoded on the processor.",
+        "No NVIDIA graphics card was found on this computer. Videos are encoded on the processor.",
       ),
     ).not.toBeNull();
     // Nothing the test printed, so nothing to fold.
@@ -499,7 +499,7 @@ describe("the settings screen", () => {
     const clips = screen.getByLabelText("Clip encoding") as HTMLSelectElement;
     expect(clips.value).toBe("thorough");
     expect([...clips.options].map((option) => option.text)).toEqual(["Thorough", "Fast"]);
-    const priority = screen.getByLabelText("Render priority") as HTMLSelectElement;
+    const priority = screen.getByLabelText("Encoding priority") as HTMLSelectElement;
     expect(priority.value).toBe("background");
     expect([...priority.options].map((option) => option.text)).toEqual([
       "Normal",
@@ -515,8 +515,7 @@ describe("the settings screen", () => {
         "GET /api/settings/encoders": jsonAnswer({
           nvidia: {
             available: false,
-            reason:
-              "This computer's NVIDIA graphics card encoder did not pass its test, so it is not used.",
+            reason: "No working NVIDIA graphics card was found on this computer.",
             detail:
               "the ffmpeg at ffmpeg lists NVENC but its test encode failed: Operation not permitted",
           },
@@ -525,7 +524,7 @@ describe("the settings screen", () => {
     );
     expect(
       await screen.findByText(
-        "This computer's NVIDIA graphics card encoder did not pass its test, so it is not used. Videos are encoded on the processor.",
+        "No working NVIDIA graphics card was found on this computer. Videos are encoded on the processor.",
       ),
     ).not.toBeNull();
     const details = screen.getByText("Details").closest("details");
@@ -561,7 +560,7 @@ describe("the settings screen", () => {
     await waitFor(() => expect(sent.at(-1)).toEqual({ ...settings, videoEncoder: "nvidia" }));
     await user.selectOptions(screen.getByLabelText("Clip encoding"), "fast");
     await waitFor(() => expect(sent.at(-1)).toMatchObject({ clipEncodeSpeed: "fast" }));
-    await user.selectOptions(screen.getByLabelText("Render priority"), "normal");
+    await user.selectOptions(screen.getByLabelText("Encoding priority"), "normal");
     await waitFor(() => expect(sent.at(-1)).toMatchObject({ renderPriority: "normal" }));
   });
 
