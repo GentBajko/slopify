@@ -32,17 +32,18 @@ const spentText = (dollars: number): string =>
     ? "Checks cost nothing so far"
     : `Checks cost $${dollars.toFixed(dollars < 0.01 ? 4 : 2)} so far`;
 
+// What the checks found: before any check, only that none ran (never "0 working", which reads
+// as none of them working), and the models listed for the key.
 function summaryOf(state: ProviderCheckState, now: Date): string {
+  const listed = state.listed > 0 ? `${String(state.listed)} listed for you` : null;
+  if (state.lastCheckedAt === null)
+    return ["Not checked yet", listed].filter((part) => part !== null).join(" · ");
   const parts = [
     `${String(state.works)} working`,
     state.noAccess > 0 ? `${String(state.noAccess)} not on your plan` : null,
-    state.listed > 0 ? `${String(state.listed)} listed for you` : null,
+    listed,
   ].filter((part) => part !== null);
-  const checked =
-    state.lastCheckedAt === null
-      ? "not checked yet"
-      : `last checked ${ago(state.lastCheckedAt, now)}`;
-  return `${parts.join(" · ")} · ${checked}`;
+  return `${parts.join(" · ")} · last checked ${ago(state.lastCheckedAt, now)}`;
 }
 
 function ProviderChecks({
@@ -59,7 +60,10 @@ function ProviderChecks({
       <div className="min-w-0">
         <p className="m-0 font-semibold">{name}</p>
         <p className="m-0 text-small text-ink-2">{summaryOf(state, now)}</p>
-        <p className="m-0 text-label text-ink-3">{spentText(state.spent)}</p>
+        {/* What the checks cost, once any ran. */}
+        {state.lastCheckedAt === null && state.spent <= 0 ? null : (
+          <p className="m-0 text-label text-ink-3">{spentText(state.spent)}</p>
+        )}
         <StatusSlot tone="info">
           {state.running ? "Checking in the background…" : (checks.message ?? null)}
         </StatusSlot>

@@ -76,7 +76,10 @@ describe("Settings → Models: models that work for you", () => {
       "3 working · 1 not on your plan · 12 listed for you · last checked 2 h ago",
     );
     expect(screen.getByText("Checks cost $0.0012 so far")).toBeTruthy();
-    expect(screen.getByText("0 working · not checked yet")).toBeTruthy();
+    // Before any check: no "0 working" that reads as nothing working, and nothing spent to say.
+    expect(screen.getByText("Not checked yet")).toBeTruthy();
+    expect(screen.queryByText(/0 working/)).toBeNull();
+    expect(screen.getAllByText(/^Checks cost/)).toHaveLength(1);
     expect(screen.queryByText("fal.ai")).toBeNull();
   });
 

@@ -135,11 +135,15 @@ it("words a model check's consequence from its estimate, and leaves Automatic ch
   const tool = toolNamed("check_models");
   expect(tool.reachesOut).toBe("asks");
   expect(tool.confirmFrom?.route).toBe("/api/providers/:id/models/check/estimate");
-  expect(tool.confirmFrom?.text({ count: 3, text: "about $0.04", planAccounts: [] })).toBe(
-    "Checks 3 models, one small request each: about $0.04 at list price.",
-  );
-  expect(tool.confirmFrom?.text({ count: 1, text: "free", planAccounts: ["codex"] })).toBe(
-    "Checks 1 model, one small request each: free at list price, using the CLI plan's allowance.",
+  expect(
+    tool.confirmFrom?.text({ count: 3, totalDollars: 0.04, unpriced: 0, planAccounts: [] }),
+  ).toBe("Checks 3 models, one small request each: about $0.04 at list price.");
+  expect(
+    tool.confirmFrom?.text({ count: 1, totalDollars: 0, unpriced: 0, planAccounts: ["codex"] }),
+  ).toBe("Checks 1 model, one small request each: nothing, using the CLI plan's allowance.");
+  // Models with no listed price read as a sentence too.
+  expect(tool.confirmFrom?.text({ count: 3, totalDollars: 0, unpriced: 3, planAccounts: [] })).toBe(
+    "Checks 3 models, one small request each: an unknown amount: 3 models have no listed price.",
   );
   expect(tool.confirmFrom?.text({ nope: true })).toBeUndefined();
   expect(toolNamed("list_models").description).toContain("standings");

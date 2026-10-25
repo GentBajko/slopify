@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { type Readiness, readinessIsUsable } from "../../kernel/ports/model.js";
+import { costPhrase } from "../../slices/model-checks/rules.js";
 import { quoteBody } from "../http/auditions.js";
 import { checkBody } from "../http/model-checks.js";
 import { switchBody } from "../http/providers.js";
@@ -245,11 +246,16 @@ const providers: readonly RouteTool[] = [
       route: "/api/providers/:id/models/check/estimate",
       text: (value) => {
         const estimate = z
-          .object({ count: z.number(), text: z.string(), planAccounts: z.array(z.string()) })
+          .object({
+            count: z.number(),
+            totalDollars: z.number(),
+            unpriced: z.number(),
+            planAccounts: z.array(z.string()),
+          })
           .safeParse(value);
         if (!estimate.success) return undefined;
-        const { count, text, planAccounts } = estimate.data;
-        return `Checks ${String(count)} model${count === 1 ? "" : "s"}, one small request each: ${text} at list price${planAccounts.length > 0 ? ", using the CLI plan's allowance" : ""}.`;
+        const { count, totalDollars, unpriced, planAccounts } = estimate.data;
+        return `Checks ${String(count)} model${count === 1 ? "" : "s"}, one small request each: ${costPhrase(totalDollars, unpriced)}${planAccounts.length > 0 ? ", using the CLI plan's allowance" : ""}.`;
       },
     },
     reachesOut: "asks",

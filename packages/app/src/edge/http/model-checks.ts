@@ -6,7 +6,7 @@ import { errorText } from "../../kernel/errors.js";
 import { providerFamilies } from "../../kernel/ports/model.js";
 import { autoModes } from "../../slices/model-checks/model.js";
 import { accountOf, markNoticesSeen, writeAuto } from "../../slices/model-checks/repo.js";
-import { dollarsText } from "../../slices/model-checks/rules.js";
+import { costPhrase, dollarsText } from "../../slices/model-checks/rules.js";
 import type { CheckPlan } from "../../slices/model-checks/run.js";
 import type { ModelChecks } from "../../slices/model-checks/service.js";
 import { type ProviderId, providerById, providerIds } from "../../slices/settings/model.js";
@@ -121,7 +121,7 @@ export function providerCheckRoutes(deps: AppDeps) {
           const estimate = estimateOf(answer.plan);
           return problem(c, {
             status: 409,
-            detail: `Checking ${String(estimate.count)} ${name} model${estimate.count === 1 ? "" : "s"} costs ${estimate.text} at list price, and nothing was sent yet. Choose Check models in Settings → Models again and confirm the estimate to go ahead.`,
+            detail: `Checking ${String(estimate.count)} ${name} model${estimate.count === 1 ? "" : "s"} costs ${costPhrase(estimate.totalDollars, estimate.unpriced)}, and nothing was sent yet. Choose Check models in Settings → Models again and confirm the estimate to go ahead.`,
             extensions: { estimate },
           });
         }
