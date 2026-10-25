@@ -676,7 +676,7 @@ describe("export everything and import a backup", () => {
       "Prompts: 2 added, 1 added as “(imported)” because the name was taken.",
     );
     expect(lines).toContain(
-      "1 schedule(s) arrived paused so two installs never run them both; resume them on the Schedules screen.",
+      "1 schedule(s) arrived paused so two installs never run them both; resume them in Calendar → Schedules.",
     );
     expect(lines).toContain("Usage: 12 recorded event(s) added to the totals.");
     expect(lines).toContain("Designs: 3 added, 1 already here.");

@@ -129,7 +129,9 @@ it("lets samples use a Claude Code or Codex plan only once switched on, saying w
   });
   expect(toggle.getAttribute("aria-checked")).toBe("false");
   expect(
-    screen.getByText(/Off: no sample, posters' included, runs a step on your plan/),
+    screen.getByText(
+      "Off: a sample that needs your plan, poster samples included, waits until you turn this on.",
+    ),
   ).toBeTruthy();
   await user.click(toggle);
   await waitFor(() => expect(put).toHaveBeenCalledOnce());

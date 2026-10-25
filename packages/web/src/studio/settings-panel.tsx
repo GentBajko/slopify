@@ -103,7 +103,7 @@ function Playlists() {
       label="Playlists"
       help={
         channel === everyChannel
-          ? "What Copy for YouTube Studio offers every channel without its own list. Ticked ones are on for every project; change them there for one project."
+          ? "The playlists Copy for YouTube Studio offers each channel without a list of its own. Ticked ones are on for every project; Copy for YouTube Studio changes them for one project."
           : own === undefined && fallback.length > 0
             ? `This channel uses the default list (${names(fallback)}) until you add its own.`
             : "This channel's own playlists. Ticked ones are on for every project; Copy for YouTube Studio changes them for one project."

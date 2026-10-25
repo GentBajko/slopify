@@ -90,8 +90,8 @@ function BudgetField(): ReactElement {
         label={plansLabel}
         help={
           data.samplesUsePlans
-            ? "On: samples, posters' too, may run steps on your plan. That usage has no dollar price, so the budgets above don't limit it."
-            : "Off: no sample, posters' included, runs a step on your plan; such a sample waits until you turn this on."
+            ? "On: samples, poster samples included, may run steps on your plan. That usage has no dollar price, so the budgets above don't limit it."
+            : "Off: a sample that needs your plan, poster samples included, waits until you turn this on."
         }
         checked={data.samplesUsePlans}
         disabled={save.isPending}

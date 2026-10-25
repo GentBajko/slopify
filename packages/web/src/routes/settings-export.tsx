@@ -407,7 +407,7 @@ export function ImportResult({
     counted("Templates", result.templates),
     counted("Schedules", result.schedules),
     result.schedules.paused > 0
-      ? `${result.schedules.paused} schedule(s) arrived paused so two installs never run them both; resume them on the Schedules screen.`
+      ? `${result.schedules.paused} schedule(s) arrived paused so two installs never run them both; resume them in Calendar → Schedules.`
       : null,
     counted("Voices", result.voices),
     counted("Saved drafts", result.drafts),
