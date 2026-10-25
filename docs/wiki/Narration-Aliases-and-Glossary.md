@@ -41,7 +41,7 @@ Each row's title line sums it up, for example "Says Dr. as Doctor · whole word"
 - A multi-word alias is read with single spaces around it: "Grey et al. wrote" goes to the voice as "Grey and others wrote".
 - An alias wins over a Pronunciation Glossary entry for the same words.
 - Aliases work with every generated voice, and in multi-voice runs they apply to each speaker's turn.
-- Aliases also change the sentences **Narration Preparation** reads, so its cues match what is said.
+- Aliases also change the sentences **Narration preparation** reads, so its cues match what is said.
 
 ### Use aliases in a video
 

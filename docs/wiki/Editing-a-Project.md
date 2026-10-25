@@ -20,7 +20,7 @@ The settings have their own list of sections on the left, named and ordered as C
 | --- | --- |
 | **Title and keywords** | The **Project title**, **Refresh keyword facts** and every keyword with what it feeds. |
 | **Article** | Where the research and the article come from, **Written by** (service, model, thinking), the article prompt and the **Article text** itself, with **Write the article again after review**. Shows "edited" once you changed the text. |
-| **Narration** | Where the narration comes from, **Read by** (service, model, voice), **Split the narration by**, pronunciation, narration aliases, tables and figures, **Speakers**, Narration Preparation, the **Intro and outro** and the narration chunks. |
+| **Narration** | Where the narration comes from, **Read by** (service, model, voice), **Split the narration by**, pronunciation, narration aliases, tables and figures, **Speakers**, narration preparation, the **Intro and outro** and the narration chunks. |
 | **Images** | Where the images come from, **Images by** (service, model), **Image prompts**, **More images for long videos**, **Scenes from the article**, the establishing image and the image list. The badge shows how many images there are. |
 | **Video and style** | Video on or off, the frame format, **Images and cuts** (seconds per image, zoom, motion, cuts, the Look) and **Sound polish** (silences, pauses, volume and ambient sound). See [Video Editing](Video-Editing). |
 | **Captions** | The captions' mode, font, size and position with the style preview, and the captions' own words and timing. The badge shows how many captions you have loaded. |
@@ -111,7 +111,7 @@ If the narration changed since you edited the captions, the section says the edi
 
 ## Prompts
 
-Each prompt the project used sits in the section of the stage it writes for: the article prompt under **Article**; Narration Preparation, the intro and the outro under **Narration**; the establishing image and each image prompt under **Images**; the thumbnail, YouTube description, shorts and shorts image style under **Extras**; the checks' prompts under **Pauses and checks**.
+Each prompt the project used sits in the section of the stage it writes for: the article prompt under **Article**; narration preparation, the intro and the outro under **Narration**; the establishing image and each image prompt under **Images**; the thumbnail, YouTube description, shorts and shorts image style under **Extras**; the checks' prompts under **Pauses and checks**.
 
 | Control | What it does |
 | --- | --- |

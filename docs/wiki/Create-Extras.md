@@ -62,7 +62,7 @@ After the captions are timed, the AI writer picks the best self-contained moment
 | Option | What it does | Default / range |
 | --- | --- | --- |
 | **Shorts** | Turns shorts on. | Off |
-| **How many** | How many shorts to cut from this video. Each needs its own new images. | 3; 1 to 10 |
+| **Shorts per video** | How many shorts to cut from this video. Each needs its own new images. | 3; 1 to 10 |
 | **Length** | The shortest and longest a short may run, in seconds. | 60 to 120; 15 to 180 |
 | **Shorts prompt** | The prompt the AI writer follows to pick the moments and write each short's title, description and hashtags. | Built-in |
 | **Image prompt** | The image prompt the shorts' new vertical images are drawn from. | Built-in |

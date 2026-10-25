@@ -13,7 +13,7 @@ The kind decides where Create offers the prompt.
 | **Article** | The instruction the AI gets to write the video's article, which becomes the narration. Research notes go first when research ran. The answer's sources and pronunciation sections are never narrated. | One AI call (**Written by**), plus up to 3 more when the answer runs out of room |
 | **Image** | Sent as written to the image model, with the keywords filled in. No AI rewrites it. Create sets how many pictures each prompt makes (1 to 20, at most 60 a run). Pictures show for 15 s each by default and repeat until the video ends. | One image call per picture |
 | **Thumbnail** | Describes the thumbnail. With the thumbnail set to **Let the AI write the prompt**, the AI first turns it into a picture prompt using the title and article. 1 thumbnail by default, or 3: the second a close-up, the third a wider shot. | One image call per thumbnail, plus one AI call with Let the AI write the prompt |
-| **Narration Preparation** | Tells the AI how the narration should be delivered. It only adds cues, such as a short speaking direction or a laugh or sigh, and never rewrites the words. Works with the Inworld TTS-2 voice model. | One call each for the body, the intro and the outro |
+| **Narration preparation** | Tells the AI how the narration should be delivered. It only adds cues, such as a short speaking direction or a laugh or sigh, and never rewrites the words. Works with the Inworld TTS-2 voice model. | One call each for the body, the intro and the outro |
 | **YouTube Description** | Tells the AI how to write the description, chapters, hashtags and tags from the timestamped transcript. A project that picks none uses the built-in wording. | One call per video |
 | **Shorts** | Tells the AI which moments to cut into vertical shorts (3 of 60 to 120 s by default). A project that picks none uses the built-in wording. | One call to pick them, one per short for its picture prompts, one image call per picture |
 | **Review** | Tells the reviewer what to check in a finished article, set of images, narration, thumbnail or shorts, and when to flag or redo it. Pictures can only be judged by the Claude Code and Codex reviewers. A stage with none picked uses its own built-in wording. | One reviewer call per item checked |
@@ -44,7 +44,7 @@ If **Save** won't go, the sentence beside it names the first problem, such as "E
 
 **Start from an example**, beside the instructions, lists text to start from:
 
-- **Narration Preparation:** **Documentary delivery (built in)** fills in documentary delivery cues.
+- **Narration preparation:** **Documentary delivery (built in)** fills in documentary delivery cues.
 - **YouTube Description**, **Shorts** and **Post:** **Built-in wording** fills in the wording Slopify uses when no prompt is picked.
 - Every kind: your other prompts of the same kind, by name.
 

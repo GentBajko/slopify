@@ -115,6 +115,6 @@ These pages cover Slopify 3.0: every screen, every setting and every workflow, s
 
 ## Getting help inside the app
 
-Every setting in Slopify has an info button beside it that explains what it does. If something goes wrong, the project page shows a button that names the fix. **Help → Start the tour** at the foot of the rail starts the interactive tutorial.
+Every setting in Slopify says what it does in its label or in one short line under it; an info button sits beside the few whose effect takes a paragraph to explain. If something goes wrong, the project page shows a button that names the fix. **Help → Start the tour** at the foot of the rail starts the interactive tutorial.
 
 These pages ship inside Slopify too, so they work offline and match the version you run: **Help → Tutorials** at the foot of the rail opens them, with the same groups as this wiki's sidebar and a search across every page. Many info buttons end in **Learn more**, which opens the matching section there, and `Ctrl+K` → **Open tutorial: <page>** opens any page. See [Troubleshooting](Troubleshooting) for the rest.

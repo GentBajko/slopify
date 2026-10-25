@@ -26,13 +26,13 @@ With **My own audio file**, the file is used as it is; include any intro and out
 | Option | What it does | Default |
 | --- | --- | --- |
 | **Service** | The voice service, charged per character of text: ElevenLabs, OpenAI, Cartesia, Inworld, Google Gemini, or **System voice**, your computer's own speech, which is free (it says **Not found** when no speech program is installed; see [the system voice](Providers-and-Keys#the-system-voice)). Changing it clears the model and voice. | The voice service your template or Settings picks |
-| **Model** | The service's voice model. Models differ in quality, languages, speed and price per character. Narration Preparation needs Inworld TTS-2. The line under it says whether the model was checked, with **Manage models ↗**. | The service's default |
+| **Model** | The service's voice model. Models differ in quality, languages, speed and price per character. Narration preparation needs Inworld TTS-2. The line under it says whether the model was checked, with **Manage models ↗**. | The service's default |
 | **Voice** | Who reads the narration: the voices you added under Settings → Voices for this service, for the project's language. With several speakers, this voice reads only the intro and outro. | None |
 | **Show all voices** | Shown when some voices are hidden because they are listed for other languages. Tick it to pick one anyway, for example a multilingual voice whose languages are listed wrong. A voice with unknown languages is always shown. | Off |
 
 ### Hear a sample
 
-**Hear a sample of your text in this voice** folds out a **Passage** box and **Hear the sample**. It reads one passage of up to 300 characters in the picked voice, at the service's price for those characters (free with the system voice). The Pronunciation Glossary and Narration Preparation are not applied, and the sample is not reused in the run.
+**Hear a sample of your text in this voice** folds out a **Passage** box and **Hear the sample**. It reads one passage of up to 300 characters in the picked voice, at the service's price for those characters (free with the system voice). The Pronunciation Glossary and narration preparation are not applied, and the sample is not reused in the run.
 
 ### Speakers
 
@@ -69,13 +69,13 @@ An intro is read before the article and an outro after it. Both are saved under 
 
 The channel's brand kit can fill the intro and outro when you leave them at their default. With several speakers, the voice under **Read by** reads the intro and outro. Your own audio file must already include any intro and outro. See [Intros and Outros](Intros-and-Outros).
 
-### Narration Preparation
+### Narration preparation
 
 Has the AI writer add delivery directions and sounds, such as a sigh or a laugh, before the voice reads, following the narration prompt you pick. The words stay the same.
 
 | Option | What it does | Default |
 | --- | --- | --- |
-| **Narration Preparation** | Pick a narration prompt, or **Off**. One AI call per narration piece and per intro or outro. **New narration prompt ↗ (opens Prompts)** writes one. | Off |
+| **Narration preparation** | Pick a narration prompt, or **Off**. One AI call per narration piece and per intro or outro. **New narration prompt** writes one in a drawer beside Create and picks it. | Off |
 
 It needs the Inworld TTS-2 model. With several speakers it works per speaker: each turn of a speaker on Inworld TTS-2 is prepared on its own, with the speaker's name and role, so every voice gets its own cues. At least one speaker must use TTS-2; turns of speakers on other voices are spoken as written. See [Multiple Voices](Multiple-Voices). When nothing earlier needs a writer (your own text, say), **Written by** appears in this row.
 

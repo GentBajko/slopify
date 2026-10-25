@@ -23,7 +23,7 @@ The row starts with an **Article** switch:
 4. Fill in any keywords the prompt asks for (at the top, or in the **Keywords** row).
 5. Check the service and model under **Written by** (below).
 
-With no article prompts yet, the row says so with **New prompt ↗ (opens Prompts)**. See [Prompts](Prompts).
+With no article prompts yet, the row says so with **New article prompt**. It opens a drawer beside Create where you write one, and the prompt you save is picked. See [Prompts](Prompts).
 
 When the narration has several speakers and the script is written for them, the field becomes **Script prompt**: a script prompt asks for speaker turns instead of a plain article. See [Multiple Voices](Multiple-Voices).
 
@@ -41,7 +41,7 @@ Pick **Adapt my text**, paste the source under **Your text**, and pick the **Art
 
 ## Written by
 
-One AI writes everything this run needs in words: the article, the research, the thumbnail prompt when the AI writes it, intros and outros written for each video, Narration Preparation, descriptions of tables and figures, the YouTube description and picking the shorts. Each is a separate call, counted in Usage.
+One AI writes everything this run needs in words: the article, the research, the thumbnail prompt when the AI writes it, intros and outros written for each video, narration preparation, descriptions of tables and figures, the YouTube description and picking the shorts. Each is a separate call, counted in Usage.
 
 The **Written by** group appears whenever the run needs an AI writer, in the row of the first thing that needs it, and its line says what it is used for (for example "for writing the article, writing the YouTube description and picking the shorts"). It is in **Article** when the article or research is written for you, in **Narration** when only the narration needs it (an audiobook whose speakers are worked out from a book you pasted, say), and in **Extras** when only the YouTube description, the shorts or the thumbnail prompt need it. There is one writer per run, wherever it shows.
 

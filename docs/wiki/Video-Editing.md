@@ -105,7 +105,7 @@ To fix a misheard word or move a caption, edit the captions themselves: see [Edi
 - Captions show in the preview only when they are shown in the video.
 - The sound is silence. It costs nothing, only a few seconds of your computer's time.
 
-If it says "Fix the caption settings to render the preview.", correct the caption fields first.
+If it says "Fix the caption settings to make the preview.", correct the caption fields first.
 
 ## What a change makes again
 

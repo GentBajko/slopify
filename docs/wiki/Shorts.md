@@ -20,7 +20,7 @@ Shorts are made in the Video stage, beside the long video. They need narration.
 
 1. On Create, open the **Extras** row.
 2. Tick **Shorts**. It is greyed out, with "Needs narration", when the Narration row is off.
-3. Set **How many** and **Length**.
+3. Set **Shorts per video** and **Length**.
 4. Optionally pick a **Shorts prompt** and an **Image prompt** of your own (from **Prompts**).
 5. Open **More shorts options** to set the title, speed, music and full video link. The disclosure's summary names what differs from the defaults, such as "Title on screen · 1.10× · Full video linked". The [Shorts preview](#shorts-preview) shows the result as you change them.
 6. Check the estimate in the rail and press **Make the video**.
@@ -30,7 +30,7 @@ Shorts are made in the Video stage, beside the long video. They need narration.
 | Option | What it does | Default / range |
 |---|---|---|
 | **Shorts** | Turns the step on. Turning it off keeps your numbers and prompts for next time. | Off |
-| **How many** | How many shorts to cut from this video. Each needs its own new images, so more shorts cost more image calls and more time to put together. | 3; 1 to 10 |
+| **Shorts per video** | How many shorts to cut from this video. Each needs its own new images, so more shorts cost more image calls and more time to put together. | 3; 1 to 10 |
 | **Length** | The shortest and longest a short may run, in seconds. The AI picks moments within these bounds. | 60 to 120; each between 15 and 180 |
 | **Shorts prompt** | Your Shorts prompt the AI follows to pick the moments and write each short's title, description and hashtags. | **Built-in**: picks moments that make sense alone, open on a hook and end on a complete thought |
 | **Image prompt** | Your Image prompt the shorts' new vertical images are drawn from. | **Built-in**: cinematic, high-contrast, uncluttered images with the subject large and centred, the lower half calm for captions, no text |
@@ -83,7 +83,7 @@ A clip must stay between the shortest and longest length you set and must not ov
 |---|---|---|
 | **Pick different moments** | The AI picks new moments. Ranges you set by hand are dropped. A new clip on the same sentences as an old one keeps its images; any other clip gets new images and is rendered again. **Keep the current moments** cancels it. | One AI call, plus one image call per new image |
 | **Make this short again** | This one short's image prompts are written again, its images drawn again and the short rendered again. Its moment, title and the other shorts stay as they are. | One image call per image |
-| Change **How many**, **Length** or **Shorts prompt** | The moments are picked again, as with Pick different moments. | As above |
+| Change **Shorts per video**, **Length** or **Shorts prompt** | The moments are picked again, as with Pick different moments. | As above |
 
 ## Add background music
 

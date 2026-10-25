@@ -69,7 +69,7 @@ When the video goes to YouTube, the title is also its YouTube title unless one i
 
 As you type, a line under the topic says when the channel already has a video on it, using the same near-duplicate rule as [schedules](Schedules#how-generation-works):
 
-- `This channel already has a video on this: "<title>" (in Projects). Start anyway if you want another take.`
+- `This channel already has a video on this: "<title>" (in Projects). Make it anyway if you want another take.`
 - That the channel already uploaded a video with that title, from the channel's **Titles to avoid**.
 
 It never stops you; it is there so you don't make the same video twice by accident.
