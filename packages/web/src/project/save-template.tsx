@@ -83,7 +83,7 @@ export function SaveProjectTemplate({
         if (!next && !active.current) onClose();
       }}
       title="Save as template"
-      description="Saves this project's settings as a template, to start new videos from in Create. Nothing in this project changes."
+      description="Saves how this project was made (its prompts, voice, images and style) as a template new projects can start from. This project stays as it is."
     >
       <form
         className="flex flex-col gap-4"
