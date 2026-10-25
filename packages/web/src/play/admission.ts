@@ -17,7 +17,7 @@ import type { DraftInput, PlayFormState, Upload } from "@/play/state";
 import { ambientUploadOn, draftOf, shortsOn, stagedOf } from "@/play/state";
 import { validSubtitleStyle } from "@/subtitles/config";
 import { articleKind } from "./article-kind";
-import { outputKindOf, outputNoun } from "./output-kind";
+import { outputKindOf, topicFix } from "./output-kind";
 import { placedBodies, textEntryRefusals } from "./placed-bodies";
 
 // Live admission. `admit` is the server's own function, imported through `@app/*`: the
@@ -258,7 +258,7 @@ export function readingRank(field: string): number {
 // field can fail two ways the form decides which sentence it is, rather than reading the rule's
 // message back. Undefined for a rule the form has no shorter sentence for.
 export function fixOf(form: PlayFormState, error: FieldError): string | undefined {
-  const about = `Type what the ${outputNoun(outputKindOf(form))} is about`;
+  const about = topicFix(outputKindOf(form));
   if (error.field.startsWith("values.")) {
     const name = error.field.slice("values.".length);
     return topicKeywords(form.title).includes(name) ? about : `Fill in ${name}`;

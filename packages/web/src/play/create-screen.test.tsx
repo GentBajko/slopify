@@ -184,6 +184,33 @@ describe("what is missing, said once and the same everywhere", () => {
   });
 });
 
+describe("what is being made", () => {
+  it("puts a kind back as it was when the person comes back to it", async () => {
+    const video: PlayDraftDocument = {
+      ...generatedRun,
+      form: {
+        ...generatedRun.form,
+        sources: { ...generatedRun.form.sources, thumbnail: "from_prompt" },
+        thumbnailPrompt: "Title card",
+        youtubeDescription: true,
+      },
+    };
+    const { session } = await mountPlay({}, video);
+    const kinds = within(screen.getByRole("radiogroup", { name: "What are you making?" }));
+    const before = session().document.form;
+    for (const away of ["Article", "Podcast", "Images"]) {
+      await userEvent.click(kinds.getByRole("radio", { name: away }));
+      expect(session().document.form.youtubeDescription).toBe(false);
+      await userEvent.click(kinds.getByRole("radio", { name: "Video" }));
+      const back = session().document.form;
+      expect(back.sources).toEqual(before.sources);
+      expect(back.youtubeDescription).toBe(true);
+      expect(back.voices).toBeUndefined();
+      expect(back.subtitles.mode).toBe(before.subtitles.mode);
+    }
+  });
+});
+
 describe("the topic box", () => {
   it("stays quiet when the person only goes in and out of it, and says the hint's words once typed in", async () => {
     await mountPlay({}, { ...generatedRun, form: { ...generatedRun.form, title: "" } });
