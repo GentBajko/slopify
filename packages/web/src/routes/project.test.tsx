@@ -206,10 +206,13 @@ describe("the next action", () => {
     );
     const video = await screen.findByRole("region", { name: "Video" });
     expect(within(video).getByLabelText("Generated video")).not.toBeNull();
-    expect(await downloadItem("Video (.mp4)")).not.toBeNull();
     expect(
-      within(nextAction()).getByRole("link", { name: "Download video" }).getAttribute("href"),
+      within(nextAction())
+        .getByRole("link", { name: "Download video (.mp4)" })
+        .getAttribute("href"),
     ).toBe(`${testOrigin}/files/p1/video`);
+    // The title row downloads the video: the section does not offer the same file again.
+    expect(within(video).queryByRole("link", { name: /^Download video/ })).toBeNull();
     // Copy for YouTube Studio sits beside the video, in its section's head.
     expect(within(video).getByRole("button", { name: "Copy for YouTube Studio" })).not.toBeNull();
     // The project's next step is the page's one lime button: the section's downloads are
@@ -217,7 +220,7 @@ describe("the next action", () => {
     const shown = [...document.querySelectorAll(".sl-btn--primary")].filter(
       (button) => button.closest("[hidden]") === null,
     );
-    expect(shown.map((button) => button.textContent?.trim())).toEqual(["Download video"]);
+    expect(shown.map((button) => button.textContent?.trim())).toEqual(["Download video (.mp4)"]);
     const article = await selectProjectStage("Article");
     expect(await within(article).findByText(/A long finished article/)).not.toBeNull();
   });
@@ -483,10 +486,10 @@ describe("the stage bodies", () => {
     ]);
     // A narration in parts names each part, in plain words.
     expect(screen.getByLabelText("Main part narration")).not.toBeNull();
-    // One line of facts in plain words; how it was sent to the voice is a technical detail.
-    expect(
-      await within(workspace).findByText("Voice Narrator M · 1 min 12 s", { exact: false }),
-    ).not.toBeNull();
+    // One line of facts in plain words, without the length the status list says; how it was
+    // sent to the voice is a technical detail.
+    expect(await within(workspace).findByText("Voice Narrator M", { exact: false })).not.toBeNull();
+    expect(within(workspace).queryByText(/1 min 12 s/)).toBeNull();
     expect(within(workspace).queryByText("Chunking")).toBeNull();
     await userEvent.click(within(workspace).getByText("Technical details"));
     expect(within(workspace).getByText("Sent to the voice every 500 words.")).not.toBeNull();
@@ -522,7 +525,7 @@ describe("the stage bodies", () => {
     // Slopify's own controls, not the browser's.
     expect(player?.hasAttribute("controls")).toBe(false);
     expect(screen.getByRole("slider", { name: "Seek" })).not.toBeNull();
-    const download = await downloadItem("Video (.mp4)");
+    const download = await screen.findByRole("link", { name: "Download video (.mp4)" });
     expect(download.getAttribute("href")).toBe(`${testOrigin}/files/p1/video`);
     expect(download.hasAttribute("download")).toBe(true);
   });

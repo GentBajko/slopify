@@ -23,8 +23,8 @@ import { outputsOf, roleOf } from "./body.js";
 import { dockerFolderHelp, openFolder } from "./open-folder.js";
 import {
   DownloadMenu,
+  downloadWords,
   fileSize,
-  lengthWords,
   MetaLine,
   OutputFolder,
   StageBody,
@@ -32,7 +32,7 @@ import {
   useOlderOutputs,
   useOutputText,
 } from "./parts.js";
-import { LeadDownloadContext } from "./read-only.js";
+import { LeadDownloadContext, TitleDownloadContext } from "./read-only.js";
 import { VideoChapters, VideoOmissions } from "./review-video.js";
 import { useOutputMedia } from "./revision-media.js";
 import { YoutubeCopyContext } from "./section-copy.js";
@@ -49,6 +49,8 @@ export function VideoBody({ stage, project, outputs }: BodyProps) {
   const { api } = useApp();
   const notify = useToast();
   const lead = use(LeadDownloadContext);
+  // The title row already downloads this file: the section does not offer it again.
+  const carried = use(TitleDownloadContext);
   const copies = use(YoutubeCopyContext);
   const audioExport =
     project.config.sources.video === "off" && project.config.sources.audio !== "off";
@@ -117,9 +119,8 @@ export function VideoBody({ stage, project, outputs }: BodyProps) {
   if (project.config.sources.video === "off" && !audioExport) return null;
 
   const shape = project.format;
+  // The length and the shape are the status list's, beside the section: said once.
   const facts = [
-    lengthWords(video?.durationMs),
-    audioExport ? "WAV, stereo" : shape,
     fileSize(video?.bytes),
     video?.meta.master === undefined
       ? undefined
@@ -212,13 +213,15 @@ export function VideoBody({ stage, project, outputs }: BodyProps) {
         {video === undefined && listening === undefined ? null : (
           <div className="flex min-w-0 flex-col gap-3">
             <ButtonRow>
-              {listening === undefined ? null : (
+              {listening === undefined || carried === assetOf(listening.main.output) ? null : (
                 <DownloadMenu files={[listening.main]} variant={lead ? "primary" : "secondary"} />
               )}
-              <DownloadMenu
-                files={[main]}
-                variant={lead && listening === undefined ? "primary" : "secondary"}
-              />
+              {video !== undefined && carried === assetOf(video) ? null : (
+                <DownloadMenu
+                  files={[main]}
+                  variant={lead && listening === undefined ? "primary" : "secondary"}
+                />
+              )}
               <OutputFolder output={video ?? listening?.main.output} />
             </ButtonRow>
             {older.size === 0 ? null : (
@@ -310,6 +313,23 @@ export function VideoBody({ stage, project, outputs }: BodyProps) {
       )}
     </StageBody>
   );
+}
+
+// What a finished audiobook or podcast downloads from the title row: its own file, named for
+// it ("Download audiobook (.m4b)"), by the asset name its URL takes. Undefined for a video
+// project, or before the file is made.
+export function listeningDownload(
+  project: ProjectSummary,
+  outputs: readonly Output[],
+): { readonly asset: string; readonly label: string } | undefined {
+  const listening = listeningFiles(
+    project,
+    outputs.find((output) => output.role === "audio_mp3"),
+    outputs.find((output) => output.role === "audio_m4b"),
+  );
+  return listening === undefined
+    ? undefined
+    : { asset: assetOf(listening.main.output), label: downloadWords(listening.main.label) };
 }
 
 // An audiobook's or a podcast's own file, which it leads with: the chaptered M4B for a book or

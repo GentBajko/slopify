@@ -17,14 +17,7 @@ import { LiveAudio } from "./live-audio.js";
 import { narrationAudioFiles, narrationTextFiles, segmentNames } from "./narration-downloads.js";
 import { NarrationText, useNarrationMarkdown } from "./narration-text.js";
 import { useOutdated } from "./output-change.js";
-import {
-  DownloadMenu,
-  EngravedLabel,
-  lengthWords,
-  MetaLine,
-  OutputFolder,
-  StageBody,
-} from "./parts.js";
+import { DownloadMenu, EngravedLabel, MetaLine, OutputFolder, StageBody } from "./parts.js";
 import { useReadOnlySample } from "./read-only.js";
 import { useNarrationTiming } from "./review-narration.js";
 import { ReviewVerdict, reviewFor, useReviews } from "./review-verdict.js";
@@ -87,10 +80,9 @@ export function AudioBody({ stage, project, outputs, busy }: BodyProps) {
   const voice =
     voices.data?.voices.find((known) => known.voiceId === picked && known.provider === provider)
       ?.name ?? picked;
-  const length = landed.reduce((sum, player) => sum + (player.output.durationMs ?? 0), 0);
+  // The length is the status list's, beside the section, and each player's own: said once.
   const facts = [
     voice === undefined ? undefined : `Voice ${voice}`,
-    lengthWords(length),
     levelled.length > 0 ? "volume evened out" : undefined,
   ].filter((part) => part !== undefined);
   const parts = landed.length > 1;

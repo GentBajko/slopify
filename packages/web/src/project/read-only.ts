@@ -19,3 +19,7 @@ export function useReadOnlySample(projectId: string): boolean {
 // True when the page has no next action of its own (no lime button in the title row), so a
 // section's main download may wear the lime: one primary per page.
 export const LeadDownloadContext = createContext(false);
+
+// The file the title row's next action downloads, by its asset name ("video", "audio-m4b"),
+// so the section that holds it does not offer the same file a second time.
+export const TitleDownloadContext = createContext<string | undefined>(undefined);

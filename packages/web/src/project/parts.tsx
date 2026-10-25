@@ -377,16 +377,6 @@ export function MetaLine({ children }: { readonly children: ReactNode }) {
   return <p className="m-0 text-small text-ink-2 tabular-nums">{children}</p>;
 }
 
-// "3 min 5 s", "45 s", "1 h 3 min": a length in words, for a facts line.
-export function lengthWords(ms: number | null | undefined): string | undefined {
-  if (ms === null || ms === undefined || !Number.isFinite(ms) || ms <= 0) return undefined;
-  const seconds = Math.round(ms / 1000);
-  if (seconds < 60) return `${String(seconds)} s`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${String(minutes)} min ${String(seconds % 60)} s`;
-  return `${String(Math.floor(minutes / 60))} h ${String(minutes % 60)} min`;
-}
-
 // "385 KB", "9.7 MB": a file's size, for a facts line.
 export function fileSize(bytes: number | null | undefined): string | undefined {
   if (bytes === null || bytes === undefined || !Number.isFinite(bytes) || bytes <= 0)

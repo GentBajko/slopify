@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { defaultVoicesSettings } from "@app/slices/voices/model.js";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { ProjectRoute } from "@/routes/project";
@@ -73,25 +74,61 @@ describe("a finished project's sections", () => {
       }).toEqual({ name, folders: 1 });
       // The next action, the video's download, is the one lime button; every section's own
       // download is secondary.
-      expect({ name, primaries: lime() }).toEqual({ name, primaries: ["Download video"] });
+      expect({ name, primaries: lime() }).toEqual({ name, primaries: ["Download video (.mp4)"] });
     }
   });
 
-  it("give the lime to the video's download in the title row, with Copy for YouTube Studio beside the video", async () => {
+  it("give the lime to the video's download in the title row, once, with Copy for YouTube Studio beside the video", async () => {
     renderRouted(
       <ProjectRoute projectId="p1" />,
       deps({ "GET /api/projects/p1": jsonAnswer(made) }),
     );
     await openProjectSection("Video");
     const video = await screen.findByRole("region", { name: "Video" });
-    await within(video).findByRole("link", { name: "Download video (.mp4)" });
+    await within(video).findAllByRole("button", { name: "Open folder" });
     expect(shown(".sl-btn--primary, .sl-key").map((one) => one.textContent?.trim())).toEqual([
-      "Download video",
+      "Download video (.mp4)",
     ]);
-    expect(screen.getByRole("link", { name: "Download video" }).getAttribute("href")).toMatch(
-      /\/files\/p1\/video$/,
-    );
+    // One download for one file on one screen: the section does not repeat the title row's.
+    const downloads = screen.getAllByRole("link", { name: "Download video (.mp4)" });
+    expect(downloads).toHaveLength(1);
+    expect(downloads[0]?.getAttribute("href")).toMatch(/\/files\/p1\/video$/);
     expect(within(video).getByRole("button", { name: "Copy for YouTube Studio" })).not.toBeNull();
+  });
+
+  it("give an audiobook's title row its own file, and the section the video beside it", async () => {
+    const book = body({
+      status: "done",
+      stages: finished.stages,
+      outputs: [
+        ...finished.outputs,
+        output("audio_m4b", "video", { id: "o-m4b", path: "audiobook.m4b" }),
+        output("audio_mp3", "video", { id: "o-mp3", path: "narration.mp3" }),
+      ],
+    });
+    renderRouted(
+      <ProjectRoute projectId="p1" />,
+      deps({
+        "GET /api/projects/p1": jsonAnswer({
+          ...book,
+          project: {
+            ...book.project,
+            config: { ...book.project.config, voices: defaultVoicesSettings("audiobook") },
+          },
+        }),
+      }),
+    );
+    await openProjectSection("Audiobook");
+    const section = await screen.findByRole("region", { name: "Audiobook" });
+    await within(section).findAllByRole("button", { name: "Open folder" });
+    // The listening file leads, from the title row, once; the video is the section's.
+    expect(shown(".sl-btn--primary, .sl-key").map((one) => one.textContent?.trim())).toEqual([
+      "Download audiobook (.m4b)",
+    ]);
+    const leads = screen.getAllByRole("link", { name: "Download audiobook (.m4b)" });
+    expect(leads).toHaveLength(1);
+    expect(leads[0]?.getAttribute("href")).toMatch(/\/files\/p1\/audio-m4b$/);
+    expect(within(section).getByRole("link", { name: "Download video (.mp4)" })).not.toBeNull();
   });
 
   it("give the lime to a section's download when the page has no next action", async () => {

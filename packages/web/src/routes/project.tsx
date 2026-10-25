@@ -23,6 +23,7 @@ import { shortcuts } from "@/lib/shortcuts";
 import { isSample as isBundledSample, readSample, sampleKey } from "@/onboarding/api";
 import { StageBodyFor } from "@/project/bodies";
 import { ShortsBlock } from "@/project/body-shorts";
+import { listeningDownload } from "@/project/body-video";
 import { YoutubeBlock } from "@/project/body-youtube";
 import {
   type CheckpointGate,
@@ -242,6 +243,7 @@ function ProjectWorkspace({
     outdated,
     waits: runCost.data?.waits ?? [],
     videoReady,
+    listening: summary === undefined ? undefined : listeningDownload(summary, outputs),
     actions,
     controller,
     openSection,
