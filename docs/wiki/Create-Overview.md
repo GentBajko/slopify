@@ -23,7 +23,7 @@ Nothing is made until you press **Make the video**. Every change is saved to the
 
 **Change** opens a row's editor under its line; **Close** (for example **Close narration**) folds it again. Opening one row folds the others. A row that needs something says what in red and its button reads **Fix**. When you open a draft, the first row that needs something opens by itself.
 
-A row with nothing to set for this video is left out: **Keywords** shows only when a prompt asks for a keyword besides the topic, and **Channel** only when you have two or more channels. What you are making decides the rest:
+A row with nothing to set for this video is left out: **Keywords** shows only when a prompt asks for a keyword besides the topic or the title is a pattern such as `History: {{Topic}}`, **Channel** only when you have two or more channels, and **Narration** not while the article is **No text**. What you are making decides the rest:
 
 | You make | Rows |
 | --- | --- |

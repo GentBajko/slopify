@@ -107,7 +107,7 @@ Each prompt's row has, in order:
 |---|---|
 | **Edit** | Opens the editor. Change the text and press **Save**. |
 | **Duplicate** | Opens the editor with a copy. Give it a new name and save. |
-| **Make a video** | Picks the prompt in your open draft and opens Create on its field. An article prompt switches the article to Generate, an image prompt is ticked with one image, a thumbnail prompt switches the thumbnail to From prompt, a Description or Shorts prompt turns that step on, and a Post prompt writes every site's post that is on (X's, when none is). |
+| **Make a video** | Picks the prompt in your open draft and opens Create on its field. An article prompt switches the article to **Write it for me**, an image prompt is ticked, a thumbnail prompt turns the thumbnail on with **From my thumbnail prompt**, a Description or Shorts prompt turns that extra on, and a Post prompt writes every site's post that is on (X's, when none is). |
 | **History** | Opens the prompt's history (below). |
 | **Delete** | Asks first, then moves the prompt to **Settings → Backup & storage → Trash** for 30 days, where **Restore** brings it back. |
 

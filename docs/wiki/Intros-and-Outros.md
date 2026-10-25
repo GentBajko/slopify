@@ -64,7 +64,7 @@ Entries have the same row actions as prompts:
 |---|---|
 | **Edit** | Opens the editor. Change it and press **Save**. |
 | **Duplicate** | Opens the editor with a copy to rename and save. |
-| **Make a video** | Picks the entry in the open Create draft. |
+| **Make a video** | Picks the entry in your open draft and opens Create on it. |
 | **History** | Versions, compare and **Used by**, exactly as for prompts. See [Prompts](Prompts#history-and-versions). |
 | **Delete** | Asks first, then moves it to **Settings → Backup & storage → Trash** for 30 days. |
 
