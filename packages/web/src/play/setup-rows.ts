@@ -168,8 +168,9 @@ export interface SummaryContext {
   readonly reviews: number;
   // What the person is making; absent reads as a video, as every draft did before the choice.
   readonly kind?: OutputKind | undefined;
-  // A model's name as its service lists it, when that list has arrived.
-  readonly modelName?: ((provider: string, model: string) => string | undefined) | undefined;
+  // A model's name as its service lists it; null while that list has not arrived, when the
+  // row names the service alone rather than a raw id ("sonnet").
+  readonly modelName?: ((provider: string, model: string) => string | null | undefined) | undefined;
 }
 
 const shapes: Readonly<Record<string, string>> = {
@@ -192,8 +193,11 @@ export function rowSummary(row: SetupRowId, form: PlayFormState, context: Summar
   const kind = context.kind ?? "video";
   const service = (id: string): string | undefined =>
     id === "" ? undefined : (context.providers.find((one) => one.id === id)?.displayName ?? id);
-  const model = (provider: string, id: string): string | undefined =>
-    id === "" ? undefined : (context.modelName?.(provider, id) ?? id);
+  const model = (provider: string, id: string): string | undefined => {
+    if (id === "") return undefined;
+    const named = context.modelName?.(provider, id);
+    return named === null ? undefined : (named ?? id);
+  };
   const by = (choice: {
     readonly provider: string;
     readonly model: string;

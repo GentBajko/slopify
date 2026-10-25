@@ -25,6 +25,7 @@ import { checkpointTarget } from "@/play/checkpoints";
 import { ContentSection } from "@/play/content-section";
 import { usePlaySession } from "@/play/draft-context";
 import { DraftList } from "@/play/draft-list";
+import { templateProviderDefaults } from "@/play/draft-state";
 import { focusPlayField, playFieldTarget } from "@/play/field-targets";
 import { KeywordBlock } from "@/play/keywords";
 import { outputKindOf, publishes, rowShown } from "@/play/output-kind";
@@ -507,10 +508,10 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     fontName: fonts.data?.fonts.find((font) => font.id === form.subtitles.fontId)?.name,
     reviews,
     kind,
-    modelName: (provider: string, model: string) =>
-      cache
-        .getQueryData<ProviderModels>(modelsKey(provider))
-        ?.models.find((one) => one.id === model)?.name,
+    modelName: (provider: string, model: string) => {
+      const listed = cache.getQueryData<ProviderModels>(modelsKey(provider));
+      return listed === undefined ? null : listed.models.find((one) => one.id === model)?.name;
+    },
   };
   const editors: Readonly<Record<SetupRowId, SetupListRow["editor"]>> = {
     title: (
@@ -573,7 +574,8 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     origin:
       templateSetup === undefined
         ? undefined
-        : rowOrigin(row.id, document, templateSetup, unusable) === "template"
+        : rowOrigin(row.id, document, templateSetup, unusable, templateProviderDefaults()) ===
+            "template"
           ? `From ${template?.name ?? "the template"}`
           : "Changed here",
     editor: editors[row.id],

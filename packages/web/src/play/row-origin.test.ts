@@ -58,3 +58,27 @@ it("counts a service the template left empty, and Create filled, as the template
   // Unless that service can't be used here, and Create put one that can in its place.
   expect(rowOrigin("images", filled, named, (service) => service === "fal")).toBe("template");
 });
+
+it("counts a service the person picked over Create's fill as changed here", () => {
+  // The template reads with OpenAI, which has no key here; Create put the saved ElevenLabs
+  // voice in its place.
+  const template = {
+    form: {
+      ...freshDraftDocument.form,
+      audio: { ...freshDraftDocument.form.audio, provider: "openai-tts", model: "m", voice: "a" },
+    },
+  };
+  const fills = { audio: { provider: "elevenlabs", model: "v2", voice: "narrator" } };
+  const unusable = (service: string) => service === "openai-tts";
+  const filled = {
+    form: { ...template.form, audio: { ...template.form.audio, ...fills.audio } },
+  };
+  expect(rowOrigin("narration", filled, template, unusable, fills)).toBe("template");
+  const picked = {
+    form: {
+      ...template.form,
+      audio: { ...template.form.audio, provider: "cartesia", model: "", voice: "" },
+    },
+  };
+  expect(rowOrigin("narration", picked, template, unusable, fills)).toBe("changed");
+});
