@@ -1,11 +1,11 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import { type RunConfig, type Stage, thumbnailCountOf } from "@app/slices/admission/model.js";
 import type { Output, OutputRole } from "@app/slices/storage/model.js";
-import { voiceFormatLabels } from "@app/slices/voices/model.js";
 import type { Tone } from "@/components/kit/status";
 import { extensionOf } from "./narration-downloads.js";
 import type { ZipSet } from "./output-api.js";
 import { nextWords, stateOf, versionLine } from "./project-outputs-state.js";
+import { stageName } from "./summary.js";
 
 export { when } from "./project-outputs-state.js";
 
@@ -136,26 +136,9 @@ export function projectOutputs(input: OutputsInput): readonly ProjectOutput[] {
       ],
     });
 
-  if (voiced) {
-    const format = config.voices?.format ?? "audiobook";
-    const book = format === "audiobook" || format === "drama";
-    const m4b = role("audio_m4b");
-    const mp3 = role("audio_mp3");
-    const primary = book
-      ? (file(m4b, "Audiobook with chapters")[0] ?? file(mp3, "Audiobook with chapters")[0])
-      : (file(mp3, "Episode")[0] ?? file(m4b, "Episode")[0]);
-    build("voices", voiceFormatLabels[format], "narration", ["audio", "video"], primary?.output, {
-      primary,
-      alternatives: [
-        ...file(book ? mp3 : m4b, book ? "MP3 with chapters" : "M4B with chapters").filter(
-          (one) => one.output.id !== primary?.output.id,
-        ),
-        ...file(role("script_md"), "Transcript by speaker"),
-        ...file(role("audio_body"), "Narration track"),
-      ],
-      source: { name: "text", output: article },
-    });
-  } else if (on("audio") || narration !== undefined)
+  // The narration, named as the status list names its step. An audiobook's or a podcast's
+  // own file is the last step's (its Audiobook or Episode row, below), so one name is one row.
+  if (on("audio") || narration !== undefined)
     build(
       "narration",
       "Narration",
@@ -172,6 +155,7 @@ export function projectOutputs(input: OutputsInput): readonly ProjectOutput[] {
             outputs.find((one) => one.role === "narration_txt" && one.meta.segment === "body"),
             "Spoken text",
           ),
+          ...(voiced ? file(role("script_md"), "Transcript by speaker") : []),
         ],
         source: { name: "text", output: article },
       },
@@ -208,6 +192,28 @@ export function projectOutputs(input: OutputsInput): readonly ProjectOutput[] {
         members: thumbnails,
       },
     );
+
+  // An audiobook's or a podcast's own file: the last step's, under the name the status list
+  // and its section give it ("Audiobook", "Episode"), ahead of the video made with it.
+  if (voiced) {
+    const format = config.voices?.format ?? "audiobook";
+    const book = format === "audiobook" || format === "drama";
+    // The file is named for what it is; the row for the step, as the status list names it.
+    const own =
+      format === "audiobook" ? "Audiobook" : format === "drama" ? "Radio drama" : "Episode";
+    const m4b = role("audio_m4b");
+    const mp3 = role("audio_mp3");
+    const primary = book
+      ? (file(m4b, `${own} with chapters`)[0] ?? file(mp3, `${own} with chapters`)[0])
+      : (file(mp3, own)[0] ?? file(m4b, own)[0]);
+    build("voices", stageName("video", config), "video", ["video"], primary?.output, {
+      primary,
+      alternatives: file(book ? mp3 : m4b, book ? "MP3 with chapters" : "M4B with chapters").filter(
+        (one) => one.output.id !== primary?.output.id,
+      ),
+      source: { name: "narration", output: narration },
+    });
+  }
 
   const video = role("video");
   if ((on("video") && config.sources.video !== "off") || video !== undefined)

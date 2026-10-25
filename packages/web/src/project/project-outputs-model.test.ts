@@ -73,7 +73,7 @@ describe("projectOutputs", () => {
     const stages = [stage("article", "done"), stage("audio", "done"), stage("video", "done")];
     const voiced = (format: "audiobook" | "podcast"): RunConfig => ({
       ...articleOnly,
-      sources: { ...articleOnly.sources, audio: "generate" },
+      sources: { ...articleOnly.sources, audio: "generate", video: "generate" },
       voices: {
         format,
         source: "attribute",
@@ -90,16 +90,24 @@ describe("projectOutputs", () => {
       outputs: [m4b, mp3, script],
     });
     const audiobook = book.find((row) => row.kind === "voices");
+    // Named as the status list and its section name the last step, and opening that section.
     expect(audiobook?.title).toBe("Audiobook");
+    expect(audiobook?.section).toBe("video");
     expect(audiobook?.primary?.label).toBe("Audiobook with chapters (.bin)");
     expect(audiobook?.primary?.output.id).toBe(m4b.id);
-    expect(audiobook?.alternatives.map((one) => one.output.id)).toEqual([mp3.id, script.id]);
+    expect(audiobook?.alternatives.map((one) => one.output.id)).toEqual([mp3.id]);
     const show = projectOutputs({ config: voiced("podcast"), stages, outputs: [m4b, mp3, script] });
     const podcast = show.find((row) => row.kind === "voices");
-    expect(podcast?.title).toBe("Podcast");
+    expect(podcast?.title).toBe("Episode");
     expect(podcast?.primary?.output.id).toBe(mp3.id);
-    expect(podcast?.alternatives.map((one) => one.label)).toContain("Transcript by speaker (.bin)");
-    expect(book.some((row) => row.kind === "narration")).toBe(false);
+    // The narration is its own row, named Narration as in the status list, with the speakers'
+    // transcript.
+    const narration = show.find((row) => row.kind === "narration");
+    expect(narration?.title).toBe("Narration");
+    expect(narration?.alternatives.map((one) => one.label)).toContain(
+      "Transcript by speaker (.bin)",
+    );
+    expect(show.filter((row) => row.title === "Episode")).toHaveLength(1);
   });
 
   it("downloads images, thumbnails and shorts as sets, and lists each file once", () => {
