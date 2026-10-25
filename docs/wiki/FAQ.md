@@ -20,7 +20,7 @@ Yes, through the command-line tools you are already signed in to: Claude Code, C
 
 ### Can I make a video without any API key?
 
-Yes. Sign in to Claude Code, Codex or Antigravity CLI for the text (Codex also draws the images), and the narration can use your computer's own voice, the **System voice**, for free. That is what the first 60-second short uses when no voice key is saved. It sounds robotic, so add a voice key when you want a better one. See [Your First Short](Your-First-Short) and [Providers and Keys](Providers-and-Keys#the-system-voice).
+Yes. Sign in to Claude Code, Codex or Antigravity CLI for the text (Codex also draws the images), and the narration can use your computer's own voice, the **System voice**, for free. That is what the first 60-second short uses when no voice key is saved. It sounds robotic, so add a voice key when you want a better one. See [Your First Short](Your-First-Short) and [Keys and Services](Providers-and-Keys#the-system-voice).
 
 ### How do I know a key works before I save it?
 
@@ -34,7 +34,7 @@ No. There is no Slopify account and no login. That is also why Slopify listens o
 
 ### Where are my API keys stored?
 
-On your computer, in Slopify's hidden data folder (`~/.slopify` by default; in Docker, the `slopify-data` volume). Each key is sent only to its own provider, and keys are never put in a backup or an export. Diagnostics files never contain them either. See [Providers and Keys](Providers-and-Keys).
+On your computer, in Slopify's hidden data folder (`~/.slopify` by default; in Docker, the `slopify-data` volume). Each key is sent only to its own provider, and keys are never put in a backup or an export. Diagnostics files never contain them either. See [Keys and Services](Providers-and-Keys).
 
 ### Where are my projects?
 
@@ -128,7 +128,7 @@ Open Settings and press **Download diagnostics**. The file lists your Slopify, s
 
 - [Troubleshooting](Troubleshooting)
 - [Recovery and Retries](Recovery-and-Retries)
-- [Providers and Keys](Providers-and-Keys)
+- [Keys and Services](Providers-and-Keys)
 - [Costs and Run Cost](Costs-and-Run-Cost)
 - [Where Your Files Live](Where-Your-Files-Live)
 - [Publishing to YouTube](Publishing-to-YouTube)

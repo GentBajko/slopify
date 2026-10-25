@@ -126,4 +126,4 @@ To fix skipped entries, edit the Pronunciation Glossary at the end of the articl
 - [Prompts](Prompts)
 - [Editing a project](Editing-a-Project)
 - [Multiple voices](Multiple-Voices)
-- [Providers and keys](Providers-and-Keys)
+- [Keys and Services](Providers-and-Keys)

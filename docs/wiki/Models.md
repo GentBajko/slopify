@@ -157,7 +157,7 @@ See [Create Overview](Create-Overview) and the Create pages for each row.
 
 ## Related pages
 
-- [Providers-and-Keys](Providers-and-Keys)
+- [Keys and Services](Providers-and-Keys)
 - [AI-CLIs](AI-CLIs)
 - [Costs-and-Run-Cost](Costs-and-Run-Cost)
 - [Templates](Templates)

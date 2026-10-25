@@ -58,7 +58,7 @@ Notes on the pickers:
 - The line under the model says whether it was checked (for example **Works · checked 2 min ago**), with **Manage models ↗** to Settings → Models.
 - **Thinking** only appears when the model offers levels.
 
-If the run needs a writer and none is picked, the row says to pick a service and model. See [Providers and Keys](Providers-and-Keys), [AI CLIs](AI-CLIs) and [Models](Models).
+If the run needs a writer and none is picked, the row says to pick a service and model. See [Keys and Services](Providers-and-Keys), [AI CLIs](AI-CLIs) and [Models](Models).
 
 ## Research
 
@@ -108,7 +108,7 @@ Folded, the Article row says what will happen, for example `Written by Claude Co
 - [Prompts](Prompts)
 - [Intros and Outros](Intros-and-Outros)
 - [Models](Models)
-- [Providers and Keys](Providers-and-Keys)
+- [Keys and Services](Providers-and-Keys)
 - [AI CLIs](AI-CLIs)
 - [Multiple Voices](Multiple-Voices)
 - [Other Languages](Other-Languages)

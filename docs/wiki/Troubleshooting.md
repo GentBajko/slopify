@@ -26,7 +26,7 @@ Most problems in Slopify show up as a failed step on the project page with a mes
 | "Slopify could not load this provider's model list. Check the API key in Settings → Keys & services and your internet connection, then refresh the list." | The model list could not be fetched. | Check the key and your connection, then refresh. |
 | "Save this provider's API key in Settings → Keys & services to load its models." | No key yet. | Save the key first. |
 
-Keys and how to get them: [Providers and Keys](Providers-and-Keys).
+Keys and how to get them: [Keys and Services](Providers-and-Keys).
 
 ## AI CLIs (Claude Code, Codex, Antigravity)
 
@@ -148,7 +148,7 @@ If an install or update fails, the message names what failed and, in Docker, the
 
 - [Recovery and Retries](Recovery-and-Retries)
 - [FAQ](FAQ)
-- [Providers and Keys](Providers-and-Keys)
+- [Keys and Services](Providers-and-Keys)
 - [AI CLIs](AI-CLIs)
 - [Docker](Docker)
 - [Install](Install)

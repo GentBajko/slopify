@@ -19,7 +19,7 @@ A backup is one `.tar` file with everything you made in Slopify: every project w
 | Settings and usage history | |
 | The trash: trashed items come back still in the trash, with their original date | |
 
-After an import you add your provider keys again in [Providers and keys](Providers-and-Keys).
+After an import you add your provider keys again in [Keys and Services](Providers-and-Keys).
 
 ## Export everything (a backup right now, downloaded)
 

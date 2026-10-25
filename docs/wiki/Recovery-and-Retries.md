@@ -149,7 +149,7 @@ When an update or install cannot finish, Slopify puts the previous version back.
 - [Troubleshooting](Troubleshooting)
 - [Project Page](Project-Page)
 - [Editing a Project](Editing-a-Project)
-- [Providers and Keys](Providers-and-Keys)
+- [Keys and Services](Providers-and-Keys)
 - [AI CLIs](AI-CLIs)
 - [Reviews and Checkpoints](Reviews-and-Checkpoints)
 - [Agents (MCP)](Agents-MCP)

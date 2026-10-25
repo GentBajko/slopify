@@ -11,7 +11,7 @@ These pages cover Slopify 3.0: every screen, every setting and every workflow, s
 1. [Install](Install) Slopify (Node 26 or newer) or run it in [Docker](Docker).
 2. Open it at `http://127.0.0.1:6969` and follow [First launch and welcome](First-Launch-and-Welcome).
 3. Make [your first 60-second short](Your-First-Short). With a signed-in CLI and your computer's own voice it needs no keys at all.
-4. Add the keys you want in [Providers and keys](Providers-and-Keys) (press **Test** to check a key before you save it), or sign in to an [AI CLI](AI-CLIs).
+4. Add the keys you want in [Keys and Services](Providers-and-Keys) (press **Test** to check a key before you save it), or sign in to an [AI CLI](AI-CLIs).
 5. Make a full video from [Create](Create-Overview).
 
 ## How a video gets made
@@ -40,7 +40,7 @@ These pages cover Slopify 3.0: every screen, every setting and every workflow, s
 ### Providers
 | Page | What it covers |
 |---|---|
-| [Providers and keys](Providers-and-Keys) | Every API provider, testing and saving keys, the system voice, Settings → Voices |
+| [Keys and Services](Providers-and-Keys) | Every API provider, testing and saving keys, the system voice, Settings → Voices |
 | [AI CLIs](AI-CLIs) | Claude Code, Codex and Antigravity CLI: sign-in, use and plan limits |
 | [Models](Models) | The model catalogue, retired models and switching |
 | [Costs and run cost](Costs-and-Run-Cost) | Cost estimates, the run cost line, the Run cost tab and usage |

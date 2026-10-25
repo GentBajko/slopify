@@ -174,5 +174,5 @@ Folded, the Narration row says who reads it, for example `Read by Ada, an Inworl
 - [Narration Aliases and Glossary](Narration-Aliases-and-Glossary)
 - [Intros and Outros](Intros-and-Outros)
 - [Prompts](Prompts)
-- [Providers and Keys](Providers-and-Keys)
+- [Keys and Services](Providers-and-Keys)
 - [Video and style](Create-Video-and-Style)

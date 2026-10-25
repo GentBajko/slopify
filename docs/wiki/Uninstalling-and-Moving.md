@@ -108,6 +108,6 @@ To put your project files on another disk or in Documents while keeping the same
 - [Install](Install)
 - [Docker](Docker)
 - [Start at Login](Start-at-Login)
-- [Providers and Keys](Providers-and-Keys)
+- [Keys and Services](Providers-and-Keys)
 - [Schedules](Schedules)
 - [Trash](Trash)

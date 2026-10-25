@@ -28,7 +28,7 @@ When the computer's own voice reads the script, the Voice line says so and offer
 
 **Check again** looks again, including for a speech program installed a moment ago. **Other tools and services Slopify can use** opens Settings → **Keys & services**. Below the lines, the three finished samples are there to watch (see [Explore the samples](#explore-the-samples)).
 
-See [AI CLIs](AI-CLIs) and [Providers and Keys](Providers-and-Keys).
+See [AI CLIs](AI-CLIs) and [Keys and Services](Providers-and-Keys).
 
 ## Step 2: Pick a style
 
@@ -133,7 +133,7 @@ When Projects has no projects at all, it also shows **Make your first video** wi
 
 - [Your First Short](Your-First-Short)
 - [Home and Projects](Home-and-Projects)
-- [Providers and Keys](Providers-and-Keys)
+- [Keys and Services](Providers-and-Keys)
 - [AI CLIs](AI-CLIs)
 - [Templates](Templates)
 - [Prompts](Prompts)

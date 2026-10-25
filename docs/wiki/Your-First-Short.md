@@ -30,7 +30,7 @@ Command-line tools can't speak, but you don't need a voice key to start: with no
 
 To set these up:
 
-1. Install and sign in to Claude Code, Codex or Antigravity CLI (see [AI CLIs](AI-CLIs)), or add keys in Settings → **Keys & services** (see [Providers and Keys](Providers-and-Keys)).
+1. Install and sign in to Claude Code, Codex or Antigravity CLI (see [AI CLIs](AI-CLIs)), or add keys in Settings → **Keys & services** (see [Keys and Services](Providers-and-Keys)).
 2. Optional: add a voice key in Settings → **Keys & services**. An OpenAI key is the simplest: the suggested voice works with it right away.
 3. Back on the first-run screen, step 1, **What a short needs**, shows the Script, Voice and Images lines, each **Ready** or **Not connected** with its fix. Press **Check again** after installing a speech program.
 
@@ -119,7 +119,7 @@ It is a normal project: you can edit the script, change an image, pick another v
 ## Related pages
 
 - [First Launch and Welcome](First-Launch-and-Welcome)
-- [Providers and Keys](Providers-and-Keys)
+- [Keys and Services](Providers-and-Keys)
 - [AI CLIs](AI-CLIs)
 - [Project Page](Project-Page)
 - [Shorts](Shorts)
