@@ -75,16 +75,16 @@ export function SamplePanel({
     ["stale", "needs-fix", "waiting"].includes(section.state) &&
     view.paid.state !== "queued" &&
     view.paid.state !== "making";
-  const failing =
+  // A fix in the section already open comes first, and is in the settings beside the sample,
+  // not a link away: the check's own verb, "Choose one in Images", said of this section.
+  const ownHref = `/templates/${encodeURIComponent(view.template.id)}?section=${section.id}`;
+  const blockers =
     checks.data?.version === view.template.version
-      ? checks.data.checks.find((check) => !check.ok && blocking.has(check.id))
-      : undefined;
+      ? checks.data.checks.filter((check) => !check.ok && blocking.has(check.id))
+      : [];
+  const failing = blockers.find((check) => check.fix?.href === ownHref) ?? blockers[0];
   const fix = failing?.fix;
-  // A fix in the section already open is in the settings beside the sample, not a link away:
-  // the check's own verb, "Choose one in Images", said of this section.
-  const here =
-    fix !== undefined &&
-    fix.href === `/templates/${encodeURIComponent(view.template.id)}?section=${section.id}`;
+  const here = fix !== undefined && fix.href === ownHref;
   const inHere = (label: string): string => {
     const suffix = ` in ${section.label}`;
     return label.endsWith(suffix)

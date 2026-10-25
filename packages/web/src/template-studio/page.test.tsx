@@ -581,6 +581,35 @@ it("says a fix that belongs to the open section in place, not as a link to the s
   expect(within(sample).queryByRole("link", { name: /first$/ })).toBeNull();
 });
 
+it("puts the open section's own fix before another section's", async () => {
+  open("pictures", {
+    [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer({
+      version: 3,
+      checks: [
+        {
+          id: "providers",
+          ok: false,
+          sentence: "No writing service is chosen, so a run can't start.",
+          fix: { label: "Choose one in Article", href: `/templates/${templateId}?section=script` },
+        },
+        {
+          id: "providers",
+          ok: false,
+          sentence: "No image service is chosen, so a run can't start.",
+          fix: { label: "Choose one in Images", href: `/templates/${templateId}?section=pictures` },
+        },
+      ],
+    }),
+  });
+  const sample = await screen.findByRole("region", { name: "Images sample" });
+  expect(
+    await within(sample).findByText(
+      "No image service is chosen, so a run can't start. Choose one in this section's settings, then Save.",
+    ),
+  ).not.toBeNull();
+  expect(within(sample).queryByRole("link", { name: "Choose one in Article first" })).toBeNull();
+});
+
 it("says On, not Sample ready, for Pauses and checks and Schedule, which have no sample", async () => {
   open("subject", {
     [`GET /api/template-studio/${templateId}`]: jsonAnswer({
