@@ -480,7 +480,8 @@ describe("Keys & services' lists", () => {
     expect(within(voice).getByText("Built in")).not.toBeNull();
     expect(within(voice).getByText("Not installed")).not.toBeNull();
     expect(screen.getByRole("heading", { name: "System voice" })).not.toBeNull();
-    expect(screen.getByText(/Install espeak-ng/)).not.toBeNull();
+    // The voices list can't be read here, so the server's own sentence says why.
+    expect(await screen.findByText(/Install espeak-ng/)).not.toBeNull();
     expect(screen.queryByLabelText("System voice API key")).toBeNull();
   });
 
@@ -526,11 +527,11 @@ describe("Keys & services' lists", () => {
       }),
     );
     // The sentence says what is wrong; the commands stand apart, one per line, to copy.
+    expect(await screen.findByText("Install espeak-ng with one of these:")).not.toBeNull();
     expect(
-      await screen.findByText("No speech program was found on this computer, so it can't narrate."),
+      screen.getByText("No speech program was found on this computer, so it can't narrate."),
     ).not.toBeNull();
     expect(screen.queryByText(/sudo apt install espeak-ng\)/)).toBeNull();
-    expect(screen.getByText("Install espeak-ng with one of these:")).not.toBeNull();
     expect(
       screen.getByText(
         (_, node) => node?.tagName === "PRE" && /dnf install/.test(node.textContent),

@@ -88,7 +88,9 @@ export function SystemVoiceDetail({
         <span className="min-w-0 break-words text-ink-2">
           {readiness.available
             ? `Found ${readiness.engine ?? "a speech program"}. Narration with it is free; a voice service with a key sounds better.`
-            : install !== undefined
+            : // The server's own sentence only where no install commands stand apart from it
+              // (macOS, Windows, or a list that could not be read), never while it loads.
+              voices.isPending || install !== undefined
               ? noProgram
               : (readiness.issue ?? noProgram)}
         </span>
