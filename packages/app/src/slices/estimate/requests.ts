@@ -123,8 +123,8 @@ function onPlan(
     detail:
       request.detail ??
       (amount === null
-        ? "Runs on your CLI plan, so it adds no charge; no API price is listed for this model."
-        : `Runs on your CLI plan, so it adds no charge; priced as ${api?.name ?? "the API model"} through the API.`),
+        ? "Runs on your subscription at no extra charge; no API price is listed for this model."
+        : `Runs on your subscription at no extra charge; through the API it would cost what ${api?.name ?? "the API model"} costs.`),
     onPlan: true,
     apiLow: amount === null ? null : amount * 0.5,
     apiHigh: amount === null ? null : amount * 1.5,

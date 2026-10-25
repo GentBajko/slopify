@@ -101,7 +101,7 @@ export function estimateRun(
   const tts = draft.audio ?? { provider: "", model: "" };
   const image = draft.images ?? { provider: "", model: "" };
   const textNote = isLocalCliProvider(llm.provider)
-    ? "Runs on your CLI plan, so it adds no charge; the API figure is what the same tokens would cost through the API."
+    ? "Runs on your subscription at no extra charge; the API figure is what the same work would cost through the API."
     : (data.llm.find(
         (model) =>
           model.provider === llm.provider &&
@@ -109,9 +109,9 @@ export function estimateRun(
           model.enabled &&
           !model.deprecated,
       )?.pricing.note ??
-      "CLI subscription or model pricing is unavailable; usage may be billed by your account.");
+      "No price is listed for this model; your account may be billed for it.");
   const imageNote = isLocalCliProvider(image.provider)
-    ? "Runs on your Codex plan, so it adds no charge; no API price is given for agent-drawn images."
+    ? "Runs on your Codex subscription at no extra charge."
     : (data.image.find(
         (model) =>
           model.provider === image.provider &&
