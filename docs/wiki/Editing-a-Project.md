@@ -195,7 +195,7 @@ Restoring adds a new revision with the old settings and outputs, so nothing afte
 
 - Several edits can go into one save. Make them all, save once, then review the remake.
 - A rejected save lists each problem next to its field; fix those and save again.
-- To redo a whole stage from scratch rather than one piece, use the section's own More menu on the project page (see [Project Page](Project-Page#re-run-a-whole-stage)).
+- To make a whole part again rather than one piece, use the button at the head of its part on the project page (see [Project Page](Project-Page#make-a-whole-part-again)).
 
 ## Related pages
 
