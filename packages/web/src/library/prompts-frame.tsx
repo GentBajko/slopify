@@ -9,6 +9,7 @@ import { keywordSlots } from "@/lib/draft-lint";
 import { categoryLabel } from "@/lib/entry-options";
 import { kindLabel } from "@/lib/prompt-kinds";
 import { entriesQuery, promptsQuery } from "@/queries";
+import { TrashLink } from "@/trash/trash-link";
 
 // What the Prompts page is showing: one kind of prompt, or the intros or the outros (saved apart
 // from prompts, with a category instead of a kind). A search spans every kind but stays on the
@@ -29,7 +30,15 @@ export function PromptsFrame({
 }): ReactElement {
   return (
     <div>
-      <PageHeader title="Prompts" actions={actions} />
+      <PageHeader
+        title="Prompts"
+        actions={
+          <>
+            <TrashLink kinds={["prompt", "entry"]} />
+            {actions}
+          </>
+        }
+      />
       <Workspace className="sl-workspace--prompts" sections={<PromptKinds shown={shown} />}>
         {children}
       </Workspace>

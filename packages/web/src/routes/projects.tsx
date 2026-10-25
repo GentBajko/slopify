@@ -29,7 +29,9 @@ import { RowCheck, useSelection } from "@/components/selection";
 import { markUploaded } from "@/home/api";
 import { plural } from "@/lib/format";
 import { keys, projectsQuery } from "@/queries";
+import { trashKey } from "@/trash/api";
 import { useOpenTrash } from "@/trash/open-trash";
+import { TrashLink } from "@/trash/trash-link";
 import { TutorialInvite } from "@/tutorial/launcher";
 import { ProjectsBulkBar, restoreProjects } from "./projects-bulk";
 import {
@@ -134,7 +136,10 @@ export function ProjectsRoute({
       }),
     onSettled: async () => {
       setDeleting(undefined);
-      await queryClient.invalidateQueries({ queryKey: keys.projects });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: keys.projects }),
+        queryClient.invalidateQueries({ queryKey: trashKey }),
+      ]);
     },
   });
   const uploaded = useMutation({
@@ -220,7 +225,12 @@ export function ProjectsRoute({
         meta={
           projects.data === undefined ? undefined : plural(inChannel.length, "project", "projects")
         }
-        actions={<ChannelPicker />}
+        actions={
+          <>
+            <TrashLink kinds={["project"]} />
+            <ChannelPicker />
+          </>
+        }
       />
 
       {projects.data?.projects.length === 0 ? <TutorialInvite /> : null}

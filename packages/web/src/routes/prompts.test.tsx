@@ -92,6 +92,28 @@ const one = (versions = 1) => ({
 const unused = { templates: [], schedules: [], projects: [] };
 
 describe("the prompts list", () => {
+  it("names how many deleted prompts, intros and outros wait in the trash, linking to it", async () => {
+    const trashed = (kind: string, id: string) => ({
+      kind,
+      id,
+      name: id,
+      detail: null,
+      deletedAt: "2026-09-27T10:00:00.000Z",
+      purgeAt: "2026-10-27T10:00:00.000Z",
+      daysLeft: 30,
+    });
+    renderRouted(
+      <Screen />,
+      deps([dossier], {
+        "GET /api/trash": jsonAnswer({
+          items: [trashed("prompt", "a"), trashed("entry", "b"), trashed("project", "c")],
+        }),
+      }),
+    );
+    const link = await screen.findByRole("link", { name: "Trash (2)" });
+    expect(link.getAttribute("href")).toBe("/settings?section=trash");
+  });
+
   it("lists every kind down the left with how many are saved, and shows the one picked", async () => {
     renderRouted(<Screen />, deps([dossier, oil, card]));
 

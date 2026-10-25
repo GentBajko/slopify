@@ -253,6 +253,34 @@ it("confirms deletion and keeps the template when the server refuses", async () 
   expect(remove).toHaveBeenCalledOnce();
 });
 
+it("deletes a template with an Undo that brings it back out of the trash", async () => {
+  const user = userEvent.setup();
+  const remove = vi.fn(() => new Response(null, { status: 204 }));
+  const restore = vi.fn(() =>
+    Response.json({
+      restored: { kind: "template", id: templateId, name: template.name, renamedFrom: null },
+    }),
+  );
+  renderRouted(
+    <TemplatesRoute onApplied={vi.fn()} />,
+    testDeps({
+      ...routes,
+      [`DELETE /api/project-templates/${templateId}`]: remove,
+      [`POST /api/trash/template/${templateId}/restore`]: restore,
+    }),
+  );
+  await user.click(await screen.findByRole("button", { name: `More for ${template.name}` }));
+  await user.click(await screen.findByRole("menuitem", { name: `Delete ${template.name}` }));
+  const dialog = await screen.findByRole("dialog");
+  // The consequence names where it can be restored, as a link to it.
+  expect(within(dialog).getByRole("link", { name: "Settings → Trash" })).not.toBeNull();
+  await user.click(within(dialog).getByRole("button", { name: "Delete template" }));
+  expect(await screen.findByText(`Moved "${template.name}" to the trash.`)).not.toBeNull();
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(restore).toHaveBeenCalledOnce());
+  expect(await screen.findByText(`Restored "${template.name}".`)).not.toBeNull();
+});
+
 it("keeps the made draft's identity when opening it fails", async () => {
   const user = userEvent.setup();
   const bodies: unknown[] = [];
