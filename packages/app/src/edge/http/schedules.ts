@@ -271,7 +271,7 @@ function routes(deps: ScheduleDeps | undefined) {
             "spend-limit":
               "Making it ahead would go over this schedule's spend limit. Raise the limit under Edit, or make it from Create instead.",
             design:
-              "A design schedule makes each piece on its day, so there is nothing to make ahead. To have a piece now, open its poster template (Templates → Poster templates) and press Make a piece; to have it sooner on a schedule, give its row an earlier date in the Schedule section.",
+              "A poster schedule makes each poster on its day, so there is nothing to make ahead. To have one now, open its poster template (Templates → Poster templates) and press Make a poster; to have it sooner on a schedule, give its row an earlier date in the Schedule section.",
           };
           return problem(c, {
             status: result.reason === "not-found" ? 404 : 409,

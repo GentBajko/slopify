@@ -59,7 +59,7 @@ export function gateLine(view: StudioView): { readonly word: string; readonly li
   };
 }
 
-// Edit template's header: Make a video (the lime key), New schedule with this template, and
+// Edit template's header: Make a video (the lime key), New schedule (with this template), and
 // More: Versions, Export as a file (.zip) and, once a schedule runs the template, Approve for
 // schedules.
 export function StudioActions({
