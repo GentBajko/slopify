@@ -18,10 +18,12 @@ import { Button } from "@/components/kit/button";
 import { ChunkingControl } from "@/play/chunking";
 import { DescribeFiguresToggle } from "@/play/describe-figures";
 import { NarrationAliasesToggle } from "@/play/narration-aliases";
-import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
+import { OptionPicker } from "@/play/pickers";
 import { PronunciationGlossary } from "@/play/pronunciation-glossary";
+import { ServiceGroup } from "@/play/service-group";
 import { ThinkingPicker } from "@/play/thinking";
 import { SpeakersEditor } from "@/voices/speakers-editor";
+import { changeSource } from "./revision-form-state.js";
 
 // "Also use pronunciations from my other projects" in Edit project: turning it on copies the
 // other projects' glossaries into this one, and the button copies them again, so a project
@@ -192,33 +194,26 @@ export function RevisionProviders({
   const title = part === "text" ? "Written by" : part === "voice" ? "Read by" : "Images by";
   return (
     <section aria-label={title} className="grid min-w-0 gap-3 sm:grid-cols-2">
-      <h3 className="col-span-full m-0 text-title-3">{title}</h3>
       {part === "text" ? (
-        <>
-          <ProviderPicker
-            label="Service"
-            tip="play.llm.provider"
-            family="llm"
-            providers={providers}
-            value={llm.provider}
-            problem={undefined}
-            onPick={(provider) =>
-              onChange({ ...edit, config: { ...config, llm: { provider, model: "" } } })
-            }
-          />
-          <ModelPicker
-            label="Model"
-            tip="play.llm.model"
-            provider={llm.provider}
-            value={llm.model}
-            problem={undefined}
-            onPick={(model) => onChange({ ...edit, config: { ...config, llm: { ...llm, model } } })}
-          />
+        <ServiceGroup
+          family="llm"
+          providers={providers}
+          provider={llm.provider}
+          model={llm.model}
+          serviceField="llm.provider"
+          modelField="llm.model"
+          serviceProblem={undefined}
+          modelProblem={undefined}
+          onService={(provider) =>
+            onChange({ ...edit, config: { ...config, llm: { provider, model: "" } } })
+          }
+          onModel={(model) => onChange({ ...edit, config: { ...config, llm: { ...llm, model } } })}
+        >
           <ThinkingPicker
             choice={llm}
             onChange={(choice) => onChange({ ...edit, config: { ...config, llm: choice } })}
           />
-        </>
+        </ServiceGroup>
       ) : null}
       {part === "voice" ? (
         <>
@@ -227,42 +222,32 @@ export function RevisionProviders({
           {config.voices !== undefined &&
           config.intro === undefined &&
           config.outro === undefined ? null : (
-            <>
-              {config.voices === undefined ? null : (
-                <p className="col-span-full m-0 text-small text-ink-2">
-                  The voice below reads only the intro and outro. Each speaker's voice is set under
-                  Speakers.
-                </p>
-              )}
-              <ProviderPicker
-                label={
-                  config.voices === undefined ? "Voice service" : "Intro and outro voice service"
-                }
-                tip="play.tts.provider"
-                family="tts"
-                providers={providers}
-                value={audio.provider}
-                problem={undefined}
-                onPick={(provider) =>
-                  onChange({
-                    ...edit,
-                    config: { ...config, audio: { ...audio, provider, model: "", voice: "" } },
-                  })
-                }
-              />
-              <ModelPicker
-                label={config.voices === undefined ? "Voice model" : "Intro and outro voice model"}
-                tip="play.tts.model"
-                provider={audio.provider}
-                value={audio.model}
-                problem={undefined}
-                onPick={(model) =>
-                  onChange({ ...edit, config: { ...config, audio: { ...audio, model } } })
-                }
-              />
+            <ServiceGroup
+              family="tts"
+              label={config.voices === undefined ? "Read by" : "Intro and outro read by"}
+              providers={providers}
+              provider={audio.provider}
+              model={audio.model}
+              serviceField="audio.provider"
+              modelField="audio.model"
+              serviceProblem={undefined}
+              modelProblem={undefined}
+              leaveOut={{
+                label: "Set Narration to Off",
+                onLeave: () => onChange(changeSource(edit, "audio", "off")),
+              }}
+              onService={(provider) =>
+                onChange({
+                  ...edit,
+                  config: { ...config, audio: { ...audio, provider, model: "", voice: "" } },
+                })
+              }
+              onModel={(model) =>
+                onChange({ ...edit, config: { ...config, audio: { ...audio, model } } })
+              }
+            >
               <OptionPicker
                 label={config.voices === undefined ? "Voice" : "Intro and outro voice"}
-                tip="play.voice"
                 value={audio.voice}
                 problem={undefined}
                 placeholder="Choose a saved voice"
@@ -278,7 +263,13 @@ export function RevisionProviders({
                   onChange({ ...edit, config: { ...config, audio: { ...audio, voice } } })
                 }
               />
-            </>
+              {config.voices === undefined ? null : (
+                <p className="sl-fields__wide m-0 text-small text-ink-2">
+                  This voice reads only the intro and outro. Each speaker's voice is set under
+                  Speakers.
+                </p>
+              )}
+            </ServiceGroup>
           )}
           <ChunkingControl
             value={config.chunking ?? { mode: "whole" }}
@@ -342,28 +333,30 @@ export function RevisionProviders({
         </>
       ) : null}
       {part === "images" ? (
-        <>
-          <ProviderPicker
-            label="Image service"
-            tip="play.images.provider"
-            family="image"
-            providers={providers}
-            value={images.provider}
-            problem={undefined}
-            onPick={(provider) =>
-              onChange({ ...edit, config: { ...config, images: { provider, model: "" } } })
-            }
-          />
-          <ModelPicker
-            label="Image model"
-            tip="play.images.model"
-            provider={images.provider}
-            value={images.model}
-            problem={undefined}
-            onPick={(model) =>
-              onChange({ ...edit, config: { ...config, images: { ...images, model } } })
-            }
-          />
+        <ServiceGroup
+          family="image"
+          providers={providers}
+          provider={images.provider}
+          model={images.model}
+          serviceField="images.provider"
+          modelField="images.model"
+          serviceProblem={undefined}
+          modelProblem={undefined}
+          leaveOut={
+            config.sources.images === "generate"
+              ? {
+                  label: "Set Images to None",
+                  onLeave: () => onChange(changeSource(edit, "images", "off")),
+                }
+              : undefined
+          }
+          onService={(provider) =>
+            onChange({ ...edit, config: { ...config, images: { provider, model: "" } } })
+          }
+          onModel={(model) =>
+            onChange({ ...edit, config: { ...config, images: { ...images, model } } })
+          }
+        >
           <ThinkingPicker
             field="images.thinking"
             label="Effort"
@@ -371,7 +364,7 @@ export function RevisionProviders({
             choice={images}
             onChange={(choice) => onChange({ ...edit, config: { ...config, images: choice } })}
           />
-        </>
+        </ServiceGroup>
       ) : null}
     </section>
   );

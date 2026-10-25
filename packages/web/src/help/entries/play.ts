@@ -1,6 +1,6 @@
 import type { HelpEntry } from "../entry.js";
 
-// Play's setup, top to bottom, and the pieces Edit project draws with the same components
+// Play's setup, top to bottom, and the pieces Edit settings draws with the same components
 // (speakers, shorts, reviews, the establishing image, the language). Settings → Voices'
 // table is here too, as it lives in the same voice components.
 export const playHelp = {
@@ -21,43 +21,6 @@ export const playHelp = {
     tutorial: { page: "Play-Overview", anchor: "keywords" },
   },
 
-  // Sources, one switch per stage
-  "play.source.research": {
-    title: "Research",
-    body: "Let the AI research has the AI plan chapters, look each one up on the web and combine the notes before the article is written: one call to plan, one per chapter and one to combine. Paste my notes uses notes you paste. Off, the default, writes from the prompt alone.",
-    tutorial: { page: "Play-Title-and-Article", anchor: "research" },
-  },
-  "play.source.article": {
-    title: "Article source",
-    body: "Write it for me has the text model write the article from the article prompt, one call. Use my text as written narrates text you paste, word for word, with no text-model cost. Adapt my text has the article prompt rewrite text you paste, one call. No text is for images only. The article is what the narration reads and the PDF lays out. Default: Write it for me.",
-    tutorial: { page: "Play-Title-and-Article", anchor: "choose-where-the-article-comes-from" },
-  },
-  "play.source.audio": {
-    title: "Narration",
-    body: "AI voice reads the article aloud with the voice you pick, charged by the voice service per character. My own audio file uses a file you upload, as it is. Off makes a silent video with no captions, YouTube description or shorts. Default: AI voice.",
-    tutorial: { page: "Play-Narration", anchor: "choose-where-the-narration-comes-from" },
-  },
-  "play.source.images": {
-    title: "Images",
-    body: "Made by AI draws images from the ticked image prompts, one paid image call each. My own images uses your PNG, JPEG or WebP files in the order you pick them. None turns the video off too. Default: Made by AI.",
-    tutorial: { page: "Play-Images", anchor: "choose-where-the-images-come-from" },
-  },
-  "play.source.thumbnail": {
-    title: "Thumbnail",
-    body: "From my thumbnail prompt draws it straight from your thumbnail prompt, one image call. Let the AI write the prompt first has the AI write the image prompt from yours, the title and the article, then draws it. Upload mine uses your own picture. Default: None.",
-    tutorial: { page: "Play-Outputs", anchor: "thumbnail" },
-  },
-  "play.source.video": {
-    title: "Video",
-    body: "Make the video puts the slideshow together on this computer from the images and narration; it costs no provider money, only time. Off (sound only) keeps the narration as one audio file and leaves each other stage to download on its own. It needs images. Default: Make the video.",
-    tutorial: { page: "Play-Video-and-Style", anchor: "choose-whether-to-render-a-video" },
-  },
-  "play.source.document": {
-    title: "PDF of the article",
-    body: "Make a PDF lays out the article and title on this computer, in the theme you pick. It needs no provider and costs nothing. Default: Off.",
-    tutorial: { page: "PDF-Documents", anchor: "make-a-pdf" },
-  },
-
   // Article row
   "play.provided.article": {
     title: "Article text",
@@ -69,16 +32,6 @@ export const playHelp = {
     body: "Notes you paste are given to the text model with the article prompt, in place of web research. Paste facts, sources and quotes the article should draw on. Nothing is looked up.",
     tutorial: { page: "Play-Title-and-Article", anchor: "give-your-own-research-notes" },
   },
-  "play.llm.provider": {
-    title: "Written by",
-    body: "Who writes: a command-line tool you are signed in to, such as Claude Code or Codex, or a keyed service such as OpenRouter, billed per token. A greyed service says why it cannot be used; fix it under Settings.",
-    tutorial: { page: "Play-Title-and-Article", anchor: "text-generation" },
-  },
-  "play.llm.model": {
-    title: "Writing model",
-    body: "The model the service runs for every writing step. Bigger models write better and cost more per token. Settings → Models refreshes the list and checks whether a model works for your key.",
-    tutorial: { page: "Play-Title-and-Article", anchor: "text-generation" },
-  },
   "play.llm.thinking": {
     title: "Thinking",
     body: "How long the model reasons before it answers, for models that offer it. Higher levels can write more carefully but take longer and use more tokens. Model default leaves it to the provider.",
@@ -86,21 +39,6 @@ export const playHelp = {
   },
 
   // Narration row
-  "play.tts.provider": {
-    title: "Voice service",
-    body: "The service that reads the narration aloud, charged per character of text. A greyed service says why it cannot be used; add its key under Settings. Changing it clears the model and voice.",
-    tutorial: { page: "Play-Narration", anchor: "pick-a-voice" },
-  },
-  "play.tts.model": {
-    title: "Voice model",
-    body: "The voice service's speech model. Models differ in quality, languages, speed and price per character. Some features need a particular model: Narration Preparation needs Inworld TTS-2. Settings → Models refreshes the list.",
-    tutorial: { page: "Play-Narration", anchor: "pick-a-voice" },
-  },
-  "play.voice": {
-    title: "Voice",
-    body: "Who reads the narration. The list holds the voices you added under Settings → Voices for this voice service, filtered to the project's language. With several speakers, this voice reads the intro and outro.",
-    tutorial: { page: "Play-Narration", anchor: "pick-a-voice" },
-  },
   "play.voice-sample": {
     title: "Try a sample of your text",
     body: "Reads the passage you paste in the chosen voice, so you hear how it says your names before a run. Up to a few hundred characters, priced on the button; Library → Narration aliases apply when the voice uses them, the Pronunciation Glossary and Narration Preparation don't. The sample is never reused in the run.",
@@ -235,16 +173,6 @@ export const playHelp = {
   },
 
   // Images row
-  "play.images.provider": {
-    title: "Image service",
-    body: "Who draws the images, the thumbnail and the shorts' pictures: a keyed service such as fal.ai, billed per image, or a command-line tool you are signed in to. A greyed service says why it cannot be used; fix it under Settings.",
-    tutorial: { page: "Play-Images", anchor: "pick-the-image-provider-and-model" },
-  },
-  "play.images.model": {
-    title: "Image model",
-    body: "The image service's model. Models differ in quality, speed and price per image; the estimate in the right rail shows what this run costs. Settings → Models refreshes the list.",
-    tutorial: { page: "Play-Images", anchor: "pick-the-image-provider-and-model" },
-  },
   "play.images.effort": {
     title: "Effort",
     body: "How long an image agent, such as the Codex CLI, reasons before it draws. Higher effort can follow the prompt more closely but takes longer and uses more tokens. Model default leaves it to the provider.",

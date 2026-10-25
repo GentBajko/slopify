@@ -399,6 +399,7 @@ function Pictures({
             />
             <ModelPicker
               label="Image model"
+              quiet
               provider={provider}
               value={model}
               problem={undefined}
@@ -482,6 +483,7 @@ function CastVoiceFields({
         />
         <ModelPicker
           label="Voice model"
+          quiet
           provider={voice.provider}
           value={voice.model}
           problem={undefined}
