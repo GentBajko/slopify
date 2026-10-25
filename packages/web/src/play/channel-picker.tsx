@@ -89,7 +89,7 @@ export function BrandKitControls({
     <div className="flex min-w-0 flex-col gap-3 py-2">
       <Switch
         label="Use the channel's brand kit"
-        help="Its caption font, intro, outro, PDF look and sounds fill what this setup leaves at its default."
+        help="Its caption font, intro, outro, PDF look and sounds fill what these settings leave at their default."
         checked={useKit}
         disabled={disabled}
         onChange={(checked) => {

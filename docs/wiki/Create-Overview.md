@@ -149,8 +149,8 @@ The channel itself is picked with **For** beside **Start from**, shown when you 
 
 | Option | What it does | Default |
 | --- | --- | --- |
-| **For** | The channel this video belongs to. Its brand kit fills what this setup leaves at its default, and its cast goes with the images. | The template's channel, or the channel you are showing |
-| **Use the channel's brand kit** | Its caption font, intro, outro, PDF look and sounds fill what this setup leaves at its default. What you set on Create wins. Off takes none of it; the cast still applies. | On |
+| **For** | The channel this video belongs to. Its brand kit fills what these settings leave at their default, and its cast goes with the images. | The template's channel, or the channel you are showing |
+| **Use the channel's brand kit** | Its caption font, intro, outro, PDF look and sounds fill what these settings leave at their default. What you set on Create wins. Off takes none of it; the cast still applies. | On |
 
 **Open <channel>** goes to the channel's page. The language is in the [Article](Create-Article#language) row. For the cast, see [Cast](Cast-Library); for the brand kit, [Channels](Channels).
 
