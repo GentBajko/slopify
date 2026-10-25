@@ -759,11 +759,12 @@
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: var(--space-3);
   }
-  /* In a project the open section shares the width with the status column: three shorts
-     across instead of two, so five fit in about a screen. */
-  @media (min-width: 1181px) {
+  /* In a project the open section shares the width with the status column: a short stays 180
+     to 200 pixels wide at every width above a phone, so its title, downloads and Copy for
+     YouTube are on the first screen, and five fit across at 1440. */
+  @media (min-width: 640px) {
     .sl-project .sl-grid--shorts {
-      grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 200px));
       column-gap: var(--space-4);
     }
   }
