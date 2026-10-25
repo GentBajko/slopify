@@ -130,10 +130,10 @@ function FontPickerFields({
           ) : null}
           <FontSample url={fontUrl(api, value)} />
         </div>
-        {/* The browser's own file box ("Choose File · No file chosen") is hidden: the button
-            says what it does and opens it. The input keeps its name and the focus a refusal
-            sends to it, out of the tab order beside the button. */}
         <div className="min-w-0 basis-full">
+          {/* The browser's own file box ("Choose File · No file chosen") is hidden: the button
+              says what it does and opens it. The input keeps its name and the focus a refusal
+              sends to it, out of the tab order beside the button. */}
           <input
             ref={fileInput}
             id={uploadId}
