@@ -17,32 +17,32 @@ In the prompt editor, the **Insert** bar above the text lists the keywords the p
 
 ## Facts Slopify already has
 
-Free: no AI call. Copied when the run starts, so later changes to the channel or its other videos never change a project already made. In **Edit project → Prompts**, **Refresh keyword facts** copies them again.
+Free: no AI call. Copied when the run starts, so later changes to the channel or its other videos never change a project already made. In **Edit settings** → **Title and keywords**, **Refresh keyword facts** copies them again.
 
 | Keyword | Fills in | Example | Works in |
 | --- | --- | --- | --- |
-| `{{Slopify_Title}}` | The video's title, with its keywords filled in | How Lighthouses Were Built on Bare Rock | Every prompt and entry |
-| `{{Slopify_Channel}}` | The project's channel name | Quiet Histories | Every prompt and entry |
-| `{{Slopify_Series}}` | The channel's series brief (Channels → Edit) | Calm histories of how things were made | Every prompt and entry |
-| `{{Slopify_Links}}` | The channel's links, one per line | Website: https://example.com | Every prompt and entry |
-| `{{Slopify_Previous_Video}}` | Title and link of the channel's previous video in the same series | The Canal Age – https://youtu.be/abc123 | Every prompt and entry |
-| `{{Slopify_Next_Video}}` | Title of the next planned video in the same series and posting plan line | Tea Clippers and the Race Home | Every prompt and entry |
-| `{{Slopify_Episode}}` | This video's number in its series on the channel | 7 | Every prompt and entry |
-| `{{Slopify_Cast}}` | The channel's cast members with their descriptions | Mira: a keeper's daughter who kept the logbook | Every prompt and entry |
-| `{{Slopify_Covered_Before}}` | The titles the channel already made, so the article avoids repeating them | The Canal Age | Every prompt and entry |
+| `{{Slopify_Title}}` | The video's title, with its keywords filled in | How Lighthouses Were Built on Bare Rock | Every prompt, intro and outro |
+| `{{Slopify_Channel}}` | The project's channel name | Quiet Histories | Every prompt, intro and outro |
+| `{{Slopify_Series}}` | The channel's series brief (Channels → Edit) | Calm histories of how things were made | Every prompt, intro and outro |
+| `{{Slopify_Links}}` | The channel's links, one per line | Website: https://example.com | Every prompt, intro and outro |
+| `{{Slopify_Previous_Video}}` | Title and link of the channel's previous video in the same series | The Canal Age – https://youtu.be/abc123 | Every prompt, intro and outro |
+| `{{Slopify_Next_Video}}` | Title of the next planned video in the same series and posting plan line | Tea Clippers and the Race Home | Every prompt, intro and outro |
+| `{{Slopify_Episode}}` | This video's number in its series on the channel | 7 | Every prompt, intro and outro |
+| `{{Slopify_Cast}}` | The channel's cast members with their descriptions | Mira: a keeper's daughter who kept the logbook | Every prompt, intro and outro |
+| `{{Slopify_Covered_Before}}` | The titles the channel already made, so the article avoids repeating them | The Canal Age | Every prompt, intro and outro |
 | `{{Slopify_Brand}}` | The brand kit's caption and title colours and font names | Colours: #F5C542. Fonts: Barlow. | Image and Thumbnail prompts |
-| `{{Slopify_Release_Date}}` | The release date from the posting plan, read when the step runs | Thursday 22 October 2026 | Every prompt and entry |
+| `{{Slopify_Release_Date}}` | The release date from the posting plan, read when the step runs | Thursday 22 October 2026 | Every prompt, intro and outro |
 | `{{Slopify_Chapters}}` | The article's chapter titles, one per line | The first lamps | Every prompt except Article and Script |
 | `{{Slopify_Duration}}` | The finished video's length | 42 min 10 s | Description, Shorts, Review and Post prompts |
 
 - In a **Description** prompt, `{{Slopify_Links}}`, `{{Slopify_Previous_Video}}` and `{{Slopify_Next_Video}}` stay links the description fills when it is shown or copied (`{{Previous video}}`, `{{Next video}}`, `{{Patreon}}`…), so changing a link changes every description at once. See [YouTube description](YouTube-Description).
-- Moving the release date later never remakes anything, and neither does a new length.
+- Moving the release date later never makes anything again, and neither does a new length.
 - A brand-kit font installed on the computer (not uploaded to Slopify) is left out of `{{Slopify_Brand}}`.
-- A **Text** intro or outro is narrated as written, so it can't say `{{Slopify_Release_Date}}`: set its Mode to **LLM**, which writes it as a request to the AI model.
+- An intro or outro set to **Say these exact words** is narrated as written, so it can't say `{{Slopify_Release_Date}}`: set it to **Let the AI write it from these instructions**, which sends it to the AI as a request.
 
 ## Written from the article
 
-One shared AI call per run, the **keyword digest**, writes every one of these the run uses, once the article exists. It uses the project's text model and shows in the cost estimate as **Keyword digest**.
+One shared AI call per run, the **keyword digest**, writes every one of these the run uses, once the article exists. It uses the AI that writes the article (**Written by**) and shows in the cost estimate as **Keyword digest**.
 
 | Keyword | Fills in | Example | Works in |
 | --- | --- | --- | --- |
