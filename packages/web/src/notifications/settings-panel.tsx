@@ -26,9 +26,10 @@ const notificationUrlQueryKey = ["settings", "notifications"] as const;
 const cantShow =
   "The test notification couldn't be shown: this browser only allows notifications from installed apps. Set a Notification URL below instead.";
 
-// Settings → Notifications: this browser's own notifications, and the Notification URL the
-// server POSTs to when no tab is open. The line under the heading says when Slopify tells you
-// and what a message holds; each switch says what it needs under it.
+// Settings → Notifications: this browser's own notifications and sounds, and the Notification
+// URL the server POSTs to when no tab is open. The line under the heading says when Slopify
+// tells you and what a message holds; each switch says what it does and needs in the one line
+// under it, so none carries an info button.
 export function NotificationSettings() {
   return (
     <div>
@@ -73,12 +74,12 @@ function BrowserNotifications() {
         setBrowserNotifications(true);
         if (!browserNotificationsOn())
           setProblem(
-            "Browser notifications couldn't be turned on because this browser blocks site storage for Slopify. Allow site data for this address in your browser's settings, then turn Browser notifications on again.",
+            `Notifications couldn't be turned on because this browser blocks site storage for Slopify. Allow site data for this address in your browser's settings, then turn ${browserLabel} on again.`,
           );
       } else
         setProblem(
           refused ??
-            "Browser notifications weren't turned on because the permission prompt was dismissed. Turn Browser notifications on again and choose Allow.",
+            `Notifications weren't turned on because the permission prompt was dismissed. Turn ${browserLabel} on again and choose Allow.`,
         );
     } finally {
       setAsking(false);
@@ -87,10 +88,10 @@ function BrowserNotifications() {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+      <div className="flex flex-wrap items-start gap-x-6 gap-y-2">
         <Switch
-          label="Browser notifications"
-          tip="settings.notifications.browser"
+          label={browserLabel}
+          help="Shows a notification on this computer when a run finishes, fails or waits for you, while any Slopify tab is open. Turning it on asks the browser's permission."
           checked={active}
           disabled={asking}
           onChange={(next) => void turn(next)}
@@ -98,7 +99,7 @@ function BrowserNotifications() {
         <Button
           variant="quiet"
           disabled={!active}
-          disabledReason="Turn Browser notifications on first."
+          disabledReason={`Turn ${browserLabel} on first.`}
           onClick={() => {
             setProblem(undefined);
             try {
@@ -112,9 +113,6 @@ function BrowserNotifications() {
           Send test notification
         </Button>
       </div>
-      <p className="m-0 text-small text-ink-2">
-        Works while any Slopify tab is open. The switch applies in this browser at once.
-      </p>
       {problem === undefined ? null : (
         <p role="alert" className="m-0 text-small text-danger">
           {problem}
@@ -129,29 +127,25 @@ function BrowserNotifications() {
 function RunSounds() {
   const on = useSyncExternalStore(onRunSoundsChange, runSoundsOn, () => true);
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-        <Switch
-          label="Run sounds"
-          tip="settings.notifications.sounds"
-          checked={on}
-          onChange={setRunSounds}
-        />
-        <Button variant="quiet" onClick={() => playRunSound("start")}>
-          Play start
-        </Button>
-        <Button variant="quiet" onClick={() => playRunSound("end")}>
-          Play end
-        </Button>
-      </div>
-      <p className="m-0 text-small text-ink-2">
-        A chime when a run starts and a different one when it finishes, fails or waits for you.
-        Works while any Slopify tab is open; set your computer's volume for how loud. The switch
-        applies in this browser at once.
-      </p>
+    <div className="flex flex-wrap items-start gap-x-6 gap-y-2">
+      <Switch
+        label="Play a sound when a run starts and ends"
+        help="A longer one when it finishes, fails or waits for you, in this browser while any Slopify tab is open. Your computer's volume sets how loud."
+        checked={on}
+        onChange={setRunSounds}
+      />
+      <Button variant="quiet" onClick={() => playRunSound("start")}>
+        Hear the start sound
+      </Button>
+      <Button variant="quiet" onClick={() => playRunSound("end")}>
+        Hear the end sound
+      </Button>
     </div>
   );
 }
+
+// The browser switch's name, which the sentences about it repeat.
+const browserLabel = "Notify me in this browser";
 
 function NotificationUrl() {
   const { api } = useApp();
@@ -276,15 +270,11 @@ function WeeklyReport() {
     <div className="flex flex-col gap-2">
       <Switch
         label="Weekly report"
-        tip="settings.notifications.weekly"
+        help="Each Monday from 09:00, what was made, what failed and what it cost last week go to the Notification URL above."
         checked={current.data?.enabled === true}
         disabled={current.data === undefined || save.isPending}
         onChange={(next) => save.mutate(next)}
       />
-      <p className="m-0 text-small text-ink-2">
-        Each Monday from 09:00, what was made, what failed and what it cost last week go to the
-        Notification URL above.
-      </p>
       {current.error === null ? null : (
         <p className="m-0 text-small text-danger">
           {`The Weekly report setting didn't load: ${current.error.message}. Reload the page to try again.`}

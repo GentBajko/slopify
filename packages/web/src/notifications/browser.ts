@@ -62,7 +62,7 @@ export function permissionProblem(
   if (permission === "unsupported")
     return "This browser can't show notifications. Use a current Chrome, Edge, Firefox or Safari, or set a Notification URL below instead.";
   if (permission === "denied")
-    return "Notifications are blocked for this site. Allow them in your browser's site settings (the icon left of the address bar), reload, then turn Browser notifications on again.";
+    return "Notifications are blocked for this site. Allow them in your browser's site settings (the icon left of the address bar), reload, then turn Notify me in this browser on again.";
   return undefined;
 }
 

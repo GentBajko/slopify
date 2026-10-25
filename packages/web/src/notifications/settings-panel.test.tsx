@@ -27,6 +27,28 @@ describe("Settings → Notifications", () => {
     await screen.findByLabelText("Notification URL");
   });
 
+  it("names each switch for what it does, with one visible line and no info button", async () => {
+    renderApp(
+      <NotificationSettings />,
+      testDeps({
+        "GET /api/settings/notifications": jsonAnswer({ url: null }),
+        "GET /api/home/autopilot/weekly": jsonAnswer({ enabled: false }),
+      }),
+    );
+    await screen.findByLabelText("Notification URL");
+    const browser = screen.getByRole("switch", { name: "Notify me in this browser" });
+    expect(browser.getAttribute("aria-describedby")).not.toBeNull();
+    expect(screen.getByText(/Turning it on asks the browser's permission\./)).not.toBeNull();
+    expect(
+      screen.getByRole("switch", { name: "Play a sound when a run starts and ends" }),
+    ).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Hear the start sound" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Hear the end sound" })).not.toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^About (Notify|Play a sound|Weekly)/ }),
+    ).toBeNull();
+  });
+
   it("refuses a URL that isn't http or https before anything is sent", async () => {
     const user = userEvent.setup();
     renderApp(

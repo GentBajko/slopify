@@ -126,21 +126,6 @@ export const settingsHelp = {
   },
 
   // Notifications
-  "settings.notifications.weekly": {
-    title: "Weekly report",
-    body: "Each Monday from 09:00 (this computer's time), Slopify sends last week's report to the Notification URL: videos made, failed steps with their reason, and what it cost. Needs a Notification URL. Default: off.",
-    tutorial: { page: "Notifications", anchor: "weekly-report" },
-  },
-  "settings.notifications.sounds": {
-    title: "Run sounds",
-    body: "Plays a chime when a run starts and a different, longer one when it finishes, fails or stops to wait for you, while any Slopify tab is open. Only one tab plays each. Needs no permission, but the browser stays silent until the page has been clicked once. This browser only. Default: on.",
-    tutorial: { page: "Notifications", anchor: "run-sounds" },
-  },
-  "settings.notifications.browser": {
-    title: "Browser notifications",
-    body: "Shows a notification from this browser while any Slopify tab is open, even in the background. Turning it on asks the browser's permission. It applies to this browser only, so turn it on in each browser you use. Default: off.",
-    tutorial: { page: "Notifications", anchor: "turn-on-browser-notifications" },
-  },
   "settings.notifications.url": {
     title: "Notification URL",
     body: "An address Slopify POSTs a short plain-text message to, with no tab open. For your phone, install the ntfy app, subscribe to a topic with a long random name, and paste https://ntfy.sh/that-topic. Any address that accepts a POST works. Each message is sent once, with a 5 second timeout. Leave it empty to turn it off.",
