@@ -49,7 +49,7 @@ const importSchema = z
       .string()
       .max(
         importFilterMax,
-        `The filter is too long to remember. Shorten "Keep only titles containing…" on the channel's Existing videos tab to at most ${importFilterMax} characters.`,
+        `The filter is too long to remember. Shorten "Keep only titles containing…" on the channel's Titles to avoid tab to at most ${importFilterMax} characters.`,
       )
       .optional(),
   })
