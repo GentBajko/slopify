@@ -280,17 +280,18 @@ it("makes one short again, or picks different moments, at once after naming the 
   // Short 2's token renewed, and only short 2's prompts started: its images and render
   // unfold from them on the server.
   expect(short?.[1].change?.(edit).regenerate).toEqual(["shorts:2"]);
-  expect(short?.[1].starts?.("shorts:2:prompts")).toBe(true);
-  expect(short?.[1].starts?.("shorts:2:render")).toBe(false);
-  expect(short?.[1].starts?.("shorts:1:prompts")).toBe(false);
-  expect(short?.[1].starts?.("shorts:20:prompts")).toBe(false);
+  const work = (key: string) => ({ key, outdated: false });
+  expect(short?.[1].starts?.(work("shorts:2:prompts"))).toBe(true);
+  expect(short?.[1].starts?.(work("shorts:2:render"))).toBe(false);
+  expect(short?.[1].starts?.(work("shorts:1:prompts"))).toBe(false);
+  expect(short?.[1].starts?.(work("shorts:20:prompts"))).toBe(false);
   expect(short?.[1]).toMatchObject({ unknownPrices: true, section: "outputs" });
   // The moments picked again drop the ranges set on the old ones.
   const again = moments?.[1].change?.(edit);
   expect(again?.regenerate).toEqual(["shorts:pick"]);
   expect(again?.content.shortsRanges).toBeUndefined();
-  expect(moments?.[1].starts?.("shorts:pick")).toBe(true);
-  expect(moments?.[1].starts?.("export:video")).toBe(false);
+  expect(moments?.[1].starts?.(work("shorts:pick"))).toBe(true);
+  expect(moments?.[1].starts?.(work("export:video"))).toBe(false);
 });
 
 it("lays the shorts out in the shorts media grid, each player showing its first still as the poster", async () => {

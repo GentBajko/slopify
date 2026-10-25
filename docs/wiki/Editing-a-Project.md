@@ -46,6 +46,8 @@ Your edit is kept when other settings change. The narration, images and video ma
 
 ## Edit narration
 
+To fix one line, you don't need the settings: on the project page, press the line in **Narration**, then **Fix this line**, correct the words or leave them, and press **Make this passage again**.
+
 **Edit settings** → **Narration** ends with the narration split into the chunks it was spoken in. Only the chunks you touch are made again, paid per character, and the video is put together again with them.
 
 | Control | What it does |

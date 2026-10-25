@@ -5,6 +5,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { stubMedia } from "@/components/kit/media-stub";
 import { renderApp, testDeps } from "@/test-app";
 import {
+  type LineFixing,
   paragraphsOf,
   speakerNames,
   Transcript,
@@ -13,7 +14,7 @@ import {
 
 afterEach(cleanup);
 
-function setup(onFix?: (line: TranscriptLine) => void) {
+function setup(fix?: LineFixing) {
   const media = createRef<HTMLAudioElement>();
   const speaker = speakerNames([
     { id: "host", name: "Ada" },
@@ -43,7 +44,7 @@ function setup(onFix?: (line: TranscriptLine) => void) {
     <>
       {/* biome-ignore lint/a11y/useMediaCaption: a test player. */}
       <audio ref={media} />
-      <Transcript lines={lines} label="Conversation" onFix={onFix} />
+      <Transcript lines={lines} label="Conversation" fix={fix} />
     </>,
     testDeps({}),
   );
@@ -75,16 +76,32 @@ it("marks the line being spoken and names each speaker", () => {
   expect(current?.textContent).toContain("Welcome back.");
 });
 
-it("offers one worded fix, under the line last played or pressed", async () => {
+it("offers one worded fix under the line last pressed, and opens its form there", async () => {
   const user = userEvent.setup();
-  const fix = vi.fn();
-  setup(fix);
+  const form = vi.fn((line: TranscriptLine, close: () => void) => (
+    <fieldset aria-label="Fix this line">
+      {`Fixing ${line.text}`}
+      <button type="button" onClick={close}>
+        Close
+      </button>
+    </fieldset>
+  ));
+  // Only a line whose passage is known can be fixed.
+  setup({ offers: (line) => line.key === "b", form });
+  expect(screen.queryByRole("button", { name: /^Fix this line/ })).toBeNull();
+  await user.click(screen.getByText("Hello there."));
   expect(screen.queryByRole("button", { name: /^Fix this line/ })).toBeNull();
   await user.click(screen.getByText("Welcome back."));
   const buttons = screen.getAllByRole("button", { name: /^Fix this line/ });
   expect(buttons).toHaveLength(1);
   await user.click(buttons[0] as HTMLElement);
-  expect(fix).toHaveBeenCalledWith(expect.objectContaining({ key: "b" }));
+  // The form opens in place of the button, on the page: nothing navigates away.
+  const opened = screen.getByRole("group", { name: "Fix this line" });
+  expect(opened.textContent).toContain("Fixing Welcome back.");
+  expect(screen.queryByRole("button", { name: /^Fix this line/ })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Close" }));
+  expect(screen.queryByRole("group", { name: "Fix this line" })).toBeNull();
+  expect(screen.getByRole("button", { name: /^Fix this line/ })).toBeTruthy();
 });
 
 it("runs caption lines into paragraphs at sentence ends, pauses and new speakers", () => {

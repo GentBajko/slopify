@@ -291,9 +291,19 @@ export function useRevisionController(
         : [
             ...new Set(
               [
-                ...saved.pieces.filter((row) => row.selected).map((row) => row.key),
-                ...saved.outputs.filter((row) => row.selected).map((row) => row.workKey),
-              ].filter((key) => starts(key)),
+                ...saved.pieces
+                  .filter((row) => row.selected)
+                  .map((row) => ({ key: row.key, outdated: false })),
+                ...saved.outputs
+                  .filter((row) => row.selected)
+                  .map((row) => ({
+                    key: row.workKey,
+                    role: row.output.role,
+                    outdated: row.state === "outdated",
+                  })),
+              ]
+                .filter((one) => starts(one))
+                .map((one) => one.key),
             ),
           ];
     await review(

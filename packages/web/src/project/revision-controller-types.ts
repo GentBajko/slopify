@@ -1,5 +1,6 @@
 import type { RebuildPreview, RebuildSelection } from "@app/slices/rebuild/model.js";
 import type { RevisionEdit, RevisionView } from "@app/slices/revisions/model.js";
+import type { OutputRole } from "@app/slices/storage/model.js";
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { RebuildConsent } from "./rebuild-review.js";
 import type { EditRequest } from "./revision-action-context.js";
@@ -27,6 +28,13 @@ export type DraftNotice =
   // The draft was saved as the current version; the editor opens again on it.
   | { readonly kind: "saved" };
 
+// One piece of work in a saved version, as a make-again picks what it starts.
+export interface SavedWork {
+  readonly key: string;
+  readonly role?: OutputRole | undefined;
+  readonly outdated: boolean;
+}
+
 export interface RegenerateOptions {
   // The charge the person saw and accepted at the button, in USD. A remake whose estimate is
   // no higher starts at once; anything dearer, or with no amount shown, opens the review.
@@ -38,9 +46,10 @@ export interface RegenerateOptions {
   // hand for the current pick.
   readonly change?: ((edit: RevisionEdit) => RevisionEdit) | undefined;
   // What to start once the version is saved, when the marks are not themselves work (a short's
-  // token): the saved version's work this accepts ("shorts:2:prompts", from which the short's
-  // images and render unfold on the server).
-  readonly starts?: ((workKey: string) => boolean) | undefined;
+  // token, a narration passage): the saved version's work this accepts, by its key, the role
+  // of its output and whether the save made that output outdated ("shorts:2:prompts", from
+  // which the short's images and render unfold on the server; the outdated narration files).
+  readonly starts?: ((work: SavedWork) => boolean) | undefined;
   // Where an open draft with changes of its own shows the marks; Images by default.
   readonly section?: EditSection | undefined;
 }

@@ -214,14 +214,14 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
             if (chosen.kind === "pick")
               regenerateNow?.([], {
                 change: pickAgain,
-                starts: (key) => key === pickKey,
+                starts: (work) => work.key === pickKey,
                 unknownPrices: true,
                 section: "outputs",
               });
             else
               regenerateNow?.([], {
                 change: (edit) => remakeShort(edit, chosen.clip.number),
-                starts: (key) => key === `${remakeKey(chosen.clip.number)}:prompts`,
+                starts: (work) => work.key === `${remakeKey(chosen.clip.number)}:prompts`,
                 unknownPrices: true,
                 section: "outputs",
               });
