@@ -265,6 +265,11 @@
   .sl-toast {
     pointer-events: auto;
   }
+  /* A drawer's footer holds its actions (Copy for YouTube Studio's Fill in and I've uploaded
+     it): a notice rises above the footer rather than cover them. */
+  html:has([data-slot="drawer"]) .sl-toasts {
+    bottom: calc(64px + var(--space-4));
+  }
   /* Skip to content: out of sight until the Tab key reaches it, then over the top left. */
   .sl-skip {
     position: fixed;

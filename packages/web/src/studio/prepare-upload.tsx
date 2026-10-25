@@ -398,16 +398,20 @@ export function PrepareUploadDrawer({
               }
               copy={copy}
               {...(readOnly ? {} : { onPick: (next) => pick.mutate(next) })}
-              releaseLink={
-                <TextLink
-                  to="/projects/$projectId"
-                  params={{ projectId }}
-                  search={{ section: "youtube" }}
-                  onClick={onClose}
-                >
-                  Release in the project's YouTube section
-                </TextLink>
-              }
+              {...(readOnly
+                ? {}
+                : {
+                    releaseLink: (
+                      <TextLink
+                        to="/projects/$projectId"
+                        params={{ projectId }}
+                        search={{ section: "youtube" }}
+                        onClick={onClose}
+                      >
+                        Release in the project's YouTube section
+                      </TextLink>
+                    ),
+                  })}
               slotPicker={
                 item.kind !== "video" ||
                 readOnly ||
@@ -509,18 +513,23 @@ function readDone(key: string): readonly string[] {
   }
 }
 
-// The video file's download: a small secondary button beside its one Open folder.
-function Download({ href, filename }: { readonly href: string; readonly filename: string }) {
+// A file's download, named for what it holds and its kind ("Download video (.mp4)",
+// "Download thumbnail (.jpg)"), the file's own name on hover.
+function Download({
+  href,
+  filename,
+  what,
+}: {
+  readonly href: string;
+  readonly filename: string;
+  readonly what: string;
+}) {
+  const dot = filename.lastIndexOf(".");
+  const kind = dot < 0 ? "" : ` (${filename.slice(dot)})`;
   return (
-    <FileLink
-      href={href}
-      download={filename}
-      aria-label={`Download ${filename}`}
-      variant="secondary"
-      size="small"
-    >
+    <FileLink href={href} download={filename} title={filename} variant="secondary" size="small">
       <DownloadIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.75} />
-      Download
+      {`Download ${what}${kind}`}
     </FileLink>
   );
 }
@@ -550,8 +559,9 @@ function Steps({
   readonly picking: boolean;
   // The posting plan's free times for the video's release (the shorts follow it).
   readonly slotPicker?: ReactNode;
-  // Where the release date is set when it has none: the project's YouTube section.
-  readonly releaseLink: ReactNode;
+  // Where the release date is set when it has none: the project's YouTube section. Absent on
+  // the sample, which has no date and can't be given one.
+  readonly releaseLink?: ReactNode;
   // Where this browser remembers the ticks; a tick is a note to self, not project state.
   readonly doneKey: string;
 }) {
@@ -599,7 +609,9 @@ function Steps({
                   <Download
                     href={`${api.origin}${item.video.url}`}
                     filename={item.video.filename}
+                    what={item.kind === "video" ? "video" : "short"}
                   />
+                  {/* The one Open folder: the thumbnails are in the same folder. */}
                   <OpenFolder projectId={projectId} asset={item.video.asset} size="small" />
                 </>
               ),
@@ -612,13 +624,6 @@ function Steps({
                 item.thumbnails.length > 1
                   ? `${letterOf(item.pickable?.thumbnail ?? 0)} under Thumbnail (choose below). The A/B test tries all ${String(item.thumbnails.length)} once the video is public.`
                   : (item.thumbnails[0]?.filename ?? ""),
-              actions: (
-                <OpenFolder
-                  projectId={projectId}
-                  asset={item.thumbnails[0]?.asset ?? "thumbnail"}
-                  size="small"
-                />
-              ),
             };
       case "audience":
         return { value: "No, it's not made for kids" };
@@ -709,7 +714,11 @@ function Steps({
               {slotPicker}
               <span className="text-ink-2">
                 {item.scheduleAt === undefined ? (
-                  <>No date yet. Set one under {releaseLink}, or pick it in Studio yourself.</>
+                  releaseLink === undefined ? (
+                    "No date: the sample isn't on YouTube and can't be. Your own copy takes one."
+                  ) : (
+                    <>No date yet. Set one under {releaseLink}, or pick it in Studio yourself.</>
+                  )
                 ) : (
                   `Goes public ${slotTime(item.scheduleAt)}, your time. In Studio's Visibility step pick Schedule and enter it; the Slopify Studio extension types it in for you.`
                 )}
@@ -821,7 +830,11 @@ function Steps({
                           Use for upload
                         </Button>
                       )}
-                      <Download href={`${api.origin}${file.url}`} filename={file.filename} />
+                      <Download
+                        href={`${api.origin}${file.url}`}
+                        filename={file.filename}
+                        what="thumbnail"
+                      />
                     </>
                   }
                 />
@@ -840,7 +853,11 @@ function Steps({
             actions={(_, index) => {
               const file = (item.pickable?.thumbnails ?? item.thumbnails)[index];
               return file === undefined ? null : (
-                <Download href={`${api.origin}${file.url}`} filename={file.filename} />
+                <Download
+                  href={`${api.origin}${file.url}`}
+                  filename={file.filename}
+                  what="thumbnail"
+                />
               );
             }}
           />
