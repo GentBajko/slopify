@@ -337,8 +337,8 @@ function listeningFiles(
             output: other,
             label: book
               ? "Download audio with chapters (.mp3)"
-              : "Download audiobook with chapters (.m4b)",
-            file: book ? "Audio with chapters (.mp3)" : "Audiobook with chapters (.m4b)",
+              : "Download episode with chapters (.m4b)",
+            file: book ? "Audio with chapters (.mp3)" : "Episode with chapters (.m4b)",
           },
         }),
   };
