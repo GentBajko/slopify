@@ -94,7 +94,7 @@ To get a glossary, ask for one in your article prompt: a section in slash-delimi
 
 | Option | What it does | Default |
 | --- | --- | --- |
-| **Use narration aliases** | Says the words listed under Settings → Voices → **Pronunciation** the way they are written there, such as `Dr.` as `Doctor`, with any AI voice. They are copied when the project starts. The article and captions keep the written words. | On |
+| **Use your pronunciation list** | Says the words listed under Settings → Voices → **Pronunciation** the way they are written there, such as `Dr.` as `Doctor`, with any AI voice. They are copied when the project starts. The article and captions keep the written words. | On |
 
 Manage the list in [Narration Aliases and Glossary](Narration-Aliases-and-Glossary).
 

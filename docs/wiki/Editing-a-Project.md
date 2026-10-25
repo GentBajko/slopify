@@ -61,7 +61,7 @@ When the narration was spoken as one whole request, the section says so: editing
 | Control | What it does |
 | --- | --- |
 | **Also use pronunciations from my other projects** → **Update from other projects** | Copies your other projects' Pronunciation Glossary terms into this project again, picking up any added since the last copy. After you save, only the chunks whose words those terms change are spoken again, paid per character. |
-| **Use narration aliases** → **Copy the list again** | Copies your Pronunciation list (Settings → Voices → **Pronunciation**) into this project again. A change to the list reaches the project only when you press this. After you save, only the chunks the changed aliases touch are spoken again. |
+| **Use your pronunciation list** → **Copy the list again** | Copies your Pronunciation list (Settings → Voices → **Pronunciation**) into this project again. A change to the list reaches the project only when you press this. After you save, only the chunks the changed aliases touch are spoken again. |
 | **Describe tables and figures in the narration** | The AI writes a short spoken passage for each table, figure, equation and code block. Turning it on costs one AI call per block, and after you save the chunks that contain a block are spoken again (the whole narration when it is spoken as one request). **Leave code out** skips code blocks. |
 
 **Show tables and figures on screen** (in **Video and style** → **Images and cuts**, when Describe tables and figures is on) shows each described block in the video while its description is spoken, as the article's picture or a card drawn on your computer at no cost. Turning it on or off puts the video together again, and any shorts that include a card; the narration is kept.

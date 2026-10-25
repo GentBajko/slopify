@@ -191,7 +191,7 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
   add("Narration preparation", before.narrationPrompt, after.narrationPrompt);
   add("Narration chunking", before.chunking, after.chunking);
   add(
-    "Narration aliases",
+    "Pronunciation list",
     before.audio?.useNarrationAliases === true ? aliasLines(before.narrationAliases) : "Off",
     after.audio?.useNarrationAliases === true ? aliasLines(after.narrationAliases) : "Off",
   );

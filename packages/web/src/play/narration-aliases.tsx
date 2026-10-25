@@ -2,8 +2,9 @@ import { type ReactElement, type ReactNode, useId } from "react";
 import { Checkbox } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 
-// "Use narration aliases": say Library → Aliases' words the way they are listed ("Dr." as
-// "Doctor"). Any generated voice; the article and the captions keep the written words.
+// "Use your pronunciation list": say the words of Settings → Voices → Pronunciation the way they
+// are listed ("Dr." as "Doctor"), named as that page is. Any generated voice; the article and
+// the captions keep the written words.
 export function NarrationAliasesToggle({
   value,
   onChange,
@@ -29,7 +30,7 @@ export function NarrationAliasesToggle({
             checked={value === true}
             onChange={(event) => onChange(event.currentTarget.checked)}
           />
-          Use narration aliases
+          Use your pronunciation list
         </label>
         <InfoTip id="play.narration-aliases" />
       </span>

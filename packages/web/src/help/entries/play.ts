@@ -85,7 +85,7 @@ export const playHelp = {
     tutorial: { page: "Create-Narration", anchor: "tables-figures-and-code" },
   },
   "play.narration-aliases": {
-    title: "Narration aliases",
+    title: "Your pronunciation list",
     body: "Says the words listed in Settings → Voices → Pronunciation the way they are written there, such as Dr. as Doctor, with any generated voice. They are copied when the project starts. The article and captions keep the written words. Default: on.",
     tutorial: { page: "Narration-Aliases-and-Glossary", anchor: "use-aliases-in-a-video" },
   },
