@@ -233,6 +233,12 @@ describe("the bundled samples", { timeout: 30_000 }, () => {
         copied.projectId,
         currentRevisionId(deps.db, copied.projectId) ?? "",
       );
+      // Named in its settings too, as Rename names a project: Rename shows the new name, and a
+      // rebuild keeps it, while what the sample was made about stays its subject.
+      expect(view?.revision.config).toMatchObject({
+        title: `${titles[id]} (my copy)`,
+        subjectTitle: titles[id],
+      });
       const video = view?.outputs.find((row) => row.selected && row.output.role === "video");
       if (video === undefined) throw new Error("no video");
       expect(existsSync(outputPath(deps.paths, copied.projectId, video.output.path))).toBe(true);

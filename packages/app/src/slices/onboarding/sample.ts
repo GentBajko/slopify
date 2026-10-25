@@ -180,5 +180,8 @@ export function copySample(
       detail:
         "That sample project is no longer here. Bring it back with Settings → Backup & storage → Restore samples, then press Make my own copy.",
     };
-  return { ok: true, ...copyProject(deps, projectId, `${title} (my copy)`) };
+  return {
+    ok: true,
+    ...copyProject(deps, projectId, `${title} (my copy)`, { renamed: true }),
+  };
 }
