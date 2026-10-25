@@ -14,7 +14,7 @@ export interface SeenTitle {
 }
 
 // The first title this channel already has for the typed topic: a project made here, or one
-// of the channel's existing uploads (Channel → Existing videos). The same near-duplicate rule
+// of the channel's existing uploads (Channel → Titles to avoid). The same near-duplicate rule
 // the schedules use for suggested topics.
 export function seenBefore(
   typed: readonly string[],
@@ -58,8 +58,8 @@ export function SeenBefore({
   return (
     <p role="status" className="m-0 text-small text-ink-2">
       {seen.where === "project"
-        ? `This channel already has a video on this: "${seen.title}" (in Projects). Start anyway if you want another take.`
-        : `This channel already uploaded "${seen.title}" (Channel → Existing videos). Start anyway if you want another take.`}
+        ? `This channel already has a video on this: "${seen.title}" (in Projects). Make it anyway if you want another take.`
+        : `This channel already uploaded "${seen.title}" (Channel → Titles to avoid). Make it anyway if you want another take.`}
     </p>
   );
 }
