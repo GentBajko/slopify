@@ -339,10 +339,10 @@ export function StepContent({
         <>
           <p>
             Slopify never uploads for you. When the video is made,{" "}
-            <strong>Copy for YouTube Studio</strong> in the title row lists everything YouTube
-            Studio asks for, in the order it asks, from the file and title to the thumbnail, tags
-            and the AI disclosure. The project’s <strong>YouTube</strong> section keeps each
-            upload’s release date and link.
+            <strong>Copy for YouTube Studio</strong>, in the Video part’s heading beside the player,
+            lists everything YouTube Studio asks for, in the order it asks, from the file and title
+            to the thumbnail, tags and the AI disclosure. The project’s <strong>YouTube</strong>{" "}
+            part keeps each upload’s release date and link.
           </p>
           <p>
             The browser extension in Settings, <strong>YouTube Studio and posting</strong>, can fill
