@@ -30,7 +30,7 @@ export type OutputState = "current" | "older" | "working" | "failed" | "waiting"
 
 export interface ExportFile {
   readonly output: Output;
-  // "Video (.mp4)", "Subtitles (.srt)".
+  // "Video (.mp4)", "Captions (.srt)".
   readonly label: string;
 }
 
@@ -203,8 +203,9 @@ export function projectOutputs(input: OutputsInput): readonly ProjectOutput[] {
       format === "audiobook" ? "Audiobook" : format === "drama" ? "Radio drama" : "Episode";
     const m4b = role("audio_m4b");
     const mp3 = role("audio_mp3");
+    // Named as the title row and the section name it: "Download audiobook (.m4b)".
     const primary = book
-      ? (file(m4b, `${own} with chapters`)[0] ?? file(mp3, `${own} with chapters`)[0])
+      ? (file(m4b, own)[0] ?? file(mp3, own)[0])
       : (file(mp3, own)[0] ?? file(m4b, own)[0]);
     build("voices", stageName("video", config), "video", ["video"], primary?.output, {
       primary,
@@ -233,10 +234,17 @@ export function projectOutputs(input: OutputsInput): readonly ProjectOutput[] {
   const shorts = [...roles("short_video")].sort(
     (a, b) => Number(a.meta.short ?? 0) - Number(b.meta.short ?? 0),
   );
+  const shortFiles = shorts.flatMap((one) => file(one, `Short ${String(one.meta.short ?? 1)}`));
   if (shorts.length > 0 || config.shorts?.enabled === true)
     build("shorts", "Shorts", "shorts", ["video"], shorts[0], {
-      set: shorts.length === 0 ? undefined : { set: "shorts", members: shorts },
-      alternatives: shorts.flatMap((one) => file(one, `Short ${String(one.meta.short ?? 1)}`)),
+      // One short is its own download, as one thumbnail is; several are a zip, each listed.
+      ...(shorts.length === 1
+        ? { primary: shortFiles[0] }
+        : {
+            set: shorts.length === 0 ? undefined : { set: "shorts" as const, members: shorts },
+            alternatives: shortFiles,
+          }),
+      members: shorts,
       // Shorts are cut from the narration and pictures, not from the finished video.
       source: { name: "narration", output: narration },
     });

@@ -200,7 +200,7 @@ it("names every download button with its verb, and offers no zip of one file", a
   expect(screen.getByRole("link", { name: /^Download article \(\./ })).not.toBeNull();
   // An acronym keeps its capitals.
   expect(screen.getByRole("link", { name: /^Download PDF \(\./ })).not.toBeNull();
-  // One short: its own file, and no "Download all 1 shorts (.zip)".
+  // One short: its own download, named with its verb, and no "Download all 1 shorts (.zip)".
   expect(screen.queryByRole("link", { name: /\.zip/ })).toBeNull();
-  expect(screen.getByRole("link", { name: /^Short 1/ })).not.toBeNull();
+  expect(screen.getByRole("link", { name: /^Download short 1 \(\./ })).not.toBeNull();
 });

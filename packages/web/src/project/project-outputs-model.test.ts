@@ -93,7 +93,8 @@ describe("projectOutputs", () => {
     // Named as the status list and its section name the last step, and opening that section.
     expect(audiobook?.title).toBe("Audiobook");
     expect(audiobook?.section).toBe("video");
-    expect(audiobook?.primary?.label).toBe("Audiobook with chapters (.bin)");
+    // Its file is named as the title row's download names it.
+    expect(audiobook?.primary?.label).toBe("Audiobook (.bin)");
     expect(audiobook?.primary?.output.id).toBe(m4b.id);
     expect(audiobook?.alternatives.map((one) => one.output.id)).toEqual([mp3.id]);
     const show = projectOutputs({ config: voiced("podcast"), stages, outputs: [m4b, mp3, script] });
@@ -140,6 +141,15 @@ describe("projectOutputs", () => {
     expect(shortsRow?.set?.members.map((one) => one.id)).toEqual(["short-1", "short-2"]);
     expect(shortsRow?.section).toBe("shorts");
     expect(shortsRow?.next).toBe("Review it in Shorts");
+    // One short is its own download, as one thumbnail is: no zip of one file.
+    const one = projectOutputs({
+      config,
+      stages: [stage("video", "done")],
+      outputs: [video, ...shorts.filter((one) => one.id === "short-1")],
+    }).find((row) => row.kind === "shorts");
+    expect(one?.set).toBeUndefined();
+    expect(one?.primary?.label).toBe("Short 1 (.bin)");
+    expect(one?.alternatives).toEqual([]);
   });
 
   it("keeps the PDF on its own row, not under the article", () => {

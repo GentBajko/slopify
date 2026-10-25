@@ -379,7 +379,7 @@ function listeningFiles(
 }
 
 // One of the stage's other files, as a quiet link in a sentence (".srt"), named in full for a
-// screen reader and on hover ("Subtitles (.srt)").
+// screen reader and on hover ("Captions (.srt)").
 function FileWord({
   output,
   label,
