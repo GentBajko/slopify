@@ -311,14 +311,18 @@
   }
 
   /* Switch and segmented */
+  /* A label that wraps stays a left-aligned label beside a whole track: the track never
+     shrinks to a dot and the words are not centred like a button's. */
   .sl-switch {
     display: inline-flex;
     align-items: center;
     gap: var(--space-3);
     cursor: pointer;
+    text-align: start;
   }
   .sl-switch__track {
     position: relative;
+    flex-shrink: 0;
     width: 36px;
     height: 20px;
     border-radius: var(--radius-pill);

@@ -102,11 +102,41 @@ it("leaves the links out for a channel that never had any", async () => {
   expect((seen[0] as { brand: object }).brand).not.toHaveProperty("links");
 });
 
-it("points Settings → Channel links at the channel's Name and look tab", async () => {
-  renderRouted(<ChannelLinksSettings />, testDeps({}));
+it("says nothing on Settings while no links saved there before still apply", async () => {
+  const summary = { ...main, templates: 0, cast: 0 };
+  renderRouted(
+    <>
+      <ChannelLinksSettings />
+      <p>Page</p>
+    </>,
+    testDeps({
+      "GET /api/channels": jsonAnswer({ channels: [summary] }),
+      "GET /api/settings/channel-links": jsonAnswer({ links: [] }),
+    }),
+  );
+  await screen.findByText("Page");
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  expect(screen.queryByText(/saved here before/)).toBeNull();
+  expect(screen.queryByRole("link", { name: /links$/ })).toBeNull();
+});
+
+it("points links saved on Settings before at the default channel's Name and look tab", async () => {
+  const summary = { ...main, templates: 0, cast: 0 };
+  renderRouted(
+    <ChannelLinksSettings />,
+    testDeps({
+      "GET /api/channels": jsonAnswer({ channels: [summary] }),
+      "GET /api/settings/channel-links": jsonAnswer({
+        links: [{ name: "Patreon", url: "https://patreon.com/me" }],
+      }),
+    }),
+  );
   expect(
-    (await screen.findByRole("link", { name: "Open the default channel's links" })).getAttribute(
-      "href",
+    await screen.findByText(
+      "A link saved here before still fills My channel's descriptions. They move to its Channel links when you save its Name and look tab.",
     ),
-  ).toBe(`/channels/${defaultId}`);
+  ).not.toBeNull();
+  expect(screen.getByRole("link", { name: "Open My channel's links" }).getAttribute("href")).toBe(
+    `/channels/${defaultId}`,
+  );
 });
