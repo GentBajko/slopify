@@ -1,6 +1,6 @@
 # Schedules
 
-A schedule starts a new project from a saved template at a set local time: every day, on chosen weekdays, or once. Give it a list of topics and each run takes the next one. Turn on topic generation and it asks your text model for new topics before the list runs dry.
+A schedule starts a new project from a saved template at a set local time: every day, on chosen weekdays, or once. Give it a list of topics and each run takes the next one. Turn on topic generation and it asks your AI for new topics before the list runs dry.
 
 **Where to find it:** **Calendar → Schedules**, the second tab on the calendar. Old `/schedules` links and **G then S** open it too. A channel's **Schedules** tab lists the schedules that run its templates.
 
@@ -102,20 +102,20 @@ On the scheduled day the schedule finds that project by its title and continues 
 
 ## Topics that find themselves
 
-Under **Topic generation**, a schedule can ask an LLM for its next topics so it never runs dry.
+Under **Topic generation**, a schedule can ask the AI for its next topics so it never runs dry.
 
 | Setting | What it does | Default |
 |---|---|---|
 | **New topics** | **Off: add topics yourself.** **Generate and queue directly:** new topics join the end of the list. **Generate and hold for approval:** they wait under **Topics waiting**, and beside the calendar, until you approve them. | Off |
-| **Series brief** | What the series covers, its style and what makes a topic worth a video. Only topic generation reads it. Leave it empty to use the channel's series brief from the channel's **Brand** tab. Up to 4,000 characters. | Empty |
+| **Series brief** | What the series covers, its style and what makes a topic worth a video. Only topic generation reads it. Leave it empty to use the channel's series brief from the channel's **Name and look** tab. Up to 4,000 characters. | Empty |
 | **Keep at least this many queued** | Slopify asks for more topics whenever the queue, plus topics waiting for approval, drops below this number. From 1 to 100. | 10 |
-| **Topic generation LLM** | Ticked, it uses the provider and model the template writes with. Untick to pick another **Provider** and **Model**, such as a cheaper one. | The template's LLM |
+| **Use the template's AI model** | Ticked, it uses the service and model the template writes with. Untick to pick another **Service** and **Model**, such as a cheaper one. | Ticked |
 
 ### How generation works
 
 1. When the queue (plus held topics) drops below your number, Slopify starts one generation in the background. It checks about every 15 seconds.
-2. It makes one LLM call for what is missing plus 5 spare, at most 50 topics.
-3. The call carries the series brief and every title already known: this schedule's queued, held, rejected and used topics, the titles of the projects in the schedule's own channel, and that channel's **Existing videos** (see [Channels](Channels)). Another channel's videos don't count: two channels may cover the same subject.
+2. It makes one AI call for what is missing plus 5 spare, at most 50 topics.
+3. The call carries the series brief and every title already known: this schedule's queued, held, rejected and used topics, the titles of the projects in the schedule's own channel, and that channel's **Titles to avoid** (see [Channels](Channels)). Another channel's videos don't count: two channels may cover the same subject.
 4. Suggestions come back ranked most view-worthy first. Slopify drops near-duplicates of titles it already knows, for example "Hypatia" and "Hypatia's Library" count as one video, while "Ptolemaic Egypt" and "Roman Egypt" are two. A topic of one or two words only counts as made when a part of a title (split at `:`, `|`, brackets, `?` and similar) holds exactly those words, leaving aside words like "who", "what" or "explained": "Cleopatra" matches "Who was Cleopatra? The Last Pharaoh", but "Egypt" does not match "The Gods of Ancient Egypt".
 5. The rest join the queue, or wait for you under **Topics waiting**.
 
@@ -123,7 +123,7 @@ Only one generation per schedule runs at a time. A failed try shows its reason o
 
 ### Generate topics now
 
-Press **Generate topics now** to ask for new topics at once: at least 5, even when the queue is full and even during the 5-minute wait after a failed try. It is one LLM call. Saving the schedule also clears the wait.
+Press **Generate topics now** to ask for new topics at once: at least 5, even when the queue is full and even during the 5-minute wait after a failed try. It is one AI call. Saving the schedule also clears the wait.
 
 ### Rank topics
 
@@ -163,7 +163,7 @@ Pick a schedule in the list to see its detail: **When**, **Timezone**, **Next ru
 | **Edit** | Opens the **Edit schedule** form on the right. Only an active or paused schedule can change. Press **Save changes**. |
 | **Pause** / **Resume** | Stops runs until you resume. Only an active schedule can pause. |
 | **Cancel schedule** | Stops future runs for good. Existing projects and run history are kept. |
-| **Delete schedule** | Moves the schedule to **Settings → Backup & storage → Trash** for 30 days. Its run history is kept. Restore brings it back paused. |
+| **Delete schedule** | Moves the schedule to **Settings → Trash** for 30 days. Its run history is kept. Restore brings it back paused. |
 | **Filter schedules by channel** | Shows only one channel's schedules. |
 | **Switch to <model>** | Shown under a schedule whose template picks a retired model, with "<model> is retired." Switches that model to its replacement in one press, as in Settings → **Models**. See [Models](Models). |
 
@@ -179,7 +179,7 @@ That changes once you approve a version for schedules in [Edit template](Templat
 
 - Try the template once from Create before scheduling it, so you know what one run costs. Then set the **Spend ceiling** a little above that.
 - Hold generated topics for approval at first. Once you trust the suggestions, switch to queue directly.
-- Write a clear series brief: what the series covers, the tone, and what makes a topic worth a video. Add your older videos under the channel's **Existing videos** so they aren't suggested again.
+- Write a clear series brief: what the series covers, the tone, and what makes a topic worth a video. Add your older videos under the channel's **Titles to avoid** so they aren't suggested again.
 
 ## Related pages
 

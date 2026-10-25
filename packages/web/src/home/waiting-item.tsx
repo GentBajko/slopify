@@ -24,10 +24,11 @@ import { projectLink, WorkItem } from "./work-item.js";
 // A run held for the person's review on Home's Needs you: approved here when the checkpoint
 // holding it is still about the work as it stands, else opened to continue on its page.
 
+// Named as the project page's own approval is (`project/next-action.ts`), for what it makes.
 const approveWords: Readonly<Record<CheckpointGate["stage"], string>> = {
-  audio: "Approve the article and record",
-  images: "Approve and draw the images",
-  video: "Approve and render",
+  audio: "Approve and make the narration",
+  images: "Approve and make the images",
+  video: "Approve and make the video",
 };
 
 const heldWords: Readonly<Record<CheckpointGate["stage"], string>> = {

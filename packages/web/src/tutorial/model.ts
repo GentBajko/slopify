@@ -17,11 +17,11 @@ export interface TutorialSession {
 }
 
 export const tutorialSteps = [
-  { id: "text-key", title: "1. Connect a text provider", target: "keys-llm", page: "settings" },
-  { id: "audio-key", title: "2. Connect a voice provider", target: "keys-tts", page: "settings" },
+  { id: "text-key", title: "1. Connect a writing service", target: "keys-llm", page: "settings" },
+  { id: "audio-key", title: "2. Connect a voice service", target: "keys-tts", page: "settings" },
   {
     id: "image-key",
-    title: "3. Connect an image provider",
+    title: "3. Connect an image service",
     target: "keys-image",
     page: "settings",
   },
@@ -59,7 +59,7 @@ export const tutorialSteps = [
   { id: "image-save", title: "10. Save your image prompt", target: "prompt-save", page: "image" },
   {
     id: "play-options",
-    title: "11. Name the project and choose text generation",
+    title: "11. Type the topic and pick who writes",
     target: "play-options",
     page: "play",
   },
@@ -75,11 +75,16 @@ export const tutorialSteps = [
   { id: "play-video", title: "16. Choose video output", target: "play-video", page: "play" },
   {
     id: "play-subtitles",
-    title: "17. Style optional subtitles",
+    title: "17. Choose captions",
     target: "play-subtitles",
     page: "play",
   },
-  { id: "play-start", title: "18. Review and start your run", target: "play-start", page: "play" },
+  {
+    id: "play-start",
+    title: "18. Check it and make the video",
+    target: "play-start",
+    page: "play",
+  },
   {
     id: "project",
     title: "19. Follow and control the run",
@@ -147,6 +152,6 @@ export const playTargetSection = {
   "play-images": "outputs",
   "play-video": "outputs",
   "play-subtitles": "style",
-  // The Play key sits in the right rail beside every section, so the guide stays on the form.
+  // The Make button sits in the right rail beside every row, so the guide stays on the form.
   "play-start": "content",
 } as const;

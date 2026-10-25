@@ -1,6 +1,6 @@
 # Install
 
-Slopify is a local web app you start from a terminal. It runs on your own computer, opens in your browser at `http://127.0.0.1:6969`, and uses your own provider keys or the AI command-line tools you are already signed in to.
+Slopify is a local web app you start from a terminal. It runs on your own computer, opens in your browser at `http://127.0.0.1:6969`, and uses your own service keys or the AI command-line tools you are already signed in to.
 
 **Where to find it:** a terminal on your computer (PowerShell or Windows Terminal on Windows, Terminal on macOS, any shell on Linux).
 
@@ -12,7 +12,7 @@ Slopify is a local web app you start from a terminal. It runs on your own comput
 | Operating system | Windows, macOS or Linux for the normal install. The managed Docker install is Linux only (see [Docker](Docker)). |
 | ffmpeg | Nothing to install: Slopify brings its own copy. See [ffmpeg](#ffmpeg) below. |
 | Disk space | Enough for your videos. Every project keeps its video, images, narration and working files. The caption model is a 378 MB download (95 MB if you pick Smallest in Settings → Production defaults). |
-| Keys or CLIs | Text and images can come from Claude Code, Codex or Antigravity CLI, or from API keys. Narration can use a voice provider key, or your computer's own speech for free (the System voice; on Linux, install `espeak-ng`). See [Providers and Keys](Providers-and-Keys) and [AI CLIs](AI-CLIs). |
+| Keys or CLIs | Text and images can come from Claude Code, Codex or Antigravity CLI, or from API keys. Narration can use a voice provider key, or your computer's own speech for free (the System voice; on Linux, install `espeak-ng`). See [Keys and Services](Providers-and-Keys) and [AI CLIs](AI-CLIs). |
 
 ## Choose how to run it
 
@@ -84,7 +84,7 @@ Only one Slopify can use a data folder at a time. A second one on the same folde
 
 ## Keep it on 127.0.0.1
 
-Slopify has no login. Whoever can reach its port controls the app and every provider key saved in it. The default `127.0.0.1` means only your own computer can reach it.
+Slopify has no login. Whoever can reach its port controls the app and every service key saved in it. The default `127.0.0.1` means only your own computer can reach it.
 
 If you start it with another `--host`, the terminal prints a warning: `WARNING: bound to <host> - anyone who reaches this port controls the app and its keys (no login).` Only do that on a network you trust completely.
 
@@ -113,7 +113,7 @@ The bundled ffmpeg is a separate program under the GPL-3.0-or-later licence. Slo
 
 ## The caption model
 
-Captions are timed against the narration by a speech model that runs on your computer, at no cost. The English model is downloaded when Slopify starts, in the background, so a run never waits for it later: the one chosen in Settings → Production defaults → **Subtitle timing model**, Most accurate (378 MB) unless changed. The Docker image already carries it. It is kept in `<data folder>/models/`. Set `SLOPIFY_NO_MODEL_PREFETCH=1` to skip the download at start. Other languages use a separate model that is downloaded the first time a project in that language needs it.
+Captions are timed against the narration by a speech model that runs on your computer, at no cost. The English model is downloaded when Slopify starts, in the background, so a run never waits for it later: the one chosen in Settings → Production defaults → **Caption timing model**, Most accurate (378 MB) unless changed. The Docker image already carries it. It is kept in `<data folder>/models/`. Set `SLOPIFY_NO_MODEL_PREFETCH=1` to skip the download at start. Other languages use a separate model that is downloaded the first time a project in that language needs it.
 
 ## Anonymous usage stats
 
@@ -150,6 +150,6 @@ More in [Troubleshooting](Troubleshooting).
 - [Where Your Files Live](Where-Your-Files-Live)
 - [Start at Login](Start-at-Login)
 - [Updating and Patch Notes](Updating-and-Patch-Notes)
-- [Providers and Keys](Providers-and-Keys)
+- [Keys and Services](Providers-and-Keys)
 - [AI CLIs](AI-CLIs)
 - [Troubleshooting](Troubleshooting)

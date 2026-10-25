@@ -216,7 +216,9 @@ describe("home", () => {
   it("shows what needs you: a held review, suggested topics and a failure with its fix", async () => {
     renderRouted(<HomeRoute />, deps());
     const needs = await screen.findByRole("region", { name: "Needs you" });
-    expect(await within(needs).findByRole("button", { name: "Approve and render" })).not.toBeNull();
+    expect(
+      await within(needs).findByRole("button", { name: "Approve and make the video" }),
+    ).not.toBeNull();
     expect(within(needs).getByText("Waiting for your review · before the video")).not.toBeNull();
     expect(within(needs).getByText("5 new topics")).not.toBeNull();
     expect(within(needs).getByRole("link", { name: "Review topics" }).getAttribute("href")).toBe(
@@ -407,9 +409,11 @@ describe("home", () => {
       }),
     );
     const needs = await screen.findByRole("region", { name: "Needs you" });
-    expect(await within(needs).findByRole("button", { name: "Approve and render" })).not.toBeNull();
     expect(
-      within(needs).queryByRole("button", { name: "Approve the article and record" }),
+      await within(needs).findByRole("button", { name: "Approve and make the video" }),
+    ).not.toBeNull();
+    expect(
+      within(needs).queryByRole("button", { name: "Approve and make the narration" }),
     ).toBeNull();
   });
 
@@ -430,7 +434,7 @@ describe("home", () => {
     );
     const needs = await screen.findByRole("region", { name: "Needs you" });
     expect(await within(needs).findByRole("link", { name: "Open to continue" })).not.toBeNull();
-    expect(within(needs).queryByRole("button", { name: "Approve and render" })).toBeNull();
+    expect(within(needs).queryByRole("button", { name: "Approve and make the video" })).toBeNull();
   });
 
   it("says a held review that didn't load, and where to review it", async () => {
@@ -470,7 +474,7 @@ describe("home", () => {
       <HomeRoute />,
       deps({ "POST /api/projects/p-wait/checkpoints/video-gate/approve": approve }),
     );
-    await user.click(await screen.findByRole("button", { name: "Approve and render" }));
+    await user.click(await screen.findByRole("button", { name: "Approve and make the video" }));
     await waitFor(() => expect(approve).toHaveBeenCalledOnce());
     const sent = JSON.parse(
       (await (approve.mock.calls[0]?.[0] as Request | undefined)?.text()) ?? "{}",

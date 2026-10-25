@@ -8,11 +8,11 @@ Short answers to the questions people ask most, with links to the pages that go 
 
 ### Is Slopify free?
 
-Yes. Slopify is free and open source. You pay the AI providers you choose (for text, narration and images) directly, on your own accounts. Rendering, captions, loudness, the Look, ambient sound, chapter cards and the style preview run on your computer and cost nothing.
+Yes. Slopify is free and open source. You pay the AI services you choose (for writing, narration and images) directly, on your own accounts. Putting the video together, captions, loudness, the Look, ambient sound, chapter cards and the style preview run on your computer and cost nothing.
 
 ### How much does one video cost?
 
-It depends on the providers, models, length and number of images. Play shows an estimate before you start, with **Cost by stage** under it. After a run, the project's **Cost** section shows what each stage and model actually cost, retries and remakes included. See [Costs and Run Cost](Costs-and-Run-Cost).
+It depends on the services, models, length and number of images. Create shows an estimate before you start, with **Cost by stage** under it. After a run, the project's cost line and its **See the breakdown** show what each stage and model actually cost, retries and everything made again included. See [Costs and Run Cost](Costs-and-Run-Cost).
 
 ### Can I use my Claude, ChatGPT (Codex) or Gemini subscription instead of API keys?
 
@@ -20,11 +20,11 @@ Yes, through the command-line tools you are already signed in to: Claude Code, C
 
 ### Can I make a video without any API key?
 
-Yes. Sign in to Claude Code, Codex or Antigravity CLI for the text (Codex also draws the images), and the narration can use your computer's own voice, the **System voice**, for free. That is what the first 60-second short uses when no voice key is saved. It sounds robotic, so add a voice key when you want a better one. See [Your First Short](Your-First-Short) and [Providers and Keys](Providers-and-Keys#the-system-voice).
+Yes. Sign in to Claude Code, Codex or Antigravity CLI for the text (Codex also draws the images), and the narration can use your computer's own voice, the **System voice**, for free. That is what the first 60-second short uses when no voice key is saved. It sounds robotic, so add a voice key when you want a better one. See [Your First Short](Your-First-Short) and [Keys and Services](Providers-and-Keys#the-system-voice).
 
 ### How do I know a key works before I save it?
 
-Paste it in Settings → **Providers** and press **Test**. Slopify checks the pasted key with the provider without storing it; press **Save** to keep it. See [Providers and Keys](Providers-and-Keys#test-a-key).
+Paste it in Settings → **Keys & services** and press **Test the key (free)**. Slopify checks the pasted key with the service without storing it; press **Save** to keep it. See [Keys and Services](Providers-and-Keys#test-a-key).
 
 ### Do I need an account or a login for Slopify?
 
@@ -34,7 +34,7 @@ No. There is no Slopify account and no login. That is also why Slopify listens o
 
 ### Where are my API keys stored?
 
-On your computer, in Slopify's hidden data folder (`~/.slopify` by default; in Docker, the `slopify-data` volume). Each key is sent only to its own provider, and keys are never put in a backup or an export. Diagnostics files never contain them either. See [Providers and Keys](Providers-and-Keys).
+On your computer, in Slopify's hidden data folder (`~/.slopify` by default; in Docker, the `slopify-data` volume). Each key is sent only to its own service, and keys are never put in a backup or an export. Diagnostics files never contain them either. See [Keys and Services](Providers-and-Keys).
 
 ### Where are my projects?
 
@@ -42,35 +42,35 @@ In your files folder, `Documents/Slopify` for new installs, Docker included (Set
 
 ### Does Slopify send anything about me?
 
-Slopify sends anonymous counts to show the live totals on slopify.stream: tokens per stage with provider and model, audio seconds, images, thumbnails, videos, PDFs, YouTube descriptions, shorts, projects created, that the machine installed Slopify, and when each happened. Each event carries a random ID and a random machine ID. It never sends your API keys, prompts, keyword values, titles, article or research text, files or file names, or your operating system, locale or hardware. A notice explains this the first time you open Slopify.
+Slopify sends anonymous counts to show the live totals on slopify.stream: tokens per stage with service and model, audio seconds, images, thumbnails, videos, PDFs, YouTube descriptions, shorts, projects created, that the machine installed Slopify, and when each happened. Each event carries a random ID and a random machine ID. It never sends your API keys, prompts, keyword values, titles, article or research text, files or file names, or your operating system, locale or hardware. A notice explains this the first time you open Slopify.
 
-What you write is sent only to the AI providers you pick, because they make the article, narration and images.
+What you write is sent only to the AI services you pick, because they make the article, narration and images.
 
 ### Does it work offline?
 
-Partly. The AI steps (article, research, narration, images, thumbnails, descriptions) call providers over the internet, or CLIs that do. Rendering the video, levelling the volume, captions, the style preview and the System voice run on your computer. Captions need a speech model of about 378 MB (smaller ones can be chosen in Settings → Production defaults) that is downloaded once, on first use. Patch notes ship with the app and open offline.
+Partly. The AI steps (article, research, narration, images, thumbnails, descriptions) call services over the internet, or CLIs that do. Putting the video together, levelling the volume, captions, the style preview and the System voice run on your computer. Captions need a speech model of about 378 MB (smaller ones can be chosen in Settings → Production defaults) that is downloaded once, on first use. Patch notes ship with the app and open offline.
 
 ## Making and editing videos
 
 ### Can I change a video after it is made?
 
-Yes. Open the project, press **Edit settings**, change what you want and press **Save changes**. Only the outputs the change affects turn outdated, and you remake them when you choose, after seeing the cost. See [Editing a Project](Editing-a-Project).
+Yes. Open the project, press **Edit settings**, change what you want and press **Save changes**. Only the files the change affects turn outdated, and you make them again when you choose, after seeing the cost. See [Editing a Project](Editing-a-Project).
 
 ### Can I fix one image or one sentence without redoing everything?
 
-Yes. In **Edit project → Images** you can edit one image's prompt, replace it with your own file or regenerate it; in **Edit project → Narration** you can edit or respeak one chunk. Only that piece and the video are made again.
+Yes. In **Edit settings** → **Images** you can edit one image's prompt, replace it with your own file or make it again; in **Edit settings** → **Narration** you can edit one chunk or have it spoken again. Only that piece and the video are made again.
 
 ### Where do I see what a run cost?
 
-At the top of a finished project's page, one line sums it up ("This run cost …"), with **See cost by stage**. See [Costs and Run Cost](Costs-and-Run-Cost).
+Under the status list on the project page, one line sums it up ("Cost $0.07 · 4 s of working time"), with **See the breakdown**. See [Costs and Run Cost](Costs-and-Run-Cost).
 
 ### Can I go back to an earlier version?
 
-Yes. **History** on the project page lists every saved revision with its files. **Restore this revision** makes an old one current again, without losing anything saved after it.
+Yes. **Edit settings** → **Versions** on the project page lists every saved version with its files. **Restore** makes an old one current again, saved as a new version, without losing anything saved after it. See [Editing a Project](Editing-a-Project#versions).
 
 ### Can I use my own images, audio or video clips?
 
-Yes. Stages can use a file you provide instead of generating one, and in Edit project you can replace any image, add your own picture or add a video clip that plays in an image's place. See [Editing a Project](Editing-a-Project#edit-images).
+Yes. Stages can use a file you provide instead of one made by AI, and in **Edit settings** you can replace any image, add your own picture or add a video clip that plays in an image's place. See [Editing a Project](Editing-a-Project#edit-images).
 
 ### What happens if I close the browser while a video is being made?
 
@@ -90,7 +90,7 @@ Yes, within 30 days. Open Settings → **Backup & storage** → **Trash** and pr
 
 ### Are captions free?
 
-Yes. Captions are timed from your narration on your computer, with no paid API. See [Video Editing](Video-Editing#subtitles).
+Yes. Captions are timed from your narration on your computer, at no cost. See [Video Editing](Video-Editing#captions).
 
 ### Can Slopify make videos in other languages?
 
@@ -100,7 +100,7 @@ Yes, with some differences in captions and cuts for languages without word timin
 
 ### Does Slopify upload to YouTube for me?
 
-No. Slopify never uploads or publishes anything. **Prepare upload** lays out the file, title, description, thumbnail, playlist, audience, AI use and tags in the order YouTube Studio asks for them, each with a copy button. The optional Studio browser extension fills in the Studio form for you; you check it and press Publish yourself. **Mark uploaded** records that you did. See [Publishing to YouTube](Publishing-to-YouTube) and [Studio Extension](Studio-Extension).
+No. Slopify never uploads or publishes anything. **Copy for YouTube Studio** lays out the file, title, description, thumbnail, playlist, audience, AI use and tags in the order YouTube Studio asks for them, each with a copy button. The optional Studio browser extension fills in the Studio form for you; you check it and press Publish yourself. **Mark uploaded** records that you did. See [Publishing to YouTube](Publishing-to-YouTube) and [Studio Extension](Studio-Extension).
 
 ### Does it make Shorts too?
 
@@ -122,13 +122,13 @@ Press **Update ready** in the rail (or **Help → Check for updates**), or run `
 
 ### Something is broken. What should I send?
 
-Open Settings and press **Download diagnostics**. The file lists your Slopify, system and Node versions and which providers are set up, never your keys, prompts or project content. Attach it to your bug report. See [Troubleshooting](Troubleshooting).
+Press **Download diagnostics** at the foot of Settings → **About** (or in the **Help** menu). The file lists your Slopify, system and Node versions and which services are set up, never your keys, prompts or project content. Attach it to your bug report. See [Troubleshooting](Troubleshooting).
 
 ## Related pages
 
 - [Troubleshooting](Troubleshooting)
 - [Recovery and Retries](Recovery-and-Retries)
-- [Providers and Keys](Providers-and-Keys)
+- [Keys and Services](Providers-and-Keys)
 - [Costs and Run Cost](Costs-and-Run-Cost)
 - [Where Your Files Live](Where-Your-Files-Live)
 - [Publishing to YouTube](Publishing-to-YouTube)

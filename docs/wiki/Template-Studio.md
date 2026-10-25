@@ -65,7 +65,7 @@ Every paid sample is priced before anything is spent:
 
 - **Save** never spends: it keeps the change as the template's next version and makes the free samples again. The paid sample waits for **Make sample**, priced on the button, for example **Make sample · about $0.12**.
 - A sample that costs more than a quarter more (plus five cents) than the price you saw, or has a step with no known price you didn't accept, waits instead of starting, with the new price on **Make sample**.
-- The daily sample budget under **Settings → Production defaults** is the most the samples may spend in one day ($2.00 by default). A sample past it waits until the next day or a higher budget. What a removed sample or a discarded comparison was charged today still counts. See [Settings-Reference](Settings-Reference#template-studio).
+- The daily sample budget under **Settings → Production defaults** is the most the samples may spend in one day ($2.00 by default). A sample past it waits until the next day or a higher budget. What a removed sample or a discarded comparison was charged today still counts. See [Settings-Reference](Settings-Reference#template-samples).
 
 **Make samples for all**, under **Samples for all templates** in Settings → Production defaults, prices the samples of every template that needs one, together, and queues the ones that fit today's budget.
 
@@ -87,7 +87,7 @@ When Slopify changes a template itself (a retired model switched in Settings →
 **Compare models**, beside the model of **Article**, **Narration** or **Images**, makes that section's sample again with one or two other models, each on a hidden copy of the sample, so you can compare what each one makes, what it was charged and how long it took, beside the model the template uses now.
 
 1. Save first: models are compared on the saved version's sample, so it must be current.
-2. Press **Compare models** and pick one or two models. The list shows the models that work for your key or CLI first. Voice models are compared within the template's voice provider, because a voice is chosen per provider.
+2. Press **Compare models** and pick one or two models. The list shows the models that work for your key or CLI first. Voice models are compared within the template's voice service, because a voice is chosen per service.
 3. The drawer prices it, for example **Compare · about $0.04**, and shows what is left of today's budget. Press it to start.
 4. **Compared models** lists each model with **Made · $0.008 charged · 12 s** and what it made (the script's opening, the narration, the pictures).
 5. **Use this model** switches the section to that model and discards the copies; press **Save** to make the template's own sample with it, at the price on the button. **Discard** removes the copies without changing anything.
@@ -102,7 +102,7 @@ A template pack is a template as one .zip file, to share with someone else or mo
 
 **More → Export as a file (.zip)** in Edit template saves the version your schedules run (it names that version when a newer one waits): its prompts' and intros' text as Prompts has them now, the voice it picks, the Look, the PDF look, and its sample's thumbnail, up to four pictures and its narration. No key, login or other file of yours goes in; a template whose text looks like a key is refused, with where to remove it. A template its schedules can't run yet (no version approved, and none saved before approvals existed) can't be exported yet.
 
-**Import a template file (.zip)** on Templates makes a new template from a pack:
+**More** → **Import a template file (.zip)** on Templates makes a new template from a template file:
 
 - Its prompts and intros join yours under Prompts. One whose name you already use for other text comes in as "name (2)", and the template uses that one.
 - Its voice is used as it is. When Settings → Voices has no voice with that ID, Edit template's voice check says so: add the voice there under that ID, or choose one of yours.
@@ -122,4 +122,4 @@ Poster templates (posters, flyers and other designed pieces) are under **Templat
 - [Models](Models)
 - [Costs and run cost](Costs-and-Run-Cost)
 - [Narration aliases and glossary](Narration-Aliases-and-Glossary)
-- [Settings reference](Settings-Reference#template-studio)
+- [Settings reference](Settings-Reference#template-samples)

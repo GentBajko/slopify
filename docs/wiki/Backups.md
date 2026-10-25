@@ -1,6 +1,6 @@
 # Backups
 
-A backup is one `.tar` file with everything you made in Slopify: every project with its files and history, your library, templates, schedules, channels and settings. Make one by hand at any time with **Export everything**, or let Slopify write one every day. Bring one back with **Import a backup**. Provider keys are never included.
+A backup is one `.tar` file with everything you made in Slopify: every project with its files and versions, your prompts, templates, schedules, channels and settings. Make one by hand at any time with **Export everything**, or let Slopify write one every day. Bring one back with **Import a backup**. Provider keys are never included.
 
 **Where to find it:** **Settings → Backup & storage**: daily backups and Back up now, Export everything and Import a backup.
 
@@ -8,18 +8,18 @@ A backup is one `.tar` file with everything you made in Slopify: every project w
 
 | Included | Left out on purpose |
 |---|---|
-| Every project with its files and history, and its channel | Provider keys |
-| Automatic review verdicts and run cost of each project | The Notification URL |
+| Every project with its files and versions, and its channel | Service keys |
+| AI check verdicts and run cost of each project | The Notification URL |
 | Prompts, intros and outros, with their history | The Studio extension's pairing |
 | Document themes and uploaded fonts | The tutorial's progress |
-| Templates, schedules and Play drafts | The daily backups' folder and status |
+| Templates, schedules and Create drafts | The daily backups' folder and status |
 | Channels: brand kit, series brief, episode memory and AI disclosure settings, cast with pictures, end screen images, episode summaries, existing videos, and the last **Keep only titles containing** filter | The telemetry machine id |
-| Channel links and the provider defaults a new Play form starts with | State that only matters while this install runs: the queue, plan-limit waits |
+| Channel links and the service defaults a new Create draft starts with | State that only matters while this install runs: the queue, plan-limit waits |
 | AI use marks: voices marked as a real person, image prompts marked photorealistic, projects with real footage | |
 | Settings and usage history | |
 | The trash: trashed items come back still in the trash, with their original date | |
 
-After an import you add your provider keys again in [Providers and keys](Providers-and-Keys).
+After an import you add your provider keys again in [Keys and Services](Providers-and-Keys).
 
 ## Export everything (a backup right now, downloaded)
 

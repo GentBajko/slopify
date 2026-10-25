@@ -26,15 +26,15 @@ A 60-second short needs three things. Each has its own line, with its state and,
 
 When the computer's own voice reads the script, the Voice line says so and offers **Add a voice key** for a better one. With an ElevenLabs, Cartesia or Inworld key but no voice saved, it says **No voice saved** with **Save a voice** (Settings → **Voices**).
 
-**Check again** looks again, including for a speech program installed a moment ago. **Other tools and services Slopify can use** opens Settings → **Providers**. Below the lines, the three finished samples are there to watch (see [Explore the samples](#explore-the-samples)).
+**Check again** looks again, including for a speech program installed a moment ago. **Other tools and services Slopify can use** opens Settings → **Keys & services**. Below the lines, the three finished samples are there to watch (see [Explore the samples](#explore-the-samples)).
 
-See [AI CLIs](AI-CLIs) and [Providers and Keys](Providers-and-Keys).
+See [AI CLIs](AI-CLIs) and [Keys and Services](Providers-and-Keys).
 
 ## Step 2: Pick a style
 
-Each row is a style for the short. **General** is a neutral explainer style; the others are the starter packs (Sleep lore, True crime, History, Science explainers). Press a row to pick it; the picked row reads **Picked**.
+Each row is a style for the short. **General** is a neutral explainer style; the others are the starter templates' styles (Sleep lore, True crime, History, Science explainers). Press a row to pick it; the picked row reads **Picked**.
 
-Making the short with a pack adds that pack's script and scene prompts to your Library and its suggested voice to Settings → **Voices**. See [Starter packs](#starter-packs).
+Making the short with one of them adds its script and scene prompts to Prompts and its suggested voice to Settings → **Voices**. See [Starter templates](#starter-templates).
 
 ## Step 3: Make a 60-second short
 
@@ -54,7 +54,7 @@ Three finished projects come with Slopify, marked **Sample** in Projects. Step 1
 
 | Sample | What it shows | Button |
 | --- | --- | --- |
-| **The Library of Alexandria** | A 3-minute narrated 16:9 video with burned-in captions, chapter cards and a warm Look, plus its two shorts, the article, the PDF, a YouTube description with chapters, four images and a thumbnail. | **Explore the sample** |
+| **The Library of Alexandria** | A 3-minute narrated 16:9 video with captions in the picture, chapter cards and a warm Look, plus its two shorts, the article, the PDF, a YouTube description with chapters, four images and a thumbnail. | **Explore the sample** |
 | **The Wind in the Willows** | An audiobook of an abridged excerpt: a narrator and two character voices, captions tagged with who speaks, and an MP3 and M4B with chapters. | **See an audiobook** |
 | **The Antikythera Mechanism** | A two-host podcast with the speaker panel, name tags and portraits, and its MP3 and M4B. | **Hear a podcast** |
 
@@ -67,38 +67,37 @@ A sample's project page says "This is the sample project, finished and free to e
 1. Open a sample.
 2. Press **Make my own copy** (also in the command palette, `Ctrl+K` → **Make my own copy**).
 3. Slopify copies every file and setting of that sample into a new, normal project. Nothing needs to be made again: the copy is finished too.
-4. Edit the copy like any project. Changes to it use your providers and cost what they cost. See [Editing a Project](Editing-a-Project).
+4. Edit the copy like any project. Changes to it use your services and cost what they cost. See [Editing a Project](Editing-a-Project).
 
 ### Restore the samples
 
-1. Open Settings → **Backup & storage** and scroll to **Sample projects**.
-2. Each sample shows whether it is **in your projects** or **not in your projects**, with **Open**.
-3. Press **Restore samples**. It puts all three back as they shipped: it adds back any that were deleted and replaces the others with the originals. Your own copies are not touched.
+1. Open Settings → **Backup & storage** and scroll to **Disk space**.
+2. Press **Restore samples**. The line beside it says which samples it brings back. It puts all three back as they shipped: it adds back any that were deleted and replaces the others with the originals. Your own copies are not touched.
 
-## Starter packs
+## Starter templates
 
-A starter pack sets you up for one kind of channel. Each one adds, in one go:
+A starter template sets you up for one kind of channel. Adding one (**Templates** → **Add starter templates**) adds, in one go:
 
-- prompts to your Library: an article prompt, a 60-second script, an image (scene) prompt, a thumbnail prompt, a description prompt and a shorts prompt, each asking only for `{{topic}}`;
+- prompts on Prompts: an article prompt, a 60-second script, an image (scene) prompt, a thumbnail prompt, a description prompt and a shorts prompt, each asking only for `{{topic}}`;
 - a suggested OpenAI voice, saved under Settings → **Voices**;
-- a Play template that uses them, named `<pack> starter`, with its captions, motion and Look.
+- a template that uses them, named `<style> starter`, with its captions, motion and Look.
 
-Then you pick the template in Create, type a topic and start. See [Templates](Templates) and [Play Overview](Play-Overview).
+Then you pick the template in Create, type a topic and start. See [Templates](Templates) and [Create Overview](Create-Overview).
 
-| Pack | What it is for | Suggested voice |
+| Starter template | What it is for | Suggested voice |
 | --- | --- | --- |
 | **Sleep lore** | Slow, gentle myths and legends told to fall asleep to. | OpenAI `sage` |
 | **True crime** | Measured, factual retellings of real cases and their investigations. | OpenAI `onyx` |
 | **History** | Narrative history of people, places and events, told like a documentary. | OpenAI `fable` |
 | **Science explainers** | Clear, friendly explanations of how the world works, one idea at a time. | OpenAI `nova` |
 
-Making a short with a pack on the first-run screen adds its prompts and voice only, not the template.
+Making a short in one of these styles on the first-run screen adds its prompts and voice only, not the template.
 
-- Adding a pack twice changes nothing.
-- It never replaces a prompt or template of yours with the same name: the pack's copy comes in as `<name> (2)`.
-- An item the pack added before and you edited is kept as you left it. One you deleted comes back.
+- Adding a starter template twice changes nothing.
+- It never replaces a prompt or template of yours with the same name: the starter's copy comes in as `<name> (2)`.
+- An item a starter template added before and you edited is kept as you left it. One you deleted comes back.
 
-You can add packs later too, from Library → **Templates** → **Add pack**.
+You can add them later too, from **Templates** → **Add starter templates**.
 
 ## Start when I log in
 
@@ -106,34 +105,34 @@ Step 3 of the first-run screen asks once, in one line: **Start when I log in** o
 
 ## Make a long video instead
 
-On steps 1 and 2, **Make a long video instead** in the bottom bar takes you to Create, where you choose prompts, keywords and outputs yourself. See [Play Overview](Play-Overview).
+On steps 1 and 2, **Make a long video instead** in the bottom bar takes you to Create, where you choose prompts, keywords and extras yourself. See [Create Overview](Create-Overview).
 
 ## The interactive tutorial
 
 **Help → Start the tour** at the foot of the rail walks you through a first project in 25 steps ("3 of 25 · First project"):
 
-1. **Settings:** connect a text, a voice and an image provider, and add a narration voice.
-2. **Library:** write and save an article prompt with keywords, then an image prompt.
-3. **Play:** name the project, choose the article, keywords, narration, images, video and subtitles, then review and start the run.
-4. **The project:** follow and control the run, download the results, see what the run cost and prepare the YouTube upload.
+1. **Settings:** connect a writing, a voice and an image service, and add a narration voice.
+2. **Prompts:** write and save an article prompt with keywords, then an image prompt.
+3. **Create:** type the topic, choose the article, keywords, narration, images, video and captions, then check it and make the video.
+4. **The project:** follow and control the run, download the results, see what the run cost and copy everything for YouTube Studio.
 5. **The rest of the app:** check Home each day, set up a channel, and plan uploads on the calendar.
 
 Each step highlights the real control you will use and opens its screen for you. Your place is saved, so it survives a page reload. On the review-and-start step, **Skip generating** leaves the run unstarted and goes on to Home, Channels and the Calendar instead of ending the tutorial. Other steps have **Skip this step** (or **Skip without saving**).
 
-When Projects has no projects at all, it also shows **Make your first video** with **Start tutorial**.
+When Projects has no projects at all, it also shows **Make your first video** with **Start the tour**.
 
 ## Tips
 
 - Try a sample before you add any keys: every screen works on it, and nothing costs anything.
 - You can come back to the first-run screen at `/welcome` until you skip it or make a real project.
 - After an update to a new major version, a **What's new** tour opens instead. See [Updating and Patch Notes](Updating-and-Patch-Notes).
-- Already use Claude Code or Codex? Settings → Connections → **Agents (MCP)** has one line that lets it run Slopify for you: start and fix runs, answer reviews, everything up to Ready to upload. See [Agents (MCP)](Agents-MCP).
+- Already use Claude Code or Codex? Settings → **AI agents** has one line that lets it run Slopify for you: start and fix runs, answer AI checks, everything up to Ready to upload. See [Agents (MCP)](Agents-MCP).
 
 ## Related pages
 
 - [Your First Short](Your-First-Short)
 - [Home and Projects](Home-and-Projects)
-- [Providers and Keys](Providers-and-Keys)
+- [Keys and Services](Providers-and-Keys)
 - [AI CLIs](AI-CLIs)
 - [Templates](Templates)
 - [Prompts](Prompts)

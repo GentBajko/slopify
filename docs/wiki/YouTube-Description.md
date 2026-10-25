@@ -2,7 +2,7 @@
 
 Slopify can write your video's YouTube description for you: a short summary, chapters at the narration's real times, hashtags, and a separate list of search tags. Each part has a Copy button and can be edited in place, and your edits survive when the description is written again.
 
-**Where to find it:** Play → **Outputs** row → **YouTube description**. On a finished project: the **YouTube** section (Description, Tags, Pinned comment and Other titles), and Edit project → **Prompts**.
+**Where to find it:** Create → **Extras** row → **YouTube description**. On a finished project: the **YouTube** part (Description, Tags, Pinned comment and Other titles), and **Edit settings** → **Extras**.
 
 ## What you get
 
@@ -19,19 +19,19 @@ Slopify lays out the description itself (summary, blank line, one chapter per li
 
 ## Turn it on
 
-1. On Play, open the **Outputs** row.
+1. On Create, open the **Extras** row.
 2. Tick **YouTube description**. It is greyed out, with "Needs narration", when the Narration row is off.
 3. Pick a **Description prompt**, or leave it on **Built-in**.
 4. Start the run.
 
-The description is written after the video's subtitle timing, beside the render, in one text-model call. The project language decides the language it is written in; see [Other-Languages](Other-Languages).
+The description is written once the captions are timed, while the video is put together, in one AI call. The project language decides the language it is written in; see [Other-Languages](Other-Languages).
 
 ## Options
 
 | Option | What it does | Default |
 |---|---|---|
-| **YouTube description** | Writes the description, chapters, hashtags and tags after subtitle timing. One text-model call. Needs narration. | Off |
-| **Description prompt** | The Library prompt the description is written from. | **Built-in** |
+| **YouTube description** | Writes the description, chapters, hashtags and tags once the captions are timed. One AI call. Needs narration. | Off |
+| **Description prompt** | Your Description prompt the description is written from. | **Built-in** |
 
 The **Built-in** prompt asks for:
 
@@ -40,34 +40,34 @@ The **Built-in** prompt asks for:
 - 3 to 5 hashtags, most specific last;
 - 15 to 25 tags, from broad to specific.
 
-To change the tone or add your own links, write a prompt of the kind **YouTube Description** in **Library → Prompts**. Each `{{keyword}}` in it becomes a field on Play. The prompt editor's starter button (see **Starter text** in its help) fills in the Built-in wording to start from. See [Prompts](Prompts).
+To change the tone or add your own links, write a prompt of the kind **YouTube Description** in **Prompts**. Each `{{keyword}}` in it becomes a field on Create. The prompt editor's **Start from an example** → **Built-in wording** fills in the built-in wording to start from. See [Prompts](Prompts).
 
 ## Read and copy it
 
-When the step has run, the project page's **YouTube** section shows four parts. A finished project with a written description opens on this section, so copying it is one press:
+When the step has run, the project page's **YouTube** part shows four pieces. A finished project with a written description opens on this section, so copying it is one press:
 
 - **Description**, with the Summary, Chapters and Hashtags, a character count such as `1,240 / 5000 characters`, and **Copy**.
 - **Tags**, shown as chips, with a count against YouTube's 500-character limit and **Copy**.
 - **Pinned comment**, below the tags, with **Copy**. YouTube pins comments only on a published video: once it is live, post the comment from your channel and choose **Pin** in its menu.
-- **Other titles**, below the pinned comment, with **Copy**. In Studio, press **A/B Testing** beside the title and add them next to the video's own title. Prepare upload lists them in its Title step with **Copy others**.
+- **Other titles**, below the pinned comment, with **Copy**. In Studio, press **A/B Testing** beside the title and add them next to the video's own title. Copy for YouTube Studio lists them in its Title step with **Copy others**.
 
 **Copy** on Description copies the whole description, placeholders filled in. **Copy** on Tags copies them comma-separated, ready to paste. A count over YouTube's limit turns red and says "over YouTube's limit".
 
 You can also run **Copy description** (`Shift+D`), **Copy tags** and **Copy pinned comment** from the command palette (`Ctrl+K`) while the project is open. The **YouTube description (.txt)** and **YouTube tags (.txt)** downloads are the text exactly as the page shows it: your edits, the fitted chapters and the filled links. See [Keyboard-Shortcuts-and-Command-Palette](Keyboard-Shortcuts-and-Command-Palette).
 
-While the stage is running the parts say "Written after the subtitle timing."; before it starts they say "Not written yet. It is made with the video."
+While the stage is running the parts say "Written once the captions are timed."; before it starts they say "Not written yet. It is made with the video."
 
 ## Edit a part
 
-1. In the project's YouTube section, press **Edit** beside Summary, Chapters, Hashtags, Tags, Pinned comment or Other titles.
+1. In the project's YouTube part, press **Edit** beside Summary, Chapters, Hashtags, Tags, Pinned comment or Other titles.
 2. Change the text and save.
 
-Your text is now marked **Your edit**. It is kept as yours:
+A line under it says it is your own text, kept when the description is written again:
 
-- When the description is written again, your part stays and "New generated version available." appears beside it with **Use it**, **Keep mine** and **View diff**.
-- **Use generated** goes back to the model's text at any time.
+- When the description is written again, your part stays and "*Part* written again. Yours stays until you choose." appears beside it with **Use the new one**, **Keep mine** and **Show the changes**.
+- **Use the written *part*** (for example **Use the written summary**) goes back to the AI's text at any time.
 
-Edits cost nothing and don't re-run anything.
+Edits cost nothing and make nothing again.
 
 ## Chapters follow YouTube's rules
 
@@ -87,19 +87,19 @@ Write a name in double braces, such as `{{Patreon}}` or `{{Discord}}`, in a desc
 
 Each channel has its own links:
 
-1. Open **Channels** → the project's channel → **Brand**.
+1. Open **Channels** → the project's channel → **Name and look**.
 2. Under **Channel links**, press **Add link**, type the name (for example `Patreon`) and the address, and press **Save channel**.
 
-A description takes the links of its project's channel. Names match without regard to case or extra spaces. A placeholder with no saved link stays as typed, is marked, and the YouTube section says "No link is saved for {{Name}}, so it stays as typed. Add it under Channel links on the channel's Brand tab."
+A description takes the links of its project's channel. Names match without regard to case or extra spaces. A placeholder with no saved link stays as typed, is marked, and the YouTube part says "No link is saved for {{Name}}, so it stays as typed. Add it under Channel links on the channel's Name and look tab."
 
-Links saved in **Settings → Channel links** before each channel had its own still fill the default channel's descriptions until you save that channel's Brand tab. See [Channels](Channels#channel-links).
+Links saved in **Settings → Channel links** before each channel had its own still fill the default channel's descriptions until you save that channel's Name and look tab. See [Channels](Channels#channel-links).
 
 ### Previous video
 
 `{{Previous video}}` is special: each project can have its own.
 
-1. In the project's YouTube section, paste the link under **Previous video for this project**.
-2. Press **Save links**.
+1. In the project's YouTube part, paste the link under **Previous episode**.
+2. Press **Save**.
 
 The project's link wins over a **Previous video** link in the channel's links. It changes only what is shown and copied, with no text-model call.
 
@@ -107,16 +107,16 @@ Because placeholders are filled when shown or copied, changing a channel's link 
 
 ## Write it again, or turn it on later
 
-To write a description again, press **Write again** beside **Description** in the project's YouTube section, then confirm. Only this step runs. A description written before pinned comments and other titles existed shows neither until it is written again this way.
+To write a description again, press **Write the description again · 1 AI call** in the project's YouTube part, then confirm. Only this step runs. A description written before pinned comments and other titles existed shows neither until it is written again this way.
 
 To turn it on, or to change its prompt first:
 
-1. Open the project and press **Edit project**.
-2. Open **Prompts**. Tick **YouTube description** if it was off, and pick a **Description prompt**.
+1. Open the project and press **Edit settings**.
+2. Open **Extras**. Tick **YouTube description** if it was off, and pick a **Description prompt**.
 3. To replace a description that is already written, press **Write the description again after review**. **Keep the current description** cancels it.
-4. Save, then continue the run or start the rebuild review.
+4. Press **Save changes**, then make the outdated description again (the title row's next action, or **Choose what to make again**).
 
-Writing it again is one paid text-model call. The description you have now is replaced, except for parts you edited, which stay yours with the new text offered beside them.
+Writing it again is one paid AI call. The description you have now is replaced, except for parts you edited, which stay yours with the new text offered beside them.
 
 ## Limits
 
@@ -127,11 +127,11 @@ Writing it again is one paid text-model call. The description you have now is re
 | Hashtags | YouTube ignores every hashtag if a description has more than 15 |
 | Chapters | At least 3, first at 0:00, each at least 10 seconds |
 
-Slopify does not upload the description to YouTube. Paste it in YouTube Studio yourself, or use Prepare upload and the optional Studio extension; see [Publishing-to-YouTube](Publishing-to-YouTube).
+Slopify does not upload the description to YouTube. Paste it in YouTube Studio yourself, or use Copy for YouTube Studio and the optional Studio extension; see [Publishing-to-YouTube](Publishing-to-YouTube).
 
 ## Related pages
 
-- [Play-Outputs](Play-Outputs)
+- [Create: Extras](Create-Extras)
 - [Prompts](Prompts)
 - [Publishing-to-YouTube](Publishing-to-YouTube)
 - [Studio-Extension](Studio-Extension)

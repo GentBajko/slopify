@@ -2,16 +2,16 @@
 
 Slopify keeps two kinds of files apart: your files (projects, backups, exports), in a normal folder you can open, and Slopify's own data (database, settings, keys, logs), in a hidden folder. This page says where each is, how to move your files, and how to free disk space.
 
-**Where to find it:** Settings → **Backup & storage** → **Your files**, **Export and import**, **Disk space** and **Sample projects**.
+**Where to find it:** Settings → **Backup & storage** → **Your files**, **Export and import** and **Disk space**.
 
 ## The two places
 
 | What | Where (new install) | Contains |
 | --- | --- | --- |
 | Your files | `<Documents>/Slopify/` | `Projects/`: one folder per project, with its video, images, narration, captions and documents. `Backups/`: scheduled backups, unless you choose another folder. `Exports/`: files Slopify saves for you; downloads go through the browser today, so it stays empty, and Slopify never cleans it. |
-| Slopify's data | `~/.slopify` (or `--data-dir` / `SLOPIFY_DATA_DIR`) | The database (`slopify.db`) with your library, settings and provider keys, `logs/`, `staging/` (uploads in progress), `models/` (caption models), and depending on use `fonts/`, `cache/`, `autostart/`, `updates/` (in-app updates) and `bin/` (a downloaded ffmpeg). |
+| Slopify's data | `~/.slopify` (or `--data-dir` / `SLOPIFY_DATA_DIR`) | The database (`slopify.db`) with your prompts, templates, settings and service keys, `logs/`, `staging/` (uploads in progress), `models/` (caption models), and depending on use `fonts/`, `cache/`, `autostart/`, `updates/` (in-app updates) and `bin/` (a downloaded ffmpeg). |
 
-The data folder is readable by your user only, because it holds your provider keys. Never share it; share an export instead (keys are never in one).
+The data folder is readable by your user only, because it holds your service keys. Never share it; share an export instead (keys are never in one).
 
 The terminal prints both places when Slopify starts (`Slopify data directory:` and `Projects:`).
 
@@ -33,7 +33,7 @@ Each project has one folder in `Projects/`, named after its title (`Lolth | D&D 
 | --- | --- | --- |
 | `Upload/` | The current version, ready to publish: `video.mp4`, `thumbnail.png` (and `thumbnail 2.png`…), `subtitles.srt` and `.vtt`, `description.txt`, `tags.txt`, `titles.txt`, `pinned comment.txt`, `document.pdf`, `article.md`, `Images/` (every image the video shows, in order; an older version's images in `Images/Earlier/<date>/`), and `Shorts/1 - <title>.mp4`… with each short's images beside it in `Shorts/1 - <title>/`. No cleanup ever deletes these images. | No: it is what you upload. |
 | `Working/` | What the current version was made from: `Narration/` (each chunk, the joined and levelled narration), `Research/`, `Article/`, `Subtitles/`, `Render/`. | Only to free space on a finished video: changing that project later makes these again, which takes time and provider credits. **Keep outputs only** does it for you. |
-| `History/<date>/` | Files of older versions, by the day they were made (an earlier render, the narration before a voice change). | Yes. Delete a day's folder, or all of `History/`, to free its space. Going back to that version in History makes its files again. |
+| `History/<date>/` | Files of older versions, by the day they were made (an earlier render, the narration before a voice change). | Yes. Delete a day's folder, or all of `History/`, to free its space. Going back to that version under **Versions** makes its files again. |
 
 A hidden `.slopify-project` file tells Slopify which project the folder holds and where its files went. Leave it there.
 
@@ -116,11 +116,11 @@ Use `--projects-dir <folder>` for another folder. The installer waits for runnin
 
 | Button | What it does |
 | --- | --- |
-| **Export everything** | Downloads one `.tar` file with every project and its files and history, your library, templates, schedules, Play drafts, fonts, settings and usage. Never provider keys. Keep Slopify running until your browser's download finishes. |
+| **Export everything** | Downloads one `.tar` file with every project and its files and versions, your prompts, templates, schedules, Create drafts, fonts, settings and usage. Never service keys. Keep Slopify running until your browser's download finishes. |
 | **Import a backup** | Adds a `.tar` (or `.zip`) backup to this install and replaces nothing. Projects already here are skipped, taken names arrive as "(imported)" and schedules arrive paused. Running projects must finish or pause first. Afterwards a summary lists what was added and skipped. |
 | **Clear leftover files** | See below. |
 
-After an import, enter your provider keys again in Settings → **Providers**. For daily automatic copies, see [Backups](Backups).
+After an import, enter your service keys again in Settings → **Keys & services**. For daily automatic copies, see [Backups](Backups).
 
 ## Free disk space
 
@@ -132,15 +132,15 @@ Deleted projects free their space when the trash removes them after 30 days, or 
 
 ### Keep outputs only
 
-On a finished project, **Keep outputs only** deletes the working files it was made from (narration parts, subtitle timing, render settings) and keeps the video, shorts, the images they show, thumbnail, article, description, document and your uploads.
+On a finished project, **Keep outputs only** deletes the working files it was made from (narration parts, caption timing, video settings) and keeps the video, shorts, the images they show, thumbnail, article, description, document and your uploads.
 
 1. Find the project in the **Disk space** list. The button says how much it frees.
 2. Press **Keep outputs only**.
 3. Read the confirmation and press **Keep outputs only** again.
 
-If you change that project later (edit an image, a caption style or the narration, or re-render), Slopify has to make those files again first, which takes time and provider credits. The button is disabled until the project has finished, or when nothing is left to remove.
+If you change that project later (edit an image, a caption style or the narration, or make the video again), Slopify has to make those files again first, which takes time and service credits. The button is disabled until the project has finished, or when nothing is left to remove.
 
-A finished project's own page offers the same in its right rail: **Free space** with **Free 1.2 GB: keep the outputs, drop the working files** (see [Project Page](Project-Page#free-space)).
+A finished project's own page offers the same under **Edit settings** → **Versions**: **Free space** with **Free 1.2 GB** (see [Project Page](Project-Page#free-space)).
 
 ### Delete old versions and Clean up everything
 
@@ -160,7 +160,7 @@ Cleanup only looks inside `Projects`. It leaves `Backups` alone (only Slopify's 
 
 ## Sample projects
 
-**Sample projects** lists the three bundled samples and whether each is in your projects, with **Open**. **Restore samples** adds back any that were deleted and replaces the others with the originals. Your own copies of them are not touched. See [First Launch and Welcome](First-Launch-and-Welcome#explore-the-samples).
+At the foot of **Disk space**, **Restore samples** puts the three bundled samples back: it adds back any that were deleted (the line beside it names them) and replaces the others with the originals. Your own copies of them are not touched. See [First Launch and Welcome](First-Launch-and-Welcome#explore-the-samples).
 
 ## Tips
 

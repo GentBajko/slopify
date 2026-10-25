@@ -17,7 +17,7 @@ From top to bottom:
 | Logo | The Slopify play logo. Click it to go Home. |
 | **Create** | The lime key. Opens Create to make a new video (`C` from anywhere). |
 | Destinations | **Home**, **Projects**, **Prompts** (also lit on Intros and outros), **Templates** (also lit on Designs), **Calendar** (also lit on Schedules), **Channels** (only once you have two or more channels; also lit on A/B results) and **Settings** (also lit on Usage, PDF themes and Pronunciation). |
-| **N running** | Shown while runs are going: a lamp and the count over the word running. It links to Running now on Home. |
+| **N running** | Shown while runs are going: a lamp and the count over the word running. It links to **Running** on Home. |
 | **Update ready** | Shown only while a new version of Slopify is ready, waiting or installing. It opens a menu that says what installing does, with **Install update**. See [Updating and Patch Notes](Updating-and-Patch-Notes). |
 | **Search** | Opens the command palette (`Ctrl+K`). |
 | **Assistant** | Opens the assistant beside the page. See [Assistant](Assistant). |
@@ -30,7 +30,7 @@ Below 768 pixels wide the rail is hidden. A slim bar at the top holds the logo, 
 
 ### Rows open with one press
 
-In every list, a press anywhere on a row or tile opens or picks it, not only on its name: projects, Home items, calendar entries, channels, schedules, Library lists, samples, saved drafts and media tiles. The buttons on a row still do their own thing.
+In every list, a press anywhere on a row or tile opens or picks it, not only on its name: projects, Home items, calendar entries, channels, schedules, the lists of prompts and templates, samples, saved drafts and media tiles. The buttons on a row still do their own thing.
 
 ### The command palette
 
@@ -70,17 +70,17 @@ The things that don't move on until you act:
 
 | Item | Status | Button |
 | --- | --- | --- |
-| A run held at a review before a step | **Waiting for your review · before the narration** (or the images, or the video) | **Approve the article and record**, **Approve and draw the images** or **Approve and render**. Approving here lets the run continue. Open the project to look first. |
+| A run held at a pause before a step | **Waiting for your review · before the narration** (or the images, or the video) | **Approve and make the narration**, **Approve and make the images** or **Approve and make the video**. Approving here lets the run continue. Open the project to look first. |
 | A run whose next step is held another way | **Waiting for your review** | **Open to continue** |
 | A run a restart stopped before it finished | **Stopped** | **Continue the run**, or **Keep as is** to leave the rest unmade |
 | A run you (or an agent) paused | **Paused** | **Open to continue** |
 | Topics a schedule suggested | **N new topics** | **Review topics**, on the calendar: queue the ones you want and reject the rest. |
-| A failed run | **Failed · <step>**, with a short reason | The fix to try: a button to Settings → Providers or Backup & storage when that is the fix, otherwise **Open to retry**. |
+| A failed run | **Failed · <step>**, with a short reason | The fix to try: a button to Settings → Keys & services or Backup & storage when that is the fix, otherwise **Open to retry**. |
 | A run that failed because a CLI is signed out | **Failed · <step>** | **Copy sign-in command** copies the command (`claude auth login`, `codex login` or `agy`). Run it in a terminal on the computer running Slopify, then **Open to retry** and press **Check again** on the project. |
 
 A held run also offers **Keep as is**, which takes it off Needs you and leaves the rest unmade (with **Undo**); editing the project brings it back. A run waiting for an [agent's review](Agents-MCP#the-external-agent-reviewer) is not here: it goes on by itself, so it shows under Running. A step that failed while the run waits on something else shows here as a failed item. Up to 4 failed runs show; **See all N failed** opens Projects filtered to them.
 
-Only one button in the column is lime: the first decision's when there is one, otherwise **Watch** on the newest video. With nothing finished, waiting or running, Home says so, with **Make a video**. See [Reviews and Checkpoints](Reviews-and-Checkpoints), [Schedules](Schedules) and [Recovery and Retries](Recovery-and-Retries).
+Only one button in the column is lime: the first decision's when there is one, otherwise **Watch** on the newest video. With nothing finished, waiting or running, Home says so, with **Make a video**. See [Pauses and Checks](Reviews-and-Checkpoints), [Schedules](Schedules) and [Recovery and Retries](Recovery-and-Retries).
 
 ### Running
 
@@ -104,26 +104,26 @@ Shown once you have a schedule: the schedule runs due in the next 7 days, with t
 
 ### Autopilot
 
-At the top of **Coming up**, one line says how far ahead you are: "9 days of content ready · the queue runs dry on Oct 30". Each run a schedule will make in the next 60 days is a slot; a run made ahead (Prepare) fills its own slot, and each finished video not uploaded yet fills the next empty one. The days count to the first slot nothing fills ("60+" when all of them are filled). **Runs dry** is the first run that will have no topic: the run after a queue's last topic when the schedule doesn't find its own, the first run past the approved topics when new ones wait for approval, and never for a schedule that finds topics by itself unless finding them fails. Paused schedules count for neither, and neither do runs a schedule skips because its template has no version marked ready.
+At the top of **Coming up**, one line says how far ahead you are: "9 days of content ready · the queue runs dry on Oct 30". Each run a schedule will make in the next 60 days needs a video; a run made ahead (**Make ahead**) is its own, and each finished video not uploaded yet fills the next run without one. The days count to the first run nothing fills ("60+" when all of them are filled). **Runs dry** is the first run that will have no topic: the run after a queue's last topic when the schedule doesn't find its own, the first run past the approved topics when new ones wait for approval, and never for a schedule that finds topics by itself unless finding them fails. Paused schedules count for neither, and neither do runs a schedule skips because its template has no version approved for schedules.
 
 Below it, warnings name what may stop the schedules before it does, each with the button that opens the fix and **Hide** (hidden for 7 days, or until it changes):
 
 | Warning | Fix |
 | --- | --- |
-| A CLI a scheduled template uses is signed out | Settings → Providers |
+| A CLI a scheduled template uses is signed out | Settings → Keys & services |
 | A CLI plan is at 80% of its weekly or 5-hour limit | Settings → Usage |
-| The OpenRouter key has less than 20% of its spending limit left | Settings → Providers |
+| The OpenRouter key has less than 20% of its spending limit left | Settings → Keys & services |
 | Less than 5 GB, or less than 10%, of the disk is free | Settings → Backup & storage |
 | A schedule that doesn't find topics has 1 or 2 left | The schedule |
 | A schedule's topic generation keeps failing | The schedule |
 | A scheduled template or schedule uses a model that is retiring or gone | Templates, or the schedule |
-| A schedule skips its runs because its template has no version marked ready | Templates (Open studio, then Mark ready) |
+| A schedule skips its runs because its template has no version approved for schedules | Templates (**Edit template** → **More** → **Approve for schedules**) |
 
 Sign-ins, the OpenRouter key and the disk are checked hourly, the first time 30 seconds after Slopify starts; Home shows the last check and never waits for one. Only the CLIs a scheduled template uses are asked, and asking never starts a run. **Last 7 days**, folded, lists what was made, each failed step with a link to its project, and what it cost. Settings → Notifications → **Weekly report** sends the same to your phone each Monday (see [Notifications](Notifications#weekly-report)).
 
 ### This week
 
-Since Monday, for the channel shown, in one line: the videos made and what their provider calls cost, for example `3 videos · $9.40 spent · ~$31.00 via API`. Calls billed to a command-line plan cost nothing per call; **~$X via API** says what they would have cost with API keys. Calls with no known price are counted separately (**N calls without a price**). Under it, a bar per command-line plan shows how much of its weekly limit is used, from the tool's last reading; it turns amber at 80%. Nothing shows before anything was made or spent this week. See [Costs and Run Cost](Costs-and-Run-Cost).
+Since Monday, for the channel shown, in one line: the videos made and what their calls to the services cost, for example `3 videos · $9.40 spent · ~$31.00 via API`. Calls billed to a command-line plan cost nothing per call; **~$X via API** says what they would have cost with API keys. Calls with no known price are counted separately (**N calls without a price**). Under it, a bar per command-line plan shows how much of its weekly limit is used, from the tool's last reading; it turns amber at 80%. Nothing shows before anything was made or spent this week. See [Costs and Run Cost](Costs-and-Run-Cost).
 
 ### Start from a template
 
@@ -168,7 +168,7 @@ If nothing matches, the list says **No project matches. Clear the search or pick
 | **Running** | A step is being made. A run waiting for a CLI plan says **Waiting for Codex limits (resets at 14:00)** instead. |
 | **Paused** | Paused by you or an agent; nothing runs until it is continued. |
 | **Queued** | Waiting for its turn in the video queue. |
-| **Waiting for your review** | Held at a review or checkpoint. |
+| **Waiting for your review** | Held at a pause for your approval. |
 | **Waiting for the agent** | An External agent is reviewing what it made; it goes on by itself. |
 | **Waiting for its day** | Made ahead by its schedule; only the video is left, for its day. |
 | **Stopped** | Stopped before it finished, for example by a restart. Open it and press **Continue the run**. |
@@ -226,10 +226,10 @@ Projects shows **No projects yet**, "Every video you make is kept here with its 
 ## Related pages
 
 - [Project Page](Project-Page)
-- [Play Overview](Play-Overview)
+- [Create Overview](Create-Overview)
 - [Channels](Channels)
 - [Calendar](Calendar)
 - [Schedules](Schedules)
-- [Reviews and Checkpoints](Reviews-and-Checkpoints)
+- [Pauses and Checks](Reviews-and-Checkpoints)
 - [Publishing to YouTube](Publishing-to-YouTube)
 - [Keyboard Shortcuts and Command Palette](Keyboard-Shortcuts-and-Command-Palette)

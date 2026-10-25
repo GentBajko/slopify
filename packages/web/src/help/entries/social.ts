@@ -59,7 +59,7 @@ export const socialHelp = {
   "social.post-text": {
     title: "Post text",
     body: "The words as they go into the site's form, hashtags and link included, counted the way the site counts them (X weighs links and emoji, Bluesky counts graphemes). Your changes save when you leave the box and stay this project's own; Reset to the written text drops them.",
-    tutorial: posting("the-post-in-prepare-upload"),
+    tutorial: posting("the-post-in-copy-for-youtube-studio"),
   },
   "social.release": {
     title: "When it goes out",

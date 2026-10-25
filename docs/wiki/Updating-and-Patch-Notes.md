@@ -92,7 +92,7 @@ After an update to a new major version (for example 2.x to 3.0), the first launc
 - The last step has **Read the full patch notes**.
 - Closing the tour also counts as having seen that version's patch notes.
 
-The 3.0 tour covers Home, Play's one path, Automatic reviews, Channels and cast, Episodes that remember (episode memory and your existing videos), The calendar, What a run cost, YouTube Studio prep, Multiple voices, Long videos stay watchable (more images per hour and ambient sound), Other languages and A trash bin. A fresh install never sees it.
+The 3.0 tour covers Home, Create's one path, An AI checks the results, Channels and cast, A channel that remembers (its Memory and Titles to avoid tabs), The calendar, What a run cost, Copy for YouTube Studio, Multiple voices, Long videos stay watchable (more images per hour and ambient sound), Other languages and A trash bin. A fresh install never sees it.
 
 ## Read the patch notes
 

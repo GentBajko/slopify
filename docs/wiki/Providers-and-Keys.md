@@ -1,38 +1,43 @@
-# Providers and Keys
+# Keys and Services
 
-Slopify does no AI work itself: it calls providers you set up, on your own accounts. This page lists every provider, where to get each key, how to save and test it, how **Check all** checks everything at once, and how to add voices in **Settings → Voices**.
+Slopify does no AI work itself: it calls services you set up, on your own accounts. This page lists every service, where to get each key, how to save and test it, how **Check every service** checks everything at once, and how to add voices in **Settings → Voices**.
 
-**Where to find it:** Settings → Providers (keys, command-line tools and the system voice), Settings → Voices (voice IDs).
+**Where to find it:** Settings → **Keys & services** (keys, sign-in tools and the system voice), Settings → **Voices** (the voices narration can use). Settings opens on Keys & services.
 
-## How providers are organised
+## How the page is laid out
 
-Settings → Providers shows three lists, one per kind of work. Each row says whether the provider is ready. Pick a row to open its setup beside the list: the steps, the key field or the command, and the actions.
+**Keys & services** opens with three lines saying what your videos have now, each with its state in words:
 
-| List | What it makes | Providers |
+| Line | Ready when | Its button |
 |---|---|---|
-| **Text** | Research, script, article, titles, descriptions, reviews | OpenRouter (API key), Claude Code CLI, Codex CLI, Antigravity CLI (command line) |
-| **Speech** | Narration | ElevenLabs, OpenAI, Cartesia, Inworld, Google Gemini (API key), System voice (built in, no key) |
-| **Images** | Images, thumbnails, animated clips | fal.ai, Replicate, OpenAI, Google (API key), Codex CLI (command line) |
+| **Article** | A writing service is ready. The line names the one Create picks, for example "Claude Code CLI (Create picks it)". | **Show writing services**, or **Set up a writing service** |
+| **Narration** | A voice service is ready (a key saved, or the system voice found). Otherwise "No voice service yet, so videos have no narration." | **Show voice services**, or **Set up a voice service** |
+| **Images** | An image service is ready. Otherwise "No image service yet, so videos have no pictures." | **Show image services**, or **Set up an image service** |
 
-Row states:
+Under them, **Check every service** (see below), then three lists, one per kind of work. Each row names the service, how it connects (**API key**, **Sign-in** or **Built in**) and its state. Pick a row to open its setup beside the list: what it does and how it bills, the key box or the tool's path, and the steps to get a key.
+
+| List | What it makes | Services |
+|---|---|---|
+| **Writing services** | Research, the article, titles, descriptions, checks | OpenRouter (API key), Claude Code CLI, Codex CLI, Antigravity CLI (sign-in) |
+| **Voice services** | Narration | ElevenLabs, OpenAI, Cartesia, Inworld, Google Gemini (API key), System voice (built in, no key) |
+| **Image services** | Images, thumbnails, animated clips | fal.ai, Replicate, OpenAI, Google (API key), Codex CLI (sign-in) |
+
+Row states, the same here, on Voices and in the check:
 
 | State | Meaning |
 |---|---|
-| **Key saved** | A key is stored for this provider. |
-| **No key** | No key yet; the provider is not selectable on Play. |
-| **Ready** | A command-line tool was found and is usable. |
-| **Needs attention** | The tool was found but something is wrong, for example Codex CLI is older than 0.149.1. |
-| **Not found** | The tool is not on this computer (or not at the saved path). For the System voice: no speech program was found. |
+| **Ready** | A key is saved, or the tool was found and is signed in. |
+| **No key** | No key yet; Create lists the service with "No key" and can't use it. |
+| **Not found** | The tool is not on this computer (or not at the saved path). |
+| **Signed out** | The tool was found but is not signed in. |
+| **Needs fixing** | The tool was found but something else is wrong, for example Codex CLI older than 0.149.1. |
+| **Not installed** | The System voice found no speech program on this computer. |
 
-Each row also says what kind it is: **Command line**, **Built in, no key** or **API key**.
-
-The command-line tools (Claude Code, Codex, Gemini) need no key: they use the sign-in you already have. They are covered on [AI CLIs](AI-CLIs).
-
-On a fresh install with no key saved, the page says **Paste a key to make its provider selectable on Play.** On the first launch Slopify also looks for the command-line tools. If it finds one it says so, names what it found and picks it on Play; choose **Got it** to hide that message. Narration needs no key either: without a voice key, the [System voice](#the-system-voice) reads it with your computer's own speech.
+The sign-in tools (Claude Code, Codex, Antigravity) need no key: they use the sign-in you already have. They are covered on [AI CLIs](AI-CLIs). Narration needs no key either: without a voice key, the [System voice](#the-system-voice) reads it with your computer's own speech.
 
 ## Where your keys are kept
 
-- A key is stored on this computer only and sent only to its own provider.
+- A key is stored on this computer only and sent only to its own service.
 - It is never put in a backup or an export. After you import a backup on another computer, enter your keys again.
 - A saved key is shown as a fixed row of dots, never any part of it.
 - Slopify reads the key when each call starts, so a key you change mid-run is used from the next call.
@@ -40,55 +45,53 @@ On a fresh install with no key saved, the page says **Paste a key to make its pr
 
 ## Add a key
 
-1. Open **Settings → Providers**.
-2. Pick the provider in its list (for example **ElevenLabs** under **Speech**).
-3. Follow the numbered steps shown beside it. They link to the provider's sign-up page, the page that makes the key and, where there is one, its billing page. Once a key is saved, the steps fold under **Where to get a key**.
-4. Paste the key in **<Provider> API key**.
-5. Optional: choose **Test** to check the pasted key before you keep it. See [Test a key](#test-a-key).
-6. Choose **Save**. A tick shows beside Save for a moment.
+1. Open **Settings → Keys & services**.
+2. Pick the service in its list (for example **ElevenLabs** under **Voice services**), or press the **Set up …** button of the line that needs it.
+3. Follow the steps under **Where to get a key**. They link to the service's sign-up page, the page that makes the key and, where there is one, its billing page.
+4. Paste the key in **<Service> API key**.
+5. Press **Save**.
+6. Optional: press **Test the key (free)** to check it. See [Test a key](#test-a-key).
 
-To replace a key, paste the new one and choose **Save**. To remove it, choose **Remove**, then **Remove key**. Projects that used that provider cannot retry until a key is saved again.
+To replace a key, paste the new one and press **Save**. To remove it, press **Remove the key** and confirm. Projects that used that service cannot try again until a key is saved again.
 
-The info button beside each provider's name says what it does and how it bills.
+When you came from Create or the welcome screen to add a key, **Done · back to …** takes you back once it is saved. With a voice key saved but no voice for it yet, the line under the key offers **Add an ElevenLabs voice** (or the service's name).
 
 ## Test a key
 
-**Test** asks the provider whether a key works, with the cheapest harmless call it allows (such as listing its models). Nothing is generated or billed. The answer waits up to 15 seconds.
+**Test the key (free)** appears once a key is pasted or saved. It asks the service whether the key works, with the cheapest harmless call it allows (such as listing its models). Nothing is made or billed. The answer waits up to 15 seconds.
 
-- **Before saving:** with a key pasted in the field, Test checks that pasted key. It is sent only to its own provider, never stored and never logged. When it passes, the answer adds "It is not saved yet: choose Save to keep it."
-- **After saving:** with the field empty, Test checks the saved key.
-
-With neither, Test is greyed out: "Paste a key first."
+- **Before saving:** with a key pasted in the box, it checks that pasted key. It is sent only to its own service, never stored and never logged. When it passes, the answer says it is not saved yet.
+- **After saving:** with the box empty, it checks the saved key.
 
 | Answer | What it means | What to do |
 |---|---|---|
-| Accepted | The key works. Except for OpenRouter, credit is only checked when Slopify first generates with it. | Nothing. |
-| Did not accept (HTTP 401) | Mistyped, revoked or for another account. | Make a new key, Save, Test. |
-| No credit (HTTP 402) | Key accepted, but the account has no credit or payment method. | Add credit on the provider's billing page. |
-| Refused (HTTP 403) | The key is restricted, or the account needs verifying or billing set up. | Check the permissions listed for that provider below. |
-| Too many requests (HTTP 429) | The key is usually valid. | Wait a minute and Test again. |
-| Problem on its side (HTTP 5xx) | The provider is having trouble. | Wait a few minutes and Test again. |
+| Accepted | The key works. Except for OpenRouter, credit is only checked when Slopify first makes something with it. | Nothing. |
+| Did not accept (HTTP 401) | Mistyped, revoked or for another account. | Make a new key, save it, test it. |
+| No credit (HTTP 402) | Key accepted, but the account has no credit or payment method. | Add credit on the service's billing page. |
+| Refused (HTTP 403) | The key is restricted, or the account needs verifying or billing set up. | Check the permissions listed for that service below. |
+| Too many requests (HTTP 429) | The key is usually valid. | Wait a minute and test again. |
+| Problem on its side (HTTP 5xx) | The service is having trouble. | Wait a few minutes and test again. |
 | Did not answer / could not reach | No answer within 15 seconds, or no connection. | Check your internet, firewall or proxy. |
-| Unexpected answer | Anything else. | Check the key; if it keeps happening, use **Download diagnostics** in Settings and report it. |
+| Unexpected answer | Anything else. | Check the key; if it keeps happening, use **Download diagnostics** in Settings → About and report it. |
 
-## Text providers
+## Writing services
 
 ### OpenRouter
 
-Writes the text with hundreds of models from many companies through one key. Charged per token from credit you buy on OpenRouter; prices follow the model catalogue (see [Models](Models)).
+Writes the text with hundreds of models from many companies through one key. Charged per token from credit you buy on OpenRouter; prices follow the model list (see [Models](Models)).
 
 1. Sign up at openrouter.ai/sign-up.
 2. Open **Credits** (openrouter.ai/settings/credits) and buy credit. Paid models are charged from it; a negative balance stops even free models.
 3. Open **Keys** (openrouter.ai/settings/keys), choose **Create API key**, and copy it.
-4. Paste it in Slopify, **Save**, then **Test**.
+4. Paste it in Slopify, **Save**, then **Test the key (free)**.
 
-Keys have no scopes. If you set a credit limit on the key, keep it above what a run costs. OpenRouter is the only provider whose Test also shows missing credit.
+Keys have no scopes. If you set a credit limit on the key, keep it above what a run costs. OpenRouter is the only service whose test also shows missing credit.
 
 ### Claude Code CLI, Codex CLI, Antigravity CLI
 
-No key. See [AI CLIs](AI-CLIs).
+No key. Pick the tool's row to see its command, whether it was found and signed in, and **Change path** to point Slopify at it (**Executable path**, then **Save path**). See [AI CLIs](AI-CLIs).
 
-## Speech providers
+## Voice services
 
 ### ElevenLabs
 
@@ -96,9 +99,9 @@ Narrates with ElevenLabs voices, including voices you added to your ElevenLabs a
 
 1. Sign up at elevenlabs.io/app/sign-up.
 2. Open **Developers → API keys** (elevenlabs.io/app/developers/api-keys), choose **Create key**, and copy it.
-3. Paste it in Slopify, **Save**, then **Test**.
+3. Paste it in Slopify, **Save**, then **Test the key (free)**.
 
-A restricted key needs **Text to Speech** access and **Models** read access (models_read) for Test; Voices read helps when picking voices. Remove any credit quota or IP allowlist that would block this computer.
+A restricted key needs **Text to Speech** access and **Models** read access (models_read) for the test; Voices read helps when picking voices. Remove any credit quota or IP allowlist that would block this computer.
 
 ### OpenAI (speech)
 
@@ -107,11 +110,11 @@ Narrates with OpenAI's text-to-speech voices. Billed per character or per audio 
 1. Sign up or sign in at platform.openai.com/signup.
 2. Open **Billing** and buy prepaid credit. New accounts need at least $5 before any call works.
 3. Open **API keys** (platform.openai.com/api-keys), choose **Create new secret key**, and copy it. It is shown once.
-4. Paste it in Slopify, **Save**, then **Test**.
+4. Paste it in Slopify, **Save**, then **Test the key (free)**.
 
-A key with All permissions works. A restricted key needs **Models: Read** (for Test) and **Model capabilities: Request** (for speech and images).
+A key with All permissions works. A restricted key needs **Models: Read** (for the test) and **Model capabilities: Request** (for speech and images).
 
-OpenAI appears twice in Settings, once under **Speech** and once under **Images**. Each has its own key field, so you can key one without the other. You can paste the same OpenAI key into both.
+OpenAI appears twice in Keys & services, once under **Voice services** and once under **Image services**. Each keeps its own key, so you can key one without the other. You can paste the same OpenAI key into both.
 
 ### Cartesia
 
@@ -119,7 +122,7 @@ Narrates with Cartesia voices, billed in characters from your Cartesia plan. The
 
 1. Sign up at play.cartesia.ai/sign-up.
 2. Open **API Keys** (play.cartesia.ai/keys), create a key, and copy it. It starts with `sk_car_`.
-3. Paste it in Slopify, **Save**, then **Test**.
+3. Paste it in Slopify, **Save**, then **Test the key (free)**.
 
 Keys have no scopes.
 
@@ -130,22 +133,22 @@ Narrates with Inworld voices, billed per character from your Inworld account.
 1. Sign up at platform.inworld.ai/signup.
 2. Open **API Keys** (platform.inworld.ai/api-keys) and choose **Generate new key**. It must be a Standard key; Realtime-only keys do not work.
 3. Copy the **Base64 credentials** value exactly as shown, without encoding it again.
-4. Paste it in Slopify, **Save**, then **Test**.
+4. Paste it in Slopify, **Save**, then **Test the key (free)**.
 
-On Play, choose the TTS-2 or TTS-2 Flash model and an Inworld voice (for example `Dennis`, or a voice from your workspace).
+On Create, choose the TTS-2 or TTS-2 Flash model and an Inworld voice (for example `Dennis`, or a voice from your workspace).
 
 How long text is handled:
 
 - Short text streams straight away.
 - With TTS-2, text over 4,000 characters goes as one async job of up to 100,000 characters. Inworld caps On-Demand accounts at 10,000. The audio is ready once the job finishes.
-- TTS-2 Flash sends parts of at most 4,000 characters. For long articles, pick paragraph chunking.
-- Pausing stops Slopify's own requests, but Inworld may still finish and bill a job it already accepted. Resuming starts a new request for any unfinished narration.
+- TTS-2 Flash sends parts of at most 4,000 characters. For long articles, split the narration by paragraph.
+- Pausing stops Slopify's own requests, but Inworld may still finish and bill a job it already accepted. Continuing starts a new request for any unfinished narration.
 
-Some features need Inworld: Narration Preparation and pronunciations need an Inworld TTS-2 model. See [Play-Narration](Play-Narration) and [Narration-Aliases-and-Glossary](Narration-Aliases-and-Glossary).
+Some features need Inworld: Narration Preparation and pronunciations need an Inworld TTS-2 model. See [Create: Narration](Create-Narration) and [Narration Aliases and Glossary](Narration-Aliases-and-Glossary).
 
 ### Google Gemini (speech)
 
-Narrates with Gemini's 30 prebuilt voices, billed per text and audio token on your Gemini API key. It uses the key saved for [Google images](#google): with one saved there, nothing is needed here. You can also save a key of its own under **Google Gemini** in the **Speech** list.
+Narrates with Gemini's 30 prebuilt voices, billed per text and audio token on your Gemini API key. It uses the key saved for [Google images](#google): with one saved there, nothing is needed here. You can also save a key of its own under **Google Gemini** in the **Voice services** list.
 
 Pick a Gemini voice in Settings → **Voices** (see [Add a voice](#add-a-voice)). With two speakers on Gemini voices (a podcast or interview, see [Multiple Voices](Multiple-Voices)), their consecutive turns go in one two-speaker request; a third voice starts a new request.
 
@@ -162,18 +165,18 @@ Slopify looks for a speech program each time and uses the best one it finds:
 | Linux | Piper, SVOX Pico, eSpeak NG or eSpeak, best first. Install one, for example `sudo apt install espeak-ng`, `sudo pacman -S espeak-ng` or `sudo dnf install espeak-ng`. Piper needs its voice models listed in `SLOPIFY_PIPER_VOICES`, and counts only when `piper --help` shows Piper's own options (the mouse settings app also called piper is left out). |
 | Docker | The image includes eSpeak NG. If it is missing, update the image. |
 
-Pick **System voice** in the **Speech** list to see what was found: "Found *engine*. Narration with it is free; a keyed voice (ElevenLabs, OpenAI) sounds better.", each program with its number of voices, and **Add a system voice**, which opens Settings → **Voices**. When nothing is found, it says what to install on your system. On Play it is offered as a TTS provider like the others, greyed out as **Speech Program Missing** when nothing is found.
+Pick **System voice** in the **Voice services** list to see what was found: "Found *program*. Narration with it is free; a voice service with a key sounds better.", each program with its number of voices, and **Add a system voice**, which opens Settings → **Voices**. When nothing is found, the row says **Not installed** and the panel says what to install on your system. On Create it is offered as a voice service like the others, marked **Not found** when nothing is installed.
 
-## Image providers
+## Image services
 
 ### fal.ai
 
-Draws images and thumbnails with the models fal.ai hosts, charged per image from prepaid credit. fal.ai locks the account when the balance runs out, so a run stops at the images step until you add credit.
+Draws images and thumbnails with the models fal.ai hosts, charged per image from prepaid credit. fal.ai locks the account when the balance runs out, so a run stops at the images until you add credit.
 
 1. Sign up at fal.ai/login.
 2. Open **Billing** (fal.ai/dashboard/billing) and buy credit.
 3. Open **Keys** (fal.ai/dashboard/keys), choose **Add key** with the **API** scope, and copy it.
-4. Paste it in Slopify, **Save**, then **Test**.
+4. Paste it in Slopify, **Save**, then **Test the key (free)**.
 
 The API scope is enough; Slopify does not need an ADMIN key.
 
@@ -184,7 +187,7 @@ Draws images and thumbnails with the models Replicate hosts, charged per image o
 1. Sign in at replicate.com/signin.
 2. Open **Billing** (replicate.com/account/billing) and buy credit. Replicate needs credit before it runs paid models.
 3. Open **API tokens** (replicate.com/account/api-tokens), create a token, and copy it. It starts with `r8_`.
-4. Paste it in Slopify, **Save**, then **Test**.
+4. Paste it in Slopify, **Save**, then **Test the key (free)**.
 
 Tokens have no scopes.
 
@@ -199,7 +202,7 @@ Draws images and thumbnails with Google's Gemini image models, charged per image
 1. Sign in to Google AI Studio (aistudio.google.com) with your Google account.
 2. Open **Projects** and choose **Set up billing** next to your project. Gemini image models are not on the free tier.
 3. Open **API keys** (aistudio.google.com/apikey), choose **Create API key**, and copy it.
-4. Paste it in Slopify, **Save**, then **Test**.
+4. Paste it in Slopify, **Save**, then **Test the key (free)**.
 
 Use a key made in AI Studio. An older Google Cloud key must be set to **Restrict to Gemini API only**, or Google rejects it.
 
@@ -211,72 +214,73 @@ Draws images with your ChatGPT sign-in instead of a key. See [AI CLIs](AI-CLIs#c
 
 ## How many calls run at once
 
-| Provider | Calls at once |
+| Service | Calls at once |
 |---|---|
 | OpenRouter, ElevenLabs, OpenAI (speech and images), Cartesia, fal.ai, Replicate, Google | 3 |
 | Inworld | 5 |
-| Claude Code, Codex, Gemini (text) | 3 |
+| Claude Code, Codex, Antigravity (writing) | 3 |
 | Codex CLI (images) | 4 |
 
-The keyed providers' numbers come from the model catalogue.
+The keyed services' numbers come from the model list.
 
-## Check all providers
+## Check every service
 
-**Check all** runs every check at once. Run it after changing a key, or when a run stops at a provider.
+**Check every service** runs every check at once. Run it after changing a key, or when a run stops at a service.
 
-1. Open **Settings → Providers**.
-2. Choose **Check all** at the top of the page (or press `Ctrl+K` and run **Check all providers**).
-3. Read the **Health check** section under the lists.
+1. Open **Settings → Keys & services**.
+2. Press **Check every service** (or press `Ctrl+K` and run **Check every service**). The line beside it says when it last checked.
+3. Read the result, one row per service, under the button.
 
-For each provider it checks:
+For each service it checks:
 
-- **Installed** and **Signed in** for a command-line tool. For Antigravity CLI, Slopify runs `agy models`: a model list means signed in, "Please sign in" means signed out (run `agy` in a terminal), and anything else shows as unknown.
+- **Installed** and **Signed in** for a sign-in tool. For Antigravity CLI, Slopify runs `agy models`: a model list means signed in, "Please sign in" means signed out (run `agy` in a terminal), and anything else shows as unknown.
 - **Speech program found** for the System voice, with the program it speaks with.
-- **Key saved** and **Key valid** for a keyed provider, using the same call as **Test**. Nothing is generated or billed.
-- **Model reachable** for a keyed provider: Slopify asks the provider, with the saved key, about each model you chose (its model page, or the model list for OpenRouter and ElevenLabs), without generating anything. It reads, for example, "OpenRouter answered for … with this key." A provider with no such check says so.
-- **Chosen models**: that the models your templates, schedules, drafts and unfinished projects use are still offered. A retired one points you to **Switch** in Settings → Models (see [Models](Models#switch-away-from-a-retired-model)).
+- **Key saved** and **Key valid** for a keyed service, using the same call as **Test the key (free)**. Nothing is made or billed.
+- **Model reachable** for a keyed service: Slopify asks the service, with the saved key, about each model you chose (its model page, or the model list for OpenRouter and ElevenLabs), without making anything.
+- **Chosen models**: that the models your templates, schedules, drafts and unfinished projects use are still offered. A retired one points you to Settings → Models (see [Models](Models#switch-away-from-a-retired-model)).
 
-Each provider's row has **Check again**, which checks that provider alone; its result replaces the row until the next **Check all**. It is the quick way to confirm a fix, such as signing a CLI in again.
+Each service's row has **Check again**, which checks that service alone; its result replaces the row until the next full check. It is the quick way to confirm a fix, such as signing a tool in again.
 
 | Result | Meaning |
 |---|---|
 | **Ready** | Every check passed. |
-| **Check** | Something might stop a run, such as a rate limit or the provider being down during the check. |
+| **May need fixing** | Something might stop a run, such as a rate limit or the service being down during the check. |
 | **Needs fixing** | Something will stop a run. The line says how to fix it. |
 | **Not set up** | Neither set up nor used anywhere. These are listed together on one line. |
 
-The report stays while you move between Settings sections.
+The result stays while you move between Settings pages.
 
 ## Add a voice
 
-Narration needs a voice ID from your speech provider. Slopify does not check the ID when you add it; a wrong ID fails when a run's narration uses it.
+Narration needs a voice from your voice service. Slopify does not check a pasted voice ID when you add it; a wrong ID fails when a run's narration uses it.
 
-1. Save a key for the speech provider in **Settings → Providers** (the Provider list only shows speech providers).
-2. Find the voice ID in the provider's voice library and copy it.
-3. Open **Settings → Voices**.
-4. Under **Add a voice**, fill in the fields and choose **Add voice**.
+1. Save a key for the voice service in **Settings → Keys & services**. (You can add a voice before, but it can't narrate until the key is saved.)
+2. Open **Settings → Voices**.
+3. Under **Add a voice**, fill in the fields and press **Add voice**.
 
 | Field | What it does | Rules |
 |---|---|---|
-| **Voice name** | The name you pick the voice by on Play and in Edit project. Only you see it. | Required, up to 200 characters. Names can repeat. |
-| **Provider** | The text-to-speech service the ID belongs to. | Speech providers only. |
-| **Voice ID** | The provider's own ID for the voice. For Inworld, use an ID such as `Dennis`, or one from your workspace. For **System voice** it is a list of the voices found on this computer, grouped by speech program (**Pick a voice**); for **Google Gemini**, a list of Gemini's voices (**Pick a Gemini voice**). Picking one fills in the name too. | Required, up to 200 characters, unique per provider. |
-| **Languages** | The languages the voice speaks, as codes such as `es, de`. Play lists the voice only for projects in these languages. | 2 or 3 letter codes. Blank asks the provider when it can say; a voice with unknown languages shows as **Any (not known)** and is offered for every language. |
+| **Voice service** | The service the voice belongs to. Each says when it has no key or is not installed. | Voice services only. |
+| **Voice** | Pick from the service's own list (for example **Pick an OpenAI voice**), or **A voice of my own (paste its ID)** and paste the service's ID for it, from its voice library. For Inworld, an ID such as `Dennis`, or one from your workspace. For **System voice** it is a list of the voices found on this computer, grouped by speech program, with a filter and **Listen**. | Required, up to 200 characters, one per voice and service. |
+| **Name** | How you pick it on Create. Only you see it. | Required, up to 200 characters. Names can repeat. |
+| **Languages it speaks (optional)** | The languages the voice speaks, as codes such as `es, de`. Create lists the voice only for projects in these languages. | 2 or 3 letter codes. Empty means any: the service is asked when it can say, and a voice with unknown languages shows as **Any (not known)** and is offered for every language. |
 
 ## Manage your voices
 
-The **Voices** table lists **Name**, **Provider**, **Voice ID**, **Languages** and **Real person** for each voice.
+The **Voices** table lists each voice with its **Service** (and that service's state), what it **Speaks**, **Sounds like a real person**, and **Listen** and **Remove**. When a voice's service has no key, a line above the table says so with a button to add the key.
 
-- **Edit** in the Languages cell changes the codes; choose **Save** or **Cancel**.
-- **Real person**: turn it on for a voice cloned from, or made to sound like, a real person. Prepare upload then answers Yes to YouTube's AI use question for videos it narrates. An AI voice that imitates no one stays off. Default: off. See [Publishing-to-YouTube](Publishing-to-YouTube).
-- **Remove**, then **Remove voice**, deletes it from the list. Projects that used the voice keep the audio they made with it.
+- **Edit** in the Speaks cell changes the language codes; **Save** or **Cancel**.
+- **Sounds like a real person**: turn it on for a voice cloned from, or made to sound like, someone real. YouTube asks you to say so when you upload; Copy for YouTube Studio answers Yes for you. An AI voice that imitates no one stays off. Default: off. See [Publishing to YouTube](Publishing-to-YouTube).
+- **Listen** reads one sentence aloud: free with the system voice, one short paid request with a service that has a key.
+- **Remove**, then confirm, deletes it from the list. Projects that used the voice keep the audio they made with it.
+- **Pronunciation** under the table opens the narration aliases: how names and words are said. See [Narration Aliases and Glossary](Narration-Aliases-and-Glossary).
 
-For projects with more than one narrator, see [Multiple-Voices](Multiple-Voices). For voices in other languages, see [Other-Languages](Other-Languages).
+For projects with more than one narrator, see [Multiple Voices](Multiple-Voices). For voices in other languages, see [Other Languages](Other-Languages).
 
 ## Tips
 
-- The cheapest way to start: sign in to a command-line tool for text and images, and use the System voice (free) or Cartesia's free plan for narration.
-- A Test that passes does not prove the account has credit (except on OpenRouter). The first real generation does.
+- The cheapest way to start: sign in to a tool for writing and images, and use the System voice (free) or Cartesia's free plan for narration.
+- A test that passes does not prove the account has credit (except on OpenRouter). The first real call does.
 - If you share a machine, keep Slopify bound to `127.0.0.1`: anyone who reaches its port can use your keys.
 
 ## Related pages
@@ -285,6 +289,6 @@ For projects with more than one narrator, see [Multiple-Voices](Multiple-Voices)
 - [Models](Models)
 - [Costs and Run Cost](Costs-and-Run-Cost)
 - [Settings Reference](Settings-Reference)
-- [Play Narration](Play-Narration)
+- [Create: Narration](Create-Narration)
 - [Multiple Voices](Multiple-Voices)
 - [Troubleshooting](Troubleshooting)

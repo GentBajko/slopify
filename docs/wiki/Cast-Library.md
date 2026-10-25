@@ -1,4 +1,4 @@
-# Cast Library
+# Cast
 
 A channel's cast is its recurring characters, creatures, places and objects. Each member has a name, a description and up to four reference pictures. Whenever a video's title or an image's brief names a member, its pictures go with that image request, so the member looks the same in every image and every episode. A cast member can also have a voice for multi-voice videos.
 
@@ -48,35 +48,35 @@ Which images get which members:
 1. Open the member in the editor.
 2. Under **Reference pictures**, press **Upload a picture** and choose a PNG or JPEG up to 10 MB.
 
-### Generate a picture
+### Make a picture
 
-1. Under **Make a picture**, pick an **Image provider** and **Image model**.
+1. Under **Make a picture**, pick the **Service** and **Model** under **Drawn by**.
 2. Check **Picture to make**. It starts from the name, the description and a request for a plain background. Edit it as you like (up to 4,000 characters).
-3. Press **Generate a picture**. Wait until "Making the picture…" finishes.
+3. Press **Make the picture · 1 image call**. Wait until "Making the picture…" finishes.
 
-Each press is one image call on that provider, billed at its price for one image. A plain background with the whole figure in view makes the best reference.
+Each press is one image call to that service, billed at its price for one image. A plain background with the whole figure in view makes the best reference.
 
 To remove a picture, press its delete button. A member with no picture is not sent with any image.
 
-## Which image providers use the pictures
+## Which image services use the pictures
 
-| Provider | What happens |
+| Service | What happens |
 |---|---|
 | Codex, OpenAI, Google, and fal.ai edit models (FLUX.2 and Nano Banana 2 edit) | The member's pictures are sent as input pictures. |
 | Models that take no input pictures (Replicate, other fal.ai models) | The member is described in words instead, from its description. |
 
-See [Images](Play-Images) and [Providers and keys](Providers-and-Keys).
+See [Create: Images](Create-Images) and [Keys and Services](Providers-and-Keys).
 
 ## Give a cast member a voice
 
 In multi-voice formats (audiobook, podcast, radio drama, interview) a cast member can speak with the same voice in every episode.
 
-1. In the member's editor, under **Cast voice**, pick a **Voice provider**, **Voice model** and **Voice**. The list shows voices that speak the channel's language. If it says "No voices. Add one in Settings.", add a voice in **Settings → Voices** first.
+1. In the member's editor, under **Voice**, pick the **Service**, **Model** and **Voice** under **Read by**. The list shows voices that speak the channel's language. If it says "No voices for *service* yet", press **Add a voice for *service* ↗** under it and add one in **Settings → Voices** first.
 2. Pick a **Pace**: 0.8, 0.9, 1 (normal), 1.1 or 1.2.
 3. Press **Save**.
-4. On Play, pick the member under **Speakers**. They read with this voice, model and pace.
+4. On Create, pick the member under **Speakers**. They read with this voice, model and pace.
 
-Leave the provider empty for no voice. A run keeps the voice it started with. See [Multiple voices](Multiple-Voices).
+Leave the service empty for no voice. A run keeps the voice it started with. See [Multiple voices](Multiple-Voices).
 
 ### Make a member one of the channel's hosts
 
@@ -86,13 +86,13 @@ A channel's regular presenters can join every new podcast or interview on their 
 2. Turn on **One of the channel's hosts**. Without a voice it warns: "A host joins new podcasts and interviews only with a voice. Pick one under Voice above."
 3. Press **Save**. The cast list shows **Host** beside the member.
 
-When you pick **Podcast** or **Interview** on Play for a draft of this channel with no speakers yet, the speakers start with the channel's hosts that have a voice. You can still add or remove speakers on the draft. Projects already made are not changed.
+When you pick **Podcast** or **Interview** on Create for a draft of this channel with no speakers yet, the speakers start with the channel's hosts that have a voice. You can still add or remove speakers on the draft. Projects already made are not changed.
 
 A picture that fails to generate because a CLI is signed out shows the same **Copy sign-in command** and **Check again** buttons as a project. See [Recovery and Retries](Recovery-and-Retries#sign-a-cli-in-again).
 
 ## What happens to finished videos
 
-A run keeps the cast as it was when it started. Editing the cast later never makes a finished video outdated. Only images that actually mention a member change their fingerprint, so only they would be remade if you remake the project's images.
+A run keeps the cast as it was when it started. Editing the cast later never makes a finished video outdated. Only images that actually mention a member change their fingerprint, so only they would be made again if you make the project's images again.
 
 ## Backups
 
@@ -107,6 +107,6 @@ Cast members and their pictures travel in a backup made with **Export everything
 ## Related pages
 
 - [Channels](Channels)
-- [Images](Play-Images)
+- [Create: Images](Create-Images)
 - [Multiple voices](Multiple-Voices)
-- [Providers and keys](Providers-and-Keys)
+- [Keys and Services](Providers-and-Keys)

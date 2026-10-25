@@ -63,7 +63,7 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     expect(nextHeld()).toBe(true);
     await user.type(screen.getByLabelText("OpenRouter API key"), "test-only-key");
     expect(nextHeld()).toBe(true);
-    expect(guide().getByRole("heading", { name: "1. Connect a text provider" })).not.toBeNull();
+    expect(guide().getByRole("heading", { name: "1. Connect a writing service" })).not.toBeNull();
     await user.click(screen.getByRole("button", { name: "Save OpenRouter key" }));
     await next(user, "audio-key");
     expect(nextHeld()).toBe(true);
@@ -328,13 +328,13 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
       });
       expect(workspace.hasAttribute("hidden")).toBe(false);
       if (final === "audio") {
-        expect(guide().getByText("Audio (.wav)")).not.toBeNull();
+        expect(guide().getByText("Download audio (.wav)")).not.toBeNull();
         expect((await downloadItem("Audio (.wav)")).getAttribute("href")).toContain(
           "/files/actual-created-project/audio-export",
         );
         expect(screen.getByLabelText("Combined narration")).not.toBeNull();
       } else {
-        expect(guide().getByText(/Audio and Video are Off/)).not.toBeNull();
+        expect(guide().getByText(/Narration and Video are Off/)).not.toBeNull();
         // The guide's interaction boundary allows the Article download, proving the
         // final spotlight moved off the skipped Video stage.
         const download = screen.getByRole("link", { name: /^Download article/ });

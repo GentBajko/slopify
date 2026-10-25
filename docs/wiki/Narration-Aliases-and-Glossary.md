@@ -2,13 +2,13 @@
 
 Two tools control how the narrator says words without changing what is written. **Narration aliases** swap a written form for a spoken one, such as `Dr.` said as "Doctor", with any generated voice. The **Pronunciation Glossary** gives exact IPA pronunciations for names, such as `Arda: /ˈɑɹdə/`, with Inworld's TTS-2 voices. In both cases the article, the transcript and the captions keep the written words; only the audio changes.
 
-**Where to find it:** aliases in **Library → Narration aliases**. Both switches are on Play under **Narration → Change → More audio settings**, and in **Edit project**. A project's glossary is shown on its **Article** section, in the **Pronunciation** tab.
+**Where to find it:** aliases in **Settings → Voices → Pronunciation**. Both switches are on Create under **Narration → Change → More narration settings**, and in a project's **Edit settings** → **Narration**. A project's glossary is shown on its **Article** section, in the **Pronunciation** tab.
 
 ## Narration aliases
 
 ### Add aliases
 
-1. Open **Library → Narration aliases**.
+1. Open **Settings → Voices → Pronunciation**.
 2. Press **Add alias**. A new row appears in the list, titled **Alias N**, with its fields under it.
 3. Fill in the row:
 
@@ -45,11 +45,11 @@ Each row's title line sums it up, for example "Says Dr. as Doctor · whole word"
 
 ### Use aliases in a video
 
-1. On Play, open the **Narration** row with **Change**, then **More audio settings**.
+1. On Create, open the **Narration** row with **Change**, then **More narration settings**.
 2. Keep **Use narration aliases** on (the default for new drafts).
 3. Start the run.
 
-A project copies the Library's aliases when it starts. Editing the Library later never changes a started project until you open **Edit project** and press **Update from Library** beside the aliases switch. Only the parts of the narration where a changed alias appears are made again.
+A project copies your Pronunciation list when it starts. Editing the list later never changes a started project until you open its **Edit settings** → **Narration** and press **Copy the list again** beside the aliases switch. Only the parts of the narration where a changed alias appears are made again.
 
 Projects from before aliases existed have the switch off and nothing copied.
 
@@ -59,11 +59,11 @@ Captions show the written words, while the audio says the alias. A caption reads
 
 ## The Pronunciation Glossary
 
-The Pronunciation Glossary is a section at the end of the article that lists names with their pronunciation in IPA. With a voice that supports it, the narrator reads each listed name the way the glossary says, with no extra text-model call. The glossary itself is never narrated.
+The Pronunciation Glossary is a section at the end of the article that lists names with their pronunciation in IPA. With a voice that supports it, the narrator reads each listed name the way the glossary says, with no extra AI call. The glossary itself is never narrated.
 
 ### Which voices support it
 
-Inworld **TTS-2** and **TTS-2 Flash**. With other providers or models the switch is greyed out and says "Unavailable for this provider or model. Your saved preference is retained."
+Inworld **TTS-2** and **TTS-2 Flash**. With other services or models the switch is greyed out and says "Only Inworld TTS-2 voices read it; your choice is kept for when you pick one."
 
 ### Get a glossary into the article
 
@@ -86,7 +86,7 @@ A table with `Term | IPA` columns works too. If you paste your own article, add 
 
 ### Turn it on
 
-1. On Play, open **Narration → Change → More audio settings**.
+1. On Create, open **Narration → Change → More narration settings**.
 2. Keep **Use Pronunciation Glossary** on (the default).
 3. Optional: keep **Also use pronunciations from my other projects** on (the default). It adds every term from your other projects' glossaries, copied when this project starts. This project's own glossary wins where they differ. Turn it off to use only this article's glossary.
 
@@ -102,7 +102,7 @@ An entry narration can't use is skipped and read as ordinary text. It never bloc
 | supply one IPA word for each written word | "New York" needs two IPA words. |
 | an earlier entry already gives this term a different pronunciation | The term is listed twice with different sounds. |
 
-To fix skipped entries, edit the Pronunciation Glossary at the end of the article in **Edit project → Article**, then save. See [Editing a project](Editing-a-Project).
+To fix skipped entries, edit the Pronunciation Glossary at the end of the article in **Edit settings** → **Article**, then save. See [Editing a project](Editing-a-Project).
 
 ## Aliases or glossary?
 
@@ -110,7 +110,7 @@ To fix skipped entries, edit the Pronunciation Glossary at the end of the articl
 |---|---|
 | An abbreviation read in full (Dr., St., vs.) | Alias |
 | A word read as a different word or spelling | Alias |
-| Any voice provider | Alias |
+| Any voice service | Alias |
 | A made-up or foreign name said exactly right, on Inworld TTS-2 | Glossary |
 | Pronunciations that come with each article automatically | Glossary |
 
@@ -122,8 +122,8 @@ To fix skipped entries, edit the Pronunciation Glossary at the end of the articl
 
 ## Related pages
 
-- [Narration](Play-Narration)
+- [Create: Narration](Create-Narration)
 - [Prompts](Prompts)
 - [Editing a project](Editing-a-Project)
 - [Multiple voices](Multiple-Voices)
-- [Providers and keys](Providers-and-Keys)
+- [Keys and Services](Providers-and-Keys)

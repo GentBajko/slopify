@@ -2,7 +2,7 @@
 
 Slopify can write the text with the Claude Code, Codex or Antigravity command-line tools, and draw the images with Codex, using the sign-in you already have. You need no API key for those steps, and their calls count toward your plan's limits instead of costing per call.
 
-**Where to find it:** Settings → Providers → the **Text** list (Claude Code CLI, Codex CLI, Antigravity CLI) and the **Images** list (Codex CLI).
+**Where to find it:** Settings → Keys & services → the **Writing services** list (Claude Code CLI, Codex CLI, Antigravity CLI) and the **Image services** list (Codex CLI).
 
 ## What each tool does
 
@@ -24,11 +24,11 @@ Codex CLI must be version 0.149.1 or newer. An older Codex shows **Needs attenti
    - Claude Code: `claude auth login`
    - Codex: `codex login`
    - Antigravity: run `agy` and sign in with your Google account (a browser opens; over SSH it shows a URL and a code).
-3. Open **Settings → Providers** (reload the page if it was already open).
-4. Pick the tool in the **Text** or **Images** list. Its row should say **Ready**, and its setup shows **Installed, version …** and the **Command** Slopify runs.
-5. Choose **Check all** to confirm it is signed in.
+3. Open **Settings → Keys & services** (reload the page if it was already open).
+4. Pick the tool in the **Writing services** or **Image services** list. Its row should say **Ready**, and its setup shows **Installed, version …** and the **Command** Slopify runs.
+5. Press **Check every service** to confirm it is signed in.
 
-On the very first launch, before any key is saved, Slopify looks for all three tools. If it finds any, it says so and picks one for text on new Play drafts, preferring Claude Code, then Codex, then Antigravity, and Codex for images when found. The CLIs can't speak, but the narration needs no key either: without a voice key, the [System voice](Providers-and-Keys#the-system-voice) reads it with your computer's own speech. See [First-Launch-and-Welcome](First-Launch-and-Welcome).
+On the very first launch, before any key is saved, Slopify looks for all three tools. If it finds any, it says so and picks one for text on new Create drafts, preferring Claude Code, then Codex, then Antigravity, and Codex for images when found. The CLIs can't speak, but the narration needs no key either: without a voice key, the [System voice](Providers-and-Keys#the-system-voice) reads it with your computer's own speech. See [First-Launch-and-Welcome](First-Launch-and-Welcome).
 
 ## Antigravity CLI: what is different
 
@@ -41,7 +41,7 @@ It works differently from the Gemini CLI in a few ways:
 - **No timeout of its own.** `agy` waits as long as the model needs; Slopify's own stall checks end a run that stops making progress.
 - **Busy messages are retried.** When several calls run at once, Google can answer that its capacity for the model is used for the moment. A reset of 5 minutes or less is retried by itself within seconds; a longer reset is handled as a plan limit and the run waits for it.
 - **Its sign-in is checked with `agy models`.** Slopify runs the command: if it lists models, the CLI is **Signed in**; if it says "Please sign in", the CLI is signed out and the check gives the command to run (`agy`); anything else shows as unknown. `GEMINI_API_KEY` is not read.
-- **Old model ids are gone.** Models come from `agy models`. A project that still names a Gemini CLI model such as `gemini-2.5-pro` stops with "The chosen model is not available…" until you pick a new one in **Edit project → Providers**. A saved path to a program still called `gemini` is refused: clear it or set the Antigravity CLI path in Settings → Providers.
+- **Old model ids are gone.** Models come from `agy models`. A project that still names a Gemini CLI model such as `gemini-2.5-pro` stops with "The chosen model is not available…" until you pick a new one under **Written by** in **Edit settings** → **Article**. A saved path to a program still called `gemini` is refused: clear it or set the Antigravity CLI path in Settings → Keys & services.
 
 ## Row states
 
@@ -55,7 +55,7 @@ It works differently from the Gemini CLI in a few ways:
 
 Slopify finds each tool on PATH, the list of folders your terminal searches. Set a path when the tool is installed somewhere else, or you have more than one copy.
 
-1. Pick the tool in **Settings → Providers**.
+1. Pick the tool in **Settings → Keys & services**.
 2. Choose **Change path**.
 3. In **Executable path**, type the absolute path to the program file, without quotes or arguments. Leave it blank to go back to finding it on PATH.
 4. Choose **Save path**. Slopify checks the tool answers before saving; a folder or a missing file is refused with the reason.
@@ -67,7 +67,7 @@ Slopify finds each tool on PATH, the list of folders your terminal searches. Set
 
 ## Check the sign-in
 
-**Check all** (Settings → Providers) asks each tool:
+**Check every service** (Settings → Keys & services) asks each tool:
 
 - **Installed**: found, with its version.
 - **Signed in**: Slopify asks each CLI directly. If one is signed out, the line tells you the command to run (`claude auth login`, `codex login` or `agy`). For Antigravity CLI it runs `agy models`: a model list means signed in, "Please sign in" means signed out (run `agy`), and anything else is shown as unknown.
@@ -79,20 +79,20 @@ If a run fails because a tool's sign-in expired, the project offers **Copy sign-
 
 ## Pick a model and thinking level
 
-A CLI's model list comes from the tool installed on your computer, not from the model catalogue. On Play:
+A CLI's model list comes from the tool installed on your computer, not from the model catalogue. On Create:
 
-1. Pick the tool as the text provider (or Codex CLI for images).
+1. Pick the tool as the **Service** under **Written by** (or Codex CLI under **Images by** for images).
 2. Pick a **Text model** from the list. The refresh button beside it (**Refresh models**) asks the tool for its current list; **Custom ID** lets you type a model the list does not show.
 3. If the model offers it, pick **Thinking** (text) or **Effort** (images). **Model default** leaves it to the tool. The levels come from the model: for example Low, Medium, High and Xhigh. Higher levels can write or draw more carefully, but take longer and use more of your plan.
 
-If a model is missing when a run reaches it, the run stops with "The chosen model is not available in the AI command-line tool on your computer." Update the tool, or pick another model in **Edit project** under Providers, then **Continue the run**. A thinking level the model does not support stops the same way.
+If a model is missing when a run reaches it, the run stops with "The chosen model is not available in the AI command-line tool on your computer." Update the tool, or pick another model in **Edit settings** (under **Written by**, or **Images by** for Codex images), then **Continue the run**. A thinking level the model does not support stops the same way.
 
 ## Codex images
 
 Codex draws each image as its own job.
 
 - **Codex default** runs with the tool's own defaults: no model and no effort on the command line.
-- Any other model is one of Codex's own models (the same list the Codex text provider shows), run with the **Effort** you pick. With a chosen model or effort, or a reference picture to match, the agent may look at its work and redraw it.
+- Any other model is one of Codex's own models (the same list Codex shows as a writing service), run with the **Effort** you pick. With a chosen model or effort, or a reference picture to match, the agent may look at its work and redraw it.
 - Each image may take several minutes; the time limit for one image is 30 minutes.
 - Up to 4 images are drawn at once.
 
@@ -106,16 +106,16 @@ The CLIs bill your subscription, which gives a share of a 5-hour and a weekly al
 - **Codex** is asked before and after each call. It reports whole percents, so a short run can show "under 1%".
 - **Antigravity** reports none.
 
-You see these on a project's **Run cost** tab, in the run's **Cost so far** panel, and on Home under **This week**. See [Costs-and-Run-Cost](Costs-and-Run-Cost).
+You see these in a project's cost breakdown (**See the breakdown** on its cost line) and on Home under **This week**. See [Costs-and-Run-Cost](Costs-and-Run-Cost).
 
 When a tool says its allowance is used up, the run does not fail:
 
 1. Slopify stores the reset time the tool gave (per tool, not per project).
 2. Every call to that tool, from any project, waits until 2 minutes after the reset. Without a stated time, it checks again every 30 minutes.
-3. The project's status reads **Waiting for limits**, with a line such as "Waiting for Codex limits (resets at 14:00)." The same words show on Home's Running now, the Projects row and the Calendar.
+3. The project's status reads **Waiting for limits**, with a line such as "Waiting for Codex limits (resets at 14:00)." The same words show on Home's Running, the Projects row and the Calendar.
 4. When the reset passes, the run continues by itself.
 
-Other providers are not held up: a project whose narration uses a key carries on while its Codex images wait. The wait survives a restart; a project that was waiting when Slopify stopped resumes on the next start and waits again. A project you paused or canceled meanwhile is left alone.
+Other services are not held up: a project whose narration uses a key carries on while its Codex images wait. The wait survives a restart; a project that was waiting when Slopify stopped resumes on the next start and waits again. A project you paused or canceled meanwhile is left alone.
 
 Antigravity's quota is handled the same way ("Slopify waits and tries again later by itself").
 
@@ -125,14 +125,14 @@ A container cannot use the CLIs installed on your computer directly. On Linux, t
 
 1. Install and sign in to the CLIs on your computer first.
 2. Run the Docker installer (`npx @gentbajko/slopify@latest --docker`). If a CLI is found, it asks once whether to set up the helper. `--accept-host-cli` approves without asking; `--host-cli=off` skips it.
-3. In Settings → Providers the tools show **Managed on host**. Their path cannot be changed there.
+3. In Settings → Keys & services the tools show **Managed on host**. Their path cannot be changed there.
 
 What to know:
 
 - The helper runs as you, as the user service `slopify-cli-bridge.service`, and talks to the container over a private socket. No network port is opened and no sign-in is copied into Docker.
 - After you install, update or remove a CLI, run the Docker installer again so Slopify sees the change.
 - Run cost and plan-limit shares work the same as without Docker. An older helper may not pass them through, and the cost page then says the share is not known.
-- With the helper off, Settings shows the CLIs as unavailable. API-key providers still work.
+- With the helper off, Settings shows the CLIs as unavailable. Services with an API key still work.
 
 Check or turn off the helper:
 
@@ -141,17 +141,17 @@ systemctl --user status slopify-cli-bridge.service
 systemctl --user disable --now slopify-cli-bridge.service
 ```
 
-Turning it off leaves Docker, your API providers, your data and your host sign-ins as they are. See [Docker](Docker).
+Turning it off leaves Docker, your keyed services, your data and your host sign-ins as they are. See [Docker](Docker).
 
 ## Tips
 
-- A CLI step on Play's estimate reads "$0 on your plan · ~$X via API": what the same tokens would cost with a key.
-- If your plan runs out often, split the work: keep text on a CLI and put images on a keyed provider, or the other way round.
-- Use **Check all** after updating a CLI; a newer tool can drop a model your template still names.
+- A CLI step on Create's estimate reads "$0 on your plan · ~$X via API": what the same tokens would cost with a key.
+- If your plan runs out often, split the work: keep the writing on a CLI and put images on a keyed service, or the other way round.
+- Use **Check every service** after updating a CLI; a newer tool can drop a model your template still names.
 
 ## Related pages
 
-- [Providers-and-Keys](Providers-and-Keys)
+- [Keys and Services](Providers-and-Keys)
 - [Models](Models)
 - [Costs-and-Run-Cost](Costs-and-Run-Cost)
 - [Docker](Docker)

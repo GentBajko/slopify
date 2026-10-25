@@ -1,35 +1,35 @@
 # Recovery and Retries
 
-Provider calls fail now and then: a rate limit, a timeout, a dropped connection, a refused prompt. Slopify retries what time can fix by itself, waits for used-up CLI plans instead of failing, and for everything else puts one button on the project page that fixes the cause or walks you through it. Work already made is never thrown away.
+Calls to the services fail now and then: a rate limit, a timeout, a dropped connection, a refused prompt. Slopify retries what time can fix by itself, waits for used-up CLI plans instead of failing, and for everything else puts one button on the project page that fixes the cause or walks you through it. Work already made is never thrown away.
 
-**Where to find it:** a project → the next action panel in the right rail, and the failed step's own section.
+**Where to find it:** a project → the next action in the title row, and the failed step's own part.
 
 ## What happens when a call fails
 
-Slopify handles a failed provider call in three tiers:
+Slopify handles a failed call to a service in three tiers:
 
 | Tier | What happens | You see |
 | --- | --- | --- |
-| 1. Quick retries | The call is tried up to four times in about 40 seconds: the first try plus retries after 2, 8 and 30 seconds. A provider's own Retry-After (up to a minute) replaces the fixed wait. | Nothing; the step keeps running. |
-| 2. Waiting it out | If the quick retries run out on a failure time can fix, the step is not failed. It waits and runs again by itself, up to four more times, after about 2, 4, 8 and 16 minutes (about half an hour in all). Each wait is spread by a quarter either way, and is never shorter than the provider's Retry-After. | **Waiting to try again**: "Images will try again by itself at 14:05." No button; the run carries on when it does. |
+| 1. Quick retries | The call is tried up to four times in about 40 seconds: the first try plus retries after 2, 8 and 30 seconds. A service's own Retry-After (up to a minute) replaces the fixed wait. | Nothing; the step keeps running. |
+| 2. Waiting it out | If the quick retries run out on a failure time can fix, the step is not failed. It waits and runs again by itself, up to four more times, after about 2, 4, 8 and 16 minutes (about half an hour in all). Each wait is spread by a quarter either way, and is never shorter than the service's Retry-After. | **Waiting to try again**: "Images will try again by itself at 14:05." No button; the run carries on when it does. |
 | 3. Failed | When the waits are used up, or the failure is one time cannot fix, the step fails and says why. | **Failed**, the error, and a fix-it or **Try ... again** button. |
 
 ### What is waited out
 
-- Rate limits (HTTP 429 and each provider's own rate-limit errors).
+- Rate limits (HTTP 429 and each service's own rate-limit errors).
 - Timeouts.
-- Dropped calls: a connection that never reached the provider or broke mid-answer, a provider server error (5xx), or a CLI the system killed mid-run.
+- Dropped calls: a connection that never reached the service or broke mid-answer, a server error at the service (5xx), or a CLI the system killed mid-run.
 
 ### What is never retried
 
 - A refusal by a content filter.
-- A key the provider rejected, or no key saved.
-- A request the provider does not support.
+- A key the service rejected, or no key saved.
+- A request the service does not support.
 - A lost CLI submission (Slopify cannot tell whether the CLI already did the work).
 
-These are the provider's final answer, and retrying would only spend your money again.
+These are the service's final answer, and retrying would only spend your money again.
 
-A provider asking for a wait longer than an hour (a daily quota) is reported as a failure rather than waited out.
+A service asking for a wait longer than an hour (a daily quota) is reported as a failure rather than waited out.
 
 ### Time limits per call
 
@@ -39,7 +39,7 @@ A provider asking for a wait longer than an hour (a daily quota) is reported as 
 | Image | 300 seconds |
 | Image animated into a clip | 900 seconds |
 
-A call that passes its limit is stopped (a streamed call when it sends nothing for that long), and the message says so, for example "The AI model did not answer within 120 seconds. It may be overloaded: wait a few minutes, then use Try again, or choose another model in the Providers section of Edit project."
+A call that passes its limit is stopped (a streamed call when it sends nothing for that long), and the message says so, for example "The AI model did not answer within 120 seconds. It may be overloaded: wait a few minutes, then use Try again, or choose another model in Edit settings → Article → Written by."
 
 ### Waits survive a restart
 
@@ -49,11 +49,11 @@ The wait is saved in the database, so quitting or restarting Slopify keeps it: t
 
 When Claude Code, Codex or Antigravity says your plan allowance is used up, the call does not fail: it waits. Slopify stores the reset time for that CLI, and every call to it, from any project, waits until two minutes after the reset. Without a stated reset time it checks again every 30 minutes.
 
-The next action panel shows **Waiting for limits**, for example "Waiting for Codex limits (resets at 14:00)." with "Nothing to do: the run carries on by itself when they reset, and work that does not need Codex keeps going." There is nothing to press. A reset on another day shows the weekday (`Tue 14:00`); with no reset time, it says "(checking again at 14:30)"; with two plans, "Waiting for Codex and Claude limits".
+The project's state reads **Waiting for limits**, and the note under the title says, for example "Waiting for Codex limits (resets at 14:00)." with "Nothing to do: the run carries on by itself when they reset, and work that does not need Codex keeps going." There is nothing to press. A reset on another day shows the weekday (`Tue 14:00`); with no reset time, it says "(checking again at 14:30)"; with two plans, "Waiting for Codex and Claude limits".
 
-The same words appear everywhere the project shows up: on Home under Running now, on its row in Projects and on the Calendar, so you can tell a waiting run from a stuck one without opening it.
+The same words appear everywhere the project shows up: on Home under Running, on its row in Projects and on the Calendar, so you can tell a waiting run from a stuck one without opening it.
 
-- Other providers are not held up, and a waiting call holds no place in the provider queue.
+- Other services are not held up, and a waiting call holds no place in the service's queue.
 - The wait survives a restart: a stage that was waiting when Slopify stopped waits on the stored reset again at the next start.
 - A project paused or canceled meanwhile is left alone.
 
@@ -61,15 +61,15 @@ See [AI CLIs](AI-CLIs) and [Costs and Run Cost](Costs-and-Run-Cost) for the plan
 
 ## Fix-it buttons
 
-A failed step's fix becomes the project's next action, shown in the right rail and beside the step in its section. The mapping lives in one place in the code, so the page always offers the same fix for the same failure.
+A failed step's fix becomes the project's next action, shown in the title row and beside the step in its part. The mapping lives in one place in the code, so the page always offers the same fix for the same failure.
 
-| Failure | What the panel says | Button | What to do |
+| Failure | What the page says | Button | What to do |
 | --- | --- | --- | --- |
 | A CLI is signed out or its sign-in expired | "Codex is signed out, so images stopped." | **Copy sign-in command**, then **Check again** | See [Sign a CLI in again](#sign-a-cli-in-again) below. |
 | A content filter refused an image or thumbnail prompt | "A content filter refused a prompt, so images stopped." | **Soften and retry** | See below. |
-| A content filter refused any other prompt | "A content filter refused a prompt, so the article stopped." | **Edit the prompt** | Opens Edit project so you can reword it, then try again. |
-| The model was retired | "The model for images is no longer offered." | **Switch model** | Opens Edit project; pick another model in **Providers**, save, and try again. |
-| A key was rejected, or none is saved | "The provider did not accept its key, so narration stopped." | **Open Settings → Providers → *provider*** | Paste a current key, save, then come back and try again. |
+| A content filter refused any other prompt | "A content filter refused a prompt, so the article stopped." | **Edit the prompt** | Opens Edit settings so you can reword it, then try again. |
+| The model was retired | "The model for images is no longer offered." | **Switch model** | Opens Edit settings; pick another model (under **Written by**, **Read by** or **Images by**), save, and try again. |
+| A key was rejected, or none is saved | "The service did not accept its key, so narration stopped." | **Open Settings → Keys & services → *service*** | Paste a current key, save, then come back and try again. |
 | The disk is full | "The disk is full, so the video stopped." | **Free space** | Opens Settings → Backup & storage, which shows what uses the space and offers **Keep outputs only** per finished project. Then try again. |
 | Anything else | "Images stopped with an error." | **Try images again** | Trying again keeps everything already made. |
 
@@ -96,20 +96,20 @@ For a refused image or thumbnail prompt, **Soften and retry** asks first ("Softe
 2. The new wording streams onto the step as it is written.
 3. The image is drawn from it and keeps it as its prompt.
 
-The AI call and the new image are charged like any other. Press **Keep the prompt** to back out and edit it yourself in **Edit project → Images**.
+The AI call and the new image are charged like any other. Press **Keep the prompt** to back out and edit it yourself in **Edit settings** → **Images**.
 
 ## Try again
 
-**Try ... again** (for example **Try the article again**, **Try images again**) runs the failed step again. It does not ask first, because it destroys nothing: the pieces and outputs already made stay where they are and are reused.
+**Try ... again** (for example **Try the article again**, **Try images again**) runs the failed step again. It does not ask first, because it destroys nothing: the pieces and files already made stay where they are and are reused.
 
 ## Done with problems
 
-A failed step stops only the steps that need its output. The video never reads the thumbnail, so a failed thumbnail leaves the video rendering. When the run's main output was made (the video; the narration when there is no video; the article when there is neither) but another step failed, the project ends **Done with problems** instead of **Failed**. Each failed step shows its error and its fix.
+A failed step stops only the steps that need what it makes. The video never reads the thumbnail, so a failed thumbnail leaves the video being made. When the run's main result was made (the video; the narration when there is no video; the article when there is neither) but another step failed, the project ends **Done with problems** instead of **Failed**. Each failed step shows its error and its fix.
 
 ## After a crash or restart
 
 - A stage that was **running** when Slopify stopped is marked failed with the reason "interrupted". Nothing re-runs by itself: press **Try ... again**. If the project was paused at the time, the stage simply goes back to waiting.
-- A project that has unfinished work nothing will start on its own reads **Stopped** on its header, in Projects and on Home, where it is listed under **Needs you** with **Continue the run** (and **Keep as is** to leave the rest unmade). The project page says "The run stopped before it finished." with the same button. Continuing makes only what is missing; everything made so far is kept. An [agent](Agents-MCP) running the attend routine may continue it for you.
+- A project that has unfinished work nothing will start on its own reads **Stopped** in its title row, in Projects and on Home, where it is listed under **Needs you** with **Continue the run** (and **Keep as is** to leave the rest unmade). The project page says "The run stopped before it finished." with the same button. Continuing makes only what is missing; everything made so far is kept. An [agent](Agents-MCP) running the attend routine may continue it for you.
 - Steps waiting to retry, or waiting for CLI limits, carry on by themselves after the restart.
 - A queued batch project waits its turn as before.
 
@@ -120,17 +120,17 @@ A failed step stops only the steps that need its output. The video never reads t
 - **Continue the run** on the canceled project makes everything that is missing.
 - If you took one step up again after the cancel (with **Try ... again**), **Continue the run** carries on only that work. The steps you canceled stay canceled until you take them up too.
 
-A canceled run's reviews waiting for an agent stop, and never pass on their own. See [Reviews and Checkpoints](Reviews-and-Checkpoints#the-external-agent-reviewer).
+A canceled run's AI checks waiting for an agent stop, and never pass on their own. See [Pauses and Checks](Reviews-and-Checkpoints#the-external-agent-reviewer).
 
-## Checkpoints and paused runs
+## Pauses and paused runs
 
-A checkpoint holds the run before a step so you can check what came before it. While held, the project shows **Waiting for your review** and an **Approve ...** button; nothing after it runs until you approve. Checkpoints are stored with the project, so a restart does not lose them; when you save a new revision, a checkpoint whose reviewed inputs changed asks for your review again (the Checkpoints view says "Inputs changed. Review the current revision before approving."). See [Reviews and Checkpoints](Reviews-and-Checkpoints).
+A pause holds the run after a step so you can check what it made. While held, the project shows **Waiting for your review** and an **Approve and make the …** button; nothing after it runs until you approve. Pauses are stored with the project, so a restart does not lose them; when you save a new version, a pause whose work changed asks for your review again (its card in **Edit settings** → **Pauses and checks** says "What it was made from has changed. Look at the current version before approving."). See [Pauses and Checks](Reviews-and-Checkpoints).
 
 A paused project keeps everything. **Continue the run** picks up where it stopped. See [Project Page](Project-Page#pause-continue-and-cancel-a-run). A connected [agent](Agents-MCP) may continue any paused run once nothing else on it needs fixing; cancel instead of pausing if you want a run to stay put.
 
 ## A failed step beside a wait
 
-When a step fails while another step of the run is waiting (for an agent's review, your checkpoint, or a prepared run's day), the run is not over: the project still reads by what it waits for (**Waiting for the agent** or **Waiting for your review**), and the failed step shows on the page with its fix. Home lists it as a failed item too, and a "Step failed" notification goes out right away (see [Notifications](Notifications#step-failed)). The project reads **Failed** only once nothing else can go on.
+When a step fails while another step of the run is waiting (for an agent's check, your approval at a pause, or the day of a video made ahead), the run is not over: the project still reads by what it waits for (**Waiting for the agent** or **Waiting for your review**), and the failed step shows on the page with its fix. Home lists it as a failed item too, and a "Step failed" notification goes out right away (see [Notifications](Notifications#step-failed)). The project reads **Failed** only once nothing else can go on.
 
 ## Updating while work runs
 
@@ -142,14 +142,14 @@ When an update or install cannot finish, Slopify puts the previous version back.
 
 - If a step keeps failing with the same error after **Try again**, open **Error details** and follow what it says. Most messages name the exact screen to fix it in.
 - Rate limits usually clear by themselves; you rarely need to do anything.
-- A kept output from an earlier revision is still in **History** if a remake goes wrong. See [Editing a Project](Editing-a-Project#history-and-saved-revisions).
+- A file from an earlier version is still under **Edit settings** → **Versions** if making it again goes wrong. See [Editing a Project](Editing-a-Project#versions).
 
 ## Related pages
 
 - [Troubleshooting](Troubleshooting)
 - [Project Page](Project-Page)
 - [Editing a Project](Editing-a-Project)
-- [Providers and Keys](Providers-and-Keys)
+- [Keys and Services](Providers-and-Keys)
 - [AI CLIs](AI-CLIs)
-- [Reviews and Checkpoints](Reviews-and-Checkpoints)
+- [Pauses and Checks](Reviews-and-Checkpoints)
 - [Agents (MCP)](Agents-MCP)

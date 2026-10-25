@@ -107,7 +107,7 @@ export const settingsHelp = {
   "settings.subtitle-model": {
     title: "Caption timing model",
     body: "The speech model that times English captions on this computer. Most accurate (378 MB) hears the narration best and on most computers runs faster too; Smallest (95 MB) can mishear a line and stop the run. The chosen model downloads once, on first use; switching back reuses one already downloaded. Changing it never marks captions outdated. Default: Most accurate.",
-    tutorial: { page: "Settings-Reference", anchor: "subtitle-timing-model" },
+    tutorial: { page: "Settings-Reference", anchor: "caption-timing-model" },
   },
   "settings.video-encoder": {
     title: "Video encoder",
