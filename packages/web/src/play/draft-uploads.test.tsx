@@ -83,9 +83,12 @@ it("guards upload identity across draft and attachment changes", async () => {
 
 it("keeps the font upload lock after leaving Style and preserves concurrent style edits", async () => {
   const pending = deferred();
-  await mountSupplied({ "POST /api/fonts": () => pending.promise });
+  await mountSupplied({ "POST /api/fonts": () => pending.promise }, false, true);
   await openSection("Style");
-  await userEvent.selectOptions(screen.getByLabelText("Captions", { selector: "select" }), "files");
+  await userEvent.selectOptions(
+    screen.getByLabelText("Captions", { selector: "select" }),
+    "burn-in",
+  );
   await userEvent.upload(
     screen.getByLabelText("Upload font (.ttf or .otf)"),
     new File(["font"], "draft.ttf", { type: "font/ttf" }),
@@ -196,9 +199,12 @@ it("restores interrupted media with Reattach and Remove and resets same-file sel
 });
 it("shows a failed font after revisiting Style and recovers by selecting a font", async () => {
   const pending = deferred();
-  await mountSupplied({ "POST /api/fonts": () => pending.promise });
+  await mountSupplied({ "POST /api/fonts": () => pending.promise }, false, true);
   await openSection("Style");
-  await userEvent.selectOptions(screen.getByLabelText("Captions", { selector: "select" }), "files");
+  await userEvent.selectOptions(
+    screen.getByLabelText("Captions", { selector: "select" }),
+    "burn-in",
+  );
   await userEvent.upload(
     screen.getByLabelText("Upload font (.ttf or .otf)"),
     new File(["font"], "broken.ttf", { type: "font/ttf" }),

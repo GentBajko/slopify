@@ -105,7 +105,7 @@ describe("existing project subtitles", () => {
     await openProjectEditor();
     await openEditSection("Captions");
     await screen.findByLabelText("Captions", { selector: "select" });
-    await user.selectOptions(subtitleMode(), "files");
+    await user.selectOptions(subtitleMode(), "burn-in");
     await user.clear(screen.getByLabelText("Caption size"));
     await user.type(screen.getByLabelText("Caption size"), "64");
     await user.click(screen.getByRole("button", { name: "Save changes" }));

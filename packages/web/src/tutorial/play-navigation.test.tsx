@@ -62,7 +62,7 @@ it("keeps a pending font upload active when the guide advances to Review", async
     }),
   });
   await at("play-subtitles");
-  await user.selectOptions(screen.getByLabelText("Captions", { selector: "select" }), "files");
+  await user.selectOptions(screen.getByLabelText("Captions", { selector: "select" }), "burn-in");
   await user.upload(
     screen.getByLabelText("Upload font (.ttf or .otf)"),
     new File(["font"], "guide.ttf", { type: "font/ttf" }),

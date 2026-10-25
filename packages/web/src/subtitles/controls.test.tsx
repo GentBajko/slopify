@@ -102,7 +102,7 @@ describe("subtitle controls", () => {
         "POST /api/fonts": problemAnswer("This file is not a font."),
       }),
     );
-    await user.selectOptions(screen.getByLabelText("Captions", { selector: "select" }), "files");
+    await user.selectOptions(screen.getByLabelText("Captions", { selector: "select" }), "burn-in");
     await user.upload(
       screen.getByLabelText("Upload font (.ttf or .otf)"),
       new File(["bad"], "broken.otf", { type: "font/otf" }),
@@ -123,7 +123,7 @@ describe("subtitle controls", () => {
       <Form onUploading={busy} />,
       testDeps({ "GET /api/fonts": jsonAnswer({ fonts }), "POST /api/fonts": () => response }),
     );
-    await user.selectOptions(screen.getByLabelText("Captions", { selector: "select" }), "files");
+    await user.selectOptions(screen.getByLabelText("Captions", { selector: "select" }), "burn-in");
     await user.upload(
       screen.getByLabelText("Upload font (.ttf or .otf)"),
       new File(["font"], "file.ttf", { type: "font/ttf" }),
@@ -142,6 +142,16 @@ describe("subtitle controls", () => {
         }),
       );
     });
+  });
+
+  it("draws no font, size or position for caption files, which the player styles", async () => {
+    const user = userEvent.setup();
+    renderApp(<Form />, testDeps({ "GET /api/fonts": jsonAnswer({ fonts }) }));
+    await user.selectOptions(screen.getByLabelText("Captions", { selector: "select" }), "files");
+    expect(screen.queryByLabelText("Caption font")).toBeNull();
+    expect(screen.queryByLabelText("Caption size")).toBeNull();
+    expect(screen.queryByLabelText("Caption position")).toBeNull();
+    expect(screen.getByText(/the player that shows them styles them/)).not.toBeNull();
   });
 
   it("disables subtitles without audio and burn-in without video", async () => {
@@ -215,7 +225,7 @@ it("renders externally owned upload state without releasing it on unmount", asyn
 
 it("lets Play suppress the embedded preview while project controls keep it by default", () => {
   const props = {
-    value: { ...defaultSubtitles, mode: "files" as const },
+    value: { ...defaultSubtitles, mode: "burn-in" as const },
     audioEnabled: true,
     videoEnabled: true,
     onChange: () => {},
