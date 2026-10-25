@@ -63,7 +63,9 @@ it("rewords a refused cast picture and links a rejected key to its settings", as
     testDeps({}),
   );
   expect(
-    (await screen.findByRole("link", { name: "Open Settings → Providers" })).getAttribute("href"),
+    (await screen.findByRole("link", { name: "Open Settings → Keys & services" })).getAttribute(
+      "href",
+    ),
   ).toContain("section=providers");
 });
 

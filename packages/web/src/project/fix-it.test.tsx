@@ -176,7 +176,9 @@ it("links a rejected key to the provider's settings and a full disk to storage",
   });
   expect(
     (
-      await within(await rail()).findByRole("link", { name: "Open Settings → Providers → fal.ai" })
+      await within(await rail()).findByRole("link", {
+        name: "Open Settings → Keys & services → fal.ai",
+      })
     ).getAttribute("href"),
   ).toContain("section=providers");
   cleanup();

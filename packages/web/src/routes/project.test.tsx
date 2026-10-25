@@ -374,7 +374,7 @@ describe("a failed stage", () => {
     );
     await screen.findByRole("region", { name: "Images" });
     const link = await within(nextAction()).findByRole("link", {
-      name: "Open Settings → Providers → fal.ai",
+      name: "Open Settings → Keys & services → fal.ai",
     });
     expect(link.getAttribute("href")).toBe("/settings?section=providers");
   });

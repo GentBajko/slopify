@@ -83,7 +83,7 @@ export function SignInActions({
     },
     onError: (error: Error) =>
       notify(
-        `Slopify couldn't check ${name}'s sign-in: ${error.message} Press Check again in a moment, or use Check all in Settings → Providers.`,
+        `Slopify couldn't check ${name}'s sign-in: ${error.message} Press Check again in a moment, or use Check every service in Settings → Keys & services.`,
         "error",
       ),
   });
