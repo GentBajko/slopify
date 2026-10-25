@@ -67,14 +67,15 @@ export function AudioRail({
     });
   }, [hidden, lead, form.audio, update]);
   const framing = form.voices !== undefined;
-  // The computer's own voice picked while no speech program answers: how to install one.
-  const speechMissing = providers.some(
-    (provider) =>
-      provider.id === systemVoiceProvider &&
-      provider.id === form.audio.provider &&
-      provider.readiness.kind === "local" &&
-      !provider.readiness.available,
+  // The computer's own voice picked while no speech program answers: how to install one, with
+  // the server's sentence for the way out where no commands are listed.
+  const systemVoice = providers.find(
+    (provider) => provider.id === systemVoiceProvider && provider.id === form.audio.provider,
   );
+  const speechMissing =
+    systemVoice?.readiness.kind === "local" && !systemVoice.readiness.available
+      ? { issue: systemVoice.readiness.issue }
+      : undefined;
   // The glossary only reaches voices that read IPA; for the others the switch is greyed and the
   // fold's line leaves it out.
   const glossaryReads = usesPronunciationGlossary({
@@ -150,7 +151,7 @@ export function AudioRail({
                   Speakers.
                 </p>
               ) : null}
-              {speechMissing ? <SpeechInstall /> : null}
+              {speechMissing === undefined ? null : <SpeechInstall issue={speechMissing.issue} />}
             </ServiceGroup>
           )}
           {hidden || framing ? null : <VoiceSample form={form} />}

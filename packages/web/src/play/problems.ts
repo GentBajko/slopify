@@ -118,6 +118,17 @@ export function speechIssue(issue: string | undefined): string {
     : first;
 }
 
+// The rest of that sentence, after its first: what the server says to do about it, for the
+// Narration row to show apart where it has no commands of its own to list.
+export function speechFix(issue: string | undefined): string | undefined {
+  const rest = issue
+    ?.split(/(?<=\.)\s+/)
+    .slice(1)
+    .join(" ")
+    .trim();
+  return rest === undefined || rest === "" ? undefined : rest;
+}
+
 const familyWords: Readonly<Record<ProviderFamily, string>> = {
   llm: "writing service",
   tts: "voice service",
