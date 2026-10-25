@@ -99,6 +99,32 @@ describe("the article prompt cards", () => {
     expect(await screen.findByRole("dialog", { name: "New article prompt" })).not.toBeNull();
   });
 
+  it("shows a long list's first cards and the picked one, with a button for the rest, never a scroll box", async () => {
+    const many = Array.from({ length: 7 }, (_, at) =>
+      prompt(`Style ${String(at + 1)}`, `Write it in style ${String(at + 1)}.`),
+    );
+    renderRouted(
+      <PromptCards
+        field="articlePrompt"
+        label="Article prompt"
+        kind="article"
+        prompts={many}
+        value="Style 7"
+        problem={undefined}
+        onPick={() => {}}
+      />,
+      testDeps({}),
+    );
+    const group = await screen.findByRole("radiogroup", { name: "Article prompt" });
+    const names = within(group)
+      .getAllByRole("radio")
+      .map((radio) => radio.getAttribute("value"));
+    expect(names).toEqual(["Style 1", "Style 2", "Style 3", "Style 4", "Style 5", "Style 7"]);
+    expect(group.className).not.toContain("overflow");
+    await userEvent.click(screen.getByRole("button", { name: "Show all 7 article prompts" }));
+    expect(within(group).getAllByRole("radio")).toHaveLength(7);
+  });
+
   it("keeps a picked prompt that is no longer in Prompts, saying so", async () => {
     renderRouted(
       <PromptCards
