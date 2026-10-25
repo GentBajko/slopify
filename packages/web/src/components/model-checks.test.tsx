@@ -259,7 +259,7 @@ describe("Settings → Models: models that work for you", () => {
 describe("Home's new models line", () => {
   it("says how many new models work and links to Settings → Models", async () => {
     await renderRouted(<NewModelsSlot />, testDeps({ "GET /api/model-checks": overview() }));
-    const link = await screen.findByRole("link", { name: "1 new model works for you" });
+    const link = await screen.findByRole("link", { name: "1 new AI model works for you" });
     expect(link.getAttribute("href")).toContain("section=models");
   });
 

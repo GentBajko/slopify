@@ -856,6 +856,20 @@ describe("home", () => {
           samples: { library: "s1", audiobook: null, podcast: "s2" },
           packs: [],
         }),
+        // Models found to work: not news beside what a video still needs.
+        "GET /api/model-checks": jsonAnswer({
+          auto: "free",
+          providers: [],
+          newForYou: [
+            {
+              provider: "openrouter",
+              family: "llm",
+              model: "x/new",
+              name: "New One",
+              firstWorksAt: new Date().toISOString(),
+            },
+          ],
+        }),
       }),
     );
     const first = await screen.findByRole("region", { name: "Your first video" });
@@ -867,6 +881,7 @@ describe("home", () => {
     const samples = screen.getByRole("region", { name: "Finished samples" });
     expect(within(samples).getAllByRole("link", { name: /^Watch / })).toHaveLength(2);
     expect(within(samples).getByText(/^3:05 · 16:9 · video \+ 2 shorts \+ PDF/)).not.toBeNull();
+    expect(screen.queryByRole("link", { name: /new AI model/ })).toBeNull();
     // No contradiction, no calendar without a schedule, no second Create.
     expect(screen.queryByText(/Nothing needs you/)).toBeNull();
     expect(screen.queryByRole("link", { name: "Open calendar" })).toBeNull();

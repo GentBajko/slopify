@@ -141,7 +141,7 @@ With **Automatic checks** on **Free and near-free checks only** (the default), S
 
 ## New for you
 
-Models that start working for you after the first check appear under **New for you**, newest first, and Home shows a line such as "2 new models work for you" that opens this page. **Compare on a sample** asks which template to try it on and opens that template's studio with [Compare models](Template-Studio#compare-models) ready for it; nothing is spent until you press Compare there. Choose one in a picker to use it, or **Dismiss** it.
+Models that start working for you after the first check appear under **New for you**, newest first, and Home shows a line such as "2 new AI models work for you" that opens this page (not before you have a project of your own: until then Home shows what a video still needs). **Compare on a sample** asks which template to try it on and opens that template's studio with [Compare models](Template-Studio#compare-models) ready for it; nothing is spent until you press Compare there. Choose one in a picker to use it, or **Dismiss** it.
 
 ## Pick models on Create
 

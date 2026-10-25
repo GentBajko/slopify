@@ -302,8 +302,10 @@ export function HomeRoute({
           {startFrom === undefined ? null : (
             <StartFromTemplate templates={myTemplates} start={startFrom} />
           )}
-          {/* Last, so its empty slot never opens a gap above the column's first section. */}
-          <NewModelsSlot />
+          {/* Last, so its empty slot never opens a gap above the column's first section. Not
+              before a project of the person's own: beside what a video still needs on this
+              computer, "new AI models work for you" would contradict it. */}
+          {projects.data === undefined || firstTime ? null : <NewModelsSlot />}
         </BoardColumn>
       </Board>
     </div>
