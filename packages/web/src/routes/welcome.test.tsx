@@ -96,9 +96,9 @@ describe("step 1: what a short needs", () => {
     expect(await screen.findByText("Claude Code writes it with your sign-in.")).not.toBeNull();
     expect(screen.getByRole("heading", { name: "What a short needs" })).not.toBeNull();
     expect(screen.getByText("Step 1 of 3")).not.toBeNull();
-    expect(within(row("Script")).getByText("Ready")).not.toBeNull();
-    expect(within(row("Voice")).getByText("Not connected")).not.toBeNull();
-    expect(within(row("Images")).getByText("Not connected")).not.toBeNull();
+    expect(within(row("Article")).getByText("Ready")).not.toBeNull();
+    expect(within(row("Narration")).getByText("Needs setup")).not.toBeNull();
+    expect(within(row("Images")).getByText("Needs setup")).not.toBeNull();
     // Each fix opens Settings at the service that works at once, and says where to come back.
     const voiceKey = screen.getByRole("link", { name: "Add a voice key" });
     expect(voiceKey.getAttribute("href")).toBe(
@@ -159,9 +159,9 @@ describe("step 1: what a short needs", () => {
         "Your computer's own voice (eSpeak NG) reads it aloud, for free. A voice key sounds better.",
       ),
     ).not.toBeNull();
-    expect(within(row("Voice")).getByRole("link", { name: "Add a voice key" }).className).toContain(
-      "sl-btn--quiet",
-    );
+    expect(
+      within(row("Narration")).getByRole("link", { name: "Add a voice key" }).className,
+    ).toContain("sl-btn--quiet");
     cleanup();
     renderRouted(
       <WelcomeRoute />,
@@ -288,7 +288,7 @@ describe("step 3: make the first short", () => {
     await user.click(screen.getByRole("button", { name: "Make a 60-second short" }));
     expect(
       await screen.findByText(
-        "The short didn't start. Fix what is marked Not connected above, then press Make a 60-second short again.",
+        "The short didn't start. Fix what is marked Needs setup above, then press Make a 60-second short again.",
       ),
     ).not.toBeNull();
     refuse = false;

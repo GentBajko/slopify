@@ -285,7 +285,7 @@ export function WelcomeRoute({
                 // service that lists no model) is said here in the server's words.
                 text:
                   missing.length > 0
-                    ? "The short didn't start. Fix what is marked Not connected above, then press Make a 60-second short again."
+                    ? "The short didn't start. Fix what is marked Needs setup above, then press Make a 60-second short again."
                     : refused.map((gap) => gap.message).join(" "),
               };
   const at = welcomeSteps.indexOf(step);
