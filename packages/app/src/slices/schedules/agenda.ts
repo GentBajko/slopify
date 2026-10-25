@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { ProjectState } from "../../kernel/pipeline.js";
 import { derive, progressOf } from "../../kernel/runner/graph.js";
 import { liveProject, stageStandingsByProject } from "../admission/repo.js";
-import { readsByWaitBesideFailure } from "../admission/state-words.js";
+import { readsByWaitBesideFailure, retryingAt } from "../admission/state-words.js";
 import { queueEntries } from "../batch/index.js";
 import { sampleIds } from "../onboarding/model.js";
 import { readSampleRecord } from "../onboarding/state.js";
@@ -271,6 +271,7 @@ function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calen
         !uploads.has(project.id) &&
         !samples.has(project.id);
       const waiting = waits.get(project.id);
+      const retry = state === "running" ? retryingAt(standings.get(project.id) ?? []) : undefined;
       return [
         {
           id: project.id,
@@ -289,6 +290,7 @@ function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calen
           ...(readsByWaitBesideFailure(state, standings.get(project.id) ?? [])
             ? { stepFailed: true }
             : {}),
+          ...(retry === undefined ? {} : { retryAt: retry }),
           ...(waiting === undefined ? {} : { limitWaits: waiting.map(listingWait) }),
         },
       ];

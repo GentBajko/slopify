@@ -22,6 +22,7 @@ it.each([
   [{ prepared: true, progress: 0 }, "off", "Queued"],
   [{ progress: 0 }, "off", "Queued"],
   [{}, "waiting", "Waiting for your review"],
+  [{ state: "running", retryAt: "2026-09-10T14:05:00.000Z" }, "waiting", "Waiting to try again"],
 ] as const)("says %o as %s %s", (over, tone, word) => {
   expect(projectLook({ ...project, ...over })).toEqual({ tone, word });
 });
