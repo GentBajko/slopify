@@ -70,13 +70,18 @@ describe("the projects list", () => {
   it("lists every run with its state in words and a link into it", async () => {
     renderRouted(
       <ProjectsRoute />,
-      deps([listing("p1", "Rope Tricks", "running"), listing("p2", "Knots", "done")]),
+      deps([
+        listing("p1", "Rope Tricks", "running", { progress: 0.45 }),
+        listing("p2", "Knots", "done"),
+      ]),
     );
 
     const row = await screen.findByRole("link", { name: "Rope Tricks" });
     expect(row.getAttribute("href")).toBe("/projects/p1");
     const list = screen.getByRole("list", { name: "Projects" });
     expect(within(list).getByText("Running")).not.toBeNull();
+    // The running row's bar says in words how far it is.
+    expect(within(list).getByText("45% done")).not.toBeNull();
     // A finished video says the same word as its filter and Home: Ready to upload.
     expect(within(list).getByText("Ready to upload")).not.toBeNull();
     // Open is in words on every row, not only behind the title.

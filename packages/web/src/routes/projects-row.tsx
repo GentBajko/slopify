@@ -77,6 +77,7 @@ export function ProjectRow({
   const meta = finished(project)
     ? finishedLine(project)
     : `${madeOf(project)} · started ${startedAt(project.createdAt)}`;
+  const done = `${String(Math.round(project.progress * 100))}% done`;
   return (
     <ListRow
       lead={
@@ -109,7 +110,8 @@ export function ProjectRow({
                 {`${project.title}: ${state.word}`}
               </span>
             </Status>
-            <span className="min-w-0 truncate max-md:whitespace-normal" title={meta}>
+            {/* Wraps rather than cuts: the finish date at its end is what tells rows apart. */}
+            <span className="min-w-0">
               {meta}
               {project.status === "partial" ? (
                 <>
@@ -120,13 +122,18 @@ export function ProjectRow({
             </span>
           </span>
           {running ? (
-            <Meter
-              progress
-              value={project.progress}
-              label={`${project.title} progress`}
-              valueText={`${String(Math.round(project.progress * 100))}% done`}
-              className="max-w-[240px]"
-            />
+            // The bar with its words: the share of the run's own work done, supplied steps
+            // left out (`progressOf`).
+            <span className="flex items-center gap-2">
+              <Meter
+                progress
+                value={project.progress}
+                label={`${project.title} progress`}
+                valueText={done}
+                className="max-w-[240px] flex-1"
+              />
+              <span className="shrink-0 text-small text-ink-2 tabular-nums">{done}</span>
+            </span>
           ) : null}
         </span>
       }
