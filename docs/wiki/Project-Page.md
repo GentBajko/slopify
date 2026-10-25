@@ -8,7 +8,7 @@ Every run you start gets a project page. It shows each part as it is made, puts 
 
 | Part | What it holds |
 | --- | --- |
-| Title row | **Projects** (the way back), the project title, its state in words beside its lamp (for example **● Done**), a short line of facts (finished when and how long it took, or when it started; its channel; when it was uploaded; "Audiobook" or "Podcast episode" for spoken work), then the one thing to do next (the page's only lime button), **Edit settings** and **More**. While a step works, a clock sits in the line: `Working · 9 min 30 s`, holding still as `9 min 30 s of work so far` while the run is paused or waits on you. |
+| Title row | **Projects** (the way back), the project title, its state in words beside its lamp (for example **● Done**), a short line of facts (finished when and how long it took, or when it started; its channel; when it was uploaded; "Audiobook" or "Podcast episode" for spoken work), then the one thing to do next (the page's only lime button), **Edit settings** and **More**. While a step works, the line says where the run stands, as Home does (`Step 2 of 4 · Narration · about 4 min left on this step`), beside a clock: `Working · 9 min 30 s`, holding still as `9 min 30 s of work so far` while the run is paused or waits on you. |
 | Note under the title | One line, only when the situation needs saying: the read-only sample, a paused, stopped or queued run, a run an agent is reviewing, a finished short. |
 | Main column | The part you picked. |
 | Status list (right) | One row per thing the project makes: **Article**, **Narration**, **Images**, **Video**, **Shorts**, **YouTube**, **PDF**, each with its state in words and one detail, for example **Done · 4 images + 1 thumbnail**. **All files** closes the list with how many files there are. While the run goes, **Progress** leads the list, and a row that works, waits or failed gets a second line saying what it is doing and the time left. A part with outdated files says how many, for example **Done · 2 outdated**. |
@@ -61,7 +61,7 @@ The title row shows at most one lime button, named for what it will do. It is th
 | Queued | None. Videos queued together run one at a time, in the order they were added; Home shows which one is running now. |
 | An edit made files outdated | Makes the outdated ones again, for example the outdated narration or 4 outdated images. Before anything paid starts, it shows what it makes again and the estimated cost. |
 | A 60-second short is finished | **Make the full video on this topic** (opens Create set up for a long video on the same topic; see [Your First Short](Your-First-Short#make-the-full-video-next)) |
-| The video is finished | **Copy for YouTube Studio** and the video's download, **Download video (.mp4)**, are both one press away (see [Publishing to YouTube](Publishing-to-YouTube)) |
+| The video is finished (uploaded or not) | **Download video**. **Copy for YouTube Studio** sits in the Video part's heading, beside the player (see [Publishing to YouTube](Publishing-to-YouTube)). |
 
 `Shift+N` runs the next action from anywhere on the page.
 
@@ -204,7 +204,7 @@ When there are old versions, **Delete old versions** frees their files too. Chan
 | Action | What it does |
 | --- | --- |
 | **Mark uploaded** / **Mark not uploaded** | Records whether the video is on YouTube, as Copy for YouTube Studio's **I've uploaded it** does. |
-| **Choose what to remake…** | Only when files are outdated: opens the review of every outdated or failed file, to make them again one by one. See [Editing a Project](Editing-a-Project#choose-what-to-remake). |
+| **Choose what to make again…** | Only when files are outdated: opens the review of every outdated or failed file, to make them again one by one. See [Editing a Project](Editing-a-Project#choose-what-to-make-again). |
 | **Rename…** | Opens the settings on the project title. |
 | **Save as template…** | Saves this project's settings as a template (not for the sample). See [Templates](Templates). |
 | **Move to channel…** | Only with two or more channels. |

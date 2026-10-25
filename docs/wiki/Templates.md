@@ -69,7 +69,7 @@ Keywords the project title names start empty so you can type this video's topic.
 
 Every save of a template is a new version. **More** → **Versions** lists them, newest first, as **Version N** with its name and date, the newest marked current, the others with **Restore**, and **Compare with the current version** beside the list. **Restore** saves the old version again as a new version ("Restored version 2 of … as version 5."), so nothing after it is lost.
 
-Schedules run the template's newest version until you approve one for schedules in Edit template (**More** → **Approve for schedules**); from then on they run the approved one. See [Template Studio](Template-Studio#mark-ready) and [Schedules](Schedules).
+Schedules run the template's newest version until you approve one for schedules in Edit template (**More** → **Approve for schedules**); from then on they run the approved one. See [Edit template](Template-Studio#approve-for-schedules) and [Schedules](Schedules).
 
 ## Move a template to another channel
 
