@@ -16,11 +16,11 @@ These pages cover Slopify 3.0: every screen, every setting and every workflow, s
 
 ## How a video gets made
 
-1. **Settings:** add provider keys and voices, or use a signed-in CLI.
+1. **Settings:** add service keys and voices, or use a signed-in CLI.
 2. **Prompts:** write article, image and thumbnail prompts once, with `{{keywords}}` where the subject goes.
-3. **Create:** pick a template or prompts, type the topic, choose your outputs, check the cost estimate, press **Make the video** (or **Queue 3 videos** for several topics).
+3. **Create:** pick a template or prompts, type the topic, choose your extras, check the cost estimate, press **Make the video** (or **Queue 3 videos** for several topics).
 4. **The project page** shows each stage as it runs. Download the video, captions, PDF and description when it is done.
-5. **Edit settings** on the project (the Edit project form) to change anything. Slopify remakes only what the change affects.
+5. **Edit settings** on the project to change anything. Slopify makes again only what the change affects.
 
 ## Contents
 
@@ -37,26 +37,26 @@ These pages cover Slopify 3.0: every screen, every setting and every workflow, s
 | [Updating and patch notes](Updating-and-Patch-Notes) | Updating, going back, and reading patch notes |
 | [Uninstalling and moving](Uninstalling-and-Moving) | Removing Slopify and moving between Docker and a native install |
 
-### Providers
+### Services and keys
 | Page | What it covers |
 |---|---|
-| [Keys and Services](Providers-and-Keys) | Every API provider, testing and saving keys, the system voice, Settings → Voices |
+| [Keys and Services](Providers-and-Keys) | Every service with an API key, testing and saving keys, the system voice, Settings → Voices |
 | [AI CLIs](AI-CLIs) | Claude Code, Codex and Antigravity CLI: sign-in, use and plan limits |
 | [Models](Models) | The model catalogue, retired models and switching |
-| [Costs and run cost](Costs-and-Run-Cost) | Cost estimates, the run cost line, the Run cost tab and usage |
+| [Costs and run cost](Costs-and-Run-Cost) | Cost estimates, the cost line, See the breakdown and usage |
 
 ### Making a video
 | Page | What it covers |
 |---|---|
-| [Create Overview](Create-Overview) | Templates, topics, batches, drafts, the estimate, Start and Queue |
+| [Create Overview](Create-Overview) | What you make, templates, topics, several videos at once, drafts, the estimate and Make the video |
 | [Create: Article](Create-Article) | Title patterns, article prompts, research and your own text |
 | [Create: Narration](Create-Narration) | Voices, pauses, volume, glossary, aliases, described tables |
 | [Create: Images](Create-Images) | Image prompts, the establishing image, cast, image pacing, Codex |
 | [Create: Video and Style](Create-Video-and-Style) | Cuts, the Look, transitions, chapter cards, motion, captions, ambient sound |
-| [Create: Extras](Create-Extras) | Video, shorts, description, PDF, thumbnails and audio exports |
-| [Pauses and checks](Reviews-and-Checkpoints) | Automatic reviews and pausing a run for you to check |
+| [Create: Extras](Create-Extras) | Thumbnails, the YouTube description, shorts, posts and the PDF |
+| [Pauses and checks](Reviews-and-Checkpoints) | AI checks and pausing a run for you to check |
 
-### Formats and outputs
+### Formats and extras
 | Page | What it covers |
 |---|---|
 | [Multiple voices](Multiple-Voices) | Audiobook, podcast, radio drama and interview formats |
@@ -69,8 +69,8 @@ These pages cover Slopify 3.0: every screen, every setting and every workflow, s
 | Page | What it covers |
 |---|---|
 | [Project page](Project-Page) | The next action, the run cost line, time left, downloads, the players, freeing space |
-| [Editing a project](Editing-a-Project) | Edit project, remaking outdated work, the rebuild review, history |
-| [Video editing](Video-Editing) | Video, caption, subtitle and ambient sound controls on a project |
+| [Editing a project](Editing-a-Project) | Edit settings, making outdated work again, Choose what to make again, Versions |
+| [Video editing](Video-Editing) | Video, caption and ambient sound controls on a project |
 | [Recovery and retries](Recovery-and-Retries) | Fix-it buttons, retries and waiting for plan limits |
 | [Trash](Trash) | Deleted projects and how to get them back |
 
@@ -83,7 +83,7 @@ These pages cover Slopify 3.0: every screen, every setting and every workflow, s
 ### Automation
 | Page | What it covers |
 |---|---|
-| [Templates](Templates) | Saving and reusing a setup |
+| [Templates](Templates) | Saving and reusing a video's settings |
 | [Schedules](Schedules) | Videos on a cadence, topic lists and self-filling topics |
 | [Calendar](Calendar) | What needs you, what is coming up, the video queue |
 | [Notifications](Notifications) | Browser and phone (ntfy) notifications |
@@ -100,7 +100,7 @@ These pages cover Slopify 3.0: every screen, every setting and every workflow, s
 | Page | What it covers |
 |---|---|
 | [Prompts and Templates](Prompts-and-Templates) | Where prompts, templates, PDF themes and aliases are |
-| [Prompts](Prompts) | Writing prompts, keyword slots, history and restore |
+| [Prompts](Prompts) | Writing prompts, keywords, history and restore |
 | [Intros and outros](Intros-and-Outros) | Reusable openings and closings |
 | [Aliases and glossary](Narration-Aliases-and-Glossary) | How the narrator says words |
 | [Document themes](Document-Themes) | The look of the PDF |
