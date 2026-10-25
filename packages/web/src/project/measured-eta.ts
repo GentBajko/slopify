@@ -36,8 +36,9 @@ export function measuredEta(stage: Stage, now: number, memory = seen): Eta | und
   if (percent === undefined) return { basis: "unknown" };
   const key = `${stage.id}\0${stage.activity?.label ?? ""}`;
   const seenBefore = memory.get(key);
-  // The first reading, or the measure started again (a second render): the clock starts here.
-  if (seenBefore === undefined || percent < seenBefore.percent) {
+  // The first reading, or the measure started again (a second render, below where the last one
+  // got to): the clock starts here.
+  if (seenBefore === undefined || percent < seenBefore.movedTo) {
     memory.set(key, { at: now, percent, movedAt: now, movedTo: percent });
     return { basis: "unknown" };
   }

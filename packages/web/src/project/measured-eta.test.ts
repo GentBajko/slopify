@@ -58,6 +58,10 @@ describe("the measured time left", () => {
     // A second render begins at 0: its own clock.
     expect(measuredEta(at(0), t0 + 70_000, memory)).toEqual({ basis: "unknown" });
     expect(measuredEta(at(10), t0 + 80_000, memory)).toEqual({ basis: "progress", seconds: 90 });
+    // A third render that the page first sees past the second's start, but below where the
+    // second got to, is its own clock too, not the tail of the last one.
+    expect(measuredEta(at(90), t0 + 160_000, memory)).toEqual({ basis: "progress", seconds: 10 });
+    expect(measuredEta(at(15), t0 + 170_000, memory)).toEqual({ basis: "unknown" });
   });
 
   // Named but not measured yet: the render before its first percent said "under a minute
