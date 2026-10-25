@@ -1,6 +1,8 @@
+import type { Prompt, PromptDraft } from "@app/slices/library/model.js";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
+import { jsonAnswer } from "@/test-app";
 import type { PlaySession } from "./draft-context";
 import {
   mountPlay,
@@ -142,26 +144,54 @@ it("retains hidden literal keyword values and renders prompt HTML as text", asyn
   for (const name of ["__proto__", "topic.name", "with spaces"])
     expect((screen.getByLabelText(name) as HTMLInputElement).value).toBe("Kept");
 });
-it("keeps the draft when New prompt opens the prompt editor", async () => {
-  const { requests } = await mountPlay();
-  await userEvent.type(screen.getByLabelText(topicLabel), "Keep this draft");
-  const link = screen.getByRole("link", { name: "New prompt ↗ (opens Prompts)" });
-  expect(link.getAttribute("href")).toBe("/prompts/new?kind=article");
-  await userEvent.click(link);
-  // The draft lives above the page, so its autosave still runs once Create is left.
-  await waitFor(
-    async () => {
-      const saves = requests.filter(
-        (request) =>
-          ["PUT", "POST"].includes(request.method) &&
-          /\/api\/drafts(?:\/[a-f0-9-]+)?$/.test(request.url),
-      );
-      expect(await saves.at(-1)?.clone().json()).toMatchObject({
-        document: { form: { title: "Keep this draft" } },
-      });
+it("writes a new prompt in a drawer beside the setup, and picks it once saved", async () => {
+  const listed: Prompt[] = [
+    {
+      id: "Dossier",
+      kind: "article",
+      name: "Dossier",
+      body: "Write about {{topic}} in {{minWords}} words.",
+      slots: ["topic", "minWords"],
+      updatedAt: "2026-09-03T00:00:00.000Z",
     },
-    { timeout: 3000 },
+  ];
+  const { session, requests } = await mountPlay({
+    "GET /api/prompts": (request) => jsonAnswer({ prompts: listed })(request),
+    "POST /api/prompts": async (request) => {
+      const draft = (await request.json()) as PromptDraft;
+      const made: Prompt = {
+        ...draft,
+        id: "made",
+        slots: ["topic"],
+        updatedAt: "2026-09-27T00:00:00.000Z",
+      };
+      listed.push(made);
+      return jsonAnswer(made, 201)(request);
+    },
+  });
+  await userEvent.type(screen.getByLabelText(topicLabel), "Keep this draft");
+  await userEvent.click(screen.getByRole("button", { name: "New article prompt" }));
+  const drawer = within(await screen.findByRole("dialog", { name: "New article prompt" }));
+  // Save says what is missing instead of saving an empty prompt.
+  await userEvent.click(drawer.getByRole("button", { name: "Save" }));
+  expect(requests.some((one) => one.method === "POST" && /\/api\/prompts$/.test(one.url))).toBe(
+    false,
   );
+  await userEvent.type(drawer.getByLabelText("Instructions"), "Tell {{{{topic}} calmly.");
+  // The name follows the text's first words.
+  expect((drawer.getByLabelText("Name") as HTMLInputElement).value).toBe("Tell topic calmly");
+  await userEvent.click(drawer.getByRole("button", { name: "Save" }));
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog", { name: /New article prompt/ })).toBeNull(),
+  );
+  await waitFor(() => expect(session().document.form.articlePrompt).toBe("Tell topic calmly"));
+  // Create never left: the topic typed before is still there.
+  expect((screen.getByLabelText(topicLabel) as HTMLInputElement).value).toBe("Keep this draft");
+  expect(
+    within(screen.getByRole("radiogroup", { name: "Article prompt" }))
+      .getByRole("radio", { name: /^Tell topic calmly/ })
+      .matches(":checked"),
+  ).toBe(true);
 });
 
 it("goes to a provided article from the hint and preserves focus through autosave", async () => {

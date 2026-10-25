@@ -94,9 +94,9 @@ describe("the article prompt cards", () => {
     expect(onPick).toHaveBeenCalledWith("Sleep lore · Story");
     expect(group.getAttribute("aria-invalid")).toBe("false");
     expect(screen.getByText("Text of the prompt")).not.toBeNull();
-    expect(
-      screen.getByRole("link", { name: "New prompt ↗ (opens Prompts)" }).getAttribute("href"),
-    ).toBe("/prompts/new?kind=article");
+    // New article prompt opens its editor in a drawer over the setup, not on another page.
+    await userEvent.click(screen.getByRole("button", { name: "New article prompt" }));
+    expect(await screen.findByRole("dialog", { name: "New article prompt" })).not.toBeNull();
   });
 
   it("keeps a picked prompt that is no longer in Prompts, saying so", async () => {

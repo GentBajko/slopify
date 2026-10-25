@@ -1,10 +1,11 @@
 import type { Prompt, PromptKind } from "@app/slices/library/model.js";
 import { type ReactElement, useId, useState } from "react";
+import { Button } from "@/components/kit/button";
 import { HelpLine, Input } from "@/components/kit/field";
 import { Fold } from "@/components/kit/fold";
 import { helpScope } from "@/components/kit/info-tip";
-import { TextLink } from "@/components/kit/link";
 import { cn } from "@/lib/utils";
+import { NewPromptDrawer } from "./new-prompt-drawer";
 
 // What a prompt makes, read from its own text until prompts carry a description: its first
 // sentence with each {{Keyword}} said as "the keyword", and how long a narration it asks for
@@ -59,7 +60,8 @@ const filterFrom = 8;
 
 // The article (or script) prompt, the heart of a run: every prompt of the kind as a card with
 // what it makes and how long, so the choice is made on what each writes, not on its name. The
-// picked one's whole text folds open under the cards; New prompt opens the prompt editor.
+// picked one's whole text folds open under the cards; New prompt writes one in a drawer beside
+// the setup and picks it once saved.
 export function PromptCards({
   field,
   label,
@@ -80,6 +82,7 @@ export function PromptCards({
   const labelId = useId();
   const name = useId();
   const [filter, setFilter] = useState("");
+  const [writing, setWriting] = useState(false);
   const mine = prompts.filter((prompt) => prompt.kind === kind);
   const picked = mine.find((prompt) => prompt.name === value);
   const words = filter.trim().toLowerCase();
@@ -98,9 +101,9 @@ export function PromptCards({
   const focusName = cards.some((card) => card.name === value) ? value : cards[0]?.name;
   const kindWord = kind === "script" ? "script" : "article";
   const newPrompt = (
-    <TextLink to="/prompts/new" search={{ kind }}>
-      New prompt ↗ (opens Prompts)
-    </TextLink>
+    <Button variant="quiet" size="small" className="-my-1" onClick={() => setWriting(true)}>
+      New {kindWord} prompt
+    </Button>
   );
   return (
     <div className="flex min-w-0 flex-col gap-2" {...helpScope}>
@@ -178,6 +181,15 @@ export function PromptCards({
           <HelpLine>A prompt tells the AI what to write, and at what length. {newPrompt}</HelpLine>
         </>
       )}
+      <NewPromptDrawer
+        kind={kind}
+        open={writing}
+        onClose={() => setWriting(false)}
+        onSaved={(saved) => {
+          setWriting(false);
+          onPick(saved.name);
+        }}
+      />
       {picked === undefined ? null : (
         <Fold summary="Text of the prompt" state={picked.name}>
           <pre

@@ -1,9 +1,11 @@
 import type { Prompt } from "@app/slices/library/model.js";
-import { type ReactElement, useId } from "react";
+import { type ReactElement, useId, useState } from "react";
+import { Button } from "@/components/kit/button";
 import { HelpLine } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
 import { TextLink } from "@/components/kit/link";
 import { Picker } from "@/components/ui/picker";
+import { NewPromptDrawer } from "./new-prompt-drawer";
 
 // Narration preparation: a narration prompt the AI follows to add delivery directions before
 // the voice reads, or Off. The line under the select says what it adds and costs, and what it
@@ -24,6 +26,7 @@ export function NarrationPreparation({
   readonly onChange: (value: string) => void;
 }): ReactElement {
   const id = useId();
+  const [writing, setWriting] = useState(false);
   const choices = prompts.filter((prompt) => prompt.kind === "narration");
   const selected = choices.find((prompt) => prompt.name === value);
   const issue =
@@ -68,9 +71,18 @@ export function NarrationPreparation({
               View prompt ↗
             </TextLink>
           ) : null}
-          <TextLink to="/prompts/new" search={{ kind: "narration" }}>
-            New narration prompt ↗ (opens Prompts)
-          </TextLink>
+          <Button variant="quiet" size="small" className="-my-1" onClick={() => setWriting(true)}>
+            New narration prompt
+          </Button>
+          <NewPromptDrawer
+            kind="narration"
+            open={writing}
+            onClose={() => setWriting(false)}
+            onSaved={(saved) => {
+              setWriting(false);
+              onChange(saved.name);
+            }}
+          />
         </div>
       ) : null}
     </div>
