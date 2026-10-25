@@ -2,14 +2,14 @@
 
 A channel's cast is its recurring characters, creatures, places and objects. Each member has a name, a description and up to four reference pictures. Whenever a video's title or an image's brief names a member, its pictures go with that image request, so the member looks the same in every image and every episode. A cast member can also have a voice for multi-voice videos.
 
-**Where to find it:** **Channels** → a channel → **Cast** tab. **Add to cast** opens the editor beside the list.
+**Where to find it:** **Channels** → a channel → **Cast** tab. **Add to cast** opens the editor beside the list. An empty cast opens on the form for its first member, across the page.
 
 ## Add a cast member
 
 1. Open **Channels**, pick the channel, and open the **Cast** tab.
 2. Press **Add to cast**.
-3. Fill in the fields (see the table below). At least give it a **Name**: "Name it first, then give it reference pictures."
-4. Press **Add to cast**. The member is saved and the picture section opens.
+3. Fill in the fields (see the table below). At least give it a **Name**: "Name it first, then give it a picture or two." **Add alias** appears once you type another name.
+4. Press **Add to cast**. The member is saved and the picture section opens. Pressed with no name, it says "Give it a name first."
 5. Add one to four reference pictures: upload them or generate them (below).
 
 To change a member later, press **Edit** on it, change what you need and press **Save**. To remove one, press its delete button and confirm with **Delete from cast**.

@@ -129,4 +129,23 @@ it("opens an empty cast on the form for its first member, with no second Add but
   expect(adds.map((button) => button.getAttribute("form"))).toEqual(["cast-member-form"]);
   // Nothing to go back to.
   expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
+  // The form is the page: no empty column beside it, and what comes after the name is shown.
+  expect(screen.queryByRole("complementary", { name: "Cast member editor" })).toBeNull();
+  expect(screen.getByRole("region", { name: "Reference pictures" })).toBeTruthy();
+});
+
+// Nothing is drawn greyed: Add alias appears once there is a name to add, and Add to cast pressed
+// with no name says so and puts the cursor in Name.
+it("never greys Add to cast or Add alias, and says a name comes first", async () => {
+  const user = userEvent.setup();
+  renderRouted(<CastTab channelId={channelId} cast={[]} />, testDeps({}));
+  const add = await screen.findByRole("button", { name: "Add to cast" });
+  expect(add.hasAttribute("disabled")).toBe(false);
+  expect(screen.queryByRole("button", { name: "Add alias" })).toBeNull();
+  await user.click(add);
+  expect(await screen.findByText("Give it a name first.")).toBeTruthy();
+  expect(document.activeElement).toBe(screen.getByPlaceholderText("Ronald the Rat"));
+  await user.type(screen.getByPlaceholderText("Another name, such as the Last Pharaoh"), "Ron");
+  await user.click(screen.getByRole("button", { name: "Add alias" }));
+  expect(screen.getByRole("list", { name: "Aliases added" }).textContent).toContain("Ron");
 });
