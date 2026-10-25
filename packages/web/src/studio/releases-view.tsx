@@ -102,11 +102,12 @@ export function ReleasesView(): ReactElement {
       </nav>
       {entries.length === 0 ? (
         page === 0 ? (
-          <EmptyState title="No release times in the next two weeks" actions={setUp}>
-            A schedule can give each video it makes a day and time to go public: open it, press
-            Edit, then Release times.
-            {data.candidates.length === 0 ? "" : " Or pick a time for a finished video below."}
-          </EmptyState>
+          // With finished videos waiting for a time, they lead and this is one line under them.
+          data.candidates.length === 0 ? (
+            <EmptyState title="No release times in the next two weeks" actions={setUp}>
+              A schedule can give each video it makes a day and time to go public.
+            </EmptyState>
+          ) : null
         ) : (
           <EmptyState title={`Nothing planned from ${range}`}>
             Press Later to look further ahead, or Back to this week.
@@ -177,6 +178,15 @@ export function ReleasesView(): ReactElement {
         editing={editing}
         onEdit={setEditing}
       />
+      {entries.length === 0 && page === 0 && data.candidates.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="m-0 text-small text-ink-2">
+            Nothing is set to go public in the next two weeks. A schedule can give each video it
+            makes a day and time.
+          </p>
+          {setUp}
+        </div>
+      ) : null}
       <p className="m-0 max-w-[90ch] text-small text-ink-2">
         Every video and short is due {String(data.leadHours)} hours before its release, so YouTube's
         copyright and ad checks finish while it is private. Change that in{" "}
