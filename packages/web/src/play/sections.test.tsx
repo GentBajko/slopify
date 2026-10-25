@@ -193,15 +193,17 @@ it("ticks the PDF of the article, picks its theme and saves both into the draft"
   expect(outputsSummary()).toBe("The video only: no thumbnail, description, shorts or PDF.");
   await userEvent.click(screen.getByRole("checkbox", { name: "PDF of the article" }));
   const theme = screen.getByRole<HTMLSelectElement>("combobox", { name: "PDF look" });
-  // Plain is the one built-in; DiceMaster is no longer offered.
+  // Three ready looks, Plain first and picked; DiceMaster is no longer offered.
   expect(theme.value).toBe("builtin:plain");
   expect(
     Array.from(
       theme.querySelectorAll("optgroup[label='Built in'] option"),
       (one) => one.textContent,
     ),
-  ).toEqual(["Plain"]);
+  ).toEqual(["Plain", "Book", "Modern"]);
   expect(outputsSummary()).toBe("Also makes a PDF in the Plain look.");
+  await userEvent.selectOptions(theme, "Book");
+  expect(outputsSummary()).toBe("Also makes a PDF in the Book look.");
   await saveNow(session);
   {
     const saves = requests.filter(
@@ -210,9 +212,9 @@ it("ticks the PDF of the article, picks its theme and saves both into the draft"
         /\/api\/drafts(?:\/[a-f0-9-]+)?$/.test(request.url),
     );
     const saved = await saves.at(-1)?.clone().json();
-    expect(saved).toMatchObject({ document: { form: { sources: { document: "generate" } } } });
-    // The default needs no saving: a draft without a theme reads, and is made, as Plain.
-    expect(saved.document.form.document?.theme ?? "plain").toBe("plain");
+    expect(saved).toMatchObject({
+      document: { form: { sources: { document: "generate" }, document: { theme: "book" } } },
+    });
   }
 });
 

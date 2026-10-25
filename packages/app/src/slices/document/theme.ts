@@ -195,8 +195,12 @@ const cinzel = (style: FontStyle, letterSpacing: number): FontFace => ({
   letterSpacing,
 });
 
-// The one built-in: an unbranded flat page. Its layout is the one Slopify has always drawn,
-// written out in full rather than as changes to another theme.
+const literata = (style: FontStyle): FontFace => ({ family: "Literata", style, letterSpacing: 0 });
+const sans = (style: FontStyle): FontFace => ({ family: "helvetica", style, letterSpacing: 0 });
+
+// The first built-in, and the default: an unbranded flat page. Its layout is the one Slopify
+// has always drawn, written out in full rather than as changes to another theme. The other
+// built-ins are changes to it.
 const plain: DocumentTheme = {
   page: { format: "a4", margin: 22, contentTop: 32 },
   background: { image: null, color: "#fdfaf3" },
@@ -284,10 +288,55 @@ export type DocumentThemeOverrides = {
   readonly [K in keyof DocumentTheme]?: Partial<DocumentTheme[K]>;
 };
 
+// Book: the article set like a novel, in Literata on the parchment texture, with Plain's Cinzel
+// headings and drop caps in a warm brown.
+const book: DocumentThemeOverrides = {
+  background: { image: "parchment", color: "#f5ebd7" },
+  colors: { heading: "#5a3214", text: "#231a12", muted: "#5e5246", faint: "#857767" },
+  fonts: {
+    body: literata("normal"),
+    strong: literata("bold"),
+    emphasis: literata("italic"),
+    footer: literata("italic"),
+  },
+  sizes: { body: 11 },
+  spacing: { bodyLine: 6.5, paragraphGap: 0.6 },
+  // A paragraph of a line or two starts plainly: a three-line initial beside it looks lost.
+  dropCap: { minLength: 120 },
+};
+
+// Modern: a sans-serif on a white page, blue headings and no drop caps, like a report.
+const modern: DocumentThemeOverrides = {
+  background: { image: null, color: "#ffffff" },
+  colors: { heading: "#1d4e89", text: "#1c1c1c", muted: "#5a5a5a", faint: "#8a8a8a" },
+  fonts: {
+    body: sans("normal"),
+    strong: sans("bold"),
+    emphasis: sans("italic"),
+    heading: sans("bold"),
+    dramatic: sans("bold"),
+    decorative: sans("normal"),
+    dropCap: sans("bold"),
+    footer: sans("normal"),
+  },
+  sizes: { brand: 28, title: 24, section: 18, heading: 15, subheading: 12, body: 10.5 },
+  spacing: { bodyLine: 6, headingLine: 9, subheadingLine: 7, paragraphGap: 0.7 },
+  dropCap: { enabled: false },
+};
+
 // A built-in by name. "dicemaster" is still read, from projects saved while it was built in,
 // and gives exactly the values it gave then.
 export function builtInTheme(name: DocumentThemeName): DocumentTheme {
-  return resolveTheme({}, name === legacyDocumentTheme ? legacyDiceMasterTheme : plain);
+  switch (name) {
+    case "book":
+      return resolveTheme(book, plain);
+    case "modern":
+      return resolveTheme(modern, plain);
+    case legacyDocumentTheme:
+      return resolveTheme({}, legacyDiceMasterTheme);
+    default:
+      return resolveTheme({}, plain);
+  }
 }
 
 // The theme a project's document is drawn with: its copy of a Library theme, or a built-in.

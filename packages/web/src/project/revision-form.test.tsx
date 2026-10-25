@@ -88,14 +88,19 @@ it("reads an absent Document source as Off and writes the source and theme", asy
       theme.querySelectorAll("optgroup[label='Built in'] option"),
       (one) => one.textContent,
     );
-  expect(builtIns()).toEqual(["Plain", "DiceMaster (retired, this project's look)"]);
+  expect(builtIns()).toEqual([
+    "Plain",
+    "Book",
+    "Modern",
+    "DiceMaster (retired, this project's look)",
+  ]);
   expect(theme.disabled).toBe(true);
   await user.selectOptions(source, "generate");
   expect(theme.disabled).toBe(false);
   await user.selectOptions(theme, "Plain");
   expect(latest.config.sources.document).toBe("generate");
   expect(latest.config.document).toEqual({ theme: "plain" });
-  expect(builtIns()).toEqual(["Plain"]);
+  expect(builtIns()).toEqual(["Plain", "Book", "Modern"]);
 });
 
 it("shows the video timing settings only where the export uses them", async () => {

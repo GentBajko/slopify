@@ -346,7 +346,7 @@ export const playHelp = {
   },
   "play.document-theme": {
     title: "PDF look",
-    body: "How the PDF looks: the built-in Plain or one of your PDF themes. A theme of yours is copied into the project, so editing it later leaves this project alone until you pick it again.",
+    body: "How the PDF looks: one of three ready looks (Plain, Book in book type on parchment, Modern in a sans-serif on white) or one of your PDF themes. Preview shows it. A theme of yours is copied into the project, so editing it later leaves this project alone until you pick it again.",
     tutorial: { page: "PDF-Documents", anchor: "options" },
   },
 
