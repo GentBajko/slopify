@@ -94,7 +94,7 @@ These pages cover Slopify 3.0: every screen, every setting and every workflow, s
 | Page | What it covers |
 |---|---|
 | [Channels](Channels) | Name and look, cast, memory, titles to avoid and channel links |
-| [Cast library](Cast-Library) | Recurring characters with pictures and voices |
+| [Cast](Cast-Library) | Recurring characters with pictures and voices |
 
 ### Prompts and templates
 | Page | What it covers |

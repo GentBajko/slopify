@@ -27,7 +27,7 @@
 - [Extras](Create-Extras)
 - [Pauses and checks](Reviews-and-Checkpoints)
 
-**Formats and outputs**
+**Formats and extras**
 - [Multiple voices](Multiple-Voices)
 - [Other languages](Other-Languages)
 - [Shorts](Shorts)
@@ -48,7 +48,7 @@
 
 **Automation**
 - [Templates](Templates)
-- [Template studio](Template-Studio)
+- [Edit template](Template-Studio)
 - [Schedules](Schedules)
 - [Calendar](Calendar)
 - [Notifications](Notifications)
@@ -58,7 +58,7 @@
 
 **Channels**
 - [Channels](Channels)
-- [Cast library](Cast-Library)
+- [Cast](Cast-Library)
 
 **Prompts and templates**
 - [Prompts and templates](Prompts-and-Templates)

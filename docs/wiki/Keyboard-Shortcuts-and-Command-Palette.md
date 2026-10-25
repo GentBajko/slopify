@@ -176,7 +176,7 @@ See [Prompts and Templates](Prompts-and-Templates).
 | **New channel** | Channels | Starts a new channel. |
 | **Add to cast** | A channel's page | Adds a character, creature, place or object to its cast. |
 
-See [Channels](Channels) and [Cast-Library](Cast-Library).
+See [Channels](Channels) and [Cast](Cast-Library).
 
 ### Schedules and Calendar
 

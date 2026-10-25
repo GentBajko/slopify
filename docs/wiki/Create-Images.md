@@ -77,7 +77,7 @@ Changing the establishing image later marks the images drawn from it as outdated
 
 The video's channel brings its cast: characters, creatures, places and objects, each with reference pictures. When an image's brief mentions a cast member by name or alias (as a whole word, ignoring case), that image is drawn with the member's pictures as references, after the establishing image when it is on. The establishing image and the thumbnail also take the members the title mentions. At most four members go with one image.
 
-Models that take several input pictures (Codex, OpenAI, Google, and fal.ai's FLUX.2 and Nano Banana 2 edit models) use the pictures directly. A model that takes none gets the members described in words instead. The cast is used even when **Use the channel's brand kit** is off. See [Cast Library](Cast-Library) and [Channels](Channels).
+Models that take several input pictures (Codex, OpenAI, Google, and fal.ai's FLUX.2 and Nano Banana 2 edit models) use the pictures directly. A model that takes none gets the members described in words instead. The cast is used even when **Use the channel's brand kit** is off. See [Cast](Cast-Library) and [Channels](Channels).
 
 ## More images for long videos
 
@@ -157,7 +157,7 @@ Folded, the Images row says what will be drawn, for example `16 images from “S
 - [Create Overview](Create-Overview)
 - [Prompts](Prompts)
 - [Keywords Slopify fills](Keywords-Slopify-Fills)
-- [Cast Library](Cast-Library)
+- [Cast](Cast-Library)
 - [Channels](Channels)
 - [Models](Models)
 - [Costs and Run Cost](Costs-and-Run-Cost)

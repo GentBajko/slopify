@@ -75,7 +75,7 @@ To keep one video exactly as its template was saved, untick **Use the channel's 
 
 ### Cast
 
-Recurring characters, creatures, places and objects, each with reference pictures that go with every image that names them. A cast member with a voice can also be one of the channel's hosts: a new podcast or interview on Create then starts with them as its speakers. See [Cast library](Cast-Library).
+Recurring characters, creatures, places and objects, each with reference pictures that go with every image that names them. A cast member with a voice can also be one of the channel's hosts: a new podcast or interview on Create then starts with them as its speakers. See [Cast](Cast-Library).
 
 ### Templates
 
@@ -142,7 +142,7 @@ Links saved in **Settings → Channel links** before channels had their own stil
 
 ## Related pages
 
-- [Cast library](Cast-Library)
+- [Cast](Cast-Library)
 - [Templates](Templates)
 - [Schedules](Schedules)
 - [Create: Video and Style](Create-Video-and-Style)
