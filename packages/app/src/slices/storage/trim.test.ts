@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { afterEach, expect, it } from "vitest";
+import { writeSampleRecord } from "../onboarding/state.js";
 import { revisionFixture } from "../revisions/revision.fake.js";
 import { storageUsage } from "./portable.js";
 import {
@@ -146,5 +147,23 @@ it("leaves a template studio sample's files alone in Clean up everything and Del
   expect(cleanUpAll(h.deps)).toEqual({ files: 0, bytesFreed: 0, skipped: 0 });
   expect(deleteAllOldVersions(h.deps)).toMatchObject({ projects: 0, files: 0, busy: 0 });
   for (const kept of ["audio-body.mp3", "render.json"])
+    expect(existsSync(join(dir, kept)), kept).toBe(true);
+});
+
+it("leaves a bundled sample's files alone and counts nothing on it as removable", () => {
+  const { h, dir } = fixture();
+  writeSampleRecord(h.deps.db, { projectId: "p1", seededAt: "t" });
+  mkdirSync(join(dir, "History"), { recursive: true });
+  writeFileSync(join(dir, "History", "old.png"), Buffer.alloc(5));
+  // Disk space's totals read these, so a sample adds nothing to Clean up everything's size.
+  expect(projectStorage(h.deps, "p1")).toMatchObject({
+    removableFiles: 0,
+    removableBytes: 0,
+    historyFiles: 0,
+    historyBytes: 0,
+  });
+  expect(cleanUpAll(h.deps)).toEqual({ files: 0, bytesFreed: 0, skipped: 0 });
+  expect(deleteAllOldVersions(h.deps)).toMatchObject({ projects: 0, files: 0, busy: 0 });
+  for (const kept of ["audio-body.mp3", "render.json", "History/old.png"])
     expect(existsSync(join(dir, kept)), kept).toBe(true);
 });

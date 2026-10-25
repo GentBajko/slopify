@@ -1,7 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { readJsonSetting, readSetting, writeSetting } from "../settings/repo.js";
-import type { SampleId } from "./model.js";
+import { type SampleId, sampleIds } from "./model.js";
 
 // What the first five minutes remember, in the settings table: whether the first-run screen
 // was dismissed, which project is the bundled sample, and which library rows each installed
@@ -56,6 +56,13 @@ export function readSampleRecord(
   id: SampleId = "library",
 ): SampleRecord | undefined {
   return readJson(db, sampleKeyOf(id), sampleRecord);
+}
+
+// The bundled samples' projects, by id, for a slice that must leave them as they are (Disk
+// space's clean-ups). A deleted sample's record stays until Restore samples, so an id may name
+// no project any more.
+export function bundledSampleProjects(db: DatabaseSync): ReadonlySet<string> {
+  return new Set(sampleIds.flatMap((id) => readSampleRecord(db, id)?.projectId ?? []));
 }
 
 export function writeSampleRecord(
