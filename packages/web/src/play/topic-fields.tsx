@@ -2,7 +2,7 @@ import { titleMax, valueMax } from "@app/slices/admission/rules.js";
 import { render } from "@app/slices/admission/substitute.js";
 import { youtubeTitleProblem } from "@app/slices/youtube/model.js";
 import { PencilIcon, PlusIcon } from "lucide-react";
-import { type ReactElement, useId, useRef, useState } from "react";
+import { type ReactElement, useEffect, useId, useRef, useState } from "react";
 import { KeywordList } from "@/components/keyword-list";
 import { Button, ButtonRow } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
@@ -31,6 +31,29 @@ export function TopicFields({
   const { document } = session;
   const { form } = document;
   const question = headingOf(outputKindOf(form));
+  // Arriving at Create, the cursor waits in the topic box (the shell moves focus there rather
+  // than to the heading), so typing the topic is the first thing, with no click; a draft
+  // reopened with its topic typed keeps the heading.
+  const autofocus =
+    topics.length === 0
+      ? form.title.trim() === ""
+      : (form.values[topics[0] ?? ""] ?? "").trim() === "";
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // Create drawn after the shell moved focus (a slow first load) takes it here too, as long
+    // as focus is still on the page itself rather than on something the person picked.
+    const target = box.current?.querySelector<HTMLInputElement>("[data-autofocus]");
+    const active = window.document.activeElement;
+    if (
+      target &&
+      (active === null ||
+        active === window.document.body ||
+        active.id === "main" ||
+        active.tagName === "H1" ||
+        active.closest("h1") !== null)
+    )
+      target.focus({ preventScroll: true });
+  }, []);
   const setForm = (next: typeof form): void => {
     session.edit({ ...document, form: next });
     session.invalidateReview(true);
@@ -42,19 +65,30 @@ export function TopicFields({
     const refused = youtubeTitleProblem(title);
     return refused === undefined ? undefined : `As a YouTube title: ${refused}`;
   };
+  // The first field is the same box whether it holds the title or a template's topic, so a
+  // template picked while the person types (the starter, on arrival) keeps the cursor and
+  // every key in it.
   if (topics.length === 0)
     return (
-      <Field label={question} error={problem("title")} help={forYoutube(form.title)}>
-        <Input
-          data-play-field="title"
-          className="!h-11 text-[17px]"
-          value={form.title}
-          spellCheck
-          maxLength={titleMax}
-          aria-invalid={problem("title") !== undefined}
-          onChange={(event) => setForm({ ...form, title: event.target.value })}
-        />
-      </Field>
+      <div ref={box} className="grid min-w-0 gap-4">
+        <Field
+          key="topic-0"
+          label={question}
+          error={problem("title")}
+          help={forYoutube(form.title)}
+        >
+          <Input
+            data-play-field="title"
+            data-autofocus={autofocus ? "" : undefined}
+            className="!h-11 text-[17px]"
+            value={form.title}
+            spellCheck
+            maxLength={titleMax}
+            aria-invalid={problem("title") !== undefined}
+            onChange={(event) => setForm({ ...form, title: event.target.value })}
+          />
+        </Field>
+      </div>
     );
   const title = render(form.title, form.values);
   const resolved = topics.every((name) => (form.values[name] ?? "").trim() !== "");
@@ -62,7 +96,7 @@ export function TopicFields({
   const typedOnly =
     topics.length === 1 && title.trim() === (form.values[topics[0] ?? ""] ?? "").trim();
   return (
-    <div className="grid min-w-0 gap-4">
+    <div ref={box} className="grid min-w-0 gap-4">
       {topics.map((name, index) => {
         const last = index === topics.length - 1;
         const help =
@@ -80,13 +114,14 @@ export function TopicFields({
           ) : undefined;
         return (
           <Field
-            key={name}
+            key={index === 0 ? "topic-0" : name}
             label={topics.length === 1 ? question : name}
             help={help}
             error={problem(`values.${name}`) ?? (last ? problem("title") : undefined)}
           >
             <Input
               data-play-field={`values.${name}`}
+              data-autofocus={autofocus && index === 0 ? "" : undefined}
               className="!h-11 text-[17px]"
               value={form.values[name] ?? ""}
               maxLength={valueMax}

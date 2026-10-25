@@ -24,7 +24,6 @@ import { checkpointTarget } from "@/play/checkpoints";
 import { ContentSection } from "@/play/content-section";
 import { usePlaySession } from "@/play/draft-context";
 import { DraftList } from "@/play/draft-list";
-import { rememberedDraft } from "@/play/draft-restore";
 import { focusPlayField, playFieldTarget } from "@/play/field-targets";
 import { KeywordBlock } from "@/play/keywords";
 import { outputKindOf, publishes, rowShown } from "@/play/output-kind";
@@ -55,7 +54,7 @@ import {
 } from "@/play/setup-rows";
 import { MakeButton, StartRail, useNarrow } from "@/play/start-rail";
 import { llmUsesOf, type PlayFormState, type Upload, type UploadSlot } from "@/play/state";
-import { choseBlank, TemplateField, useStarterTemplate } from "@/play/template-field";
+import { TemplateField, useStarterPick } from "@/play/template-field";
 import { templateLibrary } from "@/play/template-library";
 import { MoreVideos, TopicFields } from "@/play/topic-fields";
 import { useFirstRunDefaults } from "@/play/use-draft-session";
@@ -112,11 +111,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   const cast = useDraftCast();
   const session = usePlaySession();
   const { document } = session;
-  const starter = useStarterTemplate();
-  const defaultsSettled = useFirstRunDefaults(
-    session,
-    document.templateSource !== undefined || (!choseBlank() && starter.starter !== undefined),
-  );
+  const defaultsSettled = useFirstRunDefaults(session);
   const kind = outputKindOf(form);
   const sidebarChannel = useCurrentChannel().channelId;
   const { adoptChannel } = session;
@@ -294,10 +289,23 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     );
   };
 
+  const loaded =
+    defaultsSettled &&
+    [providers, prompts, entries, voices, settings].every(
+      (query) => query.isSuccess || query.isError,
+    );
+  const paused = tutorial?.active === true || leaving.current;
+  const starter = useStarterPick(paused);
+  const starterComing = starter.coming;
+  // Until the lists and the found services are in, and while the starter template is on its
+  // way, nothing is said to be missing: no row turns red over what is about to be filled in,
+  // and the hint under the button says it is checking.
+  const settling = !loaded || starterComing;
+
   // Everything that stops the Make button, once: the rows, the hint under the button and the
   // summary drawer all read this list.
   const providerList = providers.data?.providers ?? [];
-  const problems = setupProblems({
+  const missing = setupProblems({
     form,
     errors,
     refused,
@@ -306,6 +314,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     blocker,
     readinessFirst: readinessProblems(form, choices.entries, providerList, llmRow),
   });
+  const problems = settling ? [] : missing;
   const rowProblem = (row: SetupRowId): SetupProblem | undefined =>
     problems.find((one) => one.row === row);
   const topicField = topics[0] === undefined ? "title" : `values.${topics[0]}`;
@@ -335,21 +344,6 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   // until Change. Decided once per draft, after the lists the rules read and the first-run
   // defaults have arrived (and not for a fresh draft the starter template is about to
   // replace), so a row never folds away while it is being fixed.
-  const loaded =
-    defaultsSettled &&
-    [providers, prompts, entries, voices, settings].every(
-      (query) => query.isSuccess || query.isError,
-    );
-  const paused = tutorial?.active === true || leaving.current;
-  const starterComing =
-    !paused &&
-    !choseBlank() &&
-    session.activeId === null &&
-    session.view === null &&
-    session.edited === 0 &&
-    document.templateSource === undefined &&
-    rememberedDraft() === null &&
-    (!starter.settled || starter.starter !== undefined);
   // Brings a row's line into view when it is off screen, and leaves the page alone when not.
   const showRow = (row: SetupRowId): void => {
     requestAnimationFrame(() => {
@@ -739,7 +733,11 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
         />
         <div data-tour="play-options" className="flex min-w-0 flex-col gap-3">
           <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2">
-            <TemplateField topics={topics} paused={paused} onError={setTemplateError} />
+            <TemplateField
+              fresh={starter.fresh}
+              onTried={starter.onTried}
+              onError={setTemplateError}
+            />
             <ChannelFor />
           </div>
           <TopicFields topics={topics} problem={problem} />
@@ -756,7 +754,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
         </div>
         <SeenBefore topics={topics} />
         {templateError ? <Callout tone="danger" title={templateError} /> : null}
-        <SetupList rows={rows} open={open} onChange={setRow} />
+        <SetupList rows={rows} open={open} onChange={setRow} busy={settling} />
         <StartFromPicture />
       </Workspace>
       <Drawer
@@ -767,8 +765,9 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
         // view (styles/shell.css places it); where it covers the button (narrow windows), with
         // the button in its foot.
         className="min-[900px]:right-[var(--play-drawer-right)]"
+        // Closing it goes back to the form as it was: no row opens.
         onClose={() => {
-          void session.navigate("content" satisfies PlaySection);
+          void session.navigate("content" satisfies PlaySection, undefined, { reveal: false });
         }}
         {...(narrow || coversKey
           ? { footer: <MakeButton problems={problems} onStart={start} onFix={onFix} /> }

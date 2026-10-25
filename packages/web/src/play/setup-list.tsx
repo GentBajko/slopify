@@ -1,6 +1,7 @@
 import type { ReactElement, ReactNode } from "react";
 import { Button } from "@/components/kit/button";
 import { Status } from "@/components/kit/status";
+import { cn } from "@/lib/utils";
 import type { SetupRowId } from "./setup-rows";
 
 export interface SetupListRow {
@@ -23,17 +24,25 @@ export function SetupList({
   rows,
   open,
   onChange,
+  busy = false,
 }: {
   readonly rows: readonly SetupListRow[];
   readonly open: ReadonlySet<SetupRowId>;
   readonly onChange: (row: SetupRowId, open: boolean) => void;
+  // While Create is still filling the draft in (the starter template, the found services):
+  // the rows are dimmed, and none is judged yet.
+  readonly busy?: boolean;
 }): ReactElement {
   return (
     // The rows lay out by the list's own width: the name in its own column only where the
     // sentence beside it still has room.
     <ul
       aria-label="Setup"
-      className="@container m-0 flex list-none flex-col border-t border-line p-0"
+      aria-busy={busy}
+      className={cn(
+        "@container m-0 flex list-none flex-col border-t border-line p-0 transition-opacity",
+        busy && "opacity-60",
+      )}
     >
       {rows.map((row) => {
         const expanded = open.has(row.id);

@@ -308,6 +308,101 @@ describe("what Create starts from", () => {
     expect((screen.getByLabelText(topicLabel) as HTMLInputElement).value).toBe("Cleopatra");
   });
 
+  it("keeps the starter's services when the topic is typed before the model lists answer", async () => {
+    // The acceptance testers' race: on a cold start the writer's model list answers after the
+    // person has started typing, and the draft used to lose its writer and image service.
+    let answer: () => void = () => {};
+    const models = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    const { session } = await mountStarter({
+      "GET /api/providers/first-run": jsonAnswer({
+        firstRun: false,
+        detected: [],
+        defaults: {},
+        message: null,
+        detail: null,
+      }),
+      "GET /api/providers/claude-code/models": async (request) => {
+        await models;
+        return jsonAnswer({
+          models: [{ id: "sonnet", name: "Claude Sonnet" }],
+          allowsCustom: true,
+        })(request);
+      },
+    });
+    await waitFor(() => expect(startFrom().value).toBe(templateId));
+    await userEvent.type(screen.getByLabelText(topicLabel), "Volcanoes");
+    // Nothing is said to be missing while the services are on their way.
+    expect(document.querySelector("[data-row-problem]")).toBeNull();
+    await act(async () => {
+      answer();
+    });
+    await waitFor(() =>
+      expect(session().document.form.llm).toEqual({ provider: "claude-code", model: "sonnet" }),
+    );
+    expect(session().document.form.images).toEqual({ provider: "fal", model: "fal-ai/flux-2" });
+    expect(session().document.form.values.topic).toBe("Volcanoes");
+    await waitFor(() =>
+      expect(
+        within(screen.getByRole("list", { name: "Setup" })).queryByRole("button", {
+          name: /^Fix /,
+        }),
+      ).toBeNull(),
+    );
+  });
+
+  it("takes the topic typed while the starter is applied into it, every key, in one draft", async () => {
+    let made: () => void = () => {};
+    const instantiating = new Promise<void>((resolve) => {
+      made = resolve;
+    });
+    let read: () => void = () => {};
+    const reading = new Promise<void>((resolve) => {
+      read = resolve;
+    });
+    const routes = starterRoutes();
+    const instantiate = routes[`POST /api/project-templates/${templateId}/instantiate`];
+    const open = routes["GET /api/drafts/:id"];
+    if (instantiate === undefined || open === undefined) throw new Error("No starter routes");
+    const { session, requests } = await mountStarter({
+      [`POST /api/project-templates/${templateId}/instantiate`]: async (request) => {
+        await instantiating;
+        return instantiate(request);
+      },
+      "GET /api/drafts/:id": async (request) => {
+        await reading;
+        return open(request);
+      },
+    });
+    const box = screen.getByLabelText(topicLabel) as HTMLInputElement;
+    // Create opens with the cursor in the topic box.
+    await waitFor(() => expect(window.document.activeElement).toBe(box));
+    await userEvent.keyboard("Volca");
+    await act(async () => {
+      made();
+    });
+    await waitFor(() =>
+      expect(requests.some((one) => one.method === "GET" && /\/api\/drafts\/./.test(one.url))).toBe(
+        true,
+      ),
+    );
+    await userEvent.keyboard("noes");
+    await act(async () => {
+      read();
+    });
+    await waitFor(() => expect(startFrom().value).toBe(templateId));
+    await waitFor(() => expect(session().document.form.values.topic).toBe("Volcanoes"));
+    // The same box, still focused, now holds the template's topic.
+    expect(screen.getByLabelText(topicLabel)).toBe(box);
+    expect(window.document.activeElement).toBe(box);
+    expect(box.value).toBe("Volcanoes");
+    // The fresh form was never saved on its own: the starter's draft is the only one.
+    expect(
+      requests.filter((one) => one.method === "POST" && /\/api\/drafts$/.test(one.url)),
+    ).toEqual([]);
+  });
+
   it("gives a fresh draft the writer and image service the first launch found", async () => {
     const { session } = await mountPlay({
       "GET /api/providers/first-run": jsonAnswer({
@@ -416,6 +511,24 @@ describe("the rail", () => {
     await openSection("Review");
     const summary = screen.getByRole("dialog", { name: summaryTitle });
     expect(within(summary).queryByRole("button", { name: makeKey })).toBeNull();
+  });
+
+  it("opens no row when the summary closes", async () => {
+    await mountPlay({}, generatedRun);
+    const rows = within(screen.getByRole("list", { name: "Setup" }));
+    await userEvent.click(rows.getByRole("button", { name: "Change narration" }));
+    const before = rows.queryAllByRole("button", { expanded: true }).map((one) => one.textContent);
+    expect(before).toEqual(["Close narration"]);
+    await openSection("Review");
+    expect(screen.getByRole("dialog", { name: summaryTitle })).not.toBeNull();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: summaryTitle })).toBeNull());
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+    expect(rows.queryAllByRole("button", { expanded: true }).map((one) => one.textContent)).toEqual(
+      before,
+    );
   });
 
   it("checks the setup again when the person comes back to the window", async () => {
