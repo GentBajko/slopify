@@ -411,7 +411,7 @@ export function ShortsStrip({
           Open Shorts
         </TextLink>
       </div>
-      <ul className="m-0 flex list-none flex-wrap gap-4 p-0">
+      <ul className="m-0 flex list-none flex-wrap gap-x-6 gap-y-3 p-0">
         {videos.map((video) => {
           const number = Number(video.meta.short ?? 1);
           const clip = clips.find((one) => one.number === number);
@@ -448,24 +448,30 @@ function StripShort({
   const media = useOutputMedia(video);
   const picture = useOutputMedia(poster);
   return (
-    <li className="flex w-[140px] flex-col gap-1">
+    // The picture beside its words, so the strip is one short row under the player.
+    <li className="flex w-[280px] items-start gap-3">
       <MediaFrame
+        className="w-[80px] shrink-0"
         alt={`Short ${String(number)}`}
         aspect="portrait"
         {...(picture === undefined ? {} : { src: picture.url })}
       />
-      <span className="line-clamp-2 text-small font-semibold text-ink">
-        {title ?? `Short ${String(number)}`}
-      </span>
-      <span className="text-label text-ink-2 tabular-nums">{duration(video.durationMs ?? 0)}</span>
-      {media === undefined ? null : (
-        <FileLink href={media.url} download size="small" className="self-start">
-          <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
-          <span>
-            Download<span className="sr-only"> short {String(number)}</span> (.mp4)
-          </span>
-        </FileLink>
-      )}
+      <div className="flex min-w-0 flex-col items-start gap-1">
+        <span className="line-clamp-3 text-small font-semibold text-ink">
+          {title ?? `Short ${String(number)}`}
+        </span>
+        <span className="text-label text-ink-2 tabular-nums">
+          {duration(video.durationMs ?? 0)}
+        </span>
+        {media === undefined ? null : (
+          <FileLink href={media.url} download size="small">
+            <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
+            <span>
+              Download<span className="sr-only"> short {String(number)}</span> (.mp4)
+            </span>
+          </FileLink>
+        )}
+      </div>
     </li>
   );
 }
