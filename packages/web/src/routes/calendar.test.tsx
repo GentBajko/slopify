@@ -374,6 +374,10 @@ describe("the calendar", () => {
     await screen.findByRole("article", { name: /^Cleopatra,/ });
     await user.click(screen.getByRole("button", { name: "Add topics to a schedule" }));
     const dialog = screen.getByRole("dialog", { name: "Add topics to a schedule" });
+    // Never greyed: pressed with nothing typed, it says what it needs, and sends nothing.
+    await user.click(within(dialog).getByRole("button", { name: "Add topics" }));
+    expect(within(dialog).getByText("Type at least one topic, one per line.")).not.toBeNull();
+    expect(put).not.toHaveBeenCalled();
     await user.type(
       within(dialog).getByLabelText("Topics, one per line"),
       "Nefertiti\n\n  Solon  ",
