@@ -7,26 +7,17 @@ import { afterEach, expect, it } from "vitest";
 import { stageWords } from "@/lib/stage-words";
 import { jsonAnswer, openEditSection, renderRouted, testDeps } from "@/test-app";
 import { revisionView } from "./revision-fixture.js";
-import { RevisionForm } from "./revision-form.js";
-import { RevisionWorkspace } from "./revision-workspace.js";
+import { ProjectSettings, settingsRoutes } from "./settings-test-fixture.js";
 
 afterEach(cleanup);
 function mount(view: RevisionView) {
   const saves: RevisionEdit[] = [];
   renderRouted(
-    <RevisionWorkspace
-      projectId="p1"
-      currentRevisionId="r1"
-      renderEditor={(props) => <RevisionForm {...props} />}
-    />,
+    <ProjectSettings />,
     testDeps({
+      ...settingsRoutes,
       "GET /api/projects/p1/revisions/r1": jsonAnswer({ view }),
       "POST /api/projects/p1/revisions/prepare": jsonAnswer({ ok: true, view, created: false }),
-      "GET /api/providers": jsonAnswer({ providers: [] }),
-      "GET /api/settings/voices": jsonAnswer({ voices: [] }),
-      "GET /api/prompts": jsonAnswer({ prompts: [] }),
-      "GET /api/entries": jsonAnswer({ entries: [] }),
-      "GET /api/fonts": jsonAnswer({ fonts: [] }),
       "GET /api/providers/llm/models": jsonAnswer({ models: [], allowsCustom: false }),
       "GET /api/providers/tts/models": jsonAnswer({ models: [], allowsCustom: false }),
       "POST /api/projects/p1/revisions": async (request) => {

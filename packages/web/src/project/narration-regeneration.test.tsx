@@ -4,10 +4,8 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { emptyAnswer, jsonAnswer, openEditSection, renderRouted, testDeps } from "@/test-app";
-import { RevisionContentEditors } from "./revision-content.js";
 import { deferred, narrationView, response, staged } from "./revision-editor-test-fixtures.js";
-import { RevisionForm } from "./revision-form.js";
-import { RevisionWorkspace } from "./revision-workspace.js";
+import { ProjectSettings, settingsRoutes } from "./settings-test-fixture.js";
 
 afterEach(cleanup);
 function generatedNarration(): { readonly view: RevisionView; readonly key: string } {
@@ -30,23 +28,11 @@ function mount(view: RevisionView, upload: () => Promise<Response>) {
   const saves: RevisionEdit[] = [];
   const removed = vi.fn(emptyAnswer());
   renderRouted(
-    <RevisionWorkspace
-      projectId="p1"
-      currentRevisionId="r1"
-      renderEditor={(props) => (
-        <RevisionForm
-          {...props}
-          renderContent={(content) => <RevisionContentEditors {...content} />}
-        />
-      )}
-    />,
+    <ProjectSettings />,
     testDeps({
+      ...settingsRoutes,
       "GET /api/projects/p1/revisions/r1": jsonAnswer({ view }),
       "POST /api/projects/p1/revisions/prepare": jsonAnswer({ ok: true, view, created: false }),
-      "GET /api/providers": jsonAnswer({ providers: [] }),
-      "GET /api/settings/voices": jsonAnswer({ voices: [] }),
-      "GET /api/prompts": jsonAnswer({ prompts: [] }),
-      "GET /api/entries": jsonAnswer({ entries: [] }),
       "GET /api/providers/tts/models": jsonAnswer({ models: [], allowsCustom: false }),
       "POST /api/staging/audio": upload,
       "DELETE /api/staging/upload1": removed,

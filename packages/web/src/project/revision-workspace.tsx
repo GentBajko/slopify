@@ -1,18 +1,15 @@
 import type { RevisionEdit, RevisionView } from "@app/slices/revisions/model.js";
-import { type ReactElement, type ReactNode, useState } from "react";
+import type { ReactElement } from "react";
 import { Button } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
-import { type TabItem, TabPanel, Tabs } from "@/components/kit/tabs";
 import { RebuildReview } from "./rebuild-review.js";
-import { EditRequestContext, RegenerateNowContext } from "./revision-action-context.js";
-import {
-  type EditSection,
-  type RevisionController,
-  useRevisionController,
-} from "./revision-controller.js";
-import { RevisionEditPanel } from "./revision-edit-panel.js";
+import type { EditSection, RevisionController } from "./revision-controller.js";
 import { RevisionFeedback } from "./revision-feedback.js";
 import { RevisionHistory } from "./revision-history.js";
+
+// The pieces of a project's settings that the project page lays out (`routes/project.tsx`,
+// `settings-view.tsx`): the draft's controller and editor panel, Versions, and the review of
+// what is made again.
 
 export {
   type DraftNotice,
@@ -91,130 +88,5 @@ export function RebuildDrawer({
         />
       )}
     </Drawer>
-  );
-}
-
-// The saved revisions on their own, as tabs: Edit and History, with the page's other views
-// passed in. The project page lays these views out in its own section rail; this keeps them
-// usable, and tested, as one piece.
-export function RevisionWorkspace({
-  projectId,
-  currentRevisionId,
-  renderEditor,
-  tab: controlledTab,
-  onTab,
-  output,
-  live,
-  checkpoints,
-  checkpointBadge,
-  cost,
-  trailing,
-}: {
-  readonly projectId: string;
-  readonly currentRevisionId: string | null;
-  readonly renderEditor: (props: EditorProps) => ReactNode;
-  readonly tab?: ProjectTab;
-  readonly onTab?: (tab: ProjectTab) => void;
-  // The stage output panel. Without it (a unit test of the workspace alone) there is no
-  // Output tab and Edit opens first.
-  readonly output?: ReactNode;
-  readonly live?: ReactNode;
-  readonly checkpoints?: ReactNode;
-  readonly checkpointBadge?: string;
-  readonly cost?: ReactNode;
-  readonly trailing?: ReactNode;
-}): ReactElement {
-  const [ownTab, setOwnTab] = useState<ProjectTab>(output === undefined ? "edit" : "output");
-  const tab = controlledTab ?? ownTab;
-  const selectTab = (next: ProjectTab) => {
-    setOwnTab(next);
-    onTab?.(next);
-  };
-  const controller = useRevisionController(projectId, currentRevisionId, {
-    onOpenEdit: () => selectTab("edit"),
-  });
-  const tabs: TabItem<ProjectTab>[] = [
-    ...(output === undefined ? [] : [{ id: "output" as const, label: "Output" }]),
-    ...(live === undefined ? [] : [{ id: "live" as const, label: "Live" }]),
-    {
-      id: "edit",
-      label: "Edit",
-      ...(controller.unsaved ? { badge: "· unsaved" } : {}),
-    },
-    { id: "history", label: "History" },
-    ...(checkpoints === undefined
-      ? []
-      : [
-          {
-            id: "checkpoints" as const,
-            label: "Checkpoints",
-            ...(checkpointBadge === undefined ? {} : { badge: checkpointBadge }),
-          },
-        ]),
-    ...(cost === undefined ? [] : [{ id: "cost" as const, label: "Run cost" }]),
-  ];
-  return (
-    <section aria-label="Project revisions">
-      <Tabs
-        items={tabs}
-        value={tab}
-        onChange={selectTab}
-        label="Project views"
-        idPrefix="project"
-        trailing={trailing}
-        className="mb-4"
-      />
-      {output === undefined ? null : (
-        <TabPanel idPrefix="project" id="output" active={tab === "output"}>
-          <EditRequestContext
-            value={
-              controller.pending || controller.preview !== undefined
-                ? undefined
-                : controller.requestEdit
-            }
-          >
-            <RegenerateNowContext
-              value={
-                controller.pending || controller.preview !== undefined
-                  ? undefined
-                  : controller.regenerateNow
-              }
-            >
-              {output}
-            </RegenerateNowContext>
-          </EditRequestContext>
-        </TabPanel>
-      )}
-      <TabPanel idPrefix="project" id="edit" active={tab === "edit"}>
-        <RevisionEditPanel
-          controller={controller}
-          renderEditor={renderEditor}
-          active={tab === "edit"}
-        />
-      </TabPanel>
-      <TabPanel idPrefix="project" id="history" active={tab === "history"}>
-        <RevisionHistoryPanel
-          controller={controller}
-          projectId={projectId}
-          active={tab === "history"}
-        />
-      </TabPanel>
-      {live === undefined ? null : (
-        <TabPanel idPrefix="project" id="live" active={tab === "live"}>
-          {tab === "live" ? live : null}
-        </TabPanel>
-      )}
-      {checkpoints === undefined ? null : (
-        <TabPanel idPrefix="project" id="checkpoints" active={tab === "checkpoints"}>
-          {checkpoints}
-        </TabPanel>
-      )}
-      {cost === undefined ? null : (
-        <TabPanel idPrefix="project" id="cost" active={tab === "cost"}>
-          {cost}
-        </TabPanel>
-      )}
-      <RebuildDrawer controller={controller} />
-    </section>
   );
 }
