@@ -1,8 +1,8 @@
 import type { HelpEntry } from "../entry.js";
 
-// Play's setup, top to bottom, and the pieces Edit settings draws with the same components
-// (speakers, shorts, reviews, the establishing image, the language). Settings → Voices'
-// table is here too, as it lives in the same voice components.
+// Create's settings, top to bottom, and the pieces a project's Edit settings draws with the
+// same components (speakers, shorts, pauses and checks, the establishing image, the language).
+// Settings → Voices' table is here too, as it lives in the same voice components.
 export const playHelp = {
   // Top of Create
   "play.title": {
