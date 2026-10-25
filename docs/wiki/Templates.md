@@ -8,17 +8,17 @@ Set a template up section by section, with a live sample beside every setting, i
 
 ## The Templates page
 
-Two tabs: **Video templates** (with how many you have) and **Poster templates** (designed pieces such as posters). The header holds **Add starter templates** and **More** → **Import a template file (.zip)**. With seven or more templates, **Search templates** and a sort menu sit above the cards; with two or more channels, **Show templates of** narrows them to one channel.
+Two tabs: **Video templates** (with how many you have) and **Poster templates** (posters, flyers and social sizes). The header holds **Add starter templates**, while a starter is left to add, and **Import a template file (.zip)**. With seven or more templates, **Search templates** and a sort menu sit above the cards; with two or more channels, **Show templates of** narrows them to one channel.
 
-Each video template is a card: a preview of what it makes, its name, one line of what it makes (for example "Landscape 16:9 · Voice: History narrator (storyteller), OpenAI · about 2,200 words · captions on the video · 2 shorts"), what it **Asks for**, its channel and, once schedules run it, how they run it (for example **Used by 1 schedule**). Its actions:
+Each video template is a card: a still from its sample once it has one, its name in full, one line of what it makes (for example "Landscape 16:9 · Voice: History narrator (storyteller), OpenAI · about 2,200 words · captions on the video · 2 shorts"), what it **Asks for**, its channel and, once schedules run it, how they run it (for example **Used by 1 schedule**). Pressing its name or its still opens Edit template. Its actions:
 
 | Action | What it does |
 |---|---|
 | **Make a video** | Opens Create with a fresh draft made from the template. Nothing starts until you press **Make the video**. |
 | **Edit template** | Opens the template's editor, section by section, with a sample beside the settings. See [Edit template](Template-Studio). |
-| **More** → **Duplicate** | Makes a copy in the same channel. |
+| **More** → **Duplicate** | Makes a copy in the same channel, named "<name> copy", then "<name> copy 2" and so on. |
 | **More** → **Versions** | Every saved version (see [Versions](#versions)). |
-| **More** → **Export as a file (.zip)** | Saves the template as a `<name>.slopify-template.zip` file you can import on another computer with **More** → **Import a template file (.zip)**. |
+| **More** → **Export as a file (.zip)** | Saves the template as a `<name>.slopify-template.zip` file you can import on another computer with **Import a template file (.zip)**. |
 | **More** → **Delete…** | Asks first, then moves the template to the trash (see [Delete a template](#delete-a-template)). |
 
 With no templates yet, the page says what a template is for and offers **Add starter templates**.
