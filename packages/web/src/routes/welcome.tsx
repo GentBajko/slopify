@@ -309,7 +309,9 @@ export function WelcomeRoute({
     <>
       <PageHeader
         title="Welcome to Slopify"
-        // On a phone the title and Skip share the one line; the steps say the rest.
+        // On a phone the title and Skip share the one line (the title gives up its usual
+        // width, the meta is left out); the steps say the rest.
+        className="max-sm:[&>div:first-child]:basis-0"
         meta={
           <span className="max-sm:hidden">
             Make a video from a topic, with the tools already on this computer.

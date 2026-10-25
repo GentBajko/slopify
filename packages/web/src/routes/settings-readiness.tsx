@@ -15,6 +15,7 @@ import { Status } from "@/components/kit/status";
 import { type HealthRun, ProviderHealthCheck } from "@/components/provider-health";
 import { firstRunQuery } from "@/components/provider-upkeep-api";
 import { stageWords } from "@/lib/stage-words";
+import { cn } from "@/lib/utils";
 import { providersQuery, voicesQuery } from "@/queries";
 import { backSearch, type SettingsBack } from "./settings-back";
 
@@ -177,9 +178,15 @@ export function ConnectionReadiness({
             <Status tone={line.state === "ready" ? "done" : "waiting"}>
               {stateWords[line.state]}
             </Status>
+            {/* A ready line lists its services, and "(Create picks it)" arrives later: it keeps
+                to one line so that answer never moves the page. A line still to set up says
+                what the video lacks in full. */}
             <span
-              className="min-w-0 truncate text-small text-ink-2 max-md:hidden"
-              title={line.text}
+              className={cn(
+                "min-w-0 text-small text-ink-2 max-md:hidden",
+                line.state === "ready" && "truncate",
+              )}
+              title={line.state === "ready" ? line.text : undefined}
             >
               {line.text}
             </span>

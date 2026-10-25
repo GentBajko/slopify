@@ -152,20 +152,36 @@ export function bringSetupIntoView(setup: HTMLElement, arrival: boolean): void {
   window.scrollBy({ top: by, behavior: arrival ? "auto" : "smooth" });
 }
 
-// Two columns from 1024px: a kind's list with the picked service's setup beside it. On one
-// column the setup opens under its own row, so the three lists stay together.
-function useWide(): boolean {
+// Two columns where the page's own column has room for a list (400px) and, beside it, a setup
+// whose key box and Save fit on one line: from 860px of column, which a 1200px window gives
+// beside the Settings list. Narrower (a laptop at 1024px, the Assistant open, a phone) is one
+// column, where the setup opens under its own row and the three lists stay together. The
+// column is measured, not the window; a window of 1024px or more is the first guess, and the
+// only answer where nothing can measure.
+const twoColumnsPx = 860;
+function useWide(element: HTMLElement | null): boolean {
   const query = "(min-width: 1024px)";
   const [wide, setWide] = useState(
     () => typeof window.matchMedia !== "function" || window.matchMedia(query).matches,
   );
   useEffect(() => {
+    if (element !== null && typeof ResizeObserver !== "undefined") {
+      // A column not laid out yet (or never, as in a test's document) keeps the guess.
+      const measure = () => {
+        const width = element.getBoundingClientRect().width;
+        if (width > 0) setWide(width >= twoColumnsPx);
+      };
+      measure();
+      const watch = new ResizeObserver(measure);
+      watch.observe(element);
+      return () => watch.disconnect();
+    }
     if (typeof window.matchMedia !== "function") return;
     const list = window.matchMedia(query);
     const change = () => setWide(list.matches);
     list.addEventListener?.("change", change);
     return () => list.removeEventListener?.("change", change);
-  }, []);
+  }, [element]);
   return wide;
 }
 
@@ -182,7 +198,8 @@ export function ProviderKeys({
   const { api } = useApp();
   const providers = useQuery(providersQuery(api));
   const voices = useQuery(voicesQuery(api));
-  const wide = useWide();
+  const [frame, setFrame] = useState<HTMLDivElement | null>(null);
+  const wide = useWide(frame);
   // undefined until the first answer decides it; null for none open.
   const [picked, setPicked] = useState<ProviderId | null | undefined>(undefined);
   // The setup to bring into view once it is drawn and the page around it has settled.
@@ -197,6 +214,9 @@ export function ProviderKeys({
   const saved = voices.data?.voices ?? [];
   // What opens when the page arrives, once: the service asked for, or on two columns the
   // first one still to set up. It stays open after it is set up rather than jumping on.
+  // Whether the open setup is the one the page opened by itself (the first still to set up),
+  // which only two columns do: on one column the lists come first.
+  const [byItself, setByItself] = useState(false);
   if (picked === undefined && providers.data !== undefined) {
     const first =
       focus === undefined
@@ -205,7 +225,15 @@ export function ProviderKeys({
           : undefined
         : targetOf(listed, focus, saved);
     setPicked(first?.id ?? null);
+    setByItself(focus === undefined && first !== undefined);
   }
+  // The first guess of the width came from the window; once the column measures as one column,
+  // a setup opened by itself closes again, so the lists come first there too.
+  useEffect(() => {
+    if (wide || !byItself) return;
+    setByItself(false);
+    setPicked(null);
+  }, [wide, byItself]);
 
   // A readiness line's button, or the address, asks for a kind: open its service, then bring
   // that setup into view. The page is measured only once everything that sets its height has
@@ -218,6 +246,7 @@ export function ProviderKeys({
     if (focus === undefined || !settled) return;
     const target = targetOf(listed, focus, saved);
     if (target === undefined) return;
+    setByItself(false);
     setPicked(target.id);
     setBring({ id: target.id, arrival: focus.arrival });
   }, [focus, settled]);
@@ -306,7 +335,7 @@ export function ProviderKeys({
     );
 
   return (
-    <div className="flex min-w-0 flex-col gap-6">
+    <div ref={setFrame} className="@container flex min-w-0 flex-col gap-6">
       {familyOrder.map((family) => (
         // The picked service's setup sits beside its own kind's list, inside the same section,
         // so the tutorial's spotlight on a kind holds both the list and the setup.
@@ -314,7 +343,7 @@ export function ProviderKeys({
           key={family}
           data-tour={`keys-${family}`}
           aria-labelledby={`keys-${family}-title`}
-          className="grid scroll-mt-4 items-start gap-x-8 gap-y-4 lg:grid-cols-[minmax(0,400px)_minmax(0,1fr)]"
+          className="grid scroll-mt-4 items-start gap-x-8 gap-y-4 @min-[860px]:grid-cols-[minmax(0,400px)_minmax(0,1fr)]"
         >
           <div className="min-w-0">
             <SectionHead
@@ -332,9 +361,10 @@ export function ProviderKeys({
                     provider={provider}
                     selected={provider.id === selected?.id}
                     expands={!wide}
-                    onSelect={() =>
-                      setPicked((now) => (!wide && now === provider.id ? null : provider.id))
-                    }
+                    onSelect={() => {
+                      setByItself(false);
+                      setPicked((now) => (!wide && now === provider.id ? null : provider.id));
+                    }}
                   >
                     {!wide && provider.id === selected?.id ? setupOf(provider) : null}
                   </ServiceRow>
