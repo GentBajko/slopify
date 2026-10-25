@@ -155,7 +155,7 @@ it("resolves one-off Run at in the selected timezone", async () => {
   await user.type(screen.getByLabelText("Name"), "Time test");
   await screen.findByRole("option", { name: "Stories · v1" });
   await user.selectOptions(screen.getByLabelText("Template"), templateId);
-  await user.selectOptions(screen.getByLabelText("Cadence"), "once");
+  await user.selectOptions(screen.getByLabelText("How often"), "once");
   const { fireEvent } = await import("@testing-library/react");
   fireEvent.change(screen.getByLabelText("Run at"), { target: { value: "2027-01-15T12:00" } });
   await user.clear(screen.getByLabelText("Timezone"));
@@ -551,7 +551,7 @@ it("offers the title's keyword even when the template stored no value for it", a
   expect(screen.getByText("History: Pyramids")).toBeTruthy();
 });
 
-it("explains that nonexistent one-off times are refused", async () => {
+it("says when a one-off run happens in a line under it, with no info button", async () => {
   const user = userEvent.setup();
   renderRouted(
     <SchedulesView />,
@@ -564,8 +564,13 @@ it("explains that nonexistent one-off times are refused", async () => {
   );
 
   await openNew(user);
-  await user.selectOptions(screen.getByLabelText("Cadence"), "once");
-  await user.click(screen.getByRole("button", { name: "About Timezone" }));
+  await user.selectOptions(screen.getByLabelText("How often"), "once");
 
-  expect(await screen.findByText(/nonexistent spring-forward times are refused/)).toBeTruthy();
+  expect(screen.getByLabelText("Run at").getAttribute("aria-describedby")).toContain(
+    "schedule-once-help",
+  );
+  expect(
+    screen.getByText("In the timezone below. The schedule is done once this run starts."),
+  ).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /^About (Run at|Timezone|How often)/ })).toBeNull();
 });

@@ -15,7 +15,7 @@ A schedule starts a new project from a saved template at a set local time: every
 1. Open **Calendar**, then the **Schedules** tab, and press **New schedule**.
 2. Fill in **Name** (up to 200 characters). It never appears in the videos.
 3. Pick the **Template** each run starts from. The schedule keeps the template's current version.
-4. Choose the **Cadence** and times (see below).
+4. Choose **How often** and the times (see below).
 5. Add **Topics** (see below), or leave the list empty to run the template exactly as saved.
 6. Optional: set up **Topic generation**, a **Spend ceiling** and what happens to a **Missed run**.
 7. Press **Save schedule**.
@@ -26,7 +26,7 @@ The schedule appears under **Saved schedules** with its status, next run and the
 
 | Setting | What it does | Default |
 |---|---|---|
-| **Cadence** | **Every day** runs once a day at the local time. **Selected weekdays** runs on the days you tick. **One time** runs once at a date and time, then shows as completed. Each run starts one project. | Every day |
+| **How often** | **Every day** runs once a day at the local time. **Selected weekdays** runs on the days you tick. **One time** runs once at a date and time, then shows as completed. Each run starts one project. | Every day |
 | **Local time** | The clock time each run starts, read in the timezone below. | 09:00 |
 | **Weekdays** | The days a Selected weekdays schedule runs. Tick at least one; each ticked day is one project a week. | Mon, Wed and Fri |
 | **Run at** | The date and time of a One time schedule's single run. | |

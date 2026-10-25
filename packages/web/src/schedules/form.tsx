@@ -17,8 +17,8 @@ import { type FormEvent, type ReactElement, useId, useRef, useState } from "reac
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
-import { Field, Input, Select, Textarea } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { Field, HelpLine, Input, Select, Textarea } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { limitCount } from "@/lib/limit-count";
 import { keywordOrigins } from "@/play/admission";
 import { ModelPicker, ProviderPicker } from "@/play/pickers";
@@ -302,7 +302,7 @@ export function ScheduleForm({
           disabled={saving || uncertain || pending}
           className="m-0 grid min-w-0 gap-4 border-0 p-0 min-[700px]:grid-cols-2"
         >
-          <Field label="Name" id="schedule-name" tip="planning.schedule.name" error={problems.name}>
+          <Field label="Name" id="schedule-name" error={problems.name}>
             <Input
               required
               value={name}
@@ -313,7 +313,7 @@ export function ScheduleForm({
           <Field
             label="Template"
             id="schedule-template"
-            tip="planning.schedule.template"
+            help="Runs use its newest version until you approve one for schedules in Edit template, then the newest approved one."
             error={problems.template}
           >
             <Select
@@ -330,7 +330,7 @@ export function ScheduleForm({
               ))}
             </Select>
           </Field>
-          <Field label="Cadence" id="schedule-cadence" tip="planning.schedule.cadence">
+          <Field label="How often" id="schedule-cadence" help="Each run makes one project.">
             <Select
               value={kind}
               onChange={(event) =>
@@ -352,7 +352,7 @@ export function ScheduleForm({
             <Field
               label="Run at"
               id="schedule-once"
-              tip="planning.schedule.once-at"
+              help="In the timezone below. The schedule is done once this run starts."
               error={problems.once}
             >
               <Input
@@ -366,7 +366,7 @@ export function ScheduleForm({
             <Field
               label="Local time"
               id="schedule-time"
-              tip="planning.schedule.time"
+              help="In the timezone below."
               error={problems.time}
             >
               <Input
@@ -387,10 +387,7 @@ export function ScheduleForm({
               }
               {...helpScope}
             >
-              <legend className="sl-field__label mb-2 flex items-center gap-1">
-                Weekdays
-                <InfoTip id="planning.schedule.weekdays" className="-my-1" />
-              </legend>
+              <legend className="sl-field__label mb-2">Weekdays</legend>
               <div className="flex flex-wrap gap-3">
                 {dayOptions.map(([value, label]) => (
                   <label key={value} className="inline-flex items-center gap-1 text-small">
@@ -409,6 +406,7 @@ export function ScheduleForm({
                   </label>
                 ))}
               </div>
+              <HelpLine className="mt-1">Each ticked day makes one project a week.</HelpLine>
               {problems.weekdays === undefined ? null : (
                 <p id="schedule-weekdays-error" className="sl-field__error m-0 mt-1">
                   {problems.weekdays}
@@ -421,7 +419,6 @@ export function ScheduleForm({
           <Field
             label="Timezone"
             id="schedule-timezone"
-            tip={kind === "once" ? "planning.schedule.timezone-once" : "planning.schedule.timezone"}
             help={`Start typing to pick from the list. This computer uses ${localZone}.`}
             error={problems.timezone}
           >
@@ -439,7 +436,11 @@ export function ScheduleForm({
               <option key={zone} value={zone} />
             ))}
           </datalist>
-          <Field label="Missed run" id="schedule-missed" tip="planning.schedule.missed">
+          <Field
+            label="Missed run"
+            id="schedule-missed"
+            help="Runs start only while Slopify is open and the computer is awake."
+          >
             <Select
               value={missedPolicy}
               onChange={(event) =>
@@ -453,9 +454,7 @@ export function ScheduleForm({
           <Field
             label="Spend ceiling per run (US$, optional)"
             id="schedule-spend"
-            tip="planning.schedule.spend"
-            tipLabel="Spend ceiling"
-            help="In dollars, such as 5 or 2.50. Empty means no ceiling."
+            help="In dollars, such as 5 or 2.50. A run that could cost more, or can't be priced, doesn't start. Empty means no ceiling."
             error={problems.spend}
           >
             <Input
@@ -571,9 +570,7 @@ function GenerationFields({
       <Field
         label="Series brief (optional)"
         id="schedule-brief"
-        tip="planning.schedule.brief"
-        tipLabel="Series brief"
-        help={limitCount(brief.length, briefMax, "characters")}
+        help={`Empty uses the channel's series brief. ${limitCount(brief.length, briefMax, "characters")}.`}
         error={problems.brief}
       >
         <Textarea
@@ -588,7 +585,11 @@ function GenerationFields({
         <Field
           label="New topics"
           id="schedule-generation"
-          tip="planning.schedule.new-topics"
+          help={
+            generation.mode === "hold"
+              ? "They wait under Topics waiting until you approve them."
+              : "Generating more is one AI call each time."
+          }
           error={problems.generation}
         >
           <Select
@@ -610,7 +611,7 @@ function GenerationFields({
           <Field
             label="Keep at least this many queued"
             id="schedule-keep"
-            tip="planning.schedule.keep-count"
+            help="Slopify asks for more once fewer are queued. 1 to 100."
           >
             <Input
               type="number"
@@ -631,13 +632,14 @@ function GenerationFields({
       <Field
         label="Rank topics"
         id="schedule-scoring"
-        tip="planning.schedule.rank-topics"
         help={
           scoring === "search"
             ? "Sends each new topic's title to Google, DuckDuckGo and Wikipedia. Nothing else leaves this computer."
             : scoring === "library" && generation.mode === "off"
               ? "Scores your topics when you press Rescore; your own and moved topics keep their place."
-              : undefined
+              : scoring === "library"
+                ? "Scores each new topic 0 to 100, best first; nothing leaves this computer."
+                : "Ranking scores each topic 0 to 100 and puts the best first."
         }
       >
         <Select
@@ -678,8 +680,8 @@ function GenerationFields({
                 ? ` (${templateLlm.provider} · ${templateLlm.model})`
                 : ""}
             </label>
-            <InfoTip id="planning.schedule.generation-llm" className="-my-1" />
           </div>
+          <HelpLine>Untick to pick another, such as a cheaper model.</HelpLine>
           {own === null ? null : (
             <div className="grid gap-4 min-[700px]:grid-cols-2">
               <ProviderPicker

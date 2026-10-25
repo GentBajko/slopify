@@ -4,54 +4,9 @@ import type { HelpEntry } from "../entry.js";
 // cast editor says what each field does in a line under it.
 export const planningHelp = {
   // Schedules
-  "planning.schedule.name": {
-    title: "Schedule name",
-    body: "A name to tell this schedule apart in the list, on the calendar and on the channel page. It never appears in the videos. Up to 200 characters.",
-    tutorial: { page: "Schedules", anchor: "create-a-schedule" },
-  },
-  "planning.schedule.template": {
-    title: "Template",
-    body: "The saved template each run starts from, with its version. Each run uses the template's newest version until you press Mark ready in Edit template; from then on runs use the newest version marked ready, and a version you save later waits until you mark it ready. The template decides the services, and so what each run costs. Save templates from Create; they are listed under Templates.",
-    tutorial: { page: "Schedules", anchor: "create-a-schedule" },
-  },
-  "planning.schedule.cadence": {
-    title: "Cadence",
-    body: "How often the schedule runs. Every day runs once a day at the local time. Selected weekdays runs on the days you tick. One time runs once at a date and time, then completes. Each run starts one project. Default: Every day at 09:00.",
-    tutorial: { page: "Schedules", anchor: "when-it-runs" },
-  },
-  "planning.schedule.time": {
-    title: "Local time",
-    body: "The clock time each run starts, read in the timezone below. Default: 09:00. A run only starts while Slopify is open; Missed run decides what happens when it was closed.",
-    tutorial: { page: "Schedules", anchor: "when-it-runs" },
-  },
-  "planning.schedule.once-at": {
-    title: "Run at",
-    body: "The date and time of the single run, read in the timezone below. After that run starts, the schedule shows as completed.",
-    tutorial: { page: "Schedules", anchor: "when-it-runs" },
-  },
-  "planning.schedule.weekdays": {
-    title: "Weekdays",
-    body: "The days a Selected weekdays schedule runs, each at the local time. Tick at least one; each ticked day is one project a week. Default: Mon, Wed and Fri.",
-    tutorial: { page: "Schedules", anchor: "when-it-runs" },
-  },
-  "planning.schedule.timezone": {
-    title: "Timezone",
-    body: "The IANA zone the run time is read in, such as Europe/Tirane or America/New_York. Default: this computer's zone. When clocks go back, a repeated time uses the earlier one; a time skipped when clocks go forward moves forward by the gap.",
-    tutorial: { page: "Schedules", anchor: "when-it-runs" },
-  },
-  "planning.schedule.timezone-once": {
-    title: "Timezone",
-    body: "The IANA zone the one-off date and time are read in, such as Europe/Tirane or America/New_York. Default: this computer's zone. When clocks go back, a repeated time uses the earlier one; nonexistent spring-forward times are refused, so pick another.",
-    tutorial: { page: "Schedules", anchor: "when-it-runs" },
-  },
   "planning.schedule.missed": {
     title: "Missed run",
     body: "What happens to a run that came due while Slopify was closed or asleep. Skip drops it when it is more than 1 minute late and waits for the next time. Run once when Slopify reopens starts one catch-up run, however many were missed. Default: Skip.",
-    tutorial: { page: "Schedules", anchor: "when-it-runs" },
-  },
-  "planning.schedule.spend": {
-    title: "Spend ceiling",
-    body: "The most one run may cost, in US dollars, such as 5 or 2.50. Before each run Slopify estimates the project's cost; when the high estimate is over this, or a cost can't be estimated, the run fails instead of starting. Leave it empty for no ceiling. Default: empty.",
     tutorial: { page: "Schedules", anchor: "when-it-runs" },
   },
   "planning.schedule.topic-format": {
@@ -78,31 +33,6 @@ export const planningHelp = {
     title: "Every-run value",
     body: "The value this keyword gets on every run, such as a word count. Default: the template's own value. A topic that sets the keyword itself, in Table or YAML / JSON, overrides it for that one run.",
     tutorial: { page: "Schedules", anchor: "which-keyword-a-topic-fills" },
-  },
-  "planning.schedule.brief": {
-    title: "Series brief",
-    body: "What the series covers, its style and what makes a topic worth a video. Only topic generation reads it. Leave it empty to use the series brief on the channel's Name and look tab. Up to 4,000 characters.",
-    tutorial: { page: "Schedules", anchor: "topics-that-find-themselves" },
-  },
-  "planning.schedule.new-topics": {
-    title: "New topics",
-    body: "Off: you add every topic yourself. Generate and queue directly: new topics join the end of the list. Generate and hold for approval: they wait under Topics waiting, and beside the calendar, until you approve them. Each generation is one AI call. Default: Off.",
-    tutorial: { page: "Schedules", anchor: "topics-that-find-themselves" },
-  },
-  "planning.schedule.rank-topics": {
-    title: "Rank topics",
-    body: "Scores every queued topic 0-100 and orders the topics Slopify generates best first; Rescore scores them again. By what the library covers: a topic far from anything made or queued scores higher, and nothing leaves this computer. Also by public search interest: adds Google or DuckDuckGo suggestions and Wikipedia views, so each new topic's title is sent to them. Topics you add or move keep their places. Never uses channel analytics. Default: Off.",
-    tutorial: { page: "Schedules", anchor: "rank-topics" },
-  },
-  "planning.schedule.keep-count": {
-    title: "Keep at least this many queued",
-    body: "Slopify asks for new topics whenever the queue, plus the topics waiting for approval when holding, drops below this number. A higher number keeps more topics lined up ahead of the runs, for you to review. From 1 to 100. Default: 10.",
-    tutorial: { page: "Schedules", anchor: "topics-that-find-themselves" },
-  },
-  "planning.schedule.generation-llm": {
-    title: "Topic generation AI model",
-    body: "The AI model that suggests topics. Ticked, it uses the service and model the template writes with. Untick to pick another, such as a cheaper model. Either way each generation is one call on that service. Default: the template's model.",
-    tutorial: { page: "Schedules", anchor: "topics-that-find-themselves" },
   },
   "planning.schedule.held-keywords": {
     title: "Keywords of a waiting topic",

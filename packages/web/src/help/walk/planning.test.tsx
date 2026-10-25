@@ -23,8 +23,9 @@ afterEach(cleanup);
 const planningAllow: readonly (string | RegExp)[] = [
   // Grid or List: its two answers say what each draws.
   "Show the weeks as",
-  // A name says what it is.
+  // A name says what it is: the channel's, and a schedule's in its form.
   "Channel name",
+  "Name",
   // The look's fonts and colours: the frame drawn beside them shows what each one changes.
   /^(Caption|Title) (font|colour|outline)( picker)?$/,
   // Each site's account: the one line under all of them says what they are for.
@@ -209,7 +210,9 @@ describe("the planning screens explain every control", () => {
   it("walks Schedules: the list, the detail and the form with every option open", async () => {
     const user = userEvent.setup();
     renderRouted(<SchedulesView />, testDeps(planningRoutes));
-    await screen.findByText("Its runs are skipped: no version of its template is approved for schedules");
+    await screen.findByText(
+      "Its runs are skipped: no version of its template is approved for schedules",
+    );
     const waiting = await screen.findByRole("list", { name: "Topics waiting" });
     await user.click(within(waiting).getByRole("button", { name: "Edit" }));
     await screen.findByLabelText("Edit Pyramids");
@@ -220,9 +223,9 @@ describe("the planning screens explain every control", () => {
     await user.selectOptions(screen.getByLabelText("Template"), templateId);
     await screen.findByLabelText("Each topic fills");
     expectExplained();
-    await user.selectOptions(screen.getByLabelText("Cadence"), "weekly");
+    await user.selectOptions(screen.getByLabelText("How often"), "weekly");
     expectExplained();
-    await user.selectOptions(screen.getByLabelText("Cadence"), "once");
+    await user.selectOptions(screen.getByLabelText("How often"), "once");
     expectExplained();
     await user.selectOptions(screen.getByLabelText("New topics"), "hold");
     await user.click(screen.getByRole("checkbox", { name: /Use the template's AI model/ }));
