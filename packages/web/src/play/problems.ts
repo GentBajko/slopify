@@ -46,6 +46,24 @@ interface ProviderForm {
   readonly youtubeDescription?: boolean | undefined;
   readonly shorts?: { readonly enabled: boolean } | undefined;
   readonly videoEdit?: VideoEditSettings | undefined;
+  readonly voices?:
+    | { readonly speakers: readonly { readonly voice: { readonly provider: string } }[] }
+    | undefined;
+}
+
+// The voice services the narration calls: the one voice, or with several speakers and no intro
+// or outro each speaker's own (the one voice then reads nothing and has no control on Create).
+function voiceServices(form: ProviderForm): readonly RequiredProvider[] {
+  const framed = form.intro !== "" || form.outro !== "";
+  if (form.voices === undefined || framed)
+    return [{ field: "audio.provider", family: "tts", provider: form.audio.provider }];
+  const seen = new Set<string>();
+  return form.voices.speakers.flatMap((speaker, at) => {
+    const provider = speaker.voice.provider;
+    if (provider === "" || seen.has(provider)) return [];
+    seen.add(provider);
+    return [{ field: `voices.speakers.${String(at)}.voice`, family: "tts" as const, provider }];
+  });
 }
 
 // The writer, the voice service and the image service this setup calls.
@@ -75,9 +93,7 @@ export function requiredProviders(
     ...(generatedText
       ? [{ field: "llm.provider", family: "llm" as const, provider: form.llm.provider }]
       : []),
-    ...(generatedAudio
-      ? [{ field: "audio.provider", family: "tts" as const, provider: form.audio.provider }]
-      : []),
+    ...(generatedAudio ? voiceServices(form) : []),
     ...(images
       ? [{ field: "images.provider", family: "image" as const, provider: form.images.provider }]
       : []),

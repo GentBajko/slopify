@@ -1,5 +1,6 @@
 import type { ProviderStatus, Voice } from "@app/slices/settings/model.js";
 import { defaultVideoEdit } from "@app/slices/video/edit-settings.js";
+import { defaultVoicesSettings } from "@app/slices/voices/model.js";
 import { describe, expect, it } from "vitest";
 import { lookWords, rowLabel, rowSummary, type SummaryContext, setupRows } from "./setup-rows";
 import { freshForm, type PlayFormState } from "./state";
@@ -73,6 +74,22 @@ describe("each setup row's one sentence", () => {
     expect(summary("narration", { sources: { ...form.sources, audio: "off" } })).toBe(
       "None: a silent video.",
     );
+    // Several speakers with no intro: named by their own voices' services.
+    const podcast = defaultVoicesSettings("podcast", []);
+    expect(summary("narration", { voices: podcast })).toBe(
+      "Podcast with 2 speakers; no voices picked yet.",
+    );
+    expect(
+      summary("narration", {
+        voices: {
+          ...podcast,
+          speakers: podcast.speakers.map((speaker) => ({
+            ...speaker,
+            voice: { provider: "openai-tts", model: "tts", voice: "sage" },
+          })),
+        },
+      }),
+    ).toBe("Podcast with 2 speakers, read by OpenAI.");
     // A service picked with no model yet asks for the model, not the service it shows.
     expect(summary("narration", { audio: { ...form.audio, model: "", voice: "" } })).toBe(
       "OpenAI: no voice model picked yet.",

@@ -248,13 +248,28 @@ export function rowSummary(row: SetupRowId, form: PlayFormState, context: Summar
         return form.provided.audio === undefined
           ? "Your own recording, not attached yet."
           : `Your own recording: ${form.provided.audio.name}.`;
-      const voiceService = service(form.audio.provider);
-      if (voiceService === undefined) return "No voice service picked yet.";
       const extras = [
         form.intro ? `the “${form.intro}” intro` : undefined,
         form.outro ? `the “${form.outro}” outro` : undefined,
       ].filter((part) => part !== undefined);
       const after = extras.length > 0 ? `, with ${listed(extras)}` : "";
+      // Several speakers with no intro or outro are read by their own voices' services only.
+      if (form.voices !== undefined && extras.length === 0) {
+        const services = [
+          ...new Set(
+            form.voices.speakers.flatMap((speaker) => {
+              const name = service(speaker.voice.provider);
+              return name === undefined ? [] : [name];
+            }),
+          ),
+        ];
+        const format = `${voiceFormatLabels[form.voices.format]} with ${String(form.voices.speakers.length)} speakers`;
+        return services.length === 0
+          ? `${format}; no voices picked yet.`
+          : `${format}, read by ${listed(services)}.`;
+      }
+      const voiceService = service(form.audio.provider);
+      if (voiceService === undefined) return "No voice service picked yet.";
       if (form.voices !== undefined)
         return `${voiceFormatLabels[form.voices.format]} with ${String(form.voices.speakers.length)} speakers, read by ${voiceService}${after}.`;
       const voice = context.voices.find(
