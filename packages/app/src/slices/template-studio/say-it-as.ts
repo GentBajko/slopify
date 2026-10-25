@@ -202,7 +202,7 @@ export interface SayItAsQuote {
 }
 
 const aliasesOff =
-  "This template's voice doesn't use your pronunciations (Settings → Voices → Pronunciation), so “Say it as” would change nothing. Turn on Use narration aliases under All Narration settings, press Save, then try again.";
+  "This template's voice doesn't use your pronunciations (Settings → Voices → Pronunciation), so “Say it as” would change nothing. Turn on Use narration aliases under Narration → More narration settings, press Save, then try again.";
 
 export function quoteSayItAs(
   deps: SayItAsDeps & {
