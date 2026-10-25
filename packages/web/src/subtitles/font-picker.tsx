@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useEffect, useId, useRef, useState } from "react";
 import { useApp } from "@/app-context";
+import { Button } from "@/components/kit/button";
 import { Input, Select } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { type FontSummary, fontsKey, fontUrl, listFonts, uploadFont } from "./api";
@@ -72,6 +73,7 @@ function FontPickerFields({
   const { api } = useApp();
   const id = useId();
   const uploadId = useId();
+  const fileInput = useRef<HTMLInputElement>(null);
   const fonts = useQuery({ queryKey: fontsKey, queryFn: () => listFonts(api), staleTime: 60_000 });
   const uploading = upload.pending;
   const listed = fonts.data?.fonts ?? [];
@@ -129,28 +131,28 @@ function FontPickerFields({
           <FontSample url={fontUrl(api, value)} />
         </div>
         {/* The browser's own file box ("Choose File · No file chosen") is hidden: the button
-            beside it says what it does, and opens it. The input keeps the focus a refusal
-            sends to it. */}
+            says what it does and opens it. The input keeps its name and the focus a refusal
+            sends to it, out of the tab order beside the button. */}
         <div className="min-w-0 basis-full">
           <input
+            ref={fileInput}
             id={uploadId}
             data-play-field="subtitles.fontUpload"
             type="file"
             accept=".ttf,.otf,font/ttf,font/otf"
+            aria-label="Upload font (.ttf or .otf)"
+            tabIndex={-1}
             disabled={uploading}
-            className="peer sr-only"
+            className="sr-only"
             onChange={(event) => {
               const file = event.target.files?.[0];
               event.target.value = "";
               if (file) upload.pick(file);
             }}
           />
-          <label
-            htmlFor={uploadId}
-            className="sl-btn sl-btn--secondary sl-btn--small cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-focus peer-disabled:cursor-default peer-disabled:opacity-60"
-          >
+          <Button size="small" disabled={uploading} onClick={() => fileInput.current?.click()}>
             Upload font (.ttf or .otf)
-          </label>
+          </Button>
         </div>
       </div>
       {uploading ? (
