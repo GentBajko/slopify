@@ -5,7 +5,6 @@ import {
   type PromptKind,
 } from "@app/slices/library/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDownIcon } from "lucide-react";
 import { type ReactElement, useId, useRef, useState } from "react";
 import type { FieldError } from "@/api";
 import { savePrompt } from "@/api";
@@ -17,8 +16,8 @@ import { Button } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
 import { Field, HelpLine, Input } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
-import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/kit/menu";
 import { SlotBody } from "@/components/slot-body";
+import { StartFromExample } from "@/components/start-from-example";
 import {
   bodyProblems,
   draftProblems,
@@ -28,7 +27,7 @@ import {
   slotNames,
 } from "@/lib/draft-lint";
 import { usePromptDraft } from "@/lib/form-drafts";
-import { examplesWith } from "@/lib/prompt-examples";
+import { exampleGroups } from "@/lib/prompt-examples";
 import { kindAbout, kindNameExample, kindNoun, kindPlaceholder } from "@/lib/prompt-kinds";
 import { promptsQuery } from "@/queries";
 import { nameFromText } from "@/routes/prompt-editor";
@@ -116,14 +115,12 @@ export function NewPromptDrawer({
 
   // An example fills an empty text; replacing a typed one is the full editor's. Every kind has
   // built-in ones (lib/prompt-examples.ts), then your saved prompts of it.
-  const examples = bodyEmpty
-    ? examplesWith(
-        kind,
-        (prompts.data?.prompts ?? [])
-          .filter((prompt) => prompt.kind === kind)
-          .map((prompt) => ({ key: prompt.id, name: prompt.name, body: prompt.body })),
-      )
-    : [];
+  const examples = exampleGroups(
+    kind,
+    (prompts.data?.prompts ?? [])
+      .filter((prompt) => prompt.kind === kind)
+      .map((prompt) => ({ key: prompt.id, name: prompt.name, body: prompt.body })),
+  );
 
   const attempt = (): void => {
     if (problems.length > 0) {
@@ -184,23 +181,9 @@ export function NewPromptDrawer({
             <label htmlFor={bodyId} className="sl-field__label">
               Instructions
             </label>
-            {examples.length === 0 ? null : (
-              <Menu>
-                <MenuTrigger asChild>
-                  <Button variant="quiet" size="small">
-                    Start from an example
-                    <ChevronDownIcon aria-hidden="true" />
-                  </Button>
-                </MenuTrigger>
-                <MenuContent align="end">
-                  {examples.map((example) => (
-                    <MenuItem key={example.key} onSelect={() => editBody(example.body)}>
-                      {example.name}
-                    </MenuItem>
-                  ))}
-                </MenuContent>
-              </Menu>
-            )}
+            {bodyEmpty ? (
+              <StartFromExample groups={examples} onPick={(example) => editBody(example.body)} />
+            ) : null}
           </div>
           <HelpLine className="mb-1">{kindAbout(kind)}</HelpLine>
           <KeywordInsertBar place={kind} targetId={bodyId} value={draft.body} onChange={editBody} />

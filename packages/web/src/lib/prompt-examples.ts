@@ -15,7 +15,8 @@ export interface PromptExample {
 
 // The texts every install has for a kind, whether or not its starter templates were added: the
 // wording Slopify uses when a project picks no prompt of the kind, and the starter templates'
-// own prompts of it. A first prompt never starts from a blank box with nothing to copy.
+// own prompts of it. A first prompt never starts from a blank box with nothing to copy. Their
+// names carry no "(built in)": the menu lists them under its own Built in heading.
 export function builtInExamples(kind: PromptKind): readonly PromptExample[] {
   const own = ownWording(kind);
   const packed = [...starterPacks, starterSet].flatMap((pack) =>
@@ -23,21 +24,23 @@ export function builtInExamples(kind: PromptKind): readonly PromptExample[] {
       .filter((prompt) => prompt.kind === kind)
       .map((prompt) => ({
         key: `pack:${pack.id}:${prompt.key}`,
-        name: `${prompt.name} (built in)`,
+        name: prompt.name,
         body: prompt.body,
       })),
   );
   return [...own, ...packed];
 }
 
-// What a saved prompt's example list shows besides the built-ins: the built-ins whose text no
-// saved prompt already holds (an added starter template's prompt is listed once, as yours).
-export function examplesWith(
-  kind: PromptKind,
-  saved: readonly PromptExample[],
-): readonly PromptExample[] {
-  const taken = new Set(saved.map((one) => one.body));
-  return [...builtInExamples(kind).filter((one) => !taken.has(one.body)), ...saved];
+// "Start from an example"'s two groups: the built-ins whose text no saved prompt already holds
+// (an added starter template's prompt is listed once, as yours), then your saved prompts.
+export interface ExampleGroups {
+  readonly builtIn: readonly PromptExample[];
+  readonly yours: readonly PromptExample[];
+}
+
+export function exampleGroups(kind: PromptKind, yours: readonly PromptExample[]): ExampleGroups {
+  const taken = new Set(yours.map((one) => one.body));
+  return { builtIn: builtInExamples(kind).filter((one) => !taken.has(one.body)), yours };
 }
 
 const reviewNames: Readonly<Record<ReviewStage, string>> = {
@@ -63,21 +66,21 @@ const conversationExample = [
 function ownWording(kind: PromptKind): readonly PromptExample[] {
   switch (kind) {
     case "narration":
-      return [{ key: "own", name: "Documentary delivery (built in)", body: narrationStarter }];
+      return [{ key: "own", name: "Documentary delivery", body: narrationStarter }];
     case "description":
-      return [{ key: "own", name: "Built-in wording", body: defaultDescriptionPrompt }];
+      return [{ key: "own", name: "Slopify's own wording", body: defaultDescriptionPrompt }];
     case "shorts":
-      return [{ key: "own", name: "Built-in wording", body: defaultShortsPrompt }];
+      return [{ key: "own", name: "Slopify's own wording", body: defaultShortsPrompt }];
     case "post":
-      return [{ key: "own", name: "Built-in wording", body: defaultPostPrompt }];
+      return [{ key: "own", name: "Slopify's own wording", body: defaultPostPrompt }];
     case "review":
       return (Object.keys(reviewNames) as ReviewStage[]).map((stage) => ({
         key: `review:${stage}`,
-        name: `${reviewNames[stage]} (built in)`,
+        name: reviewNames[stage],
         body: defaultReviewPrompts[stage],
       }));
     case "script":
-      return [{ key: "own", name: "Two-voice conversation (built in)", body: conversationExample }];
+      return [{ key: "own", name: "Two-voice conversation", body: conversationExample }];
     case "article":
     case "image":
     case "thumbnail":

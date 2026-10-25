@@ -42,9 +42,9 @@ If **Save** won't go, the sentence beside it names the first problem, such as "E
 
 ### Start from an example
 
-**Start from an example**, beside the instructions, lists text to start from, for every kind, whether or not you added starter templates:
+**Start from an example**, beside the instructions, lists text to start from, for every kind, whether or not you added starter templates. Create's **New prompt** drawer has the same list while its box is empty:
 
-- **Built in**: the starter templates' prompts of the kind (for example **Sleep lore · Story (built in)** for an Article prompt), and Slopify's own wording where the kind has one: **Documentary delivery (built in)** for Narration preparation, **Built-in wording** for YouTube description, Shorts and Post, a check for each stage for Review (**Article check (built in)**, **Image check (built in)** and so on), and **Two-voice conversation (built in)** for Script.
+- **Built in**: the starter templates' prompts of the kind (for example **Sleep lore · Story** for an Article prompt), and Slopify's own wording where the kind has one: **Documentary delivery** for Narration preparation, **Slopify's own wording** for YouTube description, Shorts and Post, a check for each stage for Review (**Article check**, **Image check** and so on), and **Two-voice conversation** for Script.
 - **Your prompts**: your other prompts of the same kind, by name. A starter template's prompt you added is listed once, here.
 
 When the box already has text, Slopify asks "Replace the text with “…”?" first. Nothing is saved until you press **Save**.

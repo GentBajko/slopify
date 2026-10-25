@@ -35,9 +35,7 @@ it("offers the narration starter as an example, without saving or silently repla
   await screen.findByLabelText("Name");
   const pick = async () => {
     await user.click(screen.getByRole("button", { name: "Start from an example" }));
-    await user.click(
-      await screen.findByRole("menuitem", { name: "Documentary delivery (built in)" }),
-    );
+    await user.click(await screen.findByRole("menuitem", { name: "Documentary delivery" }));
   };
   await pick();
   expect(body().value).toBe(narrationStarter);
@@ -69,8 +67,8 @@ it("starts a YouTube description prompt from the built-in wording", async () => 
   );
   await screen.findByLabelText("Name");
   await user.click(screen.getByRole("button", { name: "Start from an example" }));
-  expect(screen.queryByRole("menuitem", { name: "Documentary delivery (built in)" })).toBeNull();
-  await user.click(await screen.findByRole("menuitem", { name: "Built-in wording" }));
+  expect(screen.queryByRole("menuitem", { name: "Documentary delivery" })).toBeNull();
+  await user.click(await screen.findByRole("menuitem", { name: "Slopify's own wording" }));
   expect(body().value).toBe(defaultDescriptionPrompt);
 });
 
@@ -91,9 +89,14 @@ it("offers built-in texts for every kind, then the saved prompts of the kind", a
   );
   await user.click(await screen.findByRole("button", { name: "Start from an example" }));
   const items = (await screen.findAllByRole("menuitem")).map((one) => one.textContent);
-  // The starter templates' article prompts first, whether or not they were added, then yours.
-  expect(items).toContain("Sleep lore · Story (built in)");
+  // The starter templates' article prompts first, whether or not they were added, under Built
+  // in, then yours under Your prompts. The heading says built in once, not every name.
+  expect(items).toContain("Sleep lore · Story");
   expect(items.at(-1)).toBe("History · Story");
+  const menu = screen.getByRole("menu");
+  expect(within(menu).getByText("Built in")).not.toBeNull();
+  expect(within(menu).getByText("Your prompts")).not.toBeNull();
+  expect(menu.textContent).not.toContain("(built in)");
   expect(items).not.toContain("Oil scene");
   await user.click(screen.getByRole("menuitem", { name: "History · Story" }));
   expect(body().value).toBe("Tell the story of {{Topic}}.");
@@ -102,10 +105,10 @@ it("offers built-in texts for every kind, then the saved prompts of the kind", a
   // A first prompt of a kind, on an install with no starter templates added, still has texts
   // to start from: the kinds no starter template writes have Slopify's own.
   for (const [kind, example] of [
-    ["thumbnail", "History · Thumbnail (built in)"],
-    ["image", "Starter · Vertical scene (built in)"],
-    ["script", "Two-voice conversation (built in)"],
-    ["review", "Article check (built in)"],
+    ["thumbnail", "History · Thumbnail"],
+    ["image", "Starter · Vertical scene"],
+    ["script", "Two-voice conversation"],
+    ["review", "Article check"],
   ] as const) {
     renderRouted(
       <PromptEditorRoute promptId={undefined} kind={kind} from={undefined} onLeave={vi.fn()} />,

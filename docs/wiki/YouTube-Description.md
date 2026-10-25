@@ -40,7 +40,7 @@ The **Built-in** prompt asks for:
 - 3 to 5 hashtags, most specific last;
 - 15 to 25 tags, from broad to specific.
 
-To change the tone or add your own links, write a prompt of the kind **YouTube Description** in **Prompts**. Each `{{keyword}}` in it becomes a field on Create. The prompt editor's **Start from an example** → **Built-in wording** fills in the built-in wording to start from. See [Prompts](Prompts).
+To change the tone or add your own links, write a prompt of the kind **YouTube Description** in **Prompts**. Each `{{keyword}}` in it becomes a field on Create. The prompt editor's **Start from an example** → **Slopify's own wording** fills in the wording Slopify uses, to start from. See [Prompts](Prompts).
 
 ## Read and copy it
 

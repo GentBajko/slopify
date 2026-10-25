@@ -6,7 +6,6 @@ import {
 } from "@app/slices/library/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ChevronDownIcon } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import type { FieldError } from "@/api";
 import { removePrompt, savePrompt, setPromptPhotorealistic } from "@/api";
@@ -21,18 +20,11 @@ import { Field, HelpLine, Input } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
 import { ButtonLink } from "@/components/kit/link";
-import {
-  Menu,
-  MenuContent,
-  MenuItem,
-  MenuLabel,
-  MenuSeparator,
-  MenuTrigger,
-} from "@/components/kit/menu";
 import { Switch } from "@/components/kit/switch";
 import { LabelledSwitch } from "@/components/labelled-switch";
 import { useLeaveWhenSaved } from "@/components/saved-tick";
 import { SlotBody } from "@/components/slot-body";
+import { StartFromExample } from "@/components/start-from-example";
 import type { HelpId } from "@/help/catalog";
 import {
   bodyProblems,
@@ -43,7 +35,7 @@ import {
   slotNames,
 } from "@/lib/draft-lint";
 import { usePromptDraft } from "@/lib/form-drafts";
-import { examplesWith, type PromptExample } from "@/lib/prompt-examples";
+import { exampleGroups, type PromptExample } from "@/lib/prompt-examples";
 import {
   kindAbout,
   kindLabel,
@@ -249,8 +241,7 @@ export function PromptEditorRoute({
   const yours = (rows ?? [])
     .filter((prompt) => prompt.kind === draft.kind && prompt.id !== promptId)
     .map((prompt) => ({ key: prompt.id, name: prompt.name, body: prompt.body }));
-  const examples = examplesWith(draft.kind, yours);
-  const builtIn = examples.filter((example) => !yours.includes(example));
+  const examples = exampleGroups(draft.kind, yours);
   const pickExample = (example: PromptExample): void => {
     if (draft.body.trim() !== "" && draft.body !== example.body) setReplacing(example);
     else editBody(example.body);
@@ -341,31 +332,7 @@ export function PromptEditorRoute({
                   className="-my-1"
                 />
               </span>
-              {examples.length === 0 ? null : (
-                <Menu>
-                  <MenuTrigger asChild>
-                    <Button variant="quiet" size="small">
-                      Start from an example
-                      <ChevronDownIcon aria-hidden="true" />
-                    </Button>
-                  </MenuTrigger>
-                  <MenuContent align="end" className="max-h-[min(60vh,480px)] overflow-y-auto">
-                    {builtIn.length === 0 ? null : <MenuLabel>Built in</MenuLabel>}
-                    {builtIn.map((example) => (
-                      <MenuItem key={example.key} onSelect={() => pickExample(example)}>
-                        {example.name}
-                      </MenuItem>
-                    ))}
-                    {builtIn.length === 0 || yours.length === 0 ? null : <MenuSeparator />}
-                    {yours.length === 0 ? null : <MenuLabel>Your prompts</MenuLabel>}
-                    {yours.map((example) => (
-                      <MenuItem key={example.key} onSelect={() => pickExample(example)}>
-                        {example.name}
-                      </MenuItem>
-                    ))}
-                  </MenuContent>
-                </Menu>
-              )}
+              <StartFromExample groups={examples} onPick={pickExample} />
             </div>
             {/* The open kind choice says the same under it. */}
             {kindOpen ? null : <HelpLine className="mb-1">{kindAbout(draft.kind)}</HelpLine>}
