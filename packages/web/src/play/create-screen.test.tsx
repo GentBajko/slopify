@@ -573,6 +573,45 @@ describe("the rail", () => {
     );
   });
 
+  it("says at rest when the article prompt asks for another length", async () => {
+    await mountPlay(
+      {
+        "GET /api/prompts": jsonAnswer({
+          prompts: [
+            {
+              id: "Dossier",
+              kind: "article",
+              name: "Dossier",
+              body: "Write about {{topic}} in 2800-3200 words.",
+              slots: [],
+              updatedAt: "2026-09-03T00:00:00.000Z",
+            },
+            {
+              id: "Oils",
+              kind: "image",
+              name: "Oils",
+              body: "An oil painting of {{topic}} in {{style}}.",
+              slots: [],
+              updatedAt: "2026-09-03T00:00:00.000Z",
+            },
+          ],
+        }),
+      },
+      { ...generatedRun, expectedWords: "750" },
+    );
+    const start = within(screen.getByRole("region", { name: "Start" }));
+    expect(start.getByText(/^Expected length:/).textContent).toBe(
+      "Expected length: about 5 min · 750 words",
+    );
+    await waitFor(() =>
+      expect(
+        start.getByText(
+          "The “Dossier” prompt asks for 2,800–3,200 words, so the video will be about 20 min.",
+        ),
+      ).not.toBeNull(),
+    );
+  });
+
   it("puts the Make button in the summary's foot when the summary covers the rail's", async () => {
     // A window too narrow for the summary beside the rail: the drawer spans the button.
     const box = (left: number, right: number): DOMRect =>

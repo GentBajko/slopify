@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { ArrowRightIcon, PencilIcon, PlayIcon } from "lucide-react";
 import {
   type ReactElement,
@@ -7,17 +8,21 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { useApp } from "@/app-context";
 import { Button, PlayKey } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { ariaKeyShortcuts } from "@/components/kit/command-palette";
 import { Dialog } from "@/components/kit/dialog";
-import { Field, Input } from "@/components/kit/field";
+import { Field, HelpLine, Input } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { Segmented } from "@/components/kit/switch";
 import { shortcuts } from "@/lib/shortcuts";
+import { promptsQuery } from "@/queries";
 import { usePlaySession } from "./draft-context";
 import { outputCount, outputKindOf } from "./output-kind";
 import { PlanAllowance } from "./plan-allowance";
 import type { SetupProblem } from "./problems";
+import { promptWords } from "./prompt-cards";
 import { pageVideos, pendingReviewUpload, queued, startLabel } from "./review-state";
 import { estimateHeadline, RunReview } from "./run-review";
 
@@ -316,6 +321,8 @@ function ExpectedLength({
   readonly locked: boolean;
 }): ReactElement {
   const session = usePlaySession();
+  const { api } = useApp();
+  const prompts = useQuery(promptsQuery(api));
   const { document } = session;
   const [editing, setEditing] = useState(false);
   const words = Number(document.expectedWords);
@@ -351,21 +358,45 @@ function ExpectedLength({
         </Button>
       </div>
     );
+  // The picked article prompt decides the real length; where it names a count the length here
+  // is set apart from, that is said at rest, not only while editing.
+  const asked = articlePromptWords(prompts.data?.prompts ?? [], document.form.articlePrompt);
+  const off = asked !== undefined && known && (words < asked.low || words > asked.high);
   return (
-    <p className="m-0 flex min-w-0 flex-wrap items-center gap-x-1 text-small text-ink-2">
-      <span>Expected length: {length}</span>
-      <Button
-        variant="quiet"
-        size="small"
-        disabled={locked}
-        aria-label="Change the expected length"
-        onClick={() => setEditing(true)}
-      >
-        <PencilIcon aria-hidden="true" strokeWidth={1.75} />
-        Change
-      </Button>
-    </p>
+    <div className="flex min-w-0 flex-col gap-0.5" {...helpScope}>
+      <p className="m-0 flex min-w-0 flex-wrap items-center gap-x-1 text-small text-ink-2">
+        <span>Expected length: {length}</span>
+        <Button
+          variant="quiet"
+          size="small"
+          disabled={locked}
+          aria-label="Change the expected length"
+          onClick={() => setEditing(true)}
+        >
+          <PencilIcon aria-hidden="true" strokeWidth={1.75} />
+          Change
+        </Button>
+      </p>
+      <HelpLine className={off ? "text-waiting" : undefined}>
+        {off && asked !== undefined
+          ? `The “${document.form.articlePrompt}” prompt asks for ${range(asked)}, so the video will be about ${String(Math.round((asked.low + asked.high) / 2 / wordsPerMinute))} min.`
+          : "For the estimate and the image count; the article prompt decides the real length."}
+      </HelpLine>
+    </div>
   );
+}
+
+function articlePromptWords(
+  prompts: readonly { readonly kind: string; readonly name: string; readonly body: string }[],
+  name: string,
+): { readonly low: number; readonly high: number } | undefined {
+  const body = prompts.find((one) => one.kind === "article" && one.name === name)?.body;
+  return body === undefined ? undefined : promptWords(body);
+}
+function range({ low, high }: { readonly low: number; readonly high: number }): string {
+  return low === high
+    ? `${low.toLocaleString("en-US")} words`
+    : `${low.toLocaleString("en-US")}–${high.toLocaleString("en-US")} words`;
 }
 
 // The style preview on demand: what it shows in words, and a button that renders six seconds

@@ -36,6 +36,21 @@ export function promptGist(body: string): {
   };
 }
 
+// The words a prompt asks for when its text names a count: "2800-3200 words", "1500 words".
+export function promptWords(
+  body: string,
+): { readonly low: number; readonly high: number } | undefined {
+  const number = (text: string): number => Number(text.replace(/,/g, ""));
+  const range = /(\d[\d,]*)\s*(?:-|–|to)\s*(\d[\d,]*)\s*words/i.exec(body);
+  const single = /(\d[\d,]*)\s*words/i.exec(body);
+  const low =
+    range !== null ? number(range[1] ?? "") : single !== null ? number(single[1] ?? "") : NaN;
+  const high = range !== null ? number(range[2] ?? "") : low;
+  return Number.isFinite(low) && Number.isFinite(high) && low > 0 && high >= low
+    ? { low, high }
+    : undefined;
+}
+
 // About 150 words is one minute of narration.
 function lengthOf(body: string): string | undefined {
   const number = (text: string): number => Number(text.replace(/,/g, ""));
