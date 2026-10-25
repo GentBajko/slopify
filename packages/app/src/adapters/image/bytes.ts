@@ -1,5 +1,6 @@
 import type { GeneratedImage } from "../../kernel/ports/image.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 
 // Two of the three image providers answer with a link rather than with bytes, so fetching
 // that link is part of the provider call and belongs inside the attempt with it: a URL
@@ -62,7 +63,7 @@ export async function downloadImage(download: ImageDownload): Promise<GeneratedI
   if (mime === undefined) {
     throw providerError({
       kind: "other",
-      message: `${download.provider} sent back something that is not a PNG or JPEG image (${describeBytes(bytes)}). Use Try again; if it keeps happening, choose another image model in the Providers section of Edit project.`,
+      message: `${download.provider} sent back something that is not a PNG or JPEG image (${describeBytes(bytes)}). Use Try again; if it keeps happening, choose another image model in ${editSettings.images}.`,
     });
   }
   return { bytes, mime };

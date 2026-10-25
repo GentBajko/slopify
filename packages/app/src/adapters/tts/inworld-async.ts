@@ -3,6 +3,7 @@ import type { Clock } from "../../kernel/clock.js";
 import { internalError } from "../../kernel/errors.js";
 import { redact } from "../../kernel/log.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { TtsRequest } from "../../kernel/ports/tts.js";
 import { httpFailure, noAudio, providerSaid, unreadable, voiceFix } from "../explain.js";
 import { accessField } from "../model-access.js";
@@ -38,8 +39,7 @@ export async function* inworldAsync(
   if (saved === undefined && request.text.length > 100_000) {
     throw providerError({
       kind: "unsupported",
-      message:
-        "This narration part is longer than the 100,000 characters Inworld takes at once (10,000 on On-Demand accounts). Set Chunking to Paragraph in the Providers section of Edit project, then use Try again.",
+      message: `This narration part is longer than the 100,000 characters Inworld takes at once (10,000 on On-Demand accounts). Set Chunking to Paragraph in ${editSettings.narration}, then use Try again.`,
     });
   }
   const headers = { Authorization: `Basic ${key}`, "Content-Type": "application/json" };

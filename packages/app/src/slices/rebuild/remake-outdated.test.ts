@@ -9,10 +9,10 @@ const work = (key: string, disposition: "reuse" | "generate" | "local" | "review
 
 it("leaves out a running project and a sample, with the page's reasons", () => {
   expect(remakeBlocker("running", false)).toBe(
-    "It is running now. Remake it once the run has finished.",
+    "It is running now. Make its outdated parts again once the run has finished.",
   );
   expect(remakeBlocker("done", true)).toBe(
-    "It is a sample project, which stays as it came with Slopify. Open it, press Make my own copy at the top of its page, then remake the copy.",
+    "It is a sample project, which stays as it came with Slopify. Open it, press Make my own copy at the top of its page, then change the copy.",
   );
   expect(remakeBlocker("done", false)).toBeUndefined();
 });
@@ -21,7 +21,7 @@ it("leaves out a project with nothing outdated, blocked work, or supplied conten
   const label = (key: string) => `“${key}”`;
   expect(
     previewBlocker({ work: [work("image:one", "reuse")], providedReuseRequired: [] }, label),
-  ).toBe("Nothing in it is outdated, so there is nothing to remake.");
+  ).toBe("Nothing in it is outdated, so there is nothing to make again.");
   expect(
     previewBlocker(
       {
@@ -31,7 +31,7 @@ it("leaves out a project with nothing outdated, blocked work, or supplied conten
       label,
     ),
   ).toBe(
-    "“audio:body” can't run: The voice was removed. Open the project and press Choose what to remake to see what to fix.",
+    "“audio:body” can't run: The voice was removed. Open the project and press Choose what to make again to see what to fix.",
   );
   expect(
     previewBlocker(

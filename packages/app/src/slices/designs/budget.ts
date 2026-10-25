@@ -26,7 +26,7 @@ export function budgetSentence(total: number, budget: number): string {
   return `Waiting: this sample would take today's sample spending to $${total.toFixed(2)}, over the $${budget.toFixed(2)} a day samples may spend. Press Make sample to make it anyway; the limit starts again at midnight.`;
 }
 
-// Settings → Template studio shows it beside the budget: what design samples spent since local
+// Settings → Production defaults shows it beside the budget: what design samples spent since local
 // midnight and what is left of today's budget.
 export function designBudgetRoom(
   db: DatabaseSync,

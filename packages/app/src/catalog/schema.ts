@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { thinkingModes } from "../kernel/ports/llm.js";
+import { createRows, editSettings } from "../kernel/ports/settings-places.js";
 import { providers } from "../slices/settings/model.js";
 
 const money = z.number().finite().nonnegative();
@@ -114,8 +115,7 @@ export function takesReferenceImage(model: Pick<CatalogueModel, "keywords">): bo
   return model.keywords.includes("reference");
 }
 // What the run says when the chosen image model cannot take the establishing image.
-export const referenceRefusal =
-  "The chosen image model can't use an establishing image as a reference, so the images can't be drawn to match it. Choose an image model that can (Codex CLI, OpenAI, Google, or a fal.ai model listed with reference) under Images → Model on Play or in Edit project → Providers, or set Establishing image to Off in the Images section.";
+export const referenceRefusal = `The chosen image model can't use an establishing image as a reference, so the images can't be drawn to match it. Choose an image model that can (Codex CLI, OpenAI, Google, or a fal.ai model listed with reference) in ${createRows.images} or ${editSettings.images}, or set Establishing image to Off there.`;
 // What a design's edit says when the chosen image model takes no input picture.
 export const editRefusal =
   "This image model can't edit a picture. Choose Codex CLI, OpenAI, Google, or FLUX.2 or Nano Banana 2 on fal.ai under Made with … · change.";

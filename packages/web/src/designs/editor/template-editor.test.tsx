@@ -261,7 +261,8 @@ describe("the design template editor", () => {
             JSON.stringify({
               title: "Conflict",
               status: 409,
-              detail: "Version 2 can't be marked ready yet: {{Place}} has no sample value.",
+              detail:
+                "Version 2 can't be approved for schedules yet: {{Place}} has no sample value.",
               reason: "not-ready",
               checks: [
                 {

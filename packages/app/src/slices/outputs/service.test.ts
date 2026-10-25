@@ -138,7 +138,7 @@ it("names the choices a new output still needs instead of saving a revision that
     expect(added).toMatchObject({ ok: false, reason: "invalid-edit" });
     if (added.ok) return;
     expect(added.fields?.[0]?.field).toBe("audio");
-    expect(added.fields?.[0]?.message).toMatch(/Settings/);
+    expect(added.fields?.[0]?.message).toMatch(/Edit settings, save, then add the output again/);
     expect(h.view().revision.id).toBe(base);
   } finally {
     h.close();

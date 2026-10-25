@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
 import { internalError } from "../../kernel/errors.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { LlmAnswer, StageProviders } from "../../kernel/runner/providers.js";
 import type { AttemptResult } from "../../kernel/runner/work.js";
@@ -52,9 +53,9 @@ export async function executeArticleRequests(
           previewLabel: part === 0 ? "Article" : `Continuation ${part}`,
           check: (value) =>
             value.text.trim() === ""
-              ? "The AI model returned an empty article. Try again; if it keeps happening, choose a different model in Edit project → Providers."
+              ? `The AI model returned an empty article. Try again; if it keeps happening, choose a different model in ${editSettings.writer}.`
               : part === continuationLimit && value.finishReason === "length"
-                ? `The article was still unfinished after ${continuationLimit} continuations because the AI model kept stopping at its length limit. Ask for a shorter article in Edit project → Prompts, or choose a model with a larger output limit in Edit project → Providers, then Try again.`
+                ? `The article was still unfinished after ${continuationLimit} continuations because the AI model kept stopping at its length limit. Ask for a shorter article in the article prompt in ${editSettings.article}, or choose a model with a larger output limit under Written by there, then Try again.`
                 : undefined,
         },
         (event) => {
@@ -89,7 +90,7 @@ export async function executeArticleRequests(
     piece = next;
   }
   throw new Error(
-    `The article was still unfinished after ${continuationLimit} continuations because the AI model kept stopping at its length limit. Ask for a shorter article in Edit project → Prompts, or choose a model with a larger output limit in Edit project → Providers, then Try again.`,
+    `The article was still unfinished after ${continuationLimit} continuations because the AI model kept stopping at its length limit. Ask for a shorter article in the article prompt in ${editSettings.article}, or choose a model with a larger output limit under Written by there, then Try again.`,
   );
 }
 

@@ -1,3 +1,4 @@
+import { createRows, editSettings } from "../kernel/ports/settings-places.js";
 import type { RunDraft } from "../slices/admission/model.js";
 import {
   type FieldError,
@@ -101,8 +102,7 @@ export function modelFields(draft: RunDraft, catalogue?: CatalogueStore): FieldE
     if (offered.length === 0)
       fields.push({
         field: "videoEdit.animateModel",
-        message:
-          "This image provider can't animate images. Choose fal.ai or Replicate as the image provider (on Play's Images rail, or in Edit project → Providers), or turn Animate images off.",
+        message: `This image service can't animate images. Choose fal.ai or Replicate as the image service (in ${createRows.images}, or ${editSettings.images}), or turn Animate images off.`,
       });
     else if (model.trim() !== "" && !offered.some((one) => one.id === model))
       fields.push({

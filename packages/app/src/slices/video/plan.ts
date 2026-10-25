@@ -1,3 +1,4 @@
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { Format, MotionStyle } from "../admission/model.js";
 import type { TimedChapter } from "./chapters.js";
 import { chapterCuts, narrationShotFrames } from "./cuts.js";
@@ -151,7 +152,7 @@ export function planRender(input: PlanInput): RenderPlan {
   if (input.images.length === 0) {
     // Admission permits Video only with an image source, so an empty set is a bug upstream.
     throw new Error(
-      "The video needs at least one image, but there are none. Check the Images section in Edit project, then Try again.",
+      `The video needs at least one image, but there are none. Check ${editSettings.images}, then Try again.`,
     );
   }
   const frame = frames[input.format];

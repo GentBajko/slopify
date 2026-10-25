@@ -4,6 +4,7 @@ import type { DatabaseSync } from "node:sqlite";
 import type { Paths } from "../../kernel/paths.js";
 import { derive } from "../../kernel/runner/graph.js";
 import { liveProject, projectExists, projectPaused, stagesOf } from "../admission/repo.js";
+import { bundledSampleProjects } from "../onboarding/state.js";
 import { notTemplateSample } from "../template-studio/repo.js";
 import { projectSettled } from "./arrange.js";
 import { backupsFolderName, outputPath, projectDir } from "./layout.js";
@@ -16,7 +17,9 @@ import { pieceFile } from "./reconcile.js";
 // video and shorts show included: making them again costs money and never gives the same ones. Two
 // rules keep it safe. A file the user supplied is never removed, because nothing could make
 // it again. And only files a project record names are removed: anything else in the folder
-// is reconcile's business (`reconcile.ts`), which leaves the Backups folder alone.
+// is reconcile's business (`reconcile.ts`), which leaves the Backups folder alone. A bundled
+// sample is read-only and keeps every file: nothing on it counts as removable, and no clean-up
+// touches it.
 
 // What a finished project is for: the files that get uploaded or read, from every revision,
 // so an older video in History stays too.
@@ -67,14 +70,16 @@ export type TrimResult =
 
 export function projectStorage(deps: TrimDeps, projectId: string): ProjectStorage {
   const files = filesOf(deps.paths, projectId);
-  const kept = keptPaths(deps.db, projectId);
   const outputs = outputPaths(deps.db, projectId);
-  const removable = removablePaths(deps.db, projectId, kept);
+  const sample = bundledSampleProjects(deps.db).has(projectId);
+  const removable: ReadonlySet<string> = sample
+    ? new Set()
+    : removablePaths(deps.db, projectId, keptPaths(deps.db, projectId));
   let outputsBytes = 0;
   let workingBytes = 0;
   let removableFiles = 0;
   let removableBytes = 0;
-  const history = historyPaths(deps, projectId);
+  const history: ReadonlySet<string> = sample ? new Set() : historyPaths(deps, projectId);
   let historyFiles = 0;
   let historyBytes = 0;
   for (const [path, bytes] of files) {
@@ -141,7 +146,8 @@ export function deleteOldVersions(deps: TrimDeps, projectId: string): OldVersion
 }
 
 // Every project's old versions, skipping any that runs or waits to run. A template studio
-// sample keeps its files (its bake-offs and resamples reuse them), and is no project to count.
+// sample keeps its files (its bake-offs and resamples reuse them), and is no project to count;
+// nor is a bundled sample, which is read-only.
 export function deleteAllOldVersions(deps: TrimDeps): {
   readonly projects: number;
   readonly files: number;
@@ -154,10 +160,7 @@ export function deleteAllOldVersions(deps: TrimDeps): {
   let files = 0;
   let bytesFreed = 0;
   let busy = 0;
-  for (const row of deps.db
-    .prepare(`SELECT id FROM projects WHERE ${liveProject()} AND ${notTemplateSample()}`)
-    .all()) {
-    const id = String(row.id);
+  for (const id of cleanable(deps.db)) {
     if (placedFiles(deps.paths, id).size === 0) continue;
     const result = deleteOldVersions(deps, id);
     if (!result.ok) {
@@ -185,10 +188,7 @@ export function cleanUpAll(deps: TrimDeps): {
   let files = old.files;
   let bytesFreed = old.bytesFreed;
   let skipped = old.busy;
-  for (const row of deps.db
-    .prepare(`SELECT id FROM projects WHERE ${liveProject()} AND ${notTemplateSample()}`)
-    .all()) {
-    const id = String(row.id);
+  for (const id of cleanable(deps.db)) {
     const result = keepOutputsOnly(deps, id);
     if (result.ok) {
       files += result.files;
@@ -196,6 +196,17 @@ export function cleanUpAll(deps: TrimDeps): {
     } else if (result.reason === "not-finished" && !old.busyIds.includes(id)) skipped += 1;
   }
   return { files, bytesFreed, skipped };
+}
+
+// The projects the clean-ups for every project go through: neither a template studio sample nor
+// a bundled one.
+function cleanable(db: DatabaseSync): readonly string[] {
+  const samples = bundledSampleProjects(db);
+  return db
+    .prepare(`SELECT id FROM projects WHERE ${liveProject()} AND ${notTemplateSample()}`)
+    .all()
+    .map((row) => String(row.id))
+    .filter((id) => !samples.has(id));
 }
 
 // The folders under `root` left empty, deepest first, and `root` itself if it is empty then.

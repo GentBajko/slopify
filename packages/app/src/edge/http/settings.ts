@@ -137,7 +137,7 @@ export function settingsRoutes(deps: AppDeps) {
         if (refused !== undefined)
           return problem(c, {
             status: 400,
-            detail: `The channel links weren't saved: ${refused} Then press Save in Settings → Channel links.`,
+            detail: `The channel links weren't saved: ${refused} Then press Save in Settings → YouTube Studio and posting.`,
           });
         writeChannelLinks(deps.db, links);
         return c.json({ links: readChannelLinks(deps.db) });

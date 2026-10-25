@@ -336,7 +336,7 @@ describe("the upload pack", () => {
     expect(pack.items[0]?.thumbnails.map((file) => file.asset)).toEqual(["thumbnail"]);
     expect(pack.items[0]?.video).toBeNull();
     expect(pack.missing.join("\n")).toContain("The video isn't made yet");
-    expect(pack.missing.join("\n")).toContain("Settings → YouTube Studio");
+    expect(pack.missing.join("\n")).toContain("Settings → YouTube Studio and posting");
   });
 
   it("answers 404 for a project that doesn't exist", async () => {
@@ -444,7 +444,7 @@ describe("pairing and CORS", () => {
     });
     expect(wrong.status).toBe(401);
     expect(((await wrong.json()) as { detail: string }).detail).toContain(
-      "Settings → YouTube Studio",
+      "Settings → YouTube Studio and posting",
     );
     // The paired origin's preflight is answered.
     const allowed = await h.call("/ext/pack", {
@@ -679,7 +679,7 @@ describe("a playlist per channel", () => {
     );
     expect(unknown.status).toBe(404);
     expect(((await unknown.json()) as { detail: string }).detail).toContain(
-      "Settings → YouTube Studio",
+      "Settings → YouTube Studio and posting",
     );
   });
 

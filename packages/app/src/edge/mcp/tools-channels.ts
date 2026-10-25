@@ -79,7 +79,7 @@ export const channelTools: readonly RouteTool[] = [
     body: castGenerateSchema,
     title: "Generate a cast picture",
     description:
-      "Draws a cast picture with the image provider, a paid call, like Generate on the Cast tab.",
+      "Draws a cast picture with the image service, a paid call, like Make the picture on the Cast tab.",
   },
   {
     name: "delete_cast_picture",
@@ -128,33 +128,34 @@ export const channelTools: readonly RouteTool[] = [
   {
     name: "list_channel_videos",
     route: "GET /api/channels/:id/videos",
-    title: "Read existing videos",
-    description: "The channel's existing video titles imported from YouTube Studio.",
+    title: "Read the titles to avoid",
+    description:
+      "The channel's titles to avoid: titles of videos it made before Slopify, pasted or imported from YouTube Studio.",
   },
   {
     name: "preview_channel_videos",
     route: "POST /api/channels/:id/videos/preview",
-    title: "Preview an existing-videos import",
-    description: formBody("the Existing videos import"),
+    title: "Preview a titles-to-avoid import",
+    description: formBody("the Titles to avoid tab's import"),
     unrecorded: true,
   },
   {
     name: "import_channel_videos",
     route: "POST /api/channels/:id/videos",
-    title: "Import existing videos",
-    description: formBody("the Existing videos import"),
+    title: "Import titles to avoid",
+    description: formBody("the Titles to avoid tab's import"),
   },
   {
     name: "remove_channel_videos",
     route: "DELETE /api/channels/:id/videos",
-    title: "Remove every existing video",
+    title: "Remove every title to avoid",
     description: "Removes every imported title.",
     confirm: "This removes every imported video title of the channel.",
   },
   {
     name: "remove_channel_video",
     route: "DELETE /api/channels/:id/videos/:videoId",
-    title: "Remove an existing video",
+    title: "Remove a title to avoid",
     description: "Removes one imported title.",
   },
 ];

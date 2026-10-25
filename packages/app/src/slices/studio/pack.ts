@@ -2,6 +2,7 @@ import { readFileSync, statSync } from "node:fs";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import type { Paths } from "../../kernel/paths.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import { thumbnailCountOf } from "../admission/model.js";
 import { projectById } from "../admission/repo.js";
 import { channelById, projectChannelId } from "../channels/repo.js";
@@ -79,7 +80,7 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
       ? undefined
       : readFileSync(outputPath(deps.paths, projectId, output.path), "utf8").trim();
   const channelId = projectChannelId(deps.db, projectId);
-  // The channel's playlists (Settings → YouTube Studio), ticked as this project chose.
+  // The channel's playlists (Settings → YouTube Studio and posting), ticked as this project chose.
   const playlistChoices = projectPlaylists(deps.db, projectId, channelId);
   // The long video goes into the chosen playlists that take long videos, each short into those
   // that take shorts.
@@ -143,7 +144,7 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
     missing.push(
       config.youtubeDescription === true
         ? "The YouTube description isn't written yet. It is written after the video's subtitle timing; wait for the Video stage to finish."
-        : "No YouTube description is written for this project. Turn on YouTube description in Edit project → Prompts to have one written with chapters and tags.",
+        : `No YouTube description is written for this project. Turn on YouTube description in ${editSettings.extras} to have one written with chapters and tags.`,
     );
   const count = thumbnailCountOf(config);
   // The first thumbnail, then the second and third, and never one left from when the project
@@ -154,16 +155,16 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
   if (thumbnails.length === 0)
     missing.push(
       config.sources.thumbnail === "off"
-        ? "This project makes no thumbnail, so YouTube will pick a frame. Set Thumbnail in Edit project to make or upload one."
+        ? `This project makes no thumbnail, so YouTube will pick a frame. Set Thumbnail source in ${editSettings.extras} to make or upload one.`
         : "The thumbnail isn't made yet. Let the Thumbnail stage finish, then open Copy for YouTube Studio again.",
     );
   else if (thumbnails.length < count)
     missing.push(
-      `Only ${String(thumbnails.length)} of the ${String(count)} thumbnails are made. Regenerate the missing ones in the project's Images section.`,
+      `Only ${String(thumbnails.length)} of the ${String(count)} thumbnails are made. Make the missing ones in the project's Images section.`,
     );
   if (playlistChoices.length === 0)
     missing.push(
-      "No playlist is set for this project's channel, so the playlist step is left to you. Set one in Settings → YouTube Studio → Playlists.",
+      "No playlist is set for this project's channel, so the playlist step is left to you. Set one in Settings → YouTube Studio and posting → Playlists.",
     );
 
   // The video's titles and thumbnails in the project's order, and the ones the person picked

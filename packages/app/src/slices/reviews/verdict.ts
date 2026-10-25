@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Message } from "../../kernel/ports/llm.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { ReviewStage, ReviewVerdict } from "./model.js";
 
 // The whole answer the reviewer may give: one JSON object, nothing else. A failed item names
@@ -75,8 +76,7 @@ export type ParsedVerdict =
   | { readonly ok: true; readonly value: ReviewVerdict }
   | { readonly ok: false; readonly reason: string };
 
-const retryHint =
-  "Slopify asks again while attempts remain; if it keeps happening, choose another reviewer model in Edit project → Reviews, then use Try again.";
+const retryHint = `Slopify asks again while attempts remain; if it keeps happening, choose another reviewer model in ${editSettings.checks}, then use Try again.`;
 
 // Strict: one JSON object in the shape above, optionally inside a single ```json fence (the
 // one wrapping models add unasked). Anything else is refused with what was wrong with it.

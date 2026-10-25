@@ -64,7 +64,7 @@ describe("cost planning", () => {
     const row = estimateRun(described, {}, 1500, catalogue).rows.find(
       (one) => one.stage === "Narration descriptions",
     );
-    expect(row?.detail).toContain("3 LLM calls");
+    expect(row?.detail).toContain("3 AI calls");
     expect(
       estimateRun(
         { ...described, audio: { ...described.audio, skipCode: true } },
@@ -72,7 +72,7 @@ describe("cost planning", () => {
         1500,
         catalogue,
       ).rows.find((one) => one.stage === "Narration descriptions")?.detail,
-    ).toContain("2 LLM calls");
+    ).toContain("2 AI calls");
     const generated = estimateRun(
       { ...described, sources: { ...described.sources, article: "generate" }, articlePrompt: "x" },
       { article: "x" },
@@ -103,7 +103,7 @@ describe("cost planning", () => {
       apiLow: null,
     });
     expect(estimate.rows.find((row) => row.stage === "Narration Preparation")?.detail).toContain(
-      "2 LLM calls",
+      "2 AI calls",
     );
     expect(estimate.rows.find((row) => row.stage === "Delivery cue overhead")?.low).toBeNull();
     expect(
@@ -130,7 +130,7 @@ describe("cost planning", () => {
     const row = estimateRun(selected, {}, 1500, catalogue).rows.find(
       (one) => one.stage === "YouTube description",
     );
-    expect(row?.detail).toContain("One LLM call on the timed transcript.");
+    expect(row?.detail).toContain("One AI call on the timed transcript.");
     expect(
       estimateRun({ ...selected, youtubeDescription: false }, {}, 1500, catalogue).rows.some(
         (one) => one.stage === "YouTube description",
@@ -150,7 +150,7 @@ describe("cost planning", () => {
     const rows = estimateRun(selected, { "social.linkedin": "Short." }, 1500, catalogue).rows;
     const posts = rows.filter((one) => one.stage === "Posts");
     expect(posts).toHaveLength(1);
-    expect(posts[0]?.detail).toContain("One LLM call per site whose post a post prompt writes");
+    expect(posts[0]?.detail).toContain("One AI call per site whose post a post prompt writes");
     const without = estimateRun({ ...draft, llm: selected.llm }, {}, 1500, catalogue).rows;
     expect(without.some((one) => one.stage === "Posts")).toBe(false);
     const free = estimateRun(
@@ -171,7 +171,7 @@ describe("cost planning", () => {
     const row = estimateRun(selected, {}, 1500, catalogue).rows.find(
       (one) => one.stage === "Shorts",
     );
-    expect(row?.detail).toContain("One LLM call on the numbered transcript picks the clips.");
+    expect(row?.detail).toContain("One AI call on the numbered transcript picks the clips.");
     for (const off of [
       { ...selected, shorts: { enabled: false, count: 3, minSeconds: 60, maxSeconds: 120 } },
       // Numbers the run would refuse are not priced.

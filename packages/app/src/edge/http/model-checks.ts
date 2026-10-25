@@ -63,8 +63,8 @@ function noAccount(c: Context, id: ProviderId): Response {
     status: 400,
     detail:
       auth === "key"
-        ? `No ${displayName} key is saved, so its models can't be checked. Paste a key in Settings → Providers → ${displayName} and choose Save, then choose Check models in Settings → Models.`
-        : `${displayName} is not set up, so its models can't be checked. Set it up in Settings → Providers, then choose Check models in Settings → Models.`,
+        ? `No ${displayName} key is saved, so its models can't be checked. Paste a key in Settings → Keys & services → ${displayName} and choose Save, then choose Check models in Settings → Models.`
+        : `${displayName} is not set up, so its models can't be checked. Set it up in Settings → Keys & services, then choose Check models in Settings → Models.`,
   });
 }
 

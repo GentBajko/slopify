@@ -16,7 +16,7 @@ describe("aiDisclosureOf", () => {
     expect(answer.altered).toBe(false);
     expect(answer.why).toContain("none of YouTube's three AI use cases applies");
     expect(answer.why).toContain("Settings → Voices");
-    expect(answer.why).toContain("Library → Prompts");
+    expect(answer.why).toContain("photorealistic (Prompts)");
     expect(aiDisclosureOf({ ...base, kind: "short" }).altered).toBe(false);
   });
 

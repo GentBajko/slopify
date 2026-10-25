@@ -319,7 +319,7 @@ export function createAssistant(deps: AssistantDeps): Assistant {
               sessionId,
               turnId,
               "error",
-              `Slopify couldn't run the assistant's CLI: ${detail}. Check it in Settings → Providers, then send your message again.`,
+              `Slopify couldn't run the assistant's CLI: ${detail}. Check it in Settings → Keys & services, then send your message again.`,
               { kind: "cli" },
             );
           }

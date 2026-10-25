@@ -11,7 +11,7 @@ import { exceedsAcknowledged, type SaveDeps } from "./save.js";
 import { affectedSections } from "./sections.js";
 import { paidSections } from "./status.js";
 
-// Settings → Template studio → Make samples for all: the paid sample of every template whose
+// Settings → Production defaults → Make samples for all: the paid sample of every template whose
 // newest version has none, priced together first. Today's budget is spent in name order; the
 // templates past it wait, saying so, and nothing is spent above the total the person saw.
 
@@ -110,10 +110,10 @@ function sentenceOf(makeable: readonly ForAllItem[], room: BudgetRoom): string {
   const onPlan = makeable.filter((item) => !item.fits && item.usesPlan && !room.plans).length;
   const why =
     onPlan === waiting
-      ? ": they run on your CLI plan, and samples may not use CLI plans (turn on Samples may use my CLI plans in Settings → Template studio)"
+      ? ": they run on your CLI plan, and samples may not use CLI plans (turn on Samples may use my CLI plans in Settings → Production defaults)"
       : onPlan > 0
-        ? `: ${String(onPlan)} run on your CLI plan, which samples may not use (Samples may use my CLI plans in Settings → Template studio), and the rest wait for tomorrow or a higher budget`
-        : " for tomorrow or a higher budget in Settings → Template studio";
+        ? `: ${String(onPlan)} run on your CLI plan, which samples may not use (Samples may use my CLI plans in Settings → Production defaults), and the rest wait for tomorrow or a higher budget`
+        : " for tomorrow or a higher budget in Settings → Production defaults";
   return `${head} ${String(fitting)} of them ${fitting === 1 ? "fits" : "fit"} today's budget; the other ${String(waiting)} wait${why}.`;
 }
 
@@ -144,7 +144,7 @@ export type ForAllResult =
     };
 
 const budgetHeld =
-  "Waiting: today's sample budget is used by the other templates' samples. Press Make sample tomorrow, or raise the budget in Settings → Template studio.";
+  "Waiting: today's sample budget is used by the other templates' samples. Press Make sample tomorrow, or raise the budget in Settings → Production defaults.";
 
 export async function makeSamplesForAll(deps: SaveDeps, raw: unknown): Promise<ForAllResult> {
   const parsed = samplesForAllSchema.safeParse(raw);

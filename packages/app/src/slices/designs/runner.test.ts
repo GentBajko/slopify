@@ -144,14 +144,14 @@ describe("editing a picture", () => {
     );
   });
 
-  it("points a refused key at Settings → Providers", async () => {
+  it("points a refused key at Settings → Keys & services", async () => {
     const { runner, first } = setup(async () => {
       throw providerError({ kind: "auth", message: "The key was rejected." });
     });
     runner.edit("d1", edit(first));
     await runner.idle();
     expect(designView(h.db, "d1")?.steps[1]?.error).toBe(
-      "The picture couldn't be made: The key was rejected. Check the provider's key in Settings → Providers, then press Try again.",
+      "The picture couldn't be made: The key was rejected. Check the provider's key in Settings → Keys & services, then press Try again.",
     );
   });
 
@@ -228,7 +228,7 @@ describe("editing a picture", () => {
       "Write what to change (at most 4,000 characters), then press Edit.",
     );
     expect(reason(edit(first), "gone")).toBe(
-      "This design no longer exists. Open Library → Designs to choose another.",
+      "This design no longer exists. Go back to Designs to choose another.",
     );
     expect(reason(edit(first, { castMemberIds: ["gone"] }))).toBe(
       "A cast member you chose was deleted. Choose the cast again, then press the button again.",

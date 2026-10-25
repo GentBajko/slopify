@@ -80,7 +80,7 @@ describe("paidStatuses", () => {
       "waiting",
       held,
     ]);
-    const failed = "OpenRouter refused the key. Paste a new one in Settings → Providers.";
+    const failed = "OpenRouter refused the key. Paste a new one in Settings → Keys & services.";
     expect(states({ versions: [version(2, "failed", failed)] }).script).toEqual([
       "needs-fix",
       failed,

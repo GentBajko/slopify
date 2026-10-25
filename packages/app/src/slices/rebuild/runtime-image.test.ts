@@ -61,11 +61,11 @@ it("sends the effort and the establishing image's bytes", () => {
 it("says what to do when the establishing image is missing or not a PNG or JPEG", () => {
   expect(() =>
     imageCall(deps({}), "p1", { ...input, reference: { fingerprint: "f", assetId: null } }),
-  ).toThrow(/Regenerate on the establishing image in the Images section/);
+  ).toThrow(/Make the establishing image again in the project's Images section/);
   const d = deps({ ref: "assets/reference.webp" });
   mkdirSync(join(d.paths.projects, "p1", "assets"), { recursive: true });
   writeFileSync(join(d.paths.projects, "p1", "assets", "reference.webp"), Buffer.from("RIFF...."));
   expect(() =>
     imageCall(d, "p1", { ...input, reference: { fingerprint: "f", assetId: "ref" } }),
-  ).toThrow(/Upload a PNG or JPEG in Edit project → Images → Establishing image/);
+  ).toThrow(/Upload a PNG or JPEG under Establishing image in Edit settings → Images/);
 });

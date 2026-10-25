@@ -32,7 +32,7 @@ export async function createProject(deps: AppDeps, sent: RunDraft): Promise<Crea
       ok: false,
       status: 409,
       detail:
-        "This project has checkpoints turned on, so it must be started from Play with Review and start.",
+        "This project pauses for your review (Pauses and checks), so it starts from Create: press Make the video there.",
       fields: [],
     };
   const subtitles = draft.subtitles;

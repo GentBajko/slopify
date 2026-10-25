@@ -89,7 +89,9 @@ describe("makeNextChapter", () => {
       const project = startRun(h.deps, chapter(undefined), {}, false, {}).project;
       const refused = makeNextChapter(h.deps, { id: randomUUID(), projectId: project.id });
       expect(refused).toMatchObject({ ok: false, reason: "not-an-audiobook" });
-      expect(refused.ok ? "" : refused.message).toContain("Pick Audiobook under Speakers");
+      expect(refused.ok ? "" : refused.message).toContain(
+        "Pick Audiobook as the Format under Speakers",
+      );
     } finally {
       h.close();
     }

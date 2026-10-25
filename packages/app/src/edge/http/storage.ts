@@ -1,6 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { projectExists } from "../../slices/admission/repo.js";
+import { isSampleProject } from "../../slices/onboarding/sample.js";
 import {
   BackupBusyError,
   type BackupDeps,
@@ -38,14 +39,22 @@ export function storageRoutes(deps: AppDeps) {
     appVersion: deps.version,
     hasInflight: deps.runner.hasInflight,
   });
-  // A template's studio sample keeps its files for the studio's bake-offs and resamples.
+  // A template's studio sample keeps its files for the studio's bake-offs and resamples, and a
+  // bundled sample is read-only.
   const studioSample = (id: string): ProblemInit | undefined => {
+    if (isSampleProject(deps.db, id))
+      return {
+        status: 409,
+        detail:
+          "This is a sample project, which is read-only and keeps all its files. To free its space, delete it in Projects; Restore samples in Settings → Backup & storage brings it back.",
+        extensions: { reason: "sample-read-only" },
+      };
     const owner = sampleOwner(deps.db, id);
     return owner === undefined
       ? undefined
       : {
           status: 409,
-          detail: `This is the studio sample of ${owner.name}, and the studio keeps its files to make its samples again without paying twice. Change it in its studio instead: Library → Templates → ${owner.name} → Open studio.`,
+          detail: `This is the sample project of the template ${owner.name}, kept with its files so Edit template can make its samples again without paying twice. Change it in Edit template instead: Templates → ${owner.name} → Edit template.`,
           extensions: { reason: "template-sample" },
         };
   };
@@ -86,12 +95,12 @@ export function storageRoutes(deps: AppDeps) {
           ? problem(c, {
               status: 404,
               detail:
-                "This project no longer exists. Reload Settings → Storage to see the current list.",
+                "This project no longer exists. Reload Settings → Backup & storage to see the current list.",
             })
           : problem(c, {
               status: 409,
               detail:
-                "Only a finished project can drop its working files, and this one is running, waiting or has unfinished steps. Let it finish (or cancel it on its project page), then drop the working files again from the project page or Settings → Storage.",
+                "Only a finished project can drop its working files, and this one is running, waiting or has unfinished steps. Let it finish (or cancel it on its project page), then drop the working files again from the project page or Settings → Backup & storage.",
             });
       })
       // Delete old versions: one project's History files (`slices/storage/trim.ts`).

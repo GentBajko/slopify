@@ -10,6 +10,7 @@ import {
   llmDocumentsSchema,
 } from "../../kernel/ports/llm-documents.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 
 export const documentServerName = "slopify_research";
 export const documentTool = "read_document";
@@ -21,8 +22,7 @@ export function documentWorkspace(input: readonly LlmDocument[] | undefined) {
   if (!parsed.success)
     throw providerError({
       kind: "unsupported",
-      message:
-        "The research notes are too large, or not in a form the AI model can be given, so nothing was sent. Make the inputs shorter in Edit project, then use Try again; if it keeps happening, use Download diagnostics in Settings and report it.",
+      message: `The research notes are too large, or not in a form the AI model can be given, so nothing was sent. Make the research notes shorter in ${editSettings.article}, then use Try again; if it keeps happening, use Download diagnostics in Settings and report it.`,
     });
   const documents = parsed.data;
   const directory = mkdtempSync(join(tmpdir(), "slopify-documents-"));
@@ -92,8 +92,7 @@ export function documentWorkspace(input: readonly LlmDocument[] | undefined) {
 function unread(): Error {
   return providerError({
     kind: "unavailable",
-    message:
-      "The AI model did not read all of the research notes, so its answer was not used (the attempt may still have used your quota). Use Try again; if it keeps happening, choose another model in the Providers section of Edit project.",
+    message: `The AI model did not read all of the research notes, so its answer was not used (the attempt may still have used your quota). Use Try again; if it keeps happening, choose another model in ${editSettings.writer}.`,
   });
 }
 export type DocumentWorkspace = NonNullable<ReturnType<typeof documentWorkspace>>;

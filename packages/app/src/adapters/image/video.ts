@@ -1,5 +1,6 @@
 import type { GeneratedImage, GeneratedVideo } from "../../kernel/ports/image.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import { describeBytes } from "./bytes.js";
 
 // What the two image-to-video adapters share: the still goes up inline as a data URI (the
@@ -34,7 +35,7 @@ export async function downloadVideo(download: VideoDownload): Promise<GeneratedV
   if (!sniffVideo(bytes))
     throw providerError({
       kind: "other",
-      message: `${download.provider} sent back something that is not an MP4 video clip (${describeBytes(bytes)}). Use Try again; if it keeps happening, choose another image-to-video model under Animate images in Edit project → Inputs → Look.`,
+      message: `${download.provider} sent back something that is not an MP4 video clip (${describeBytes(bytes)}). Use Try again; if it keeps happening, choose another image-to-video model under Animate images in ${editSettings.look}.`,
     });
   return { bytes, mime: "video/mp4" };
 }

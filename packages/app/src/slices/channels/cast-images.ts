@@ -100,7 +100,7 @@ export function generateCastImage(
       fail(
         deps,
         id,
-        `The picture couldn't be made: ${reason.slice(0, 500)} Check the image provider in Settings → Providers, then press Generate again.`,
+        `The picture couldn't be made: ${reason.slice(0, 500)} Check the image service in Settings → Keys & services, then press Make the picture again.`,
       );
     },
   );

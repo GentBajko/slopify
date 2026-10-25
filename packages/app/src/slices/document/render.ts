@@ -1,4 +1,5 @@
 import { jsPDF } from "jspdf";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import { type Block, type Run, runsText } from "./blocks.js";
 import { drawLine, type TextStyle, wrapRuns } from "./flow.js";
 import { type DocumentAssets, faceWidth, registerFonts, useFace } from "./fonts.js";
@@ -49,7 +50,7 @@ export function renderDocument(input: DocumentInput): RenderedDocument {
   const blocks = withoutTitle(text.blocks, input.title);
   if (blocks.length === 0)
     throw new Error(
-      "The article has no text to put in the document. Write or regenerate the article (Edit project → Article), then use Try again on Document.",
+      `The article has no text to put in the PDF. Write it in ${editSettings.article}, or press Write the article again in the project's Article section, then use Try again on PDF.`,
     );
   const words = blocks
     .map((block) =>

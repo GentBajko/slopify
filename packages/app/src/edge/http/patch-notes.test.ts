@@ -108,7 +108,7 @@ describe("GET /api/patch-notes/:id", () => {
     await withApp({ "index.json": index, "index.md": "no" }, async (app) => {
       const response = await app.request(`/api/patch-notes/${id}`);
       expect(response.status).toBe(404);
-      expect(await detail(response)).toContain("Settings → Patch notes");
+      expect(await detail(response)).toContain("Settings → What's new");
     });
   });
 });

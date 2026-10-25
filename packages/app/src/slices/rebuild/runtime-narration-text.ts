@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { internalError } from "../../kernel/errors.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { NarrationSegment } from "../narration/preparation.js";
 import type { RevisionDeps, RevisionView } from "../revisions/model.js";
@@ -41,7 +42,7 @@ export function narrationTextParts(
     );
     if (selected === undefined || recipe === undefined)
       throw new Error(
-        "Some narration chunks aren't finished, so the full narration text isn't available. Let the Narration stage finish (Resume, or Try again on it), or regenerate the missing chunk in Edit project → Narration.",
+        `Some narration chunks aren't finished, so the full narration text isn't available. Let the Narration stage finish (Continue the run, or Try again on Narration), or make the missing chunk again in ${editSettings.narration}.`,
       );
     const input = recipe.input;
     if (
@@ -64,7 +65,7 @@ export function narrationTextParts(
       (payload.spokenText !== input.spokenText || payload.text !== input.text)
     )
       throw new Error(
-        "A narration chunk's audio no longer matches its prepared text. Regenerate that chunk in Edit project → Narration, then Try again.",
+        `A narration chunk's audio no longer matches its prepared text. Make that chunk again in ${editSettings.narration}, then Try again.`,
       );
     return {
       logicalKey: input.logicalKey,

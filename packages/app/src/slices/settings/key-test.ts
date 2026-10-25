@@ -45,7 +45,7 @@ export function keyTestOutcome(
   const guide = keyGuides[provider];
   const keyPage = guide === undefined ? "the provider's website" : guide.keyPage.url;
   const billing = guide?.billing?.url;
-  const place = `Settings → Providers → ${name}`;
+  const place = `Settings → Keys & services → ${name}`;
   const done = (result: KeyTestResult, message: string): KeyTestOutcome => ({
     provider,
     result,

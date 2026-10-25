@@ -134,7 +134,7 @@ describe("article pronunciation glossary", () => {
     expect(parsed.skipped?.length).toBe(1);
     const notice = skippedGlossaryNotice(parsed.skipped ?? []) ?? "";
     expect(notice).toMatch(/^Pronunciation Glossary: 1 entry is skipped .*entry [23]: /u);
-    expect(notice).toContain("Edit project → Article");
+    expect(notice).toContain("Edit settings → Article");
     expect(notice).not.toContain("Kish");
     expect(notice).not.toContain("Ignore the article");
   });
@@ -390,7 +390,7 @@ describe("names left without a pronunciation on purpose", () => {
   it("says it calmly, with where to fix it, and lists no rows", () => {
     const notice = skippedGlossaryNotice([], 49) ?? "";
     expect(notice).toContain("49 names have no pronunciation given and are read as written");
-    expect(notice).toContain("Edit project → Article");
+    expect(notice).toContain("Edit settings → Article");
     expect(notice).not.toContain("skipped");
     expect(skippedGlossaryNotice([], 1)).toContain("1 name has no pronunciation given");
     expect(skippedGlossaryNotice([], 0)).toBeNull();

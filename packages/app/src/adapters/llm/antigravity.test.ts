@@ -350,7 +350,7 @@ describe("Antigravity CLI", () => {
     const one = fake(success);
     await expect(drain(one.run, request(), "/usr/local/bin/gemini")).rejects.toMatchObject({
       fault: { kind: "unsupported" },
-      message: expect.stringContaining("Settings → Providers"),
+      message: expect.stringContaining("Settings → Keys & services"),
     });
     expect(one.options()).toBeUndefined();
     // The registry reads the saved path on every run.

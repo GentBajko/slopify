@@ -1,5 +1,6 @@
 import { languageInfo } from "../../kernel/ports/languages.js";
 import type { NarrationAlias } from "../../kernel/ports/narration-aliases.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import { type AlignmentGates, type AlignmentSpec, englishSpec } from "./spec.js";
 import { type Speller, spellers, spokenNumber } from "./spell.js";
 import { respoken, type SpeechWord, speechWords } from "./text.js";
@@ -267,7 +268,7 @@ function spell(text: string, alphabet: string, raw: string, language: string): s
     const folded = fold(character);
     if (folded === undefined)
       throw new Error(
-        `Word timing for ${languageInfo(language).name} reads Latin letters only, and "${raw}" has letters from another alphabet. Write that word in Latin letters in the article (open the project, Edit project → Article), then Try again.`,
+        `Word timing for ${languageInfo(language).name} reads Latin letters only, and "${raw}" has letters from another alphabet. Write that word in Latin letters in the article (${editSettings.article}), then Try again.`,
       );
     result += folded;
   }

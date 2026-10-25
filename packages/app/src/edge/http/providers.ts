@@ -15,7 +15,7 @@ import {
 import { switchAllRetired, switchRetiredModel } from "../../slices/model-upkeep/switch.js";
 import { retiredModelUsage, usageKinds, usageSlots } from "../../slices/model-upkeep/usage.js";
 import { cliPathMaxLength, saveCliPath } from "../../slices/settings/cli-paths.js";
-import { dismissFirstRun, firstRunStatus } from "../../slices/settings/first-run.js";
+import { firstRunStatus } from "../../slices/settings/first-run.js";
 import { checkProviderHealth } from "../../slices/settings/health.js";
 import { keyGuides } from "../../slices/settings/key-guides.js";
 import { testProviderKey } from "../../slices/settings/key-test.js";
@@ -80,7 +80,7 @@ export function providerRoutes(deps: AppDeps) {
 
   return (
     new Hono()
-      // The step lists Settings → Providers shows beside each key field.
+      // The step lists Settings → Keys & services shows beside each key field.
       .get("/key-guides", (c) => c.json({ guides: keyGuides }))
       // What the first launch found, and the providers Play picks by default.
       .get("/first-run", async (c) => {
@@ -91,10 +91,6 @@ export function providerRoutes(deps: AppDeps) {
             await providerStatuses(readiness),
           ),
         );
-      })
-      .post("/first-run/dismiss", (c) => {
-        dismissFirstRun(deps.db);
-        return c.body(null, 204);
       })
       // "Check all": every CLI signed in, every key valid, every chosen model still offered and
       // answering for the key. `?provider=codex` checks that one only (its row's Check again,
@@ -286,7 +282,7 @@ export function providerRoutes(deps: AppDeps) {
         if (candidate !== undefined && !candidate.success)
           return problem(c, {
             status: 400,
-            detail: `The pasted ${providerById(id).displayName} key could not be tested: it is empty or longer than any key. Paste the whole key in Settings → Providers → ${providerById(id).displayName}, then choose Test again.`,
+            detail: `The pasted ${providerById(id).displayName} key could not be tested: it is empty or longer than any key. Paste the whole key in Settings → Keys & services → ${providerById(id).displayName}, then choose Test again.`,
           });
         return c.json(
           await testProviderKey(

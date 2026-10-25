@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { jsonBetween } from "../../kernel/json-answer.js";
 import type { Message } from "../../kernel/ports/llm.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 
 // One call per short writes exactly the image prompts its clip needs, one per stretch of
 // `imageSeconds`, in the order they are shown. The style comes from the project's Image
@@ -54,7 +55,7 @@ export type CheckedImagePrompts =
   | { readonly ok: true; readonly prompts: readonly string[] }
   | { readonly ok: false; readonly reason: string };
 
-const fix = "Try again, or choose another model in Edit project → Providers.";
+const fix = `Try again, or choose another model in ${editSettings.writer}.`;
 
 // The reason is the sentence the stage shows; the provider wrapper's `check` asks the model
 // again while attempts remain.

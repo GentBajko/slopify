@@ -1,6 +1,7 @@
 import { zipSync } from "fflate";
 import { Hono } from "hono";
 import { expect, it } from "vitest";
+import { writeSampleRecord } from "../../slices/onboarding/state.js";
 import { startFixture } from "../../slices/play-drafts/draft.fake.js";
 import { portableMaxArchiveBytes } from "../../slices/storage/portable.js";
 import type { AppDeps } from "./app.js";
@@ -55,6 +56,16 @@ it("drops working files only for a finished project that exists", async () => {
     });
     const done = await app.request("/api/storage/projects/p1/keep-outputs", { method: "POST" });
     expect(await done.json()).toEqual({ ok: true, files: 0, bytesFreed: 0 });
+    // A bundled sample is read-only: it keeps its files, and says how to free its space.
+    writeSampleRecord(h.deps.db, { projectId: "p1", seededAt: "t" });
+    for (const route of ["keep-outputs", "old-versions/delete"]) {
+      const sample = await app.request(`/api/storage/projects/p1/${route}`, { method: "POST" });
+      expect(sample.status, route).toBe(409);
+      expect(await sample.json()).toMatchObject({
+        reason: "sample-read-only",
+        detail: expect.stringMatching(/read-only and keeps all its files/),
+      });
+    }
   } finally {
     h.close();
   }

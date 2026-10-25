@@ -155,7 +155,7 @@ const notFound = {
   ok: false,
   reason: "not-found",
   message:
-    "This design template no longer exists. Open Library → Designs → Templates to choose another.",
+    "This design template no longer exists. Open Templates → Poster templates to choose another.",
 } as const;
 
 function invalid(error: z.ZodError): DesignResult<never> {
@@ -264,7 +264,7 @@ export async function markTemplateReady(
 ): Promise<DesignResult<DesignTemplate>> {
   const parsed = markReadySchema.safeParse(raw);
   if (!parsed.success)
-    return { ok: false, reason: "invalid", message: "Say which version to mark ready." };
+    return { ok: false, reason: "invalid", message: "Say which version to approve for schedules." };
   if (getTemplate(deps.db, templateId) === undefined) return notFound;
   const revision = templateRevision(deps.db, templateId, parsed.data.version);
   if (revision === undefined)
@@ -294,7 +294,7 @@ export async function markTemplateReady(
     return {
       ok: false,
       reason: "not-ready",
-      message: `Version ${String(parsed.data.version)} can't be marked ready yet: ${failed.map((check) => check.sentence).join(" ")}`,
+      message: `Version ${String(parsed.data.version)} can't be approved for schedules yet: ${failed.map((check) => check.sentence).join(" ")}`,
       current: failed,
     };
   const template = getTemplate(deps.db, templateId);

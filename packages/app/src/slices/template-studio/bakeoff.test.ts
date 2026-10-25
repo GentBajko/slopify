@@ -169,7 +169,7 @@ describe("startBakeoff", () => {
     expect(broke).toMatchObject({
       ok: false,
       reason: "over-budget",
-      message: expect.stringContaining("Raise the budget in Settings → Template studio"),
+      message: expect.stringContaining("Raise the budget in Settings → Production defaults"),
     });
     expect(queuedJob(deps.db, id)).toBeUndefined();
     writeStudioSettings(deps.db, { dailyBudget: 2 });
@@ -385,7 +385,7 @@ describe("makeBakeoff", () => {
       "Fix the key, then press Compare again. Or press Compare again later.",
     ],
     [
-      "The AI model didn't answer. Use Try again; if it keeps happening, choose another model in the Providers section of Edit project.",
+      "The AI model didn't answer. Use Try again; if it keeps happening, choose another model in Edit settings → Article → Written by.",
       "The AI model didn't answer. Press Compare again; if it keeps happening, choose another model with Change on that section's “Made with …” line.",
     ],
   ])("says each model's own failure (%s), naming Compare again", async (reason, said) => {

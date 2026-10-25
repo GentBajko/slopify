@@ -11,7 +11,7 @@ export function draftProblem(
     "not-found":
       "This draft no longer exists; it may have been started or deleted. Reload the page to start a new one.",
     "invalid-draft":
-      "This saved draft could not be read. Reload the page and set the video up again in Play.",
+      "This saved draft could not be read. Reload the page and set the video up again on Create.",
     conflict:
       "This draft changed in another tab or window. Reload the page to see the latest, then make your change again.",
     "invalid-edit": "Some settings need fixing. Fix the highlighted fields, then try again.",

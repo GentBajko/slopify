@@ -1,5 +1,6 @@
 import { projectById } from "../admission/repo.js";
 import { projectChannelId } from "../channels/repo.js";
+import { setupSectionNames } from "../project-templates/setup-sections.js";
 import { channelSocial } from "./channel.js";
 import { dueAt, readyNow, tooLate, waitsForRelease } from "./due.js";
 import { profileUrl } from "./limits.js";
@@ -25,10 +26,10 @@ export type Refused = {
   readonly sentence: string;
 };
 
-// Edit project has no posting editor: a project's sites come from its template (or Play).
+// A project's settings have no posting editor: its sites come from its template (or Create).
 export function notPostingSentence(platform: SocialPlatform): string {
   const site = platformLabels[platform];
-  return `This project doesn't post to ${site}. A project's sites come from its template: turn ${site} on under Post to in Template Studio → Upload pack (Library → Templates → Open studio), or on Play under Outputs, for the projects it makes next.`;
+  return `This project doesn't post to ${site}. A project's sites come from its template: tick ${site} under Post to in Edit template → ${setupSectionNames.youtube}, or under Post to other sites in Create, for the projects it makes next.`;
 }
 
 const notPosting = (platform: SocialPlatform): Refused => ({

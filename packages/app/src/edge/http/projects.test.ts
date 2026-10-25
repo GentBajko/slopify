@@ -390,7 +390,7 @@ describe("POST /api/projects with library templates", () => {
 
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({
-      fields: [{ field: "llm", message: "Choose a text (LLM) provider and model." }],
+      fields: [{ field: "llm", message: "Choose a Service and a Model under Written by." }],
     });
   });
 

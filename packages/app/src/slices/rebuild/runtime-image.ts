@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import type { CastReference, GeneratedImage } from "../../kernel/ports/image.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { ImageCall } from "../../kernel/runner/providers.js";
 import { imageBlob } from "../channels/repo.js";
 import type { RevisionDeps } from "../revisions/model.js";
@@ -36,8 +37,7 @@ function referenceImage(
 ): GeneratedImage | undefined {
   if (input.reference === undefined) return undefined;
   // The step waits for the establishing image, so a missing one went away since.
-  const missing =
-    "The establishing image this image is drawn from is missing. Use Regenerate on the establishing image in the Images section (or upload it again in Edit project → Images), then use Try again.";
+  const missing = `The establishing image this image is drawn from is missing. Press Make the establishing image again in the project's Images section (or upload it again in ${editSettings.images}), then use Try again.`;
   if (input.reference.assetId === null) throw new Error(missing);
   const saved = assetPathOrUndefined(deps, projectId, input.reference.assetId);
   if (saved === undefined) throw new Error(missing);
@@ -50,7 +50,7 @@ function referenceImage(
   const mime = imageMime(bytes);
   if (mime === undefined)
     throw new Error(
-      "The establishing image is not a PNG or JPEG file, so it can't be sent as a reference. Upload a PNG or JPEG in Edit project → Images → Establishing image, then use Try again.",
+      `The establishing image is not a PNG or JPEG file, so it can't be sent as a reference. Upload a PNG or JPEG under Establishing image in ${editSettings.images}, then use Try again.`,
     );
   return { bytes, mime };
 }
@@ -69,7 +69,7 @@ function castImages(
       const blob = imageBlob(deps.db, sha256);
       if (blob === undefined)
         throw new Error(
-          `A picture of ${member.name} that this project was started with is not in this Slopify's database, so it can't be sent as a reference. Add the picture again in Channels → Cast, then start the video again from Play.`,
+          `A picture of ${member.name} that this project was started with is not in this Slopify's database, so it can't be sent as a reference. Add the picture again in Channels → Cast, then start the video again from Create.`,
         );
       return blob;
     }),

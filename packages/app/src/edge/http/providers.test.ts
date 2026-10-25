@@ -534,7 +534,7 @@ describe("key setup, health and model upkeep routes", () => {
       headers: { "content-type": "application/json" },
     });
     expect(blank.status).toBe(400);
-    expect(await blank.text()).toMatch(/Settings → Providers → OpenRouter/u);
+    expect(await blank.text()).toMatch(/Settings → Keys & services → OpenRouter/u);
   });
 
   it("reports first-run detection and lists no retired models on a fresh install", async () => {
@@ -543,17 +543,12 @@ describe("key setup, health and model upkeep routes", () => {
       catalogue: createCatalogueStore({ dataDir, fetch: globalThis.fetch }),
     });
     const first = await (await app.request("/api/providers/first-run")).json();
-    expect(first).toMatchObject({
-      firstRun: true,
-      message: expect.stringContaining("no API keys"),
-    });
+    expect(first).toMatchObject({ firstRun: true });
+    expect(first).not.toHaveProperty("message");
+    // The callout that pressed "Got it" is gone, and its route with it.
     expect((await app.request("/api/providers/first-run/dismiss", { method: "POST" })).status).toBe(
-      204,
+      404,
     );
-    expect(
-      ((await (await app.request("/api/providers/first-run")).json()) as { firstRun: boolean })
-        .firstRun,
-    ).toBe(false);
     expect(await (await app.request("/api/providers/catalogue/retired")).json()).toEqual({
       usages: [],
     });

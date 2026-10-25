@@ -84,7 +84,9 @@ describe("a project's raw prompt", () => {
     const { unmount } = render(
       <Raw start="Out {{Slopify_Release_Date}}" promptKey="intro" textEntry />,
     );
-    expect(screen.getByText(/can't be used in a Text intro/)).not.toBeNull();
+    expect(
+      screen.getByText(/can't be used in an intro that says these exact words/),
+    ).not.toBeNull();
     unmount();
     render(<Raw start="Out {{Slopify_Release_Date}}" promptKey="intro" />);
     expect(box().getAttribute("aria-invalid")).toBe("false");

@@ -143,7 +143,7 @@ it("shows a refusal's own sentence and keeps what was typed", async () => {
           title: "Conflict",
           reason: "over-budget",
           detail:
-            "Voicing these lines again costs about $0.01 and $0.00 of today's $0.00 sample budget is left. Raise the budget in Settings → Template studio, or try again tomorrow.",
+            "Voicing these lines again costs about $0.01 and $0.00 of today's $0.00 sample budget is left. Raise the budget in Settings → Production defaults, or try again tomorrow.",
         },
         409,
       ),

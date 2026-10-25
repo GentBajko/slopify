@@ -246,7 +246,7 @@ it("is not Stopped while it waits its turn in a batch, or while a step's call is
 });
 
 // A failed step is the person's to try again (its own fix-it), not Continue the run's, and a
-// canceled run continues only through Choose what to remake: neither offers Continue the run.
+// canceled run continues only through Choose what to make again: neither offers Continue the run.
 it("is not Stopped once a step failed or the run was canceled", () => {
   const f = stoppedBehindVideoGate();
   f.stage("audio", "failed");
@@ -274,7 +274,7 @@ it("reads a prepared project a restart stopped as Stopped, not Prepared", () => 
   expect([...holds.prepared]).toEqual([]);
 });
 
-// A saved edit's step waits for the person to choose what to remake, not for Continue the run:
+// A saved edit's step waits for the person to choose what to make again, not for Continue the run:
 // between two stages, with the next one's admitted step about to start, the run isn't stopped.
 it("is not Stopped by a saved edit's step that was never admitted", () => {
   const f = fixture();

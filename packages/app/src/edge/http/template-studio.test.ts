@@ -400,7 +400,7 @@ it("refuses Mark ready with each thing to fix, and only for the newest version",
     problems: { label: string }[];
   };
   expect(body.reason).toBe("not-ready");
-  expect(body.detail).toMatch(/^Version 1 can't be marked ready yet\. /u);
+  expect(body.detail).toMatch(/^Version 1 can't be approved for schedules yet\. /u);
   expect(body.problems.length).toBeGreaterThan(0);
 
   const older = await h.app.request(`/api/template-studio/${h.id}/ready`, {

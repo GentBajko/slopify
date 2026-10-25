@@ -73,10 +73,10 @@ const picoVoices: readonly SpeechVoice[] = [
   { id: "it-IT", name: "Italian", language: "it-IT" },
 ];
 
-// OpenAI is named alone: the voices the starter packs set up are OpenAI voices, so its key
+// OpenAI is named alone: the voices the starter templates set up are OpenAI voices, so its key
 // narrates at once, while ElevenLabs, Cartesia and Inworld also need a voice saved first.
 export const noSpeechFix =
-  "or add an OpenAI key in Settings → Providers: its voices work at once and sound better.";
+  "or add an OpenAI key in Settings → Keys & services: its voices work at once and sound better.";
 
 export interface SpeechInstall {
   // What the commands do, as a lead-in: "Install espeak-ng with one of these:".
@@ -86,7 +86,8 @@ export interface SpeechInstall {
 
 // How to get a speech program onto this computer from a terminal, for a screen that lists the
 // commands apart from the sentence (the first-run checklist), or undefined where none is
-// installed that way: macOS and Windows have their own, which only a broken setup lacks.
+// installed that way: macOS and Windows have their own, which only a broken setup lacks. The
+// issue sentences below name the fix in words and leave the commands to this.
 export function speechInstall(host: SpeechHost): SpeechInstall | undefined {
   if (host.platform === "darwin" || host.platform === "win32") return undefined;
   return host.env.SLOPIFY_CONTAINER === "1"
@@ -155,8 +156,8 @@ export async function detectSpeech(given: SpeechProbe, host: SpeechHost): Promis
     engines,
     issue:
       host.env.SLOPIFY_CONTAINER === "1"
-        ? `Slopify runs in Docker and this image has no speech program, so the system voice can't narrate. Update the image (docker compose pull, then docker compose up -d), ${noSpeechFix}`
-        : `No speech program was found on this computer, so the system voice can't narrate. Install espeak-ng (for example sudo apt install espeak-ng, sudo pacman -S espeak-ng or sudo dnf install espeak-ng), ${noSpeechFix}`,
+        ? `Slopify runs in Docker and this image has no speech program, so the system voice can't narrate. Update Slopify's Docker image, which has one built in, ${noSpeechFix}`
+        : `No speech program was found on this computer, so the system voice can't narrate. Install the free program eSpeak NG, ${noSpeechFix}`,
   };
 }
 

@@ -580,7 +580,7 @@ describe("/mcp/assistant", () => {
       },
     });
     expect(textOf(result)).toContain(
-      "Start a remake for “Saved”. This starts paid work: estimated at $0.40–$0.85; 1 step has no price in the catalogue.",
+      "Make the previewed parts again for “Saved”. This starts paid work: estimated at $0.40–$0.85; 1 step has no price in the catalogue.",
     );
     await client.close();
   });

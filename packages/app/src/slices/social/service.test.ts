@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { defaultChannelId } from "../channels/model.js";
+import { setupSectionNames } from "../project-templates/setup-sections.js";
 import { writeChannelSocial } from "./channel.js";
 import { defaultChoices } from "./defaults.js";
 import { readPost, writeProgress } from "./repo.js";
@@ -60,8 +61,8 @@ describe("fillPost and reportPost", () => {
     const one = project();
     const refused = fillPost(one, "p1", "reddit", now);
     expect(refused).toMatchObject({ ok: false, status: 404 });
-    expect(refused.ok ? "" : refused.sentence).toMatch(
-      /doesn't post to Reddit\. A project's sites come from its template: turn Reddit on under Post to in Template Studio → Upload pack/,
+    expect(refused.ok ? "" : refused.sentence).toContain(
+      `doesn't post to Reddit. A project's sites come from its template: tick Reddit under Post to in Edit template → ${setupSectionNames.youtube}, or under Post to other sites in Create`,
     );
   });
 

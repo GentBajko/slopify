@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Message } from "../../kernel/ports/llm.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import { keywordSpecs } from "./specs.js";
 
 // The keyword digest: one call to the project's AI model reads the article once and writes every
@@ -55,8 +56,7 @@ export function checkDigest(
 ):
   | { readonly ok: true; readonly digest: Digest }
   | { readonly ok: false; readonly reason: string } {
-  const fix =
-    "Use Try again; if it keeps happening, choose another model in the Providers section of Edit project.";
+  const fix = `Use Try again; if it keeps happening, choose another model in ${editSettings.writer}.`;
   const parsed = digestSchema.safeParse(jsonObjectOf(text));
   if (!parsed.success)
     return {

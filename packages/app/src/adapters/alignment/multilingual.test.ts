@@ -46,7 +46,7 @@ describe("multilingual normalisation", () => {
   });
 
   it("refuses words in another alphabet with a plain fix", () => {
-    expect(() => spoken("Москва", "es")).toThrow(/Latin letters only.*Edit project → Article/);
+    expect(() => spoken("Москва", "es")).toThrow(/Latin letters only.*Edit settings → Article/);
   });
 
   it("attaches punctuation-only tokens to the previous word", () => {

@@ -22,6 +22,10 @@ import { projectDir } from "../storage/layout.js";
 // copy's plan is worked out again and each step the source had finished is re-stamped with the
 // fingerprint the copy's own ids give it, a layer at a time until nothing changes. The copy
 // then has nothing to rebuild, exactly like the source.
+//
+// `renamed` names the copy in its settings too, every version of them, as Rename does: the
+// title the source was made about is kept as `subjectTitle`, which the fingerprints read, so the
+// new name changes no step. Without it only the projects row is named (a bake-off's hidden copy).
 
 export interface CopyDeps extends RevisionDeps {
   readonly catalogue: Catalogue;
@@ -35,6 +39,7 @@ export function copyProject(
   deps: CopyDeps,
   sourceId: string,
   title: string,
+  { renamed = false }: { readonly renamed?: boolean } = {},
 ): { readonly projectId: string } {
   const source = projectDir(deps.paths, sourceId);
   const tables = projectTables.map(
@@ -64,6 +69,10 @@ export function copyProject(
   const projectId = ids.get(sourceId) ?? sourceId;
   const target = projectDir(deps.paths, projectId);
   const at = deps.clock.now().toISOString();
+  const named = (row: BackupRow): BackupRow =>
+    renamed && typeof row.config === "string"
+      ? { ...row, config: renameConfig(row.config, title) }
+      : row;
   try {
     for (const file of listFiles(source)) {
       if (file === projectMarker) continue;
@@ -86,7 +95,11 @@ export function copyProject(
           insert(
             deps.db,
             table,
-            table === "projects" ? { ...copied, title, created_at: at, updated_at: at } : copied,
+            table === "projects"
+              ? { ...named(copied), title, created_at: at, updated_at: at }
+              : table === "project_revisions"
+                ? named(copied)
+                : copied,
           );
         }
       rebind(deps, projectId);
@@ -96,6 +109,15 @@ export function copyProject(
     throw error;
   }
   return { projectId };
+}
+
+// A stored config (JSON) under a new title, keeping what it was made about.
+function renameConfig(config: string, title: string): string {
+  const parsed: unknown = JSON.parse(config);
+  if (typeof parsed !== "object" || parsed === null || !("title" in parsed)) return config;
+  const before = parsed as { readonly title: unknown; readonly subjectTitle?: unknown };
+  if (typeof before.title !== "string" || before.title === title) return config;
+  return JSON.stringify({ ...before, title, subjectTitle: before.subjectTitle ?? before.title });
 }
 
 // Re-stamps the copy's finished steps with the fingerprints its own ids give them.

@@ -107,7 +107,7 @@ export interface AssistantCliState {
 
 export type AssistantCliStates = Readonly<Record<AssistantCli, AssistantCliState>>;
 
-// Where the fix is: Settings → Providers, or the Install tutorial for the Docker copy.
+// Where the fix is: Settings → Keys & services, or the Install tutorial for the Docker copy.
 export type AssistantFix =
   | { readonly kind: "settings"; readonly section: "providers"; readonly label: string }
   | { readonly kind: "tutorial"; readonly page: string; readonly label: string };
@@ -119,7 +119,7 @@ export type AssistantCliChoice =
 const providersFix: AssistantFix = {
   kind: "settings",
   section: "providers",
-  label: "Open Settings → Providers",
+  label: "Open Settings → Keys & services",
 };
 
 const signIn: Readonly<Record<AssistantCli, string>> = {
@@ -130,7 +130,7 @@ const signIn: Readonly<Record<AssistantCli, string>> = {
 function blocked(cli: AssistantCli, state: AssistantCliState): string | undefined {
   const name = assistantCliNames[cli];
   if (!state.installed)
-    return `The assistant can't start: ${name} isn't installed on this computer. Install it, then set it up in Settings → Providers.`;
+    return `The assistant can't start: ${name} isn't installed on this computer. Install it, then set it up in Settings → Keys & services.`;
   if (state.issue !== undefined) return `The assistant can't start: ${state.issue}`;
   if (state.login === "signed-out")
     return `The assistant can't start: ${name} is signed out. Run "${signIn[cli]}" in a terminal, then send your message again.`;
@@ -169,7 +169,7 @@ export function assistantCliOf(
   return {
     ok: false,
     reason:
-      "The assistant runs on Claude Code or Codex, and neither is ready on this computer. Set up Claude Code or Codex in Settings → Providers.",
+      "The assistant runs on Claude Code or Codex, and neither is ready on this computer. Set up Claude Code or Codex in Settings → Keys & services.",
     fix: providersFix,
   };
 }

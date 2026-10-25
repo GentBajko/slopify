@@ -14,6 +14,8 @@ export const providerDefaultsSchema = z
 export type ProviderDefaults = z.infer<typeof providerDefaultsSchema>;
 export const providerDefaultsKey = "provider.defaults";
 const defaultsKey = providerDefaultsKey;
+// Set by the first-launch callout's "Got it" in older versions. Nothing writes it now; an
+// install that pressed it keeps its first launch behind it.
 const doneKey = "first-run.done";
 
 export interface DetectedCli {
@@ -26,13 +28,10 @@ export interface DetectedCli {
   readonly issue?: string;
 }
 export interface FirstRunStatus {
-  // No key saved and the welcome not yet dismissed.
+  // No key saved, and no "Got it" pressed on the callout older versions showed.
   readonly firstRun: boolean;
   readonly detected: readonly DetectedCli[];
   readonly defaults: ProviderDefaults;
-  // The one sentence the welcome leads with, or null when there is nothing to say.
-  readonly message: string | null;
-  readonly detail: string | null;
 }
 
 // The order a text tool is preferred in when several are found.
@@ -42,17 +41,14 @@ export function readProviderDefaults(db: DatabaseSync): ProviderDefaults {
   return readJsonSetting(db, defaultsKey, providerDefaultsSchema, {});
 }
 
-export function dismissFirstRun(db: DatabaseSync): void {
-  writeSetting(db, doneKey, "1");
-}
-
 export interface FirstRunDeps {
   readonly db: DatabaseSync;
   readonly modelsFor?: (provider: string, family: ProviderFamily) => Promise<readonly ModelInfo[]>;
 }
 
-// First launch: find Claude Code, Codex and Gemini, pick the found ones as Play's defaults, and
-// say a video can be made without any API key. Later launches only report what was found.
+// First launch: find Claude Code, Codex and Gemini and pick the found ones as Create's defaults.
+// Later launches only report what was found. The first-run screen (slices/onboarding) says what
+// was found in its own words.
 export async function firstRunStatus(
   deps: FirstRunDeps,
   statuses: readonly ProviderStatus[],
@@ -96,30 +92,7 @@ export async function firstRunStatus(
     };
     writeSetting(deps.db, defaultsKey, JSON.stringify(defaults));
   }
-  const names = detected
-    .filter((cli) => cli.usable && cli.id !== "codex-image")
-    .map((cli) => cli.displayName);
-  const systemVoice = statuses.some(
-    (status) => status.readiness.kind === "local" && status.readiness.available,
-  );
-  const narration = systemVoice
-    ? "Narration can use your computer's built-in voice (System voice in Settings → Voices); add an ElevenLabs or OpenAI key later for a better one."
-    : "Narration still needs a voice provider key, or turn Audio off or upload your own.";
-  return {
-    firstRun,
-    detected,
-    defaults,
-    message: !firstRun
-      ? null
-      : names.length > 0
-        ? "You can make a video now, no API keys needed."
-        : "No AI command-line tool was found on this computer.",
-    detail: !firstRun
-      ? null
-      : names.length > 0
-        ? `Slopify found ${list(names)} and picked ${names.length === 1 ? "it" : "them"} on Play. ${narration} Keys are optional extras in Settings → Providers.`
-        : "Install Claude Code, Codex or Antigravity CLI and sign in once in a terminal, then reload this page. Or paste an API key in Settings → Providers.",
-  };
+  return { firstRun, detected, defaults };
 }
 
 async function firstModel(
@@ -133,10 +106,4 @@ async function firstModel(
     // The picker shows the tool's list once it answers; the provider is still chosen.
     return "";
   }
-}
-
-function list(names: readonly string[]): string {
-  return names.length <= 1
-    ? (names[0] ?? "")
-    : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }

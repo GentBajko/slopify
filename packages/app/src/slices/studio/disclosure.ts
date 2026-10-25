@@ -83,7 +83,7 @@ export function aiDisclosureOf(input: DisclosureInput): AiDisclosure {
     );
   if (input.photorealistic)
     reasons.push(
-      `an AI image model draws its pictures from an Image prompt marked photorealistic in Library → Prompts (YouTube's case 3: "${aiUseCases[2]}")`,
+      `an AI image model draws its pictures from an Image prompt marked photorealistic in Prompts (YouTube's case 3: "${aiUseCases[2]}")`,
     );
   if (reasons.length > 0)
     return {
@@ -96,7 +96,7 @@ export function aiDisclosureOf(input: DisclosureInput): AiDisclosure {
       : "";
   return {
     altered: false,
-    why: `No because none of YouTube's three AI use cases applies: no narrating voice is marked as imitating a real person (Settings → Voices), no real footage is altered, and no AI pictures come from an Image prompt marked photorealistic (Library → Prompts). Stylised AI pictures and an AI narrator that doesn't pose as a real person don't need the label.${footage}`,
+    why: `No because none of YouTube's three AI use cases applies: no narrating voice is marked as imitating a real person (Settings → Voices), no real footage is altered, and no AI pictures come from an Image prompt marked photorealistic (Prompts). Stylised AI pictures and an AI narrator that doesn't pose as a real person don't need the label.${footage}`,
   };
 }
 

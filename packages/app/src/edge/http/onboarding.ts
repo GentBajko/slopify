@@ -108,7 +108,7 @@ export function onboardingRoutes(deps: AppDeps) {
         return problem(c, {
           status: 404,
           detail:
-            "Slopify doesn't have that starter pack. Reload the page and pick one of the packs listed.",
+            "Slopify doesn't have that starter template. Reload the page and pick one of the templates listed.",
         });
       return c.json(installed.value);
     })
@@ -122,7 +122,7 @@ export function onboardingRoutes(deps: AppDeps) {
         return problem(c, {
           status: 404,
           detail:
-            "Slopify doesn't have that starter pack. Reload the page and pick one of the packs listed.",
+            "Slopify doesn't have that starter template. Reload the page and pick one of the templates listed.",
         });
       const modelsFor = deps.modelsFor;
       if (modelsFor === undefined)
@@ -150,7 +150,7 @@ export function onboardingRoutes(deps: AppDeps) {
         return problem(c, {
           status: 404,
           detail:
-            "Slopify doesn't have that starter pack. Reload the page and pick one of the packs listed.",
+            "Slopify doesn't have that starter template. Reload the page and pick one of the templates listed.",
         });
       // The computer's voice is saved like any other, so Play and a later rebuild offer it.
       const audio = plan.providers.audio;
@@ -204,18 +204,18 @@ export function onboardingRoutes(deps: AppDeps) {
         return problem(c, {
           status: 404,
           detail:
-            "This short or its starter pack is no longer here, so Play couldn't be set up from it. Open Play and pick a template yourself.",
+            "This short or its starter template is no longer here, so Create couldn't be set up from it. Open Create and pick a template yourself.",
         });
       if (made.reason === "not-short")
         return problem(c, {
           status: 409,
           detail:
-            "This project is already a long video. Open Play to start another one on a new topic.",
+            "This project is already a long video. Open Create to start another one on a new topic.",
         });
       return problem(c, {
         status: 409,
         detail:
-          "Slopify couldn't open a Play draft for the full video. Press Make the full video on this topic again; if it keeps failing, open Play and pick the pack's template in Library → Templates.",
+          "Slopify couldn't open a draft on Create for the full video. Press Make the full video on this topic again; if it keeps failing, press Make a video on the starter template in Templates.",
         extensions: { reason: made.reason },
       });
     })

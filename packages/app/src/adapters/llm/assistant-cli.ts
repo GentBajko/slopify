@@ -265,7 +265,7 @@ function failed(cli: "claude-code" | "codex", said: string): AssistantStreamEven
   if (login !== undefined) return { type: "failed", message: login.message };
   return {
     type: "failed",
-    message: `The ${cliName(cli === "claude-code" ? "claude" : "codex")} stopped with an error: ${redact(said).slice(0, 500)}. Send your message again; if it keeps happening, check the CLI in Settings → Providers.`,
+    message: `The ${cliName(cli === "claude-code" ? "claude" : "codex")} stopped with an error: ${redact(said).slice(0, 500)}. Send your message again; if it keeps happening, check the CLI in Settings → Keys & services.`,
   };
 }
 

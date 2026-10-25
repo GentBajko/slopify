@@ -45,7 +45,7 @@ const checkLabel: Readonly<Record<FreeCheckId, string>> = {
   keywords: "Keywords",
   providers: "Services",
   voice: "Voice",
-  "release-slots": "Release slots",
+  "release-slots": "Release times",
   "monthly-cost": "Monthly cost",
   answerers: "Pauses answered",
 };
@@ -138,7 +138,7 @@ export async function markReady(
     return {
       ok: false,
       reason: "not-ready",
-      message: `Version ${String(version)} can't be marked ready yet. ${problems.map(sentenceOf).join(" ")}`,
+      message: `Version ${String(version)} can't be approved for schedules yet. ${problems.map(sentenceOf).join(" ")}`,
       problems,
     };
   return transact(deps.db, (): ReadyResult => {

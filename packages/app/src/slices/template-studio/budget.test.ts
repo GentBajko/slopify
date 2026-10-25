@@ -208,7 +208,7 @@ describe("the daily budget", () => {
     expect(fitsBudget(off, 0, true)).toBe(false);
     expect(fitsBudget(off, 0, false)).toBe(true);
     expect(budgetWords(off, { high: 0, usesPlan: true }, "This sample")).toBe(
-      "This sample runs on your CLI plan, and samples may not use CLI plans. Turn on Samples may use my CLI plans in Settings → Template studio",
+      "This sample runs on your CLI plan, and samples may not use CLI plans. Turn on Samples may use my CLI plans in Settings → Production defaults",
     );
     writeStudioSettings(db, { dailyBudget: 5 });
     expect(fitsBudget(budgetRoom(db, now, "UTC"), 0, true)).toBe(false);
@@ -227,7 +227,7 @@ describe("the daily budget", () => {
     expect(fitsBudget(on, 0, true)).toBe(true);
     expect(fitsBudget(on, 0.2, true)).toBe(false);
     expect(budgetWords(on, { high: 0.2, usesPlan: true }, "This sample")).toBe(
-      "This sample costs about $0.20 and $0.00 of today's $0.00 sample budget is left. Raise the budget in Settings → Template studio",
+      "This sample costs about $0.20 and $0.00 of today's $0.00 sample budget is left. Raise the budget in Settings → Production defaults",
     );
   });
 

@@ -5,7 +5,7 @@ import { backupConfigInputSchema } from "../../slices/backups/model.js";
 import type { BackupService } from "../../slices/backups/service.js";
 import { onInvalid, problem } from "./problem.js";
 
-// Settings → Backups: the schedule, the folder, the last result and Back up now. Writing an
+// Settings → Backup & storage: the schedule, the folder, the last result and Back up now. Writing an
 // archive takes minutes, so Back up now answers at once and the screen polls this view.
 export function backupRoutes(service: BackupService | undefined) {
   const backups = (): BackupService => {

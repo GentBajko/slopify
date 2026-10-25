@@ -31,7 +31,10 @@ const stems: Readonly<Record<LibrarySection, string>> = {
   documentThemes: "pdf-themes",
   aliases: "aliases",
 };
-const importTool = { name: "import_library", title: "Import into the Library" } as const;
+const importTool = {
+  name: "import_library",
+  title: "Import prompts, intros and outros, PDF looks or pronunciations",
+} as const;
 
 // The file Library → Import or export writes for one section, with the name the page gives it.
 export function exportLibrary(deps: RouteCallDeps, section: LibrarySection): CallToolResult {
@@ -131,7 +134,7 @@ export async function importLibrary(
   const bytes = Buffer.from(file.base64, "base64");
   if (bytes.byteLength > libraryFileMaxBytes)
     return refusal(
-      `${file.name} wasn't imported: it is larger than ${String(libraryFileMaxBytes / 1024 / 1024)} MB, far more than a Library export. Send the file export_library made.`,
+      `${file.name} wasn't imported: it is larger than ${String(libraryFileMaxBytes / 1024 / 1024)} MB, far more than an export of prompts, PDF looks or pronunciations. Send the file export_library made.`,
     );
   const content = bytes.toString("utf8");
   const outcome =
@@ -182,9 +185,9 @@ export function registerLibraryTools(server: McpServer, deps: RouteCallDeps): vo
   server.registerTool(
     "export_library",
     {
-      title: "Export a Library section",
+      title: "Export prompts, intros and outros, PDF looks or pronunciations",
       description:
-        "Library → Import or export → Export: the section as the .json file the page downloads, with the name it gives it.",
+        "Import or export → Export, on Prompts, Intros and outros, the PDF looks or Pronunciation: the section as the .json file the page downloads, with the name it gives it.",
       inputSchema: { section },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
@@ -195,7 +198,7 @@ export function registerLibraryTools(server: McpServer, deps: RouteCallDeps): vo
     {
       title: importTool.title,
       description:
-        "Library → Import or export → Import from a file: a .json file Export made (or, for aliases, a two-column .csv or .tsv table). Each item is saved with the Library's own checks; one whose name is taken is saved as \"<name> (imported)\", one that doesn't fit is skipped with its reason. Aliases join the saved list and are saved.",
+        'Import or export → Import from a file, on the same pages: a .json file Export made (or, for aliases, a two-column .csv or .tsv table). Each item is saved with the checks a Save of it has; one whose name is taken is saved as "<name> (imported)", one that doesn\'t fit is skipped with its reason. Aliases join the saved list and are saved.',
       inputSchema: { section, file: fileArg },
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     },

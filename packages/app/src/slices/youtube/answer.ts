@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { jsonBetween } from "../../kernel/json-answer.js";
 import type { Message } from "../../kernel/ports/llm.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import {
   alternativeTitles,
   descriptionMaxCharacters,
@@ -101,7 +102,7 @@ export type CheckedAnswer =
   | { readonly ok: true; readonly value: DescriptionAnswer }
   | { readonly ok: false; readonly reason: string };
 
-const fix = "Try again, or choose another model in Edit project → Providers.";
+const fix = `Try again, or choose another model in ${editSettings.writer}.`;
 
 // Reads and checks the model's answer. The reason is the sentence the stage shows; the
 // provider wrapper's `check` asks the model again while attempts remain.

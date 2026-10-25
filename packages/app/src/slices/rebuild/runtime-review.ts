@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { z } from "zod";
 import { internalError } from "../../kernel/errors.js";
 import { thinkingModes } from "../../kernel/ports/llm.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageProviders } from "../../kernel/runner/providers.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
@@ -248,8 +249,8 @@ export function reviewMaterial(
         throw missing(
           stage === "images" ? "image" : "thumbnail",
           stage === "images"
-            ? "Use More → make it again in its section on Images"
-            : "Use More → make it again in its section on Thumbnail",
+            ? "Press Make this image again on it in the project's Images section"
+            : "Press Make the thumbnail again in the project's Images section",
         );
       const recipe = recipes.find((one) => one.key === itemKey);
       const brief = recipe?.input.kind === "image" ? recipe.input.prompt : "";
@@ -289,7 +290,7 @@ export function reviewMaterial(
       if (timing === undefined || itemKey !== narrationItemKey)
         throw missing(
           "narration's word timing",
-          "Use More → Render the video again in the Video section",
+          "Press Make the video again in the project's Video section",
         );
       const { words, omissions } = wordsSchema.parse(
         JSON.parse(readFileSync(path(timing), "utf8")),
@@ -321,7 +322,7 @@ export function reviewMaterial(
     case "shorts": {
       const render = output(`${itemKey}:render`);
       if (render === undefined)
-        throw missing("short", "Use Make this short again in Edit project → Shorts");
+        throw missing("short", `Use Make this short again in ${editSettings.shorts}`);
       const number = Number(itemKey.slice("shorts:".length));
       const pick = view.pieces.find(
         (row) => row.key === "shorts:pick" && row.selected && row.piece.state === "done",
@@ -333,7 +334,7 @@ export function reviewMaterial(
         .filter((row) => row.workKey.startsWith(`${itemKey}:image:`) && isReadyOutput(row))
         .slice(0, 6);
       if (stills.length === 0)
-        throw missing("short's images", "Use Make this short again in Edit project → Shorts");
+        throw missing("short's images", `Use Make this short again in ${editSettings.shorts}`);
       const names = stills.map((_, index) => `image ${String(index + 1)} of the short`);
       return {
         request: request([{ label: "Title of the short", text: title }], names),

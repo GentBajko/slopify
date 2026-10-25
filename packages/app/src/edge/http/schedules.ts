@@ -2,6 +2,7 @@ import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
+import { setupSectionNames } from "../../slices/project-templates/setup-sections.js";
 import { calendarRange } from "../../slices/schedules/agenda.js";
 import { rejectHeldTopics, restoreRejectedTopics } from "../../slices/schedules/held-bulk.js";
 import type { ScheduleDeps, ScheduleResult } from "../../slices/schedules/model.js";
@@ -79,13 +80,12 @@ function refused(c: Context, result: Extract<ScheduleResult<never>, { ok: false 
       "This schedule is still active. Cancel it first, then delete it. Completed schedules can be deleted straight away.",
     "missing-template":
       "The template you picked was deleted or changed. Choose a template again, then save.",
-    "unsupported-media":
-      "This template uses audio, images, a thumbnail, shorts background music or an ambient sound file you supplied, so it cannot run on a schedule: a scheduled run has no one to attach the file again. Pick a template that generates these instead, or on Play remove the music under Outputs → More shorts options (or pick Rain, Fireplace or Wind under Video and style → Ambient sound) and save the template again.",
+    "unsupported-media": `This template uses audio, images, a thumbnail, shorts background music or an ambient sound file you supplied, so it cannot run on a schedule: a scheduled run has no one to attach the file again. Pick a template that generates these instead, or open this one in Edit template, remove the music under ${setupSectionNames.shorts} (or pick Rain, Fireplace or Wind as the Ambient sound under ${setupSectionNames.video}) and save it again.`,
     "not-due": "This one-off time has already passed. Choose a time in the future.",
     "spend-limit":
       "The estimated cost is above this schedule's spend limit, or some prices are unknown. Raise the spend limit or choose models with known prices.",
     readiness:
-      "A provider this template needs is not ready, for example a missing API key, model or voice. Check Settings → Providers, then try again.",
+      "A provider this template needs is not ready, for example a missing API key, model or voice. Check Settings → Keys & services, then try again.",
     "queue-full": `A schedule's topic queue holds at most ${String(queueMax)} topics. Remove some under Schedules → Edit, then try again.`,
     "topic-not-found":
       "This topic was already approved, turned down or used. Reload the page to see the topics waiting now.",

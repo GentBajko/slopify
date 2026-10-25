@@ -1,5 +1,6 @@
 import { extname } from "node:path";
 import { z } from "zod";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { Format, RunConfig } from "../admission/model.js";
 import { usesFigureCards, usesYoutubeDescription } from "../admission/rules.js";
@@ -190,7 +191,7 @@ async function clipSeconds(
   }
   if (!(ms > 0))
     throw new Error(
-      `Image ${String(place)} is a video clip Slopify can't read, so the video can't show it. Replace it with another clip or an image in Edit project → Images, then Try again.`,
+      `Image ${String(place)} is a video clip Slopify can't read, so the video can't show it. Replace it with another clip or an image in ${editSettings.images}, then Try again.`,
     );
   return ms / 1000;
 }

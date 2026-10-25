@@ -55,7 +55,7 @@ export function stagingRoutes(deps: AppDeps) {
           status: result.reason === "in-use" ? 409 : 404,
           detail:
             result.reason === "in-use"
-              ? "This file is still attached to a draft in Play. Remove it from the draft first."
+              ? "This file is still attached to a draft on Create. Remove it from the draft first."
               : "This uploaded file no longer exists; it may have been removed already. Reload the page.",
         });
       }

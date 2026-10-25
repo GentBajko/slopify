@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { bridgeLimits, hostFramesHeader, hostFramesVersion } from "../../kernel/ports/host-cli.js";
 import { agentImageTimeoutMs } from "../../kernel/ports/image.js";
 import { type ProviderError, providerError } from "../../kernel/ports/model.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 
 export function hostUnavailable(submitted = false): ProviderError {
   return providerError({
@@ -40,8 +41,7 @@ export async function hostRequest(options: HostRequestOptions): Promise<Incoming
   if (options.body && options.body.byteLength > bridgeLimits.request)
     throw providerError({
       kind: "unsupported",
-      message:
-        "This request is larger than the host helper accepts (16 MB), so nothing was sent. Make the inputs shorter in Edit project, or choose an API provider such as OpenRouter in its Providers section, then use Try again.",
+      message: `This request is larger than the host helper accepts (16 MB), so nothing was sent. Make the article or its research notes shorter in ${editSettings.article}, or choose an API service such as OpenRouter under Written by there, then use Try again.`,
     });
   let token: string;
   try {

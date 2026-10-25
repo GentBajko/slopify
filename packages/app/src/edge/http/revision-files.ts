@@ -109,7 +109,7 @@ function unavailable(c: Context, reason: string): Response {
     status: 404,
     detail:
       reason === "missing-file"
-        ? "This file was deleted or moved from the project folder. In the Edit tab, use Choose what to remake (in the project's More menu) to make it again."
+        ? "This file was deleted or moved from the project folder. Use Choose what to make again (in the project's More menu) to make it again."
         : reason === "no-images"
           ? "There are no saved files of this kind to put in the zip yet. Wait for the step that makes them to finish, then download again."
           : "This file is no longer part of the project. Reload the page to see its current files.",

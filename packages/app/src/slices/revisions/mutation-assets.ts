@@ -1,5 +1,6 @@
 import { statSync } from "node:fs";
 import { z } from "zod";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import { type RunConfig, referenceKey, thumbnailCountOf } from "../admission/model.js";
 import { type FieldError, usesReference } from "../admission/rules.js";
 import type { PreparedAsset } from "../storage/assets.js";
@@ -84,8 +85,7 @@ export function validateUploads(deps: RevisionDeps, edit: RevisionEdit): readonl
     if (to.kind === "shortsMusic" && edit.config.shorts?.enabled !== true)
       fields.push({
         field,
-        message:
-          "Background music is only used by the shorts. Turn Shorts on in Edit project → Shorts, then add the music.",
+        message: `Background music is only used by the shorts. Turn Shorts on in ${editSettings.shorts}, then add the music.`,
       });
     const destination = JSON.stringify(to);
     if (staged.has(upload.stagedFileId) || destinations.has(destination))

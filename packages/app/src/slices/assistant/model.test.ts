@@ -43,7 +43,7 @@ describe("assistantCliOf", () => {
     const choice = assistantCliOf(states(missing, signedOut), "auto", false);
     expect(choice).toMatchObject({ ok: false, fix: { kind: "settings", section: "providers" } });
     expect(choice.ok ? "" : choice.reason).toContain(
-      "Set up Claude Code or Codex in Settings → Providers.",
+      "Set up Claude Code or Codex in Settings → Keys & services.",
     );
   });
 

@@ -43,18 +43,18 @@ describe("what Mark ready reads from this computer", () => {
       null,
     );
     expect(await context([status({ kind: "keyed", hasKey: false })]).providerProblem("fal")).toBe(
-      "fal.ai has no API key, so the picture can't be made. Add the key in Settings → Providers, then press Mark ready again.",
+      "fal.ai has no API key, so the picture can't be made. Add the key in Settings → Keys & services, then press Approve for schedules again.",
     );
     expect(
       await context([
         status({ kind: "cli", installed: true, issue: "Sign in with codex login." }),
       ]).providerProblem("fal"),
     ).toBe(
-      "fal.ai can't be used yet: Sign in with codex login. Fix it in Settings → Providers, then press Mark ready again.",
+      "fal.ai can't be used yet: Sign in with codex login. Fix it in Settings → Keys & services, then press Approve for schedules again.",
     );
     expect(await context([]).providerProblem("nope")).toContain("isn't one this Slopify knows");
     expect(await context(new Error("Probe failed.")).providerProblem("fal")).toBe(
-      "Slopify couldn't check the image provider: Probe failed. Open Settings → Providers, then press Mark ready again.",
+      "Slopify couldn't check the image service: Probe failed. Open Settings → Keys & services, then press Approve for schedules again.",
     );
   });
 });

@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { errorText } from "../../kernel/errors.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { FfmpegRun } from "../loudness/loudnorm.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
 import { softenBreaths } from "./breaths.js";
@@ -62,7 +63,7 @@ export async function deEssPieces(
     } catch (error) {
       if (run.signal.aborted) throw error;
       throw new Error(
-        `Soften S sounds could not process narration piece ${String(index + 1)} (${errorText(error)}), so the narration can't be joined together. Use Try again; if it fails again, turn off Soften S sounds in Edit project → Pauses and volume and use Save changes, then use Download diagnostics in Settings and report it.`,
+        `Soften S sounds could not process narration piece ${String(index + 1)} (${errorText(error)}), so the narration can't be joined together. Use Try again; if it fails again, turn off Soften S sounds in ${editSettings.sound} and use Save changes, then use Download diagnostics in Settings and report it.`,
         { cause: error },
       );
     }

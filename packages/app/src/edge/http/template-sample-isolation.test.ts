@@ -330,7 +330,7 @@ describe("the template studio's sample project", () => {
       expect(await reply.json()).toMatchObject({
         reason: "template-sample",
         detail:
-          "This is the studio sample of Show. Change the template in its studio instead: Library → Templates → Show → Open studio.",
+          "This is the sample project of the template Show. Change the template in Edit template instead: Templates → Show → Edit template.",
       });
     }
     const visible = await h.app.request("/api/projects/visible0control/pause", { method: "POST" });

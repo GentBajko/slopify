@@ -15,43 +15,43 @@ const drafts: readonly RouteTool[] = [
   {
     name: "list_drafts",
     route: "GET /api/drafts",
-    title: "List Play drafts",
-    description: "Play drafts: saved setups for Create, not started yet.",
+    title: "List the drafts on Create",
+    description: "Drafts on Create: videos set up there and not started yet.",
   },
   {
     name: "create_draft",
     route: "POST /api/drafts",
     body: createDraftInputSchema,
-    title: "Create a Play draft",
+    title: "Make a new draft on Create",
     description:
-      "Create, like New project: a draft whose document is the Play form (kind and outputs, format including square 1:1, sources, prompts, voices, reviews, the queue switch). Body: {id: a new UUID, document}. get_draft shows a document's shape; instantiate_template makes one from a template.",
+      "New draft, as on Create: a draft whose document is Create's form (kind and outputs, format including square 1:1, sources, prompts, voices, reviews, the One after another switch). Body: {id: a new UUID, document}. get_draft shows a document's shape; instantiate_template makes one from a template.",
   },
   {
     name: "get_draft",
     route: "GET /api/drafts/:id",
-    title: "Read a Play draft",
-    description: "A Play draft: its document, version, attachments, latest review and start.",
+    title: "Read a draft",
+    description: "A draft on Create: its document, version, attachments, latest review and start.",
   },
   {
     name: "save_draft",
     route: "PUT /api/drafts/:id",
     body: saveBody,
-    title: "Save a Play draft",
+    title: "Save a draft",
     description:
-      "Saves the draft's document; queue: true is Play's Queue switch, so several videos run one after another. Body: {baseVersion: the draft's version, mutationId: a new UUID, document}.",
+      "Saves the draft's document; queue: true is Create's One after another switch, so several videos run one after another. Body: {baseVersion: the draft's version, mutationId: a new UUID, document}.",
   },
   {
     name: "fork_draft",
     route: "POST /api/drafts/:id/fork",
     body: createDraftInputSchema,
-    title: "Copy a Play draft",
+    title: "Copy a draft",
     description: "Body: {id: a new UUID for the copy, sourceId: this draft's id, document}.",
   },
   {
     name: "discard_draft",
     route: "DELETE /api/drafts/:id",
     body: versionBody,
-    title: "Discard a Play draft",
+    title: "Discard a draft",
     description: "Body: {baseVersion}.",
     confirm: "This discards the draft and its uploaded files for good.",
   },
@@ -59,18 +59,18 @@ const drafts: readonly RouteTool[] = [
     name: "review_draft",
     route: "POST /api/drafts/:id/review",
     body: versionBody,
-    title: "Review a Play draft",
+    title: "Review a draft",
     description:
-      "Play's Review step: readiness, warnings and the cost estimate the person sees before Start. Body: {baseVersion}. start_draft needs this review's id.",
+      "Create's review: readiness, warnings and the cost estimate the person sees before Make the video. Body: {baseVersion}. start_draft needs this review's id.",
     unrecorded: true,
   },
   {
     name: "start_draft",
     route: "POST /api/drafts/:id/start",
     body: startBody,
-    title: "Start a Play draft",
+    title: "Start a draft",
     description:
-      "Start in Play: starts the reviewed draft's runs, which spend what the review estimated. Body: {baseVersion, reviewId: the id review_draft returned}.",
+      "Make the video on Create: starts the reviewed draft's runs, which spend what the review estimated. Body: {baseVersion, reviewId: the id review_draft returned}.",
   },
   {
     name: "upload_draft_attachment",
@@ -110,7 +110,7 @@ const drafts: readonly RouteTool[] = [
 
 // Which version a schedule runs after a save (`template-studio/gate.ts`).
 const templateGateRule =
-  "Schedules use a new version from their next run unless a version of this template was marked ready in its Template studio (mark_template_ready); from then on a new version waits until it is marked ready.";
+  "Schedules use a new version from their next run unless a version of this template was approved for schedules in Edit template (mark_template_ready); from then on a new version waits until it is approved.";
 
 const templates: readonly RouteTool[] = [
   {
@@ -158,7 +158,7 @@ const templates: readonly RouteTool[] = [
     route: "DELETE /api/project-templates/:id",
     body: templateDeleteBody,
     title: "Delete a template",
-    description: formBody("Delete in Library → Templates"),
+    description: formBody("Delete on Templates"),
     confirm:
       "Moves it to the trash for 30 days (Settings → Trash). Existing projects and drafts keep their setup.",
   },
@@ -166,8 +166,8 @@ const templates: readonly RouteTool[] = [
     name: "instantiate_template",
     route: "POST /api/project-templates/:id/instantiate",
     body: templateInstantiateBody,
-    title: "Use a template",
-    description: "Opens a new Play draft from the template, like Use template.",
+    title: "Make a video from a template",
+    description: "Opens a new draft on Create from the template, like Make a video on Templates.",
   },
 ];
 

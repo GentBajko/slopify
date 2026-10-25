@@ -596,7 +596,7 @@ function checkScratch(
     )
       throw new Error("staged files");
   } catch {
-    throw unreadable("a Play draft");
+    throw unreadable("a draft on Create");
   }
   try {
     allTelemetryEvents(scratch);

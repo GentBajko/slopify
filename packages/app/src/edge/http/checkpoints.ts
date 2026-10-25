@@ -1,6 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
 import { errorText } from "../../kernel/errors.js";
+import { type StageKind, stageWords } from "../../kernel/pipeline.js";
 import { projectPaused } from "../../slices/admission/repo.js";
 import {
   changeCheckpoints,
@@ -30,19 +31,20 @@ function refused(c: Context, reason: string): Response {
     otherwise: 409,
     detail:
       reason === "not-found"
-        ? "This checkpoint no longer exists; the project may have moved on or changed. Reload the page to see where it is now."
+        ? "This pause no longer exists; the project may have moved on or changed. Reload the page to see where it is now."
         : reason === "invalid-input"
-          ? "This checkpoint answer could not be read. Reload the page and try again."
-          : "This checkpoint changed since the page loaded, for example it was already approved. Reload the page to see its current state, then try again.",
+          ? "This answer to the pause could not be read. Reload the page and try again."
+          : "This pause changed since the page loaded, for example it was already approved. Reload the page to see its current state, then try again.",
   });
 }
 
 // Taking a checkpoint off that holds the run now would start the paid steps behind it without
 // the review: that goes through Approve, which checks what is approved is what was looked at.
-function heldThere(c: Context, stage: string): Response {
+function heldThere(c: Context, stage: StageKind): Response {
+  const name = stageWords[stage];
   return problem(c, {
     status: 409,
-    detail: `The run is waiting at the checkpoint before ${stage}, so it can't be taken off now: that would start the next steps without the review. Look over what is made, then press Approve on the checkpoint (agents: approve_checkpoint).`,
+    detail: `The run is waiting for your review before ${name}, so that pause can't be taken off now: that would start the next steps without the review. Look over what is made, then press Approve and make the ${name.toLowerCase()} (agents: approve_checkpoint).`,
     extensions: { reason: "held-at-checkpoint" },
   });
 }
@@ -51,7 +53,7 @@ function alreadyApproved(c: Context): Response {
   return problem(c, {
     status: 409,
     detail:
-      "This checkpoint was already approved, so nothing changed. Reload the page (or call needs_attention) to see what waits now.",
+      "This pause was already approved, so nothing changed. Reload the page (or call needs_attention) to see what waits now.",
     extensions: { reason: "already-approved" },
   });
 }

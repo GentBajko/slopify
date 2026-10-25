@@ -175,7 +175,7 @@ describe("renderDocument", () => {
   it("refuses an article with nothing to print", () => {
     expect(() =>
       renderDocument(input({ articleMarkdown: "# The Hammurabi\n\n## Sources Consulted\n\n- x" })),
-    ).toThrow(/Edit project → Article.*Try again on Document/);
+    ).toThrow(/Edit settings → Article.*Try again on PDF/);
   });
 
   it("gives a long article as many contents pages as its headings need", () => {

@@ -10,6 +10,7 @@ import type {
 } from "../../kernel/ports/image.js";
 import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { createRows, editSettings } from "../../kernel/ports/settings-places.js";
 import { httpFailure, noImage, providerSaid, refusedImage, unreadable } from "../explain.js";
 import {
   failureText,
@@ -86,8 +87,7 @@ export function replicateImage(deps: ReplicateImageDeps): ImagePort {
       if (req.reference !== undefined)
         throw providerError({
           kind: "unsupported",
-          message:
-            "Replicate's image models can't use an establishing image as a reference. Choose Codex CLI, OpenAI, Google or fal.ai under Images → Provider on Play or in Edit project → Providers, or set Establishing image to Off in the Images section.",
+          message: `Replicate's image models can't use an establishing image as a reference. Choose Codex CLI, OpenAI, Google or fal.ai as the image service in ${createRows.images} or ${editSettings.images}, or set Establishing image to Off there.`,
         });
       const response = await deps.fetch(`${replicateBase}/models/${req.model}/predictions`, {
         method: "POST",
@@ -220,7 +220,7 @@ function declined(current: z.infer<typeof prediction>): Error {
           "Replicate",
           "could not make the image",
           message,
-          "Use Try again; if it keeps happening, reword the image prompt in the Images section of Edit project or choose another image model in its Providers section.",
+          `Use Try again; if it keeps happening, reword the image prompt in ${editSettings.images} or choose another image model there.`,
         ),
   });
 }

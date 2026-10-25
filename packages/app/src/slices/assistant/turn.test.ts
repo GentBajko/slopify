@@ -216,7 +216,7 @@ describe("a turn", () => {
     h.assistant.send(session, "x", undefined);
     await h.settled(session);
     expect(h.said(session).at(-1)?.[1]).toContain(
-      "Set up Claude Code or Codex in Settings → Providers.",
+      "Set up Claude Code or Codex in Settings → Keys & services.",
     );
     expect(h.turns).toEqual([]);
   });

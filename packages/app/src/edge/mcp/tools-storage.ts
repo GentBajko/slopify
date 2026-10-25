@@ -70,13 +70,13 @@ const onboarding: readonly RouteTool[] = [
     name: "get_onboarding",
     route: "GET /api/onboarding",
     title: "Read the welcome state",
-    description: "Starter packs and what the welcome offers.",
+    description: "Starter templates and what the welcome offers.",
   },
   {
     name: "install_starter_pack",
     route: "POST /api/onboarding/packs/:id",
-    title: "Install a starter pack",
-    description: "Adds a starter pack's prompts and templates.",
+    title: "Install a starter template",
+    description: "Adds a starter template's prompts and templates.",
   },
   {
     name: "make_quick_short",

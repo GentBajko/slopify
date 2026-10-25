@@ -1,6 +1,7 @@
 import { renameSync, rmSync } from "node:fs";
 import { z } from "zod";
 import type { Log } from "../../kernel/log.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { RenderPriority } from "../video/encoding.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
 import type { LoudnessGoal, MasterReport } from "./model.js";
@@ -144,7 +145,7 @@ export async function measure(
   const measured = parseMeasured(stderr);
   if (measured === undefined)
     throw new Error(
-      "Slopify couldn't measure the loudness of the narration (ffmpeg printed no measurement). Try again; if it happens again, turn off Level the volume in Edit project → Pauses and volume, then use Download diagnostics in Settings and report it.",
+      `Slopify couldn't measure the loudness of the narration (ffmpeg printed no measurement). Try again; if it happens again, turn off Level the volume in ${editSettings.sound}, then use Download diagnostics in Settings and report it.`,
     );
   return measured;
 }

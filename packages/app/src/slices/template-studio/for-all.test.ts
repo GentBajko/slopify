@@ -57,7 +57,7 @@ describe("quoteSamplesForAll", () => {
     expect(quote.items.map((item) => item.fits)).toEqual([true, false, false]);
     expect(quote.fitting).toBe(1);
     expect(quote.sentence).toContain(
-      "1 of them fits today's budget; the other 2 wait for tomorrow or a higher budget in Settings → Template studio.",
+      "1 of them fits today's budget; the other 2 wait for tomorrow or a higher budget in Settings → Production defaults.",
     );
   });
 
@@ -86,7 +86,7 @@ describe("makeSamplesForAll", () => {
     expect(sampleVersions(deps.db, ids[1] ?? "")[0]).toMatchObject({
       state: "held",
       heldReason:
-        "Waiting: today's sample budget is used by the other templates' samples. Press Make sample tomorrow, or raise the budget in Settings → Template studio.",
+        "Waiting: today's sample budget is used by the other templates' samples. Press Make sample tomorrow, or raise the budget in Settings → Production defaults.",
     });
   });
 

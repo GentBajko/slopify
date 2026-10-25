@@ -373,7 +373,7 @@ export function validateRevisionEdit(
     fields.push({
       field: "content.imageOrder",
       message:
-        "Every image is deleted, so the video has nothing to show. Press Discard changes to get them back, then press Regenerate all on the Images stage to make them again. To make the project without pictures, set Images and Video to Off on Inputs instead.",
+        "Every image is deleted, so the video has nothing to show. Press Discard changes to get them back, then press Make all images again in the project's Images section. To make the project without pictures, set Images source and Video source to Off in Edit settings instead.",
     });
   if (config.sources.images === "off" && config.sources.video !== "off")
     fields.push({ field: "sources.video", message: "Turn Video off when Images is off." });
@@ -425,7 +425,7 @@ export function validateRevisionEdit(
     config.subtitles !== undefined &&
     config.subtitles.mode !== "off"
   )
-    fields.push({ field: "subtitles.mode", message: "Subtitles need narration audio." });
+    fields.push({ field: "subtitles.mode", message: "Captions need narration audio." });
   fields.push(...voicesFields(config));
   return fields;
 }

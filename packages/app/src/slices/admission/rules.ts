@@ -123,7 +123,7 @@ export function admit(input: AdmissionInput): AdmissionResult {
   }
 
   if (needsLlmFor(draft, input.keywordUses) && !chosen(draft.llm)) {
-    fields.push({ field: "llm", message: "Choose a text (LLM) provider and model." });
+    fields.push({ field: "llm", message: "Choose a Service and a Model under Written by." });
   }
 
   if (sources.article === "generate" && blank(draft.articlePrompt)) {
@@ -135,7 +135,7 @@ export function admit(input: AdmissionInput): AdmissionResult {
   fields.push(...voicesFields(draft));
   if (sources.audio === "generate") {
     if (voiced === undefined || !chosen(voiced)) {
-      fields.push({ field: "audio", message: "Choose a narration provider and model." });
+      fields.push({ field: "audio", message: "Choose a Service and a Model under Read by." });
     } else if (voiced.voice.trim() === "") {
       fields.push({ field: "audio.voice", message: "Choose a voice for the narration." });
     }
@@ -152,7 +152,7 @@ export function admit(input: AdmissionInput): AdmissionResult {
       usesAnimation(draft)) &&
     !chosen(draft.images)
   ) {
-    fields.push({ field: "images", message: "Choose an image provider and model." });
+    fields.push({ field: "images", message: "Choose a Service and a Model under Images by." });
   }
 
   if (
@@ -165,7 +165,7 @@ export function admit(input: AdmissionInput): AdmissionResult {
   if (sources.audio === "off" && draft.subtitles !== undefined && draft.subtitles.mode !== "off") {
     fields.push({
       field: "subtitles.mode",
-      message: "Subtitles need narration. Turn narration on, or turn subtitles off.",
+      message: "Captions need narration. Turn narration on, or turn captions off.",
     });
   }
   fields.push(...youtubeDescriptionFields(draft));

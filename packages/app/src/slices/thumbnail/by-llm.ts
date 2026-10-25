@@ -49,5 +49,5 @@ export function thumbnailMessages(brief: ThumbnailBrief): readonly Message[] {
 // Empty output is a failed attempt. Returned as the sentence the stage would show rather than
 // thrown, because the wrapper's `check` hook is what makes it a retry.
 export function writtenPrompt(text: string): string | undefined {
-  return text.trim() === "" ? "the LLM wrote no thumbnail prompt" : undefined;
+  return text.trim() === "" ? "the AI model wrote no thumbnail prompt" : undefined;
 }

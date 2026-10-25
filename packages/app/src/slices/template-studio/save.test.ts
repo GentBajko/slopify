@@ -151,7 +151,7 @@ describe("saveStudio", () => {
     const result = await saveStudio(deps, id, input({ acknowledgedHigh: quote.high }));
     expect(result).toMatchObject({ ok: false, reason: "over-budget" });
     expect(!result.ok && result.message).toContain(
-      "Raise the budget in Settings → Template studio.",
+      "Raise the budget in Settings → Production defaults.",
     );
     expect(queuedJob(deps.db, id)).toBeUndefined();
   });
@@ -185,7 +185,7 @@ describe("saveStudio", () => {
     );
     expect(refused).toMatchObject({ ok: false, reason: "over-budget" });
     expect(!refused.ok && refused.message).toBe(
-      "This sample runs on your CLI plan, and samples may not use CLI plans. Turn on Samples may use my CLI plans in Settings → Template studio.",
+      "This sample runs on your CLI plan, and samples may not use CLI plans. Turn on Samples may use my CLI plans in Settings → Production defaults.",
     );
     expect(queuedJob(deps.db, id)).toBeUndefined();
     // Allowed, a sample whose only cost is plan usage starts at a $0 budget.

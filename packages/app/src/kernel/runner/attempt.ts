@@ -5,6 +5,7 @@ import { redact } from "../log.js";
 import type { StageKind } from "../pipeline.js";
 import type { ProviderError, ProviderErrorKind } from "../ports/model.js";
 import { isProviderError, providerError } from "../ports/model.js";
+import { editSettings } from "../ports/settings-places.js";
 import type { AttemptStore } from "./attempt-repo.js";
 import type { AttemptResult, WorkRef } from "./work.js";
 
@@ -170,7 +171,7 @@ function classify(
       message:
         opts.streaming === true
           ? `The ${callee[opts.kind]} sent nothing for ${seconds} seconds, so Slopify stopped waiting. It may be overloaded: wait a few minutes, then use Try again.`
-          : `The ${callee[opts.kind]} did not answer within ${seconds} seconds. It may be overloaded: wait a few minutes, then use Try again, or choose another model in the Providers section of Edit project.`,
+          : `The ${callee[opts.kind]} did not answer within ${seconds} seconds. It may be overloaded: wait a few minutes, then use Try again, or choose another model in ${modelPlace[opts.kind]}.`,
     });
   }
   if (isProviderError(error)) {
@@ -201,9 +202,17 @@ function classify(
 // What the user calls the other end of each kind of call.
 const callee: Readonly<Record<ProviderCallKind, string>> = {
   llm: "AI model",
-  tts: "narration provider",
-  image: "image provider",
+  tts: "voice service",
+  image: "image service",
   video: "image-to-video model",
+};
+
+// Where a project's settings choose the model of each kind of call.
+const modelPlace: Readonly<Record<ProviderCallKind, string>> = {
+  llm: editSettings.writer,
+  tts: editSettings.narration,
+  image: editSettings.images,
+  video: editSettings.look,
 };
 
 // Node's `fetch` rejects a request that never reached the server with this TypeError.

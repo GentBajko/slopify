@@ -93,7 +93,7 @@ function refused(
       return problem(c, {
         status: 404,
         detail:
-          "This PDF theme no longer exists; it may have been deleted in another tab. Go back to Library → PDF themes.",
+          "This PDF look no longer exists; it may have been deleted in another tab. Go back to the PDF looks (Settings → Production defaults → Edit PDF looks).",
       });
   }
 }

@@ -9,9 +9,11 @@
 // A paragraph's minimum is separate and 0 (the sentence minimum only) unless set: the pause
 // between paragraphs is mostly the narration prompt's and the voice's to make.
 //
-// Browser-safe: Play and Edit project read these limits. A run without either has neither on
+// Browser-safe: Create and Edit settings read these limits. A run without either has neither on
 // its config, which is what every project saved before them was, and the joins keep their
 // fingerprints then.
+
+import { createRows, editSettings } from "../../kernel/ports/settings-places.js";
 
 // ceiling: a quarter second reads brisk, 0.35 to 0.45 natural or documentary, 0.5 to 0.8 an
 // audiobook's relaxed pace, and above 0.8 sleep content; beyond 2 s it stops sounding like a
@@ -44,7 +46,7 @@ export function pauseProblem(value: number, name: string): string | undefined {
     value <= pauseSecondsMax &&
     Math.abs(steps - Math.round(steps)) < 1e-6
     ? undefined
-    : `The pause between ${name} must be between 0 and ${String(pauseSecondsMax)} seconds, in steps of ${String(pauseSecondsStep)}. Change it under Play → Video and style, or Edit project → Pauses and volume.`;
+    : `The pause between ${name} must be between 0 and ${String(pauseSecondsMax)} seconds, in steps of ${String(pauseSecondsStep)}. Change it under ${createRows.video}, or ${editSettings.sound}.`;
 }
 
 export function pauseFields(config: {

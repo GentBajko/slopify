@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { CostEstimate } from "../estimate/index.js";
 
-// The cost sentence on an ask card, from the estimate the preview (Choose what to remake) or
+// The cost sentence on an ask card, from the estimate the preview (Choose what to make again) or
 // Play's review already showed for this exact work.
 
 const money = (value: number): string => `$${value.toFixed(2)}`;

@@ -1,6 +1,6 @@
 import type { ProviderId } from "./model.js";
 
-// The step list Settings → Providers shows beside each key field. Every link is the provider's
+// The step list Settings → Keys & services shows beside each key field. Every link is the provider's
 // own page, checked against its documentation on 2026-09-27.
 export interface GuideLink {
   readonly label: string;

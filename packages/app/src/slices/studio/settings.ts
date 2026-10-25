@@ -84,16 +84,16 @@ function storedPlaylists(db: DatabaseSync, key: string): StudioPlaylist[] | null
   return stored.length === 0 ? null : stored;
 }
 
-// Why a list can't be saved, in words for Settings → YouTube Studio; undefined when it can.
+// Why a list can't be saved, in words for Settings → YouTube Studio and posting; undefined when it can.
 export function studioPlaylistsProblem(list: readonly StudioPlaylist[]): string | undefined {
   const long = list.find((one) => one.name.trim().length > studioPlaylistMax);
   if (long !== undefined)
-    return `The playlist name "${long.name.slice(0, 40)}…" is longer than YouTube allows (${String(studioPlaylistMax)} characters). Shorten it in Settings → YouTube Studio.`;
+    return `The playlist name "${long.name.slice(0, 40)}…" is longer than YouTube allows (${String(studioPlaylistMax)} characters). Shorten it in Settings → YouTube Studio and posting.`;
   const seen = new Set<string>();
   for (const one of list) {
     const key = one.name.trim().toLowerCase();
     if (seen.has(key))
-      return `"${one.name.trim()}" is listed twice. Remove one in Settings → YouTube Studio.`;
+      return `"${one.name.trim()}" is listed twice. Remove one in Settings → YouTube Studio and posting.`;
     seen.add(key);
   }
   return undefined;

@@ -46,7 +46,7 @@ export function readDocumentAssets(): DocumentAssets {
     };
   } catch (error) {
     throw new Error(
-      `Slopify couldn't read the fonts and page texture it makes documents with (${errorText(error)}). Its installation is incomplete: reinstall or update Slopify, then use Try again on Document.`,
+      `Slopify couldn't read the fonts and page texture it makes documents with (${errorText(error)}). Its installation is incomplete: reinstall or update Slopify, then use Try again on PDF.`,
       { cause: error },
     );
   }

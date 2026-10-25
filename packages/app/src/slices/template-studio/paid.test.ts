@@ -130,38 +130,38 @@ describe("a template's first paid sample", () => {
     expect(sampleVersions(h.deps.db, id)[0]).toMatchObject({
       state: "failed",
       heldReason:
-        "The sample can't start: Set up this provider in Settings → Providers before starting.",
+        "The sample can't start: Set up this provider in Settings → Keys & services before starting.",
     });
   });
 
   it("shows the failed step's own sentence when the run fails", async () => {
     const { h, deps, id, job } = harness({
-      fail: "OpenRouter refused the key. Paste a new one in Settings → Providers.",
+      fail: "OpenRouter refused the key. Paste a new one in Settings → Keys & services.",
     });
     await makePaidSample(deps, job(), signal);
     expect(sampleVersions(h.deps.db, id)[0]).toMatchObject({
       state: "failed",
-      heldReason: "OpenRouter refused the key. Paste a new one in Settings → Providers.",
+      heldReason: "OpenRouter refused the key. Paste a new one in Settings → Keys & services.",
     });
   });
 
   it("names the studio's Make sample where the step's sentence names a project's Try again", async () => {
     for (const [fail, said] of [
       [
-        "The AI model didn't answer. Use Try again; if it keeps happening, choose another model in the Providers section of Edit project.",
+        "The AI model didn't answer. Use Try again; if it keeps happening, choose another model in Edit settings → Article → Written by.",
         "The AI model didn't answer. Press Make sample to try again; if it keeps happening, choose another model with Change on that section's “Made with …” line.",
       ],
       [
-        "No OpenRouter API key is saved. Add one in Settings → Providers, then use Try again.",
-        "No OpenRouter API key is saved. Add one in Settings → Providers, then press Make sample to try again.",
+        "No OpenRouter API key is saved. Add one in Settings → Keys & services, then use Try again.",
+        "No OpenRouter API key is saved. Add one in Settings → Keys & services, then press Make sample to try again.",
       ],
       [
-        "The article has no text. Write it, then use Try again on Document.",
+        "The article has no text. Write it, then use Try again on PDF.",
         "The article has no text. Write it, then press Make sample to try again.",
       ],
       [
-        "Add a key in Settings → Providers, then Try again.",
-        "Add a key in Settings → Providers, then press Make sample to try again.",
+        "Add a key in Settings → Keys & services, then Try again.",
+        "Add a key in Settings → Keys & services, then press Make sample to try again.",
       ],
     ] as const) {
       const { h, deps, id, job } = harness({ fail });

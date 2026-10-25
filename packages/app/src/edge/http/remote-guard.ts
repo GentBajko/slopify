@@ -20,12 +20,12 @@ export const hostOnlyWrites: readonly HostOnly[] = [
   {
     method: "PUT|DELETE",
     path: new RegExp(`^/api/providers/${id}/key/?$`),
-    what: "Provider keys are saved and removed (Settings → Providers)",
+    what: "Provider keys are saved and removed (Settings → Keys & services)",
   },
   {
     method: "PUT",
     path: new RegExp(`^/api/providers/${id}/path/?$`),
-    what: "A CLI's path is set (Settings → Providers)",
+    what: "A CLI's path is set (Settings → Keys & services)",
   },
   {
     method: "PUT",

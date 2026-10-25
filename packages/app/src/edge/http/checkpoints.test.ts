@@ -277,7 +277,7 @@ it("refuses a second approval of a checkpoint that was already approved", async 
     idempotencyKey: randomUUID(),
   });
   expect(second.status).toBe(409);
-  expect(await second.text()).toContain("This checkpoint was already approved");
+  expect(await second.text()).toContain("This pause was already approved");
   expect(h.wake).toHaveBeenCalledTimes(1);
 });
 it("refuses to release a run held at a checkpoint by removing it, and says to approve it", async () => {
@@ -286,7 +286,9 @@ it("refuses to release a run held at a checkpoint by removing it, and says to ap
   expect(response.status).toBe(409);
   const body = (await response.json()) as { detail: string; reason: string };
   expect(body.reason).toBe("held-at-checkpoint");
-  expect(body.detail).toContain("Approve");
+  // In the page's words: the stage by its name, and the button that ends the pause.
+  expect(body.detail).toMatch(/waiting for your review before Narration/);
+  expect(body.detail).toContain("press Approve and make the narration");
   expect(listCheckpoints(h.db, h.projectId, h.view.revision.id)).toHaveLength(1);
   expect(h.wake).not.toHaveBeenCalled();
   // A paused run goes on only through Continue the run, so its checkpoint can be taken off.

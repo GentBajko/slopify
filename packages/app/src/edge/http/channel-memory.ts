@@ -106,8 +106,8 @@ function refused(c: Context, result: Refusal, about: "episode" | "video"): Respo
     result.message ??
     (result.reason === "not-found"
       ? about === "episode"
-        ? "This channel or episode summary no longer exists; it may have been deleted in another tab. Reload the channel's Episodes tab."
-        : "This channel or video title no longer exists; it may have been deleted in another tab. Reload the channel's Existing videos tab."
+        ? "This channel or episode summary no longer exists; it may have been deleted in another tab. Reload the channel's Memory tab."
+        : "This channel or video title no longer exists; it may have been deleted in another tab. Reload the channel's Titles to avoid tab."
       : "This request isn't valid. Reload the page and try again.");
   return refusal(c, result.reason, { statuses: { "not-found": 404 }, otherwise: 400, detail });
 }

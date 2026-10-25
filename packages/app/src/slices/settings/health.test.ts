@@ -5,7 +5,7 @@ import { parseCatalogue } from "../../catalog/store.js";
 import { draftFixture, must } from "../play-drafts/draft.fake.js";
 import { createDraft } from "../play-drafts/service.js";
 import type { CliProbe } from "./cli-status.js";
-import { dismissFirstRun, firstRunStatus, readProviderDefaults } from "./first-run.js";
+import { firstRunStatus, readProviderDefaults } from "./first-run.js";
 import { checkProviderHealth, type HealthDeps } from "./health.js";
 import { saveProviderKey } from "./keys.js";
 import { providerStatuses } from "./readiness.js";
@@ -208,14 +208,13 @@ describe("model reachable", () => {
 });
 
 describe("first run", () => {
-  it("finds the CLIs, picks them as Play's defaults once, and says no key is needed", async () => {
+  it("finds the CLIs and picks them as Create's defaults once", async () => {
     const h = draftFixture();
     try {
       const d = deps(h, installed);
       const status = await firstRunStatus(d, await providerStatuses(d));
       expect(status).toMatchObject({
         firstRun: true,
-        message: "You can make a video now, no API keys needed.",
         defaults: {
           llm: { provider: "claude-code", model: "sonnet" },
           images: { provider: "codex-image", model: "gpt" },
@@ -228,8 +227,10 @@ describe("first run", () => {
         "codex-image",
       ]);
       expect(readProviderDefaults(h.deps.db)).toEqual(status.defaults);
-      dismissFirstRun(h.deps.db);
-      expect((await firstRunStatus(d, await providerStatuses(d))).firstRun).toBe(false);
+      // Written once: a later answer reads them back rather than picking again.
+      expect((await firstRunStatus(d, await providerStatuses(d))).defaults).toEqual(
+        status.defaults,
+      );
     } finally {
       h.close();
     }
@@ -241,14 +242,12 @@ describe("first run", () => {
       const d = deps(h, onlyClaude);
       const status = await firstRunStatus(d, await providerStatuses(d));
       expect(status.defaults).toEqual({ llm: { provider: "claude-code", model: "sonnet" } });
-      expect(status.detail).toContain("Claude Code CLI");
       const other = draftFixture();
       try {
         saveProviderKey(other.deps, "openrouter", "k");
         const e = deps(other, installed);
         expect(await firstRunStatus(e, await providerStatuses(e))).toMatchObject({
           firstRun: false,
-          message: null,
           defaults: {},
         });
       } finally {
@@ -259,16 +258,13 @@ describe("first run", () => {
     }
   });
 
-  it("says what to install when nothing is found", async () => {
+  it("picks nothing when no tool is found", async () => {
     const h = draftFixture();
     try {
       const d = deps(h, async () => ({ ran: false, stdout: "" }));
-      expect(await firstRunStatus(d, await providerStatuses(d))).toMatchObject({
-        firstRun: true,
-        defaults: {},
-        message: "No AI command-line tool was found on this computer.",
-        detail: expect.stringContaining("Settings → Providers"),
-      });
+      const status = await firstRunStatus(d, await providerStatuses(d));
+      expect(status).toMatchObject({ firstRun: true, defaults: {} });
+      expect(status.detected.some((cli) => cli.usable)).toBe(false);
     } finally {
       h.close();
     }

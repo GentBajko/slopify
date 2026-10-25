@@ -105,7 +105,7 @@ describe("freeChecks", () => {
     const providerLines = (overrides: Partial<FreeCheckInput>) =>
       freeChecks({ ...input, ...overrides }).filter((one) => one.id === "providers");
 
-    it("fails when a used provider has no key, and links to Settings → Providers", () => {
+    it("fails when a used provider has no key, and links to Settings → Keys & services", () => {
       const result = check(
         { providers: new Map([...ready, ["fal", { name: "fal.ai", ready: false }]]) },
         "providers",
@@ -115,7 +115,10 @@ describe("freeChecks", () => {
         ok: false,
         sentence:
           "fal.ai, the image service, isn't set up on this computer: no key is stored or its program wasn't found.",
-        fix: { label: "Set it up in Settings → Providers", href: "/settings?section=providers" },
+        fix: {
+          label: "Set it up in Settings → Keys & services",
+          href: "/settings?section=providers",
+        },
       });
     });
 
@@ -159,7 +162,7 @@ describe("freeChecks", () => {
         [
           false,
           "OpenAI, the voice service, isn't set up on this computer: no key is stored or its program wasn't found.",
-          "Set it up in Settings → Providers",
+          "Set it up in Settings → Keys & services",
         ],
       ]);
     });

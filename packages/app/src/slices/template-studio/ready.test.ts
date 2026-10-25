@@ -138,8 +138,8 @@ describe("markReady", () => {
     const result = await markReady(deps, id, { version: 1 });
     if (result.ok) throw new Error("marked");
     expect(result.reason).toBe("not-ready");
-    expect(result.message).toMatch(/^Version 1 can't be marked ready yet\. /u);
-    expect(result.message).toContain("Settings → Providers");
+    expect(result.message).toMatch(/^Version 1 can't be approved for schedules yet\. /u);
+    expect(result.message).toContain("Settings → Keys & services");
     expect(result.problems.some((problem) => problem.fix !== undefined)).toBe(true);
     expect(gatesOf(h.deps.db, id)).toEqual([]);
   });

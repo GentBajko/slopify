@@ -32,7 +32,7 @@ export interface PackFile {
 export const playlistUses = ["all", "long", "shorts"] as const;
 export type PlaylistUse = (typeof playlistUses)[number];
 
-// A playlist of a channel's list (Settings → YouTube Studio), ticked by default or not, and
+// A playlist of a channel's list (Settings → YouTube Studio and posting), ticked by default or not, and
 // whether it takes long videos, shorts or both (absent: both, as every list saved before).
 export interface StudioPlaylist {
   readonly name: string;
@@ -81,7 +81,7 @@ export interface PackItem {
   // (the long video): set on the Details page after the upload.
   readonly endScreenVideoId?: string | undefined;
   readonly relatedVideoId?: string | undefined;
-  // The comment to post and pin once the video is public (Settings → YouTube Studio).
+  // The comment to post and pin once the video is public (Settings → YouTube Studio and posting).
   readonly pinnedComment?: string | undefined;
   // What was changed in the description's chapters to meet YouTube's rules
   // (`slices/youtube/chapters.ts`); absent when nothing was.

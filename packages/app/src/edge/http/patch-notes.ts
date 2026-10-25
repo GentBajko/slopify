@@ -9,7 +9,7 @@ import type { AppDeps } from "./app.js";
 import { problem } from "./problem.js";
 import { bundleMissing } from "./refusal.js";
 
-// Settings → Patch notes: the list (with which note is due to open by itself), one note's
+// Settings → What's new: the list (with which note is due to open by itself), one note's
 // Markdown, and recording that the note that opened by itself was closed.
 // Preserve Hono's inferred route types for the web client.
 export function patchNotesRoutes(deps: Pick<AppDeps, "db" | "version" | "patchNotesDir">) {
@@ -37,7 +37,7 @@ export function patchNotesRoutes(deps: Pick<AppDeps, "db" | "version" | "patchNo
         return problem(c, {
           status: 404,
           detail:
-            "These patch notes are not in this version of Slopify. Open Settings → Patch notes and pick one from the list.",
+            "These patch notes are not in this version of Slopify. Open Settings → What's new and pick one from the list.",
         });
       return c.body(markdown, 200, { "content-type": "text/markdown; charset=utf-8" });
     });

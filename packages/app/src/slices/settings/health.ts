@@ -83,7 +83,7 @@ function overall(
   return setUp || used ? "ok" : "unused";
 }
 
-// "Check all" on Settings → Providers: each command-line tool found and signed in, each saved
+// "Check all" on Settings → Keys & services: each command-line tool found and signed in, each saved
 // key accepted by its provider, and each chosen model still offered and answering for the key.
 // `only` checks one provider: its row's Check again, or a sign-in fix-it's.
 export async function checkProviderHealth(
@@ -151,7 +151,7 @@ async function cliHealth(
       state: used.length > 0 ? "problem" : "skipped",
       detail:
         readiness.issue ??
-        `${name} was not found on this computer. Install it, sign in once in a terminal, then choose Check all again. If it is installed somewhere unusual, set its path in Settings → Providers.`,
+        `${name} was not found on this computer. Install it, sign in once in a terminal, then choose Check all again. If it is installed somewhere unusual, set its path in Settings → Keys & services.`,
     });
     return { ...base, state: used.length > 0 ? "problem" : "unused", checks };
   }
@@ -295,7 +295,7 @@ async function keyedHealth(
     checks.push({
       label: "Key saved",
       state: used.length > 0 ? "problem" : "skipped",
-      detail: `No key is saved.${used.length > 0 ? ` It is chosen for ${describe(used)}.` : ""} Make one at ${guide?.keyPage.url ?? "the provider's website"}, paste it in Settings → Providers → ${status.displayName} and choose Save.`,
+      detail: `No key is saved.${used.length > 0 ? ` It is chosen for ${describe(used)}.` : ""} Make one at ${guide?.keyPage.url ?? "the provider's website"}, paste it in Settings → Keys & services → ${status.displayName} and choose Save.`,
     });
     return { ...base, state: used.length > 0 ? "problem" : "unused", checks };
   }

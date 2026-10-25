@@ -66,9 +66,11 @@ export async function contextChecks(
     checks.push({
       id: "provider",
       ok: problem === null,
-      sentence: problem ?? "The image provider is ready.",
+      sentence: problem ?? "The image service is ready.",
       fix:
-        problem === null ? null : { label: "Open Providers", href: "/settings?section=providers" },
+        problem === null
+          ? null
+          : { label: "Open Keys & services", href: "/settings?section=providers" },
     });
   } else {
     const kept = doc.picture.sha256 !== undefined;
@@ -152,12 +154,13 @@ export async function contextChecks(
   return checks;
 }
 
-// Mark ready asks for the version's own sample, made, as a project template's studio does: the
+// Approve for schedules asks for the version's own sample, made, as Edit template does: the
 // person has seen what a schedule will make before it makes it.
 export function sampleCheck(db: DatabaseSync, templateId: string, version: number): TemplateCheck {
   const row = sampleRow(db, templateId);
   const made = row?.state === "done" && row.version === version;
-  const how = "Make its sample, look it over beside the settings, then press Mark ready.";
+  const how =
+    "Make its sample, look it over beside the settings, then press Approve for schedules.";
   return {
     id: "sample",
     ok: made,

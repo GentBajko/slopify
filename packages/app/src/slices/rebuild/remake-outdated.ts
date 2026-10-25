@@ -16,9 +16,10 @@ export function remadeWork<W extends Pick<RebuildWork, "disposition">>(
 }
 
 export function remakeBlocker(status: string, sample: boolean): string | undefined {
-  if (status === "running") return "It is running now. Remake it once the run has finished.";
+  if (status === "running")
+    return "It is running now. Make its outdated parts again once the run has finished.";
   if (sample)
-    return "It is a sample project, which stays as it came with Slopify. Open it, press Make my own copy at the top of its page, then remake the copy.";
+    return "It is a sample project, which stays as it came with Slopify. Open it, press Make my own copy at the top of its page, then change the copy.";
   return undefined;
 }
 
@@ -27,12 +28,12 @@ export function previewBlocker(
   label: (key: string) => string,
 ): string | undefined {
   if (remadeWork(preview.work).length === 0)
-    return "Nothing in it is outdated, so there is nothing to remake.";
+    return "Nothing in it is outdated, so there is nothing to make again.";
   const blocked = preview.work.find((work) => work.disposition === "blocked");
   if (blocked !== undefined)
-    return `${label(blocked.key)} can't run: ${blocked.reason.trim() || "no reason was given."} Open the project and press Choose what to remake to see what to fix.`;
+    return `${label(blocked.key)} can't run: ${blocked.reason.trim() || "no reason was given."} Open the project and press Choose what to make again to see what to fix.`;
   if (preview.providedReuseRequired.length > 0)
-    return "It uses content you supplied, which you confirm on the project itself: open it and press Choose what to remake.";
+    return "It uses content you supplied, which you confirm on the project itself: open it and press Choose what to make again.";
   return undefined;
 }
 

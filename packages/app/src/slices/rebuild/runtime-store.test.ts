@@ -337,3 +337,140 @@ it("keeps a stage's first failure time while it stays failed, and a later retry 
     h.close();
   }
 });
+
+// The run length on a project's title row, the time left on a running step and the usual time a
+// step takes all read when a stage started and when it finished.
+it("records when a stage starts and keeps when it finished, through a retry wait and a later save", () => {
+  const h = revisionFixture();
+  try {
+    let now = "2026-09-10T01:00:00.000Z";
+    const deps = { ...h.deps, clock: { ...h.deps.clock, now: () => new Date(now) } };
+    for (const kind of stageKinds)
+      deps.db
+        .prepare(
+          "INSERT INTO stages(id,project_id,kind,source,state) VALUES (?,?,?,'generate','pending')",
+        )
+        .run(kind, h.projectId, kind);
+    deps.db.prepare("UPDATE projects SET config=? WHERE id=?").run(
+      JSON.stringify({
+        ...h.config,
+        sources: { ...h.config.sources, audio: "generate" },
+        audio: { provider: "voice", model: "tts", voice: "v1" },
+      }),
+      h.projectId,
+    );
+    const base = adoptBaseline(deps, h.projectId);
+    if (!base.ok) throw new Error("Missing baseline");
+    admitInitialRevision(deps, base.view, catalogue);
+    const work = executionStages(deps, h.projectId).find((row) => row.kind === "video")?.work;
+    if (work === undefined) throw new Error("Missing work");
+    const times = () =>
+      deps.db.prepare("SELECT state,started_at,finished_at FROM stages WHERE id='video'").get();
+    const workState = (state: string, retryAt: string | null = null) =>
+      deps.db
+        .prepare("UPDATE revision_work SET state=?,retry_at=? WHERE id=?")
+        .run(state, retryAt, work.workId);
+    projectStandings(deps, h.projectId);
+    expect(times()).toMatchObject({ state: "pending", started_at: null, finished_at: null });
+    workState("running");
+    projectStandings(deps, h.projectId);
+    expect(times()).toEqual({
+      state: "running",
+      started_at: "2026-09-10T01:00:00.000Z",
+      finished_at: null,
+    });
+    // Still running a minute later, then waiting to try again: the start stays.
+    now = "2026-09-10T01:01:00.000Z";
+    projectStandings(deps, h.projectId);
+    workState("pending", "2026-09-10T01:02:00.000Z");
+    projectStandings(deps, h.projectId);
+    workState("running");
+    now = "2026-09-10T01:02:00.000Z";
+    projectStandings(deps, h.projectId);
+    expect(times()).toMatchObject({ started_at: "2026-09-10T01:00:00.000Z" });
+    now = "2026-09-10T01:04:00.000Z";
+    workState("done");
+    projectStandings(deps, h.projectId);
+    expect(times()).toEqual({
+      state: "done",
+      started_at: "2026-09-10T01:00:00.000Z",
+      finished_at: "2026-09-10T01:04:00.000Z",
+    });
+    // Read again much later (a rename's save does this): neither moment moves.
+    now = "2026-09-12T09:00:00.000Z";
+    projectStandings(deps, h.projectId);
+    expect(times()).toMatchObject({
+      started_at: "2026-09-10T01:00:00.000Z",
+      finished_at: "2026-09-10T01:04:00.000Z",
+    });
+    // Made again: a new start.
+    workState("running");
+    projectStandings(deps, h.projectId);
+    expect(times()).toEqual({
+      state: "running",
+      started_at: "2026-09-12T09:00:00.000Z",
+      finished_at: null,
+    });
+  } finally {
+    h.close();
+  }
+});
+
+// A stage of several steps (the narration's chunk, then its join) is between steps for a moment
+// while one has finished and the next is not claimed yet: it keeps the start it took.
+it("keeps a stage's start between its steps", () => {
+  const h = revisionFixture();
+  try {
+    let now = "2026-09-10T01:00:00.000Z";
+    const deps = { ...h.deps, clock: { ...h.deps.clock, now: () => new Date(now) } };
+    for (const kind of stageKinds)
+      deps.db
+        .prepare(
+          "INSERT INTO stages(id,project_id,kind,source,state) VALUES (?,?,?,'generate','pending')",
+        )
+        .run(kind, h.projectId, kind);
+    deps.db.prepare("UPDATE projects SET config=? WHERE id=?").run(
+      JSON.stringify({
+        ...h.config,
+        sources: { ...h.config.sources, audio: "generate" },
+        audio: { provider: "voice", model: "tts", voice: "v1" },
+      }),
+      h.projectId,
+    );
+    const base = adoptBaseline(deps, h.projectId);
+    if (!base.ok) throw new Error("Missing baseline");
+    admitInitialRevision(deps, base.view, catalogue);
+    const steps = executionStages(deps, h.projectId).filter((row) => row.kind === "audio");
+    expect(steps.length).toBeGreaterThan(1);
+    const times = () =>
+      deps.db.prepare("SELECT state,started_at,finished_at FROM stages WHERE id='audio'").get();
+    const step = (index: number, state: string) =>
+      deps.db
+        .prepare("UPDATE revision_work SET state=? WHERE id=?")
+        .run(state, steps[index]?.work.workId ?? "");
+    step(0, "running");
+    projectStandings(deps, h.projectId);
+    now = "2026-09-10T01:02:00.000Z";
+    step(0, "done");
+    projectStandings(deps, h.projectId);
+    expect(times()).toEqual({
+      state: "pending",
+      started_at: "2026-09-10T01:00:00.000Z",
+      finished_at: null,
+    });
+    now = "2026-09-10T01:03:00.000Z";
+    for (let index = 1; index < steps.length; index++) step(index, "running");
+    projectStandings(deps, h.projectId);
+    expect(times()).toMatchObject({ state: "running", started_at: "2026-09-10T01:00:00.000Z" });
+    now = "2026-09-10T01:05:00.000Z";
+    for (let index = 1; index < steps.length; index++) step(index, "done");
+    projectStandings(deps, h.projectId);
+    expect(times()).toEqual({
+      state: "done",
+      started_at: "2026-09-10T01:00:00.000Z",
+      finished_at: "2026-09-10T01:05:00.000Z",
+    });
+  } finally {
+    h.close();
+  }
+});

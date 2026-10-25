@@ -48,7 +48,7 @@ const notFound = {
   ok: false,
   reason: "not-found",
   message:
-    "This design template no longer exists. Open Library → Designs → Templates to choose another.",
+    "This design template no longer exists. Open Templates → Poster templates to choose another.",
 } as const;
 
 // What one piece made from this document costs: its artwork, or nothing when the template

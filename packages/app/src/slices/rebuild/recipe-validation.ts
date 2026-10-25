@@ -1,3 +1,4 @@
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { RunConfig } from "../admission/model.js";
 import {
   type FieldError,
@@ -59,10 +60,10 @@ export function validateRecipeInputs(
       (cost) => cost === "digest" || cost === "scenes",
     );
   if (llm && (!config.llm?.provider.trim() || !config.llm.model.trim()))
-    fields.push({ field: "llm", message: "Pick a text provider and model." });
+    fields.push({ field: "llm", message: "Choose a Service and a Model under Written by." });
   if (config.sources.audio === "generate") {
     if (!config.audio?.provider.trim() || !config.audio.model.trim())
-      fields.push({ field: "audio", message: "Pick a narration provider and model." });
+      fields.push({ field: "audio", message: "Choose a Service and a Model under Read by." });
     else if (!config.audio.voice.trim())
       fields.push({ field: "audio.voice", message: "Pick a narration voice." });
   }
@@ -77,7 +78,7 @@ export function validateRecipeInputs(
       usesAnimation(config)) &&
     (!config.images?.provider.trim() || !config.images.model.trim())
   )
-    fields.push({ field: "images", message: "Pick an image provider and model." });
+    fields.push({ field: "images", message: "Choose a Service and a Model under Images by." });
   // 60, or more for a project that scales its images with the narration (`images/scale.ts`).
   const imagesMax = imagesPerVideoMax(config);
   if (content.imageOrder.length > imagesMax)
@@ -124,8 +125,7 @@ export function validateRecipeInputs(
     if (config.keywordFacts === undefined && usesFacts([text]))
       fields.push({
         field: prompt.field,
-        message:
-          "This prompt uses a keyword Slopify fills from the channel and its videos, but this project has no keyword facts yet. Use Refresh keyword facts in Edit project → Prompts, then save again.",
+        message: `This prompt uses a keyword Slopify fills from the channel and its videos, but this project has no keyword facts yet. Use Refresh keyword facts in ${editSettings.title}, then save again.`,
       });
     if (prompt.raw === null) continue;
     const slots = detectSlots(prompt.raw);

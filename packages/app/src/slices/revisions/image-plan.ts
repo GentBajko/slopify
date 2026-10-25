@@ -120,7 +120,7 @@ export function replanImagePrompts(input: {
     if (body === undefined) {
       fields.push({
         field: `imagePrompts.${String(index)}.name`,
-        message: `The image prompt "${prompt.name}" is not in the Library any more. Untick it under Images, or add it back on Library → Prompts.`,
+        message: `The image prompt "${prompt.name}" is not in Prompts any more. Untick it under Images, or add it back in Prompts → Image.`,
       });
       continue;
     }

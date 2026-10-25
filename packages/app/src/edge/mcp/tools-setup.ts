@@ -65,7 +65,7 @@ const settings: readonly RouteTool[] = [
     route: "GET /api/settings/remote-access",
     title: "Read remote access",
     description:
-      "Settings → General → Remote access: whether Slopify's page is open on the person's other devices through Tailscale serve (their tailnet only, never the public internet), its https address, and any problem with the exact fix. Turning it on or off is the person's; agents can't.",
+      "Settings → Remote access: whether Slopify's page is open on the person's other devices through Tailscale serve (their tailnet only, never the public internet), its https address, and any problem with the exact fix. Turning it on or off is the person's; agents can't.",
   },
   {
     name: "get_settings",
@@ -93,7 +93,7 @@ const settings: readonly RouteTool[] = [
     route: "GET /api/settings/channel-links",
     title: "Read the default channel links",
     description:
-      "Settings → Channel links: the links a description's {{Name}} placeholders fill from.",
+      "Settings → YouTube Studio and posting: the links a description's {{Name}} placeholders fill from.",
   },
   {
     name: "set_default_channel_links",
@@ -163,7 +163,7 @@ const settings: readonly RouteTool[] = [
     body: quoteBody,
     title: "Price a voice sample",
     description:
-      "Try a sample's price, as Play shows it before playing one. Body: {lines: [{speaker, provider, model, text}]}.",
+      "Try a sample's price, as Create shows it before playing one. Body: {lines: [{speaker, provider, model, text}]}.",
     unrecorded: true,
   },
   {
@@ -184,7 +184,7 @@ const settings: readonly RouteTool[] = [
     route: "GET /api/studio/settings",
     title: "Read YouTube Studio settings",
     description:
-      "Settings → YouTube Studio: the playlists upload packs name, and whether the comment is posted.",
+      "Settings → YouTube Studio and posting: the playlists upload packs name, and whether the comment is posted.",
     shape: withoutExtensionSecrets,
   },
   {
@@ -207,14 +207,14 @@ const providers: readonly RouteTool[] = [
   {
     name: "list_providers",
     route: "GET /api/providers",
-    title: "List providers",
-    description: "Each provider as configured or missing.",
+    title: "List the services",
+    description: "Each service on Settings → Keys & services, as configured or missing.",
     shape: configuredOrMissing,
   },
   {
     name: "list_models",
     route: "GET /api/providers/:id/models",
-    title: "List a provider's models",
+    title: "List a service's models",
     description:
       "The models Slopify offers for the provider, with prices where known, and each model's standing for the saved key or CLI under standings: works (a check or a run succeeded), listed (the key's own model list names it), known (only Slopify's model list does), no-access (the provider said it is not on the plan, with its sentence), and retiring with its replacement when one is due. Standings never stop a run: a model chosen anywhere keeps working as before.",
   },
@@ -228,7 +228,7 @@ const providers: readonly RouteTool[] = [
   {
     name: "estimate_model_checks",
     route: "GET /api/providers/:id/models/check/estimate",
-    title: "Estimate checking a provider's models",
+    title: "Estimate checking a service's models",
     description:
       "What Check models in Settings → Models would check for this provider and what it costs at list price, before anything is sent. Query: models (optional, comma-separated ids).",
   },
@@ -236,7 +236,7 @@ const providers: readonly RouteTool[] = [
     name: "check_models",
     route: "POST /api/providers/:id/models/check",
     body: checkBody,
-    title: "Check a provider's models",
+    title: "Check a service's models",
     description:
       "Settings → Models' Check models: sends each model the smallest request (one word, a spoken Hi, one small image) to learn whether it works for the saved key or CLI, in the background. A check that costs money is refused with its estimate until the body carries confirmedDollars of at least the estimate's totalDollars (read estimate_model_checks first). Body: {models?: [ids], confirmedDollars?: number}.",
     confirm:
@@ -270,9 +270,9 @@ const providers: readonly RouteTool[] = [
   {
     name: "check_providers",
     route: "POST /api/providers/health",
-    title: "Check providers",
+    title: "Check every service",
     description:
-      "Settings → Providers' Check all: which providers answer and which CLIs are signed in.",
+      "Settings → Keys & services' Check every service: which services answer and which CLIs are signed in.",
     unrecorded: true,
     reachesOut: "asks",
   },

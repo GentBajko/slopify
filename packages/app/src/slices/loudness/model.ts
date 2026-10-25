@@ -9,10 +9,12 @@
 // The ambient bed and the shorts' music are mixed before the master and ducked by the levelled
 // voice, so they keep their place under it.
 //
-// Browser-safe: Play, Edit project and Settings convert the same numbers.
+// Browser-safe: Create, Edit settings and Settings convert the same numbers.
 //
 // A run without the setting has no `loudness` at all, which is what every project saved before
 // it was, and every recipe leaves it out of its fingerprint then.
+
+import { createRows, editSettings } from "../../kernel/ports/settings-places.js";
 
 export interface LoudnessSettings {
   // The long video's and the shorts' integrated loudness, in LUFS.
@@ -127,7 +129,7 @@ export function loudnessProblem(lufs: number, target: LoudnessTarget): string | 
     db >= loudnessDbMin - 1e-9 &&
     db <= loudnessDbMax + 1e-9
     ? undefined
-    : `The volume must be between ${String(loudnessDbMin)} dB and +${String(loudnessDbMax)} dB of the recommended level, in steps of ${String(loudnessDbStep)} dB. Change it under Level the volume (Play → Video and style, Edit project → Pauses and volume, or Settings → General).`;
+    : `The volume must be between ${String(loudnessDbMin)} dB and +${String(loudnessDbMax)} dB of the recommended level, in steps of ${String(loudnessDbStep)} dB. Change it under Level the volume (${createRows.video}, ${editSettings.sound}, or Settings → Production defaults).`;
 }
 
 export function loudnessFields(

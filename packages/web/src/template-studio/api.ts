@@ -229,7 +229,7 @@ export function anatomyQuery(
   };
 }
 
-// Settings → Template studio: the samples' daily budgets and what they spent today.
+// Settings → Production defaults: the samples' daily budgets and what they spent today.
 export const studioSettingsSchema = z
   .object({
     dailyBudget: z.number(),
@@ -281,7 +281,7 @@ export function about(high: number): string {
   return `about ${usd(high)}`;
 }
 
-// Settings → Template studio → Make samples for all: every template needing a sample, priced
+// Settings → Production defaults → Make samples for all: every template needing a sample, priced
 // together first.
 export const forAllQuoteSchema = z
   .object({

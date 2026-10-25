@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isUnreachablePath } from "../../kernel/errors.js";
 import type { Paths } from "../../kernel/paths.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import { discoverSystemFonts } from "./discovery.js";
 import { readFontFile } from "./files.js";
 import type { FontSummary, ResolvedFont } from "./model.js";
@@ -59,7 +60,7 @@ export async function resolveBoldFont(paths: Paths, id: string): Promise<Resolve
 
 export function missingFont(): Error {
   return new Error(
-    "The chosen caption font is no longer available; it may have been uninstalled or deleted. Choose another font in Edit project → Subtitles, then try again.",
+    `The chosen caption font is no longer available; it may have been uninstalled or deleted. Choose another font in ${editSettings.captions}, then try again.`,
     {
       cause: "font-not-found",
     },

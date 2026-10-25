@@ -779,7 +779,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       version,
       env: process.env,
     });
-    // Settings → General → Remote access. It proxies to the port the server really got, read
+    // Settings → Remote access. It proxies to the port the server really got, read
     // when it applies; nothing applies before the server listens.
     const remoteAccess = createRemoteAccessService({
       db,

@@ -2,6 +2,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import {
   type DetectedSpeech,
   defaultSpeechVoice,
@@ -94,7 +95,7 @@ export function systemTts(deps: SystemTtsDeps): TtsPort {
       message:
         found.engines.length === 0
           ? (found.issue ?? `No speech program was found on this computer, ${noSpeechFix}`)
-          : `The speech program "${model}" chosen for this narration isn't on this computer any more. In the Edit tab, choose Edit project and pick another System voice model (${found.engines.map((one) => one.name).join(", ")}) under Providers, then use Continue the run.`,
+          : `The speech program "${model}" chosen for this narration isn't on this computer any more. Pick another voice model (${found.engines.map((one) => one.name).join(", ")}) in ${editSettings.narration}, then use Continue the run.`,
     });
   };
 

@@ -63,7 +63,7 @@ it("admits an Inworld asynchronous narration request above the streaming limit",
     ).toEqual([
       expect.objectContaining({
         field: expect.stringMatching(/^work\.audio:body:.*\.text$/),
-        message: expect.stringContaining("exceeds the current model limit"),
+        message: expect.stringContaining("longer than the voice model takes now"),
       }),
     ]);
     expect(

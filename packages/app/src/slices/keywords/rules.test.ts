@@ -179,7 +179,7 @@ describe("placedProblems", () => {
       {
         field: "articlePrompt",
         message:
-          "{{Slopify_Hook}} at line 1, column 1 can't be used in an Article prompt: it is written from the article, which doesn't exist yet when this prompt runs. Remove it; it works in Image, Thumbnail, Description, Shorts, Review and Post. Change the prompt in Library, or pick another one.",
+          "{{Slopify_Hook}} at line 1, column 1 can't be used in an Article prompt: it is written from the article, which doesn't exist yet when this prompt runs. Remove it; it works in Image, Thumbnail, Description, Shorts, Review and Post. Change the prompt in Prompts, or pick another one.",
       },
     ]);
   });
@@ -221,7 +221,7 @@ describe("textEntryProblems", () => {
       {
         field: "intro",
         message:
-          "{{Slopify_Release_Date}} can't be used in a Text intro: Text is narrated as written, and the release date is only filled in when a step asks the AI model. Set this intro's Mode to LLM in Library → Intros & Outros, or remove the keyword.",
+          "{{Slopify_Release_Date}} can't be used in an intro that says these exact words: those are narrated as written, and the release date is only filled in when a step asks the AI model. In Prompts → Intros and outros, set this intro's What the narrator reads to Let the AI write it from these instructions, or remove the keyword.",
       },
     ]);
     expect(textEntryProblems("Thanks, {{Slopify_Channel}}.", "outro")).toEqual([]);

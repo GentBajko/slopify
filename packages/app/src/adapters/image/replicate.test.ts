@@ -301,7 +301,9 @@ it("refuses an establishing image before sending anything", async () => {
     })
     .catch((error: unknown) => error);
   expect(isProviderError(thrown) && thrown.fault.kind).toBe("unsupported");
-  expect(String(thrown)).toContain("set Establishing image to Off in the Images section");
+  expect(String(thrown)).toContain(
+    "Edit settings → Images, or set Establishing image to Off there",
+  );
   expect(seen).toEqual([]);
 });
 

@@ -406,7 +406,7 @@ it("records a failure with a plain reason and retries on a later tick, not in a 
     const result = await generateTopics(s.deps, s.id);
     expect(result).toMatchObject({ ok: false, reason: "failed" });
     expect(s.read().topics.error).toBe(
-      "Couldn't generate topics: template-llm (template-model) did not answer: Codex is signed out. Check it in Settings → Providers, or pick another LLM under Edit → Topic generation. Slopify tries again in 5 minutes, or press Generate topics now on the Schedules screen.",
+      "Couldn't generate topics: template-llm (template-model) did not answer: Codex is signed out. Check it in Settings → Keys & services, or pick another Service or Model under Edit → Topic generation. Slopify tries again in 5 minutes, or press Generate topics now on the Schedules screen.",
     );
     const runner = createScheduleRunner(s.deps);
     s.at("2026-09-12T00:00:30.000Z");

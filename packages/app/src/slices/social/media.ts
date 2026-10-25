@@ -2,6 +2,7 @@
 // the project's outputs (`sources.ts`); a reshaped picture or a design's render is made the
 // first time it is asked for (`reshape.ts`), so listing a pack never draws anything.
 
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { DesignFormat } from "../designs/model.js";
 import { limitsFor } from "./limits.js";
 import {
@@ -137,7 +138,7 @@ export function mediaFor(
     if (short?.file == null)
       missing(
         short === undefined
-          ? `This project has no short ${String(number)}. Pick another short for ${site} in the post's media, or turn on Shorts in Edit project.`
+          ? `This project has no short ${String(number)}. Pick another short for ${site} in the post's media, or turn on Shorts in ${editSettings.shorts}.`
           : `Short ${String(number)} isn't rendered yet. Let the Video stage finish, then open Copy for YouTube Studio again.`,
       );
     else
@@ -156,7 +157,7 @@ export function mediaFor(
   if (choice.thumbnail === true) {
     if (sources.thumbnail === null)
       missing(
-        "The thumbnail isn't made yet. Let the Thumbnail stage finish, or set Thumbnail in Edit project.",
+        `The thumbnail isn't made yet. Let the Thumbnail stage finish, or set Thumbnail source in ${editSettings.extras}.`,
       );
     else media.push(still(sources, "thumbnail", sources.thumbnail, shape));
   }

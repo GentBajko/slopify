@@ -317,7 +317,7 @@ describe("the cast", () => {
     if (!read.ok) throw new Error("read failed");
     expect(read.value.cast[0]?.images[0]).toMatchObject({
       state: "failed",
-      error: expect.stringContaining("The key was rejected. Check the image provider in Settings"),
+      error: expect.stringContaining("The key was rejected. Check the image service in Settings"),
     });
     expect(generateCastImage(deps, id, { prompt: "x", provider: "fal", model: "f" })).toMatchObject(
       { reason: "no-image-provider" },

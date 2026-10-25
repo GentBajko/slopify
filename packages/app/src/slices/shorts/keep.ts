@@ -1,3 +1,4 @@
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { KeptShort } from "../revisions/model.js";
 import type { PickedSentence } from "./clips.js";
 import { clipBounds, type ShortPick } from "./pick.js";
@@ -104,5 +105,5 @@ export function lostMessage(lost: readonly number[], kept: readonly KeptShort[])
       return short === undefined ? `short ${String(at)}` : `short ${String(at)} ("${short.title}")`;
     })
     .join(", ");
-  return `The narration of ${names} changed, so its moment can't be kept. Open Edit project → Shorts and choose Pick a new moment for it or drop it, then Remake.`;
+  return `The narration of ${names} changed, so its moment can't be kept. Untick it under Keep finished shorts in ${editSettings.shorts}, so a new moment is picked for it, save, then use Choose what to make again (in the project's More menu).`;
 }

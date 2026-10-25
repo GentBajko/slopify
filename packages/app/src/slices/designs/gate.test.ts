@@ -76,12 +76,12 @@ describe("the checks that read this computer", () => {
     h = designHarness();
     const checks = await contextChecks(poster(), "t1", {
       ...ready,
-      providerProblem: async () => "fal.ai has no API key. Add one in Settings → Providers.",
+      providerProblem: async () => "fal.ai has no API key. Add one in Settings → Keys & services.",
     });
     expect(byId(checks, "provider")).toMatchObject({
       ok: false,
-      sentence: "fal.ai has no API key. Add one in Settings → Providers.",
-      fix: { label: "Open Providers", href: "/settings?section=providers" },
+      sentence: "fal.ai has no API key. Add one in Settings → Keys & services.",
+      fix: { label: "Open Keys & services", href: "/settings?section=providers" },
     });
   });
 
@@ -156,7 +156,7 @@ describe("the sample Mark ready asks for", () => {
       id: "sample",
       ok: false,
       sentence:
-        "Version 1 has no sample yet. Make its sample, look it over beside the settings, then press Mark ready.",
+        "Version 1 has no sample yet. Make its sample, look it over beside the settings, then press Approve for schedules.",
       fix: { label: "Open Picture", href: "/library/design-templates/t1#picture" },
     });
     const row = {
@@ -175,7 +175,7 @@ describe("the sample Mark ready asks for", () => {
     expect(sampleCheck(h.db, "t1", 2)).toMatchObject({
       ok: false,
       sentence:
-        "Version 2 has no sample yet: the one shown is of version 1. Make its sample, look it over beside the settings, then press Mark ready.",
+        "Version 2 has no sample yet: the one shown is of version 1. Make its sample, look it over beside the settings, then press Approve for schedules.",
     });
   });
 });

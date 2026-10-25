@@ -8,11 +8,11 @@ const signedOutCodex =
 const signedOutClaude =
   'The Claude Code CLI is not signed in, or its sign-in has expired. Open a terminal on the computer running the CLI, run "claude auth login" and sign in, then use Try again.';
 const rejectedKey =
-  "ElevenLabs did not accept the API key (error 401). The key may be wrong, expired or revoked: paste a current key in Settings → Providers, then use Try again.";
+  "ElevenLabs did not accept the API key (error 401). The key may be wrong, expired or revoked: paste a current key in Settings → Keys & services, then use Try again.";
 const noKey =
-  "No OpenRouter API key is saved. Add one in Settings → Providers, then use Try again.";
+  "No OpenRouter API key is saved. Add one in Settings → Keys & services, then use Try again.";
 const refused = (provider: string): string =>
-  `${provider} refused to make this image under its content rules. Reword the image prompt in the Images section of Edit project, or choose another image provider in its Providers section.`;
+  `${provider} refused to make this image under its content rules. Reword the image prompt in Edit settings → Images, or choose another image service there.`;
 
 describe("fixFor", () => {
   it("offers to sign in to the CLI the failure names, with the command to run", () => {
@@ -44,12 +44,12 @@ describe("fixFor", () => {
       }),
     ).toEqual({
       kind: "provider-settings",
-      label: "Open Settings → Providers → ElevenLabs",
+      label: "Open Settings → Keys & services → ElevenLabs",
       provider: "elevenlabs",
     });
     expect(fixFor({ stage: "article", reason: noKey, provider: "openrouter" })).toMatchObject({
       kind: "provider-settings",
-      label: "Open Settings → Providers → OpenRouter",
+      label: "Open Settings → Keys & services → OpenRouter",
     });
   });
 

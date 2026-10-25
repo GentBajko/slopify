@@ -28,7 +28,7 @@ it("signs a CLI in for a cast picture, then makes it again", async () => {
   const run = vi.fn();
   renderRouted(
     <PictureFailure
-      error="The picture couldn't be made: The Codex CLI is not signed in, or its sign-in has expired. Check the image provider in Settings → Providers, then press Generate again."
+      error="The picture couldn't be made: The Codex CLI is not signed in, or its sign-in has expired. Check the image service in Settings → Keys & services, then press Make the picture again."
       retry={{ run, busy: false }}
       onReword={() => undefined}
     />,
@@ -63,7 +63,9 @@ it("rewords a refused cast picture and links a rejected key to its settings", as
     testDeps({}),
   );
   expect(
-    (await screen.findByRole("link", { name: "Open Settings → Providers" })).getAttribute("href"),
+    (await screen.findByRole("link", { name: "Open Settings → Keys & services" })).getAttribute(
+      "href",
+    ),
   ).toContain("section=providers");
 });
 

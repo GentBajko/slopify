@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import type { Paths } from "../../kernel/paths.js";
 import { languageInfo, languageLetters, type WritingSystem } from "../../kernel/ports/languages.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import { resolveBoldFont, resolveFont } from "./catalog.js";
 import { discoverSystemFonts } from "./discovery.js";
 import { readFontFile } from "./files.js";
@@ -57,7 +58,7 @@ export async function captionFont(
   }
   for (const font of await deps.system()) if (await covers(font, letters)) return font;
   throw new Error(
-    `The caption font ${chosen.name} has no ${info.name} letters, and Slopify doesn't ship a font for ${info.name} (they are 10-20 MB). In Edit project → Subtitles, use Upload font in the caption font picker to add a font that has them (for example Noto Sans ${info.code === "ja" ? "JP" : info.code === "ko" ? "KR" : "SC"} from fonts.google.com), choose it there, then Try again.`,
+    `The caption font ${chosen.name} has no ${info.name} letters, and Slopify doesn't ship a font for ${info.name} (they are 10-20 MB). In ${editSettings.captions}, use Upload font in the caption font picker to add a font that has them (for example Noto Sans ${info.code === "ja" ? "JP" : info.code === "ko" ? "KR" : "SC"} from fonts.google.com), choose it there, then Try again.`,
   );
 }
 

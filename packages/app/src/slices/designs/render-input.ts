@@ -30,7 +30,7 @@ export function prepare(
     return {
       ok: false,
       reason: "not-found",
-      message: "This design no longer exists. Open Library → Designs to choose another.",
+      message: "This design no longer exists. Go back to Designs to choose another.",
     };
   const parsed = designDocumentSchema.safeParse(design.document);
   if (!parsed.success)

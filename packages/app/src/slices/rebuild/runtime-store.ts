@@ -265,7 +265,13 @@ export function projectStandings(deps: RevisionDeps, projectId: string): readonl
     }, 0);
     // A failed step, or else one waiting to run again, says why on the stage row. A failed
     // stage keeps the moment it failed: needs_attention tells a narration retry started after
-    // the failure (still going) from one started before it (spent) by it.
+    // the failure (still going) from one started before it (spent) by it. A stage's start is
+    // the moment it went running, kept through a wait to retry, between its steps (one done,
+    // the next not claimed yet) and once it ends; a pending start is kept only then, so a
+    // stage made again after it was done takes a new one when it runs. A done
+    // stage keeps the moment it finished: the project's run length, the time left on a running
+    // step and the usual time a step takes (`eta/history.ts`) read them, and a later save that
+    // changes nothing in the stage moves neither.
     const failed =
       all.find((work) => work.state === "failed") ??
       (stage.retryAt === undefined || stage.retryAt === null
@@ -281,7 +287,16 @@ export function projectStandings(deps: RevisionDeps, projectId: string): readonl
       .prepare(
         `UPDATE stages SET state=:state,failure_reason=:reason,failure_kind=:kind,retry_at=:retryAt,
            progress_current=:current,progress_total=:total,
-           finished_at=CASE WHEN :state='done' THEN :now
+           started_at=CASE
+             WHEN :state='running' THEN CASE
+               WHEN started_at IS NOT NULL AND state IN ('running','pending') THEN started_at
+               ELSE :now END
+             WHEN :state IN ('done','failed') THEN started_at
+             WHEN :state='pending' AND :retryAt IS NOT NULL THEN started_at
+             WHEN :state='pending' AND state IN ('running','pending') AND :current > 0 THEN started_at
+             ELSE NULL END,
+           finished_at=CASE
+             WHEN :state='done' THEN CASE WHEN state='done' AND finished_at IS NOT NULL THEN finished_at ELSE :now END
              WHEN :state='failed' THEN CASE WHEN state='failed' AND finished_at IS NOT NULL THEN finished_at ELSE :now END
              ELSE NULL END
          WHERE project_id=:projectId AND kind=:stage`,

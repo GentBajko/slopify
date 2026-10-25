@@ -46,7 +46,7 @@ describe("checkPost", () => {
   it("refuses an empty post and one over the limit, saying what to do", () => {
     expect(checkPost(' "" ', postTarget("x"))).toMatch(/sent back an empty X post\. Use Try again/);
     expect(checkPost("a".repeat(301), postTarget("bluesky"))).toMatch(
-      /Bluesky post is 301 characters; it may be at most 300\..*Library → Prompts → Post/,
+      /Bluesky post is 301 characters; it may be at most 300\..*in Prompts → Post/,
     );
   });
 });

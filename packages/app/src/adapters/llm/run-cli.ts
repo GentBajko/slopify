@@ -5,6 +5,7 @@ import { cliCommand } from "../../kernel/cli-command.js";
 import { redact } from "../../kernel/log.js";
 import type { Message } from "../../kernel/ports/llm.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import { cliName, commandOf, quoted } from "../explain.js";
 import { safeJson } from "../http-failure.js";
 
@@ -194,8 +195,7 @@ export function cliInput(text: string): string {
   if (Buffer.byteLength(text) >= 8 * 1024 * 1024)
     throw providerError({
       kind: "unsupported",
-      message:
-        "This prompt is larger than the CLI accepts (8 MB), so nothing was sent. Make the inputs shorter in Edit project, or choose an API provider such as OpenRouter in its Providers section, then use Try again.",
+      message: `This prompt is larger than the CLI accepts (8 MB), so nothing was sent. Make the article or its research notes shorter in ${editSettings.article}, or choose an API service such as OpenRouter under Written by there, then use Try again.`,
     });
   return text;
 }
@@ -231,7 +231,7 @@ export function promptOf(messages: readonly Message[]): string {
 export function endedWithout(binary: string, ended: CliEnded, stderr: string): string {
   const said = redact(stderr.trim());
   if (ended.error !== null)
-    return `The ${cliName(binary)} could not be started${quoted("", redact(ended.error.message))}. Check it is installed and set up in Settings → Providers, then use Try again.`;
+    return `The ${cliName(binary)} could not be started${quoted("", redact(ended.error.message))}. Check it is installed and set up in Settings → Keys & services, then use Try again.`;
   const how = ended.code === null ? "killed by the system" : `exit code ${String(ended.code)}`;
   return `The ${cliName(binary)} stopped without answering${quoted(how, said)}. Run ${commandOf(binary)} in a terminal to check it works and is signed in, then use Try again.`;
 }

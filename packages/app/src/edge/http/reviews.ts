@@ -169,7 +169,7 @@ export function reviewRoutes(deps: AppDeps) {
       result.reason === "running"
         ? "This item, or work that depends on it, is still running. Wait for it to finish, or Pause the project, then use Redo again."
         : result.reason === "readiness"
-          ? "Slopify can't make this item again yet. Fix what is listed in Settings → Providers or Edit project, then use Redo again."
+          ? "Slopify can't make this item again yet. Fix what is listed in Settings → Keys & services or Edit settings, then use Redo again."
           : result.reason === "conflict" || result.reason === "control-changed"
             ? "This project changed since the page loaded. Reload the project page, then use Redo again."
             : result.reason === "invalid-selection"

@@ -199,7 +199,7 @@ describe("a design template's sample", () => {
     const held = off.save(onPlan(prompt("A neon stage")), 0);
     expect(held?.state).toBe("held");
     expect(held?.heldReason).toBe(
-      "Waiting: this sample's picture runs on your CLI plan, and samples may not use CLI plans. Turn on Samples may use my CLI plans in Settings → Template studio, or press Make sample to make it anyway.",
+      "Waiting: this sample's picture runs on your CLI plan, and samples may not use CLI plans. Turn on Samples may use my CLI plans in Settings → Production defaults, or press Make sample to make it anyway.",
     );
     await tick();
     expect(off.calls).toHaveLength(0);

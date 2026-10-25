@@ -3,6 +3,7 @@ import { redact } from "../../kernel/log.js";
 import type { GeneratedImage, ImagePort, ImageRequest } from "../../kernel/ports/image.js";
 import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import { httpFailure, noImage, refusedImage, unreadable } from "../explain.js";
 import {
   failureText,
@@ -148,7 +149,7 @@ function decode(b64: string): GeneratedImage {
   if (mime === undefined) {
     throw providerError({
       kind: "other",
-      message: `OpenAI sent back something that is not a PNG or JPEG image (${describeBytes(bytes)}). Use Try again; if it keeps happening, choose another image model in the Providers section of Edit project.`,
+      message: `OpenAI sent back something that is not a PNG or JPEG image (${describeBytes(bytes)}). Use Try again; if it keeps happening, choose another image model in ${editSettings.images}.`,
     });
   }
   return { bytes, mime };
