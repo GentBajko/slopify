@@ -45,11 +45,10 @@ function Harness({
     gates: [],
     outdated: [],
     waits: [],
-    uploadReady: false,
+    videoReady: false,
     actions,
     controller: { review, pending: false } as unknown as RevisionController,
     openSection,
-    openUpload: () => undefined,
   });
   return (
     <>

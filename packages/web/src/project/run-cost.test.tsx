@@ -1,19 +1,10 @@
 import type { CostEstimate } from "@app/slices/estimate/index.js";
 import type { PlanWindowUse, RunCost } from "@app/slices/run-cost/panel.js";
 import { act, cleanup, render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RunReview } from "@/play/run-review";
 import { jsonAnswer, renderApp, testDeps } from "@/test-app";
-import {
-  limitWaitMessage,
-  planLine,
-  planUse,
-  RunClock,
-  RunCostPanel,
-  RunCostSummary,
-  usage,
-} from "./run-cost";
+import { planLine, planUse, RunClock, RunCostPanel, usage } from "./run-cost";
 
 afterEach(cleanup);
 
@@ -28,38 +19,6 @@ const weekly: PlanWindowUse = {
   nowPercent: 15,
   resetsAt: null,
 };
-
-describe("the plan-limit status line", () => {
-  it("names the CLI and when it resets", () => {
-    const message = limitWaitMessage([
-      {
-        account: "codex",
-        name: "Codex",
-        stage: "images",
-        resetsAt: new Date(new Date().setHours(14, 0, 0, 0)).toISOString(),
-        retryAt: new Date(new Date().setHours(14, 2, 0, 0)).toISOString(),
-      },
-    ]);
-    const at = new Date(new Date().setHours(14, 0, 0, 0));
-    const time = at.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-    expect(message?.startsWith(`Waiting for Codex limits (resets at ${time}).`)).toBe(true);
-    expect(message).toContain("carries on by itself");
-    expect(limitWaitMessage([])).toBeUndefined();
-  });
-  it("says when it checks again if the CLI gave no reset time", () => {
-    expect(
-      limitWaitMessage([
-        {
-          account: "gemini",
-          name: "Gemini",
-          stage: "article",
-          resetsAt: null,
-          retryAt: new Date(new Date().setHours(10, 30, 0, 0)).toISOString(),
-        },
-      ]),
-    ).toContain("Waiting for Gemini limits (checking again at ");
-  });
-});
 
 describe("the Run cost summary", () => {
   it("shows a CLI run as $0 on the plan with its API price", () => {
@@ -249,37 +208,6 @@ describe("the Run cost tab", () => {
     );
     const byModel = await screen.findByRole("table", { name: "Run cost by model" });
     expect(within(byModel).getByText("$0 · sample, free")).toBeTruthy();
-  });
-
-  it("sums the finished run up in one line on the project page, linking to the tab", async () => {
-    const user = userEvent.setup();
-    const onOpen = vi.fn();
-    render(<RunCostSummary cost={cost} status="done" onOpen={onOpen} />);
-    const line = screen.getByRole("region", { name: "Run cost" });
-    expect(line.textContent).toContain("This run cost $3.37 · ~$1.50 via API · 9 min 0 s of work");
-    await user.click(within(line).getByRole("button", { name: "See cost by stage" }));
-    expect(onOpen).toHaveBeenCalledOnce();
-    cleanup();
-    render(<RunCostSummary cost={cost} status="failed" onOpen={onOpen} />);
-    expect(screen.getByRole("region", { name: "Run cost" }).textContent).toContain(
-      "Spent so far $3.37",
-    );
-  });
-
-  it("stays away while the run goes on or before anything was spent", () => {
-    for (const status of ["running", "paused", "pending"] as const) {
-      render(<RunCostSummary cost={cost} status={status} onOpen={() => undefined} />);
-      expect(screen.queryByRole("region", { name: "Run cost" })).toBeNull();
-      cleanup();
-    }
-    render(
-      <RunCostSummary
-        cost={{ ...cost, calls: 0, byStage: [] }}
-        status="done"
-        onOpen={() => undefined}
-      />,
-    );
-    expect(screen.queryByRole("region", { name: "Run cost" })).toBeNull();
   });
 });
 

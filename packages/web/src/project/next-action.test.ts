@@ -46,7 +46,7 @@ function input(over: Partial<NextActionInput> = {}): NextActionInput {
     held: [],
     outdated: [],
     waits: [],
-    uploadReady: true,
+    videoReady: true,
     fixOf: (one) =>
       fixFor({
         stage: one.kind,
@@ -194,6 +194,7 @@ describe("the next action", () => {
     );
     expect(key?.action?.intent).toEqual({ kind: "open-settings", section: "providers" });
     expect(key?.section).toBe("narration");
+    expect(key?.title).toBe("The service did not accept its key, so the narration stopped.");
     const disk = nextActionFor(
       input({
         project: { status: "failed", config },
@@ -247,7 +248,7 @@ describe("the next action", () => {
         stages: [stage("images", "pending"), stage("video", "pending")],
         held: [{ checkpointId: "c2", stage: "video", dependents: [] }],
         resumable: false,
-        uploadReady: false,
+        videoReady: false,
       }),
     );
     expect(next).toMatchObject({
@@ -265,7 +266,7 @@ describe("the next action", () => {
         project: { status: "pending", config, waitingForAgent: true, setAside: true },
         stages: [stage("images", "pending"), stage("video", "pending")],
         resumable: false,
-        uploadReady: false,
+        videoReady: false,
       }),
     );
     expect(next).toMatchObject({ situation: "done", status: "Kept as is" });
@@ -366,7 +367,7 @@ describe("the next action", () => {
     );
     expect(
       nextActionFor(
-        input({ project: { status: "pending", config }, resumable: true, uploadReady: false }),
+        input({ project: { status: "pending", config }, resumable: true, videoReady: false }),
       )?.situation,
     ).toBe("stopped");
   });
@@ -376,21 +377,25 @@ describe("the next action", () => {
       input({
         project: { status: "pending", config, setAside: true },
         resumable: true,
-        uploadReady: false,
+        videoReady: false,
       }),
     );
     expect(next?.status).toBe("Kept as is");
     expect(next?.action).toBeUndefined();
-    // With its video made, it is ready to upload like a finished run.
+    // With its video made, it downloads like a finished run, and says what is left.
     expect(
       nextActionFor(
         input({
           project: { status: "pending", config, setAside: true },
           resumable: true,
-          uploadReady: true,
+          videoReady: true,
         }),
-      )?.action?.label,
-    ).toBe("Copy for YouTube Studio");
+      ),
+    ).toMatchObject({
+      status: "Kept as is",
+      title: "The video is ready; what is left won't run.",
+      action: { label: "Download video", intent: { kind: "download" } },
+    });
   });
 
   it("says a queued run waits for its turn, without a button", () => {
@@ -398,14 +403,14 @@ describe("the next action", () => {
       input({
         project: { status: "pending", config },
         stages: [stage("article", "pending")],
-        uploadReady: false,
+        videoReady: false,
       }),
     );
     expect(next?.situation).toBe("queued");
     expect(next?.action).toBeUndefined();
   });
 
-  it("remakes exactly the outdated images after an edit", () => {
+  it("makes exactly the outdated images again after an edit", () => {
     const next = nextActionFor(
       input({
         outdated: [
@@ -423,7 +428,7 @@ describe("the next action", () => {
       title: "3 images are outdated after your edit.",
       section: "images",
       action: {
-        label: "Remake 3 outdated images",
+        label: "Make the 3 outdated images again",
         intent: { kind: "remake", workKeys: ["image:a", "image:b", "image:c"] },
       },
     });
@@ -440,7 +445,7 @@ describe("the next action", () => {
       }),
     );
     expect(next?.action).toEqual({
-      label: "Remake the outdated video",
+      label: "Make the outdated video again",
       intent: { kind: "remake", workKeys: ["export:video", "subtitles:files"] },
     });
     expect(next?.title).toBe("The video is outdated after your edit.");
@@ -453,23 +458,25 @@ describe("the next action", () => {
         { workKey: "shorts:2:render", role: "short_video" },
         { workKey: "image:a", role: "image" },
       ]).map((group) => group.label),
-    ).toEqual(["Remake the outdated image", "Remake 2 outdated shorts"]);
+    ).toEqual(["Make the outdated image again", "Make the 2 outdated shorts again"]);
   });
 
-  it("offers Copy for YouTube Studio once the video is done", () => {
+  it("offers Download video once the video is done, uploaded or not", () => {
     const next = nextActionFor(input());
     expect(next).toMatchObject({
       situation: "done",
-      section: "youtube",
-      action: { label: "Copy for YouTube Studio", intent: { kind: "prepare-upload" } },
+      status: "Done",
+      title: "Your video is ready.",
+      section: "video",
+      action: { label: "Download video", intent: { kind: "download" } },
     });
     expect(nextActionFor(input({ project: { status: "partial", config } }))?.situation).toBe(
       "done",
     );
   });
 
-  it("shows nothing when a finished run has nothing to upload", () => {
-    expect(nextActionFor(input({ uploadReady: false }))).toBeUndefined();
+  it("shows nothing when a finished run made no video", () => {
+    expect(nextActionFor(input({ videoReady: false }))).toBeUndefined();
   });
 
   it("orders the situations: paused, failed, held, waiting, running, outdated, done", () => {
@@ -499,7 +506,7 @@ describe("the next action", () => {
     ).toBe("outdated");
   });
 
-  it("leads a finished short to the full video on its topic, ahead of Copy for YouTube Studio", () => {
+  it("leads a finished short to the full video on its topic, ahead of its download", () => {
     const short = { ...config, mode: "short" } as ProjectSummary["config"];
     expect(nextActionFor(input({ project: { status: "done", config: short } }))).toMatchObject({
       situation: "done",
@@ -508,8 +515,8 @@ describe("the next action", () => {
     });
     // Not before it is done, and never for a long video.
     expect(
-      nextActionFor(input({ project: { status: "partial", config: short }, uploadReady: false })),
+      nextActionFor(input({ project: { status: "partial", config: short }, videoReady: false })),
     ).toBeUndefined();
-    expect(nextActionFor(input())?.action?.intent.kind).toBe("prepare-upload");
+    expect(nextActionFor(input())?.action?.intent.kind).toBe("download");
   });
 });

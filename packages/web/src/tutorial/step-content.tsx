@@ -269,23 +269,24 @@ export function StepContent({
       return (
         <>
           <p>
-            The rail on the left lists the project's sections: Article, Narration, Images, Video and
-            the rest. The right rail says where the run stands and offers the one thing to do next,
-            named for its result: <strong>Pause</strong> while it runs,{" "}
-            <strong>Continue the run</strong> when it is paused, <strong>Try images again</strong>{" "}
-            when a step fails.
+            The list on the right shows each part the project makes, such as Article, Narration,
+            Images and Video, with its state in words; press one to open it. The title row’s first
+            button is the one thing to do next, named for its result: <strong>Pause</strong> while
+            it runs, <strong>Continue the run</strong> when it is paused,{" "}
+            <strong>Try images again</strong> when a step fails.
           </p>
           <p>
-            Press <strong>Edit settings</strong> to change providers, models, voice, prompts or
-            optional steps. <strong>Save changes</strong> keeps a new revision without starting
-            generation; what the change made outdated is then offered as the next action, such as{" "}
-            <strong>Remake 3 outdated images</strong>. Earlier revisions stay in{" "}
-            <strong>History</strong>.
+            Press <strong>Edit settings</strong> to change the services, models, voice, prompts or
+            extras. <strong>Save changes</strong> keeps a new version without making anything; what
+            the change made outdated is then offered as the next thing to do, with what it makes
+            again and what that costs. Earlier versions stay under Edit settings,{" "}
+            <strong>Versions</strong>.
           </p>
           <p>
-            A failed step says why beside it; open <strong>Error details</strong> for the provider's
-            own message. Rare actions, such as making a whole stage again, sit behind each section's{" "}
-            <strong>More</strong> button and in the command palette (Ctrl+K).
+            A failed step says why beside it; open <strong>Error details</strong> for the service’s
+            own message. Each part’s heading has the button that makes it all again, with its cost,
+            such as <strong>Make the video again (free)</strong>. Everything else is under{" "}
+            <strong>More</strong> and in the command palette (Ctrl+K).
           </p>
         </>
       );

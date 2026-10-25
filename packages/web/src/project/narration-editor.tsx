@@ -114,7 +114,7 @@ export function NarrationEditor({
         <HelpLine>
           The narration in the chunks it was spoken in: edit a chunk's words, replace its audio with
           your own file, or mark it to be spoken again. Only the chunks you change are made again,
-          paid per character, once you save and remake.
+          paid per character, once you save and make the outdated narration again.
         </HelpLine>
       </div>
       {edit.config.chunking?.mode === "whole" || edit.config.chunking === undefined ? (
@@ -203,7 +203,8 @@ export function NarrationEditor({
             />
             {edit.regenerate?.includes(chunk.key) ? (
               <p className="flex flex-wrap items-center gap-2 text-small text-accent-ink">
-                Narration chunk {index + 1} is spoken again once you save and remake.
+                Narration chunk {index + 1} is spoken again once you save and make the outdated
+                narration again.
                 <Button
                   type="button"
                   variant="quiet"

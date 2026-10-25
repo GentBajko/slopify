@@ -26,6 +26,13 @@ describe("provider model API", () => {
     expect(query).toBe("?refresh=1");
   });
 
+  it("asks nothing for a sample's stand-in services, whose list is empty", async () => {
+    // No route: a request would be answered 404 and the call would throw.
+    const { api } = testDeps({});
+    for (const provider of ["sample-writer", "sample-artist", "sample-voice"])
+      expect(await listProviderModels(api, provider)).toEqual({ models: [], allowsCustom: false });
+  });
+
   it("reports a failed discovery request without inventing model options", async () => {
     const { api } = testDeps({
       "GET /api/providers/codex/models": problemAnswer("Discovery failed.", 503),

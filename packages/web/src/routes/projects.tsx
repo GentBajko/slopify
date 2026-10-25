@@ -142,7 +142,8 @@ export function ProjectsRoute({
       notify(
         input.uploaded
           ? `Marked uploaded: ${input.project.title}.`
-          : `${input.project.title} is back on Ready to upload.`,
+          : // The long video's YouTube link and the mark are one fact (`studio/videos.ts`).
+            `${input.project.title} is back on Ready to upload, and any YouTube link saved for its video is forgotten.`,
         "success",
         input.uploaded
           ? { label: "Undo", run: () => uploaded.mutate({ ...input, uploaded: false }) }

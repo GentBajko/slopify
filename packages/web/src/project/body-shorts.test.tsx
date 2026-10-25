@@ -208,9 +208,11 @@ it("does not show a video made before the current pick under the new clip", asyn
   expect(screen.getAllByText("Not made yet. It is made with the video.")).toHaveLength(2);
 });
 
-it("says the clips come after the subtitle timing before they are picked", async () => {
+it("says the clips come once the captions are timed, before they are picked", async () => {
   mount([], "running");
-  expect(await screen.findByText("The clips are picked after the subtitle timing.")).not.toBeNull();
+  expect(
+    await screen.findByText("The clips are picked once the captions are timed."),
+  ).not.toBeNull();
 });
 
 it("ends the copied description with the project's link to the full video", async () => {
@@ -236,13 +238,15 @@ it("keeps showing a short made before the pick when the pick chose the same sent
   expect(await within(cards[0] as HTMLElement).findByLabelText("Short 1")).not.toBeNull();
 });
 
-it("opens Edit project to make one short again, or to pick different moments", async () => {
+it("opens Edit settings to make one short again, or to pick different moments", async () => {
   const requests: EditRequest[] = [];
   mount([pick, first], "done", undefined, { requestEdit: (request) => requests.push(request) });
   const cards = await screen.findAllByRole("listitem");
-  // Make again is the rare one: quiet, in words, under the card's other actions.
+  // Make this short again is the rare one: quiet, in words, under the card's other actions.
   await userEvent.click(
-    within(cards[1] as HTMLElement).getByRole("button", { name: "Make short 2 again" }),
+    within(cards[1] as HTMLElement).getByRole("button", {
+      name: "Make this short again (short 2)",
+    }),
   );
   await userEvent.click(screen.getByRole("button", { name: "Pick different moments · 1 AI call" }));
   const view = revisionView();

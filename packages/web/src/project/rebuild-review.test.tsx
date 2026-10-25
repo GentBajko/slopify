@@ -63,9 +63,7 @@ it("blocks unavailable work and locks consent while starting", () => {
     work: preview.work.map((work) => ({ ...work, disposition: "blocked" as const })),
   };
   render(<RebuildReview preview={blocked} pending onStart={() => {}} onCancel={() => {}} />);
-  expect(
-    screen.getByRole("button", { name: "Starting the remake…" }).hasAttribute("disabled"),
-  ).toBe(true);
+  expect(screen.getByRole("button", { name: "Starting…" }).hasAttribute("disabled")).toBe(true);
   for (const input of screen.getAllByRole("checkbox"))
     expect(input.hasAttribute("disabled")).toBe(true);
 });
@@ -309,7 +307,7 @@ it("says what is made again, what is rebuilt on this computer and what stays", (
       onCancel={() => {}}
     />,
   );
-  const scope = screen.getByRole("list", { name: "What this remake does" });
+  const scope = screen.getByRole("list", { name: "What this does" });
   expect(scope.textContent).toContain("Made again, charged: Image request 1.");
   expect(scope.textContent).toContain("Then rebuilt on this computer, free: Video export.");
   expect(scope.textContent).toContain("Stays as it is: 2 image requests.");

@@ -47,7 +47,7 @@ describe("the sample project", () => {
   it("shows its settings read-only, with Save off and the reason above them", async () => {
     mount(true);
     await openProjectSection("Settings");
-    const form = await screen.findByRole("form", { name: "Edit project" });
+    const form = await screen.findByRole("form", { name: "Edit settings" });
     // Said in a line over the form, not only as the disabled button's reason.
     await waitFor(() =>
       expect(
@@ -74,7 +74,7 @@ describe("a project's own settings", () => {
   it("light Save only once something changed, and say so until then", async () => {
     mount(false);
     await openProjectSection("Settings");
-    const form = await screen.findByRole("form", { name: "Edit project" });
+    const form = await screen.findByRole("form", { name: "Edit settings" });
     expect(within(form).getByText("Nothing to save yet: change a setting first.")).not.toBeNull();
     expect(
       within(form)

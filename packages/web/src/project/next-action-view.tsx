@@ -3,7 +3,9 @@ import type { CheckpointHold } from "@app/slices/reviews/holds.js";
 import type { LimitWait } from "@app/slices/run-cost/panel.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { DownloadIcon } from "lucide-react";
 import { type ReactElement, type ReactNode, useEffect, useRef, useState } from "react";
+import { fileUrl } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Callout, type CalloutTone } from "@/components/kit/callout";
@@ -11,7 +13,7 @@ import { ariaKeyShortcuts } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { HelpLine } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
-import { ButtonLink } from "@/components/kit/link";
+import { ButtonLink, FileLink } from "@/components/kit/link";
 import { copyText, SignInActions } from "@/fixes/fix-actions";
 import { sentence } from "@/http";
 import { shortcuts } from "@/lib/shortcuts";
@@ -44,6 +46,8 @@ export interface NextActionState {
   readonly pending: boolean;
   // What the last press said, when it did not work.
   readonly message: string | undefined;
+  // The project's finished video, which Download video saves.
+  readonly download: string;
 }
 
 export function useNextAction({
@@ -55,11 +59,10 @@ export function useNextAction({
   gates,
   outdated,
   waits,
-  uploadReady,
+  videoReady,
   actions,
   controller,
   openSection,
-  openUpload,
 }: {
   readonly project: ProjectSummary;
   readonly stages: readonly Stage[];
@@ -70,11 +73,11 @@ export function useNextAction({
   readonly gates: readonly CheckpointGate[];
   readonly outdated: readonly OutdatedOutput[];
   readonly waits: readonly LimitWait[];
-  readonly uploadReady: boolean;
+  // A finished video file is there to download.
+  readonly videoReady: boolean;
   readonly actions: ProjectActions;
   readonly controller: RevisionController;
   readonly openSection: (section: SectionId) => void;
-  readonly openUpload: () => void;
 }): NextActionState {
   const { api } = useApp();
   const client = useQueryClient();
@@ -97,6 +100,7 @@ export function useNextAction({
       stage: gate.stage,
       dependents: gate.dependents,
     }));
+  const download = fileUrl(api, project.id, "video");
   const next = nextActionFor({
     project,
     stages,
@@ -105,7 +109,7 @@ export function useNextAction({
     held,
     outdated,
     waits,
-    uploadReady,
+    videoReady,
     fixOf: (stage) => fixOf(stage, project),
     clock: clockTime,
   });
@@ -210,9 +214,14 @@ export function useNextAction({
       case "open-settings":
         void navigate({ to: "/settings", search: { section: intent.section } });
         return;
-      case "prepare-upload":
-        openUpload();
+      // From the command palette: the same file the title row's Download video links to.
+      case "download": {
+        const link = document.createElement("a");
+        link.href = download;
+        link.download = "";
+        link.click();
         return;
+      }
       case "full-video":
         full.mutate();
         return;
@@ -220,7 +229,7 @@ export function useNextAction({
   };
   const pending =
     copy.isPending || full.isPending || approve.isPending || actions.pending || controller.pending;
-  return { next, run, pending, message };
+  return { next, run, pending, message, download };
 }
 
 // "Continuing…": the button's label while its own press is under way.
@@ -276,6 +285,21 @@ function ActionButton({
           busy: state.pending,
         }}
       />
+    );
+  if (intent.kind === "download")
+    return (
+      <FileLink
+        href={state.download}
+        download
+        variant={variant}
+        aria-keyshortcuts={
+          variant === "primary" ? ariaKeyShortcuts(shortcuts.nextAction) : undefined
+        }
+        {...(className === undefined ? {} : { className })}
+      >
+        <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
+        {action.label}
+      </FileLink>
     );
   if (intent.kind === "open-settings")
     return (
@@ -340,11 +364,16 @@ export function NextActionButton({
 }
 
 // The situations no section callout says and the title row's state word does not cover: the
-// sample, a paused, stopped or queued run, a run parked on an agent, a finished short.
+// sample, a paused, stopped or queued run, a run parked on an agent, a finished short, a video
+// kept as is with work left. A plain Done says itself in the title row's state word.
 function noted(next: NextAction): boolean {
   if (next.situation === "running") return false;
   if (calloutTone[next.situation] !== undefined && next.section !== undefined) return false;
-  return !(next.situation === "done" && next.action?.intent.kind === "prepare-upload");
+  return !(
+    next.situation === "done" &&
+    next.status === "Done" &&
+    next.action?.intent.kind === "download"
+  );
 }
 
 // One line under the title row: what the situation is and what the button does, only where

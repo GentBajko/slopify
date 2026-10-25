@@ -126,7 +126,7 @@ export function RevisionHistory({
                     <Button
                       size="small"
                       disabled={pending}
-                      disabledReason="Wait until the open change or remake is done"
+                      disabledReason="Wait until the save or the work under way is done"
                       onClick={() => setRestoring({ id: revision.id, number })}
                     >
                       Restore

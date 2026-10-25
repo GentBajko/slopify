@@ -146,10 +146,10 @@ describe("subtitle downloads and playback", () => {
       `${testOrigin}/files/p1/subtitles-vtt`,
     );
     expect(video.querySelector("track")?.getAttribute("srclang")).toBe("en");
-    expect((await downloadItem("Subtitles (.srt)")).getAttribute("href")).toBe(
+    expect((await downloadItem("Captions (.srt)")).getAttribute("href")).toBe(
       `${testOrigin}/files/p1/subtitles-srt`,
     );
-    expect((await downloadItem("Subtitles (.vtt)")).getAttribute("href")).toBe(
+    expect((await downloadItem("Captions (.vtt)")).getAttribute("href")).toBe(
       `${testOrigin}/files/p1/subtitles-vtt`,
     );
   });
@@ -173,7 +173,7 @@ describe("subtitle downloads and playback", () => {
         }),
       );
       expect((await screen.findByLabelText("Generated video")).querySelector("track")).toBeNull();
-      expect(await downloadItem("Subtitles (.srt)")).not.toBeNull();
+      expect(await downloadItem("Captions (.srt)")).not.toBeNull();
     },
   );
 
@@ -218,7 +218,7 @@ describe("subtitle downloads and playback", () => {
       }),
     );
     await screen.findByLabelText("Combined narration");
-    expect(await downloadItem("Subtitles (.srt)")).not.toBeNull();
+    expect(await downloadItem("Captions (.srt)")).not.toBeNull();
     expect(screen.queryByLabelText("Captions", { selector: "select" })).toBeNull();
     expect(screen.queryByLabelText("Generated video")).toBeNull();
   });
@@ -244,8 +244,8 @@ it("shows persisted missing narration notes alongside downloadable subtitles", a
     <ProjectRoute projectId="p1" />,
     deps({ ...fontRoute, "GET /api/projects/p1": jsonAnswer(value) }),
   );
-  await userEvent.click(await screen.findByText("Passages left out of the subtitles"));
+  await userEvent.click(await screen.findByText("Passages left out of the captions"));
   expect(screen.getByText(/The missing transcript passage\./)).not.toBeNull();
   expect(screen.getByRole("button", { name: "Play from 2:41" })).not.toBeNull();
-  expect(await downloadItem("Subtitles (.srt)")).not.toBeNull();
+  expect(await downloadItem("Captions (.srt)")).not.toBeNull();
 });

@@ -4,9 +4,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { readDraft } from "@/lib/draft-store";
 import { isRevisionEdit } from "@/project/draft-merge";
 import { revisionView } from "@/project/revision-fixture";
-import { RevisionWorkspace } from "@/project/revision-workspace";
+import { ProjectSettings, settingsRoutes } from "@/project/settings-test-fixture";
 import { revisionDraftKey } from "@/project/use-durable-draft";
-import { jsonAnswer, renderApp, testDeps } from "@/test-app";
+import { jsonAnswer, renderApp, renderRouted, testDeps } from "@/test-app";
 import { VersionPrompt } from "./version-prompt.js";
 
 afterEach(cleanup);
@@ -79,26 +79,13 @@ describe("the stale-version prompt", () => {
     });
     const user = userEvent.setup();
     const reload = vi.fn();
-    const { deps } = renderApp(
+    const { deps } = renderRouted(
       <>
-        <RevisionWorkspace
-          projectId="p1"
-          currentRevisionId="r1"
-          renderEditor={({ edit, onChange }) => (
-            <label>
-              Project title
-              <input
-                value={edit.config.title}
-                onChange={(event) =>
-                  onChange({ ...edit, config: { ...edit.config, title: event.target.value } })
-                }
-              />
-            </label>
-          )}
-        />
+        <ProjectSettings />
         <VersionPrompt reload={reload} />
       </>,
       testDeps({
+        ...settingsRoutes,
         "GET /api/projects/p1/revisions/r1": jsonAnswer({ view: revisionView() }),
         "POST /api/projects/p1/revisions/prepare": jsonAnswer({
           ok: true,
@@ -107,7 +94,7 @@ describe("the stale-version prompt", () => {
         }),
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Edit project" }));
+    await user.click(await screen.findByRole("button", { name: "Edit settings again" }));
     const field = await screen.findByRole("textbox", { name: "Project title" });
     await user.clear(field);
     await user.type(field, "Half-written");

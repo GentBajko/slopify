@@ -223,12 +223,11 @@ function ProjectWorkspace({
   const summary = project.data?.project;
   const stages = project.data?.stages ?? [];
   const outputs = project.data?.outputs ?? [];
-  // Copy for YouTube Studio is for a video made for YouTube; any other video keeps its
-  // downloads only.
+  // A finished video downloads from the title row; Copy for YouTube Studio is for a video
+  // made for YouTube, and any other video keeps its downloads only.
+  const videoReady = outputs.some((output) => output.role === "video");
   const uploadReady =
-    summary !== undefined &&
-    outputs.some((output) => output.role === "video") &&
-    makesYoutubeVideo(summary.config, outputs);
+    summary !== undefined && videoReady && makesYoutubeVideo(summary.config, outputs);
   const openSection = (section: SectionId) => setChosen(section);
   const next = useNextAction({
     project: summary ?? placeholderProject,
@@ -239,11 +238,10 @@ function ProjectWorkspace({
     gates: gateRows,
     outdated,
     waits: runCost.data?.waits ?? [],
-    uploadReady,
+    videoReady,
     actions,
     controller,
     openSection,
-    openUpload: () => setUploadOpen(true),
   });
 
   // The settings view opens straight into the editor.
@@ -278,7 +276,10 @@ function ProjectWorkspace({
     mutationFn: (mark: boolean) => markUploaded(api, projectId, mark),
     onSuccess: (_, mark) =>
       notify(
-        mark ? `Marked uploaded: ${title}.` : `${title} is back on Ready to upload.`,
+        mark
+          ? `Marked uploaded: ${title}.`
+          : // The long video's YouTube link and the mark are one fact (`studio/videos.ts`).
+            `${title} is back on Ready to upload, and any YouTube link saved for its video is forgotten.`,
         "success",
         mark ? { label: "Undo", run: () => uploaded.mutate(false) } : undefined,
       ),
@@ -375,10 +376,10 @@ function ProjectWorkspace({
   });
   useCommand({
     id: "project.rebuild-review",
-    title: "Choose what to remake",
+    title: "Choose what to make again",
     group: "This project",
     context: title,
-    keywords: ["rebuild", "review", "remake", "outdated", "affected"],
+    keywords: ["rebuild", "review", "remake", "again", "outdated", "affected"],
     run: () => controller.review({ kind: "allAffected" }),
   });
   useCommand({
@@ -408,7 +409,7 @@ function ProjectWorkspace({
   const groups = outdatedGroups(outdated);
   useCommand({
     id: "project.remake-1",
-    title: groups[0]?.label ?? "Remake outdated outputs",
+    title: groups[0]?.label ?? "Make the outdated files again",
     group: "This project",
     context: title,
     keywords: ["remake", "outdated", "rebuild"],
@@ -420,7 +421,7 @@ function ProjectWorkspace({
   });
   useCommand({
     id: "project.remake-all",
-    title: "Remake everything outdated",
+    title: "Make everything outdated again",
     group: "This project",
     context: title,
     keywords: ["remake", "outdated", "rebuild", "all"],
@@ -550,13 +551,13 @@ function ProjectWorkspace({
       : listing?.uploadedAt !== null && listing?.uploadedAt !== undefined && !isSample
         ? [{ id: "uploaded", label: "Mark not uploaded", run: () => uploaded.mutate(false) }]
         : []),
-    // Only with outdated outputs: then the remake is chosen file by file.
+    // Only with outdated outputs: then what is made again is chosen file by file.
     ...(groups.length === 0
       ? []
       : [
           {
             id: "rebuild",
-            label: "Choose what to remake…",
+            label: "Choose what to make again…",
             run: () => controller.review({ kind: "allAffected" }),
             disabled: controller.busy,
           },
@@ -636,13 +637,12 @@ function ProjectWorkspace({
       ? undefined
       : channels.find((one) => one.id === listing.channelId)?.name;
   const chapter = nextChapter !== undefined && finishedAudiobook(summary) ? nextChapter : undefined;
-  // Copy for YouTube Studio, where the next action does not already offer it.
-  const studio =
-    uploadReady && next.next?.action?.intent.kind !== "prepare-upload" ? (
-      <Button variant="secondary" onClick={() => setUploadOpen(true)}>
-        Copy for YouTube Studio
-      </Button>
-    ) : null;
+  // Copy for YouTube Studio, beside the video and in the YouTube text's head.
+  const studio = uploadReady ? (
+    <Button variant="secondary" size="small" onClick={() => setUploadOpen(true)}>
+      Copy for YouTube Studio
+    </Button>
+  ) : null;
   return (
     <RevisionMedia projectId={projectId} revisionId={revisionId}>
       <RevisionControlContext value={revisionId !== null}>
@@ -752,7 +752,7 @@ function ProjectWorkspace({
                       stages={[videoStage].filter(isStage)}
                       active={selected === "video"}
                       {...sectionProps}
-                      {...(studio === null || youtubeShown ? {} : { extra: studio })}
+                      {...(studio === null ? {} : { extra: studio })}
                     >
                       {body(videoStage)}
                     </StageSection>

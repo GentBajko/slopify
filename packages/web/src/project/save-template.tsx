@@ -83,7 +83,7 @@ export function SaveProjectTemplate({
         if (!next && !active.current) onClose();
       }}
       title="Save as template"
-      description="Save this revision’s setup for a fresh Play draft. This does not rebuild the project."
+      description="Saves how this project was made (its prompts, voice, images and style) as a template new projects can start from. This project stays as it is."
     >
       <form
         className="flex flex-col gap-4"

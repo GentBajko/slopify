@@ -32,8 +32,8 @@ export const socialHelp = {
     tutorial: posting("pictures-and-video"),
   },
   "social.pictures": {
-    title: "Post pictures",
-    body: "How many of the project's pictures go with the post, in their order. Instagram gets them cut to 4:5; other sites take them as made. A site that takes fewer, or doesn't mix pictures with a video, gets a warning instead of a refusal.",
+    title: "Post images",
+    body: "How many of the project's images go with the post, in their order. Instagram gets them cut to 4:5; other sites take them as made. A site that takes fewer, or doesn't mix images with a video, gets a warning instead of a refusal.",
     tutorial: posting("pictures-and-video"),
   },
   "social.designs": {

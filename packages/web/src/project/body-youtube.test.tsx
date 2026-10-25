@@ -104,10 +104,10 @@ it("marks a placeholder with no link and keeps it in the copy", async () => {
   mount({ links: [] });
   await waitFor(() => expect(within(pasted()).getByText("{{Patreon}}").tagName).toBe("MARK"));
   expect(screen.getByText(/No link is saved for \{\{Patreon\}\}/u)).not.toBeNull();
-  // The links are the project's channel's: the note leads to its Brand tab.
-  expect(screen.getByRole("link", { name: "the channel's Brand tab" }).getAttribute("href")).toBe(
-    "/channels/c1",
-  );
+  // The links are the project's channel's: the note leads to its Name and look tab.
+  expect(
+    screen.getByRole("link", { name: "the channel's Name and look tab" }).getAttribute("href"),
+  ).toBe("/channels/c1");
   await userEvent.click(screen.getByRole("button", { name: "Copy description" }));
   expect(writeText).toHaveBeenLastCalledWith(expect.stringContaining("Support: {{Patreon}}"));
 });

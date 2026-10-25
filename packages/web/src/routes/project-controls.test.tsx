@@ -288,7 +288,7 @@ describe("project pause and provider changes", () => {
       ).toBe(false),
     );
     await openProjectTab("Edit");
-    expect(await screen.findByRole("form", { name: "Edit project" })).not.toBeNull();
+    expect(await screen.findByRole("form", { name: "Edit settings" })).not.toBeNull();
     expect(resume).toHaveBeenCalledTimes(2);
     expect(approve).not.toHaveBeenCalled();
     expect(fixture.start).not.toHaveBeenCalled();
@@ -313,20 +313,30 @@ describe("project pause and provider changes", () => {
     // Pauses and checks asks for its checker's Service and Model too; these are the writer's.
     const writer = within(await screen.findByRole("region", { name: "Written by" }));
     await user.selectOptions(writer.getByLabelText("Service"), "claude-code");
-    await user.click(writer.getByRole("button", { name: "Enter Model ID" }));
-    await user.type(writer.getByRole("textbox", { name: "Model" }), "sonnet");
+    // A model id the list does not have is typed: the list's last entry opens the box.
+    await user.selectOptions(writer.getByLabelText("Model"), "Type a model ID…");
+    await user.type(writer.getByRole("textbox", { name: "Written by Model" }), "sonnet");
     await openEditSection("Narration");
-    await user.selectOptions(screen.getByLabelText("Voice service"), "cartesia");
-    await user.click(screen.getByRole("button", { name: "Enter Voice model ID" }));
-    await user.type(screen.getByRole("textbox", { name: "Voice model" }), "sonic-3");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Read by Service" }), "cartesia");
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Read by Model" }),
+      "Type a model ID…",
+    );
+    await user.type(screen.getByRole("textbox", { name: "Read by Model" }), "sonic-3");
     await user.selectOptions(screen.getByLabelText("Voice"), "new-voice");
     await user.click(screen.getByRole("radio", { name: "Every 3000 characters" }));
     await user.clear(screen.getByLabelText("Characters"));
     await user.type(screen.getByLabelText("Characters"), "1800");
     await openEditSection("Images");
-    await user.selectOptions(screen.getByLabelText("Image service"), "google-image");
-    await user.click(screen.getByRole("button", { name: "Enter Image model ID" }));
-    await user.type(screen.getByRole("textbox", { name: "Image model" }), "image-model");
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Images by Service" }),
+      "google-image",
+    );
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Images by Model" }),
+      "Type a model ID…",
+    );
+    await user.type(screen.getByRole("textbox", { name: "Images by Model" }), "image-model");
     expect(screen.queryByRole("button", { name: "Run settings" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Save providers" })).toBeNull();
     await user.click(screen.getByRole("button", { name: "Save changes" }));

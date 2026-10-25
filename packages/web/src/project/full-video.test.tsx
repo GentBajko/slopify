@@ -33,7 +33,7 @@ function Harness() {
     gates: [],
     outdated: [],
     waits: [],
-    uploadReady: true,
+    videoReady: true,
     actions: {
       run: () => undefined,
       pending: false,
@@ -42,7 +42,6 @@ function Harness() {
     },
     controller: { review: () => undefined, pending: false } as unknown as RevisionController,
     openSection: () => undefined,
-    openUpload: () => undefined,
   });
   return (
     <>

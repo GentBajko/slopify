@@ -241,14 +241,14 @@ export async function openProjectTab(
   await openProjectSection(name === "Edit" ? "Settings" : name);
 }
 
-// Edit project is the Settings view: it opens straight into the editor.
-// After a save the view shows the saved revision, with Edit project to open a new draft.
+// Edit settings opens the Settings view straight into the editor. After a discard the view
+// shows the saved version, with Edit settings again to open a new draft.
 export async function openProjectEditor(): Promise<void> {
   await openProjectTab("Edit");
-  const again = screen.queryByRole("button", { name: "Edit project" });
-  if (again !== null && screen.queryByRole("form", { name: "Edit project" }) === null)
+  const again = screen.queryByRole("button", { name: "Edit settings again" });
+  if (again !== null && screen.queryByRole("form", { name: "Edit settings" }) === null)
     await userEvent.click(again);
-  await screen.findByRole("form", { name: "Edit project" });
+  await screen.findByRole("form", { name: "Edit settings" });
 }
 
 // One file from a stage's Download menu (project/parts.tsx), opening the menu when it is shut.

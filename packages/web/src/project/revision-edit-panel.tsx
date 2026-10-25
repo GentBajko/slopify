@@ -76,7 +76,7 @@ export function RevisionEditPanel({
   readonly renderEditor: (props: EditorProps) => ReactNode;
   // Feedback is said only in the view on screen, so one refusal is not announced twice.
   readonly active?: boolean;
-  // Shown above the Edit project button while no draft is open.
+  // Shown above the Edit settings again button while no draft is open.
   readonly intro?: ReactNode;
   // Guards leaving the project while the draft is unsaved; left out, nothing is guarded.
   readonly projectId?: string;
@@ -144,10 +144,10 @@ export function RevisionEditPanel({
             onClick={() => c.review({ kind: "allAffected" })}
             variant="secondary"
           >
-            Choose what to remake
+            Choose what to make again
           </Button>
           <Button variant="primary" disabled={c.busy} onClick={c.openEditor}>
-            Edit project
+            Edit settings again
           </Button>
         </ActionBar>
       </div>
@@ -155,7 +155,7 @@ export function RevisionEditPanel({
   const conflict = c.remoteChanged || c.refusal?.reason === "conflict";
   return (
     <form
-      aria-label="Edit project"
+      aria-label="Edit settings"
       onSubmit={(event) => {
         event.preventDefault();
         c.save();

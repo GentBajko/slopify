@@ -187,7 +187,7 @@ describe("editing the article", () => {
     expect(fixture.start).not.toHaveBeenCalled();
     // The settings stay open, on the new version, and say it was saved.
     await screen.findByText("Saved as a new version. Nothing is made again until you choose to.");
-    expect(screen.queryByRole("button", { name: "Edit project" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Edit settings again" })).toBeNull();
     expect(((await screen.findByLabelText("Article text")) as HTMLTextAreaElement).value).toBe(
       "Rewritten.",
     );

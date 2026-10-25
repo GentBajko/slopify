@@ -31,7 +31,7 @@ export function RebuildScope({
       : "If anything fails, the current version stays in use and the step can be tried again.",
   ].filter((line): line is string => line !== undefined);
   return (
-    <ul aria-label="What this remake does" className="m-0 flex flex-col gap-1 pl-5 text-small">
+    <ul aria-label="What this does" className="m-0 flex flex-col gap-1 pl-5 text-small">
       {lines.map((line) => (
         <li key={line}>{line}</li>
       ))}

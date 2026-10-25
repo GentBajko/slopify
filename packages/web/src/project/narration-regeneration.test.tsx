@@ -3,11 +3,9 @@ import { saveRevisionSchema } from "@app/slices/revisions/schema.js";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { emptyAnswer, jsonAnswer, openEditSection, renderApp, testDeps } from "@/test-app";
-import { RevisionContentEditors } from "./revision-content.js";
+import { emptyAnswer, jsonAnswer, openEditSection, renderRouted, testDeps } from "@/test-app";
 import { deferred, narrationView, response, staged } from "./revision-editor-test-fixtures.js";
-import { RevisionForm } from "./revision-form.js";
-import { RevisionWorkspace } from "./revision-workspace.js";
+import { ProjectSettings, settingsRoutes } from "./settings-test-fixture.js";
 
 afterEach(cleanup);
 function generatedNarration(): { readonly view: RevisionView; readonly key: string } {
@@ -29,24 +27,12 @@ function generatedNarration(): { readonly view: RevisionView; readonly key: stri
 function mount(view: RevisionView, upload: () => Promise<Response>) {
   const saves: RevisionEdit[] = [];
   const removed = vi.fn(emptyAnswer());
-  renderApp(
-    <RevisionWorkspace
-      projectId="p1"
-      currentRevisionId="r1"
-      renderEditor={(props) => (
-        <RevisionForm
-          {...props}
-          renderContent={(content) => <RevisionContentEditors {...content} />}
-        />
-      )}
-    />,
+  renderRouted(
+    <ProjectSettings />,
     testDeps({
+      ...settingsRoutes,
       "GET /api/projects/p1/revisions/r1": jsonAnswer({ view }),
       "POST /api/projects/p1/revisions/prepare": jsonAnswer({ ok: true, view, created: false }),
-      "GET /api/providers": jsonAnswer({ providers: [] }),
-      "GET /api/settings/voices": jsonAnswer({ voices: [] }),
-      "GET /api/prompts": jsonAnswer({ prompts: [] }),
-      "GET /api/entries": jsonAnswer({ entries: [] }),
       "GET /api/providers/tts/models": jsonAnswer({ models: [], allowsCustom: false }),
       "POST /api/staging/audio": upload,
       "DELETE /api/staging/upload1": removed,
@@ -81,7 +67,7 @@ it.each(["saved replacement", "staged replacement", "text override"] as const)(
       },
     };
     const { saves } = mount(view, async () => response({ ...staged, stageKind: "audio" }));
-    await user.click(screen.getByRole("button", { name: "Edit project" }));
+    await user.click(await screen.findByRole("button", { name: "Edit settings again" }));
     await openEditSection("Narration");
     await screen.findByLabelText("Replace narration chunk 1");
     if (scenario !== "saved replacement") {
@@ -113,7 +99,7 @@ it("discards an upload that settles after regeneration without undoing the saved
   const copied = deferred<Response>();
   const { view, key } = generatedNarration();
   const { saves, removed } = mount(view, () => copied.promise);
-  await user.click(screen.getByRole("button", { name: "Edit project" }));
+  await user.click(await screen.findByRole("button", { name: "Edit settings again" }));
   await openEditSection("Narration");
   fireEvent.change(await screen.findByLabelText("Replace narration chunk 1"), {
     target: { files: [new File(["audio"], "replacement.mp3", { type: "audio/mpeg" })] },

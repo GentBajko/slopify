@@ -305,7 +305,7 @@ it("plays the video from a passage the captions left out when its time is presse
   const player = await screen.findByLabelText("Generated video", { selector: "video" });
   if (!(player instanceof HTMLVideoElement)) throw new Error("Expected the video element.");
   stubMedia(player);
-  await userEvent.click(screen.getByText("Passages left out of the subtitles"));
+  await userEvent.click(screen.getByText("Passages left out of the captions"));
   await userEvent.click(screen.getByRole("button", { name: "Play from 1:15" }));
   expect(player.currentTime).toBe(75);
 });

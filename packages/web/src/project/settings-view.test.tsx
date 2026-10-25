@@ -5,11 +5,14 @@ import userEvent from "@testing-library/user-event";
 import { type ReactElement, use } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { unreachable } from "@/http";
-import { jsonAnswer, renderApp, testDeps } from "@/test-app";
+import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
 import { EditRequestContext, RegenerateNowContext } from "./revision-action-context.js";
 import { revisionView } from "./revision-fixture.js";
-import type { EditorProps } from "./revision-workspace.js";
-import { RevisionWorkspace } from "./revision-workspace.js";
+import { ProjectSettings, settingsRoutes } from "./settings-test-fixture.js";
+
+// A project's settings as Edit settings opens them: saving a draft, its conflicts and retries,
+// Versions' restore, the review of what is made again, and the requests the page's sections
+// send to it.
 
 afterEach(cleanup);
 it("saves a title without starting any rebuild", async () => {
@@ -23,23 +26,10 @@ it("saves a title without starting any rebuild", async () => {
       202,
     ),
   );
-  renderApp(
-    <RevisionWorkspace
-      projectId="p1"
-      currentRevisionId="r1"
-      renderEditor={({ edit, onChange }) => (
-        <label>
-          Project title
-          <input
-            value={edit.config.title}
-            onChange={(event) =>
-              onChange({ ...edit, config: { ...edit.config, title: event.target.value } })
-            }
-          />
-        </label>
-      )}
-    />,
+  renderRouted(
+    <ProjectSettings />,
     testDeps({
+      ...settingsRoutes,
       "GET /api/projects/p1/revisions/r1": jsonAnswer({ view: baseline }),
       "POST /api/projects/p1/revisions/prepare": jsonAnswer({
         ok: true,
@@ -64,7 +54,7 @@ it("saves a title without starting any rebuild", async () => {
       }),
     }),
   );
-  await user.click(screen.getByRole("button", { name: "Edit project" }));
+  await user.click(await screen.findByRole("button", { name: "Edit settings again" }));
   const title = await screen.findByRole("textbox", { name: "Project title" });
   await user.clear(title);
   await user.type(title, "Changed");
@@ -73,19 +63,6 @@ it("saves a title without starting any rebuild", async () => {
   expect(start).not.toHaveBeenCalled();
   await waitFor(() => expect(screen.queryByRole("textbox", { name: "Project title" })).toBeNull());
 });
-function titleEditor({ edit, onChange }: EditorProps): ReactElement {
-  return (
-    <label>
-      Project title
-      <input
-        value={edit.config.title}
-        onChange={(event) =>
-          onChange({ ...edit, config: { ...edit.config, title: event.target.value } })
-        }
-      />
-    </label>
-  );
-}
 function currentBody(view: ReturnType<typeof revisionView>) {
   return {
     revisionId: view.revision.id,
@@ -104,9 +81,10 @@ function currentBody(view: ReturnType<typeof revisionView>) {
 }
 it("preserves an unsaved title when another tab advanced the base", async () => {
   const user = userEvent.setup();
-  renderApp(
-    <RevisionWorkspace projectId="p1" currentRevisionId="r1" renderEditor={titleEditor} />,
+  renderRouted(
+    <ProjectSettings />,
     testDeps({
+      ...settingsRoutes,
       "GET /api/projects/p1/revisions/r1": jsonAnswer({ view: revisionView() }),
       "POST /api/projects/p1/revisions/prepare": jsonAnswer({
         ok: true,
@@ -127,7 +105,7 @@ it("preserves an unsaved title when another tab advanced the base", async () => 
         ),
     }),
   );
-  await user.click(screen.getByRole("button", { name: "Edit project" }));
+  await user.click(await screen.findByRole("button", { name: "Edit settings again" }));
   const title = await screen.findByRole("textbox", { name: "Project title" });
   await user.clear(title);
   await user.type(title, "Changed");
@@ -140,9 +118,10 @@ it("retries a transport failure with the original idempotency key", async () => 
   const user = userEvent.setup();
   const keys: string[] = [];
   const next = revisionView("r2", "Changed");
-  renderApp(
-    <RevisionWorkspace projectId="p1" currentRevisionId="r1" renderEditor={titleEditor} />,
+  renderRouted(
+    <ProjectSettings />,
     testDeps({
+      ...settingsRoutes,
       "GET /api/projects/p1/revisions/r1": jsonAnswer({ view: revisionView() }),
       "POST /api/projects/p1/revisions/prepare": jsonAnswer({
         ok: true,
@@ -158,7 +137,7 @@ it("retries a transport failure with the original idempotency key", async () => 
       "GET /api/projects/p1": jsonAnswer(currentBody(next)),
     }),
   );
-  await user.click(screen.getByRole("button", { name: "Edit project" }));
+  await user.click(await screen.findByRole("button", { name: "Edit settings again" }));
   const title = await screen.findByRole("textbox", { name: "Project title" });
   await user.clear(title);
   await user.type(title, "Changed");
@@ -171,9 +150,10 @@ it("retries a transport failure with the original idempotency key", async () => 
 it("does not adopt an old successful receipt as the current editor", async () => {
   const user = userEvent.setup();
   const old = { ...revisionView("r2", "Changed"), current: false };
-  renderApp(
-    <RevisionWorkspace projectId="p1" currentRevisionId="r1" renderEditor={titleEditor} />,
+  renderRouted(
+    <ProjectSettings />,
     testDeps({
+      ...settingsRoutes,
       "GET /api/projects/p1/revisions/r1": jsonAnswer({ view: revisionView() }),
       "POST /api/projects/p1/revisions/prepare": jsonAnswer({
         ok: true,
@@ -184,7 +164,7 @@ it("does not adopt an old successful receipt as the current editor", async () =>
       "GET /api/projects/p1": jsonAnswer(currentBody(revisionView("r3", "Latest"))),
     }),
   );
-  await user.click(screen.getByRole("button", { name: "Edit project" }));
+  await user.click(await screen.findByRole("button", { name: "Edit settings again" }));
   const title = await screen.findByRole("textbox", { name: "Project title" });
   await user.clear(title);
   await user.type(title, "Changed");
@@ -219,9 +199,10 @@ it("recovers a history restore conflict without requiring an open editor", async
       request,
     );
   });
-  renderApp(
-    <RevisionWorkspace projectId="p1" currentRevisionId="r1" renderEditor={titleEditor} />,
+  renderRouted(
+    <ProjectSettings />,
     testDeps({
+      ...settingsRoutes,
       "GET /api/projects/p1/revisions/r1": jsonAnswer({ view: revisionView() }),
       "GET /api/projects/p1/revisions/old": jsonAnswer({
         view: { ...revisionView("old", "Earlier"), current: false },
@@ -244,7 +225,7 @@ it("recovers a history restore conflict without requiring an open editor", async
       "GET /api/projects/p1": jsonAnswer(currentBody(revisionView("r3", "Restored"))),
     }),
   );
-  await user.click(screen.getByRole("tab", { name: "History" }));
+  await user.click(await screen.findByRole("tab", { name: "Versions" }));
   await user.click(await screen.findByRole("button", { name: "Restore" }));
   await user.click(await screen.findByRole("button", { name: "Restore version 1" }));
   await screen.findByText("Project changed.");
@@ -284,9 +265,10 @@ it.each(["transport", "readiness", "stale-preview", "conflict"] as const)(
         assumptions: [],
       },
     };
-    renderApp(
-      <RevisionWorkspace projectId="p1" currentRevisionId="r1" renderEditor={titleEditor} />,
+    renderRouted(
+      <ProjectSettings />,
       testDeps({
+        ...settingsRoutes,
         "GET /api/projects/p1/revisions/r1": jsonAnswer({ view: revisionView() }),
         "POST /api/projects/p1/revisions/prepare": jsonAnswer({
           ok: true,
@@ -329,11 +311,11 @@ it.each(["transport", "readiness", "stale-preview", "conflict"] as const)(
         },
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Choose what to remake" }));
+    await user.click(await screen.findByRole("button", { name: "Choose what to make again" }));
     await screen.findByRole("button", { name: /^Make \d+ outputs? again$/ });
-    expect(screen.getByRole("button", { name: "Edit project" }).hasAttribute("disabled")).toBe(
-      true,
-    );
+    expect(
+      screen.getByRole("button", { name: "Edit settings again" }).hasAttribute("disabled"),
+    ).toBe(true);
     expect(sent).toEqual([]);
     const acknowledgement = screen.getByRole("checkbox", { name: /cost estimates are unknown/ });
     await user.click(acknowledgement);
@@ -344,7 +326,7 @@ it.each(["transport", "readiness", "stale-preview", "conflict"] as const)(
       expect(screen.queryByRole("region", { name: "Review affected rebuild" })).toBeNull();
       await waitFor(() => expect(document.activeElement).toBe(alert));
       expect(
-        screen.getByRole("button", { name: "Choose what to remake" }).hasAttribute("disabled"),
+        screen.getByRole("button", { name: "Choose what to make again" }).hasAttribute("disabled"),
       ).toBe(false);
       return;
     }
@@ -361,7 +343,7 @@ it.each(["transport", "readiness", "stale-preview", "conflict"] as const)(
   },
 );
 
-it("opens Edit project with a change the Output tab asks for, in the section it names", async () => {
+it("opens the settings with a change a section asks for, at the section it names", async () => {
   const user = userEvent.setup();
   const baseline = revisionView();
   const save = vi.fn(jsonAnswer({ ok: true, view: baseline, duplicate: false }));
@@ -382,18 +364,10 @@ it("opens Edit project with a change the Output tab asks for, in the section it 
       </button>
     );
   }
-  renderApp(
-    <RevisionWorkspace
-      projectId="p1"
-      currentRevisionId="r1"
-      output={<Remake />}
-      renderEditor={({ edit, focus }) => (
-        <p>
-          {focus?.section ?? "no section"}: {(edit.regenerate ?? []).join(",")}
-        </p>
-      )}
-    />,
+  renderRouted(
+    <ProjectSettings beside={<Remake />} />,
     testDeps({
+      ...settingsRoutes,
       "GET /api/projects/p1/revisions/r1": jsonAnswer({ view: baseline }),
       "POST /api/projects/p1/revisions/prepare": jsonAnswer({
         ok: true,
@@ -404,9 +378,16 @@ it("opens Edit project with a change the Output tab asks for, in the section it 
     }),
   );
   await user.click(await screen.findByRole("button", { name: "Make short 2 again" }));
-  // Nothing is saved until the user presses Save changes on the Edit tab.
-  expect(await screen.findByText("outputs: shorts:2")).not.toBeNull();
-  expect(screen.getByRole("tab", { name: /^Edit/ }).getAttribute("aria-selected")).toBe("true");
+  // The settings open at Outputs with the short marked; nothing is saved until Save changes.
+  const sections = await screen.findByRole("navigation", { name: "Edit sections" });
+  await waitFor(() =>
+    expect(
+      within(sections)
+        .getByRole("button", { name: /^Outputs/ })
+        .getAttribute("aria-current"),
+    ).not.toBeNull(),
+  );
+  expect(screen.getByRole("tab", { name: /^Settings/ }).getAttribute("aria-selected")).toBe("true");
   expect(save).not.toHaveBeenCalled();
   await user.click(screen.getByRole("button", { name: "Save changes" }));
   await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
@@ -419,9 +400,10 @@ it("opens Edit project with a change the Output tab asks for, in the section it 
 it("says unsaved only once the draft differs from the saved revision", async () => {
   const user = userEvent.setup();
   const baseline = revisionView();
-  renderApp(
-    <RevisionWorkspace projectId="p1" currentRevisionId="r1" renderEditor={titleEditor} />,
+  renderRouted(
+    <ProjectSettings />,
     testDeps({
+      ...settingsRoutes,
       "GET /api/projects/p1/revisions/r1": jsonAnswer({ view: baseline }),
       "POST /api/projects/p1/revisions/prepare": jsonAnswer({
         ok: true,
@@ -431,16 +413,16 @@ it("says unsaved only once the draft differs from the saved revision", async () 
       "GET /api/projects/p1": jsonAnswer(currentBody(baseline)),
     }),
   );
-  await user.click(screen.getByRole("button", { name: "Edit project" }));
+  await user.click(await screen.findByRole("button", { name: "Edit settings again" }));
   const title = await screen.findByRole("textbox", { name: "Project title" });
-  expect(screen.getByRole("tab", { name: /^Edit/ }).textContent).not.toContain("unsaved");
+  expect(screen.getByRole("tab", { name: /^Settings/ }).textContent).not.toContain("unsaved");
   await user.type(title, "!");
   await waitFor(() =>
-    expect(screen.getByRole("tab", { name: /^Edit/ }).textContent).toContain("unsaved"),
+    expect(screen.getByRole("tab", { name: /^Settings/ }).textContent).toContain("unsaved"),
   );
   await user.type(title, "{Backspace}");
   await waitFor(() =>
-    expect(screen.getByRole("tab", { name: /^Edit/ }).textContent).not.toContain("unsaved"),
+    expect(screen.getByRole("tab", { name: /^Settings/ }).textContent).not.toContain("unsaved"),
   );
 });
 
@@ -496,14 +478,10 @@ it("makes pictures again at once when the charge shown at the button covers the 
       assumptions: [],
     },
   };
-  renderApp(
-    <RevisionWorkspace
-      projectId="p1"
-      currentRevisionId="r1"
-      renderEditor={titleEditor}
-      output={<RegenerateButton />}
-    />,
+  renderRouted(
+    <ProjectSettings beside={<RegenerateButton />} />,
     testDeps({
+      ...settingsRoutes,
       "GET /api/projects/p1/revisions/r1": jsonAnswer({ view: baseline }),
       "POST /api/projects/p1/revisions/prepare": () =>
         jsonAnswer({ ok: true, view: head, created: false })(new Request("http://x")),
