@@ -245,13 +245,16 @@ export function MakeSampleButton({
   const client = useQueryClient();
   const [asking, setAsking] = useState(false);
   const known = view.paid.quotedHigh;
+  const held = view.paid.state === "held";
+  // A waiting sample is priced too: one the budget or the plan setting holds would only wait
+  // again, so the way to the setting stands in its button.
   const whole = useQuery({
     queryKey: [...templateStudioKey(view.template.id), "quote", "whole", view.sample.topic],
     queryFn: () => quoteSample(api, view.template.id, { topic: view.sample.topic }),
-    enabled: known === null,
+    enabled: known === null || held,
   });
   const high = known ?? whole.data?.high;
-  const unknown = known === null ? (whole.data?.unknown ?? 0) > 0 : view.paid.state === "held";
+  const unknown = known === null ? (whole.data?.unknown ?? 0) > 0 : held;
   const refused = known === null ? (whole.data?.problem ?? null) : null;
   async function make(): Promise<void> {
     if (high === undefined) return;
@@ -273,7 +276,7 @@ export function MakeSampleButton({
     }
   }
   if (refused !== null) return <p className="m-0 text-small text-danger">{refused}</p>;
-  if (known === null && whole.data !== undefined && !whole.data.fits)
+  if ((known === null || held) && whole.data !== undefined && !whole.data.fits)
     return (
       <p className="m-0 text-small text-ink-2">
         {budgetLead(whole.data, "This sample")}
@@ -295,7 +298,11 @@ export function MakeSampleButton({
         : `Make sample · ${
             known === null && whole.data !== undefined
               ? samplePrice(whole.data)
-              : samplePrice({ high, unknown: unknown ? 1 : 0, onPlan: false })
+              : samplePrice({
+                  high,
+                  unknown: unknown ? 1 : 0,
+                  onPlan: whole.data?.onPlan === true,
+                })
           }`}
     </Button>
   );

@@ -80,15 +80,22 @@ export function SamplePanel({
       ? checks.data.checks.find((check) => !check.ok && blocking.has(check.id))
       : undefined;
   const fix = failing?.fix;
-  // A fix in the section already open is in the settings beside the sample, not a link away.
+  // A fix in the section already open is in the settings beside the sample, not a link away:
+  // the check's own verb, "Choose one in Images", said of this section.
   const here =
     fix !== undefined &&
     fix.href === `/templates/${encodeURIComponent(view.template.id)}?section=${section.id}`;
+  const inHere = (label: string): string => {
+    const suffix = ` in ${section.label}`;
+    return label.endsWith(suffix)
+      ? `${label.slice(0, -suffix.length)} in this section's settings`
+      : "Fix it in this section's settings";
+  };
   const action = remakeable ? (
     fix === undefined ? (
       <MakeSampleButton view={view} onDone={setProblem} />
     ) : here ? (
-      <p className="m-0 text-small text-ink-2">{`${failing?.sentence ?? ""} Choose it in this section's settings, then Save.`}</p>
+      <p className="m-0 text-small text-ink-2">{`${failing?.sentence ?? ""} ${inHere(fix.label)}, then Save.`}</p>
     ) : (
       <TextLink to={fix.href} className="text-small">{`${fix.label} first`}</TextLink>
     )

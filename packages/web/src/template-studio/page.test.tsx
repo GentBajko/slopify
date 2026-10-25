@@ -533,6 +533,35 @@ it("never calls a sample with unpriced steps free, and links the plan setting in
   expect(within(sample).queryByRole("button", { name: /^Make sample/ })).toBeNull();
 });
 
+it("links the plan setting in place of Make sample for a sample that already waits on it", async () => {
+  const waiting =
+    "Waiting: this sample runs on your Claude Code or Codex plan, and samples may not use it.";
+  open("script", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({
+      ...view,
+      sections: view.sections.map((one) =>
+        one.id === "script" ? { ...one, state: "waiting", sentence: waiting } : one,
+      ),
+      paid: { ...view.paid, state: "held", sentence: waiting, quotedHigh: 0 },
+    }),
+    [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer(passing),
+    [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(
+      quote({
+        high: 0,
+        onPlan: true,
+        usesPlan: true,
+        fits: false,
+        budget: { budget: 2, spent: 0, unpriced: 0, left: 2, plans: false },
+      }),
+    ),
+  });
+  const sample = await screen.findByRole("region", { name: "Article sample" });
+  expect(
+    await within(sample).findByRole("link", { name: "Settings → Production defaults" }),
+  ).not.toBeNull();
+  expect(within(sample).queryByRole("button", { name: /^Make sample/ })).toBeNull();
+});
+
 it("puts a failing check's fix where Make sample would be", async () => {
   open("script");
   const sample = await screen.findByRole("region", { name: "Article sample" });
@@ -546,7 +575,7 @@ it("says a fix that belongs to the open section in place, not as a link to the s
   const sample = await screen.findByRole("region", { name: "Narration sample" });
   expect(
     await within(sample).findByText(
-      "No voice service is chosen, so a run can't start. Choose it in this section's settings, then Save.",
+      "No voice service is chosen, so a run can't start. Choose one in this section's settings, then Save.",
     ),
   ).not.toBeNull();
   expect(within(sample).queryByRole("link", { name: /first$/ })).toBeNull();
@@ -838,7 +867,7 @@ it("names the steps a scheduled run has no price for, and says the cost is the l
   const section = await screen.findByRole("region", { name: "Schedule settings" });
   expect(
     within(section).getByText(
-      "About $6.08 a month at least, for about 30 runs. Not counted, with no known price: Narration descriptions and Delivery cue overhead.",
+      "At least $6.08 a month, for about 30 runs. Not counted, with no known price: Narration descriptions and Delivery cue overhead.",
     ),
   ).not.toBeNull();
   const table = within(section).getByRole("table", { name: "The next runs" });
