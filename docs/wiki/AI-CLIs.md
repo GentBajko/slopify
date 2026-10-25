@@ -106,7 +106,7 @@ The CLIs bill your subscription, which gives a share of a 5-hour and a weekly al
 - **Codex** is asked before and after each call. It reports whole percents, so a short run can show "under 1%".
 - **Antigravity** reports none.
 
-You see these on a project's **Run cost** tab, in the run's **Cost so far** panel, and on Home under **This week**. See [Costs-and-Run-Cost](Costs-and-Run-Cost).
+You see these in a project's cost breakdown (**See the breakdown** on its cost line) and on Home under **This week**. See [Costs-and-Run-Cost](Costs-and-Run-Cost).
 
 When a tool says its allowance is used up, the run does not fail:
 

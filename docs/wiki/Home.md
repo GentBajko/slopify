@@ -68,7 +68,7 @@ These pages cover Slopify 3.0: every screen, every setting and every workflow, s
 ### The project page
 | Page | What it covers |
 |---|---|
-| [Project page](Project-Page) | The next action, the run cost line, time left, downloads, the players, freeing space |
+| [Project page](Project-Page) | The next action, the cost line, time left, downloads, the players, freeing space |
 | [Editing a project](Editing-a-Project) | Edit settings, making outdated work again, Choose what to make again, Versions |
 | [Video editing](Video-Editing) | Video, caption and ambient sound controls on a project |
 | [Recovery and retries](Recovery-and-Retries) | Fix-it buttons, retries and waiting for plan limits |
