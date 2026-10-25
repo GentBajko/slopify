@@ -91,6 +91,23 @@ it("names the run's start until it finishes", async () => {
   expect(screen.queryByText(/^finished /)).toBeNull();
 });
 
+it("says where a running run stands, beside its clock, as Home does", async () => {
+  renderRouted(
+    <ProjectHeader
+      project={{ ...plain, status: "running" }}
+      stages={[stage("article", "done"), stage("audio", "running"), stage("video", "pending")]}
+      editing={false}
+      onEdit={() => {}}
+      more={[]}
+      progress={0.5}
+      clock={<span>Working · 0:01:12</span>}
+    />,
+    testDeps({}),
+  );
+  const line = (await screen.findByText(/^Step 2 of 3 · Narration/)).closest(".sl-project__meta");
+  expect(line?.textContent).toMatch(/· started .+· Step 2 of 3 · Narration.*Working · 0:01:12$/);
+});
+
 it("puts the next action first, then Edit settings, then a worded More", async () => {
   const user = userEvent.setup();
   const removed = vi.fn();
@@ -98,7 +115,7 @@ it("puts the next action first, then Edit settings, then a worded More", async (
     <ProjectHeader
       project={plain}
       stages={ran}
-      primary={<button type="button">Copy for YouTube Studio</button>}
+      primary={<button type="button">Download video</button>}
       editing={false}
       onEdit={() => {}}
       more={[
@@ -110,7 +127,7 @@ it("puts the next action first, then Edit settings, then a worded More", async (
     testDeps({}),
   );
   const buttons = (await screen.findAllByRole("button")).map((button) => button.textContent);
-  expect(buttons).toEqual(["Copy for YouTube Studio", "Edit settings", "More"]);
+  expect(buttons).toEqual(["Download video", "Edit settings", "More"]);
   await user.click(screen.getByRole("button", { name: "More" }));
   await user.click(await screen.findByRole("menuitem", { name: "Delete project…" }));
   expect(removed).toHaveBeenCalledOnce();
