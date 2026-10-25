@@ -8,7 +8,7 @@ const studio = (anchor: string) => ({ page: "Template-Studio", anchor });
 export const templateStudioHelp = {
   "template-studio.compare-provider": {
     title: "Service to compare",
-    body: "Whose model to try. Services you haven't set up are greyed with the reason; set one up in Settings → Providers. Voice models are compared within the template's voice service, because a voice is chosen per service.",
+    body: "Whose model to try. Services you haven't set up are greyed with the reason; set one up in Settings → Keys & services. Voice models are compared within the template's voice service, because a voice is chosen per service.",
     tutorial: studio("compare-models"),
   },
   "template-studio.compare-model": {
