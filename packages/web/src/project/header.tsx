@@ -8,9 +8,9 @@ import { Button } from "@/components/kit/button";
 import { PageHeader } from "@/components/kit/layout";
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/components/kit/menu";
 import { Badge, Status } from "@/components/kit/status";
-import { runLine } from "@/home/running-now";
 import { projectStateOf } from "@/lib/state-words";
 import { startedAt } from "@/lib/utils";
+import { runPosition } from "./measured-eta.js";
 import { stageName } from "./summary.js";
 
 // The project's title row, one line: the way back (to the list it was opened from), the title,
@@ -175,7 +175,7 @@ function MenuItemWithApart({
 // Sep 28": what a person checks on a project each morning, after its state. An audiobook or a
 // podcast says first what it is, since its page otherwise reads like a video's. While a step
 // runs, the last fact is where the run stands, as Home says it: "Step 2 of 4 · Narration · about
-// 4 min left on this step".
+// 4 min left on this step", the time measured as Progress measures it (`measured-eta.ts`).
 function facts(
   project: ProjectSummary,
   stages: readonly Stage[],
@@ -196,7 +196,7 @@ function facts(
     uploadedAt === null || uploadedAt === undefined
       ? undefined
       : `uploaded ${startedAt(uploadedAt)}`,
-    runLine(
+    runPosition(
       stages.filter((stage) => stage.source !== "off" && stage.state !== "skipped"),
       Date.now(),
       (kind) => stageName(kind, project.config),

@@ -71,7 +71,8 @@ describe("the status list", () => {
       id: "live",
       name: "Progress",
       state: "Running",
-      detail: "1 of 3",
+      // Counted as the title row counts: the step the run is at, not the steps done.
+      detail: "Step 2 of 3",
     });
     expect(rows[2]).toMatchObject({
       name: "Narration",
@@ -140,6 +141,82 @@ describe("the status list", () => {
     expect(line(statusRows(input({ shorts: true }))).find((row) => row.startsWith("Shorts"))).toBe(
       "Shorts | Not made",
     );
+  });
+
+  // Renaming a project with a PDF sends its step back to waiting: the PDF is there, outdated,
+  // not "Not started", and the shorts made with the video keep saying what they hold.
+  it("says Outdated for a made step an edit sent back to waiting", () => {
+    const shorts = [1, 2].map((short) =>
+      output("short_video", "video", { id: `short-${String(short)}`, meta: { short } }),
+    );
+    const rows = statusRows(
+      input({
+        shorts: true,
+        stages: [
+          ...finished.stages.filter((one) => one.kind !== "document"),
+          stage("document", "pending"),
+        ],
+        outputs: [...finished.outputs, ...shorts],
+        outdated: (id) => (id === "document" ? 1 : 0),
+      }),
+    );
+    expect(rows.find((row) => row.id === "document")).toEqual({
+      id: "document",
+      name: "PDF",
+      tone: "info",
+      state: "Outdated",
+    });
+    expect(line(rows).find((row) => row.startsWith("Shorts"))).toBe("Shorts | Done | 2 shorts");
+    // A PDF never made stays Not started.
+    expect(
+      statusRows(
+        input({
+          stages: [
+            ...finished.stages.filter((one) => one.kind !== "document"),
+            stage("document", "pending"),
+          ],
+        }),
+      ).find((row) => row.id === "document")?.state,
+    ).toBe("Not started");
+  });
+
+  // Make the video again renders only the video: the shorts and the YouTube text it does not
+  // touch keep their state, while a part the stage names as at work runs.
+  it("keeps Shorts and YouTube done while the video alone is made again", () => {
+    const made = [
+      ...finished.outputs,
+      output("short_video", "video", { id: "short-1", meta: { short: 1 } }),
+      output("youtube_description", "video"),
+    ];
+    const rendering = (label?: string) =>
+      line(
+        statusRows(
+          input({
+            shorts: true,
+            youtube: true,
+            outputs: made,
+            stages: finished.stages.map((one) =>
+              one.kind === "video"
+                ? stage("video", "running", label === undefined ? {} : { activity: { label } })
+                : one,
+            ),
+          }),
+        ),
+      ).filter((row) => /^(Shorts|YouTube)/.test(row));
+    expect(rendering("rendering the video")).toEqual([
+      "Shorts | Done | 1 short",
+      "YouTube | Done | description and tags",
+    ]);
+    expect(rendering("rendering the shorts")).toEqual([
+      "Shorts | Running",
+      "YouTube | Done | description and tags",
+    ]);
+    expect(rendering("writing the YouTube description")).toEqual([
+      "Shorts | Done | 1 short",
+      "YouTube | Running",
+    ]);
+    // Nothing named yet: either may be at work.
+    expect(rendering()).toEqual(["Shorts | Running", "YouTube | Running"]);
   });
 
   it("keeps Images for an establishing image when the slideshow is off", () => {

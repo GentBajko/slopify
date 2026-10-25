@@ -258,7 +258,8 @@ describe("the next action", () => {
     const rail = await statusList();
     // Progress leads the list while the run goes; a row at work says what it does under it.
     expect(within(rail).getByRole("link", { name: /^Progress/ }).textContent).toBe(
-      "Progress, Running · 1 of 4",
+      // Counted as the title row counts it: the step the run is at.
+      "Progress, Running · Step 2 of 4",
     );
     const narration = within(rail).getByRole("link", { name: /^Narration/ });
     expect(narration.textContent).toBe("Narration, Running");
@@ -694,7 +695,7 @@ describe("Progress", () => {
     const rail = await statusList();
     await userEvent.click(within(rail).getByRole("link", { name: /^Progress/ }));
     const progress = await screen.findByRole("region", { name: "Progress" });
-    expect(within(progress).getByText(/^Making your video · 3 of 4/)).not.toBeNull();
+    expect(within(progress).getByText(/^Making your video · Step 4 of 4/)).not.toBeNull();
     expect(within(progress).getByRole("progressbar", { name: "Whole run" })).not.toBeNull();
     const steps = within(progress).getByRole("list", { name: "Run steps" });
     expect(within(steps).getByText("Video")).not.toBeNull();

@@ -1,14 +1,14 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import { type ProjectSummary, type Stage, thumbnailCountOf } from "@app/slices/admission/model.js";
-import { etaLabel, stageEta } from "@app/slices/eta/model.js";
+import { etaLabel } from "@app/slices/eta/model.js";
 import type { CheckpointHold } from "@app/slices/reviews/holds.js";
 import type { Output } from "@app/slices/storage/model.js";
 import type { Tone } from "@/components/kit/status";
 import type { Step } from "@/components/kit/steps";
+import { measuredEta, runStep } from "./measured-eta.js";
 import type { SectionId } from "./next-action.js";
 import { runSteps } from "./run-aside.js";
 import { stageName, summaryOf } from "./summary.js";
-import { overallProgress } from "./workspace.js";
 
 // The project's status column: one row per thing the project makes (Article, Narration,
 // Images, Video, Shorts, YouTube text, PDF), each "● Name  State · one detail", then All files.
@@ -93,6 +93,10 @@ export function statusRows(input: StatusInput): readonly StatusRow[] {
       const detail = outdated(id) ?? (done === undefined || done === "" ? undefined : done);
       return { tone: "done", state: "Done", ...(detail === undefined ? {} : { detail }) };
     }
+    // An edit sends a made step back to waiting: its files are there, only outdated, so the row
+    // says so rather than "Not started" (All files says why, the section offers to make them).
+    if (loudest.tone === "off" && outdated(id) !== undefined)
+      return { tone: "info", state: "Outdated" };
     const more =
       loudest.tone === "off" ||
       typeof loudest.detail !== "string" ||
@@ -125,14 +129,14 @@ export function statusRows(input: StatusInput): readonly StatusRow[] {
     project.status === "paused" ||
     shown.some((stage) => stage.state === "running");
   if (running) {
-    const overall = overallProgress(stages);
+    const step = runStep(stages);
     const left = timeLeft(shown, input.now);
     rows.push({
       id: "live",
       name: "Progress",
       tone: project.status === "paused" ? "waiting" : "running",
       state: project.status === "paused" ? "Paused" : "Running",
-      detail: `${String(overall.completed)} of ${String(overall.total)}`,
+      ...(step === undefined ? {} : { detail: step }),
       ...(left === undefined || project.status === "paused" ? {} : { more: left }),
     });
   }
@@ -160,14 +164,32 @@ export function statusRows(input: StatusInput): readonly StatusRow[] {
   rows.push(...row("video", stageName("video", config), ["video"], doneOf("video")));
 
   // Shorts and the YouTube text are made with the video: they stand as it does, until it is
-  // done, and then say what they hold.
+  // done, and then say what they hold. Made before, they keep saying so while the video is made
+  // again without them (the video stage names the part at work), or waits after an edit.
   const videoLook = standing("video", ["video"], undefined);
-  const made = (id: SectionId, name: string, count: number, detail: string): StatusRow =>
-    videoLook?.tone === "done"
-      ? count === 0
+  const videoStage = stageOf("video");
+  const atWork = (id: SectionId): boolean => {
+    if (videoStage?.state !== "running") return false;
+    const label = videoStage.activity?.label;
+    // Nothing named yet: any part of the stage may be at work.
+    if (label === undefined) return true;
+    return id === "shorts" ? /\bshorts\b/i.test(label) : /\bYouTube\b/.test(label);
+  };
+  const made = (id: SectionId, name: string, count: number, detail: string): StatusRow => {
+    const stale = outdated(id);
+    if (videoLook?.tone === "done")
+      return count === 0
         ? { id, name, tone: "off", state: "Not made" }
-        : { id, name, tone: "done", state: "Done", detail: outdated(id) ?? detail }
-      : { id, name, tone: videoLook?.tone ?? "off", state: videoLook?.state ?? "Not started" };
+        : { id, name, tone: "done", state: "Done", detail: stale ?? detail };
+    if (count > 0 && videoLook?.tone === "running" && !atWork(id))
+      return { id, name, tone: "done", state: "Done", detail: stale ?? detail };
+    // Waiting after an edit: what it made is there, outdated or as it was.
+    if (count > 0 && (videoLook?.tone === "off" || videoLook?.tone === "info"))
+      return stale === undefined
+        ? { id, name, tone: "done", state: "Done", detail }
+        : { id, name, tone: "info", state: "Outdated" };
+    return { id, name, tone: videoLook?.tone ?? "off", state: videoLook?.state ?? "Not started" };
+  };
   if (input.shorts) {
     const shorts = outputs.filter((output) => output.role === "short_video").length;
     rows.push(made("shorts", "Shorts", shorts, plural(shorts, "short")));
@@ -188,7 +210,7 @@ export function statusRows(input: StatusInput): readonly StatusRow[] {
 export function timeLeft(stages: readonly Stage[], now: number): string | undefined {
   const running = stages.filter((stage) => stage.state === "running");
   if (running.length === 0) return undefined;
-  const etas = running.map((stage) => stageEta(stage, now));
+  const etas = running.map((stage) => measuredEta(stage, now));
   const known = etas.every((eta) => eta?.seconds !== undefined);
   const waiting = stages.filter((stage) => stage.state === "pending");
   const later = waiting.every((stage) => stage.typicalSeconds !== undefined);
