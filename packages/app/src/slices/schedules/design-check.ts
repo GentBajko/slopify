@@ -41,14 +41,14 @@ export function checkDesign(
   for (const keyword of Object.keys(input.values))
     if (!fields.includes(keyword))
       problems.push(
-        `{{${keyword}}} (for every row) is not a field of this template (its fields are ${named}). Remove it.`,
+        `{{${keyword}}} (for every row) is not a keyword of this template (its keywords are ${named}). Remove it.`,
       );
   for (const [index, row] of input.items.entries()) {
     const where = `Row ${String(index + 1)} (${row.title})`;
     for (const keyword of Object.keys(row.values))
       if (!fields.includes(keyword))
         problems.push(
-          `${where} fills {{${keyword}}}, which this template doesn't use (its fields are ${named}). Remove that column.`,
+          `${where} fills {{${keyword}}}, which this template doesn't use (its keywords are ${named}). Remove that column.`,
         );
     if (rowDate(row, plan.dateField) === undefined)
       problems.push(

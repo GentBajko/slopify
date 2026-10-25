@@ -256,7 +256,11 @@ describe("a design schedule", () => {
       items: [{ title: "x", values: { Date: "2026-11-14", Colour: "red" } }],
     });
     expect(unknown.ok ? "saved" : unknown.message).toContain(
-      "fills {{Colour}}, which this template doesn't use",
+      "fills {{Colour}}, which this template doesn't use (its keywords are {{",
+    );
+    const everyRow = create({ values: { Colour: "red" } });
+    expect(everyRow.ok ? "saved" : everyRow.message).toContain(
+      "{{Colour}} (for every row) is not a keyword of this template (its keywords are {{",
     );
     const gone = create({ templateId: "nope" });
     expect(gone.ok ? "saved" : gone.reason).toBe("missing-template");
