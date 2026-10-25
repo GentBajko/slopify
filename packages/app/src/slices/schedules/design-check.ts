@@ -33,7 +33,7 @@ export function checkDesign(
   const plan = designPlanOf(deps.db, input.templateId);
   if (plan === undefined)
     return refuse(
-      `The schedule wasn't saved. ${template.name} doesn't say which field holds each date. Open it in Library → Designs → Templates, choose the date field under Schedule, save it, then save the schedule again.`,
+      `The schedule wasn't saved. ${template.name} doesn't say which keyword holds each date. Open it from Templates → Poster templates, choose the date keyword under Schedule, save it, then save the schedule again.`,
     );
   const fields = designFields(plan.document);
   const named = fields.length === 0 ? "none" : fields.map((one) => `{{${one}}}`).join(", ");

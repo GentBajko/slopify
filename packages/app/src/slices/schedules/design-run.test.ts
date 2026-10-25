@@ -286,7 +286,7 @@ describe("a design schedule", () => {
     const { create } = await setup({ doc: poster() });
     const result = create();
     expect(result.ok ? "saved" : result.message).toContain(
-      "Gig poster doesn't say which field holds each date.",
+      "Gig poster doesn't say which keyword holds each date.",
     );
   });
 

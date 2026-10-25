@@ -106,7 +106,7 @@ export function MakePieceDrawer({
           values={values}
           dateField={doc.schedule?.dateField}
           onChange={setValues}
-          label="Fields"
+          label="Keywords"
           tip="library.design.make-values"
         />
         {unknown ? (

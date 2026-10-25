@@ -180,7 +180,7 @@ describe("making a piece from a template", () => {
       return result.ok ? "made" : result.message;
     };
     expect(reason({ values: { ...values, Price: " " } })).toBe(
-      "{{Price}} has no value. Fill it in under Fields, then press Make.",
+      "{{Price}} has no value. Fill it in under Keywords, then press Make.",
     );
     expect(reason({ acknowledgedHigh: 0.01 })).toBe(
       "The price changed since you looked: this piece now costs up to $0.04. Check the new price on the button and press it again.",

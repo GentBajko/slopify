@@ -507,7 +507,7 @@ function TemplateCardItem({
   );
 }
 
-// Poster templates: posters and flyers with fields such as {{Event}}, made again by hand or
+// Poster templates: posters and flyers with keywords such as {{Event}}, made again by hand or
 // ahead of each date by a schedule, each set up in its own editor.
 function PosterTemplates({
   problem,
@@ -519,7 +519,7 @@ function PosterTemplates({
   return (
     <div className="flex flex-col gap-3">
       <p className="m-0 text-small text-ink-2">
-        A poster with fields such as {"{{Event}}"}, made again by hand or ahead of each date by a
+        A poster with keywords such as {"{{Event}}"}, made again by hand or ahead of each date by a
         schedule. Your posters and picture edits are under{" "}
         <TextLink to="/designs">Designs</TextLink>.
       </p>

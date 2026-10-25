@@ -235,7 +235,7 @@ describe("drawing a designed piece", () => {
       return result.ok ? "drawn" : result.message;
     };
     expect(await message("a4", "png")).toBe(
-      "{{Price}} has no value. Fill it in under Fields, then press Make.",
+      "{{Price}} has no value. Fill it in under Keywords, then press Make.",
     );
     expect(await message("wide", "png")).toBe(
       "Wide 16:9 isn't ticked for this design. Tick it under Formats, then download again.",
