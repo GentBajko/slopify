@@ -214,20 +214,28 @@ export function VideoBody({ stage, project, outputs }: BodyProps) {
           <div className="flex min-w-0 flex-col gap-3">
             <ButtonRow>
               {listening === undefined || carried === assetOf(listening.main.output) ? null : (
-                <DownloadMenu files={[listening.main]} variant={lead ? "primary" : "secondary"} />
+                <DownloadMenu
+                  files={[listening.main]}
+                  variant={lead ? "primary" : "secondary"}
+                  noteOlder={false}
+                />
               )}
               {video !== undefined && carried === assetOf(video) ? null : (
                 <DownloadMenu
                   files={[main]}
                   variant={lead && listening === undefined ? "primary" : "secondary"}
+                  noteOlder={false}
                 />
               )}
               <OutputFolder output={video ?? listening?.main.output} />
             </ButtonRow>
+            {/* Said once, here, rather than on the button: a button named "… (previous
+                version)" ran out of the 300px column. */}
             {older.size === 0 ? null : (
               <MetaLine>
-                Made before your last change: the download is that previous version until you make
-                it again.
+                {rendering
+                  ? "Being made again: the download is the current file until the new one is ready."
+                  : "Made before your last change: the download is that previous version until you make it again."}
               </MetaLine>
             )}
             {subtitles.length === 0 && listening?.other === undefined ? null : (

@@ -221,12 +221,15 @@ export function DownloadMenu({
   files,
   label,
   variant = "secondary",
+  noteOlder = true,
 }: {
   readonly files: readonly StageFile[];
   // The menu's words; one file is named for itself.
   readonly label?: string | undefined;
   // Primary only on a page whose title row has no next action.
   readonly variant?: "primary" | "secondary";
+  // False where the body says under the button that its file is the previous version.
+  readonly noteOlder?: boolean;
 }) {
   const shown = files.filter(
     (file): file is { readonly output: Output; readonly label: string } =>
@@ -240,7 +243,7 @@ export function DownloadMenu({
     return (
       <SingleDownload
         output={only.output}
-        label={older.has(only.output.id) ? `${words} (previous version)` : words}
+        label={noteOlder && older.has(only.output.id) ? `${words} (previous version)` : words}
         file={only.label}
         variant={variant}
       />

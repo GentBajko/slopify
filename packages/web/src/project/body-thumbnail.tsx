@@ -59,7 +59,7 @@ export function ThumbnailTile({
   outputs,
   actions,
   busy,
-  sample,
+  locked,
   onOpen,
 }: {
   readonly slot: ThumbnailSlot;
@@ -71,8 +71,8 @@ export function ThumbnailTile({
   readonly outputs: readonly Output[];
   readonly actions: BodyProps["actions"];
   readonly busy: boolean;
-  // A read-only sample: nothing here may spend or change it.
-  readonly sample: boolean;
+  // A read-only sample, or a project at work: nothing here may spend or change it.
+  readonly locked: boolean;
   readonly onOpen: () => void;
 }): ReactElement {
   const { variant, output } = slot;
@@ -129,7 +129,7 @@ export function ThumbnailTile({
                   {flagged && review !== undefined ? (
                     <ReviewActions review={review} projectId={project.id} busy={busy} />
                   ) : null}
-                  {sample ? null : (
+                  {locked ? null : (
                     <Button
                       size="small"
                       disabled={change.unavailable}
@@ -150,7 +150,7 @@ export function ThumbnailTile({
                     name={name}
                     aspect={frameAspect(project.format)}
                     replaceable={
-                      !sample &&
+                      !locked &&
                       (project.config.sources.thumbnail === "from_prompt" ||
                         project.config.sources.thumbnail === "prompt_by_llm")
                     }
