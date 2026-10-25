@@ -189,11 +189,4 @@ export const settingsHelp = {
     body: "The full path of the folder your files move to, on another disk or a synced folder for example. Slopify makes Projects and Backups inside it. It must be empty or not exist yet. The move needs as much free space there as your projects take now.",
     tutorial: { page: "Where-Your-Files-Live", anchor: "move-your-files-to-another-folder" },
   },
-
-  // First run
-  "welcome.packs": {
-    title: "Starter templates",
-    body: "Each starter template adds its prompts, a suggested voice and the template for one kind of channel, so you can pick the template in Create, type a topic and go. Adding one twice changes nothing, and it never replaces a prompt or template of yours with the same name.",
-    tutorial: { page: "First-Launch-and-Welcome", anchor: "starter-packs" },
-  },
 } as const satisfies Readonly<Record<string, HelpEntry>>;
