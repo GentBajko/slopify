@@ -170,7 +170,8 @@ it("writes a new prompt in a drawer beside the setup, and picks it once saved", 
     },
   });
   await userEvent.type(screen.getByLabelText(topicLabel), "Keep this draft");
-  await userEvent.click(screen.getByRole("button", { name: "New article prompt" }));
+  await openRow("Article");
+  await userEvent.click(await screen.findByRole("button", { name: "New article prompt" }));
   const drawer = within(await screen.findByRole("dialog", { name: "New article prompt" }));
   // Save says what is missing instead of saving an empty prompt.
   await userEvent.click(drawer.getByRole("button", { name: "Save" }));
