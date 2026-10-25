@@ -45,7 +45,9 @@ it("starts a new video following the narration, with a plain Look folded away", 
   expect(within(look as HTMLElement).getByText("Plain cuts, no effects")).not.toBeNull();
   // The line under Cuts says how they run; no info button beside it.
   expect(screen.queryByRole("button", { name: "About cuts" })).toBeNull();
-  expect(screen.getByText(/^Follow the narration cuts at a sentence end/)).not.toBeNull();
+  expect(
+    screen.getByText(/^Follow the narration starts each image at a sentence end/),
+  ).not.toBeNull();
 });
 
 it("sets transitions, the Look, chapter cards and animated images, and saves them in the draft", async () => {

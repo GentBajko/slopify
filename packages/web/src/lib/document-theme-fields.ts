@@ -190,7 +190,7 @@ export const themeGroups: readonly ThemeGroup[] = [
       share(["spacing", "itemGap"], "After a list item", "× line"),
       mm(["spacing", "listIndent"], "List indent"),
       mm(["spacing", "quoteIndent"], "Quote indent"),
-      mm(["spacing", "ruleWidth"], "Divider width", "The short centred line a --- becomes."),
+      mm(["spacing", "ruleWidth"], "Divider width", "The short centered line a --- becomes."),
     ],
   },
   {

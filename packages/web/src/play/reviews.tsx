@@ -134,7 +134,7 @@ export function ReviewSettings({
     !imageReviewers.includes(value.provider);
   const overall = overallMode(value, makes);
   // One choice for every stage this run makes something for; the promise check stays as it is
-  // set under Advanced. Turning checks on with no checker picked uses the run's writer.
+  // set under Checker and stages. Turning checks on with no checker picked uses the run's writer.
   const setAll = (mode: ReviewMode): void => {
     const stages = { ...value.stages };
     for (const stage of reviewStagesInRunOrder) {

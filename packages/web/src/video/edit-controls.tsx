@@ -98,7 +98,7 @@ export function useVideoEditControls({
       label="Cuts"
       help={
         noWordTiming === undefined
-          ? "Follow the narration cuts at a sentence end near Seconds per image; the images start again when they run out."
+          ? "Follow the narration starts each image at a sentence end, about Seconds per image apart. The images start again when they run out."
           : undefined
       }
     >
