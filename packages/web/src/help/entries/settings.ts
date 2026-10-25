@@ -173,16 +173,6 @@ export const settingsHelp = {
     body: "Slopify never uploads or publishes. A finished project's Copy for YouTube Studio lists everything Studio asks for, with Copy buttons. The optional Slopify Studio browser extension fills Studio's upload dialog for you; you still press Publish. Install it below, then pair it with the token.",
     tutorial: { page: "Studio-Extension", anchor: "get-the-extension" },
   },
-  "settings.studio.playlist": {
-    title: "Playlists",
-    body: "The YouTube playlists Copy for YouTube Studio offers, typed exactly as Studio names them. Pick Every channel for the default list, or a channel to give it its own. Ticked On by default means every project goes into it; Copy for YouTube Studio changes the ticks for one project. The extension ticks each one in Studio. Default: none.",
-    tutorial: { page: "Studio-Extension", anchor: "settings--youtube-studio" },
-  },
-  "settings.studio.pairing": {
-    title: "Extension pairing token",
-    body: "A secret the Slopify Studio extension needs before it may read what your projects are ready to upload, so no other page can. Copy it into the extension's options and press Pair. New pairing token makes a fresh one and unpairs the extension until you paste the new token.",
-    tutorial: { page: "Studio-Extension", anchor: "pair-it-with-slopify" },
-  },
 
   "settings.files.new-folder": {
     title: "New folder",

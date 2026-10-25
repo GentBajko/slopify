@@ -276,7 +276,7 @@ export function PrepareUploadDrawer({
                 disabledReason={
                   settings.error !== null
                     ? `Couldn't check whether the extension is paired: ${settings.error.message} Close Copy for YouTube Studio and open it again.`
-                    : "Wait for the upload pack to load"
+                    : "Wait for the fields to load"
                 }
                 onClick={() => {
                   if (item === undefined) return;
@@ -324,7 +324,7 @@ export function PrepareUploadDrawer({
         </div>
       )}
       {post !== undefined || pack.error === null ? null : (
-        <Callout tone="danger" title="The upload pack couldn't be read.">
+        <Callout tone="danger" title="The fields for YouTube Studio couldn't be read.">
           {`${pack.error.message} Close Copy for YouTube Studio and open it again.`}
         </Callout>
       )}
