@@ -14,7 +14,7 @@ type Edit = (form: Form) => void;
 
 // The few settings each section leads with, presets before numbers, laid out two across. The
 // section's whole editor (Play's own) is under "All … settings" below them. Shorts, Pauses and
-// checks and YouTube description & posts show their whole editor here instead (page.tsx).
+// checks and YouTube description and posts show their whole editor here instead (page.tsx).
 export function VisibleControls({
   section,
   document,

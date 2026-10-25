@@ -108,12 +108,14 @@ export function FineTune({
       return (
         <NarrationSection {...controls} entries={choices.entries} onKeyword={() => undefined} />
       );
+    // The section leads with the images' source, the thumbnail's source and its count: the
+    // editors under the fold leave them out.
     case "pictures":
-      return <ImagesSection {...controls} />;
+      return <ImagesSection {...controls} bare />;
     case "video":
       return <VideoSection {...controls} problemOf={problem} />;
     case "thumbnail":
-      return <ThumbnailRail {...controls} />;
+      return <ThumbnailRail {...controls} bare />;
     case "shorts":
       return written ? (
         <Shorts

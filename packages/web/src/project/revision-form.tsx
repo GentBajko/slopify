@@ -9,6 +9,11 @@ import {
   titleMax,
   zoomPercentMax,
 } from "@app/slices/admission/rules.js";
+import {
+  channelName,
+  extrasName,
+  setupSectionNames,
+} from "@app/slices/project-templates/setup-sections.js";
 import { defaultSubtitles } from "@app/slices/subtitles/model.js";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -179,20 +184,26 @@ export function RevisionForm(
     language: config.language,
     onChange: (next) => onChange({ ...edit, config: { ...config, videoEdit: next } }),
   });
+  // Named as Create's rows and Edit template's sections are (`setup-sections.ts`). Captions, the
+  // made captions' own words, is the project's alone.
   const sections: readonly {
     readonly id: EditSection;
     readonly label: string;
     readonly badge?: string;
   }[] = [
-    { id: "title", label: "Title and keywords" },
+    { id: "title", label: setupSectionNames.topic },
     {
       id: "article",
-      label: "Article",
+      label: setupSectionNames.article,
       ...(edit.content.articleEdited ? { badge: "edited" } : {}),
     },
-    { id: "narration", label: "Narration" },
-    { id: "images", label: "Images", badge: String(edit.content.imageOrder.length) },
-    { id: "video", label: "Video and style" },
+    { id: "narration", label: setupSectionNames.narration },
+    {
+      id: "images",
+      label: setupSectionNames.images,
+      badge: String(edit.content.imageOrder.length),
+    },
+    { id: "video", label: setupSectionNames.video },
     ...(config.sources.article === "off"
       ? []
       : [
@@ -204,13 +215,13 @@ export function RevisionForm(
               : { badge: String(edit.content.subtitleCues.cues.length) }),
           },
         ]),
-    { id: "outputs", label: "Outputs" },
+    { id: "outputs", label: extrasName },
     {
       id: "checks",
-      label: "Pauses and checks",
+      label: setupSectionNames.checks,
       ...(config.reviews === undefined ? {} : { badge: "on" }),
     },
-    { id: "channel", label: "Channel" },
+    { id: "channel", label: channelName },
   ];
   const current = sections.some((one) => one.id === section) ? section : "title";
   const panel = (id: EditSection) => cn("min-w-0 space-y-6", current === id ? undefined : "hidden");

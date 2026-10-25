@@ -40,9 +40,9 @@ it("asks for the topic the title names and shows the title it makes", async () =
   );
   await userEvent.type(screen.getByLabelText(topicLabel), "Cleopatra");
   expect(screen.getByText(/Title will be:/).textContent).toBe("Title will be: Lore: Cleopatra");
-  // The title itself moves into the Keywords row, where it can still be changed.
+  // The title itself moves into the Title and keywords row, where it can still be changed.
   expect(screen.queryByRole("textbox", { name: "Title" })).toBeNull();
-  await openRow("Keywords");
+  await openRow("Title and keywords");
   expect((screen.getByLabelText("Title pattern") as HTMLInputElement).value).toBe(
     "Lore: {{topic}}",
   );

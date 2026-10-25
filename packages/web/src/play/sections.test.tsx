@@ -28,7 +28,7 @@ afterEach(cleanup);
 it("folds the setup into rows, one open at a time, that keep what was typed", async () => {
   const { requests } = await mountPlay();
   const rows = within(screen.getByRole("list", { name: "Setup" }));
-  // Keywords and Channel are rows only when there is something to set: no prompt asks for a
+  // Title and keywords and Channel are rows only when there is something to set: no prompt asks for a
   // keyword yet, and there is one channel.
   const names = document.querySelectorAll("[data-setup-row] > [data-row-head] h3");
   expect(Array.from(names, (heading) => heading.textContent)).toEqual([
@@ -128,17 +128,17 @@ it("retains hidden literal keyword values and renders prompt HTML as text", asyn
   await pickArticlePrompt("Dossier");
   await userEvent.click(screen.getByText("Text of the prompt"));
   expect(document.querySelector("pre img")).toBeNull();
-  await openRow("Keywords");
+  await openRow("Title and keywords");
   for (const name of ["__proto__", "topic.name", "with spaces"])
     await userEvent.type(screen.getByLabelText(name), "Kept");
   await openRow("Article");
   const source = within(screen.getByRole("radiogroup", { name: "Article" }));
   await userEvent.click(source.getByRole("radio", { name: "Use my text as written" }));
-  // Nothing asks for a keyword now, so there is no Keywords row at all.
+  // Nothing asks for a keyword now, so there is no Title and keywords row at all.
   expect(document.querySelector('[data-setup-row="title"]')).toBeNull();
   expect(screen.queryByLabelText("__proto__")).toBeNull();
   await userEvent.click(source.getByRole("radio", { name: "Write it for me" }));
-  await openRow("Keywords");
+  await openRow("Title and keywords");
   for (const name of ["__proto__", "topic.name", "with spaces"])
     expect((screen.getByLabelText(name) as HTMLInputElement).value).toBe("Kept");
 });

@@ -49,11 +49,14 @@ type Pane = "sections" | "settings" | "sample";
 // settings, and every one of them matters (the shorts, each pause and AI check, the
 // description and each site's post).
 const unfolded: readonly TemplateSection[] = ["shorts", "reviews", "upload"];
-// Topic & title's other settings (the language, a keyword the title doesn't fill) follow its
+// Title and keywords' other settings (the language, a keyword the title doesn't fill) follow its
 // lead ones with no fold: a fold of one or two settings hides more than it tidies. PDF has no
 // others: whether to make it and its look are both lead settings.
 const followed: readonly TemplateSection[] = ["subject"];
 const leadOnly: readonly TemplateSection[] = ["document", "schedule"];
+// The sections whose fold leaves out what they lead with (the source, the thumbnail count):
+// it holds the rest of their settings, not all of them (fine-tune.tsx).
+const rest: readonly TemplateSection[] = ["pictures", "thumbnail"];
 
 // Templates → Edit template: a template set up section by section, in run order, each
 // section's sample beside its settings.
@@ -314,6 +317,7 @@ function Studio({
             <AllSettings
               key={`${current.id}:${String(fineTune)}`}
               label={current.label}
+              more={rest.includes(current.id)}
               open={fineTune > 0}
             >
               <FineTune section={current.id} onFiles={onFiles} />
@@ -350,25 +354,33 @@ function isSetting(control: Element): boolean {
   );
 }
 
+// How many settings a person meets under `root`, a row of choices counted once.
+export function settingCount(root: Element): number {
+  return [...root.querySelectorAll(settingSelector)].filter(isSetting).length;
+}
+
 function useSettingCount(within: RefObject<HTMLElement | null>): number | undefined {
   const [count, setCount] = useState<number>();
   useLayoutEffect(() => {
     const root = within.current;
     if (root === null) return;
-    const next = [...root.querySelectorAll(settingSelector)].filter(isSetting).length;
+    const next = settingCount(root);
     if (next !== count) setCount(next);
   });
   return count;
 }
 
-// "All Video & captions settings (99)": a section's whole editor, folded under its few lead
-// settings, with how many it holds.
+// "All Video and style settings (99)": a section's whole editor, folded under its few lead
+// settings, with how many it holds; "More Images settings (6)" where the editor leaves out
+// what the section leads with. A fold with nothing in it (a thumbnail that is off) isn't drawn.
 function AllSettings({
   label,
+  more,
   open,
   children,
 }: {
   readonly label: string;
+  readonly more: boolean;
   readonly open: boolean;
   readonly children: ReactElement;
 }): ReactElement {
@@ -377,7 +389,8 @@ function AllSettings({
   return (
     <Fold
       defaultOpen={open}
-      summary={`All ${label} settings${count === undefined || count === 0 ? "" : ` (${String(count)})`}`}
+      {...(count === 0 ? { className: "hidden" } : {})}
+      summary={`${more ? "More" : "All"} ${label} settings${count === undefined || count === 0 ? "" : ` (${String(count)})`}`}
     >
       <div ref={body} className="flex min-w-0 flex-col gap-4 pt-2 pb-2">
         {children}

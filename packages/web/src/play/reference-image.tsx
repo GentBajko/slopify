@@ -101,7 +101,7 @@ export function ReferenceImage({
             />
             Use it as a reference for the thumbnail too
           </label>
-          <HelpLine className="pl-7">The thumbnail itself is switched on under Outputs.</HelpLine>
+          <HelpLine className="pl-7">The thumbnail itself has its own switch, Thumbnail.</HelpLine>
         </div>
       )}
     </div>

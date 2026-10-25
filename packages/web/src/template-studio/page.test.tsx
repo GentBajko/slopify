@@ -10,7 +10,7 @@ import { freshDraftDocument } from "@/play/draft-state";
 import { packs, xPack } from "@/social/post.fake";
 import type { PlayHandoff } from "@/templates/play-handoff";
 import { jsonAnswer, problemAnswer, renderRouted, testDeps } from "@/test-app";
-import { TemplateStudioPage } from "./page";
+import { settingCount, TemplateStudioPage } from "./page";
 import { checks, labels, routes, templateId, view } from "./studio.fake";
 
 afterEach(cleanup);
@@ -96,13 +96,24 @@ it("says nothing about schedules on a template no schedule runs", async () => {
 
 it("folds each section's whole editor under its lead settings, as a disclosure with its count", async () => {
   open("video");
-  const panel = await screen.findByRole("region", { name: "Video & captions settings" });
+  const panel = await screen.findByRole("region", { name: "Video and style settings" });
   const summary = panel.querySelector("details > summary");
-  expect(summary?.textContent).toMatch(/^All Video & captions settings \(\d+\)$/);
+  expect(summary?.textContent).toMatch(/^All Video and style settings \(\d+\)$/);
   expect(panel.querySelector("details")?.open).toBe(false);
 });
 
-it("counts a row of choices once, whichever control draws it", async () => {
+it("counts a row of choices once, whichever control draws it", () => {
+  const root = document.createElement("div");
+  root.innerHTML = `
+    <div role="group" aria-label="Shape"><button aria-pressed="true">16:9</button><button aria-pressed="false">9:16</button></div>
+    <div role="radiogroup" aria-label="How many"><button role="radio">1</button><button role="radio">3</button></div>
+    <div role="group" aria-label="Layout only"><span>Not a setting</span></div>
+    <select aria-label="Prompt"></select>
+    <input type="file" aria-label="File" />`;
+  expect(settingCount(root)).toBe(3);
+});
+
+it("folds only what Thumbnail doesn't lead with: its prompt, not its source or count again", async () => {
   open("thumbnail", {
     [`GET /api/template-studio/${templateId}`]: jsonAnswer({
       ...view,
@@ -119,18 +130,42 @@ it("counts a row of choices once, whichever control draws it", async () => {
     }),
   });
   const panel = await screen.findByRole("region", { name: "Thumbnail settings" });
-  // Whether to make one, its source, its prompt and how many: a tick, two rows of choices and
-  // a select.
   await waitFor(() =>
     expect(panel.querySelector("details > summary")?.textContent).toBe(
-      "All Thumbnail settings (4)",
+      "More Thumbnail settings (1)",
     ),
   );
+  const fold = panel.querySelector("details") as HTMLElement;
+  expect(within(fold).getByRole("combobox", { name: "Thumbnail prompt" })).not.toBeNull();
+  expect(within(fold).queryByText("How many thumbnails")).toBeNull();
+  expect(within(fold).queryByRole("checkbox", { name: /^Thumbnail/ })).toBeNull();
+  // The lead settings, once each.
+  expect(within(panel).getAllByRole("group", { name: "Thumbnails per video" })).toHaveLength(1);
 });
 
-it("shows Topic & title's language with its lead settings, under no fold", async () => {
+it("folds Images without its source or Scenes from the article, which it leads with", async () => {
+  open("pictures");
+  const panel = await screen.findByRole("region", { name: "Images settings" });
+  await waitFor(() =>
+    expect(panel.querySelector("details > summary")?.textContent).toMatch(
+      /^More Images settings \(\d+\)$/,
+    ),
+  );
+  expect(within(panel).getAllByRole("switch", { name: /^Scenes from the article/ })).toHaveLength(
+    1,
+  );
+  expect(within(panel).getAllByRole("group", { name: "Images" })).toHaveLength(1);
+});
+
+it("draws no fold for a thumbnail that is off: there is nothing more to set", async () => {
+  open("thumbnail");
+  const panel = await screen.findByRole("region", { name: "Thumbnail settings" });
+  await waitFor(() => expect(panel.querySelector("details")?.className).toContain("hidden"));
+});
+
+it("shows Title and keywords's language with its lead settings, under no fold", async () => {
   open("subject");
-  const panel = await screen.findByRole("region", { name: "Topic & title settings" });
+  const panel = await screen.findByRole("region", { name: "Title and keywords settings" });
   expect(await within(panel).findByRole("combobox", { name: "Language" })).not.toBeNull();
   expect(panel.querySelector("details")).toBeNull();
 });
@@ -183,14 +218,14 @@ it.each(["shorts", "reviews", "upload"] as const)(
   },
 );
 
-it("puts each setting in one section: the shorts in Shorts, each site's post in YouTube description & posts", async () => {
+it("puts each setting in one section: the shorts in Shorts, each site's post in YouTube description and posts", async () => {
   open("shorts");
   const shorts = await screen.findByRole("region", { name: "Shorts settings" });
   expect(within(shorts).queryByRole("group", { name: "Post to" })).toBeNull();
   cleanup();
   open("upload");
   const upload = await screen.findByRole("region", {
-    name: "YouTube description & posts settings",
+    name: "YouTube description and posts settings",
   });
   expect(within(upload).getAllByRole("group", { name: "Post to" })).toHaveLength(1);
   expect(within(upload).queryByText(/How many/)).toBeNull();
@@ -352,7 +387,7 @@ it("has no Save until something changed, and one Save that never spends", async 
     });
   });
   open("video", { [`POST /api/template-studio/${templateId}/save`]: sent });
-  await screen.findByRole("region", { name: "Video & captions settings" });
+  await screen.findByRole("region", { name: "Video and style settings" });
   expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
   await user.click(screen.getByRole("button", { name: "Vertical 9:16" }));
   expect(screen.getByText("Unsaved changes. Save them before you make a video.")).not.toBeNull();
@@ -360,7 +395,7 @@ it("has no Save until something changed, and one Save that never spends", async 
   await waitFor(() => expect(sent).toHaveBeenCalledOnce());
 });
 
-it("renames the template from Topic & title, saved with the next Save", async () => {
+it("renames the template from Title and keywords, saved with the next Save", async () => {
   const user = userEvent.setup();
   const sent = vi.fn(async (request: Request) => {
     expect(await request.json()).toMatchObject({ name: "Monthly documentary" });
@@ -556,16 +591,16 @@ it("switches between sections, settings and sample with tabs on a narrow screen"
       .getAllByRole("tab")
       .map((tab) => tab.textContent),
   ).toEqual(["Sections", "Settings", "Sample"]);
-  const settings = screen.getByRole("region", { name: "Topic & title settings" });
-  const sample = screen.getByRole("region", { name: "Topic & title sample" });
+  const settings = screen.getByRole("region", { name: "Title and keywords settings" });
+  const sample = screen.getByRole("region", { name: "Title and keywords sample" });
   expect(settings.className).not.toContain("max-md:hidden");
   expect(sample.parentElement?.className).toContain("max-md:hidden");
   await user.click(within(tabs).getByRole("tab", { name: "Sample" }));
-  expect(screen.getByRole("region", { name: "Topic & title settings" }).className).toContain(
+  expect(screen.getByRole("region", { name: "Title and keywords settings" }).className).toContain(
     "max-md:hidden",
   );
   expect(
-    screen.getByRole("region", { name: "Topic & title sample" }).parentElement?.className,
+    screen.getByRole("region", { name: "Title and keywords sample" }).parentElement?.className,
   ).not.toContain("max-md:hidden");
 });
 
@@ -588,7 +623,7 @@ it("says plainly when the template can't be read", async () => {
 
 it("plays the 30-second video sample in the template's frame, with no button while it is ready", async () => {
   open("video");
-  const sample = await screen.findByRole("region", { name: "Video & captions sample" });
+  const sample = await screen.findByRole("region", { name: "Video and style sample" });
   const video = sample.querySelector("video");
   expect(video?.getAttribute("src")).toBe("http://slopify.test/api/style-preview/abc.mp4?v=1");
   expect(within(sample).queryByRole("button", { name: /^Make sample/ })).toBeNull();
@@ -701,7 +736,7 @@ it("asks for a version's free samples by itself once, and again from Make sample
     [`POST /api/template-studio/${templateId}/free-samples`]: asked,
   });
   await waitFor(() => expect(asked).toHaveBeenCalledOnce());
-  const sample = await screen.findByRole("region", { name: "Video & captions sample" });
+  const sample = await screen.findByRole("region", { name: "Video and style sample" });
   const make = within(sample).getByRole("button", { name: "Make sample · free" });
   await waitFor(() => expect(make.hasAttribute("disabled")).toBe(false));
   await user.click(make);
@@ -1067,9 +1102,9 @@ it("shows the samples an imported template came with", async () => {
   expect(within(section).getByText(/Your own samples replace these/)).not.toBeNull();
 });
 
-it("names each choice row in Video & captions above its buttons", async () => {
+it("names each choice row in Video and style above its buttons", async () => {
   open("video");
-  const panel = await screen.findByRole("region", { name: "Video & captions settings" });
+  const panel = await screen.findByRole("region", { name: "Video and style settings" });
   const names = [...panel.querySelectorAll('[data-slot="studio-choice"] .sl-field__label')].map(
     (label) => label.textContent,
   );
@@ -1077,7 +1112,7 @@ it("names each choice row in Video & captions above its buttons", async () => {
   expect(within(panel).getByRole("group", { name: "Captions" })).not.toBeNull();
 });
 
-it("turns a site on in YouTube description & posts with its defaults, saved with the template", async () => {
+it("turns a site on in YouTube description and posts with its defaults, saved with the template", async () => {
   const user = userEvent.setup();
   const saved: unknown[] = [];
   open("upload", {

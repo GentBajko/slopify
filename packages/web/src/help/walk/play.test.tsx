@@ -75,7 +75,7 @@ const routes = {
 };
 
 const rows = [
-  "Keywords",
+  "Title and keywords",
   "Article",
   "Narration",
   "Images",

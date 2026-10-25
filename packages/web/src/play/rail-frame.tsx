@@ -35,6 +35,9 @@ export interface RailProps {
   readonly onSubtitleUpload?: (pending: boolean) => void;
   // False when the rail is the setup row itself, which already names the stage.
   readonly titled?: boolean | undefined;
+  // True where the screen already draws the stage's switch and its lead settings (Edit
+  // template's section, over its fold): the editor draws only the rest, so nothing shows twice.
+  readonly bare?: boolean | undefined;
 }
 
 // The id of the visible name a stage's switch is labelled by: its rail's name, or the tick of
@@ -50,6 +53,7 @@ export function StageRail({
   name,
   dim,
   titled = true,
+  bare = false,
   source,
   note,
   children,
@@ -58,6 +62,8 @@ export function StageRail({
   readonly name: string;
   readonly dim: boolean;
   readonly titled?: boolean | undefined;
+  // No name and no switch: only the stage's settings (RailProps `bare`).
+  readonly bare?: boolean | undefined;
   // The stage's switch: SourceSwitch, or the article's own.
   readonly source: ReactNode;
   // One short sentence under the switch, saying what the picked choice does where its label
@@ -71,27 +77,29 @@ export function StageRail({
       data-tour={`play-${kind}`}
       className="flex min-w-0 flex-col gap-4 border-b border-line py-4 last:border-b-0 [&>div:empty]:hidden"
     >
-      <div
-        className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2"
-        {...(note === undefined || note === null ? {} : helpScope)}
-      >
-        {titled ? (
-          <>
-            <StageGlyph kind={kind} className={dim ? "text-ink-3" : "text-ink-2"} />
-            <h3 id={nameId} className={cn("m-0 text-title-3", dim ? "text-ink-3" : undefined)}>
+      {bare ? null : (
+        <div
+          className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2"
+          {...(note === undefined || note === null ? {} : helpScope)}
+        >
+          {titled ? (
+            <>
+              <StageGlyph kind={kind} className={dim ? "text-ink-3" : "text-ink-2"} />
+              <h3 id={nameId} className={cn("m-0 text-title-3", dim ? "text-ink-3" : undefined)}>
+                {name}
+              </h3>
+            </>
+          ) : (
+            <span id={nameId} className="sl-field__label">
               {name}
-            </h3>
-          </>
-        ) : (
-          <span id={nameId} className="sl-field__label">
-            {name}
-          </span>
-        )}
-        <RailName.Provider value={nameId}>{source}</RailName.Provider>
-        {note === undefined || note === null ? null : (
-          <HelpLine className="basis-full">{note}</HelpLine>
-        )}
-      </div>
+            </span>
+          )}
+          <RailName.Provider value={nameId}>{source}</RailName.Provider>
+          {note === undefined || note === null ? null : (
+            <HelpLine className="basis-full">{note}</HelpLine>
+          )}
+        </div>
+      )}
       {children}
     </section>
   );

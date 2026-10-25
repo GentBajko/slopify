@@ -11,10 +11,14 @@ import { SceneKeywordRows, sceneKeywordUses } from "@/components/scene-keyword-r
 export function ImageScenesControl({
   document,
   prompts,
+  bare = false,
   onEdit,
 }: {
   readonly document: PlayDraftDocument;
   readonly prompts: readonly Prompt[];
+  // Edit template draws the switch with its section's lead settings: only the prompts that
+  // turn scenes on by themselves show here.
+  readonly bare?: boolean | undefined;
   readonly onEdit: (next: PlayDraftDocument) => void;
 }): ReactElement {
   const { form } = document;
@@ -38,15 +42,17 @@ export function ImageScenesControl({
         ]);
   return (
     <div className="flex basis-full flex-col items-start gap-2">
-      <Switch
-        checked={form.imageScenes === true}
-        label="Scenes from the article"
-        tip="play.image-scenes"
-        onChange={(on) => {
-          const { imageScenes: _dropped, ...rest } = form;
-          onEdit({ ...document, form: { ...rest, ...(on ? { imageScenes: true } : {}) } });
-        }}
-      />
+      {bare ? null : (
+        <Switch
+          checked={form.imageScenes === true}
+          label="Scenes from the article"
+          tip="play.image-scenes"
+          onChange={(on) => {
+            const { imageScenes: _dropped, ...rest } = form;
+            onEdit({ ...document, form: { ...rest, ...(on ? { imageScenes: true } : {}) } });
+          }}
+        />
+      )}
       <SceneKeywordRows uses={uses} />
     </div>
   );

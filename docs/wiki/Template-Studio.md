@@ -10,19 +10,19 @@ The rail on the left lists the template's sections in the order a run makes them
 
 | Section | What it sets |
 |---|---|
-| **Subject & research** | The title pattern (`History: {{Topic}}`), keyword values, research on or off |
-| **Script** | Written by AI or pasted, the text model, the article prompt, the expected length |
-| **Voice** | The voice, the narration model, loudness, breaths and S sounds, pronunciations |
-| **Pictures** | Made by AI, added by you or off; the picture model, image prompts, scenes |
-| **Video & captions** | Format, captions, motion, seconds per picture, the Look |
-| **Thumbnail & title** | How the thumbnail is made, one or three of them |
+| **Title and keywords** | The template's name, the title pattern (`History: {{Topic}}`), keyword values and the language, research on or off |
+| **Article** | Written by AI or pasted, who writes it, the article prompt, the expected length |
+| **Narration** | The voice, its model, loudness, breaths and S sounds, pronunciations |
+| **Images** | Made by AI, added by you or off; the image model, image prompts, scenes |
+| **Video and style** | Shape, captions, motion, seconds per image, the Look |
+| **Thumbnail** | How the thumbnail is made, one or three of them |
 | **Shorts** | Shorts from the video, how many |
-| **Document (PDF)** | A PDF made from the script, and its theme |
-| **Reviews & checkpoints** | Automatic reviews and where a run waits for you |
-| **Upload pack** | The YouTube description, chapters and tags, and the other sites the projects post to (**Post to**), each with its text and main media; hashtags, the thumbnail and the YouTube link are under Fine-tune. The sample shows each site's post as the site shows it. See [Posting to social sites](Posting-to-Social-Sites). |
+| **PDF** | A PDF of the article, and its look |
+| **Pauses and checks** | Where a run pauses for you, and the AI checks |
+| **YouTube description and posts** | The YouTube description, chapters and tags, and the other sites the projects post to (**Post to**), each with its text and main media. The sample shows each site's post as the site shows it. See [Posting to social sites](Posting-to-Social-Sites). |
 | **Schedule** | The next five runs of each schedule that uses the template, and what they cost a month |
 
-Each section shows two to four settings. Everything else is under **Fine-tune**, which holds Play's own editor for that section, so no setting is lost. **Made with OpenRouter · model · Change** says which provider makes the section; **Change** opens Fine-tune.
+Each section leads with two to four settings. The rest are in the fold under them (**All … settings**, or **More … settings** where the fold leaves out what the section leads with), which holds Create's own editor for that section, so no setting is lost. Create and a project's **Edit settings** use the same section names, with Thumbnail, Shorts, PDF and the YouTube description together under **Extras**. **Made with OpenRouter · model · Change** says which provider makes the section; **Change** opens Fine-tune.
 
 Each section's lamp says where its sample is: **Current** (made for this version), **Making**, **Waiting** (queued, or held with the reason), **Needs a fix** (the failed step's own sentence and the button that fixes it), **No current sample** (made for an older version, or none yet), **Off**, or **Provided** (you add the file in Play for each video, so there is no sample to make).
 

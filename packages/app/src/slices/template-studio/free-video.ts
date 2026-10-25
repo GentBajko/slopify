@@ -2,7 +2,7 @@ import { defaultImageSeconds, defaultMotionStyle, defaultZoomPercent } from "../
 import type { PlayDraftDocument } from "../play-drafts/schema.js";
 import type { StylePreviewRequest } from "../style-preview/schema.js";
 
-// The Video & captions sample: 30 seconds made by the style preview's renderer from the
+// The Video and style sample: 30 seconds made by the style preview's renderer from the
 // template's frame, captions, Look and picture timing, on the bundled sample's pictures and
 // narration. Local and free; no provider is called.
 export const videoSampleSeconds = 30;
