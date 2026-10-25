@@ -451,7 +451,7 @@ export function estimateRun(
   const reviews = draft.reviews;
   if (reviews !== undefined && reviewedByAgent(reviews)) {
     if (activeReviewStages(draft).length > 0)
-      local("Reviews", "An external agent answers each review through MCP; no API fee.");
+      local("Reviews", "Your own AI agent answers each check; no API fee.");
   } else if (reviews !== undefined)
     for (const stage of activeReviewStages(draft)) {
       const picked = rendered[reviewPromptKey(stage)]?.trim() ?? "";

@@ -44,7 +44,7 @@ export const reviewAnswerers = ["model", "agent", "person", "nobody"] as const;
 export type ReviewAnswerer = (typeof reviewAnswerers)[number];
 
 // Said to a person who never heard of MCP: a model Slopify pays per check, or an AI agent they
-// connected themselves (Settings → Agents), which answers for free.
+// connected themselves (Settings → AI agents), which answers for free.
 export const reviewerLabels: Readonly<Record<Reviewer, string>> = {
   model: "An AI model",
   agent: "Your own AI agent",

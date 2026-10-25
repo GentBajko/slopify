@@ -345,7 +345,7 @@ describe("cost planning", () => {
       (one) => one.stage === "Reviews",
     );
     expect(rows).toHaveLength(1);
-    expect(rows[0]?.detail).toContain("through MCP");
+    expect(rows[0]?.detail).toBe("Your own AI agent answers each check; no API fee.");
     expect(rows[0]?.high ?? 0).toBe(0);
   });
 
