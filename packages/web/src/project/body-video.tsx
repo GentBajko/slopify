@@ -140,9 +140,11 @@ export function VideoBody({ stage, project, outputs }: BodyProps) {
           `${output === video ? (audioExport ? "Audio" : "Video") : (listening?.main.label ?? "")}: ${masterText(output.meta.master)}.`,
         ],
   );
+  // One captions file, named in words: YouTube Studio takes the .srt; the .vtt is in All files.
   const subtitles = [
-    { output: srt, label: ".srt", file: "Captions (.srt)" },
-    { output: vtt, label: ".vtt", file: "Captions (.vtt)" },
+    srt === undefined
+      ? { output: vtt, label: "Download captions (.vtt)", file: "Captions (.vtt)" }
+      : { output: srt, label: "Download captions (.srt)", file: "Captions (.srt)" },
   ].filter(
     (one): one is { output: Output; label: string; file: string } => one.output !== undefined,
   );
@@ -229,33 +231,24 @@ export function VideoBody({ stage, project, outputs }: BodyProps) {
             )}
             {subtitles.length === 0 && listening?.other === undefined ? null : (
               <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-small text-ink-2">
-                {subtitles.length === 0 ? null : (
-                  <span className="inline-flex flex-wrap items-center gap-x-2">
-                    Captions:
-                    {subtitles.map((one) => (
-                      <FileWord
-                        key={one.output.id}
-                        output={one.output}
-                        label={one.label}
-                        file={one.file}
-                      />
-                    ))}
-                  </span>
-                )}
+                {subtitles.map((one) => (
+                  <FileWord
+                    key={one.output.id}
+                    output={one.output}
+                    label={one.label}
+                    file={one.file}
+                  />
+                ))}
                 {listening?.other === undefined ? null : (
-                  <span className="inline-flex flex-wrap items-center gap-x-2">
-                    Also:
-                    <FileWord
-                      output={listening.other.output}
-                      label={listening.other.label}
-                      file={listening.other.file}
-                    />
-                  </span>
+                  <FileWord
+                    output={listening.other.output}
+                    label={listening.other.label}
+                    file={listening.other.file}
+                  />
                 )}
               </p>
             )}
             {facts.length === 0 ? null : <MetaLine>{facts.join(" · ")}</MetaLine>}
-            <VideoChapters chapters={chapters} media={played} />
             {written && copies !== undefined ? (
               <ButtonRow>
                 <Button onClick={() => copy("description")}>
@@ -279,6 +272,9 @@ export function VideoBody({ stage, project, outputs }: BodyProps) {
                 Read the narration
               </TextLink>
             )}
+            {/* Last: the chapters come with the YouTube text, a moment after the rest, and
+                arriving here they push nothing down. */}
+            <VideoChapters chapters={chapters} media={played} />
           </div>
         )}
       </div>
@@ -304,7 +300,7 @@ export function VideoBody({ stage, project, outputs }: BodyProps) {
       )}
       <VideoOmissions omissions={video?.meta.subtitleOmissions ?? []} media={played} />
       {technical.length === 0 ? null : (
-        <Fold summary="Technical details">
+        <Fold summary="Measured loudness">
           <p className="m-0 mt-2 text-small text-ink-2 tabular-nums">{technical.join(" ")}</p>
         </Fold>
       )}
@@ -339,15 +335,17 @@ function listeningFiles(
       : {
           other: {
             output: other,
-            label: book ? ".mp3 with chapters" : ".m4b with chapters",
+            label: book
+              ? "Download audio with chapters (.mp3)"
+              : "Download audiobook with chapters (.m4b)",
             file: book ? "Audio with chapters (.mp3)" : "Audiobook with chapters (.m4b)",
           },
         }),
   };
 }
 
-// One of the stage's other files, as a quiet link in a sentence (".srt"), named in full for a
-// screen reader and on hover ("Subtitles (.srt)").
+// One of the stage's other files, as a quiet link named for what it downloads ("Download
+// captions (.srt)"), with the file's own name on hover.
 function FileWord({
   output,
   label,

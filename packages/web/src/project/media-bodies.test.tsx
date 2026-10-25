@@ -329,7 +329,7 @@ it("leads an audiobook with its chaptered file, the video beside it and the othe
   expect(links.slice(0, 2)).toEqual(["Download audiobook (.m4b)", "Download video (.mp4)"]);
   expect(
     screen.getByRole("link", { name: "Download audio with chapters (.mp3)" }).textContent,
-  ).toBe(".mp3 with chapters");
+  ).toBe("Download audio with chapters (.mp3)");
   // Neither is a menu: each names the one file it fetches.
   expect(screen.queryByRole("button", { name: /^Download/ })).toBeNull();
 });

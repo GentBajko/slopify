@@ -1,5 +1,5 @@
 import { defaultSubtitles, type SubtitleConfig } from "@app/slices/subtitles/model.js";
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -7,6 +7,7 @@ import {
   jsonAnswer,
   openEditSection,
   openProjectEditor,
+  openProjectSection,
   renderRouted,
   testOrigin,
 } from "@/test-app";
@@ -133,6 +134,8 @@ describe("existing project subtitles", () => {
 });
 
 describe("subtitle downloads and playback", () => {
+  // The Video section names one captions file in words (the .srt YouTube Studio takes); the
+  // .vtt is in All files with every other file.
   it("offers SRT/VTT downloads and a native English track in files mode", async () => {
     renderRouted(
       <ProjectRoute projectId="p1" />,
@@ -149,7 +152,13 @@ describe("subtitle downloads and playback", () => {
     expect((await downloadItem("Captions (.srt)")).getAttribute("href")).toBe(
       `${testOrigin}/files/p1/subtitles-srt`,
     );
-    expect((await downloadItem("Captions (.vtt)")).getAttribute("href")).toBe(
+    expect(screen.getByRole("link", { name: "Download captions (.srt)" }).textContent).toBe(
+      "Download captions (.srt)",
+    );
+    await openProjectSection("All files");
+    const files = await screen.findByRole("region", { name: "All files" });
+    const captions = await within(files).findAllByRole("link", { name: /^Captions/ });
+    expect(captions.map((link) => link.getAttribute("href"))).toContain(
       `${testOrigin}/files/p1/subtitles-vtt`,
     );
   });
