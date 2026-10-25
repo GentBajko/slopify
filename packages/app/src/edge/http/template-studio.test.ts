@@ -487,7 +487,7 @@ it("lists the names to check, prices a Say it as, and refuses one that would cha
   expect(refused.status).toBe(400);
   expect(await refused.json()).toMatchObject({
     detail: expect.stringContaining(
-      "Turn on Use your pronunciation list under All Narration settings",
+      "Turn on Use your pronunciation list under All Narration settings → More narration settings",
     ),
   });
   expect(

@@ -26,7 +26,7 @@ export function checkDesign(
       ok: false,
       reason: "invalid-input",
       message:
-        "A design schedule makes each row's piece ahead of its date: it has no cadence, topic generation or release days. Choose Ahead of each date.",
+        "A poster schedule makes each row's poster ahead of its date: it has no cadence, topic generation or release days. Choose Ahead of each date.",
     };
   const template = getTemplate(deps.db, input.templateId);
   if (template === undefined) return { ok: false, reason: "missing-template" };

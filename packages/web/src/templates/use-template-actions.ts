@@ -1,3 +1,4 @@
+import { templateNameMax } from "@app/slices/project-templates/schema.js";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { useApp } from "@/app-context";
@@ -80,7 +81,8 @@ export function useTemplateActions({
         "The template's draft was made but Create didn't open it. Press Make a video again to open it.",
       );
   }
-  // The copy is "<name> copy" in the same channel; pressed twice for one version it is made once.
+  // The copy is "<name> copy" in the same channel, "<name> copy 2" when that name is taken, so
+  // no two cards read alike; pressed twice for one version it is made once.
   async function duplicate(template: TemplateSummary): Promise<void> {
     const key = `${template.id}:${template.version}`;
     let id = duplicates.current.get(key);
@@ -90,9 +92,12 @@ export function useTemplateActions({
     }
     const read = await readProjectTemplate(api, template.id);
     if (!read.ok) throw new Error(read.message);
+    const taken = new Set(
+      (client.getQueryData<readonly TemplateSummary[]>(templatesKey) ?? []).map((one) => one.name),
+    );
     const reply = await saveProjectTemplate(api, {
       id,
-      name: `${template.name} copy`,
+      name: copyName(template.name, taken),
       document: read.value.document,
     });
     if (!reply.ok) throw new Error(reply.message);
@@ -101,4 +106,15 @@ export function useTemplateActions({
     await client.invalidateQueries({ queryKey: templatesKey });
   }
   return { apply, duplicate };
+}
+
+// "History starter copy", then "History starter copy 2", "copy 3": the first name no template
+// has, the original cut short where the whole would be too long for a name.
+export function copyName(name: string, taken: ReadonlySet<string>): string {
+  const fit = (suffix: string) =>
+    `${name.slice(0, templateNameMax - suffix.length).trimEnd()}${suffix}`;
+  if (!taken.has(fit(" copy"))) return fit(" copy");
+  let n = 2;
+  while (taken.has(fit(` copy ${String(n)}`))) n += 1;
+  return fit(` copy ${String(n)}`);
 }

@@ -2,7 +2,7 @@ import { setImmediate as yieldTurn } from "node:timers/promises";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
 import { templateById, templateSummaries } from "../project-templates/repo.js";
-import { type BudgetRoom, budgetRoom, budgetWords, fitsBudget } from "./budget.js";
+import { type BudgetRoom, budgetRoom, budgetWords, fitsBudget, plansSwitch } from "./budget.js";
 import { enqueueJob } from "./jobs.js";
 import type { StudioRefusal, TemplateSection } from "./model.js";
 import { quoteSample } from "./quote.js";
@@ -110,9 +110,9 @@ function sentenceOf(makeable: readonly ForAllItem[], room: BudgetRoom): string {
   const onPlan = makeable.filter((item) => !item.fits && item.usesPlan && !room.plans).length;
   const why =
     onPlan === waiting
-      ? ": they run on your CLI plan, and samples may not use CLI plans (turn on Samples may use my CLI plans in Settings → Production defaults)"
+      ? `: they run on your Claude Code or Codex plan, which samples may not use (turn on ${plansSwitch} in Settings → Production defaults)`
       : onPlan > 0
-        ? `: ${String(onPlan)} run on your CLI plan, which samples may not use (Samples may use my CLI plans in Settings → Production defaults), and the rest wait for tomorrow or a higher budget`
+        ? `: ${String(onPlan)} run on your Claude Code or Codex plan, which samples may not use (turn on ${plansSwitch} in Settings → Production defaults), and the rest wait for tomorrow or a higher budget`
         : " for tomorrow or a higher budget in Settings → Production defaults";
   return `${head} ${String(fitting)} of them ${fitting === 1 ? "fits" : "fit"} today's budget; the other ${String(waiting)} wait${why}.`;
 }

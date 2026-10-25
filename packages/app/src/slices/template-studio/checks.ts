@@ -46,6 +46,8 @@ export interface FreeCheckInput {
   readonly monthlyCost: {
     readonly high: number;
     readonly unknown: number;
+    // The steps no price is known for, by name: not counted in `high`.
+    readonly unpriced?: readonly string[];
     readonly problem?: string | null;
     // The active schedules' runs a month.
     readonly runs?: number;
@@ -142,6 +144,7 @@ function keywordsCheck(input: FreeCheckInput): Check {
 function usedProviders(document: PlayDraftDocument): readonly {
   readonly family: ProviderFamily;
   readonly provider: string;
+  readonly model: string;
   readonly section: TemplateSection;
   readonly what: string;
 }[] {
@@ -165,6 +168,7 @@ function usedProviders(document: PlayDraftDocument): readonly {
           {
             family: "llm" as const,
             provider: form.llm.provider,
+            model: form.llm.model,
             section: "script" as const,
             what: "writing service",
           },
@@ -175,6 +179,7 @@ function usedProviders(document: PlayDraftDocument): readonly {
           {
             family: "tts" as const,
             provider: form.audio.provider,
+            model: form.audio.model,
             section: "voice" as const,
             what: "voice service",
           },
@@ -185,6 +190,7 @@ function usedProviders(document: PlayDraftDocument): readonly {
           {
             family: "image" as const,
             provider: form.images.provider,
+            model: form.images.model,
             section: "pictures" as const,
             what: "image service",
           },
@@ -195,6 +201,7 @@ function usedProviders(document: PlayDraftDocument): readonly {
           {
             family: "llm" as const,
             provider: form.reviews.provider,
+            model: form.reviews.model,
             section: "reviews" as const,
             what: "service for the AI checks",
           },
@@ -208,6 +215,13 @@ function providersChecks(input: FreeCheckInput): readonly Check[] {
   const unchosen = used.filter(
     (one, index) =>
       one.provider === "" && used.findIndex((other) => other.what === one.what) === index,
+  );
+  // A service picked without its model is refused by every run, as the sample says.
+  const modelless = used.filter(
+    (one, index) =>
+      one.provider !== "" &&
+      one.model.trim() === "" &&
+      used.findIndex((other) => other.what === one.what) === index,
   );
   const missing = used.filter(
     (one, index) =>
@@ -227,6 +241,18 @@ function providersChecks(input: FreeCheckInput): readonly Check[] {
         },
       }),
     ),
+    ...modelless.map((one): Check => {
+      const name = input.providers.get(one.provider)?.name ?? one.provider;
+      return {
+        id: "providers",
+        ok: false,
+        sentence: `No model is chosen for ${name}, the ${one.what}, so a run can't start.`,
+        fix: {
+          label: `Choose one in ${sectionLabel[one.section]}`,
+          href: studioHref(input.templateId, one.section),
+        },
+      };
+    }),
     ...missing.map((one): Check => {
       const name = input.providers.get(one.provider)?.name ?? one.provider;
       return {
@@ -329,37 +355,51 @@ function releaseSlotsCheck(input: FreeCheckInput): Check {
   };
 }
 
+// A run that can't be priced at all fails: it can't start either, and the sentence says why.
+// Steps with no price (how many tables a written article describes is known only once it is
+// written) never fail it, since nothing fixes them: they are named as not counted, here and in
+// Schedule, so the dollar figure reads as the least it costs.
 function monthlyCostCheck(input: FreeCheckInput): Check {
-  if (input.monthlyCost === null)
+  const cost = input.monthlyCost;
+  if (cost === null)
     return {
       id: "monthly-cost",
       ok: true,
       sentence: "No schedule runs this template, so it costs nothing a month.",
     };
-  const paused = input.monthlyCost.paused?.schedules ?? 0;
-  const resumed = `up to about $${(input.monthlyCost.paused?.high ?? 0).toFixed(2)} a month when resumed`;
-  const many = (n: number) => `${String(n)} paused ${n === 1 ? "schedule" : "schedules"}`;
-  if (input.monthlyCost.unknown === 0) {
-    const activeCost = `Its schedules cost up to about $${input.monthlyCost.high.toFixed(2)} a month`;
+  if (cost.problem !== undefined && cost.problem !== null)
     return {
       id: "monthly-cost",
-      ok: true,
-      sentence:
-        paused === 0
-          ? `${activeCost}.`
-          : input.monthlyCost.high === 0 && (input.monthlyCost.runs ?? 0) === 0
-            ? `${many(paused)} ${paused === 1 ? "uses" : "use"} this template: ${paused === 1 ? "it costs" : "they cost"} nothing while paused, and ${resumed}.`
-            : `${activeCost}; ${many(paused)} would add ${resumed}.`,
+      ok: false,
+      sentence: cost.problem,
+      fix: { label: "See its runs in Schedule", href: studioHref(input.templateId, "schedule") },
     };
-  }
+  const paused = cost.paused?.schedules ?? 0;
+  const resumed = `up to about $${(cost.paused?.high ?? 0).toFixed(2)} a month when resumed`;
+  const many = (n: number) => `${String(n)} paused ${n === 1 ? "schedule" : "schedules"}`;
+  const activeCost = `Its schedules cost ${cost.unknown === 0 ? "up to about" : "at least"} $${cost.high.toFixed(2)} a month`;
+  const sentence =
+    paused === 0
+      ? `${activeCost}.`
+      : cost.high === 0 && (cost.runs ?? 0) === 0
+        ? `${many(paused)} ${paused === 1 ? "uses" : "use"} this template: ${paused === 1 ? "it costs" : "they cost"} nothing while paused, and ${resumed}.`
+        : `${activeCost}; ${many(paused)} would add ${resumed}.`;
   return {
     id: "monthly-cost",
-    ok: false,
-    sentence:
-      input.monthlyCost.problem ??
-      `The monthly cost isn't known: ${String(input.monthlyCost.unknown)} ${input.monthlyCost.unknown === 1 ? "step has" : "steps have"} no price in the model list.`,
-    fix: { label: "See which in Schedule", href: studioHref(input.templateId, "schedule") },
+    ok: true,
+    sentence: cost.unknown === 0 ? sentence : `${sentence} ${unpricedSentence(cost)}`,
   };
+}
+
+// "Not counted, with no known price: Narration descriptions and Delivery cue overhead."
+function unpricedSentence(cost: {
+  readonly unknown: number;
+  readonly unpriced?: readonly string[];
+}): string {
+  const names = cost.unpriced ?? [];
+  return names.length === 0
+    ? `${String(cost.unknown)} ${cost.unknown === 1 ? "step has" : "steps have"} no known price and ${cost.unknown === 1 ? "isn't" : "aren't"} counted.`
+    : `Not counted, with no known price: ${list(names)}.`;
 }
 
 function answerersCheck(input: FreeCheckInput): Check {

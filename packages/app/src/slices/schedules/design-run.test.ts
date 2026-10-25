@@ -178,7 +178,7 @@ describe("a design schedule", () => {
     expect(runs().map((run) => [run.status, run.error])).toEqual([
       [
         "skipped",
-        "Skipped: Slopify wasn't open at 09:00 when Late Set's piece was due, and this schedule skips the runs it misses. It tries again at 09:00 tomorrow; to make a missed piece as soon as Slopify opens, set Missed run to Run once when Slopify reopens in Templates → Poster templates → Gig poster → Schedule.",
+        "Skipped: Slopify wasn't open at 09:00 when Late Set's poster was due, and this schedule skips the runs it misses. It tries again at 09:00 tomorrow; to make a missed poster as soon as Slopify opens, set Missed run to Run once when Slopify reopens in Templates → Poster templates → Gig poster → Schedule.",
       ],
     ]);
     expect(asked).toHaveLength(0);
@@ -224,7 +224,7 @@ describe("a design schedule", () => {
     expect(runs()[0]).toMatchObject({
       status: "failed",
       error:
-        "Not started: Late Set's piece costs up to $0.04, over this schedule's spend limit. Raise the spend limit or choose an image model with a known, lower price.",
+        "Not started: Late Set's poster costs up to $0.04, over this schedule's spend limit. Raise the spend limit or choose an image model with a known, lower price.",
     });
     expect(scheduleById(h.deps.db, id)?.items).toHaveLength(2);
     expect(asked).toHaveLength(0);

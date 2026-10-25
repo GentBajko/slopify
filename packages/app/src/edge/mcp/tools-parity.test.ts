@@ -184,7 +184,7 @@ it("tells the agent's client a test send goes out and a catalogue check can chan
 it("offers designs with the confirm sentence Mark ready shows and takes a picture as bytes", () => {
   const tool = (name: string) => routeTools.find((one) => one.name === name);
   expect(tool("mark_design_template_ready")?.confirm).toBe(
-    "Schedules start making pieces from this version.",
+    "Schedules start making posters from this version.",
   );
   expect(tool("upload_design_picture")?.upload).toBe("raw");
   for (const name of ["edit_design_picture", "make_design_artwork", "make_design_from_template"])

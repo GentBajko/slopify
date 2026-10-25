@@ -14,8 +14,8 @@ export const stateTone: Readonly<Record<SectionState, Tone>> = {
   provided: "off",
 };
 
-// A section's sample in words, the same in the rail and over the sample.
-export const stateWord: Readonly<Record<SectionState, string>> = {
+// A section's sample in words.
+const stateWord: Readonly<Record<SectionState, string>> = {
   current: "Sample ready",
   making: "Making",
   waiting: "Waiting",
@@ -33,13 +33,30 @@ export interface RailSection<Id extends string> {
   readonly state: SectionState;
 }
 
+// The sections that never have a sample: what they set is all there is to see (where a run
+// pauses, which schedules run it), so once they are on they say "On", not "Sample ready".
+const sampleless: ReadonlySet<string> = new Set(["reviews", "schedule"]);
+
+// A section's state in words, the same in the rail and over the sample.
+export function sectionWord(section: {
+  readonly id: string;
+  readonly state: SectionState;
+}): string {
+  return section.state === "current" && sampleless.has(section.id)
+    ? "On"
+    : stateWord[section.state];
+}
+
 // The rail marks a section only when it says something: a sample made, being made, waiting or
 // failed, a section switched off. "No sample yet" is every section's starting point, so it
 // draws no lamp at all rather than a column of identical dots; the sample head says it.
-function standing(
-  state: SectionState,
-): { readonly tone: Tone; readonly state: string } | undefined {
-  return state === "stale" ? undefined : { tone: stateTone[state], state: stateWord[state] };
+function standing(section: {
+  readonly id: string;
+  readonly state: SectionState;
+}): { readonly tone: Tone; readonly state: string } | undefined {
+  return section.state === "stale"
+    ? undefined
+    : { tone: stateTone[section.state], state: sectionWord(section) };
 }
 
 // The rail every template studio shows, whatever the template makes: its sections in order,
@@ -62,7 +79,7 @@ export function StudioRail<Id extends string>({
   return (
     <Rail label="Template sections" className="sl-studio-rail">
       {sections.map((section) => {
-        const mark = standing(section.state) ?? {};
+        const mark = standing(section) ?? {};
         const link = linkOf?.(section.id);
         return link === undefined ? (
           <RailButton

@@ -59,8 +59,11 @@ export function holdReason(
   if (cost.unknown > 0 && !deps.acks.accepted(job.templateId, job.templateVersion))
     return `Waiting: ${String(cost.unknown)} ${cost.unknown === 1 ? "step of this sample has" : "steps of this sample have"} no known price. Press Make sample to accept that and make it.`;
   const room = budgetRoom(deps.db, deps.now, deps.timeZone);
+  // Tomorrow brings a new budget, never the plan setting.
   if (!fitsBudget(room, cost.high, cost.usesPlan))
-    return `Waiting: ${budgetWords(room, cost, "this sample")}, or press Make sample tomorrow.`;
+    return cost.usesPlan && !room.plans
+      ? `Waiting: ${budgetWords(room, cost, "this sample")}.`
+      : `Waiting: ${budgetWords(room, cost, "this sample")}, or press Make sample tomorrow.`;
   return undefined;
 }
 

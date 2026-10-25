@@ -10,7 +10,7 @@ import { freshDraftDocument } from "@/play/draft-state";
 import { packs, xPack } from "@/social/post.fake";
 import type { PlayHandoff } from "@/templates/play-handoff";
 import { jsonAnswer, problemAnswer, renderRouted, testDeps } from "@/test-app";
-import { settingCount, TemplateStudioPage } from "./page";
+import { TemplateStudioPage } from "./page";
 import { checks, labels, routes, templateId, view } from "./studio.fake";
 
 afterEach(cleanup);
@@ -94,26 +94,19 @@ it("says nothing about schedules on a template no schedule runs", async () => {
   expect(screen.queryByRole("menuitem", { name: /Approve/ })).toBeNull();
 });
 
-it("folds each section's whole editor under its lead settings, as a disclosure with its count", async () => {
+it("lays each section's whole editor out at once, in Create's words, with nothing said twice", async () => {
   open("video");
   const panel = await screen.findByRole("region", { name: "Video and style settings" });
-  const summary = panel.querySelector("details > summary");
-  expect(summary?.textContent).toMatch(/^All Video and style settings \(\d+\)$/);
-  expect(panel.querySelector("details")?.open).toBe(false);
+  const folds = [...panel.querySelectorAll("details > summary")].map((one) => one.textContent);
+  expect(folds.filter((one) => /^(All|More) /.test(one ?? ""))).toEqual([]);
+  // One shape setting, named as Create names it.
+  expect(within(panel).getAllByText("Frame format")).toHaveLength(1);
+  expect(within(panel).queryByText("Shape")).toBeNull();
+  expect(within(panel).queryByText("Image motion")).toBeNull();
+  expect(within(panel).getAllByRole("textbox", { name: /^Seconds per image/ })).toHaveLength(1);
 });
 
-it("counts a row of choices once, whichever control draws it", () => {
-  const root = document.createElement("div");
-  root.innerHTML = `
-    <div role="group" aria-label="Shape"><button aria-pressed="true">16:9</button><button aria-pressed="false">9:16</button></div>
-    <div role="radiogroup" aria-label="How many"><button role="radio">1</button><button role="radio">3</button></div>
-    <div role="group" aria-label="Layout only"><span>Not a setting</span></div>
-    <select aria-label="Prompt"></select>
-    <input type="file" aria-label="File" />`;
-  expect(settingCount(root)).toBe(3);
-});
-
-it("shows Thumbnail's prompt right under its lead settings, with no fold and nothing twice", async () => {
+it("shows the thumbnail as Create's Extras shows it: its tick, how it is made and its prompt", async () => {
   open("thumbnail", {
     [`GET /api/template-studio/${templateId}`]: jsonAnswer({
       ...view,
@@ -131,27 +124,22 @@ it("shows Thumbnail's prompt right under its lead settings, with no fold and not
   });
   const panel = await screen.findByRole("region", { name: "Thumbnail settings" });
   expect(await within(panel).findByRole("combobox", { name: "Thumbnail prompt" })).not.toBeNull();
+  expect(within(panel).getAllByRole("checkbox", { name: /^Thumbnail/ })).toHaveLength(1);
   expect(panel.querySelector("details > summary")?.textContent ?? "").not.toMatch(/settings/);
-  expect(within(panel).queryByText("How many thumbnails")).toBeNull();
-  expect(within(panel).queryByRole("checkbox", { name: /^Thumbnail/ })).toBeNull();
-  expect(within(panel).getAllByRole("group", { name: "Thumbnails per video" })).toHaveLength(1);
+  expect(within(panel).getAllByText("How many thumbnails")).toHaveLength(1);
 });
 
-it("folds Images without its source or Scenes from the article, which it leads with", async () => {
+it("shows Images whole: its source, who makes them and Scenes from the article, once each", async () => {
   open("pictures");
   const panel = await screen.findByRole("region", { name: "Images settings" });
-  await waitFor(() =>
-    expect(panel.querySelector("details > summary")?.textContent).toMatch(
-      /^More Images settings \(\d+\)$/,
-    ),
-  );
-  expect(within(panel).getAllByRole("switch", { name: /^Scenes from the article/ })).toHaveLength(
-    1,
-  );
-  expect(within(panel).getAllByRole("group", { name: "Images" })).toHaveLength(1);
+  expect(
+    await within(panel).findAllByRole("switch", { name: /^Scenes from the article/ }),
+  ).toHaveLength(1);
+  expect(within(panel).getAllByRole("group", { name: "Images by" })).toHaveLength(1);
+  expect(panel.querySelector("details > summary")?.textContent ?? "").not.toMatch(/settings/);
 });
 
-it("draws no fold for images that are off: there is nothing more to set", async () => {
+it("shows only the Images switch while images are off: there is nothing more to set", async () => {
   open("pictures", {
     [`GET /api/template-studio/${templateId}`]: jsonAnswer({
       ...view,
@@ -161,34 +149,41 @@ it("draws no fold for images that are off: there is nothing more to set", async 
           ...view.template.document,
           form: {
             ...view.template.document.form,
-            sources: { ...view.template.document.form.sources, images: "off" },
+            sources: { ...view.template.document.form.sources, images: "off", video: "off" },
           },
         },
       },
     }),
   });
   const panel = await screen.findByRole("region", { name: "Images settings" });
-  await waitFor(() => expect(panel.querySelector("details")?.className).toContain("hidden"));
+  expect(within(panel).queryByRole("group", { name: "Images by" })).toBeNull();
+  expect(within(panel).queryByRole("switch", { name: /^Scenes from the article/ })).toBeNull();
 });
 
-it("shows Title and keywords's language with its lead settings, under no fold", async () => {
+it("shows Title and keywords's name, title and language under no fold, and Research once, in Article", async () => {
   open("subject");
   const panel = await screen.findByRole("region", { name: "Title and keywords settings" });
   expect(await within(panel).findByRole("combobox", { name: "Language" })).not.toBeNull();
+  expect(within(panel).getByRole("textbox", { name: "Video title" })).not.toBeNull();
   expect(panel.querySelector("details")).toBeNull();
+  expect(within(panel).queryByText("Research")).toBeNull();
 });
 
-it("leads PDF with whether to make it and, once on, its look, with nothing folded", async () => {
+it("shows PDF as Create's Extras shows it: one tick and, once on, its look", async () => {
   const user = userEvent.setup();
   open("document");
   const panel = await screen.findByRole("region", { name: "PDF settings" });
   expect(within(panel).queryByRole("combobox", { name: "PDF look" })).toBeNull();
-  await user.click(within(panel).getByRole("button", { name: "Make a PDF of the article" }));
+  expect(
+    within(panel).getByText("Laid out on this computer from the article and title · free."),
+  ).not.toBeNull();
+  await user.click(within(panel).getByRole("checkbox", { name: /^PDF of the article/ }));
   expect(within(panel).getByRole("combobox", { name: "PDF look" })).not.toBeNull();
-  expect(within(panel).getByRole("link", { name: "Edit PDF looks" }).getAttribute("href")).toBe(
-    "/document-themes",
-  );
-  expect(panel.querySelector("details > summary")?.textContent ?? "").not.toMatch(/^All /);
+  expect(
+    within(panel)
+      .getByRole("link", { name: /^Edit PDF looks/ })
+      .getAttribute("href"),
+  ).toBe("/document-themes");
 });
 
 it("sends a thumbnail drawn by the images' service to Images to change it", async () => {
@@ -246,19 +241,16 @@ it("shows Pauses and checks' pauses and AI checks at once", async () => {
   expect(within(panel).getByRole("combobox", { name: "Article: check" })).not.toBeNull();
 });
 
-it("says who writes the article, and Change opens all its settings", async () => {
-  const user = userEvent.setup();
+it("shows who writes the article in Create's own Written by group, once", async () => {
   open("script");
-  expect(await screen.findByText("Written by OpenRouter · claude")).not.toBeNull();
-  await user.click(screen.getByRole("button", { name: "Change" }));
-  await waitFor(() =>
-    expect(
-      screen.getByRole("region", { name: "Article settings" }).querySelector("details")?.open,
-    ).toBe(true),
-  );
+  const panel = await screen.findByRole("region", { name: "Article settings" });
+  const group = await within(panel).findByRole("group", { name: "Written by" });
+  expect(within(panel).getAllByRole("group", { name: "Written by" })).toHaveLength(1);
+  expect(within(group).getByRole("combobox", { name: /Service$/ })).not.toBeNull();
+  expect(within(panel).queryByRole("button", { name: "Change" })).toBeNull();
 });
 
-it("reads an unchosen writer as this computer's default, as every video made from it does", async () => {
+it("shows an unchosen writer as this computer's default, as every video made from it gets it, with nothing red", async () => {
   open("script", {
     [`GET /api/template-studio/${templateId}`]: jsonAnswer({
       ...view,
@@ -269,7 +261,7 @@ it("reads an unchosen writer as this computer's default, as every video made fro
           form: {
             ...view.template.document.form,
             llm: { provider: "", model: "" },
-            images: { provider: "", model: "" },
+            images: { provider: "fal", model: "flux" },
           },
         },
       },
@@ -280,10 +272,20 @@ it("reads an unchosen writer as this computer's default, as every video made fro
       defaults: { llm: { provider: "openrouter", model: "claude" } },
     }),
   });
-  expect(await screen.findByText("Written by OpenRouter · claude (your default)")).not.toBeNull();
+  expect(
+    await screen.findByText(
+      /^Each video is written by your default, OpenRouter \(.+\): no writer is saved with this template yet\.$/,
+    ),
+  ).not.toBeNull();
+  const panel = screen.getByRole("region", { name: "Article settings" });
+  const group = within(panel).getByRole("group", { name: "Written by" });
+  expect(
+    (within(group).getByRole("combobox", { name: /Service$/ }) as HTMLSelectElement).value,
+  ).toBe("openrouter");
+  expect(within(panel).queryByText(/No writing service is chosen/)).toBeNull();
 });
 
-it("draws the writer's pickers where the check's link lands when there is no choice and no default", async () => {
+it("draws the writer's pickers once, and says a run can't start, when there is no choice and no default", async () => {
   open("script", {
     [`GET /api/template-studio/${templateId}`]: jsonAnswer({
       ...view,
@@ -297,39 +299,12 @@ it("draws the writer's pickers where the check's link lands when there is no cho
     }),
   });
   const panel = await screen.findByRole("region", { name: "Article settings" });
-  // The lead pickers, once: the fold under them holds the rest of the Article settings.
+  const group = await within(panel).findByRole("group", { name: "Written by" });
   expect(within(panel).getAllByRole("group", { name: "Written by" })).toHaveLength(1);
   expect(
-    within(panel).getAllByText("No writing service is chosen, so a run can't start."),
-  ).toHaveLength(1);
-  await waitFor(() =>
-    expect(panel.querySelector("details > summary")?.textContent).toMatch(
-      /^More Article settings \(\d+\)$/,
-    ),
-  );
-});
-
-it("draws the image service's pickers once, over the fold, when nobody chose one", async () => {
-  open("pictures", {
-    [`GET /api/template-studio/${templateId}`]: jsonAnswer({
-      ...view,
-      template: {
-        ...view.template,
-        document: {
-          ...view.template.document,
-          form: { ...view.template.document.form, images: { provider: "", model: "" } },
-        },
-      },
-    }),
-  });
-  const panel = await screen.findByRole("region", { name: "Images settings" });
-  expect(
-    await within(panel).findByText("No image service is chosen, so a run can't start."),
-  ).not.toBeNull();
-  const fold = panel.querySelector("details");
-  if (fold !== null) fold.open = true;
-  expect(within(panel).getAllByRole("group", { name: "Images by" })).toHaveLength(1);
-  expect(within(panel).getAllByRole("combobox", { name: /Service$/ })).toHaveLength(1);
+    (within(group).getByRole("combobox", { name: /Service$/ }) as HTMLSelectElement).value,
+  ).toBe("");
+  expect(within(panel).queryByText(/your default/)).toBeNull();
 });
 
 it("shows the page at once while its checks are still being looked up", async () => {
@@ -423,10 +398,20 @@ it("has no Save until something changed, and one Save that never spends", async 
   open("video", { [`POST /api/template-studio/${templateId}/save`]: sent });
   await screen.findByRole("region", { name: "Video and style settings" });
   expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
-  await user.click(screen.getByRole("button", { name: "Vertical 9:16" }));
+  await user.click(screen.getByRole("radio", { name: "9:16 Portrait" }));
   expect(screen.getByText("Unsaved changes. Save them before you make a video.")).not.toBeNull();
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(sent).toHaveBeenCalledOnce());
+});
+
+it("says the checks are the saved version's while a change is unsaved", async () => {
+  const user = userEvent.setup();
+  open("subject");
+  const region = await screen.findByRole("region", { name: "Checks" });
+  const note = "Checked on the saved version: Save to check your changes.";
+  expect(within(region).queryByText(note)).toBeNull();
+  await user.type(screen.getByRole("textbox", { name: "Template name" }), " two");
+  expect(within(region).getByText(note)).not.toBeNull();
 });
 
 it("renames the template from Title and keywords, saved with the next Save", async () => {
@@ -508,12 +493,141 @@ it("never prices a sample at $0: free, plan usage, or why none can be made", asy
   expect(within(sample).queryByRole("switch", { name: /Write the whole article/ })).toBeNull();
 });
 
+it("never calls a sample with unpriced steps free, and links the plan setting instead of a wait", async () => {
+  open("script", {
+    [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer(passing),
+    [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(quote({ high: 0, unknown: 5 })),
+  });
+  let sample = await screen.findByRole("region", { name: "Article sample" });
+  expect(
+    await within(sample).findByRole("button", { name: "Make sample · price not known" }),
+  ).not.toBeNull();
+  cleanup();
+  open("script", {
+    [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer(passing),
+    [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(quote({ high: 0.3, unknown: 2 })),
+  });
+  sample = await screen.findByRole("region", { name: "Article sample" });
+  expect(
+    await within(sample).findByRole("button", { name: "Make sample · at least $0.30" }),
+  ).not.toBeNull();
+  cleanup();
+  open("script", {
+    [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer(passing),
+    [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(
+      quote({
+        high: 0,
+        onPlan: true,
+        usesPlan: true,
+        fits: false,
+        budget: { budget: 2, spent: 0, unpriced: 0, left: 2, plans: false },
+      }),
+    ),
+  });
+  sample = await screen.findByRole("region", { name: "Article sample" });
+  const link = await within(sample).findByRole("link", { name: "Settings → Production defaults" });
+  expect(link.getAttribute("href")).toBe("/settings?section=playback");
+  expect(link.parentElement?.textContent).toContain(
+    "Turn on Let samples use my Claude Code or Codex plan in Settings → Production defaults.",
+  );
+  expect(within(sample).queryByRole("button", { name: /^Make sample/ })).toBeNull();
+});
+
+it("links the plan setting in place of Make sample for a sample that already waits on it", async () => {
+  const waiting =
+    "Waiting: this sample runs on your Claude Code or Codex plan, and samples may not use it.";
+  open("script", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({
+      ...view,
+      sections: view.sections.map((one) =>
+        one.id === "script" ? { ...one, state: "waiting", sentence: waiting } : one,
+      ),
+      paid: { ...view.paid, state: "held", sentence: waiting, quotedHigh: 0 },
+    }),
+    [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer(passing),
+    [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(
+      quote({
+        high: 0,
+        onPlan: true,
+        usesPlan: true,
+        fits: false,
+        budget: { budget: 2, spent: 0, unpriced: 0, left: 2, plans: false },
+      }),
+    ),
+  });
+  const sample = await screen.findByRole("region", { name: "Article sample" });
+  expect(
+    await within(sample).findByRole("link", { name: "Settings → Production defaults" }),
+  ).not.toBeNull();
+  expect(within(sample).queryByRole("button", { name: /^Make sample/ })).toBeNull();
+});
+
 it("puts a failing check's fix where Make sample would be", async () => {
   open("script");
   const sample = await screen.findByRole("region", { name: "Article sample" });
   const fix = await within(sample).findByRole("link", { name: "Choose one in Narration first" });
   expect(fix.getAttribute("href")).toBe(`/templates/${templateId}?section=voice`);
   expect(within(sample).queryByRole("button", { name: /^Make sample/ })).toBeNull();
+});
+
+it("says a fix that belongs to the open section in place, not as a link to the same page", async () => {
+  open("voice");
+  const sample = await screen.findByRole("region", { name: "Narration sample" });
+  expect(
+    await within(sample).findByText(
+      "No voice service is chosen, so a run can't start. Choose one in this section's settings, then Save.",
+    ),
+  ).not.toBeNull();
+  expect(within(sample).queryByRole("link", { name: /first$/ })).toBeNull();
+});
+
+it("puts the open section's own fix before another section's", async () => {
+  open("pictures", {
+    [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer({
+      version: 3,
+      checks: [
+        {
+          id: "providers",
+          ok: false,
+          sentence: "No writing service is chosen, so a run can't start.",
+          fix: { label: "Choose one in Article", href: `/templates/${templateId}?section=script` },
+        },
+        {
+          id: "providers",
+          ok: false,
+          sentence: "No image service is chosen, so a run can't start.",
+          fix: { label: "Choose one in Images", href: `/templates/${templateId}?section=pictures` },
+        },
+      ],
+    }),
+  });
+  const sample = await screen.findByRole("region", { name: "Images sample" });
+  expect(
+    await within(sample).findByText(
+      "No image service is chosen, so a run can't start. Choose one in this section's settings, then Save.",
+    ),
+  ).not.toBeNull();
+  expect(within(sample).queryByRole("link", { name: "Choose one in Article first" })).toBeNull();
+});
+
+it("says On, not Sample ready, for Pauses and checks and Schedule, which have no sample", async () => {
+  open("subject", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({
+      ...view,
+      sections: view.sections.map((one) =>
+        one.id === "reviews" || one.id === "schedule" || one.id === "script"
+          ? { ...one, state: "current" }
+          : one,
+      ),
+    }),
+  });
+  const rail = await screen.findByRole("navigation", { name: "Template sections" });
+  const names = within(rail)
+    .getAllByRole("link")
+    .map((link) => link.textContent);
+  expect(names).toContain("Pauses and checks, On");
+  expect(names).toContain("Schedule, On");
+  expect(names).toContain("Article, Sample ready");
 });
 
 it("shows a failed sample's own sentence and Make sample at its price", async () => {
@@ -620,16 +734,18 @@ it("switches between sections, settings and sample with tabs on a narrow screen"
   const user = userEvent.setup();
   open();
   const tabs = await screen.findByRole("tablist", { name: "Edit template panes" });
+  // The checks are under the Sample tab on a phone: its name says one thing is to fix.
+  await within(tabs).findByRole("tab", { name: "Sample · 1 to fix" });
   expect(
     within(tabs)
       .getAllByRole("tab")
       .map((tab) => tab.textContent),
-  ).toEqual(["Sections", "Settings", "Sample"]);
+  ).toEqual(["Sections", "Settings", "Sample · 1 to fix"]);
   const settings = screen.getByRole("region", { name: "Title and keywords settings" });
   const sample = screen.getByRole("region", { name: "Title and keywords sample" });
   expect(settings.className).not.toContain("max-md:hidden");
   expect(sample.parentElement?.className).toContain("max-md:hidden");
-  await user.click(within(tabs).getByRole("tab", { name: "Sample" }));
+  await user.click(within(tabs).getByRole("tab", { name: "Sample · 1 to fix" }));
   expect(screen.getByRole("region", { name: "Title and keywords settings" }).className).toContain(
     "max-md:hidden",
   );
@@ -663,16 +779,22 @@ it("plays the 30-second video sample in the template's frame, with no button whi
   expect(within(sample).queryByRole("button", { name: /^Make sample/ })).toBeNull();
 });
 
-it("plays the narration before and after levelling, its levels on the labels' titles", async () => {
+it("plays the narration before and after levelling in one player, its levels on the choices' titles", async () => {
+  const user = userEvent.setup();
   open("voice");
   const sample = await screen.findByRole("region", { name: "Narration sample" });
   expect(within(sample).getByText("Before levelling").getAttribute("title")).toBe("-19.4 LUFS");
   expect(within(sample).getByText("After levelling (YouTube loudness)").getAttribute("title")).toBe(
     "-14.0 LUFS",
   );
-  expect([...sample.querySelectorAll("audio")].map((one) => one.getAttribute("src"))).toEqual([
-    `http://slopify.test/api/template-studio/${templateId}/loudness/before.mp3`,
+  // One play key in the column: the choice above it picks what it plays.
+  const sources = () => [...sample.querySelectorAll("audio")].map((one) => one.getAttribute("src"));
+  expect(sources()).toEqual([
     `http://slopify.test/api/template-studio/${templateId}/loudness/after.mp3?v=1`,
+  ]);
+  await user.click(within(sample).getByRole("button", { name: "Before levelling" }));
+  expect(sources()).toEqual([
+    `http://slopify.test/api/template-studio/${templateId}/loudness/before.mp3`,
   ]);
 });
 
@@ -700,7 +822,7 @@ it("lists the schedule's next runs with their titles and the cost a month", asyn
   const table = within(section).getByRole("table", { name: "The next runs" });
   expect(within(table).getByText("History: Salt roads")).not.toBeNull();
   expect(
-    within(section).getByText("About $4.35 a month at most, for about 8.7 runs."),
+    within(section).getByText("About $4.35 a month at most, for about 9 runs."),
   ).not.toBeNull();
 });
 
@@ -714,6 +836,7 @@ it("lists a paused schedule's runs marked paused, and what it costs once resumed
           runs: 0,
           high: 0,
           unknown: 0,
+          unpriced: [],
           problem: null,
           paused: { schedules: 1, runs: 8.7, high: 4.35 },
         },
@@ -725,7 +848,7 @@ it("lists a paused schedule's runs marked paused, and what it costs once resumed
   expect(within(table).getByText("Weekdays (paused)")).not.toBeNull();
   expect(
     within(section).getByText(
-      "1 paused schedule uses this template: nothing runs while it is paused. Resumed, about $4.35 a month at most, for about 8.7 runs.",
+      "1 paused schedule uses this template: nothing runs while it is paused. Resumed, about $4.35 a month at most, for about 9 runs.",
     ),
   ).not.toBeNull();
 });
@@ -744,8 +867,41 @@ it("starts a new schedule with this template picked", async () => {
     </>,
     testDeps(routes),
   );
-  await user.click(await screen.findByRole("button", { name: "New schedule with this template" }));
+  await user.click(await screen.findByRole("button", { name: "New schedule" }));
   await waitFor(() => expect(path).toBe("/calendar?tab=schedules"));
+  // One button does it: the section itself has none of its own.
+  cleanup();
+  open("schedule");
+  await screen.findByRole("region", { name: "Schedule settings" });
+  expect(screen.getAllByRole("button", { name: /^New schedule/ })).toHaveLength(1);
+});
+
+it("names the steps a scheduled run has no price for, and says the cost is the least, in whole runs", async () => {
+  open("schedule", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({
+      ...view,
+      schedule: {
+        runs: view.schedule.runs.map((run) => ({ ...run, topic: false, title: "{{Topic}}" })),
+        cost: {
+          runs: 30.4,
+          high: 6.08,
+          unknown: 2,
+          unpriced: ["Narration descriptions", "Delivery cue overhead"],
+          problem: null,
+          paused: { schedules: 0, runs: 0, high: 0 },
+        },
+      },
+    }),
+  });
+  const section = await screen.findByRole("region", { name: "Schedule settings" });
+  expect(
+    within(section).getByText(
+      "At least $6.08 a month, for about 30 runs. Not counted, with no known price: Narration descriptions and Delivery cue overhead.",
+    ),
+  ).not.toBeNull();
+  const table = within(section).getByRole("table", { name: "The next runs" });
+  expect(within(table).getAllByText("No topic queued yet").length).toBeGreaterThan(0);
+  expect(within(table).queryByText(/\{\{Topic\}\}/)).toBeNull();
 });
 
 it("shows where a run pauses and which AI checks run", async () => {
@@ -972,6 +1128,7 @@ it("asks for the free samples by itself when only the schedule's cost is still t
           runs: 4,
           high: 0,
           unknown: 1,
+          unpriced: [],
           problem:
             "The cost of the runs of Weekdays isn't worked out yet: it is, with the free samples.",
           paused: { schedules: 0, runs: 0, high: 0 },
@@ -1010,10 +1167,10 @@ it("makes a video from the saved template, and waits for a Save while something 
     { onApplied: applied },
   );
   const make = await screen.findByRole("button", { name: "Make a video" });
-  await user.click(screen.getByRole("button", { name: "Square 1:1" }));
+  await user.click(screen.getByRole("radio", { name: "1:1 Square" }));
   expect(make.hasAttribute("disabled") || make.getAttribute("aria-disabled") === "true").toBe(true);
   expect(screen.getByText("Unsaved changes. Save them before you make a video.")).not.toBeNull();
-  await user.click(screen.getByRole("button", { name: "Landscape 16:9" }));
+  await user.click(screen.getByRole("radio", { name: "16:9 Landscape" }));
   await waitFor(() => expect(make.hasAttribute("disabled")).toBe(false));
   await user.click(make);
   await waitFor(() => expect(applied).toHaveBeenCalledOnce());
@@ -1134,16 +1291,6 @@ it("shows the samples an imported template came with", async () => {
   const section = await screen.findByRole("region", { name: "Samples it came with" });
   expect(within(section).getByRole("img", { name: "The thumbnail it came with" })).not.toBeNull();
   expect(within(section).getByText(/Your own samples replace these/)).not.toBeNull();
-});
-
-it("names each choice row in Video and style above its buttons", async () => {
-  open("video");
-  const panel = await screen.findByRole("region", { name: "Video and style settings" });
-  const names = [...panel.querySelectorAll('[data-slot="studio-choice"] .sl-field__label')].map(
-    (label) => label.textContent,
-  );
-  expect(names).toEqual(["Shape", "Captions", "Image motion"]);
-  expect(within(panel).getByRole("group", { name: "Captions" })).not.toBeNull();
 });
 
 it("turns a site on in YouTube description and posts with its defaults, saved with the template", async () => {

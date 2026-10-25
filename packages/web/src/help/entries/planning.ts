@@ -4,11 +4,6 @@ import type { HelpEntry } from "../entry.js";
 // and the cast editor say what each field does in a line under it.
 export const planningHelp = {
   // Schedules
-  "planning.schedule.missed": {
-    title: "Missed run",
-    body: "What happens to a run that came due while Slopify was closed or asleep. Skip drops it when it is more than 1 minute late and waits for the next time. Run once when Slopify reopens starts one catch-up run, however many were missed. Default: Skip.",
-    tutorial: { page: "Schedules", anchor: "when-it-runs" },
-  },
   "planning.schedule.topic-format": {
     title: "How to write the topics",
     body: "Three ways to write the same list; switching keeps everything. One per line fills only the topic keyword. Table adds a column for each keyword a topic sets itself, such as its word count. YAML / JSON holds the same as text, for pasting or keeping in a file.",

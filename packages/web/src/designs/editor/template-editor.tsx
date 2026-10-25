@@ -126,7 +126,7 @@ function TemplateEditor({ template }: { readonly template: TemplateView }): Reac
         setFailing([]);
         setStatus({
           tone: "success",
-          text: `Version ${String(template.headVersion)} is approved: schedules make pieces from it.`,
+          text: `Version ${String(template.headVersion)} is approved: schedules make posters from it.`,
         });
       } else {
         setFailing(result.checks ?? []);
@@ -249,11 +249,11 @@ function TemplateEditor({ template }: { readonly template: TemplateView }): Reac
       >
         <Button
           disabled={dirty}
-          disabledReason="Save first: a piece is made from the saved version."
+          disabledReason="Save first: a poster is made from the saved version."
           focusableWhenDisabled
           onClick={() => setMaking(true)}
         >
-          Make a piece
+          Make a poster
         </Button>
         {scheduled ? (
           <Button

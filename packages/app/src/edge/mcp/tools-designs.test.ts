@@ -82,7 +82,7 @@ it("asks for confirmed: true before marking a template version ready", async () 
     arguments: { id: "t1", body: { version: 1 } },
   });
   expect(unconfirmed.isError).toBe(true);
-  expect(textOf(unconfirmed)).toContain("Schedules start making pieces from this version.");
+  expect(textOf(unconfirmed)).toContain("Schedules start making posters from this version.");
 });
 
 it("says Try again is paid again, with the acknowledgement it needs, and the assistant asks first", () => {

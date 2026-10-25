@@ -74,7 +74,7 @@ export function TextPanel({
       />
       <ValueFields
         label="Keywords"
-        tip="library.design.values"
+        help="The words for each keyword on this poster. Every keyword needs words before the artwork is made."
         fields={fields}
         values={values}
         dateField={doc.schedule?.dateField}

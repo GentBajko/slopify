@@ -208,7 +208,7 @@ describe("the daily budget", () => {
     expect(fitsBudget(off, 0, true)).toBe(false);
     expect(fitsBudget(off, 0, false)).toBe(true);
     expect(budgetWords(off, { high: 0, usesPlan: true }, "This sample")).toBe(
-      "This sample runs on your CLI plan, and samples may not use CLI plans. Turn on Samples may use my CLI plans in Settings → Production defaults",
+      "This sample runs on your Claude Code or Codex plan, and samples may not use it. Turn on Let samples use my Claude Code or Codex plan in Settings → Production defaults",
     );
     writeStudioSettings(db, { dailyBudget: 5 });
     expect(fitsBudget(budgetRoom(db, now, "UTC"), 0, true)).toBe(false);

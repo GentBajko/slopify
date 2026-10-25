@@ -3,19 +3,20 @@ import type { StudioView } from "@app/slices/template-studio/schema.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
-import { AudioPlayer } from "@/components/kit/audio-player";
 import { Button } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
 import { Fold } from "@/components/kit/fold";
-import { FileLink } from "@/components/kit/link";
+import { FileLink, TextLink } from "@/components/kit/link";
 import { MediaFrame, MediaGrid } from "@/components/kit/media";
 import { Player } from "@/components/kit/player";
 import { ReadingView } from "@/components/kit/reading-view";
 import { Switch } from "@/components/kit/switch";
 import { readText } from "@/http";
+import { usd } from "@/lib/format";
 import { readPostPacks, socialPacksKey } from "@/social/api";
 import { PostPreview } from "@/social/post-preview";
 import { about, changeFullScript, makeSample, quoteSample, templateStudioKey } from "./api";
+import { budgetLead } from "./budget-words";
 
 type Output = StudioView["paid"]["outputs"][number];
 
@@ -31,6 +32,15 @@ export const paidSections: readonly TemplateSection[] = [
 ];
 
 const audioRoles = ["audio_levelled", "audio_body", "audio_mp3", "audio_export"];
+
+// The narration the paid sample made, the levelled file first. The Narration sample column
+// plays it in its one player, beside the levelling's before and after (sample-panel.tsx).
+export function paidNarration(view: StudioView): Output | undefined {
+  const outputs = view.paid.outputs.filter((output) => output.section === "voice");
+  return audioRoles
+    .map((role) => outputs.find((one) => one.role === role))
+    .find((one) => one !== undefined);
+}
 
 // What a section's paid sample made, in the sample project as it is now.
 export function PaidBody({
@@ -49,12 +59,6 @@ export function PaidBody({
   switch (section) {
     case "script":
       return view.paid.article === null ? null : <ScriptSample markdown={view.paid.article} />;
-    case "voice": {
-      const audio = audioRoles.map((role) => of(role)[0]).find((one) => one !== undefined);
-      return audio === undefined ? null : (
-        <AudioPlayer src={at(audio.url)} label={`${view.template.name}: sample narration`} />
-      );
-    }
     case "pictures": {
       const images = of("image", "reference");
       return images.length === 0 ? null : (
@@ -213,9 +217,23 @@ function UploadSample({
   );
 }
 
+// A sample's price on its button: "about $0.30", "free", "plan usage", or, with steps no price
+// is known for, "at least $0.30" or "price not known": never "free" for work nobody priced.
+export function samplePrice(quote: {
+  readonly high: number;
+  readonly unknown: number;
+  readonly onPlan: boolean;
+}): string {
+  if (quote.unknown > 0)
+    return quote.high === 0 ? "price not known" : `at least ${usd(quote.high)}`;
+  if (quote.high === 0) return quote.onPlan ? "plan usage" : "free";
+  return about(quote.high);
+}
+
 // Make sample: the current version's paid sample, at the price on the button. A waiting one
 // says its price; any other is priced as a whole new sample, which is the most it can cost. A
-// setup no sample can be made of says why instead, and never shows a price.
+// setup no sample can be made of says why instead, and never shows a price. One today's budget
+// or the plan setting would only hold says so, with the way to the setting, in its place.
 export function MakeSampleButton({
   view,
   onDone,
@@ -227,13 +245,16 @@ export function MakeSampleButton({
   const client = useQueryClient();
   const [asking, setAsking] = useState(false);
   const known = view.paid.quotedHigh;
+  const held = view.paid.state === "held";
+  // A waiting sample is priced too: one the budget or the plan setting holds would only wait
+  // again, so the way to the setting stands in its button.
   const whole = useQuery({
     queryKey: [...templateStudioKey(view.template.id), "quote", "whole", view.sample.topic],
     queryFn: () => quoteSample(api, view.template.id, { topic: view.sample.topic }),
-    enabled: known === null,
+    enabled: known === null || held,
   });
   const high = known ?? whole.data?.high;
-  const unknown = known === null ? (whole.data?.unknown ?? 0) > 0 : view.paid.state === "held";
+  const unknown = known === null ? (whole.data?.unknown ?? 0) > 0 : held;
   const refused = known === null ? (whole.data?.problem ?? null) : null;
   async function make(): Promise<void> {
     if (high === undefined) return;
@@ -255,6 +276,16 @@ export function MakeSampleButton({
     }
   }
   if (refused !== null) return <p className="m-0 text-small text-danger">{refused}</p>;
+  if ((known === null || held) && whole.data !== undefined && !whole.data.fits)
+    return (
+      <p className="m-0 text-small text-ink-2">
+        {budgetLead(whole.data, "This sample")}
+        <TextLink to="/settings" search={{ section: "playback" }}>
+          Settings → Production defaults
+        </TextLink>
+        .
+      </p>
+    );
   return (
     <Button
       size="small"
@@ -264,7 +295,15 @@ export function MakeSampleButton({
     >
       {high === undefined
         ? "Make sample · pricing…"
-        : `Make sample · ${known === null && whole.data?.onPlan === true ? "plan usage" : high === 0 ? "free" : about(high)}`}
+        : `Make sample · ${
+            known === null && whole.data !== undefined
+              ? samplePrice(whole.data)
+              : samplePrice({
+                  high,
+                  unknown: unknown ? 1 : 0,
+                  onPlan: whole.data?.onPlan === true,
+                })
+          }`}
     </Button>
   );
 }
@@ -309,7 +348,7 @@ export function FullScriptSwitch({
       disabled={asking || price.data === undefined}
       onChange={() => void change()}
       className="text-left"
-      label={`Write the whole article in the sample${price.data === undefined ? "" : ` (${price.data.onPlan ? "plan usage" : price.data.high === 0 ? "free" : about(price.data.high)})`}`}
+      label={`Write the whole article in the sample${price.data === undefined ? "" : ` (${samplePrice(price.data)})`}`}
       help="Off, the sample writes the outline and the first chapter. Your videos always get the whole article."
     />
   );

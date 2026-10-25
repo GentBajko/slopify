@@ -94,6 +94,32 @@ describe("Designs", () => {
     expect(within(list).getByRole("link", { name: "Edit template Gig poster" })).not.toBeNull();
   });
 
+  it("makes a poster from its row, as a video template's card makes a video, with Delete under More", async () => {
+    const user = userEvent.setup();
+    renderRouted(
+      <DesignTemplateList onNew={() => {}} />,
+      deps({
+        "POST /api/design-templates/t1/quote": jsonAnswer({
+          currency: "USD",
+          rows: [],
+          low: 0.04,
+          high: 0.04,
+          unknown: 0,
+          expectedWords: 0,
+          catalogueDate: null,
+          assumptions: [],
+        }),
+      }),
+    );
+    const list = await screen.findByRole("list", { name: "Poster templates" });
+    expect(within(list).queryByRole("button", { name: "Delete Gig poster" })).toBeNull();
+    await user.click(within(list).getByRole("button", { name: "Make a poster with Gig poster" }));
+    expect(await screen.findByRole("dialog", { name: "Make a poster" })).not.toBeNull();
+    await user.keyboard("{Escape}");
+    await user.click(within(list).getByRole("button", { name: "More for Gig poster" }));
+    expect(await screen.findByRole("menuitem", { name: "Delete Gig poster" })).not.toBeNull();
+  });
+
   it("deletes a design from its tile", async () => {
     let deleted = false;
     renderRouted(

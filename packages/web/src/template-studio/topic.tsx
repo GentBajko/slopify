@@ -6,8 +6,9 @@ import { Button } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
 import { Field, Input } from "@/components/kit/field";
 import { Segmented, Switch } from "@/components/kit/switch";
-import { about, changeTopic, quoteSample, templateStudioKey } from "./api";
+import { changeTopic, quoteSample, templateStudioKey } from "./api";
 import { budgetReason } from "./budget-words";
+import { samplePrice } from "./paid-sample";
 
 type Choice = "typed" | "next-queued" | "fixed";
 
@@ -119,9 +120,9 @@ function TopicDrawer({
             disabledReason={saving ? "Changing the topic" : (blocked ?? "")}
             onClick={() => void use()}
           >
-            {quote.data === undefined
+            {quote.data === undefined || quote.data.problem !== null
               ? "Use this topic"
-              : `Use this topic · ${quote.data.high === 0 ? "free" : about(quote.data.high)}`}
+              : `Use this topic · ${samplePrice(quote.data)}`}
           </Button>
         </div>
       }

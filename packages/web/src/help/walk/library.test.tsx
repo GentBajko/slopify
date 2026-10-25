@@ -290,7 +290,10 @@ describe("every control on Prompts, Templates, PDF looks and Pronunciation is ex
             { id: "c2", name: "Sleep" },
           ],
         }),
-        "GET /api/onboarding": jsonAnswer({ packs: [] }),
+        // One starter not added yet: Add starter templates shows only while one is left.
+        "GET /api/onboarding": jsonAnswer({
+          packs: [{ id: "history", name: "History", summary: "Documentaries.", installed: false }],
+        }),
       }),
     );
     await screen.findByRole("list", { name: "Video templates" });

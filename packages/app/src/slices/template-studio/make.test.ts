@@ -63,6 +63,7 @@ it("makes the free samples, then prices each schedule's run once, telling the st
   expect(prices.get(priceKey({ id: scheduleId, version: 1 }, { id, version: 1 }))).toEqual({
     high: 0,
     unknown: 0,
+    unpriced: [],
   });
   expect(changed).toEqual([id, id]);
   await make(job, new AbortController().signal);

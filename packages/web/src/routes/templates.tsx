@@ -1,5 +1,6 @@
 import { type UseQueryResult, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDownIcon, EllipsisIcon } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { EllipsisIcon } from "lucide-react";
 import { type ReactElement, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { channelsQuery } from "@/channels/api";
@@ -23,6 +24,7 @@ import { DesignTemplateList } from "@/designs/designs-route";
 import { useDesignStarts } from "@/designs/start";
 import { sortLibrary, useLibrarySort } from "@/library/sort";
 import { SortMenu } from "@/library/sort-menu";
+import { onboardingKey, readFirstRun } from "@/onboarding/api";
 import { PacksDrawer } from "@/onboarding/packs-drawer";
 import { providersQuery } from "@/queries";
 import { downloadPack, type TemplateCard, templateCardsQuery } from "@/template-studio/api";
@@ -85,31 +87,30 @@ export function TemplatesRoute({
   });
   const count = templates.data?.length;
   const posters = useQuery(designTemplatesQuery(api));
+  // Add starter templates goes once every starter is added: its drawer would offer nothing.
+  const starters = useQuery({ queryKey: onboardingKey, queryFn: () => readFirstRun(api) });
+  const allAdded = starters.data?.packs.every((pack) => pack.installed) === true;
   // An empty list teaches with its own button; the header doesn't repeat it.
   return (
     <div>
       <PageHeader
         title="Templates"
-        meta="A template is a saved setup. Make a video from one, or edit what it makes."
+        meta={
+          current === "videos"
+            ? "A template is a saved setup. Make a video from one, or edit what it makes."
+            : "A poster template is a saved poster with keywords. Make a poster from one, or edit what it makes."
+        }
         actions={
           current === "videos" ? (
             <>
-              {count === 0 ? null : (
+              {count === 0 || allAdded ? null : (
                 <Button onClick={() => setAdding(true)} aria-expanded={adding}>
                   Add starter templates
                 </Button>
               )}
-              <Menu>
-                <MenuTrigger asChild>
-                  <Button aria-label="More ways to add templates" disabled={importing.busy}>
-                    More
-                    <ChevronDownIcon aria-hidden="true" className="size-4" strokeWidth={1.75} />
-                  </Button>
-                </MenuTrigger>
-                <MenuContent>
-                  <MenuItem onSelect={importing.choose}>Import a template file (.zip)</MenuItem>
-                </MenuContent>
-              </Menu>
+              <Button disabled={importing.busy} onClick={importing.choose}>
+                Import a template file (.zip)
+              </Button>
             </>
           ) : posters.data?.length === 0 ? undefined : (
             <Button disabled={designs.busy} onClick={designs.startTemplate}>
@@ -437,19 +438,29 @@ function TemplateCardItem({
       aria-label={template.name}
       aria-current={picked ? "true" : undefined}
     >
-      <div className="sl-template-card__still" data-format={format}>
-        {card?.still == null ? (
-          <div className="sl-template-card__shape" aria-hidden="true">
-            <span>{format}</span>
-            <span className="text-ink-3">No preview yet</span>
-          </div>
-        ) : (
+      {card?.still == null ? null : (
+        <Link
+          to="/templates/$templateId"
+          params={{ templateId: template.id }}
+          search={{}}
+          // The name below is the way in from the keyboard; the still is one more for a pointer.
+          tabIndex={-1}
+          className="sl-template-card__still"
+          data-format={format}
+        >
           <img src={`${api.origin}${card.still}`} alt={`A still from ${template.name}'s sample`} />
-        )}
-      </div>
+        </Link>
+      )}
       <div className="flex min-w-0 flex-col gap-1">
-        <h3 className="m-0 truncate text-title-3" title={template.name}>
-          {template.name}
+        <h3 className="m-0 text-title-3 [overflow-wrap:anywhere]">
+          <Link
+            to="/templates/$templateId"
+            params={{ templateId: template.id }}
+            search={{}}
+            className="text-ink no-underline hover:underline"
+          >
+            {template.name}
+          </Link>
         </h3>
         <p className="m-0 text-small text-ink-2">
           {card === undefined ? "Reading what it makes…" : cardFacts(card, providerName)}

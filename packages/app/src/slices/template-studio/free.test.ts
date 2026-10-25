@@ -154,7 +154,7 @@ describe("free samples", () => {
     expect(free.view("t1", base, idle).video).toEqual({
       state: "needs-fix",
       sentence:
-        "The video sample couldn't be made because the caption font is no longer on this computer. Choose another font under All Video and style settings, then press Make sample.",
+        "The video sample couldn't be made because the caption font is no longer on this computer. Choose another Caption font in Video and style, then press Make sample.",
       url: null,
     });
   });

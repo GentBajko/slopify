@@ -2,7 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
 import { projectExists } from "../admission/repo.js";
-import type { DraftReviewDeps } from "../play-drafts/model.js";
+import type { DraftReviewDeps, PlayDraftDocument } from "../play-drafts/model.js";
 import { templateById } from "../project-templates/repo.js";
 import { currentRevisionId } from "../revisions/repo.js";
 import { getRevisionView } from "../revisions/view.js";
@@ -84,14 +84,20 @@ export async function getAnatomy(
     };
   const record = sampleOf(deps.db, id);
   const fullScript = record?.fullScript ?? false;
-  const resolved = await resolveSampleRun(
-    deps.review,
-    sampleDocument(template.document, {
-      topic: record?.topic ?? defaultSampleTopic(deps.db),
-      fullScript,
-    }),
+  const sampled = sampleDocument(template.document, {
+    topic: record?.topic ?? defaultSampleTopic(deps.db),
     fullScript,
-  );
+  });
+  let resolved = await resolveSampleRun(deps.review, sampled, fullScript);
+  // A refusal about another section (no image service on a fresh install) never hides this
+  // section's prompt: the setup is read again with only what this section's prompt needs.
+  for (const focused of resolved.ok ? [] : focusedDocuments(sampled, section)) {
+    const retry = await resolveSampleRun(deps.review, focused, fullScript);
+    if (retry.ok) {
+      resolved = retry;
+      break;
+    }
+  }
   const empty = (problem: string | null): StudioResult<AnatomyView> => ({
     ok: true,
     value: { section, items: [], item: null, segments: [], fromSample: false, problem },
@@ -145,4 +151,41 @@ export async function getAnatomy(
       problem: null,
     },
   };
+}
+
+// The setup with every stage this section's prompt doesn't need turned off: first keeping the
+// narration, which shapes the article's prompt (a script for speakers), then without it.
+export function focusedDocuments(
+  document: PlayDraftDocument,
+  section: TemplateSection,
+): readonly PlayDraftDocument[] {
+  const { form } = document;
+  const keep = (own: TemplateSection, source: (typeof form.sources)["images"]) =>
+    section === own ? source : ("off" as const);
+  const focused: PlayDraftDocument = {
+    ...document,
+    form: {
+      ...form,
+      sources: {
+        ...form.sources,
+        images: section === "shorts" ? form.sources.images : keep("pictures", form.sources.images),
+        thumbnail: keep("thumbnail", form.sources.thumbnail),
+        video: "off",
+        ...(form.sources.document === undefined ? {} : { document: "off" as const }),
+      },
+      youtubeDescription: section === "upload" ? form.youtubeDescription : false,
+      ...(form.shorts === undefined || section === "shorts"
+        ? {}
+        : { shorts: { ...form.shorts, enabled: false } }),
+      ...(section === "upload" ? {} : { social: undefined }),
+      ...(form.reviews === undefined || section === "reviews"
+        ? {}
+        : { reviews: { ...form.reviews, stages: {} } }),
+    },
+  };
+  if (section === "voice" || focused.form.sources.audio === "off") return [focused];
+  return [
+    focused,
+    { ...focused, form: { ...focused.form, sources: { ...focused.form.sources, audio: "off" } } },
+  ];
 }

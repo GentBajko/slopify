@@ -55,6 +55,21 @@ function heldText(source: string, text: string): string {
   return source === "provide" && text.trim() !== "" ? "held" : source;
 }
 
+// One press of Make sample makes every paid section's sample at once, so its sentence names
+// them: "Make sample makes the samples of Title and keywords, Article and Narration together,
+// about the sample topic."
+export function makeSampleSentence(document: PlayDraftDocument): string {
+  const made = paidSections
+    .filter((id) => {
+      const source = sourceOf(document, id);
+      return source !== "off" && source !== "provide";
+    })
+    .map((id) => sectionLabel[id]);
+  if (made.length <= 1) return "Make sample shows what this section makes, about the sample topic.";
+  const names = `${made.slice(0, -1).join(", ")} and ${made.at(-1) ?? ""}`;
+  return `Make sample makes the samples of ${names} together, about the sample topic.`;
+}
+
 const offSentence: Readonly<Record<TemplateSection, string>> = {
   subject: "Research is off: the script is written from the topic alone.",
   script: "The article is off.",
@@ -92,7 +107,9 @@ export function baseStatuses(
         id,
         label,
         state: "stale",
-        sentence: "Make sample shows what this section makes, about the sample topic.",
+        sentence: (paidSections as readonly TemplateSection[]).includes(id)
+          ? makeSampleSentence(document)
+          : "Make sample shows what this section makes, about the sample topic.",
       }
     );
   });
@@ -230,7 +247,7 @@ export function paidStatuses(
         id,
         "stale",
         done === undefined
-          ? "Make sample shows what this section makes, about the sample topic."
+          ? makeSampleSentence(input.headDocument)
           : `Changed since the sample of version ${String(done.templateVersion)}. Press Make sample to see it again.`,
       );
   }

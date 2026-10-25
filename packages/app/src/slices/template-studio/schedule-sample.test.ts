@@ -105,6 +105,7 @@ describe("monthlyCost", () => {
       runs: 39.1,
       high: 7.39,
       unknown: 0,
+      unpriced: [],
       problem: null,
       paused: { schedules: 0, runs: 0, high: 0 },
     });
@@ -145,6 +146,7 @@ describe("monthlyCost", () => {
       runs: 30.4,
       high: 3.04,
       unknown: 0,
+      unpriced: [],
       problem: null,
       paused: { schedules: 1, runs: 8.7, high: 4.35 },
     });
@@ -153,6 +155,18 @@ describe("monthlyCost", () => {
       high: 0,
       paused: { schedules: 1, runs: 8.7, high: 0 },
     });
+  });
+
+  it("names each step with no price once, across the schedules", () => {
+    const cost = monthlyCost(
+      [schedule({}), schedule({ id: "s2", cadence: { kind: "daily", time: "08:00" } })],
+      new Map([
+        ["s1", { high: 0.5, unknown: 1, unpriced: ["Narration descriptions"] }],
+        ["s2", { high: 0.1, unknown: 2, unpriced: ["Narration descriptions", "Images"] }],
+      ]),
+      now,
+    );
+    expect(cost).toMatchObject({ unknown: 3, unpriced: ["Narration descriptions", "Images"] });
   });
 
   it("counts a one-off run only when it falls within the month", () => {

@@ -10,8 +10,16 @@ import { templateChecksQuery } from "./api";
 
 // What a run of this template needs that it lacks, one line per missing thing with the link to
 // where it is fixed, so "3 to fix" means three lines to fix; what passes is folded under them.
-// Read on their own, so the page shows while they load.
-export function ChecksList({ templateId }: { readonly templateId: string }): ReactElement {
+// Read on their own, so the page shows while they load. They are worked out on the saved
+// version: while a change is unsaved, one line says so, so a line that the change already fixes
+// doesn't read as the page contradicting itself.
+export function ChecksList({
+  templateId,
+  dirty,
+}: {
+  readonly templateId: string;
+  readonly dirty: boolean;
+}): ReactElement {
   const { api } = useApp();
   const query = useQuery(templateChecksQuery(api, templateId));
   const checks = query.data?.checks;
@@ -31,6 +39,11 @@ export function ChecksList({ templateId }: { readonly templateId: string }): Rea
               : `${String(failing.length)} to fix`
         }
       />
+      {dirty ? (
+        <p className="m-0 text-small text-ink-2">
+          Checked on the saved version: Save to check your changes.
+        </p>
+      ) : null}
       {query.error ? (
         <p role="alert" className="m-0 text-small text-danger">
           {`The checks didn't load: ${query.error.message} Reload the page to look again.`}

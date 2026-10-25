@@ -42,7 +42,10 @@ export function modelFields(draft: RunDraft, catalogue?: CatalogueStore): FieldE
     },
   ] as const;
   for (const { field, family, choice, needed } of checks) {
-    if (!needed || !choice || isUncataloguedProvider(choice.provider)) continue;
+    // No model at all is admission's to say ("Choose a Service and a Model under …"): none was
+    // chosen, so none is "no longer" in the list.
+    if (!needed || !choice || choice.model === "" || isUncataloguedProvider(choice.provider))
+      continue;
     const model = catalogue.models(choice.provider, family).find((m) => m.id === choice.model);
     if (!model)
       fields.push({

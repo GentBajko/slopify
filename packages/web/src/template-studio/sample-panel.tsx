@@ -10,6 +10,7 @@ import { Player } from "@/components/kit/player";
 import { SectionHead } from "@/components/kit/section-head";
 import { Status } from "@/components/kit/status";
 import { Steps } from "@/components/kit/steps";
+import { Segmented } from "@/components/kit/switch";
 import { cn } from "@/lib/utils";
 import { templateChecksQuery } from "./api";
 import {
@@ -17,10 +18,11 @@ import {
   FullScriptSwitch,
   MakeSampleButton,
   PaidBody,
+  paidNarration,
   paidSections,
 } from "./paid-sample";
 import { SayItAs } from "./say-it-as";
-import { stateTone, stateWord } from "./section-rail";
+import { sectionWord, stateTone } from "./section-rail";
 import { SampleTopic } from "./topic";
 
 type Section = StudioView["sections"][number];
@@ -73,13 +75,27 @@ export function SamplePanel({
     ["stale", "needs-fix", "waiting"].includes(section.state) &&
     view.paid.state !== "queued" &&
     view.paid.state !== "making";
-  const fix =
+  // A fix in the section already open comes first, and is in the settings beside the sample,
+  // not a link away: the check's own verb, "Choose one in Images", said of this section.
+  const ownHref = `/templates/${encodeURIComponent(view.template.id)}?section=${section.id}`;
+  const blockers =
     checks.data?.version === view.template.version
-      ? checks.data.checks.find((check) => !check.ok && blocking.has(check.id))?.fix
-      : undefined;
+      ? checks.data.checks.filter((check) => !check.ok && blocking.has(check.id))
+      : [];
+  const failing = blockers.find((check) => check.fix?.href === ownHref) ?? blockers[0];
+  const fix = failing?.fix;
+  const here = fix !== undefined && fix.href === ownHref;
+  const inHere = (label: string): string => {
+    const suffix = ` in ${section.label}`;
+    return label.endsWith(suffix)
+      ? `${label.slice(0, -suffix.length)} in this section's settings`
+      : "Fix it in this section's settings";
+  };
   const action = remakeable ? (
     fix === undefined ? (
       <MakeSampleButton view={view} onDone={setProblem} />
+    ) : here ? (
+      <p className="m-0 text-small text-ink-2">{`${failing?.sentence ?? ""} ${inHere(fix.label)}, then Save.`}</p>
     ) : (
       <TextLink to={fix.href} className="text-small">{`${fix.label} first`}</TextLink>
     )
@@ -95,7 +111,7 @@ export function SamplePanel({
         title="Sample"
         as="h3"
         className="pb-0"
-        status={<Status tone={stateTone[section.state]}>{stateWord[section.state]}</Status>}
+        status={<Status tone={stateTone[section.state]}>{sectionWord(section)}</Status>}
       />
       <p
         className={cn(
@@ -151,25 +167,8 @@ function SampleBody({
           />
         </Frame>
       );
-    case "voice": {
-      const { loudness } = view.free;
-      if (loudness.beforeUrl === null || loudness.url === null) return null;
-      return (
-        <div className="flex flex-col gap-2">
-          <p className="m-0 text-small font-semibold" title={lufs(loudness.beforeLufs)}>
-            Before levelling
-          </p>
-          <AudioPlayer src={at(loudness.beforeUrl)} label="Sample narration before levelling" />
-          <p className="m-0 text-small font-semibold" title={lufs(loudness.afterLufs)}>
-            After levelling (YouTube loudness)
-          </p>
-          <AudioPlayer src={at(loudness.url)} label="Sample narration after levelling" />
-          {heldBack(loudness) === "" ? null : (
-            <p className="m-0 text-small text-ink-2">{heldBack(loudness)}</p>
-          )}
-        </div>
-      );
-    }
+    case "voice":
+      return <NarrationSamples view={view} at={at} />;
     case "document":
       // A phone's browser shows no PDF inline, so the file opens on its own too.
       return view.free.document.url === null ? null : (
@@ -209,6 +208,75 @@ function SampleBody({
     default:
       return null;
   }
+}
+
+type Hearing = "sample" | "before" | "after";
+
+// The narration's samples in one player, so the column has one play key: the voice's own sample
+// once made, and the levelling's before and after, picked above it.
+function NarrationSamples({
+  view,
+  at,
+}: {
+  readonly view: StudioView;
+  readonly at: (url: string) => string;
+}): ReactElement | null {
+  const paid = paidNarration(view);
+  const { loudness } = view.free;
+  const levelled = loudness.beforeUrl !== null && loudness.url !== null;
+  const [hearing, setHearing] = useState<Hearing>(paid === undefined ? "after" : "sample");
+  const sources: readonly {
+    readonly value: Hearing;
+    readonly label: ReactNode;
+    readonly url: string;
+    readonly name: string;
+  }[] = [
+    ...(paid === undefined
+      ? []
+      : [
+          {
+            value: "sample" as const,
+            label: "Your voice's sample",
+            url: paid.url,
+            name: `${view.template.name}: sample narration`,
+          },
+        ]),
+    ...(levelled
+      ? [
+          {
+            value: "before" as const,
+            label: <span title={lufs(loudness.beforeLufs)}>Before levelling</span>,
+            url: loudness.beforeUrl ?? "",
+            name: "Sample narration before levelling",
+          },
+          {
+            value: "after" as const,
+            label: <span title={lufs(loudness.afterLufs)}>After levelling (YouTube loudness)</span>,
+            url: loudness.url ?? "",
+            name: "Sample narration after levelling",
+          },
+        ]
+      : []),
+  ];
+  const shown = sources.find((one) => one.value === hearing) ?? sources[0];
+  if (shown === undefined) return null;
+  return (
+    <div className="flex flex-col gap-2">
+      {sources.length > 1 ? (
+        <Segmented
+          label="Hear"
+          help="Levelling evens the narration out to YouTube's loudness."
+          value={shown.value}
+          options={sources.map(({ value, label }) => ({ value, label }))}
+          onChange={setHearing}
+        />
+      ) : null}
+      <AudioPlayer key={shown.value} src={at(shown.url)} label={shown.name} />
+      {levelled && heldBack(loudness) !== "" ? (
+        <p className="m-0 text-small text-ink-2">{heldBack(loudness)}</p>
+      ) : null}
+    </div>
+  );
 }
 
 function Frame({

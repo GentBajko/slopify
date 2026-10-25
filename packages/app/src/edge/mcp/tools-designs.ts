@@ -153,14 +153,14 @@ export const designTools: readonly RouteTool[] = [
     title: "Delete a design template",
     description: "Moves the template to Settings → Trash, where it stays 30 days.",
     confirm:
-      "It moves to Settings → Trash, and schedules that make from it stop making pieces. After 30 days it is removed for good with its versions and its sample.",
+      "It moves to Settings → Trash, and schedules that make from it stop making posters. After 30 days it is removed for good with its versions and its sample.",
   },
   {
     name: "quote_design_template",
     route: "POST /api/design-templates/:id/quote",
-    title: "Price a piece from a template",
+    title: "Price a poster from a template",
     description:
-      "What one piece made from the template's newest version costs. With a body {document}: what saving that document would cost the editor's sample instead (only a changed picture is paid), with the sections it changes and whether it makes a picture. Records nothing.",
+      "What one poster made from the template's newest version costs. With a body {document}: what saving that document would cost the editor's sample instead (only a changed picture is paid), with the sections it changes and whether it makes a picture. Records nothing.",
     unrecorded: true,
   },
   {
@@ -177,13 +177,13 @@ export const designTools: readonly RouteTool[] = [
     title: "Approve a template version for schedules",
     description:
       "Runs the version's checks and approves it for schedules when they pass, as the editor's Approve for schedules does; refused with the checks that failed. Body: {version}.",
-    confirm: "Schedules start making pieces from this version.",
+    confirm: "Schedules start making posters from this version.",
   },
   {
     name: "make_design_from_template",
     route: "POST /api/design-templates/:id/make",
     body: makeFromTemplateSchema,
-    title: "Make a piece from a template",
-    description: `Makes one designed piece from a template version with these values and starts its artwork. This is ${paid}. Body: {mutationId: a new UUID, values, acknowledgedHigh, version?, name?, projectId?}.`,
+    title: "Make a poster from a template",
+    description: `Makes one poster from a template version with these values and starts its artwork. This is ${paid}. Body: {mutationId: a new UUID, values, acknowledgedHigh, version?, name?, projectId?}.`,
   },
 ];

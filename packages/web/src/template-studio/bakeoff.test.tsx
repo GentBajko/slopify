@@ -138,8 +138,8 @@ describe("Compare models", () => {
   it("asks for a Save first, in words, while the settings have unsaved changes", async () => {
     const user = userEvent.setup();
     open();
-    await user.clear(await screen.findByLabelText("Expected length (words)"));
-    await user.type(screen.getByLabelText("Expected length (words)"), "900");
+    await user.clear(await screen.findByLabelText("Words per video"));
+    await user.type(screen.getByLabelText("Words per video"), "900");
     expect(screen.queryByRole("button", { name: "Compare models" })).toBeNull();
     expect(
       screen.getByText(

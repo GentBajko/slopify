@@ -183,11 +183,11 @@ describe("making a piece from a template", () => {
       "{{Price}} has no value. Fill it in under Keywords, then press Make.",
     );
     expect(reason({ acknowledgedHigh: 0.01 })).toBe(
-      "The price changed since you looked: this piece now costs up to $0.04. Check the new price on the button and press it again.",
+      "The price changed since you looked: this poster now costs up to $0.04. Check the new price on the button and press it again.",
     );
     expect(reason({}, "gone")).toMatch(/^This design template no longer exists/);
     expect(reason({ version: 7 })).toMatch(/^That version of the template doesn't exist/);
-    expect(reason({ mutationId: "x" })).toMatch(/^The piece can't be made: /);
+    expect(reason({ mutationId: "x" })).toMatch(/^The poster can't be made: /);
     expect(h.db.prepare("SELECT count(*) AS n FROM designs").get()).toEqual({ n: 0 });
   });
 

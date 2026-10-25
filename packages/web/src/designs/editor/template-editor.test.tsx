@@ -146,10 +146,10 @@ describe("the design template editor", () => {
       }),
     );
     // Nothing changed yet: there is nothing to save, so no Save is drawn.
-    await screen.findByRole("button", { name: "Make a piece" });
+    await screen.findByRole("button", { name: "Make a poster" });
     expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
     await user.click(screen.getByRole("button", { name: railName("Text layout") }));
-    await user.click(screen.getByRole("button", { name: "Centre" }));
+    await user.click(screen.getByRole("button", { name: "Center" }));
     await waitFor(() => expect(saveButton().getAttribute("aria-disabled")).toBeNull());
     await user.click(saveButton());
     await waitFor(() => expect(saved).toHaveLength(1));
@@ -213,6 +213,31 @@ describe("the design template editor", () => {
     await waitFor(() =>
       expect(asked).toEqual({ version: 2, acknowledgedHigh: 0.04, acknowledgedUnknown: false }),
     );
+  });
+
+  it("says on the Made with line when its image service has no key, and links the key instead of Make sample", async () => {
+    renderRouted(
+      <DesignTemplateRoute templateId="t1" />,
+      deps(template({ sample: null }), {
+        "GET /api/providers": jsonAnswer({
+          providers: [
+            {
+              id: "fal",
+              family: "image",
+              displayName: "fal.ai",
+              readiness: { kind: "keyed", hasKey: false },
+            },
+          ],
+        }),
+      }),
+    );
+    expect(await screen.findByText(/^fal.ai has no key yet/)).not.toBeNull();
+    const panel = await screen.findByRole("region", { name: "Sample" });
+    const link = await within(panel).findByRole("link", { name: "Add a fal.ai key first ↗" });
+    expect(link.getAttribute("href")).toBe("/settings?section=providers&family=image");
+    expect(within(panel).queryByRole("button", { name: /^Make sample/ })).toBeNull();
+    // No sample and none being made: no frame with a lamp that reads as work going on.
+    expect(panel.querySelector(".sl-media__generating")).toBeNull();
   });
 
   it("draws a finished sample from the sample design", async () => {
@@ -281,6 +306,22 @@ describe("the design template editor", () => {
     expect(await screen.findByText(/{{Place}} has no sample value. Fill it in/)).not.toBeNull();
     await user.click(screen.getByRole("button", { name: "Open Text layout" }));
     expect(await screen.findByRole("region", { name: "Text layout" })).not.toBeNull();
+  });
+
+  it("leaves Days ahead and At out with No schedule, and says beside Start the schedule why it waits", async () => {
+    const user = userEvent.setup();
+    renderRouted(<DesignTemplateRoute templateId="t1" />, deps(template()));
+    await user.click(await screen.findByRole("button", { name: railName("Schedule") }));
+    await screen.findByRole("region", { name: "Schedule" });
+    expect(screen.queryByLabelText("Days ahead")).toBeNull();
+    expect(screen.queryByLabelText("At")).toBeNull();
+    // Said in the line beside the button, not only in its tooltip.
+    expect(
+      screen
+        .getAllByText("Choose which keyword holds each date above, then save the template.")
+        .some((one) => one.tagName === "P" && one.getAttribute("role") === "status"),
+    ).toBe(true);
+    expect(screen.queryByText(/approve a version for schedules/)).toBeNull();
   });
 
   it("starts a schedule from rows, each with its date", async () => {
@@ -360,7 +401,7 @@ describe("the design template editor", () => {
       }),
     );
     await user.click(await screen.findByRole("button", { name: railName("Schedule") }));
-    const ceiling = await screen.findByLabelText("Spend ceiling per piece (US$, optional)");
+    const ceiling = await screen.findByLabelText("Spend ceiling per poster (US$, optional)");
     await waitFor(() => expect((ceiling as HTMLInputElement).value).toBe("4"));
     await user.clear(ceiling);
     await user.type(ceiling, "about two");
@@ -378,7 +419,7 @@ describe("the design template editor", () => {
       expect(saved).toMatchObject({ spendLimitCents: 150, baseVersion: 3, templateKind: "design" }),
     );
   });
-  describe("Make a piece", () => {
+  describe("Make a poster", () => {
     const dated: DesignDocument = {
       ...blankTemplate(),
       schedule: { dateField: "Date", daysBefore: 7, time: "09:00" },
@@ -397,15 +438,17 @@ describe("the design template editor", () => {
           },
         }),
       );
-      await user.click(await screen.findByRole("button", { name: "Make a piece" }));
-      const drawer = await screen.findByRole("dialog", { name: "Make a piece" });
+      await user.click(await screen.findByRole("button", { name: "Make a poster" }));
+      const drawer = await screen.findByRole("dialog", { name: "Make a poster" });
       expect((within(drawer).getByLabelText("Event") as HTMLInputElement).value).toBe(
         "Midnight Jazz Session",
       );
       expect(within(drawer).getByLabelText("Date").getAttribute("type")).toBe("date");
       await user.clear(within(drawer).getByLabelText("Place"));
       await user.type(within(drawer).getByLabelText("Place"), "Harbour Hall");
-      await user.click(await within(drawer).findByRole("button", { name: "Make · about $0.04" }));
+      await user.click(
+        await within(drawer).findByRole("button", { name: "Make the poster · about $0.04" }),
+      );
       await waitFor(() =>
         expect(asked).toMatchObject({
           values: { Event: "Midnight Jazz Session", Date: "2026-11-14", Place: "Harbour Hall" },
@@ -418,12 +461,12 @@ describe("the design template editor", () => {
     it("is the quiet secondary action and waits for a Save", async () => {
       const user = userEvent.setup();
       renderRouted(<DesignTemplateRoute templateId="t1" />, deps(template({ readyVersion: 2 })));
-      const button = await screen.findByRole("button", { name: "Make a piece" });
+      const button = await screen.findByRole("button", { name: "Make a poster" });
       expect(button.getAttribute("data-variant")).not.toBe("primary");
       await user.click(screen.getByRole("button", { name: railName("Text layout") }));
       await user.click(screen.getByRole("button", { name: "Add a line" }));
       expect(
-        screen.getByRole("button", { name: "Make a piece" }).getAttribute("aria-disabled"),
+        screen.getByRole("button", { name: "Make a poster" }).getAttribute("aria-disabled"),
       ).toBe("true");
     });
 
@@ -437,16 +480,18 @@ describe("the design template editor", () => {
           ),
         }),
       );
-      await user.click(await screen.findByRole("button", { name: "Make a piece" }));
-      const drawer = await screen.findByRole("dialog", { name: "Make a piece" });
-      const make = await within(drawer).findByRole("button", { name: "Make · price unknown" });
+      await user.click(await screen.findByRole("button", { name: "Make a poster" }));
+      const drawer = await screen.findByRole("dialog", { name: "Make a poster" });
+      const make = await within(drawer).findByRole("button", {
+        name: "Make the poster · price unknown",
+      });
       expect(make.hasAttribute("disabled") || make.getAttribute("aria-disabled") === "true").toBe(
         true,
       );
       await user.click(within(drawer).getByRole("switch", { name: /I accept/ }));
       expect(
         within(drawer)
-          .getByRole("button", { name: "Make · price unknown" })
+          .getByRole("button", { name: "Make the poster · price unknown" })
           .hasAttribute("disabled"),
       ).toBe(false);
     });
@@ -454,13 +499,13 @@ describe("the design template editor", () => {
     it("says plainly when the version is not approved for schedules, and still allows it", async () => {
       const user = userEvent.setup();
       renderRouted(<DesignTemplateRoute templateId="t1" />, deps(template({ readyVersion: 1 })));
-      await user.click(await screen.findByRole("button", { name: "Make a piece" }));
-      const drawer = await screen.findByRole("dialog", { name: "Make a piece" });
+      await user.click(await screen.findByRole("button", { name: "Make a poster" }));
+      const drawer = await screen.findByRole("dialog", { name: "Make a poster" });
       expect(within(drawer).getByText(/Version 2 isn't approved for schedules/)).not.toBeNull();
       expect(
-        (await within(drawer).findByRole("button", { name: "Make · about $0.04" })).hasAttribute(
-          "disabled",
-        ),
+        (
+          await within(drawer).findByRole("button", { name: "Make the poster · about $0.04" })
+        ).hasAttribute("disabled"),
       ).toBe(false);
     });
 
@@ -488,11 +533,15 @@ describe("the design template editor", () => {
           },
         }),
       );
-      await user.click(await screen.findByRole("button", { name: "Make a piece" }));
-      const drawer = await screen.findByRole("dialog", { name: "Make a piece" });
-      await user.click(await within(drawer).findByRole("button", { name: "Make · about $0.04" }));
+      await user.click(await screen.findByRole("button", { name: "Make a poster" }));
+      const drawer = await screen.findByRole("dialog", { name: "Make a poster" });
+      await user.click(
+        await within(drawer).findByRole("button", { name: "Make the poster · about $0.04" }),
+      );
       expect(await within(drawer).findByText(/now costs up to \$0\.09/)).not.toBeNull();
-      await user.click(await within(drawer).findByRole("button", { name: "Make · about $0.09" }));
+      await user.click(
+        await within(drawer).findByRole("button", { name: "Make the poster · about $0.09" }),
+      );
       expect(
         await within(drawer).findByText("Fill in Place before making the piece."),
       ).not.toBeNull();

@@ -1,4 +1,5 @@
 import { topicKeywords } from "@app/slices/project-templates/one-off.js";
+import type { ProviderChoices } from "@app/slices/project-templates/provider-defaults.js";
 import type { TemplateSection } from "@app/slices/template-studio/model.js";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
@@ -8,7 +9,6 @@ import { usePlayDraft } from "@/lib/form-drafts";
 import { admission, keywordOrigins } from "@/play/admission";
 import { CheckpointControls } from "@/play/checkpoints";
 import { ContentSection } from "@/play/content-section";
-import { ShowFiguresToggle } from "@/play/describe-figures";
 import { usePlaySession } from "@/play/draft-context";
 import { KeywordBlock } from "@/play/keywords";
 import { ImagesSection, NarrationSection, VideoSection } from "@/play/outputs-section";
@@ -16,7 +16,7 @@ import { FilePick } from "@/play/provided";
 import type { RailProps } from "@/play/rail-frame";
 import { PlayReviews } from "@/play/reviews";
 import { freshShorts, Shorts, shortsPreviewOf } from "@/play/shorts";
-import { ThumbnailRail } from "@/play/stage-rails";
+import { DocumentRail, ThumbnailRail } from "@/play/stage-rails";
 import { type PlayFormState, shortsOn } from "@/play/state";
 import { templateLibrary } from "@/play/template-library";
 import { YoutubeDescription } from "@/play/youtube-description";
@@ -26,18 +26,19 @@ import { formSocial, shortsOf } from "@/social/studio-post-settings";
 import { subtitlesFor } from "@/subtitles/config";
 import { StylePreview } from "@/video/style-preview";
 
-// Every setting a section has, in Play's own editors, so the few the section leads with never
-// hide one. Each setting is in one section only: Shorts holds the shorts, YouTube description &
-// posts the description and each site's post. Rendered inside `TemplateSession`, which binds
-// the editors to the template.
+// Every setting a section has, in Create's own editors and Create's words, laid out whole. Each
+// setting is in one section only: Shorts holds the shorts, YouTube description and posts the
+// description and each site's post, Narration whether tables and figures are also shown.
+// Rendered inside `TemplateSession`, which binds the editors to the template. A writer or image
+// service nobody chose shows this computer's default in its pickers, as every video made from
+// the template gets it, and is saved with the template only once the person picks one.
 export function FineTune({
   section,
-  withoutService = false,
+  defaults,
   onFiles,
 }: {
   readonly section: TemplateSection;
-  // The section leads with who makes it (`leadsWithService`), so its editor leaves that out.
-  readonly withoutService?: boolean;
+  readonly defaults: ProviderChoices;
   readonly onFiles: () => void;
 }): ReactElement | null {
   const { api } = useApp();
@@ -46,8 +47,18 @@ export function FineTune({
   const entries = useQuery(entriesQuery(api));
   const voices = useQuery(voicesQuery(api));
   const settings = useQuery(settingsQuery(api));
-  const [form, setForm] = usePlayDraft();
+  const [saved, setForm] = usePlayDraft();
   const { document } = usePlaySession();
+  // Kind by kind, as `project-templates/provider-defaults.ts` fills every run of the template.
+  const form: PlayFormState = {
+    ...saved,
+    ...(saved.llm.provider === "" && defaults.llm !== undefined
+      ? { llm: { ...saved.llm, ...defaults.llm } }
+      : {}),
+    ...(saved.images.provider === "" && defaults.images !== undefined
+      ? { images: { ...saved.images, ...defaults.images } }
+      : {}),
+  };
   const choices = templateLibrary(
     document.librarySnapshot,
     prompts.data?.prompts ?? [],
@@ -86,7 +97,6 @@ export function FineTune({
     onPickFiles: onFiles,
     onRemoveFile,
     onReattachFile: onFiles,
-    withoutService,
   };
   const topics = topicKeywords(form.title);
   const written = form.sources.article !== "off";
@@ -112,14 +122,12 @@ export function FineTune({
       return (
         <NarrationSection {...controls} entries={choices.entries} onKeyword={() => undefined} />
       );
-    // The section leads with the images' source, the thumbnail's source and its count: the
-    // editors under the fold leave them out.
     case "pictures":
-      return <ImagesSection {...controls} bare />;
+      return <ImagesSection {...controls} />;
     case "video":
       return <VideoSection {...controls} problemOf={problem} />;
     case "thumbnail":
-      return <ThumbnailRail {...controls} bare />;
+      return <ThumbnailRail {...controls} />;
     case "shorts":
       return written ? (
         <Shorts
@@ -164,12 +172,6 @@ export function FineTune({
             problem={problem}
             onChange={(next) => update(next)}
           />
-          {form.sources.audio === "generate" && form.audio.describeFigures === true ? (
-            <ShowFiguresToggle
-              value={form.showFigures}
-              onChange={(showFigures) => update({ showFigures })}
-            />
-          ) : null}
           <div data-play-field="social">
             <PostSettings
               value={form.social}
@@ -189,9 +191,13 @@ export function FineTune({
           <PlayReviews problem={problem} />
         </div>
       );
-    // PDF's two settings and Schedule's runs are on the section itself (visible.tsx,
-    // schedule-section.tsx).
     case "document":
+      return written ? (
+        <DocumentRail {...controls} />
+      ) : (
+        <NeedsArticle what="The PDF lays out the article" />
+      );
+    // Schedule's runs are on the section itself (schedule-section.tsx).
     case "schedule":
       return null;
   }
