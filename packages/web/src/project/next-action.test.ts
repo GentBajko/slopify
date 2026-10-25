@@ -194,6 +194,7 @@ describe("the next action", () => {
     );
     expect(key?.action?.intent).toEqual({ kind: "open-settings", section: "providers" });
     expect(key?.section).toBe("narration");
+    expect(key?.title).toBe("The service did not accept its key, so the narration stopped.");
     const disk = nextActionFor(
       input({
         project: { status: "failed", config },

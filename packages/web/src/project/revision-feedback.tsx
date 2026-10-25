@@ -42,7 +42,7 @@ export function RevisionFeedback({
             (refusal?.reason === "readiness"
               ? refusal.fields.length > 0
                 ? "This can't start yet. Fix the items below, then try again."
-                : "Slopify couldn't check your providers. Open Settings → Providers, make sure each one you use is set up, then try again."
+                : "Slopify couldn't check your services. Open Settings → Keys & services, make sure each one you use is set up, then try again."
               : (refusal?.message ?? ""))
           }
         />

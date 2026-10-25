@@ -238,8 +238,8 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
       case "provider-settings":
         return {
           ...base,
-          title: `The provider did not accept its key, so ${lower(plural(stageLabel))} stopped.`,
-          why: "Check the key in Settings, then try again.",
+          title: `The service did not accept its key, so ${lower(plural(stageLabel))} stopped.`,
+          why: "Check the key in Settings → Keys & services, then try again.",
           action: { label: fix.label, intent: { kind: "open-settings", section: "providers" } },
         };
       case "free-space":
