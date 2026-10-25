@@ -1,4 +1,5 @@
 import { usesPronunciationGlossary } from "@app/slices/admission/rules.js";
+import { systemVoiceProvider } from "@app/slices/settings/model.js";
 import { type ComponentProps, type ReactNode, useEffect } from "react";
 import type { CastMember } from "@/channels/api";
 import { Fold } from "@/components/kit/fold";
@@ -14,6 +15,7 @@ import { NarrationPreparation } from "./narration-preparation";
 import { PronunciationGlossary } from "./pronunciation-glossary";
 import { ReferenceImage, referenceOff } from "./reference-image";
 import { ServiceGroup } from "./service-group";
+import { SpeechInstall } from "./speech-install";
 import { ThinkingPicker } from "./thinking";
 import { VoicePicker } from "./voice-picker";
 import { VoiceSample } from "./voice-sample";
@@ -65,6 +67,14 @@ export function AudioRail({
     });
   }, [hidden, lead, form.audio, update]);
   const framing = form.voices !== undefined;
+  // The computer's own voice picked while no speech program answers: how to install one.
+  const speechMissing = providers.some(
+    (provider) =>
+      provider.id === systemVoiceProvider &&
+      provider.id === form.audio.provider &&
+      provider.readiness.kind === "local" &&
+      !provider.readiness.available,
+  );
   // The glossary only reaches voices that read IPA; for the others the switch is greyed and the
   // fold's line leaves it out.
   const glossaryReads = usesPronunciationGlossary({
@@ -140,6 +150,7 @@ export function AudioRail({
                   Speakers.
                 </p>
               ) : null}
+              {speechMissing ? <SpeechInstall /> : null}
             </ServiceGroup>
           )}
           {hidden || framing ? null : <VoiceSample form={form} />}

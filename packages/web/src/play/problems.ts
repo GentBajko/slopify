@@ -100,10 +100,22 @@ export function readiness(provider: ProviderStatus): {
   if (provider.readiness.kind === "local")
     return provider.readiness.available
       ? { ok: true, text: "Ready" }
-      : { ok: false, text: provider.readiness.issue ?? "No speech program found on this computer" };
+      : { ok: false, text: speechIssue(provider.readiness.issue) };
   return provider.readiness.hasKey
     ? { ok: true, text: "Key saved" }
     : { ok: false, text: `${provider.displayName} has no key yet` };
+}
+
+// What is wrong with the computer's own voice, in its first sentence: the server's sentence goes
+// on to the commands that install a speech program, which the Narration row lists apart.
+export function speechIssue(issue: string | undefined): string {
+  const first = issue
+    ?.split(/(?<=\.)\s+/)[0]
+    ?.trim()
+    .replace(/\.$/, "");
+  return first === undefined || first === ""
+    ? "No speech program was found on this computer"
+    : first;
 }
 
 const familyWords: Readonly<Record<ProviderFamily, string>> = {
