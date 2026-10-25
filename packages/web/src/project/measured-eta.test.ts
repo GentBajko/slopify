@@ -41,6 +41,12 @@ describe("the measured time left", () => {
       basis: "progress",
       seconds: 820,
     });
+    // Still 18% a minute later: the time counts down, it does not grow while the whole
+    // percent waits to move.
+    expect(measuredEta(rendering(18), t0 + 240_000, memory)).toEqual({
+      basis: "progress",
+      seconds: 760,
+    });
   });
 
   it("starts the clock again when the measure starts again, and waits until it moves", () => {

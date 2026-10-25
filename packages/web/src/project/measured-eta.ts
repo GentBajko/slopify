@@ -9,9 +9,14 @@ import { overallProgress } from "./workspace.js";
 // page saw to the latest, the rate it moves at gives the time left; until it has moved, the time
 // is not known. Every other step keeps the stage's estimate (`slices/eta`).
 
+// The first reading the page saw, and the last time the measure moved: the rate is taken
+// between the two, so a percent that moves in whole steps counts down between them instead of
+// growing while it waits for the next one.
 interface Sample {
   readonly at: number;
   readonly percent: number;
+  readonly movedAt: number;
+  readonly movedTo: number;
 }
 
 // What the page has seen of each named measure, by stage and measure.
@@ -30,17 +35,21 @@ export function measuredEta(stage: Stage, now: number, memory = seen): Eta | und
   // steps is no guide to it either.
   if (percent === undefined) return { basis: "unknown" };
   const key = `${stage.id}\0${stage.activity?.label ?? ""}`;
-  const first = memory.get(key);
+  const seenBefore = memory.get(key);
   // The first reading, or the measure started again (a second render): the clock starts here.
-  if (first === undefined || percent < first.percent) {
-    memory.set(key, { at: now, percent });
+  if (seenBefore === undefined || percent < seenBefore.percent) {
+    memory.set(key, { at: now, percent, movedAt: now, movedTo: percent });
     return { basis: "unknown" };
   }
+  const first =
+    percent > seenBefore.movedTo ? { ...seenBefore, movedAt: now, movedTo: percent } : seenBefore;
+  memory.set(key, first);
   if (percent >= 100) return { basis: "progress", seconds: 0 };
-  const moved = percent - first.percent;
-  const spent = (now - first.at) / 1000;
+  const moved = first.movedTo - first.percent;
+  const spent = (first.movedAt - first.at) / 1000;
   if (moved <= 0 || spent < 5) return { basis: "unknown" };
-  return { basis: "progress", seconds: Math.round((spent / moved) * (100 - percent)) };
+  const left = (spent / moved) * (100 - first.movedTo) - (now - first.movedAt) / 1000;
+  return { basis: "progress", seconds: Math.max(1, Math.round(left)) };
 }
 
 // "Step 3 of 4": the section the run is at, counted as `overallProgress` counts (research inside
