@@ -680,6 +680,22 @@ describe("a stage's state is a word beside its lamp", () => {
     expect(screen.queryByText(/^, /)).toBeNull();
   });
 
+  it("with its time when it has one, and nothing in its place when it has none", () => {
+    render(
+      <Steps
+        label="Run steps"
+        steps={[
+          { id: "i", name: "Images", tone: "done", state: "Done", time: "1:24" },
+          { id: "v", name: "Video", tone: "off", state: "Not started" },
+        ]}
+      />,
+    );
+    const [images, video] = screen.getAllByRole("listitem");
+    expect(images?.querySelector(".sl-step__time")?.textContent).toBe("1:24");
+    expect(video?.querySelector(".sl-step__time")?.textContent).toBe("");
+    expect(screen.queryByText("—")).toBeNull();
+  });
+
   it("in a rail, where items without a lamp keep its column", () => {
     const css = readFileSync(join(import.meta.dirname, "..", "..", "styles", "kit.css"), "utf8");
     render(

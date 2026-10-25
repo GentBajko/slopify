@@ -43,7 +43,8 @@ export function Steps({
           <li key={step.id} className="sl-step" data-tone={step.tone}>
             <Lamp tone={step.tone} />
             <span className="sl-step__name">{step.name}</span>
-            <span className="sl-step__time">{step.time ?? "—"}</span>
+            {/* A step with no time to tell (not started, provided) shows none, not a dash. */}
+            <span className="sl-step__time">{step.time}</span>
             <span className="sl-step__detail">
               <span className="sl-step__state">{step.state}</span>
               {detail === undefined ? null : (
