@@ -1474,6 +1474,8 @@
   .sl-table td.num,
   .sl-table th.num {
     text-align: right;
+    /* A gap before a right-aligned column, so two headers never run together on a phone. */
+    padding-left: 16px;
   }
 
   /* Overlays */

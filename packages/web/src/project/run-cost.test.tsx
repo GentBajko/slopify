@@ -129,19 +129,29 @@ describe("the Run cost tab", () => {
     run: { current: true, running: false, workingMs: 9 * 60_000 },
   };
 
-  it("leads with paid, via API, the plan meter and the end-to-end time, then the tables", async () => {
+  it("leads with what only it says (via API, the plan meter), then the tables, then the totals", async () => {
     renderApp(
       <RunCostPanel projectId="p1" />,
-      testDeps({ "GET /api/projects/p1/run-cost": jsonAnswer(cost) }),
+      testDeps({
+        "GET /api/projects/p1/run-cost": jsonAnswer(cost),
+        "GET /api/providers/codex/models": jsonAnswer({
+          models: [{ id: "gpt-5", name: "GPT-5" }],
+          allowsCustom: false,
+        }),
+      }),
     );
     const summary = await screen.findByRole("region", { name: "Run cost summary" });
     const stats = within(summary)
       .getAllByRole("definition")
       .map((value) => value.textContent);
-    expect(stats).toContain("$3.37");
+    // The total and the working time are the status column's cost line: not said again here
+    // as big numbers, and never as "paid to providers".
+    expect(stats).not.toContain("$3.37");
+    expect(stats).not.toContain("9 min 0 s");
     expect(stats).toContain("~$1.50");
     expect(stats).toContain("18%");
-    expect(stats).toContain("9 min 0 s");
+    expect(document.body.textContent).not.toMatch(/provider/i);
+    expect(screen.getByText(/^In total: \$3\.37 · /)).toBeTruthy();
     const meter = within(summary).getByRole("meter", {
       name: "Share of the weekly Codex limit this run used",
     });
@@ -151,7 +161,8 @@ describe("the Run cost tab", () => {
     expect(within(byStage).getByRole("columnheader", { name: "Via API" })).toBeTruthy();
     expect(within(byStage).getByText("6 min 0 s")).toBeTruthy();
     const byModel = screen.getByRole("table", { name: "Run cost by model" });
-    expect(within(byModel).getByText("codex · gpt-5")).toBeTruthy();
+    // Named as Create names them, from the catalogue.
+    expect(await within(byModel).findByText("Codex CLI · GPT-5")).toBeTruthy();
     expect(within(byModel).getByText("$0 on plan")).toBeTruthy();
   });
 
@@ -208,6 +219,7 @@ describe("the Run cost tab", () => {
     );
     const byModel = await screen.findByRole("table", { name: "Run cost by model" });
     expect(within(byModel).getByText("$0 · sample, free")).toBeTruthy();
+    expect(within(byModel).getByText("Sample artist")).toBeTruthy();
   });
 });
 
