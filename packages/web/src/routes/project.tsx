@@ -639,7 +639,7 @@ function ProjectWorkspace({
   const chapter = nextChapter !== undefined && finishedAudiobook(summary) ? nextChapter : undefined;
   // Copy for YouTube Studio, beside the video and in the YouTube text's head.
   const studio = uploadReady ? (
-    <Button variant="secondary" onClick={() => setUploadOpen(true)}>
+    <Button variant="secondary" size="small" onClick={() => setUploadOpen(true)}>
       Copy for YouTube Studio
     </Button>
   ) : null;
