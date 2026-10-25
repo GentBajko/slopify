@@ -85,6 +85,37 @@ describe("the projects list", () => {
     );
   });
 
+  it("names how many deleted projects wait in the trash, linking to it, and nothing with none", async () => {
+    const trashed = (kind: string, id: string) => ({
+      kind,
+      id,
+      name: id,
+      detail: null,
+      deletedAt: "2026-09-27T10:00:00.000Z",
+      purgeAt: "2026-10-27T10:00:00.000Z",
+      daysLeft: 30,
+    });
+    renderRouted(
+      <ProjectsRoute />,
+      deps([listing("p1", "Rope Tricks", "done")], {
+        "GET /api/trash": jsonAnswer({
+          items: [trashed("project", "a"), trashed("project", "b"), trashed("prompt", "c")],
+        }),
+      }),
+    );
+    const link = await screen.findByRole("link", { name: "Trash (2)" });
+    expect(link.getAttribute("href")).toBe("/settings?section=trash");
+    cleanup();
+    renderRouted(
+      <ProjectsRoute />,
+      deps([listing("p1", "Rope Tricks", "done")], {
+        "GET /api/trash": jsonAnswer({ items: [trashed("prompt", "c")] }),
+      }),
+    );
+    await screen.findByRole("link", { name: "Rope Tricks" });
+    await waitFor(() => expect(screen.queryByRole("link", { name: /^Trash/ })).toBeNull());
+  });
+
   it("says a run waits for a CLI's limits, and when they reset", async () => {
     const resetsAt = new Date();
     resetsAt.setHours(14, 0, 0, 0);
@@ -394,11 +425,13 @@ describe("deleting a project", () => {
     await user.click(await screen.findByRole("button", { name: "Delete Rope Tricks" }));
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText('Delete "Rope Tricks"?')).not.toBeNull();
+    expect(dialog.textContent).toContain(
+      "Moves the project to the trash for 30 days. Undo brings it back, or restore it later in Settings → Trash.",
+    );
+    // The place it can be restored from is a link to it.
     expect(
-      within(dialog).getByText(
-        "Moves the project to the trash for 30 days. Undo brings it back, or restore it later in Settings → Backup & storage → Trash.",
-      ),
-    ).not.toBeNull();
+      within(dialog).getByRole("link", { name: "Settings → Trash" }).getAttribute("href"),
+    ).toBe("/settings?section=trash");
     expect(deleted).toBeUndefined();
 
     await user.click(within(dialog).getByRole("button", { name: "Delete project" }));

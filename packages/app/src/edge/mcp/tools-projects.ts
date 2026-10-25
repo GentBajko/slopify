@@ -37,7 +37,7 @@ const projects: readonly RouteTool[] = [
     description:
       "Delete on the Projects list: moves the project to the trash. A running project is refused: cancel it first.",
     confirm:
-      "This moves the project to Settings → Backup & storage → Trash, where it is kept 30 days before it is deleted for good.",
+      "This moves the project to Settings → Trash, where it is kept 30 days before it is deleted for good.",
   },
   {
     name: "move_projects_to_channel",

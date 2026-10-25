@@ -92,6 +92,28 @@ const one = (versions = 1) => ({
 const unused = { templates: [], schedules: [], projects: [] };
 
 describe("the prompts list", () => {
+  it("names how many deleted prompts, intros and outros wait in the trash, linking to it", async () => {
+    const trashed = (kind: string, id: string) => ({
+      kind,
+      id,
+      name: id,
+      detail: null,
+      deletedAt: "2026-09-27T10:00:00.000Z",
+      purgeAt: "2026-10-27T10:00:00.000Z",
+      daysLeft: 30,
+    });
+    renderRouted(
+      <Screen />,
+      deps([dossier], {
+        "GET /api/trash": jsonAnswer({
+          items: [trashed("prompt", "a"), trashed("entry", "b"), trashed("project", "c")],
+        }),
+      }),
+    );
+    const link = await screen.findByRole("link", { name: "Trash (2)" });
+    expect(link.getAttribute("href")).toBe("/settings?section=trash");
+  });
+
   it("lists every kind down the left with how many are saved, and shows the one picked", async () => {
     renderRouted(<Screen />, deps([dossier, oil, card]));
 
@@ -314,11 +336,10 @@ describe("the prompts list", () => {
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText('Delete "Documentary dossier"?')).not.toBeNull();
     // Nothing a past project made is touched by this.
-    expect(
-      within(dialog).getByText(
-        "Moves it to the trash for 30 days (Settings → Trash). Projects that used it keep their text.",
-      ),
-    ).not.toBeNull();
+    expect(dialog.textContent).toContain(
+      "Moves it to the trash for 30 days (Settings → Trash). Projects that used it keep their text.",
+    );
+    expect(within(dialog).getByRole("link", { name: "Settings → Trash" })).not.toBeNull();
 
     await user.click(within(dialog).getByRole("button", { name: "Delete prompt" }));
     await waitFor(() => {

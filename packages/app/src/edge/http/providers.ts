@@ -7,7 +7,11 @@ import { keyProbes } from "../../adapters/key-probes.js";
 import { catalogueModelInfo } from "../../catalog/model-info.js";
 import { videoModelsOf } from "../../catalog/schema.js";
 import type { ModelInfo } from "../../kernel/ports/model.js";
-import { defaultSpeechVoice, detectSpeechCached } from "../../kernel/ports/system-speech.js";
+import {
+  defaultSpeechVoice,
+  detectSpeechCached,
+  speechInstall,
+} from "../../kernel/ports/system-speech.js";
 import { switchAllRetired, switchRetiredModel } from "../../slices/model-upkeep/switch.js";
 import { retiredModelUsage, usageKinds, usageSlots } from "../../slices/model-upkeep/usage.js";
 import { cliPathMaxLength, saveCliPath } from "../../slices/settings/cli-paths.js";
@@ -179,9 +183,11 @@ export function providerRoutes(deps: AppDeps) {
       // What Settings draws its rails from and Play its dropdowns: every provider, with
       // the one fact that decides whether it is selectable.
       .get("/", async (c) => c.json({ providers: await providerStatuses(readiness) }))
-      // The system voice's speech programs and their voices, for Settings → Voices' picker.
+      // The system voice's speech programs and their voices, for Settings → Voices' picker, and
+      // with none, how to install one from a terminal (the commands apart from the sentence).
       .get("/system-voice/voices", async (c) => {
-        const found = await detectSpeechCached(deps.probe, deps.speechHost ?? process);
+        const host = deps.speechHost ?? process;
+        const found = await detectSpeechCached(deps.probe, host);
         return c.json({
           engines: found.engines.map((engine) => ({
             id: engine.id,
@@ -190,6 +196,7 @@ export function providerRoutes(deps: AppDeps) {
             defaultVoice: defaultSpeechVoice(engine)?.id ?? null,
           })),
           issue: found.issue ?? null,
+          install: found.engines.length === 0 ? (speechInstall(host) ?? null) : null,
         });
       })
       .get("/:id/models", zValidator("param", providerParam, onInvalid), async (c) => {

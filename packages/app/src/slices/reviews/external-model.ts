@@ -66,7 +66,7 @@ export const closedReviewSentences: Readonly<Record<Exclude<ReviewStanding, "wai
   canceled:
     "This review's run was canceled, so nothing waits on it and it takes no verdict: a canceled run's reviews never pass. Call needs_attention to see what is waiting now.",
   trashed:
-    "This review's project is in the Trash, so nothing waits on it and it takes no verdict. Restore the project in Settings → Backup & storage → Trash; the review then waits for its verdict again.",
+    "This review's project is in the Trash, so nothing waits on it and it takes no verdict. Restore the project in Settings → Trash; the review then waits for its verdict again.",
 };
 
 export type ExternalAnswerResult =

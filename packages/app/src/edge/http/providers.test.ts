@@ -36,7 +36,13 @@ function harness(
   probe: CliProbe = notFound,
   models: Pick<
     AppDeps,
-    "modelsFor" | "fallbackModelsFor" | "catalogue" | "hostCliStatus" | "fetch" | "cliLogin"
+    | "modelsFor"
+    | "fallbackModelsFor"
+    | "catalogue"
+    | "hostCliStatus"
+    | "fetch"
+    | "cliLogin"
+    | "speechHost"
   > = {},
 ): Harness {
   const paths = layout(mkdtempSync(join(tmpdir(), "slopify-providers-")));
@@ -291,6 +297,30 @@ describe("GET /api/providers", () => {
     expect(statusOf(body, "openrouter")).toMatchObject({
       readiness: { kind: "keyed", hasKey: false },
     });
+  });
+});
+
+describe("GET /api/providers/system-voice/voices", () => {
+  it("gives the install commands apart from the sentence when no speech program is found", async () => {
+    const { app } = harness(notFound, { speechHost: { platform: "linux", env: {} } });
+    const body = await (await app.request("/api/providers/system-voice/voices")).json();
+    expect(body).toMatchObject({
+      engines: [],
+      install: {
+        text: "Install espeak-ng with one of these:",
+        commands: [
+          "sudo apt install espeak-ng",
+          "sudo pacman -S espeak-ng",
+          "sudo dnf install espeak-ng",
+        ],
+      },
+    });
+  });
+
+  it("has no install commands where the computer brings its own speech", async () => {
+    const { app } = harness(notFound, { speechHost: { platform: "darwin", env: {} } });
+    const body = await (await app.request("/api/providers/system-voice/voices")).json();
+    expect(body).toMatchObject({ engines: [], install: null });
   });
 });
 

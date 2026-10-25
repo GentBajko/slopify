@@ -152,7 +152,7 @@ describe("/api/trash", () => {
     expect(await json(await h.app.request("/api/trash"))).toEqual({ items: [] });
   });
 
-  it("says what to do when the item is not in the trash", async () => {
+  it("says the item was restored or removed when it is no longer in the trash", async () => {
     const h = harness();
     project(h, "p1");
 
@@ -160,7 +160,7 @@ describe("/api/trash", () => {
     expect(restore.status).toBe(404);
     expect(await json(restore)).toMatchObject({
       reason: "not-found",
-      detail: expect.stringMatching(/Settings → Trash/),
+      detail: "This item is no longer in the trash: it was restored or removed for good.",
     });
     const removed = await h.app.request("/api/trash/project/p1", { method: "DELETE" });
     expect(removed.status).toBe(404);

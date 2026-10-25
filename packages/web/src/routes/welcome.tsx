@@ -385,7 +385,11 @@ export function WelcomeRoute({
         ) : (
           <Callout tone="info" className="mb-4" title="Your short is being made.">
             It usually takes about five minutes. Watch each step as it runs, or look at a sample
-            while you wait.
+            while you wait. {pack === "" ? "Its prompts are" : `Its ${packName} prompts are`} now in{" "}
+            <TextLink to="/prompts" search={{ kind: "article" }}>
+              Prompts
+            </TextLink>
+            , for your next video.
           </Callout>
         )}
 

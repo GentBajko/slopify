@@ -3,7 +3,7 @@
 // (Trash holds projects, prompts, intros and outros, templates and schedules).
 
 const permanent = (what: string): string =>
-  `It is deleted permanently: ${what} do not go to Settings → Trash, so it cannot be restored.`;
+  `It is deleted permanently: ${what} do not go to the trash, so it cannot be restored.`;
 
 export const channelDeleteTitle = (name: string | undefined): string =>
   name === undefined ? "Delete this channel?" : `Delete the channel “${name}”?`;

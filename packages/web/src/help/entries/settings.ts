@@ -99,21 +99,6 @@ export const settingsHelp = {
     body: "Seconds of quiet between the intro and the narration, and between the narration and the outro, in every new video, unless Create sets a different gap for one video. It only matters when an intro or outro is set; 0 runs them together. Default: 3 seconds, from 0 to 30. Videos already started keep their own gap.",
     tutorial: { page: "Settings-Reference", anchor: "silence-between-segments" },
   },
-  "settings.template-studio.budget": {
-    title: "Daily sample budget",
-    body: "The most the studio's samples may spend in one day, in US dollars, from midnight on this computer; at $0.00 none spends money. A sample over it waits in the studio and says so: press Make sample once there is room, or raise the budget. Steps on a CLI plan have no dollar price; Samples may use my CLI plans decides those. Default: $2.00, from $0 to $1,000.",
-    tutorial: { page: "Settings-Reference", anchor: "template-studio" },
-  },
-  "settings.template-studio.design-budget": {
-    title: "Designed pieces: daily sample budget",
-    body: "The most the samples of designed-piece templates (Library → Designs) may spend in one day, in US dollars, from midnight on this computer; separate from the studio's budget. A sample over it waits in the template's editor: press Make sample to make it anyway, or raise this. Samples may use my CLI plans decides steps on a plan. Default: $1.00, from $0 to $1,000.",
-    tutorial: { page: "Settings-Reference", anchor: "template-studio" },
-  },
-  "settings.template-studio.plans": {
-    title: "Samples may use my CLI plans",
-    body: "Whether a template's samples, Compare models, Make samples for all and the samples of designed-piece templates may run steps on your Claude Code or Codex plan. Off, a sample with such a step waits in the studio and says so, whatever the daily budget; nothing on your plan is used. On, those steps run and use your plan's allowance, which the daily budget doesn't limit because it has no dollar price. Default: off.",
-    tutorial: { page: "Settings-Reference", anchor: "template-studio" },
-  },
   "settings.loudness": {
     title: "Level the volume for new runs",
     body: "Whether a new video on Create (and a template or quick short) starts with Level the volume on, and at which volumes. On evens out every narration piece and sets the video to about -14 LUFS, the loudness YouTube plays at, and the audio files to -18 LUFS. A project keeps what it started with; change it there in Edit settings. Default: on.",
@@ -141,21 +126,6 @@ export const settingsHelp = {
   },
 
   // Notifications
-  "settings.notifications.weekly": {
-    title: "Weekly report",
-    body: "Each Monday from 09:00 (this computer's time), Slopify sends last week's report to the Notification URL: videos made, failed steps with their reason, and what it cost. Needs a Notification URL. Default: off.",
-    tutorial: { page: "Notifications", anchor: "weekly-report" },
-  },
-  "settings.notifications.sounds": {
-    title: "Run sounds",
-    body: "Plays a chime when a run starts and a different, longer one when it finishes, fails or stops to wait for you, while any Slopify tab is open. Only one tab plays each. Needs no permission, but the browser stays silent until the page has been clicked once. This browser only. Default: on.",
-    tutorial: { page: "Notifications", anchor: "run-sounds" },
-  },
-  "settings.notifications.browser": {
-    title: "Browser notifications",
-    body: "Shows a notification from this browser while any Slopify tab is open, even in the background. Turning it on asks the browser's permission. It applies to this browser only, so turn it on in each browser you use. Default: off.",
-    tutorial: { page: "Notifications", anchor: "turn-on-browser-notifications" },
-  },
   "settings.notifications.url": {
     title: "Notification URL",
     body: "An address Slopify POSTs a short plain-text message to, with no tab open. For your phone, install the ntfy app, subscribe to a topic with a long random name, and paste https://ntfy.sh/that-topic. Any address that accepts a POST works. Each message is sent once, with a 5 second timeout. Leave it empty to turn it off.",
@@ -173,27 +143,10 @@ export const settingsHelp = {
     body: "Slopify never uploads or publishes. A finished project's Copy for YouTube Studio lists everything Studio asks for, with Copy buttons. The optional Slopify Studio browser extension fills Studio's upload dialog for you; you still press Publish. Install it below, then pair it with the token.",
     tutorial: { page: "Studio-Extension", anchor: "get-the-extension" },
   },
-  "settings.studio.playlist": {
-    title: "Playlists",
-    body: "The YouTube playlists Copy for YouTube Studio offers, typed exactly as Studio names them. Pick Every channel for the default list, or a channel to give it its own. Ticked On by default means every project goes into it; Copy for YouTube Studio changes the ticks for one project. The extension ticks each one in Studio. Default: none.",
-    tutorial: { page: "Studio-Extension", anchor: "settings--youtube-studio" },
-  },
-  "settings.studio.pairing": {
-    title: "Extension pairing token",
-    body: "A secret the Slopify Studio extension needs before it may read what your projects are ready to upload, so no other page can. Copy it into the extension's options and press Pair. New pairing token makes a fresh one and unpairs the extension until you paste the new token.",
-    tutorial: { page: "Studio-Extension", anchor: "pair-it-with-slopify" },
-  },
 
   "settings.files.new-folder": {
     title: "New folder",
     body: "The full path of the folder your files move to, on another disk or a synced folder for example. Slopify makes Projects and Backups inside it. It must be empty or not exist yet. The move needs as much free space there as your projects take now.",
     tutorial: { page: "Where-Your-Files-Live", anchor: "move-your-files-to-another-folder" },
-  },
-
-  // First run
-  "welcome.packs": {
-    title: "Starter templates",
-    body: "Each starter template adds its prompts, a suggested voice and the template for one kind of channel, so you can pick the template in Create, type a topic and go. Adding one twice changes nothing, and it never replaces a prompt or template of yours with the same name.",
-    tutorial: { page: "First-Launch-and-Welcome", anchor: "starter-packs" },
   },
 } as const satisfies Readonly<Record<string, HelpEntry>>;

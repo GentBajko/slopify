@@ -14,6 +14,7 @@ import { read } from "@/http";
 import { plural } from "@/lib/format";
 import { keys, projectsQuery } from "@/queries";
 import { restoreTrashItem } from "@/trash/api";
+import { useOpenTrash } from "@/trash/open-trash";
 
 const queueKey = ["batch-queue"] as const;
 
@@ -138,6 +139,7 @@ export function QueueItemActions({
   const { api } = useApp();
   const client = useQueryClient();
   const notify = useToast();
+  const openTrash = useOpenTrash();
   const refresh = () => {
     void client.invalidateQueries({ queryKey: queueKey });
     void client.invalidateQueries({ queryKey: ["projects"] });
@@ -157,13 +159,14 @@ export function QueueItemActions({
     mutationFn: () => removeProject(api, projectId),
     onSuccess: () => {
       refresh();
-      notify(`${title} left the queue and is in Settings → Trash.`, "success", {
+      notify(`${title} left the queue and is in the trash.`, "success", {
         label: "Undo",
         run: () =>
           void restoreTrashItem(api, "project", projectId).then(refresh, (error: Error) =>
             notify(
               `${title} wasn't put back: ${error.message} Restore it from Settings → Trash.`,
               "error",
+              openTrash,
             ),
           ),
       });

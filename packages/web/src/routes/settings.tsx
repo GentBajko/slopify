@@ -1,15 +1,17 @@
 import type { ProviderFamily } from "@app/slices/settings/model.js";
-import { useQueryClient } from "@tanstack/react-query";
-import { type ReactElement, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
+import { Fragment, type ReactElement, useState } from "react";
 import { AgentSettings } from "@/agents/agent-settings";
 import { useApp } from "@/app-context";
 import { AutostartSettings } from "@/autostart/autostart-settings";
+import { channelsQuery } from "@/channels/api";
 import { CatalogueSettings, RetiredModelsInUse } from "@/components/catalogue";
 import { useCommand } from "@/components/kit/command-palette";
 import { Select } from "@/components/kit/field";
 import { PageHeader, Workspace } from "@/components/kit/layout";
 import { ButtonLink } from "@/components/kit/link";
-import { Rail, RailButton } from "@/components/kit/rail";
+import { Rail, RailButton, RailLink } from "@/components/kit/rail";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
 import { ModelChecksSettings } from "@/components/model-checks";
@@ -51,6 +53,8 @@ export {
 // Settings: one flat list of pages beside the page picked, each page named once (the list's
 // row is its title). The page is the `section` search parameter, not a route, so the title
 // follows it. On a phone the list is one select at the top, so the page starts right under it.
+// With one channel, Channels is not in the app's rail and the channel's page lights Settings,
+// so the list also carries "Your channel", a link to that page, after the publishing pages.
 export function SettingsRoute({
   section: asked = "providers",
   note,
@@ -74,7 +78,10 @@ export function SettingsRoute({
 }) {
   const { api } = useApp();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const notify = useToast();
+  const channels = useQuery(channelsQuery(api));
+  const oneChannel = channels.data !== undefined && channels.data.length < 2;
   const health = useProviderHealth();
   const backUp = useBackUpNow();
   const section = settingsSectionOf(asked);
@@ -134,27 +141,41 @@ export function SettingsRoute({
           <>
             <Rail label="Settings pages" className="max-md:hidden">
               {settingsSections.map((item, index) => (
-                <RailButton
-                  key={item.id}
-                  current={item.id === section}
-                  onClick={() => onSection(item.id)}
-                  // 36px rows whose whole name shows (a long one wraps rather than being cut),
-                  // and a little space where one run of pages ends and the next begins.
-                  className={cn(
-                    "h-auto min-h-9 py-1.5 [&>.truncate]:whitespace-normal",
-                    index > 0 && settingsSections[index - 1]?.run !== item.run && "mt-3",
-                  )}
-                >
-                  {item.label}
-                </RailButton>
+                <Fragment key={item.id}>
+                  <RailButton
+                    current={item.id === section}
+                    onClick={() => onSection(item.id)}
+                    // 36px rows whose whole name shows (a long one wraps rather than being cut),
+                    // and a little space where one run of pages ends and the next begins.
+                    className={cn(
+                      rowClass,
+                      index > 0 && settingsSections[index - 1]?.run !== item.run && "mt-3",
+                    )}
+                  >
+                    {item.label}
+                  </RailButton>
+                  {oneChannel && item.id === channelAfter ? (
+                    <RailLink to="/channels" className={rowClass}>
+                      {yourChannel}
+                    </RailLink>
+                  ) : null}
+                </Fragment>
               ))}
             </Rail>
             <Select
               aria-label="Settings page"
               className="w-full md:hidden"
               value={section}
-              options={settingsSections.map((item) => ({ value: item.id, label: item.label }))}
-              onChange={(event) => onSection(settingsSectionOf(event.target.value))}
+              options={settingsSections.flatMap((item) => [
+                { value: item.id, label: item.label },
+                ...(oneChannel && item.id === channelAfter
+                  ? [{ value: channelOption, label: yourChannel }]
+                  : []),
+              ])}
+              onChange={(event) => {
+                if (event.target.value === channelOption) void navigate({ to: "/channels" });
+                else onSection(settingsSectionOf(event.target.value));
+              }}
             />
           </>
         }
@@ -234,6 +255,14 @@ export function SettingsRoute({
     </div>
   );
 }
+
+const rowClass = "h-auto min-h-9 py-1.5 [&>.truncate]:whitespace-normal";
+
+// "Your channel" follows the pages about publishing; on a phone it is an option of the page
+// select that opens the channel's page.
+const channelAfter: SettingsSection = "studio";
+const channelOption = "your-channel";
+const yourChannel = "Your channel";
 
 // Keys & services: what each kind of work has, with its fix, then every service by kind. A
 // readiness line's button, or a link from the welcome or Create, opens that kind's list and

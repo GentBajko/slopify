@@ -12,7 +12,7 @@ const kindLabels: Readonly<Record<TrashKind, string>> = {
   template: "Template",
   schedule: "Schedule",
   design: "Design",
-  "design-template": "Design template",
+  "design-template": "Poster template",
 };
 
 // The filter's words, plural, in the order the filter shows them.
@@ -23,7 +23,7 @@ export const kindFilters: readonly { readonly value: TrashKind; readonly label: 
   { value: "template", label: "Templates" },
   { value: "schedule", label: "Schedules" },
   { value: "design", label: "Designs" },
-  { value: "design-template", label: "Design templates" },
+  { value: "design-template", label: "Poster templates" },
 ];
 
 // What does and does not come here, for the empty trash and the section's meta line.

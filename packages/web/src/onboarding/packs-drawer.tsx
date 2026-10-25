@@ -4,7 +4,6 @@ import { useApp } from "@/app-context";
 import { StatusSlot } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
-import { InfoTip } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { installPack, onboardingKey, readFirstRun } from "./api.js";
 
@@ -49,9 +48,9 @@ export function PacksDrawer({
         </StatusSlot>
       }
     >
-      <p className="mb-4 flex items-center gap-1 text-small text-ink-2">
-        Prompts, a suggested voice and a template for one kind of channel.
-        <InfoTip id="welcome.packs" />
+      <p className="m-0 mb-4 text-small text-ink-2">
+        Each adds prompts, a suggested voice and a template for one kind of channel. It never
+        replaces a prompt or template of yours.
       </p>
       <List label="Starter templates" className="sl-list--wrap-meta">
         {(view.data?.packs ?? []).map((pack) => (

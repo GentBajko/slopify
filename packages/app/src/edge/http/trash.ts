@@ -51,8 +51,7 @@ const status: Readonly<Record<TrashRefusal, 404 | 409 | 500>> = {
 };
 
 const details: Readonly<Record<TrashRefusal, string>> = {
-  "not-found":
-    "This item is no longer in the trash: it was restored or removed for good. Reload Settings → Trash to see what is left.",
+  "not-found": "This item is no longer in the trash: it was restored or removed for good.",
   running:
     "This project is still running. Use Cancel run on the project page first, then try again.",
   files:

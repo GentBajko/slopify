@@ -68,7 +68,7 @@ it("says a review of a project in the Trash waits for nobody until it is restore
     ).run();
   });
   expect(said).toMatchObject({ state: "trashed" });
-  expect(said.explanation).toContain("Restore the project in Settings → Backup & storage → Trash");
+  expect(said.explanation).toContain("Restore the project in Settings → Trash");
   expect(said).not.toHaveProperty("answer");
 });
 

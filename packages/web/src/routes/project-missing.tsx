@@ -45,7 +45,7 @@ export function ProjectMissing({
             </>
           }
         >
-          {`It was deleted on ${formatDate(trashed.deletedAt)} and stays in Settings → Trash until ${formatDate(trashed.purgeAt)}. Restore it there to open it again.`}
+          {`It was deleted on ${formatDate(trashed.deletedAt)} and stays in the trash until ${formatDate(trashed.purgeAt)}. Open Trash and restore it to open it again.`}
         </EmptyState>
       </div>
     );
