@@ -113,7 +113,7 @@ it("counts a row of choices once, whichever control draws it", () => {
   expect(settingCount(root)).toBe(3);
 });
 
-it("folds only what Thumbnail doesn't lead with: its prompt, not its source or count again", async () => {
+it("shows Thumbnail's prompt right under its lead settings, with no fold and nothing twice", async () => {
   open("thumbnail", {
     [`GET /api/template-studio/${templateId}`]: jsonAnswer({
       ...view,
@@ -130,16 +130,10 @@ it("folds only what Thumbnail doesn't lead with: its prompt, not its source or c
     }),
   });
   const panel = await screen.findByRole("region", { name: "Thumbnail settings" });
-  await waitFor(() =>
-    expect(panel.querySelector("details > summary")?.textContent).toBe(
-      "More Thumbnail settings (1)",
-    ),
-  );
-  const fold = panel.querySelector("details") as HTMLElement;
-  expect(within(fold).getByRole("combobox", { name: "Thumbnail prompt" })).not.toBeNull();
-  expect(within(fold).queryByText("How many thumbnails")).toBeNull();
-  expect(within(fold).queryByRole("checkbox", { name: /^Thumbnail/ })).toBeNull();
-  // The lead settings, once each.
+  expect(await within(panel).findByRole("combobox", { name: "Thumbnail prompt" })).not.toBeNull();
+  expect(panel.querySelector("details > summary")?.textContent ?? "").not.toMatch(/settings/);
+  expect(within(panel).queryByText("How many thumbnails")).toBeNull();
+  expect(within(panel).queryByRole("checkbox", { name: /^Thumbnail/ })).toBeNull();
   expect(within(panel).getAllByRole("group", { name: "Thumbnails per video" })).toHaveLength(1);
 });
 
@@ -157,9 +151,23 @@ it("folds Images without its source or Scenes from the article, which it leads w
   expect(within(panel).getAllByRole("group", { name: "Images" })).toHaveLength(1);
 });
 
-it("draws no fold for a thumbnail that is off: there is nothing more to set", async () => {
-  open("thumbnail");
-  const panel = await screen.findByRole("region", { name: "Thumbnail settings" });
+it("draws no fold for images that are off: there is nothing more to set", async () => {
+  open("pictures", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({
+      ...view,
+      template: {
+        ...view.template,
+        document: {
+          ...view.template.document,
+          form: {
+            ...view.template.document.form,
+            sources: { ...view.template.document.form.sources, images: "off" },
+          },
+        },
+      },
+    }),
+  });
+  const panel = await screen.findByRole("region", { name: "Images settings" });
   await waitFor(() => expect(panel.querySelector("details")?.className).toContain("hidden"));
 });
 

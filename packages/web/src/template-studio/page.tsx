@@ -49,14 +49,15 @@ type Pane = "sections" | "settings" | "sample";
 // settings, and every one of them matters (the shorts, each pause and AI check, the
 // description and each site's post).
 const unfolded: readonly TemplateSection[] = ["shorts", "reviews", "upload"];
-// Title and keywords' other settings (the language, a keyword the title doesn't fill) follow its
-// lead ones with no fold: a fold of one or two settings hides more than it tidies. PDF has no
-// others: whether to make it and its look are both lead settings.
-const followed: readonly TemplateSection[] = ["subject"];
+// Title and keywords' other settings (the language, a keyword the title doesn't fill) and
+// Thumbnail's (who draws it and its prompt, past the source and count it leads with) follow
+// their lead ones with no fold: a fold of one or two settings hides more than it tidies. PDF has
+// no others: whether to make it and its look are both lead settings.
+const followed: readonly TemplateSection[] = ["subject", "thumbnail"];
 const leadOnly: readonly TemplateSection[] = ["document", "schedule"];
-// The sections whose fold leaves out what they lead with (the source, the thumbnail count):
-// it holds the rest of their settings, not all of them (fine-tune.tsx).
-const rest: readonly TemplateSection[] = ["pictures", "thumbnail"];
+// The sections whose fold leaves out what they lead with (the images' source and Scenes from
+// the article): it holds the rest of their settings, not all of them (fine-tune.tsx).
+const rest: readonly TemplateSection[] = ["pictures"];
 
 // Templates → Edit template: a template set up section by section, in run order, each
 // section's sample beside its settings.
@@ -372,7 +373,7 @@ function useSettingCount(within: RefObject<HTMLElement | null>): number | undefi
 
 // "All Video and style settings (99)": a section's whole editor, folded under its few lead
 // settings, with how many it holds; "More Images settings (6)" where the editor leaves out
-// what the section leads with. A fold with nothing in it (a thumbnail that is off) isn't drawn.
+// what the section leads with. A fold with nothing in it (images that are off) isn't drawn.
 function AllSettings({
   label,
   more,
