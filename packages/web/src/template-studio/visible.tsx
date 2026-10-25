@@ -321,6 +321,7 @@ function PdfLook({
         <DocumentThemePicker
           id={id}
           field="document.theme"
+          draft
           value={value}
           disabled={false}
           onChange={onChange}

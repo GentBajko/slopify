@@ -526,6 +526,7 @@ export function DocumentRail({ form, update }: RailProps) {
             <DocumentThemePicker
               id={id}
               field="document.theme"
+              draft
               className="w-auto min-w-[160px]"
               disabled={false}
               value={form.document}
