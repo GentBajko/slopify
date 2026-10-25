@@ -142,7 +142,7 @@ When an update or install cannot finish, Slopify puts the previous version back.
 
 - If a step keeps failing with the same error after **Try again**, open **Error details** and follow what it says. Most messages name the exact screen to fix it in.
 - Rate limits usually clear by themselves; you rarely need to do anything.
-- A kept output from an earlier revision is still in **History** if a remake goes wrong. See [Editing a Project](Editing-a-Project#history-and-saved-revisions).
+- A file from an earlier version is still under **Edit settings** → **Versions** if making it again goes wrong. See [Editing a Project](Editing-a-Project#versions).
 
 ## Related pages
 

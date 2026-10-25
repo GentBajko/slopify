@@ -61,12 +61,12 @@ export const projectHelp = {
   "project.subtitles.mode": {
     title: "Captions",
     body: "Off makes none. Show captions in the video draws them into the picture and also makes .srt and .vtt files; it needs a video. Caption files only gives you the files to upload beside the video. Captions are timed from your narration on this computer, with no paid API; the first use downloads a speech model of about 378 MB (Settings → Production defaults offers smaller ones). Default: Off.",
-    tutorial: { page: "Video-Editing", anchor: "subtitles" },
+    tutorial: { page: "Video-Editing", anchor: "captions" },
   },
   "project.subtitles.font": {
     title: "Caption font",
     body: "The typeface of captions shown in the video and of chapter cards. Pick a bundled font or one you uploaded (.ttf or .otf); uploaded fonts stay available to every project. Caption files carry no font, since players style them. Changing it makes only the video again. Default: the bundled font.",
-    tutorial: { page: "Video-Editing", anchor: "subtitles" },
+    tutorial: { page: "Video-Editing", anchor: "captions" },
   },
   "project.edit.article-text": {
     title: "Article text",
@@ -101,12 +101,12 @@ export const projectHelp = {
   "project.rebuild.keep-provided": {
     title: "Keep the provided content",
     body: "This output uses a file or text you supplied, and something it depends on, such as the narration, has changed since. Tick to confirm it still fits and keep it as it is. To use something else, cancel and replace the file in Edit settings first. The button that makes it again stays off until you tick it.",
-    tutorial: { page: "Editing-a-Project", anchor: "choose-what-to-remake" },
+    tutorial: { page: "Editing-a-Project", anchor: "choose-what-to-make-again" },
   },
   "project.rebuild.unknown-costs": {
     title: "Unknown cost estimates",
     body: "Some steps use a model with no published price, so their cost cannot be estimated and is left out of the total shown. Tick to start anyway; the real cost is recorded under Cost once they run. The button that makes it again stays off until you tick it.",
-    tutorial: { page: "Editing-a-Project", anchor: "choose-what-to-remake" },
+    tutorial: { page: "Editing-a-Project", anchor: "choose-what-to-make-again" },
   },
   "project.edit.show-figures": {
     title: "Show tables and figures on screen",

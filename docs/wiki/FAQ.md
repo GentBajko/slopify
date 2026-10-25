@@ -90,7 +90,7 @@ Yes, within 30 days. Open Settings → **Backup & storage** → **Trash** and pr
 
 ### Are captions free?
 
-Yes. Captions are timed from your narration on your computer, with no paid API. See [Video Editing](Video-Editing#subtitles).
+Yes. Captions are timed from your narration on your computer, at no cost. See [Video Editing](Video-Editing#captions).
 
 ### Can Slopify make videos in other languages?
 
