@@ -47,10 +47,10 @@ const details: Readonly<Record<keyof typeof statuses, string>> = {
   "invalid-selection":
     "Some of the outputs you picked can no longer be rebuilt. Reload the page and choose again.",
   "review-required":
-    'This rebuild touches content you supplied yourself. Tick "Keep the provided content" for each item in the review, then choose Start rebuild.',
+    "This touches content you supplied yourself. Tick “Keep the provided content” for each item in the review, then press the button that makes them again.",
   "cost-ack-required":
-    "Some costs for this rebuild are unknown. Tick the box confirming you understand, then choose Start rebuild.",
-  readiness: "Slopify cannot run this rebuild yet. Fix the problems listed, then try again.",
+    "Some prices aren't known in advance. Tick “Start even though …” in the review, then press the button that makes them again.",
+  readiness: "This can't start yet. Fix the items listed, then try again.",
 };
 function refused(
   c: Context,

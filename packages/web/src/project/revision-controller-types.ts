@@ -38,8 +38,9 @@ export interface RegenerateOptions {
   // hand for the current pick.
   readonly change?: ((edit: RevisionEdit) => RevisionEdit) | undefined;
   // What to start once the version is saved, when the marks are not themselves work (a short's
-  // token, the pick): the work of the outputs the save made outdated that this accepts.
-  readonly starts?: ((output: { readonly workKey: string }) => boolean) | undefined;
+  // token): the saved version's work this accepts ("shorts:2:prompts", from which the short's
+  // images and render unfold on the server).
+  readonly starts?: ((workKey: string) => boolean) | undefined;
   // Where an open draft with changes of its own shows the marks; Images by default.
   readonly section?: EditSection | undefined;
 }

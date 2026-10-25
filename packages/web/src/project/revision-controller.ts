@@ -188,8 +188,12 @@ export function useRevisionController(
     if (await accepted(result.value.view)) setNotice({ kind: "saved" });
     saveMemory.current = undefined;
   }
-  async function start(consent: RebuildConsent, shown = preview): Promise<void> {
-    if (shown === undefined) return;
+  // The refusal when the rebuild did not start, else undefined.
+  async function start(
+    consent: RebuildConsent,
+    shown = preview,
+  ): Promise<RevisionRefusal | undefined> {
+    if (shown === undefined) return undefined;
     const payload = { baseRevisionId: shown.baseRevisionId, previewId: shown.id, ...consent };
     const memory = requestFor(startMemory.current, payload, () => crypto.randomUUID());
     startMemory.current = memory;
@@ -200,12 +204,13 @@ export function useRevisionController(
     if (!result.ok) {
       setRefusal(result);
       if (result.reason === "stale-preview" || result.reason === "conflict") setPreview(undefined);
-      return;
+      return result;
     }
     startMemory.current = undefined;
     putBack.current = undefined;
     setPreview(undefined);
     await client.invalidateQueries({ queryKey: keys.project(projectId) });
+    return undefined;
   }
   // `consent` is what the button that asked accepted; without it the review always opens.
   // `before` is the version a make-again saved over, put back if its review is closed.
@@ -221,19 +226,27 @@ export function useRevisionController(
       request: selection,
     });
     if (!result.ok) {
+      // A make-again whose work could not even be previewed is put back as well.
+      if (before !== undefined) await restore(before, current);
       setRefusal(result);
       return;
     }
     const shown = result.value.value;
     startMemory.current = undefined;
     if (consent !== undefined && startsWithoutReview(shown, consent)) {
-      await start(
+      const refused = await start(
         {
           acknowledgeUnknownCosts: consent.unknownPrices === true && shown.costs.unknown > 0,
           confirmedProvidedWorkKeys: [],
         },
         shown,
       );
+      // A make-again that could not start (a service not set up, say) leaves nothing half
+      // done: the version saved for it goes, and why it could not start stays said.
+      if (refused !== undefined && before !== undefined) {
+        await restore(before, current);
+        setRefusal(refused);
+      }
       return;
     }
     putBack.current =
@@ -277,9 +290,10 @@ export function useRevisionController(
         ? workKeys
         : [
             ...new Set(
-              saved.outputs
-                .filter((row) => row.selected && row.state === "outdated" && starts(row))
-                .map((row) => row.workKey),
+              [
+                ...saved.pieces.filter((row) => row.selected).map((row) => row.key),
+                ...saved.outputs.filter((row) => row.selected).map((row) => row.workKey),
+              ].filter((key) => starts(key)),
             ),
           ];
     await review(
@@ -288,8 +302,9 @@ export function useRevisionController(
       base.revision.id,
     );
   }
-  async function restore(targetRevisionId: string): Promise<void> {
-    const current = view ?? saved.data ?? (await prepare(false));
+  // `head` is the version restored over, when the caller has just read it.
+  async function restore(targetRevisionId: string, head?: RevisionView): Promise<void> {
+    const current = head ?? view ?? saved.data ?? (await prepare(false));
     if (current === undefined) return;
     const payload = { baseRevisionId: current.revision.id, targetRevisionId };
     const memory = requestFor(restoreMemory.current, payload, () => crypto.randomUUID());
@@ -411,7 +426,10 @@ export function useRevisionController(
             : undefined,
         ),
       ),
-    start: (consent) => void perform(() => start(consent)),
+    start: (consent) =>
+      void perform(async () => {
+        await start(consent);
+      }),
     closePreview: () => {
       if (pending) return;
       const back = putBack.current;

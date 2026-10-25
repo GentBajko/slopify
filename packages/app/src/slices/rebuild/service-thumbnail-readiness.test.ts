@@ -38,7 +38,14 @@ const catalogue: Catalogue = {
   ],
 };
 
-it.each(["missing-key", "unavailable-model", "disabled", "deprecated", "ready"] as const)(
+it.each([
+  "missing-key",
+  "unknown-service",
+  "unavailable-model",
+  "disabled",
+  "deprecated",
+  "ready",
+] as const)(
   "checks deferred thumbnail image readiness before admitting prompt and image work (%s)",
   async (scenario) => {
     const h = await serviceFixture();
@@ -73,11 +80,14 @@ it.each(["missing-key", "unavailable-model", "disabled", "deprecated", "ready"] 
       const deps: RebuildDeps = {
         ...h.deps,
         providers: async () =>
-          (await h.deps.providers()).map((row) =>
-            row.family === "image" && scenario === "missing-key"
-              ? { ...row, readiness: { kind: "keyed", hasKey: false } }
-              : row,
-          ),
+          (await h.deps.providers())
+            // A sample's own service is not among the ones Slopify offers.
+            .filter((row) => !(row.family === "image" && scenario === "unknown-service"))
+            .map((row) =>
+              row.family === "image" && scenario === "missing-key"
+                ? { ...row, readiness: { kind: "keyed", hasKey: false } }
+                : row,
+            ),
         modelsFor: async (provider, family) =>
           family === "image" && scenario === "unavailable-model"
             ? []
@@ -114,13 +124,18 @@ it.each(["missing-key", "unavailable-model", "disabled", "deprecated", "ready"] 
           reason: "readiness",
           fields: [
             {
-              field: scenario === "missing-key" ? "image" : "image.model",
+              field:
+                scenario === "missing-key" || scenario === "unknown-service"
+                  ? "image"
+                  : "image.model",
               message:
                 scenario === "missing-key"
-                  ? "Configure this provider before rebuilding."
-                  : scenario === "unavailable-model"
-                    ? "Choose an available model before rebuilding."
-                    : "The selected model is no longer available.",
+                  ? "Its service isn't set up yet. Add it in Settings → Keys & services, then try again."
+                  : scenario === "unknown-service"
+                    ? "This project's service isn't one Slopify can use here. Choose another in Edit settings, then try again."
+                    : scenario === "unavailable-model"
+                      ? "Choose an available model before rebuilding."
+                      : "The selected model is no longer available.",
             },
           ],
         });

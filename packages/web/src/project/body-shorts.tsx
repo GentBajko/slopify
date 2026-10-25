@@ -11,6 +11,7 @@ import { use, useId, useState } from "react";
 import { z } from "zod";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button, ButtonRow } from "@/components/kit/button";
+import { ConfirmDialog } from "@/components/kit/dialog";
 import { FileLink } from "@/components/kit/link";
 import { MediaFrame, MediaGrid } from "@/components/kit/media";
 import { Player } from "@/components/kit/player";
@@ -23,9 +24,13 @@ import { useReadOnlySample } from "./read-only.js";
 import type { Review } from "./review-api.js";
 import { ShortsSafeZone } from "./review-safe-zone.js";
 import { ReviewVerdict, reviewFor, useReviews } from "./review-verdict.js";
-import { EditRequestContext, RevisionControlContext } from "./revision-action-context.js";
+import {
+  EditRequestContext,
+  RegenerateNowContext,
+  RevisionControlContext,
+} from "./revision-action-context.js";
 import { useOutputMedia } from "./revision-media.js";
-import { pickAgain, remakeShort } from "./revision-shorts.js";
+import { pickAgain, pickKey, remakeKey, remakeShort } from "./revision-shorts.js";
 import { SetDownload } from "./set-download.js";
 import { duration } from "./summary.js";
 
@@ -51,7 +56,8 @@ type Clip = z.infer<typeof listSchema>["shorts"][number];
 // tiles: every short as one zip, the stage's one Open folder and Pick different moments, then
 // one sentence about the link each short's description ends with and the button that fills it
 // in. While the stage runs, a clip not rendered yet says how far it got. Make again and Pick
-// different moments open the settings' Outputs with the change made, to review and save.
+// different moments ask first, naming their paid calls, then save a version with the change
+// and make only what it touches, at once.
 export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "actions" | "busy">) {
   const own = outputsOf(outputs, stage);
   const list = roleOf(own, "shorts");
@@ -69,8 +75,14 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
   const linked = (fullVideoLink?.trim() ?? "") !== "";
   const revisions = use(RevisionControlContext);
   const requestEdit = use(EditRequestContext);
+  const regenerateNow = use(RegenerateNowContext);
+  const [asking, setAsking] = useState<Remake | undefined>();
   if (settings?.enabled !== true && list === undefined && videos.length === 0) return null;
   const editable = revisions && requestEdit !== undefined && settings?.enabled === true && !sample;
+  // Making a short, or the pick, again: one press and its dialog, then the work starts.
+  const remakes = revisions && regenerateNow !== undefined && settings?.enabled === true && !sample;
+  const imagesOf = (clip: Clip) =>
+    shortImageCount(clip.end - clip.start, project.config.imageSeconds);
   // The long video's link box is under YouTube text when the project writes one; without it,
   // the shorts' own Full video link in the settings' Outputs.
   const youtubeText =
@@ -117,15 +129,15 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
     <div className="flex min-w-0 flex-col gap-3">
       {/* Every short as one zip (each tile has its own Download), the stage's one Open folder,
           then picking again. */}
-      {videos.length === 0 && !(editable && clips.length > 0) ? null : (
+      {videos.length === 0 && !(remakes && clips.length > 0) ? null : (
         <ButtonRow>
           {videos.length > 1 ? (
             <SetDownload projectId={project.id} set="shorts" members={videos} />
           ) : null}
           <OutputFolder output={videos[0]} />
-          {editable && clips.length > 0 ? (
-            <Button onClick={() => requestEdit({ section: "outputs", change: pickAgain })}>
-              Pick different moments · 1 AI call
+          {remakes && clips.length > 0 ? (
+            <Button onClick={() => setAsking({ kind: "pick" })}>
+              Pick different moments · AI and image calls
             </Button>
           ) : null}
         </ButtonRow>
@@ -174,20 +186,12 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
                 stills={currentShorts(own, "short_image", clips)
                   .filter((output) => ofClip(output, clip))
                   .toSorted((left, right) => (left.meta.index ?? 0) - (right.meta.index ?? 0))}
-                wanted={shortImageCount(clip.end - clip.start, project.config.imageSeconds)}
+                wanted={imagesOf(clip)}
                 state={stage.state}
                 failed={failedHere(stage.failureReason, clip.number)}
                 onCopy={() => copy(clip)}
                 safeZone={safeZone}
-                {...(editable
-                  ? {
-                      onRemake: () =>
-                        requestEdit({
-                          section: "outputs",
-                          change: (edit) => remakeShort(edit, clip.number),
-                        }),
-                    }
-                  : {})}
+                {...(remakes ? { onRemake: () => setAsking({ kind: "short", clip }) } : {})}
               />
             ))}
           </MediaGrid>
@@ -196,8 +200,65 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
       <StatusSlot tone={status?.tone ?? "info"} wrap>
         {status?.text}
       </StatusSlot>
+      {asking === undefined ? null : (
+        <ConfirmDialog
+          open
+          tone="primary"
+          {...remakeWords(asking, asking.kind === "short" ? imagesOf(asking.clip) : 0)}
+          onConfirm={() => {
+            const chosen = asking;
+            setAsking(undefined);
+            // The version is saved with the change, then only that short's image prompts, or
+            // the pick, is started: what follows from it (the short's images and render, the
+            // clips of a new pick) unfolds and is made with it. The dialog named those calls.
+            if (chosen.kind === "pick")
+              regenerateNow?.([], {
+                change: pickAgain,
+                starts: (key) => key === pickKey,
+                unknownPrices: true,
+                section: "outputs",
+              });
+            else
+              regenerateNow?.([], {
+                change: (edit) => remakeShort(edit, chosen.clip.number),
+                starts: (key) => key === `${remakeKey(chosen.clip.number)}:prompts`,
+                unknownPrices: true,
+                section: "outputs",
+              });
+          }}
+          onCancel={() => setAsking(undefined)}
+        />
+      )}
     </div>
   );
+}
+
+type Remake = { readonly kind: "pick" } | { readonly kind: "short"; readonly clip: Clip };
+
+// What each make-again asks, its paid calls first.
+function remakeWords(
+  remake: Remake,
+  images: number,
+): {
+  readonly title: string;
+  readonly consequence: string;
+  readonly confirmLabel: string;
+  readonly cancelLabel: string;
+} {
+  if (remake.kind === "pick")
+    return {
+      title: "Pick different moments?",
+      consequence:
+        "Paid calls: 1 AI call picks new moments; each short whose moment changes then gets 1 AI call for its image prompts and one image call per image, and is put together on this computer. A short whose moment comes back is kept, and the current shorts stay under Versions.",
+      confirmLabel: "Pick different moments",
+      cancelLabel: "Keep these moments",
+    };
+  return {
+    title: `Make short ${String(remake.clip.number)} again?`,
+    consequence: `${String(images + 1)} paid calls: 1 AI call for its image prompts and ${String(images)} image ${images === 1 ? "call" : "calls"}; it is then put together again on this computer. The current short stays under Versions.`,
+    confirmLabel: "Make it again",
+    cancelLabel: "Keep it",
+  };
 }
 
 // The long video's link box under YouTube text (`on-youtube.tsx`).
@@ -308,7 +369,8 @@ function ShortCard({
       {onRemake === undefined ? null : (
         <Button variant="quiet" size="small" className="self-start" onClick={onRemake}>
           <span>
-            Make this short again<span className="sr-only"> (short {number})</span>
+            Make this short again<span className="sr-only"> (short {number})</span> · {wanted + 1}{" "}
+            calls
           </span>
         </Button>
       )}

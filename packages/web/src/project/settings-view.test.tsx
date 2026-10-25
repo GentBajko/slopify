@@ -511,7 +511,7 @@ it("makes pictures again at once when the charge shown at the button covers the 
 
 // A make-again whose saved version waits on a preview: the head moves to r2 on save and back on
 // restore, and every request is kept for the assertions.
-function remakeRoutes(costs: { readonly high: number; readonly unknown: number }) {
+function remakeRoutes(costs: { readonly high: number; readonly unknown: number }, refuse = false) {
   const baseline = revisionView();
   const next = revisionView("r2", "Saved");
   let head = baseline;
@@ -561,6 +561,23 @@ function remakeRoutes(costs: { readonly high: number; readonly unknown: number }
     "POST /api/projects/p1/rebuild/preview": jsonAnswer({ ok: true, value: preview }),
     "POST /api/projects/p1/rebuild": async (request: Request) => {
       started.push(startRebuildSchema.parse(await request.json()));
+      if (refuse)
+        return new Response(
+          JSON.stringify({
+            title: "Conflict",
+            status: 409,
+            reason: "readiness",
+            detail: "This can't start yet. Fix the items listed, then try again.",
+            fields: [
+              {
+                field: "image",
+                message:
+                  "This project's service isn't one Slopify can use here. Choose another in Edit settings, then try again.",
+              },
+            ],
+          }),
+          { status: 409 },
+        );
       return jsonAnswer(
         {
           ok: true,
@@ -610,4 +627,19 @@ it("puts the version from before the press back when its review is closed withou
   await waitFor(() => expect(restored).toHaveLength(1));
   expect(restored[0]).toMatchObject({ baseRevisionId: "r2", targetRevisionId: "r1" });
   expect(started).toEqual([]);
+});
+
+it("puts the version back and says why when a make-again could not start", async () => {
+  const user = userEvent.setup();
+  const { routes, saved, restored, started } = remakeRoutes({ high: 0, unknown: 1 }, true);
+  renderRouted(<ProjectSettings beside={<UnknownPriceButton />} />, testDeps(routes));
+  await user.click(await screen.findByRole("button", { name: "Make image a again" }));
+  await waitFor(() => expect(restored).toHaveLength(1));
+  expect(saved).toHaveLength(1);
+  expect(started).toHaveLength(1);
+  expect(restored[0]).toMatchObject({ baseRevisionId: "r2", targetRevisionId: "r1" });
+  // The refusal outlives the put-back, item by item.
+  expect(
+    (await screen.findByText(/isn't one Slopify can use here/)).closest("[role=alert]"),
+  ).not.toBeNull();
 });
