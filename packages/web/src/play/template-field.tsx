@@ -5,9 +5,14 @@ import { type ReactElement, useEffect, useId, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { HelpLine } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
-import { onboardingKey, readFirstRun } from "@/onboarding/api";
+import { installPack, onboardingKey, readFirstRun } from "@/onboarding/api";
 import { keys } from "@/queries";
-import { instantiateProjectTemplate, type TemplateSummary, templatesQuery } from "@/templates/api";
+import {
+  instantiateProjectTemplate,
+  type TemplateSummary,
+  templatesKey,
+  templatesQuery,
+} from "@/templates/api";
 import { usePlaySession } from "./draft-context";
 import { rememberedDraft } from "./draft-restore";
 import { freshDraftDocument } from "./draft-state";
@@ -138,6 +143,9 @@ export function carryTopic(typed: PlayDraftDocument, made: PlayDraftDocument): P
   return { ...made, form: { ...made.form, values: { ...made.form.values, ...carried } } };
 }
 
+// A starter template offered in Start from before it is added: its option value.
+const packOption = "pack:";
+
 // "Start from: History starter ▾" above the topic: picking a template opens a fresh draft made
 // from it, and what was typed for the topic comes along. A fresh draft starts from the first
 // starter template by itself; "A blank video" (or audiobook, …) starts from nothing and stays
@@ -171,7 +179,9 @@ export function TemplateField({
       await session.newDraft();
       return;
     }
-    const template = templates.data?.find((one) => one.id === templateId);
+    // From the cache, which holds a template a starter just added before this render does.
+    const listed = client.getQueryData<readonly TemplateSummary[]>(templatesKey) ?? templates.data;
+    const template = listed?.find((one) => one.id === templateId);
     if (!template) return;
     setBusy(true);
     try {
@@ -209,6 +219,37 @@ export function TemplateField({
       setBusy(false);
     }
   };
+  // A starter template not added yet, offered in the same list: picking one adds it (its
+  // prompts, voice and template) and starts from it, so a person who skipped the welcome is one
+  // pick away from a setup that can make a video.
+  const firstRun = useQuery({
+    queryKey: onboardingKey,
+    queryFn: () => readFirstRun(api),
+    retry: false,
+  });
+  const addable = (firstRun.data?.packs ?? []).filter((pack) => !pack.installed);
+  const add = async (packId: string): Promise<void> => {
+    onError(null);
+    setBusy(true);
+    let made: string | null = null;
+    try {
+      made = (await installPack(api, packId)).templateId;
+      await Promise.all([
+        client.invalidateQueries({ queryKey: onboardingKey }),
+        client.invalidateQueries({ queryKey: keys.prompts }),
+        client.invalidateQueries({ queryKey: keys.entries }),
+        client.invalidateQueries({ queryKey: keys.voices }),
+        client.refetchQueries({ queryKey: templatesKey }),
+      ]);
+    } catch (error) {
+      onError(
+        `The starter template wasn't added. ${error instanceof Error ? error.message : "Pick it again."}`,
+      );
+    } finally {
+      setBusy(false);
+    }
+    if (made !== null) await pick(made);
+  };
   // The fresh form starts from the starter template, once per fresh form, even when the topic
   // is already being typed: it comes along.
   const tried = useRef<number | null>(null);
@@ -224,7 +265,9 @@ export function TemplateField({
   const help = templates.error
     ? `Templates didn't load. ${templates.error.message}`
     : templates.data?.length === 0
-      ? `No templates yet. Set this ${noun} up, then Save as template.`
+      ? addable.length > 0
+        ? `No templates yet: pick a starter template here, or set this ${noun} up and Save as template.`
+        : `No templates yet. Set this ${noun} up, then Save as template.`
       : undefined;
   return (
     <div className="flex min-w-0 flex-col gap-1" {...helpScope}>
@@ -238,7 +281,10 @@ export function TemplateField({
           className="sl-select sl-select--compact min-w-0 max-w-[320px]"
           value={current?.id ?? ""}
           disabled={busy || blocked}
-          onChange={(event) => void pick(event.target.value)}
+          onChange={(event) => {
+            const value = event.target.value;
+            void (value.startsWith(packOption) ? add(value.slice(packOption.length)) : pick(value));
+          }}
         >
           <option value="">
             {source && !current ? "A template no longer saved" : `A blank ${noun}`}
@@ -248,6 +294,15 @@ export function TemplateField({
               {template.name}
             </option>
           ))}
+          {addable.length > 0 ? (
+            <optgroup label="Starter templates (adds it)">
+              {addable.map((pack) => (
+                <option key={pack.id} value={`${packOption}${pack.id}`}>
+                  {pack.name} starter
+                </option>
+              ))}
+            </optgroup>
+          ) : null}
         </select>
       </div>
       {help === undefined ? null : <HelpLine>{help}</HelpLine>}

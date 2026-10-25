@@ -446,6 +446,51 @@ describe("what Create starts from", () => {
     ).toEqual([]);
   });
 
+  it("offers the starter templates not added yet, and starts from one once picked", async () => {
+    // A person who skipped the welcome: no templates, nothing added.
+    let added = false;
+    const routes = starterRoutes();
+    const { session, requests } = await mountPlay(
+      {
+        ...routes,
+        "GET /api/project-templates": (request) =>
+          jsonAnswer({
+            templates: added
+              ? [
+                  {
+                    id: templateId,
+                    name: "Lore starter",
+                    version: 1,
+                    updatedAt: "2026-09-13T00:00:00.000Z",
+                  },
+                ]
+              : [],
+          })(request),
+        "GET /api/onboarding": (request) =>
+          jsonAnswer({
+            packs: [{ id: "lore", name: "Lore", summary: "", installed: added, templateId: null }],
+          })(request),
+        "POST /api/onboarding/packs/lore": (request) => {
+          added = true;
+          return jsonAnswer({ packId: "lore", added: true, templateId })(request);
+        },
+      },
+      undefined,
+      () => screen.findByRole("option", { name: "Lore starter" }),
+    );
+    expect(
+      screen.getByText(
+        "No templates yet: pick a starter template here, or set this video up and Save as template.",
+      ),
+    ).not.toBeNull();
+    await userEvent.type(screen.getByLabelText(topicLabel), "Cleopatra");
+    await userEvent.selectOptions(startFrom(), "pack:lore");
+    await waitFor(() => expect(session().document.templateSource?.id).toBe(templateId));
+    expect(requests.some((one) => one.url.endsWith("/api/onboarding/packs/lore"))).toBe(true);
+    await waitFor(() => expect(session().document.form.values.topic).toBe("Cleopatra"));
+    await waitFor(() => expect(startFrom().value).toBe(templateId));
+  });
+
   it("gives a fresh draft the writer and image service the first launch found", async () => {
     const { session } = await mountPlay({
       "GET /api/providers/first-run": jsonAnswer({
