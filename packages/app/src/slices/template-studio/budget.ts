@@ -3,7 +3,7 @@ import { z } from "zod";
 import { dailySampleBudget, dailySampleBudgetKey } from "../designs/budget.js";
 import { readJsonSetting, writeSetting } from "../settings/repo.js";
 
-// Settings → Template studio: the most the studio's samples may spend in one day, in dollars,
+// Settings → Production defaults: the most the studio's samples may spend in one day, in dollars,
 // and whether they may use a CLI plan at all. Plan usage has no dollar price, so the budget
 // can't hold it back: samples that run on a CLI plan wait until the person turns that on. By
 // default ($2 a day, plans off) samples spend at most $2 a day and never a plan; at $0 nothing
@@ -140,10 +140,10 @@ export function budgetWords(
   subject: string,
 ): string {
   if (cost.usesPlan && !room.plans)
-    return `${subject} runs on your CLI plan, and samples may not use CLI plans. Turn on Samples may use my CLI plans in Settings → Template studio`;
+    return `${subject} runs on your CLI plan, and samples may not use CLI plans. Turn on Samples may use my CLI plans in Settings → Production defaults`;
   const unpriced =
     room.unpriced === 0
       ? ""
       : ` (samples spent ${money(room.spent)} today plus ${String(room.unpriced)} ${room.unpriced === 1 ? "call" : "calls"} with no known price)`;
-  return `${subject} costs about ${money(cost.high)} and ${money(room.left)} of today's ${money(room.budget)} sample budget is left${unpriced}. Raise the budget in Settings → Template studio`;
+  return `${subject} costs about ${money(cost.high)} and ${money(room.left)} of today's ${money(room.budget)} sample budget is left${unpriced}. Raise the budget in Settings → Production defaults`;
 }

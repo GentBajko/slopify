@@ -37,7 +37,7 @@ it("shows the total first and makes the samples for all at that total", async ()
         total: 0.9,
         fitting: 1,
         sentence:
-          "2 templates need a sample: about $0.90 in all. 1 of them fits today's budget; the other 1 wait for tomorrow or a higher budget in Settings → Template studio.",
+          "2 templates need a sample: about $0.90 in all. 1 of them fits today's budget; the other 1 wait for tomorrow or a higher budget in Settings → Production defaults.",
       }),
       "POST /api/template-studio/samples-for-all": make,
     }),

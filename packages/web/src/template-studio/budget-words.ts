@@ -23,7 +23,7 @@ export function budgetReason(quote: BudgetQuote): string {
     : "Today's sample budget can't cover it";
 }
 
-// The sentence before the link to Settings → Template studio, ending where the link goes.
+// The sentence before the link to Settings → Production defaults, ending where the link goes.
 export function budgetLead(quote: BudgetQuote, subject: string): string {
   return heldByPlan(quote)
     ? `${subject} runs on your CLI plan, and samples may not use CLI plans. Turn on Samples may use my CLI plans in `

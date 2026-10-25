@@ -17,7 +17,7 @@ import {
   writeStudioSettings,
 } from "./api";
 
-// Settings → Template studio: the most the studio's samples, and designed pieces' template
+// Settings → Production defaults: the most the studio's samples, and designed pieces' template
 // samples, may spend in one day, in dollars, and whether they may run on a CLI plan at all. A sample that would go over either waits,
 // saying so, until the next day, a higher budget or plans allowed.
 export function TemplateStudioSettings(): ReactElement {

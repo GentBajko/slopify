@@ -6,6 +6,7 @@ import { webhookBody } from "../../slices/notifications/address.js";
 import type { NoticeText } from "../../slices/notifications/rules.js";
 import { sendFailureText } from "../../slices/notifications/send.js";
 import { readNotificationUrl } from "../../slices/notifications/settings.js";
+import { setupSectionNames } from "../../slices/project-templates/setup-sections.js";
 import { waitsForRelease } from "../../slices/social/due.js";
 import { postingExtension, writeExtensionSites } from "../../slices/social/extension.js";
 import { platformLabels, type SocialPacksResponse } from "../../slices/social/model.js";
@@ -153,7 +154,7 @@ export function socialRoutes(deps: AppDeps) {
           )
             return problem(c, {
               status: 409,
-              detail: `A post written by a post prompt is a paid step, so it is picked in the template, in Template Studio → Upload pack, where Save shows its cost. For this project, pick a free text source in Copy for YouTube Studio → ${platformLabels[platform]} → Settings.`,
+              detail: `A post written by a post prompt is a paid step, so it is picked in the template, in Edit template → ${setupSectionNames.youtube}, where Save shows its cost. For this project, pick a free text source in Copy for YouTube Studio → ${platformLabels[platform]} → Settings.`,
             });
           writeChoice(deps.db, { projectId, platform }, choice, deps.clock.now());
           changed(projectId);

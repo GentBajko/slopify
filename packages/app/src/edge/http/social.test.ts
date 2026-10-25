@@ -118,7 +118,7 @@ describe("the page's routes", () => {
     });
     expect(response.status).toBe(409);
     expect(await detail(response)).toBe(
-      "A post written by a post prompt is a paid step, so it is picked in the template, in Template Studio → Upload pack, where Save shows its cost. For this project, pick a free text source in Copy for YouTube Studio → X → Settings.",
+      "A post written by a post prompt is a paid step, so it is picked in the template, in Edit template → YouTube description & posts, where Save shows its cost. For this project, pick a free text source in Copy for YouTube Studio → X → Settings.",
     );
   });
 
@@ -150,7 +150,7 @@ describe("the page's routes", () => {
     const notThere = await send("PUT", "/social/packs/p1/tiktok/text", { text: "a", base: "b" });
     expect(notThere.status).toBe(404);
     expect(await detail(notThere)).toBe(
-      "This project doesn't post to TikTok. A project's sites come from its template: turn TikTok on under Post to in Template Studio → Upload pack (Library → Templates → Open studio), or on Play under Outputs, for the projects it makes next.",
+      "This project doesn't post to TikTok. A project's sites come from its template: tick TikTok under Post to in Edit template → YouTube description & posts, or under Post to other sites in Create, for the projects it makes next.",
     );
   });
 

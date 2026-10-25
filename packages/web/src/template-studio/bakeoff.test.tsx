@@ -130,7 +130,9 @@ describe("Compare models", () => {
         /Comparing costs about \$3\.00 and \$2\.00 of today's \$2\.00 sample budget is left/,
       ),
     ).not.toBeNull();
-    expect(within(dialog).getByRole("link", { name: "Settings → Template studio" })).not.toBeNull();
+    expect(
+      within(dialog).getByRole("link", { name: "Settings → Production defaults" }),
+    ).not.toBeNull();
   });
 
   it("asks for a Save first, in words, while the settings have unsaved changes", async () => {

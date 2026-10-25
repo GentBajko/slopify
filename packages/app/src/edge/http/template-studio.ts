@@ -222,13 +222,13 @@ export function templateStudioRoutes(deps: AppDeps) {
       .get("/cards", (c) =>
         c.json({ cards: templateCards({ db: deps.db, paths: deps.paths, log: deps.log }) }),
       )
-      // Settings → Template studio: the samples' daily budgets, and what was spent today.
+      // Settings → Production defaults: the samples' daily budgets, and what was spent today.
       .get("/settings", (c) => c.json(settingsView()))
       .put("/settings", zValidator("json", studioSettingsSchema, onInvalid), (c) => {
         writeStudioSettings(deps.db, c.req.valid("json"));
         return c.json(settingsView());
       })
-      // Settings → Template studio → Make samples for all: the total first, then each sample
+      // Settings → Production defaults → Make samples for all: the total first, then each sample
       // that fits today's budget queued at its price, the rest waiting on the budget.
       .post("/samples-for-all/quote", async (c) => {
         if (review === undefined) return problem(c, { status: 503, detail: unpriced });

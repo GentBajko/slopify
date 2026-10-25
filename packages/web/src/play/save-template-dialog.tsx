@@ -107,7 +107,7 @@ export function SaveTemplateDialog({
         if (!next) close();
       }}
       title="Save as template"
-      description="Saves this setup's prompts, voice, images, style, outputs and reviews as a new template. Projects you start from it, and schedules you point at it, use it; this project and earlier ones stay as they are. Schedules use each new version of it right away until you press Mark ready in its Template studio; from then on new versions wait for Mark ready."
+      description="Saves the prompts, voice, images, style, extras and checks picked here as a new template. Projects you start from it, and schedules you point at it, use it; this project and earlier ones stay as they are. Schedules use each new version of it right away until you approve one in Edit template (More → Approve for schedules); from then on a new version waits for your approval."
       footer={
         <>
           <Button variant="secondary" onClick={close}>

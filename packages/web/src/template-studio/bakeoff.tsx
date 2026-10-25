@@ -477,8 +477,8 @@ function CompareDrawer({
         {quote.data?.fits === false ? (
           <p className="m-0 text-body text-waiting">
             {budgetLead(quote.data, "Comparing")}
-            <TextLink to="/settings" search={{ section: "template-studio" }}>
-              Settings → Template studio
+            <TextLink to="/settings" search={{ section: "playback" }}>
+              Settings → Production defaults
             </TextLink>
             .
           </p>

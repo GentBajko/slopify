@@ -77,7 +77,7 @@ export function createSampleRunner(deps: SampleRunnerDeps): SampleRunner {
       recoverJobs(deps.db);
       loop = run().catch((error: unknown) => {
         deps.log.write("error", "template-studio.runner", {
-          detail: `The template studio's sample loop stopped: ${errorText(error)}. Restart Slopify to make samples again.`,
+          detail: `The loop that makes Edit template's samples stopped: ${errorText(error)}. Restart Slopify to make samples again.`,
         });
       });
     },
