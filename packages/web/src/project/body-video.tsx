@@ -45,7 +45,7 @@ import { WaveAudioPlayer } from "./waveform.js";
 // text's two copies. Narrower, the same blocks stack under the player. An audiobook or a
 // podcast leads with its listening file. The YouTube text and the shorts have their own
 // sections; the narration's words are read in Narration.
-export function VideoBody({ stage, project, outputs, subtitleControls }: BodyProps) {
+export function VideoBody({ stage, project, outputs }: BodyProps) {
   const { api } = useApp();
   const notify = useToast();
   const lead = use(LeadDownloadContext);
@@ -113,8 +113,8 @@ export function VideoBody({ stage, project, outputs, subtitleControls }: BodyPro
     },
   });
 
-  if (project.config.sources.video === "off" && !audioExport)
-    return <StageBody>{subtitleControls}</StageBody>;
+  // No video and no sound-only export: nothing of this stage to show.
+  if (project.config.sources.video === "off" && !audioExport) return null;
 
   const shape = project.format;
   const facts = [
@@ -308,7 +308,6 @@ export function VideoBody({ stage, project, outputs, subtitleControls }: BodyPro
           <p className="m-0 mt-2 text-small text-ink-2 tabular-nums">{technical.join(" ")}</p>
         </Fold>
       )}
-      {subtitleControls ? <Fold summary="Subtitles and fonts">{subtitleControls}</Fold> : null}
     </StageBody>
   );
 }

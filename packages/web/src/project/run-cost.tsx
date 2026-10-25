@@ -1,6 +1,5 @@
 import type { ProjectState } from "@app/kernel/pipeline.js";
 import type {
-  LimitWait,
   ModelCost,
   PlanUse,
   RunCost,
@@ -9,17 +8,15 @@ import type {
 } from "@app/slices/run-cost/panel.js";
 import { isSampleStandIn } from "@app/slices/settings/model.js";
 import { useQuery } from "@tanstack/react-query";
-import { ReceiptIcon, TimerIcon } from "lucide-react";
+import { TimerIcon } from "lucide-react";
 import { type ReactElement, useEffect, useState } from "react";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { SectionHead } from "@/components/kit/section-head";
 import { type Column, DataTable, Meter, Stat, Stats } from "@/components/kit/stats";
 import { usd, wholeNumber } from "@/lib/format";
 import { stageWords } from "@/lib/stage-words";
 import { runCostQuery } from "@/queries";
-import { limitNames, limitWaitLine } from "./limit-wait.js";
 import { accountLine, shareLabel, shareLine, shareValue, windowName } from "./plan-share.js";
 
 // The Run cost tab: what the run's provider calls actually cost, per stage and per model,
@@ -43,39 +40,6 @@ export function RunCostPanel({ projectId }: { readonly projectId: string }): Rea
       </div>
     );
   return <Panel cost={cost.data} />;
-}
-
-// The run's cost in one line on the project page once the run has ended (done, done with
-// problems, failed or canceled), at every width, with the way to the full Cost section.
-// Nothing while it runs, waits, or spent nothing.
-export function RunCostSummary({
-  cost,
-  status,
-  onOpen,
-}: {
-  readonly cost: RunCost | undefined;
-  readonly status: ProjectState;
-  readonly onOpen: () => void;
-}): ReactElement | null {
-  if (cost === undefined || !ended.has(status) || (cost.calls === 0 && cost.byStage.length === 0))
-    return null;
-  const parts = [
-    `${status === "done" || status === "partial" ? "This run cost" : "Spent so far"} ${usd(cost.cost)}${cost.unpriced > 0 ? " plus unpriced calls" : ""}`,
-    ...(cost.apiEquivalent === null ? [] : [`~${usd(cost.apiEquivalent)} via API`]),
-    ...(cost.run === null ? [] : [`${workDuration(cost.run.workingMs)} of work`]),
-  ];
-  return (
-    <section
-      aria-label="Run cost"
-      className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line pb-3 text-small text-ink-2"
-    >
-      <span>{parts.join(" · ")}</span>
-      <Button variant="quiet" size="small" onClick={onOpen}>
-        <ReceiptIcon aria-hidden="true" strokeWidth={1.75} />
-        See cost by stage
-      </Button>
-    </section>
-  );
 }
 
 const ended: ReadonlySet<ProjectState> = new Set(["done", "partial", "failed", "canceled"]);
@@ -277,14 +241,6 @@ function Panel({ cost }: { readonly cost: RunCost }): ReactElement {
   );
 }
 
-// What the status line says while a stage waits for a CLI's plan to reset.
-export function limitWaitMessage(waits: readonly LimitWait[]): string | undefined {
-  const line = limitWaitLine(waits, clock);
-  if (line === undefined) return undefined;
-  const names = limitNames(waits);
-  return `${line}. The run carries on by itself; work that does not need ${names} keeps going.`;
-}
-
 // "CLI calls: $0 on your plan · ~$1.20 via API".
 export function planLine(cost: Pick<RunCost, "apiEquivalent" | "apiUnpriced">): string {
   const api = cost.apiEquivalent ?? 0;
@@ -369,13 +325,4 @@ export function workDuration(ms: number): string {
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes} min ${seconds % 60} s`;
   return `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
-}
-
-function clock(iso: string): string {
-  const at = new Date(iso);
-  const today = new Date();
-  const time = at.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-  return at.toDateString() === today.toDateString()
-    ? time
-    : `${at.toLocaleDateString(undefined, { weekday: "short" })} ${time}`;
 }
