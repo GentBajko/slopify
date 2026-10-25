@@ -80,7 +80,7 @@ export function AmbientBedControls({
     <div className="sl-fields">
       <Field
         label="Ambient sound"
-        help="Played quietly under the narration, dipping while the narrator speaks · free. Shorts never get it."
+        help="Plays quietly under the narration and dips while the narrator speaks. It costs nothing, and shorts never get it."
         error={problem("source")}
       >
         <Select

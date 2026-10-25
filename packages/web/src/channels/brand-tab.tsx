@@ -58,7 +58,7 @@ function draftOf(brand: BrandKit): Draft {
 }
 
 // The Name and look tab: the channel's name, language and series brief first, then its look
-// beside a frame drawn with it, its intro, outro, PDF theme and ambient sound, and folded
+// beside a frame drawn with it, its intro, outro, PDF look and ambient sound, and folded
 // below, its named links and how it posts (the YouTube AI disclosure, the X subscription and
 // its accounts). Every look field is optional: Not set leaves the template's own setting alone.
 // One Save channel saves all of it.
@@ -257,7 +257,7 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
             onPick={set("outro")}
           />
           <Choice
-            label="PDF theme"
+            label="PDF look"
             help="For videos that also make a PDF."
             value={kit.documentTheme}
             options={themeOptions}

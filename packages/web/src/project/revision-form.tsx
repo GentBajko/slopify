@@ -346,7 +346,7 @@ export function RevisionForm(
           </ul>
         )}
         <section
-          aria-label="Title and keywords"
+          aria-label={setupSectionNames.topic}
           hidden={current !== "title"}
           className={panel("title")}
         >
@@ -362,7 +362,11 @@ export function RevisionForm(
           </Field>
           {promptPart("keywords")}
         </section>
-        <section aria-label="Article" hidden={current !== "article"} className={panel("article")}>
+        <section
+          aria-label={setupSectionNames.article}
+          hidden={current !== "article"}
+          className={panel("article")}
+        >
           <div className="grid min-w-0 gap-4 md:grid-cols-2">
             {sourceField("research")}
             {sourceField("article")}
@@ -436,7 +440,7 @@ export function RevisionForm(
           )}
         </section>
         <section
-          aria-label="Narration"
+          aria-label={setupSectionNames.narration}
           hidden={current !== "narration"}
           className={panel("narration")}
         >
@@ -463,13 +467,17 @@ export function RevisionForm(
           </Group>
           {promptPart("narration")}
         </section>
-        <section aria-label="Images" hidden={current !== "images"} className={panel("images")}>
+        <section
+          aria-label={setupSectionNames.images}
+          hidden={current !== "images"}
+          className={panel("images")}
+        >
           {sourceField("images")}
           {providerPart("images")}
           {promptPart("images")}
         </section>
         <section
-          aria-label="Video and style"
+          aria-label={setupSectionNames.video}
           hidden={current !== "video"}
           className={panel("video")}
         >
@@ -655,7 +663,11 @@ export function RevisionForm(
             />
           )}
         </section>
-        <section aria-label="Outputs" hidden={current !== "outputs"} className={panel("outputs")}>
+        <section
+          aria-label={extrasName}
+          hidden={current !== "outputs"}
+          className={panel("outputs")}
+        >
           {sourceField("thumbnail")}
           <RevisionYoutube
             edit={edit}
@@ -693,7 +705,7 @@ export function RevisionForm(
           {promptPart("outputs")}
         </section>
         <section
-          aria-label="Pauses and checks"
+          aria-label={setupSectionNames.checks}
           hidden={current !== "checks"}
           className={panel("checks")}
         >
@@ -707,7 +719,11 @@ export function RevisionForm(
           />
           {promptPart("checks")}
         </section>
-        <section aria-label="Channel" hidden={current !== "channel"} className={panel("channel")}>
+        <section
+          aria-label={channelName}
+          hidden={current !== "channel"}
+          className={panel("channel")}
+        >
           <EditChannel
             edit={edit}
             saved={view.revision.config}
