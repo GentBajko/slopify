@@ -2,7 +2,7 @@
 
 You can change almost anything about a project after it has run: the article, one narration chunk, one image, the prompts, the services and models, the captions or the volume. Slopify saves each change as a new version and makes again only what the change affects, after you have seen what that costs.
 
-**Where to find it:** a project → **Edit settings** in the title row. It opens the project's settings in the main column, with two tabs: **Settings** and **Versions**. Press **Edit settings** again to close them.
+**Where to find it:** a project → **Edit settings** in the title row. It opens the project's settings in the main column, with two tabs: **Settings** and **Versions**. While they are open the same button reads **Close settings**.
 
 ## How editing works
 
