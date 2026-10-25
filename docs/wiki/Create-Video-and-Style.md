@@ -50,7 +50,7 @@ After the run, you can fix a misheard word or nudge a caption's timing on the pr
 
 ## Images and cuts
 
-**Images and cuts** is a fold in the row.
+**Images and cuts** is the part of the row under the captions.
 
 | Option | What it does | Default / range |
 | --- | --- | --- |
