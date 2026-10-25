@@ -22,8 +22,10 @@ export function Lamp({
   );
 }
 
-// "Running", "Waiting for your review", "Failed". Running and done read in accent-ink, the rest in
-// their own colour; off reads in ink-2.
+// "Running", "Waiting for your review", "Failed". A word reads in its colour only when it moves,
+// waits or failed: Running in accent-ink, waiting, failed and info in their own colours. Done and
+// off stay quiet in ink-2, the lamp alone green, so a list of finished work is not a column of
+// lime.
 export function Status({
   tone,
   children,
@@ -33,12 +35,9 @@ export function Status({
   readonly children: ReactNode;
   readonly className?: string;
 }): ReactElement {
-  const word = tone === "done" ? "running" : tone;
+  const quiet = tone === "done" || tone === "off";
   return (
-    <span
-      data-slot="status"
-      className={cn("sl-status", word !== "off" && `sl-status--${word}`, className)}
-    >
+    <span data-slot="status" className={cn("sl-status", !quiet && `sl-status--${tone}`, className)}>
       <Lamp tone={tone} />
       {children}
     </span>

@@ -15,6 +15,7 @@ import { Lightbox, type LightboxItem, MediaFrame, MediaGrid } from "./media.js";
 import { foldPeaks } from "./media-controls.js";
 import { Rail, RailButton } from "./rail.js";
 import { ReadingView, splitSections } from "./reading-view.js";
+import { Status } from "./status.js";
 import { Steps } from "./steps.js";
 import { Segmented, Switch } from "./switch.js";
 import { Tabs } from "./tabs.js";
@@ -801,5 +802,26 @@ describe("foldPeaks", () => {
     expect(foldPeaks([0.1, 0.5], 400)).toEqual([0.1, 0.5]);
     // 8 peaks into 16 pixels: 4 bars, each the loudest of the two it covers.
     expect(foldPeaks([0.1, 0.9, 0.2, 0.3, 0.8, 0.1, 0.4, 0.4], 16)).toEqual([0.9, 0.3, 0.8, 0.4]);
+  });
+});
+
+// A finished run is not a column of lime: Done reads quiet in ink-2 with its green lamp; only what
+// moves, waits or failed reads in its colour.
+describe("Status", () => {
+  it("colours the words that move, wait or failed, and keeps Done and off quiet", () => {
+    render(
+      <>
+        <Status tone="done">Done</Status>
+        <Status tone="off">Not started</Status>
+        <Status tone="running">Running</Status>
+        <Status tone="waiting">Paused</Status>
+      </>,
+    );
+    const classOf = (word: string) => screen.getByText(word).className;
+    expect(classOf("Done")).not.toMatch(/sl-status--/);
+    expect(classOf("Not started")).not.toMatch(/sl-status--/);
+    expect(classOf("Running")).toMatch(/sl-status--running/);
+    expect(classOf("Paused")).toMatch(/sl-status--waiting/);
+    expect(screen.getByText("Done").querySelector("[data-tone=done]")).not.toBeNull();
   });
 });
