@@ -613,6 +613,15 @@ describe("selected projects", () => {
     if (bar === null) throw new Error("no selection bar");
     await user.click(within(bar).getByRole("button", { name: "Mark uploaded" }));
     await waitFor(() => expect(marked).toEqual(["p1"]));
+    expect(await screen.findByText("Marked 1 project uploaded.")).not.toBeNull();
+    // Undo takes the mark back, and with it any YouTube link saved since, and says so.
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+    await waitFor(() => expect(marked).toEqual(["p1", "p1"]));
+    expect(
+      await screen.findByText(
+        "1 project back on Ready to upload. Any YouTube link saved for it is forgotten.",
+      ),
+    ).not.toBeNull();
   });
 
   it("gives each row checkbox a 24px target", async () => {
