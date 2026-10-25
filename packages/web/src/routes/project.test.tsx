@@ -806,4 +806,68 @@ describe("the title row's More", () => {
     // ceiling: the list's row arrives before Mark uploaded is offered; under a loaded suite
     // that has taken over 2 s.
   }, 20_000);
+  // Marking not uploaded forgets the long video's saved link (one fact on the server): its Undo
+  // saves the link again, which marks the project uploaded once more.
+  it("marks not uploaded with an Undo that saves the forgotten link again", async () => {
+    const marked: unknown[] = [];
+    const linked: unknown[] = [];
+    const youtube = {
+      ...finished,
+      project: {
+        ...finished.project,
+        config: { ...finished.project.config, youtubeDescription: true },
+      },
+    };
+    renderRouted(
+      <ProjectRoute projectId="p1" />,
+      deps({
+        "GET /api/projects/p1": jsonAnswer(youtube),
+        "GET /api/projects": jsonAnswer({
+          projects: [
+            {
+              ...youtube.project,
+              progress: 1,
+              channelId: "00000000-0000-4000-8000-000000000001",
+              uploadedAt: "2026-09-28T09:00:00.000Z",
+            },
+          ],
+        }),
+        "GET /api/studio/videos/p1": jsonAnswer({
+          videos: [
+            {
+              projectId: "p1",
+              short: null,
+              videoId: "6tRcYUoxyQo",
+              recordedAt: "2026-09-28T09:00:00.000Z",
+              uploadState: "done",
+            },
+          ],
+        }),
+        "PUT /api/projects/p1/uploaded": async (request) => {
+          marked.push(await request.json());
+          return jsonAnswer({ uploadedAt: null })(request);
+        },
+        "PUT /api/studio/videos/p1": async (request) => {
+          linked.push(await request.json());
+          return jsonAnswer({ videos: [] })(request);
+        },
+      }),
+    );
+    await userEvent.click(
+      await within(await projectActions()).findByRole(
+        "button",
+        { name: "Mark not uploaded" },
+        { timeout: 5_000 },
+      ),
+    );
+    await waitFor(() => expect(marked).toEqual([{ uploaded: false }]), { timeout: 5_000 });
+    expect(
+      await screen.findByText(/is back on Ready to upload, and its YouTube link is forgotten\./),
+    ).not.toBeNull();
+    await userEvent.click(await screen.findByRole("button", { name: "Undo" }));
+    await waitFor(() =>
+      expect(linked).toEqual([{ short: null, link: "https://youtu.be/6tRcYUoxyQo" }]),
+    );
+    // ceiling: the list's row and the videos arrive before the press; past 2 s when loaded.
+  }, 20_000);
 });
