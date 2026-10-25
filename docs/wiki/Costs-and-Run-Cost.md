@@ -130,7 +130,7 @@ To jump there, press `Ctrl+K` and run **Open usage and costs**. The old `/usage`
 - [Models](Models)
 - [AI-CLIs](AI-CLIs)
 - [Providers-and-Keys](Providers-and-Keys)
-- [Play-Outputs](Play-Outputs)
+- [Create: Extras](Create-Extras)
 - [Project-Page](Project-Page)
 - [Home-and-Projects](Home-and-Projects)
 - [Settings-Reference](Settings-Reference)

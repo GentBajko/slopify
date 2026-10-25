@@ -96,7 +96,7 @@ Editing a suggestion's words before approving it is done under **Topics waiting*
 - A browser notification for new suggestions opens the calendar's **Suggested topics** when you click it. See [Notifications](Notifications).
 - `Ctrl+K` → **Add to calendar** works from any screen: it opens the calendar with the form. `G` then `C` goes to the calendar.
 - To change a schedule's queued topics one by one (rename, reorder, remove), use the **Schedules** tab. See [Schedules](Schedules#edit-the-queued-topics-in-place).
-- To start one video right now instead of waiting for a run, use [Play](Play-Overview).
+- To start one video right now instead of waiting for a run, use [Play](Create-Overview).
 
 ## Related pages
 

@@ -131,7 +131,7 @@ Slopify does not upload the description to YouTube. Paste it in YouTube Studio y
 
 ## Related pages
 
-- [Play-Outputs](Play-Outputs)
+- [Create: Extras](Create-Extras)
 - [Prompts](Prompts)
 - [Publishing-to-YouTube](Publishing-to-YouTube)
 - [Studio-Extension](Studio-Extension)

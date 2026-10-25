@@ -19,13 +19,13 @@
 - [Costs and run cost](Costs-and-Run-Cost)
 
 **Making a video**
-- [Play overview](Play-Overview)
-- [Title and article](Play-Title-and-Article)
-- [Narration](Play-Narration)
-- [Images](Play-Images)
-- [Video and style](Play-Video-and-Style)
-- [Outputs](Play-Outputs)
-- [Reviews and checkpoints](Reviews-and-Checkpoints)
+- [Create overview](Create-Overview)
+- [Article](Create-Article)
+- [Narration](Create-Narration)
+- [Images](Create-Images)
+- [Video and style](Create-Video-and-Style)
+- [Extras](Create-Extras)
+- [Pauses and checks](Reviews-and-Checkpoints)
 
 **Formats and outputs**
 - [Multiple voices](Multiple-Voices)
@@ -60,8 +60,8 @@
 - [Channels](Channels)
 - [Cast library](Cast-Library)
 
-**Library**
-- [Library overview](Library-Overview)
+**Prompts and templates**
+- [Prompts and templates](Prompts-and-Templates)
 - [Prompts](Prompts)
 - [Keywords Slopify fills](Keywords-Slopify-Fills)
 - [Intros and outros](Intros-and-Outros)

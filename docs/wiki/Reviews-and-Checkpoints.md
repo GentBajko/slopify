@@ -161,7 +161,7 @@ When an automatic review flags an item and keeps it (its redos ran out, or the s
 
 ## Related pages
 
-- [Play Overview](Play-Overview)
+- [Create Overview](Create-Overview)
 - [Project Page](Project-Page)
 - [Editing a Project](Editing-a-Project)
 - [Recovery and Retries](Recovery-and-Retries)

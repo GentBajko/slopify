@@ -12,7 +12,7 @@ These pages cover Slopify 3.0: every screen, every setting and every workflow, s
 2. Open it at `http://127.0.0.1:6969` and follow [First launch and welcome](First-Launch-and-Welcome).
 3. Make [your first 60-second short](Your-First-Short). With a signed-in CLI and your computer's own voice it needs no keys at all.
 4. Add the keys you want in [Providers and keys](Providers-and-Keys) (press **Test** to check a key before you save it), or sign in to an [AI CLI](AI-CLIs).
-5. Make a full video from [Play](Play-Overview).
+5. Make a full video from [Play](Create-Overview).
 
 ## How a video gets made
 
@@ -48,12 +48,12 @@ These pages cover Slopify 3.0: every screen, every setting and every workflow, s
 ### Making a video
 | Page | What it covers |
 |---|---|
-| [Play overview](Play-Overview) | Templates, topics, batches, drafts, the estimate, Start and Queue |
-| [Title and article](Play-Title-and-Article) | Title patterns, article prompts, research and your own text |
-| [Narration](Play-Narration) | Voices, pauses, volume, glossary, aliases, described tables |
-| [Images](Play-Images) | Image prompts, the establishing image, cast, image pacing, Codex |
-| [Video and style](Play-Video-and-Style) | Cuts, the Look, transitions, chapter cards, motion, captions, ambient sound |
-| [Outputs](Play-Outputs) | Video, shorts, description, PDF, thumbnails and audio exports |
+| [Create Overview](Create-Overview) | Templates, topics, batches, drafts, the estimate, Start and Queue |
+| [Create: Article](Create-Article) | Title patterns, article prompts, research and your own text |
+| [Create: Narration](Create-Narration) | Voices, pauses, volume, glossary, aliases, described tables |
+| [Create: Images](Create-Images) | Image prompts, the establishing image, cast, image pacing, Codex |
+| [Create: Video and Style](Create-Video-and-Style) | Cuts, the Look, transitions, chapter cards, motion, captions, ambient sound |
+| [Create: Extras](Create-Extras) | Video, shorts, description, PDF, thumbnails and audio exports |
 | [Reviews and checkpoints](Reviews-and-Checkpoints) | Automatic reviews and pausing a run for you to check |
 
 ### Formats and outputs
@@ -99,7 +99,7 @@ These pages cover Slopify 3.0: every screen, every setting and every workflow, s
 ### Library
 | Page | What it covers |
 |---|---|
-| [Library overview](Library-Overview) | What the Library holds |
+| [Prompts and Templates](Prompts-and-Templates) | What the Library holds |
 | [Prompts](Prompts) | Writing prompts, keyword slots, history and restore |
 | [Intros and outros](Intros-and-Outros) | Reusable openings and closings |
 | [Aliases and glossary](Narration-Aliases-and-Glossary) | How the narrator says words |

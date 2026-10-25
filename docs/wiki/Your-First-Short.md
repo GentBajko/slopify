@@ -98,7 +98,7 @@ If the run fails later, the project page and Home's **Needs you** say which step
 
 ## Make the full video next
 
-When the short is done, the project's next action is **Make the full video on this topic**. It opens Play set up for a long video: the same topic and title, the starter pack's Play template (added to your Library if it wasn't yet), and the text, image and voice providers the short used, since those are known to work on your computer. Nothing starts until you press **Start run**. See [Play Overview](Play-Overview).
+When the short is done, the project's next action is **Make the full video on this topic**. It opens Play set up for a long video: the same topic and title, the starter pack's Play template (added to your Library if it wasn't yet), and the text, image and voice providers the short used, since those are known to work on your computer. Nothing starts until you press **Start run**. See [Create Overview](Create-Overview).
 
 ## Change the short afterwards
 
@@ -106,7 +106,7 @@ It is a normal project: you can edit the script, change an image, pick another v
 
 ## Next steps
 
-- Make a long video with more control: [Play Overview](Play-Overview).
+- Make a long video with more control: [Create Overview](Create-Overview).
 - Cut shorts from a long video automatically: [Shorts](Shorts).
 - Reuse the style: add the starter pack and pick its template on Play ([Templates](Templates)).
 - Let Claude Code or Codex look after your runs, fix failures and answer reviews: [Agents (MCP)](Agents-MCP).

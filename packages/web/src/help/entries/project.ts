@@ -131,11 +131,11 @@ export const projectHelp = {
   "project.edit.show-figures": {
     title: "Show tables and figures on screen",
     body: "Shows each described table, figure, equation and code block in the video while its description is spoken, as the article's picture or a card drawn on this computer at no cost. Turning it on or off renders the video again, and any Shorts that include a card; the narration is kept. The cards appear under Images, From the article, and can be made again there.",
-    tutorial: { page: "Play-Outputs", anchor: "show-tables-and-figures-on-screen" },
+    tutorial: { page: "Create-Narration", anchor: "tables-figures-and-code" },
   },
   "project.edit.describe-figures": {
     title: "Describe tables and figures",
     body: "The text model writes a short spoken passage for each table, figure, equation and code block, said in its place. Turning it on costs one text-model call per block, and after you save, the narration chunks that contain a block are spoken again, paid per character (the whole narration when Chunking is the whole article). Other chunks keep their audio; captions and timing are redone to match.",
-    tutorial: { page: "Play-Narration", anchor: "tables-figures-and-code" },
+    tutorial: { page: "Create-Narration", anchor: "tables-figures-and-code" },
   },
 } as const satisfies Readonly<Record<string, HelpEntry>>;

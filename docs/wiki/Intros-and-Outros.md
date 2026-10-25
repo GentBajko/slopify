@@ -68,7 +68,7 @@ Entries have the same row actions as prompts:
 | **History** | Versions, compare and **Used by**, exactly as for prompts. See [Prompts](Prompts#history-and-versions). |
 | **Delete** | Asks first, then moves it to **Settings → Backup & storage → Trash** for 30 days. |
 
-Use **Search intros and outros** (`/`) to find one by name. The pencil beside a name renames the entry in its row, with **Undo** on the notice; see [Rename in the row](Library-Overview#rename-in-the-row).
+Use **Search intros and outros** (`/`) to find one by name. Rename one in its editor.
 
 A project keeps its own copy of the intro and outro it started with, so editing an entry here changes only runs started later. Templates keep their own copies too.
 
@@ -80,7 +80,7 @@ A project keeps its own copy of the intro and outro it started with, so editing 
 
 ## Related pages
 
-- [Narration](Play-Narration)
+- [Create: Narration](Create-Narration)
 - [Prompts](Prompts)
 - [Channels](Channels)
-- [Library overview](Library-Overview)
+- [Prompts and Templates](Prompts-and-Templates)

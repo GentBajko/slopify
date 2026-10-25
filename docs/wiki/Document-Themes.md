@@ -203,5 +203,5 @@ These appear in a PDF reader's document properties, not on the pages.
 
 - [PDF documents](PDF-Documents)
 - [Channels](Channels)
-- [Library overview](Library-Overview)
-- [Play outputs](Play-Outputs)
+- [Prompts and Templates](Prompts-and-Templates)
+- [Create: Extras](Create-Extras)

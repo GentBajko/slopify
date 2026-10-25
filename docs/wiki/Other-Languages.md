@@ -100,8 +100,8 @@ English projects always render with exactly the font you chose.
 
 ## Related pages
 
-- [Play-Narration](Play-Narration)
-- [Play-Video-and-Style](Play-Video-and-Style)
+- [Create: Narration](Create-Narration)
+- [Create: Video and Style](Create-Video-and-Style)
 - [Channels](Channels)
 - [Multiple-Voices](Multiple-Voices)
 - [Shorts](Shorts)

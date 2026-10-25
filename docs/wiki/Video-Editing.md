@@ -2,7 +2,7 @@
 
 These settings decide how the finished video looks and sounds: how long each image stays, where the cuts fall, how images move and hand over, the Look, chapter cards, animated images, ambient sound and captions. All of it except animated images is done on your computer with ffmpeg, so it costs render time, not API calls.
 
-**Where to find it:** a project → **Edit settings** → **Inputs** (**Timing**, **Cuts and look**, **Ambient sound**) and **Subtitles**. On a new run the same controls are on Play → **Video and style** (see [Play Video and Style](Play-Video-and-Style)).
+**Where to find it:** a project → **Edit settings** → **Inputs** (**Timing**, **Cuts and look**, **Ambient sound**) and **Subtitles**. On a new run the same controls are on Play → **Video and style** (see [Create: Video and Style](Create-Video-and-Style)).
 
 ## How the video is put together
 
@@ -127,7 +127,7 @@ The rebuild review lists exactly what will be made before anything runs. See [Ed
 
 ## Related pages
 
-- [Play Video and Style](Play-Video-and-Style)
+- [Create: Video and Style](Create-Video-and-Style)
 - [Editing a Project](Editing-a-Project)
 - [Project Page](Project-Page)
 - [Shorts](Shorts)

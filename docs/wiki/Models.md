@@ -153,7 +153,7 @@ On Play, each provider row has a model picker fed by the catalogue (or by the CL
 - **Custom ID** lets you type a model ID the list does not show; **Use list** goes back.
 - **Thinking** (text) or **Effort** (images) appears only when the model offers levels. **Model default** leaves it to the provider.
 
-See [Play-Overview](Play-Overview) and the Play pages for each step.
+See [Create Overview](Create-Overview) and the Play pages for each step.
 
 ## Related pages
 

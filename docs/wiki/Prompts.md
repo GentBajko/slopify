@@ -20,7 +20,7 @@ The kind decides where Play offers the prompt.
 | **Script (speakers)** | Used instead of an Article prompt when a run has several voices. The text model answers with `#` section headings and `Name: words` turns, one speaker per paragraph. Text in `[square brackets]` is not spoken. | One call on the project's LLM |
 | **Post** | Writes a project's post for X, LinkedIn, Instagram, TikTok, Reddit or Bluesky from the article. Slopify gives it the site's length limit and asks again when the answer is over it, then adds the hashtags and the link itself. Picked per site in a template's Upload pack (text **Written by a post prompt**); a site set to a post prompt with none picked uses the built-in wording. See [Posting to social sites](Posting-to-Social-Sites#post-prompts). | One call per site that uses it, on the project's LLM |
 
-See [Title and article](Play-Title-and-Article), [Images](Play-Images), [Narration](Play-Narration), [YouTube description](YouTube-Description), [Shorts](Shorts), [Reviews and checkpoints](Reviews-and-Checkpoints), [Multiple voices](Multiple-Voices) and [Posting to social sites](Posting-to-Social-Sites) for how each is used.
+See [Create: Article](Create-Article), [Create: Images](Create-Images), [Create: Narration](Create-Narration), [YouTube description](YouTube-Description), [Shorts](Shorts), [Reviews and checkpoints](Reviews-and-Checkpoints), [Multiple voices](Multiple-Voices) and [Posting to social sites](Posting-to-Social-Sites) for how each is used.
 
 ## Write a new prompt
 
@@ -88,7 +88,7 @@ Looks: {{Appearance}}
 - Each costs one more AI call per video (the looks call searches the web).
 - In the shorts' image prompt (**Shorts → Image prompt**), `{{Appearance}}` gives each short the subject's look and those of the figures its clip names. A `{{Scene}}` line is left out there: each short's images already show what is said at that moment.
 
-See [Play Images](Play-Images#scenes-from-the-article) for how the scenes and looks are chosen.
+See [Create: Images](Create-Images#scenes-from-the-article) for how the scenes and looks are chosen.
 
 ## Mark an image prompt as photorealistic
 
@@ -155,9 +155,9 @@ Prompts saved before history existed start with their current text as version 1.
 
 ## Related pages
 
-- [Library overview](Library-Overview)
-- [Title and article](Play-Title-and-Article)
-- [Images](Play-Images)
+- [Prompts and Templates](Prompts-and-Templates)
+- [Create: Article](Create-Article)
+- [Create: Images](Create-Images)
 - [Keywords Slopify fills](Keywords-Slopify-Fills)
 - [Templates](Templates)
 - [Editing a project](Editing-a-Project)

@@ -83,7 +83,7 @@ A starter pack sets you up for one kind of channel. Each one adds, in one go:
 - a suggested OpenAI voice, saved under Settings → **Voices**;
 - a Play template that uses them, named `<pack> starter`, with its captions, motion and Look.
 
-Then you pick the template in Create, type a topic and start. See [Templates](Templates) and [Play Overview](Play-Overview).
+Then you pick the template in Create, type a topic and start. See [Templates](Templates) and [Create Overview](Create-Overview).
 
 | Pack | What it is for | Suggested voice |
 | --- | --- | --- |
@@ -106,7 +106,7 @@ Step 3 of the first-run screen asks once, in one line: **Start when I log in** o
 
 ## Make a long video instead
 
-On steps 1 and 2, **Make a long video instead** in the bottom bar takes you to Create, where you choose prompts, keywords and outputs yourself. See [Play Overview](Play-Overview).
+On steps 1 and 2, **Make a long video instead** in the bottom bar takes you to Create, where you choose prompts, keywords and outputs yourself. See [Create Overview](Create-Overview).
 
 ## The interactive tutorial
 

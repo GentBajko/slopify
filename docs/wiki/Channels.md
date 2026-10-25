@@ -145,6 +145,6 @@ Links saved in **Settings → Channel links** before channels had their own stil
 - [Cast library](Cast-Library)
 - [Templates](Templates)
 - [Schedules](Schedules)
-- [Play video and style](Play-Video-and-Style)
+- [Create: Video and Style](Create-Video-and-Style)
 - [Publishing to YouTube](Publishing-to-YouTube)
 - [Other languages](Other-Languages)

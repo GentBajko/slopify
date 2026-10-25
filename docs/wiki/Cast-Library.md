@@ -65,7 +65,7 @@ To remove a picture, press its delete button. A member with no picture is not se
 | Codex, OpenAI, Google, and fal.ai edit models (FLUX.2 and Nano Banana 2 edit) | The member's pictures are sent as input pictures. |
 | Models that take no input pictures (Replicate, other fal.ai models) | The member is described in words instead, from its description. |
 
-See [Images](Play-Images) and [Providers and keys](Providers-and-Keys).
+See [Create: Images](Create-Images) and [Providers and keys](Providers-and-Keys).
 
 ## Give a cast member a voice
 
@@ -107,6 +107,6 @@ Cast members and their pictures travel in a backup made with **Export everything
 ## Related pages
 
 - [Channels](Channels)
-- [Images](Play-Images)
+- [Create: Images](Create-Images)
 - [Multiple voices](Multiple-Voices)
 - [Providers and keys](Providers-and-Keys)

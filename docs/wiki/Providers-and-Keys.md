@@ -141,7 +141,7 @@ How long text is handled:
 - TTS-2 Flash sends parts of at most 4,000 characters. For long articles, pick paragraph chunking.
 - Pausing stops Slopify's own requests, but Inworld may still finish and bill a job it already accepted. Resuming starts a new request for any unfinished narration.
 
-Some features need Inworld: Narration Preparation and pronunciations need an Inworld TTS-2 model. See [Play-Narration](Play-Narration) and [Narration-Aliases-and-Glossary](Narration-Aliases-and-Glossary).
+Some features need Inworld: Narration Preparation and pronunciations need an Inworld TTS-2 model. See [Create: Narration](Create-Narration) and [Narration-Aliases-and-Glossary](Narration-Aliases-and-Glossary).
 
 ### Google Gemini (speech)
 
@@ -285,6 +285,6 @@ For projects with more than one narrator, see [Multiple-Voices](Multiple-Voices)
 - [Models](Models)
 - [Costs and Run Cost](Costs-and-Run-Cost)
 - [Settings Reference](Settings-Reference)
-- [Play Narration](Play-Narration)
+- [Create: Narration](Create-Narration)
 - [Multiple Voices](Multiple-Voices)
 - [Troubleshooting](Troubleshooting)

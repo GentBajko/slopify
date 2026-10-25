@@ -93,8 +93,8 @@ While the stage runs it says "The PDF will be saved when rendering finishes." Th
 ## Related pages
 
 - [Document-Themes](Document-Themes)
-- [Play-Outputs](Play-Outputs)
+- [Create: Extras](Create-Extras)
 - [Channels](Channels)
 - [Project-Page](Project-Page)
 - [Editing-a-Project](Editing-a-Project)
-- [Play-Title-and-Article](Play-Title-and-Article)
+- [Create: Article](Create-Article)

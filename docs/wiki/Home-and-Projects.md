@@ -226,7 +226,7 @@ Projects shows **No projects yet**, "Every video you make is kept here with its 
 ## Related pages
 
 - [Project Page](Project-Page)
-- [Play Overview](Play-Overview)
+- [Create Overview](Create-Overview)
 - [Channels](Channels)
 - [Calendar](Calendar)
 - [Schedules](Schedules)

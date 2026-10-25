@@ -53,7 +53,7 @@ While **More shorts options** is open (on Play, or in Edit project → **Shorts*
 - **Rendering:** done on your computer at no provider cost.
 - **Reviews:** with Automatic reviews on, each short can be reviewed like other outputs. Picture reviews need Claude Code or Codex as the reviewer.
 
-With the establishing image on, the shorts' images are drawn with it as a reference too, so characters and style stay the same. See [Play-Images](Play-Images).
+With the establishing image on, the shorts' images are drawn with it as a reference too, so characters and style stay the same. See [Create: Images](Create-Images).
 
 ## See, copy and download your shorts
 
@@ -107,7 +107,7 @@ A clip must stay between the shortest and longest length you set and must not ov
 
 ## Related pages
 
-- [Play-Outputs](Play-Outputs)
+- [Create: Extras](Create-Extras)
 - [Prompts](Prompts)
 - [Video-Editing](Video-Editing)
 - [Editing-a-Project](Editing-a-Project)

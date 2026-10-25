@@ -121,7 +121,7 @@ With a **Narration Preparation** prompt picked (Narration row → **More audio s
 - A spoken direction at the start of a sentence, such as `[say shyly and a little uncertainly]`, held until the next one or `[reset]`.
 - Non-verbal sounds where they happen: `[laugh]`, `[breathe]`, `[sigh]`, `[cough]`, `[clear throat]` and `[yawn]`.
 
-Each turn is its own request, so a direction never leaks into the next speaker, and every speaker on TTS-2 gets cues of their own. Turns of speakers on other voices, or on TTS-2 Flash (which ignores directions), are spoken as written. At least one speaker must be on TTS-2, or Play asks you to choose that model for a speaker or clear Narration Preparation under Narration → **More audio settings**. The Narration row's own model (which reads the intro and outro) must be Inworld TTS-2 too. The tags are only in what the voice is sent: captions, word timing, the MP3/M4B chapters and the script download never show them. See [Play-Narration](Play-Narration) for Narration Preparation itself.
+Each turn is its own request, so a direction never leaks into the next speaker, and every speaker on TTS-2 gets cues of their own. Turns of speakers on other voices, or on TTS-2 Flash (which ignores directions), are spoken as written. At least one speaker must be on TTS-2, or Play asks you to choose that model for a speaker or clear Narration Preparation under Narration → **More audio settings**. The Narration row's own model (which reads the intro and outro) must be Inworld TTS-2 too. The tags are only in what the voice is sent: captions, word timing, the MP3/M4B chapters and the script download never show them. See [Create: Narration](Create-Narration) for Narration Preparation itself.
 
 ## How the audio is made
 
@@ -151,7 +151,7 @@ Each turn is its own request, so a direction never leaks into the next speaker, 
 
 ## Related pages
 
-- [Play-Narration](Play-Narration)
+- [Create: Narration](Create-Narration)
 - [Cast-Library](Cast-Library)
 - [Channels](Channels)
 - [Prompts](Prompts)

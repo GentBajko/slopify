@@ -122,7 +122,7 @@ To fix skipped entries, edit the Pronunciation Glossary at the end of the articl
 
 ## Related pages
 
-- [Narration](Play-Narration)
+- [Create: Narration](Create-Narration)
 - [Prompts](Prompts)
 - [Editing a project](Editing-a-Project)
 - [Multiple voices](Multiple-Voices)

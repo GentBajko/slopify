@@ -20,7 +20,7 @@ Because the template keeps copies of its prompts, editing a prompt in the Librar
 
 ## Save a template from Play
 
-1. Set up a video on [Play](Play-Overview) the way you want every video of this kind to look.
+1. Set up a video on [Play](Create-Overview) the way you want every video of this kind to look.
 2. In the right rail, press **Save as template**.
 3. Type a **Template name** (up to 120 characters). The placeholder suggests the title without its keywords.
 4. Read the list under the name. It says what is left out, such as the topic you typed and any extra videos. If the title names no keyword, it says every keyword keeps its value.
@@ -142,7 +142,7 @@ Adding a pack twice changes nothing, and a pack never replaces a prompt or templ
 ## Related pages
 
 - [Template studio](Template-Studio)
-- [Play overview](Play-Overview)
+- [Create Overview](Create-Overview)
 - [Schedules](Schedules)
 - [Channels](Channels)
 - [Prompts](Prompts)

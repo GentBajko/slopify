@@ -57,7 +57,7 @@ With **Article** set to Off these can't be used: there is no article to write th
 
 ## Per picture
 
-Written for each picture by one AI call that reads the article, like the scenes of [Scenes from the article](Play-Images#scenes-from-the-article).
+Written for each picture by one AI call that reads the article, like the scenes of [Scenes from the article](Create-Images#scenes-from-the-article).
 
 | Keyword | Fills in | Example | Works in |
 | --- | --- | --- | --- |
@@ -82,6 +82,6 @@ The editor offers **Update to new names** on a prompt that still uses them. Rena
 ## Related pages
 
 - [Prompts](Prompts)
-- [Images](Play-Images)
+- [Create: Images](Create-Images)
 - [YouTube description](YouTube-Description)
 - [Editing a project](Editing-a-Project)

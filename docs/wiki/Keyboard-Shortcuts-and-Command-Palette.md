@@ -109,7 +109,7 @@ On the Play screen.
 | **Pick a template** | Moves to the template picker. |
 | **Change title and keywords**, **Change article**, **Change narration**, **Change images**, **Change video and style**, **Change outputs**, **Change reviews**, **Change channel** | Opens that part of the setup and scrolls to it. |
 
-See [Play-Overview](Play-Overview).
+See [Create Overview](Create-Overview).
 
 ### This project
 
@@ -169,7 +169,7 @@ On any Library tab.
 | **Open prompts**, **Open intros and outros**, **Open templates**, **Open document themes** | Switches tab. |
 | **Save a setup as a template** | On the Templates tab: saves a Play setup as a template. |
 
-See [Library-Overview](Library-Overview).
+See [Prompts and Templates](Prompts-and-Templates).
 
 ### Channels
 
@@ -214,7 +214,7 @@ See [Settings-Reference](Settings-Reference).
 
 ## Related pages
 
-- [Play-Overview](Play-Overview)
+- [Create Overview](Create-Overview)
 - [Project-Page](Project-Page)
 - [Home-and-Projects](Home-and-Projects)
 - [Settings-Reference](Settings-Reference)

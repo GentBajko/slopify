@@ -105,7 +105,7 @@ A short's title, description and hashtags come from the shorts pick; to change w
 
 ## Three thumbnails
 
-With **Thumbnails** set to 3 on Play or in Edit project → Images, Slopify draws the thumbnail prompt twice more with a different composition each time, for YouTube's A/B Testing (it replaced Test & compare). Prepare upload lists all three. In Studio, set the first under **Thumbnail**, then add all three with the **A/B Testing** button beside the title. Each extra thumbnail costs one image. See [Play-Outputs](Play-Outputs).
+With **Thumbnails** set to 3 on Play or in Edit project → Images, Slopify draws the thumbnail prompt twice more with a different composition each time, for YouTube's A/B Testing (it replaced Test & compare). Prepare upload lists all three. In Studio, set the first under **Thumbnail**, then add all three with the **A/B Testing** button beside the title. Each extra thumbnail costs one image. See [Create: Extras](Create-Extras).
 
 ## Mark a video uploaded
 
