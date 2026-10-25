@@ -415,3 +415,62 @@ it("records when a stage starts and keeps when it finished, through a retry wait
     h.close();
   }
 });
+
+// A stage of several steps (the narration's chunk, then its join) is between steps for a moment
+// while one has finished and the next is not claimed yet: it keeps the start it took.
+it("keeps a stage's start between its steps", () => {
+  const h = revisionFixture();
+  try {
+    let now = "2026-09-10T01:00:00.000Z";
+    const deps = { ...h.deps, clock: { ...h.deps.clock, now: () => new Date(now) } };
+    for (const kind of stageKinds)
+      deps.db
+        .prepare(
+          "INSERT INTO stages(id,project_id,kind,source,state) VALUES (?,?,?,'generate','pending')",
+        )
+        .run(kind, h.projectId, kind);
+    deps.db.prepare("UPDATE projects SET config=? WHERE id=?").run(
+      JSON.stringify({
+        ...h.config,
+        sources: { ...h.config.sources, audio: "generate" },
+        audio: { provider: "voice", model: "tts", voice: "v1" },
+      }),
+      h.projectId,
+    );
+    const base = adoptBaseline(deps, h.projectId);
+    if (!base.ok) throw new Error("Missing baseline");
+    admitInitialRevision(deps, base.view, catalogue);
+    const steps = executionStages(deps, h.projectId).filter((row) => row.kind === "audio");
+    expect(steps.length).toBeGreaterThan(1);
+    const times = () =>
+      deps.db.prepare("SELECT state,started_at,finished_at FROM stages WHERE id='audio'").get();
+    const step = (index: number, state: string) =>
+      deps.db
+        .prepare("UPDATE revision_work SET state=? WHERE id=?")
+        .run(state, steps[index]?.work.workId);
+    step(0, "running");
+    projectStandings(deps, h.projectId);
+    now = "2026-09-10T01:02:00.000Z";
+    step(0, "done");
+    projectStandings(deps, h.projectId);
+    expect(times()).toEqual({
+      state: "pending",
+      started_at: "2026-09-10T01:00:00.000Z",
+      finished_at: null,
+    });
+    now = "2026-09-10T01:03:00.000Z";
+    for (let index = 1; index < steps.length; index++) step(index, "running");
+    projectStandings(deps, h.projectId);
+    expect(times()).toMatchObject({ state: "running", started_at: "2026-09-10T01:00:00.000Z" });
+    now = "2026-09-10T01:05:00.000Z";
+    for (let index = 1; index < steps.length; index++) step(index, "done");
+    projectStandings(deps, h.projectId);
+    expect(times()).toEqual({
+      state: "done",
+      started_at: "2026-09-10T01:00:00.000Z",
+      finished_at: "2026-09-10T01:05:00.000Z",
+    });
+  } finally {
+    h.close();
+  }
+});
