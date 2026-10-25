@@ -108,7 +108,7 @@ export function onboardingRoutes(deps: AppDeps) {
         return problem(c, {
           status: 404,
           detail:
-            "Slopify doesn't have that starter pack. Reload the page and pick one of the packs listed.",
+            "Slopify doesn't have that starter template. Reload the page and pick one of the templates listed.",
         });
       return c.json(installed.value);
     })
@@ -122,7 +122,7 @@ export function onboardingRoutes(deps: AppDeps) {
         return problem(c, {
           status: 404,
           detail:
-            "Slopify doesn't have that starter pack. Reload the page and pick one of the packs listed.",
+            "Slopify doesn't have that starter template. Reload the page and pick one of the templates listed.",
         });
       const modelsFor = deps.modelsFor;
       if (modelsFor === undefined)
@@ -150,7 +150,7 @@ export function onboardingRoutes(deps: AppDeps) {
         return problem(c, {
           status: 404,
           detail:
-            "Slopify doesn't have that starter pack. Reload the page and pick one of the packs listed.",
+            "Slopify doesn't have that starter template. Reload the page and pick one of the templates listed.",
         });
       // The computer's voice is saved like any other, so Play and a later rebuild offer it.
       const audio = plan.providers.audio;

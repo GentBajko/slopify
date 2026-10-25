@@ -178,25 +178,25 @@ const decisions: readonly RouteTool[] = [
   {
     name: "get_checkpoints",
     route: "GET /api/projects/:id/checkpoints",
-    title: "Read review checkpoints",
+    title: "Read the pauses for your review",
     description:
-      "The project's review checkpoints: each gate's stage, state, fingerprint and currentFingerprint. A gate is Waiting for your review while held.",
+      "The project's pauses for your review (Pauses and checks): each gate's stage, state, fingerprint and currentFingerprint. A gate is Waiting for your review while held.",
   },
   {
     name: "approve_checkpoint",
     route: "POST /api/projects/:id/checkpoints/:checkpointId/approve",
     body: approvalBody,
-    title: "Approve a checkpoint",
+    title: "Approve a pause",
     description:
-      "Approves a held checkpoint so the stages after it run, like Approve on the project page. Body: {revisionId, fingerprint: the gate's currentFingerprint, idempotencyKey: a new UUID}.",
+      "Approves a held pause so the stages after it run, like Approve and make the … on the project page. Body: {revisionId, fingerprint: the gate's currentFingerprint, idempotencyKey: a new UUID}.",
   },
   {
     name: "change_checkpoints",
     route: "PATCH /api/projects/:id/checkpoints",
     body: checkpointChangeSchema,
-    title: "Change checkpoints",
+    title: "Change the pauses",
     description:
-      'Sets the stages that stop for approval, like the Checkpoints tab. Body: {revisionId, stages: ["audio" | "images" | "video"]}.',
+      'Sets the stages that stop for approval, like Pause after … in Edit settings → Pauses and checks. Body: {revisionId, stages: ["audio" | "images" | "video"]}.',
   },
   {
     name: "list_reviews",

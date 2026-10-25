@@ -21,7 +21,7 @@ export const templateStudioTools: readonly RouteTool[] = [
     route: "GET /api/template-studio/:id/checks",
     title: "Read a template's checks",
     description:
-      "The free checks the template's current version passes before Approve for schedules, each failing one with what is wrong and where it is fixed: keywords filled, providers set up, a voice that is one of yours (Settings → Voices), release slots, a known monthly cost, someone to answer each checkpoint.",
+      "The free checks the template's current version passes before Approve for schedules, each failing one with what is wrong and where it is fixed: keywords filled, providers set up, a voice that is one of yours (Settings → Voices), release times, a known monthly cost, someone to answer each pause.",
   },
   {
     name: "mark_template_ready",

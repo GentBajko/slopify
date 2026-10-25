@@ -47,7 +47,7 @@ const runs: readonly RouteTool[] = [
     route: "POST /api/projects/:id/stages/:kind/rerun",
     body: revisionControlSchema,
     title: "Make a stage again",
-    description: `A section's Make … again button (Write the article again, Make all images again): makes a stage again and everything built on it. Making again what costs money is refused until it is reviewed: use preview_rebuild (Choose what to remake), then start_rebuild. ${control}`,
+    description: `A section's Make … again button (Write the article again, Make all images again): makes a stage again and everything built on it. Making again what costs money is refused until it is reviewed: use preview_rebuild (Choose what to make again), then start_rebuild. ${control}`,
     confirm:
       "Make this stage again? It makes the stage and what is built on it again, which costs what the stage cost the first time; the previous outputs stay under Versions.",
   },
@@ -88,7 +88,7 @@ const revisions: readonly RouteTool[] = [
     body: saveBody,
     title: "Save an edit",
     description:
-      "Saves an edit as a new version, like Save in Edit settings; it starts nothing. Body: {baseRevisionId, idempotencyKey: a new UUID, edit: {config, content, regenerate?: [work keys to make again, such as a narration chunk key], uploads?: [{stagedFileId, destination}]}}; send get_revision's revision.config and revision.content with your change. One chunk's wording or delivery note is content.narrationOverrides[chunk key] = {kind: \"text\", text, direction?}. Finished shorts kept through a new pick are content.shortsKeep: leave one out to pick a new moment for it, and lower config.shorts.count as well to drop it. Then preview_rebuild (Choose what to remake) says what it makes and costs, and start_rebuild starts it.",
+      "Saves an edit as a new version, like Save in Edit settings; it starts nothing. Body: {baseRevisionId, idempotencyKey: a new UUID, edit: {config, content, regenerate?: [work keys to make again, such as a narration chunk key], uploads?: [{stagedFileId, destination}]}}; send get_revision's revision.config and revision.content with your change. One chunk's wording or delivery note is content.narrationOverrides[chunk key] = {kind: \"text\", text, direction?}. Finished shorts kept through a new pick are content.shortsKeep: leave one out to pick a new moment for it, and lower config.shorts.count as well to drop it. Then preview_rebuild (Choose what to make again) says what it makes and costs, and start_rebuild starts it.",
   },
   {
     name: "restore_revision",
@@ -96,24 +96,24 @@ const revisions: readonly RouteTool[] = [
     body: restoreBody,
     title: "Restore a version",
     description:
-      "Makes an earlier version current again, like Restore this revision; it starts nothing. Body: {baseRevisionId, idempotencyKey: a new UUID, targetRevisionId}.",
+      "Makes an earlier version current again, like Restore on a row of Versions; it starts nothing. Body: {baseRevisionId, idempotencyKey: a new UUID, targetRevisionId}.",
   },
   {
     name: "preview_rebuild",
     route: "POST /api/projects/:id/rebuild/preview",
     body: previewRebuildSchema,
-    title: "Choose what to remake",
+    title: "Choose what to make again",
     description:
-      'Choose what to remake: what a remake makes again, reuses or leaves blocked, each output\'s estimate and the total, like the project\'s Choose what to remake. Body: {baseRevisionId, request: {kind: "allAffected"} | {kind: "selected", workKeys: [...]}}. Nothing starts; start_rebuild does, with this preview\'s id.',
+      'Choose what to make again: what making it again makes, reuses or leaves blocked, each output\'s estimate and the total, like the project\'s Choose what to make again. Body: {baseRevisionId, request: {kind: "allAffected"} | {kind: "selected", workKeys: [...]}}. Nothing starts; start_rebuild does, with this preview\'s id.',
     unrecorded: true,
   },
   {
     name: "start_rebuild",
     route: "POST /api/projects/:id/rebuild",
     body: startRebuildSchema,
-    title: "Start a remake",
+    title: "Make the previewed parts again",
     description:
-      "Starts the remake you previewed: the acknowledgement Choose what to remake asks for. Body: {baseRevisionId, idempotencyKey: a new UUID, previewId: the preview's id, acknowledgeUnknownCosts: true only after reading the preview's unknown costs, confirmedProvidedWorkKeys: the preview's providedReuseRequired keys you accept replacing}.",
+      "Starts making again what you previewed: the acknowledgement Choose what to make again asks for. Body: {baseRevisionId, idempotencyKey: a new UUID, previewId: the preview's id, acknowledgeUnknownCosts: true only after reading the preview's unknown costs, confirmedProvidedWorkKeys: the preview's providedReuseRequired keys you accept replacing}.",
   },
 ];
 

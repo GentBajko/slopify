@@ -41,16 +41,16 @@ const uploadPrep: readonly RouteTool[] = [
   {
     name: "get_upload_pack",
     route: "GET /api/studio/packs/:projectId",
-    title: "Read the upload pack",
+    title: "Read Copy for YouTube Studio",
     description:
-      "Copy for YouTube Studio: the title, description, tags, thumbnails, playlists and release time of each upload (the video and each short), and the plan's free slots. The agent's work ends here, at Ready to upload: uploading is the person's.",
+      "Copy for YouTube Studio: the title, description, tags, thumbnails, playlists and release time of each upload (the video and each short), and the plan's free release times (slots). The agent's work ends here, at Ready to upload: uploading is the person's.",
   },
   {
     name: "set_pack_slot",
     route: "PUT /api/studio/packs/:projectId/slot",
-    title: "Choose the release slot",
+    title: "Choose the release time",
     description:
-      "Copy for YouTube Studio's release picker: one of the free slots get_upload_pack lists, or none. Body: {slot: {row, longAt} | null}.",
+      "Copy for YouTube Studio's release picker: one of the free release times (slots) get_upload_pack lists, or none. Body: {slot: {row, longAt} | null}.",
   },
   {
     name: "set_pack_real_footage",
@@ -69,7 +69,7 @@ const uploadPrep: readonly RouteTool[] = [
   {
     name: "set_pack_playlists",
     route: "PUT /api/studio/packs/:projectId/playlists",
-    title: "Set the pack's playlists",
+    title: "Set the upload's playlists",
     description:
       "Copy for YouTube Studio's playlist ticks. Body: {playlists: [names] | null for the channel's defaults}.",
   },
