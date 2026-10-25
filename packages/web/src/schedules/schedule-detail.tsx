@@ -14,7 +14,7 @@ import { scheduleGateWords } from "@/template-studio/gate-words";
 import { scheduleAction, scheduleDetailQuery } from "./api";
 import { TopicGenerationPanel } from "./held-topics";
 import { InlineTopics } from "./inline-topics";
-import { type Act, ScheduleStatus } from "./schedule-row";
+import { type Act, ScheduleStatus, weekdaysAt } from "./schedule-row";
 import { formatScheduleDate } from "./time";
 
 // The picked schedule: its policy, topic generation and run history, with Cancel for a live
@@ -25,8 +25,11 @@ export function ScheduleDetail({
   onAction,
   onConfirm,
   onDuplicate,
+  templateName,
 }: {
   readonly schedule: ScheduleSummary;
+  // The name of the template it runs, when the templates loaded.
+  readonly templateName?: string | undefined;
   readonly pending: boolean;
   readonly onAction: Act;
   readonly onConfirm: (kind: "cancel" | "delete") => void;
@@ -47,7 +50,7 @@ export function ScheduleDetail({
           ? `Once, ${formatScheduleDate(schedule.cadence.at, schedule.timezone)}`
           : schedule.cadence.kind === "daily"
             ? `Every day at ${schedule.cadence.time}`
-            : `Selected weekdays at ${schedule.cadence.time}`,
+            : weekdaysAt(schedule.cadence.days, schedule.cadence.time),
     ],
     ["Timezone", schedule.timezone],
     [
@@ -64,9 +67,16 @@ export function ScheduleDetail({
           : "No topics queued"
         : `${String(schedule.items.length)} ${schedule.items.length === 1 ? "topic" : "topics"} left`,
     ],
-    ...(schedule.templateGate === undefined
-      ? []
-      : ([["Template", scheduleGateWords(schedule.templateGate).text]] as const)),
+    // Which template it runs, by name, then which of its versions.
+    [
+      "Template",
+      [
+        templateName ?? "Its template",
+        ...(schedule.templateGate === undefined
+          ? []
+          : [scheduleGateWords(schedule.templateGate).text.replace(/^R/, "r")]),
+      ].join(" · "),
+    ],
     ["Missed runs", schedule.missedPolicy === "skip" ? "Skip" : "Run once on reopening"],
     ["Overlap", "Skip"],
     [

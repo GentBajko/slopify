@@ -251,7 +251,8 @@ export function CalendarRoute({
       item.state === "active" &&
       visible?.projects.find((one) => one.id === item.projectId)?.state === "paused",
   );
-  const scheduleCount = (schedules.data ?? []).filter((one) => one.deletedAt === null).length;
+  // The channel shown's, as the tab lists them.
+  const scheduleCount = liveSchedules.length;
   const planned = `${String(allRuns.length)} ${allRuns.length === 1 ? "video" : "videos"} planned ${shift === 0 ? `in the next ${String(weeks)} weeks` : windowLabel}`;
 
   return (

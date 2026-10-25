@@ -13,7 +13,6 @@ import { Button, ButtonRow } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
-import { Select } from "@/components/kit/field";
 import { ListDetail } from "@/components/kit/layout";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
@@ -87,13 +86,12 @@ export function SchedulesView({
   for (const run of calendar.data?.runs ?? [])
     if (run.renderedTitle !== null && !nextTitles.has(run.scheduleId))
       nextTitles.set(run.scheduleId, run.renderedTitle);
-  const sidebarChannel = useCurrentChannel().channelId;
-  // Starts on the channel the sidebar shows, then is this list's own choice. "" shows every channel's schedules; a schedule's channel is its template's.
-  const [channelFilter, setChannelFilter] = useState(sidebarChannel ?? "");
-  // The channel filter only when there is more than one channel to tell apart; with one, a
-  // choice left over from when there were more no longer applies.
+  // The channel the page header's "Showing:" picks, the calendar's one channel picker; every
+  // channel's schedules with All channels. A schedule's channel is its template's. With one
+  // channel, a choice left over from when there were more no longer applies.
+  const showing = useCurrentChannel().channelId;
   const manyChannels = (channels.data?.length ?? 0) > 1;
-  const filter = manyChannels ? channelFilter : "";
+  const filter = manyChannels ? (showing ?? "") : "";
   const inChannel = (schedule: ScheduleSummary): boolean => {
     if (filter === "") return true;
     const template = templates.data?.find((one) => one.id === schedule.templateId);
@@ -220,7 +218,7 @@ export function SchedulesView({
   const showNew = canStart && allLive.length > 0;
   return (
     <div>
-      {noTemplates || manyChannels || showNew ? (
+      {noTemplates || showNew ? (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <p className="m-0 min-w-0 text-small text-ink-2">
             {noTemplates ? (
@@ -235,21 +233,6 @@ export function SchedulesView({
             ) : null}
           </p>
           <ButtonRow>
-            {manyChannels ? (
-              <Select
-                aria-label="Filter schedules by channel"
-                value={channelFilter}
-                className="w-auto min-w-[160px]"
-                onChange={(event) => setChannelFilter(event.target.value)}
-              >
-                <option value="">All channels</option>
-                {(channels.data ?? []).map((channel) => (
-                  <option key={channel.id} value={channel.id}>
-                    {channel.name}
-                  </option>
-                ))}
-              </Select>
-            ) : null}
             {showNew ? (
               <Button variant="primary" onClick={() => startNew()}>
                 <PlusIcon aria-hidden="true" className="size-4" strokeWidth={1.75} />
@@ -334,6 +317,7 @@ export function SchedulesView({
               onAction={act}
               onConfirm={(kind) => setConfirm({ kind, schedule: selected })}
               onDuplicate={() => duplicate(selected)}
+              templateName={templates.data?.find((one) => one.id === selected.templateId)?.name}
             />
           ) : null
         }
