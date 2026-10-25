@@ -3,8 +3,6 @@ import type { Prompt } from "@app/slices/library/model.js";
 import {
   defaultReviewRetries,
   imageReviewers,
-  reviewRetriesMax,
-  reviewRetriesMin,
   type Reviewer,
   type ReviewMode,
   type ReviewSettingsForm,
@@ -12,6 +10,8 @@ import {
   reviewerLabels,
   reviewers,
   reviewModes,
+  reviewRetriesMax,
+  reviewRetriesMin,
   reviewStageLabels,
   reviewStagesInRunOrder,
   visionStages,
@@ -191,6 +191,10 @@ export function ReviewSettings({
           </HelpLine>
           <div className="sl-fields">
             <div className="block text-small">
+              {/* The group is named by its label too; this is the name a sighted person reads. */}
+              <p className="sl-field__label m-0 mb-1" aria-hidden="true">
+                Who checks
+              </p>
               <Segmented<Reviewer>
                 label="Who checks"
                 help="A model is one paid call per item. An agent connected over MCP answers for free; a check nobody answers within 2 hours passes."
