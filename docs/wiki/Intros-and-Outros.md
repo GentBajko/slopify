@@ -2,7 +2,7 @@
 
 Intros and outros are short narrated passages read before and after the body of a video, in the same voice: a greeting, a series tagline, a sign-off, a call to subscribe. Write one as fixed text, or as an instruction the text model answers fresh for each video.
 
-**Where to find it:** **Library → Intros & outros**. Pick them on Play in the **Intro** and **Outro** pickers (Narration row → **More audio settings**), in **Edit project**, or as a channel default in the channel's brand kit.
+**Where to find it:** **Prompts → Intros** and **Outros**. Pick them on Create in the **Intro** and **Outro** pickers (Narration row → **More narration settings**), in **Edit project**, or as a channel default in the channel's brand kit.
 
 ## Text or LLM
 
@@ -17,14 +17,14 @@ Either way the intro or outro is narrated as its own audio file with the run's v
 
 ## Write an intro or outro
 
-1. Open **Library → Intros & outros**.
+1. Open **Prompts → Intros** and **Outros**.
 2. Choose **Intros** or **Outros** with **Entry category**.
 3. Press **New intro or outro**.
 4. Fill in the editor:
-   - **Name**: what Play and Edit project list it by. Up to 200 characters, unique within its category.
+   - **Name**: what Create and a project's Edit settings list it by. Up to 200 characters, unique within its category.
    - **Category**: **Intro** (read before the body) or **Outro** (read after it). You can change it later.
    - **Mode**: **Text** or **LLM**.
-   - **Body**: in Text mode, the words the narrator says; in LLM mode, the instruction whose answer is said. Each `{{keyword}}` becomes a field on Play, just like in prompts.
+   - **Body**: in Text mode, the words the narrator says; in LLM mode, the instruction whose answer is said. Each `{{keyword}}` becomes a field on Create, just like in prompts.
 5. Press **Save** (or `Ctrl+S`).
 
 ### Examples
@@ -44,15 +44,15 @@ the listener can think about tonight. Do not ask them to subscribe.
 
 ## Use one in a video
 
-**On Play:**
+**On Create:**
 
-1. Open the **Narration** row with **Change**, then open **More audio settings**.
+1. Open the **Narration** row with **Change**, then open **More narration settings**.
 2. Pick an entry in **Intro** and, if you like, in **Outro**. **Off** reads none.
 3. Fill in any new keyword fields the entry added.
 
-**From the Library:** press **Use in Play** on the entry's row. It is picked in your open Play draft and Play opens on its field.
+**From Prompts:** press **Make a video** on the entry's row. It is picked in your open draft and Create opens on its field.
 
-**For a whole channel:** open **Channels** → the channel → **Brand** and set **Intro** and **Outro** under the brand kit. Every video of that channel whose template has no intro or outro of its own gets them. See [Channels](Channels).
+**For a whole channel:** open **Channels** → the channel → **Name and look** and set **Intro** and **Outro** under the brand kit. Every video of that channel whose template has no intro or outro of its own gets them. See [Channels](Channels).
 
 **In a finished project:** open **Edit project**, pick a different intro or outro, and save. Only the parts that change are remade. See [Editing a project](Editing-a-Project).
 
@@ -64,7 +64,7 @@ Entries have the same row actions as prompts:
 |---|---|
 | **Edit** | Opens the editor. Change it and press **Save**. |
 | **Duplicate** | Opens the editor with a copy to rename and save. |
-| **Use in Play** | Picks the entry in the open Play draft. |
+| **Make a video** | Picks the entry in the open Create draft. |
 | **History** | Versions, compare and **Used by**, exactly as for prompts. See [Prompts](Prompts#history-and-versions). |
 | **Delete** | Asks first, then moves it to **Settings → Backup & storage → Trash** for 30 days. |
 

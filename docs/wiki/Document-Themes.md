@@ -2,7 +2,7 @@
 
 A document theme is the look of the PDF Slopify makes from the article: paper size, colours, fonts, spacing, the title page, contents, sources and closing pages, headers and page numbers. Slopify ships a built-in **Plain** theme. Copy it to make themes of your own, with a live preview as you edit.
 
-**Where to find it:** **Library → PDF themes**. Pick a theme on Play's **Document** row, in **Edit project**, or as a channel's default in its brand kit.
+**Where to find it:** **PDF themes** (Settings → Production defaults → PDF look → **Edit PDF looks**). Pick a theme on Create in the **Extras** row (**PDF of the article** → **Theme**, with **Edit themes ↗**), in a project's **Edit settings**, or as a channel's default in its brand kit.
 
 ## Built-in and your own themes
 
@@ -15,16 +15,16 @@ A project keeps its own copy of the theme's settings. Editing or deleting a them
 
 ## Make a theme
 
-1. Open **Library → PDF themes**.
+1. Open **PDF themes** (Settings → Production defaults → PDF look → **Edit PDF looks**).
 2. Press **New theme** (it starts from Plain), or pick a built-in theme and press **Copy theme**, or press **Duplicate** on one of your themes.
-3. Type a **Name** (up to 80 characters). This is what the Document row on Play and Edit project shows.
+3. Type a **Name** (up to 80 characters). This is what the **Theme** picker on Create and a project's Edit settings shows.
 4. Open the groups on the left and change what you like (every setting is listed below). The first two groups start open.
 5. Watch the **Preview** on the right. It lays out a sample article with this theme using the same renderer that makes a project's PDF, redrawn about half a second after you stop typing. It runs on your computer and costs nothing.
 6. Press **Save**. If a setting is out of range it is highlighted, and Save says "Fix the highlighted settings first."
 
 ## Use a theme
 
-- **On Play:** open the **Document** row (the PDF output) and pick the theme. See [PDF documents](PDF-Documents).
+- **On Create:** open the **Extras** row, tick **PDF of the article** and pick the **Theme**. See [PDF documents](PDF-Documents).
 - **On a finished project:** open **Edit project** (the **Edit settings** button), pick the theme under **Document theme**, save, and remake the document.
 - **For a channel:** set **Document theme** in the channel's brand kit. Videos whose template picks no theme get it. See [Channels](Channels).
 

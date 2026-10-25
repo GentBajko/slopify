@@ -2,7 +2,7 @@
 
 A run can be narrated by several speakers instead of one voice reading the article. You pick a format (Audiobook, Podcast, Radio drama or Interview), give each speaker a voice, and Slopify has the text model write or split the script into speaker turns. You get a video whose captions know who is talking and, if you want them, an MP3 and an M4B audiobook file with chapters.
 
-**Where to find it:** Play → **Narration** row → **Speakers** (the disclosure under the voice picker). On a finished project: Edit project → **Providers** → Speakers.
+**Where to find it:** Create → **Narration** row → **Speakers** (the disclosure under the voice picker). On a finished project: Edit project → **Providers** → Speakers.
 
 ## Formats
 
@@ -20,11 +20,11 @@ You can rename, recast or remove the starter speakers. A run can have up to 10 s
 
 When the channel has hosts (cast members marked **One of the channel's hosts** that have a voice), a new **Podcast** or **Interview** starts with them as its speakers instead of Alex and Sam, or Host and Guest. See [Cast library](Cast-Library#make-a-member-one-of-the-channels-hosts).
 
-The **speaker panel** (Podcast and Interview) is a row of tiles, one per speaker, with the one talking lit in their colour and their name as a lower third. It is drawn together with burned-in captions, so set **Captions** to **Burn in** under Play → **Video and style** to see it. A speaker added from a channel's cast whose member has a reference picture shows that picture in their tile (the member's first picture, cropped square, taken when the run starts); everyone else shows their initials. Adding a picture to the cast later does not change projects already made.
+The **speaker panel** (Podcast and Interview) is a row of tiles, one per speaker, with the one talking lit in their colour and their name as a lower third. It is drawn together with burned-in captions, so set **Captions** to **Show captions in the video** under Create → **Video and style** to see it. A speaker added from a channel's cast whose member has a reference picture shows that picture in their tile (the member's first picture, cropped square, taken when the run starts); everyone else shows their initials. Adding a picture to the cast later does not change projects already made.
 
 ## Set up a multi-voice run
 
-1. On Play, open the **Narration** row and pick the **TTS** provider, model and **Voice** as usual. This voice reads the intro and outro; the speakers read the article.
+1. On Create, open the **Narration** row and pick the voice **Service**, **Model** and **Voice** under **Read by** as usual. This voice reads the intro and outro; the speakers read the article.
 2. Open **Speakers** and choose a **Format**.
 3. Choose where the **Script** comes from (see [The script](#the-script)).
 4. For each speaker, set a **Speaker name**, **Role**, **Voice provider**, **Voice model** and **Voice**. Add more with **Add speaker**, or pick someone from **Add from the cast**.
@@ -33,7 +33,7 @@ The **speaker panel** (Podcast and Interview) is a row of tiles, one per speaker
 7. For a podcast or interview, set Captions to **Burn in** so the speaker panel shows.
 8. Review the estimate in the right rail and start the run.
 
-If something is missing, Play names it before you can start, for example "A podcast needs at least two speakers" or "An audiobook needs a narrator. Set one speaker's role to Narrator under Speakers".
+If something is missing, Create names it before you can start, for example "A podcast needs at least two speakers" or "An audiobook needs a narrator. Set one speaker's role to Narrator under Speakers".
 
 ## The script
 
@@ -46,7 +46,7 @@ Other formats must use **Write a script**. When the article is split, the split 
 
 ### Script format
 
-Write Script prompts in **Library → Prompts** with the kind **Script**. The text model answers in this shape:
+Write Script prompts in **Prompts** with the kind **Script**. The text model answers in this shape:
 
 ```
 # Section title
@@ -93,7 +93,7 @@ The MP3 and M4B appear with the Video section's downloads on the project page, a
 
 An audiobook can be one chapter of a book, so a long book is made one chapter per project and a player keeps the chapters together.
 
-1. On Play, pick the **Audiobook** format under Speakers.
+1. On Create, pick the **Audiobook** format under Speakers.
 2. Turn on **A chapter of a book**.
 3. Type the **Book title** (the same for every chapter) and the **Chapter** number (from 1).
 4. Start the run.
@@ -102,7 +102,7 @@ The MP3 and M4B carry the book as their album and the chapter as their track. Pr
 
 ### Make the next chapter
 
-On a finished audiobook's project page, **Make the next chapter** (beside **Edit settings**) opens a new Play draft for the next chapter: the same speakers and voices, channel and cast, prompts and settings, with the chapter number one higher. Write or paste the new chapter's text there, then start it. An audiobook that was not a book yet becomes one, named after itself, starting at chapter 2.
+On a finished audiobook's project page, **Make the next chapter** (beside **Edit settings**) opens a new Create draft for the next chapter: the same speakers and voices, channel and cast, prompts and settings, with the chapter number one higher. Write or paste the new chapter's text there, then start it. An audiobook that was not a book yet becomes one, named after itself, starting at chapter 2.
 
 ## Speakers from a channel's cast
 
@@ -110,23 +110,23 @@ A channel's cast member can have a voice, so a host or recurring character sound
 
 1. Open **Channels**, pick the channel, open its **Cast** tab and edit a member.
 2. Under **Cast voice**, pick a **Voice provider**, **Voice model** and **Voice**. The list shows voices that speak the channel's language. Leave the provider empty for no voice.
-3. On Play, under Speakers, pick the member from **Add from the cast**. Only members with a voice are listed.
+3. On Create, under Speakers, pick the member from **Add from the cast**. Only members with a voice are listed.
 
-The speaker takes the member's name and voice. Every run started later, whether from Play, a batch, a schedule or a template, takes that member's voice, pace and pronunciations as they are when the run starts. Projects already made keep the voice they were made with. See [Cast-Library](Cast-Library) for editing the cast.
+The speaker takes the member's name and voice. Every run started later, whether from Create, a batch, a schedule or a template, takes that member's voice, pace and pronunciations as they are when the run starts. Projects already made keep the voice they were made with. See [Cast-Library](Cast-Library) for editing the cast.
 
 ## Delivery tags
 
-With a **Narration Preparation** prompt picked (Narration row → **More audio settings**), each turn of a speaker on Inworld's TTS-2 model is prepared on its own before it is spoken. The text model sees the turn and who says it (for example `Rat (character)`) and adds cues:
+With a **Narration Preparation** prompt picked (Narration row → **More narration settings**), each turn of a speaker on Inworld's TTS-2 model is prepared on its own before it is spoken. The text model sees the turn and who says it (for example `Rat (character)`) and adds cues:
 
 - A spoken direction at the start of a sentence, such as `[say shyly and a little uncertainly]`, held until the next one or `[reset]`.
 - Non-verbal sounds where they happen: `[laugh]`, `[breathe]`, `[sigh]`, `[cough]`, `[clear throat]` and `[yawn]`.
 
-Each turn is its own request, so a direction never leaks into the next speaker, and every speaker on TTS-2 gets cues of their own. Turns of speakers on other voices, or on TTS-2 Flash (which ignores directions), are spoken as written. At least one speaker must be on TTS-2, or Play asks you to choose that model for a speaker or clear Narration Preparation under Narration → **More audio settings**. The Narration row's own model (which reads the intro and outro) must be Inworld TTS-2 too. The tags are only in what the voice is sent: captions, word timing, the MP3/M4B chapters and the script download never show them. See [Create: Narration](Create-Narration) for Narration Preparation itself.
+Each turn is its own request, so a direction never leaks into the next speaker, and every speaker on TTS-2 gets cues of their own. Turns of speakers on other voices, or on TTS-2 Flash (which ignores directions), are spoken as written. At least one speaker must be on TTS-2, or Create asks you to choose that model for a speaker or clear Narration Preparation under Narration → **More narration settings**. The Narration row's own model (which reads the intro and outro) must be Inworld TTS-2 too. The tags are only in what the voice is sent: captions, word timing, the MP3/M4B chapters and the script download never show them. See [Create: Narration](Create-Narration) for Narration Preparation itself.
 
 ## How the audio is made
 
 - Every turn is its own request in its speaker's voice, then the turns are joined with the gap between turns.
-- Narration aliases (Library → Narration aliases) apply to every turn.
+- Narration aliases (Settings → Voices → Pronunciation) apply to every turn.
 - Changing one speaker's voice remakes only that speaker's turns.
 - With **Level the volume** on (the default for new runs), each turn is brought to one common loudness before joining, so a quiet host and a loud guest sit at the same level. The MP3 and M4B are mastered to the audio files volume (−18 LUFS by default).
 - **Pause between sentences** lengthens the quiet between sentences inside a turn; the gap between turns stays the Gap between turns.

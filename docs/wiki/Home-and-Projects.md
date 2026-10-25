@@ -75,7 +75,7 @@ The things that don't move on until you act:
 | A run a restart stopped before it finished | **Stopped** | **Continue the run**, or **Keep as is** to leave the rest unmade |
 | A run you (or an agent) paused | **Paused** | **Open to continue** |
 | Topics a schedule suggested | **N new topics** | **Review topics**, on the calendar: queue the ones you want and reject the rest. |
-| A failed run | **Failed · <step>**, with a short reason | The fix to try: a button to Settings → Providers or Backup & storage when that is the fix, otherwise **Open to retry**. |
+| A failed run | **Failed · <step>**, with a short reason | The fix to try: a button to Settings → Keys & services or Backup & storage when that is the fix, otherwise **Open to retry**. |
 | A run that failed because a CLI is signed out | **Failed · <step>** | **Copy sign-in command** copies the command (`claude auth login`, `codex login` or `agy`). Run it in a terminal on the computer running Slopify, then **Open to retry** and press **Check again** on the project. |
 
 A held run also offers **Keep as is**, which takes it off Needs you and leaves the rest unmade (with **Undo**); editing the project brings it back. A run waiting for an [agent's review](Agents-MCP#the-external-agent-reviewer) is not here: it goes on by itself, so it shows under Running. A step that failed while the run waits on something else shows here as a failed item. Up to 4 failed runs show; **See all N failed** opens Projects filtered to them.
@@ -110,14 +110,14 @@ Below it, warnings name what may stop the schedules before it does, each with th
 
 | Warning | Fix |
 | --- | --- |
-| A CLI a scheduled template uses is signed out | Settings → Providers |
+| A CLI a scheduled template uses is signed out | Settings → Keys & services |
 | A CLI plan is at 80% of its weekly or 5-hour limit | Settings → Usage |
-| The OpenRouter key has less than 20% of its spending limit left | Settings → Providers |
+| The OpenRouter key has less than 20% of its spending limit left | Settings → Keys & services |
 | Less than 5 GB, or less than 10%, of the disk is free | Settings → Backup & storage |
 | A schedule that doesn't find topics has 1 or 2 left | The schedule |
 | A schedule's topic generation keeps failing | The schedule |
 | A scheduled template or schedule uses a model that is retiring or gone | Templates, or the schedule |
-| A schedule skips its runs because its template has no version marked ready | Templates (Open studio, then Mark ready) |
+| A schedule skips its runs because its template has no version approved for schedules | Templates (**Edit template** → **More** → **Approve for schedules**) |
 
 Sign-ins, the OpenRouter key and the disk are checked hourly, the first time 30 seconds after Slopify starts; Home shows the last check and never waits for one. Only the CLIs a scheduled template uses are asked, and asking never starts a run. **Last 7 days**, folded, lists what was made, each failed step with a link to its project, and what it cost. Settings → Notifications → **Weekly report** sends the same to your phone each Monday (see [Notifications](Notifications#weekly-report)).
 

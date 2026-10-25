@@ -1,17 +1,17 @@
 # Prompts
 
-Prompts are the instructions Slopify gives your models: how to write the article, what each picture shows, what the thumbnail looks like, how to write the YouTube description, which moments become shorts, and more. You write a prompt once, with `{{keywords}}` where the subject goes, and Play turns each keyword into a field you fill in per video.
+Prompts are the instructions Slopify gives your models: how to write the article, what each picture shows, what the thumbnail looks like, how to write the YouTube description, which moments become shorts, and more. You write a prompt once, with `{{keywords}}` where the subject goes, and Create turns each keyword into a field you fill in per video.
 
-**Where to find it:** **Library → Prompts**. Pick the kind with **Prompt kind** at the top.
+**Where to find it:** **Prompts**. Pick the kind with **Prompt kind** at the top.
 
 ## Prompt kinds
 
-The kind decides where Play offers the prompt.
+The kind decides where Create offers the prompt.
 
 | Kind | What it does | What it costs |
 |---|---|---|
 | **Article** | The instruction the text model gets to write the video's article, which becomes the narration. Research notes go first when research ran. The answer's sources and pronunciation sections are never narrated. | One call on the project's LLM, plus up to 3 more when the answer runs out of room |
-| **Image** | Sent as written to the image model, with the keywords filled in. No text model rewrites it. Play sets how many pictures each prompt makes (1 to 20, at most 60 a run). Pictures show for 15 s each by default and repeat until the video ends. | One image call per picture |
+| **Image** | Sent as written to the image model, with the keywords filled in. No text model rewrites it. Create sets how many pictures each prompt makes (1 to 20, at most 60 a run). Pictures show for 15 s each by default and repeat until the video ends. | One image call per picture |
 | **Thumbnail** | Describes the thumbnail. With Thumbnail set to **Prompt by LLM**, the text model first turns it into a picture prompt using the title and article. 1 thumbnail by default, or 3: the second a close-up, the third a wider shot. | One image call per thumbnail, plus one text call with Prompt by LLM |
 | **Narration Preparation** | Tells the text model how the narration should be delivered. It only adds cues, such as a short speaking direction or a laugh or sigh, and never rewrites the words. Works with the Inworld TTS-2 voice model. | One call each for the body, the intro and the outro |
 | **YouTube Description** | Tells the text model how to write the description, chapters, hashtags and tags from the timestamped transcript. A project that picks none uses the built-in wording. | One call per video |
@@ -24,9 +24,9 @@ See [Create: Article](Create-Article), [Create: Images](Create-Images), [Create:
 
 ## Write a new prompt
 
-1. Open **Library → Prompts** and pick the **Prompt kind**.
+1. Open **Prompts** and pick the **Prompt kind**.
 2. Press **New prompt**.
-3. Type a **Name**: up to 200 characters, unique within its kind. Play and Edit project list the prompt by this name.
+3. Type a **Name**: up to 200 characters, unique within its kind. Create and a project's Edit settings list the prompt by this name.
 4. Write the **Body**, up to 100,000 characters. Put a keyword in double braces wherever the subject goes, for example:
 
    ```
@@ -51,7 +51,7 @@ When the body already has text, Slopify asks "Replace this prompt body?" first. 
 
 ## Keywords (slots)
 
-Every `{{keyword}}` in the body becomes one field on Play, except the two Slopify fills itself (below).
+Every `{{keyword}}` in the body becomes one field on Create, except the two Slopify fills itself (below).
 
 - You type a keyword's value once per video, and it is filled into every prompt, intro and outro that names it.
 - Names are case-sensitive: `{{Topic}}` and `{{topic}}` are two fields.
@@ -97,7 +97,7 @@ YouTube asks whether a video contains realistic-looking AI scenes. Slopify answe
 1. Save the Image prompt first. (Before it is saved, the editor says "Save this Image prompt first, then choose whether it draws photorealistic pictures.")
 2. Turn on **Draws photorealistic pictures** when the prompt's style looks like real photos or film. Leave it off for painterly or illustrated styles.
 
-It applies at once, without pressing Save. Prepare upload then answers Yes to YouTube's AI use question for videos and shorts drawn with this prompt. A channel set to **Always Yes** or **Always No** wins. Default: off. See [Publishing to YouTube](Publishing-to-YouTube).
+It applies at once, without pressing Save. Copy for YouTube Studio then answers Yes to YouTube's AI use question for videos and shorts drawn with this prompt. A channel set to **Always Yes** or **Always No** wins. Default: off. See [Publishing to YouTube](Publishing-to-YouTube).
 
 ## Edit, duplicate, use and delete
 
@@ -107,7 +107,7 @@ Each prompt's row has, in order:
 |---|---|
 | **Edit** | Opens the editor. Change the text and press **Save**. |
 | **Duplicate** | Opens the editor with a copy. Give it a new name and save. |
-| **Use in Play** | Picks the prompt in your open Play draft and opens Play on its field. An article prompt switches the article to Generate, an image prompt is ticked with one image, a thumbnail prompt switches the thumbnail to From prompt, a Description or Shorts prompt turns that step on, and a Post prompt writes every site's post that is on (X's, when none is). |
+| **Make a video** | Picks the prompt in your open draft and opens Create on its field. An article prompt switches the article to Generate, an image prompt is ticked with one image, a thumbnail prompt switches the thumbnail to From prompt, a Description or Shorts prompt turns that step on, and a Post prompt writes every site's post that is on (X's, when none is). |
 | **History** | Opens the prompt's history (below). |
 | **Delete** | Asks first, then moves the prompt to **Settings → Backup & storage → Trash** for 30 days, where **Restore** brings it back. |
 

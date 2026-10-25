@@ -2,13 +2,13 @@
 
 Slopify can lay out your article as a styled PDF: a title page with the thumbnail as its cover, a table of contents, the article with drop caps, a sources page and an optional closing page. It is drawn on your computer in the theme you pick, needs no provider and costs nothing.
 
-**Where to find it:** Play → **Outputs** row → **Document**. On a finished project: the **Document** section of the project page, and Edit project → **Inputs** → **Stages** → **Document theme**.
+**Where to find it:** Create → **Extras** row → **PDF of the article**. On a finished project: the **Document** section of the project page, and Edit project → **Inputs** → **Stages** → **Document theme**.
 
 ## Make a PDF
 
-1. On Play, open the **Outputs** row.
+1. On Create, open the **Extras** row.
 2. In the **Document** rail, switch the source from **Off** to **Generate**.
-3. Pick a **Theme**: the built-in **Plain**, or one of your own themes from Library → PDF themes.
+3. Pick a **Theme**: the built-in **Plain**, or one of your own themes from PDF themes (Settings → Production defaults → PDF look → Edit PDF looks).
 4. Start the run.
 
 The Document stage runs after the article (and the thumbnail, if there is one) is ready. A thumbnail that failed or was canceled doesn't hold it back: the PDF is then laid out without a cover. It needs an article with some text; an empty article stops the stage with a message pointing you to Edit project → Article.
@@ -18,7 +18,7 @@ The Document stage runs after the article (and the thumbnail, if there is one) i
 | Option | What it does | Default |
 |---|---|---|
 | **Document** source | **Generate** lays out a PDF of the article and title on this computer, in the theme you pick. It needs no provider and costs nothing. | Off |
-| **Theme** | How the PDF looks: the built-in **Plain** theme, or one of yours from **Library → PDF themes**. **Edit themes** opens the list. | Plain, or the channel's document theme |
+| **Theme** | How the PDF looks: the built-in **Plain** theme, or one of yours from **PDF themes** (Settings → Production defaults → PDF look → **Edit PDF looks**). **Edit themes ↗** opens the list. | Plain, or the channel's document theme |
 
 A theme of yours is copied into the project when you pick it. Editing the theme later leaves this project alone until you pick it again, so a PDF already made or queued never changes by surprise. A channel's brand kit can set a **Document theme** for its videos whose template picks none; see [Channels](Channels).
 
@@ -86,7 +86,7 @@ While the stage runs it says "The PDF will be saved when rendering finishes." Th
 
 ## Tips
 
-- Use Library → PDF themes' live preview to try a theme on a sample article before you pick it for a project.
+- Use the live preview on the PDF themes page (Settings → Production defaults → PDF look → Edit PDF looks) to try a theme on a sample article before you pick it for a project.
 - If a PDF has no cover, check that the project has a thumbnail and that it is a PNG, JPEG or WebP image.
 - Want the sources page filled? Make sure your Article prompt asks for a "Sources Consulted" section, and consider turning on research.
 

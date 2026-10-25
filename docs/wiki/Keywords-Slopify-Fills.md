@@ -1,6 +1,6 @@
 # Keywords Slopify fills
 
-Most `{{keywords}}` in a prompt are yours: each becomes a field on Play that you fill in once per video. The keywords on this page are different. Slopify fills them itself, so they never become fields, and each one is written with the `Slopify_` prefix, like `{{Slopify_Title}}` or `{{Slopify_Thumbnail_Text}}`.
+Most `{{keywords}}` in a prompt are yours: each becomes a field on Create that you fill in once per video. The keywords on this page are different. Slopify fills them itself, so they never become fields, and each one is written with the `Slopify_` prefix, like `{{Slopify_Title}}` or `{{Slopify_Thumbnail_Text}}`.
 
 The whole `Slopify_` prefix is Slopify's. `{{Title}}`, `{{Channel}}` and `{{Date}}` stay ordinary keywords of your own, so no prompt you already have changes meaning.
 
@@ -11,7 +11,7 @@ In the prompt editor, the **Insert** bar above the text lists the keywords the p
 - **Using a keyword turns on what fills it.** There is no switch to find: `{{Slopify_Summary}}` in a prompt adds the keyword digest to the run, `{{Slopify_Setting}}` adds the scenes call.
 - **A line with nothing to fill is left out.** A `Series: {{Slopify_Series}}` line disappears when the channel has no series brief, and so does a `Next: {{Slopify_Next_Video}}` line when nothing is planned after this video.
 - **Your own value wins.** A prompt saved before the prefix was reserved may already have a field named, say, `{{Slopify_Title}}`. When the project has a value for it, that value is used.
-- **Each keyword works only where it can be filled.** `{{Slopify_Chapters}}` and `{{Slopify_Summary}}` can't be used in the Article prompt: the article isn't written yet when that prompt runs. The editor marks a misuse in place and Play refuses the run, naming the prompt and where the keyword works.
+- **Each keyword works only where it can be filled.** `{{Slopify_Chapters}}` and `{{Slopify_Summary}}` can't be used in the Article prompt: the article isn't written yet when that prompt runs. The editor marks a misuse in place and Create refuses the run, naming the prompt and where the keyword works.
 - **No keyword goes in the project title.** Slopify fills several of them from the title.
 - **An unknown `Slopify_` name is refused when you save a prompt.** Rename it, for example `{{Slopify_Wish}}` to `{{Wish}}`. A prompt that already had such a name saves as it was and keeps asking for its value.
 

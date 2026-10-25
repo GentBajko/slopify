@@ -12,9 +12,9 @@ A backup is one `.tar` file with everything you made in Slopify: every project w
 | Automatic review verdicts and run cost of each project | The Notification URL |
 | Prompts, intros and outros, with their history | The Studio extension's pairing |
 | Document themes and uploaded fonts | The tutorial's progress |
-| Templates, schedules and Play drafts | The daily backups' folder and status |
+| Templates, schedules and Create drafts | The daily backups' folder and status |
 | Channels: brand kit, series brief, episode memory and AI disclosure settings, cast with pictures, end screen images, episode summaries, existing videos, and the last **Keep only titles containing** filter | The telemetry machine id |
-| Channel links and the provider defaults a new Play form starts with | State that only matters while this install runs: the queue, plan-limit waits |
+| Channel links and the service defaults a new Create draft starts with | State that only matters while this install runs: the queue, plan-limit waits |
 | AI use marks: voices marked as a real person, image prompts marked photorealistic, projects with real footage | |
 | Settings and usage history | |
 | The trash: trashed items come back still in the trash, with their original date | |

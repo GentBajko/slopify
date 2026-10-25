@@ -12,7 +12,7 @@ Yes. Slopify is free and open source. You pay the AI providers you choose (for t
 
 ### How much does one video cost?
 
-It depends on the providers, models, length and number of images. Play shows an estimate before you start, with **Cost by stage** under it. After a run, the project's **Cost** section shows what each stage and model actually cost, retries and remakes included. See [Costs and Run Cost](Costs-and-Run-Cost).
+It depends on the providers, models, length and number of images. Create shows an estimate before you start, with **Cost by stage** under it. After a run, the project's **Cost** section shows what each stage and model actually cost, retries and remakes included. See [Costs and Run Cost](Costs-and-Run-Cost).
 
 ### Can I use my Claude, ChatGPT (Codex) or Gemini subscription instead of API keys?
 
@@ -100,7 +100,7 @@ Yes, with some differences in captions and cuts for languages without word timin
 
 ### Does Slopify upload to YouTube for me?
 
-No. Slopify never uploads or publishes anything. **Prepare upload** lays out the file, title, description, thumbnail, playlist, audience, AI use and tags in the order YouTube Studio asks for them, each with a copy button. The optional Studio browser extension fills in the Studio form for you; you check it and press Publish yourself. **Mark uploaded** records that you did. See [Publishing to YouTube](Publishing-to-YouTube) and [Studio Extension](Studio-Extension).
+No. Slopify never uploads or publishes anything. **Copy for YouTube Studio** lays out the file, title, description, thumbnail, playlist, audience, AI use and tags in the order YouTube Studio asks for them, each with a copy button. The optional Studio browser extension fills in the Studio form for you; you check it and press Publish yourself. **Mark uploaded** records that you did. See [Publishing to YouTube](Publishing-to-YouTube) and [Studio Extension](Studio-Extension).
 
 ### Does it make Shorts too?
 

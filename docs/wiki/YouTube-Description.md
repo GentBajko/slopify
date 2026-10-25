@@ -2,7 +2,7 @@
 
 Slopify can write your video's YouTube description for you: a short summary, chapters at the narration's real times, hashtags, and a separate list of search tags. Each part has a Copy button and can be edited in place, and your edits survive when the description is written again.
 
-**Where to find it:** Play → **Outputs** row → **YouTube description**. On a finished project: the **YouTube** section (Description, Tags, Pinned comment and Other titles), and Edit project → **Prompts**.
+**Where to find it:** Create → **Extras** row → **YouTube description**. On a finished project: the **YouTube** section (Description, Tags, Pinned comment and Other titles), and Edit project → **Prompts**.
 
 ## What you get
 
@@ -19,7 +19,7 @@ Slopify lays out the description itself (summary, blank line, one chapter per li
 
 ## Turn it on
 
-1. On Play, open the **Outputs** row.
+1. On Create, open the **Extras** row.
 2. Tick **YouTube description**. It is greyed out, with "Needs narration", when the Narration row is off.
 3. Pick a **Description prompt**, or leave it on **Built-in**.
 4. Start the run.
@@ -40,7 +40,7 @@ The **Built-in** prompt asks for:
 - 3 to 5 hashtags, most specific last;
 - 15 to 25 tags, from broad to specific.
 
-To change the tone or add your own links, write a prompt of the kind **YouTube Description** in **Library → Prompts**. Each `{{keyword}}` in it becomes a field on Play. The prompt editor's starter button (see **Starter text** in its help) fills in the Built-in wording to start from. See [Prompts](Prompts).
+To change the tone or add your own links, write a prompt of the kind **YouTube Description** in **Prompts**. Each `{{keyword}}` in it becomes a field on Create. The prompt editor's starter button (see **Starter text** in its help) fills in the Built-in wording to start from. See [Prompts](Prompts).
 
 ## Read and copy it
 
@@ -49,7 +49,7 @@ When the step has run, the project page's **YouTube** section shows four parts. 
 - **Description**, with the Summary, Chapters and Hashtags, a character count such as `1,240 / 5000 characters`, and **Copy**.
 - **Tags**, shown as chips, with a count against YouTube's 500-character limit and **Copy**.
 - **Pinned comment**, below the tags, with **Copy**. YouTube pins comments only on a published video: once it is live, post the comment from your channel and choose **Pin** in its menu.
-- **Other titles**, below the pinned comment, with **Copy**. In Studio, press **A/B Testing** beside the title and add them next to the video's own title. Prepare upload lists them in its Title step with **Copy others**.
+- **Other titles**, below the pinned comment, with **Copy**. In Studio, press **A/B Testing** beside the title and add them next to the video's own title. Copy for YouTube Studio lists them in its Title step with **Copy others**.
 
 **Copy** on Description copies the whole description, placeholders filled in. **Copy** on Tags copies them comma-separated, ready to paste. A count over YouTube's limit turns red and says "over YouTube's limit".
 
@@ -87,12 +87,12 @@ Write a name in double braces, such as `{{Patreon}}` or `{{Discord}}`, in a desc
 
 Each channel has its own links:
 
-1. Open **Channels** → the project's channel → **Brand**.
+1. Open **Channels** → the project's channel → **Name and look**.
 2. Under **Channel links**, press **Add link**, type the name (for example `Patreon`) and the address, and press **Save channel**.
 
-A description takes the links of its project's channel. Names match without regard to case or extra spaces. A placeholder with no saved link stays as typed, is marked, and the YouTube section says "No link is saved for {{Name}}, so it stays as typed. Add it under Channel links on the channel's Brand tab."
+A description takes the links of its project's channel. Names match without regard to case or extra spaces. A placeholder with no saved link stays as typed, is marked, and the YouTube section says "No link is saved for {{Name}}, so it stays as typed. Add it under Channel links on the channel's Name and look tab."
 
-Links saved in **Settings → Channel links** before each channel had its own still fill the default channel's descriptions until you save that channel's Brand tab. See [Channels](Channels#channel-links).
+Links saved in **Settings → Channel links** before each channel had its own still fill the default channel's descriptions until you save that channel's Name and look tab. See [Channels](Channels#channel-links).
 
 ### Previous video
 
@@ -127,7 +127,7 @@ Writing it again is one paid text-model call. The description you have now is re
 | Hashtags | YouTube ignores every hashtag if a description has more than 15 |
 | Chapters | At least 3, first at 0:00, each at least 10 seconds |
 
-Slopify does not upload the description to YouTube. Paste it in YouTube Studio yourself, or use Prepare upload and the optional Studio extension; see [Publishing-to-YouTube](Publishing-to-YouTube).
+Slopify does not upload the description to YouTube. Paste it in YouTube Studio yourself, or use Copy for YouTube Studio and the optional Studio extension; see [Publishing-to-YouTube](Publishing-to-YouTube).
 
 ## Related pages
 

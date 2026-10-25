@@ -74,7 +74,7 @@ In multi-voice formats (audiobook, podcast, radio drama, interview) a cast membe
 1. In the member's editor, under **Cast voice**, pick a **Voice provider**, **Voice model** and **Voice**. The list shows voices that speak the channel's language. If it says "No voices. Add one in Settings.", add a voice in **Settings → Voices** first.
 2. Pick a **Pace**: 0.8, 0.9, 1 (normal), 1.1 or 1.2.
 3. Press **Save**.
-4. On Play, pick the member under **Speakers**. They read with this voice, model and pace.
+4. On Create, pick the member under **Speakers**. They read with this voice, model and pace.
 
 Leave the provider empty for no voice. A run keeps the voice it started with. See [Multiple voices](Multiple-Voices).
 
@@ -86,7 +86,7 @@ A channel's regular presenters can join every new podcast or interview on their 
 2. Turn on **One of the channel's hosts**. Without a voice it warns: "A host joins new podcasts and interviews only with a voice. Pick one under Voice above."
 3. Press **Save**. The cast list shows **Host** beside the member.
 
-When you pick **Podcast** or **Interview** on Play for a draft of this channel with no speakers yet, the speakers start with the channel's hosts that have a voice. You can still add or remove speakers on the draft. Projects already made are not changed.
+When you pick **Podcast** or **Interview** on Create for a draft of this channel with no speakers yet, the speakers start with the channel's hosts that have a voice. You can still add or remove speakers on the draft. Projects already made are not changed.
 
 A picture that fails to generate because a CLI is signed out shows the same **Copy sign-in command** and **Check again** buttons as a project. See [Recovery and Retries](Recovery-and-Retries#sign-a-cli-in-again).
 

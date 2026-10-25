@@ -9,8 +9,8 @@ Deleting something in Slopify does not remove it at once. Deleted projects, prom
 | Kind | Shown as | Deleted from |
 | --- | --- | --- |
 | Project | Project | Projects (the delete button on a project's row, then **Delete project**) |
-| Library prompt | Prompt · *type* (for example Prompt · article) | Library → Prompts |
-| Intro or outro | Intro or Outro | Library → Intros & outros |
+| Library prompt | Prompt · *type* (for example Prompt · article) | Prompts |
+| Intro or outro | Intro or Outro | Prompts → Intros and Outros |
 | Template | Template | Templates |
 | Schedule | Schedule | Schedules |
 

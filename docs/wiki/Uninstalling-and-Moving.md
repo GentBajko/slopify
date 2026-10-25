@@ -7,7 +7,7 @@ How to take Slopify off a computer, and how to move your projects between a norm
 ## Before you remove anything
 
 1. Let running projects finish, or pause them.
-2. Open Settings → **Backup & storage** and press **Export everything**. Keep the downloaded `.tar` file somewhere safe. It holds every project with its files and history, your library, templates, schedules, Play drafts, fonts, settings and usage. It does not hold your provider keys; keep those in your password manager.
+2. Open Settings → **Backup & storage** and press **Export everything**. Keep the downloaded `.tar` file somewhere safe. It holds every project with its files and history, your library, templates, schedules, Create drafts, fonts, settings and usage. It does not hold your provider keys; keep those in your password manager.
 3. If you turned on Settings → **General** → **Start Slopify when I log in**, turn it off. That removes the login entry, so nothing tries to start Slopify at your next login.
 
 Deleting the folders below can't be undone. Scheduled backups in your `Backups` folder are deleted with it unless you move them first.
@@ -59,7 +59,7 @@ The installer turned on user lingering for the bridge (so your user services run
 3. Start Slopify normally: `npx @gentbajko/slopify@latest`. See [Install](Install).
 4. In the new Slopify, open Settings → **Backup & storage** → **Import a backup** and pick the `.tar` file. Large backups take a while to upload and check.
 5. Read the summary. Projects, library, templates and settings come in; schedules arrive paused.
-6. Enter your provider keys in Settings → **Providers** and check your voices in Settings → **Voices**.
+6. Enter your provider keys in Settings → **Keys & services** and check your voices in Settings → **Voices**.
 7. Resume your schedules on the Schedules screen. See [Schedules](Schedules).
 8. Once everything opens fine, remove the Docker install as above.
 

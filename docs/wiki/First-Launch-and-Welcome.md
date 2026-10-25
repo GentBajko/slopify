@@ -26,7 +26,7 @@ A 60-second short needs three things. Each has its own line, with its state and,
 
 When the computer's own voice reads the script, the Voice line says so and offers **Add a voice key** for a better one. With an ElevenLabs, Cartesia or Inworld key but no voice saved, it says **No voice saved** with **Save a voice** (Settings → **Voices**).
 
-**Check again** looks again, including for a speech program installed a moment ago. **Other tools and services Slopify can use** opens Settings → **Providers**. Below the lines, the three finished samples are there to watch (see [Explore the samples](#explore-the-samples)).
+**Check again** looks again, including for a speech program installed a moment ago. **Other tools and services Slopify can use** opens Settings → **Keys & services**. Below the lines, the three finished samples are there to watch (see [Explore the samples](#explore-the-samples)).
 
 See [AI CLIs](AI-CLIs) and [Providers and Keys](Providers-and-Keys).
 
@@ -34,7 +34,7 @@ See [AI CLIs](AI-CLIs) and [Providers and Keys](Providers-and-Keys).
 
 Each row is a style for the short. **General** is a neutral explainer style; the others are the starter packs (Sleep lore, True crime, History, Science explainers). Press a row to pick it; the picked row reads **Picked**.
 
-Making the short with a pack adds that pack's script and scene prompts to your Library and its suggested voice to Settings → **Voices**. See [Starter packs](#starter-packs).
+Making the short with a pack adds that pack's script and scene prompts to Prompts and its suggested voice to Settings → **Voices**. See [Starter packs](#starter-packs).
 
 ## Step 3: Make a 60-second short
 
@@ -79,9 +79,9 @@ A sample's project page says "This is the sample project, finished and free to e
 
 A starter pack sets you up for one kind of channel. Each one adds, in one go:
 
-- prompts to your Library: an article prompt, a 60-second script, an image (scene) prompt, a thumbnail prompt, a description prompt and a shorts prompt, each asking only for `{{topic}}`;
+- prompts on Prompts: an article prompt, a 60-second script, an image (scene) prompt, a thumbnail prompt, a description prompt and a shorts prompt, each asking only for `{{topic}}`;
 - a suggested OpenAI voice, saved under Settings → **Voices**;
-- a Play template that uses them, named `<pack> starter`, with its captions, motion and Look.
+- a template that uses them, named `<pack> starter`, with its captions, motion and Look.
 
 Then you pick the template in Create, type a topic and start. See [Templates](Templates) and [Create Overview](Create-Overview).
 
@@ -98,7 +98,7 @@ Making a short with a pack on the first-run screen adds its prompts and voice on
 - It never replaces a prompt or template of yours with the same name: the pack's copy comes in as `<name> (2)`.
 - An item the pack added before and you edited is kept as you left it. One you deleted comes back.
 
-You can add packs later too, from Library → **Templates** → **Add pack**.
+You can add them later too, from **Templates** → **Add starter templates**.
 
 ## Start when I log in
 
@@ -113,8 +113,8 @@ On steps 1 and 2, **Make a long video instead** in the bottom bar takes you to C
 **Help → Start the tour** at the foot of the rail walks you through a first project in 25 steps ("3 of 25 · First project"):
 
 1. **Settings:** connect a text, a voice and an image provider, and add a narration voice.
-2. **Library:** write and save an article prompt with keywords, then an image prompt.
-3. **Play:** name the project, choose the article, keywords, narration, images, video and subtitles, then review and start the run.
+2. **Prompts:** write and save an article prompt with keywords, then an image prompt.
+3. **Create:** type the topic, choose the article, keywords, narration, images, video and captions, then check it and make the video.
 4. **The project:** follow and control the run, download the results, see what the run cost and prepare the YouTube upload.
 5. **The rest of the app:** check Home each day, set up a channel, and plan uploads on the calendar.
 

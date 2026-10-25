@@ -69,7 +69,7 @@ A failed step's fix becomes the project's next action, shown in the right rail a
 | A content filter refused an image or thumbnail prompt | "A content filter refused a prompt, so images stopped." | **Soften and retry** | See below. |
 | A content filter refused any other prompt | "A content filter refused a prompt, so the article stopped." | **Edit the prompt** | Opens Edit project so you can reword it, then try again. |
 | The model was retired | "The model for images is no longer offered." | **Switch model** | Opens Edit project; pick another model in **Providers**, save, and try again. |
-| A key was rejected, or none is saved | "The provider did not accept its key, so narration stopped." | **Open Settings → Providers → *provider*** | Paste a current key, save, then come back and try again. |
+| A key was rejected, or none is saved | "The provider did not accept its key, so narration stopped." | **Open Settings → Keys & services → *provider*** | Paste a current key, save, then come back and try again. |
 | The disk is full | "The disk is full, so the video stopped." | **Free space** | Opens Settings → Backup & storage, which shows what uses the space and offers **Keep outputs only** per finished project. Then try again. |
 | Anything else | "Images stopped with an error." | **Try images again** | Trying again keeps everything already made. |
 

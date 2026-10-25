@@ -2,11 +2,11 @@
 
 A project can be written and narrated in one of 30 languages, not only English. Slopify asks the text model to write the article, description and shorts titles in that language, lists the voices that speak it, and times the captions for it. English and nine other languages get word-by-word captions; the rest are timed sentence by sentence.
 
-**Where to find it:** Play → **Channel** row → **Language**. On a finished project: Edit project → **Providers** → **Language**. For a channel's default: Channels → the channel → **Brand** → **Language of new projects**.
+**Where to find it:** Create → **Article** row → **Language**. On a finished project: Edit project → **Providers** → **Language**. For a channel's default: Channels → the channel → **Name and look** → **Language of new projects**.
 
 ## Pick a language for one video
 
-1. On Play, open the **Channel** row.
+1. On Create, open the **Article** row.
 2. Under **Language**, pick the language. The first option, **Channel's language (…)**, uses the channel's language and names it.
 3. Open the **Narration** row and pick a **Voice** that speaks the language. The list only shows voices listed for that language, plus voices whose languages are unknown.
 4. Read the line under the Language picker: it says what is written in the language and how the captions will be timed.
@@ -16,7 +16,7 @@ A template saves the language its draft had. A draft that never picked one uses 
 
 ## Set a channel's language
 
-1. Open **Channels**, pick the channel and open its **Brand** tab.
+1. Open **Channels**, pick the channel and open its **Name and look** tab.
 2. Under **Language of new projects**, pick the language. **Not set** means English.
 
 This applies with the brand kit off too, because language is not styling. Projects already made keep their language.
@@ -66,7 +66,7 @@ Saved voices carry the languages they speak.
 
 OpenAI has no voice API for this, and its voices read every language its model does. A voice whose languages are unknown is offered for every language.
 
-On Play, the voice list shows the voices that speak the project language. Tick **Show all voices** to pick one listed for other languages, for example a multilingual voice whose languages are listed wrong. If you pick such a voice, Play warns you but does not stop the run. Speaker voice pickers under Speakers, and a cast member's voice picker, filter the same way. See [Multiple-Voices](Multiple-Voices).
+On Create, the voice list shows the voices that speak the project language. Tick **Show all voices** to pick one listed for other languages, for example a multilingual voice whose languages are listed wrong. If you pick such a voice, Create warns you but does not stop the run. Speaker voice pickers under Speakers, and a cast member's voice picker, filter the same way. See [Multiple-Voices](Multiple-Voices).
 
 ## Caption timing in detail
 
@@ -87,7 +87,7 @@ For any language other than English, Slopify checks that your caption font has t
 
 1. It uses a bundled Noto font for Latin, Greek, Cyrillic, Arabic, Hebrew, Devanagari and Thai.
 2. For Chinese, Japanese and Korean, which are not bundled (their fonts run to 10-20 MB), it looks for a font on your computer that has the letters.
-3. If none is found, the Video stage stops and says so. Upload a font that has the letters with **Upload font (.ttf or .otf)** in the caption font picker (Play → **Video and style**, or Edit project → **Subtitles**), choose it, then press **Try again**. Noto Sans JP, KR or SC from fonts.google.com work.
+3. If none is found, the Video stage stops and says so. Upload a font that has the letters with **Upload font (.ttf or .otf)** in the caption font picker (Create → **Video and style**, or Edit project → **Subtitles**), choose it, then press **Try again**. Noto Sans JP, KR or SC from fonts.google.com work.
 
 English projects always render with exactly the font you chose.
 

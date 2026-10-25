@@ -176,7 +176,7 @@ export const settingsHelp = {
   "settings.studio.playlist": {
     title: "Playlists",
     body: "The YouTube playlists Copy for YouTube Studio offers, typed exactly as Studio names them. Pick Every channel for the default list, or a channel to give it its own. Ticked On by default means every project goes into it; Copy for YouTube Studio changes the ticks for one project. The extension ticks each one in Studio. Default: none.",
-    tutorial: { page: "Studio-Extension", anchor: "settings--youtube-studio" },
+    tutorial: { page: "Studio-Extension", anchor: "settings--youtube-studio-and-posting" },
   },
   "settings.studio.pairing": {
     title: "Extension pairing token",

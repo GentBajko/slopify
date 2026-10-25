@@ -116,11 +116,11 @@ Use `--projects-dir <folder>` for another folder. The installer waits for runnin
 
 | Button | What it does |
 | --- | --- |
-| **Export everything** | Downloads one `.tar` file with every project and its files and history, your library, templates, schedules, Play drafts, fonts, settings and usage. Never provider keys. Keep Slopify running until your browser's download finishes. |
+| **Export everything** | Downloads one `.tar` file with every project and its files and history, your library, templates, schedules, Create drafts, fonts, settings and usage. Never provider keys. Keep Slopify running until your browser's download finishes. |
 | **Import a backup** | Adds a `.tar` (or `.zip`) backup to this install and replaces nothing. Projects already here are skipped, taken names arrive as "(imported)" and schedules arrive paused. Running projects must finish or pause first. Afterwards a summary lists what was added and skipped. |
 | **Clear leftover files** | See below. |
 
-After an import, enter your provider keys again in Settings → **Providers**. For daily automatic copies, see [Backups](Backups).
+After an import, enter your provider keys again in Settings → **Keys & services**. For daily automatic copies, see [Backups](Backups).
 
 ## Free disk space
 

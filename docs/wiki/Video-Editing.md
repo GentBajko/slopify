@@ -2,7 +2,7 @@
 
 These settings decide how the finished video looks and sounds: how long each image stays, where the cuts fall, how images move and hand over, the Look, chapter cards, animated images, ambient sound and captions. All of it except animated images is done on your computer with ffmpeg, so it costs render time, not API calls.
 
-**Where to find it:** a project → **Edit settings** → **Inputs** (**Timing**, **Cuts and look**, **Ambient sound**) and **Subtitles**. On a new run the same controls are on Play → **Video and style** (see [Create: Video and Style](Create-Video-and-Style)).
+**Where to find it:** a project → **Edit settings** → **Inputs** (**Timing**, **Cuts and look**, **Ambient sound**) and **Subtitles**. On a new run the same controls are on Create → **Video and style** (see [Create: Video and Style](Create-Video-and-Style)).
 
 ## How the video is put together
 
@@ -62,7 +62,7 @@ Changing the Look outdates the video; narration and images are kept.
 
 In **Edit project → Images**, **Add a video clip** puts your own clip into the image order. It plays muted for as long as an image would be shown: trimmed, slowed (to half speed at most) or looped to fit. See [Editing a Project](Editing-a-Project#edit-images).
 
-If the clips you uploaded are real filmed footage, turn on **Real footage** in Prepare upload so YouTube's AI-use answer is right. See [Publishing to YouTube](Publishing-to-YouTube).
+If the clips you uploaded are real filmed footage, turn on **Real footage** in Copy for YouTube Studio so YouTube's AI-use answer is right. See [Publishing to YouTube](Publishing-to-YouTube).
 
 ## Ambient sound
 
@@ -72,7 +72,7 @@ A quiet bed under the whole narration of the long video. It dips while the narra
 
 | Option | What it does | Default / range |
 | --- | --- | --- |
-| **Ambient sound** | **Rain**, **Fireplace** or **Wind**, made on your computer, or **None**. **My own file** stays offered while the project has an uploaded bed; a new file is chosen on Play. | None, or the channel's bed |
+| **Ambient sound** | **Rain**, **Fireplace** or **Wind**, made on your computer, or **None**. **My own file** stays offered while the project has an uploaded bed; a new file is chosen on Create. | None, or the channel's bed |
 | **Level (dB)** | How loud it plays under the voice, from -40 (barely there) to -6 (close to the voice). Whole numbers only. | -18 |
 | **Fade in (seconds)** | How long it takes to rise from silence at the start. | 3; 0 to 30 in 0.5 steps |
 | **Tail after the narration (seconds)** | How long it keeps playing, fading out, after the narration ends. A tail longer than the silence at the end makes the video that much longer. | 6; 0 to 30 in 0.5 steps |
@@ -98,7 +98,7 @@ To fix a misheard word or move a caption, edit the captions themselves: see [Edi
 
 ## Style preview
 
-**Style preview** (under Subtitles in Edit project, and in Play's right rail) renders six seconds of video with the real renderer, at a small size: your format, captions, Look, transition, motion and a chapter card when chapter cards are on.
+**Style preview** (under Subtitles in Edit project, and from **Watch a 6-second preview** in Create's rail) renders six seconds of video with the real renderer, at a small size: your format, captions, Look, transition, motion and a chapter card when chapter cards are on.
 
 - It is drawn on the project's establishing image or a cast picture when there is one (the line under it says "Drawn on ..."), otherwise on three plain stills.
 - It renders again by itself a moment after you change a setting. **Make the preview again** forces a fresh one.

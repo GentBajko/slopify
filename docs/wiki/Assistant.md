@@ -13,7 +13,7 @@ The assistant is a chat inside Slopify. Ask it how something works, or ask it to
 
 ## It asks first
 
-Anything that costs money (starting a run or a remake, retrying a step, generating topics, a cast picture or a voice sample), anything a button would confirm, anything that removes something, and anything that sends to or changes an address outside Slopify (where notifications go, a test notification) waits for you. The chat shows a card with what it wants to do, for which project, and what it costs: the estimate the remake preview or Play's review showed, or "Slopify can't price it here" when there is none.
+Anything that costs money (starting a run or a remake, retrying a step, generating topics, a cast picture or a voice sample), anything a button would confirm, anything that removes something, and anything that sends to or changes an address outside Slopify (where notifications go, a test notification) waits for you. The chat shows a card with what it wants to do, for which project, and what it costs: the estimate the remake preview or Create's review showed, or "Slopify can't price it here" when there is none.
 
 | Press | What happens |
 | --- | --- |
@@ -36,7 +36,7 @@ The panel says why and links to the fix:
 
 | Message | Fix |
 | --- | --- |
-| Neither Claude Code nor Codex is ready | Install one and sign in, then check it in **Settings → Providers** ([AI CLIs](AI-CLIs)). |
+| Neither Claude Code nor Codex is ready | Install one and sign in, then check it in **Settings → Keys & services** ([AI CLIs](AI-CLIs)). |
 | Claude Code (or Codex) is signed out | Run `claude auth login` (or `codex login`) in a terminal, then send your message again. |
 | Codex is too old | Update Codex CLI to the version the message names. |
 | The Docker version | The assistant isn't available in Docker: there the CLIs run on your computer through the host helper, which can't hand them Slopify's tools safely. Install Slopify with npm ([Install](Install)) to use it. |

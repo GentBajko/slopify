@@ -17,7 +17,7 @@ The catalogue lists the models of the providers that take an API key:
 
 For each model it holds a name, a price (per token, per character, per image or per second) and whether the model is retired. A model with no price is counted as unknown, never as free.
 
-The command-line tools (Claude Code, Codex, Gemini) are not in the catalogue. Their pickers show the models the tool installed on your computer offers, and **Check all** in Settings → Providers checks them. See [AI CLIs](AI-CLIs).
+The command-line tools (Claude Code, Codex, Gemini) are not in the catalogue. Their pickers show the models the tool installed on your computer offers, and **Check every service** in Settings → Keys & services checks them. See [AI CLIs](AI-CLIs).
 
 The catalogue also sets how many calls each keyed provider runs at once (3 for most, 5 for Inworld).
 
@@ -75,7 +75,7 @@ If the file is missing or has a mistake, Slopify keeps using the last working li
 
 ## Switch away from a retired model
 
-**Retired models in use** lists every template, schedule, Play draft and project (with steps still to run) whose model is retired or no longer listed. Nothing changes by itself: a run that reaches a retired model stops and says so.
+**Retired models in use** lists every template, schedule, Create draft and project (with steps still to run) whose model is retired or no longer listed. Nothing changes by itself: a run that reaches a retired model stops and says so.
 
 Each row shows:
 
@@ -105,7 +105,7 @@ Rows that cannot be switched here say why and what to do:
 
 When nothing is affected, the section says **Nothing uses a retired model.**
 
-You don't have to come here to see it: a template or schedule that picks a retired model is flagged on its own row in **Library → Templates** and **Calendar → Schedules**, with the same **Switch to <model>** button. See [Templates](Templates#retired-models) and [Schedules](Schedules#manage-a-schedule).
+You don't have to come here to see it: a template or schedule that picks a retired model is flagged on its own row in **Templates** and **Calendar → Schedules**, with the same **Switch to <model>** button. See [Templates](Templates#retired-models) and [Schedules](Schedules#manage-a-schedule).
 
 **Check every service** in Settings → Keys & services also reports retired models under **Chosen models**, and **Model reachable** asks each keyed service whether it still answers for the models you chose. See [Keys and Services](Providers-and-Keys#check-every-service).
 
@@ -143,9 +143,9 @@ With **Automatic checks** on **Free and near-free checks only** (the default), S
 
 Models that start working for you after the first check appear under **New for you**, newest first, and Home shows a line such as "2 new models work for you" that opens this page. **Compare on a sample** asks which template to try it on and opens that template's studio with [Compare models](Template-Studio#compare-models) ready for it; nothing is spent until you press Compare there. Choose one in a picker to use it, or **Dismiss** it.
 
-## Pick models on Play
+## Pick models on Create
 
-On Play, each provider row has a model picker fed by the catalogue (or by the CLI for command-line tools):
+On Create, each service group has a model picker fed by the catalogue (or by the CLI for command-line tools):
 
 - By default it shows the models that work for you, plus the one already chosen, whatever its standing. Until something works for you it shows the listed models, then every known one, so the list is never empty. **Show all** brings back the rest.
 - The line under the picker says what is known about the chosen model, with **Check** (or **Check models** before anything was checked), which shows the price first when there is one.
@@ -153,7 +153,7 @@ On Play, each provider row has a model picker fed by the catalogue (or by the CL
 - **Custom ID** lets you type a model ID the list does not show; **Use list** goes back.
 - **Thinking** (text) or **Effort** (images) appears only when the model offers levels. **Model default** leaves it to the provider.
 
-See [Create Overview](Create-Overview) and the Play pages for each step.
+See [Create Overview](Create-Overview) and the Create pages for each row.
 
 ## Related pages
 

@@ -2,7 +2,7 @@
 
 The template studio is where a template is set up once, section by section, with a live sample beside every setting, then marked ready for its schedules. Each change you save is made again on a short hidden sample, so you see and hear what the next video will be like before a schedule spends anything on it.
 
-**Where to find it:** **Library → Templates**, then **Open studio** on a template's row. Saving a setup as a template from Play or a project opens its studio too.
+**Where to find it:** **Templates**, then **Edit template** on a template's row. Saving a setup as a template from Create or a project opens its studio too.
 
 ## The sections
 
@@ -22,9 +22,9 @@ The rail on the left lists the template's sections in the order a run makes them
 | **Upload pack** | The YouTube description, chapters and tags, and the other sites the projects post to (**Post to**), each with its text and main media; hashtags, the thumbnail and the YouTube link are under Fine-tune. The sample shows each site's post as the site shows it. See [Posting to social sites](Posting-to-Social-Sites). |
 | **Schedule** | The next five runs of each schedule that uses the template, and what they cost a month |
 
-Each section shows two to four settings. Everything else is under **Fine-tune**, which holds Play's own editor for that section, so no setting is lost. **Made with OpenRouter · model · Change** says which provider makes the section; **Change** opens Fine-tune.
+Each section shows two to four settings. Everything else is under **Fine-tune**, which holds Create's own editor for that section, so no setting is lost. **Made with OpenRouter · model · Change** says which provider makes the section; **Change** opens Fine-tune.
 
-Each section's lamp says where its sample is: **Current** (made for this version), **Making**, **Waiting** (queued, or held with the reason), **Needs a fix** (the failed step's own sentence and the button that fixes it), **No current sample** (made for an older version, or none yet), **Off**, or **Provided** (you add the file in Play for each video, so there is no sample to make).
+Each section's lamp says where its sample is: **Current** (made for this version), **Making**, **Waiting** (queued, or held with the reason), **Needs a fix** (the failed step's own sentence and the button that fixes it), **No current sample** (made for an older version, or none yet), **Off**, or **Provided** (you add the file on Create for each video, so there is no sample to make).
 
 On a narrow window the studio shows **Sections · Settings · Sample** tabs instead of three columns.
 
@@ -53,7 +53,7 @@ Under **Script**, **Write the full script in the sample** has the sample write t
 
 ### Say it as
 
-Under **Voice**, **Say it as** lists the names the sample's script says that a voice may get wrong, each with the line it is in. **Play** one to hear it, type how it should be said and press **Save**: that writes a Library → Narration aliases row (used by every project started after it) and voices again only the sample's lines that say it, priced on the button. **Another word to check** adds a name of your own.
+Under **Voice**, **Say it as** lists the names the sample's script says that a voice may get wrong, each with the line it is in. **Play** one to hear it, type how it should be said and press **Save**: that writes a Settings → Voices → Pronunciation row (used by every project started after it) and voices again only the sample's lines that say it, priced on the button. **Another word to check** adds a name of your own.
 
 ### Prompt anatomy
 
@@ -102,7 +102,7 @@ A template pack is a template as one .zip file, to share with someone else or mo
 
 **Export pack** in the studio's header saves the version marked ready (the button says which when a newer one waits): its prompts' and intros' text as your Library has them now, the voice it picks, the Look, the PDF theme, and its sample's thumbnail, up to four pictures and its narration. No key, login or other file of yours goes in; a template whose text looks like a key is refused, with where to remove it. A template with no version marked ready (and none saved before the studio) can't be exported yet.
 
-**Import template pack** on Library → Templates makes a new template from a pack:
+**More** → **Import a template file (.zip)** on Templates makes a new template from a template file:
 
 - Its prompts and intros join your Library. One whose name your Library already uses for other text comes in as "name (2)", and the template uses that one.
 - Its voice is used as it is. When Settings → Voices has no voice with that ID, the studio's Voice check says so: add the voice there under that ID, or choose one of yours.
@@ -113,7 +113,7 @@ A file larger than 30 MB, one that isn't a pack, one made by a newer Slopify, or
 
 ## Design templates
 
-Design templates (posters, flyers and other designed pieces) are listed on Library → Templates below the project templates, each with **Open studio**. Their studio has four sections, **Picture**, **Text layout**, **Formats** and **Schedule**, with the same rail of lamps, a live sample and Mark ready. See [Templates](Templates).
+Design templates (posters, flyers and other designed pieces) are listed on Templates below the project templates, each with **Edit template**. Their studio has four sections, **Picture**, **Text layout**, **Formats** and **Schedule**, with the same rail of lamps, a live sample and Mark ready. See [Templates](Templates).
 
 ## Related pages
 

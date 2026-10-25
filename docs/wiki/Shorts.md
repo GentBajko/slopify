@@ -2,7 +2,7 @@
 
 Shorts turns the best moments of your long video into vertical clips for YouTube Shorts, TikTok and Reels, with no editing on your part. After the narration is timed, the text model picks self-contained moments; each becomes a 1080×1920 (9:16) clip with new images, big word-by-word captions and its own title, description and hashtags.
 
-**Where to find it:** Play → **Outputs** row → **Shorts**. On a finished project: the **Shorts** section, and Edit project → **Shorts**.
+**Where to find it:** Create → **Extras** row → **Shorts**. On a finished project: the **Shorts** section, and Edit project → **Shorts**.
 
 ## What you get
 
@@ -18,7 +18,7 @@ Shorts are made in the Video stage, beside the long video's render. They need na
 
 ## Turn on Shorts
 
-1. On Play, open the **Outputs** row.
+1. On Create, open the **Extras** row.
 2. Tick **Shorts**. It is greyed out, with "Needs narration", when the Narration row is off.
 3. Set **How many** and **Length**.
 4. Optionally pick a **Shorts prompt** and an **Image style** from your Library.
@@ -40,11 +40,11 @@ Shorts are made in the Video stage, beside the long video's render. They need na
 | **Full video link** | Each short's description ends with "Watch the full video:" and this link. Without it the line says `[PASTE THE FULL VIDEO LINK HERE]` for you to fill in. | Empty; up to 2,000 characters |
 | Background music | An audio file mixed under every short, looped if shorter than a short. | None |
 
-Write your own Shorts prompts and Image prompts in **Library → Prompts** ([Prompts](Prompts)). To match the long video's look, pick one of your own Image prompts as the Image style.
+Write your own Shorts prompts and Image prompts in **Prompts** ([Prompts](Prompts)). To match the long video's look, pick one of your own Image prompts as the Image style.
 
 ## Shorts preview
 
-While **More shorts options** is open (on Play, or in Edit project → **Shorts**), **Shorts preview** ("A few seconds of the sample as a short with your settings, made free on this computer") renders a few seconds of the bundled sample project as a 9:16 short, through the same renderer real shorts use: the big word-by-word captions in your caption font, the title on screen when **Title on screen** is on (the sample's title, "The Library of Alexandria"), and your **Speed**. The line under it reads, for example, "Title on screen · 1.10×". It renders on your computer at no cost; **Make the preview again** forces a fresh one.
+While **More shorts options** is open (on Create, or in Edit project → **Shorts**), **Shorts preview** ("A few seconds of the sample as a short with your settings, made free on this computer") renders a few seconds of the bundled sample project as a 9:16 short, through the same renderer real shorts use: the big word-by-word captions in your caption font, the title on screen when **Title on screen** is on (the sample's title, "The Library of Alexandria"), and your **Speed**. The line under it reads, for example, "Title on screen · 1.10×". It renders on your computer at no cost; **Make the preview again** forces a fresh one.
 
 ## What it costs
 
@@ -65,7 +65,7 @@ When the run finishes, the project page's **Shorts** section shows a grid headed
 
 While the stage runs, a short not rendered yet says how far it got, such as "Making images · 2 of 5" or "Rendering". A short that failed says so and points you to Error details in the Video section.
 
-To upload them, open **Prepare upload**: each short is listed on its own, with its title, description and tags. See [Publishing-to-YouTube](Publishing-to-YouTube).
+To upload them, open **Copy for YouTube Studio**: each short is listed on its own, with its title, description and tags. See [Publishing-to-YouTube](Publishing-to-YouTube).
 
 ## Change the picked moments
 
@@ -87,7 +87,7 @@ A clip must stay between the shortest and longest length you set and must not ov
 
 ## Add background music
 
-1. Open Edit project → **Shorts** (or use the music control under **More shorts options** on Play).
+1. Open Edit project → **Shorts** (or use the music control under **More shorts options** on Create).
 2. Choose an audio file under **Background music (optional)**. It is looped if shorter than a short.
 3. Set **Music volume**. The music dips while the narrator speaks.
 4. Save and continue the run. **Remove the music** takes it off again.
@@ -102,7 +102,7 @@ A clip must stay between the shortest and longest length you set and must not ov
 ## Tips
 
 - Keep **Length** close to the default 60 to 120 seconds; very short clips often lose the setup that makes a moment work.
-- After you upload the long video, paste its link in **Full video link** (Edit project → **Shorts**) and save. Copy and Prepare upload read the link when you use them, so the description line picks it up.
+- After you upload the long video, paste its link in **Full video link** (Edit project → **Shorts**) and save. Copy and Copy for YouTube Studio read the link when you use them, so the description line picks it up.
 - A frame format of 9:16 on the Video and style row makes the long video itself vertical; Shorts are separate clips and are always 9:16.
 
 ## Related pages

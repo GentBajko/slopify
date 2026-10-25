@@ -110,7 +110,7 @@ All at once finishes sooner while the steps wait on services (research, narratio
 
 ### The video queue
 
-Videos queued together wait their turn. Home lists them under **Running** → **Waiting to start**, with **Earlier**, **Later** and **Remove** on each. Projects has a **Queued** filter, and a project page says how many videos wait in the queue and opens the list. Pausing a project holds the queue; when one fails or is canceled, the next one starts.
+Videos queued together wait their turn. Home lists them under **Running** → **Waiting to start**, and the Calendar under **Batch queue**, with **Earlier**, **Later** and **Remove** on each. Projects has a **Queued** filter, and a project page says how many videos wait in the queue and opens the list. Pausing a project holds the queue; when one fails or is canceled, the next one starts.
 
 ## Drafts
 

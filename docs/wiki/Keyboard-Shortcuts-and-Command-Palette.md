@@ -32,17 +32,17 @@ Press `?` anywhere (outside a text field) to see **Keyboard shortcuts**: every k
 | `G` then `T` | Anywhere | Go to Templates. |
 | `G` then `K` | Anywhere | Go to Channels. |
 | `G` then `,` | Anywhere | Go to Settings. |
-| `/` | Projects, Library → Prompts, Library → Intros & outros | Puts the cursor in the list's search box. |
-| `Shift+N` | A project page | Runs the project's next action (Approve, Try again, Prepare upload…). |
+| `/` | Projects, Prompts, Prompts → Intros and Outros | Puts the cursor in the list's search box. |
+| `Shift+N` | A project page | Runs the project's next action (Approve, Try again, Copy for YouTube Studio…). |
 | `Shift+D` | A project page | Copies the YouTube description. |
-| `Ctrl+S` / `Cmd+S` | The Library editors (prompts, intros and outros, document themes) | Saves, even while you are typing in a field. |
+| `Ctrl+S` / `Cmd+S` | The prompt, intro and outro and PDF theme editors | Saves, even while you are typing in a field. |
 | `Up` / `Down`, `Home` / `End`, `Enter`, `Esc` | Command palette | Move, jump, run, close. |
-| `Ctrl+Enter` / `Cmd+Enter` | Play | Opens **Review the whole setup** without starting a run. |
+| `Ctrl+Enter` / `Cmd+Enter` | Create | Opens **See everything this run will do** without starting a run. |
 | `Space` or `K`, `J` / `L`, `Left` / `Right`, `M`, `F`, `C`, `0`–`9` | Inside a video or audio player | Play and pause, jump 10 seconds, jump 5 seconds, mute, full screen, captions, jump to a tenth of the way. See [Project Page](Project-Page#the-players). |
 | `Enter` / `Shift+Enter` | Search box in a reading view (research, article, narration text, patch notes) | Next match / previous match. |
 | `Left` / `Right` | Image viewer (an enlarged image or thumbnail on a project) | Previous / next image. |
 | `Esc` | Dialogs, side drawers, the image viewer | Closes them. |
-| `Esc` | Adding another title on Play | Cancels adding it. |
+| `Esc` | Adding another title on Create | Cancels adding it. |
 | `Esc` | Guided tour | Closes an open picker first; press again to leave the tour. |
 | `Left` / `Right`, `Home` / `End` | Tabs (for example on a project page) | Move between the tabs. |
 | `Left` / `Right` | Segmented choices (for example **Appearance** in Settings) | Move between the options. |
@@ -96,18 +96,18 @@ These are found once you type, from any screen:
 
 These tutorial pages are also inside Slopify, under **Help → Tutorials**. Type `tutorial` and a few words of a page's name, then pick **Open tutorial: <page>**, for example **Open tutorial: Install** or **Open tutorial: Shorts**. It opens that page at `/help/tutorials/<Page>`, where a search box finds any page. **Open tutorials** (under Help, found by typing) and **Help → Tutorials** at the foot of the rail open the tutorials' home page, and on the tutorials page `/` puts the cursor in that search box.
 
-### Play
+### Create
 
-On the Play screen.
+On the Create screen, under **Create**.
 
 | Command | What it does |
 |---|---|
-| **Start run** / **Queue N videos** | Starts the run, or queues every video on the page. If something is missing, it takes you to the field that needs it. |
-| **Add a topic for another video** | Adds another title to make a batch. |
+| **Make the video** / **Queue N videos** | Starts the run, or queues every video on the page. If something is missing, it opens the row that needs it. |
+| **Add another topic** | Opens the Another topic field to add one more video. |
 | **Save as template** | Saves the current setup as a template. |
-| **Review the whole setup** (`Ctrl+Enter`) | Opens the full review. |
-| **Pick a template** | Moves to the template picker. |
-| **Change title and keywords**, **Change article**, **Change narration**, **Change images**, **Change video and style**, **Change outputs**, **Change reviews**, **Change channel** | Opens that part of the setup and scrolls to it. |
+| **See everything this run will do** (`Ctrl+Enter`) | Opens the side panel with every setting in words. |
+| **Pick what to start from** | Moves to the **Start from** picker. |
+| **Change keywords**, **Change article**, **Change narration**, **Change images**, **Change video and style**, **Change extras**, **Change pauses and checks**, **Change channel** | Opens that row and scrolls to it (one per row shown). |
 
 See [Create Overview](Create-Overview).
 
@@ -117,14 +117,12 @@ On a project's page. The project's title shows beside each command.
 
 | Command | What it does |
 |---|---|
-| The next action (for example **Continue the run**, **Try images again**, **Prepare upload**) (`Shift+N`) | Runs what the project page suggests next. Shows **Show the project's next action** when there is none. |
+| The next action (for example **Continue the run**, **Try images again**, **Copy for YouTube Studio**) (`Shift+N`) | Runs what the project page suggests next. Shows **Show the project's next action** when there is none. |
 | **Pause the run** / **Continue the run** | Pauses or resumes the run. |
 | **Cancel the run** | Asks to cancel the run. |
-| **Prepare upload** | Opens the upload pack once the video has been made. |
-| **Edit project settings** | Opens Edit project. |
-| **Choose what to remake** | Opens the review of everything a change affects. |
-| The first outdated group / **Remake outdated outputs** | Remakes the first group of outdated outputs. Says so when nothing is outdated. |
-| **Remake everything outdated** | Remakes all outdated outputs. |
+| **Copy for YouTube Studio** | Opens Copy for YouTube Studio once the video has been made. |
+| **Edit settings** | Opens the project's settings. |
+| The outdated files, as one command for the first group and one for everything | Opens the review that makes them again, with what it makes and its cost. Says so when nothing is outdated. |
 | **Save as template** | Saves this project's setup as a template. |
 | **Make my own copy** | On a sample project, makes an editable copy. |
 | **Open the project folder** | Opens the project's folder on this computer. |
@@ -157,17 +155,18 @@ On the Projects list.
 | **Show failed projects** | Filters to failed projects. |
 | **Search projects** (`/`) | Puts the cursor in the search box. |
 
-### Library
+### Prompts and templates
 
-On any Library tab.
+On Prompts, Templates and the PDF themes page.
 
 | Command | What it does |
 |---|---|
-| **New prompt** | Starts a new prompt (of the kind the tab shows). |
-| **New intro or outro** | Starts a new intro or outro. |
-| **New document theme** | Starts a new document theme. |
-| **Open prompts**, **Open intros and outros**, **Open templates**, **Open document themes** | Switches tab. |
-| **Save a setup as a template** | On the Templates tab: saves a Play setup as a template. |
+| **New prompt** | Starts a new prompt (of the kind shown). |
+| **New intro** / **New outro** | Starts a new intro or outro. |
+| **New PDF theme** | Starts a new PDF theme. |
+| **Add starter templates** | Opens the starter templates. |
+
+**Open Prompts** (`G` then `L`) and **Open Templates** (`G` then `T`) are under **Go to**.
 
 See [Prompts and Templates](Prompts-and-Templates).
 
@@ -198,7 +197,7 @@ In Settings.
 
 | Command | What it does |
 |---|---|
-| **Check all providers** | Opens Providers and runs Check all. |
+| **Check every service** | Opens Keys & services and checks every service. |
 | **Back up now** | Opens Backups and starts a backup. |
 | **Download diagnostics** | Saves `slopify-diagnostics.json`. |
 | **Export everything** | In Backup & storage: downloads the full export. |
@@ -210,7 +209,7 @@ See [Settings-Reference](Settings-Reference).
 
 - The fastest way around: `Ctrl+K`, a few letters, `Enter`. For example `Ctrl+K`, `usage`, `Enter` opens your usage. For the main screens, `G` and a letter is faster still.
 - On a project, `Ctrl+K` lists that project's commands first, so the next action is a few letters away (try `next` or `continue`).
-- On Play, `Ctrl+Enter` is a safe way to check everything: it opens the review and never starts a run.
+- On Create, `Ctrl+Enter` is a safe way to check everything: it opens the review and never starts a run.
 
 ## Related pages
 

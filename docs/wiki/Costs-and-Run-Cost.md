@@ -2,7 +2,7 @@
 
 Slopify shows what a run is likely to cost before you start it, what it actually cost once it ran, and, for runs on a command-line plan, what the same work would have cost with API keys and how much of your plan it used. All figures are in US dollars, from the providers' published prices.
 
-**Where to find it:** Play → **Estimated cost** in the right rail; a project → **Run cost** tab; Home → **This week**; Settings → **Usage**.
+**Where to find it:** Create → **Estimated cost** in the rail; a project → the cost line under its status list, and **See the breakdown**; Home → **This week**; Settings → **Usage**.
 
 ## Where costs come from
 
@@ -21,9 +21,9 @@ There is no API figure for a model the catalogue does not list, for a CLI's defa
 
 See [AI-CLIs](AI-CLIs#plan-limits-and-waiting-them-out) for the plan limits themselves.
 
-## Before you start: Estimated cost on Play
+## Before you start: Estimated cost on Create
 
-The right rail on Play shows **Estimated cost** once the setup is complete. Until then it says "The estimate appears once the setup is complete."
+The rail on Create shows **Estimated cost** once the setup is complete. Until then it says "Estimated cost: shown once nothing is missing."
 
 | Part | What it shows |
 |---|---|

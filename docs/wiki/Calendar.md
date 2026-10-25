@@ -28,13 +28,13 @@ Above the weeks, **Needs you** lists what cannot move on without you, then what 
 | A project you paused | **Paused** | **Open to continue** |
 | A project a restart stopped before it finished | **Stopped** | **Open to continue** |
 | A project held at a review checkpoint, or with an automatic review that flagged an item and waits for **Overrule** or **Redo** | **Waiting for your review** | **Open to review** |
-| A finished video not marked uploaded | **Ready to upload** | **Prepare upload** |
+| A finished video not marked uploaded | **Ready to upload** | **Copy for YouTube Studio** |
 
 The bundled samples never show here. A press anywhere on an entry opens its project. See [Reviews and Checkpoints](Reviews-and-Checkpoints) and [Publishing to YouTube](Publishing-to-YouTube).
 
 ## The batch queue
 
-Videos started together, such as extra videos queued from Play, run one at a time. **Batch queue** lists them in the order they run, numbered (**1 in line**, **2 in line**, …), each marked **Running now**, **Waiting its turn** or **Paused**. Its heading says how many are waiting to start. Pausing a queued project holds the whole queue; when one fails or is canceled, the next one starts. The batch queue is only shown on the calendar; Projects links here and has a **Queued** filter. It is hidden when nothing is queued.
+Videos started together, such as extra videos queued from Create, run one at a time. **Batch queue** lists them in the order they run, numbered (**1 in line**, **2 in line**, …), each marked **Running now**, **Waiting its turn** or **Paused**. Its heading says how many are waiting to start. Pausing a queued project holds the whole queue; when one fails or is canceled, the next one starts. Home lists the same videos under **Running** → **Waiting to start**, and Projects has a **Queued** filter. The batch queue is hidden when nothing is queued.
 
 ## Switch between weeks and a list
 
@@ -96,7 +96,7 @@ Editing a suggestion's words before approving it is done under **Topics waiting*
 - A browser notification for new suggestions opens the calendar's **Suggested topics** when you click it. See [Notifications](Notifications).
 - `Ctrl+K` → **Add to calendar** works from any screen: it opens the calendar with the form. `G` then `C` goes to the calendar.
 - To change a schedule's queued topics one by one (rename, reorder, remove), use the **Schedules** tab. See [Schedules](Schedules#edit-the-queued-topics-in-place).
-- To start one video right now instead of waiting for a run, use [Play](Create-Overview).
+- To start one video right now instead of waiting for a run, use [Create](Create-Overview).
 
 ## Related pages
 

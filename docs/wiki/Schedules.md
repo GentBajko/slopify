@@ -44,7 +44,7 @@ Each run takes the first topic, starts one project with it and removes it from t
 
 **Each topic fills** is the template keyword a topic replaces, such as `{{Topic}}`. By default it is the keyword the template's project title uses, or else the first one. If the title doesn't use this keyword, every project gets the same title.
 
-Every other keyword of the template has an every-run value: the value it gets on every run, such as a word count. The fields are labelled `<keyword> (every run)` and use the same keyword list as Play, Edit project and templates: the line under each says which prompts it feeds ("Feeds …"), or "Not used by any picked prompt". The default is the template's own value. A topic can set its own value for any keyword, which wins for that one run; the field then notes "Unless a topic sets its own."
+Every other keyword of the template has an every-run value: the value it gets on every run, such as a word count. The fields are labelled `<keyword> (every run)` and use the same keyword list as Create, a project's Edit settings and templates: the line under each says which prompts it feeds ("Feeds …"), or "Not used by any picked prompt". The default is the template's own value. A topic can set its own value for any keyword, which wins for that one run; the field then notes "Unless a topic sets its own."
 
 ### Three ways to write the list
 
@@ -107,7 +107,7 @@ Under **Topic generation**, a schedule can ask an LLM for its next topics so it 
 | Setting | What it does | Default |
 |---|---|---|
 | **New topics** | **Off: add topics yourself.** **Generate and queue directly:** new topics join the end of the list. **Generate and hold for approval:** they wait under **Topics waiting**, and beside the calendar, until you approve them. | Off |
-| **Series brief** | What the series covers, its style and what makes a topic worth a video. Only topic generation reads it. Leave it empty to use the channel's series brief from the channel's **Brand** tab. Up to 4,000 characters. | Empty |
+| **Series brief** | What the series covers, its style and what makes a topic worth a video. Only topic generation reads it. Leave it empty to use the channel's series brief from the channel's **Name and look** tab. Up to 4,000 characters. | Empty |
 | **Keep at least this many queued** | Slopify asks for more topics whenever the queue, plus topics waiting for approval, drops below this number. From 1 to 100. | 10 |
 | **Topic generation LLM** | Ticked, it uses the provider and model the template writes with. Untick to pick another **Provider** and **Model**, such as a cheaper one. | The template's LLM |
 
@@ -177,9 +177,9 @@ That changes once you press **Mark ready** on a version in the template's [Templ
 
 ## Tips
 
-- Try the template once from Play before scheduling it, so you know what one run costs. Then set the **Spend ceiling** a little above that.
+- Try the template once from Create before scheduling it, so you know what one run costs. Then set the **Spend ceiling** a little above that.
 - Hold generated topics for approval at first. Once you trust the suggestions, switch to queue directly.
-- Write a clear series brief: what the series covers, the tone, and what makes a topic worth a video. Add your older videos under the channel's **Existing videos** so they aren't suggested again.
+- Write a clear series brief: what the series covers, the tone, and what makes a topic worth a video. Add your older videos under the channel's **Titles to avoid** so they aren't suggested again.
 
 ## Related pages
 

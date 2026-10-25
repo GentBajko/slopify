@@ -19,12 +19,12 @@ Most problems in Slopify show up as a failed step on the project page with a mes
 
 | Message (or part of it) | Cause | Fix |
 | --- | --- | --- |
-| "*Provider* did not accept the API key ... The key may be wrong, expired or revoked" | The key is wrong or was revoked. | Paste a current key in Settings → **Providers**, save, then press **Try ... again** on the project. The fix-it button **Open Settings → Providers → *provider*** takes you there. |
-| "No *provider* API key is saved. Add one in Settings → Providers, then use Try again." | The project uses a provider with no key. | Add the key, or switch the project to another provider in **Edit project → Providers**. |
+| "*Provider* did not accept the API key ... The key may be wrong, expired or revoked" | The key is wrong or was revoked. | Paste a current key in Settings → **Keys & services**, save, then press **Try ... again** on the project. The fix-it button **Open Settings → Keys & services → *provider*** takes you there. |
+| "No *provider* API key is saved. Add one in Settings → Keys & services, then use Try again." | The project uses a provider with no key. | Add the key, or switch the project to another provider in **Edit project → Providers**. |
 | "*Provider* says the account is out of credits" | Your provider account has no balance. | Add credits on the provider's website, then try again. |
 | "Google gives this API key no image quota for this model" | The Google project behind the key has no quota for that image model. | Enable billing or quota in Google's console, or pick another image model. |
-| "Slopify could not load this provider's model list. Check the API key in Settings → Providers and your internet connection, then refresh the list." | The model list could not be fetched. | Check the key and your connection, then refresh. |
-| "Save this provider's API key in Settings → Providers to load its models." | No key yet. | Save the key first. |
+| "Slopify could not load this provider's model list. Check the API key in Settings → Keys & services and your internet connection, then refresh the list." | The model list could not be fetched. | Check the key and your connection, then refresh. |
+| "Save this provider's API key in Settings → Keys & services to load its models." | No key yet. | Save the key first. |
 
 Keys and how to get them: [Providers and Keys](Providers-and-Keys).
 
@@ -37,7 +37,7 @@ Keys and how to get them: [Providers and Keys](Providers-and-Keys).
 | "The *CLI* stopped without answering" | Run the CLI in a terminal to check it works and is signed in, then try again. |
 | "Slopify could not hand the whole prompt to the CLI, so it cannot tell what the CLI worked on (it may already have used your quota)." | Use **Try again**. This is not retried automatically, so you choose whether to spend the quota again. |
 | "No Codex model is chosen for images." | Choose a model (or Codex default) for images in **Edit project → Providers**, then try again. |
-| "Slopify could not get the model list from the *CLI* CLI." | Check the CLI is installed and signed in (Settings → Providers), refresh the list, or type an exact model ID. |
+| "Slopify could not get the model list from the *CLI* CLI." | Check the CLI is installed and signed in (Settings → Keys & services), refresh the list, or type an exact model ID. |
 | A CLI shows as not installed in Settings | Install the CLI so it is on your `PATH`, or, in Docker, rerun the Docker install after installing or moving a CLI so the host helper finds it. Then press **Check again** on its row under **Health check**. |
 | "The Antigravity CLI tried to use a tool Slopify does not allow (it said: …), so it gave no answer." | Headless `agy` refuses page reading, the browser and commands, and then ends its turn with no text. Press **Try again**. If it keeps happening, choose another model or text provider in the **Providers** section of **Edit project**. |
 | "The Antigravity CLI answered with no text." | Press **Try again**. If it keeps happening, run `agy` in a terminal to check it works, or choose another model in the **Providers** section of **Edit project**. |

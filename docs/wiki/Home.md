@@ -12,13 +12,13 @@ These pages cover Slopify 3.0: every screen, every setting and every workflow, s
 2. Open it at `http://127.0.0.1:6969` and follow [First launch and welcome](First-Launch-and-Welcome).
 3. Make [your first 60-second short](Your-First-Short). With a signed-in CLI and your computer's own voice it needs no keys at all.
 4. Add the keys you want in [Providers and keys](Providers-and-Keys) (press **Test** to check a key before you save it), or sign in to an [AI CLI](AI-CLIs).
-5. Make a full video from [Play](Create-Overview).
+5. Make a full video from [Create](Create-Overview).
 
 ## How a video gets made
 
 1. **Settings:** add provider keys and voices, or use a signed-in CLI.
-2. **Library → Prompts:** write article, image and thumbnail prompts once, with `{{keywords}}` where the subject goes.
-3. **Play:** pick a template or prompts, type the topic, choose your outputs, check the cost estimate, press **Start run** (or **Queue 3 videos** for several topics).
+2. **Prompts:** write article, image and thumbnail prompts once, with `{{keywords}}` where the subject goes.
+3. **Create:** pick a template or prompts, type the topic, choose your outputs, check the cost estimate, press **Make the video** (or **Queue 3 videos** for several topics).
 4. **The project page** shows each stage as it runs. Download the video, captions, PDF and description when it is done.
 5. **Edit settings** on the project (the Edit project form) to change anything. Slopify remakes only what the change affects.
 
@@ -77,7 +77,7 @@ These pages cover Slopify 3.0: every screen, every setting and every workflow, s
 ### Publishing
 | Page | What it covers |
 |---|---|
-| [Publishing to YouTube](Publishing-to-YouTube) | Prepare upload, AI use disclosure, chapters and links |
+| [Publishing to YouTube](Publishing-to-YouTube) | Copy for YouTube Studio, AI use disclosure, chapters and links |
 | [Studio extension](Studio-Extension) | The browser extension that fills YouTube Studio's upload dialog |
 
 ### Automation
@@ -93,13 +93,13 @@ These pages cover Slopify 3.0: every screen, every setting and every workflow, s
 ### Channels
 | Page | What it covers |
 |---|---|
-| [Channels](Channels) | Brand kit, episode memory, existing videos and channel links |
+| [Channels](Channels) | Name and look, cast, memory, titles to avoid and channel links |
 | [Cast library](Cast-Library) | Recurring characters with pictures and voices |
 
-### Library
+### Prompts and templates
 | Page | What it covers |
 |---|---|
-| [Prompts and Templates](Prompts-and-Templates) | What the Library holds |
+| [Prompts and Templates](Prompts-and-Templates) | Where prompts, templates, PDF themes and aliases are |
 | [Prompts](Prompts) | Writing prompts, keyword slots, history and restore |
 | [Intros and outros](Intros-and-Outros) | Reusable openings and closings |
 | [Aliases and glossary](Narration-Aliases-and-Glossary) | How the narrator says words |

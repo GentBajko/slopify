@@ -63,10 +63,10 @@ If you start Slopify with `--host 0.0.0.0` (or another address other computers c
 
 Anything you can do in the web page, except the few things listed under [What agents cannot do](#what-agents-cannot-do). That includes:
 
-- **Projects:** make projects from Play drafts and templates (after the same review and estimate you see), read them, edit them, pause, continue and cancel runs, **Keep as is**, move projects to another channel, delete and restore them.
+- **Projects:** make projects from Create drafts and templates (after the same review and estimate you see), read them, edit them, pause, continue and cancel runs, **Keep as is**, move projects to another channel, delete and restore them.
 - **Fixing runs:** **Try ... again**, **Soften and retry**, remake a step or one item, regenerate a narration chunk, and **Choose what to remake**, with its estimate.
 - **Reviews:** answer reviews set to **External agent (MCP)**, **Overrule** or **Redo** flagged items, and approve review checkpoints.
-- **Planning:** release times, the posting plan, **Mark uploaded**, **Deleted on YouTube**, and **Prepare upload** up to **Ready to upload**.
+- **Planning:** release times, the posting plan, **Mark uploaded**, **Deleted on YouTube**, and **Copy for YouTube Studio** up to **Ready to upload**.
 - **Schedules:** schedules, their topic lists, approving or turning down held topics, and **Prepare**.
 - **Library and setup:** prompts (with history), templates, channels and cast, Library import and export, and settings other than those below.
 - **Reading:** Home's work list, the calendar, costs and estimates, a project's files (pictures come back as pictures; audio and video as their address in Slopify), and the material a review looks at.
@@ -106,7 +106,7 @@ Everything an agent changes is marked, so you can always tell its work from your
 
 Instead of paying a reviewer model, you can let your agent do the [automatic reviews](Reviews-and-Checkpoints#automatic-reviews).
 
-1. On Play, open the **Reviews** row (or Edit project → **Reviews** on a project).
+1. On Create, open the **Pauses and checks** row (or **Edit settings** → **Pauses and checks** on a project).
 2. Set **Who reviews** to **External agent (MCP)**. **Reviewer** and **Reviewer model** are greyed: the agent needs neither.
 3. Pick **Flag only** or **Flag and redo** for each stage, as usual. Picture stages (images, the thumbnail, shorts) work too: the agent is shown the pictures.
 

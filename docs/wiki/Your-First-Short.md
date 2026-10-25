@@ -30,8 +30,8 @@ Command-line tools can't speak, but you don't need a voice key to start: with no
 
 To set these up:
 
-1. Install and sign in to Claude Code, Codex or Antigravity CLI (see [AI CLIs](AI-CLIs)), or add keys in Settings → **Providers** (see [Providers and Keys](Providers-and-Keys)).
-2. Optional: add a voice key in Settings → **Providers**. An OpenAI key is the simplest: the suggested voice works with it right away.
+1. Install and sign in to Claude Code, Codex or Antigravity CLI (see [AI CLIs](AI-CLIs)), or add keys in Settings → **Keys & services** (see [Providers and Keys](Providers-and-Keys)).
+2. Optional: add a voice key in Settings → **Keys & services**. An OpenAI key is the simplest: the suggested voice works with it right away.
 3. Back on the first-run screen, step 1, **What a short needs**, shows the Script, Voice and Images lines, each **Ready** or **Not connected** with its fix. Press **Check again** after installing a speech program.
 
 ## Make the short
@@ -50,10 +50,10 @@ Pressing the button twice, or retrying after a dropped connection, opens the sam
 
 - **The project.** Its title is your topic, with a capital first letter. Its format is 9:16.
 - **Library prompts.** The style's script and vertical-scene prompts are added to your Library (for General: **Starter · 60-second short** and **Starter · Vertical scene**). If you already have a prompt with that name and different text, the new one comes in as `<name> (2)`. Reusing them later changes nothing.
-- **A saved voice.** The style's suggested OpenAI voice is added to Settings → **Voices** (for General: **Starter narrator**), unless you already have one with that voice. When the computer's own voice narrates, it is saved there too, named `<voice> (computer voice)`, so Play offers it later.
+- **A saved voice.** The style's suggested OpenAI voice is added to Settings → **Voices** (for General: **Starter narrator**), unless you already have one with that voice. When the computer's own voice narrates, it is saved there too, named `<voice> (computer voice)`, so Create offers it later.
 - **Settings.** Captions at the bottom, a slow zoom or pan on each image, half a second of silence at each end, and the volume levelled as in your Settings.
 
-The pack's template is not added this way. To get it, use Library → **Templates** → **Add pack**. **Make the full video on this topic** (below) also adds it.
+The pack's template is not added this way. To get it, use **Templates** → **Add starter templates**. **Make the full video on this topic** (below) also adds it.
 
 ## Watch it being made
 
@@ -98,7 +98,7 @@ If the run fails later, the project page and Home's **Needs you** say which step
 
 ## Make the full video next
 
-When the short is done, the project's next action is **Make the full video on this topic**. It opens Play set up for a long video: the same topic and title, the starter pack's Play template (added to your Library if it wasn't yet), and the text, image and voice providers the short used, since those are known to work on your computer. Nothing starts until you press **Start run**. See [Create Overview](Create-Overview).
+When the short is done, the project's next action is **Make the full video on this topic**. It opens Create set up for a long video: the same topic and title, the starter template (added to Templates if it wasn't yet), and the text, image and voice providers the short used, since those are known to work on your computer. Nothing starts until you press **Make the video**. See [Create Overview](Create-Overview).
 
 ## Change the short afterwards
 
@@ -108,12 +108,12 @@ It is a normal project: you can edit the script, change an image, pick another v
 
 - Make a long video with more control: [Create Overview](Create-Overview).
 - Cut shorts from a long video automatically: [Shorts](Shorts).
-- Reuse the style: add the starter pack and pick its template on Play ([Templates](Templates)).
+- Reuse the style: add the starter pack and pick its template on Create ([Templates](Templates)).
 - Let Claude Code or Codex look after your runs, fix failures and answer reviews: [Agents (MCP)](Agents-MCP).
 
 ## Tips
 
-- The first-run screen disappears once you have a real project. Your later shorts are made from Play, or from Shorts on a long video.
+- The first-run screen disappears once you have a real project. Your later shorts are made from Create, or from Shorts on a long video.
 - Want to try without spending anything first? Open a sample project from the first-run screen ([First Launch and Welcome](First-Launch-and-Welcome#explore-the-samples)).
 
 ## Related pages

@@ -79,7 +79,7 @@ The **Regenerate** button on an image in the project's Images section, and **Reg
 
 ### Image prompts and More images for long videos
 
-- **Image prompts** is the same control as on Play: which Library image prompts the project uses and how many images each makes (its Number). The line under it says what saving will do. Raising a Number adds images right after that prompt's last one, lowering it drops its last ones, unticking a prompt drops its images, and a newly ticked prompt adds new images at the end. Images left as they were are kept and reused.
+- **Image prompts** is the same control as on Create: which Library image prompts the project uses and how many images each makes (its Number). The line under it says what saving will do. Raising a Number adds images right after that prompt's last one, lowering it drops its last ones, unticking a prompt drops its images, and a newly ticked prompt adds new images at the end. Images left as they were are kept and reused.
 - **More images for long videos** sets extra images by length: **Every N minutes** or **N per hour**. Saving plans the extra images and keeps every existing one.
 
 ### Establishing image and provided files
@@ -119,7 +119,7 @@ The project keeps its own copy of each prompt, so later Library edits reach it o
 | Control | What it does |
 | --- | --- |
 | **Also use pronunciations from my other projects** → **Update from other projects** | Copies your other projects' Pronunciation Glossary terms into this project again, picking up any added since the last copy. After you save, only the chunks whose words those terms change are spoken again, paid per character. |
-| **Use narration aliases** → **Update from Library** | Copies Library → Narration aliases into this project again. A Library edit reaches the project only when you press this. After you save, only the chunks the changed aliases touch are spoken again. |
+| **Use narration aliases** → **Update from Library** | Copies Settings → Voices → Pronunciation into this project again. A Library edit reaches the project only when you press this. After you save, only the chunks the changed aliases touch are spoken again. |
 | **Describe tables and figures in the narration** | The text model writes a short spoken passage for each table, figure, equation and code block. Turning it on costs one text call per block, and after you save the chunks that contain a block are spoken again (the whole narration when Chunking is the whole article). **Leave code out** skips code blocks. |
 
 **Show tables and figures on screen** (in **Inputs → Cuts and look**, when Describe tables and figures is on) shows each described block in the video while its description is spoken, as the article's picture or a card drawn on your computer at no cost. Turning it on or off renders the video again, and any Shorts that include a card; the narration is kept.
@@ -189,7 +189,7 @@ Restoring adds a new revision with the old settings and outputs, so nothing afte
 
 ## Save as template
 
-**More project actions → Save as template…** saves this project's settings as a template for Play and Schedules. Keywords the title names are saved empty; other keyword values are kept. See [Templates](Templates).
+**More project actions → Save as template…** saves this project's settings as a template for Create and Schedules. Keywords the title names are saved empty; other keyword values are kept. See [Templates](Templates).
 
 ## Tips
 

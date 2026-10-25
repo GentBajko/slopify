@@ -2,7 +2,7 @@
 
 Two ways to keep an eye on a run before it spends more. A **review checkpoint** holds the run before a step until you approve it, so you can check and edit what came before. An **automatic review** has a reviewer model check each finished item (the article, every image, the narration, the thumbnail, every short) and flag it, or make it again, when it fails.
 
-**Where to find it:** Play → **Reviews** row → **Change**, which opens the **Review** side panel. **Review the whole setup** in the right rail and `Ctrl+Enter` open the same panel. After the run starts: the project page → **Checkpoints**, and Edit project → **Reviews**.
+**Where to find it:** Create → **Reviews** row → **Change**, which opens the **Review** side panel. **Review the whole setup** in the right rail and `Ctrl+Enter` open the same panel. After the run starts: the project page → **Checkpoints**, and Edit project → **Reviews**.
 
 ## The Review side panel
 
@@ -13,7 +13,7 @@ The panel holds, from top to bottom:
 3. **Automatic reviews**.
 4. The whole setup in words, with **Read the resolved prompt** (or **Read the supplied article and resolved prompts**), which shows each prompt exactly as it will be sent.
 
-The estimate and the Play key stay in the right rail. Opening the panel also asks the server to check the setup, since it knows rules the browser cannot see. **Refresh review** in the right rail does the same and recalculates the estimate now, instead of waiting for you to pause typing. Use it after changing a prompt in the Library.
+The estimate and the Make button stay in the rail. Opening the panel also asks the server to check the setup, since it knows rules the browser cannot see. **Refresh review** in the right rail does the same and recalculates the estimate now, instead of waiting for you to pause typing. Use it after changing a prompt in the Library.
 
 The Reviews row summary says what is set, for example `1 checkpoint · 2 automatic reviews`, or `No checkpoints · no automatic reviews`.
 
@@ -31,7 +31,7 @@ A step must be generated to have a checkpoint. A greyed checkbox says why: "Choo
 
 Default: no checkpoints.
 
-### Add a checkpoint on Play
+### Add a checkpoint on Create
 
 1. Open the **Reviews** row (or press **Review the whole setup**).
 2. Under **Review checkpoints**, tick **Before Audio**, **Before Images** or **Before Video / export**.
