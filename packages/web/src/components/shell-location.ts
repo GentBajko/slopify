@@ -9,9 +9,10 @@ import { setFallbackTitle, titleForPath } from "./document-title.js";
 // screen itself changed, moves focus to its heading so a keyboard or screen-reader user starts
 // at the top of the new screen instead of on a link that is no longer there. A change of
 // section or filter on the same screen keeps focus where it is. Until the person has pressed a
-// key or a pointer, a change of screen is the app's own (a fresh install's Home sending it on to
-// Welcome) and keeps the browser's focus, as the first screen does: nothing was moved away from,
-// and Chromium would ring the heading of a screen nobody has touched yet.
+// key or a pointer or clicked something (a screen reader's click comes with neither), a change of
+// screen is the app's own (a fresh install's Home sending it on to Welcome) and keeps the
+// browser's focus, as the first screen does: nothing was moved away from, and Chromium would ring
+// the heading of a screen nobody has touched yet.
 export function useShellLocation(main: RefObject<HTMLElement | null>): void {
   const pathname = useLocation({ select: (current) => current.pathname });
   const search = useLocation({ select: (current) => current.search });
@@ -35,11 +36,10 @@ export function useShellLocation(main: RefObject<HTMLElement | null>): void {
       touched.current = true;
     };
     const options = { capture: true, passive: true } as const;
-    window.addEventListener("pointerdown", mark, options);
-    window.addEventListener("keydown", mark, options);
+    const events = ["pointerdown", "keydown", "click"] as const;
+    for (const event of events) window.addEventListener(event, mark, options);
     return () => {
-      window.removeEventListener("pointerdown", mark, options);
-      window.removeEventListener("keydown", mark, options);
+      for (const event of events) window.removeEventListener(event, mark, options);
     };
   }, []);
 

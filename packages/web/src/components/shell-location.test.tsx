@@ -6,7 +6,7 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRef } from "react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -76,5 +76,14 @@ describe("focus on a change of screen", () => {
     const heading = await screen.findByRole("heading", { name: "Projects" });
     await waitFor(() => expect(document.activeElement).toBe(heading));
     expect(heading.getAttribute("tabindex")).toBe("-1");
+  });
+
+  it("moves there too after a click that came with no key or pointer press, as a screen reader's does", async () => {
+    const router = mount();
+    await screen.findByRole("heading", { name: "Home" });
+    fireEvent.click(document.body);
+    await act(() => router.navigate({ to: "/projects" }));
+    const heading = await screen.findByRole("heading", { name: "Projects" });
+    await waitFor(() => expect(document.activeElement).toBe(heading));
   });
 });
