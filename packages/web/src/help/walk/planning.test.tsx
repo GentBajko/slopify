@@ -26,8 +26,8 @@ const planningAllow: readonly (string | RegExp)[] = [
   // A name says what it is: the channel's, and a schedule's in its form.
   "Channel name",
   "Name",
-  // The look's fonts and colours: the frame drawn beside them shows what each one changes.
-  /^(Caption|Title) (font|colour|outline)( picker)?$/,
+  // The look's fonts and colors: the frame drawn beside them shows what each one changes.
+  /^(Caption|Title) (font|color|outline)( picker)?$/,
   // Each site's account: the one line under all of them says what they are for.
   / account$/,
 ];

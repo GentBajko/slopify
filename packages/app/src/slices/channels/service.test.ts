@@ -161,7 +161,7 @@ describe("channels", () => {
         seriesBrief: "",
         baseVersion: 2,
       }),
-    ).toMatchObject({ reason: "invalid-input", message: "Use a colour like #FFD700." });
+    ).toMatchObject({ reason: "invalid-input", message: "Use a color like #FFD700." });
   });
 
   it("refuses to delete the default channel or one with templates, and moves projects", () => {

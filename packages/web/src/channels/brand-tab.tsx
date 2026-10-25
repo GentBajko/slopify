@@ -199,11 +199,7 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
               options={fontOptions}
               onPick={set("captionFontId")}
             />
-            <Colour
-              label="Caption colour"
-              value={kit.captionColor}
-              onChange={set("captionColor")}
-            />
+            <Colour label="Caption color" value={kit.captionColor} onChange={set("captionColor")} />
             <Colour
               label="Caption outline"
               value={kit.captionOutlineColor}
@@ -211,7 +207,7 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
               contrast={contrastWarning(
                 kit.captionColor,
                 kit.captionOutlineColor,
-                "the caption colour",
+                "the caption color",
                 3,
               )}
             />
@@ -221,7 +217,7 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
               options={fontOptions}
               onPick={set("titleFontId")}
             />
-            <Colour label="Title colour" value={kit.titleColor} onChange={set("titleColor")} />
+            <Colour label="Title color" value={kit.titleColor} onChange={set("titleColor")} />
             <Field label="End screen text" help="Shown over the last 5 seconds.">
               <Input
                 value={kit.endScreenText}
@@ -313,7 +309,7 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
             name.trim() === ""
               ? "Give the channel a name"
               : badColour
-                ? "Fix the colour marked above"
+                ? "Fix the color marked above"
                 : badAccount
                   ? "Fix the account name marked under Posting"
                   : "Fix the ambient sound settings above"

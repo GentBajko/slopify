@@ -227,7 +227,7 @@ describe("Channels", () => {
         [`PUT /api/channels/${id}`]: recording(jsonAnswer({ ...channel, version: 4 }), seen),
       }),
     );
-    await user.type(await screen.findByLabelText("Caption colour"), "#ffd700");
+    await user.type(await screen.findByLabelText("Caption color"), "#ffd700");
     await user.clear(screen.getByLabelText("End screen text"));
     await user.click(screen.getByRole("button", { name: "Save channel" }));
     await waitFor(() => expect(seen).toHaveLength(1));
