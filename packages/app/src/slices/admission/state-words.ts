@@ -111,7 +111,7 @@ export function queuedRun(project: ProjectStanding): boolean {
   return project.status === "pending" && !heldRun(project);
 }
 
-// An uploaded project already reads "done" from the projects route (`uploadedAndSettled`).
+// A settled project already reads "done" from the projects route (`settledProjects`).
 export function projectStateWord(project: ProjectStanding): string {
   return heldRun(project) ? heldStateWord(project) : projectStateWords[project.status];
 }

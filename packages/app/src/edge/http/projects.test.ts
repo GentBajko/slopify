@@ -717,6 +717,69 @@ describe("GET /api/projects", () => {
     expect(after?.stopped).toBeUndefined();
   });
 
+  // Renaming a finished project with a PDF: the PDF prints the title, so the save marks it
+  // outdated and its step goes back to pending, held for the person and admitted by no one.
+  // That is a finished project with an outdated file (its page offers to make the PDF again,
+  // cost first), not a run that stopped: the list, the page and Continue the run agree.
+  it("reads a finished project an edit left with an outdated file as done, not stopped", async () => {
+    const { app, db } = harness();
+    db.exec(
+      'INSERT INTO projects VALUES (\'p1\',\'Renamed\',\'16:9\',\'{"title":"Renamed","format":"16:9","sources":{"research":"off","article":"provide","audio":"provide","images":"provide","thumbnail":"off","video":"generate","document":"generate"},"imagePrompts":[],"values":{},"provided":{},"silenceGapSeconds":3,"rendered":{}}\',\'2026-09-01\',\'2026-09-01\')',
+    );
+    db.exec("PRAGMA foreign_keys=OFF");
+    db.exec("INSERT INTO project_heads VALUES ('p1','r2')");
+    db.exec(
+      "INSERT INTO stages (id, project_id, kind, source, state) VALUES ('s1','p1','article','provide','done'), ('s3','p1','video','generate','done'), ('s4','p1','document','generate','pending')",
+    );
+    db.exec(
+      "INSERT INTO revision_work(id,project_id,revision_id,stage_id,kind,fingerprint,state,dispatch_state,created_at) VALUES ('w-pdf','p1','r2','s4','document','f2','pending','held','2026-09-02')",
+    );
+    db.exec(
+      "INSERT INTO revision_work_reservations(project_id,revision_id,work_key,work_id,fingerprint) VALUES ('p1','r2','document:pdf','w-pdf','f2')",
+    );
+    const pdf = (state: string) =>
+      db
+        .prepare(
+          "INSERT INTO revision_outputs(id,project_id,revision_id,slot,work_key,asset_id,fingerprint,state,descriptor,selected,created_at) VALUES ('o-pdf','p1','r2','document_pdf','document:pdf','a-pdf','f1',?,?,1,'2026-09-01')",
+        )
+        .run(state, JSON.stringify({ stageKind: "document", role: "document_pdf" }));
+    const read = async () => {
+      const list = (await (await app.request("/api/projects")).json()) as {
+        projects: { status: string; stopped?: boolean }[];
+      };
+      const page = (await (await app.request("/api/projects/p1")).json()) as {
+        project: { status: string; stopped?: boolean };
+        resumable: boolean;
+      };
+      return {
+        list: list.projects[0]?.status,
+        listStopped: list.projects[0]?.stopped,
+        page: page.project.status,
+        resumable: page.resumable,
+      };
+    };
+    // Never made before: the PDF is work the run still owes, and Continue the run makes it.
+    expect(await read()).toEqual({
+      list: "pending",
+      listStopped: true,
+      page: "pending",
+      resumable: true,
+    });
+    pdf("outdated");
+    expect(await read()).toEqual({
+      list: "done",
+      listStopped: undefined,
+      page: "done",
+      resumable: false,
+    });
+    // Once the person makes it again, the run admits the step and the project runs.
+    db.exec("UPDATE revision_work SET dispatch_state='allowed' WHERE id='w-pdf'");
+    expect((await read()).page).toBe("pending");
+    // A step a restart held for Continue the run is still a stopped run, outdated file or not.
+    db.exec("UPDATE revision_work SET dispatch_state='held', recipe_context='{}' WHERE id='w-pdf'");
+    expect(await read()).toMatchObject({ list: "pending", listStopped: true, resumable: true });
+  });
+
   // Its page says the same, each project read alone: another uploaded project with work still
   // to run stays paused beside it.
   it("shows an uploaded, paused project with nothing admitted as done on its page", async () => {

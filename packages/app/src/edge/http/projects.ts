@@ -32,11 +32,7 @@ import { limitWaitsByProject, listingWait } from "../../slices/run-cost/panel.js
 import { outputsOf } from "../../slices/storage/repo.js";
 import type { TrashDeps } from "../../slices/trash/model.js";
 import { trashProject } from "../../slices/trash/service.js";
-import {
-  setAsideProjects,
-  uploadedAndSettled,
-  uploadedProjects,
-} from "../../slices/uploads/repo.js";
+import { setAsideProjects, settledProjects, uploadedProjects } from "../../slices/uploads/repo.js";
 import { settledStatus } from "../../slices/uploads/rules.js";
 import type { AppDeps } from "./app.js";
 import { idParam } from "./ids.js";
@@ -57,7 +53,7 @@ export function projectRoutes(deps: AppDeps) {
     const stages = stagesOf(deps.db, project.id);
     const status = settledStatus(
       derive(stages, project.paused),
-      uploadedAndSettled(deps.db, project.id).has(project.id),
+      settledProjects(deps.db, project.id).has(project.id),
     );
     return {
       ...project,
@@ -93,7 +89,7 @@ export function projectRoutes(deps: AppDeps) {
         const channels = projectChannels(deps.db);
         const uploads = uploadedProjects(deps.db);
         const aside = setAsideProjects(deps.db);
-        const settled = uploadedAndSettled(deps.db);
+        const settled = settledProjects(deps.db);
         const holds = projectHolds(deps.db, { standings, settled });
         const waits = limitWaitsByProject(deps.db);
         const failures = stepFailuresByProject(deps.db);
