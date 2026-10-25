@@ -38,10 +38,10 @@ describe("an info button", () => {
 
 describe("Learn more", () => {
   it("links the entry's tutorial section in Help → Tutorials", async () => {
-    render(<InfoTip id="play.voice" />);
+    render(<InfoTip id="play.title" />);
     await userEvent.click(screen.getByRole("button", { name: /^About/ }));
     const link = await screen.findByRole("link", { name: "Learn more" });
-    const tutorial = catalog["play.voice"].tutorial;
+    const tutorial = catalog["play.title"].tutorial;
     expect(tutorial).toBeDefined();
     expect(link.getAttribute("href")).toBe(
       `/help/tutorials/${tutorial?.page ?? ""}${tutorial?.anchor === undefined ? "" : `#${tutorial.anchor}`}`,

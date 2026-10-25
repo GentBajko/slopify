@@ -150,7 +150,7 @@ export function RevisionContentEditors({
       );
       if (!ready || duration === undefined || fingerprint === undefined || record === undefined)
         throw new Error(
-          "Captions can't be edited until the current narration has finished and its subtitle timing is ready.",
+          "Captions can't be edited until the current narration has finished and its caption timing is ready.",
         );
       const response = await api.fetch(
         revisionFileUrl(api, view.revision.projectId, view.revision.id, record.recordId),
@@ -158,14 +158,14 @@ export function RevisionContentEditors({
       );
       if (!response.ok)
         throw new Error(
-          "The subtitle timing file couldn't be read. Reload the page and try again; if it still fails, use More → make it again in its section on Audio.",
+          "The caption timing file couldn't be read. Reload the page and try again; if it still fails, make the video again from the Video section, which times the captions again.",
         );
       const saved = timing.parse(await response.json());
       let previous = 0;
       for (const word of saved.words) {
         if (word.start < previous || word.end <= word.start || word.end > duration)
           throw new Error(
-            "The saved subtitle timing doesn't match the current narration. Use More → make it again in its section on Audio to rebuild it.",
+            "The saved caption timing doesn't match the current narration. Make the video again from the Video section, which times the captions again.",
           );
         previous = word.end;
       }
@@ -308,8 +308,8 @@ export function RevisionContentEditors({
       <section aria-label="Caption text" hidden={!shows("captions")} className="space-y-5">
         {!ready ? (
           <p>
-            Captions can be edited once the current narration has finished and its subtitle timing
-            is ready.
+            Captions can be edited once the current narration has finished and its caption timing is
+            ready.
           </p>
         ) : null}
         {captions === undefined ? (

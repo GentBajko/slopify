@@ -161,7 +161,7 @@ export const libraryTools: readonly RouteTool[] = [
     route: "GET /api/pronunciations/aliases",
     title: "Read narration aliases",
     description:
-      "Library → Narration aliases: words the narration says differently from how they are written.",
+      "Settings → Voices → Pronunciation: words the narration says differently from how they are written.",
   },
   {
     name: "set_narration_aliases",

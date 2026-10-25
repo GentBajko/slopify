@@ -155,18 +155,17 @@ On the Projects list.
 | **Show failed projects** | Filters to failed projects. |
 | **Search projects** (`/`) | Puts the cursor in the search box. |
 
-### Prompts and templates
+### Prompts, templates and PDF themes
 
-On Prompts, Templates and the PDF themes page.
+On Prompts (with its intros and outros), PDF themes, Pronunciation and What worked on YouTube, except where a row says otherwise.
 
 | Command | What it does |
 |---|---|
-| **New prompt** | Starts a new prompt (of the kind shown). |
-| **New intro** / **New outro** | Starts a new intro or outro. |
+| **New prompt** | Starts a new prompt (of the kind Prompts shows). |
+| **New intro** / **New outro** | Starts a new intro or outro (whichever list is showing). |
 | **New PDF theme** | Starts a new PDF theme. |
-| **Add starter templates** | Opens the starter templates. |
-
-**Open Prompts** (`G` then `L`) and **Open Templates** (`G` then `T`) are under **Go to**.
+| **Open intros and outros**, **Open PDF themes** | Opens that list (found by typing). **Open Prompts** and **Open Templates** are under Go to. |
+| **Add starter templates** | On Templates: opens the starter templates to add. |
 
 See [Prompts and Templates](Prompts-and-Templates).
 

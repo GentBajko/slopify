@@ -31,7 +31,7 @@ export function outputStateWords(
     case "ready":
       return "Current";
     case "outdated":
-      return `${outdatedWords(role)}; kept until you remake it`;
+      return `${outdatedWords(role)}; kept until you make it again`;
     case "review":
       return "Provided content needs your review";
   }

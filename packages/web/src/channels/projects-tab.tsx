@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
-import { WatchLink } from "@/calendar/recent";
+import { byFinished, finishedMeta, WatchLink } from "@/calendar/recent";
 import { EmptyState } from "@/components/kit/empty-state";
 import { List, ListRow } from "@/components/kit/list-row";
 import { LoadFailed, LoadingBlock } from "@/components/kit/query-state";
@@ -13,14 +13,15 @@ import { shortDate } from "@/lib/utils";
 import { projectsQuery } from "@/queries";
 import { ShowMore, useBounded } from "./bounded-list";
 
-// The Projects tab: what this channel made, newest first, each with its picture, what it is,
-// when it finished (or started), where it stands in words, and Watch once it is done.
+// The Projects tab: what this channel made, newest first, each with its picture, its length,
+// what it is, when it finished (or started), where it stands in words, and Watch once it is
+// done.
 export function ProjectsTab({ channelId }: { readonly channelId: string }): ReactElement {
   const { api } = useApp();
   const projects = useQuery(projectsQuery(api));
   const own = (projects.data?.projects ?? [])
     .filter((project) => project.channelId === channelId)
-    .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    .toSorted(byFinished);
   const rows = useBounded(own, channelId);
   if (projects.data === undefined)
     return projects.error === null ? (
@@ -61,7 +62,11 @@ export function ProjectsTab({ channelId }: { readonly channelId: string }): Reac
                   {project.title}
                 </Link>
               }
-              meta={`${project.format} · ${finished ? "finished" : "started"} ${shortDate(finished ? project.updatedAt : project.createdAt)}`}
+              meta={
+                finished
+                  ? finishedMeta(project)
+                  : `${project.format} · started ${shortDate(project.createdAt)}`
+              }
               actions={
                 <>
                   <Status tone={state.tone} className="mr-3 self-center">

@@ -78,7 +78,7 @@ function Outcome({
       <p role="status" className="m-0 text-small text-ink-2">
         {parts.length === 0
           ? "Saving keeps every image as it is."
-          : `Saving ${parts.join(" and ")}. The other images are kept; the new ones are made when you remake outdated outputs.`}
+          : `Saving ${parts.join(" and ")}. The other images are kept; the new ones are made when you make the outdated images again.`}
       </p>
     </>
   );

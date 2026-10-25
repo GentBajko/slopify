@@ -1,4 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
+import { LinkedText } from "@/components/linked-text";
 import {
   DialogContent,
   DialogDescription,
@@ -88,7 +89,10 @@ export function ConfirmDialog({
         if (!next) onCancel();
       }}
       title={title}
-      description={consequence}
+      // A consequence that names a Settings page ("Settings → Trash") links it.
+      description={
+        typeof consequence === "string" ? <LinkedText text={consequence} /> : consequence
+      }
       footer={
         <>
           <Button variant="secondary" autoFocus onClick={onCancel}>

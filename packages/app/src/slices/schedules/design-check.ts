@@ -33,7 +33,7 @@ export function checkDesign(
   const plan = designPlanOf(deps.db, input.templateId);
   if (plan === undefined)
     return refuse(
-      `The schedule wasn't saved. ${template.name} doesn't say which field holds each date. Open it in Library → Designs → Templates, choose the date field under Schedule, save it, then save the schedule again.`,
+      `The schedule wasn't saved. ${template.name} doesn't say which keyword holds each date. Open it from Templates → Poster templates, choose the date keyword under Schedule, save it, then save the schedule again.`,
     );
   const fields = designFields(plan.document);
   const named = fields.length === 0 ? "none" : fields.map((one) => `{{${one}}}`).join(", ");
@@ -41,14 +41,14 @@ export function checkDesign(
   for (const keyword of Object.keys(input.values))
     if (!fields.includes(keyword))
       problems.push(
-        `{{${keyword}}} (for every row) is not a field of this template (its fields are ${named}). Remove it.`,
+        `{{${keyword}}} (for every row) is not a keyword of this template (its keywords are ${named}). Remove it.`,
       );
   for (const [index, row] of input.items.entries()) {
     const where = `Row ${String(index + 1)} (${row.title})`;
     for (const keyword of Object.keys(row.values))
       if (!fields.includes(keyword))
         problems.push(
-          `${where} fills {{${keyword}}}, which this template doesn't use (its fields are ${named}). Remove that column.`,
+          `${where} fills {{${keyword}}}, which this template doesn't use (its keywords are ${named}). Remove that column.`,
         );
     if (rowDate(row, plan.dateField) === undefined)
       problems.push(

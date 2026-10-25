@@ -142,8 +142,8 @@ const surfaces = [
   {
     name: "Project",
     Subject: ProjectSubject,
-    providerLabel: "Voice service",
-    modelLabel: "Voice model",
+    providerLabel: "Read by Service",
+    modelLabel: "Read by Model",
   },
 ] as const;
 

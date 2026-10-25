@@ -1,5 +1,6 @@
 import type { ModelInfo } from "@app/kernel/ports/model.js";
 import type { ModelStandingView } from "@app/slices/model-checks/model.js";
+import { isSampleStandIn } from "@app/slices/settings/model.js";
 import { queryOptions } from "@tanstack/react-query";
 import type { Api } from "@/api";
 import { read } from "@/http";
@@ -16,12 +17,17 @@ export interface ProviderModels {
 
 export const modelsKey = keys.modelsOf;
 
+// A sample's stand-in services (`isSampleStandIn`) have no list to ask for: the server refuses
+// the request, so their list is known to be empty and the sample's saved model stands alone.
+const noModels: ProviderModels = { models: [], allowsCustom: false };
+
 export async function listProviderModels(
   api: Api,
   provider: string,
   refresh = false,
   signal?: AbortSignal,
 ): Promise<ProviderModels> {
+  if (isSampleStandIn(provider)) return noModels;
   const url = `${api.origin}/api/providers/${encodeURIComponent(provider)}/models${refresh ? "?refresh=1" : ""}`;
   return read<ProviderModels>(await api.fetch(url, signal ? { signal } : undefined));
 }
@@ -43,12 +49,14 @@ export function videoModelsQuery(api: Api, provider: string, enabled: boolean) {
   return queryOptions({
     queryKey: ["provider-video-models", provider] as const,
     queryFn: async ({ signal }) =>
-      read<ProviderModels>(
-        await api.fetch(
-          `${api.origin}/api/providers/${encodeURIComponent(provider)}/models?video=1`,
-          { signal },
-        ),
-      ),
+      isSampleStandIn(provider)
+        ? noModels
+        : read<ProviderModels>(
+            await api.fetch(
+              `${api.origin}/api/providers/${encodeURIComponent(provider)}/models?video=1`,
+              { signal },
+            ),
+          ),
     enabled: enabled && provider !== "",
     staleTime: 60 * 1000,
     retry: false,

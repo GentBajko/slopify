@@ -509,7 +509,7 @@ export const libraryHelp = {
   },
   "library.design.artwork": {
     title: "Describe the artwork",
-    body: "What the AI draws behind your text. Describe the picture, not the words: Slopify sets your lines on top in real fonts. Fields such as {{Event}} are filled with this piece's values. Each piece's artwork is one paid picture from the model under Made with, drawn once and cropped for every format.",
+    body: "What the AI draws behind your text. Describe the picture, not the words: Slopify sets your lines on top in real fonts. Keywords such as {{Event}} are filled with this piece's values. Each piece's artwork is one paid picture from the model under Made with, drawn once and cropped for every format.",
   },
   "library.design.ai-text": {
     title: "Let the AI draw the text",
@@ -525,23 +525,23 @@ export const libraryHelp = {
   },
   "library.design.lines": {
     title: "Lines",
-    body: "The words Slopify sets on the piece, one line each, the first the largest. Fields such as {{Event}} are filled with the piece's values. Up to 8 lines; remove one with its bin button. Size, font and colour are under Fine-tune lines.",
+    body: "The words Slopify sets on the piece, one line each, the first the largest. Keywords such as {{Event}} are filled with the piece's values. Up to 8 lines; remove one with its bin button. Size, font and colour are under Fine-tune lines.",
   },
   "library.design.line-style": {
     title: "Line size, font and colour",
     body: "Size picks the line's role: Headline is largest, then Subhead, Details and Small print. Font is any font in Settings → Fonts; Barlow is the default. Colour is the line's text colour. Default: white.",
   },
   "library.design.values": {
-    title: "Fields",
-    body: "The words for each {{name}} in the artwork's description and the lines, for this piece. A field used as the schedule's date takes a date. Every field needs words before the artwork is made.",
+    title: "Keywords",
+    body: "The words for each {{name}} in the artwork's description and the lines, for this piece. A keyword used as the schedule's date takes a date. Every keyword needs words before the artwork is made.",
   },
   "library.design.sample-values": {
     title: "Sample values",
-    body: "Words for each {{name}} used to draw the template's sample, so you can see a finished piece while you design. Pieces a schedule makes use each row's own words instead. A field used as the schedule's date takes a date.",
+    body: "Words for each {{name}} used to draw the template's sample, so you can see a finished piece while you design. Pieces a schedule makes use each row's own words instead. A keyword used as the schedule's date takes a date.",
   },
   "library.design.make-values": {
-    title: "Fields for this piece",
-    body: "The words for each {{name}} in the template, for this one piece. They start as the template's sample values; change them as you like. Every field needs words. A field used as the schedule's date takes a date. Nothing here changes the template.",
+    title: "Keywords for this piece",
+    body: "The words for each {{name}} in the template, for this one piece. They start as the template's sample values; change them as you like. Every keyword needs words. A keyword used as the schedule's date takes a date. Nothing here changes the template.",
   },
   "library.design.accept-unknown": {
     title: "Accept an unknown price",
@@ -557,7 +557,7 @@ export const libraryHelp = {
   },
   "library.design.brochure": {
     title: "Brochure",
-    body: "The brochure's title and its inside pages, drawn as an A4 PDF after the cover. The pages are Markdown: # for a heading, a blank line between paragraphs, - for a list. Fields such as {{Event}} are filled in.",
+    body: "The brochure's title and its inside pages, drawn as an A4 PDF after the cover. The pages are Markdown: # for a heading, a blank line between paragraphs, - for a list. Keywords such as {{Event}} are filled in.",
   },
   "library.design.project": {
     title: "Keep in project",
@@ -565,7 +565,7 @@ export const libraryHelp = {
   },
   "library.design.template-name": {
     title: "Template name",
-    body: "What Library → Designs → Templates lists this template by. It is never printed on the pieces. Up to 200 characters.",
+    body: "What Templates → Poster templates lists this template by. It is never printed on the pieces. Up to 200 characters.",
   },
   "library.design.source": {
     title: "Artwork",
@@ -573,7 +573,7 @@ export const libraryHelp = {
   },
   "library.design.date-field": {
     title: "Each piece's date is in",
-    body: "The field that holds each row's date, such as {{Date}}. A schedule then makes each row's piece the set number of days before that date. No schedule: pieces are only made by hand.",
+    body: "The keyword that holds each row's date, such as {{Date}}. A schedule then makes each row's piece the set number of days before that date. No schedule: pieces are only made by hand.",
   },
   "library.design.days-ahead": {
     title: "Days ahead",

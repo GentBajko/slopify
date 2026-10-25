@@ -380,7 +380,7 @@ it.each([
         },
       },
     },
-    "3 shorts of 60-120 s · Built-in prompt · Built-in image prompt · Title on screen · 1.10× speed · Music at 20% once added in Edit project · Links https://youtu.be/x · Portrait images, made after the captions are timed",
+    "3 shorts of 60-120 s · Built-in prompt · Built-in image prompt · Title on screen · 1.10× speed · Music at 20% once added in Edit settings · Links https://youtu.be/x · Portrait images, made after the captions are timed",
   ],
   [
     "attached background music",

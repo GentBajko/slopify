@@ -303,6 +303,11 @@ describe("step 3: make the first short", () => {
     expect(screen.getByRole("link", { name: "Watch it being made" }).getAttribute("href")).toBe(
       "/projects/p9",
     );
+    // The style's prompts the short installed are named once, with where they are now.
+    expect(screen.getByText(/Its History prompts are now in/)).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Prompts" }).getAttribute("href")).toBe(
+      "/prompts?kind=article",
+    );
     expect(screen.getByRole("button", { name: "Done" })).not.toBeNull();
     // The samples are there to look at while it runs.
     expect(screen.getByRole("link", { name: "Explore the sample" }).getAttribute("href")).toBe(

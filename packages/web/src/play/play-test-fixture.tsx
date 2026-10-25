@@ -479,7 +479,7 @@ const sectionIds: Readonly<Record<string, PlaySection>> = {
   Style: "style",
 };
 const sectionRows: Readonly<Record<string, readonly string[]>> = {
-  Content: ["Keywords", "Article", "Channel"],
+  Content: ["Title and keywords", "Article", "Channel"],
   Outputs: ["Narration", "Images", "Video and style", "Extras"],
   Style: ["Video and style"],
 };

@@ -106,7 +106,7 @@ function unexplained(status: number): string {
   if (status === 502 || status === 503 || status === 504) {
     return unreachable();
   }
-  return `Slopify hit an unexpected error (${String(status)}). Reload the page and try again. If it keeps happening, open Settings → About and press Download diagnostics at the top.`;
+  return `Slopify hit an unexpected error (${String(status)}). Reload the page and try again. If it keeps happening, open Settings → About and press Download diagnostics, at the foot of the page.`;
 }
 
 // `fetch` rejects with a bare TypeError ("Failed to fetch", "Load failed", "NetworkError ...")

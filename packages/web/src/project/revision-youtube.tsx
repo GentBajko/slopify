@@ -78,7 +78,8 @@ export function RevisionYoutube({
       {written && edit.config.youtubeDescription === true ? (
         again ? (
           <p className="flex flex-wrap items-center gap-2 text-small text-accent-ink">
-            The YouTube description will be written again after you save and press Remake.
+            The YouTube description will be written again after you save and make the outdated
+            description again.
             <Button
               type="button"
               variant="quiet"
@@ -106,7 +107,8 @@ export function RevisionYoutube({
               Write the description again after review
             </Button>
             <HelpLine>
-              One paid writing call when you remake; the description you have now is replaced.
+              One paid writing call when you make it again; the description you have now is
+              replaced.
             </HelpLine>
           </span>
         )

@@ -1,3 +1,4 @@
+import { preparedWord } from "@app/slices/admission/state-words.js";
 import type { CalendarRun } from "@app/slices/schedules/schema.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
@@ -5,13 +6,15 @@ import { GripVerticalIcon } from "lucide-react";
 import { type DragEvent, type KeyboardEvent, type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
+import { ConfirmDialog } from "@/components/kit/dialog";
 import { ButtonLink, TextLink } from "@/components/kit/link";
 import { hitArea, hitTarget } from "@/components/kit/list-row";
 import { Status } from "@/components/kit/status";
 import { fullDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { zonedTime } from "@/lib/zoned";
+import { browserZone, zonedTime } from "@/lib/zoned";
 import { calendarKey, prepareTopic } from "@/schedules/api";
+import { formatScheduleDate } from "@/schedules/time";
 import { projectLook } from "./attention";
 import { type Day, runTitle } from "./plan";
 
@@ -192,7 +195,7 @@ function RunChip({
       ) : run.topicSource === "held" ? (
         <Status tone="info">Needs a topic</Status>
       ) : run.prepared !== null ? (
-        <Status tone="info">Prepared</Status>
+        <Status tone="info">{preparedWord}</Status>
       ) : (
         <Status tone="off">Queued</Status>
       )}
@@ -201,11 +204,11 @@ function RunChip({
   );
 }
 
-export const designNotPrepared =
-  "A design is made on its day, so there is nothing to prepare ahead.";
+export const designNotPrepared = "A design is made on its day, so there is nothing to make ahead.";
 
-// Prepare a queued topic ahead: its project runs everything but the video now, and its day
-// renders. Once prepared, the way to its project.
+// Make ahead: a queued topic's project runs everything but the video now, paid for now as its
+// day would, and its day puts the video together. It spends money, so it asks first, saying
+// so. Once made ahead, the way to its project.
 export function PrepareRun({
   run,
   compact = false,
@@ -215,20 +218,25 @@ export function PrepareRun({
 }): ReactElement | null {
   const { api } = useApp();
   const client = useQueryClient();
+  const [asking, setAsking] = useState(false);
   const [problem, setProblem] = useState<string | undefined>();
   const prepare = useMutation({
     mutationFn: async () => {
-      if (run.topic === null) throw new Error("This run has no topic to prepare yet.");
+      if (run.topic === null) throw new Error("This run has no topic to make ahead yet.");
       const reply = await prepareTopic(api, run.scheduleId, run.topic);
       if (!reply.ok) throw new Error(reply.message);
       return reply.value;
     },
     onSuccess: () => {
       setProblem(undefined);
+      setAsking(false);
       void client.invalidateQueries({ queryKey: calendarKey });
       void client.invalidateQueries({ queryKey: ["projects"] });
     },
-    onError: (error) => setProblem(error.message),
+    onError: (error) => {
+      setAsking(false);
+      setProblem(error.message);
+    },
   });
   if (run.prepared !== null)
     return (
@@ -238,7 +246,7 @@ export function PrepareRun({
         size="small"
         variant="quiet"
       >
-        {compact ? "Open" : "Open prepared"}
+        {compact ? "Open" : "Open the project"}
       </ButtonLink>
     );
   // The server refuses it: a design is made on its day, and there is no video to hold back.
@@ -247,20 +255,32 @@ export function PrepareRun({
   // A paused schedule makes nothing, ahead or on its day; the run says Paused instead.
   if (run.index === null || run.topic === null || run.topicSource !== "queued" || run.paused)
     return null;
+  const day = formatScheduleDate(run.at, run.timezone ?? browserZone());
   return (
     <>
       <Button
         size="small"
         variant={compact ? "quiet" : "secondary"}
         disabled={prepare.isPending}
-        disabledReason="Preparing"
+        disabledReason="Making it ahead"
         onClick={(event) => {
           event.stopPropagation();
-          prepare.mutate();
+          setAsking(true);
         }}
       >
-        {prepare.isPending ? "Preparing…" : "Prepare"}
+        {prepare.isPending ? "Making ahead…" : "Make ahead"}
       </Button>
+      <ConfirmDialog
+        open={asking}
+        tone="primary"
+        title={`Make “${run.topic}” ahead?`}
+        consequence={`Everything but the video is made now and paid for now, as its run would be on its day, so you can look it over first. The video is put together on its day, ${day}.`}
+        confirmLabel="Make ahead (paid)"
+        cancelLabel="Not now"
+        pending={prepare.isPending}
+        onConfirm={() => prepare.mutate()}
+        onCancel={() => setAsking(false)}
+      />
       {problem === undefined ? null : (
         <span role="alert" className="text-label text-danger">
           {problem}

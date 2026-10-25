@@ -8,12 +8,15 @@ import { Button } from "@/components/kit/button";
 import { PageHeader } from "@/components/kit/layout";
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/components/kit/menu";
 import { Badge, Status } from "@/components/kit/status";
+import { runLine } from "@/home/running-now";
 import { projectStateOf } from "@/lib/state-words";
 import { startedAt } from "@/lib/utils";
+import { stageName } from "./summary.js";
 
 // The project's title row, one line: the way back (to the list it was opened from), the title,
-// its state with when it finished, how long it took and its channel, then the one thing to do
-// next (the page's only lime button), Edit settings and a worded More for the rest.
+// its state with when it finished, how long it took and its channel (while it runs, where the
+// run stands beside its clock), then the one thing to do next (the page's only lime button),
+// Edit settings and a worded More for the rest.
 export interface MoreAction {
   readonly id: string;
   readonly label: string;
@@ -170,7 +173,9 @@ function MenuItemWithApart({
 
 // "Audiobook", "Sea Tales, chapter 3", "finished Sep 27 17:18, 3 min", "My channel", "uploaded
 // Sep 28": what a person checks on a project each morning, after its state. An audiobook or a
-// podcast says first what it is, since its page otherwise reads like a video's.
+// podcast says first what it is, since its page otherwise reads like a video's. While a step
+// runs, the last fact is where the run stands, as Home says it: "Step 2 of 4 · Narration · about
+// 4 min left on this step".
 function facts(
   project: ProjectSummary,
   stages: readonly Stage[],
@@ -191,6 +196,11 @@ function facts(
     uploadedAt === null || uploadedAt === undefined
       ? undefined
       : `uploaded ${startedAt(uploadedAt)}`,
+    runLine(
+      stages.filter((stage) => stage.source !== "off" && stage.state !== "skipped"),
+      Date.now(),
+      (kind) => stageName(kind, project.config),
+    ),
   ].filter((fact): fact is string => fact !== undefined && fact !== "");
 }
 

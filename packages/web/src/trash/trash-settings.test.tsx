@@ -183,6 +183,27 @@ it("shows the server's reason when a restore is refused", async () => {
   expect(await screen.findByText(/Restore the template first/)).not.toBeNull();
 });
 
+it("drops an item restored or removed elsewhere from the list once the server says so", async () => {
+  let gone = false;
+  renderApp(
+    <TrashSettings />,
+    testDeps({
+      "GET /api/trash": (request) =>
+        jsonAnswer({ items: gone ? [] : [item({ name: "Cleopatra" })] })(request),
+      "POST /api/trash/project/p1/restore": (request) => {
+        gone = true;
+        return problemAnswer(
+          "This item is no longer in the trash: it was restored or removed for good.",
+          404,
+        )(request);
+      },
+    }),
+  );
+  await userEvent.click(await screen.findByRole("button", { name: "Restore" }));
+  expect(await screen.findByText(/no longer in the trash/)).not.toBeNull();
+  expect(await screen.findByText("The trash is empty")).not.toBeNull();
+});
+
 it("asks before Delete now, and removes the item only on confirm", async () => {
   const remove = vi.fn(emptyAnswer());
   renderApp(

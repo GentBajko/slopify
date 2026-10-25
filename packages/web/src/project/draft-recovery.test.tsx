@@ -5,12 +5,11 @@ import userEvent from "@testing-library/user-event";
 import { type ReactElement, use } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readDraft, writeDraft } from "@/lib/draft-store";
-import { jsonAnswer, renderApp, testDeps } from "@/test-app";
+import { jsonAnswer, openEditSection, renderRouted, testDeps } from "@/test-app";
 import { describeEdit, isRevisionEdit, reapplyEdit } from "./draft-merge.js";
 import { RegenerateNowContext } from "./revision-action-context.js";
 import { revisionView } from "./revision-fixture.js";
-import type { EditorProps } from "./revision-workspace.js";
-import { RevisionWorkspace } from "./revision-workspace.js";
+import { ProjectSettings, settingsRoutes } from "./settings-test-fixture.js";
 import { revisionDraftKey } from "./use-durable-draft.js";
 
 // The test environment has no localStorage of its own.
@@ -39,34 +38,6 @@ afterEach(() => {
   Object.defineProperty(window, "localStorage", { configurable: true, value: undefined });
 });
 
-function editor({ edit, onChange }: EditorProps): ReactElement {
-  return (
-    <>
-      <label>
-        Project title
-        <input
-          value={edit.config.title}
-          onChange={(event) =>
-            onChange({ ...edit, config: { ...edit.config, title: event.target.value } })
-          }
-        />
-      </label>
-      <label>
-        Image seconds
-        <input
-          value={String(edit.config.imageSeconds)}
-          onChange={(event) =>
-            onChange({
-              ...edit,
-              config: { ...edit.config, imageSeconds: Number(event.target.value) },
-            })
-          }
-        />
-      </label>
-    </>
-  );
-}
-
 function body(view: RevisionView) {
   return {
     revisionId: view.revision.id,
@@ -85,6 +56,7 @@ function body(view: RevisionView) {
 }
 
 const base = {
+  ...settingsRoutes,
   "GET /api/projects/p1/revisions/r1": jsonAnswer({ view: revisionView() }),
   "POST /api/projects/p1/revisions/prepare": jsonAnswer({
     ok: true,
@@ -96,11 +68,8 @@ const base = {
 describe("a project's unsaved edit", () => {
   it("is kept in this browser and offered back on the next visit", async () => {
     const user = userEvent.setup();
-    const first = renderApp(
-      <RevisionWorkspace projectId="p1" currentRevisionId="r1" renderEditor={editor} />,
-      testDeps(base),
-    );
-    await user.click(screen.getByRole("button", { name: "Edit project" }));
+    const first = renderRouted(<ProjectSettings />, testDeps(base));
+    await user.click(await screen.findByRole("button", { name: "Edit settings again" }));
     const title = await screen.findByRole("textbox", { name: "Project title" });
     await user.clear(title);
     await user.type(title, "Kept title");
@@ -109,10 +78,7 @@ describe("a project's unsaved edit", () => {
       "Kept title",
     );
 
-    renderApp(
-      <RevisionWorkspace projectId="p1" currentRevisionId="r1" renderEditor={editor} />,
-      testDeps(base),
-    );
+    renderRouted(<ProjectSettings />, testDeps(base));
     const restored = await screen.findByRole("textbox", { name: "Project title" });
     expect((restored as HTMLInputElement).value).toBe("Kept title");
     expect(await screen.findByText(/Restored your unsaved edit from/)).toBeTruthy();
@@ -123,11 +89,8 @@ describe("a project's unsaved edit", () => {
 
   it("can be brought back with Undo after Discard changes", async () => {
     const user = userEvent.setup();
-    renderApp(
-      <RevisionWorkspace projectId="p1" currentRevisionId="r1" renderEditor={editor} />,
-      testDeps(base),
-    );
-    await user.click(screen.getByRole("button", { name: "Edit project" }));
+    renderRouted(<ProjectSettings />, testDeps(base));
+    await user.click(await screen.findByRole("button", { name: "Edit settings again" }));
     const title = await screen.findByRole("textbox", { name: "Project title" });
     await user.clear(title);
     await user.type(title, "Second thoughts");
@@ -145,12 +108,16 @@ describe("a project's unsaved edit", () => {
     const latest = revisionView("r2", "Saved");
     const newer: RevisionView = {
       ...latest,
-      revision: { ...latest.revision, config: { ...latest.revision.config, imageSeconds: 9 } },
+      revision: {
+        ...latest.revision,
+        config: { ...latest.revision.config, language: "de" },
+      },
     };
     const saved: unknown[] = [];
-    renderApp(
-      <RevisionWorkspace projectId="p1" currentRevisionId="r1" renderEditor={editor} />,
+    renderRouted(
+      <ProjectSettings />,
       testDeps({
+        ...settingsRoutes,
         "GET /api/projects/p1/revisions/r1": jsonAnswer({ view: revisionView() }),
         "POST /api/projects/p1/revisions/prepare": () =>
           jsonAnswer({ ok: true, view: head, created: false })(new Request("http://x")),
@@ -178,7 +145,7 @@ describe("a project's unsaved edit", () => {
         "GET /api/projects/p1": jsonAnswer(body(revisionView("r3", "Mine"))),
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Edit project" }));
+    await user.click(await screen.findByRole("button", { name: "Edit settings again" }));
     const title = await screen.findByRole("textbox", { name: "Project title" });
     await user.clear(title);
     await user.type(title, "Mine");
@@ -188,13 +155,13 @@ describe("a project's unsaved edit", () => {
     await user.click(screen.getByRole("button", { name: "Reload latest and re-apply my edit" }));
     await screen.findByText(/Your edit is laid over the latest version/);
     expect((title as HTMLInputElement).value).toBe("Mine");
-    const seconds = screen.getByRole("textbox", { name: "Image seconds" });
-    expect((seconds as HTMLInputElement).value).toBe("9");
+    await openEditSection("Channel");
+    expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "Language" }).value).toBe("de");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(saved).toHaveLength(2));
     expect(saved[1]).toMatchObject({
       baseRevisionId: "r2",
-      edit: { config: { title: "Mine", imageSeconds: 9 } },
+      edit: { config: { title: "Mine", language: "de" } },
     });
   });
 });
@@ -277,12 +244,9 @@ describe("a remake asked for from a button", () => {
       ),
     );
     const next = revisionView("r2", "Saved");
-    renderApp(
-      <RevisionWorkspace
-        projectId="p1"
-        currentRevisionId="r1"
-        renderEditor={editor}
-        output={<Regenerate {...(approvedUpTo === undefined ? {} : { approvedUpTo })} />}
+    renderRouted(
+      <ProjectSettings
+        beside={<Regenerate {...(approvedUpTo === undefined ? {} : { approvedUpTo })} />}
       />,
       testDeps({
         ...base,
@@ -299,7 +263,7 @@ describe("a remake asked for from a button", () => {
     const user = userEvent.setup();
     const start = render(preview(0.04, "provider"));
     await user.click(await screen.findByRole("button", { name: "Regenerate image a" }));
-    expect(await screen.findByRole("dialog", { name: "Choose what to remake" })).toBeTruthy();
+    expect(await screen.findByRole("dialog", { name: "Choose what to make again" })).toBeTruthy();
     expect(screen.getByText("$0.04")).toBeTruthy();
     expect(start).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Make 1 output again" }));
@@ -310,7 +274,7 @@ describe("a remake asked for from a button", () => {
     const user = userEvent.setup();
     const start = render(preview(0.4, "provider"), 0.04);
     await user.click(await screen.findByRole("button", { name: "Regenerate image a" }));
-    expect(await screen.findByRole("dialog", { name: "Choose what to remake" })).toBeTruthy();
+    expect(await screen.findByRole("dialog", { name: "Choose what to make again" })).toBeTruthy();
     expect(start).not.toHaveBeenCalled();
   });
 
@@ -319,7 +283,7 @@ describe("a remake asked for from a button", () => {
     const start = render(preview(0, "local"));
     await user.click(await screen.findByRole("button", { name: "Regenerate image a" }));
     await waitFor(() => expect(start).toHaveBeenCalledTimes(1));
-    expect(screen.queryByRole("dialog", { name: "Choose what to remake" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "Choose what to make again" })).toBeNull();
   });
 });
 

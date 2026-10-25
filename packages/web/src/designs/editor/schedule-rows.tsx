@@ -82,7 +82,7 @@ export function ScheduleRows({
   const save = useMutation({
     mutationFn: async () => {
       if (dateField === undefined)
-        throw new Error("Choose which field holds each date, then save the template.");
+        throw new Error("Choose which keyword holds each date, then save the template.");
       // The same ceiling a project schedule has, per piece: a piece priced over it, or with
       // no known price, isn't made (`schedules/design-run.ts`).
       const limit = dollarsToCents(spendShown);
@@ -154,9 +154,9 @@ export function ScheduleRows({
   const set = (key: string, name: string, value: string) =>
     setRows(shown.map((row) => (row._key === key ? { ...row, [name]: value } : row)));
   const blocked = dirty
-    ? "Save the template first: the rows follow its saved fields."
+    ? "Save the template first: the rows follow its saved keywords."
     : dateField === undefined
-      ? "Choose which field holds each date above, then save the template."
+      ? "Choose which keyword holds each date above, then save the template."
       : rows === null && spend === null && missed === null
         ? "Change a row, the spend ceiling or the missed run first."
         : undefined;
@@ -298,7 +298,7 @@ export function ScheduleRows({
         <p role="status" className="m-0 min-w-0 text-small text-ink-2">
           {message ??
             (template.readyVersion === null
-              ? "Nothing is made until a version is marked ready."
+              ? "Nothing is made until you approve a version for schedules."
               : `Pieces are made from version ${String(template.readyVersion)}.`)}
         </p>
       </div>

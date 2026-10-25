@@ -62,7 +62,7 @@ export function FormatsFields({
           </Field>
           <Field
             label="Brochure pages"
-            help="Markdown; fields such as {{Event}} are filled in."
+            help="Markdown; keywords such as {{Event}} are filled in."
             tip="library.design.brochure"
           >
             <Textarea

@@ -28,6 +28,7 @@ import { TransferMenu } from "@/library/transfer-menu";
 import { refusalOf, useLibraryBulk } from "@/library/use-library-bulk";
 import { useLibraryTransfer } from "@/library/use-library-transfer";
 import { keys, promptsQuery } from "@/queries";
+import { trashKey } from "@/trash/api";
 
 // Prompts: every kind down the left with its count, the saved prompts of the one picked (by
 // name or last change) beside the selected one's text. A search looks through every kind at
@@ -60,7 +61,10 @@ export function PromptsRoute({
     mutationFn: (id: string) => removePrompt(api, id),
     onSettled: async () => {
       setDeleting(undefined);
-      await queryClient.invalidateQueries({ queryKey: keys.prompts });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: keys.prompts }),
+        queryClient.invalidateQueries({ queryKey: trashKey }),
+      ]);
     },
   });
 

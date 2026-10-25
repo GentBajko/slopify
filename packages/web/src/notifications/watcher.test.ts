@@ -284,7 +284,7 @@ describe("createRunWatcher", () => {
     expect(shown).toEqual([]);
   });
 
-  // Its schedule renders the video on its day.
+  // Its schedule puts the video together on its day.
   it("says nothing when a prepared run stops at its schedule's hold", async () => {
     const { watcher, shown } = harness();
     watcher.observe({ projectId: "prepared", state: "running" });

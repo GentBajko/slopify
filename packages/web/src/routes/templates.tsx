@@ -38,6 +38,8 @@ import { cardFacts } from "@/templates/card-facts";
 import type { PlayHandoff } from "@/templates/play-handoff";
 import { TemplateHistoryDrawer } from "@/templates/row-parts";
 import { useTemplateActions } from "@/templates/use-template-actions";
+import { restoreTrashItem } from "@/trash/api";
+import { useOpenTrash } from "@/trash/open-trash";
 
 export type TemplatesTab = "videos" | "posters";
 
@@ -182,6 +184,7 @@ function VideoTemplates({
   const { api } = useApp();
   const client = useQueryClient();
   const notify = useToast();
+  const openTrash = useOpenTrash();
   const providers = useQuery(providersQuery(api));
   const sidebarChannel = useCurrentChannel().channelId;
   // Starts on the channel the app shows, then is this list's own choice. "" is every channel.
@@ -231,10 +234,23 @@ function VideoTemplates({
     client.setQueryData<readonly TemplateSummary[]>(templatesKey, (current) =>
       current?.filter((template) => template.id !== gone),
     );
-    notify(
-      "Template moved to the trash. Restore it in Settings → Trash within 30 days.",
-      "success",
-    );
+    const name = deleting.name;
+    notify(`Moved "${name}" to the trash.`, "success", {
+      label: "Undo",
+      run: () =>
+        void restoreTrashItem(api, "template", gone).then(
+          async () => {
+            notify(`Restored "${name}".`, "success");
+            await client.invalidateQueries({ queryKey: templatesKey });
+          },
+          (error: Error) =>
+            notify(
+              `"${name}" wasn't restored: ${error.message} Restore it in Settings → Trash.`,
+              "error",
+              openTrash,
+            ),
+        ),
+    });
     await client.invalidateQueries({ queryKey: templatesKey });
   }
   async function exportFile(template: TemplateSummary): Promise<void> {
@@ -507,7 +523,7 @@ function TemplateCardItem({
   );
 }
 
-// Poster templates: posters and flyers with fields such as {{Event}}, made again by hand or
+// Poster templates: posters and flyers with keywords such as {{Event}}, made again by hand or
 // ahead of each date by a schedule, each set up in its own editor.
 function PosterTemplates({
   problem,
@@ -519,7 +535,7 @@ function PosterTemplates({
   return (
     <div className="flex flex-col gap-3">
       <p className="m-0 text-small text-ink-2">
-        A poster with fields such as {"{{Event}}"}, made again by hand or ahead of each date by a
+        A poster with keywords such as {"{{Event}}"}, made again by hand or ahead of each date by a
         schedule. Your posters and picture edits are under{" "}
         <TextLink to="/designs">Designs</TextLink>.
       </p>

@@ -90,7 +90,11 @@ export function useTrashActions(): {
         );
       if (failed.length > 0) notify(failureText("restore", failed, items.length, items), "error");
     },
-    onError: (error) => notify(error.message, "error"),
+    // An item restored or removed meanwhile (another tab, the daily purge) leaves the list too.
+    onError: async (error, items) => {
+      notify(error.message, "error");
+      await refresh(items);
+    },
   });
 
   const remove = useMutation({
@@ -111,7 +115,10 @@ export function useTrashActions(): {
         notify(`Deleted ${counted(deleted.length, "item", "items")} for good.`, "success");
       if (failed.length > 0) notify(failureText("delete", failed, items.length, items), "error");
     },
-    onError: (error) => notify(error.message, "error"),
+    onError: async (error, items) => {
+      notify(error.message, "error");
+      await refresh(items);
+    },
   });
 
   return { restore, remove };

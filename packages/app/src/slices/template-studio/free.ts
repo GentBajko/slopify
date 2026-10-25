@@ -241,7 +241,7 @@ export function createFreeSamples(deps: FreeSampleDeps): FreeSamples {
 function videoFailure(error: unknown): string {
   if (error instanceof StylePreviewError) {
     if (error.reason === "font-missing")
-      return `The video sample couldn't be made because the caption font is no longer on this computer. Choose another font under All Video & captions settings, then ${press}.`;
+      return `The video sample couldn't be made because the caption font is no longer on this computer. Choose another font under All Video and style settings, then ${press}.`;
     if (error.reason === "ffmpeg-missing")
       return `The video sample couldn't be made because ffmpeg wasn't found. Install ffmpeg, or use the Docker image, then ${press}.`;
   }

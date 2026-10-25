@@ -112,20 +112,23 @@ export function ConnectionReadiness({
     <div className="flex flex-col gap-3">
       <ul aria-label="What your videos have" className="sl-list m-0 list-none p-0">
         {readinessLines(providers.data.providers, firstRun.data?.defaults).map((line) => (
+          // On a phone each line is the part, its state and its button on one row (the button
+          // drops under them when it can't fit), and the services' names stay for the wider
+          // screen: the lists below say the same, and the key box comes into the first screen.
           <li
             key={line.family}
-            className="grid grid-cols-[88px_minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-b border-line py-2 md:grid-cols-[88px_112px_minmax(0,1fr)_auto]"
+            className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line py-2 md:grid md:grid-cols-[88px_112px_minmax(0,1fr)_auto]"
           >
-            <span className="font-semibold text-ink">{line.label}</span>
+            <span className="w-[88px] shrink-0 font-semibold text-ink md:w-auto">{line.label}</span>
             <Status tone={line.ready ? "done" : "waiting"}>
               {line.ready ? "Ready" : "Needs setup"}
             </Status>
-            <span className="min-w-0 text-small text-ink-2 max-md:col-span-2">{line.text}</span>
+            <span className="min-w-0 text-small text-ink-2 max-md:hidden">{line.text}</span>
             {onShow === undefined ? null : (
               <Button
                 size="small"
                 variant={line.ready ? "quiet" : "secondary"}
-                className="justify-self-start max-md:col-span-2"
+                className="justify-self-start max-md:ml-auto"
                 onClick={() => onShow(line.family)}
               >
                 {line.action}

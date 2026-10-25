@@ -13,6 +13,7 @@ import { designsMax } from "@app/slices/social/schema.js";
 import { type ReactElement, useEffect, useId, useState } from "react";
 import { Checkbox, Field, Select, Textarea } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { TextLink } from "@/components/kit/link";
 import { Switch } from "@/components/kit/switch";
 import { textSourceOptions } from "./words";
 
@@ -129,7 +130,7 @@ export function PostChoiceFields({
           onCommit={(custom) => set({ custom })}
         />
       ) : null}
-      <Field label={`${site} pictures`} tip="social.pictures">
+      <Field label={`${site} images`} tip="social.pictures">
         <Select
           value={String(choice.media.pictures ?? 0)}
           disabled={disabled}
@@ -139,8 +140,7 @@ export function PostChoiceFields({
           }}
           options={pictureCounts(limits.pictures, choice.media.pictures ?? 0).map((count) => ({
             value: String(count),
-            label:
-              count === 0 ? "None" : `${String(count)} ${count === 1 ? "picture" : "pictures"}`,
+            label: count === 0 ? "None" : `${String(count)} ${count === 1 ? "image" : "images"}`,
           }))}
         />
       </Field>
@@ -230,8 +230,9 @@ function DesignPicker({
       </span>
       {listed.length === 0 ? (
         <p className="sl-field__help m-0">
-          No designs are made for this project yet. Make one in Library → Designs and set its Keep
-          in project to this project; it shows here.
+          No designs are made for this project yet. Make one on{" "}
+          <TextLink to="/designs">Designs</TextLink> and set its Keep in project to this project; it
+          shows here.
         </p>
       ) : (
         // biome-ignore lint/a11y/useSemanticElements: a row of chips; a fieldset's box and legend would break the row.

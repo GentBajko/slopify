@@ -6,8 +6,8 @@ import { newStudioPairing, readStudioSettings, saveStudioPlaylists } from "@/api
 import { useApp } from "@/app-context";
 import { channelsQuery } from "@/channels/api";
 import { Button } from "@/components/kit/button";
-import { Checkbox, Field, Input, Select } from "@/components/kit/field";
-import { InfoTip } from "@/components/kit/info-tip";
+import { Checkbox, Field, HelpLine, Input, Select } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
 import { UnsavedStatus } from "@/components/save-state";
@@ -18,8 +18,9 @@ import { PostingPlanSettings } from "./posting-plan";
 
 export const studioSettingsKey = ["studio", "settings"] as const;
 
-// Settings → YouTube Studio and posting: the playlists each channel's upload packs offer, the pairing token
-// the Slopify Studio browser extension needs before it may read a pack, and how to install it.
+// Settings → YouTube Studio and posting: the playlists Copy for YouTube Studio offers each
+// channel, the pairing token the Slopify Studio browser extension needs before it may read what
+// a project is ready to upload, and how to install it.
 export function StudioSettings() {
   const { api } = useApp();
   const settings = useQuery({
@@ -100,10 +101,9 @@ function Playlists() {
   return (
     <Field
       label="Playlists"
-      tip="settings.studio.playlist"
       help={
         channel === everyChannel
-          ? "The playlists upload packs offer, for every channel without its own. Ticked ones are on for every project; Copy for YouTube Studio changes them for one project."
+          ? "The playlists Copy for YouTube Studio offers each channel without a list of its own. Ticked ones are on for every project; Copy for YouTube Studio changes them for one project."
           : own === undefined && fallback.length > 0
             ? `This channel uses the default list (${names(fallback)}) until you add its own.`
             : "This channel's own playlists. Ticked ones are on for every project; Copy for YouTube Studio changes them for one project."
@@ -277,11 +277,8 @@ function Pairing() {
     );
   };
   return (
-    <div className="sl-field">
-      <div className="flex min-w-0 items-center gap-1">
-        <span className="sl-field__label">Extension pairing token</span>
-        <InfoTip id="settings.studio.pairing" className="-my-1" />
-      </div>
+    <div className="sl-field" {...helpScope}>
+      <span className="sl-field__label">Extension pairing token</span>
       <div className="flex flex-wrap items-center gap-2">
         <SecretText
           value={pairing?.token}
@@ -300,11 +297,11 @@ function Pairing() {
           New pairing token
         </Button>
       </div>
-      <p className="sl-field__help m-0">
+      <HelpLine>
         {pairing?.origin == null
-          ? "No extension is paired. Paste this token into the Slopify Studio extension's options and press Pair."
-          : `Paired with the extension at ${pairing.origin}. A new token unpairs it.`}
-      </p>
+          ? "A secret that lets only the Slopify Studio extension read what your projects are ready to upload. Paste it into the extension's options and press Pair."
+          : `Paired with the extension at ${pairing.origin}. New pairing token unpairs it until you paste the new one there.`}
+      </HelpLine>
       {reset.error === null ? null : (
         <p role="alert" className="m-0 text-small text-danger">
           {reset.error.message}

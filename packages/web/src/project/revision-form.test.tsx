@@ -5,13 +5,17 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { keys } from "@/queries";
-import { jsonAnswer, openEditSection, renderApp, testDeps } from "@/test-app";
+import { jsonAnswer, openEditSection, renderRouted, testDeps } from "@/test-app";
 import { response, staged } from "./revision-editor-test-fixtures.js";
 import { revisionView } from "./revision-fixture.js";
 import { RevisionForm } from "./revision-form.js";
 import { formOfRevision } from "./revision-form-state.js";
 
 afterEach(cleanup);
+// A stage's strip at the top of its section, named for the stage: "Images", "Video".
+const strip = (stage: string) => within(screen.getByRole("radiogroup", { name: stage }));
+const picked = (stage: string, choice: string | RegExp) =>
+  strip(stage).getByRole("radio", { name: choice }).getAttribute("aria-checked") === "true";
 function Subject(): import("react").ReactElement {
   const view = revisionView();
   const [edit, setEdit] = useState(formOfRevision(view));
@@ -21,7 +25,7 @@ function Subject(): import("react").ReactElement {
 }
 it("offers Article Off and pairs Images Off with Video Off", async () => {
   const user = userEvent.setup();
-  renderApp(
+  renderRouted(
     <Subject />,
     testDeps({
       "GET /api/providers": jsonAnswer({ providers: [] }),
@@ -31,21 +35,20 @@ it("offers Article Off and pairs Images Off with Video Off", async () => {
     }),
   );
   await openEditSection("Article");
-  const article = screen.getByRole("combobox", { name: "Article source" });
-  expect(within(article).queryByRole("option", { name: "No text" })).not.toBeNull();
+  expect(strip("Article").queryByRole("radio", { name: "No text" })).not.toBeNull();
   await openEditSection("Images");
-  await user.selectOptions(screen.getByRole("combobox", { name: "Images source" }), "generate");
+  await user.click(strip("Images").getByRole("radio", { name: "Made by AI (paid)" }));
   await openEditSection("Video and style");
-  await user.selectOptions(screen.getByRole("combobox", { name: "Video source" }), "generate");
+  await user.click(strip("Video").getByRole("radio", { name: "Make the video" }));
   await openEditSection("Images");
-  await user.selectOptions(screen.getByRole("combobox", { name: "Images source" }), "off");
+  await user.click(strip("Images").getByRole("radio", { name: "None" }));
   await openEditSection("Video and style");
-  const video = screen.getByRole("combobox", { name: "Video source" });
-  if (!(video instanceof HTMLSelectElement)) throw new Error("Expected video source select.");
-  expect(video.value).toBe("off");
+  expect(picked("Video", /^Off/)).toBe(true);
   expect(
-    within(video).getByRole<HTMLOptionElement>("option", { name: "Make the video" }).disabled,
+    strip("Video").getByRole<HTMLButtonElement>("radio", { name: "Make the video" }).disabled,
   ).toBe(true);
+  // The line under the strip says why.
+  expect(screen.getByText(/A video needs images first\./)).not.toBeNull();
   // The silences are sound polish, folded under the video's style.
   await user.click(screen.getByText("Sound polish"));
   const gap = screen.getByRole<HTMLInputElement>("spinbutton", { name: "Silence gap (seconds)" });
@@ -67,7 +70,7 @@ it("reads an absent Document source as Off and writes the source and theme", asy
       <RevisionForm view={view} edit={edit} onChange={setEdit} onPending={() => {}} fields={[]} />
     );
   }
-  renderApp(
+  renderRouted(
     <Document />,
     testDeps({
       "GET /api/providers": jsonAnswer({ providers: [] }),
@@ -76,9 +79,11 @@ it("reads an absent Document source as Off and writes the source and theme", asy
       "GET /api/entries": jsonAnswer({ entries: [] }),
     }),
   );
-  await openEditSection("Outputs");
-  const source = screen.getByRole<HTMLSelectElement>("combobox", { name: "PDF source" });
-  expect(source.value).toBe("off");
+  await openEditSection("Extras");
+  expect(picked("PDF", "Off")).toBe(true);
+  // The look only once there is a PDF to lay out.
+  expect(screen.queryByRole("combobox", { name: "PDF look" })).toBeNull();
+  await user.click(strip("PDF").getByRole("radio", { name: "Make a PDF" }));
   const theme = screen.getByRole<HTMLSelectElement>("combobox", { name: "PDF look" });
   // A project saved with no theme was drawn with DiceMaster, and still is; the retired built-in
   // is shown as this project's look, not offered as a choice.
@@ -88,14 +93,16 @@ it("reads an absent Document source as Off and writes the source and theme", asy
       theme.querySelectorAll("optgroup[label='Built in'] option"),
       (one) => one.textContent,
     );
-  expect(builtIns()).toEqual(["Plain", "DiceMaster (retired, this project's look)"]);
-  expect(theme.disabled).toBe(true);
-  await user.selectOptions(source, "generate");
-  expect(theme.disabled).toBe(false);
+  expect(builtIns()).toEqual([
+    "Plain",
+    "Book",
+    "Modern",
+    "DiceMaster (retired, this project's look)",
+  ]);
   await user.selectOptions(theme, "Plain");
   expect(latest.config.sources.document).toBe("generate");
   expect(latest.config.document).toEqual({ theme: "plain" });
-  expect(builtIns()).toEqual(["Plain"]);
+  expect(builtIns()).toEqual(["Plain", "Book", "Modern"]);
 });
 
 it("shows the video timing settings only where the export uses them", async () => {
@@ -135,7 +142,7 @@ it("shows the video timing settings only where the export uses them", async () =
       />
     );
   }
-  renderApp(
+  renderRouted(
     <Timing />,
     testDeps({
       "GET /api/providers": jsonAnswer({ providers: [] }),
@@ -187,13 +194,13 @@ it("shows the video timing settings only where the export uses them", async () =
   expect(latest.config.edgeSilenceSeconds).toBe(1.5);
 
   await openEditSection("Images");
-  await user.selectOptions(screen.getByRole("combobox", { name: "Images source" }), "off");
+  await user.click(strip("Images").getByRole("radio", { name: "None" }));
   await openEditSection("Video and style");
   expect(screen.queryByRole("spinbutton", { name: "Seconds per image" })).toBeNull();
   expect(screen.queryByRole("spinbutton", { name: "Zoom (%)" })).toBeNull();
   expect(screen.queryByRole("combobox", { name: "Motion" })).toBeNull();
   await openEditSection("Narration");
-  await user.selectOptions(screen.getByRole("combobox", { name: "Narration source" }), "off");
+  await user.click(strip("Narration").getByRole("radio", { name: "Off" }));
   expect(screen.queryByLabelText("Silence at start and end (seconds)")).toBeNull();
 });
 
@@ -241,7 +248,7 @@ it("preserves saved unavailable choices, content references and frozen templates
       />
     );
   }
-  renderApp(
+  renderRouted(
     <Preserved />,
     testDeps({
       "GET /api/providers": jsonAnswer({ providers: [] }),
@@ -257,7 +264,7 @@ it("preserves saved unavailable choices, content references and frozen templates
     }),
   );
   // Written by and Read by each ask for a Service.
-  const article = within(screen.getByRole("region", { name: "Written by", hidden: true }));
+  const article = within(await screen.findByRole("region", { name: "Written by", hidden: true }));
   expect((article.getByLabelText("Service") as HTMLSelectElement).value).toBe("gone-llm");
   expect((article.getByLabelText("Model") as HTMLSelectElement).value).toBe("old-text");
   expect((article.getByLabelText("Thinking") as HTMLSelectElement).value).toBe("high");
@@ -319,7 +326,7 @@ it("copies an explicitly selected entry and ignores subsequent library changes",
       </>
     );
   }
-  renderApp(
+  renderRouted(
     <LibraryChange />,
     testDeps({
       "GET /api/providers": jsonAnswer({ providers: [] }),
@@ -370,7 +377,7 @@ it("retains content upload pending state when a field changes", async () => {
       />
     );
   }
-  renderApp(
+  renderRouted(
     <Uploading />,
     testDeps({
       "GET /api/providers": jsonAnswer({ providers: [] }),
@@ -379,7 +386,7 @@ it("retains content upload pending state when a field changes", async () => {
       "GET /api/entries": jsonAnswer({ entries: [] }),
     }),
   );
-  await user.click(screen.getByRole("button", { name: "Start content upload" }));
+  await user.click(await screen.findByRole("button", { name: "Start content upload" }));
   await user.type(screen.getByLabelText("Project title"), " changed");
   expect(pending.mock.calls.map(([value]) => value)).toEqual([false, true]);
   await user.click(screen.getByRole("button", { name: "Finish content upload" }));
@@ -417,7 +424,7 @@ it("adopts saved wording as a template only after an explicit click", async () =
       />
     );
   }
-  renderApp(
+  renderRouted(
     <Frozen />,
     testDeps({
       "GET /api/providers": jsonAnswer({ providers: [] }),
@@ -459,7 +466,7 @@ it("switches the YouTube description on in Outputs and freezes or drops its prom
       <RevisionForm view={view} edit={edit} onChange={setEdit} onPending={() => {}} fields={[]} />
     );
   }
-  renderApp(
+  renderRouted(
     <Describe />,
     testDeps({
       "GET /api/providers": jsonAnswer({ providers: [] }),
@@ -479,7 +486,7 @@ it("switches the YouTube description on in Outputs and freezes or drops its prom
       "GET /api/entries": jsonAnswer({ entries: [] }),
     }),
   );
-  await openEditSection("Outputs");
+  await openEditSection("Extras");
   const on = screen.getByRole<HTMLInputElement>("checkbox", { name: /YouTube description/ });
   expect(on.checked).toBe(false);
   expect(screen.queryByRole("combobox", { name: "Description prompt" })).toBeNull();
@@ -568,7 +575,7 @@ function mountShorts(
       <RevisionForm view={view} edit={edit} onChange={setEdit} onPending={() => {}} fields={[]} />
     );
   }
-  renderApp(
+  renderRouted(
     <Cut />,
     testDeps({
       "GET /api/providers": jsonAnswer({ providers: [] }),
@@ -595,7 +602,7 @@ function mountShorts(
 it("sets the Shorts in their own section: numbers, prompts and the more options", async () => {
   const user = userEvent.setup();
   const state = mountShorts(shortsView());
-  await openEditSection("Outputs");
+  await openEditSection("Extras");
   const count = screen.getByRole<HTMLInputElement>("textbox", { name: "How many shorts" });
   expect(count.value).toBe("2");
   await user.clear(count);
@@ -635,7 +642,7 @@ it("sets the Shorts in their own section: numbers, prompts and the more options"
 it("moves a picked clip by a sentence, or to a range of one's own, and says when it can't", async () => {
   const user = userEvent.setup();
   const state = mountShorts(shortsView());
-  await openEditSection("Outputs");
+  await openEditSection("Extras");
   const first = screen.getByRole("listitem", { name: "Short 1 · Short 1 title" });
   expect(within(first).getByText("Starts: “Sentence 2.”")).not.toBeNull();
   expect(within(first).getByText("Ends: “Sentence 4.”")).not.toBeNull();
@@ -674,7 +681,7 @@ it("makes one short again, or picks different moments, through the edit's regene
       },
     },
   });
-  await openEditSection("Outputs");
+  await openEditSection("Extras");
   const second = screen.getByRole("listitem", { name: "Short 2 · Short 2 title" });
   await user.click(within(second).getByRole("button", { name: "Make this short again" }));
   expect(state.latest.regenerate).toEqual(["shorts:2"]);
@@ -692,7 +699,7 @@ it("uploads background music for the shorts and removes it again", async () => {
   const state = mountShorts(shortsView(), {
     "POST /api/staging/audio": async () => response({ ...staged, stageKind: "audio" }),
   });
-  await openEditSection("Outputs");
+  await openEditSection("Extras");
   await userEvent.click(screen.getByText(/More shorts options/));
   fireEvent.change(screen.getByLabelText(/Background music \(optional\)/), {
     target: { files: [new File(["music"], "loop.mp3", { type: "audio/mpeg" })] },
@@ -719,7 +726,7 @@ it("shows an old project's video as it was, and writes edit settings only once o
       <RevisionForm view={view} edit={edit} onChange={setEdit} onPending={() => {}} fields={[]} />
     );
   }
-  renderApp(
+  renderRouted(
     <Video />,
     testDeps({
       "GET /api/providers": jsonAnswer({ providers: [] }),
@@ -729,9 +736,9 @@ it("shows an old project's video as it was, and writes edit settings only once o
     }),
   );
   await openEditSection("Images");
-  await user.selectOptions(screen.getByRole("combobox", { name: "Images source" }), "generate");
+  await user.click(strip("Images").getByRole("radio", { name: "Made by AI (paid)" }));
   await openEditSection("Video and style");
-  await user.selectOptions(screen.getByRole("combobox", { name: "Video source" }), "generate");
+  await user.click(strip("Video").getByRole("radio", { name: "Make the video" }));
   // Saved before the settings: cuts every N seconds, a plain Look, and nothing written.
   expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "Cuts" }).value).toBe("interval");
   expect(screen.getByText("Plain cuts, no effects")).not.toBeNull();
@@ -742,7 +749,7 @@ it("shows an old project's video as it was, and writes edit settings only once o
   expect(screen.getByText("Look").nextElementSibling?.textContent).toBe("Sepia");
 });
 
-it("offers this project's outro or the Library's newer one when the Library has changed it", async () => {
+it("offers this project's outro or the newer one when it has changed in Prompts", async () => {
   const user = userEvent.setup();
   const base = revisionView();
   const view: RevisionView = {
@@ -765,7 +772,7 @@ it("offers this project's outro or the Library's newer one when the Library has 
       </>
     );
   }
-  renderApp(
+  renderRouted(
     <Outro />,
     testDeps({
       "GET /api/providers": jsonAnswer({ providers: [] }),
@@ -788,7 +795,7 @@ it("offers this project's outro or the Library's newer one when the Library has 
   );
   await openEditSection("Narration");
   const picker = await screen.findByRole("combobox", { name: "Outro" });
-  await screen.findByRole("option", { name: "Closing · Library version (newer)" });
+  await screen.findByRole("option", { name: "Closing · newer wording from Prompts" });
   expect(screen.getByRole("option", { name: "Closing · this project's version" })).toBeDefined();
   // It starts on the project's own wording.
   expect(screen.getByLabelText("Outro wording").textContent).toBe("Say goodbye.");

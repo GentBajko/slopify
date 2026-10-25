@@ -97,6 +97,8 @@ export function EditLoudness({
   return (
     <LoudnessControls
       value={value}
+      // A sound-only project has no video for its volume to apply to.
+      video={edit.config.sources.video !== "off"}
       problem={(field) => problem(`loudness.${field}`)}
       onChange={(next) => {
         setValue(next);

@@ -1,6 +1,11 @@
 import { languageInfo } from "@app/kernel/ports/languages.js";
 import { render } from "@app/slices/admission/substitute.js";
 import { documentThemeLabel } from "@app/slices/document/model.js";
+import {
+  channelName,
+  extrasName,
+  setupSectionNames,
+} from "@app/slices/project-templates/setup-sections.js";
 import type { ProviderStatus, Voice } from "@app/slices/settings/model.js";
 import {
   atmosphereLabels,
@@ -17,16 +22,17 @@ import { type PlayFormState, shortsOn } from "./state";
 
 // Create is one screen: what is being made, the topic, then these rows, each one plain sentence
 // saying what the run will do, with Change opening its editor in place under it (one at a time).
-// The same names, in the same order, as Edit template and a project's Edit settings.
+// The same names, in the same order, as Edit template and a project's Edit settings: the one
+// list in `setup-sections.ts`, with the optional outputs together under Extras.
 export const setupRows = [
-  { id: "title", label: "Keywords", section: "content" },
-  { id: "article", label: "Article", section: "content" },
-  { id: "narration", label: "Narration", section: "outputs" },
-  { id: "images", label: "Images", section: "outputs" },
-  { id: "video", label: "Video and style", section: "style" },
-  { id: "outputs", label: "Extras", section: "outputs" },
-  { id: "reviews", label: "Pauses and checks", section: "review" },
-  { id: "channel", label: "Channel", section: "content" },
+  { id: "title", label: setupSectionNames.topic, section: "content" },
+  { id: "article", label: setupSectionNames.article, section: "content" },
+  { id: "narration", label: setupSectionNames.narration, section: "outputs" },
+  { id: "images", label: setupSectionNames.images, section: "outputs" },
+  { id: "video", label: setupSectionNames.video, section: "style" },
+  { id: "outputs", label: extrasName, section: "outputs" },
+  { id: "reviews", label: setupSectionNames.checks, section: "review" },
+  { id: "channel", label: channelName, section: "content" },
 ] as const satisfies readonly {
   readonly id: string;
   readonly label: string;

@@ -249,7 +249,7 @@ it("takes no verdict for a project in the Trash and says how to get it back", as
     .run(h.projectId);
   const trashed = await verdictOn(h, { verdict: "pass", reasons: [] });
   expect(trashed.refused).toBe(true);
-  expect(trashed.said).toContain("Settings → Backup & storage → Trash");
+  expect(trashed.said).toContain("Settings → Trash");
   expect(externalReviewById(h.deps.db, h.projectId, "er1")?.state).toBe("waiting");
 });
 

@@ -19,7 +19,7 @@ const projects: readonly RouteTool[] = [
     route: "GET /api/projects",
     title: "List projects",
     description:
-      "Every project as the Projects list shows it: id, title, status, stateWord (how Slopify's pages say it: Queued, Running, Paused, Waiting for your review, Waiting for the agent, Stopped (only Continue the run, resume_project, goes on), Prepared, Kept as is, Failed, Done with problems, Done, Canceled; an uploaded project reads Done once nothing it admitted is left to run; a run whose step failed while another step waits for the agent or the person reads by that wait, with stepFailed: true, and Failed once nothing else can go on), stepFailures (each step that failed while another step waits for the agent, the person or its day, even while a third still runs, as kind@finishedAt; absent otherwise), progress from 0 to 1, channelId and uploadedAt.",
+      "Every project as the Projects list shows it: id, title, status, stateWord (how Slopify's pages say it: Queued, Running, Paused, Waiting for your review, Waiting for the agent, Stopped (only Continue the run, resume_project, goes on), Waiting for its day (made ahead by its schedule), Kept as is, Failed, Done with problems, Done, Canceled; an uploaded project reads Done once nothing it admitted is left to run; a run whose step failed while another step waits for the agent or the person reads by that wait, with stepFailed: true, and Failed once nothing else can go on), stepFailures (each step that failed while another step waits for the agent, the person or its day, even while a third still runs, as kind@finishedAt; absent otherwise), progress from 0 to 1, channelId and uploadedAt.",
     shape: listWithStateWords,
   },
   {
@@ -37,7 +37,7 @@ const projects: readonly RouteTool[] = [
     description:
       "Delete on the Projects list: moves the project to the trash. A running project is refused: cancel it first.",
     confirm:
-      "This moves the project to Settings → Backup & storage → Trash, where it is kept 30 days before it is deleted for good.",
+      "This moves the project to Settings → Trash, where it is kept 30 days before it is deleted for good.",
   },
   {
     name: "move_projects_to_channel",

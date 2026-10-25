@@ -208,8 +208,8 @@ export function projectOutputs(input: OutputsInput): readonly ProjectOutput[] {
       primary: file(video, "Video")[0],
       // The thumbnails have their own row.
       alternatives: [
-        ...file(role("subtitles_srt"), "Subtitles"),
-        ...file(role("subtitles_vtt"), "Subtitles"),
+        ...file(role("subtitles_srt"), "Captions"),
+        ...file(role("subtitles_vtt"), "Captions"),
         ...file(role("youtube_description"), "YouTube description"),
         ...file(role("youtube_tags"), "YouTube tags"),
       ],

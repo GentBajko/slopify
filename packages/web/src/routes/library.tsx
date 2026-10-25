@@ -19,8 +19,9 @@ export function LibraryLayout(): ReactElement {
   );
 }
 
-// The frequent actions in Ctrl+K: a new prompt, intro or outro (on the kind or list showing),
-// a new PDF theme, and the way to each list.
+// The frequent actions in Ctrl+K: a new prompt, intro or outro (on the kind or list showing)
+// and a new PDF theme. The intros and outros and the PDF themes are found by name; Open Prompts
+// and Open Templates are the rail's own (components/shell-commands.tsx), listed once.
 function LibraryCommands(): null {
   const navigate = useNavigate();
   const location = useRouterState({ select: (state) => state.location });
@@ -55,29 +56,13 @@ function LibraryCommands(): null {
     },
   });
   useCommand({
-    id: "library.open-prompts",
-    title: "Open prompts",
-    group: "Prompts",
-    run: () => {
-      void navigate({ to: "/prompts", search: { kind: "article" } });
-    },
-  });
-  useCommand({
     id: "library.open-entries",
     title: "Open intros and outros",
     group: "Prompts",
     keywords: ["entries"],
+    searchOnly: true,
     run: () => {
       void navigate({ to: "/entries", search: { category: "intro" } });
-    },
-  });
-  useCommand({
-    id: "library.open-templates",
-    title: "Open templates",
-    group: "Templates",
-    keywords: ["setups"],
-    run: () => {
-      void navigate({ to: "/templates" });
     },
   });
   useCommand({
@@ -85,6 +70,7 @@ function LibraryCommands(): null {
     title: "Open PDF themes",
     group: "PDF themes",
     keywords: ["pdf", "documents", "document themes", "pdf look"],
+    searchOnly: true,
     run: () => {
       void navigate({ to: "/document-themes" });
     },

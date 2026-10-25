@@ -99,7 +99,7 @@ export function summaryOf(
       return "Canceled by user";
     case "running":
       if (preparingSubtitles(stage, project.config))
-        return `Preparing subtitles · ${String(percent(stage.progressCurrent ?? 0, 35))}%`;
+        return `Preparing captions · ${String(percent(stage.progressCurrent ?? 0, 35))}%`;
       if (stage.activity !== undefined) return capitalised(activityText(stage) ?? "");
       if (stage.kind === "video" && finalOutput(project.config) === "audio")
         return "Exporting combined audio";

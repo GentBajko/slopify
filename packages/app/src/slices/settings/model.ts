@@ -21,8 +21,8 @@ export const providerIds = [
   "claude-code",
   "codex",
   "gemini",
-  "elevenlabs",
   "openai-tts",
+  "elevenlabs",
   "cartesia",
   "inworld",
   "system-voice",
@@ -113,8 +113,10 @@ export const providers: readonly Provider[] = [
     binary: "agy",
     versionArgs: ["--version"],
   },
-  { id: "elevenlabs", family: "tts", displayName: "ElevenLabs", auth: "key" },
+  // OpenAI first among the voices: the voices Slopify sets up are OpenAI's, so its key narrates
+  // at once, while ElevenLabs, Cartesia and Inworld also need a voice saved under Voices.
   { id: "openai-tts", family: "tts", displayName: "OpenAI", auth: "key" },
+  { id: "elevenlabs", family: "tts", displayName: "ElevenLabs", auth: "key" },
   { id: "cartesia", family: "tts", displayName: "Cartesia", auth: "key" },
   { id: "inworld", family: "tts", displayName: "Inworld", auth: "key" },
   { id: "system-voice", family: "tts", displayName: "System voice", auth: "local" },

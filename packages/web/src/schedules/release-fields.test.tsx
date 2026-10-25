@@ -69,7 +69,7 @@ it("sets each run day's release times, with one time for each short the template
   await user.type(screen.getByLabelText("Name"), "Twice a week");
   await screen.findByRole("option", { name: "Stories · v1" });
   await user.selectOptions(screen.getByLabelText("Template"), templateId);
-  await user.selectOptions(screen.getByLabelText("Cadence"), "weekly");
+  await user.selectOptions(screen.getByLabelText("How often"), "weekly");
   // Monday, Wednesday and Friday are ticked to start with: Friday goes.
   await user.click(screen.getByRole("checkbox", { name: "Fri" }));
   await user.click(screen.getByRole("button", { name: "Set release times" }));

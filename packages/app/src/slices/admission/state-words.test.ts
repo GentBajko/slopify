@@ -11,7 +11,7 @@ import {
 it.each([
   [{ status: "pending", progress: 0 }, "Queued"],
   [{ status: "pending", progress: 0.5 }, "Waiting for your review"],
-  [{ status: "pending", progress: 0.5, prepared: true }, "Prepared"],
+  [{ status: "pending", progress: 0.5, prepared: true }, "Waiting for its day"],
   [{ status: "pending", progress: 0.5, setAside: true }, "Kept as is"],
   [{ status: "pending", progress: 0.5, waitingForAgent: true }, "Waiting for the agent"],
   [

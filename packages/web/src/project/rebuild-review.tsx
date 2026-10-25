@@ -12,7 +12,7 @@ export interface RebuildConsent {
   readonly confirmedProvidedWorkKeys: readonly string[];
 }
 
-// Choose what to remake: what the rebuild will make, keep and skip, what it costs, and what
+// Choose what to make again: what the rebuild will make, keep and skip, what it costs, and what
 // it needs from the person, compactly. The counts and the cost are always in view; the
 // changed inputs, each work item and each cost row are folded away. Everything Start still
 // needs (a provided file to confirm, unknown costs to accept) sits beside Start itself.
@@ -248,7 +248,7 @@ export function RebuildReview({
               })
             }
           >
-            {pending ? "Starting the remake…" : verb}
+            {pending ? "Starting…" : verb}
           </Button>
           <Button disabled={pending} onClick={onCancel}>
             Keep things as they are

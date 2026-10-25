@@ -1,14 +1,14 @@
 # Document Themes
 
-A document theme is the look of the PDF Slopify makes from the article: paper size, colours, fonts, spacing, the title page, contents, sources and closing pages, headers and page numbers. Slopify ships a built-in **Plain** theme. Copy it to make themes of your own, with a live preview as you edit.
+A document theme is the look of the PDF Slopify makes from the article: paper size, colours, fonts, spacing, the title page, contents, sources and closing pages, headers and page numbers. Slopify ships three ready looks, **Plain**, **Book** and **Modern**. Copy one to make themes of your own, with a live preview as you edit.
 
-**Where to find it:** **PDF themes** (Settings → Production defaults → PDF look → **Edit PDF looks**). Pick a theme on Create in the **Extras** row (**PDF of the article** → **Theme**, with **Edit themes ↗**), in a project's **Edit settings**, or as a channel's default in its brand kit.
+**Where to find it:** **Edit PDF looks** beside the **PDF look** on Create's **Extras** row, in Edit template's **PDF** section or under **Settings → Production defaults**. Pick a look on Create, in a project's **Edit settings**, or as a channel's default in its brand kit.
 
 ## Built-in and your own themes
 
 | List | What it holds |
 |---|---|
-| **Built-in themes** | Looks that ship with Slopify and can't be changed. **Plain** is an unbranded flat page and what a new project gets. Press **Copy theme** to make an editable copy. |
+| **Built-in themes** | Looks that ship with Slopify and can't be changed. **Plain** is an unbranded flat page and what a new project gets; **Book** is book type on parchment; **Modern** is a sans-serif on white. Press **Copy theme** to make an editable copy. |
 | **Your themes** | Themes you made or copied. Each has **Edit**, **Duplicate** and **Delete**. |
 
 A project keeps its own copy of the theme's settings. Editing or deleting a theme never changes a PDF already made or queued.

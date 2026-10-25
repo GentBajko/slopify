@@ -78,8 +78,8 @@ const labels: Readonly<Record<DescriptionField, string>> = {
 // An edit is kept as the person's own and survives the next writing: when the description is
 // written again, a part they changed keeps their text and offers the new one beside it
 // (`slices/youtube/edits.ts`). `{{Name}}` placeholders fill from the project's channel's links
-// (its Brand tab) and this project's own Previous episode. Everything stays mounted while the
-// step runs or waits, so nothing moves when the text lands.
+// (its Name and look tab) and this project's own Previous episode. Everything stays mounted
+// while the step runs or waits, so nothing moves when the text lands.
 export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actions" | "busy">) {
   const id = useId();
   const { api } = useApp();
@@ -266,7 +266,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
   if (shared !== undefined) shared.current = copyLatest.current;
   const waiting =
     stage.state === "running"
-      ? "Written after the subtitle timing."
+      ? "Written once the captions are timed."
       : "Not written yet. It is made with the video.";
   const edit = (name: DescriptionField) =>
     editable && drafts[name] === undefined ? (
@@ -358,14 +358,14 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
               <p className="m-0 text-small text-waiting">
                 {`No link is saved for ${unknown.map((name) => `{{${name}}}`).join(", ")}, so it stays as typed. Add it under Channel links on `}
                 {channelLinks.data === undefined ? (
-                  "the channel's Brand tab"
+                  "the channel's Name and look tab"
                 ) : (
                   <Link
                     to="/channels/$channelId"
                     params={{ channelId: channelLinks.data.channelId }}
                     className="underline"
                   >
-                    the channel's Brand tab
+                    the channel's Name and look tab
                   </Link>
                 )}
                 {`${unknown.some((name) => linkKey(name) === linkKey(previousVideoLink)) ? ", or give this project's Previous episode under YouTube links" : ""}.`}

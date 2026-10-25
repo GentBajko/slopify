@@ -126,7 +126,9 @@ export function ArticleRail({ form, prompts, problem, update, titled }: RailProp
   );
 }
 
-// Outputs → Thumbnail: one tick; once ticked, how it is made and from what.
+// Outputs → Thumbnail: one tick; once ticked, how it is made and from what. Bare (Edit
+// template, whose section leads with the source and the count), only who draws it, its prompt
+// or its file.
 export function ThumbnailRail({
   form,
   providers,
@@ -136,20 +138,12 @@ export function ThumbnailRail({
   onPickFiles,
   onRemoveFile,
   onReattachFile,
+  bare = false,
 }: RailProps) {
   const generating =
     form.sources.thumbnail === "from_prompt" || form.sources.thumbnail === "prompt_by_llm";
-  return (
-    <OutputTick
-      field="sources.thumbnail"
-      label="Thumbnail"
-      help="The picture people see before they press play. A drawn one is one image call each."
-      checked={form.sources.thumbnail !== "off"}
-      onChange={(on) =>
-        update({ sources: { ...form.sources, thumbnail: on ? "from_prompt" : "off" } })
-      }
-    >
-      <SourceSwitch kind="thumbnail" form={form} update={update} without="off" />
+  const made = (
+    <>
       {generating ? (
         <div className="sl-fields">
           {form.sources.images !== "generate" ? (
@@ -173,12 +167,14 @@ export function ThumbnailRail({
               update({ thumbnailPrompt });
             }}
           />
-          <ThumbnailCountPicker
-            value={form.thumbnailCount === 3 ? 3 : 1}
-            onPick={(thumbnailCount) => {
-              update({ thumbnailCount });
-            }}
-          />
+          {bare ? null : (
+            <ThumbnailCountPicker
+              value={form.thumbnailCount === 3 ? 3 : 1}
+              onPick={(thumbnailCount) => {
+                update({ thumbnailCount });
+              }}
+            />
+          )}
         </div>
       ) : null}
       {form.sources.thumbnail === "provide" ? (
@@ -199,6 +195,21 @@ export function ThumbnailRail({
           }}
         />
       ) : null}
+    </>
+  );
+  if (bare) return made;
+  return (
+    <OutputTick
+      field="sources.thumbnail"
+      label="Thumbnail"
+      help="The picture people see before they press play. A drawn one is one image call each."
+      checked={form.sources.thumbnail !== "off"}
+      onChange={(on) =>
+        update({ sources: { ...form.sources, thumbnail: on ? "from_prompt" : "off" } })
+      }
+    >
+      <SourceSwitch kind="thumbnail" form={form} update={update} without="off" />
+      {made}
     </OutputTick>
   );
 }
@@ -496,8 +507,9 @@ export function NumberField({
   );
 }
 
-// Outputs → PDF of the article: laid out locally from the article and title, so nothing here
-// needs a provider. One tick; once ticked, the look.
+// Extras → PDF of the article: laid out locally from the article and title, so nothing here
+// needs a provider. One tick; once ticked, its look, named as Edit template, Edit settings and
+// Settings → Production defaults name it.
 export function DocumentRail({ form, update }: RailProps) {
   if (form.sources.article === "off") return null;
   return (
@@ -508,12 +520,13 @@ export function DocumentRail({ form, update }: RailProps) {
       checked={form.sources.document === "generate"}
       onChange={(on) => update({ sources: { ...form.sources, document: on ? "generate" : "off" } })}
     >
-      <LabelledField label="Theme" problem={undefined}>
+      <LabelledField label="PDF look" problem={undefined}>
         {({ id }) => (
           <span className="flex flex-wrap items-center gap-3">
             <DocumentThemePicker
               id={id}
               field="document.theme"
+              draft
               className="w-auto min-w-[160px]"
               disabled={false}
               value={form.document}
@@ -522,7 +535,7 @@ export function DocumentRail({ form, update }: RailProps) {
               }}
             />
             <TextLink to="/document-themes" className="text-small">
-              Edit themes ↗
+              Edit PDF looks ↗
             </TextLink>
           </span>
         )}

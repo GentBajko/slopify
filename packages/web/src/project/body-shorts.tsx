@@ -133,7 +133,7 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
       {clips.length === 0 ? (
         <p className="m-0 text-small text-ink-2">
           {stage.state === "running"
-            ? "The clips are picked after the subtitle timing."
+            ? "The clips are picked once the captions are timed."
             : "Not made yet. They are made with the video."}
         </p>
       ) : (
@@ -308,7 +308,7 @@ function ShortCard({
       {onRemake === undefined ? null : (
         <Button variant="quiet" size="small" className="self-start" onClick={onRemake}>
           <span>
-            Make<span className="sr-only"> short {number}</span> again
+            Make this short again<span className="sr-only"> (short {number})</span>
           </span>
         </Button>
       )}

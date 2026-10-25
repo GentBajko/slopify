@@ -170,7 +170,7 @@ If nothing matches, the list says **No project matches. Clear the search or pick
 | **Queued** | Waiting for its turn in the video queue. |
 | **Waiting for your review** | Held at a review or checkpoint. |
 | **Waiting for the agent** | An External agent is reviewing what it made; it goes on by itself. |
-| **Prepared** | Made ahead by its schedule; only the video is left, for its day. |
+| **Waiting for its day** | Made ahead by its schedule; only the video is left, for its day. |
 | **Stopped** | Stopped before it finished, for example by a restart. Open it and press **Continue the run**. |
 | **Kept as is** | What is left was set aside with **Keep as is**. |
 | **Ready to upload** | A finished video you have not marked uploaded. |

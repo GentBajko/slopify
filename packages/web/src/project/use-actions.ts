@@ -191,7 +191,8 @@ function perform(
   control?: RevisionControlInput,
 ): Promise<ActionResult | RecoveryActionResult> {
   const required = (): RevisionControlInput => {
-    if (!control) throw new Error("A saved revision and request identity are required.");
+    if (!control)
+      throw new Error("This project has no saved version to act on yet. Reload the page.");
     return control;
   };
   switch (action.kind) {

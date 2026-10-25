@@ -5,6 +5,7 @@ import { useApp } from "@/app-context";
 import { useToast } from "@/components/kit/toast";
 import { counted, type Selection } from "@/components/selection";
 import { restoreTrashItems, trashKey } from "@/trash/api";
+import { useOpenTrash } from "@/trash/open-trash";
 
 // Duplicate selected and Delete selected for a Library tab. Each item is done on its own, so
 // one refusal leaves the rest done; the toast says how many and the first reason. A delete
@@ -55,6 +56,7 @@ export function useLibraryBulk<T extends BulkItem>({
   const { api } = useApp();
   const client = useQueryClient();
   const notify = useToast();
+  const openTrash = useOpenTrash();
   const words = (count: number): string => counted(count, noun[0], noun[1]);
   const refresh = async (): Promise<void> => {
     await Promise.all([
@@ -119,14 +121,16 @@ export function useLibraryBulk<T extends BulkItem>({
       );
       if (answer.failed.length > 0)
         notify(
-          `${words(answer.failed.length)} couldn't be restored: ${answer.failed[0]?.detail ?? ""} Restore ${answer.failed.length === 1 ? "it" : "them"} in Settings → Backup & storage → Trash.`,
+          `${words(answer.failed.length)} couldn't be restored: ${answer.failed[0]?.detail ?? ""} Restore ${answer.failed.length === 1 ? "it" : "them"} in Settings → Trash.`,
           "error",
+          openTrash,
         );
       else notify(`Restored ${words(answer.restored.length)}.`, "success");
     } catch (error) {
       notify(
-        `The ${noun[1]} weren't restored: ${reasonOf(error)} Restore them in Settings → Backup & storage → Trash.`,
+        `The ${noun[1]} weren't restored: ${reasonOf(error)} Restore them in Settings → Trash.`,
         "error",
+        openTrash,
       );
     } finally {
       await refresh();

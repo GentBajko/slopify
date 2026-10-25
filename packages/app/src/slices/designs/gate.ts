@@ -90,7 +90,7 @@ export async function contextChecks(
       ok: used,
       sentence: used
         ? `Each row's date is read from {{${schedule.dateField}}}.`
-        : `The schedule reads each date from {{${schedule.dateField}}}, but the template doesn't use that field. Choose a field it uses under Schedule.`,
+        : `The schedule reads each date from {{${schedule.dateField}}}, but the template doesn't use that keyword. Choose a keyword it uses under Schedule.`,
       fix: used ? null : at("schedule"),
     });
   }

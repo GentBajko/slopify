@@ -228,6 +228,12 @@ describe("a fold", () => {
     expect((details as HTMLDetailsElement).open).toBe(true);
   });
 
+  it("puts its state on a line of its own under the name on a phone", () => {
+    expect(css).toMatch(
+      /@media \(max-width: 480px\) \{\s*\.sl-fold__summary \{\s*flex-wrap: wrap;[^}]*\}\s*\.sl-fold__state \{\s*order: 1;\s*flex-basis: 100%;\s*padding-left: var\(--fold-indent\);/,
+    );
+  });
+
   it("leaves the state out when it has none", () => {
     render(
       <Fold summary="Install the extension">
@@ -672,6 +678,22 @@ describe("a stage's state is a word beside its lamp", () => {
     expect(images?.querySelector(".sl-step__detail")?.textContent).toBe("Done · 4 images");
     expect(video?.querySelector(".sl-step__detail")?.textContent).toBe("Not started");
     expect(screen.queryByText(/^, /)).toBeNull();
+  });
+
+  it("with its time when it has one, and nothing in its place when it has none", () => {
+    render(
+      <Steps
+        label="Run steps"
+        steps={[
+          { id: "i", name: "Images", tone: "done", state: "Done", time: "1:24" },
+          { id: "v", name: "Video", tone: "off", state: "Not started" },
+        ]}
+      />,
+    );
+    const [images, video] = screen.getAllByRole("listitem");
+    expect(images?.querySelector(".sl-step__time")?.textContent).toBe("1:24");
+    expect(video?.querySelector(".sl-step__time")?.textContent).toBe("");
+    expect(screen.queryByText("—")).toBeNull();
   });
 
   it("in a rail, where items without a lamp keep its column", () => {

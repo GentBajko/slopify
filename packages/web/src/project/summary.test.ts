@@ -256,5 +256,5 @@ it("distinguishes subtitle preparation from audio encoding", () => {
       ...project,
       config,
     }),
-  ).toBe("Preparing subtitles · 60%");
+  ).toBe("Preparing captions · 60%");
 });

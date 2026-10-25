@@ -1,6 +1,6 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { jsonAnswer, problemAnswer, renderApp, testDeps } from "@/test-app";
 import { NotificationSettings } from "./settings-panel.js";
 
@@ -25,6 +25,68 @@ describe("Settings → Notifications", () => {
       screen.queryByRole("button", { name: /^About (Browser and phone|Notifications)$/ }),
     ).toBeNull();
     await screen.findByLabelText("Notification URL");
+  });
+
+  it("names each switch for what it does, with one visible line and no info button", async () => {
+    renderApp(
+      <NotificationSettings />,
+      testDeps({
+        "GET /api/settings/notifications": jsonAnswer({ url: null }),
+        "GET /api/home/autopilot/weekly": jsonAnswer({ enabled: false }),
+      }),
+    );
+    await screen.findByLabelText("Notification URL");
+    const browser = screen.getByRole("switch", { name: "Notify me in this browser" });
+    expect(browser.getAttribute("aria-describedby")).not.toBeNull();
+    expect(screen.getByText(/Turning it on asks the browser's permission\./)).not.toBeNull();
+    expect(
+      screen.getByRole("switch", { name: "Play a sound when a run starts and ends" }),
+    ).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Hear the start sound" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Hear the end sound" })).not.toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^About (Notify|Play a sound|Weekly)/ }),
+    ).toBeNull();
+  });
+
+  it("offers the browser's own test only once its notifications are on", async () => {
+    const user = userEvent.setup();
+    const shown: string[] = [];
+    // This runner has no localStorage, so the test brings its own.
+    const stored = new Map<string, string>();
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => stored.get(key) ?? null,
+      setItem: (key: string, value: string) => stored.set(key, value),
+      removeItem: (key: string) => stored.delete(key),
+    });
+    vi.stubGlobal(
+      "Notification",
+      class {
+        static readonly permission = "granted";
+        onclick: (() => void) | null = null;
+        constructor(headline: string) {
+          shown.push(headline);
+        }
+        close(): void {}
+      },
+    );
+    try {
+      renderApp(
+        <NotificationSettings />,
+        testDeps({ "GET /api/settings/notifications": jsonAnswer({ url: null }) }),
+      );
+      await screen.findByLabelText("Notification URL");
+      // Off, and with no Notification URL, there is nothing to test yet.
+      expect(screen.queryAllByRole("button", { name: "Send test notification" })).toHaveLength(0);
+      await user.click(screen.getByRole("switch", { name: "Notify me in this browser" }));
+      const tests = await screen.findAllByRole("button", { name: "Send test notification" });
+      expect(tests).toHaveLength(1);
+      await user.click(tests[0] as HTMLElement);
+      expect(shown).toHaveLength(1);
+      expect(await screen.findByText("Test notification sent to this browser.")).not.toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("refuses a URL that isn't http or https before anything is sent", async () => {
@@ -59,9 +121,9 @@ describe("Settings → Notifications", () => {
     );
     expect(await screen.findByDisplayValue("https://ntfy.sh/slopify-runs")).not.toBeNull();
     const tests = screen.getAllByRole("button", { name: "Send test notification" });
-    // The browser's own test waits for the toggle; the URL's is ready.
-    expect(tests[0]?.hasAttribute("disabled")).toBe(true);
-    const urlTest = tests[1];
+    // The browser's own test appears once its switch is on; the URL's is there already.
+    expect(tests).toHaveLength(1);
+    const urlTest = tests[0];
     if (urlTest === undefined) throw new Error("the Notification URL row has no test button");
     await user.click(urlTest);
     expect((await screen.findByText(detail)).getAttribute("role")).toBe("alert");

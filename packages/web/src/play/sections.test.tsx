@@ -28,7 +28,7 @@ afterEach(cleanup);
 it("folds the setup into rows, one open at a time, that keep what was typed", async () => {
   const { requests } = await mountPlay();
   const rows = within(screen.getByRole("list", { name: "Setup" }));
-  // Keywords and Channel are rows only when there is something to set: no prompt asks for a
+  // Title and keywords and Channel are rows only when there is something to set: no prompt asks for a
   // keyword yet, and there is one channel.
   const names = document.querySelectorAll("[data-setup-row] > [data-row-head] h3");
   expect(Array.from(names, (heading) => heading.textContent)).toEqual([
@@ -128,17 +128,17 @@ it("retains hidden literal keyword values and renders prompt HTML as text", asyn
   await pickArticlePrompt("Dossier");
   await userEvent.click(screen.getByText("Text of the prompt"));
   expect(document.querySelector("pre img")).toBeNull();
-  await openRow("Keywords");
+  await openRow("Title and keywords");
   for (const name of ["__proto__", "topic.name", "with spaces"])
     await userEvent.type(screen.getByLabelText(name), "Kept");
   await openRow("Article");
   const source = within(screen.getByRole("radiogroup", { name: "Article" }));
   await userEvent.click(source.getByRole("radio", { name: "Use my text as written" }));
-  // Nothing asks for a keyword now, so there is no Keywords row at all.
+  // Nothing asks for a keyword now, so there is no Title and keywords row at all.
   expect(document.querySelector('[data-setup-row="title"]')).toBeNull();
   expect(screen.queryByLabelText("__proto__")).toBeNull();
   await userEvent.click(source.getByRole("radio", { name: "Write it for me" }));
-  await openRow("Keywords");
+  await openRow("Title and keywords");
   for (const name of ["__proto__", "topic.name", "with spaces"])
     expect((screen.getByLabelText(name) as HTMLInputElement).value).toBe("Kept");
 });
@@ -189,19 +189,21 @@ it("ticks the PDF of the article, picks its theme and saves both into the draft"
   const { requests, session } = await mountPlay();
   await openRow("Extras");
   // Its look is asked for only once it is ticked.
-  expect(screen.queryByRole("combobox", { name: "Theme" })).toBeNull();
+  expect(screen.queryByRole("combobox", { name: "PDF look" })).toBeNull();
   expect(outputsSummary()).toBe("The video only: no thumbnail, description, shorts or PDF.");
   await userEvent.click(screen.getByRole("checkbox", { name: "PDF of the article" }));
-  const theme = screen.getByRole<HTMLSelectElement>("combobox", { name: "Theme" });
-  // Plain is the one built-in; DiceMaster is no longer offered.
+  const theme = screen.getByRole<HTMLSelectElement>("combobox", { name: "PDF look" });
+  // Three ready looks, Plain first and picked; DiceMaster is no longer offered.
   expect(theme.value).toBe("builtin:plain");
   expect(
     Array.from(
       theme.querySelectorAll("optgroup[label='Built in'] option"),
       (one) => one.textContent,
     ),
-  ).toEqual(["Plain"]);
+  ).toEqual(["Plain", "Book", "Modern"]);
   expect(outputsSummary()).toBe("Also makes a PDF in the Plain look.");
+  await userEvent.selectOptions(theme, "Book");
+  expect(outputsSummary()).toBe("Also makes a PDF in the Book look.");
   await saveNow(session);
   {
     const saves = requests.filter(
@@ -210,9 +212,9 @@ it("ticks the PDF of the article, picks its theme and saves both into the draft"
         /\/api\/drafts(?:\/[a-f0-9-]+)?$/.test(request.url),
     );
     const saved = await saves.at(-1)?.clone().json();
-    expect(saved).toMatchObject({ document: { form: { sources: { document: "generate" } } } });
-    // The default needs no saving: a draft without a theme reads, and is made, as Plain.
-    expect(saved.document.form.document?.theme ?? "plain").toBe("plain");
+    expect(saved).toMatchObject({
+      document: { form: { sources: { document: "generate" }, document: { theme: "book" } } },
+    });
   }
 });
 

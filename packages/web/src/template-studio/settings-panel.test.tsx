@@ -100,7 +100,7 @@ it("shows the refusal's own sentence when the total went up", async () => {
   expect((await screen.findByRole("alert")).textContent).toContain("more than the $0.40 you saw");
 });
 
-it("lets samples use CLI plans only once switched on, saying what each state limits", async () => {
+it("lets samples use a Claude Code or Codex plan only once switched on, saying what each state limits", async () => {
   let sent: unknown;
   const put = vi.fn(async (request: Request) => {
     sent = await request.json();
@@ -124,11 +124,13 @@ it("lets samples use CLI plans only once switched on, saying what each state lim
       }),
     }),
   );
-  const toggle = await screen.findByRole("switch", { name: "Samples may use my CLI plans" });
+  const toggle = await screen.findByRole("switch", {
+    name: "Let samples use my Claude Code or Codex plan",
+  });
   expect(toggle.getAttribute("aria-checked")).toBe("false");
   expect(
     screen.getByText(
-      /Off: no sample, designed pieces' included, runs a step on your Claude Code or Codex plan/,
+      "Off: a sample that needs your plan, poster samples included, waits until you turn this on.",
     ),
   ).toBeTruthy();
   await user.click(toggle);
@@ -161,7 +163,7 @@ it("says today's sample calls with no known price beside what was spent", async 
   ).toBeTruthy();
 });
 
-it("sets the designed pieces' daily sample budget on its own", async () => {
+it("sets the poster templates' daily budget on its own", async () => {
   let sent: unknown;
   const put = vi.fn(async (request: Request) => {
     sent = await request.json();
@@ -194,7 +196,7 @@ it("sets the designed pieces' daily sample budget on its own", async () => {
     }),
   );
   const field = await screen.findByRole("spinbutton", {
-    name: "Designed pieces: daily sample budget",
+    name: "Poster templates: daily budget",
   });
   expect(screen.getByText(/Spent today: \$0\.25; left: \$0\.75\./)).toBeTruthy();
   await user.clear(field);
@@ -202,7 +204,7 @@ it("sets the designed pieces' daily sample budget on its own", async () => {
   expect(screen.getByText("Enter an amount between $0.00 and $1,000.00.")).toBeTruthy();
   await user.clear(field);
   await user.type(field, "3");
-  await user.click(screen.getByRole("button", { name: "Save designed pieces' budget" }));
+  await user.click(screen.getByRole("button", { name: "Save poster budget" }));
   await waitFor(() => expect(put).toHaveBeenCalledOnce());
   expect(sent).toEqual({ designDailyBudget: 3 });
   expect(await screen.findByText(/Spent today: \$0\.25; left: \$2\.75\./)).toBeTruthy();

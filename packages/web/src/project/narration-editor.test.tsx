@@ -161,7 +161,9 @@ it("shows a chunk queued for regeneration and can take it back", async () => {
     screen.getByRole("button", { name: "Make narration chunk 1 again · voice call" }),
   );
   expect(
-    screen.getByText("Narration chunk 1 is spoken again once you save and remake."),
+    screen.getByText(
+      "Narration chunk 1 is spoken again once you save and make the outdated narration again.",
+    ),
   ).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Keep narration chunk 1" }));
   expect(

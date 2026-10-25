@@ -9,6 +9,11 @@ import {
   titleMax,
   zoomPercentMax,
 } from "@app/slices/admission/rules.js";
+import {
+  channelName,
+  extrasName,
+  setupSectionNames,
+} from "@app/slices/project-templates/setup-sections.js";
 import { defaultSubtitles } from "@app/slices/subtitles/model.js";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -29,13 +34,10 @@ import { Field, HelpLine, Input, Select, Textarea } from "@/components/kit/field
 import { Fold } from "@/components/kit/fold";
 import { helpScope } from "@/components/kit/info-tip";
 import { RailButton } from "@/components/kit/rail";
-import type { HelpId } from "@/help/catalog";
 import { RevisionLanguage } from "@/language/revision-language";
-import { stageWords } from "@/lib/stage-words";
 import { cn } from "@/lib/utils";
 import { ShowFiguresToggle } from "@/play/describe-figures";
 import { FormatPicker } from "@/play/format-picker";
-import { sourceOptions } from "@/play/state";
 import { entriesQuery, promptsQuery, providersQuery, voicesQuery } from "@/queries";
 import { subtitlesFor } from "@/subtitles/config";
 import { SubtitleControls } from "@/subtitles/controls";
@@ -46,24 +48,15 @@ import { EditChannel } from "./edit-channel.js";
 import { editPreviewImageOf } from "./edit-preview-image.js";
 import { EditAmbientBed, EditLoudness, EditPauses } from "./edit-sound-and-scale.js";
 import { revisionFileUrl } from "./revision-api.js";
-import { changeSource, editOfForm } from "./revision-form-state.js";
+import { editOfForm } from "./revision-form-state.js";
 import { RevisionNarration } from "./revision-narration.js";
 import { type PromptPart, RevisionPrompts } from "./revision-prompts.js";
 import { RevisionProviders } from "./revision-providers.js";
 import { RevisionReviews } from "./revision-reviews.js";
 import { RevisionShorts } from "./revision-shorts.js";
+import { RevisionSource } from "./revision-source.js";
 import type { EditorProps, EditSection } from "./revision-workspace.js";
 import { RevisionYoutube } from "./revision-youtube.js";
-
-const sourceTips = {
-  research: "play.source.research",
-  article: "play.source.article",
-  audio: "play.source.audio",
-  images: "play.source.images",
-  thumbnail: "play.source.thumbnail",
-  video: "play.source.video",
-  document: "play.source.document",
-} as const satisfies Readonly<Record<(typeof stageKinds)[number], HelpId>>;
 
 // The intro or outro picker's value for "this project's version" of an entry the Library has
 // changed since the project copied it.
@@ -179,20 +172,26 @@ export function RevisionForm(
     language: config.language,
     onChange: (next) => onChange({ ...edit, config: { ...config, videoEdit: next } }),
   });
+  // Named as Create's rows and Edit template's sections are (`setup-sections.ts`). Captions, the
+  // made captions' own words, is the project's alone.
   const sections: readonly {
     readonly id: EditSection;
     readonly label: string;
     readonly badge?: string;
   }[] = [
-    { id: "title", label: "Title and keywords" },
+    { id: "title", label: setupSectionNames.topic },
     {
       id: "article",
-      label: "Article",
+      label: setupSectionNames.article,
       ...(edit.content.articleEdited ? { badge: "edited" } : {}),
     },
-    { id: "narration", label: "Narration" },
-    { id: "images", label: "Images", badge: String(edit.content.imageOrder.length) },
-    { id: "video", label: "Video and style" },
+    { id: "narration", label: setupSectionNames.narration },
+    {
+      id: "images",
+      label: setupSectionNames.images,
+      badge: String(edit.content.imageOrder.length),
+    },
+    { id: "video", label: setupSectionNames.video },
     ...(config.sources.article === "off"
       ? []
       : [
@@ -204,13 +203,13 @@ export function RevisionForm(
               : { badge: String(edit.content.subtitleCues.cues.length) }),
           },
         ]),
-    { id: "outputs", label: "Outputs" },
+    { id: "outputs", label: extrasName },
     {
       id: "checks",
-      label: "Pauses and checks",
+      label: setupSectionNames.checks,
       ...(config.reviews === undefined ? {} : { badge: "on" }),
     },
-    { id: "channel", label: "Channel" },
+    { id: "channel", label: channelName },
   ];
   const current = sections.some((one) => one.id === section) ? section : "title";
   const panel = (id: EditSection) => cn("min-w-0 space-y-6", current === id ? undefined : "hidden");
@@ -219,58 +218,15 @@ export function RevisionForm(
   const promptList = prompts.data?.prompts ?? [];
   const entryList = entries.data?.entries ?? [];
   // Each stage's source (made by AI, supplied, or off) sits at the top of its own section.
-  const sourceField = (kind: (typeof stageKinds)[number]) =>
-    // With Article Off, what reads the article is off and not offered.
-    config.sources.article === "off" &&
-    (kind === "research" || kind === "audio" || kind === "document") ? null : (
-      <Field
-        key={kind}
-        label={`${stageWords[kind]} source`}
-        tip={sourceTips[kind]}
-        error={problem(`sources.${kind}`)}
-      >
-        <Select
-          value={sourceOf(config.sources, kind)}
-          onChange={(event) => {
-            const option = sourceOptions(kind).find((one) => one.value === event.target.value);
-            if (option === undefined) return;
-            const next = changeSource(edit, kind, option.value);
-            onChange(
-              kind === "article" && option.value === "provide" && !edit.content.articleEdited
-                ? {
-                    ...next,
-                    content: {
-                      ...next.content,
-                      articleMarkdown: view.articleMarkdown ?? edit.content.articleMarkdown,
-                    },
-                  }
-                : next,
-            );
-          }}
-        >
-          {sourceOptions(kind)
-            .filter(
-              (option) =>
-                !(
-                  kind === "thumbnail" &&
-                  option.value === "prompt_by_llm" &&
-                  config.sources.article === "off"
-                ),
-            )
-            .map((option) => (
-              <option
-                key={option.value}
-                value={option.value}
-                disabled={
-                  kind === "video" && option.value === "generate" && config.sources.images === "off"
-                }
-              >
-                {option.label}
-              </option>
-            ))}
-        </Select>
-      </Field>
-    );
+  const sourceField = (kind: (typeof stageKinds)[number]) => (
+    <RevisionSource
+      kind={kind}
+      edit={edit}
+      articleMarkdown={view.articleMarkdown}
+      problem={problem}
+      onChange={onChange}
+    />
+  );
   const providerPart = (part: "text" | "voice" | "images") => (
     <RevisionProviders
       part={part}
@@ -335,7 +291,7 @@ export function RevisionForm(
           </ul>
         )}
         <section
-          aria-label="Title and keywords"
+          aria-label={setupSectionNames.topic}
           hidden={current !== "title"}
           className={panel("title")}
         >
@@ -351,11 +307,13 @@ export function RevisionForm(
           </Field>
           {promptPart("keywords")}
         </section>
-        <section aria-label="Article" hidden={current !== "article"} className={panel("article")}>
-          <div className="grid min-w-0 gap-4 md:grid-cols-2">
-            {sourceField("research")}
-            {sourceField("article")}
-          </div>
+        <section
+          aria-label={setupSectionNames.article}
+          hidden={current !== "article"}
+          className={panel("article")}
+        >
+          {sourceField("research")}
+          {sourceField("article")}
           {config.sources.research === "provide" ? (
             <Field
               label="Research notes"
@@ -385,7 +343,7 @@ export function RevisionForm(
                 error={problem("content.articleMarkdown") ?? problem("provided.article")}
                 help={
                   edit.content.articleEdited
-                    ? "Your edited article is kept when other settings change. Writing it again replaces it after the remake review."
+                    ? "Your edited article is kept when other settings change. Writing the article again replaces it."
                     : undefined
                 }
                 value={
@@ -416,7 +374,7 @@ export function RevisionForm(
                     Write the article again after review
                   </Button>
                   <HelpLine>
-                    Paid writing calls when you remake; the remake shows their cost first. It
+                    Paid writing calls when you make it again, with their cost shown first. It
                     replaces your edits to the article.
                   </HelpLine>
                 </div>
@@ -425,7 +383,7 @@ export function RevisionForm(
           )}
         </section>
         <section
-          aria-label="Narration"
+          aria-label={setupSectionNames.narration}
           hidden={current !== "narration"}
           className={panel("narration")}
         >
@@ -452,22 +410,21 @@ export function RevisionForm(
           </Group>
           {promptPart("narration")}
         </section>
-        <section aria-label="Images" hidden={current !== "images"} className={panel("images")}>
+        <section
+          aria-label={setupSectionNames.images}
+          hidden={current !== "images"}
+          className={panel("images")}
+        >
           {sourceField("images")}
           {providerPart("images")}
           {promptPart("images")}
         </section>
         <section
-          aria-label="Video and style"
+          aria-label={setupSectionNames.video}
           hidden={current !== "video"}
           className={panel("video")}
         >
           {sourceField("video")}
-          {config.sources.images === "off" ? (
-            <p className="m-0 text-small text-ink-2">
-              Images are Off. Video is also Off in these changes.
-            </p>
-          ) : null}
           <FormatPicker
             value={config.format}
             onPick={(format) => onChange({ ...edit, config: { ...config, format } })}
@@ -644,7 +601,11 @@ export function RevisionForm(
             />
           )}
         </section>
-        <section aria-label="Outputs" hidden={current !== "outputs"} className={panel("outputs")}>
+        <section
+          aria-label={extrasName}
+          hidden={current !== "outputs"}
+          className={panel("outputs")}
+        >
           {sourceField("thumbnail")}
           <RevisionYoutube
             edit={edit}
@@ -666,23 +627,27 @@ export function RevisionForm(
               />
             </section>
           ) : null}
-          <Group title="PDF">
-            {sourceField("document")}
-            <Field label="PDF look" id={`${formId}-document-theme`} tip="play.document-theme">
-              <DocumentThemePicker
-                id={`${formId}-document-theme`}
-                disabled={sourceOf(config.sources, "document") === "off"}
-                value={config.document}
-                onChange={(document) => {
-                  onChange({ ...edit, config: { ...config, document } });
-                }}
-              />
-            </Field>
-          </Group>
+          {sourceField("document")}
+          {/* The look only once there is a PDF to lay out. */}
+          {config.sources.article === "off" ||
+          sourceOf(config.sources, "document") === "off" ? null : (
+            <div className="grid min-w-0 gap-4 md:grid-cols-2">
+              <Field label="PDF look" id={`${formId}-document-theme`} tip="play.document-theme">
+                <DocumentThemePicker
+                  id={`${formId}-document-theme`}
+                  disabled={false}
+                  value={config.document}
+                  onChange={(document) => {
+                    onChange({ ...edit, config: { ...config, document } });
+                  }}
+                />
+              </Field>
+            </div>
+          )}
           {promptPart("outputs")}
         </section>
         <section
-          aria-label="Pauses and checks"
+          aria-label={setupSectionNames.checks}
           hidden={current !== "checks"}
           className={panel("checks")}
         >
@@ -696,7 +661,11 @@ export function RevisionForm(
           />
           {promptPart("checks")}
         </section>
-        <section aria-label="Channel" hidden={current !== "channel"} className={panel("channel")}>
+        <section
+          aria-label={channelName}
+          hidden={current !== "channel"}
+          className={panel("channel")}
+        >
           <EditChannel
             edit={edit}
             saved={view.revision.config}
@@ -803,7 +772,7 @@ function IntroOutro({
           .map((entry) => (
             <option key={entry.id} value={entry.name}>
               {split && entry.name === chosen
-                ? `${entry.name} · Library version (newer)`
+                ? `${entry.name} · newer wording from Prompts`
                 : entry.name}
             </option>
           ))}

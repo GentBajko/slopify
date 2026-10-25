@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { ChannelPicker, CurrentChannelProvider } from "@/channels/current";
-import { selfExplanatory, unexplainedControls } from "@/help/coverage";
+import { selfExplanatory, stageEditors, unexplainedControls } from "@/help/coverage";
 import { freshDraftDocument } from "@/play/draft-state";
 import { CalendarRoute } from "@/routes/calendar";
 import { ChannelRoute, type ChannelTab } from "@/routes/channel";
@@ -23,16 +23,21 @@ afterEach(cleanup);
 const planningAllow: readonly (string | RegExp)[] = [
   // Grid or List: its two answers say what each draws.
   "Show the weeks as",
-  // A name says what it is.
+  // A name says what it is: the channel's, and a schedule's in its form.
   "Channel name",
+  "Name",
   // The look's fonts and colours: the frame drawn beside them shows what each one changes.
   /^(Caption|Title) (font|colour|outline)( picker)?$/,
   // Each site's account: the one line under all of them says what they are for.
   / account$/,
 ];
 
+// A cast member's picture and voice are picked with Create's service groups ("Drawn by",
+// "Read by" over Service and Model, then Voice), named as Create names them.
 function expectExplained(): void {
-  expect(unexplainedControls(document.body, [...selfExplanatory, ...planningAllow])).toEqual([]);
+  expect(
+    unexplainedControls(document.body, [...selfExplanatory, ...stageEditors, ...planningAllow]),
+  ).toEqual([]);
 }
 
 const templateId = "11111111-1111-4111-8111-111111111111";
@@ -209,7 +214,9 @@ describe("the planning screens explain every control", () => {
   it("walks Schedules: the list, the detail and the form with every option open", async () => {
     const user = userEvent.setup();
     renderRouted(<SchedulesView />, testDeps(planningRoutes));
-    await screen.findByText("Its runs are skipped: no version of its template is marked ready");
+    await screen.findByText(
+      "Its runs are skipped: no version of its template is approved for schedules",
+    );
     const waiting = await screen.findByRole("list", { name: "Topics waiting" });
     await user.click(within(waiting).getByRole("button", { name: "Edit" }));
     await screen.findByLabelText("Edit Pyramids");
@@ -220,9 +227,9 @@ describe("the planning screens explain every control", () => {
     await user.selectOptions(screen.getByLabelText("Template"), templateId);
     await screen.findByLabelText("Each topic fills");
     expectExplained();
-    await user.selectOptions(screen.getByLabelText("Cadence"), "weekly");
+    await user.selectOptions(screen.getByLabelText("How often"), "weekly");
     expectExplained();
-    await user.selectOptions(screen.getByLabelText("Cadence"), "once");
+    await user.selectOptions(screen.getByLabelText("How often"), "once");
     expectExplained();
     await user.selectOptions(screen.getByLabelText("New topics"), "hold");
     await user.click(screen.getByRole("checkbox", { name: /Use the template's AI model/ }));

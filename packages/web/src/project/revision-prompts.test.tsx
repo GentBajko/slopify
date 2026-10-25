@@ -39,7 +39,7 @@ function edit(): RevisionEdit {
   };
 }
 
-it("offers the Library's newer outro, or keeping the project's own", async () => {
+it("offers the newer outro from Prompts, or keeping the project's own", async () => {
   const onChange = vi.fn();
   const mount = () =>
     render(
@@ -52,7 +52,7 @@ it("offers the Library's newer outro, or keeping the project's own", async () =>
       />,
     );
   mount();
-  await userEvent.click(screen.getByRole("button", { name: "Use the Library version for Outro" }));
+  await userEvent.click(screen.getByRole("button", { name: "Use the new wording for Outro" }));
   expect(onChange.mock.lastCall?.[0].content.promptTemplates.outro).toBe("Say goodbye warmly.");
 
   await userEvent.click(
@@ -76,5 +76,5 @@ it("asks again when the Library changes once more", () => {
       onChange={() => {}}
     />,
   );
-  expect(screen.getByText(/The Library's "Closing" has changed/)).toBeDefined();
+  expect(screen.getByText(/"Closing" in Prompts has changed/)).toBeDefined();
 });

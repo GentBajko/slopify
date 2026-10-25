@@ -1,15 +1,15 @@
 # PDF Documents
 
-Slopify can lay out your article as a styled PDF: a title page with the thumbnail as its cover, a table of contents, the article with drop caps, a sources page and an optional closing page. It is drawn on your computer in the theme you pick, needs no provider and costs nothing.
+Slopify can lay out your article as a styled PDF: a title page with the thumbnail as its cover, a table of contents, the article with drop caps, a sources page and an optional closing page. It is drawn on your computer in the look you pick, needs no service and costs nothing.
 
-**Where to find it:** Create → **Extras** row → **PDF of the article**. On a finished project: the **Document** section of the project page, and Edit project → **Inputs** → **Stages** → **Document theme**.
+**Where to find it:** Create → **Extras** → **PDF of the article**. On a finished project: the **PDF** section of the project page, and **Edit settings** → **Extras** → **PDF**.
 
 ## Make a PDF
 
 1. On Create, open the **Extras** row.
-2. In the **Document** rail, switch the source from **Off** to **Generate**.
-3. Pick a **Theme**: the built-in **Plain**, or one of your own themes from PDF themes (Settings → Production defaults → PDF look → Edit PDF looks).
-4. Start the run.
+2. Tick **PDF of the article**.
+3. Pick a **PDF look**: one of the three ready looks, **Plain**, **Book** or **Modern** (**Preview** shows it), or one of your own PDF themes.
+4. Make the video.
 
 The Document stage runs after the article (and the thumbnail, if there is one) is ready. A thumbnail that failed or was canceled doesn't hold it back: the PDF is then laid out without a cover. It needs an article with some text; an empty article stops the stage with a message pointing you to Edit project → Article.
 
@@ -18,9 +18,9 @@ The Document stage runs after the article (and the thumbnail, if there is one) i
 | Option | What it does | Default |
 |---|---|---|
 | **Document** source | **Generate** lays out a PDF of the article and title on this computer, in the theme you pick. It needs no provider and costs nothing. | Off |
-| **Theme** | How the PDF looks: the built-in **Plain** theme, or one of yours from **PDF themes** (Settings → Production defaults → PDF look → **Edit PDF looks**). **Edit themes ↗** opens the list. | Plain, or the channel's document theme |
+| **PDF look** | How the PDF looks: a ready look (**Plain**, **Book** or **Modern**), or one of your PDF themes. **Edit PDF looks** opens the list. | Plain, or the channel's PDF look |
 
-A theme of yours is copied into the project when you pick it. Editing the theme later leaves this project alone until you pick it again, so a PDF already made or queued never changes by surprise. A channel's brand kit can set a **Document theme** for its videos whose template picks none; see [Channels](Channels).
+A theme of yours is copied into the project when you pick it. Editing the theme later leaves this project alone until you pick it again, so a PDF already made or queued never changes by surprise. A channel's brand kit can set a **PDF look** for its videos whose template picks none; see [Channels](Channels).
 
 ## What's in the PDF
 
@@ -62,9 +62,15 @@ Sources come from two places:
 
 When there are no sources, the Sources page is left out.
 
-## The Plain theme
+## The ready looks
 
-Plain is the one built-in theme: an unbranded A4 page on a warm off-white background, headings in dark blue, the Cinzel typeface for body and headings, a three-line drop cap after headings, a table of contents and a sources page, no closing page.
+Three looks come with Slopify, all unbranded A4 pages with a table of contents and a sources page and no closing page:
+
+| Look | What it looks like |
+|---|---|
+| **Plain** | A warm off-white page, headings in dark blue, the Cinzel typeface for body and headings, a three-line drop cap after headings. What a new project gets. |
+| **Book** | The article set like a novel in Literata on a parchment texture, Cinzel headings and drop caps in warm brown. |
+| **Modern** | A sans-serif on a white page, blue headings and no drop caps, like a report. |
 
 To change fonts, colours, paper size (A4 or Letter), page parts and the closing page, make your own theme. See [Document-Themes](Document-Themes).
 

@@ -5,6 +5,7 @@ import {
   CalendarIcon,
   CircleHelpIcon,
   CompassIcon,
+  DownloadIcon,
   EllipsisIcon,
   FilmIcon,
   HandHeartIcon,
@@ -225,8 +226,9 @@ function reloadPage(): void {
   window.location.reload();
 }
 
-// Help: the tour first, then the guides, the keys, the patch notes and Slopify's own update.
-// On a phone it also holds the Assistant and the support links, so the top bar stays two words.
+// Help: the tour first, then the guides, the keys, the patch notes, Slopify's own update and
+// the diagnostics file a bug report needs (the same one Settings → About saves). On a phone it
+// also holds the Assistant and the support links, so the top bar stays two words.
 function HelpMenu({
   update,
   phone,
@@ -238,6 +240,7 @@ function HelpMenu({
   readonly onAssistant: () => void;
   readonly className: string;
 }): ReactElement {
+  const { api } = useApp();
   const tutorial = useTutorial();
   const palette = useCommandPalette();
   const onHelp = useLocation({ select: (location) => location.pathname.startsWith("/help") });
@@ -280,6 +283,16 @@ function HelpMenu({
         ) : null}
         <MenuSeparator />
         <UpdateMenuRows update={update} />
+        <MenuItem asChild>
+          <a
+            href={`${api.origin}/api/diagnostics`}
+            download="slopify-diagnostics.json"
+            className="no-underline"
+          >
+            <DownloadIcon {...iconProps} className="size-4" />
+            Download diagnostics
+          </a>
+        </MenuItem>
         {phone ? (
           <>
             <MenuSeparator />

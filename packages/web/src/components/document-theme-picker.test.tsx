@@ -35,3 +35,25 @@ it("previews the picked theme's sample article in a drawer before a render", asy
   expect(screen.getByRole("dialog", { name: "Preview: Plain" })).not.toBeNull();
   await waitFor(() => expect(previewed).toEqual({ values: plain }));
 });
+
+// A project saved before the PDF setting existed was drawn as DiceMaster and still is; a Create
+// draft or a template with no setting is made in today's default, so it reads Plain.
+it("reads a draft with no PDF setting as Plain, and a project with none as its retired look", async () => {
+  const deps = () =>
+    testDeps({
+      "GET /api/document-themes": jsonAnswer({ builtIns: [], themes: [] }),
+    });
+  const picked = () => screen.getByRole<HTMLSelectElement>("combobox").value;
+  renderApp(
+    <DocumentThemePicker id="theme" value={undefined} draft disabled={false} onChange={vi.fn()} />,
+    deps(),
+  );
+  expect(picked()).toBe("builtin:plain");
+  expect(screen.queryByRole("option", { name: /DiceMaster/ })).toBeNull();
+  cleanup();
+  renderApp(
+    <DocumentThemePicker id="theme" value={undefined} disabled={false} onChange={vi.fn()} />,
+    deps(),
+  );
+  expect(picked()).toBe("builtin:dicemaster");
+});

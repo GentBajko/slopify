@@ -437,6 +437,22 @@
   .sl-fold[open] > .sl-fold__summary .sl-fold__toggle::after {
     content: "Hide";
   }
+  /* On a phone the state takes its own line under the name, so a long one ("Split by chapter,
+     2 voices") leaves the name and Show on one line instead of squeezing the name onto three. */
+  @media (max-width: 480px) {
+    .sl-fold__summary {
+      flex-wrap: wrap;
+      row-gap: 0;
+    }
+    .sl-fold__state {
+      order: 1;
+      flex-basis: 100%;
+      padding-left: var(--fold-indent);
+    }
+    .sl-fold__state::before {
+      content: none;
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
     .sl-fold__chevron {
       transition: none;
@@ -728,15 +744,23 @@
   }
   .sl-grid--shorts {
     /* Vertical players 240 to 280 pixels wide: wide enough for one row of controls, two to
-       four across as the page allows, one down a phone. */
+       four across as the page allows. */
     grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
+  }
+  /* On a phone two shorts side by side, about 160 pixels each, rather than one player the
+     height of two screens. */
+  @media (max-width: 639px) {
+    .sl-grid--shorts {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: var(--space-3);
+    }
   }
   .sl-grid--compact {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: var(--space-3);
   }
-  /* In a project the open section is a column between two rails: three shorts across instead
-     of two, so five fit in about a screen. */
+  /* In a project the open section shares the width with the status column: three shorts
+     across instead of two, so five fit in about a screen. */
   @media (min-width: 1181px) {
     .sl-project .sl-grid--shorts {
       grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr));

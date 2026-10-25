@@ -15,7 +15,7 @@ A schedule starts a new project from a saved template at a set local time: every
 1. Open **Calendar**, then the **Schedules** tab, and press **New schedule**.
 2. Fill in **Name** (up to 200 characters). It never appears in the videos.
 3. Pick the **Template** each run starts from. The schedule keeps the template's current version.
-4. Choose the **Cadence** and times (see below).
+4. Choose **How often** and the times (see below).
 5. Add **Topics** (see below), or leave the list empty to run the template exactly as saved.
 6. Optional: set up **Topic generation**, a **Spend ceiling** and what happens to a **Missed run**.
 7. Press **Save schedule**.
@@ -26,7 +26,7 @@ The schedule appears under **Saved schedules** with its status, next run and the
 
 | Setting | What it does | Default |
 |---|---|---|
-| **Cadence** | **Every day** runs once a day at the local time. **Selected weekdays** runs on the days you tick. **One time** runs once at a date and time, then shows as completed. Each run starts one project. | Every day |
+| **How often** | **Every day** runs once a day at the local time. **Selected weekdays** runs on the days you tick. **One time** runs once at a date and time, then shows as completed. Each run starts one project. | Every day |
 | **Local time** | The clock time each run starts, read in the timezone below. | 09:00 |
 | **Weekdays** | The days a Selected weekdays schedule runs. Tick at least one; each ticked day is one project a week. | Mon, Wed and Fri |
 | **Run at** | The date and time of a One time schedule's single run. | |
@@ -44,7 +44,7 @@ Each run takes the first topic, starts one project with it and removes it from t
 
 **Each topic fills** is the template keyword a topic replaces, such as `{{Topic}}`. By default it is the keyword the template's project title uses, or else the first one. If the title doesn't use this keyword, every project gets the same title.
 
-Every other keyword of the template has an every-run value: the value it gets on every run, such as a word count. The fields are labelled `<keyword> (every run)` and use the same keyword list as Create, a project's Edit settings and templates: the line under each says which prompts it feeds ("Feeds …"), or "Not used by any picked prompt". The default is the template's own value. A topic can set its own value for any keyword, which wins for that one run; the field then notes "Unless a topic sets its own."
+Every other keyword of the template has an every-run value: the value it gets on every run, such as a word count. The fields are labelled `<keyword> (every run)` and use the same keyword list as Create, a project's Edit settings and Edit template: the line under each says which prompts it feeds ("Feeds …"), or "Not used by any picked prompt". The default is the template's own value. A topic can set its own value for any keyword, which wins for that one run; the field then notes "Unless a topic sets its own."
 
 ### Three ways to write the list
 
@@ -83,22 +83,22 @@ Pick a schedule in the list to see its **Queued topics · N**. You can change th
 
 Each change saves at once and says so, for example "Renamed to “Hypatia of Alexandria”.", with **Undo** on the notice. Only the queue changes; the next run and the other settings stay as they are. If the schedule changed in another tab meanwhile, the change is refused with the reason; reload and try again.
 
-## Prepare a video ahead
+## Make a video ahead
 
-A scheduled video can be made ahead of its day, so the day only renders it: useful before a trip, or to read the article and listen to the narration first.
+A scheduled video can be made ahead of its day, so the day only puts the video together: useful before a trip, or to read the article and listen to the narration first.
 
 1. Open **Calendar** and find the topic's run (either view).
-2. Press **Prepare**.
+2. Press **Make ahead**, read what it does and spends, and press **Make ahead (paid)**.
 
-Slopify makes the project now, exactly as the schedule would on the day (the template as it is now, the topic and the schedule's values), and runs everything but the video: research, the article, narration, images, the thumbnail and the PDF. It then holds at a **Before Video** checkpoint, and the run shows **Prepared** with **Open**.
+Slopify makes the project now, exactly as the schedule would on the day (the template as it is now, the topic and the schedule's values), and runs everything but the video: research, the article, narration, images, the thumbnail and the PDF. It then pauses before the video, and the run shows **Waiting for its day** with **Open**.
 
 On the scheduled day the schedule finds that project by its title and continues it instead of making another: the hold is lifted and the video, its captions, shorts and YouTube description are made. The same goes for an unfinished project you made yourself under the same title. A finished one counts as a video already made, and the day makes a new one.
 
-- You can open the prepared project and change anything before its day, for example with Edit project.
-- A **Before Video** checkpoint the template already has stays: the day waits for you to approve it, and the project reads **Waiting for your review** and is listed under **Needs you** (and for a connected [agent](Agents-MCP)). A project held only by Prepare's own hold reads **Prepared** and is not listed as waiting anywhere: it waits for its day, not for you.
-- A setup that makes no video has nothing to hold back, so Prepare runs it to the end.
-- A schedule without topics gives every run the same title, so only a prepared project continues there.
-- The spend limit applies to Prepare as it does to a scheduled run.
+- You can open the project made ahead and change anything before its day, for example with Edit settings.
+- A pause before the video that the template already has (**Pause after the images (before the video)**) stays: the day waits for you to approve it, and the project reads **Waiting for your review** and is listed under **Needs you** (and for a connected [agent](Agents-MCP)). A project held only by Make ahead's own hold reads **Waiting for its day** and is not listed as waiting anywhere: it waits for its day, not for you.
+- A setup that makes no video has nothing to hold back, so Make ahead runs it to the end.
+- A schedule without topics gives every run the same title, so only a project made ahead continues there.
+- The spend limit applies to Make ahead as it does to a scheduled run.
 
 ## Topics that find themselves
 
@@ -171,9 +171,9 @@ Pick a schedule in the list to see its detail: **When**, **Timezone**, **Next ru
 
 ## When you edit the template
 
-A schedule runs the newest version of its template, so a change you save applies from the next run, as before. The schedule's **Template** line says **Runs the newest version · Not checked in the studio**.
+A schedule runs the newest version of its template, so a change you save applies from the next run, as before. The schedule's **Template** line says **Runs each version you save**.
 
-That changes once you press **Mark ready** on a version in the template's [Template studio](Template-Studio#mark-ready) for the first time. From then on the schedule runs the newest version marked ready (or one Slopify carried over from it), and a version you save later waits until you look it over and press **Mark ready**. The line then says, for example, **Runs version 6 · version 7 not ready yet**. The schedule is never stopped or switched to an unchecked version by itself. If the change adds a keyword the schedule has no value for, fill it in under the schedule's topics or every-run values.
+That changes once you approve a version for schedules in [Edit template](Template-Studio#approve-for-schedules) (**More → Approve for schedules**) for the first time. From then on the schedule runs the newest approved version (or one Slopify carried over from it), and a version you save later waits until you look it over and approve it. The line then says, for example, **Runs version 6 · version 7 waits for your approval**. The schedule is never stopped or switched to an unchecked version by itself. If the change adds a keyword the schedule has no value for, fill it in under the schedule's topics or every-run values.
 
 ## Tips
 

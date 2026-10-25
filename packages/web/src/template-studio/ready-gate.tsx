@@ -7,7 +7,7 @@ import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/kit/menu";
-import { intents, requestIntent } from "@/lib/intents";
+import { requestNewSchedule } from "@/schedules/new-from";
 import type { PlayHandoff } from "@/templates/play-handoff";
 import { TemplateHistoryDrawer } from "@/templates/row-parts";
 import { useTemplateActions } from "@/templates/use-template-actions";
@@ -139,7 +139,7 @@ export function StudioActions({
       <Button
         onClick={() => {
           // The schedule editor opens with this template picked (`schedules/view.tsx`).
-          requestIntent(intents.newSchedule, view.template.id);
+          requestNewSchedule(view.template.id);
           void navigate({ to: "/calendar", search: { tab: "schedules" } });
         }}
       >

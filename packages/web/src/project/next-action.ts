@@ -87,8 +87,8 @@ export interface NextActionInput {
   readonly held: readonly HeldGate[];
   readonly outdated: readonly OutdatedOutput[];
   readonly waits: readonly LimitWaitLike[];
-  // A finished video is there to upload.
-  readonly uploadReady: boolean;
+  // A finished video file is there to download.
+  readonly videoReady: boolean;
   // The fix-it a failed step offers (`slices/fixes/rules.ts`), looked up by the caller.
   readonly fixOf: (stage: Stage) => Fix | undefined;
   // "14:05": how a time reads in a sentence. Injected so tests do not depend on the clock.
@@ -111,7 +111,7 @@ export type NextIntent =
   | { readonly kind: "soften"; readonly stage: StageKind }
   | { readonly kind: "edit" }
   | { readonly kind: "open-settings"; readonly section: "providers" | "storage" }
-  | { readonly kind: "prepare-upload" }
+  | { readonly kind: "download" }
   | { readonly kind: "full-video" };
 
 export type Situation =
@@ -129,7 +129,7 @@ export type Situation =
 export interface NextAction {
   readonly situation: Situation;
   readonly tone: Tone;
-  // The state in words, beside the lamp: "Waiting for your review", "Prepared".
+  // The state in words, beside the lamp: "Waiting for your review", "Waiting for its day".
   readonly status: string;
   // What is ready or what happened, one sentence.
   readonly title: string;
@@ -148,6 +148,12 @@ export const stoppedLines = {
   title: "The run stopped before it finished.",
   why: "Continuing makes only what is missing; everything made so far is kept.",
 } as const;
+
+// The finished video's file, from the title row: the one thing to do once it is made.
+const downloadVideo: NonNullable<NextAction["action"]> = {
+  label: "Download video",
+  intent: { kind: "download" },
+};
 
 const lower = (text: string): string =>
   /^[A-Z]{2}/.test(text) ? text : text.charAt(0).toLowerCase() + text.slice(1);
@@ -168,8 +174,8 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
     };
 
   if (project.status === "paused") {
-    // What the paused run had still to make, so an "Outdated" file is not taken for a remake
-    // that finished.
+    // What the paused run had still to make, so an "Outdated" file is not taken for one made
+    // again that finished.
     const left = stillToMake(input.outdated);
     return {
       situation: "paused",
@@ -232,8 +238,8 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
       case "provider-settings":
         return {
           ...base,
-          title: `The provider did not accept its key, so ${lower(plural(stageLabel))} stopped.`,
-          why: "Check the key in Settings, then try again.",
+          title: `The service did not accept its key, so ${lower(plural(stageLabel))} stopped.`,
+          why: "Check the key in Settings → Keys & services, then try again.",
           action: { label: fix.label, intent: { kind: "open-settings", section: "providers" } },
         };
       case "free-space":
@@ -277,10 +283,10 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
       tone: "waiting",
       status: heldStateWord(input.project),
       title: prepared
-        ? "Everything but the video is made; its schedule renders the video on its day."
+        ? "Everything but the video is made; its schedule puts the video together on its day."
         : `The ${lower(name(before))} ${isAre(name(before))} ready for your review.`,
       why: prepared
-        ? "Approving now renders it before its day."
+        ? "Approving now puts it together before its day."
         : after.length === 0
           ? `Approving makes the ${lower(heldName)}. Nothing after it runs until you do.`
           : `Approving makes the ${lower(heldName)}, then ${list(after.map((kind) => lower(plural(name(kind)))))}. Nothing after it runs until you do.`,
@@ -334,15 +340,15 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
   // Kept as is on Home's Needs you: what is left was set aside on purpose (a step added after
   // the project was made, whose run would redo finished work), so nothing asks to continue.
   if (project.status === "pending" && project.setAside === true)
-    return input.uploadReady
+    return input.videoReady
       ? {
           situation: "done",
           tone: "done",
           status: keptAsIsWord,
           title: "The video is ready; what is left won't run.",
-          why: "Copy for YouTube Studio lays out the file, title, description, thumbnails and tags in the order YouTube Studio asks for them. Editing the project brings the rest back to Needs you.",
-          action: { label: "Copy for YouTube Studio", intent: { kind: "prepare-upload" } },
-          section: "youtube",
+          why: "Editing the project brings the rest back to Needs you.",
+          action: downloadVideo,
+          section: "video",
         }
       : {
           situation: "done",
@@ -385,20 +391,17 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
         group.count === 1 || group.singular
           ? `The ${group.noun} ${group.noun.endsWith("s") ? "are" : "is"} outdated after your edit.`
           : `${String(group.count)} ${group.plural} are outdated after your edit.`,
-      why: "They keep their current version until you remake them. Before anything charged starts, the remake shows what it makes again and its estimated cost; nothing else is made again.",
+      why: "They keep their current version until you make them again. Before anything charged starts, you see what is made again and its estimated cost; nothing else is made again.",
       action: {
-        label:
-          group.count === 1 || group.singular
-            ? `Remake the outdated ${group.noun}`
-            : `Remake ${String(group.count)} outdated ${group.plural}`,
+        label: makeAgainLabel(group),
         intent: { kind: "remake", workKeys: group.workKeys },
       },
       section: group.section,
     };
 
   // The first thing a person makes is a short; the long video comes second. A finished short
-  // leads there, with the same topic and starter template. Copy for YouTube Studio stays in
-  // its section.
+  // leads there, with the same topic and starter template. Its download and Copy for YouTube
+  // Studio stay in its section.
   if (project.status === "done" && config.mode === "short")
     return {
       situation: "done",
@@ -409,15 +412,16 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
       action: { label: "Make the full video on this topic", intent: { kind: "full-video" } },
     };
 
-  if ((project.status === "done" || project.status === "partial") && input.uploadReady)
+  // A finished video is what the person came for: its download is the one thing to do next,
+  // uploaded or not. Copy for YouTube Studio sits beside the video, in its section's head.
+  if ((project.status === "done" || project.status === "partial") && input.videoReady)
     return {
       situation: "done",
       tone: "done",
       status: "Done",
-      title: "The video is ready.",
-      why: "Copy for YouTube Studio lays out the file, title, description, thumbnails and tags in the order YouTube Studio asks for them.",
-      action: { label: "Copy for YouTube Studio", intent: { kind: "prepare-upload" } },
-      section: "youtube",
+      title: "Your video is ready.",
+      action: downloadVideo,
+      section: "video",
     };
 
   return undefined;
@@ -469,7 +473,7 @@ function list(items: readonly string[]): string {
 }
 
 // Outdated outputs, grouped the way a person names them, in the order the run makes them.
-// Only the first group is offered: remaking it may make the next group outdated in turn,
+// Only the first group is offered: making it again may make the next group outdated in turn,
 // and the next action then names that one.
 interface OutdatedGroup {
   readonly id: string;
@@ -647,7 +651,20 @@ export function stillToMake(outdated: readonly OutdatedOutput[]): string | undef
   return named.length === 0 ? undefined : list(named);
 }
 
-// Every outdated group, for the palette: "Remake 3 outdated images", "Remake the video".
+// "Make the outdated video again", "Make the 3 outdated images again": named for its result.
+function makeAgainLabel(group: {
+  readonly noun: string;
+  readonly plural: string;
+  readonly singular: boolean;
+  readonly count: number;
+}): string {
+  return group.count === 1 || group.singular
+    ? `Make the outdated ${group.noun} again`
+    : `Make the ${String(group.count)} outdated ${group.plural} again`;
+}
+
+// Every outdated group, for the palette: "Make the 3 outdated images again", "Make the outdated
+// video again".
 export function outdatedGroups(outdated: readonly OutdatedOutput[]): readonly {
   readonly label: string;
   readonly workKeys: readonly string[];
@@ -663,10 +680,7 @@ export function outdatedGroups(outdated: readonly OutdatedOutput[]): readonly {
     );
     return [
       {
-        label:
-          count === 1 || group.singular
-            ? `Remake the outdated ${group.noun}`
-            : `Remake ${String(count)} outdated ${group.plural}`,
+        label: makeAgainLabel({ ...group, count }),
         workKeys: [...new Set(members.map((output) => output.workKey))],
         section: group.section,
         count,

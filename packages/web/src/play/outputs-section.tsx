@@ -106,7 +106,12 @@ export function ImagesSection(props: RailProps): ReactElement {
         <>
           <ImageScaleControl document={document} problem={props.problem} onEdit={session.edit} />
           {document.form.sources.article === "off" ? null : (
-            <ImageScenesControl document={document} prompts={props.prompts} onEdit={session.edit} />
+            <ImageScenesControl
+              document={document}
+              prompts={props.prompts}
+              bare={props.bare}
+              onEdit={session.edit}
+            />
           )}
         </>
       }

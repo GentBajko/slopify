@@ -46,7 +46,7 @@ export function designFields(doc: DesignDocument): readonly string[] {
 const slotSentences: Readonly<Record<SlotLintKind, string>> = {
   unclosed: "has a {{ without its }}",
   empty: "has an empty {{}}",
-  nested: "has a { or } inside a {{field}}",
+  nested: "has a { or } inside a {{keyword}}",
 };
 
 export function fieldProblems(doc: DesignDocument): readonly FieldProblem[] {
@@ -57,7 +57,7 @@ export function fieldProblems(doc: DesignDocument): readonly FieldProblem[] {
         kind: "slot",
         where: body.where,
         error: error.kind,
-        sentence: `The ${body.where.replace(/^the /, "")} ${slotSentences[error.kind]}. Fix it so every field reads {{Name}}.`,
+        sentence: `The ${body.where.replace(/^the /, "")} ${slotSentences[error.kind]}. Fix it so every keyword reads {{Name}}.`,
       });
   const names = designFields(doc);
   for (const name of names)
@@ -72,7 +72,7 @@ export function fieldProblems(doc: DesignDocument): readonly FieldProblem[] {
     problems.push({
       kind: "date-field",
       name: dateField,
-      sentence: `The schedule reads each row's date from {{${dateField}}}, but no text uses it. Put {{${dateField}}} in a text block, or choose another date field under Schedule.`,
+      sentence: `The schedule reads each row's date from {{${dateField}}}, but no text uses it. Put {{${dateField}}} in a text block, or choose another date keyword under Schedule.`,
     });
   return problems;
 }
@@ -93,7 +93,7 @@ export function missingSentence(missing: readonly string[]): string {
     list.length === 1
       ? `${list[0] ?? ""} has`
       : `${list.slice(0, -1).join(", ")} and ${list.at(-1) ?? ""} have`;
-  return `${named} no value. Fill ${list.length === 1 ? "it" : "them"} in under Fields, then press Make.`;
+  return `${named} no value. Fill ${list.length === 1 ? "it" : "them"} in under Keywords, then press Make.`;
 }
 
 // Every text with its fields filled. Values are inserted verbatim, never read as fields.

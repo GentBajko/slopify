@@ -191,7 +191,7 @@ describe("the calendar", () => {
     expect(screen.getByRole("combobox", { name: "Move Cleopatra to…" })).not.toBeNull();
   });
 
-  it("leaves Prepare off a paused schedule's run, which says Paused", async () => {
+  it("leaves Make ahead off a paused schedule's run, which says Paused", async () => {
     const prepare = vi.fn(jsonAnswer({ projectId: "p", title: "x" }, 201));
     renderRouted(
       <CalendarRoute />,
@@ -208,11 +208,46 @@ describe("the calendar", () => {
     );
     const chip = await screen.findByRole("article", { name: /^Cleopatra,/ });
     expect(within(chip).getByText("Paused")).not.toBeNull();
-    expect(within(chip).queryByRole("button", { name: "Prepare" })).toBeNull();
+    expect(within(chip).queryByRole("button", { name: "Make ahead" })).toBeNull();
     expect(prepare).not.toHaveBeenCalled();
   });
 
-  it("offers Prepare only for a video run, and says why a design run has none", async () => {
+  it("asks before making a topic ahead, saying it is paid now, and shows it Waiting for its day", async () => {
+    const user = userEvent.setup();
+    let made = false;
+    const prepare = vi.fn(async (request: Request) => {
+      made = true;
+      return jsonAnswer({ projectId: "p-ahead", title: "Cleopatra" }, 201)(request);
+    });
+    const calendar = (prepared: string | null) => ({
+      from: inDays(0, 0),
+      to: inDays(28, 0),
+      runs: [{ ...run(2, 0, "Cleopatra"), prepared }],
+      projects: [],
+      queued: [],
+    });
+    renderRouted(
+      <CalendarRoute />,
+      deps({
+        "GET /api/calendar": (request) => jsonAnswer(calendar(made ? "p-ahead" : null))(request),
+        [`POST /api/schedules/${scheduleId}/topics/prepare`]: prepare,
+      }),
+    );
+    const chip = await screen.findByRole("article", { name: /^Cleopatra,/ });
+    await user.click(within(chip).getByRole("button", { name: "Make ahead" }));
+    const dialog = await screen.findByRole("dialog", { name: "Make “Cleopatra” ahead?" });
+    expect(dialog.textContent).toContain("Everything but the video is made now and paid for now");
+    expect(prepare).not.toHaveBeenCalled();
+    await user.click(within(dialog).getByRole("button", { name: "Make ahead (paid)" }));
+    await waitFor(() => expect(prepare).toHaveBeenCalledOnce());
+    const after = await screen.findByRole("article", { name: /^Cleopatra,/ });
+    expect(await within(after).findByText("Waiting for its day")).not.toBeNull();
+    expect(within(after).getByRole("link", { name: "Open" }).getAttribute("href")).toBe(
+      "/projects/p-ahead",
+    );
+  });
+
+  it("offers Make ahead only for a video run, and says why a design run has none", async () => {
     const user = userEvent.setup();
     const prepare = vi.fn(jsonAnswer({ projectId: "p", title: "x" }, 201));
     const design = { ...run(1, 0, "Spring fair", otherId), templateKind: "design" };
@@ -230,13 +265,13 @@ describe("the calendar", () => {
       }),
     );
     const chip = await screen.findByRole("article", { name: /^Spring fair,/ });
-    expect(within(chip).queryByRole("button", { name: "Prepare" })).toBeNull();
+    expect(within(chip).queryByRole("button", { name: "Make ahead" })).toBeNull();
     const video = screen.getByRole("article", { name: /^Cleopatra,/ });
-    expect(within(video).getByRole("button", { name: "Prepare" })).not.toBeNull();
+    expect(within(video).getByRole("button", { name: "Make ahead" })).not.toBeNull();
     await user.click(screen.getByRole("button", { name: "List" }));
-    expect(screen.getAllByRole("button", { name: "Prepare" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Make ahead" })).toHaveLength(1);
     expect(
-      screen.getByText("A design is made on its day, so there is nothing to prepare ahead."),
+      screen.getByText("A design is made on its day, so there is nothing to make ahead."),
     ).not.toBeNull();
     expect(prepare).not.toHaveBeenCalled();
     // Its template is a design template, opened in the design template editor.
@@ -430,22 +465,34 @@ describe("an empty calendar", () => {
       empty({
         "GET /api/projects": jsonAnswer({
           projects: [
-            finished("p-old", "The Old Kingdom", { updatedAt: "2026-09-20T10:00:00.000Z" }),
-            finished("p-new", "The Library of Alexandria"),
+            // Renamed since, so changed last, but it finished first.
+            finished("p-old", "The Old Kingdom", {
+              status: "partial",
+              finishedAt: "2026-09-20T10:00:00.000Z",
+              updatedAt: "2026-09-28T10:00:00.000Z",
+            }),
+            finished("p-new", "The Library of Alexandria", {
+              finishedAt: "2026-09-27T10:00:00.000Z",
+              durationSeconds: 185,
+            }),
             finished("p-run", "Still going", { status: "running", progress: 0.4 }),
           ],
         }),
       }),
     );
     const strip = await screen.findByRole("region", { name: "Recently finished" });
-    expect(
-      within(strip)
-        .getAllByRole("listitem")
-        .map((one) => one.textContent),
-    ).toEqual([
+    const tiles = within(strip).getAllByRole("listitem");
+    expect(tiles.map((one) => one.textContent)).toEqual([
       expect.stringContaining("The Library of Alexandria"),
       expect.stringContaining("The Old Kingdom"),
     ]);
+    // Its length, what it is and when it finished; a run with a failed step says so in its
+    // state word.
+    expect(
+      within(tiles[0] as HTMLElement).getByText(/^3:05 · 16:9 · finished Sep 27/),
+    ).not.toBeNull();
+    expect(within(tiles[1] as HTMLElement).getByText("Done with problems")).not.toBeNull();
+    expect(within(strip).queryByText(/a step failed/)).toBeNull();
     expect(
       within(strip)
         .getByRole("link", { name: "Watch The Library of Alexandria" })

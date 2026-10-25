@@ -39,9 +39,9 @@ export function VideoOmissions({
 }): ReactElement | null {
   if (omissions.length === 0) return null;
   return (
-    <Fold summary="Passages left out of the subtitles" state={String(omissions.length)}>
+    <Fold summary="Passages left out of the captions" state={String(omissions.length)}>
       <p className="m-0 mt-2 text-small text-ink-2">
-        These passages could not be matched to the audio, so the subtitles skip them; the audio is
+        These passages could not be matched to the audio, so the captions skip them; the audio is
         unchanged. Press a time to hear that moment.
       </p>
       <ul className="m-0 mt-2 flex flex-col gap-2 pl-5 text-small">

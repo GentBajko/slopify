@@ -3,13 +3,36 @@ import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { ButtonLink } from "@/components/kit/link";
 import { hitArea, hitTarget } from "@/components/kit/list-row";
+import { Status } from "@/components/kit/status";
+import { finishedLine } from "@/home/finished-words";
 import { ProjectThumb } from "@/home/project-thumb";
-import { shortDate } from "@/lib/utils";
+import { projectStateOf } from "@/lib/state-words";
 
 // The calendar's newest finished work, so the weeks never read as if nothing was ever made: a
-// few tiles with the thumbnail, the title, what it is and when it finished, and Watch.
+// few tiles with the thumbnail, the title, its length, what it is and when it finished, and
+// Watch.
 
 export const recentShown = 4;
+
+type Finished = Pick<
+  ProjectListing,
+  "status" | "finishedAt" | "updatedAt" | "durationSeconds" | "format" | "outputs"
+>;
+
+// When a finished project finished: its run's end, or its last change from a server that
+// doesn't say. One still to finish goes by its last change.
+const finishedTime = (project: Finished): string =>
+  project.status === "done" || project.status === "partial"
+    ? (project.finishedAt ?? project.updatedAt)
+    : project.updatedAt;
+
+// Newest first, a finished one by when it finished.
+export const byFinished = (a: Finished, b: Finished): number =>
+  finishedTime(b).localeCompare(finishedTime(a));
+
+// "3:05 · 16:9 · video + 2 shorts · finished Sep 27", as Home and Projects say it.
+export const finishedMeta = (project: Finished): string =>
+  finishedLine({ ...project, finishedAt: finishedTime(project) });
 
 // Finished (with or without a failed step) and in view, newest first.
 export function recentlyFinished(
@@ -21,7 +44,7 @@ export function recentlyFinished(
       (project) =>
         (project.status === "done" || project.status === "partial") && includes(project.channelId),
     )
-    .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .toSorted(byFinished)
     .slice(0, recentShown);
 }
 
@@ -72,9 +95,10 @@ export function RecentlyFinished({
               >
                 {project.title}
               </Link>
-              <span className="text-small text-ink-2">
-                {`${project.format} · finished ${shortDate(project.updatedAt)}${project.status === "partial" ? " · a step failed" : ""}`}
-              </span>
+              <span className="text-small text-ink-2">{finishedMeta(project)}</span>
+              {project.status === "partial" ? (
+                <Status tone={projectStateOf(project).tone}>{projectStateOf(project).word}</Status>
+              ) : null}
               <WatchLink project={project} />
             </div>
           </li>

@@ -85,6 +85,37 @@ describe("the projects list", () => {
     );
   });
 
+  it("names how many deleted projects wait in the trash, linking to it, and nothing with none", async () => {
+    const trashed = (kind: string, id: string) => ({
+      kind,
+      id,
+      name: id,
+      detail: null,
+      deletedAt: "2026-09-27T10:00:00.000Z",
+      purgeAt: "2026-10-27T10:00:00.000Z",
+      daysLeft: 30,
+    });
+    renderRouted(
+      <ProjectsRoute />,
+      deps([listing("p1", "Rope Tricks", "done")], {
+        "GET /api/trash": jsonAnswer({
+          items: [trashed("project", "a"), trashed("project", "b"), trashed("prompt", "c")],
+        }),
+      }),
+    );
+    const link = await screen.findByRole("link", { name: "Trash (2)" });
+    expect(link.getAttribute("href")).toBe("/settings?section=trash");
+    cleanup();
+    renderRouted(
+      <ProjectsRoute />,
+      deps([listing("p1", "Rope Tricks", "done")], {
+        "GET /api/trash": jsonAnswer({ items: [trashed("prompt", "c")] }),
+      }),
+    );
+    await screen.findByRole("link", { name: "Rope Tricks" });
+    await waitFor(() => expect(screen.queryByRole("link", { name: /^Trash/ })).toBeNull());
+  });
+
   it("says a run waits for a CLI's limits, and when they reset", async () => {
     const resetsAt = new Date();
     resetsAt.setHours(14, 0, 0, 0);
@@ -169,7 +200,7 @@ describe("the projects list", () => {
     );
     expect(await screen.findByText("Waiting for your review")).not.toBeNull();
     expect(screen.getByText("Bends").closest("li")?.textContent).toContain("Stopped");
-    expect(screen.getByText("Prepared")).not.toBeNull();
+    expect(screen.getByText("Waiting for its day")).not.toBeNull();
     expect(screen.getByText("Waiting for the agent")).not.toBeNull();
     expect(screen.getByText("Hitches").closest("li")?.textContent).toContain("Queued");
     expect(screen.queryByText("Waiting for you")).toBeNull();
@@ -361,9 +392,16 @@ describe("marking uploaded", () => {
     const list = await screen.findByRole("list", { name: "Projects" });
     await user.click(within(list).getByRole("button", { name: "Mark uploaded: Rope Tricks" }));
     await waitFor(() => expect(sent).toEqual([{ uploaded: true }]));
+    expect(await screen.findByText("Marked uploaded: Rope Tricks.")).not.toBeNull();
     expect(screen.getAllByText("Uploaded")).toHaveLength(2);
     await user.click(screen.getByRole("button", { name: "Undo upload mark: Knots" }));
     await waitFor(() => expect(sent).toEqual([{ uploaded: true }, { uploaded: false }]));
+    // Taking the mark back forgets the long video's link with it, and says so.
+    expect(
+      await screen.findByText(
+        "Knots is back on Ready to upload, and any YouTube link saved for its video is forgotten.",
+      ),
+    ).not.toBeNull();
     // Marked weeks ago: the state stays, the row no longer offers to take it back.
     expect(screen.queryByRole("button", { name: "Undo upload mark: Sailing" })).toBeNull();
   });
@@ -387,11 +425,13 @@ describe("deleting a project", () => {
     await user.click(await screen.findByRole("button", { name: "Delete Rope Tricks" }));
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText('Delete "Rope Tricks"?')).not.toBeNull();
+    expect(dialog.textContent).toContain(
+      "Moves the project to the trash for 30 days. Undo brings it back, or restore it later in Settings → Trash.",
+    );
+    // The place it can be restored from is a link to it.
     expect(
-      within(dialog).getByText(
-        "Moves the project to the trash for 30 days. Undo brings it back, or restore it later in Settings → Backup & storage → Trash.",
-      ),
-    ).not.toBeNull();
+      within(dialog).getByRole("link", { name: "Settings → Trash" }).getAttribute("href"),
+    ).toBe("/settings?section=trash");
     expect(deleted).toBeUndefined();
 
     await user.click(within(dialog).getByRole("button", { name: "Delete project" }));
@@ -606,6 +646,15 @@ describe("selected projects", () => {
     if (bar === null) throw new Error("no selection bar");
     await user.click(within(bar).getByRole("button", { name: "Mark uploaded" }));
     await waitFor(() => expect(marked).toEqual(["p1"]));
+    expect(await screen.findByText("Marked 1 project uploaded.")).not.toBeNull();
+    // Undo takes the mark back, and with it any YouTube link saved since, and says so.
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+    await waitFor(() => expect(marked).toEqual(["p1", "p1"]));
+    expect(
+      await screen.findByText(
+        "1 project back on Ready to upload. Any YouTube link saved for it is forgotten.",
+      ),
+    ).not.toBeNull();
   });
 
   it("gives each row checkbox a 24px target", async () => {

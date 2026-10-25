@@ -148,7 +148,7 @@ async function fillGeneratedRun(): Promise<void> {
   await pick("Written by Service", "claude-code");
   await pick("Written by Model", "sonnet");
   await fill(screen.getByLabelText(topicLabel), "Rope Tricks");
-  await openRow("Keywords");
+  await openRow("Title and keywords");
   await fill(screen.getByLabelText("topic"), "rope");
   await fill(screen.getByLabelText("minWords"), "3000");
   await fill(screen.getByLabelText("style"), "oil on canvas");
@@ -260,7 +260,7 @@ describe("the Make button and its hint", () => {
     // The rows are read top to bottom: the keywords the prompt asks for come first, then the
     // writer in the Article row, under its prompt.
     expect(screen.getByText("Fill in topic first")).not.toBeNull();
-    await openRow("Keywords");
+    await openRow("Title and keywords");
     await fill(screen.getByLabelText("topic"), "rope");
     await fill(screen.getByLabelText("minWords"), "3000");
     expect(screen.getByText("Pick a service and model to write the text first")).not.toBeNull();
@@ -614,7 +614,7 @@ describe("the keyword block", () => {
     expect(screen.queryByLabelText("topic")).toBeNull();
 
     await pick("Article prompt", "Dossier");
-    await openRow("Keywords");
+    await openRow("Title and keywords");
     expect(screen.getByLabelText("topic")).not.toBeNull();
     expect(screen.getByLabelText("minWords")).not.toBeNull();
     expect(screen.queryByLabelText("style")).toBeNull();

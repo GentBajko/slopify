@@ -1,8 +1,8 @@
 import type { HelpEntry } from "../entry.js";
 
-// Play's setup, top to bottom, and the pieces Edit project draws with the same components
-// (speakers, shorts, reviews, the establishing image, the language). Settings → Voices'
-// table is here too, as it lives in the same voice components.
+// Create's settings, top to bottom, and the pieces a project's Edit settings draws with the
+// same components (speakers, shorts, pauses and checks, the establishing image, the language).
+// Settings → Voices' table is here too, as it lives in the same voice components.
 export const playHelp = {
   // Top of Create
   "play.title": {
@@ -21,43 +21,6 @@ export const playHelp = {
     tutorial: { page: "Create-Overview", anchor: "keywords" },
   },
 
-  // Sources, one switch per stage
-  "play.source.research": {
-    title: "Research",
-    body: "Let the AI research has the AI plan chapters, look each one up on the web and combine the notes before the article is written: one call to plan, one per chapter and one to combine. Paste my notes uses notes you paste. Off, the default, writes from the prompt alone.",
-    tutorial: { page: "Create-Article", anchor: "research" },
-  },
-  "play.source.article": {
-    title: "Article source",
-    body: "Write it for me has the text model write the article from the article prompt, one call. Use my text as written narrates text you paste, word for word, with no text-model cost. Adapt my text has the article prompt rewrite text you paste, one call. No text is for images only. The article is what the narration reads and the PDF lays out. Default: Write it for me.",
-    tutorial: { page: "Create-Article", anchor: "choose-where-the-article-comes-from" },
-  },
-  "play.source.audio": {
-    title: "Narration",
-    body: "AI voice reads the article aloud with the voice you pick, charged by the voice service per character. My own audio file uses a file you upload, as it is. Off makes a silent video with no captions, YouTube description or shorts. Default: AI voice.",
-    tutorial: { page: "Create-Narration", anchor: "choose-where-the-narration-comes-from" },
-  },
-  "play.source.images": {
-    title: "Images",
-    body: "Made by AI draws images from the ticked image prompts, one paid image call each. My own images uses your PNG, JPEG or WebP files in the order you pick them. None turns the video off too. Default: Made by AI.",
-    tutorial: { page: "Create-Images", anchor: "choose-where-the-images-come-from" },
-  },
-  "play.source.thumbnail": {
-    title: "Thumbnail",
-    body: "From my thumbnail prompt draws it straight from your thumbnail prompt, one image call. Let the AI write the prompt first has the AI write the image prompt from yours, the title and the article, then draws it. Upload mine uses your own picture. Default: None.",
-    tutorial: { page: "Create-Extras", anchor: "thumbnail" },
-  },
-  "play.source.video": {
-    title: "Video",
-    body: "Make the video puts the slideshow together on this computer from the images and narration; it costs no provider money, only time. Off (sound only) keeps the narration as one audio file and leaves each other stage to download on its own. It needs images. Default: Make the video.",
-    tutorial: { page: "Create-Video-and-Style", anchor: "choose-whether-to-make-a-video" },
-  },
-  "play.source.document": {
-    title: "PDF of the article",
-    body: "Make a PDF lays out the article and title on this computer, in the theme you pick. It needs no provider and costs nothing. Default: Off.",
-    tutorial: { page: "PDF-Documents", anchor: "make-a-pdf" },
-  },
-
   // Article row
   "play.provided.article": {
     title: "Article text",
@@ -69,16 +32,6 @@ export const playHelp = {
     body: "Notes you paste are given to the text model with the article prompt, in place of web research. Paste facts, sources and quotes the article should draw on. Nothing is looked up.",
     tutorial: { page: "Create-Article", anchor: "give-your-own-research-notes" },
   },
-  "play.llm.provider": {
-    title: "Written by",
-    body: "Who writes: a command-line tool you are signed in to, such as Claude Code or Codex, or a keyed service such as OpenRouter, billed per token. A greyed service says why it cannot be used; fix it under Settings.",
-    tutorial: { page: "Create-Article", anchor: "written-by" },
-  },
-  "play.llm.model": {
-    title: "Writing model",
-    body: "The model the service runs for every writing step. Bigger models write better and cost more per token. Settings → Models refreshes the list and checks whether a model works for your key.",
-    tutorial: { page: "Create-Article", anchor: "written-by" },
-  },
   "play.llm.thinking": {
     title: "Thinking",
     body: "How long the model reasons before it answers, for models that offer it. Higher levels can write more carefully but take longer and use more tokens. Model default leaves it to the provider.",
@@ -86,24 +39,9 @@ export const playHelp = {
   },
 
   // Narration row
-  "play.tts.provider": {
-    title: "Voice service",
-    body: "The service that reads the narration aloud, charged per character of text. A greyed service says why it cannot be used; add its key under Settings. Changing it clears the model and voice.",
-    tutorial: { page: "Create-Narration", anchor: "pick-a-voice" },
-  },
-  "play.tts.model": {
-    title: "Voice model",
-    body: "The voice service's speech model. Models differ in quality, languages, speed and price per character. Some features need a particular model: Narration Preparation needs Inworld TTS-2. Settings → Models refreshes the list.",
-    tutorial: { page: "Create-Narration", anchor: "pick-a-voice" },
-  },
-  "play.voice": {
-    title: "Voice",
-    body: "Who reads the narration. The list holds the voices you added under Settings → Voices for this voice service, filtered to the project's language. With several speakers, this voice reads the intro and outro.",
-    tutorial: { page: "Create-Narration", anchor: "pick-a-voice" },
-  },
   "play.voice-sample": {
     title: "Try a sample of your text",
-    body: "Reads the passage you paste in the chosen voice, so you hear how it says your names before a run. Up to a few hundred characters, priced on the button; Library → Narration aliases apply when the voice uses them, the Pronunciation Glossary and Narration Preparation don't. The sample is never reused in the run.",
+    body: "Reads the passage you paste in the chosen voice, so you hear how it says your names before a run. Up to a few hundred characters, priced on the button; your Pronunciation list (Settings → Voices → Pronunciation) applies when the voice uses it, the Pronunciation Glossary and Narration Preparation don't. The sample is never reused in the run.",
     tutorial: { page: "Create-Narration" },
   },
   "play.show-all-voices": {
@@ -113,12 +51,12 @@ export const playHelp = {
   },
   "play.intro": {
     title: "Intro",
-    body: "A Library entry read before the article. A text entry is read as written; an LLM entry is written by the text model for each video, one extra call. Off reads no intro. Write entries in Library → Intros & outros.",
+    body: "One of your intros, read before the article. A written intro is read as it is; one the AI writes is written for each video, one extra AI call. Off reads no intro. Write intros under Prompts → Intros & outros.",
     tutorial: { page: "Create-Narration", anchor: "intro-and-outro" },
   },
   "play.outro": {
     title: "Outro",
-    body: "A Library entry read after the article, such as a sign-off. A text entry is read as written; an LLM entry is written by the text model for each video, one extra call. Off reads no outro.",
+    body: "One of your outros, read after the article, such as a sign-off. A written outro is read as it is; one the AI writes is written for each video, one extra AI call. Off reads no outro. Write outros under Prompts → Intros & outros.",
     tutorial: { page: "Create-Narration", anchor: "intro-and-outro" },
   },
   "play.chunking": {
@@ -133,7 +71,7 @@ export const playHelp = {
   },
   "play.narration-preparation": {
     title: "Narration Preparation",
-    body: "Has the text model add delivery directions and sounds, such as a sigh or a laugh, following the Library narration prompt you pick. One text-model call per narration chunk and per entry. Needs Inworld TTS-2. The article and captions stay unchanged. Default: Off.",
+    body: "Has the AI writer add delivery directions and sounds, such as a sigh or a laugh, following the narration prompt you pick. One AI call per narration part and per intro or outro. Needs Inworld TTS-2. The article and captions stay unchanged. Default: Off.",
     tutorial: { page: "Create-Narration", anchor: "narration-preparation" },
   },
   "play.pronunciation-glossary": {
@@ -163,7 +101,7 @@ export const playHelp = {
   },
   "play.narration-aliases": {
     title: "Narration aliases",
-    body: "Says the words listed in Library → Narration aliases the way they are written there, such as Dr. as Doctor, with any generated voice. They are copied when the project starts. The article and captions keep the written words. Default: on.",
+    body: "Says the words listed in Settings → Voices → Pronunciation the way they are written there, such as Dr. as Doctor, with any generated voice. They are copied when the project starts. The article and captions keep the written words. Default: on.",
     tutorial: { page: "Narration-Aliases-and-Glossary", anchor: "use-aliases-in-a-video" },
   },
 
@@ -235,16 +173,6 @@ export const playHelp = {
   },
 
   // Images row
-  "play.images.provider": {
-    title: "Image service",
-    body: "Who draws the images, the thumbnail and the shorts' pictures: a keyed service such as fal.ai, billed per image, or a command-line tool you are signed in to. A greyed service says why it cannot be used; fix it under Settings.",
-    tutorial: { page: "Create-Images", anchor: "pick-the-image-service-and-model" },
-  },
-  "play.images.model": {
-    title: "Image model",
-    body: "The image service's model. Models differ in quality, speed and price per image; the estimate in the right rail shows what this run costs. Settings → Models refreshes the list.",
-    tutorial: { page: "Create-Images", anchor: "pick-the-image-service-and-model" },
-  },
   "play.images.effort": {
     title: "Effort",
     body: "How long an image agent, such as the Codex CLI, reasons before it draws. Higher effort can follow the prompt more closely but takes longer and uses more tokens. Model default leaves it to the provider.",
@@ -301,27 +229,27 @@ export const playHelp = {
   // Outputs row
   "play.thumbnail-prompt": {
     title: "Thumbnail prompt",
-    body: "The Library thumbnail prompt, keywords filled in. From my thumbnail prompt sends it to the image service as it is; Let the AI write the prompt gives it to the AI writer with the title and article to write the image prompt. Write prompts on Prompts.",
+    body: "Your thumbnail prompt, keywords filled in. From my thumbnail prompt sends it to the image service as it is; Let the AI write the prompt gives it to the AI writer with the title and article to write the image prompt. Write prompts on Prompts.",
     tutorial: { page: "Create-Extras", anchor: "thumbnail" },
   },
   "play.thumbnail-count": {
     title: "How many thumbnails",
-    body: "Three makes two more thumbnails from the same prompt with different compositions, for YouTube's Test & compare. Each costs one more image, so 3 thumbnails are 3 image calls. You can remake each on its own on the project page. Default: 1.",
+    body: "Three makes two more thumbnails from the same prompt with different compositions, for YouTube's Test & compare. Each costs one more image, so 3 thumbnails are 3 image calls. You can make each again on its own on the project page. Default: 1.",
     tutorial: { page: "Create-Extras", anchor: "make-three-thumbnails-for-test--compare" },
   },
   "play.description-prompt": {
     title: "Description prompt",
-    body: "The Library prompt the description is written from. Built-in asks for a short summary, 5 to 12 chapters, 3 to 5 hashtags and 15 to 25 tags. Write your own description prompt on Prompts to change the tone or add links.",
+    body: "The prompt the description is written from. Built-in asks for a short summary, 5 to 12 chapters, 3 to 5 hashtags and 15 to 25 tags. Write your own description prompt on Prompts to change the tone or add links.",
     tutorial: { page: "YouTube-Description", anchor: "turn-it-on" },
   },
   "play.shorts.prompt": {
     title: "Shorts prompt",
-    body: "The Library prompt the text model follows to pick the moments and write each short's title, description and hashtags. Built-in picks moments that make sense alone and open on a hook.",
+    body: "The prompt the AI writer follows to pick the moments and write each short's title, description and hashtags. Built-in picks moments that make sense alone and open on a hook.",
     tutorial: { page: "Shorts", anchor: "options" },
   },
   "play.shorts.image-style": {
     title: "Image prompt",
-    body: "The Library image prompt the shorts' new vertical images are drawn from. Built-in draws cinematic, uncluttered images with the subject centered. Pick one of your image prompts to match the long video.",
+    body: "The image prompt the shorts' new vertical images are drawn from. Built-in draws cinematic, uncluttered images with the subject centered. Pick one of your image prompts to match the long video.",
     tutorial: { page: "Shorts", anchor: "options" },
   },
   "play.shorts.title-on-screen": {
@@ -345,8 +273,8 @@ export const playHelp = {
     tutorial: { page: "Shorts", anchor: "options" },
   },
   "play.document-theme": {
-    title: "Theme",
-    body: "How the PDF looks: a built-in theme or one of yours from Library → PDF themes. A theme of yours is copied into the project, so editing it later leaves this project alone until you pick it again. Edit themes opens the list.",
+    title: "PDF look",
+    body: "How the PDF looks: one of three ready looks (Plain, Book in book type on parchment, Modern in a sans-serif on white) or one of your PDF themes. Preview shows it. A theme of yours is copied into the project, so editing it later leaves this project alone until you pick it again.",
     tutorial: { page: "PDF-Documents", anchor: "options" },
   },
 

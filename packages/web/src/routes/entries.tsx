@@ -28,6 +28,7 @@ import { TransferMenu } from "@/library/transfer-menu";
 import { refusalOf, useLibraryBulk } from "@/library/use-library-bulk";
 import { useLibraryTransfer } from "@/library/use-library-transfer";
 import { entriesQuery, keys } from "@/queries";
+import { trashKey } from "@/trash/api";
 
 // Prompts → Intros or Outros: the saved intros (or outros), by name or last change, beside the
 // selected one's words. They sit in the Prompts page's list of kinds; a search looks through
@@ -60,7 +61,10 @@ export function EntriesRoute({
     mutationFn: (id: string) => removeEntry(api, id),
     onSettled: async () => {
       setDeleting(undefined);
-      await queryClient.invalidateQueries({ queryKey: keys.entries });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: keys.entries }),
+        queryClient.invalidateQueries({ queryKey: trashKey }),
+      ]);
     },
   });
 

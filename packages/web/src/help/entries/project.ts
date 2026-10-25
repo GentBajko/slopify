@@ -1,8 +1,8 @@
 import type { HelpEntry } from "../entry.js";
 
-// The project page, Edit project and the video, caption and upload screens it opens.
+// The project page, Edit settings and the video, caption and upload screens it opens.
 export const projectHelp = {
-  // Video edit: cuts and the Look (video/edit-controls.tsx), shared by Play and Edit project.
+  // Video edit: cuts and the Look (video/edit-controls.tsx), shared by Play and Edit settings.
   "project.video.cuts": {
     title: "Cuts",
     body: "Every N seconds holds each image for Seconds per image. Follow the narration cuts in the pause after a sentence, as close to that length as the sentences allow (never under 40% of it), and starts a new image at every chapter. It needs word timing, so it works in English and the languages that have it. New projects default to Follow the narration.",
@@ -15,7 +15,7 @@ export const projectHelp = {
   },
   "project.video.animate": {
     title: "Animate images",
-    body: "Turns some images into 5-second moving clips with an image-to-video model on your image provider (fal.ai or Replicate). Chapter openers animates the first image of each chapter; Every Nth image animates every 2nd to 10th. Each clip is one paid call, shown in the estimate. An image that cannot be animated stays still. Default: Off.",
+    body: "Turns some images into 5-second moving clips with an image-to-video model on your image service (fal.ai or Replicate). Chapter openers animates the first image of each chapter; Every Nth image animates every 2nd to 10th. Each clip is one paid call, shown in the estimate. An image that cannot be animated stays still. Default: Off.",
     tutorial: { page: "Video-Editing", anchor: "the-look" },
   },
   "project.pause.sentence": {
@@ -45,7 +45,7 @@ export const projectHelp = {
   },
   "project.loudness": {
     title: "Level the volume",
-    body: "Brings every narration piece (each chunk, and each speaker's turn) to one loudness before they are joined, so the voice stops jumping between quiet and loud. Then the video, the shorts and the audio files are each set to a finished loudness. Runs on this computer, no API calls; turning it on remakes the levelled narration and the exports, never the speech. Default: on for new runs.",
+    body: "Brings every narration piece (each chunk, and each speaker's turn) to one loudness before they are joined, so the voice stops jumping between quiet and loud. Then the video, the shorts and the audio files are each set to a finished loudness. Runs on this computer, no API calls; turning it on makes the levelled narration and the exports again, never the speech. Default: on for new runs.",
     tutorial: { page: "Editing-a-Project", anchor: "pauses-and-volume" },
   },
   "project.loudness.video": {
@@ -58,26 +58,6 @@ export const projectHelp = {
     body: "How loud the audio-only WAV and an audiobook's MP3 and M4B are, in dB from -18 LUFS, the level audiobook shops such as ACX ask for (-18 to -23 LUFS). LUFS is how loud a file sounds on average. Type dB or a percentage of the recommended level; peaks always stay under -3 dBTP, which those shops require.",
     tutorial: { page: "Editing-a-Project", anchor: "pauses-and-volume" },
   },
-  "project.ambient.source": {
-    title: "Ambient sound",
-    body: "Rain, a fireplace or wind made on this computer, or your own audio file, played quietly under the whole narration of the long video. It dips while the narrator speaks. Costs no API calls. Shorts never get it. Changing it remakes only the video. Default: None, or the channel's bed.",
-    tutorial: { page: "Video-Editing", anchor: "ambient-sound" },
-  },
-  "project.ambient.level": {
-    title: "Ambient level",
-    body: "How loud the ambient sound plays under the voice, in decibels from -40 (barely there) to -6 (close to the voice). Whole numbers only. Default: -18 dB.",
-    tutorial: { page: "Video-Editing", anchor: "ambient-sound" },
-  },
-  "project.ambient.fade-in": {
-    title: "Ambient fade in",
-    body: "How many seconds the ambient sound takes to rise from silence at the start of the video, 0 to 30 in half-second steps. Default: 3 seconds.",
-    tutorial: { page: "Video-Editing", anchor: "ambient-sound" },
-  },
-  "project.ambient.tail": {
-    title: "Ambient tail",
-    body: "How long the ambient sound keeps playing, fading out, after the narration ends: 0 to 30 seconds in half-second steps. A tail longer than the silence at the end makes the video that much longer. Default: 6 seconds.",
-    tutorial: { page: "Video-Editing", anchor: "ambient-sound" },
-  },
   "project.subtitles.mode": {
     title: "Captions",
     body: "Off makes none. Show captions in the video draws them into the picture and also makes .srt and .vtt files; it needs a video. Caption files only gives you the files to upload beside the video. Captions are timed from your narration on this computer, with no paid API; the first use downloads a speech model of about 378 MB (Settings → Production defaults offers smaller ones). Default: Off.",
@@ -85,22 +65,22 @@ export const projectHelp = {
   },
   "project.subtitles.font": {
     title: "Caption font",
-    body: "The typeface of captions shown in the video and of chapter cards. Pick a bundled font or one you uploaded (.ttf or .otf); uploaded fonts stay available to every project. Caption files carry no font, since players style them. Changing it remakes only the video. Default: the bundled font.",
+    body: "The typeface of captions shown in the video and of chapter cards. Pick a bundled font or one you uploaded (.ttf or .otf); uploaded fonts stay available to every project. Caption files carry no font, since players style them. Changing it makes only the video again. Default: the bundled font.",
     tutorial: { page: "Video-Editing", anchor: "subtitles" },
   },
   "project.edit.article-text": {
     title: "Article text",
-    body: "The script the narrator reads, in Markdown. Your edits are kept when other settings change and are saved as a new revision; the narration, images and video made from the old text turn outdated and are remade when you choose. Headings become chapters.",
+    body: "The script the narrator reads, in Markdown. Your edits are kept when other settings change and are saved as a new version; the narration, images and video made from the old text turn outdated and are made again when you choose. Headings become chapters.",
     tutorial: { page: "Editing-a-Project", anchor: "change-the-article-text" },
   },
   "project.prompts.template": {
     title: "Use a saved prompt",
-    body: "Copies a prompt from your Library into this project, replacing the raw prompt below. The project keeps its own copy, so later Library edits reach it only when you pick it again or press Use the Library version. Outputs made from the old wording turn outdated; nothing is remade until you choose.",
+    body: "Copies one of your saved prompts into this project, replacing the raw prompt below. The project keeps its own copy, so later edits to the saved prompt reach it only when you pick it again or press Use the new wording. What was made from the old wording turns outdated; nothing is made again until you choose.",
     tutorial: { page: "Editing-a-Project", anchor: "prompts" },
   },
   "project.prompts.raw": {
     title: "Raw prompt",
-    body: "This project's own copy of the prompt, with keywords still in double braces such as {{Topic}}. Edit it to change what the model is asked for this project only; the Library prompt is untouched. Saving fills the keywords in again, and what was made from the old wording turns outdated.",
+    body: "This project's own copy of the prompt, with keywords still in double braces such as {{Topic}}. Edit it to change what the model is asked for this project only; your saved prompt is untouched. Saving fills the keywords in again, and what was made from the old wording turns outdated.",
     tutorial: { page: "Editing-a-Project", anchor: "prompts" },
   },
   "project.shorts.range": {
@@ -110,17 +90,17 @@ export const projectHelp = {
   },
   "project.images.prompt": {
     title: "Image prompt",
-    body: "The words this one image is drawn from, with keywords in double braces filled in from the project. Editing it outdates only this image and the video; it is drawn again, one image call, when you remake outdated outputs. Use saved wording as template copies the prompt as sent so you can edit it.",
+    body: "The words this one image is drawn from, with keywords in double braces filled in from the project. Editing it outdates only this image and the video; it is drawn again, one image call, when you make the outdated images again. Use saved wording as template copies the prompt as sent so you can edit it.",
     tutorial: { page: "Editing-a-Project", anchor: "edit-images" },
   },
   "project.narration.chunk-text": {
     title: "Narration chunk text",
-    body: "What the narrator says in this chunk. Editing it has this chunk spoken again by your voice provider, paid per character of the chunk, when you remake outdated outputs; the other chunks keep their audio. Captions and the video follow. It does not change the article.",
+    body: "What the narrator says in this chunk. Editing it has this chunk spoken again by your voice service, paid per character of the chunk, when you make the outdated narration again; the other chunks keep their audio. Captions and the video follow. It does not change the article.",
     tutorial: { page: "Editing-a-Project", anchor: "edit-narration" },
   },
   "project.rebuild.keep-provided": {
     title: "Keep the provided content",
-    body: "This output uses a file or text you supplied, and something it depends on, such as the narration, has changed since. Tick to confirm it still fits and keep it as it is. To use something else, cancel and replace the file in Edit project first. The button that makes it again stays off until you tick it.",
+    body: "This output uses a file or text you supplied, and something it depends on, such as the narration, has changed since. Tick to confirm it still fits and keep it as it is. To use something else, cancel and replace the file in Edit settings first. The button that makes it again stays off until you tick it.",
     tutorial: { page: "Editing-a-Project", anchor: "choose-what-to-remake" },
   },
   "project.rebuild.unknown-costs": {

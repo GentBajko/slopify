@@ -18,3 +18,9 @@ it("names shorts work by short and step", () => {
     "Short 12: render",
   ]);
 });
+
+it("names the caption work Captions, never Subtitles", () => {
+  expect(
+    ["subtitles:timing", "subtitles:cues", "subtitles:files", "subtitles:other"].map(workName),
+  ).toEqual(["Caption timing", "Caption text and timing", "Caption files", "Captions"]);
+});

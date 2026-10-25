@@ -55,6 +55,8 @@ describe("errorOf", () => {
     const message = errorOf(new Response(null, { status: 500 }), undefined).message;
     expect(message).toContain("(500)");
     expect(message).toContain("Download diagnostics");
+    // About puts Download diagnostics last, under Something wrong?, and the sentence says so.
+    expect(message).toContain("at the foot of the page");
   });
 });
 

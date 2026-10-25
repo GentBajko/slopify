@@ -1,9 +1,10 @@
 import type { FieldError } from "../admission/rules.js";
 import type { DocumentTheme } from "./theme.js";
 
-// The built-in looks a project's PDF can be given. Browser-safe: Play, Edit project and the
-// server all offer the same names from here.
-export const documentThemes = ["plain"] as const;
+// The ready looks a project's PDF can be given, so a PDF looks right without a theme of one's
+// own: Plain, Book (book type on parchment) and Modern (a sans-serif on white). Browser-safe:
+// Create, Edit template, Edit settings and the server all offer the same names from here.
+export const documentThemes = ["plain", "book", "modern"] as const;
 export type BuiltInDocumentThemeName = (typeof documentThemes)[number];
 
 // DiceMaster was built in before 2.3.0 and is one brand's look, not Slopify's. A project
@@ -20,6 +21,8 @@ export const defaultDocumentTheme: BuiltInDocumentThemeName = "plain";
 
 export const documentThemeLabels: Readonly<Record<DocumentThemeName, string>> = {
   plain: "Plain",
+  book: "Book",
+  modern: "Modern",
   dicemaster: "DiceMaster",
 };
 

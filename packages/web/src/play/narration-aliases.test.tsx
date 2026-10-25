@@ -52,7 +52,7 @@ function ProjectSubject({ use }: { readonly use: boolean | undefined }): ReactEl
   );
 }
 
-it("copies Library → Aliases into a project when turned on in Edit project, and drops them when off", async () => {
+it("copies the Pronunciation list into a project when turned on in Edit settings, and drops it when off", async () => {
   const user = userEvent.setup();
   let aliases = [doctor];
   renderRouted(
@@ -66,16 +66,18 @@ it("copies Library → Aliases into a project when turned on in Edit project, an
   // A project from before aliases reads as off and carries none.
   expect((toggle as HTMLInputElement).checked).toBe(false);
   await user.click(toggle);
-  expect(await screen.findByText("1 alias copied from Library → Narration aliases.")).toBeTruthy();
+  expect(
+    await screen.findByText("1 alias copied from Settings → Voices → Pronunciation."),
+  ).toBeTruthy();
   expect(JSON.parse(screen.getByLabelText("Saved config").textContent ?? "")).toEqual({
     use: true,
     aliases: [doctor],
   });
-  // A Library edit reaches the project only when asked.
+  // An edit to the list reaches the project only when asked.
   aliases = [doctor, { ...doctor, written: "Ms.", spoken: "Miss" }];
-  await user.click(screen.getByRole("button", { name: "Update from Library" }));
+  await user.click(screen.getByRole("button", { name: "Copy the list again" }));
   expect(
-    await screen.findByText("2 aliases copied from Library → Narration aliases."),
+    await screen.findByText("2 aliases copied from Settings → Voices → Pronunciation."),
   ).toBeTruthy();
   await user.click(toggle);
   expect(JSON.parse(screen.getByLabelText("Saved config").textContent ?? "")).toEqual({

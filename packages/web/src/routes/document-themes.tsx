@@ -310,7 +310,7 @@ export function DocumentThemesRoute() {
       <ConfirmDialog
         open={confirming}
         title={`Delete ${counted(chosen.length, "PDF theme", "PDF themes")} permanently?`}
-        consequence={`${chosen.length === 1 ? `“${chosen[0]?.name ?? ""}” is` : `These ${String(chosen.length)} themes are`} deleted permanently: PDF themes do not go to Settings → Trash, so they cannot be restored. Projects that used them keep their own copy of the settings.`}
+        consequence={`${chosen.length === 1 ? `“${chosen[0]?.name ?? ""}” is` : `These ${String(chosen.length)} themes are`} deleted permanently: PDF themes do not go to the trash, so they cannot be restored. Projects that used them keep their own copy of the settings.`}
         confirmLabel={`Delete ${counted(chosen.length, "theme", "themes")} permanently`}
         cancelLabel="Keep them"
         pending={bulk.busy}
@@ -327,4 +327,4 @@ export function DocumentThemesRoute() {
 const themeNoun = ["PDF theme", "PDF themes"] as const;
 
 export const deleteConsequence =
-  "It is deleted permanently: PDF themes do not go to Settings → Trash, so it cannot be restored. Projects that used it keep their own copy of its settings.";
+  "It is deleted permanently: PDF themes do not go to the trash, so it cannot be restored. Projects that used it keep their own copy of its settings.";

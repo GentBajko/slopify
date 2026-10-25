@@ -22,12 +22,14 @@ const run = {
   templateKind: "project" as const,
 };
 
-it("says a run waits for Mark ready instead of calling it queued", () => {
+it("says a run is skipped until its template is approved, and where, instead of calling it queued", () => {
   render(<ComingUp runs={[run, { ...run, at: "2026-10-22T20:00:00.000Z", notReady: true }]} />);
   expect(screen.getAllByText("Queued")).toHaveLength(1);
-  expect(screen.getByText("Waits for Mark ready").getAttribute("title")).toContain(
-    "Open the template's studio and press Mark ready.",
-  );
+  expect(screen.getByText("Skipped until approved")).not.toBeNull();
+  // What to do is on the row, not only on hover.
+  expect(
+    screen.getByText("Nightly · Crime · To run it, approve a version in Edit template"),
+  ).not.toBeNull();
 });
 
 // Home, Calendar and the schedule all read a run on its schedule's clock; a zone that isn't

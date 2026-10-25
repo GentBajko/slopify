@@ -117,7 +117,7 @@ export function ScheduleDetail({
         <Callout
           tone="waiting"
           className="mt-4"
-          title="Its runs are skipped: no version of its template is marked ready"
+          title="Its runs are skipped: no version of its template is approved for schedules"
           // Secondary: the waiting callout already draws the eye, and New schedule over the
           // list is the tab's one lime.
           actions={
@@ -130,7 +130,8 @@ export function ScheduleDetail({
             </ButtonLink>
           }
         >
-          Look over the samples there and press Mark ready; the next run after that starts.
+          Look over the samples there, then choose More → Approve for schedules; the next run after
+          that starts.
         </Callout>
       ) : null}
       <dl className="m-0 mt-4 grid grid-cols-1 gap-x-6 gap-y-3 text-small min-[600px]:grid-cols-2">

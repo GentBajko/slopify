@@ -37,7 +37,7 @@ it("asks before moving a project to the trash, then moves it", async () => {
   const agent = await connectAgent(h.app);
   const asked = await agent.callTool({ name: "trash_project", arguments: { id: h.projectId } });
   expect(asked.isError).toBe(true);
-  expect(JSON.stringify(asked.content)).toContain("Settings → Backup & storage → Trash");
+  expect(JSON.stringify(asked.content)).toContain("Settings → Trash");
   expect(projectTrashed(h.deps.db, h.projectId)).toBe(false);
   const done = await agent.callTool({
     name: "trash_project",
