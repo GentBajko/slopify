@@ -234,7 +234,7 @@ export const playHelp = {
   },
   "play.thumbnail-count": {
     title: "How many thumbnails",
-    body: "Three makes two more thumbnails from the same prompt with different compositions, for YouTube's Test & compare. Each costs one more image, so 3 thumbnails are 3 image calls. You can remake each on its own on the project page. Default: 1.",
+    body: "Three makes two more thumbnails from the same prompt with different compositions, for YouTube's Test & compare. Each costs one more image, so 3 thumbnails are 3 image calls. You can make each again on its own on the project page. Default: 1.",
     tutorial: { page: "Play-Outputs", anchor: "make-three-thumbnails-for-test--compare" },
   },
   "play.description-prompt": {
