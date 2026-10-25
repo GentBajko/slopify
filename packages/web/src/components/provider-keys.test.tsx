@@ -163,6 +163,38 @@ describe("Keys & services' lists", () => {
     }
   });
 
+  it("on a plain visit, brings the setup it opened by itself into view, or starts at the top", async () => {
+    const scrolled = vi.spyOn(window, "scrollBy").mockImplementation(() => {});
+    const top = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      top: 1400,
+      bottom: 1700,
+    } as DOMRect);
+    try {
+      // The image service is the first still to set up: its key box is brought into view.
+      renderRouted(
+        <ProviderKeys />,
+        deps([
+          keyed("openrouter", "llm", "OpenRouter", true),
+          keyed("openai-tts", "tts", "OpenAI", true),
+          keyed("fal", "image", "fal.ai", false),
+        ]),
+      );
+      expect(await screen.findByLabelText("fal.ai API key")).not.toBeNull();
+      await waitFor(() => expect(scrolled).toHaveBeenCalledTimes(1));
+      cleanup();
+      scrolled.mockClear();
+      top.mockClear();
+      // Everything is ready: nothing opens, and the visit starts at the top.
+      renderRouted(<ProviderKeys />, deps([keyed("openrouter", "llm", "OpenRouter", true)]));
+      expect(await screen.findByRole("list", { name: "Writing services" })).not.toBeNull();
+      await waitFor(() => expect(top).toHaveBeenCalledWith({ top: 0, left: 0 }));
+      expect(scrolled).not.toHaveBeenCalled();
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
+
   it("waits for the voices, which the readiness lines above also wait for, before it measures for a link", async () => {
     const scrolled = vi.spyOn(window, "scrollBy").mockImplementation(() => {});
     vi.spyOn(window, "scrollTo").mockImplementation(() => {});

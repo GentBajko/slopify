@@ -214,8 +214,8 @@ export function ProviderKeys({
   const saved = voices.data?.voices ?? [];
   // What opens when the page arrives, once: the service asked for, or on two columns the
   // first one still to set up. It stays open after it is set up rather than jumping on.
-  // Whether the open setup is the one the page opened by itself (the first still to set up),
-  // which only two columns do: on one column the lists come first.
+  // `byItself`: the open setup is the one the page opened by itself, which only two columns
+  // do; on one column the lists come first.
   const [byItself, setByItself] = useState(false);
   if (picked === undefined && providers.data !== undefined) {
     const first =
@@ -229,10 +229,16 @@ export function ProviderKeys({
   }
   // The first guess of the width came from the window; once the column measures as one column,
   // a setup opened by itself closes again, so the lists come first there too.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only the width deciding closes it.
   useEffect(() => {
     if (wide || !byItself) return;
     setByItself(false);
     setPicked(null);
+    // Its scroll into view is off too: the visit starts at the top instead.
+    if (bring !== undefined) {
+      setBring(undefined);
+      window.scrollTo({ top: 0, left: 0 });
+    }
   }, [wide, byItself]);
 
   // A readiness line's button, or the address, asks for a kind: open its service, then bring
@@ -254,6 +260,16 @@ export function ProviderKeys({
     setPicked(target.id);
     setBring({ id: target.id, arrival: focus.arrival });
   }, [focus, settled]);
+  // A visit with no link's focus (the app's rail, the Settings list, Back): the router leaves
+  // this page's scroll to it (`keysArrival`), so the visit starts at the top, or brings the
+  // setup the page opened by itself into view as a link's arrival would.
+  const [visited, setVisited] = useState(false);
+  useEffect(() => {
+    if (focus !== undefined || !settled || visited) return;
+    setVisited(true);
+    if (byItself && typeof picked === "string") setBring({ id: picked, arrival: true });
+    else window.scrollTo({ top: 0, left: 0 });
+  }, [focus, settled, visited, byItself, picked]);
   useEffect(() => {
     if (bring === undefined || picked !== bring.id) return;
     const setup = setupRef.current;

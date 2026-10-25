@@ -5,6 +5,7 @@ import { XIcon } from "lucide-react";
 import type { ReactElement } from "react";
 import { setVoiceLanguages } from "@/api";
 import { useApp } from "@/app-context";
+import { IconButton } from "@/components/kit/button";
 import { Select } from "@/components/kit/field";
 import { keys } from "@/queries";
 
@@ -34,15 +35,15 @@ export function VoiceLanguagesPicker({
       {value.map((code) => (
         <span key={code} className="sl-chip h-8 gap-1 pr-1">
           {nameOf(code)}
-          <button
-            type="button"
-            aria-label={`Remove ${nameOf(code)}`}
+          <IconButton
+            label={`Remove ${nameOf(code)}`}
+            size="small"
+            tip={false}
             disabled={disabled}
-            className="inline-flex size-6 items-center justify-center rounded-control text-ink-2 hover:bg-raised hover:text-ink"
             onClick={() => onChange(value.filter((one) => one !== code))}
           >
             <XIcon aria-hidden="true" className="size-3.5" strokeWidth={2} />
-          </button>
+          </IconButton>
         </span>
       ))}
       {left.length === 0 ? null : (

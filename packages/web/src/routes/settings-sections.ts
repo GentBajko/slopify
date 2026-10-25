@@ -122,13 +122,10 @@ export function settingsSectionOf(value: unknown): ListedSection {
   return settingsSections.find((section) => section.id === value)?.id ?? "providers";
 }
 
-// A link to a service on Keys & services (`?family=image&provider=openai-image`): that page
-// brings the service's setup into view itself once its lists are in, so the router leaves the
-// scroll alone for it rather than resetting to the top after the page has scrolled.
+// Keys & services, with or without a service named (`?family=image&provider=openai-image`):
+// the page sets its own scroll once its lists are in (to the top, or to the setup it opens),
+// so the router leaves the scroll alone for it rather than resetting to the top after the page
+// has scrolled.
 export function keysArrival(pathname: string, search: Readonly<Record<string, unknown>>): boolean {
-  return (
-    pathname === "/settings" &&
-    settingsSectionOf(search.section) === "providers" &&
-    (search.family !== undefined || search.provider !== undefined)
-  );
+  return pathname === "/settings" && settingsSectionOf(search.section) === "providers";
 }

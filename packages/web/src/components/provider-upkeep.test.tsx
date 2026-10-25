@@ -172,7 +172,8 @@ describe("the health check", () => {
     await userEvent.click(screen.getByRole("button", { name: "Check every service" }));
     expect(await screen.findByText("Needs fixing")).not.toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Check Codex CLI again" }));
-    expect(await screen.findByText("Ready")).not.toBeNull();
+    // Fixed, it joins the one line of ready services rather than keeping a row of its own.
+    expect(await screen.findByText("Ready: Codex CLI.")).not.toBeNull();
     expect(screen.queryByText("Needs fixing")).toBeNull();
     expect(asked).toEqual(["all", "codex"]);
   });

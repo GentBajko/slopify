@@ -67,18 +67,20 @@ describe("scroll on arrival", () => {
     return restore({ location: router.state.location });
   }
 
-  it("leaves the scroll to Keys & services when a link opens a service there", async () => {
+  it("leaves the scroll to Keys & services, which scrolls to the setup it opens", async () => {
     expect(
       await restores(
         "/settings?section=providers&family=image&provider=openai-image&return=welcome",
       ),
     ).toBe(false);
     expect(await restores("/settings?family=tts")).toBe(false);
+    expect(await restores("/settings?section=providers")).toBe(false);
+    expect(await restores("/settings")).toBe(false);
   });
 
   it("resets or restores every other screen as before", async () => {
-    expect(await restores("/settings?section=providers")).toBe(true);
     expect(await restores("/settings?section=voices&provider=elevenlabs")).toBe(true);
+    expect(await restores("/settings?section=models")).toBe(true);
     expect(await restores("/projects")).toBe(true);
   });
 });

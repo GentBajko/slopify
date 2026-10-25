@@ -911,8 +911,8 @@ export function createAppRouter() {
     routeTree,
     defaultErrorComponent: RouteError,
     // Back and Forward return to where the page was scrolled; a new screen starts at the top,
-    // except a link to a service on Keys & services, which scrolls to that service's setup
-    // itself (`keysArrival`): a reset landing after that scroll would undo it.
+    // except Keys & services, which sets its own scroll once its lists are in, to the top or to
+    // the setup it opens (`keysArrival`): a reset landing after that scroll would undo it.
     scrollRestoration: ({ location }) =>
       !keysArrival(location.pathname, location.search as Readonly<Record<string, unknown>>),
   });
