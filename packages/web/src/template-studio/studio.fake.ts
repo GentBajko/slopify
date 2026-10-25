@@ -82,6 +82,7 @@ export const view: StudioView = {
       runs: 8.7,
       high: 4.35,
       unknown: 0,
+      unpriced: [],
       problem: null,
       paused: { schedules: 0, runs: 0, high: 0 },
     },

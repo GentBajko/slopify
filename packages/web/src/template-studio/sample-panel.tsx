@@ -20,7 +20,7 @@ import {
   paidSections,
 } from "./paid-sample";
 import { SayItAs } from "./say-it-as";
-import { stateTone, stateWord } from "./section-rail";
+import { sectionWord, stateTone } from "./section-rail";
 import { SampleTopic } from "./topic";
 
 type Section = StudioView["sections"][number];
@@ -73,13 +73,20 @@ export function SamplePanel({
     ["stale", "needs-fix", "waiting"].includes(section.state) &&
     view.paid.state !== "queued" &&
     view.paid.state !== "making";
-  const fix =
+  const failing =
     checks.data?.version === view.template.version
-      ? checks.data.checks.find((check) => !check.ok && blocking.has(check.id))?.fix
+      ? checks.data.checks.find((check) => !check.ok && blocking.has(check.id))
       : undefined;
+  const fix = failing?.fix;
+  // A fix in the section already open is in the settings beside the sample, not a link away.
+  const here =
+    fix !== undefined &&
+    fix.href === `/templates/${encodeURIComponent(view.template.id)}?section=${section.id}`;
   const action = remakeable ? (
     fix === undefined ? (
       <MakeSampleButton view={view} onDone={setProblem} />
+    ) : here ? (
+      <p className="m-0 text-small text-ink-2">{`${failing?.sentence ?? ""} Choose it in this section's settings, then Save.`}</p>
     ) : (
       <TextLink to={fix.href} className="text-small">{`${fix.label} first`}</TextLink>
     )
@@ -95,7 +102,7 @@ export function SamplePanel({
         title="Sample"
         as="h3"
         className="pb-0"
-        status={<Status tone={stateTone[section.state]}>{stateWord[section.state]}</Status>}
+        status={<Status tone={stateTone[section.state]}>{sectionWord(section)}</Status>}
       />
       <p
         className={cn(

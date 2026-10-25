@@ -404,6 +404,16 @@ it("has no Save until something changed, and one Save that never spends", async 
   await waitFor(() => expect(sent).toHaveBeenCalledOnce());
 });
 
+it("says the checks are the saved version's while a change is unsaved", async () => {
+  const user = userEvent.setup();
+  open("subject");
+  const region = await screen.findByRole("region", { name: "Checks" });
+  const note = "Checked on the saved version: Save to check your changes.";
+  expect(within(region).queryByText(note)).toBeNull();
+  await user.type(screen.getByRole("textbox", { name: "Template name" }), " two");
+  expect(within(region).getByText(note)).not.toBeNull();
+});
+
 it("renames the template from Title and keywords, saved with the next Save", async () => {
   const user = userEvent.setup();
   const sent = vi.fn(async (request: Request) => {
@@ -489,6 +499,37 @@ it("puts a failing check's fix where Make sample would be", async () => {
   const fix = await within(sample).findByRole("link", { name: "Choose one in Narration first" });
   expect(fix.getAttribute("href")).toBe(`/templates/${templateId}?section=voice`);
   expect(within(sample).queryByRole("button", { name: /^Make sample/ })).toBeNull();
+});
+
+it("says a fix that belongs to the open section in place, not as a link to the same page", async () => {
+  open("voice");
+  const sample = await screen.findByRole("region", { name: "Narration sample" });
+  expect(
+    await within(sample).findByText(
+      "No voice service is chosen, so a run can't start. Choose it in this section's settings, then Save.",
+    ),
+  ).not.toBeNull();
+  expect(within(sample).queryByRole("link", { name: /first$/ })).toBeNull();
+});
+
+it("says On, not Sample ready, for Pauses and checks and Schedule, which have no sample", async () => {
+  open("subject", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({
+      ...view,
+      sections: view.sections.map((one) =>
+        one.id === "reviews" || one.id === "schedule" || one.id === "script"
+          ? { ...one, state: "current" }
+          : one,
+      ),
+    }),
+  });
+  const rail = await screen.findByRole("navigation", { name: "Template sections" });
+  const names = within(rail)
+    .getAllByRole("link")
+    .map((link) => link.textContent);
+  expect(names).toContain("Pauses and checks, On");
+  expect(names).toContain("Schedule, On");
+  expect(names).toContain("Article, Sample ready");
 });
 
 it("shows a failed sample's own sentence and Make sample at its price", async () => {
@@ -675,7 +716,7 @@ it("lists the schedule's next runs with their titles and the cost a month", asyn
   const table = within(section).getByRole("table", { name: "The next runs" });
   expect(within(table).getByText("History: Salt roads")).not.toBeNull();
   expect(
-    within(section).getByText("About $4.35 a month at most, for about 8.7 runs."),
+    within(section).getByText("About $4.35 a month at most, for about 9 runs."),
   ).not.toBeNull();
 });
 
@@ -689,6 +730,7 @@ it("lists a paused schedule's runs marked paused, and what it costs once resumed
           runs: 0,
           high: 0,
           unknown: 0,
+          unpriced: [],
           problem: null,
           paused: { schedules: 1, runs: 8.7, high: 4.35 },
         },
@@ -700,7 +742,7 @@ it("lists a paused schedule's runs marked paused, and what it costs once resumed
   expect(within(table).getByText("Weekdays (paused)")).not.toBeNull();
   expect(
     within(section).getByText(
-      "1 paused schedule uses this template: nothing runs while it is paused. Resumed, about $4.35 a month at most, for about 8.7 runs.",
+      "1 paused schedule uses this template: nothing runs while it is paused. Resumed, about $4.35 a month at most, for about 9 runs.",
     ),
   ).not.toBeNull();
 });
@@ -719,8 +761,41 @@ it("starts a new schedule with this template picked", async () => {
     </>,
     testDeps(routes),
   );
-  await user.click(await screen.findByRole("button", { name: "New schedule with this template" }));
+  await user.click(await screen.findByRole("button", { name: "New schedule" }));
   await waitFor(() => expect(path).toBe("/calendar?tab=schedules"));
+  // One button does it: the section itself has none of its own.
+  cleanup();
+  open("schedule");
+  await screen.findByRole("region", { name: "Schedule settings" });
+  expect(screen.getAllByRole("button", { name: /^New schedule/ })).toHaveLength(1);
+});
+
+it("names the steps a scheduled run has no price for, and says the cost is the least, in whole runs", async () => {
+  open("schedule", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({
+      ...view,
+      schedule: {
+        runs: view.schedule.runs.map((run) => ({ ...run, topic: false, title: "{{Topic}}" })),
+        cost: {
+          runs: 30.4,
+          high: 6.08,
+          unknown: 2,
+          unpriced: ["Narration descriptions", "Delivery cue overhead"],
+          problem: null,
+          paused: { schedules: 0, runs: 0, high: 0 },
+        },
+      },
+    }),
+  });
+  const section = await screen.findByRole("region", { name: "Schedule settings" });
+  expect(
+    within(section).getByText(
+      "About $6.08 a month at least, for about 30 runs. Not counted, with no known price: Narration descriptions and Delivery cue overhead.",
+    ),
+  ).not.toBeNull();
+  const table = within(section).getByRole("table", { name: "The next runs" });
+  expect(within(table).getAllByText("No topic queued yet").length).toBeGreaterThan(0);
+  expect(within(table).queryByText(/\{\{Topic\}\}/)).toBeNull();
 });
 
 it("shows where a run pauses and which AI checks run", async () => {
@@ -947,6 +1022,7 @@ it("asks for the free samples by itself when only the schedule's cost is still t
           runs: 4,
           high: 0,
           unknown: 1,
+          unpriced: [],
           problem:
             "The cost of the runs of Weekdays isn't worked out yet: it is, with the free samples.",
           paused: { schedules: 0, runs: 0, high: 0 },

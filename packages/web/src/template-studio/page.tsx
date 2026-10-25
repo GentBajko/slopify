@@ -225,7 +225,7 @@ function Studio({
               />
             )}
             <PackSamples templateId={view.template.id} />
-            <ChecksList templateId={view.template.id} />
+            <ChecksList templateId={view.template.id} dirty={dirty} />
           </div>
         }
       >
