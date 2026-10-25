@@ -4,7 +4,7 @@ import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "lucide-react";
 import { type ReactElement, useMemo, useState } from "react";
 import { useApp } from "@/app-context";
 import { AddTopics, topicTargets } from "@/calendar/add-topics";
-import { attentionMeta, needingAttention } from "@/calendar/attention";
+import { attentionLine } from "@/calendar/attention";
 import { DayCell } from "@/calendar/day-cell";
 import { ListView } from "@/calendar/list-view";
 import {
@@ -149,7 +149,10 @@ export function CalendarRoute({
     [visible],
   );
   const allRuns = visible?.runs ?? [];
-  const attention = needingAttention(visible?.projects ?? []);
+  // Home's counts for the channel shown, from every project, not only this window's.
+  const attention = attentionLine(
+    (projects.data?.projects ?? []).filter((one) => current.includes(one.channelId)),
+  );
   const recent = recentlyFinished(projects.data?.projects ?? [], (id) => current.includes(id));
   const liveSchedules = mySchedules.filter((one) => one.deletedAt === null);
   const targets = topicTargets(mySchedules);
@@ -332,9 +335,11 @@ export function CalendarRoute({
           <>
             {/* What needs a decision is Home's list; the calendar only says how much and links
                 there, and keeps its own space for what is planned. */}
-            {visible === undefined || attention.length === 0 ? null : (
+            {attention === undefined ? null : (
               <p className="m-0 text-small text-ink-2">
-                {attentionMeta(attention)}. <TextLink to="/">Open Home</TextLink> to act on them.
+                {`${attention.text}. `}
+                <TextLink to="/">Open Home</TextLink>
+                {` to act on ${attention.items === 1 ? "it" : "them"}.`}
               </p>
             )}
             {nothingScheduled ? (

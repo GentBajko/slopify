@@ -38,8 +38,9 @@ function ProjectRow({ project }: { readonly project: CalendarProject }): ReactEl
           {project.title}
         </Link>
       }
+      // The state word stands apart from the button that acts on it.
       actions={
-        <>
+        <span className="flex flex-wrap items-center gap-3">
           <Status tone={look.tone}>{look.word}</Status>
           {look.action === undefined ? null : look.action.kind === "upload" ? (
             <PrepareUpload projectId={project.id} ready />
@@ -53,7 +54,7 @@ function ProjectRow({ project }: { readonly project: CalendarProject }): ReactEl
               {look.action.label}
             </ButtonLink>
           )}
-        </>
+        </span>
       }
     />
   );

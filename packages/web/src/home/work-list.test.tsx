@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { TextLink } from "@/components/kit/link";
 import { renderRouted, testDeps } from "@/test-app";
 import { finishedLine, lengthWords, madeWords } from "./finished-words.js";
-import { FinishedList } from "./work-list.js";
+import { FinishedList, finishedMeta } from "./work-list.js";
 
 afterEach(cleanup);
 
@@ -79,6 +79,25 @@ describe("Finished on Home", () => {
     expect(within(row("Knots")).getByText("Uploaded")).not.toBeNull();
     expect(within(row("Knots")).getByRole("link", { name: "Watch Knots" })).not.toBeNull();
     expect(screen.getByText("2 videos · 1 ready to upload")).not.toBeNull();
+  });
+
+  // A video made with a failed step is ready to upload and reads Done with problems: the count
+  // says how many of the ready ones that is, so it matches the rows' words.
+  it("says how many of the videos ready to upload had a step fail", () => {
+    expect(
+      finishedMeta([
+        ready("p1", "Rope Tricks"),
+        ready("p2", "Moon jellyfish", { status: "partial", failedSteps: ["thumbnail"] }),
+        ready("p3", "Knots", { uploadedAt: "2026-09-28T10:00:00.000Z" }),
+      ]),
+    ).toBe("3 videos · 2 ready to upload (1 with a failed step)");
+    expect(
+      finishedMeta([
+        ready("p1", "Rope Tricks"),
+        ready("p2", "Moon jellyfish", { status: "partial", failedSteps: ["thumbnail"] }),
+      ]),
+    ).toBe("2 videos · 2 ready to upload (1 with a failed step)");
+    expect(finishedMeta([ready("p1", "Rope Tricks")])).toBe("1 video");
   });
 
   // An audiobook has nothing to watch: its row opens the project.

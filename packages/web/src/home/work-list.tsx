@@ -26,15 +26,19 @@ export const shownPerKind = 4;
 export const finishedShown = 6;
 
 // "4 videos · 2 ready to upload": how many, in the list's own noun, and how many still wait to
-// be uploaded.
+// be uploaded, saying how many of those read Done with problems ("3 ready to upload (1 with a
+// failed step)") so the count matches the rows' words.
 export function finishedMeta(finished: readonly ProjectListing[]): string {
   const videos = finished.every((one) => one.config.sources.video !== "off");
-  const ready = finished.filter(isReadyToUpload).length;
+  const ready = finished.filter(isReadyToUpload);
+  const failing = ready.filter((one) => one.status === "partial").length;
   return [
     videos
       ? plural(finished.length, "video", "videos")
       : plural(finished.length, "project", "projects"),
-    ready === 0 || ready === finished.length ? undefined : `${String(ready)} ready to upload`,
+    ready.length === 0 || (ready.length === finished.length && failing === 0)
+      ? undefined
+      : `${String(ready.length)} ready to upload${failing === 0 ? "" : ` (${String(failing)} with a failed step)`}`,
   ]
     .filter((part) => part !== undefined)
     .join(" · ");

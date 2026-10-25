@@ -1,6 +1,14 @@
-import { heldWord, stoppedWord } from "@app/slices/admission/state-words.js";
+import type { ProjectListing } from "@app/slices/admission/model.js";
+import {
+  failedRun,
+  heldWord,
+  stoppedWord,
+  waitsForPerson,
+} from "@app/slices/admission/state-words.js";
 import type { Calendar } from "@app/slices/schedules/schema.js";
 import type { Tone } from "@/components/kit/status";
+import { isReadyToUpload } from "@/home/ready";
+import { plural } from "@/lib/format";
 import { projectStateOf } from "@/lib/state-words";
 import { limitWaitLine } from "@/project/limit-wait";
 
@@ -47,34 +55,32 @@ export function projectLook(
   }
   const waiting = limitWaitLine(project.limitWaits, clock);
   if (waiting !== undefined) return { tone: "waiting", word: waiting };
+  // A video made with a failed step reads Done with problems, as on Home, Projects and its page,
+  // and is still ready to copy for YouTube Studio.
   if (project.readyToUpload === true)
-    return { tone: "done", word: "Ready to upload", action: { kind: "upload" } };
+    return project.state === "partial"
+      ? { ...projectStateOf({ ...project, status: "partial" }), action: { kind: "upload" } }
+      : { tone: "done", word: "Ready to upload", action: { kind: "upload" } };
   return projectStateOf({ ...project, status: project.state });
 }
 
-// What a project asks of the person, counted as Home's Needs you counts it: what it needs, and a
-// step failed beside its wait as one more item.
-function asks(project: CalendarProject): number {
-  return (project.needs === undefined ? 0 : 1) + (project.stepFailed === true ? 1 : 0);
-}
-
-// "2 waiting for you · 1 ready to upload".
-export function attentionMeta(projects: readonly CalendarProject[]): string {
-  const needs = projects.reduce((total, project) => total + asks(project), 0);
-  const ready = projects.filter((project) => asks(project) === 0).length;
-  return [
-    needs === 0 ? undefined : `${String(needs)} waiting for you`,
+// The line above the weeks, counted from the same projects by the same rules as Home, so the two
+// screens give one number: Needs you's decisions and failures, and the finished videos ready to
+// upload ("1 decision · 1 failed · 2 ready to upload"). Undefined when there is nothing to say.
+export function attentionLine(
+  projects: readonly ProjectListing[],
+): { readonly text: string; readonly items: number } | undefined {
+  const decisions = projects.filter(waitsForPerson).length;
+  const failed = projects.filter(failedRun).length;
+  const ready = projects.filter(isReadyToUpload).length;
+  const items = decisions + failed + ready;
+  if (items === 0) return undefined;
+  const text = [
+    decisions === 0 ? undefined : plural(decisions, "decision", "decisions"),
+    failed === 0 ? undefined : `${String(failed)} failed`,
     ready === 0 ? undefined : `${String(ready)} ready to upload`,
   ]
     .filter((part) => part !== undefined)
     .join(" · ");
-}
-
-// The projects that ask something of the person, then the ones ready to upload, as the
-// calendar's "Needs you" list shows them.
-export function needingAttention(projects: readonly CalendarProject[]): readonly CalendarProject[] {
-  return [
-    ...projects.filter((project) => asks(project) > 0),
-    ...projects.filter((project) => asks(project) === 0 && project.readyToUpload === true),
-  ];
+  return { text, items };
 }

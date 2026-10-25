@@ -523,6 +523,20 @@ describe("an empty calendar", () => {
 });
 
 describe("what needs you and what is ready", () => {
+  const listed = (id: string, status: string, over: Partial<ProjectListing> = {}) =>
+    ({
+      id,
+      title: id,
+      status,
+      progress: 1,
+      format: "16:9",
+      channelId: "00000000-0000-4000-8000-000000000001",
+      uploadedAt: null,
+      config: { sources: { video: "generate" } },
+      createdAt: inDays(0, 1),
+      updatedAt: inDays(0, 1),
+      ...over,
+    }) as ProjectListing;
   const project = (id: string, title: string, over: Record<string, unknown>) => ({
     id,
     title,
@@ -566,10 +580,27 @@ describe("what needs you and what is ready", () => {
           queued: [],
         }),
         "GET /api/schedules": jsonAnswer({ schedules: [] }),
+        // Home's counts come from every project, not only the ones in these weeks.
+        "GET /api/projects": jsonAnswer({
+          projects: [
+            listed("p-ready", "done"),
+            listed("p-older", "done"),
+            listed("p-review", "pending", { progress: 0.5 }),
+            listed("p-failed", "failed", { progress: 0.5 }),
+            listed("p-wait", "running", { progress: 0.5 }),
+            listed("p-done", "done", { uploadedAt: inDays(0, 3) }),
+          ],
+        }),
       }),
     );
-    // What needs a decision is Home's list: the calendar says how much and links there.
-    expect(await screen.findByText(/^2 waiting for you · 1 ready to upload\./)).not.toBeNull();
+    // What needs a decision is Home's list: the calendar says how much, in Home's words, and
+    // links there.
+    const line = await screen.findByText(
+      (_, element) => element?.tagName === "P" && /ready to upload/.test(element.textContent ?? ""),
+    );
+    expect(line.textContent).toBe(
+      "1 decision · 1 failed · 2 ready to upload. Open Home to act on them.",
+    );
     expect(screen.getByRole("link", { name: "Open Home" }).getAttribute("href")).toBe("/");
     expect(screen.queryByRole("list", { name: "Needs you" })).toBeNull();
     // On its day, a project waiting for CLI limits says when they reset.

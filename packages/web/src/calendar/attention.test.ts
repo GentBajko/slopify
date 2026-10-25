@@ -1,5 +1,6 @@
+import type { ProjectListing } from "@app/slices/admission/model.js";
 import { expect, it } from "vitest";
-import { attentionMeta, type CalendarProject, needingAttention, projectLook } from "./attention";
+import { attentionLine, type CalendarProject, projectLook } from "./attention";
 
 const project: CalendarProject = {
   id: "p1",
@@ -33,8 +34,6 @@ it("asks the person to open a stopped run to continue it, and counts it as waiti
     word: "Stopped",
     action: { kind: "open", label: "Open to continue" },
   });
-  expect(attentionMeta([stopped])).toBe("1 waiting for you");
-  expect(needingAttention([project, stopped])).toEqual([stopped]);
 });
 
 // A step failed beside a wait reads by the wait and is one more item for the person, as on
@@ -48,8 +47,42 @@ it("reads a step failed beside a wait by its wait and counts the failed step apa
     word: "Waiting for your review",
     action: { kind: "open", label: "Open to review" },
   });
-  expect(needingAttention([project, agent, review])).toEqual([agent, review]);
-  expect(attentionMeta([agent, review])).toBe("3 waiting for you");
-  const ready = { ...project, state: "done", readyToUpload: true } as const;
-  expect(attentionMeta([agent, ready])).toBe("1 waiting for you · 1 ready to upload");
+});
+
+// A video made with a failed step reads as everywhere else, and is still ready to copy.
+it("reads a video ready with a failed step as Done with problems", () => {
+  expect(projectLook({ ...project, state: "partial", readyToUpload: true })).toEqual({
+    tone: "waiting",
+    word: "Done with problems",
+    action: { kind: "upload" },
+  });
+  expect(projectLook({ ...project, state: "done", readyToUpload: true }).word).toBe(
+    "Ready to upload",
+  );
+});
+
+// The line above the weeks counts what Home counts, from every project of the channel shown.
+it("counts the decisions, the failures and the videos ready to upload as Home does", () => {
+  const listing = (over: Partial<ProjectListing>) =>
+    ({
+      id: "x",
+      title: "x",
+      status: "done",
+      progress: 1,
+      uploadedAt: null,
+      config: { sources: { video: "generate" } },
+      ...over,
+    }) as ProjectListing;
+  expect(
+    attentionLine([
+      listing({ status: "pending", progress: 0.5 }),
+      listing({ status: "failed", progress: 0.5 }),
+      listing({}),
+      listing({ status: "partial" }),
+      listing({ uploadedAt: "2026-09-01T00:00:00.000Z" }),
+      listing({ sample: true }),
+      listing({ status: "running", progress: 0.5 }),
+    ]),
+  ).toEqual({ text: "1 decision · 1 failed · 2 ready to upload", items: 4 });
+  expect(attentionLine([listing({ status: "running", progress: 0.5 })])).toBeUndefined();
 });
