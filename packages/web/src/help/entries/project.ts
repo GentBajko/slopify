@@ -15,7 +15,7 @@ export const projectHelp = {
   },
   "project.video.animate": {
     title: "Animate images",
-    body: "Turns some images into 5-second moving clips with an image-to-video model on your image provider (fal.ai or Replicate). Chapter openers animates the first image of each chapter; Every Nth image animates every 2nd to 10th. Each clip is one paid call, shown in the estimate. An image that cannot be animated stays still. Default: Off.",
+    body: "Turns some images into 5-second moving clips with an image-to-video model on your image service (fal.ai or Replicate). Chapter openers animates the first image of each chapter; Every Nth image animates every 2nd to 10th. Each clip is one paid call, shown in the estimate. An image that cannot be animated stays still. Default: Off.",
     tutorial: { page: "Video-Editing", anchor: "the-look" },
   },
   "project.pause.sentence": {
@@ -115,7 +115,7 @@ export const projectHelp = {
   },
   "project.narration.chunk-text": {
     title: "Narration chunk text",
-    body: "What the narrator says in this chunk. Editing it has this chunk spoken again by your voice provider, paid per character of the chunk, when you make the outdated narration again; the other chunks keep their audio. Captions and the video follow. It does not change the article.",
+    body: "What the narrator says in this chunk. Editing it has this chunk spoken again by your voice service, paid per character of the chunk, when you make the outdated narration again; the other chunks keep their audio. Captions and the video follow. It does not change the article.",
     tutorial: { page: "Editing-a-Project", anchor: "edit-narration" },
   },
   "project.rebuild.keep-provided": {
