@@ -107,7 +107,7 @@ API keys, the key Test, key guides, the health check, local agent CLIs (path ove
 
 ### First-run provider defaults
 
-`GET /api/providers/first-run` (`providers.ts:82-94`, `packages/app/src/slices/settings/first-run.ts:63-130`): `firstRun` is true while no key is saved and `first-run.done` is unset. On a first run with no saved defaults, the first usable CLI in the order claude-code, codex, gemini becomes Play's LLM default and a usable `codex-image` the image default, each with the first model its list returns ("" when the list fails), written once to setting `provider.defaults` (`first-run.ts:39`, `:81-105`, `:132-143`). The message says a video can be made without keys, or that no CLI was found; the narration sentence depends on whether a system voice is available (`:106-129`). `POST /first-run/dismiss` sets `first-run.done` (`:52-54`).
+`GET /api/providers/first-run` (`providers.ts:82-94`, `packages/app/src/slices/settings/first-run.ts:63-130`): `firstRun` is true while no key is saved and `first-run.done` is unset. On a first run with no saved defaults, the first usable CLI in the order claude-code, codex, gemini becomes Play's LLM default and a usable `codex-image` the image default, each with the first model its list returns ("" when the list fails), written once to setting `provider.defaults` (`first-run.ts:39`, `:81-105`, `:132-143`). The answer is `{firstRun, detected, defaults}` and says nothing in words: the first-run screen (`slices/onboarding/first-run.ts`) says what was found. Nothing writes `first-run.done` now; it was the old callout's "Got it", and an install that pressed it keeps reading it.
 
 ### Health check
 

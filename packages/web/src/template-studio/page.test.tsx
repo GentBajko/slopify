@@ -235,8 +235,6 @@ it("reads an unchosen writer as this computer's default, as every video made fro
       firstRun: false,
       detected: [],
       defaults: { llm: { provider: "openrouter", model: "claude" } },
-      message: null,
-      detail: null,
     }),
   });
   expect(await screen.findByText("Written by OpenRouter · claude (your default)")).not.toBeNull();

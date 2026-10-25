@@ -11,7 +11,7 @@ import { defaultSpeechVoice, detectSpeechCached } from "../../kernel/ports/syste
 import { switchAllRetired, switchRetiredModel } from "../../slices/model-upkeep/switch.js";
 import { retiredModelUsage, usageKinds, usageSlots } from "../../slices/model-upkeep/usage.js";
 import { cliPathMaxLength, saveCliPath } from "../../slices/settings/cli-paths.js";
-import { dismissFirstRun, firstRunStatus } from "../../slices/settings/first-run.js";
+import { firstRunStatus } from "../../slices/settings/first-run.js";
 import { checkProviderHealth } from "../../slices/settings/health.js";
 import { keyGuides } from "../../slices/settings/key-guides.js";
 import { testProviderKey } from "../../slices/settings/key-test.js";
@@ -87,10 +87,6 @@ export function providerRoutes(deps: AppDeps) {
             await providerStatuses(readiness),
           ),
         );
-      })
-      .post("/first-run/dismiss", (c) => {
-        dismissFirstRun(deps.db);
-        return c.body(null, 204);
       })
       // "Check all": every CLI signed in, every key valid, every chosen model still offered and
       // answering for the key. `?provider=codex` checks that one only (its row's Check again,
