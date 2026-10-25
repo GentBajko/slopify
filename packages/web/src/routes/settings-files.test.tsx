@@ -43,7 +43,9 @@ it("shows where the files are and moves them to Documents/Slopify", async () => 
       "POST /api/storage/files/move": move,
     }),
   );
-  expect(await screen.findByText("/home/you/.slopify/projects/Backups")).not.toBeNull();
+  expect(await screen.findByText("/home/you/.slopify/projects")).not.toBeNull();
+  // The backups' folder is said once, by the backups above, not again here.
+  expect(screen.queryByText("/home/you/.slopify/projects/Backups")).toBeNull();
   await userEvent.click(screen.getByRole("button", { name: "Move to Documents/Slopify" }));
   await waitFor(() => expect(move).toHaveBeenCalledTimes(1));
   expect(

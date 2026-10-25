@@ -35,6 +35,9 @@ it("turns starting at login on and shows the login entry", async () => {
   );
   const toggle = await screen.findByRole("switch", { name: "Start Slopify when I log in" });
   expect(toggle.getAttribute("aria-checked")).toBe("false");
+  // Off, the switch and its help say it all: no heading and no "starts only when you start it".
+  expect(screen.queryByText("Slopify starts only when you start it.")).toBeNull();
+  expect(screen.queryByRole("heading", { name: "Start at login" })).toBeNull();
   await userEvent.click(toggle);
   await waitFor(() => expect(sent).toEqual({ enabled: true }));
   expect(

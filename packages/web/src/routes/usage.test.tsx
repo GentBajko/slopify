@@ -1,7 +1,7 @@
 import type { Usage } from "@app/slices/telemetry/usage.js";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { jsonAnswer, problemAnswer, renderApp, testDeps } from "@/test-app";
+import { jsonAnswer, problemAnswer, renderApp, renderRouted, testDeps } from "@/test-app";
 import { SettingsRoute } from "./settings.js";
 import { UsageBoard as UsageRoute } from "./usage.js";
 
@@ -65,23 +65,27 @@ describe("the usage screen", () => {
   });
 
   it("shows the board and the table's shape while the numbers are coming", async () => {
-    const { container } = renderApp(<UsageRoute />, testDeps({}));
+    const { container } = renderRouted(<UsageRoute />, testDeps({}));
     await waitFor(() => {
       expect(container.querySelectorAll(".rounded-control").length).toBeGreaterThan(9);
     });
     expect(screen.queryByRole("table")).toBeNull();
   });
 
-  it("teaches a fresh install what fills it, with every counter at zero", async () => {
-    renderApp(<UsageRoute />, deps(empty));
+  it("teaches a fresh install what fills it once, with the way to the first video", async () => {
+    renderRouted(<UsageRoute />, deps(empty));
 
-    expect(await screen.findByText("Numbers appear after your first run.")).not.toBeNull();
-    expect(screen.getAllByText("0")).toHaveLength(5);
-    expect(screen.getByText("No stages have run yet.")).not.toBeNull();
+    expect(await screen.findByRole("heading", { name: "Nothing made yet" })).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Make your first video" }).getAttribute("href")).toBe(
+      "/play",
+    );
+    // No five zeros over an empty table saying the same thing twice.
+    expect(screen.queryByText("0")).toBeNull();
+    expect(screen.queryByRole("table")).toBeNull();
   });
 
   it("counts the five things the marketing page counts", async () => {
-    renderApp(<UsageRoute />, deps(busy));
+    renderRouted(<UsageRoute />, deps(busy));
 
     const videos = await screen.findByText("Videos made");
     expect(videos.parentElement?.textContent).toBe("Videos made42");
@@ -90,15 +94,24 @@ describe("the usage screen", () => {
       "Hours of narration15.3",
     );
     expect(screen.getByText("Images made").parentElement?.textContent).toBe("Images made612");
-    expect(screen.getByText("Tokens used").parentElement?.textContent).toBe("Tokens used8.4M");
+    expect(screen.getByText("AI text read and written").parentElement?.textContent).toBe(
+      "AI text read and written8.4M",
+    );
     expect(screen.getByText("Projects").parentElement?.textContent).toBe("Projects47");
-    expect(screen.queryByText("Numbers appear after your first run.")).toBeNull();
+    // The unit is said once, in plain words.
+    expect(screen.getByText(/counted in tokens: pieces of about three quarters/)).not.toBeNull();
+    expect(screen.queryByRole("heading", { name: "Nothing made yet" })).toBeNull();
   });
 
-  it("tabulates the tokens by stage, in the order the server sorted them", async () => {
-    renderApp(<UsageRoute />, deps(busy));
+  it("tabulates the AI text by part of the video, in the order the server sorted them", async () => {
+    renderRouted(<UsageRoute />, deps(busy));
 
-    const table = await screen.findByRole("table", { name: "Tokens by stage" });
+    const table = await screen.findByRole("table", { name: "AI text by part of the video" });
+    expect(
+      within(table)
+        .getAllByRole("columnheader")
+        .map((cell) => cell.textContent),
+    ).toEqual(["Part", "Service · model", "Read", "Written"]);
     const rows = within(table).getAllByRole("row").slice(1);
     expect(
       rows.map((row) =>
@@ -118,21 +131,25 @@ describe("the usage screen", () => {
       <UsageRoute />,
       deps({ ...busy, counters: { ...busy.counters, tokensUsed: 940_120 } }),
     );
-    expect((await screen.findByText("Tokens used")).parentElement?.textContent).toBe(
-      `Tokens used${group(940_120)}`,
+    expect((await screen.findByText("AI text read and written")).parentElement?.textContent).toBe(
+      `AI text read and written${group(940_120)}`,
     );
   });
 
-  it("engraves the machine id and the version that goes out with each report", async () => {
-    renderApp(<UsageRoute />, deps(busy));
+  it("shows this computer's random number and the version that goes out with each count", async () => {
+    renderRouted(<UsageRoute />, deps(busy));
     expect(
-      await screen.findByText("Machine ID 7f3c2a19-4b0e-4d61-9c7a-2e58d0f19a1e · Slopify 0.4.2"),
+      await screen.findByText(
+        "This computer's random number: 7f3c2a19-4b0e-4d61-9c7a-2e58d0f19a1e · Slopify 0.4.2",
+      ),
     ).not.toBeNull();
   });
 
-  it("says the machine id is not made yet before the notice is dismissed", async () => {
-    renderApp(<UsageRoute />, deps({ ...empty, machineId: null }));
-    expect(await screen.findByText("Machine ID not made yet · Slopify 0.4.2")).not.toBeNull();
+  it("says nothing is counted before Start counting is pressed", async () => {
+    renderRouted(<UsageRoute />, deps({ ...empty, machineId: null }));
+    expect(
+      await screen.findByText("Nothing is counted until you press Start counting · Slopify 0.4.2"),
+    ).not.toBeNull();
   });
 
   it("names the problem when the numbers cannot be read", async () => {

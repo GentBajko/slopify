@@ -230,7 +230,8 @@ export function BackupSettings() {
                 >
                   <Input
                     value={current?.folder ?? ""}
-                    placeholder={view?.defaultFolder ?? ""}
+                    // The default's path is said once, in the line under the box.
+                    placeholder="Default folder"
                     disabled={current === undefined}
                     onChange={(event) => edit({ folder: event.target.value })}
                   />
@@ -301,10 +302,15 @@ function nextLine(view: BackupView): string {
   return view.nextRunAt === null ? "" : `Next: ${when(view.nextRunAt)}.`;
 }
 
+// Where the backups go, said once on the page (Your files below does not list it again), with
+// how many are kept there once there are any.
 function whereLine(view: BackupView): string {
-  const kept = `${view.files.length} backup${view.files.length === 1 ? "" : "s"} here (${fileSize(view.files.reduce((sum, file) => sum + file.bytes, 0))}).`;
+  const kept =
+    view.files.length === 0
+      ? ""
+      : `${view.files.length} backup${view.files.length === 1 ? "" : "s"} here (${fileSize(view.files.reduce((sum, file) => sum + file.bytes, 0))}).`;
   if (view.hostFolder === null)
-    return `Inside Slopify's Docker volume, not on your computer. Leave Folder empty to save backups in the Backups folder on your computer. ${kept}`;
+    return `Inside Slopify's Docker volume, not on your computer. Leave Folder empty to save backups in the Backups folder on your computer. ${kept}`.trim();
   const empty = view.config.folder === null ? "Empty uses the default: " : "On your computer: ";
-  return `${empty}${view.hostFolder}. ${kept}`;
+  return `${empty}${view.hostFolder}. ${kept}`.trim();
 }

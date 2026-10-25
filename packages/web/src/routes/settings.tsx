@@ -259,10 +259,10 @@ export function SettingsRoute({
 const rowClass = "h-auto min-h-9 py-1.5 [&>.truncate]:whitespace-normal";
 
 // "Your channel" follows the pages about publishing; on a phone it is an option of the page
-// select that opens the channel's page.
+// select that opens the channel's page. It leaves Settings, so it carries ↗.
 const channelAfter: SettingsSection = "studio";
 const channelOption = "your-channel";
-const yourChannel = "Your channel";
+const yourChannel = "Your channel ↗";
 
 // Keys & services: what each kind of work has, with its fix, then every service by kind. A
 // readiness line's button, or a link from the welcome or Create, opens that kind's list and

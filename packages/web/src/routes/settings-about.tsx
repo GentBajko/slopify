@@ -96,7 +96,7 @@ export function AboutSettings({
         </p>
         <p className="m-0 text-small">
           <a href={channelStoryUrl} target="_blank" rel="noreferrer" className="sl-link">
-            How I run a channel with it
+            How I run a channel with it ↗
           </a>
         </p>
       </div>

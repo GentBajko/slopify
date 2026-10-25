@@ -53,7 +53,7 @@ export const settingsSections = [
   {
     id: "trash",
     label: "Trash",
-    meta: "Deleted things, kept for 30 days.",
+    meta: "What you deleted, to bring back or remove for good.",
     run: 2,
   },
   {

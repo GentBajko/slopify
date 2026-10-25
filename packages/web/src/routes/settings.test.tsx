@@ -219,13 +219,13 @@ describe("the settings screen", () => {
       deps({ "GET /api/channels": jsonAnswer({ channels: [one] }) }),
     );
     const nav = await screen.findByRole("navigation", { name: "Settings pages" });
-    const link = await within(nav).findByRole("link", { name: "Your channel" });
+    const link = await within(nav).findByRole("link", { name: "Your channel ↗" });
     expect(link.getAttribute("href")).toBe("/channels");
     // It sits after the publishing pages, as a link: the list's pages stay buttons.
     expect(link.previousElementSibling?.textContent).toBe("YouTube Studio and posting");
     // On a phone the page select carries it too, and picking it opens the channel.
     const select = screen.getByLabelText("Settings page") as HTMLSelectElement;
-    await userEvent.selectOptions(select, "Your channel");
+    await userEvent.selectOptions(select, "Your channel ↗");
     await waitFor(() => expect(screen.getByLabelText("Where").textContent).toBe("/channels"));
   });
 
@@ -240,8 +240,8 @@ describe("the settings screen", () => {
     );
     // The services are listed once the answers are in, the channels' among them.
     await screen.findByRole("heading", { name: "Voice services" });
-    expect(screen.queryByRole("link", { name: "Your channel" })).toBeNull();
-    expect(screen.queryByRole("option", { name: "Your channel" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Your channel ↗" })).toBeNull();
+    expect(screen.queryByRole("option", { name: "Your channel ↗" })).toBeNull();
   });
 
   it.each([
@@ -589,7 +589,7 @@ describe("the settings screen", () => {
     // Trashed projects' folders are shown apart from the live project files.
     expect(
       screen.getByText(
-        /256 KB project files · 128 B staged files · 256 KB in the trash \(2 deleted projects\), freed when removed for good/,
+        /256 KB project files · 128 B of uploads not used yet · 256 KB in the trash \(2 deleted projects\), freed when removed for good/,
       ),
     ).not.toBeNull();
     expect(screen.getByText("A finished run")).not.toBeNull();
