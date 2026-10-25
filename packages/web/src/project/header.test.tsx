@@ -1,11 +1,11 @@
 import type { ProjectSummary } from "@app/slices/admission/model.js";
 import { defaultVoicesSettings } from "@app/slices/voices/model.js";
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { body, stage } from "@/routes/project-fixtures";
 import { renderRouted, testDeps } from "@/test-app";
-import { finishedAt, ProjectHeader, runLength, runStart } from "./header";
+import { finishedAt, ProjectActions, ProjectHeader, runLength, runStart } from "./header";
 import { NextChapterOffer } from "./next-action-view";
 
 afterEach(cleanup);
@@ -38,7 +38,6 @@ it("says a finished project's state, what it is, when it finished, how long it t
       uploadedAt="2026-09-28T09:00:00.000Z"
       editing={false}
       onEdit={() => {}}
-      more={[]}
       progress={1}
     />,
     testDeps({}),
@@ -58,14 +57,7 @@ it("names a podcast as an episode, and a video by nothing more", async () => {
     config: { ...plain.config, voices: defaultVoicesSettings("podcast") },
   };
   const header = (project: ProjectSummary) => (
-    <ProjectHeader
-      project={project}
-      stages={ran}
-      editing={false}
-      onEdit={() => {}}
-      more={[]}
-      progress={1}
-    />
+    <ProjectHeader project={project} stages={ran} editing={false} onEdit={() => {}} progress={1} />
   );
   const { unmount } = renderRouted(header(podcast), testDeps({}));
   expect(await screen.findByText("Podcast episode")).not.toBeNull();
@@ -82,7 +74,6 @@ it("names the run's start until it finishes", async () => {
       stages={ran}
       editing={false}
       onEdit={() => {}}
-      more={[]}
       progress={0.5}
     />,
     testDeps({}),
@@ -98,7 +89,6 @@ it("says where a running run stands, beside its clock, as Home does", async () =
       stages={[stage("article", "done"), stage("audio", "running"), stage("video", "pending")]}
       editing={false}
       onEdit={() => {}}
-      more={[]}
       progress={0.5}
       clock={<span>Working · 0:01:12</span>}
     />,
@@ -108,28 +98,61 @@ it("says where a running run stands, beside its clock, as Home does", async () =
   expect(line?.textContent).toMatch(/· started .+· Step 2 of 3 · Narration.*Working · 0:01:12$/);
 });
 
-it("puts the next action first, then Edit settings, then a worded More", async () => {
-  const user = userEvent.setup();
-  const removed = vi.fn();
-  renderRouted(
+it("puts the next action first, then Edit settings, named for what a press does", async () => {
+  const header = (editing: boolean) => (
     <ProjectHeader
       project={plain}
       stages={ran}
       primary={<button type="button">Download video</button>}
-      editing={false}
+      editing={editing}
       onEdit={() => {}}
-      more={[
+      progress={1}
+    />
+  );
+  const { unmount } = renderRouted(header(false), testDeps({}));
+  const buttons = (await screen.findAllByRole("button")).map((button) => button.textContent);
+  expect(buttons).toEqual(["Download video", "Edit settings"]);
+  unmount();
+  // Open, the same button closes the settings, and says so.
+  renderRouted(header(true), testDeps({}));
+  expect(await screen.findByRole("button", { name: "Close settings" })).not.toBeNull();
+});
+
+// The project's other actions are listed in words, not behind a menu named More: nothing
+// needs a press to find out what it is. Deleting sits apart; one that cannot act says why.
+it("lists the project's other actions in words, deleting apart", async () => {
+  const user = userEvent.setup();
+  const removed = vi.fn();
+  renderRouted(
+    <ProjectActions
+      actions={[
         { id: "uploaded", label: "Mark uploaded", run: () => {} },
+        {
+          id: "rebuild",
+          label: "Choose what to make again…",
+          run: () => {},
+          disabledReason: "Wait until the last change is saved",
+        },
         { id: "delete", label: "Delete project…", run: removed, apart: true },
       ]}
-      progress={1}
     />,
     testDeps({}),
   );
-  const buttons = (await screen.findAllByRole("button")).map((button) => button.textContent);
-  expect(buttons).toEqual(["Download video", "Edit settings", "More"]);
-  await user.click(screen.getByRole("button", { name: "More" }));
-  await user.click(await screen.findByRole("menuitem", { name: "Delete project…" }));
+  const group = await screen.findByRole("region", { name: "Project actions" });
+  const lists = within(group).getAllByRole("list");
+  expect(
+    lists.map((list) =>
+      within(list)
+        .getAllByRole("button")
+        .map((button) => button.firstChild?.textContent),
+    ),
+  ).toEqual([["Mark uploaded", "Choose what to make again…"], ["Delete project…"]]);
+  expect(
+    screen
+      .getByRole("button", { name: "Choose what to make again…" })
+      .getAttribute("aria-disabled"),
+  ).toBe("true");
+  await user.click(screen.getByRole("button", { name: "Delete project…" }));
   expect(removed).toHaveBeenCalledOnce();
 });
 
@@ -140,7 +163,6 @@ it("says a held or prepared project's state as Projects and the agent tools do",
       stages={[]}
       editing={false}
       onEdit={() => {}}
-      more={[]}
       progress={progress}
     />
   );

@@ -26,10 +26,13 @@ import { revisionRouteFixture } from "./project-revision.fake.js";
 
 afterEach(cleanup);
 
-// Cancel the run sits in the title row's "More" menu, behind its confirmation.
+// Cancel the run is listed with the project's actions under its status, behind its
+// confirmation.
+const projectActions = () => screen.findByRole("region", { name: "Project actions" });
 async function pressCancelRun(): Promise<void> {
-  await userEvent.click(await screen.findByRole("button", { name: "More" }));
-  await userEvent.click(await screen.findByRole("menuitem", { name: "Cancel the run…" }));
+  await userEvent.click(
+    within(await projectActions()).getByRole("button", { name: "Cancel the run…" }),
+  );
 }
 
 // The title row, where the project's next action is the one primary button.
@@ -454,9 +457,9 @@ describe("cancelling a run", () => {
   it("offers no Cancel once the run is over, and Delete in its place", async () => {
     renderRouted(<ProjectRoute projectId="p1" />, deps());
     await statusList();
-    await userEvent.click(screen.getByRole("button", { name: "More" }));
-    expect(await screen.findByRole("menuitem", { name: "Delete project…" })).not.toBeNull();
-    expect(screen.queryByRole("menuitem", { name: "Cancel the run…" })).toBeNull();
+    const listed = await projectActions();
+    expect(within(listed).getByRole("button", { name: "Delete project…" })).not.toBeNull();
+    expect(within(listed).queryByRole("button", { name: "Cancel the run…" })).toBeNull();
   });
 
   it("keeps article output read-only and offers the settings while a stage runs", async () => {
@@ -736,27 +739,28 @@ describe("the title row's More", () => {
       }),
     );
     await statusList();
-    await userEvent.click(screen.getByRole("button", { name: "More" }));
-    expect((await screen.findAllByRole("menuitem")).map((item) => item.textContent)).toEqual([
-      "Rename…",
-      "Save as template…",
-      "Posters & pictures…",
-      "Delete project…",
-    ]);
-    await userEvent.click(screen.getByRole("menuitem", { name: "Rename…" }));
+    // Every action is on show in words: nothing hides behind a menu.
+    const listed = await projectActions();
+    await waitFor(() =>
+      expect(
+        within(listed)
+          .getAllByRole("button")
+          .map((item) => item.textContent),
+      ).toEqual(["Rename…", "Save as template…", "Posters and edited images…", "Delete project…"]),
+    );
+    await userEvent.click(within(listed).getByRole("button", { name: "Rename…" }));
     const title = await screen.findByLabelText("Project title");
     await waitFor(() => expect(document.activeElement).toBe(title));
-    await userEvent.click(screen.getByRole("button", { name: "More" }));
-    await userEvent.click(await screen.findByRole("menuitem", { name: "Delete project…" }));
+    await userEvent.click(within(listed).getByRole("button", { name: "Delete project…" }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText('Delete "Rope Tricks"?')).not.toBeNull();
     expect(removed).not.toHaveBeenCalled();
     await userEvent.click(within(dialog).getByRole("button", { name: "Delete project" }));
     await waitFor(() => expect(removed).toHaveBeenCalledOnce());
-    // ceiling: opens the settings and two menus; alone 1.9 s, past 5 s under a loaded suite.
+    // ceiling: opens the settings and a dialog; alone 1.9 s, past 5 s under a loaded suite.
   }, 20_000);
 
-  it("marks a finished video uploaded from More, with Undo, and says so in the title row", async () => {
+  it("marks a finished video uploaded from its actions, with Undo, and says so in the title row", async () => {
     const marked: unknown[] = [];
     let uploadedAt: string | null = null;
     const youtube = {
@@ -790,11 +794,16 @@ describe("the title row's More", () => {
       }),
     );
     await statusList();
-    await userEvent.click(screen.getByRole("button", { name: "More" }));
-    await userEvent.click(await screen.findByRole("menuitem", { name: "Mark uploaded" }));
+    await userEvent.click(
+      await within(await projectActions()).findByRole(
+        "button",
+        { name: "Mark uploaded" },
+        { timeout: 5_000 },
+      ),
+    );
     await waitFor(() => expect(marked).toEqual([{ uploaded: true }]), { timeout: 5_000 });
     expect(await screen.findByText(/^uploaded /, {}, { timeout: 5_000 })).not.toBeNull();
-    // ceiling: the list's row arrives before More offers Mark uploaded; under a loaded suite
+    // ceiling: the list's row arrives before Mark uploaded is offered; under a loaded suite
     // that has taken over 2 s.
   }, 20_000);
 });

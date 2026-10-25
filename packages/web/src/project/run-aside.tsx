@@ -11,6 +11,7 @@ import { etaLabel } from "@app/slices/eta/model.js";
 import type { CheckpointHold } from "@app/slices/reviews/holds.js";
 import type { RunCost } from "@app/slices/run-cost/panel.js";
 import type { Output } from "@app/slices/storage/model.js";
+import { FolderOpenIcon } from "lucide-react";
 import type { ReactElement } from "react";
 import { TextLink } from "@/components/kit/link";
 import { Rail, RailLink } from "@/components/kit/rail";
@@ -193,7 +194,8 @@ export function StageAnnouncements({
 
 // The status column's list: one row per thing the project makes, each a link to its section,
 // with its lamp, its state in words and one detail; a row at work or waiting says what it does
-// on a second line. All files ends it.
+// on a second line. All files ends it, drawn as a button with its folder: a place to go, not
+// one more thing made.
 export function ProjectStatusList({
   rows,
   projectId,
@@ -213,6 +215,12 @@ export function ProjectStatusList({
             resetScroll={false}
             data-tour={`project-rail-${row.id}`}
             current={row.id === selected}
+            {...(row.id === "outputs"
+              ? {
+                  icon: <FolderOpenIcon aria-hidden="true" strokeWidth={1.75} />,
+                  className: "sl-status-list__files",
+                }
+              : {})}
             {...(row.tone === undefined || row.state === undefined
               ? {}
               : { tone: row.tone, state: row.state })}
