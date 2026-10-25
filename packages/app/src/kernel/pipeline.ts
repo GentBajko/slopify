@@ -25,6 +25,19 @@ export const stageKinds = [
 ] as const;
 export type StageKind = (typeof stageKinds)[number];
 
+// One name per stage, everywhere a stage is named, on screen (the web app reads it through
+// `@/lib/stage-words`) and in the server's sentences. The pipeline calls the narration stage
+// `audio` and the PDF stage `document`; a person never sees those words.
+export const stageWords: Readonly<Record<StageKind, string>> = {
+  research: "Research",
+  article: "Article",
+  audio: "Narration",
+  images: "Images",
+  thumbnail: "Thumbnail",
+  video: "Video",
+  document: "PDF",
+};
+
 export const stageStates = [
   "pending",
   "running",

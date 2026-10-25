@@ -118,7 +118,7 @@ export function planningRoutes(deps: AppDeps) {
           return problem(c, {
             status: 409,
             detail:
-              "Videos with checkpoints turned on cannot be queued. Start them one at a time from Play with Review and start.",
+              "Videos that pause for your review (Pauses and checks) can't be queued. Make them one at a time from Create.",
           });
         if (batchExists(deps.db, input.requestId))
           return c.json({ queue: queueEntries(deps.db, input.requestId) });
