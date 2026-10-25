@@ -208,9 +208,11 @@ it("does not show a video made before the current pick under the new clip", asyn
   expect(screen.getAllByText("Not made yet. It is made with the video.")).toHaveLength(2);
 });
 
-it("says the clips come after the subtitle timing before they are picked", async () => {
+it("says the clips come once the captions are timed, before they are picked", async () => {
   mount([], "running");
-  expect(await screen.findByText("The clips are picked after the subtitle timing.")).not.toBeNull();
+  expect(
+    await screen.findByText("The clips are picked once the captions are timed."),
+  ).not.toBeNull();
 });
 
 it("ends the copied description with the project's link to the full video", async () => {

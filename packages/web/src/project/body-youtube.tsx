@@ -266,7 +266,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
   if (shared !== undefined) shared.current = copyLatest.current;
   const waiting =
     stage.state === "running"
-      ? "Written after the subtitle timing."
+      ? "Written once the captions are timed."
       : "Not written yet. It is made with the video.";
   const edit = (name: DescriptionField) =>
     editable && drafts[name] === undefined ? (

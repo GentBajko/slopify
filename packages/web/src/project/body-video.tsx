@@ -141,8 +141,8 @@ export function VideoBody({ stage, project, outputs, subtitleControls }: BodyPro
         ],
   );
   const subtitles = [
-    { output: srt, label: ".srt", file: "Subtitles (.srt)" },
-    { output: vtt, label: ".vtt", file: "Subtitles (.vtt)" },
+    { output: srt, label: ".srt", file: "Captions (.srt)" },
+    { output: vtt, label: ".vtt", file: "Captions (.vtt)" },
   ].filter(
     (one): one is { output: Output; label: string; file: string } => one.output !== undefined,
   );
@@ -152,7 +152,7 @@ export function VideoBody({ stage, project, outputs, subtitleControls }: BodyPro
       {rendering ? (
         <p className="m-0 text-small text-accent-ink">
           {preparingSubtitles(stage, project.config)
-            ? `Preparing subtitles · ${String(percent(stage.progressCurrent ?? 0, 35))}%`
+            ? `Preparing captions · ${String(percent(stage.progressCurrent ?? 0, 35))}%`
             : audioExport
               ? "Exporting combined audio"
               : stage.activity !== undefined
@@ -231,7 +231,7 @@ export function VideoBody({ stage, project, outputs, subtitleControls }: BodyPro
               <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-small text-ink-2">
                 {subtitles.length === 0 ? null : (
                   <span className="inline-flex flex-wrap items-center gap-x-2">
-                    Subtitles:
+                    Captions:
                     {subtitles.map((one) => (
                       <FileWord
                         key={one.output.id}

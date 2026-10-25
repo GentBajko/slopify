@@ -4,7 +4,7 @@ import type { RebuildPreview } from "@app/slices/rebuild/model.js";
 const workNames: Readonly<Record<string, string>> = {
   "export:wav": "Audio export (WAV)",
   "export:video": "Video export",
-  "subtitles:timing": "Subtitle timing",
+  "subtitles:timing": "Caption timing",
   "subtitles:cues": "Caption text and timing",
   "subtitles:files": "Subtitle files",
   "article:body": "Article",
@@ -34,7 +34,7 @@ export function workName(key: string): string {
     article: "Article",
     research: "Research",
     thumbnail: "Thumbnail",
-    subtitles: "Subtitles",
+    subtitles: "Captions",
     video: "Video export",
     export: "Export",
     entry: "Intro or outro",
