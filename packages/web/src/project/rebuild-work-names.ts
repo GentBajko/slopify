@@ -6,7 +6,7 @@ const workNames: Readonly<Record<string, string>> = {
   "export:video": "Video export",
   "subtitles:timing": "Caption timing",
   "subtitles:cues": "Caption text and timing",
-  "subtitles:files": "Subtitle files",
+  "subtitles:files": "Caption files",
   "article:body": "Article",
   "audio:provided": "Provided narration",
   "audio:body:concat": "Combined narration",
