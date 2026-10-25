@@ -603,6 +603,8 @@ Again.
     const user = userEvent.setup();
     const { container } = render(<ReadingView markdown={markdown} label="Article" />);
     const search = screen.getByLabelText("Search the article");
+    // Nothing to step through yet: no greyed arrows wait beside the box.
+    expect(screen.queryByRole("button", { name: "Next match" })).toBeNull();
     await user.type(search, "cleopatra");
     await waitFor(() => expect(screen.getByText("2 matches")).not.toBeNull());
     await user.click(screen.getByRole("button", { name: "Next match" }));

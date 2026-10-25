@@ -46,6 +46,29 @@ function withoutHeading(section: string): string {
   return section.replace(/^\s*[^\n]*\n?/u, "").trim();
 }
 
+// A plain-text article you supplied names its parts on lines of their own: "Collecting
+// everything", a blank line, then the paragraph. Those lines read as headings, as a written
+// article's do: short, one line, capitalised, with no closing punctuation, and a longer
+// paragraph after them.
+export function plainHeadings(text: string): string {
+  const blocks = text.split(/\n[ \t]*\n/u);
+  return blocks
+    .map((block, index) => {
+      const line = block.trim();
+      const next = blocks[index + 1]?.trim() ?? "";
+      const heading =
+        line !== "" &&
+        !line.includes("\n") &&
+        line.length <= 80 &&
+        line.split(/\s+/u).length <= 10 &&
+        /^\p{Lu}/u.test(line) &&
+        !/[.!?:;,…"”’')\]]$/u.test(line) &&
+        next.length > line.length;
+      return heading ? `## ${line}` : block;
+    })
+    .join("\n\n");
+}
+
 export function ArticleBody({ stage, companion, project, outputs, busy }: BodyProps) {
   const reviews = useReviews(project.id);
   const revisionId = useProjectRevision(project.id);
@@ -77,7 +100,11 @@ export function ArticleBody({ stage, companion, project, outputs, busy }: BodyPr
     enabled: false,
   });
 
-  const text = stored.data ?? "";
+  // Plain text you supplied gets its part names as headings; a script's lines stay as written.
+  const text =
+    markdown?.role === "article_txt" && voices?.source !== "script"
+      ? plainHeadings(stored.data ?? "")
+      : (stored.data ?? "");
   const running = stage.state === "running";
   const shown = running ? (streaming.data ?? "") : text;
   // The article's own heading becomes the body's title line, so it is not typeset twice.

@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { body, output, stage } from "@/routes/project-fixtures";
 import { jsonAnswer, renderApp, testDeps, testOrigin } from "@/test-app";
-import { ArticleBody } from "./body-article.js";
+import { ArticleBody, plainHeadings } from "./body-article.js";
 import { RevisionControlContext } from "./revision-action-context.js";
 import { revisionView } from "./revision-fixture.js";
 import { RevisionMedia } from "./revision-media.js";
@@ -336,4 +336,24 @@ it("opens on Research while the research has failed and the article waits", asyn
   ).not.toBeNull();
   await userEvent.click(screen.getByRole("tab", { name: "Article" }));
   expect(screen.getByText("The article is written once the research has finished.")).not.toBeNull();
+});
+
+it("reads a supplied plain-text article's part names as headings, and nothing else", () => {
+  const text = [
+    "A library at the edge of the sea",
+    "Around three hundred years before our era, the city set out to gather the world's books.",
+    "Collecting everything",
+    "Nobody knows how many scrolls it held. Ancient writers disagree.",
+    "It ended.",
+    "Short line",
+  ].join("\n\n");
+  expect(plainHeadings(text).split("\n\n")).toEqual([
+    "## A library at the edge of the sea",
+    "Around three hundred years before our era, the city set out to gather the world's books.",
+    "## Collecting everything",
+    "Nobody knows how many scrolls it held. Ancient writers disagree.",
+    // A sentence, and a last line with nothing after it, stay as they are.
+    "It ended.",
+    "Short line",
+  ]);
 });
