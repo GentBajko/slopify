@@ -48,9 +48,7 @@ export function ProjectsTab({ channelId }: { readonly channelId: string }): Reac
     );
   return (
     <section aria-label="Channel projects" className="flex flex-col gap-3">
-      <p className="m-0 text-small text-ink-2">
-        Everything made in this channel, newest first.
-      </p>
+      <p className="m-0 text-small text-ink-2">Everything made in this channel, newest first.</p>
       <List label="Channel projects" className="sl-projects">
         {rows.shown.map((project) => {
           const state = listState(project);
