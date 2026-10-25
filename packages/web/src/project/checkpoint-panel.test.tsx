@@ -196,6 +196,28 @@ it("says in one line that a finished run has nothing left to pause", async () =>
   expect(within(pauses).queryAllByRole("checkbox")).toEqual([]);
 });
 
+// Renamed, a finished project with a PDF reads Done with its PDF waiting, outdated: the PDF
+// holds no pause, so there is still nothing to pause.
+it("says nothing is left to pause when only an outdated PDF waits", async () => {
+  renderApp(
+    <CheckpointPanel
+      projectId="p1"
+      revisionId="r1"
+      paused={false}
+      stages={[
+        { kind: "audio", state: "done", source: "generate" },
+        { kind: "images", state: "done", source: "generate" },
+        { kind: "video", state: "done", source: "generate" },
+        { kind: "document", state: "pending", source: "generate" },
+      ]}
+    />,
+    testDeps({ "GET /api/projects/p1/checkpoints": jsonAnswer({ ...status, checkpoints: [] }) }),
+  );
+  expect(
+    (await screen.findByRole("region", { name: "Pauses for this run" })).textContent,
+  ).toContain("Nothing is left to pause");
+});
+
 it("keeps refused choices frozen until an explicit reload and restores keyboard focus", async () => {
   const user = userEvent.setup();
   const patch = vi.fn(() =>

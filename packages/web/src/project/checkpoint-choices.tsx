@@ -137,18 +137,18 @@ export function CheckpointChoices({
   };
   // Nothing is left to pause: every step it could hold has run. Three greyed ticks would say
   // nothing a person can act on, so the run says so in one line instead.
+  // A step still at work keeps its ticks in view (the run is going); an outdated PDF waiting
+  // after an edit holds no pause.
   const finished =
     !dirty &&
     choices.every(({ stage }) => !enabledOf(stage)) &&
-    stages.every(
-      (one) => one.state === "done" || one.state === "provided" || one.state === "skipped",
-    );
+    stages.every((one) => one.state !== "running" && one.state !== "failed");
   if (finished)
     return (
       <section aria-label="Pauses for this run" className="space-y-1" {...helpScope}>
         <p className="m-0 font-semibold">Pauses for this run</p>
         <HelpLine>
-          Nothing is left to pause: every step of this run has been made. Making something again
+          Nothing is left to pause: every step a pause can hold has run. Making something again
           starts once you have seen what it costs, without a pause.
         </HelpLine>
       </section>
