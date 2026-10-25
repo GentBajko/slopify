@@ -89,7 +89,7 @@ export function reviewFields(draft: ReviewDraft): readonly FieldError[] {
   )
     fields.push({
       field: "reviews.provider",
-      message: `The ${pictures.map((stage) => reviewStageLabels[stage]).join(", ")} ${pictures.length === 1 ? "review looks" : "reviews look"} at pictures, and Slopify can't show pictures to this reviewer. In the Reviews section, choose Claude Code or Codex as the reviewer, or set ${pictures.length === 1 ? "that review" : "those reviews"} to Off.`,
+      message: `The ${pictures.map((stage) => reviewStageLabels[stage]).join(", ")} ${pictures.length === 1 ? "check looks" : "checks look"} at pictures, and Slopify can't show pictures to this checker. Under Pauses and checks → Advanced → Checked by, choose Claude Code or Codex, or set ${pictures.length === 1 ? "that check" : "those checks"} to Off.`,
     });
   return fields;
 }
