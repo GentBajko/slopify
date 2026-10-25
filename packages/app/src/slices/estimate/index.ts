@@ -187,7 +187,7 @@ export function estimateRun(
         kind: "unknown",
         stage: "Narration descriptions",
         detail:
-          "One LLM call per table, figure, equation or code block in the article; how many is known once the text is written.",
+          "One AI call per table, figure, equation or code block in the article; how many is known once the article is written.",
       });
     else
       for (const block of blocks)
@@ -198,7 +198,7 @@ export function estimateRun(
             0,
           ),
           600,
-          `${String(blocks.length)} LLM ${blocks.length === 1 ? "call" : "calls"}: one per table, figure, equation or code block.`,
+          `${String(blocks.length)} AI ${blocks.length === 1 ? "call" : "calls"}: one per table, figure, equation or code block.`,
         );
   }
   if (draft.sources.audio === "generate") {
@@ -238,7 +238,7 @@ export function estimateRun(
         kind: "unknown",
         stage: "Delivery cue overhead",
         detail:
-          "TTS character charges include delivery tags; their length is known after preparation.",
+          "The voice charges per character, delivery tags included; their length is known after preparation.",
       });
     }
     // A template studio sample says only the narration's opening (`template-studio/scope.ts`).
@@ -268,14 +268,14 @@ export function estimateRun(
           "Speaker split",
           articleChars + 1500,
           Math.round(articleChars * 1.1),
-          "One LLM call hands the text's passages to the speakers.",
+          "One AI call hands the text's passages to the speakers.",
         );
       if (draft.voices?.source === "adapt")
         text(
           "Conversation script",
           articleChars + 1500,
           Math.round(articleChars * 1.2),
-          "One LLM call rewrites the text as a conversation between the speakers; the article stays as written.",
+          "One AI call rewrites the text as a conversation between the speakers; the article stays as written.",
         );
     } else
       requests.push(
@@ -374,7 +374,7 @@ export function estimateRun(
         Math.round(articleChars * 1.05) +
         1500,
       2400,
-      "One LLM call on the timed transcript.",
+      "One AI call on the timed transcript.",
     );
   // Each site whose post is written by a post prompt: one call that reads the article.
   for (const platform of socialPlatforms) {
@@ -384,7 +384,7 @@ export function estimateRun(
       "Posts",
       (own === "" ? defaultPostPrompt.length : own.length) + articleChars + 400,
       600,
-      "One LLM call per site whose post a post prompt writes, reading the article.",
+      "One AI call per site whose post a post prompt writes, reading the article.",
     );
   }
   // Shorts: one call picks the clips from the numbered transcript, one per clip writes its
@@ -404,13 +404,13 @@ export function estimateRun(
         Math.round(articleChars * 1.15) +
         1500,
       400 * shorts.count,
-      "One LLM call on the numbered transcript picks the clips.",
+      "One AI call on the numbered transcript picks the clips.",
     );
     const style = rendered.shortsImage?.trim()
       ? rendered.shortsImage.length
       : defaultShortsImagePrompt.length;
     for (let clip = 0; clip < shorts.count; clip++)
-      text("Shorts", style + 3000, 2400, "One LLM call per short writes its image prompts.");
+      text("Shorts", style + 3000, 2400, "One AI call per short writes its image prompts.");
     const count = shortsImageUpperBound(shorts, draft.imageSeconds);
     for (let index = 0; index < count; index++)
       requests.push({
