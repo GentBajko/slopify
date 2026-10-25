@@ -189,10 +189,10 @@ it("ticks the PDF of the article, picks its theme and saves both into the draft"
   const { requests, session } = await mountPlay();
   await openRow("Extras");
   // Its look is asked for only once it is ticked.
-  expect(screen.queryByRole("combobox", { name: "Theme" })).toBeNull();
+  expect(screen.queryByRole("combobox", { name: "PDF look" })).toBeNull();
   expect(outputsSummary()).toBe("The video only: no thumbnail, description, shorts or PDF.");
   await userEvent.click(screen.getByRole("checkbox", { name: "PDF of the article" }));
-  const theme = screen.getByRole<HTMLSelectElement>("combobox", { name: "Theme" });
+  const theme = screen.getByRole<HTMLSelectElement>("combobox", { name: "PDF look" });
   // Plain is the one built-in; DiceMaster is no longer offered.
   expect(theme.value).toBe("builtin:plain");
   expect(

@@ -507,8 +507,9 @@ export function NumberField({
   );
 }
 
-// Outputs → PDF of the article: laid out locally from the article and title, so nothing here
-// needs a provider. One tick; once ticked, the look.
+// Extras → PDF of the article: laid out locally from the article and title, so nothing here
+// needs a provider. One tick; once ticked, its look, named as Edit template, Edit settings and
+// Settings → Production defaults name it.
 export function DocumentRail({ form, update }: RailProps) {
   if (form.sources.article === "off") return null;
   return (
@@ -519,7 +520,7 @@ export function DocumentRail({ form, update }: RailProps) {
       checked={form.sources.document === "generate"}
       onChange={(on) => update({ sources: { ...form.sources, document: on ? "generate" : "off" } })}
     >
-      <LabelledField label="Theme" problem={undefined}>
+      <LabelledField label="PDF look" problem={undefined}>
         {({ id }) => (
           <span className="flex flex-wrap items-center gap-3">
             <DocumentThemePicker
@@ -533,7 +534,7 @@ export function DocumentRail({ form, update }: RailProps) {
               }}
             />
             <TextLink to="/document-themes" className="text-small">
-              Edit themes ↗
+              Edit PDF looks ↗
             </TextLink>
           </span>
         )}
