@@ -591,7 +591,8 @@ describe("export everything and import a backup", () => {
     templates: { added: 1, renamed: 0, skipped: 0 },
     schedules: { added: 1, renamed: 0, skipped: 0, paused: 1 },
     voices: { added: 0, renamed: 0, skipped: 0 },
-    drafts: { added: 0, renamed: 0, skipped: 0 },
+    drafts: { added: 2, renamed: 0, skipped: 0 },
+    channelVideos: { added: 5, renamed: 0, skipped: 0 },
     designs: { added: 3, renamed: 0, skipped: 1 },
     designTemplates: { added: 0, renamed: 0, skipped: 0 },
     settings: { added: 1, kept: 1 },
@@ -679,7 +680,10 @@ describe("export everything and import a backup", () => {
     );
     expect(lines).toContain("Usage: 12 recorded event(s) added to the totals.");
     expect(lines).toContain("Designs: 3 added, 1 already here.");
-    expect(lines.some((line) => line?.startsWith("Design templates"))).toBe(false);
+    // Each kind by the name its own screen gives it.
+    expect(lines).toContain("Titles to avoid: 5 added.");
+    expect(lines).toContain("Saved drafts: 2 added.");
+    expect(lines.some((line) => line?.startsWith("Poster templates"))).toBe(false);
     expect(lines).toContain("Skipped “Old run”: It is already in this install.");
   });
 

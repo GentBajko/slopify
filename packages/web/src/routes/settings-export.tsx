@@ -402,7 +402,7 @@ export function ImportResult({
     counted("Channels", result.channels),
     counted("Cast members", result.cast),
     counted("Episode memories", result.episodeMemories),
-    counted("Existing videos", result.channelVideos),
+    counted("Titles to avoid", result.channelVideos),
     counted("PDF themes", result.documentThemes),
     counted("Templates", result.templates),
     counted("Schedules", result.schedules),
@@ -410,9 +410,9 @@ export function ImportResult({
       ? `${result.schedules.paused} schedule(s) arrived paused so two installs never run them both; resume them on the Schedules screen.`
       : null,
     counted("Voices", result.voices),
-    counted("Play drafts", result.drafts),
+    counted("Saved drafts", result.drafts),
     counted("Designs", result.designs),
-    counted("Design templates", result.designTemplates),
+    counted("Poster templates", result.designTemplates),
     result.settings.added + result.settings.kept > 0
       ? `Settings: ${result.settings.added} filled in${result.settings.kept > 0 ? `, ${result.settings.kept} kept as this install has them` : ""}.`
       : null,
