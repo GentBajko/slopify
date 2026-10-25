@@ -80,12 +80,33 @@ describe("builtInTheme", () => {
     expect(resolvedDocumentTheme(undefined)).toEqual(legacyDiceMasterTheme);
   });
 
-  it("offers Plain alone, and keeps reading the retired name", () => {
-    expect(documentThemes).toEqual(["plain"]);
+  it("offers three ready looks, Plain first, and keeps reading the retired name", () => {
+    expect(documentThemes).toEqual(["plain", "book", "modern"]);
+    expect(documentSettingsSchema.parse({ theme: "book" })).toEqual({ theme: "book" });
     expect(defaultDocumentTheme).toBe("plain");
     expect(documentSettingsSchema.parse({ theme: "dicemaster" })).toEqual({ theme: "dicemaster" });
     expect(documentThemeOf(undefined)).toBe("dicemaster");
     expect(draftDocumentThemeOf(undefined)).toBe("plain");
+  });
+
+  it("draws Book and Modern as unbranded changes to Plain's layout", () => {
+    const plain = builtInTheme("plain");
+    const book = builtInTheme("book");
+    const modern = builtInTheme("modern");
+    for (const theme of [book, modern]) {
+      expect(theme.page).toEqual(plain.page);
+      expect(theme.brand).toEqual(plain.brand);
+      expect(theme.metadata).toEqual(plain.metadata);
+      expect(theme.endPage).toEqual(plain.endPage);
+    }
+    expect(book.background.image).toBe("parchment");
+    expect(book.fonts.body.family).toBe("Literata");
+    expect(book.fonts.heading).toEqual(plain.fonts.heading);
+    expect(modern.background).toEqual({ image: null, color: "#ffffff" });
+    expect(Object.values(modern.fonts).map((face) => face.family)).toEqual(
+      Array(8).fill("helvetica"),
+    );
+    expect(modern.dropCap.enabled).toBe(false);
   });
 
   it("lets the parchment texture be any theme's background", () => {

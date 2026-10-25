@@ -76,10 +76,10 @@ describe("design fields", () => {
       schedule: { dateField: "When", daysBefore: 7, time: "09:00" },
     });
     expect(fieldProblems(doc).map((problem) => problem.sentence)).toEqual([
-      "The picture prompt has a {{ without its }}. Fix it so every field reads {{Name}}.",
+      "The picture prompt has a {{ without its }}. Fix it so every keyword reads {{Name}}.",
       "{{Slopify_Title}} is a name Slopify keeps for videos, so a design can't use it. Rename it (for example {{TitleText}}).",
       "{{Scene}} is a name Slopify keeps for videos, so a design can't use it. Rename it (for example {{SceneText}}).",
-      "The schedule reads each row's date from {{When}}, but no text uses it. Put {{When}} in a text block, or choose another date field under Schedule.",
+      "The schedule reads each row's date from {{When}}, but no text uses it. Put {{When}} in a text block, or choose another date keyword under Schedule.",
     ]);
     expect(fieldProblems(poster())).toEqual([]);
   });
@@ -106,10 +106,10 @@ describe("design fields", () => {
       "Price",
     ]);
     expect(missingSentence(["Price"])).toBe(
-      "{{Price}} has no value. Fill it in under Fields, then press Make.",
+      "{{Price}} has no value. Fill it in under Keywords, then press Make.",
     );
     expect(missingSentence(["Date", "Venue", "Price"])).toBe(
-      "{{Date}}, {{Venue}} and {{Price}} have no value. Fill them in under Fields, then press Make.",
+      "{{Date}}, {{Venue}} and {{Price}} have no value. Fill them in under Keywords, then press Make.",
     );
   });
 

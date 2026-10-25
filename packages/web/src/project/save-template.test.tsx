@@ -57,7 +57,7 @@ it("saves a named current revision without invoking project work", async () => {
   await user.clear(input);
   await user.type(input, "Reusable film");
   await user.click(within(dialog).getByRole("button", { name: "Save template" }));
-  await screen.findByText("Template saved. Set it up section by section in its studio.");
+  await screen.findByText("Template saved. Look it over section by section in Edit template.");
   expect(save).toHaveBeenCalledOnce();
   // The new template opens in its studio.
   expect(await screen.findByTestId("path")).toHaveProperty(

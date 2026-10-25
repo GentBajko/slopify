@@ -286,7 +286,7 @@ describe("Edit project", () => {
       "Images",
       "Video and style",
       "Captions",
-      "Outputs",
+      "Extras",
       "Pauses and checks",
       "Channel",
     ]);
@@ -300,7 +300,7 @@ describe("Edit project", () => {
           if (fold !== null) fold.open = true;
         }
       }
-      if (section === "Outputs")
+      if (section === "Extras")
         await userEvent.click(
           screen.getAllByRole("button", { name: "Use my own range" })[0] ?? document.body,
         );

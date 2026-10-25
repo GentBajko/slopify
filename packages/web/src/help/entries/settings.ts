@@ -133,7 +133,7 @@ export const settingsHelp = {
   },
   "settings.agents": {
     title: "Agents (MCP)",
-    body: "An AI agent on this computer, such as Claude Code or Codex, can run Slopify through this address: start and fix runs, edit the Library and answer reviews set to External agent. It needs no key, like this page, and never uploads to YouTube. What it changes is marked by agent in the project's history, in notifications and in the list below.",
+    body: "An AI agent on this computer, such as Claude Code or Codex, can run Slopify through this address: start and fix runs, edit your prompts and templates, and answer reviews set to External agent. It needs no key, like this page, and never uploads to YouTube. What it changes is marked by agent in the project's history, in notifications and in the list below.",
     tutorial: { page: "Agents-MCP", anchor: "connect-an-agent" },
   },
 

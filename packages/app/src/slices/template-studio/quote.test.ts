@@ -181,7 +181,7 @@ describe("quoteSave", () => {
 describe("fieldSentence", () => {
   it("names an empty keyword and where it is filled, and keeps every other message", () => {
     expect(fieldSentence({ field: "values.topic", message: "Fill in this field." })).toBe(
-      "The keyword {{topic}} is empty. Fill it in Topic & title.",
+      "The keyword {{topic}} is empty. Fill it in Title and keywords.",
     );
     expect(
       fieldSentence({ field: "audio.voice", message: "Choose a voice for the narration." }),

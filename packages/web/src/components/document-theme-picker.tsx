@@ -3,6 +3,7 @@ import {
   documentThemeLabels,
   documentThemeOf,
   documentThemes,
+  draftDocumentThemeOf,
   legacyDocumentTheme,
 } from "@app/slices/document/model.js";
 import { useQuery } from "@tanstack/react-query";
@@ -19,10 +20,13 @@ import { documentThemesQuery } from "@/queries";
 // so editing the theme later leaves this project alone until it is picked again. A project
 // whose copy no longer matches the saved theme (or whose theme was deleted) keeps an option for
 // the copy it has. Likewise a project saved with the retired DiceMaster built-in keeps an option
-// for it while it is the current choice; it is never offered otherwise.
+// for it while it is the current choice; it is never offered otherwise. A Create draft or a
+// template (`draft`) with no setting is drawn in the current default, Plain, not as a project
+// saved before the setting existed.
 export function DocumentThemePicker({
   id,
   value,
+  draft = false,
   disabled,
   className,
   field,
@@ -30,6 +34,7 @@ export function DocumentThemePicker({
 }: {
   readonly id: string;
   readonly value: DocumentSettings | undefined;
+  readonly draft?: boolean;
   readonly disabled: boolean;
   readonly className?: string;
   // The Play field the readiness rail points at, when there is one.
@@ -37,6 +42,7 @@ export function DocumentThemePicker({
   readonly onChange: (next: DocumentSettings) => void;
 }) {
   const { api } = useApp();
+  const themeOf = draft ? draftDocumentThemeOf : documentThemeOf;
   const listing = useQuery(documentThemesQuery(api));
   const saved = listing.data?.themes ?? [];
   const custom = value?.custom;
@@ -46,20 +52,16 @@ export function DocumentThemePicker({
     (library === undefined ||
       library.name !== custom.name ||
       JSON.stringify(library.values) !== JSON.stringify(custom.values));
-  const legacy = custom === undefined && documentThemeOf(value) === legacyDocumentTheme;
+  const legacy = custom === undefined && themeOf(value) === legacyDocumentTheme;
   const selected =
-    custom === undefined
-      ? `builtin:${documentThemeOf(value)}`
-      : kept
-        ? "kept"
-        : `custom:${custom.id}`;
+    custom === undefined ? `builtin:${themeOf(value)}` : kept ? "kept" : `custom:${custom.id}`;
   const [previewing, setPreviewing] = useState(false);
-  const builtIn = listing.data?.builtIns.find((one) => one.name === documentThemeOf(value));
+  const builtIn = listing.data?.builtIns.find((one) => one.name === themeOf(value));
   const shown =
     custom !== undefined
       ? { name: custom.name, values: custom.values }
       : {
-          name: builtIn?.label ?? documentThemeLabels[documentThemeOf(value)],
+          name: builtIn?.label ?? documentThemeLabels[themeOf(value)],
           values: builtIn?.values,
         };
 
@@ -82,7 +84,7 @@ export function DocumentThemePicker({
           const theme = saved.find((one) => `custom:${one.id}` === picked);
           if (theme !== undefined)
             onChange({
-              theme: documentThemeOf(value),
+              theme: themeOf(value),
               custom: { id: theme.id, name: theme.name, values: theme.values },
             });
         }}

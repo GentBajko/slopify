@@ -58,26 +58,6 @@ export const projectHelp = {
     body: "How loud the audio-only WAV and an audiobook's MP3 and M4B are, in dB from -18 LUFS, the level audiobook shops such as ACX ask for (-18 to -23 LUFS). LUFS is how loud a file sounds on average. Type dB or a percentage of the recommended level; peaks always stay under -3 dBTP, which those shops require.",
     tutorial: { page: "Editing-a-Project", anchor: "pauses-and-volume" },
   },
-  "project.ambient.source": {
-    title: "Ambient sound",
-    body: "Rain, a fireplace or wind made on this computer, or your own audio file, played quietly under the whole narration of the long video. It dips while the narrator speaks. Costs no API calls. Shorts never get it. Changing it makes only the video again. Default: None, or the channel's bed.",
-    tutorial: { page: "Video-Editing", anchor: "ambient-sound" },
-  },
-  "project.ambient.level": {
-    title: "Ambient level",
-    body: "How loud the ambient sound plays under the voice, in decibels from -40 (barely there) to -6 (close to the voice). Whole numbers only. Default: -18 dB.",
-    tutorial: { page: "Video-Editing", anchor: "ambient-sound" },
-  },
-  "project.ambient.fade-in": {
-    title: "Ambient fade in",
-    body: "How many seconds the ambient sound takes to rise from silence at the start of the video, 0 to 30 in half-second steps. Default: 3 seconds.",
-    tutorial: { page: "Video-Editing", anchor: "ambient-sound" },
-  },
-  "project.ambient.tail": {
-    title: "Ambient tail",
-    body: "How long the ambient sound keeps playing, fading out, after the narration ends: 0 to 30 seconds in half-second steps. A tail longer than the silence at the end makes the video that much longer. Default: 6 seconds.",
-    tutorial: { page: "Video-Editing", anchor: "ambient-sound" },
-  },
   "project.subtitles.mode": {
     title: "Captions",
     body: "Off makes none. Show captions in the video draws them into the picture and also makes .srt and .vtt files; it needs a video. Caption files only gives you the files to upload beside the video. Captions are timed from your narration on this computer, with no paid API; the first use downloads a speech model of about 378 MB (Settings → Production defaults offers smaller ones). Default: Off.",

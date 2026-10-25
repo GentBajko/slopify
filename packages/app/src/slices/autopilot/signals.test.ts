@@ -195,7 +195,7 @@ describe("autopilotView", () => {
     expect(view.forecast.daysAhead).toBeNull();
     expect(view.warnings.map((one) => one.key)).toContain(`template-not-ready:${f.scheduleId}`);
     expect(view.warnings.find((one) => one.key.startsWith("template-not-ready"))?.text).toBe(
-      "“Nightly histories” skips its runs because its template “Lighthouses” has no version marked ready. Open it in Library → Templates → Open studio and press Mark ready.",
+      "“Nightly histories” skips its runs because its template “Lighthouses” has no version approved for schedules. Open it from Templates with Edit template, then choose More → Approve for schedules.",
     );
   });
 

@@ -324,7 +324,7 @@ describe("making a designed piece's artwork", () => {
     piece(runner, { Date: "x" });
     const missing = runner.artwork("d2", { mutationId: "art-00001", acknowledgedHigh: 0.04 });
     expect(missing.ok ? "started" : missing.message).toBe(
-      "{{Event}} has no value. Fill it in under Fields, then press Make.",
+      "{{Event}} has no value. Fill it in under Keywords, then press Make.",
     );
     h.db.exec(
       `UPDATE designs SET document_json='${JSON.stringify(poster({ picture: { ...poster().picture, source: "picture" } }))}' WHERE id='d2'`,

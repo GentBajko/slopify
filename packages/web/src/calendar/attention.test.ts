@@ -13,7 +13,7 @@ const project: CalendarProject = {
 
 // The calendar says a project's state as Projects does (`projectStateOf`).
 it.each([
-  [{ prepared: true }, "waiting", "Prepared"],
+  [{ prepared: true }, "waiting", "Waiting for its day"],
   [{ waitingForAgent: true }, "waiting", "Waiting for the agent"],
   [{ stopped: true }, "waiting", "Stopped"],
   [{ setAside: true }, "done", "Kept as is"],

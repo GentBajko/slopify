@@ -118,7 +118,7 @@ describe("Name and look", () => {
       screen.getByRole("img", { name: "Preview of the channel's captions and end screen text" }),
     ).toBeTruthy();
     // Every look setting left empty says so in the same words: the two fonts, intro, outro,
-    // PDF theme and ambient sound, and the three colours.
+    // PDF look and ambient sound, and the three colours.
     expect(screen.getAllByRole("option", { name: "Not set", selected: true })).toHaveLength(6);
     expect(screen.getAllByPlaceholderText("Not set")).toHaveLength(3);
   });

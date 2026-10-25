@@ -54,7 +54,7 @@ describe("freeChecks", () => {
   });
 
   describe("keywords", () => {
-    it("names each empty keyword and links to Topic & title", () => {
+    it("names each empty keyword and links to Title and keywords", () => {
       const result = check({ bodies: ["Write in {{style}} about {{era}}."] }, "keywords");
       expect(result).toEqual({
         id: "keywords",
@@ -62,7 +62,7 @@ describe("freeChecks", () => {
         sentence:
           "Keywords are empty: {{style}} and {{era}}. A run would send the prompt with nothing in their place.",
         fix: {
-          label: "Fill them in Topic & title",
+          label: "Fill them in Title and keywords",
           href: "/templates/t1?section=subject",
         },
       });

@@ -9,6 +9,11 @@ import {
   titleMax,
   zoomPercentMax,
 } from "@app/slices/admission/rules.js";
+import {
+  channelName,
+  extrasName,
+  setupSectionNames,
+} from "@app/slices/project-templates/setup-sections.js";
 import { defaultSubtitles } from "@app/slices/subtitles/model.js";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -167,20 +172,26 @@ export function RevisionForm(
     language: config.language,
     onChange: (next) => onChange({ ...edit, config: { ...config, videoEdit: next } }),
   });
+  // Named as Create's rows and Edit template's sections are (`setup-sections.ts`). Captions, the
+  // made captions' own words, is the project's alone.
   const sections: readonly {
     readonly id: EditSection;
     readonly label: string;
     readonly badge?: string;
   }[] = [
-    { id: "title", label: "Title and keywords" },
+    { id: "title", label: setupSectionNames.topic },
     {
       id: "article",
-      label: "Article",
+      label: setupSectionNames.article,
       ...(edit.content.articleEdited ? { badge: "edited" } : {}),
     },
-    { id: "narration", label: "Narration" },
-    { id: "images", label: "Images", badge: String(edit.content.imageOrder.length) },
-    { id: "video", label: "Video and style" },
+    { id: "narration", label: setupSectionNames.narration },
+    {
+      id: "images",
+      label: setupSectionNames.images,
+      badge: String(edit.content.imageOrder.length),
+    },
+    { id: "video", label: setupSectionNames.video },
     ...(config.sources.article === "off"
       ? []
       : [
@@ -192,13 +203,13 @@ export function RevisionForm(
               : { badge: String(edit.content.subtitleCues.cues.length) }),
           },
         ]),
-    { id: "outputs", label: "Outputs" },
+    { id: "outputs", label: extrasName },
     {
       id: "checks",
-      label: "Pauses and checks",
+      label: setupSectionNames.checks,
       ...(config.reviews === undefined ? {} : { badge: "on" }),
     },
-    { id: "channel", label: "Channel" },
+    { id: "channel", label: channelName },
   ];
   const current = sections.some((one) => one.id === section) ? section : "title";
   const panel = (id: EditSection) => cn("min-w-0 space-y-6", current === id ? undefined : "hidden");
@@ -280,7 +291,7 @@ export function RevisionForm(
           </ul>
         )}
         <section
-          aria-label="Title and keywords"
+          aria-label={setupSectionNames.topic}
           hidden={current !== "title"}
           className={panel("title")}
         >
@@ -296,7 +307,11 @@ export function RevisionForm(
           </Field>
           {promptPart("keywords")}
         </section>
-        <section aria-label="Article" hidden={current !== "article"} className={panel("article")}>
+        <section
+          aria-label={setupSectionNames.article}
+          hidden={current !== "article"}
+          className={panel("article")}
+        >
           {sourceField("research")}
           {sourceField("article")}
           {config.sources.research === "provide" ? (
@@ -368,7 +383,7 @@ export function RevisionForm(
           )}
         </section>
         <section
-          aria-label="Narration"
+          aria-label={setupSectionNames.narration}
           hidden={current !== "narration"}
           className={panel("narration")}
         >
@@ -395,13 +410,17 @@ export function RevisionForm(
           </Group>
           {promptPart("narration")}
         </section>
-        <section aria-label="Images" hidden={current !== "images"} className={panel("images")}>
+        <section
+          aria-label={setupSectionNames.images}
+          hidden={current !== "images"}
+          className={panel("images")}
+        >
           {sourceField("images")}
           {providerPart("images")}
           {promptPart("images")}
         </section>
         <section
-          aria-label="Video and style"
+          aria-label={setupSectionNames.video}
           hidden={current !== "video"}
           className={panel("video")}
         >
@@ -582,7 +601,11 @@ export function RevisionForm(
             />
           )}
         </section>
-        <section aria-label="Outputs" hidden={current !== "outputs"} className={panel("outputs")}>
+        <section
+          aria-label={extrasName}
+          hidden={current !== "outputs"}
+          className={panel("outputs")}
+        >
           {sourceField("thumbnail")}
           <RevisionYoutube
             edit={edit}
@@ -624,7 +647,7 @@ export function RevisionForm(
           {promptPart("outputs")}
         </section>
         <section
-          aria-label="Pauses and checks"
+          aria-label={setupSectionNames.checks}
           hidden={current !== "checks"}
           className={panel("checks")}
         >
@@ -638,7 +661,11 @@ export function RevisionForm(
           />
           {promptPart("checks")}
         </section>
-        <section aria-label="Channel" hidden={current !== "channel"} className={panel("channel")}>
+        <section
+          aria-label={channelName}
+          hidden={current !== "channel"}
+          className={panel("channel")}
+        >
           <EditChannel
             edit={edit}
             saved={view.revision.config}

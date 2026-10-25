@@ -79,7 +79,7 @@ it("reads an absent Document source as Off and writes the source and theme", asy
       "GET /api/entries": jsonAnswer({ entries: [] }),
     }),
   );
-  await openEditSection("Outputs");
+  await openEditSection("Extras");
   expect(picked("PDF", "Off")).toBe(true);
   // The look only once there is a PDF to lay out.
   expect(screen.queryByRole("combobox", { name: "PDF look" })).toBeNull();
@@ -93,11 +93,16 @@ it("reads an absent Document source as Off and writes the source and theme", asy
       theme.querySelectorAll("optgroup[label='Built in'] option"),
       (one) => one.textContent,
     );
-  expect(builtIns()).toEqual(["Plain", "DiceMaster (retired, this project's look)"]);
+  expect(builtIns()).toEqual([
+    "Plain",
+    "Book",
+    "Modern",
+    "DiceMaster (retired, this project's look)",
+  ]);
   await user.selectOptions(theme, "Plain");
   expect(latest.config.sources.document).toBe("generate");
   expect(latest.config.document).toEqual({ theme: "plain" });
-  expect(builtIns()).toEqual(["Plain"]);
+  expect(builtIns()).toEqual(["Plain", "Book", "Modern"]);
 });
 
 it("shows the video timing settings only where the export uses them", async () => {
@@ -481,7 +486,7 @@ it("switches the YouTube description on in Outputs and freezes or drops its prom
       "GET /api/entries": jsonAnswer({ entries: [] }),
     }),
   );
-  await openEditSection("Outputs");
+  await openEditSection("Extras");
   const on = screen.getByRole<HTMLInputElement>("checkbox", { name: /YouTube description/ });
   expect(on.checked).toBe(false);
   expect(screen.queryByRole("combobox", { name: "Description prompt" })).toBeNull();
@@ -597,7 +602,7 @@ function mountShorts(
 it("sets the Shorts in their own section: numbers, prompts and the more options", async () => {
   const user = userEvent.setup();
   const state = mountShorts(shortsView());
-  await openEditSection("Outputs");
+  await openEditSection("Extras");
   const count = screen.getByRole<HTMLInputElement>("textbox", { name: "How many shorts" });
   expect(count.value).toBe("2");
   await user.clear(count);
@@ -637,7 +642,7 @@ it("sets the Shorts in their own section: numbers, prompts and the more options"
 it("moves a picked clip by a sentence, or to a range of one's own, and says when it can't", async () => {
   const user = userEvent.setup();
   const state = mountShorts(shortsView());
-  await openEditSection("Outputs");
+  await openEditSection("Extras");
   const first = screen.getByRole("listitem", { name: "Short 1 · Short 1 title" });
   expect(within(first).getByText("Starts: “Sentence 2.”")).not.toBeNull();
   expect(within(first).getByText("Ends: “Sentence 4.”")).not.toBeNull();
@@ -676,7 +681,7 @@ it("makes one short again, or picks different moments, through the edit's regene
       },
     },
   });
-  await openEditSection("Outputs");
+  await openEditSection("Extras");
   const second = screen.getByRole("listitem", { name: "Short 2 · Short 2 title" });
   await user.click(within(second).getByRole("button", { name: "Make this short again" }));
   expect(state.latest.regenerate).toEqual(["shorts:2"]);
@@ -694,7 +699,7 @@ it("uploads background music for the shorts and removes it again", async () => {
   const state = mountShorts(shortsView(), {
     "POST /api/staging/audio": async () => response({ ...staged, stageKind: "audio" }),
   });
-  await openEditSection("Outputs");
+  await openEditSection("Extras");
   await userEvent.click(screen.getByText(/More shorts options/));
   fireEvent.change(screen.getByLabelText(/Background music \(optional\)/), {
     target: { files: [new File(["music"], "loop.mp3", { type: "audio/mpeg" })] },

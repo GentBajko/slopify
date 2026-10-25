@@ -336,7 +336,12 @@ describe("Channels", () => {
         ...common,
         "GET /api/projects": jsonAnswer({
           projects: [
-            { ...listing("p1", "Cleopatra Awakens"), channelId: id },
+            {
+              ...listing("p1", "Cleopatra Awakens"),
+              channelId: id,
+              finishedAt: "2026-09-27T10:00:00.000Z",
+              durationSeconds: 185,
+            },
             {
               ...listing("p2", "The Library Burns"),
               channelId: id,
@@ -355,6 +360,10 @@ describe("Channels", () => {
       "Cleopatra Awakens",
     ]);
     expect(within(rows[0] as HTMLElement).getByText("Running")).not.toBeNull();
+    // A finished one says its length and when it finished.
+    expect(
+      within(rows[1] as HTMLElement).getByText(/^3:05 · 16:9 · finished Sep 27/),
+    ).not.toBeNull();
     expect(within(rows[0] as HTMLElement).queryByRole("link", { name: /^Watch/ })).toBeNull();
     expect(
       within(rows[1] as HTMLElement)

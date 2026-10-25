@@ -18,12 +18,12 @@ export const socialHelp = {
   },
   "social.prompt": {
     title: "Post prompt",
-    body: "The Library prompt (kind Post) that writes this site's post from the article. Built-in uses Slopify's own wording. It is one call to the project's text model per site, so Save in Template Studio and the run's estimate show its price. Write your own in Library → Prompts → Post.",
+    body: "The post prompt that writes this site's post from the article. Built-in uses Slopify's own wording. It is one AI call per site, so a template's sample and the run's estimate include its price. Write your own under Prompts → Post.",
     tutorial: posting("post-prompts"),
   },
   "social.custom": {
     title: "Your text",
-    body: "The post's words, typed once for every project the template makes. Keywords Slopify fills, such as {{Slopify_Summary}}, and your template's own fields are filled for each project; a keyword with no value leaves its line out. Free.",
+    body: "The post's words, typed once for every project the template makes. Keywords Slopify fills, such as {{Slopify_Summary}}, and your template's own keywords are filled for each project; a keyword with no value leaves its line out. Free.",
     tutorial: posting("where-the-words-come-from"),
   },
   "social.video": {
@@ -38,7 +38,7 @@ export const socialHelp = {
   },
   "social.designs": {
     title: "Post designs",
-    body: "Designs from Library → Designs made for this project, sent with the post as pictures. Each goes in the design's own format closest to the site's shape: portrait on Instagram, a story on TikTok, square elsewhere; Slopify draws it in that format when the post needs it. Up to 10 per post.",
+    body: "Designs kept in this project (Templates → Designs), sent with the post as pictures. Each goes in the design's own format closest to the site's shape: portrait on Instagram, a story on TikTok, square elsewhere; Slopify draws it in that format when the post needs it. Up to 10 per post.",
     tutorial: posting("pictures-and-video"),
   },
   "social.thumbnail": {

@@ -1,5 +1,6 @@
 import { expect, it } from "vitest";
 import { readDocumentAssets } from "./fonts.js";
+import { documentThemeNames } from "./model.js";
 import { renderDocument } from "./render.js";
 import { builtInTheme } from "./theme.js";
 
@@ -18,7 +19,7 @@ it("sends every contents entry of the exported PDF to the page its heading is on
     (_, index) =>
       `## Part ${String(index + 1)}\n\n${"Words that fill the page for a while. ".repeat(20 + index)}`,
   ).join("\n\n");
-  for (const theme of ["plain", "dicemaster"] as const) {
+  for (const theme of documentThemeNames) {
     const result = renderDocument({
       title: "Tides",
       articleMarkdown: `# Tides\n\n${sections}`,

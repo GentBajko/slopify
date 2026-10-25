@@ -378,12 +378,12 @@ it("opens the settings with a change a section asks for, at the section it names
     }),
   );
   await user.click(await screen.findByRole("button", { name: "Make short 2 again" }));
-  // The settings open at Outputs with the short marked; nothing is saved until Save changes.
+  // The settings open at Extras with the short marked; nothing is saved until Save changes.
   const sections = await screen.findByRole("navigation", { name: "Edit sections" });
   await waitFor(() =>
     expect(
       within(sections)
-        .getByRole("button", { name: /^Outputs/ })
+        .getByRole("button", { name: /^Extras/ })
         .getAttribute("aria-current"),
     ).not.toBeNull(),
   );

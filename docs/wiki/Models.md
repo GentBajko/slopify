@@ -91,7 +91,7 @@ To switch:
 
 What a switch does:
 
-- A template gets a new saved version, and the schedules that ran its latest version move along with it. When its newest version waits to be marked ready in the [Template studio](Template-Studio#mark-ready) and the schedules run an older one, that older version is switched too (as a new version that keeps its ready mark), so no schedule keeps running the retired model; your newer version stays the newest, switched as well.
+- A template gets a new saved version, and the schedules that ran its latest version move along with it. When its newest version waits for your approval in [Edit template](Template-Studio#approve-for-schedules) and the schedules run an older one, that older version is switched too (as a new version that keeps its approval), so no schedule keeps running the retired model; your newer version stays the newest, switched as well.
 - A project gets a new saved version, as **Edit project** would make.
 - A draft is updated in place.
 

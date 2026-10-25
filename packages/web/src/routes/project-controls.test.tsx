@@ -112,7 +112,7 @@ describe("project pause and provider changes", () => {
   });
 
   // The checkpoints the server says hold the run (`holding`) are the only ones the page offers.
-  it("counts only the person's reached checkpoints, and reads a prepared video as Prepared", async () => {
+  it("counts only the person's reached checkpoints, and reads a made-ahead video as Waiting for its day", async () => {
     const gate = (checkpointId: string, stage: "audio" | "video") => ({
       projectId: "p1",
       revisionId: "r1",
@@ -157,13 +157,13 @@ describe("project pause and provider changes", () => {
     const video = await screen.findByRole("region", { name: "Video" });
     expect(
       await within(video).findByText(
-        "Everything but the video is made; its schedule renders the video on its day.",
+        "Everything but the video is made; its schedule puts the video together on its day.",
       ),
     ).not.toBeNull();
     const rail = screen.getByRole("navigation", { name: "Project sections" });
     const row = within(rail).getByRole("link", { name: /^Video/ });
-    expect(row.textContent).toBe("Video, Prepared");
-    expect(row.nextElementSibling?.textContent).toBe("Its schedule makes it on its day.");
+    expect(row.textContent).toBe("Video, Waiting for its day");
+    expect(row.nextElementSibling?.textContent).toBe("Its schedule makes it then.");
     expect(rail.textContent).not.toContain("Waiting for your review");
   });
 

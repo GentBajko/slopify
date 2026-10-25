@@ -450,12 +450,12 @@ describe("the design template editor", () => {
       ).toBe(false);
     });
 
-    it("says plainly when the version is not marked ready, and still allows it", async () => {
+    it("says plainly when the version is not approved for schedules, and still allows it", async () => {
       const user = userEvent.setup();
       renderRouted(<DesignTemplateRoute templateId="t1" />, deps(template({ readyVersion: 1 })));
       await user.click(await screen.findByRole("button", { name: "Make a piece" }));
       const drawer = await screen.findByRole("dialog", { name: "Make a piece" });
-      expect(within(drawer).getByText(/Version 2 isn't marked ready/)).not.toBeNull();
+      expect(within(drawer).getByText(/Version 2 isn't approved for schedules/)).not.toBeNull();
       expect(
         (await within(drawer).findByRole("button", { name: "Make · about $0.04" })).hasAttribute(
           "disabled",

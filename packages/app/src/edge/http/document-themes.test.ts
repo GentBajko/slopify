@@ -82,6 +82,11 @@ describe("document themes", () => {
     expect(theme.name).toBe("House style");
 
     const listing = (await (await send(app, "GET", "/api/document-themes")).json()) as Listing;
+    expect(listing.builtIns.map((one) => [one.name, one.label])).toEqual([
+      ["plain", "Plain"],
+      ["book", "Book"],
+      ["modern", "Modern"],
+    ]);
     expect(listing.themes.map((one) => [one.name, one.values.colors?.heading])).toEqual([
       ["House style", "#224466"],
     ]);

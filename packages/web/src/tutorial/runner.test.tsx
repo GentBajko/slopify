@@ -512,7 +512,7 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     await openRow("Article");
     await user.selectOptions(screen.getByLabelText("Written by Service"), "claude-code");
     await user.selectOptions(screen.getByLabelText("Written by Model"), "sonnet");
-    await openRow("Keywords");
+    await openRow("Title and keywords");
     await fill(user, "topic", "Mountains");
     await openSection("Review");
     // The rail's button: where every box measures the same, the summary's foot carries one too.

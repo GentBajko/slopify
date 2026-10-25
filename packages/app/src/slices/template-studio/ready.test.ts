@@ -154,9 +154,9 @@ describe("markReady", () => {
     const result = await markReady(deps, id, { version: 1 });
     if (result.ok) throw new Error("marked");
     expect(result.problems.map((problem) => problem.label)).toEqual(
-      expect.arrayContaining(["Video & captions", "Article"]),
+      expect.arrayContaining(["Video and style", "Article"]),
     );
-    expect(result.message).toContain("Video & captions: The video sample failed: no ffmpeg.");
+    expect(result.message).toContain("Video and style: The video sample failed: no ffmpeg.");
   });
 
   it("marks only the newest version, saying which one to look at", async () => {
@@ -209,7 +209,7 @@ describe("readyProblems", () => {
           { id: "voice", label: "Voice", state: "stale", sentence: "Press Make sample." },
           { id: "shorts", label: "Shorts", state: "off", sentence: "Off." },
           { id: "pictures", label: "Pictures", state: "provided", sentence: "Provided." },
-          { id: "video", label: "Video & captions", state: "making", sentence: "Making." },
+          { id: "video", label: "Video and style", state: "making", sentence: "Making." },
         ],
       ),
     ).toEqual([
@@ -219,7 +219,7 @@ describe("readyProblems", () => {
         fix: { label: "Providers", href: "/settings?section=providers" },
       },
       { label: "Voice", sentence: "Press Make sample.", section: "voice" },
-      { label: "Video & captions", sentence: "Making.", section: "video" },
+      { label: "Video and style", sentence: "Making.", section: "video" },
     ]);
   });
 });

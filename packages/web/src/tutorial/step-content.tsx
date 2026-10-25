@@ -162,7 +162,7 @@ export function StepContent({
           </p>
           <p>
             Use My own images for your own pictures or None to skip them. Images None also turns the
-            video off. The thumbnail is separate, under Outputs; leave it unticked for this first
+            video off. The thumbnail is separate, under Extras; leave it unticked for this first
             run.
           </p>
         </>

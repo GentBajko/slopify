@@ -35,7 +35,7 @@ export function documentChecks(doc: DesignDocument, templateId: string): readonl
     {
       id: "fields",
       ok: problems.length === 0,
-      sentence: problems[0]?.sentence ?? "Every field is written as {{Name}}.",
+      sentence: problems[0]?.sentence ?? "Every keyword is written as {{Name}}.",
       fix: problems.length === 0 ? null : at("text"),
     },
     {
@@ -43,7 +43,7 @@ export function documentChecks(doc: DesignDocument, templateId: string): readonl
       ok: missing.length === 0,
       sentence:
         missing.length === 0
-          ? "Every field has a sample value."
+          ? "Every keyword has a sample value."
           : `${missing.map((name) => `{{${name}}}`).join(", ")} ${missing.length === 1 ? "has" : "have"} no sample value. Fill ${missing.length === 1 ? "it" : "them"} in under Text → Sample values.`,
       fix: missing.length === 0 ? null : at("text"),
     },

@@ -10,13 +10,13 @@ The calendar starts on this week's Monday and shows four weeks, Monday to Sunday
 
 - **Scheduled runs**, each with the project title it will make. A run shows **Queued** when a topic is lined up, **Needs a topic** when its topic is still waiting for your approval or for generation, and **Paused** when its schedule is paused.
 - **Needs you**, above the weeks: every project that is waiting on you or ready to upload (see below).
-- **Projects** running or finished on their day, with their state: **Running**, **Waiting for the agent**, **Paused**, **Queued**, **Waiting for your review**, **Prepared**, **Stopped**, **Kept as is**, **Failed**, **Done with problems**, **Done** or **Canceled**. A project waiting for a CLI plan says so, for example **Waiting for Codex limits (resets at 14:00)**.
+- **Projects** running or finished on their day, with their state: **Running**, **Waiting for the agent**, **Paused**, **Queued**, **Waiting for your review**, **Waiting for its day**, **Stopped**, **Kept as is**, **Failed**, **Done with problems**, **Done** or **Canceled**. A project waiting for a CLI plan says so, for example **Waiting for Codex limits (resets at 14:00)**.
 - **Batch queue**: projects waiting to start (see below).
 - **Suggested topics**, beside the weeks, for schedules that hold generated topics for approval.
 
 The calendar follows the channel picked under **Showing:** in the page header, or shows every channel. See [Channels](Channels).
 
-Each queued run has **Prepare**, which makes its video ahead of the day and leaves only the render for the day; a prepared run shows **Prepared** and **Open**. See [Schedules](Schedules#prepare-a-video-ahead).
+Each queued run has **Make ahead**, which makes everything but its video now (and spends what the run costs) and leaves only putting the video together for its day; such a run shows **Waiting for its day** and **Open**. See [Schedules](Schedules#make-a-video-ahead).
 
 ## Needs you
 

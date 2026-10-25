@@ -41,7 +41,7 @@ export const playHelp = {
   // Narration row
   "play.voice-sample": {
     title: "Try a sample of your text",
-    body: "Reads the passage you paste in the chosen voice, so you hear how it says your names before a run. Up to a few hundred characters, priced on the button; Library → Narration aliases apply when the voice uses them, the Pronunciation Glossary and Narration Preparation don't. The sample is never reused in the run.",
+    body: "Reads the passage you paste in the chosen voice, so you hear how it says your names before a run. Up to a few hundred characters, priced on the button; your Pronunciation list (Settings → Voices → Pronunciation) applies when the voice uses it, the Pronunciation Glossary and Narration Preparation don't. The sample is never reused in the run.",
     tutorial: { page: "Play-Narration" },
   },
   "play.show-all-voices": {
@@ -51,12 +51,12 @@ export const playHelp = {
   },
   "play.intro": {
     title: "Intro",
-    body: "A Library entry read before the article. A text entry is read as written; an LLM entry is written by the text model for each video, one extra call. Off reads no intro. Write entries in Library → Intros & outros.",
+    body: "One of your intros, read before the article. A written intro is read as it is; one the AI writes is written for each video, one extra AI call. Off reads no intro. Write intros under Prompts → Intros & outros.",
     tutorial: { page: "Play-Narration", anchor: "intro-and-outro" },
   },
   "play.outro": {
     title: "Outro",
-    body: "A Library entry read after the article, such as a sign-off. A text entry is read as written; an LLM entry is written by the text model for each video, one extra call. Off reads no outro.",
+    body: "One of your outros, read after the article, such as a sign-off. A written outro is read as it is; one the AI writes is written for each video, one extra AI call. Off reads no outro. Write outros under Prompts → Intros & outros.",
     tutorial: { page: "Play-Narration", anchor: "intro-and-outro" },
   },
   "play.chunking": {
@@ -71,7 +71,7 @@ export const playHelp = {
   },
   "play.narration-preparation": {
     title: "Narration Preparation",
-    body: "Has the text model add delivery directions and sounds, such as a sigh or a laugh, following the Library narration prompt you pick. One text-model call per narration chunk and per entry. Needs Inworld TTS-2. The article and captions stay unchanged. Default: Off.",
+    body: "Has the AI writer add delivery directions and sounds, such as a sigh or a laugh, following the narration prompt you pick. One AI call per narration part and per intro or outro. Needs Inworld TTS-2. The article and captions stay unchanged. Default: Off.",
     tutorial: { page: "Play-Narration", anchor: "narration-preparation" },
   },
   "play.pronunciation-glossary": {
@@ -101,7 +101,7 @@ export const playHelp = {
   },
   "play.narration-aliases": {
     title: "Narration aliases",
-    body: "Says the words listed in Library → Narration aliases the way they are written there, such as Dr. as Doctor, with any generated voice. They are copied when the project starts. The article and captions keep the written words. Default: on.",
+    body: "Says the words listed in Settings → Voices → Pronunciation the way they are written there, such as Dr. as Doctor, with any generated voice. They are copied when the project starts. The article and captions keep the written words. Default: on.",
     tutorial: { page: "Narration-Aliases-and-Glossary", anchor: "use-aliases-in-a-video" },
   },
 
@@ -229,7 +229,7 @@ export const playHelp = {
   // Outputs row
   "play.thumbnail-prompt": {
     title: "Thumbnail prompt",
-    body: "The Library thumbnail prompt, keywords filled in. From my thumbnail prompt sends it to the image service as it is; Let the AI write the prompt gives it to the AI writer with the title and article to write the image prompt. Write prompts on Prompts.",
+    body: "Your thumbnail prompt, keywords filled in. From my thumbnail prompt sends it to the image service as it is; Let the AI write the prompt gives it to the AI writer with the title and article to write the image prompt. Write prompts on Prompts.",
     tutorial: { page: "Play-Outputs", anchor: "thumbnail" },
   },
   "play.thumbnail-count": {
@@ -239,17 +239,17 @@ export const playHelp = {
   },
   "play.description-prompt": {
     title: "Description prompt",
-    body: "The Library prompt the description is written from. Built-in asks for a short summary, 5 to 12 chapters, 3 to 5 hashtags and 15 to 25 tags. Write your own description prompt on Prompts to change the tone or add links.",
+    body: "The prompt the description is written from. Built-in asks for a short summary, 5 to 12 chapters, 3 to 5 hashtags and 15 to 25 tags. Write your own description prompt on Prompts to change the tone or add links.",
     tutorial: { page: "YouTube-Description", anchor: "turn-it-on" },
   },
   "play.shorts.prompt": {
     title: "Shorts prompt",
-    body: "The Library prompt the text model follows to pick the moments and write each short's title, description and hashtags. Built-in picks moments that make sense alone and open on a hook.",
+    body: "The prompt the AI writer follows to pick the moments and write each short's title, description and hashtags. Built-in picks moments that make sense alone and open on a hook.",
     tutorial: { page: "Shorts", anchor: "options" },
   },
   "play.shorts.image-style": {
     title: "Image prompt",
-    body: "The Library image prompt the shorts' new vertical images are drawn from. Built-in draws cinematic, uncluttered images with the subject centered. Pick one of your image prompts to match the long video.",
+    body: "The image prompt the shorts' new vertical images are drawn from. Built-in draws cinematic, uncluttered images with the subject centered. Pick one of your image prompts to match the long video.",
     tutorial: { page: "Shorts", anchor: "options" },
   },
   "play.shorts.title-on-screen": {
@@ -273,8 +273,8 @@ export const playHelp = {
     tutorial: { page: "Shorts", anchor: "options" },
   },
   "play.document-theme": {
-    title: "Theme",
-    body: "How the PDF looks: a built-in theme or one of yours from Library → PDF themes. A theme of yours is copied into the project, so editing it later leaves this project alone until you pick it again. Edit themes opens the list.",
+    title: "PDF look",
+    body: "How the PDF looks: one of three ready looks (Plain, Book in book type on parchment, Modern in a sans-serif on white) or one of your PDF themes. Preview shows it. A theme of yours is copied into the project, so editing it later leaves this project alone until you pick it again.",
     tutorial: { page: "PDF-Documents", anchor: "options" },
   },
 

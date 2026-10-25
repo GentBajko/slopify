@@ -6,16 +6,16 @@ import { jsonAnswer } from "@/test-app";
 // One template's Edit template page as the server answers it, for its page tests and help walk.
 export const templateId = "33333333-3333-4333-8333-333333333333";
 export const labels = [
-  "Topic & title",
+  "Title and keywords",
   "Article",
   "Narration",
   "Images",
-  "Video & captions",
+  "Video and style",
   "Thumbnail",
   "Shorts",
   "PDF",
   "Pauses and checks",
-  "YouTube description & posts",
+  "YouTube description and posts",
   "Schedule",
 ];
 export const document = {

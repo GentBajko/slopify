@@ -26,7 +26,7 @@ export const projectStateLook: Readonly<Record<ProjectState, StateLook>> = {
 // A project's state with its lamp, in the words the MCP tools say it (`projectStateWord`): a
 // held run (`heldRun`) reads as what it waits for, the person (Waiting for your review), an
 // External agent (Waiting for the agent), Continue the run (Stopped), its scheduled day
-// (Prepared), or nobody once set aside (Kept as is).
+// (Waiting for its day), or nobody once set aside (Kept as is).
 export function projectStateOf(project: {
   readonly status: ProjectState;
   readonly progress: number;

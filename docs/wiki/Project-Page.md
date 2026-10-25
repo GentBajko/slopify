@@ -41,7 +41,7 @@ The status beside the title reads one of:
 | **Canceled** | You canceled the run. Finished outputs are kept. |
 | **Waiting for your review** | A review checkpoint is holding the run for you to approve. |
 | **Waiting for the agent** | An [External agent](Agents-MCP#the-external-agent-reviewer) is reviewing what was made. It goes on by itself once the agent answers, or after 2 hours. |
-| **Prepared** | Made ahead by its schedule; only the video is left, for its day. See [Schedules](Schedules#prepare-a-video-ahead). |
+| **Waiting for its day** | Made ahead by its schedule; only the video is left, for its day. See [Schedules](Schedules#make-a-video-ahead). |
 | **Stopped** | The run stopped before it finished (for example after a restart). Press **Continue the run**. |
 | **Kept as is** | What is left was set aside with **Keep as is** and won't run. Editing the project brings it back. |
 

@@ -7,6 +7,7 @@ import { EntityCommands } from "@/components/entity-commands";
 import { useCommand } from "@/components/kit/command-palette";
 import { intents, requestIntent } from "@/lib/intents";
 import { projectsQuery } from "@/queries";
+import { requestNewSchedule } from "@/schedules/new-from";
 
 // The palette from anywhere: every project by name ("Open Cleopatra", "Make image 3 again in
 // Cleopatra"), prompts, templates and plans by name (`entity-commands.tsx`), New schedule and Add
@@ -48,7 +49,7 @@ function NewScheduleCommand(): null {
     keywords: ["schedule", "recurring", "calendar", "plan"],
     searchOnly: true,
     run: () => {
-      requestIntent(intents.newSchedule);
+      requestNewSchedule();
       void navigate({ to: "/calendar", search: { tab: "schedules" } });
     },
   });

@@ -73,7 +73,7 @@ export function TextPanel({
         onChange={(text) => onDoc({ ...doc, text })}
       />
       <ValueFields
-        label="Fields"
+        label="Keywords"
         tip="library.design.values"
         fields={fields}
         values={values}

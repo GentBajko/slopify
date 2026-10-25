@@ -154,7 +154,7 @@ it("says a held or prepared project's state as Projects and the agent tools do",
     testDeps({}),
   );
   expect(await screen.findByText("Waiting for your review")).not.toBeNull();
-  expect(screen.getByText("Prepared")).not.toBeNull();
+  expect(screen.getByText("Waiting for its day")).not.toBeNull();
   expect(screen.getByText("Queued")).not.toBeNull();
   expect(screen.getByText("Waiting for the agent")).not.toBeNull();
 });

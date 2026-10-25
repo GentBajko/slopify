@@ -15,7 +15,7 @@ const sha256 = z.string().regex(/^[a-f0-9]{64}$/);
 export const designValuesSchema = z
   .record(z.string().min(1).max(100), z.string().max(2000))
   .refine((values) => Object.keys(values).length <= 100, {
-    message: "A design has at most 100 fields.",
+    message: "A design has at most 100 keywords.",
   });
 
 export const createDesignSchema = z

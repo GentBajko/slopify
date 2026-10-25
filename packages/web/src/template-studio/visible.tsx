@@ -7,14 +7,14 @@ import { DocumentThemePicker } from "@/components/document-theme-picker";
 import { Field, Input } from "@/components/kit/field";
 import { TextLink } from "@/components/kit/link";
 import { Segmented, type SegmentedOption, Switch } from "@/components/kit/switch";
-import { ModelPicker, ProviderPicker } from "@/play/pickers";
+import { ServiceGroup } from "@/play/service-group";
 
 type Form = PlayDraftDocument["form"];
 type Edit = (form: Form) => void;
 
 // The few settings each section leads with, presets before numbers, laid out two across. The
 // section's whole editor (Play's own) is under "All … settings" below them. Shorts, Pauses and
-// checks and YouTube description & posts show their whole editor here instead (page.tsx).
+// checks and YouTube description and posts show their whole editor here instead (page.tsx).
 export function VisibleControls({
   section,
   document,
@@ -85,9 +85,8 @@ export function VisibleControls({
               onChange={(event) => onEdit({ ...document, expectedWords: event.target.value })}
             />
           </Field>
-          {unchosen.llm && form.sources.article === "generate" ? (
+          {leadsWithService(section, form, unchosen) ? (
             <ServicePicker
-              group="Written by"
               missing="writing service"
               field="llm"
               family="llm"
@@ -146,9 +145,8 @@ export function VisibleControls({
               onChange={(imageScenes) => edit({ ...form, imageScenes })}
             />
           ) : null}
-          {unchosen.images && form.sources.images === "generate" ? (
+          {leadsWithService(section, form, unchosen) ? (
             <ServicePicker
-              group="Made by"
               missing="image service"
               field="images"
               family="image"
@@ -258,11 +256,23 @@ export function VisibleControls({
   }
 }
 
-// Who makes a section nobody chose one in, and no default of this computer stands in for: the
-// group's name ("Written by"), then the service and model pickers, saying in red, in the
-// checks' words, that a run can't start yet.
+// Whether a section leads with who makes it: the article's writer or the image service, when
+// nobody chose one and no default of this computer stands in. The editor in the fold under it
+// then leaves its own service group out (`FineTune` withoutService), so it shows once.
+export function leadsWithService(
+  section: TemplateSection,
+  form: Form,
+  unchosen: { readonly llm: boolean; readonly images: boolean },
+): boolean {
+  if (section === "script") return unchosen.llm && form.sources.article === "generate";
+  if (section === "pictures") return unchosen.images && form.sources.images === "generate";
+  return false;
+}
+
+// Who makes a section nobody chose one in: Create's own group ("Written by", "Images by") over
+// Service and Model, saying in red, in the checks' words, that a run can't start yet, with the
+// way to a key when no service has one.
 function ServicePicker({
-  group,
   missing,
   field,
   family,
@@ -270,7 +280,6 @@ function ServicePicker({
   value,
   onPick,
 }: {
-  readonly group: string;
   // What the checks call it: "writing service".
   readonly missing: string;
   readonly field: "llm" | "images";
@@ -280,30 +289,20 @@ function ServicePicker({
   readonly onPick: (next: { provider: string; model: string }) => void;
 }): ReactElement {
   return (
-    <fieldset className="sl-fields__wide m-0 min-w-0 border-0 p-0">
-      <legend className="sl-kicker mb-2 p-0">{group}</legend>
-      <div className="sl-fields">
-        <ProviderPicker
-          field={`${field}.provider`}
-          label="Service"
-          family={family}
-          providers={providers}
-          value={value.provider}
-          problem={
-            value.provider === "" ? `No ${missing} is chosen, so a run can't start.` : undefined
-          }
-          onPick={(provider) => onPick({ provider, model: "" })}
-        />
-        <ModelPicker
-          field={`${field}.model`}
-          label="Model"
-          provider={value.provider}
-          value={value.model}
-          problem={undefined}
-          onPick={(model) => onPick({ provider: value.provider, model })}
-        />
-      </div>
-    </fieldset>
+    <ServiceGroup
+      family={family}
+      providers={providers}
+      provider={value.provider}
+      model={value.model}
+      serviceField={`${field}.provider`}
+      modelField={`${field}.model`}
+      serviceProblem={
+        value.provider === "" ? `No ${missing} is chosen, so a run can't start.` : undefined
+      }
+      modelProblem={undefined}
+      onService={(provider) => onPick({ provider, model: "" })}
+      onModel={(model) => onPick({ provider: value.provider, model })}
+    />
   );
 }
 
@@ -322,6 +321,7 @@ function PdfLook({
         <DocumentThemePicker
           id={id}
           field="document.theme"
+          draft
           value={value}
           disabled={false}
           onChange={onChange}

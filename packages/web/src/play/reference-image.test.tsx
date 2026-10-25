@@ -72,7 +72,7 @@ describe("the establishing image control", () => {
       thumbnail: true,
     });
     expect((screen.getByLabelText(tick) as HTMLInputElement).checked).toBe(true);
-    expect(screen.getByText("The thumbnail itself is switched on under Outputs.")).not.toBeNull();
+    expect(screen.getByText("The thumbnail itself has its own switch, Thumbnail.")).not.toBeNull();
     fireEvent.click(screen.getByLabelText(tick));
     expect(onChange).toHaveBeenLastCalledWith({
       source: "prompt",

@@ -129,7 +129,7 @@ export type Situation =
 export interface NextAction {
   readonly situation: Situation;
   readonly tone: Tone;
-  // The state in words, beside the lamp: "Waiting for your review", "Prepared".
+  // The state in words, beside the lamp: "Waiting for your review", "Waiting for its day".
   readonly status: string;
   // What is ready or what happened, one sentence.
   readonly title: string;
@@ -283,10 +283,10 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
       tone: "waiting",
       status: heldStateWord(input.project),
       title: prepared
-        ? "Everything but the video is made; its schedule renders the video on its day."
+        ? "Everything but the video is made; its schedule puts the video together on its day."
         : `The ${lower(name(before))} ${isAre(name(before))} ready for your review.`,
       why: prepared
-        ? "Approving now renders it before its day."
+        ? "Approving now puts it together before its day."
         : after.length === 0
           ? `Approving makes the ${lower(heldName)}. Nothing after it runs until you do.`
           : `Approving makes the ${lower(heldName)}, then ${list(after.map((kind) => lower(plural(name(kind)))))}. Nothing after it runs until you do.`,

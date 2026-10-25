@@ -8,8 +8,8 @@ import { Field, Input } from "@/components/kit/field";
 import { useToast } from "@/components/kit/toast";
 import { saveTemplateFromProject, templatesKey } from "@/templates/api";
 
-// Save as template: the current revision's setup as a template for a fresh Play draft, then its
-// studio. Opened from the project's More menu or the command palette.
+// Save as template: how the current version was made, as a template new projects start from
+// on Create, then Edit template on it. Opened from the project's More menu or the command palette.
 export function SaveProjectTemplate({
   projectId,
   revisionId,
@@ -62,7 +62,7 @@ export function SaveProjectTemplate({
       }
       identity.current = null;
       onClose();
-      notify("Template saved. Set it up section by section in its studio.", "success");
+      notify("Template saved. Look it over section by section in Edit template.", "success");
       await client.invalidateQueries({ queryKey: templatesKey });
       await navigate({ to: "/templates/$templateId", params: { templateId: reply.value.id } });
     } catch (cause) {
