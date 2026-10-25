@@ -308,7 +308,7 @@ function ShortCard({
       {onRemake === undefined ? null : (
         <Button variant="quiet" size="small" className="self-start" onClick={onRemake}>
           <span>
-            Make<span className="sr-only"> short {number}</span> again
+            Make this short again<span className="sr-only"> (short {number})</span>
           </span>
         </Button>
       )}
