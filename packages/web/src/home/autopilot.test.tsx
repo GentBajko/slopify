@@ -39,8 +39,12 @@ const disk = {
 };
 
 describe("forecastLine", () => {
-  it("says how far ahead the content is and when the queue runs dry", () => {
-    expect(forecastLine(forecast)).toMatch(/^9 days of content ready · the queue runs dry on /);
+  it("says how far ahead the content is and when the topics run out", () => {
+    expect(forecastLine(forecast)).toMatch(/^9 days of content ready · topics run out on /);
+    // Every run there is has its video, and the topics end: no "60+ days" over days with no run.
+    expect(forecastLine({ ...forecast, daysAhead: 60, coveredBeyondWindow: true })).toMatch(
+      /^Every run has a video ready · topics run out on /,
+    );
     expect(forecastLine({ ...forecast, daysAhead: 1, runsDryAt: null })).toBe(
       "1 day of content ready",
     );
@@ -52,7 +56,7 @@ describe("forecastLine", () => {
 });
 
 describe("Autopilot", () => {
-  it("shows the forecast, each warning with its fix and Hide, and the last seven days folded", async () => {
+  it("shows the forecast, each warning with its fix and Hide, and the steps that failed folded", async () => {
     const hidden: unknown[] = [];
     let warnings: AutopilotView["warnings"] = [disk];
     renderRouted(
@@ -73,7 +77,10 @@ describe("Autopilot", () => {
     expect(screen.getByRole("link", { name: "Open Backup & storage" }).getAttribute("href")).toBe(
       "/settings?section=storage",
     );
-    expect(screen.getByText("Last 7 days · 4 made · 1 failed · $2.50 + 1 unpriced")).toBeTruthy();
+    // What was made and spent is This week's; the fold is the failed steps alone.
+    expect(screen.getByText("Failed in the last 7 days")).toBeTruthy();
+    expect(screen.getByText("1 step")).toBeTruthy();
+    expect(screen.queryByText(/made/)).toBeNull();
     expect(screen.getByRole("link", { name: "Rope" }).getAttribute("href")).toBe("/projects/p1");
     fireEvent.click(screen.getByRole("button", { name: "Hide" }));
     await waitFor(() => expect(screen.queryByText(disk.text)).toBeNull());
