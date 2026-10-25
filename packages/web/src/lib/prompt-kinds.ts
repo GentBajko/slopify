@@ -38,15 +38,15 @@ export function kindWrites(kind: PromptKind): string {
     case "thumbnail":
       return "The video's thumbnail";
     case "narration":
-      return "Pauses and stress for the voice";
+      return "Pauses and stress";
     case "description":
       return "Description, chapters, tags";
     case "shorts":
-      return "Which moments become shorts";
+      return "Moments cut as shorts";
     case "review":
       return "What the AI checks";
     case "script":
-      return "Lines for two or more voices";
+      return "Lines for several voices";
     case "post":
       return "Posts for social sites";
   }
