@@ -391,7 +391,12 @@ export function useDraftSession(): PlaySession {
       start: () => {
         alive = true;
         const id = rememberedDraft();
-        if (id) void open(id);
+        if (!id) return;
+        void open(id).then((opened) => {
+          const view = state.current.view;
+          if (opened && view !== null && view.draft.id === id)
+            publish({ restored: { id, updatedAt: view.draft.updatedAt } });
+        });
       },
       stop: () => {
         alive = false;
@@ -430,6 +435,7 @@ export function useDraftSession(): PlaySession {
     edited: current.clock.edited,
     acknowledged: current.clock.acknowledged,
     reveal: current.reveal,
+    restored: current.restored?.id === current.id ? current.restored : undefined,
     edit: owner.edit,
     flush: owner.flush,
     open: owner.open,

@@ -17,6 +17,7 @@ import { PlayLanguage } from "@/language/play-language";
 import { usePlayDraft } from "@/lib/form-drafts";
 import { modelsKey, modelsQuery, type ProviderModels } from "@/lib/models";
 import { shortcuts } from "@/lib/shortcuts";
+import { exactTime, startedAt } from "@/lib/utils";
 import { admission, keywordOrigins } from "@/play/admission";
 import { BrandKitControls, ChannelFor, useDraftCast } from "@/play/channel-picker";
 import { checkpointTarget } from "@/play/checkpoints";
@@ -675,6 +676,26 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
           <span ref={heading} tabIndex={-1}>
             Create
           </span>
+        }
+        meta={
+          session.restored === undefined ? undefined : (
+            // Create reopened the draft this browser had open last: said, with the way out.
+            <span className="inline-flex flex-wrap items-center gap-x-2">
+              <span>
+                Your draft from{" "}
+                <time
+                  dateTime={session.restored.updatedAt}
+                  title={exactTime(session.restored.updatedAt)}
+                >
+                  {startedAt(session.restored.updatedAt)}
+                </time>
+              </span>
+              <span aria-hidden="true">·</span>
+              <Button variant="quiet" size="small" onClick={() => void session.newDraft()}>
+                New draft
+              </Button>
+            </span>
+          )
         }
         actions={
           <>

@@ -3,6 +3,7 @@ import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultChannelId } from "@/channels/api";
+import { startedAt } from "@/lib/utils";
 import { type Answer, jsonAnswer, testVersion } from "@/test-app";
 import { freshDraftDocument, setFreshProviderDefaults, setReadyServices } from "./draft-state";
 import {
@@ -331,6 +332,29 @@ describe("what Create starts from", () => {
       model: "fal-ai/flux-2",
     });
     expect(session().document.templateSource).toBeUndefined();
+  });
+});
+
+describe("a draft Create reopens by itself", () => {
+  it("says it is the draft from earlier, with New draft beside it", async () => {
+    const id = "44444444-4444-4444-8444-444444444444";
+    window.localStorage.setItem("slopify.play-draft", id);
+    const { session } = await mountPlay();
+    const header = await waitFor(() => {
+      const meta = document.querySelector(".sl-page-header__meta");
+      if (meta === null) throw new Error("Create says nothing about the draft it reopened.");
+      return meta;
+    });
+    expect(header.textContent).toBe(`Your draft from ${startedAt("2026-09-13")}·New draft`);
+    expect(session().activeId).toBe(id);
+    await userEvent.click(within(header as HTMLElement).getByRole("button", { name: "New draft" }));
+    await waitFor(() => expect(document.querySelector(".sl-page-header__meta")).toBeNull());
+    expect(session().activeId).toBeNull();
+  });
+
+  it("says nothing on a draft the person opened or started here", async () => {
+    await mountPlay();
+    expect(document.querySelector(".sl-page-header__meta")).toBeNull();
   });
 });
 

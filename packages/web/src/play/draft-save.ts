@@ -52,6 +52,9 @@ export interface DraftSessionState {
   readonly status: DraftSaveStatus;
   readonly error: string | null;
   readonly reveal: RevealRequest | null;
+  // The draft Create reopened by itself on arrival (the one this browser had open last), with
+  // when it was last edited then; gone once another draft, or a new one, is open.
+  readonly restored?: { readonly id: string; readonly updatedAt: string } | undefined;
 }
 export function emptySession(): DraftSessionState {
   return {
