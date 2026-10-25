@@ -68,7 +68,7 @@ An empty palette opens on **Create a video**, then these, in the rail's order:
 | **Open Calendar** | Goes to the Calendar. |
 | **Open Channels** | Goes to Channels. Listed once you have two or more channels; found by typing otherwise. |
 | **Open Settings** | Goes to Settings. |
-| **Show patch notes** | Goes to Settings → Patch notes. |
+| **What's new** | Goes to Settings → What's new (found by typing). |
 | **Open schedules** | Goes to the Calendar's Schedules (found by typing). |
 | **Open usage and costs** | Goes to Settings → Usage (found by typing). |
 
@@ -89,7 +89,7 @@ These are found once you type, from any screen:
 | **Open <project>** | Opens any project by name, for example `hypatia` finds **Open Hypatia of Alexandria**. |
 | **Make image N again in <project>** | Type the project, the words and the number, for example `cleopatra make image 3 again` (`regenerate` works too). It opens that project on its Images and asks before redrawing. |
 | **New schedule** | Opens Schedules with a new schedule started. |
-| **Add to calendar** | Opens the Calendar with the Add to calendar form. |
+| **Add topics to a schedule** | Opens the Calendar with the Add topics to a schedule form. |
 | **Show keyboard shortcuts** (`?`) | Lists every shortcut that works here. |
 
 ### Open a tutorial page
@@ -184,8 +184,8 @@ See [Channels](Channels) and [Cast](Cast-Library).
 |---|---|---|
 | **New schedule** | Schedules (from anywhere once you type it) | Starts a new schedule. |
 | **Pause schedule** / **Resume schedule** | Schedules, with one open | Pauses or resumes it. |
-| **Add to calendar** | Calendar (from anywhere once you type it) | Adds topics to the calendar. |
-| **Show the calendar as weeks** / **Show the calendar as a list** | Calendar | Switches the view. |
+| **Add topics to a schedule** | Calendar (from anywhere once you type it) | Adds topics to a schedule's queue. |
+| **Show the calendar as a grid** / **Show the calendar as a list** | Calendar | Switches the view. |
 | **Queue all suggested topics** | Calendar | Accepts every topic a schedule suggested. One per schedule with suggestions. |
 
 See [Schedules](Schedules) and [Calendar](Calendar).

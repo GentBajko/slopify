@@ -30,9 +30,9 @@ Videos started together, such as extra videos queued from Create, run one at a t
 
 ## Switch between weeks and a list
 
-Use **Calendar view** at the top:
+Use **Show the weeks as** at the top:
 
-- **Weeks** (the default) shows the four weeks as a grid.
+- **Grid** (the default) shows the four weeks as a grid.
 - **List** shows the same runs day by day, with buttons to move each topic.
 
 This browser remembers your choice.
@@ -56,10 +56,10 @@ The topic now runs with the other schedule's template.
 
 ## Add topics
 
-1. Press **Add to calendar**.
+1. Press **Add topics to a schedule**.
 2. Pick the **Schedule** the topics join. Only active and paused schedules are listed, each with the number of topics already queued.
 3. Type or paste **Topics, one per line**. Blank lines are skipped.
-4. Press **Add N topics** (the button counts them). **Keep the calendar as it is** closes the form without adding anything.
+4. Press **Add N topics** (the button counts them). **Cancel** closes the form without adding anything.
 
 The topics go to the end of the schedule's queue, in order, and take its next free runs. Each topic fills the schedule's topic keyword; every other keyword keeps its every-run value. To give topics their own values, edit the schedule's topics as a table on the **Schedules** tab (see [Schedules](Schedules)).
 
@@ -86,7 +86,7 @@ Editing a suggestion's words before approving it is done under **Topics waiting*
 
 - Use the list view if dragging is fiddly, for example on a touch screen or a narrow window.
 - A browser notification for new suggestions opens the calendar's **Suggested topics** when you click it. See [Notifications](Notifications).
-- `Ctrl+K` → **Add to calendar** works from any screen: it opens the calendar with the form. `G` then `C` goes to the calendar.
+- `Ctrl+K` → **Add topics to a schedule** works from any screen: it opens the calendar with the form. `G` then `C` goes to the calendar.
 - To change a schedule's queued topics one by one (rename, reorder, remove), use the **Schedules** tab. See [Schedules](Schedules#edit-the-queued-topics-in-place).
 - To start one video right now instead of waiting for a run, use [Create](Create-Overview).
 
