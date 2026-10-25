@@ -3,6 +3,7 @@ import { z } from "zod";
 import { internalError } from "../../kernel/errors.js";
 import { subtitleModelDir } from "../../kernel/paths.js";
 import { projectLanguage } from "../../kernel/ports/languages.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { SubtitleOmission } from "../../kernel/ports/subtitles.js";
 import { SubtitleMismatch } from "../../kernel/ports/subtitles.js";
 import type { StageContext } from "../../kernel/runner/index.js";
@@ -116,7 +117,7 @@ async function timing(
   const audio = await revisionAudio(deps, context, snapshot.view);
   if (audio.length === 0)
     throw new Error(
-      "Captions and the YouTube description need narration audio, but this project has none. Turn captions and the YouTube description off in Edit project, or turn narration on, then Try again.",
+      `Captions and the YouTube description need narration audio, but this project has none. Turn captions off in ${editSettings.captions} and the YouTube description off in ${editSettings.outputs}, or turn narration on, then Try again.`,
     );
   const alignSubtitles = deps.alignSubtitles;
   if (alignSubtitles === undefined)
@@ -172,7 +173,7 @@ async function timing(
   }
   if (captionCues(words).length === 0)
     throw new Error(
-      "None of the narration could be matched to the article text, so captions can't be timed. The narration must be in the project language set in Edit project → Language; if you uploaded your own audio, make sure it reads the article text, then Try again.",
+      `None of the narration could be matched to the article text, so captions can't be timed. The narration must be in the project's language (${editSettings.language}); if you uploaded your own audio, make sure it reads the article text, then Try again.`,
     );
   context.signal.throwIfAborted();
   const output = preparedText(
@@ -198,7 +199,7 @@ async function cues(
   if (manual !== undefined) {
     if (plan.work.find((one) => one.key === piece.key)?.disposition === "review")
       throw new Error(
-        "Your edited captions were written for an older version of the narration. Review them in Edit project → Captions and save, then Try again.",
+        `Your edited captions were written for an older version of the narration. Look them over in ${editSettings.captions} and save, then Try again.`,
       );
     const audio = await revisionAudio(deps, context, view);
     const errors = validateCues(
@@ -458,17 +459,17 @@ export function describeMismatch(
   if (retry !== undefined) {
     const n = String(retry.chunk);
     return retry.try === undefined
-      ? `${stopped} Slopify already recorded narration chunk ${n} again ${String(narrationRetryLimit)} times and the audio still doesn't match there, so the voice probably reads something its own way (a year, an abbreviation or a name). Listen at ${clock(mismatch.at)}: if words are missing or wrong, reword that sentence in Edit project → Narration → narration chunk ${n}, save, then Continue the run. If it says them right, use Download diagnostics in Settings and report it.`
-      : `${stopped} The voice probably skipped or garbled words there, so Slopify is recording narration chunk ${n} again by itself (try ${String(retry.try)} of ${String(narrationRetryLimit)}) and carries on with the video when it's done. If this message is still here in a few minutes, regenerate narration chunk ${n} in Edit project → Narration, then Continue the run.`;
+      ? `${stopped} Slopify already recorded narration chunk ${n} again ${String(narrationRetryLimit)} times and the audio still doesn't match there, so the voice probably reads something its own way (a year, an abbreviation or a name). Listen at ${clock(mismatch.at)}: if words are missing or wrong, reword that sentence in narration chunk ${n} in ${editSettings.narration}, save, then Continue the run. If it says them right, use Download diagnostics in Settings and report it.`
+      : `${stopped} The voice probably skipped or garbled words there, so Slopify is recording narration chunk ${n} again by itself (try ${String(retry.try)} of ${String(narrationRetryLimit)}) and carries on with the video when it's done. If this message is still here in a few minutes, make narration chunk ${n} again in ${editSettings.narration}, then Continue the run.`;
   }
   const fix =
     chunk === undefined
-      ? `Listen at ${clock(mismatch.at)}: if words are missing or wrong, regenerate that part in Edit project → Narration, then Continue the run.`
-      : `Listen at ${clock(mismatch.at)}: if words are missing or wrong, regenerate narration chunk ${String(at + 1)} in Edit project → Narration, then Continue the run.`;
+      ? `Listen at ${clock(mismatch.at)}: if words are missing or wrong, make that part again in ${editSettings.narration}, then Continue the run.`
+      : `Listen at ${clock(mismatch.at)}: if words are missing or wrong, make narration chunk ${String(at + 1)} again in ${editSettings.narration}, then Continue the run.`;
   // A voice that reads a year, an abbreviation or a name its own way reads it the same way
   // again, so a remake would cost a chunk and fail here once more.
   const same =
-    "If it says them right, only another way (a year, an abbreviation or a name read its own way), regenerating gives the same reading: use Download diagnostics in Settings and report it.";
+    "If it says them right, only another way (a year, an abbreviation or a name read its own way), making it again gives the same reading: use Download diagnostics in Settings and report it.";
   return `${stopped} The recording there probably skips or changes words. ${fix} ${same}`;
 }
 

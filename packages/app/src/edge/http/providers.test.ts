@@ -504,7 +504,7 @@ describe("key setup, health and model upkeep routes", () => {
       headers: { "content-type": "application/json" },
     });
     expect(blank.status).toBe(400);
-    expect(await blank.text()).toMatch(/Settings → Providers → OpenRouter/u);
+    expect(await blank.text()).toMatch(/Settings → Keys & services → OpenRouter/u);
   });
 
   it("reports first-run detection and lists no retired models on a fresh install", async () => {

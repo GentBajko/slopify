@@ -385,7 +385,7 @@ describe("makeBakeoff", () => {
       "Fix the key, then press Compare again. Or press Compare again later.",
     ],
     [
-      "The AI model didn't answer. Use Try again; if it keeps happening, choose another model in the Providers section of Edit project.",
+      "The AI model didn't answer. Use Try again; if it keeps happening, choose another model in Edit settings → Article → Written by.",
       "The AI model didn't answer. Press Compare again; if it keeps happening, choose another model with Change on that section's “Made with …” line.",
     ],
   ])("says each model's own failure (%s), naming Compare again", async (reason, said) => {

@@ -233,7 +233,10 @@ function providersChecks(input: FreeCheckInput): readonly Check[] {
         id: "providers",
         ok: false,
         sentence: `${name}, the ${one.what}, isn't set up on this computer: no key is stored or its program wasn't found.`,
-        fix: { label: "Set it up in Settings → Providers", href: "/settings?section=providers" },
+        fix: {
+          label: "Set it up in Settings → Keys & services",
+          href: "/settings?section=providers",
+        },
       };
     }),
   ];

@@ -94,7 +94,7 @@ export async function summarizeEpisode(
     if (signal?.aborted === true) return "failed";
     deps.log.write("warn", "episode.memory", {
       projectId,
-      detail: `The episode summary wasn't saved: ${errorText(error)}. The project is unaffected; only later episodes won't be reminded of this one. Check the project's text model in Settings → Providers.`,
+      detail: `The episode summary wasn't saved: ${errorText(error)}. The project is unaffected; only later episodes won't be reminded of this one. Check the project's text model in Settings → Keys & services.`,
     });
     return "failed";
   }

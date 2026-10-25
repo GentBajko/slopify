@@ -10,7 +10,7 @@ const writes: RunConfig = {
 };
 const using = { ...content, promptTemplates: { article: "For {{Slopify_Channel}}." } };
 const factsMessage =
-  "This prompt uses a keyword Slopify fills from the channel and its videos, but this project has no keyword facts yet. Use Refresh keyword facts in Edit project → Prompts, then save again.";
+  "This prompt uses a keyword Slopify fills from the channel and its videos, but this project has no keyword facts yet. Use Refresh keyword facts in Edit settings → Title and keywords, then save again.";
 
 describe("keywords in a saved version", () => {
   it("refuses a fact keyword in a project that has no facts copied, and says how to get them", () => {

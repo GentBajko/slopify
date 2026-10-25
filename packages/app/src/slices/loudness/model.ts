@@ -1,3 +1,4 @@
+import { createRows, editSettings } from "../../kernel/ports/settings-places.js";
 // Loudness normalization ("Level the volume"). Text-to-speech comes back at a different
 // loudness per voice and even per request, so a joined narration jumps. With the setting on:
 // - every narration piece (a chunk, an intro or outro part, a speaker's turn) is measured and
@@ -127,7 +128,7 @@ export function loudnessProblem(lufs: number, target: LoudnessTarget): string | 
     db >= loudnessDbMin - 1e-9 &&
     db <= loudnessDbMax + 1e-9
     ? undefined
-    : `The volume must be between ${String(loudnessDbMin)} dB and +${String(loudnessDbMax)} dB of the recommended level, in steps of ${String(loudnessDbStep)} dB. Change it under Level the volume (Play → Video and style, Edit project → Pauses and volume, or Settings → General).`;
+    : `The volume must be between ${String(loudnessDbMin)} dB and +${String(loudnessDbMax)} dB of the recommended level, in steps of ${String(loudnessDbStep)} dB. Change it under Level the volume (${createRows.video}, ${editSettings.sound}, or Settings → Production defaults).`;
 }
 
 export function loudnessFields(

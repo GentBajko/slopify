@@ -83,7 +83,7 @@ export function socialRoutes(deps: AppDeps) {
                   ok: false as const,
                   sentence:
                     drawn?.message ??
-                    "The design couldn't be drawn. Open it in Library → Designs to check it, then close Copy for YouTube Studio and open it again.",
+                    "The design couldn't be drawn. Open it in Designs to check it, then close Copy for YouTube Studio and open it again.",
                 };
           },
         }),

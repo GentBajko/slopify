@@ -170,6 +170,6 @@ describe("scheduled backups", () => {
     const status = (await h.service.view()).status;
     expect(status.lastResult).toBe("failed");
     expect(status.detail).toContain("is a file, not a folder");
-    expect(status.detail).toContain("Settings → Backups");
+    expect(status.detail).toContain("Settings → Backup & storage");
   });
 });

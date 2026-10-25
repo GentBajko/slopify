@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { hasErrnoCode } from "../../kernel/errors.js";
 
-// The patch notes the app shows in Settings → Patch notes: Markdown files kept in the
+// The patch notes the app shows in Settings → What's new: Markdown files kept in the
 // repository's docs/patch-notes/ and copied into the build beside the compiled code
 // (scripts/copy-assets.mjs). index.json lists them with a title and a date; each note is
 // `<id>.md` beside it. Nothing here writes: the notes are part of the release.

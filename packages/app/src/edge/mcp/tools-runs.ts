@@ -46,10 +46,10 @@ const runs: readonly RouteTool[] = [
     name: "rerun_stage",
     route: "POST /api/projects/:id/stages/:kind/rerun",
     body: revisionControlSchema,
-    title: "Re-run a stage",
-    description: `Re-run section: makes a stage again and everything built on it. A re-run that costs money is refused until it is reviewed: use preview_rebuild (Choose what to remake), then start_rebuild. ${control}`,
+    title: "Make a stage again",
+    description: `A section's Make … again button (Write the article again, Make all images again): makes a stage again and everything built on it. Making again what costs money is refused until it is reviewed: use preview_rebuild (Choose what to remake), then start_rebuild. ${control}`,
     confirm:
-      "Re-run this stage? It generates the stage and its dependent outputs again, which costs what the stage cost the first time; previous outputs stay in History.",
+      "Make this stage again? It makes the stage and what is built on it again, which costs what the stage cost the first time; the previous outputs stay under Versions.",
   },
 ];
 
@@ -88,7 +88,7 @@ const revisions: readonly RouteTool[] = [
     body: saveBody,
     title: "Save an edit",
     description:
-      "Saves an edit as a new version, like Save in Edit project; it starts nothing. Body: {baseRevisionId, idempotencyKey: a new UUID, edit: {config, content, regenerate?: [work keys to make again, such as a narration chunk key], uploads?: [{stagedFileId, destination}]}}; send get_revision's revision.config and revision.content with your change. One chunk's wording or delivery note is content.narrationOverrides[chunk key] = {kind: \"text\", text, direction?}. Finished shorts kept through a new pick are content.shortsKeep: leave one out to pick a new moment for it, and lower config.shorts.count as well to drop it. Then preview_rebuild (Choose what to remake) says what it makes and costs, and start_rebuild starts it.",
+      "Saves an edit as a new version, like Save in Edit settings; it starts nothing. Body: {baseRevisionId, idempotencyKey: a new UUID, edit: {config, content, regenerate?: [work keys to make again, such as a narration chunk key], uploads?: [{stagedFileId, destination}]}}; send get_revision's revision.config and revision.content with your change. One chunk's wording or delivery note is content.narrationOverrides[chunk key] = {kind: \"text\", text, direction?}. Finished shorts kept through a new pick are content.shortsKeep: leave one out to pick a new moment for it, and lower config.shorts.count as well to drop it. Then preview_rebuild (Choose what to remake) says what it makes and costs, and start_rebuild starts it.",
   },
   {
     name: "restore_revision",

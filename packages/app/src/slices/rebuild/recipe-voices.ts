@@ -1,4 +1,5 @@
 import { aliasMatches, applyAliases } from "../../kernel/ports/narration-aliases.js";
+import { createRows, editSettings } from "../../kernel/ports/settings-places.js";
 import { splitText } from "../../kernel/ports/text.js";
 import type { FingerprintValue } from "../../kernel/runner/work.js";
 import type { RunConfig } from "../admission/model.js";
@@ -144,7 +145,7 @@ export function voiceBodyRecipes(
         context,
         "audio:body:turn:1",
         script.dependsOn,
-        `The script can't be narrated: ${parsed.reason} Fix it in Edit project → Article, then Try again.`,
+        `The script can't be narrated: ${parsed.reason} Fix it in ${editSettings.article}, then Try again.`,
       ),
     );
   } else if (pending) {
@@ -398,7 +399,7 @@ function speakerGlossary(
   if (!own.ok)
     return {
       ok: false,
-      reason: `${speaker.name.trim()}'s pronunciations can't be used: ${own.reason.replace("Edit the glossary or turn off Use Pronunciation Glossary.", "Fix them under Speakers (Play → Narration, or Edit project → Providers).")}`,
+      reason: `${speaker.name.trim()}'s pronunciations can't be used: ${own.reason.replace("Edit the glossary or turn off Use Pronunciation Glossary.", `Fix them under Speakers (${createRows.narration}, or ${editSettings.narration}).`)}`,
     };
   const run =
     context.config.audio?.usePronunciationGlossary === true && glossary?.ok === true

@@ -89,7 +89,7 @@ describe.skipIf(!present)("Soften breaths with the bundled ffmpeg", () => {
     const run = { bin, log, signal: new AbortController().signal };
     const missing = join(scratch, "missing.wav");
     await expect(softenBreaths(run, [missing], join(scratch, "bad"))).rejects.toThrow(
-      /Soften breaths could not process narration piece 1 .*Edit project → Pauses and volume/,
+      /Soften breaths could not process narration piece 1 .*Edit settings → Video and style → Sound polish/,
     );
   }, 60_000);
 
@@ -133,7 +133,7 @@ describe.skipIf(!present)("Soften breaths with the bundled ffmpeg", () => {
         deEss: true,
       }),
     ).rejects.toThrow(
-      /Soften S sounds could not process narration piece 1 .*Edit project → Pauses and volume/,
+      /Soften S sounds could not process narration piece 1 .*Edit settings → Video and style → Sound polish/,
     );
   }, 60_000);
 });

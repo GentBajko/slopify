@@ -51,7 +51,7 @@ const projects: readonly RouteTool[] = [
     route: "GET /api/projects/queue",
     title: "Read the run queue",
     description:
-      "The batch queue: projects waiting their turn, in order. Play's Queue switch (the draft's queue field) puts a run's videos here.",
+      "The batch queue: projects waiting their turn, in order. Create's One after another switch (the draft's queue field) puts a run's videos here.",
   },
   {
     name: "move_in_run_queue",
@@ -64,7 +64,7 @@ const projects: readonly RouteTool[] = [
     route: "POST /api/projects/estimate",
     title: "Estimate a run",
     description:
-      "The cost estimate Play shows before Start. Body: {draft: a run draft, expectedWords?: 1-100000, items?}. For a Play draft, review_draft returns the same estimate.",
+      "The cost estimate Create shows before Make the video. Body: {draft: a run draft, expectedWords?: 1-100000, items?}. For a draft on Create, review_draft returns the same estimate.",
     unrecorded: true,
   },
   {

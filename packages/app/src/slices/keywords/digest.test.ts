@@ -46,7 +46,7 @@ describe("checkDigest", () => {
     expect(checkDigest("No JSON here.")).toEqual({
       ok: false,
       reason:
-        "The AI model didn't answer with the keyword digest (summary, hook, thumbnail text, key facts, quote and tags). Use Try again; if it keeps happening, choose another model in the Providers section of Edit project.",
+        "The AI model didn't answer with the keyword digest (summary, hook, thumbnail text, key facts, quote and tags). Use Try again; if it keeps happening, choose another model in Edit settings → Article → Written by.",
     });
     expect(checkDigest("{ not json }").ok).toBe(false);
     expect(checkDigest(JSON.stringify({ summary: "x" })).ok).toBe(false);

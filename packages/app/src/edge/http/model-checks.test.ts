@@ -186,7 +186,7 @@ describe("model check routes", () => {
       expect(response.status).toBe(400);
       const body = (await response.json()) as { detail: string };
       expect(body.detail).toContain("No OpenAI key is saved");
-      expect(body.detail).toContain("Settings → Providers → OpenAI");
+      expect(body.detail).toContain("Settings → Keys & services → OpenAI");
     }
   });
 

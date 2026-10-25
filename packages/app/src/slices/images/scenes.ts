@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { jsonBetween } from "../../kernel/json-answer.js";
 import type { Message } from "../../kernel/ports/llm.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import { detectSlots, render, sceneKeyword } from "../admission/substitute.js";
 
 // Scenes from the article (Images → Scenes from the article): each image is drawn from its
@@ -258,8 +259,7 @@ export function checkScenes(
       readonly details?: readonly SceneDetails[];
     }
   | { readonly ok: false; readonly reason: string } {
-  const fix =
-    "Use Try again; if it keeps happening, choose another model in the Providers section of Edit project.";
+  const fix = `Use Try again; if it keeps happening, choose another model in ${editSettings.writer}.`;
   const parsed = sceneAnswer.safeParse(jsonBetween(text, "[", "]"));
   if (!parsed.success)
     return {

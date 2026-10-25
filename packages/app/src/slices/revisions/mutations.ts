@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { FieldError } from "../admission/rules.js";
 import { rebrandedEdit } from "../channels/rebrand.js";
 import { projectChannelId, resolveChannelId, setProjectChannel } from "../channels/repo.js";
@@ -256,14 +257,14 @@ function settingProblems(edit: RevisionEdit): readonly FieldError[] {
       ? []
       : ambientBedProblems(bed).map((problem) => ({
           field: `ambientBed.${problem.field}`,
-          message: `${problem.message} Change it in Edit project → Inputs → Ambient sound.`,
+          message: `${problem.message} Change it under Ambient sound in ${editSettings.sound}.`,
         }))),
     ...(scaleProblem === undefined
       ? []
       : [
           {
             field: "imageScale",
-            message: `${scaleProblem} Change it in Edit project → Images → More images for long videos.`,
+            message: `${scaleProblem} Change it under More images for long videos in ${editSettings.images}.`,
           },
         ]),
   ];

@@ -156,7 +156,8 @@ const youtube: readonly RouteTool[] = [
     name: "get_ab_results",
     route: "GET /api/studio/ab-results",
     title: "Read A/B results",
-    description: "Library → A/B results: every finished title and thumbnail test.",
+    description:
+      "What worked on YouTube (on a channel's page): every finished title and thumbnail test.",
   },
 ];
 

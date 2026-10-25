@@ -191,7 +191,7 @@ describe("providerStatuses", () => {
     expect(statusOf(found, "system-voice").readiness).toMatchObject({
       kind: "local",
       available: false,
-      issue: expect.stringMatching(/Docker.*docker compose pull.*Settings → Providers/),
+      issue: expect.stringMatching(/Docker.*docker compose pull.*Settings → Keys & services/),
     });
   });
 

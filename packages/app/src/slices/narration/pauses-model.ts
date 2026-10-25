@@ -1,3 +1,4 @@
+import { createRows, editSettings } from "../../kernel/ports/settings-places.js";
 // Pauses between sentences. Some voices (Inworld's TTS-2 among them) run one sentence into the
 // next with barely a breath, so a narration sounds rushed. With a minimum set, the join finds
 // the quiet after each sentence in every narration piece and lengthens it to at least that
@@ -44,7 +45,7 @@ export function pauseProblem(value: number, name: string): string | undefined {
     value <= pauseSecondsMax &&
     Math.abs(steps - Math.round(steps)) < 1e-6
     ? undefined
-    : `The pause between ${name} must be between 0 and ${String(pauseSecondsMax)} seconds, in steps of ${String(pauseSecondsStep)}. Change it under Play → Video and style, or Edit project → Pauses and volume.`;
+    : `The pause between ${name} must be between 0 and ${String(pauseSecondsMax)} seconds, in steps of ${String(pauseSecondsStep)}. Change it under ${createRows.video}, or ${editSettings.sound}.`;
 }
 
 export function pauseFields(config: {

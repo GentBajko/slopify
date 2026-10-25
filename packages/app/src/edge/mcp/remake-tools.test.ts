@@ -98,7 +98,7 @@ it("previews each project's remake, leaves out the running one, and adds one tot
   expect(said.skipped).toEqual([
     expect.objectContaining({
       projectId: "p2",
-      reason: "It is running now. Remake it once the run has finished.",
+      reason: "It is running now. Make its outdated parts again once the run has finished.",
     }),
   ]);
   expect(said.total).toEqual({ low: 4, high: 7, unknown: 1 });
@@ -128,16 +128,16 @@ it("says why a project couldn't be checked and what to do, whatever the API answ
   expect(skipped.map((one) => [one.projectId, one.reason])).toEqual([
     [
       "silent",
-      "It couldn't be checked: Remake outdated failed: Slopify answered HTTP 500 without saying why. Call preview_remake_outdated again; if it keeps failing, use Download diagnostics in Settings and report it.",
+      "It couldn't be checked: Make outdated parts again failed: Slopify answered HTTP 500 without saying why. Call preview_remake_outdated again; if it keeps failing, use Download diagnostics in Settings and report it.",
     ],
     ["refused", "It couldn't be checked: This project is no longer here."],
     [
       "odd",
-      "It couldn't be checked: its project page came back in a shape this tool doesn't read. Open the project and use Remake outdated on the Projects list; if it keeps happening, use Download diagnostics in Settings and report it.",
+      "It couldn't be checked: its project page came back in a shape this tool doesn't read. Open the project and use Make outdated parts again on the Projects list; if it keeps happening, use Download diagnostics in Settings and report it.",
     ],
     [
       "oddpreview",
-      "It couldn't be checked: its remake plan came back in a shape this tool doesn't read. Open the project and use Remake outdated on the Projects list; if it keeps happening, use Download diagnostics in Settings and report it.",
+      "It couldn't be checked: its remake plan came back in a shape this tool doesn't read. Open the project and use Make outdated parts again on the Projects list; if it keeps happening, use Download diagnostics in Settings and report it.",
     ],
   ]);
 });

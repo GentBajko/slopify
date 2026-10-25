@@ -201,7 +201,7 @@ export function choiceSites(db: DatabaseSync): readonly ChoiceSite[] {
       blocked:
         head === row.template_version
           ? null
-          : `This schedule runs an older version of the template "${template.name}". In Library → Schedules, choose Edit, pick the template again so it runs the latest version, then save.`,
+          : `This schedule runs an older version of the template "${template.name}". In Calendar → Schedules, choose Edit, pick the template again so it runs the latest version, then save.`,
     });
   }
   for (const row of draftRows(db)) {

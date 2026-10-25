@@ -120,7 +120,9 @@ describe("replanning image prompts", () => {
     });
     expect(plan).toMatchObject({
       ok: false,
-      fields: [{ field: "imagePrompts.2.name", message: expect.stringContaining("Library") }],
+      fields: [
+        { field: "imagePrompts.2.name", message: expect.stringContaining("Prompts → Image") },
+      ],
     });
   });
 });

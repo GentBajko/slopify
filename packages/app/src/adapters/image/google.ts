@@ -3,6 +3,7 @@ import { redact } from "../../kernel/log.js";
 import type { GeneratedImage, ImagePort, ImageRequest } from "../../kernel/ports/image.js";
 import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import { httpFailure, noImage, quoted, refusedImage, unreadable } from "../explain.js";
 import {
   failureText,
@@ -147,7 +148,7 @@ function decode(part: z.infer<typeof content>): GeneratedImage {
     const claimed = part.mime_type ?? "nothing";
     throw providerError({
       kind: "other",
-      message: `Google sent back something that is not a PNG or JPEG image (labelled ${claimed}, but ${describeBytes(bytes)}). Use Try again; if it keeps happening, choose another image model in the Providers section of Edit project.`,
+      message: `Google sent back something that is not a PNG or JPEG image (labelled ${claimed}, but ${describeBytes(bytes)}). Use Try again; if it keeps happening, choose another image model in ${editSettings.images}.`,
     });
   }
   return { bytes, mime };
@@ -203,7 +204,7 @@ async function failure(response: Response): Promise<Error> {
     response,
     kind,
     kind === "unsupported"
-      ? `Google gives this API key no image quota for this model${quoted(`error ${String(response.status)}`, detail)}. Retrying will not help: turn on billing for the key's project in Google AI Studio, or choose another image provider in the Providers section of Edit project.`
+      ? `Google gives this API key no image quota for this model${quoted(`error ${String(response.status)}`, detail)}. Retrying will not help: turn on billing for the key's project in Google AI Studio, or choose another image service in ${editSettings.images}.`
       : // PERMISSION_DENIED and FAILED_PRECONDITION also cover keys without access, billing
         // and region limits, so they read as a content refusal only when Google says so.
         refused

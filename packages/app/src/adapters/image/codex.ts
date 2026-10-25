@@ -13,6 +13,7 @@ import type { Usage } from "../../kernel/ports/llm.js";
 import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import type { LimitWindow } from "../../kernel/ports/plan-limits.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import { cliReported, quoted, refusedImage } from "../explain.js";
 import { cliLoginError } from "../llm/cli-login-error.js";
 import { codexLimitError, readingOf } from "../llm/codex.js";
@@ -274,8 +275,7 @@ export function codexImage(deps: {
       if (req.model.trim() === "" || req.model.startsWith("-"))
         throw providerError({
           kind: "unsupported",
-          message:
-            "No Codex model is chosen for images. Choose one (or Codex default) for images in the Providers section of Edit project, then use Try again.",
+          message: `No Codex model is chosen for images. Choose one (or Codex default) in ${editSettings.images}, then use Try again.`,
         });
       req.signal.throwIfAborted();
       const directory = mkdtempSync(join(tmpdir(), "slopify-codex-image-"));
@@ -315,7 +315,7 @@ export function codexImage(deps: {
           throw providerError({
             kind: "unsupported",
             message:
-              "The Codex CLI could not be started. Check it is installed and set up in Settings → Providers, then use Try again.",
+              "The Codex CLI could not be started. Check it is installed and set up in Settings → Keys & services, then use Try again.",
           });
         }
         let completed = false;
@@ -399,7 +399,7 @@ export function codexImage(deps: {
           throw providerError({
             kind: "unsupported",
             message:
-              "The Codex CLI could not be started. Check it is installed and set up in Settings → Providers, then use Try again.",
+              "The Codex CLI could not be started. Check it is installed and set up in Settings → Keys & services, then use Try again.",
           });
         const stderrLimit = codexPlanLimit(run.stderr(), new Date());
         if ((ended.code !== 0 || !completed) && stderrLimit !== undefined)
@@ -465,10 +465,8 @@ async function* bounded(
   }
 }
 
-const imageNext =
-  "Use Try again; if it keeps failing, run codex in a terminal to check it works and is signed in, or choose another image provider in the Providers section of Edit project.";
-const cannotDraw =
-  "Update the Codex CLI and check your ChatGPT plan includes image generation, or choose another image provider in the Providers section of Edit project.";
+const imageNext = `Use Try again; if it keeps failing, run codex in a terminal to check it works and is signed in, or choose another image service in ${editSettings.images}.`;
+const cannotDraw = `Update the Codex CLI and check your ChatGPT plan includes image generation, or choose another image service in ${editSettings.images}.`;
 
 function imageEnvironment(
   directory: string,

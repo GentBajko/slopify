@@ -113,7 +113,7 @@ export function createBackupService(deps: BackupServiceDeps): BackupService {
         await pruneBackups(folder, settings.keep);
       } catch (error) {
         deps.log.write("warn", "backups.prune", { detail: String(error) });
-        detail = `The backup was saved, but older backups in ${folder} could not be removed (${errnoCode(error) ?? "unknown error"}), so more than ${settings.keep} are kept. Check Slopify can delete files in that folder, or pick another Folder in Settings → Backups.`;
+        detail = `The backup was saved, but older backups in ${folder} could not be removed (${errnoCode(error) ?? "unknown error"}), so more than ${settings.keep} are kept. Check Slopify can delete files in that folder, or pick another Folder in Settings → Backup & storage.`;
       }
       record({
         ...attempt,
@@ -325,22 +325,23 @@ function named(projects: readonly BusyProject[]): string {
   return projects.length > 3 ? `${titles} and ${projects.length - 3} more` : titles;
 }
 
-// What failed, why, and what to change - the sentence Settings → Backups shows.
+// What failed, why, and what to change - the sentence Settings → Backup & storage shows.
 export function explain(
   error: unknown,
   folder: string,
   retries: boolean,
   signal?: AbortSignal,
 ): string {
-  const fix = "Pick another Folder in Settings → Backups, or leave it empty to use the default";
+  const fix =
+    "Pick another Folder in Settings → Backup & storage, or leave it empty to use the default";
   if (signal?.aborted === true && error === signal.reason)
     return "The backup was not saved: Slopify stopped while writing it, and the unfinished file was removed. It runs again after Slopify starts.";
   if (error instanceof NoSpaceError)
-    return `The backup was not saved: it needs about ${bytes(error.needed)}, but the disk holding ${folder} has ${bytes(error.free)} free. Free up space there, lower "Keep last" in Settings → Backups, or pick another Folder.`;
+    return `The backup was not saved: it needs about ${bytes(error.needed)}, but the disk holding ${folder} has ${bytes(error.free)} free. Free up space there, lower "Keep last" in Settings → Backup & storage, or pick another Folder.`;
   switch (errnoCode(error)) {
     case "ENOSPC":
     case "EDQUOT":
-      return `The backup was not saved: the disk holding ${folder} ran out of space. Free up space there, lower "Keep last" in Settings → Backups, or pick another Folder.`;
+      return `The backup was not saved: the disk holding ${folder} ran out of space. Free up space there, lower "Keep last" in Settings → Backup & storage, or pick another Folder.`;
     case "EACCES":
     case "EPERM":
     case "EROFS":

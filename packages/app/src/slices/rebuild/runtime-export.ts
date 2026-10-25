@@ -1,6 +1,7 @@
 import { copyFileSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { extname, join, relative, sep } from "node:path";
 import { internalError } from "../../kernel/errors.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { SubtitleAligner } from "../../kernel/ports/subtitles.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
@@ -79,7 +80,7 @@ export async function executeExportRecipe(
     throw new Error(internalError("unknown kind of export"));
   if (wav && audio.length === 0)
     throw new Error(
-      "The audio export has nothing to export because narration is turned off for this project. Turn narration on in Edit project, then Try again.",
+      `The audio export has nothing to export because narration is turned off for this project. Turn narration on (Narration source in ${editSettings.narration}), then Try again.`,
     );
   if (!wav && usesShortMode(view.revision.config))
     return executeShortExport(deps, context, piece, snapshot, audio);
@@ -291,7 +292,7 @@ export function slideshowImages(
     const row = readyOutput(view, { workKey: `image:${key}` });
     if (row === undefined)
       throw new Error(
-        "The video export can't find one of the slideshow images. Use More → make it again in its section on Images (or regenerate that image in Edit project → Images), then Try again.",
+        `The video export can't find one of the slideshow images. Press Make this image again on it in the project's Images section (or replace it in ${editSettings.images}), then Try again.`,
       );
     return outputPath(deps.paths, context.work.projectId, row.output.path);
   });
@@ -306,7 +307,7 @@ function captionDirectory(
   const font = find("subtitle_font");
   if (ass === undefined || font === undefined)
     throw new Error(
-      "Burned-in captions are missing their caption file or font. Use More → Render the video again in the Video section (or choose the caption font again in Edit project → Subtitles), then Try again.",
+      `Burned-in captions are missing their caption file or font. Press Make the video again in the project's Video section (or choose the caption font again in ${editSettings.captions}), then Try again.`,
     );
   const directory = mkdtempSync(join(projectDir(deps.paths, context.work.projectId), "render-"));
   try {

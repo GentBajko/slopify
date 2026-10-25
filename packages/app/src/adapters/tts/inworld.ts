@@ -3,6 +3,7 @@ import type { Clock } from "../../kernel/clock.js";
 import { redact } from "../../kernel/log.js";
 import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { TtsPort, TtsRequest } from "../../kernel/ports/tts.js";
 import { httpFailure, missingKey, noAudio, unreadable, voiceFix } from "../explain.js";
 import { accessField } from "../model-access.js";
@@ -90,8 +91,7 @@ async function* synthesizeRequest(
   if (request.text.trim().length === 0)
     throw providerError({
       kind: "unsupported",
-      message:
-        "Inworld was sent an empty piece of narration. Check the article has text in the Article section of Edit project, then use Try again.",
+      message: `Inworld was sent an empty piece of narration. Check the article has text in ${editSettings.article}, then use Try again.`,
     });
   if ((request.model ?? "inworld-tts-2") === "inworld-tts-2" && request.text.length > 4000) {
     yield* inworldAsync(deps, request, key);
@@ -100,8 +100,7 @@ async function* synthesizeRequest(
   if (request.text.length > 4000)
     throw providerError({
       kind: "unsupported",
-      message:
-        "This narration part is longer than the 4,000 characters Inworld's Flash model takes at once. In the Providers section of Edit project, set Chunking to Paragraph or a smaller character count, or switch to the Realtime TTS-2 model.",
+      message: `This narration part is longer than the 4,000 characters Inworld's Flash model takes at once. In ${editSettings.narration}, set Chunking to Paragraph or a smaller character count, or switch to the Realtime TTS-2 voice model.`,
     });
   request.signal.throwIfAborted();
   const response = await deps.fetch("https://api.inworld.ai/tts/v1/voice:stream", {

@@ -52,8 +52,8 @@ export function validateLocalProviderChanges(
               "Install this command-line tool on your computer and sign in to it, then try again.")
             : provider.readiness.kind === "local"
               ? (provider.readiness.issue ??
-                "No speech program was found on this computer. Install espeak-ng, or choose a voice provider with a key in Settings → Providers.")
-              : "Add this provider's API key in Settings → Providers first.",
+                "No speech program was found on this computer. Install espeak-ng, or choose a voice provider with a key in Settings → Keys & services.")
+              : "Add this provider's API key in Settings → Keys & services first.",
       });
     }
   }

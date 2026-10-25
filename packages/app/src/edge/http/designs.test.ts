@@ -89,7 +89,7 @@ describe("design routes", () => {
     expect([missing.status, missing.reason, missing.detail]).toEqual([
       404,
       "not-found",
-      "This design no longer exists. Open Library → Designs to choose another.",
+      "This design no longer exists. Go back to Designs to choose another.",
     ]);
     const blank = await problemOf(await send("POST", "/designs", create()));
     expect([blank.status, blank.reason]).toEqual([400, "invalid"]);

@@ -65,7 +65,7 @@ const settings: readonly RouteTool[] = [
     route: "GET /api/settings/remote-access",
     title: "Read remote access",
     description:
-      "Settings → General → Remote access: whether Slopify's page is open on the person's other devices through Tailscale serve (their tailnet only, never the public internet), its https address, and any problem with the exact fix. Turning it on or off is the person's; agents can't.",
+      "Settings → Remote access: whether Slopify's page is open on the person's other devices through Tailscale serve (their tailnet only, never the public internet), its https address, and any problem with the exact fix. Turning it on or off is the person's; agents can't.",
   },
   {
     name: "get_settings",
@@ -93,7 +93,7 @@ const settings: readonly RouteTool[] = [
     route: "GET /api/settings/channel-links",
     title: "Read the default channel links",
     description:
-      "Settings → Channel links: the links a description's {{Name}} placeholders fill from.",
+      "Settings → YouTube Studio and posting: the links a description's {{Name}} placeholders fill from.",
   },
   {
     name: "set_default_channel_links",
@@ -163,7 +163,7 @@ const settings: readonly RouteTool[] = [
     body: quoteBody,
     title: "Price a voice sample",
     description:
-      "Try a sample's price, as Play shows it before playing one. Body: {lines: [{speaker, provider, model, text}]}.",
+      "Try a sample's price, as Create shows it before playing one. Body: {lines: [{speaker, provider, model, text}]}.",
     unrecorded: true,
   },
   {
@@ -184,7 +184,7 @@ const settings: readonly RouteTool[] = [
     route: "GET /api/studio/settings",
     title: "Read YouTube Studio settings",
     description:
-      "Settings → YouTube Studio: the playlists upload packs name, and whether the comment is posted.",
+      "Settings → YouTube Studio and posting: the playlists upload packs name, and whether the comment is posted.",
     shape: withoutExtensionSecrets,
   },
   {
@@ -272,7 +272,7 @@ const providers: readonly RouteTool[] = [
     route: "POST /api/providers/health",
     title: "Check providers",
     description:
-      "Settings → Providers' Check all: which providers answer and which CLIs are signed in.",
+      "Settings → Keys & services' Check all: which providers answer and which CLIs are signed in.",
     unrecorded: true,
     reachesOut: "asks",
   },

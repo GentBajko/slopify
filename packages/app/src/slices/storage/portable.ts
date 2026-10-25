@@ -472,7 +472,7 @@ const storedAppearance = z.enum(appearances);
 const storedLoudness = z
   .object({ enabled: z.boolean(), videoLufs: z.number(), audioFilesLufs: z.number() })
   .strict();
-// Settings → Channel links, and the providers a fresh Play form starts with.
+// Settings → YouTube Studio and posting, and the providers a fresh Play form starts with.
 // The AI use marks: ticked voices, Image prompts and projects, by id.
 const storedIds = z.array(z.string().max(200)).max(100_000);
 // The channel page's "Keep only titles containing…" text, one per channel.

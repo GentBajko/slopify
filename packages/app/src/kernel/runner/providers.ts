@@ -9,6 +9,7 @@ import type { LlmDocument } from "../ports/llm-documents.js";
 import { isProviderError, providerError } from "../ports/model.js";
 import { type PlanLimitReading, planAccountOf } from "../ports/plan-limits.js";
 import type { Registry } from "../ports/registry.js";
+import { createRows, editSettings } from "../ports/settings-places.js";
 import type { AttemptContext } from "./attempt.js";
 import { attempt } from "./attempt.js";
 import type { AttemptStore } from "./attempt-repo.js";
@@ -315,7 +316,7 @@ export function stageProviders(
                 if (call.dialogue !== undefined && port.capabilities.dialogue !== true)
                   throw providerError({
                     kind: "unsupported",
-                    message: `${call.provider} can't speak several voices in one request. Turn off Native multi-speaker under Speakers (Play → Narration, or Edit project → Providers), then Try again.`,
+                    message: `${call.provider} can't speak several voices in one request. Turn off One request for consecutive turns under Speakers (${createRows.narration}, or ${editSettings.narration}), then Try again.`,
                   });
                 const spoken = await port.synthesize({
                   model: call.model,
@@ -450,7 +451,7 @@ export function stageProviders(
         return Promise.reject(
           providerError({
             kind: "unsupported",
-            message: `${call.provider} can't turn images into video clips. Choose fal.ai or Replicate as the image provider in Edit project → Providers, or turn Animate images off in Edit project → Inputs → Look.`,
+            message: `${call.provider} can't turn images into video clips. Choose fal.ai or Replicate as the image service in ${editSettings.images}, or turn Animate images off in ${editSettings.look}.`,
           }),
         );
       const started = deps.clock.now().getTime();

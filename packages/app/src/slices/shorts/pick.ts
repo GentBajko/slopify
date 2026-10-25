@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { jsonBetween } from "../../kernel/json-answer.js";
 import type { Message } from "../../kernel/ports/llm.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import { youtubeTimestamp } from "../youtube/timestamps.js";
 import type { TranscriptSentence } from "../youtube/transcript.js";
 import { shortHashtagsMax, shortHashtagsMin, shortTitleMax } from "./model.js";
@@ -205,7 +206,7 @@ export type CheckedPicks =
       readonly problems: readonly string[];
     };
 
-const fix = "Try again, or choose another model in Edit project → Providers.";
+const fix = `Try again, or choose another model in ${editSettings.writer}.`;
 
 export interface PickLimits {
   readonly count: number;
@@ -335,8 +336,8 @@ export function checkPicks(
 export function noPicksMessage(problems: readonly string[], limits: PickLimits): string {
   const shortVideo = limits.durationSeconds < limits.minSeconds;
   if (shortVideo)
-    return `The narration is ${String(Math.round(limits.durationSeconds))} seconds long, shorter than the ${String(limits.minSeconds)}-second minimum for a short, so there is nothing to cut. Lower the shortest length in Edit project → Shorts, then Try again.`;
-  return `The AI model didn't pick any clip Slopify could use as a short, twice (${problems[0] ?? "no clips were listed"}). Try again; if it keeps happening, widen the length range in Edit project → Shorts, or choose another model in Edit project → Providers.`;
+    return `The narration is ${String(Math.round(limits.durationSeconds))} seconds long, shorter than the ${String(limits.minSeconds)}-second minimum for a short, so there is nothing to cut. Lower the shortest Length in ${editSettings.shorts}, then Try again.`;
+  return `The AI model didn't pick any clip Slopify could use as a short, twice (${problems[0] ?? "no clips were listed"}). Try again; if it keeps happening, widen the Length range in ${editSettings.shorts}, or choose another model in ${editSettings.writer}.`;
 }
 
 function round(seconds: number): number {

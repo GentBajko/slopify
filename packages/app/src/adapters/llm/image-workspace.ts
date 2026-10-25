@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { basename, extname, join } from "node:path";
 import type { LlmImage } from "../../kernel/ports/llm.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 
 const extensions = new Set([".png", ".jpg", ".jpeg", ".webp"]);
 // ceiling: a review shows one image, or a short's handful plus the establishing image.
@@ -54,14 +55,13 @@ export function readFileName(path: unknown): string | undefined {
 export function unseenImages(): Error {
   return providerError({
     kind: "unavailable",
-    message:
-      "The reviewer answered without opening every picture it was given, so its verdict was not used (the attempt may still have used your quota). Use Try again; if it keeps happening, choose Codex as the reviewer in Edit project → Reviews.",
+    message: `The reviewer answered without opening every picture it was given, so its verdict was not used (the attempt may still have used your quota). Use Try again; if it keeps happening, choose Codex as the reviewer in ${editSettings.checks}.`,
   });
 }
 
 export function noImages(provider: string): Error {
   return providerError({
     kind: "unsupported",
-    message: `Slopify can't show pictures to ${provider}, so a review that needs them was not sent. In Edit project → Reviews, choose Claude Code or Codex as the reviewer, or set the picture reviews to Off, then use Try again.`,
+    message: `Slopify can't show pictures to ${provider}, so a review that needs them was not sent. In ${editSettings.checks}, choose Claude Code or Codex as the reviewer, or set the picture reviews to Off, then use Try again.`,
   });
 }

@@ -76,7 +76,7 @@ const quoteBodySchema = z.object({ document: designDocumentSchema }).strict();
 const notFoundRefusal = {
   reason: "not-found",
   message:
-    "This design template no longer exists. Open Library → Designs → Templates to choose another.",
+    "This design template no longer exists. Open Templates → Poster templates to choose another.",
 } as const;
 
 export function designTemplateRoutes(deps: DesignTemplateRoutesDeps | undefined) {
@@ -102,7 +102,7 @@ export function designTemplateRoutes(deps: DesignTemplateRoutesDeps | undefined)
         ? designRefused(c, {
             reason: "not-found",
             message:
-              "This design template no longer exists. Open Library → Designs → Templates to choose another.",
+              "This design template no longer exists. Open Templates → Poster templates to choose another.",
           })
         : c.json({ ...template, sample: deps.samples?.state?.(template.id) ?? null });
     })
@@ -146,7 +146,7 @@ export function designTemplateRoutes(deps: DesignTemplateRoutesDeps | undefined)
         : designRefused(c, {
             reason: "not-found",
             message:
-              "This design template no longer exists. Open Library → Designs → Templates to choose another.",
+              "This design template no longer exists. Open Templates → Poster templates to choose another.",
           });
     })
     .post("/:id/quote", zValidator("param", idParam, onInvalid), async (c) => {

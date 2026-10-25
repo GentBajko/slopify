@@ -40,7 +40,7 @@ const details: Readonly<Record<AddOutputRefusal["reason"], string>> = {
   "needs-article":
     "That output is made from the article, which this project does not have yet. Wait for the Article step to finish, then add it.",
   "narration-taken":
-    "This project already has narration, and a project has one. Keep it, or change its format under Speakers in this project's Settings → Providers.",
+    "This project already has narration, and a project has one. Keep it, or change its format under Speakers in this project's Settings → Keys & services.",
   "adaptation-not-accepted":
     'This output rewrites your article as a conversation. Tick "Adapt my article into a conversation" in Add another output, then add it.',
 };

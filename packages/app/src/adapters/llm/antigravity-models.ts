@@ -44,7 +44,7 @@ export async function nodeAntigravityModels(
   } catch {
     // Do not pass the CLI's raw output or home paths to the browser.
     throw new Error(
-      'Slopify could not get the model list from the Antigravity CLI (it ran "agy models"). Check agy is installed and signed in (Settings → Providers), then refresh the list, or type a model slug that "agy models" shows.',
+      'Slopify could not get the model list from the Antigravity CLI (it ran "agy models"). Check agy is installed and signed in (Settings → Keys & services), then refresh the list, or type a model slug that "agy models" shows.',
     );
   }
 }

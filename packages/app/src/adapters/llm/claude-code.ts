@@ -4,6 +4,7 @@ import type { LlmCompletion, LlmEvent, LlmPort, Usage } from "../../kernel/ports
 import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import { isoOfEpoch, type LimitWindow, type PlanLimitHit } from "../../kernel/ports/plan-limits.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import { cliCheck, cliReported, commandOf } from "../explain.js";
 import { nodeClaudeCodeModels } from "./claude-code-models.js";
 import { cliLoginError } from "./cli-login-error.js";
@@ -338,7 +339,7 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
     // The stream ended with no result event at all.
     if (!run)
       throw new Error(
-        "The Claude Code CLI could not be started. Check it is installed and set up in Settings → Providers, then use Try again.",
+        "The Claude Code CLI could not be started. Check it is installed and set up in Settings → Keys & services, then use Try again.",
       );
     const login = cliLoginError("claude-code", run.stderr());
     if (login) throw login;
@@ -378,7 +379,7 @@ function nextStep(binary: string, status: number | null): string {
   if (status === 429)
     return "Your Claude usage limit may be used up: wait until it resets, then use Try again.";
   if (status === 404)
-    return "The chosen model may not exist or not be available to your account: choose another in the Providers section of Edit project, then use Try again.";
+    return `The chosen model may not exist or not be available to your account: choose another in ${editSettings.writer}, then use Try again.`;
   return cliCheck(binary);
 }
 

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
+import { createRows } from "../../kernel/ports/settings-places.js";
 import { projectById } from "../admission/repo.js";
 import { projectChannelId } from "../channels/repo.js";
 import type { DraftView } from "../play-drafts/model.js";
@@ -70,8 +71,7 @@ export function makeNextChapter(deps: TemplateDeps, input: unknown): NextChapter
       return {
         ok: false,
         reason: "not-an-audiobook",
-        message:
-          "Only an audiobook has chapters. Pick Audiobook under Speakers (Play → Narration) to start a book.",
+        message: `Only an audiobook has chapters. Pick Audiobook as the Format under Speakers (${createRows.narration}) to start a book.`,
       };
     const book = nextBook(revision.config.title, voices.book);
     const document = documentFromProject(deps, revision);

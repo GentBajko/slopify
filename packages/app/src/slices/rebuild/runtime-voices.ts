@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 import { internalError } from "../../kernel/errors.js";
+import { createRows, editSettings } from "../../kernel/ports/settings-places.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
 import { masterFile, masterReport } from "../loudness/loudnorm.js";
@@ -44,7 +45,7 @@ export async function executeVoicesRecipe(
   const audio = await revisionAudio(deps, context, view, { levelled: true });
   if (audio.length === 0)
     throw new Error(
-      "The MP3 and M4B files need narration audio, but this project has none. Turn narration on in Edit project, or turn Audio files off under Speakers (Play → Narration, or Edit project → Providers), then Try again.",
+      `The MP3 and M4B files need narration audio, but this project has none. Turn narration on in ${editSettings.narration}, or untick Also make MP3 and M4B files under Speakers (${createRows.narration}, or ${editSettings.narration}), then Try again.`,
     );
   const totalSeconds = audio.reduce((sum, segment) => sum + segment.seconds, 0);
   const chapters = audioChapters({

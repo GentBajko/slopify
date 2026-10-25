@@ -1,4 +1,4 @@
-// What Settings → General → Remote access shows. The web client imports this file, so it stays
+// What Settings → Remote access shows. The web client imports this file, so it stays
 // free of Node imports.
 
 export const remoteAccessStates = [

@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { errorText, internalError } from "../../kernel/errors.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
 import { readDocumentAssets } from "../document/fonts.js";
@@ -39,7 +40,7 @@ export async function executeDocumentRecipe(
       : text("article_md", "article:body");
   if (article === null)
     throw new Error(
-      "The article isn't finished yet, so there's nothing to make the document from. Let the Article stage finish (Resume, or Try again on Article), then use Try again on Document.",
+      "The article isn't finished yet, so there's nothing to make the document from. Let the Article stage finish (Continue the run, or Try again on Article), then use Try again on PDF.",
     );
   const thumbnail = ready(view, "thumbnail", "thumbnail:image");
   let cover: Uint8Array | null = null;
@@ -50,7 +51,7 @@ export async function executeDocumentRecipe(
       );
     } catch (error) {
       throw new Error(
-        `The document's cover is the project's thumbnail, and its file can't be read (${errorText(error)}). Regenerate or upload the thumbnail again (More → make it again in its section on Thumbnail, or Edit project → Thumbnail), then use Try again on Document.`,
+        `The document's cover is the project's thumbnail, and its file can't be read (${errorText(error)}). Make the thumbnail again in the project's Images section, or upload it again in ${editSettings.outputs}, then use Try again on PDF.`,
         { cause: error },
       );
     }
@@ -98,7 +99,7 @@ function documentView(
     throw new Error(
       internalError(
         "the project version the document belongs to is missing",
-        "Use Try again on Document",
+        "Use Try again on PDF",
       ),
     );
   const recipe = executionPlan(deps, view, savedCatalogue(row.recipe_context)).recipes.find(
@@ -106,7 +107,7 @@ function documentView(
   );
   if (recipe === undefined || recipe.unresolved)
     throw new Error(
-      "The project changed after this document was queued, so it no longer matches the saved article. Use Choose what to remake (in the project's More menu) (or Try again on Document) to make it from the current version.",
+      "The project changed after this document was queued, so it no longer matches the saved article. Use Choose what to remake (in the project's More menu) (or Try again on PDF) to make it from the current version.",
     );
   return view;
 }

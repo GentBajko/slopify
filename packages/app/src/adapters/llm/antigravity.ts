@@ -6,6 +6,7 @@ import { redact } from "../../kernel/log.js";
 import type { LlmCompletion, LlmEvent, LlmPort } from "../../kernel/ports/llm.js";
 import { documentMessages } from "../../kernel/ports/llm-documents.js";
 import { type ModelInfo, providerError } from "../../kernel/ports/model.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import { cliCheck, cliName, cliReported, commandOf } from "../explain.js";
 import { accessField } from "../model-access.js";
 import { nodeAntigravityModels } from "./antigravity-models.js";
@@ -31,7 +32,7 @@ export const antigravityBinary = "agy";
 export interface AntigravityDeps {
   readonly env?: Readonly<NodeJS.ProcessEnv> | undefined;
   readonly run: RunCli;
-  // A function when the saved program path can change between runs (Settings → Providers).
+  // A function when the saved program path can change between runs (Settings → Keys & services).
   readonly binary?: string | (() => string) | undefined;
   readonly readModels?: (() => Promise<readonly ModelInfo[]>) | undefined;
   readonly now?: (() => number) | undefined;
@@ -101,7 +102,7 @@ export function antigravityLlm(deps: AntigravityDeps): LlmPort {
     if (/^gemini$/i.test(commandOf(binary)))
       throw providerError({
         kind: "unsupported",
-        message: `The saved program path for the Antigravity CLI (${binary}) still points at the Gemini CLI, which Google has retired. In Settings → Providers, clear the Antigravity CLI path or set it to the agy program, then use Try again.`,
+        message: `The saved program path for the Antigravity CLI (${binary}) still points at the Gemini CLI, which Google has retired. In Settings → Keys & services, clear the Antigravity CLI path or set it to the agy program, then use Try again.`,
       });
     // The documents travel inline, as with OpenRouter: headless agy refuses MCP tools it was
     // not pre-approved for, so a research reader tool would be silently unavailable.
@@ -188,7 +189,7 @@ export function antigravityLlm(deps: AntigravityDeps): LlmPort {
         binary,
         req.model,
         "",
-        `The ${cliName(binary)} could not be started. Check it is installed and set up in Settings → Providers, then use Try again.`,
+        `The ${cliName(binary)} could not be started. Check it is installed and set up in Settings → Keys & services, then use Try again.`,
       );
     if (authRequired(run.stderr())) throw authFailure();
     throw failure(
@@ -225,11 +226,11 @@ function emptyAnswer(binary: string, stderr: string): Error {
   if (/no output produced|auto-denied|permission/i.test(stderr))
     return providerError({
       kind: "other",
-      message: `The ${cliName(binary)} tried to use a tool Slopify does not allow (it said: ${redact(stderr.trim()).slice(0, 300)}), so it gave no answer. Use Try again; if it keeps happening, choose another model or text provider in the Providers section of Edit project.`,
+      message: `The ${cliName(binary)} tried to use a tool Slopify does not allow (it said: ${redact(stderr.trim()).slice(0, 300)}), so it gave no answer. Use Try again; if it keeps happening, choose another service or model in ${editSettings.writer}.`,
     });
   return providerError({
     kind: "other",
-    message: `The ${cliName(binary)} answered with no text. Use Try again; if it keeps happening, run agy in a terminal to check it works, or choose another model in the Providers section of Edit project.`,
+    message: `The ${cliName(binary)} answered with no text. Use Try again; if it keeps happening, run agy in a terminal to check it works, or choose another model in ${editSettings.writer}.`,
   });
 }
 
@@ -248,7 +249,7 @@ function failure(
       kind: "unsupported",
       // agy lists models a plan can't run and refuses them with this sentence.
       access: "no-access",
-      message: `The ${cliName(binary)} does not offer the model "${model}". Run "agy models" in a terminal to see the ones it has, pick one in the Edit tab (Edit project → Providers), then use Continue the run.`,
+      message: `The ${cliName(binary)} does not offer the model "${model}". Run "agy models" in a terminal to see the ones it has, pick one in ${editSettings.writer}, then use Continue the run.`,
     });
   if (
     /quota|resource.?exhausted|capacity/i.test(message) &&
@@ -265,7 +266,7 @@ function failure(
     if (waitMs !== undefined && waitMs <= 5 * 60_000)
       return providerError({
         kind: "rate_limit",
-        message: `The ${cliName(binary)} is busy: Google's capacity for this model is used for the moment (it said: ${redact(message)}). Slopify tries again by itself shortly; if it keeps happening, run fewer projects at once or choose another model in the Providers section of Edit project.`,
+        message: `The ${cliName(binary)} is busy: Google's capacity for this model is used for the moment (it said: ${redact(message)}). Slopify tries again by itself shortly; if it keeps happening, run fewer projects at once or choose another model in ${editSettings.writer}.`,
         retryAfterMs: Math.max(1000, waitMs),
       });
     return providerError({

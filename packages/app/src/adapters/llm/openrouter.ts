@@ -4,6 +4,7 @@ import type { LlmCompletion, LlmEvent, LlmPort, Usage } from "../../kernel/ports
 import { documentMessages } from "../../kernel/ports/llm-documents.js";
 import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import { droppedStream, httpFailure, providerSaid, refreshList, unreadable } from "../explain.js";
 import {
   failureText,
@@ -207,7 +208,7 @@ function streamFailure(status: number, detail: string): string {
         "OpenRouter",
         "stopped part-way through the answer",
         detail,
-        "Use Try again; if it keeps happening, choose another model in the Providers section of Edit project.",
+        `Use Try again; if it keeps happening, choose another model in ${editSettings.writer}.`,
       );
 }
 

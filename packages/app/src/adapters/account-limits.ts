@@ -2,7 +2,7 @@ import { statfs } from "node:fs/promises";
 import { z } from "zod";
 
 // The autopilot's hourly look at what may stop the schedules: the OpenRouter key's spending
-// limit (`GET /api/v1/key`, the same read Settings → Providers' Test makes) and the free disk.
+// limit (`GET /api/v1/key`, the same read Settings → Keys & services' Test makes) and the free disk.
 // Read-only: neither starts paid work.
 
 const keyAnswer = z.object({

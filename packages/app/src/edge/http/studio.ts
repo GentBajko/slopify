@@ -437,7 +437,7 @@ export function studioRoutes(deps: AppDeps) {
           return problem(c, {
             status: 404,
             detail:
-              "The playlists weren't saved: that channel no longer exists. Reload Settings → YouTube Studio and pick the channel again.",
+              "The playlists weren't saved: that channel no longer exists. Reload Settings → YouTube Studio and posting and pick the channel again.",
           });
         const invalid = studioPlaylistsProblem(raw);
         if (invalid !== undefined)
@@ -663,7 +663,7 @@ export function studioRoutes(deps: AppDeps) {
             : problem(c, {
                 status: 403,
                 detail:
-                  "Only the Slopify Studio browser extension can pair with Slopify. Install it (see Settings → YouTube Studio) and pair from its options page.",
+                  "Only the Slopify Studio browser extension can pair with Slopify. Install it (see Settings → YouTube Studio and posting) and pair from its options page.",
               });
         // The origin is paired now; the response carries its headers.
         allowOrigin(c, false);

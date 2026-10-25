@@ -145,7 +145,7 @@ describe("channel routes", () => {
     });
     expect(generate.status).toBe(400);
     expect(((await generate.json()) as { detail: string }).detail).toContain(
-      "Settings → Providers",
+      "Settings → Keys & services",
     );
   });
 

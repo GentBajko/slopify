@@ -76,11 +76,11 @@ describe("the checks that read this computer", () => {
     h = designHarness();
     const checks = await contextChecks(poster(), "t1", {
       ...ready,
-      providerProblem: async () => "fal.ai has no API key. Add one in Settings → Providers.",
+      providerProblem: async () => "fal.ai has no API key. Add one in Settings → Keys & services.",
     });
     expect(byId(checks, "provider")).toMatchObject({
       ok: false,
-      sentence: "fal.ai has no API key. Add one in Settings → Providers.",
+      sentence: "fal.ai has no API key. Add one in Settings → Keys & services.",
       fix: { label: "Open Providers", href: "/settings?section=providers" },
     });
   });

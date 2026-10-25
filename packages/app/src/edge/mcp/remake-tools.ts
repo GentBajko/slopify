@@ -20,11 +20,14 @@ const baselineSchema = z
   .object({ view: z.object({ revision: z.object({ id: z.string() }) }) })
   .loose();
 const previewSchema = z.object({ value: rebuildPreviewSchema }).loose();
-const remakeTool = { name: "preview_remake_outdated", title: "Remake outdated" } as const;
+const remakeTool = {
+  name: "preview_remake_outdated",
+  title: "Make outdated parts again",
+} as const;
 
 // An answer this tool can't read: the project is left out, and the page can still do it.
 const unreadable = (what: string): string =>
-  `its ${what} came back in a shape this tool doesn't read. Open the project and use Remake outdated on the Projects list; if it keeps happening, use Download diagnostics in Settings and report it.`;
+  `its ${what} came back in a shape this tool doesn't read. Open the project and use Make outdated parts again on the Projects list; if it keeps happening, use Download diagnostics in Settings and report it.`;
 
 interface Plan {
   readonly projectId: string;
@@ -111,7 +114,7 @@ export function registerRemakeTools(server: McpServer, deps: RouteCallDeps): voi
     {
       title: remakeTool.title,
       description:
-        "Remake outdated for several projects, like the Projects list's selection bar: each project's Choose what to remake for every outdated output with its estimate, the projects it leaves out and why, and the single total. Nothing starts here.",
+        "Make outdated parts again for several projects, like the Projects list's selection bar: each project's Choose what to remake for every outdated output with its estimate, the projects it leaves out and why, and the single total. Nothing starts here.",
       inputSchema: { projectIds: z.array(pathParam).min(1).max(2000) },
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     },

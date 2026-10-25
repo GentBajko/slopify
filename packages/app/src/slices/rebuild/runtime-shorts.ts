@@ -1,5 +1,6 @@
 import { errorText, internalError } from "../../kernel/errors.js";
 import { withLanguage, wordTimingUnavailable } from "../../kernel/ports/languages.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { LlmCall, StageProviders } from "../../kernel/runner/providers.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
@@ -69,7 +70,7 @@ export async function executeShortsRecipe(
   const clip = savedClips(snapshot).find((one) => one.number === number);
   if (clip === undefined)
     throw new Error(
-      "The clip this short was cut from is no longer among the picked shorts. Use Pick different moments in Edit project → Shorts, then Try again.",
+      `The clip this short was cut from is no longer among the picked shorts. Use Pick different moments in ${editSettings.shorts}, then Try again.`,
     );
   if (matched[2] === "prompts") return prompts(deps, context, providers, piece, snapshot, clip);
   if (matched[2] === "render") return render(deps, context, piece, snapshot, clip);
@@ -92,7 +93,7 @@ async function pick(
   const llm = config.llm;
   if (llm === undefined || llm.provider.trim() === "" || llm.model.trim() === "")
     throw new Error(
-      "Shorts need an AI text model to pick the clips, and none is chosen. Choose one in Edit project → Providers, then Try again.",
+      `Shorts need an AI text model to pick the clips, and none is chosen. Choose one in ${editSettings.writer}, then Try again.`,
     );
   const sentences = transcriptSentences(
     readTimingWords(deps, context, view, shortsTimingPurpose).words,
@@ -328,7 +329,7 @@ async function render(
       const row = readyOutput(view, { workKey: recipe.key });
       if (row === undefined)
         throw new Error(
-          `Short ${String(clip.number)} is missing one of its images. Try again to make it again; if it keeps happening, use Make this short again in Edit project → Shorts.`,
+          `Short ${String(clip.number)} is missing one of its images. Try again to make it again; if it keeps happening, use Make this short again in ${editSettings.shorts}.`,
         );
       return outputPath(deps.paths, context.work.projectId, row.output.path);
     });
@@ -466,8 +467,7 @@ async function backgroundMusic(
   const assetId = view.revision.content.shortsMusic;
   const shorts = view.revision.config.shorts;
   if (assetId === undefined || shorts === undefined) return undefined;
-  const fix =
-    "Choose another file under Background music in Edit project → Shorts, or remove the music, then Try again.";
+  const fix = `Choose another file under Background music in ${editSettings.shorts}, or remove the music, then Try again.`;
   const saved = assetPathOrUndefined(deps, context.work.projectId, assetId);
   if (saved === undefined)
     throw new Error(`The shorts' background music file is no longer in the project. ${fix}`);

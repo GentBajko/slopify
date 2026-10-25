@@ -2,6 +2,7 @@ import { basename } from "node:path";
 import type { AudioPreviewStore } from "../../kernel/audio-preview.js";
 import { internalError } from "../../kernel/errors.js";
 import type { LlmImage, Message } from "../../kernel/ports/llm.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { LlmAnswer, StageProviders } from "../../kernel/runner/providers.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
@@ -269,7 +270,7 @@ export async function softenIfAsked(
     previewLabel: `${label}: softened prompt`,
     check: (value) =>
       softenedPrompt(value.text) === ""
-        ? "The AI model sent back an empty prompt while softening it. Use Soften and retry again, or reword the prompt yourself in Edit project → Images."
+        ? `The AI model sent back an empty prompt while softening it. Use Soften and retry again, or reword the prompt yourself in ${editSettings.images}.`
         : undefined,
   });
   return answer.ok ? softenedPrompt(answer.value.text) : "held";
@@ -277,10 +278,10 @@ export async function softenIfAsked(
 
 function checkAnswer(piece: WorkPiece, answer: LlmAnswer): string | undefined {
   if (answer.text.trim() === "")
-    return "The AI model sent back an empty answer. Use Try again; if it keeps happening, choose another model in the Providers section of Edit project.";
+    return `The AI model sent back an empty answer. Use Try again; if it keeps happening, choose another model in ${editSettings.writer}.`;
   if (piece.input.kind === "llm" && piece.input.describe !== undefined)
     return spokenPassage(answer.text) === ""
-      ? "The AI model's description had no words a narrator could say. Use Try again; if it keeps happening, choose another model in the Providers section of Edit project, or turn off Describe tables and figures there."
+      ? `The AI model's description had no words a narrator could say. Use Try again; if it keeps happening, choose another model in ${editSettings.writer}, or turn off Describe tables and figures in ${editSettings.narration}.`
       : undefined;
   // Scenes from the article: one scene per image, as many as the request lists.
   if (
@@ -305,7 +306,7 @@ function checkAnswer(piece: WorkPiece, answer: LlmAnswer): string | undefined {
     return checkPost(answer.text, piece.input.social);
   if (piece.key === "research:planner")
     return chaptersFrom(answer.text).length === 0
-      ? "The AI model's research plan listed no chapters, so research could not go on. Use Try again; if it keeps happening, choose another model in the Providers section of Edit project."
+      ? `The AI model's research plan listed no chapters, so research could not go on. Use Try again; if it keeps happening, choose another model in ${editSettings.writer}.`
       : undefined;
   if (piece.key === "research:notes" || piece.key.startsWith("research:chapter:"))
     return sourcedAnswer(piece.key, answer.text);
@@ -434,7 +435,7 @@ async function publishText(
       const checked = parseScript(parts.body, piece.input.script.speakers);
       if (!checked.ok)
         throw new Error(
-          `The text model's script can't be read: ${checked.reason} Try again to have it written again, or fix it in Edit project → Article.`,
+          `The text model's script can't be read: ${checked.reason} Try again to have it written again, or fix it in ${editSettings.article}.`,
         );
     }
     await publishResult(

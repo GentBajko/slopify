@@ -229,7 +229,7 @@ describe("switching a retired model", () => {
     expect(blocked).toMatchObject({ ok: false, message: expect.stringMatching(/older version/) });
     expect(
       retiredModelUsage(h.deps.db, catalogue).find((usage) => usage.kind === "schedule")?.blocked,
-    ).toMatch(/Library → Schedules/);
+    ).toMatch(/Calendar → Schedules/);
     const wrong = await switchRetiredModel(h.deps, catalogue, {
       kind: "template",
       id: templateId,

@@ -82,7 +82,7 @@ export async function checkDraftReadiness(
         message:
           provider !== undefined && provider.readiness.kind !== "keyed" && provider.readiness.issue
             ? provider.readiness.issue
-            : "Set up this provider in Settings → Providers before starting.",
+            : "Set up this provider in Settings → Keys & services before starting.",
       });
       continue;
     }
@@ -118,12 +118,12 @@ export function localDraftReadiness(
       fields.push({
         field: `${c.field}.cliPath`,
         message:
-          "This provider's command-line tool changed in Settings → Providers. Choose Review and start again.",
+          "This provider's command-line tool changed in Settings → Keys & services. Choose Review and start again.",
       });
     if (provider?.readiness.kind === "keyed" && !hasKey(deps.db, provider.id))
       fields.push({
         field: c.field,
-        message: "Add this provider's API key in Settings → Providers before starting.",
+        message: "Add this provider's API key in Settings → Keys & services before starting.",
       });
   }
   for (const { draft } of runs)

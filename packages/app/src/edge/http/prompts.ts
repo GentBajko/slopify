@@ -77,7 +77,7 @@ export function promptRoutes(deps: AppDeps) {
             : problem(c, {
                 status: 400,
                 detail:
-                  "Only an Image prompt can be marked photorealistic. Open the prompt from the Image tab in Library → Prompts.",
+                  "Only an Image prompt can be marked photorealistic. Open the prompt under Image in Prompts.",
               });
         },
       )
@@ -142,7 +142,7 @@ export function refused(c: Context, failure: SaveFailure, noun: "prompt" | "entr
     case "not-found":
       return problem(c, {
         status: 404,
-        detail: `This ${noun} no longer exists; it may have been deleted. Go back to the Library to pick another.`,
+        detail: `This ${noun} no longer exists; it may have been deleted. Go back to Prompts to pick another.`,
       });
   }
 }

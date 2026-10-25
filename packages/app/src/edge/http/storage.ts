@@ -95,12 +95,12 @@ export function storageRoutes(deps: AppDeps) {
           ? problem(c, {
               status: 404,
               detail:
-                "This project no longer exists. Reload Settings → Storage to see the current list.",
+                "This project no longer exists. Reload Settings → Backup & storage to see the current list.",
             })
           : problem(c, {
               status: 409,
               detail:
-                "Only a finished project can drop its working files, and this one is running, waiting or has unfinished steps. Let it finish (or cancel it on its project page), then drop the working files again from the project page or Settings → Storage.",
+                "Only a finished project can drop its working files, and this one is running, waiting or has unfinished steps. Let it finish (or cancel it on its project page), then drop the working files again from the project page or Settings → Backup & storage.",
             });
       })
       // Delete old versions: one project's History files (`slices/storage/trim.ts`).

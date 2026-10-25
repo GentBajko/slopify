@@ -236,7 +236,7 @@ describe("PUT /api/prompts/:id", () => {
 
     expect(response.status).toBe(404);
     expect(((await response.json()) as ProblemBody).detail).toBe(
-      "This prompt no longer exists; it may have been deleted. Go back to the Library to pick another.",
+      "This prompt no longer exists; it may have been deleted. Go back to Prompts to pick another.",
     );
   });
 

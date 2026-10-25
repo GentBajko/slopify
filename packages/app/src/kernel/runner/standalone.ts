@@ -193,11 +193,11 @@ function standaloneError(error: unknown): unknown {
   if (!isProviderError(error)) return error;
   const kept = error.message
     .replace(
-      /,? then use (?:Retry stage|Try again)(?:, or choose another model in the Providers section of Edit project)?/g,
+      /,? then use (?:Retry stage|Try again)(?:, or choose another model in Edit settings[^.,;]*)?/g,
       "",
     )
     .split(/(?<=\.)\s+/)
-    .filter((sentence) => !/Retry stage|Try again|Edit project/.test(sentence))
+    .filter((sentence) => !/Retry stage|Try again|Edit settings/.test(sentence))
     .join(" ")
     .trim();
   if (kept === error.message || kept === "") return error;

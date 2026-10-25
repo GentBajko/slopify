@@ -25,6 +25,7 @@ import {
   type ProviderErrorKind,
   providerError,
 } from "../../kernel/ports/model.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import { sniffImage } from "../image/bytes.js";
 import { claudePlanLimit } from "../llm/claude-code.js";
 import { codexPlanLimit } from "../llm/codex-limits.js";
@@ -36,8 +37,7 @@ import {
   readHostBytes,
 } from "./transport.js";
 
-const tooBigForHost =
-  "Slopify could not send this request to the host helper because it is larger than, or shaped differently from, what the helper accepts. Make the inputs shorter in Edit project, then use Try again; if it happens again, use Download diagnostics in Settings and report it.";
+const tooBigForHost = `Slopify could not send this request to the host helper because it is larger than, or shaped differently from, what the helper accepts. Make the article or its research notes shorter in ${editSettings.article}, then use Try again; if it happens again, use Download diagnostics in Settings and report it.`;
 
 export function createHostCliClient(options: {
   readonly directory: string | undefined;

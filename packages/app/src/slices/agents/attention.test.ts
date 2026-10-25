@@ -369,7 +369,7 @@ it("gives a failed redo's error as the reason, and lists only each item's latest
       (entry) => entry.kind === "flagged-verdict",
     );
   const redoError =
-    "Slopify couldn't make this item again automatically: the image provider has no key. Fix that in Settings → Providers, then use Redo beside it.";
+    "Slopify couldn't make this item again automatically: the image provider has no key. Fix that in Settings → Keys & services, then use Redo beside it.";
   db.prepare("UPDATE review_verdicts SET redo_state='failed', redo_error=? WHERE id='v1'").run(
     redoError,
   );

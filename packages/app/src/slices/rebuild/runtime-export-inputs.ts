@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { z } from "zod";
 import { internalError } from "../../kernel/errors.js";
 import type { Paths } from "../../kernel/paths.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import {
   narrationAliasesOf,
@@ -100,21 +101,21 @@ export async function narrationAudio(
     );
     if (row === undefined && levelled)
       throw new Error(
-        `The levelled ${segment === "body" ? "narration" : segment} isn't finished yet, so the sound can't be exported at an even volume. Let the Narration stage finish (Resume, or Try again on it), then retry this stage; or turn off Level the volume in Edit project → Pauses and volume.`,
+        `The levelled ${segment === "body" ? "narration" : segment} isn't finished yet, so the sound can't be exported at an even volume. Let the Narration stage finish (Continue the run, or Try the narration again), then try this stage again; or turn off Level the volume in ${editSettings.sound}.`,
       );
     if (row === undefined) return undefined;
     const path = outputPath(deps.paths, view.revision.projectId, row.output.path);
     const duration = row.output.durationMs ?? (await deps.measure(path));
     if (!Number.isFinite(duration) || duration <= 0)
       throw new Error(
-        "Slopify couldn't read the length of the narration audio, so the file may be damaged or empty. Regenerate the narration (or upload your audio file again in Edit project → Narration), then Try again.",
+        `Slopify couldn't read the length of the narration audio, so the file may be damaged or empty. Press Make the narration again in the project's Narration section (or upload your audio file again in ${editSettings.narration}), then Try again.`,
       );
     return { path, seconds: duration / 1000 };
   };
   const body = await input("audio_body");
   if (body === undefined)
     throw new Error(
-      "The narration audio isn't finished yet. Let the Narration stage finish (Resume, or Try again on it), then retry this stage.",
+      "The narration audio isn't finished yet. Let the Narration stage finish (Continue the run, or Try the narration again), then try this stage again.",
     );
   return narrationTimeline(config, {
     body,
@@ -188,7 +189,7 @@ export function revisionTranscript(
       )
         return recipe.input.semantic[0];
       throw new Error(
-        "Some narration chunks aren't finished, so the full narration text isn't available. Let the Narration stage finish (Resume, or Try again on it), or regenerate the missing chunk in Edit project → Narration.",
+        `Some narration chunks aren't finished, so the full narration text isn't available. Let the Narration stage finish (Continue the run, or Try the narration again), or make the missing chunk again in ${editSettings.narration}.`,
       );
     });
     if (texts.length > 0) return texts.join("\n");

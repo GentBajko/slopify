@@ -90,7 +90,7 @@ import { whatsNewRoutes } from "./whats-new.js";
 import { youtubeEditRoutes } from "./youtube-edits.js";
 
 export interface AppDeps {
-  // Settings → General → Remote access (Tailscale serve); absent answers that it can't be set.
+  // Settings → Remote access (Tailscale serve); absent answers that it can't be set.
   readonly remoteAccess?: import("../remote-access/service.js").RemoteAccessService | undefined;
   // Settings → General's "Start Slopify when I log in"; absent answers that it can't be set.
   readonly autostart?: import("../autostart/service.js").AutostartService | undefined;
@@ -146,7 +146,7 @@ export interface AppDeps {
           | undefined;
       }
     | undefined;
-  // The network for Settings → Providers' Test and Check all. Handed in so a test never
+  // The network for Settings → Keys & services' Test and Check all. Handed in so a test never
   // reaches a real provider.
   readonly fetch?: typeof globalThis.fetch;
   // Asks a CLI on this computer whether it is signed in, for the health check.
@@ -319,7 +319,7 @@ export function createApp(deps: AppDeps): Hono {
       return problem(c, {
         status: 403,
         detail:
-          "Slopify doesn't answer the public internet: this request came through Tailscale Funnel. On the computer Slopify runs on, run tailscale funnel status to see which port has Funnel, turn it off with tailscale funnel --https=<that port> off, and open Slopify on your other devices through Settings → General → Remote access instead.",
+          "Slopify doesn't answer the public internet: this request came through Tailscale Funnel. On the computer Slopify runs on, run tailscale funnel status to see which port has Funnel, turn it off with tailscale funnel --https=<that port> off, and open Slopify on your other devices through Settings → Remote access instead.",
       });
     })
     // Only Slopify's own names, and changes only from its own page (`request-guard.ts`).
@@ -402,7 +402,7 @@ export function createApp(deps: AppDeps): Hono {
       if (owner === undefined) return next();
       return problem(c, {
         status: 409,
-        detail: `This is the studio sample of ${owner.name}. Change the template in its studio instead: Library → Templates → ${owner.name} → Open studio.`,
+        detail: `This is the sample project of the template ${owner.name}. Change the template in Edit template instead: Templates → ${owner.name} → Edit template.`,
         extensions: { reason: "template-sample" },
       });
     })

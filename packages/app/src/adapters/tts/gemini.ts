@@ -3,6 +3,7 @@ import { internalError } from "../../kernel/errors.js";
 import { redact } from "../../kernel/log.js";
 import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { DialogueLine, TtsAudio, TtsPort, TtsRequest } from "../../kernel/ports/tts.js";
 import {
   httpFailure,
@@ -184,7 +185,7 @@ function audioOf(text: string): { readonly pcm: Uint8Array; readonly sampleRate:
         "Google",
         "refused to speak this narration under its content rules",
         blocked,
-        "Reword that part of the script or article, or choose another voice provider under Speakers (Edit project → Providers).",
+        `Reword that part of the script or article, or choose another voice service under Speakers (${editSettings.narration}).`,
       ),
     });
   for (const candidate of parsed.data.candidates ?? [])

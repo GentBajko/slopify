@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { z } from "zod";
 import { internalError } from "../../kernel/errors.js";
 import type { Log } from "../../kernel/log.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
 import { referenceKey, thumbnailVariant } from "../admission/model.js";
@@ -52,7 +53,7 @@ export async function executeLocalRecipe(
   if (input.kind === "provided") {
     if (input.assetId === null)
       throw new Error(
-        "A file you uploaded for this project is missing. Upload it again in Edit project, then Try again.",
+        "A file you uploaded for this project is missing. Upload it again in Edit settings, then Try again.",
       );
     const row = z
       .object({ id: z.string(), project_id: z.string(), path: z.string(), created_at: z.string() })
@@ -179,7 +180,7 @@ async function concatenate(
     );
     if (input?.assetId === null || input === undefined)
       throw new Error(
-        "One narration chunk has no saved audio, so the narration can't be joined together. Regenerate the missing chunk in Edit project → Narration, then Try again.",
+        `One narration chunk has no saved audio, so the narration can't be joined together. Make the missing chunk again in ${editSettings.narration}, then Try again.`,
       );
     return outputPath(
       deps.paths,

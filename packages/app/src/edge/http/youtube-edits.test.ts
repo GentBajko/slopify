@@ -286,7 +286,7 @@ describe("/api/settings/channel-links", () => {
     });
     expect(refused.status).toBe(400);
     expect(((await refused.json()) as { detail: string }).detail).toMatch(
-      /Two links are named.*Settings → Channel links/u,
+      /Two links are named.*Settings → YouTube Studio and posting/u,
     );
   });
 });

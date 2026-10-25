@@ -1,4 +1,5 @@
 import { errorText } from "../../kernel/errors.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { RevisionView } from "../revisions/model.js";
 import { assetPathOrUndefined } from "../revisions/mutation-assets.js";
@@ -26,8 +27,7 @@ export async function exportBed(
   };
   if (bed.source !== "upload")
     return { source: { kind: "noise", preset: bed.source }, ...settings };
-  const fix =
-    "Make the video again from Play with another file under Video and style → Ambient sound, or pick Rain, Fireplace or Wind there instead.";
+  const fix = `Choose another file under Ambient sound in ${editSettings.sound}, or pick Rain, Fireplace or Wind there instead.`;
   const assetId = view.revision.content.ambientBed;
   const saved =
     assetId === undefined ? undefined : assetPathOrUndefined(deps, context.work.projectId, assetId);

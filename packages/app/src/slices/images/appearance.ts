@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { jsonBetween } from "../../kernel/json-answer.js";
 import type { Message } from "../../kernel/ports/llm.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import { appearanceKeyword, detectSlots, render } from "../admission/substitute.js";
 
 // How things look, looked up rather than guessed: when an image or thumbnail prompt has
@@ -60,8 +61,7 @@ export function checkAppearance(
 ):
   | { readonly ok: true; readonly appearance: Appearance }
   | { readonly ok: false; readonly reason: string } {
-  const fix =
-    "Use Try again; if it keeps happening, choose another model in the Providers section of Edit project.";
+  const fix = `Use Try again; if it keeps happening, choose another model in ${editSettings.writer}.`;
   const parsed = appearanceSchema.safeParse(jsonBetween(text, "{", "}"));
   if (!parsed.success)
     return { ok: false, reason: `The AI model didn't answer with the looks it looked up. ${fix}` };

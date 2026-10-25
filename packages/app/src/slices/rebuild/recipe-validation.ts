@@ -1,3 +1,4 @@
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { RunConfig } from "../admission/model.js";
 import {
   type FieldError,
@@ -124,8 +125,7 @@ export function validateRecipeInputs(
     if (config.keywordFacts === undefined && usesFacts([text]))
       fields.push({
         field: prompt.field,
-        message:
-          "This prompt uses a keyword Slopify fills from the channel and its videos, but this project has no keyword facts yet. Use Refresh keyword facts in Edit project → Prompts, then save again.",
+        message: `This prompt uses a keyword Slopify fills from the channel and its videos, but this project has no keyword facts yet. Use Refresh keyword facts in ${editSettings.title}, then save again.`,
       });
     if (prompt.raw === null) continue;
     const slots = detectSlots(prompt.raw);

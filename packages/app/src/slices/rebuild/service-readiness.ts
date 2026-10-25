@@ -135,7 +135,7 @@ export function localReadiness(
         fields.push({
           field: `work.${recipe.key}.text`,
           message:
-            "This saved physical request exceeds the current model limit. Regenerate this narration group to plan new parts.",
+            "This saved request is longer than the voice model takes now. Make this part of the narration again, so it is split into parts that fit.",
         });
     } else if (input.kind === "llm") {
       if (isLocalCliProvider(input.provider)) continue;

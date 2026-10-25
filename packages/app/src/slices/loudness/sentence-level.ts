@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { isAbsolute, join, resolve as resolvePath } from "node:path";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import { measurePiece, type Silence } from "../narration/pauses.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
 import type { FfmpegRun } from "./loudnorm.js";
@@ -287,7 +288,7 @@ export async function meterFile(
       else
         reject(
           new Error(
-            `Slopify couldn't measure a narration piece's sentences (ffmpeg said: ${errors.trim().split("\n").at(-1) ?? "nothing"}). Try again; if it happens again, turn off Level each sentence in Edit project → Pauses and volume, then use Download diagnostics in Settings and report it.`,
+            `Slopify couldn't measure a narration piece's sentences (ffmpeg said: ${errors.trim().split("\n").at(-1) ?? "nothing"}). Try again; if it happens again, turn off Level each sentence in ${editSettings.sound}, then use Download diagnostics in Settings and report it.`,
           ),
         );
     });

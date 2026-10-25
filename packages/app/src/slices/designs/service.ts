@@ -34,7 +34,7 @@ export const reusedMessage =
 const notFound = {
   ok: false,
   reason: "not-found",
-  message: "This design no longer exists. Open Library → Designs to choose another.",
+  message: "This design no longer exists. Go back to Designs to choose another.",
 } as const;
 
 export function mutationHash(input: unknown): string {

@@ -76,7 +76,7 @@ export function providerRoutes(deps: AppDeps) {
 
   return (
     new Hono()
-      // The step lists Settings → Providers shows beside each key field.
+      // The step lists Settings → Keys & services shows beside each key field.
       .get("/key-guides", (c) => c.json({ guides: keyGuides }))
       // What the first launch found, and the providers Play picks by default.
       .get("/first-run", async (c) => {
@@ -275,7 +275,7 @@ export function providerRoutes(deps: AppDeps) {
         if (candidate !== undefined && !candidate.success)
           return problem(c, {
             status: 400,
-            detail: `The pasted ${providerById(id).displayName} key could not be tested: it is empty or longer than any key. Paste the whole key in Settings → Providers → ${providerById(id).displayName}, then choose Test again.`,
+            detail: `The pasted ${providerById(id).displayName} key could not be tested: it is empty or longer than any key. Paste the whole key in Settings → Keys & services → ${providerById(id).displayName}, then choose Test again.`,
           });
         return c.json(
           await testProviderKey(

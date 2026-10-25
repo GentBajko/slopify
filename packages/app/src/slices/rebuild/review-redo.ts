@@ -154,7 +154,7 @@ export function redoRefusal(result: Extract<RecoveryResult, { ok: false }>): str
     case "running":
       return "Slopify couldn't make this item again automatically because work that depends on it was already running. Use Redo beside it once the run has finished.";
     case "readiness":
-      return `Slopify couldn't make this item again automatically: ${detail ?? "a provider isn't ready"}. Fix that in Settings → Providers, then use Redo beside it.`;
+      return `Slopify couldn't make this item again automatically: ${detail ?? "a provider isn't ready"}. Fix that in Settings → Keys & services, then use Redo beside it.`;
     case "conflict":
     case "control-changed":
       return "Slopify couldn't make this item again automatically because the project changed at the same moment (an edit, Pause or Cancel). Use Redo beside it.";

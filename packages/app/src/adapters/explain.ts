@@ -1,3 +1,5 @@
+import { editSettings } from "../kernel/ports/settings-places.js";
+
 // The sentences a failed provider call shows. Whatever an adapter throws becomes the stage's
 // failure reason on the project page, read by someone who only wants the video, so each one
 // says what failed, the likely cause and the next step, using the names on screen. The
@@ -8,7 +10,7 @@
 const detailMax = 300;
 
 export function missingKey(provider: string): string {
-  return `No ${provider} API key is saved. Add one in Settings → Providers, then use Try again.`;
+  return `No ${provider} API key is saved. Add one in Settings → Keys & services, then use Try again.`;
 }
 
 export interface HttpFailure {
@@ -31,18 +33,17 @@ export interface HttpFailure {
 
 export const refreshList = "refresh the list";
 
-export const checkChoice =
-  "Check the provider and model chosen in the Providers section of Edit project, then use Try again.";
+export const checkChoice = `Check the service and model chosen in ${editSettings.open} (under Written by in Article, in Narration or in Images), then use Try again.`;
 
 export function httpFailure(failure: HttpFailure): string {
   const { provider, status } = failure;
   const said = quoted(failure.label ?? `error ${String(status)}`, failure.detail);
   const next = failure.next ?? "use Try again";
   if (status === 401) {
-    return `${provider} did not accept the API key${said}. The key may be wrong, expired or revoked: paste a current key in Settings → Providers, then ${next}.`;
+    return `${provider} did not accept the API key${said}. The key may be wrong, expired or revoked: paste a current key in Settings → Keys & services, then ${next}.`;
   }
   if (status === 403) {
-    return `${provider} refused access${said}. The API key may not be allowed to use this model, or the account needs attention: check your ${provider} account and the key in Settings → Providers, then ${next}.`;
+    return `${provider} refused access${said}. The API key may not be allowed to use this model, or the account needs attention: check your ${provider} account and the key in Settings → Keys & services, then ${next}.`;
   }
   if (status === 402) {
     return `${provider} says the account is out of credits${said}. Add credits on the ${provider} website, then ${next}.`;
@@ -51,7 +52,7 @@ export function httpFailure(failure: HttpFailure): string {
     return `${provider} is limiting requests${said}. Too many requests were sent at once or the plan's quota is used up: wait a few minutes or check your ${provider} usage and billing, then ${next}.`;
   }
   if (status >= 400 && status < 500) {
-    return `${provider} rejected the ${failure.subject ?? "request"}${said}. ${failure.fix ?? (failure.next === undefined ? checkChoice : `Check the key in Settings → Providers, then ${next}.`)}`;
+    return `${provider} rejected the ${failure.subject ?? "request"}${said}. ${failure.fix ?? (failure.next === undefined ? checkChoice : `Check the key in Settings → Keys & services, then ${next}.`)}`;
   }
   if (status >= 500) {
     return `${provider} had a problem on its side${said}. This is usually temporary: wait a few minutes, then ${next}.`;
@@ -77,17 +78,17 @@ export function noAudio(provider: string): string {
 }
 
 export function noImage(provider: string): string {
-  return `${provider} finished without sending an image. Use Try again; if it keeps happening, reword the image prompt in the Images section of Edit project or choose another image model in its Providers section.`;
+  return `${provider} finished without sending an image. Use Try again; if it keeps happening, reword the image prompt in ${editSettings.images} or choose another image model there.`;
 }
 
 export function refusedImage(provider: string, detail: string): string {
-  return `${provider} refused to make this image under its content rules${quoted("", detail)}. Reword the image prompt in the Images section of Edit project, or choose another image provider in its Providers section.`;
+  return `${provider} refused to make this image under its content rules${quoted("", detail)}. Reword the image prompt in ${editSettings.images}, or choose another image service there.`;
 }
 
 // A narration request the provider turned down is most often a voice that no longer exists
 // or a part longer than the model takes.
 export function voiceFix(voiceId: string): string {
-  return `Check that voice "${voiceId}" still exists in Settings → Voices and that each narration part fits the model's length limit (Chunking, in the Providers section of Edit project), then use Try again.`;
+  return `Check that voice "${voiceId}" still exists in Settings → Voices and that each narration part fits the model's length limit (Chunking, in ${editSettings.narration}), then use Try again.`;
 }
 
 const cliNames: Readonly<Record<string, string>> = {
@@ -115,7 +116,7 @@ export function cliReported(binary: string, detail: string, next: string): strin
 }
 
 export function cliCheck(binary: string): string {
-  return `Use Try again; if it keeps failing, run ${commandOf(binary)} in a terminal to check it works and is signed in, or choose another model in the Providers section of Edit project.`;
+  return `Use Try again; if it keeps failing, run ${commandOf(binary)} in a terminal to check it works and is signed in, or choose another model in ${editSettings.writer}.`;
 }
 
 // ` (error 401: "Unauthorized")`, ` (error 401)`, ` ("Unauthorized")`, or nothing.

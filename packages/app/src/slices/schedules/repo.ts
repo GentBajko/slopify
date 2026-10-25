@@ -5,6 +5,7 @@ import { transact } from "../../kernel/db/tx.js";
 import { derive } from "../../kernel/runner/graph.js";
 import { projectExists, projectPaused, stagesOf } from "../admission/repo.js";
 import { readStartReceipt } from "../play-drafts/start-repo.js";
+import { setupSectionNames } from "../project-templates/setup-sections.js";
 import {
   type ScheduleRun,
   type ScheduleSummary,
@@ -547,18 +548,17 @@ const internalRunError =
 const runErrors: Readonly<Record<string, string>> = {
   "missing-template":
     "The template this schedule uses was deleted or changed. Edit the schedule and choose a template again.",
-  "unsupported-media":
-    "This template uses audio, images, a thumbnail, shorts background music or an ambient sound file you supplied, which scheduled runs cannot use. Pick a template that generates these instead, or on Play remove the music under Outputs → More shorts options (or pick Rain, Fireplace or Wind under Video and style → Ambient sound) and save the template again.",
+  "unsupported-media": `This template uses audio, images, a thumbnail, shorts background music or an ambient sound file you supplied, which scheduled runs cannot use. Pick a template that generates these instead, or open this one in Edit template, remove the music under ${setupSectionNames.shorts} (or pick Rain, Fireplace or Wind as the Ambient sound under ${setupSectionNames.video}) and save it again.`,
   "spend-limit":
     "Not started: the estimated cost was above this schedule's spend limit, or some prices were unknown. Raise the spend limit or choose models with known prices.",
   readiness:
-    "Not started: a provider was not ready, for example a missing API key, model or voice. Check Settings → Providers; the next run will try again.",
+    "Not started: a provider was not ready, for example a missing API key, model or voice. Check Settings → Keys & services; the next run will try again.",
   "not-found":
-    "The template's settings are no longer valid, for example a prompt or voice it uses was deleted. Fix the template in Library > Templates and save it.",
+    "The template's settings are no longer valid, for example a prompt or voice it uses was deleted. Fix the template in Templates → Edit template and save it.",
   "invalid-draft":
-    "The template's settings are no longer valid, for example a prompt or voice it uses was deleted. Fix the template in Library > Templates and save it.",
+    "The template's settings are no longer valid, for example a prompt or voice it uses was deleted. Fix the template in Templates → Edit template and save it.",
   "invalid-edit":
-    "The template's settings are no longer valid, for example a prompt or voice it uses was deleted. Fix the template in Library > Templates and save it.",
+    "The template's settings are no longer valid, for example a prompt or voice it uses was deleted. Fix the template in Templates → Edit template and save it.",
   conflict: internalRunError,
   "pending-start": internalRunError,
   "already-started": internalRunError,

@@ -76,7 +76,9 @@ export function fixFor(step: FailedStep): Fix | undefined {
     return {
       kind: "provider-settings",
       label:
-        name === undefined ? "Open Settings → Providers" : `Open Settings → Providers → ${name}`,
+        name === undefined
+          ? "Open Settings → Keys & services"
+          : `Open Settings → Keys & services → ${name}`,
       provider: step.provider ?? "",
     };
   }

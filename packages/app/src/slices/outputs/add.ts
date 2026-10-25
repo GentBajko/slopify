@@ -82,7 +82,7 @@ export function planAddedOutput(
     return {
       ok: false,
       reason: "narration-taken",
-      message: `This project already has narration, and a project has one: ${kind === "podcast" ? "a podcast" : "an audiobook"} would replace it. Keep it, or change its format under Speakers in this project's Settings → Providers.`,
+      message: `This project already has narration, and a project has one: ${kind === "podcast" ? "a podcast" : "an audiobook"} would replace it. Keep it, or change its format under Speakers in this project's Settings → Keys & services.`,
     };
   const sources = switchedOn(config, kind);
   const next: RunConfig = {

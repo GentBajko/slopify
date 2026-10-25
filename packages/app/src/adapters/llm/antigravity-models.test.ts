@@ -43,7 +43,7 @@ describe("Antigravity model list", () => {
         throw new Error("ENOENT");
       }),
     ).rejects.toThrow(
-      'Slopify could not get the model list from the Antigravity CLI (it ran "agy models"). Check agy is installed and signed in (Settings → Providers), then refresh the list, or type a model slug that "agy models" shows.',
+      'Slopify could not get the model list from the Antigravity CLI (it ran "agy models"). Check agy is installed and signed in (Settings → Keys & services), then refresh the list, or type a model slug that "agy models" shows.',
     );
     await expect(nodeAntigravityModels("agy", async () => "nothing here")).rejects.toThrow(
       "Antigravity CLI",

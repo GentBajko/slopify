@@ -2,6 +2,7 @@
 // built-in one), and the check its answer must pass. Pure.
 
 import type { Message } from "../../kernel/ports/llm.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import { limitsFor, type PlatformLimits } from "./limits.js";
 import { platformLabels, type SocialPlatform } from "./model.js";
 import { countFor } from "./text.js";
@@ -65,8 +66,7 @@ export function postText(answer: string): string {
 export function checkPost(answer: string, target: PostTarget): string | undefined {
   const site = platformLabels[target.platform];
   const text = postText(answer);
-  const fix =
-    "Use Try again; if it keeps happening, shorten what the post prompt asks for in Library → Prompts → Post, or choose another model in Edit project → Providers.";
+  const fix = `Use Try again; if it keeps happening, shorten what the post prompt asks for in Prompts → Post, or choose another model in ${editSettings.writer}.`;
   if (text === "") return `The AI model sent back an empty ${site} post. ${fix}`;
   const used = countFor(text, target.unit);
   if (used > target.max)

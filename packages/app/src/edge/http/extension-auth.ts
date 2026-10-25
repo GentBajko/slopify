@@ -38,7 +38,7 @@ export function extensionAuth(db: DatabaseSync): ExtensionAuth {
       status: 401,
       title: "Unauthorized",
       detail:
-        "The Slopify Studio extension isn't paired with this Slopify. Copy the pairing token from Slopify's Settings → YouTube Studio into the extension's options and press Pair.",
+        "The Slopify Studio extension isn't paired with this Slopify. Copy the pairing token from Slopify's Settings → YouTube Studio and posting into the extension's options and press Pair.",
     });
   return { allowOrigin, allowed, refused };
 }

@@ -19,7 +19,7 @@ export const libraryTools: readonly RouteTool[] = [
     route: "PUT /api/prompts/:id",
     title: "Save a prompt",
     description:
-      "Body: {kind, name, body}. Saving adds a history version; a rename follows into templates and Play drafts. The body follows create_prompt's keyword rules; an unknown Slopify_ name the prompt already had is kept.",
+      "Body: {kind, name, body}. Saving adds a history version; a rename follows into templates and drafts on Create. The body follows create_prompt's keyword rules; an unknown Slopify_ name the prompt already had is kept.",
   },
   {
     name: "list_keywords",
@@ -33,7 +33,7 @@ export const libraryTools: readonly RouteTool[] = [
     route: "GET /api/keywords/facts/:projectId",
     title: "Read a project's keyword facts as they are now",
     description:
-      "The facts keywords like {{Slopify_Channel}}, {{Slopify_Links}} and {{Slopify_Previous_Video}} are filled from, copied again from the project's channel and its other projects, like Refresh keyword facts in Edit project. Put the answer's keywordFacts into the revision's config and save it with save_revision.",
+      "The facts keywords like {{Slopify_Channel}}, {{Slopify_Links}} and {{Slopify_Previous_Video}} are filled from, copied again from the project's channel and its other projects, like Refresh keyword facts in Edit settings → Title and keywords. Put the answer's keywordFacts into the revision's config and save it with save_revision.",
   },
   {
     name: "set_prompt_photorealistic",
@@ -114,8 +114,8 @@ export const libraryTools: readonly RouteTool[] = [
   {
     name: "list_document_themes",
     route: "GET /api/document-themes",
-    title: "List PDF themes",
-    description: "The built-in PDF themes and the ones saved in the Library.",
+    title: "List PDF looks",
+    description: "The built-in PDF looks and the ones you saved.",
   },
   {
     name: "create_document_theme",

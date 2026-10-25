@@ -169,7 +169,7 @@ describe("geminiTts.synthesize", () => {
       toMp3: () => Promise.resolve(mp3),
     });
     await expect(noKey.synthesize({ voiceId: "Kore", text: "x", signal })).rejects.toThrow(
-      "No Google API key is saved. Add one in Settings → Providers",
+      "No Google API key is saved. Add one in Settings → Keys & services",
     );
 
     const badKey = await port(

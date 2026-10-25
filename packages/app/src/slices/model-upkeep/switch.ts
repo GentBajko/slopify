@@ -147,7 +147,7 @@ export async function switchRetiredModel(
         return {
           ok: false,
           message:
-            "This schedule runs an older version of its template. In Library → Schedules, choose Edit, pick the template again so it runs the latest version, then save.",
+            "This schedule runs an older version of its template. In Calendar → Schedules, choose Edit, pick the template again so it runs the latest version, then save.",
         };
       return switchTemplate(deps, catalogue, request, String(row.templateId));
     }
@@ -174,7 +174,7 @@ function switchTemplate(
       ok: false,
       message:
         error.reason === "missing-prompt"
-          ? `The template "${template.name}" uses a prompt or intro/outro that was deleted, so it cannot be saved. Open it in Library → Templates, choose another, and save.`
+          ? `The template "${template.name}" uses a prompt or intro/outro that was deleted, so it cannot be saved. Open it in Templates → Edit template, choose another, and save.`
           : changedMeanwhile,
     };
   }
@@ -299,7 +299,7 @@ async function switchProject(
             : "fields" in saved && saved.fields?.[0] !== undefined
               ? ` (${saved.fields[0].message})`
               : ""
-        }. Open the project, choose Edit project and change it under Providers.`,
+        }. Open the project and change it in Edit settings.`,
       };
 }
 

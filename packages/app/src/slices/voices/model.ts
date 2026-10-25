@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { createRows, editSettings } from "../../kernel/ports/settings-places.js";
 
 // Multiple voices: a run whose narration is a script of speaker turns rather than one voice
 // reading an article. Absent on a run is the Narration format, which is every project saved
@@ -175,19 +176,17 @@ export function voicesProblems(settings: VoicesSettings): readonly VoiceProblem[
   if (speakers.length === 0)
     problems.push({
       field: "voices.speakers",
-      message:
-        "Add at least one speaker under Speakers (Play → Narration, or Edit project → Providers).",
+      message: `Add at least one speaker under Speakers (${createRows.narration}, or ${editSettings.narration}).`,
     });
   if (settings.source === "attribute" && settings.format !== "audiobook")
     problems.push({
       field: "voices.source",
-      message:
-        "Only audiobooks can hand an existing text's dialogue to speakers. Choose Write a script under Speakers (Play → Narration, or Edit project → Providers).",
+      message: `Only audiobooks can hand an existing text's dialogue to speakers. Choose Write a script under Speakers (${createRows.narration}, or ${editSettings.narration}).`,
     });
   if ((settings.format === "podcast" || settings.format === "interview") && speakers.length < 2)
     problems.push({
       field: "voices.speakers",
-      message: `A ${voiceFormatLabels[settings.format].toLowerCase()} needs at least two speakers. Add one under Speakers (Play → Narration, or Edit project → Providers).`,
+      message: `A ${voiceFormatLabels[settings.format].toLowerCase()} needs at least two speakers. Add one under Speakers (${createRows.narration}, or ${editSettings.narration}).`,
     });
   if (
     (settings.format === "audiobook" || settings.format === "drama") &&
@@ -195,7 +194,7 @@ export function voicesProblems(settings: VoicesSettings): readonly VoiceProblem[
   )
     problems.push({
       field: "voices.speakers",
-      message: `An ${settings.format === "drama" ? "radio drama" : "audiobook"} needs a narrator. Set one speaker's role to Narrator under Speakers (Play → Narration, or Edit project → Providers).`,
+      message: `An ${settings.format === "drama" ? "radio drama" : "audiobook"} needs a narrator. Set one speaker's role to Narrator under Speakers (${createRows.narration}, or ${editSettings.narration}).`,
     });
   const names = new Set<string>();
   const ids = new Set<string>();
@@ -242,8 +241,7 @@ export function voicesProblems(settings: VoicesSettings): readonly VoiceProblem[
     if (settings.book.title.trim() === "")
       problems.push({
         field: "voices.book.title",
-        message:
-          "Enter the book's title under Speakers (Play → Narration), or remove the book to make a project on its own.",
+        message: `Enter the book's title under Speakers (${createRows.narration}, or ${editSettings.narration}), or remove the book to make a project on its own.`,
       });
     if (
       !Number.isInteger(settings.book.chapter) ||
@@ -252,14 +250,13 @@ export function voicesProblems(settings: VoicesSettings): readonly VoiceProblem[
     )
       problems.push({
         field: "voices.book.chapter",
-        message: `Enter a chapter number from 1 to ${String(bookChapterMax)} under Speakers (Play → Narration).`,
+        message: `Enter a chapter number from 1 to ${String(bookChapterMax)} under Speakers (${createRows.narration}, or ${editSettings.narration}).`,
       });
   }
   if (!(turnGapSteps as readonly number[]).includes(settings.turnGapSeconds))
     problems.push({
       field: "voices.turnGapSeconds",
-      message:
-        "Pick a gap between turns from the list under Speakers (Play → Narration, or Edit project → Providers).",
+      message: `Pick a gap between turns from the list under Speakers (${createRows.narration}, or ${editSettings.narration}).`,
     });
   return problems;
 }

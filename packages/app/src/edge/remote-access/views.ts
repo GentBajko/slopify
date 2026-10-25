@@ -2,7 +2,7 @@ import type { RemoteAccessView } from "./model.js";
 import { addressOf, type Problem } from "./rules.js";
 import type { Saved } from "./store.js";
 
-// The views Settings → General → Remote access shows, each one plain sentence and its fix.
+// The views Settings → Remote access shows, each one plain sentence and its fix.
 
 export interface RemoteAccessViews {
   // Where Slopify answers on this computer, and where Tailscale serve forwards to.

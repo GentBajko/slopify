@@ -11,6 +11,7 @@ import type {
 } from "../../kernel/ports/image.js";
 import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { createRows, editSettings } from "../../kernel/ports/settings-places.js";
 import { httpFailure, noImage, providerSaid, unreadable } from "../explain.js";
 import {
   failureText,
@@ -156,8 +157,7 @@ export function falImage(deps: FalImageDeps): ImagePort {
       if (req.reference !== undefined && edit === undefined)
         throw providerError({
           kind: "unsupported",
-          message:
-            "This fal.ai model can't use an establishing image as a reference. Choose FLUX.2 or Nano Banana 2 under Images → Model on Play or in Edit project → Providers, or set Establishing image to Off in the Images section.",
+          message: `This fal.ai model can't use an establishing image as a reference. Choose FLUX.2 or Nano Banana 2 as the image model in ${createRows.images} or ${editSettings.images}, or set Establishing image to Off there.`,
         });
       const response = await deps.fetch(`${falBase}/${edit ?? req.model}`, {
         method: "POST",
@@ -222,7 +222,7 @@ export function falImage(deps: FalImageDeps): ImagePort {
               "fal.ai",
               "could not make the video clip",
               redact(current.error),
-              "Use Try again; if it keeps happening, choose another image-to-video model under Animate images in Edit project → Inputs → Look.",
+              `Use Try again; if it keeps happening, choose another image-to-video model under Animate images in ${editSettings.look}.`,
             ),
           });
         if (current.status === "COMPLETED") break;
@@ -259,7 +259,7 @@ function refused(answer: z.infer<typeof generated>, prompt: string): void {
   if (flags.length > 0 && flags.every((flagged) => flagged)) {
     throw providerError({
       kind: "refusal",
-      message: `fal.ai's safety checker blocked the image for this prompt: "${redact(prompt)}". Reword the image prompt in the Images section of Edit project, or choose another image provider in its Providers section.`,
+      message: `fal.ai's safety checker blocked the image for this prompt: "${redact(prompt)}". Reword the image prompt in ${editSettings.images}, or choose another image service there.`,
     });
   }
 }

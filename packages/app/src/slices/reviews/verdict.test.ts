@@ -35,7 +35,7 @@ describe("parseVerdict", () => {
     expect(parsed.ok).toBe(false);
     if (!parsed.ok) {
       expect(parsed.reason).toMatch(/^The reviewer/);
-      expect(parsed.reason).toContain("Edit project → Reviews");
+      expect(parsed.reason).toContain("Edit settings → Pauses and checks");
     }
   });
 

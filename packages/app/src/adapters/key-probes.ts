@@ -2,7 +2,7 @@ import type { KeyProbes, ModelList, ModelProbe } from "../kernel/ports/key-probe
 import { safeJson } from "./http-failure.js";
 import { cartesiaVersion } from "./tts/cartesia.js";
 
-// Settings → Providers' Test button, per provider. Some answer a key they do not recognise
+// Settings → Keys & services' Test button, per provider. Some answer a key they do not recognise
 // with something other than 401: Google with 400 API_KEY_INVALID, ElevenLabs with 400
 // invalid_api_key, Inworld with 403 "does not exist". Observed on 2026-09-27; their
 // documentation says 401.

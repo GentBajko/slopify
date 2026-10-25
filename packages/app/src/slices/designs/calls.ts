@@ -16,7 +16,7 @@ import { settleStep, stepById } from "./steps-repo.js";
 export const maxConcurrentDesignCalls = 2;
 
 export const noProviderMessage =
-  "No image provider is set up. Add one in Settings → Providers, then press the button again.";
+  "No image provider is set up. Add one in Settings → Keys & services, then press the button again.";
 
 export interface DesignCalls {
   readonly start: (designId: string, stepId: string) => void;
@@ -145,6 +145,6 @@ function failedSentence(error: unknown, reason: string): string {
   if (kind === "unsupported")
     return `The picture couldn't be made: ${reason}${reason.includes("Made with") ? "" : " Choose another image model under Made with … · change."}`;
   if (kind === "auth" || kind === "missing_key")
-    return `The picture couldn't be made: ${reason}${/Settings/.test(reason) ? "" : " Check the provider's key in Settings → Providers, then press Try again."}`;
+    return `The picture couldn't be made: ${reason}${/Settings/.test(reason) ? "" : " Check the provider's key in Settings → Keys & services, then press Try again."}`;
   return `The picture couldn't be made: ${reason} Press Try again, or choose another image model under Made with … · change.`;
 }

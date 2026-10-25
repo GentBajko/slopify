@@ -2,6 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { setTimeout as sleep } from "node:timers/promises";
 import { transact } from "../../kernel/db/tx.js";
 import { internalError } from "../../kernel/errors.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import { derive } from "../../kernel/runner/graph.js";
 import { pendingAdmitted } from "../admission/admitted-work.js";
 import { projectExists, projectPaused, stagesOf } from "../admission/repo.js";
@@ -142,6 +143,13 @@ function outcome(db: DatabaseSync, projectId: string): { readonly failed: string
   return { failed: null };
 }
 
+// A step's sentence sends a project to its settings for another model; a template's section
+// changes its model with Change on its "Made with …" line.
+const modelPlaces = new RegExp(
+  `choose another (model|image model) in (?:${[editSettings.writer, editSettings.narration, editSettings.images].join("|")})`,
+  "g",
+);
+
 // A step's sentence names a project's Try again (on its stage); a studio's own button for it
 // is another: Make sample for a sample, Compare again for a model comparison. `then` is what
 // follows the button's name in the sentence.
@@ -151,12 +159,9 @@ export function studioWords(
   then: string = " to try again",
 ): string {
   return reason
+    .replace(modelPlaces, "choose another $1 with Change on that section's “Made with …” line")
     .replace(
-      /choose another model in the Providers section of Edit project/g,
-      "choose another model with Change on that section's “Made with …” line",
-    )
-    .replace(
-      /(\b[UuPp](?:se|ress) )?Try again(?: on [A-Z][a-z]+)?/g,
+      /(\b[UuPp](?:se|ress) )?Try again(?: on [A-Z][A-Za-z]+)?/g,
       (_, verb: string | undefined, at: number) => {
         const opens =
           verb === undefined ? /(^|[.;:!?]\s+)$/.test(reason.slice(0, at)) : /^[UP]/.test(verb);
@@ -171,7 +176,7 @@ const refusedSentence: Readonly<Record<string, string>> = {
   "stale-preview":
     "What the sample needed changed while it was being set up. Press Make sample again.",
   readiness:
-    "A provider this template uses isn't set up, so the sample can't start. Set it up in Settings → Providers, then press Make sample.",
+    "A provider this template uses isn't set up, so the sample can't start. Set it up in Settings → Keys & services, then press Make sample.",
   "cost-ack-required":
     "Some steps of this sample have no known price. Press Make sample to accept that and make it.",
 };

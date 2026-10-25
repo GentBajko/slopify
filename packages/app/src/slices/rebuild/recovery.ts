@@ -117,7 +117,7 @@ export async function recoverProject(
                 message:
                   input.action.kind === "redo"
                     ? "This item is no longer made by the project (it was removed, or its source changed), so it can't be made again. Reload the project page."
-                    : "This section has no generated work to rerun. Use Edit project to change its source.",
+                    : "This section has nothing made by AI to make again. Change its source in Edit settings.",
               },
             ],
           };
@@ -204,7 +204,7 @@ export async function recoverProject(
           fields: [
             {
               field: "stage",
-              message: "This section has no enabled work. Use Edit project to change its source.",
+              message: "This section is switched off. Change its source in Edit settings.",
             },
           ],
         });
@@ -217,7 +217,7 @@ export async function recoverProject(
           fields: preview.value.preview.providedReuseRequired.map((key) => ({
             field: key,
             message:
-              "Review changed supplied content or manual captions in Edit project or Advanced rebuild review.",
+              "Look over the changed content you supplied, or the captions you edited, in Edit settings or in Choose what to remake.",
           })),
         });
       const blocked = preview.value.preview.work.filter((row) => row.disposition === "blocked");
