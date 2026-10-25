@@ -1,5 +1,6 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import { type ProjectSummary, type Stage, thumbnailCountOf } from "@app/slices/admission/model.js";
+import { retryingAt, retryingWord } from "@app/slices/admission/state-words.js";
 import { etaLabel, stageEta } from "@app/slices/eta/model.js";
 import type { CheckpointHold } from "@app/slices/reviews/holds.js";
 import type { Output } from "@app/slices/storage/model.js";
@@ -127,11 +128,13 @@ export function statusRows(input: StatusInput): readonly StatusRow[] {
   if (running) {
     const overall = overallProgress(stages);
     const left = timeLeft(shown, input.now);
+    // Nothing at work but a step waiting to run again by itself: the header's word.
+    const retrying = project.status === "running" && retryingAt(stages) !== undefined;
     rows.push({
       id: "live",
       name: "Progress",
-      tone: project.status === "paused" ? "waiting" : "running",
-      state: project.status === "paused" ? "Paused" : "Running",
+      tone: project.status === "paused" || retrying ? "waiting" : "running",
+      state: project.status === "paused" ? "Paused" : retrying ? retryingWord : "Running",
       // "2 of 3 done" beside the header's "Step 3 of 3": both count these rows.
       detail: `${String(overall.completed)} of ${String(overall.total)} done`,
       ...(left === undefined || project.status === "paused" ? {} : { more: left }),

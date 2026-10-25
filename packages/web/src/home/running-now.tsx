@@ -145,7 +145,7 @@ export function RunningProject({
       <div className="flex min-w-0 flex-col gap-3">
         <div className="flex min-w-0 flex-col gap-0.5">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <div className="sl-row__title text-[17px]">
+            <div className="sl-row__title text-[17px] whitespace-normal">
               <Link to="/projects/$projectId" params={{ projectId: project.id }}>
                 {project.title}
               </Link>

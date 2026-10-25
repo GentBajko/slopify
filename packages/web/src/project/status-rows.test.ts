@@ -83,6 +83,22 @@ describe("the status list", () => {
     expect(rows[3]).toEqual({ id: "video", name: "Video", tone: "off", state: "Not started" });
   });
 
+  // Nothing at work, a step waiting to run again by itself: Progress says it as the header does.
+  it("says Waiting to try again on Progress while a step only waits to retry", () => {
+    const rows = statusRows(
+      input({
+        stages: [
+          stage("article", "done"),
+          stage("images", "pending", { retryAt: "2026-09-27T14:05:00.000Z" }),
+          stage("video", "pending"),
+        ],
+        outputs: [],
+        project: { ...(input({}).project as ProjectSummary), status: "running" },
+      }),
+    );
+    expect(rows[0]).toMatchObject({ id: "live", tone: "waiting", state: "Waiting to try again" });
+  });
+
   it("speaks for a row of two stages with the one that needs the reader", () => {
     const rows = statusRows(
       input({

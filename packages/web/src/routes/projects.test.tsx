@@ -83,6 +83,7 @@ describe("the projects list", () => {
     expect(within(list).getByText("Running")).not.toBeNull();
     // The running row's bar says in words how far it is.
     expect(within(list).getByText("45% done")).not.toBeNull();
+    expect(within(list).getAllByRole("progressbar")).toHaveLength(1);
     // A finished video says the same word as its filter and Home: Ready to upload.
     expect(within(list).getByText("Ready to upload")).not.toBeNull();
     // Open is in words on every row, not only behind the title.

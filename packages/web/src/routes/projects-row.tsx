@@ -121,9 +121,10 @@ export function ProjectRow({
               ) : null}
             </span>
           </span>
-          {running ? (
+          {running && project.progress > 0 ? (
             // The bar with its words: the share of the run's own work done, supplied steps
-            // left out (`progressOf`).
+            // left out (`progressOf`). Before any of it can be measured (a render that reports
+            // no count) a "0% done" bar would say nothing true: the state word stands alone.
             <span className="flex items-center gap-2">
               <Meter
                 progress
