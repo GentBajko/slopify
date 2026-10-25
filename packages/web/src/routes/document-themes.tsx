@@ -131,35 +131,40 @@ export function DocumentThemesRoute() {
           <ListSkeleton label="PDF looks" />
         ) : null
       ) : (
-        <ListDetail
-          className={libraryListDetail}
-          list={
-            <div className="flex flex-col gap-6">
-              <section className="flex flex-col gap-2">
-                <SectionHead title="Your looks" as="h3" className="pb-0">
-                  {yours.length > 1 ? (
-                    <SortMenu what="your looks" sort={sort} onSort={setSort} />
-                  ) : null}
-                </SectionHead>
-                <HelpLine>
-                  Pick one when you create a video with a PDF, or in a project's settings. A project
-                  keeps its own copy, so a change here never alters a PDF already made.
-                </HelpLine>
-                {data.themes.length === 0 ? (
-                  <p className="m-0 text-small text-ink-2">
-                    No looks of your own yet. Copy a built-in one below to start one.
-                  </p>
-                ) : (
-                  <SelectionArea selection={selection}>
-                    <LibraryBulkBar
-                      selection={selection}
-                      total={yours.length}
-                      noun={themeNoun}
-                      busy={bulk.busy}
-                      onDuplicate={() => bulk.duplicate(chosen)}
-                      onExport={() => transfer.exportItems(chosen)}
-                      onDelete={() => setConfirming(true)}
-                    />
+        // The selection bar spans the list and the detail, so its line has room for every
+        // action once a look of yours is ticked, and ticking one never moves a row.
+        <SelectionArea selection={selection}>
+          {data.themes.length === 0 ? null : (
+            <LibraryBulkBar
+              selection={selection}
+              total={yours.length}
+              noun={themeNoun}
+              scope="Select all of yours"
+              busy={bulk.busy}
+              onDuplicate={() => bulk.duplicate(chosen)}
+              onExport={() => transfer.exportItems(chosen)}
+              onDelete={() => setConfirming(true)}
+            />
+          )}
+          <ListDetail
+            className={libraryListDetail}
+            list={
+              <div className="flex flex-col gap-6">
+                <section className="flex flex-col gap-2">
+                  <SectionHead title="Your looks" as="h3" className="pb-0">
+                    {yours.length > 1 ? (
+                      <SortMenu what="your looks" sort={sort} onSort={setSort} />
+                    ) : null}
+                  </SectionHead>
+                  <HelpLine>
+                    Pick one when you create a video with a PDF, or in a project's settings. A
+                    project keeps its own copy, so a change here never alters a PDF already made.
+                  </HelpLine>
+                  {data.themes.length === 0 ? (
+                    <p className="m-0 text-small text-ink-2">
+                      No looks of your own yet. Copy a built-in one below to start one.
+                    </p>
+                  ) : (
                     <List label="Your looks">
                       {yours.map((theme) => (
                         <ListRow
@@ -210,80 +215,80 @@ export function DocumentThemesRoute() {
                         />
                       ))}
                     </List>
-                  </SelectionArea>
-                )}
-              </section>
+                  )}
+                </section>
 
-              <section className="flex flex-col gap-2">
-                <SectionHead title="Built in" as="h3" className="pb-0" />
-                <HelpLine>These can't be changed. Copy one to make a look of your own.</HelpLine>
-                <List label="Built-in looks">
-                  {data.builtIns.map((theme) => (
-                    <ListRow
-                      key={theme.name}
-                      className={libraryRow}
-                      lead={<Swatches colors={theme.values.colors} />}
-                      title={theme.label}
-                      meta={themeMeta(theme.values)}
-                      selected={theme.name === shownBuiltIn?.name}
-                      onSelect={() => setPicked(theme.name)}
-                      actions={
-                        <ButtonLink
-                          to="/document-themes/new"
-                          search={{ from: theme.name }}
-                          aria-label={`Copy ${theme.label}`}
-                          variant="quiet"
-                          size="small"
-                        >
-                          Copy
-                        </ButtonLink>
-                      }
-                    />
-                  ))}
-                </List>
-              </section>
-            </div>
-          }
-          detail={
-            shownSaved !== undefined ? (
-              <ThemeDetail
-                name={shownSaved.name}
-                kicker="Your look"
-                meta={
-                  <>
-                    Updated <Stamp iso={shownSaved.updatedAt} />
-                  </>
-                }
-                values={shownSaved.values}
-                action={
-                  <ButtonLink
-                    to="/document-themes/$themeId"
-                    params={{ themeId: shownSaved.id }}
-                    size="small"
-                  >
-                    Edit look
-                  </ButtonLink>
-                }
-              />
-            ) : shownBuiltIn !== undefined ? (
-              <ThemeDetail
-                name={shownBuiltIn.label}
-                kicker="Built in"
-                meta="Built-in looks can't be changed. Copy one to make it yours."
-                values={shownBuiltIn.values}
-                action={
-                  <ButtonLink
-                    to="/document-themes/new"
-                    search={{ from: shownBuiltIn.name }}
-                    size="small"
-                  >
-                    Copy look
-                  </ButtonLink>
-                }
-              />
-            ) : null
-          }
-        />
+                <section className="flex flex-col gap-2">
+                  <SectionHead title="Built in" as="h3" className="pb-0" />
+                  <HelpLine>These can't be changed. Copy one to make a look of your own.</HelpLine>
+                  <List label="Built-in looks">
+                    {data.builtIns.map((theme) => (
+                      <ListRow
+                        key={theme.name}
+                        className={libraryRow}
+                        lead={<Swatches colors={theme.values.colors} />}
+                        title={theme.label}
+                        meta={themeMeta(theme.values)}
+                        selected={theme.name === shownBuiltIn?.name}
+                        onSelect={() => setPicked(theme.name)}
+                        actions={
+                          <ButtonLink
+                            to="/document-themes/new"
+                            search={{ from: theme.name }}
+                            aria-label={`Copy ${theme.label}`}
+                            variant="quiet"
+                            size="small"
+                          >
+                            Copy
+                          </ButtonLink>
+                        }
+                      />
+                    ))}
+                  </List>
+                </section>
+              </div>
+            }
+            detail={
+              shownSaved !== undefined ? (
+                <ThemeDetail
+                  name={shownSaved.name}
+                  kicker="Your look"
+                  meta={
+                    <>
+                      Updated <Stamp iso={shownSaved.updatedAt} />
+                    </>
+                  }
+                  values={shownSaved.values}
+                  action={
+                    <ButtonLink
+                      to="/document-themes/$themeId"
+                      params={{ themeId: shownSaved.id }}
+                      size="small"
+                    >
+                      Edit look
+                    </ButtonLink>
+                  }
+                />
+              ) : shownBuiltIn !== undefined ? (
+                <ThemeDetail
+                  name={shownBuiltIn.label}
+                  kicker="Built in"
+                  meta="Built-in looks can't be changed. Copy one to make it yours."
+                  values={shownBuiltIn.values}
+                  action={
+                    <ButtonLink
+                      to="/document-themes/new"
+                      search={{ from: shownBuiltIn.name }}
+                      size="small"
+                    >
+                      Copy look
+                    </ButtonLink>
+                  }
+                />
+              ) : null
+            }
+          />
+        </SelectionArea>
       )}
 
       {remove.error === null ? null : (
