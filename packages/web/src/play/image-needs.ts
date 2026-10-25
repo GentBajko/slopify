@@ -25,21 +25,21 @@ export function imageServiceUsers(form: NeedsForm): readonly string[] {
 
 // What turning a stage off would make instead, when that changes what is being made: Images
 // None turns a video into an audiobook, Narration Off an audiobook into an article. Undefined
-// when the kind stays.
+// when the kind stays, and when nothing would be made at all (a set of images with its images
+// off writes no article either), since there is no kind to name.
 export function kindAfterOff(
   form: Pick<PlayFormState, "sources" | "voices">,
   stage: "images" | "audio",
 ): OutputKind | undefined {
   const now = outputKindOf(form);
-  const after = outputKindOf({
-    ...form,
-    sources: {
-      ...form.sources,
-      [stage]: "off",
-      ...(stage === "images" ? { video: "off" as const } : {}),
-    },
-  });
-  return after === now ? undefined : after;
+  const sources = {
+    ...form.sources,
+    [stage]: "off",
+    ...(stage === "images" ? { video: "off" as const } : {}),
+  } as const;
+  const after = outputKindOf({ ...form, sources });
+  if (after === now) return undefined;
+  return after === "article" && sources.article === "off" ? undefined : after;
 }
 
 // "an audiobook", "an article", "a video".

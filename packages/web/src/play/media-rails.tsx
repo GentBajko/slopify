@@ -304,7 +304,9 @@ export function ImagesRail({
       source={<SourceSwitch kind="images" form={form} update={update} />}
       note={
         offMakes !== undefined
-          ? `None leaves the video out: this makes ${aKind(offMakes)} instead.`
+          ? form.sources.video === "generate"
+            ? `None leaves the video out: this makes ${aKind(offMakes)} instead.`
+            : `None makes ${aKind(offMakes)} instead.`
           : form.sources.images === "off" && form.sources.audio !== "off"
             ? "No images, so no video: the narration is made as sound."
             : undefined
