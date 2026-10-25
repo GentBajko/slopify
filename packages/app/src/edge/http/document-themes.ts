@@ -78,11 +78,11 @@ function refused(
     case "invalid":
       return problem(c, {
         status: 400,
-        detail: "This theme can't be saved yet. Fix the highlighted settings and try again.",
+        detail: "This look can't be saved yet. Fix the highlighted settings and try again.",
         extensions: { fields: failure.fields },
       });
     case "duplicate-name": {
-      const message = "Another PDF theme already has this name. Choose a different name.";
+      const message = "Another PDF look already has this name. Choose a different name.";
       return problem(c, {
         status: 409,
         detail: message,

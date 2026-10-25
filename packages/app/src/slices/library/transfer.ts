@@ -49,7 +49,7 @@ export interface LibraryFile extends LibrarySections {
 const sectionWords: Readonly<Record<LibrarySection, string>> = {
   prompts: "prompts",
   entries: "intros or outros",
-  documentThemes: "PDF themes",
+  documentThemes: "PDF looks",
   aliases: "narration aliases",
 };
 
