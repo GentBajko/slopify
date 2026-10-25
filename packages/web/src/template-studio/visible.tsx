@@ -1,26 +1,16 @@
 import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import { templateNameMax } from "@app/slices/project-templates/schema.js";
-import type { ProviderStatus } from "@app/slices/settings/model.js";
 import type { TemplateSection } from "@app/slices/template-studio/model.js";
-import { type ReactElement, type ReactNode, useId } from "react";
-import { DocumentThemePicker } from "@/components/document-theme-picker";
+import type { ReactElement } from "react";
 import { Field, Input } from "@/components/kit/field";
-import { TextLink } from "@/components/kit/link";
-import { Segmented, type SegmentedOption, Switch } from "@/components/kit/switch";
-import { ServiceGroup } from "@/play/service-group";
 
-type Form = PlayDraftDocument["form"];
-type Edit = (form: Form) => void;
-
-// The few settings each section leads with, presets before numbers, laid out two across. The
-// section's whole editor (Play's own) is under "All … settings" below them. Shorts, Pauses and
-// checks and YouTube description and posts show their whole editor here instead (page.tsx).
-export function VisibleControls({
+// What only a template has, beside Create's own editors (fine-tune.tsx): its name and the title
+// every video fills, first in Title and keywords, and how long each article is planned to be,
+// after the Article editor (Create asks it beside its Make button, in the same words).
+export function TemplateFields({
   section,
   document,
   name,
-  providers,
-  unchosen,
   onEdit,
   onName,
 }: {
@@ -28,355 +18,46 @@ export function VisibleControls({
   readonly document: PlayDraftDocument;
   // The template's name as typed, saved with the next Save.
   readonly name: string;
-  readonly providers: readonly ProviderStatus[];
-  // The writer and the image service nobody chose, with no default of this computer to stand
-  // in: their pickers are drawn here, where the check's link lands.
-  readonly unchosen: { readonly llm: boolean; readonly images: boolean };
   readonly onEdit: (document: PlayDraftDocument) => void;
   readonly onName: (name: string) => void;
 }): ReactElement | null {
   const { form } = document;
-  const edit: Edit = (next) => onEdit({ ...document, form: next });
-  const sources = (patch: Partial<Form["sources"]>): Form => ({
-    ...form,
-    sources: { ...form.sources, ...patch },
-  });
-  switch (section) {
-    case "subject":
-      return (
-        <Controls>
-          <Field label="Template name">
-            <Input
-              value={name}
-              maxLength={templateNameMax}
-              onChange={(event) => onName(event.target.value)}
-            />
-          </Field>
-          <TitlePattern value={form.title} onChange={(title) => edit({ ...form, title })} />
-          <Choice
-            label="Research"
-            help="Looks the topic up before the article is written."
-            value={form.sources.research === "off" ? "off" : "generate"}
-            options={[
-              { value: "off", label: "Off" },
-              { value: "generate", label: "Research the topic" },
-            ]}
-            onChange={(research) => edit(sources({ research }))}
+  if (section === "subject")
+    return (
+      <div data-slot="studio-controls" className="sl-fields">
+        <Field label="Template name">
+          <Input
+            value={name}
+            maxLength={templateNameMax}
+            onChange={(event) => onName(event.target.value)}
           />
-        </Controls>
-      );
-    case "script":
-      return (
-        <Controls>
-          <Choice
-            label="Article"
-            value={form.sources.article === "provide" ? "provide" : "generate"}
-            options={[
-              { value: "generate", label: "Written by AI" },
-              { value: "provide", label: "I paste it" },
-            ]}
-            onChange={(article) => edit(sources({ article }))}
-          />
-          <Field label="Expected length (words)" help="About 150 words is one minute of narration.">
-            <Input
-              inputMode="numeric"
-              className="sl-input--number"
-              value={document.expectedWords}
-              onChange={(event) => onEdit({ ...document, expectedWords: event.target.value })}
-            />
-          </Field>
-          {leadsWithService(section, form, unchosen) ? (
-            <ServicePicker
-              missing="writing service"
-              field="llm"
-              family="llm"
-              providers={providers}
-              value={form.llm}
-              onPick={(llm) => edit({ ...form, llm })}
-            />
-          ) : null}
-        </Controls>
-      );
-    case "voice":
-      return (
-        <Controls>
-          <Switch
-            label="Level the volume"
-            help="Evens the narration out to YouTube's loudness."
-            checked={form.loudness?.enabled ?? true}
-            onChange={(enabled) => edit({ ...form, loudness: { ...form.loudness, enabled } })}
-          />
-          <Switch
-            label="Soften breaths"
-            checked={form.removeBreaths === true}
-            onChange={(removeBreaths) => edit({ ...form, removeBreaths })}
-          />
-          <Switch
-            label="Soften S sounds"
-            checked={form.deEss === true}
-            onChange={(deEss) => edit({ ...form, deEss })}
-          />
-        </Controls>
-      );
-    case "pictures":
-      return (
-        <Controls>
-          <Choice
-            label="Images"
-            value={
-              form.sources.images === "provide"
-                ? "provide"
-                : form.sources.images === "off"
-                  ? "off"
-                  : "generate"
+        </Field>
+        <Field label="Video title" help="{{Topic}} is filled with each video's topic.">
+          <Input
+            value={form.title}
+            maxLength={200}
+            onChange={(event) =>
+              onEdit({ ...document, form: { ...form, title: event.target.value } })
             }
-            options={[
-              { value: "generate", label: "Made by AI" },
-              { value: "provide", label: "I add them" },
-              { value: "off", label: "Off" },
-            ]}
-            onChange={(images) => edit(sources({ images }))}
           />
-          {form.sources.images === "generate" ? (
-            <Switch
-              label="Scenes from the article"
-              help="Each image shows what the narration says at that moment."
-              checked={form.imageScenes === true}
-              onChange={(imageScenes) => edit({ ...form, imageScenes })}
-            />
-          ) : null}
-          {leadsWithService(section, form, unchosen) ? (
-            <ServicePicker
-              missing="image service"
-              field="images"
-              family="image"
-              providers={providers}
-              value={form.images}
-              onPick={(images) => edit({ ...form, images })}
-            />
-          ) : null}
-        </Controls>
-      );
-    case "video":
-      return (
-        <Controls>
-          <Choice
-            label="Shape"
-            wide
-            value={form.format}
-            options={[
-              { value: "16:9", label: "Landscape 16:9" },
-              { value: "9:16", label: "Vertical 9:16" },
-              { value: "1:1", label: "Square 1:1" },
-            ]}
-            onChange={(format) => edit({ ...form, format })}
+        </Field>
+      </div>
+    );
+  if (section === "script" && form.sources.article === "generate")
+    return (
+      <div data-slot="studio-controls" className="sl-fields">
+        <Field
+          label="Words per video"
+          help="About 150 words is one minute. The article prompt decides the real length."
+        >
+          <Input
+            inputMode="numeric"
+            className="sl-input--number"
+            value={document.expectedWords}
+            onChange={(event) => onEdit({ ...document, expectedWords: event.target.value })}
           />
-          <Choice
-            label="Captions"
-            value={form.subtitles.mode}
-            options={[
-              { value: "off", label: "Off" },
-              { value: "burn-in", label: "On the video" },
-              { value: "files", label: "As a file" },
-            ]}
-            onChange={(mode) => edit({ ...form, subtitles: { ...form.subtitles, mode } })}
-          />
-          <Choice
-            label="Image motion"
-            value={form.motionStyle}
-            options={[
-              { value: "zoom", label: "Zoom" },
-              { value: "pan", label: "Pan" },
-              { value: "mixed", label: "Mixed" },
-              { value: "still", label: "Still" },
-            ]}
-            onChange={(motionStyle) => edit({ ...form, motionStyle })}
-          />
-          <Field label="Seconds per image">
-            <Input
-              inputMode="decimal"
-              className="sl-input--number"
-              value={form.imageSeconds}
-              onChange={(event) => edit({ ...form, imageSeconds: event.target.value })}
-            />
-          </Field>
-        </Controls>
-      );
-    case "thumbnail":
-      return (
-        <Controls>
-          <Choice
-            label="Thumbnail"
-            wide
-            value={
-              form.sources.thumbnail === "provide" ||
-              form.sources.thumbnail === "off" ||
-              form.sources.thumbnail === "prompt_by_llm"
-                ? form.sources.thumbnail
-                : "from_prompt"
-            }
-            options={[
-              { value: "from_prompt", label: "From my prompt" },
-              { value: "prompt_by_llm", label: "Prompt written by AI" },
-              { value: "provide", label: "I add it" },
-              { value: "off", label: "Off" },
-            ]}
-            onChange={(thumbnail) => edit(sources({ thumbnail }))}
-          />
-          <Choice
-            label="Thumbnails per video"
-            value={String(form.thumbnailCount ?? 1) as "1" | "3"}
-            options={[
-              { value: "1", label: "One" },
-              { value: "3", label: "Three to compare" },
-            ]}
-            onChange={(count) => edit({ ...form, thumbnailCount: count === "3" ? 3 : 1 })}
-          />
-        </Controls>
-      );
-    case "document":
-      return (
-        <Controls>
-          <Choice
-            label="PDF"
-            value={form.sources.document === "generate" ? "generate" : "off"}
-            options={[
-              { value: "off", label: "Off" },
-              { value: "generate", label: "Make a PDF of the article" },
-            ]}
-            onChange={(document) => edit(sources({ document }))}
-          />
-          {form.sources.document === "generate" ? (
-            <PdfLook value={form.document} onChange={(next) => edit({ ...form, document: next })} />
-          ) : null}
-        </Controls>
-      );
-    default:
-      return null;
-  }
-}
-
-// Whether a section leads with who makes it: the article's writer or the image service, when
-// nobody chose one and no default of this computer stands in. The editor in the fold under it
-// then leaves its own service group out (`FineTune` withoutService), so it shows once.
-export function leadsWithService(
-  section: TemplateSection,
-  form: Form,
-  unchosen: { readonly llm: boolean; readonly images: boolean },
-): boolean {
-  if (section === "script") return unchosen.llm && form.sources.article === "generate";
-  if (section === "pictures") return unchosen.images && form.sources.images === "generate";
-  return false;
-}
-
-// Who makes a section nobody chose one in: Create's own group ("Written by", "Images by") over
-// Service and Model, saying in red, in the checks' words, that a run can't start yet, with the
-// way to a key when no service has one.
-function ServicePicker({
-  missing,
-  field,
-  family,
-  providers,
-  value,
-  onPick,
-}: {
-  // What the checks call it: "writing service".
-  readonly missing: string;
-  readonly field: "llm" | "images";
-  readonly family: "llm" | "image";
-  readonly providers: readonly ProviderStatus[];
-  readonly value: { readonly provider: string; readonly model: string };
-  readonly onPick: (next: { provider: string; model: string }) => void;
-}): ReactElement {
-  return (
-    <ServiceGroup
-      family={family}
-      providers={providers}
-      provider={value.provider}
-      model={value.model}
-      serviceField={`${field}.provider`}
-      modelField={`${field}.model`}
-      serviceProblem={
-        value.provider === "" ? `No ${missing} is chosen, so a run can't start.` : undefined
-      }
-      modelProblem={undefined}
-      onService={(provider) => onPick({ provider, model: "" })}
-      onModel={(model) => onPick({ provider: value.provider, model })}
-    />
-  );
-}
-
-// The look the PDF is drawn in, with a way to the looks themselves.
-function PdfLook({
-  value,
-  onChange,
-}: {
-  readonly value: Form["document"];
-  readonly onChange: (next: NonNullable<Form["document"]>) => void;
-}): ReactElement {
-  const id = useId();
-  return (
-    <Field id={id} label="PDF look">
-      <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-        <DocumentThemePicker
-          id={id}
-          field="document.theme"
-          draft
-          value={value}
-          disabled={false}
-          onChange={onChange}
-        />
-        <TextLink to="/document-themes" className="text-small">
-          Edit PDF looks
-        </TextLink>
-      </span>
-    </Field>
-  );
-}
-
-function TitlePattern({
-  value,
-  onChange,
-}: {
-  readonly value: string;
-  readonly onChange: (title: string) => void;
-}): ReactElement {
-  return (
-    <Field label="Video title" help="{{Topic}} is filled with each video's topic.">
-      <Input value={value} maxLength={200} onChange={(event) => onChange(event.target.value)} />
-    </Field>
-  );
-}
-
-function Controls({ children }: { readonly children: ReactNode }): ReactElement {
-  return (
-    <div data-slot="studio-controls" className="sl-fields">
-      {children}
-    </div>
-  );
-}
-
-// A choice row with its name shown above it, the way a field's label is, so a row of presets
-// never stands unlabelled (Shape, Captions, Image motion read alike as bare buttons).
-function Choice<T extends string>({
-  label,
-  wide = false,
-  ...rest
-}: {
-  readonly label: string;
-  // Spans the row, for a choice whose options need the room ("Landscape 16:9").
-  readonly wide?: boolean;
-  readonly value: T;
-  readonly options: readonly SegmentedOption<T>[];
-  readonly onChange: (next: T) => void;
-  readonly help?: string;
-}): ReactElement {
-  return (
-    <div className={wide ? "sl-field sl-fields__wide" : "sl-field"} data-slot="studio-choice">
-      <span className="sl-field__label" aria-hidden="true">
-        {label}
-      </span>
-      <Segmented label={label} {...rest} />
-    </div>
-  );
+        </Field>
+      </div>
+    );
+  return null;
 }

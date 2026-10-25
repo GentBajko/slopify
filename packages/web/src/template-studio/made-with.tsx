@@ -1,15 +1,12 @@
 import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
-import {
-  type ProviderChoices,
-  withProviderDefaults,
-} from "@app/slices/project-templates/provider-defaults.js";
+import type { ProviderChoices } from "@app/slices/project-templates/provider-defaults.js";
 import { sectionLabel, type TemplateSection } from "@app/slices/template-studio/model.js";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/kit/button";
 import { TextLink } from "@/components/kit/link";
 import { readFirstRun, upkeepKeys } from "@/components/provider-upkeep-api";
+import { modelsQuery } from "@/lib/models";
 import { providerUnavailableLabel } from "@/lib/provider-status";
 import { cn } from "@/lib/utils";
 import { providersQuery } from "@/queries";
@@ -28,52 +25,80 @@ export function useProviderDefaults(): ProviderChoices {
   return status.data?.defaults ?? {};
 }
 
-const lead: Partial<Readonly<Record<TemplateSection, string>>> = {
-  script: "Written by",
-  voice: "Read by",
-  pictures: "Images by",
-  thumbnail: "Thumbnail by",
-};
-
-const missingWhat: Partial<Readonly<Record<TemplateSection, string>>> = {
-  script: "writing service",
-  voice: "voice service",
-  pictures: "image service",
-  thumbnail: "image service",
-};
-
-// "Written by Claude Code CLI · sonnet (your default) · Change": who makes a section, in one
-// line, its change under All … settings. Nothing chosen is said in red, in the words the
-// checks use, so the section and the list agree. The thumbnail is drawn by the images' service
-// while the video has images of its own: that one is changed in Images, so the line links there.
-export function MadeWith({
-  templateId,
-  section,
-  document,
-  onChange,
-}: {
-  readonly templateId: string;
-  readonly section: TemplateSection;
-  readonly document: PlayDraftDocument;
-  readonly onChange: () => void;
-}): ReactElement | null {
+// A service and its model by the names its pickers show, the way Create says them:
+// "fal.ai (FLUX.2)", "Claude Code CLI (Sonnet 5.5)". Ids only until the lists answer.
+function useServiceName(choice: { readonly provider: string; readonly model: string }): {
+  readonly name: string;
+  readonly service: string;
+  readonly unusable: string | undefined;
+} {
   const { api } = useApp();
   const providers = useQuery(providersQuery(api));
+  const models = useQuery({
+    ...modelsQuery(api, choice.provider),
+    enabled: choice.provider !== "",
+  });
+  const status = providers.data?.providers.find((one) => one.id === choice.provider);
+  const service = status?.displayName ?? choice.provider;
+  const model =
+    choice.model === ""
+      ? undefined
+      : (models.data?.models.find((one) => one.id === choice.model)?.name ?? choice.model);
+  return {
+    name: model === undefined ? service : `${service} (${model})`,
+    service,
+    unusable: status === undefined ? undefined : providerUnavailableLabel(status.readiness),
+  };
+}
+
+// The writer or image service nobody saved with the template, shown by its pickers as this
+// computer's default: one line says so, since the pickers alone would read as saved.
+export function StandIn({
+  section,
+  document,
+}: {
+  readonly section: TemplateSection;
+  readonly document: PlayDraftDocument;
+}): ReactElement | null {
   const defaults = useProviderDefaults();
-  const filled = withProviderDefaults(document, defaults);
-  const choice = choiceOf(section, filled.form);
-  if (choice === undefined) return null;
-  const own = choiceOf(section, document.form);
-  const byDefault = own !== undefined && own.provider === "" && choice.provider !== "";
-  const service = providers.data?.providers.find((one) => one.id === choice.provider);
-  const name = service?.displayName ?? choice.provider;
-  // A service this computer can't use yet says so in the line, as the checks do.
-  const unusable = service === undefined ? undefined : providerUnavailableLabel(service.readiness);
-  const parts = [choice.voice, name, choice.model].filter(
-    (part): part is string => part !== undefined && part !== "",
+  const { form } = document;
+  const kind =
+    section === "script" && form.sources.article === "generate" && form.llm.provider === ""
+      ? "llm"
+      : section === "pictures" && form.sources.images === "generate" && form.images.provider === ""
+        ? "images"
+        : undefined;
+  const choice = kind === undefined ? undefined : defaults[kind];
+  const { name } = useServiceName(choice ?? { provider: "", model: "" });
+  if (kind === undefined || choice === undefined) return null;
+  return (
+    <p className="m-0 text-small text-ink-2">
+      {kind === "llm"
+        ? `Each video is written by your default, ${name}: no writer is saved with this template yet.`
+        : `Each video's images are made by your default, ${name}: no image service is saved with this template yet.`}
+    </p>
   );
+}
+
+// "Thumbnail by fal.ai (FLUX.2) · Change it in Images": a thumbnail drawn while the video has
+// images of its own is drawn by the images' service, which is changed in Images. Nothing chosen
+// is said in red, in the words the checks use, so the section and the list agree.
+export function MadeWith({
+  templateId,
+  document,
+}: {
+  readonly templateId: string;
+  readonly document: PlayDraftDocument;
+}): ReactElement | null {
+  const defaults = useProviderDefaults();
+  const { form } = document;
+  const own = form.images;
+  const choice = own.provider === "" ? (defaults.images ?? own) : own;
+  const { name, service, unusable } = useServiceName(choice);
+  const drawn =
+    form.sources.thumbnail === "from_prompt" || form.sources.thumbnail === "prompt_by_llm";
+  if (!drawn || form.sources.images !== "generate") return null;
   const none = choice.provider === "";
-  const inImages = section === "thumbnail" && document.form.sources.images === "generate";
   return (
     <p
       className={cn(
@@ -82,42 +107,16 @@ export function MadeWith({
       )}
     >
       {none
-        ? `No ${missingWhat[section] ?? "service"} is chosen, so a run can't start.`
-        : `${lead[section] ?? "Made with"} ${parts.join(" · ")}${byDefault ? " (your default)" : ""}${unusable === undefined ? "" : ` (${name}: ${unusable.toLowerCase()})`}`}
-      {inImages ? (
-        <TextLink
-          to="/templates/$templateId"
-          params={{ templateId }}
-          search={{ section: "pictures" }}
-          className="text-small"
-        >
-          {`${none ? "Choose one" : "Change it"} in ${sectionLabel.pictures}`}
-        </TextLink>
-      ) : (
-        <Button variant="quiet" size="small" onClick={onChange}>
-          {none ? "Choose one" : "Change"}
-        </Button>
-      )}
+        ? "No image service is chosen, so a run can't start."
+        : `Thumbnail by ${name}${own.provider === "" ? " (your default)" : ""}${unusable === undefined ? "" : ` (${service}: ${unusable.toLowerCase()})`}`}
+      <TextLink
+        to="/templates/$templateId"
+        params={{ templateId }}
+        search={{ section: "pictures" }}
+        className="text-small"
+      >
+        {`${none ? "Choose one" : "Change it"} in ${sectionLabel.pictures}`}
+      </TextLink>
     </p>
   );
-}
-
-function choiceOf(
-  section: TemplateSection,
-  form: PlayDraftDocument["form"],
-): { readonly provider: string; readonly model: string; readonly voice?: string } | undefined {
-  switch (section) {
-    case "script":
-      return form.sources.article === "generate" ? form.llm : undefined;
-    case "voice":
-      return form.sources.audio === "generate" ? form.audio : undefined;
-    case "pictures":
-      return form.sources.images === "generate" ? form.images : undefined;
-    case "thumbnail":
-      return form.sources.thumbnail === "from_prompt" || form.sources.thumbnail === "prompt_by_llm"
-        ? form.images
-        : undefined;
-    default:
-      return undefined;
-  }
 }

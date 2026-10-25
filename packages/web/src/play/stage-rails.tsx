@@ -126,9 +126,8 @@ export function ArticleRail({ form, prompts, problem, update, titled }: RailProp
   );
 }
 
-// Outputs → Thumbnail: one tick; once ticked, how it is made and from what. Bare (Edit
-// template, whose section leads with the source and the count), only who draws it, its prompt
-// or its file.
+// Extras → Thumbnail (and Edit template's Thumbnail): one tick; once ticked, how it is made and
+// from what.
 export function ThumbnailRail({
   form,
   providers,
@@ -138,7 +137,6 @@ export function ThumbnailRail({
   onPickFiles,
   onRemoveFile,
   onReattachFile,
-  bare = false,
 }: RailProps) {
   const generating =
     form.sources.thumbnail === "from_prompt" || form.sources.thumbnail === "prompt_by_llm";
@@ -167,14 +165,12 @@ export function ThumbnailRail({
               update({ thumbnailPrompt });
             }}
           />
-          {bare ? null : (
-            <ThumbnailCountPicker
-              value={form.thumbnailCount === 3 ? 3 : 1}
-              onPick={(thumbnailCount) => {
-                update({ thumbnailCount });
-              }}
-            />
-          )}
+          <ThumbnailCountPicker
+            value={form.thumbnailCount === 3 ? 3 : 1}
+            onPick={(thumbnailCount) => {
+              update({ thumbnailCount });
+            }}
+          />
         </div>
       ) : null}
       {form.sources.thumbnail === "provide" ? (
@@ -197,7 +193,6 @@ export function ThumbnailRail({
       ) : null}
     </>
   );
-  if (bare) return made;
   return (
     <OutputTick
       field="sources.thumbnail"

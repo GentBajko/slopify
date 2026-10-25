@@ -271,8 +271,6 @@ export function ImagesRail({
   startAt,
   more,
   titled,
-  bare,
-  withoutService,
 }: RailProps & {
   readonly rawNumbers?: ComponentProps<typeof ImagePrompts>["rawNumbers"];
   // How many images a newly ticked image prompt starts on.
@@ -286,19 +284,16 @@ export function ImagesRail({
       name="Images"
       dim={form.sources.images === "off"}
       titled={titled}
-      bare={bare}
       source={<SourceSwitch kind="images" form={form} update={update} />}
     >
       {form.sources.images === "generate" ? (
         <>
-          {withoutService === true ? null : (
-            <ImageProviderControls
-              form={form}
-              providers={providers}
-              problem={problem}
-              update={update}
-            />
-          )}
+          <ImageProviderControls
+            form={form}
+            providers={providers}
+            problem={problem}
+            update={update}
+          />
           <ImagePrompts
             prompts={prompts.filter((prompt) => prompt.kind === "image")}
             {...(rawNumbers ? { rawNumbers } : {})}

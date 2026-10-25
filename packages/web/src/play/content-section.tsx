@@ -17,7 +17,7 @@ export function ContentSection(
   return (
     <>
       <ArticleRail {...props} titled={false} />
-      {props.withoutService === true ? null : <TextGenerationIn {...props} section="article" />}
+      <TextGenerationIn {...props} section="article" />
       {form.sources.article === "off" ? (
         <p className="m-0 py-4 text-small text-ink-2">
           No text: for a set of images or a thumbnail made from prompts. Narration, the PDF and

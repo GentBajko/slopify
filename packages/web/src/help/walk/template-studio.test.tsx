@@ -16,24 +16,8 @@ afterEach(cleanup);
 // button beside a button, a heading or a row (or a field's second one), and a second lime
 // button in one area.
 const studioAllow: readonly (string | RegExp)[] = [
-  // Names that say what they set: the template's own name, and presets whose options name
-  // every choice ("Landscape 16:9", "On the video", "Zoom").
+  // The template's own name says what it sets.
   "Template name",
-  "Article",
-  "Images",
-  "Shape",
-  "Captions",
-  "Image motion",
-  "Seconds per image",
-  "Thumbnail",
-  "Thumbnails per video",
-  "PDF",
-  "Soften breaths",
-  "Soften S sounds",
-  // The service and model pickers under "Images by" when nothing makes the images yet: their
-  // red line says why they matter.
-  "Service",
-  "Model",
   // The sample topic drawer's own topic, under the sentence saying what the topic is for.
   "Your topic",
 ];
