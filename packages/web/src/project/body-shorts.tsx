@@ -348,11 +348,10 @@ function ShortCard({
       <p className="m-0 text-label text-ink-2 tabular-nums">
         {duration(video?.durationMs ?? Math.round((clip.end - clip.start) * 1000))}
       </p>
-      <p className="m-0 break-words text-small text-ink-2">{clip.description}</p>
-      <p className="m-0 break-words text-small text-ink-2">{clip.hashtags.join(" ")}</p>
-      <ReviewVerdict review={review} projectId={projectId} busy={state === "running"} />
-      {/* The tile's actions in words, at rest: its file, and what goes with its upload. */}
-      <ButtonRow className="mt-1 gap-1">
+      {/* The tile's actions in words, at rest, right under its name: its file, and what goes
+          with its upload. Its text to read comes after, so the actions stay on the first
+          screen at every width. */}
+      <ButtonRow className="gap-1">
         {video !== undefined && media !== undefined ? (
           <FileLink href={media.url} download size="small">
             <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
@@ -368,6 +367,9 @@ function ShortCard({
           </span>
         </Button>
       </ButtonRow>
+      <p className="m-0 break-words text-small text-ink-2">{clip.description}</p>
+      <p className="m-0 break-words text-small text-ink-2">{clip.hashtags.join(" ")}</p>
+      <ReviewVerdict review={review} projectId={projectId} busy={state === "running"} />
       {onRemake === undefined ? null : (
         <Button variant="quiet" size="small" className="self-start" onClick={onRemake}>
           <span>

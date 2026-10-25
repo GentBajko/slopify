@@ -60,8 +60,7 @@ With the establishing image on, the shorts' images are drawn with it as a refere
 When the run finishes, the project page's **Shorts** part shows the shorts side by side. Above them sit **Download all 3 shorts (.zip)** (or **Download both shorts (.zip)**; none with one short), **Open folder** and **Pick different moments · AI and image calls**, and **Show what YouTube covers on a phone** draws the parts of the frame YouTube's buttons hide. Each short has:
 
 - A vertical player (Slopify's own, showing the short's first picture until it plays), its title and length.
-- Its description and its hashtags.
-- Its actions in words: **Download (.mp4)**, **Copy for YouTube**, which puts its title, description, full video line and hashtags on the clipboard in one go, and **Make this short again · 4 calls** under them (one AI call for its image prompts and one image call per image).
+- Right under them, its actions in words: **Download (.mp4)**, **Copy for YouTube**, which puts its title, description, full video line and hashtags on the clipboard in one go, then its description and its hashtags, and **Make this short again · 4 calls** last (one AI call for its image prompts and one image call per image).
 
 **Pick different moments** and **Make this short again** each ask first, naming their paid calls; press the button in the dialog and the work starts at once. The new version is saved for you, so the current shorts stay under **Versions**.
 
