@@ -437,6 +437,22 @@
   .sl-fold[open] > .sl-fold__summary .sl-fold__toggle::after {
     content: "Hide";
   }
+  /* On a phone the state takes its own line under the name, so a long one ("Split by chapter,
+     2 voices") leaves the name and Show on one line instead of squeezing the name onto three. */
+  @media (max-width: 480px) {
+    .sl-fold__summary {
+      flex-wrap: wrap;
+      row-gap: 0;
+    }
+    .sl-fold__state {
+      order: 1;
+      flex-basis: 100%;
+      padding-left: var(--fold-indent);
+    }
+    .sl-fold__state::before {
+      content: none;
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
     .sl-fold__chevron {
       transition: none;

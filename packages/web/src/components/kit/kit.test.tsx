@@ -228,6 +228,12 @@ describe("a fold", () => {
     expect((details as HTMLDetailsElement).open).toBe(true);
   });
 
+  it("puts its state on a line of its own under the name on a phone", () => {
+    expect(css).toMatch(
+      /@media \(max-width: 480px\) \{\s*\.sl-fold__summary \{\s*flex-wrap: wrap;[^}]*\}\s*\.sl-fold__state \{\s*order: 1;\s*flex-basis: 100%;\s*padding-left: var\(--fold-indent\);/,
+    );
+  });
+
   it("leaves the state out when it has none", () => {
     render(
       <Fold summary="Install the extension">
