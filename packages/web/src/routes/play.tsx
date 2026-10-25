@@ -1,3 +1,4 @@
+import { render } from "@app/slices/admission/substitute.js";
 import { topicKeywords } from "@app/slices/project-templates/one-off.js";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -18,7 +19,7 @@ import { usePlayDraft } from "@/lib/form-drafts";
 import { modelsKey, modelsQuery, type ProviderModels } from "@/lib/models";
 import { shortcuts } from "@/lib/shortcuts";
 import { exactTime, startedAt } from "@/lib/utils";
-import { admission, keywordOrigins } from "@/play/admission";
+import { admission, fixOf, keywordOrigins } from "@/play/admission";
 import { BrandKitControls, ChannelFor, useDraftCast } from "@/play/channel-picker";
 import { checkpointTarget } from "@/play/checkpoints";
 import { ContentSection } from "@/play/content-section";
@@ -132,6 +133,8 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   // picked, or a rule the browser's copy could not see.
   const refused = session.review.fields;
   const [touched, setTouched] = useState<ReadonlySet<string>>(new Set());
+  // The typed fields (the topic, the keywords) the person typed in.
+  const [typedIn, setTypedIn] = useState<ReadonlySet<string>>(new Set());
   const [open, setOpen] = useState<ReadonlySet<SetupRowId>>(new Set());
   const [adding, setAdding] = useState(false);
   const [variantOpen, setVariantOpen] = useState<string | null>(null);
@@ -178,6 +181,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     if (touchedDraft.current !== session.activeId) {
       touchedDraft.current = session.activeId;
       setTouched(new Set());
+      setTypedIn(new Set());
       setVariantOpen(null);
       setPressed(false);
     }
@@ -264,19 +268,30 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     return playFieldTarget(field, form, batchItems, choices.entries, choices.prompts);
   };
   // A field says what is wrong with it once it has been touched, or once the server refused
-  // it; what is typed (the topic, the keywords) never turns red before the person has been in
-  // it or pressed the Make button, however early the server checks the draft.
+  // it. What is typed (the topic, the keywords) turns red only once the person typed in it and
+  // left it, or pressed the Make button: going in and out of an empty box is not a mistake.
+  // The topic and the services say it in the words of their row and the hint ("Type what the
+  // video is about"), not the rule's.
+  const own = result.ok ? [] : result.fields;
   const problem = (field: string): string | undefined => {
     const canonical = target(field).field;
-    return errors.find((error) => {
+    const found = errors.find((error) => {
       if (target(error.field).field !== canonical) return false;
-      const typed = error.field === "title" || error.field.startsWith("values.");
-      return (
-        touched.has(field) ||
-        touched.has(canonical) ||
-        (refused.includes(error) && (!typed || pressed))
-      );
-    })?.message;
+      const left = touched.has(field) || touched.has(canonical);
+      if (error.field === "title" || error.field.startsWith("values."))
+        return (
+          (left && (typedIn.has(field) || typedIn.has(canonical))) ||
+          (refused.includes(error) && pressed)
+        );
+      return left || refused.includes(error);
+    });
+    if (found === undefined) return undefined;
+    const server = refused.includes(found) && !own.some((other) => other.field === found.field);
+    const formWords =
+      found.field === "title" ||
+      found.field.startsWith("values.") ||
+      ["llm", "audio", "images"].includes(found.field);
+    return server || !formWords ? found.message : (fixOf(form, found) ?? found.message);
   };
   const revealField = (field: string): void => {
     const found = target(field);
@@ -313,6 +328,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     llmRow,
     blocker,
     readinessFirst: readinessProblems(form, choices.entries, providerList, llmRow),
+    providers: providerList,
   });
   const problems = settling ? [] : missing;
   const rowProblem = (row: SetupRowId): SetupProblem | undefined =>
@@ -585,7 +601,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     id: "play.start",
     title: startLabel(session.review, document),
     group: "Create",
-    context: form.title || "New project",
+    context: titleShown(form.title, form.values),
     keywords: ["start", "queue", "run", "make", "go"],
     run: () => {
       if (canStart) start();
@@ -661,6 +677,17 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
       onBlurCapture={(event) => {
         const field = (event.target as HTMLElement).dataset.playField;
         if (field) setTouched((current) => new Set([...current, field]));
+      }}
+      // Only the typed boxes: a select's input event comes before its change, and drawing the
+      // page between them would put its old value back.
+      onInputCapture={(event) => {
+        const field = (event.target as HTMLElement).dataset.playField;
+        if (
+          field !== undefined &&
+          (field === "title" || field.startsWith("values.")) &&
+          !typedIn.has(field)
+        )
+          setTypedIn((current) => new Set([...current, field]));
       }}
       data-play-grid="true"
       className="min-w-0 max-[767px]:[&_button]:min-h-11 max-[767px]:[&_input:not([type=checkbox])]:min-h-11 max-[767px]:[&_select]:min-h-11 max-[767px]:[&_summary]:min-h-11"
@@ -807,4 +834,12 @@ function RowCommand({
     run: () => onOpen(id, true),
   });
   return null;
+}
+
+// The title as the run will have it, for the command palette: the keywords filled in, or
+// "Untitled" while one is still empty.
+function titleShown(title: string, values: Readonly<Record<string, string>>): string {
+  const filled = Object.fromEntries(Object.entries(values).filter(([, value]) => value.trim()));
+  const shown = render(title, filled).trim();
+  return shown === "" || /\{\{[^{}]*\}\}/.test(shown) ? "Untitled" : shown;
 }

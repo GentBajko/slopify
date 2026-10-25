@@ -92,7 +92,12 @@ describe("one list of what stops the Make button", () => {
   it("puts the topic first, then one problem per row, top to bottom", () => {
     const errors = [error("images"), error("audio"), error("articlePrompt"), error("title")];
     const problems = setupProblems({
-      form: { ...form, title: "" },
+      form: {
+        ...form,
+        title: "",
+        audio: { ...form.audio, provider: "", model: "" },
+        images: { provider: "", model: "" },
+      },
       errors,
       refused: [],
       topics: [],
@@ -106,6 +111,42 @@ describe("one list of what stops the Make button", () => {
     ]);
     // The row says the same thing to do, without "first".
     expect(problems[1]?.text).toBe("Pick an article prompt");
+  });
+
+  it("names what is missing of a picked service, and the way out when none of its kind answers", () => {
+    const picked = setupProblems({
+      form: { ...form, audio: { ...form.audio, model: "" }, images: { provider: "", model: "" } },
+      errors: [error("audio"), error("images")],
+      refused: [],
+      topics: [],
+      llmRow: "article",
+      // No image service has a key here.
+      providers: providers.map((one) =>
+        one.family === "image"
+          ? { ...one, readiness: { kind: "keyed" as const, hasKey: false } }
+          : one,
+      ),
+    });
+    expect(picked.map((one) => [one.text, one.hint])).toEqual([
+      ["Pick a voice model", "Pick a voice model first"],
+      [
+        "No image service has a key yet: add one in Settings, or set Images to None.",
+        "Add an image service key first",
+      ],
+    ]);
+  });
+
+  it("asks for every speaker's voice without naming a starter speaker", () => {
+    const problems = setupProblems({
+      form,
+      errors: [error("voices.speakers.0.voice", "Choose a voice service and model for Alex.")],
+      refused: [],
+      topics: [],
+      llmRow: "article",
+    });
+    expect(problems.map((one) => [one.text, one.hint])).toEqual([
+      ["Pick a voice for each speaker", "Pick a voice for each speaker first"],
+    ]);
   });
 
   it("keeps what the server refused in its own words, ahead of the form's rule on that row", () => {
@@ -129,7 +170,7 @@ describe("one list of what stops the Make button", () => {
 
   it("puts an upload still copying before everything, and a rule no row holds after the rows", () => {
     const problems = setupProblems({
-      form,
+      form: { ...form, audio: { ...form.audio, provider: "", model: "" } },
       errors: [error("future.rule", "A new rule requires attention."), error("audio")],
       refused: [],
       topics: [],

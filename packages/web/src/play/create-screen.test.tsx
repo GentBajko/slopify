@@ -184,6 +184,22 @@ describe("what is missing, said once and the same everywhere", () => {
   });
 });
 
+describe("the topic box", () => {
+  it("stays quiet when the person only goes in and out of it, and says the hint's words once typed in", async () => {
+    await mountPlay({}, { ...generatedRun, form: { ...generatedRun.form, title: "" } });
+    const box = screen.getByLabelText(topicLabel);
+    await userEvent.click(box);
+    await userEvent.tab();
+    expect(box.getAttribute("aria-invalid")).toBe("false");
+    expect(screen.queryByText("Fill in this field.")).toBeNull();
+    await userEvent.type(box, "x");
+    await userEvent.clear(box);
+    await userEvent.tab();
+    expect(box.getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByText("Type what the video is about")).not.toBeNull();
+  });
+});
+
 describe("what Create starts from", () => {
   it("starts from the first starter template, with the services the first launch found", async () => {
     const { session, requests } = await mountStarter();

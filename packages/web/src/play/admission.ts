@@ -265,6 +265,10 @@ export function fixOf(form: PlayFormState, error: FieldError): string | undefine
   }
   const keyword = keywordFix(error);
   if (keyword !== undefined) return keyword;
+  // A podcast's or audiobook's speakers: said for all of them, since a starter speaker's name
+  // ("Alex") is one the person never chose.
+  if (/^voices\.speakers\.\d+\.voice(\.voice)?$/.test(error.field))
+    return "Pick a voice for each speaker";
   if (error.field.startsWith("imagePrompts.")) {
     return error.field.endsWith(".number")
       ? `Set how many images, from 1 to ${String(numberPerPromptMax)}`
@@ -280,15 +284,20 @@ export function fixOf(form: PlayFormState, error: FieldError): string | undefine
         ? "Tick an image prompt"
         : `Lower the image counts to ${String(imagesPerRunMax)} in all`;
     case "llm":
-      return "Pick a service and model to write the text";
+      return form.llm.provider === ""
+        ? "Pick a service and model to write the text"
+        : "Pick a model to write the text";
     case "articlePrompt":
       return articleKind(form) === "script" ? "Pick a script prompt" : "Pick an article prompt";
     case "audio":
-      return "Pick a voice service";
+      // The service picked, its model is what is missing.
+      return form.audio.provider === "" ? "Pick a voice service" : "Pick a voice model";
     case "audio.voice":
       return "Pick a voice";
     case "images":
-      return "Pick an image service and model";
+      return form.images.provider === ""
+        ? "Pick an image service and model"
+        : "Pick an image model";
     case "thumbnailPrompt":
       return "Pick a thumbnail prompt";
     case "youtubeDescription":
