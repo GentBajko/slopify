@@ -447,7 +447,7 @@ it("keeps a stage's start between its steps", () => {
     const step = (index: number, state: string) =>
       deps.db
         .prepare("UPDATE revision_work SET state=? WHERE id=?")
-        .run(state, steps[index]?.work.workId);
+        .run(state, steps[index]?.work.workId ?? "");
     step(0, "running");
     projectStandings(deps, h.projectId);
     now = "2026-09-10T01:02:00.000Z";
