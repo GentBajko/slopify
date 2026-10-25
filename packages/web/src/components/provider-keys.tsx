@@ -136,7 +136,7 @@ function windowBottom(): number {
 // shows its heading down to its key box and the buttons under it (the whole setup when it has
 // no key box), and never past its heading. A setup already in view leaves the page where it is,
 // so the page header and its way back stay in view on a wide screen.
-export function bringSetupIntoView(setup: HTMLElement, arrival: boolean): void {
+function bringSetupIntoView(setup: HTMLElement, arrival: boolean): void {
   // A link's arrival starts from the top, as any new page does (the router leaves this one's
   // scroll to the page: `keysArrival`), so the header stays in view when it can.
   if (arrival) window.scrollTo({ top: 0, left: 0 });
@@ -245,7 +245,11 @@ export function ProviderKeys({
   useEffect(() => {
     if (focus === undefined || !settled) return;
     const target = targetOf(listed, focus, saved);
-    if (target === undefined) return;
+    if (target === undefined) {
+      // Nothing to open: an arrival starts at the top, as the router would have put it.
+      if (focus.arrival) window.scrollTo({ top: 0, left: 0 });
+      return;
+    }
     setByItself(false);
     setPicked(target.id);
     setBring({ id: target.id, arrival: focus.arrival });

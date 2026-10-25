@@ -53,7 +53,7 @@ const families: readonly {
 // The voice service whose key narrates at once: the first short saves its starter voice.
 const keyNarrates: ProviderId = "openai-tts";
 
-export type ReadinessState = "ready" | "no-key" | "no-voice";
+type ReadinessState = "ready" | "no-key" | "no-voice";
 
 const stateWords: Readonly<Record<ReadinessState, string>> = {
   ready: "Ready",

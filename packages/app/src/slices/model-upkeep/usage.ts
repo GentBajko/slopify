@@ -23,7 +23,7 @@ function familyOf(slot: UsageSlot): "llm" | "tts" | "image" {
 
 // A Create draft's name as Create's header says it: its title once every keyword in it is
 // filled, else "Untitled draft". Never a raw {{Topic}}.
-export function draftName(title: string, values: Readonly<Record<string, string>>): string {
+function draftName(title: string, values: Readonly<Record<string, string>>): string {
   const filled = title
     .replace(/\{\{\s*([^{}]+?)\s*\}\}/g, (keyword, name: string) => {
       const value = values[name]?.trim() ?? "";

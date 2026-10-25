@@ -33,7 +33,7 @@ const needNames: Readonly<Record<Need, string>> = {
 
 // What a gap lacks, in the words Keys & services uses for the same state: a voice service with
 // a key and no voice saved, or no key (nor sign-in) for that part at all.
-export function gapWord(fix: ShortGap["fix"]): string {
+function gapWord(fix: ShortGap["fix"]): string {
   return fix === "saved-voice" ? "No voice saved" : "No key";
 }
 
