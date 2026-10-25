@@ -382,7 +382,7 @@
     .sl-lightbox__bar {
       grid-template-columns: minmax(0, 1fr) auto;
     }
-    .sl-lightbox__close {
+    .sl-lightbox__nav {
       grid-column: 2;
       grid-row: 1;
     }

@@ -239,8 +239,9 @@ export function Lightbox({
           {item === undefined || index === null ? null : (
             <>
               {/* One line of title (the whole prompt is the caption under the picture), the
-                  item's actions, and Close always in the top right corner; on a phone the
-                  actions take the line under the title and the zoom keys give way to pinching. */}
+                  item's actions, then paging and Close always in the top right corner; on a
+                  narrower screen the actions take the line under the title and, on a phone,
+                  the zoom keys give way to pinching. */}
               <div className="sl-lightbox__bar">
                 <DialogPrimitive.Title className="sl-lightbox__title m-0 text-small font-semibold">
                   {`${String(index + 1)} of ${String(count)} · ${item.title ?? item.alt}`}
@@ -268,18 +269,20 @@ export function Lightbox({
                       </IconButton>
                     </span>
                   ) : null}
+                </div>
+                <div className="sl-lightbox__nav sl-btn-row">
                   <IconButton label="Previous" onClick={() => page(-1)} disabled={count < 2}>
                     <ChevronLeftIcon aria-hidden="true" strokeWidth={1.75} />
                   </IconButton>
                   <IconButton label="Next" onClick={() => page(1)} disabled={count < 2}>
                     <ChevronRightIcon aria-hidden="true" strokeWidth={1.75} />
                   </IconButton>
+                  <DialogPrimitive.Close asChild>
+                    <IconButton label="Close">
+                      <XIcon aria-hidden="true" strokeWidth={1.75} />
+                    </IconButton>
+                  </DialogPrimitive.Close>
                 </div>
-                <DialogPrimitive.Close asChild>
-                  <IconButton label="Close" className="sl-lightbox__close">
-                    <XIcon aria-hidden="true" strokeWidth={1.75} />
-                  </IconButton>
-                </DialogPrimitive.Close>
               </div>
               <div className="sl-lightbox__stage">
                 {item.kind === "video" ? (
