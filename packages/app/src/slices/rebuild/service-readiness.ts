@@ -115,7 +115,10 @@ export function localReadiness(
         message: "The configured CLI command changed. Check readiness again before rebuilding.",
       });
     if (provider?.readiness.kind === "keyed" && !hasKey(deps.db, provider.id))
-      fields.push({ field: choice.family, message: "Save the provider key before rebuilding." });
+      fields.push({
+        field: choice.family,
+        message: "Its key isn't saved yet. Add it in Settings → Keys & services, then try again.",
+      });
     if (
       choice.voice !== undefined &&
       !listVoices(deps.db).some(
