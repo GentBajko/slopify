@@ -2,7 +2,7 @@
 
 Slopify keeps two kinds of files apart: your files (projects, backups, exports), in a normal folder you can open, and Slopify's own data (database, settings, keys, logs), in a hidden folder. This page says where each is, how to move your files, and how to free disk space.
 
-**Where to find it:** Settings → **Backup & storage** → **Your files**, **Export and import**, **Disk space** and **Sample projects**.
+**Where to find it:** Settings → **Backup & storage** → **Your files**, **Export and import** and **Disk space**.
 
 ## The two places
 
@@ -160,7 +160,7 @@ Cleanup only looks inside `Projects`. It leaves `Backups` alone (only Slopify's 
 
 ## Sample projects
 
-**Sample projects** lists the three bundled samples and whether each is in your projects, with **Open**. **Restore samples** adds back any that were deleted and replaces the others with the originals. Your own copies of them are not touched. See [First Launch and Welcome](First-Launch-and-Welcome#explore-the-samples).
+At the foot of **Disk space**, **Restore samples** puts the three bundled samples back: it adds back any that were deleted (the line beside it names them) and replaces the others with the originals. Your own copies of them are not touched. See [First Launch and Welcome](First-Launch-and-Welcome#explore-the-samples).
 
 ## Tips
 

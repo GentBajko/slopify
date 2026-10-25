@@ -71,9 +71,8 @@ A sample's project page says "This is the sample project, finished and free to e
 
 ### Restore the samples
 
-1. Open Settings → **Backup & storage** and scroll to **Sample projects**.
-2. Each sample shows whether it is **in your projects** or **not in your projects**, with **Open**.
-3. Press **Restore samples**. It puts all three back as they shipped: it adds back any that were deleted and replaces the others with the originals. Your own copies are not touched.
+1. Open Settings → **Backup & storage** and scroll to **Disk space**.
+2. Press **Restore samples**. The line beside it says which samples it brings back. It puts all three back as they shipped: it adds back any that were deleted and replaces the others with the originals. Your own copies are not touched.
 
 ## Starter templates
 
