@@ -128,7 +128,7 @@ If an install or update fails, the message names what failed and, in Docker, the
 
 | What you see | What it means |
 | --- | --- |
-| **Queued** | Other videos in the queue go first. Home's **Running** → **Waiting to start** and the Calendar's **Batch queue** show the order. |
+| **Queued** | Other videos in the queue go first. Home's and the Calendar's **Waiting to start** show the order. |
 | **Waiting for limits** / "Waiting for Codex limits (resets at 14:00)" | A CLI plan is used up; the run waits and carries on after the reset time shown. |
 | **Waiting to try again** | A rate limit or timeout; it retries at the time shown. |
 | **Waiting for your review** | A pause is holding the run. Press **Approve and make the …**. See [Pauses and Checks](Reviews-and-Checkpoints). |

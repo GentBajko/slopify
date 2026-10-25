@@ -212,7 +212,7 @@ Each one says what it did in a notice with **Undo**: Undo after a delete restore
 
 ### The video queue
 
-Videos started together (**Queue 3 videos** in Create, for example) run one at a time. Home lists the ones waiting under **Running**, and the **Queued** filter here lists them in the order they start, each with **Earlier**, **Later** and **Remove**; the calendar has the same list under **Batch queue** (see [Calendar](Calendar#the-batch-queue)). A project page says how many videos wait while any do. Pausing a project holds the queue; when one fails or is canceled, the next one starts.
+Videos started together (**Queue 3 videos** in Create, for example) run one at a time. Home lists the ones waiting under **Running**, and the **Queued** filter here lists them in the order they start, each with **Earlier**, **Later** and **Remove**; the calendar has the same list under **Waiting to start** (see [Calendar](Calendar#the-batch-queue)). The page of a project in the queue says how many videos wait to start. Pausing a project holds the queue; when one fails or is canceled, the next one starts.
 
 ### When there are no projects
 

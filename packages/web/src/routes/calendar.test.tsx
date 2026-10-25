@@ -588,7 +588,7 @@ describe("what needs you and what is ready", () => {
 });
 
 describe("the batch queue", () => {
-  it("shows every queued video in its order, and a paused one as paused (Projects no longer repeats it)", async () => {
+  it("lists the videos still to start as Home does, and says when a paused one holds them", async () => {
     const item = (projectId: string, title: string, position: number, state: string) => ({
       projectId,
       title,
@@ -620,15 +620,19 @@ describe("the batch queue", () => {
         "GET /api/schedules": jsonAnswer({ schedules: [] }),
       }),
     );
-    const queue = await screen.findByRole("list", { name: "Batch queue" });
+    // Home's list in Home's words: the videos still to start, numbered, the started one left out
+    // of the count; that it is paused, holding the rest, is said once above them.
+    const section = await screen.findByRole("region", { name: "Waiting to start" });
+    expect(within(section).getByText("1 video, in the order they start")).not.toBeNull();
+    expect(
+      within(section).getByText("Second is paused, so none of these starts until it continues."),
+    ).not.toBeNull();
+    const queue = within(section).getByRole("list", { name: "Waiting to start" });
     const rows = within(queue).getAllByRole("listitem");
-    expect(rows.map((row) => within(row).getByRole("link").textContent)).toEqual([
-      "First",
-      "Second",
-    ]);
-    expect(within(rows[0] as HTMLElement).getByText("1 in line")).not.toBeNull();
-    expect(within(rows[0] as HTMLElement).getByText("Waiting its turn")).not.toBeNull();
-    expect(within(rows[1] as HTMLElement).getByText("Paused")).not.toBeNull();
+    expect(rows).toHaveLength(1);
+    expect(within(rows[0] as HTMLElement).getByText("1.")).not.toBeNull();
+    expect(within(rows[0] as HTMLElement).getByText("Queued")).not.toBeNull();
+    expect(screen.queryByText(/in line|Waiting its turn|Running now/)).toBeNull();
   });
 });
 

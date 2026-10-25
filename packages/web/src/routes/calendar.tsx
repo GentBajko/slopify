@@ -1,6 +1,5 @@
 import type { Calendar, CalendarRun } from "@app/slices/schedules/schema.js";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "lucide-react";
 import { type ReactElement, useMemo, useState } from "react";
 import { useApp } from "@/app-context";
@@ -23,20 +22,18 @@ import { RecentlyFinished, recentlyFinished } from "@/calendar/recent";
 import { SuggestedTopics, suggesting } from "@/calendar/suggestions";
 import { useCalendarMoves } from "@/calendar/use-moves";
 import { ChannelPicker, useCurrentChannel } from "@/channels/current";
-import { QueueItemActions } from "@/components/batch-queue";
+import { QueueList } from "@/components/batch-queue";
 import { StatusSlot } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
 import { EmptyState } from "@/components/kit/empty-state";
 import { PageHeader } from "@/components/kit/layout";
 import { ButtonLink, TextLink } from "@/components/kit/link";
-import { List, ListRow } from "@/components/kit/list-row";
 import { LoadFailed, LoadingBlock, StaleNote } from "@/components/kit/query-state";
 import { SectionHead } from "@/components/kit/section-head";
-import { Status } from "@/components/kit/status";
 import { Segmented } from "@/components/kit/switch";
 import { TabPanel, Tabs } from "@/components/kit/tabs";
-import { fullDay } from "@/lib/format";
+import { fullDay, plural } from "@/lib/format";
 import { intents, useIntent } from "@/lib/intents";
 import { projectsQuery } from "@/queries";
 import { calendarQuery, schedulesQuery } from "@/schedules/api";
@@ -241,8 +238,16 @@ export function CalendarRoute({
   // The status slot is for what the person just did; a failed load says so in place, with Retry.
   const today = dayKey(new Date());
   const windowLabel = `${shortDay.format(new Date(range.from))} to ${shortDay.format(new Date(Date.parse(range.to) - 2 * dayMs))}`;
-  const waiting = (visible?.queued ?? []).toSorted((a, b) => a.position - b.position);
+  // The queue of the channel shown, in its order.
+  const waiting = (visible?.queued ?? [])
+    .filter((item) => current.includes(projectChannel.get(item.projectId)))
+    .toSorted((a, b) => a.position - b.position);
   const stillWaiting = waiting.filter((item) => item.state === "queued");
+  const holdingQueue = waiting.find(
+    (item) =>
+      item.state === "active" &&
+      visible?.projects.find((one) => one.id === item.projectId)?.state === "paused",
+  );
   const scheduleCount = (schedules.data ?? []).filter((one) => one.deletedAt === null).length;
   const planned = `${String(allRuns.length)} ${allRuns.length === 1 ? "video" : "videos"} planned ${shift === 0 ? `in the next ${String(weeks)} weeks` : windowLabel}`;
 
@@ -449,53 +454,21 @@ export function CalendarRoute({
                 )}
               </section>
             ) : null}
-            {visible !== undefined && visible.queued.length > 0 ? (
-              <section aria-label="Batch queue">
+            {stillWaiting.length > 0 ? (
+              // Home's list, in Home's words: the videos still to start, numbered in their order,
+              // with Earlier, Later and Remove. The one running is on Home under Running.
+              <section aria-label="Waiting to start" className="flex flex-col gap-1">
                 <SectionHead
-                  title="Batch queue"
-                  meta={`${String(visible.queued.length)} waiting to start, one at a time`}
+                  title="Waiting to start"
+                  meta={`${plural(stillWaiting.length, "video", "videos")}, in the order they start`}
                 />
-                <List label="Batch queue">
-                  {waiting.map((item, index) => {
-                    // Pausing a queued project holds the whole queue, so it says so.
-                    const paused =
-                      visible.projects.find((one) => one.id === item.projectId)?.state === "paused";
-                    return (
-                      <ListRow
-                        key={item.projectId}
-                        title={
-                          <Link to="/projects/$projectId" params={{ projectId: item.projectId }}>
-                            {item.title}
-                          </Link>
-                        }
-                        meta={`${String(index + 1)} in line`}
-                        actions={
-                          <>
-                            <Status
-                              tone={
-                                paused ? "waiting" : item.state === "active" ? "running" : "off"
-                              }
-                            >
-                              {paused
-                                ? "Paused"
-                                : item.state === "active"
-                                  ? "Running now"
-                                  : "Waiting its turn"}
-                            </Status>
-                            {item.state === "queued" ? (
-                              <QueueItemActions
-                                projectId={item.projectId}
-                                title={item.title}
-                                place={stillWaiting.indexOf(item)}
-                                waiting={stillWaiting.length}
-                              />
-                            ) : null}
-                          </>
-                        }
-                      />
-                    );
-                  })}
-                </List>
+                {/* Pausing the started one holds the whole queue, so it says so. */}
+                {holdingQueue === undefined ? null : (
+                  <p className="m-0 text-small text-ink-2">
+                    {`${holdingQueue.title} is paused, so none of these starts until it continues.`}
+                  </p>
+                )}
+                <QueueList waiting={stillWaiting} projects={projects.data?.projects} />
               </section>
             ) : null}
           </>

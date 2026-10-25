@@ -707,7 +707,7 @@ function ProjectWorkspace({
                             primary={next.next?.action === undefined}
                           />
                         )}
-                        <BatchQueueCount />
+                        <BatchQueueCount projectId={projectId} />
                       </>
                     }
                   >

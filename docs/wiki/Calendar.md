@@ -11,7 +11,7 @@ The calendar starts on this week's Monday and shows four weeks, Monday to Sunday
 - **Scheduled runs**, each with the project title it will make. A run shows **Queued** when a topic is lined up, **Needs a topic** when its topic is still waiting for your approval or for generation, and **Paused** when its schedule is paused.
 - **Needs you**, above the weeks: one line counting what waits on you and what is ready to upload (see below).
 - **Projects** running or finished on their day, with their state: **Running**, **Waiting for the agent**, **Paused**, **Queued**, **Waiting for your review**, **Waiting for its day**, **Stopped**, **Kept as is**, **Failed**, **Done with problems**, **Done** or **Canceled**. A project waiting for a CLI plan says so, for example **Waiting for Codex limits (resets at 14:00)**.
-- **Batch queue**: projects waiting to start (see below).
+- **Waiting to start**: the batch queue, videos started together that wait their turn (see below).
 - **Suggested topics**, beside the weeks, for schedules that hold generated topics for approval.
 
 The calendar follows the channel picked under **Showing:** in the page header, or shows every channel. See [Channels](Channels).
@@ -26,7 +26,7 @@ Acting on them is Home's job: **Needs you** there lists each one with its button
 
 ## The batch queue
 
-Videos started together, such as extra videos queued from Create, run one at a time. **Batch queue** lists them in the order they run, numbered (**1 in line**, **2 in line**, …), each marked **Running now**, **Waiting its turn** or **Paused**. Its heading says how many are waiting to start. Pausing a queued project holds the whole queue; when one fails or is canceled, the next one starts. Home lists the same videos under **Running** → **Waiting to start**, and Projects has a **Queued** filter. The batch queue is hidden when nothing is queued.
+Videos started together, such as extra videos queued from Create, run one at a time. **Waiting to start** is the same list as Home's: the videos still to start, numbered in the order they start (**1.**, **2.**, …), each marked **Queued** (or **Paused**) with **Earlier**, **Later** and **Remove**. Its heading says how many there are; the one already running is on Home under **Running**. Pausing the started project holds the whole queue, and the list says so; when one fails or is canceled, the next one starts. It follows the channel shown under **Showing:**, and is hidden when nothing waits.
 
 ## Switch between weeks and a list
 
