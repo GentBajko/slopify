@@ -75,6 +75,7 @@ export const scheduleSampleSchema = z
         runs: z.number(),
         high: z.number(),
         unknown: z.number(),
+        unpriced: z.array(z.string()).readonly(),
         problem: z.string().nullable(),
         paused: z
           .object({ schedules: z.number(), runs: z.number(), high: z.number() })

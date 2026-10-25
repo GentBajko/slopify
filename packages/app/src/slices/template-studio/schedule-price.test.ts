@@ -34,7 +34,11 @@ function setup() {
 
 it("prices a scheduled run with its first topic, saving no draft", async () => {
   const { h, template, schedule } = setup();
-  expect(await priceScheduledRun(h.deps, template, schedule)).toEqual({ high: 0, unknown: 0 });
+  expect(await priceScheduledRun(h.deps, template, schedule)).toEqual({
+    high: 0,
+    unknown: 0,
+    unpriced: [],
+  });
   expect(h.deps.db.prepare("SELECT count(*) AS n FROM play_drafts").get()).toEqual({ n: 0 });
 });
 

@@ -40,8 +40,10 @@ export async function priceDocument(
     return review.fields.length === 0
       ? "Create's review refused this setup. Press Make a video on the template to see why on Create."
       : [...new Set(review.fields.map((field) => field.message))].join(" ");
+  const rows = review.value.estimates.flatMap((estimate) => estimate.rows);
   return {
     high: review.value.estimates.reduce((sum, estimate) => sum + estimate.high, 0),
     unknown: review.value.estimates.reduce((sum, estimate) => sum + estimate.unknown, 0),
+    unpriced: [...new Set(rows.filter((row) => row.low === null).map((row) => row.stage))],
   };
 }

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 import { attachSamples } from "../../kernel/paths.js";
+import { createPrompt } from "../library/save.js";
 import { defaultLoudness } from "../loudness/model.js";
 import { draftFixture } from "../play-drafts/draft.fake.js";
 import { createTemplate, updateTemplate } from "../project-templates/service.js";
@@ -303,5 +304,34 @@ describe("getStudio with a paid sample", () => {
       name: "Topic",
       text: "The history of the lighthouse",
     });
+  });
+});
+
+describe("getAnatomy", () => {
+  it("shows the writer's prompt while another section keeps the sample from being made", async () => {
+    const h = draftFixture();
+    open.push(h.close);
+    const { review } = paidSampleDeps(h.deps);
+    const document = paidDocument(review);
+    const oils = createPrompt(review, { kind: "image", name: "Oils", body: "An oil painting." });
+    if (!oils.ok) throw new Error("The image prompt was refused.");
+    // A fresh install: images are on and nobody chose who makes them.
+    const unchosen = {
+      ...document,
+      form: {
+        ...document.form,
+        sources: { ...document.form.sources, images: "generate" as const },
+        imagePrompts: [{ name: "Oils", number: "4" }],
+      },
+    };
+    const id = randomUUID();
+    const created = createTemplate(h.deps, { id, name: "Show", document: unchosen });
+    if (!created.ok) throw new Error(created.reason);
+    const anatomy = await getAnatomy({ ...h.deps, review }, id, "script", undefined);
+    if (!anatomy.ok) throw new Error(anatomy.message);
+    expect(anatomy.value).toMatchObject({ problem: null, item: "article", fromSample: false });
+    expect(anatomy.value.segments.map((segment) => segment.text).join("")).toContain(
+      "documentary script about",
+    );
   });
 });

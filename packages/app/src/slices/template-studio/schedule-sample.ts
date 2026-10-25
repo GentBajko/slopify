@@ -61,14 +61,23 @@ export function runsPerMonth(schedule: ScheduleSummary, now: Date, asResumed = f
   return at !== null && at.getTime() - now.getTime() <= 30 * 24 * 60 * 60 * 1000 ? 1 : 0;
 }
 
-// One run's cost as Play's review prices it: the high estimate and the steps without a price.
-// A string when the run couldn't be priced: why, in a sentence.
-export type RunPrice = { readonly high: number; readonly unknown: number } | string;
+// One run's cost as Play's review prices it: the high estimate, how many steps have no price
+// and those steps' names ("Narration descriptions": how many is known once the article is
+// written). A string when the run couldn't be priced: why, in a sentence.
+export type RunPrice =
+  | {
+      readonly high: number;
+      readonly unknown: number;
+      readonly unpriced?: readonly string[] | undefined;
+    }
+  | string;
 
 export interface MonthlyCost {
   readonly runs: number;
   readonly high: number;
   readonly unknown: number;
+  // The steps with no price, by name, once each: not counted in `high`.
+  readonly unpriced: readonly string[];
   // Why a schedule's run couldn't be priced, when one couldn't.
   readonly problem: string | null;
   // The paused schedules that use the template, and what they would cost a month resumed (at
@@ -100,6 +109,7 @@ export function monthlyCost(
   let runs = 0;
   let high = 0;
   let unknown = 0;
+  const unpriced = new Set<string>();
   let problem: string | null = null;
   for (const schedule of active) {
     const perMonth = runsPerMonth(schedule, now);
@@ -115,11 +125,13 @@ export function monthlyCost(
     }
     high += price.high * perMonth;
     unknown += price.unknown;
+    for (const stage of price.unpriced ?? []) unpriced.add(stage);
   }
   return {
     runs: Math.round(runs * 10) / 10,
     high: Math.round(high * 100) / 100,
     unknown,
+    unpriced: [...unpriced],
     problem,
     paused,
   };

@@ -43,6 +43,10 @@ it("leaves local CLI IDs to async validation while retaining API catalogue check
       field: "llm",
       message: "This model is no longer in Slopify's model list. Choose another model.",
     });
+    // No model at all was never in the list: admission asks for one in its own words.
+    expect(
+      modelFields({ ...draft, llm: { provider: "openrouter", model: "" } }, catalogue),
+    ).toEqual([]);
   } finally {
     rmSync(dataDir, { recursive: true, force: true });
   }

@@ -167,6 +167,21 @@ describe("freeChecks", () => {
       ]);
     });
 
+    it("fails when a used service has no model chosen, as the sample refuses it", () => {
+      const modelless = {
+        ...document,
+        form: { ...document.form, images: { provider: "fal", model: "" } },
+      };
+      expect(providerLines({ document: modelless })).toEqual([
+        {
+          id: "providers",
+          ok: false,
+          sentence: "No model is chosen for fal.ai, the image service, so a run can't start.",
+          fix: { label: "Choose one in Images", href: "/templates/t1?section=pictures" },
+        },
+      ]);
+    });
+
     it("reads an unchosen writer and image service as this computer's defaults, as every run does", () => {
       const empty = {
         ...document,
@@ -315,6 +330,27 @@ describe("freeChecks", () => {
       );
     });
 
+    it("passes with steps that have no price, naming them as not counted", () => {
+      expect(
+        check(
+          {
+            monthlyCost: {
+              high: 6.08,
+              unknown: 2,
+              unpriced: ["Narration descriptions", "Delivery cue overhead"],
+              problem: null,
+            },
+          },
+          "monthly-cost",
+        ),
+      ).toEqual({
+        id: "monthly-cost",
+        ok: true,
+        sentence:
+          "Its schedules cost at least about $6.08 a month. Not counted, with no known price: Narration descriptions and Delivery cue overhead.",
+      });
+    });
+
     it("says why a schedule's run couldn't be priced", () => {
       expect(
         check(
@@ -369,11 +405,12 @@ describe("freeChecks", () => {
       ).toBe("Weekdays (paused) runs on Wednesday but has no release time for that day.");
     });
 
-    it("fails when a step has no price", () => {
-      expect(check({ monthlyCost: { high: 3, unknown: 2 } }, "monthly-cost")).toMatchObject({
-        ok: false,
-        sentence: "The monthly cost isn't known: 2 steps have no price in the model list.",
-        fix: { href: "/templates/t1?section=schedule" },
+    it("never fails on a step with no price: nothing fixes it, so it is counted out loud", () => {
+      expect(check({ monthlyCost: { high: 3, unknown: 2 } }, "monthly-cost")).toEqual({
+        id: "monthly-cost",
+        ok: true,
+        sentence:
+          "Its schedules cost at least about $3.00 a month. 2 steps have no known price and aren't counted.",
       });
     });
 

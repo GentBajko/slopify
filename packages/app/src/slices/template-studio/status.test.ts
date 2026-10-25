@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PlayDraftDocument } from "../play-drafts/schema.js";
 import type { SampleVersion } from "./repo.js";
-import { baseStatuses, type PaidStatusInput, paidStatuses } from "./status.js";
+import { baseStatuses, makeSampleSentence, type PaidStatusInput, paidStatuses } from "./status.js";
 import { paidSetup } from "./studio.fake.js";
 
 const one: PlayDraftDocument = paidSetup();
@@ -118,5 +118,24 @@ describe("baseStatuses", () => {
     expect(baseStatuses(pasted).find((status) => status.id === "script")?.state).toBe("stale");
     expect(sections.thumbnail).toBe("off");
     expect(sections.script).toBe("current");
+  });
+});
+
+describe("makeSampleSentence", () => {
+  it("names every section one press of Make sample makes, and only those that are on", () => {
+    // The fixture writes the article and voices it: its research, images, thumbnail and video
+    // are off.
+    expect(makeSampleSentence(one)).toBe(
+      "Make sample makes the samples of Article and Narration together, about the sample topic.",
+    );
+    const researched = {
+      ...one,
+      form: { ...one.form, sources: { ...one.form.sources, research: "generate" as const } },
+    };
+    expect(makeSampleSentence(researched)).toBe(
+      "Make sample makes the samples of Title and keywords, Article and Narration together, about the sample topic.",
+    );
+    const first = baseStatuses(one).find((status) => status.id === "script");
+    expect(first?.sentence).toBe(makeSampleSentence(one));
   });
 });
