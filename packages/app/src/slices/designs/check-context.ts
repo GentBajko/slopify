@@ -28,16 +28,16 @@ export function designCheckContext(deps: {
       try {
         statuses = await deps.providers();
       } catch (error) {
-        return `Slopify couldn't check the image provider: ${errorText(error)} Open Settings → Providers, then press Mark ready again.`;
+        return `Slopify couldn't check the image provider: ${errorText(error)} Open Settings → Keys & services, then press Approve for schedules again.`;
       }
       const status = statuses.find((one) => one.id === provider);
       if (status === undefined)
         return `The image provider “${provider}” isn't one this Slopify knows. Choose another image model under Picture.`;
       const readiness = status.readiness;
       if (readiness.kind === "keyed" && !readiness.hasKey)
-        return `${status.displayName} has no API key, so the picture can't be made. Add the key in Settings → Providers, then press Mark ready again.`;
+        return `${status.displayName} has no API key, so the picture can't be made. Add the key in Settings → Keys & services, then press Approve for schedules again.`;
       if (readiness.kind === "cli" && (!readiness.installed || readiness.issue !== undefined))
-        return `${status.displayName} can't be used yet: ${readiness.issue ?? "it isn't installed on this computer."} Fix it in Settings → Providers, then press Mark ready again.`;
+        return `${status.displayName} can't be used yet: ${readiness.issue ?? "it isn't installed on this computer."} Fix it in Settings → Keys & services, then press Approve for schedules again.`;
       return null;
     },
   };

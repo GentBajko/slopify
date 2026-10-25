@@ -88,7 +88,7 @@ export function claimDesignRun(deps: ScheduleDeps, schedule: ScheduleSummary, no
     if (current.missedPolicy === "skip" && now.valueOf() - scheduledFor.valueOf() > missedGraceMs)
       return keep(
         "skipped",
-        `Skipped: Slopify wasn't open at ${time} when ${row.title}'s piece was due, and this schedule skips the runs it misses. It tries again at ${time} tomorrow; to make a missed piece as soon as Slopify opens, set Missed run to Run once when Slopify reopens in Library → Designs → Templates → ${plan.name} → Schedule.`,
+        `Skipped: Slopify wasn't open at ${time} when ${row.title}'s piece was due, and this schedule skips the runs it misses. It tries again at ${time} tomorrow; to make a missed piece as soon as Slopify opens, set Missed run to Run once when Slopify reopens in Templates → Poster templates → ${plan.name} → Schedule.`,
       );
     if (designs === undefined)
       return keep(
@@ -98,7 +98,7 @@ export function claimDesignRun(deps: ScheduleDeps, schedule: ScheduleSummary, no
     if (plan.readyVersion === null)
       return keep(
         "skipped",
-        `Not started: ${plan.name} has no version marked ready. Open it in Library → Designs → Templates and press Mark ready.`,
+        `Not started: ${plan.name} has no version approved for schedules. Open it in Templates → Poster templates and press Approve for schedules.`,
       );
     const missing = missingValues(plan.document, row.values);
     if (missing.length > 0) {

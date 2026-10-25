@@ -125,7 +125,7 @@ export const designTools: readonly RouteTool[] = [
     name: "list_design_templates",
     route: "GET /api/design-templates",
     title: "List design templates",
-    description: "Every design template with its versions and the version marked ready.",
+    description: "Every design template with its versions and the version approved for schedules.",
   },
   {
     name: "create_design_template",
@@ -174,9 +174,9 @@ export const designTools: readonly RouteTool[] = [
     name: "mark_design_template_ready",
     route: "POST /api/design-templates/:id/ready",
     body: markDesignReadySchema,
-    title: "Mark a template version ready",
+    title: "Approve a template version for schedules",
     description:
-      "Runs the version's checks and marks it ready when they pass; refused with the checks that failed. Body: {version}.",
+      "Runs the version's checks and approves it for schedules when they pass, as the editor's Approve for schedules does; refused with the checks that failed. Body: {version}.",
     confirm: "Schedules start making pieces from this version.",
   },
   {

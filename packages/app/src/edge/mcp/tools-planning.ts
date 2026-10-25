@@ -110,7 +110,7 @@ const drafts: readonly RouteTool[] = [
 
 // Which version a schedule runs after a save (`template-studio/gate.ts`).
 const templateGateRule =
-  "Schedules use a new version from their next run unless a version of this template was marked ready in its Template studio (mark_template_ready); from then on a new version waits until it is marked ready.";
+  "Schedules use a new version from their next run unless a version of this template was approved for schedules in Edit template (mark_template_ready); from then on a new version waits until it is approved.";
 
 const templates: readonly RouteTool[] = [
   {

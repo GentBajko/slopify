@@ -156,7 +156,7 @@ describe("the sample Mark ready asks for", () => {
       id: "sample",
       ok: false,
       sentence:
-        "Version 1 has no sample yet. Make its sample, look it over beside the settings, then press Mark ready.",
+        "Version 1 has no sample yet. Make its sample, look it over beside the settings, then press Approve for schedules.",
       fix: { label: "Open Picture", href: "/library/design-templates/t1#picture" },
     });
     const row = {
@@ -175,7 +175,7 @@ describe("the sample Mark ready asks for", () => {
     expect(sampleCheck(h.db, "t1", 2)).toMatchObject({
       ok: false,
       sentence:
-        "Version 2 has no sample yet: the one shown is of version 1. Make its sample, look it over beside the settings, then press Mark ready.",
+        "Version 2 has no sample yet: the one shown is of version 1. Make its sample, look it over beside the settings, then press Approve for schedules.",
     });
   });
 });

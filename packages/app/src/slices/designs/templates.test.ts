@@ -107,7 +107,7 @@ describe("design templates", () => {
         : [refused.reason, (refused.current as { id: string }[]).map((check) => check.id)],
     ).toEqual(["not-ready", ["samples", "dates"]]);
     expect(refused.ok ? "" : refused.message).toBe(
-      "Version 1 can't be marked ready yet: {{Venue}}, {{Price}} have no sample value. Fill them in under Text → Sample values. The sample {{Date}} \"14 Nov\" isn't a date written YYYY-MM-DD (for example 2026-11-14). Write it that way under Text → Sample values.",
+      "Version 1 can't be approved for schedules yet: {{Venue}}, {{Price}} have no sample value. Fill them in under Text → Sample values. The sample {{Date}} \"14 Nov\" isn't a date written YYYY-MM-DD (for example 2026-11-14). Write it that way under Text → Sample values.",
     );
     expect(getTemplate(h.db, "t1")?.checks.filter((check) => !check.ok)).toHaveLength(2);
     saveTemplate(h.deps, "t1", {
@@ -119,7 +119,7 @@ describe("design templates", () => {
       { id: "fonts", ok: false, sentence: "The font has no €.", fix: null },
     ]);
     expect(extra.ok ? "ready" : extra.message).toBe(
-      "Version 2 can't be marked ready yet: The font has no €.",
+      "Version 2 can't be approved for schedules yet: The font has no €.",
     );
     const ready = await markTemplateReady(h.deps, "t1", { version: 2 });
     expect(ready.ok && [ready.value.gate, ready.value.readyVersion]).toEqual(["ready", 2]);

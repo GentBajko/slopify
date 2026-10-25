@@ -7,12 +7,12 @@ import { sayItAsSchema } from "../../slices/template-studio/say-it-as.js";
 import { fullScriptSchema, topicSchema } from "../../slices/template-studio/topic.js";
 import type { RouteTool } from "./route-tool.js";
 
-// The template studio (Library → Templates → Open studio). Not the YouTube Studio tools.
+// Edit template (Templates → a template → Edit template). Not the YouTube Studio tools.
 export const templateStudioTools: readonly RouteTool[] = [
   {
     name: "get_template_studio",
     route: "GET /api/template-studio/:id",
-    title: "Read a template's studio",
+    title: "Read a template in Edit template",
     description:
       "The template's sections with each sample's state (current, making, waiting, needs-fix, stale, off, provided), the sample topic, and which version schedules run. Its checks are read with get_template_checks.",
   },
@@ -21,24 +21,24 @@ export const templateStudioTools: readonly RouteTool[] = [
     route: "GET /api/template-studio/:id/checks",
     title: "Read a template's checks",
     description:
-      "The free checks the template's current version passes before Mark ready, each failing one with what is wrong and where it is fixed: keywords filled, providers set up, a voice that is one of yours (Settings → Voices), release slots, a known monthly cost, someone to answer each checkpoint.",
+      "The free checks the template's current version passes before Approve for schedules, each failing one with what is wrong and where it is fixed: keywords filled, providers set up, a voice that is one of yours (Settings → Voices), release slots, a known monthly cost, someone to answer each checkpoint.",
   },
   {
     name: "mark_template_ready",
     route: "POST /api/template-studio/:id/ready",
     body: markReadySchema,
-    title: "Mark a template ready for its schedules",
+    title: "Approve a template for its schedules",
     description:
-      "Marks the template's newest version (pass it as version) ready, so its schedules run it from their next run on. Refused, marking nothing, while a check fails or a section's sample isn't current, with each thing to fix (problems). A version already ready is answered again. Until a template's first Mark ready its schedules run its newest version; from then on a schedule runs only a version marked ready, saved before the studio, or carried over from one by Slopify, and each version saved later waits until it is marked ready.",
+      "Approves the template's newest version (pass it as version) for its schedules, so they run it from their next run on: Edit template's Approve for schedules. Refused, approving nothing, while a check fails or a section's sample isn't current, with each thing to fix (problems). A version already approved is answered again. Until a template's first approval its schedules run its newest version; from then on a schedule runs only a version approved for schedules, saved before Edit template, or carried over from one by Slopify, and each version saved later waits until it is approved.",
     confirm:
-      "Schedules run this version from their next run, and each version saved later waits until it is marked ready.",
+      "Schedules run this version from their next run, and each version saved later waits until it is approved.",
   },
   {
     name: "get_prompt_anatomy",
     route: "GET /api/template-studio/:id/anatomy",
     title: "Read a section's prompt anatomy",
     description:
-      "One of the prompts a template section sends (section: subject, script, voice, pictures, thumbnail, shorts, upload, reviews; item: the prompt's key from items), cut into segments: the person's own words (yours), their keywords' values (keyword), what Slopify fills itself (slopify) and what settings add (setting). Read from the prompt the sample sent when it was made from this setup.",
+      "One of the prompts a template section sends (section: subject, script, voice, pictures, thumbnail, shorts, upload, reviews; item: the prompt's key from items), cut into segments: the person's own words (yours), their keywords' values (keyword), what Slopify fills itself (slopify) and what settings add (setting). Read from the prompt the sample sent when it was made from these settings.",
   },
   {
     name: "quote_template_save",
@@ -52,7 +52,7 @@ export const templateStudioTools: readonly RouteTool[] = [
     name: "save_template_studio",
     route: "POST /api/template-studio/:id/save",
     body: saveStudioSchema,
-    title: "Save a template in its studio",
+    title: "Save a template in Edit template",
     description:
       'Saves the template document as its next version. With sample "make" it also makes the paid sample of what changed, which spends money: price it first with quote_template_save and pass that quote\'s high as acknowledgedHigh (and acknowledgedUnknown: true when the quote counts steps with no price). A higher price, an unaccepted unknown one or a sample past today\'s budget is refused with the new quote and nothing is saved. With sample "skip" only the free samples are made. Send the same mutationId to retry the very same Save.',
   },
@@ -106,17 +106,17 @@ export const templateStudioTools: readonly RouteTool[] = [
   {
     name: "get_template_studio_settings",
     route: "GET /api/template-studio/settings",
-    title: "Read the template studio's settings",
+    title: "Read the template samples' budgets",
     description:
-      "The most the studio's samples may spend in one day (dailyBudget, US dollars), whether they may run steps on a CLI plan (samplesUsePlans; off by default, such a sample waits; it applies to designed pieces' samples too), the most designed pieces' template samples may spend in one day (designDailyBudget, $1 by default), and what each spent today and has left (today, designToday).",
+      "The most Edit template's samples may spend in one day (dailyBudget, US dollars), whether they may run steps on a CLI plan (samplesUsePlans; off by default, such a sample waits; it applies to designed pieces' samples too), the most designed pieces' template samples may spend in one day (designDailyBudget, $1 by default), and what each spent today and has left (today, designToday).",
   },
   {
     name: "update_template_studio_settings",
     route: "PUT /api/template-studio/settings",
     body: studioSettingsSchema,
-    title: "Change the template studio's daily budgets",
+    title: "Change the template samples' daily budgets",
     description:
-      "Sets any of: dailyBudget, the most the studio's samples may spend in one day, in US dollars (0 to 1000); designDailyBudget, the same for designed pieces' template samples (0 to 1000); samplesUsePlans, whether either may run steps on a Claude Code or Codex plan, which the dollar budgets can't limit. A field left out keeps what it was. A sample that would go over its budget, or needs a plan while plans are off, waits.",
+      "Sets any of: dailyBudget, the most Edit template's samples may spend in one day, in US dollars (0 to 1000); designDailyBudget, the same for designed pieces' template samples (0 to 1000); samplesUsePlans, whether either may run steps on a Claude Code or Codex plan, which the dollar budgets can't limit. A field left out keeps what it was. A sample that would go over its budget, or needs a plan while plans are off, waits.",
   },
   {
     name: "quote_samples_for_all",
@@ -145,17 +145,17 @@ export const templateStudioTools: readonly RouteTool[] = [
   {
     name: "import_template_pack",
     route: "POST /api/template-studio/packs/import",
-    title: "Import a template pack",
+    title: "Import a template file",
     description:
-      "Makes a new template from a template pack (the .zip a template studio's Export pack made, at most 30 MB): its prompts and intros join the Library (a name taken by other text comes in as \"<name> (2)\" and the template names that one), its voice is used as it is, and it is not checked in the studio yet: look its samples over and mark it ready (mark_template_ready). A pack holding anything that looks like a key, a file a pack never has or a newer format is refused, writing nothing. Answers templateId, the name it got, how many Library items it added and which were renamed, whether Settings → Voices has its voice (voiceKnown; when false, get_template_checks' voice check says what to do) and how many samples it brought.",
+      "Makes a new template from a template file (the .zip Edit template's Export as a file (.zip) made, at most 30 MB): its prompts and intros join Prompts (a name taken by other text comes in as \"<name> (2)\" and the template names that one), its voice is used as it is, and it is not checked in Edit template yet: look its samples over and approve it for schedules (mark_template_ready). A file holding anything that looks like a key, a file a template file never has or a newer format is refused, writing nothing. Answers templateId, the name it got, how many prompts and intros it added and which were renamed, whether Settings → Voices has its voice (voiceKnown; when false, get_template_checks' voice check says what to do) and how many samples it brought.",
     upload: "multipart",
   },
   {
     name: "get_template_pack_samples",
     route: "GET /api/template-studio/:id/pack-samples",
-    title: "List the samples a template's pack brought",
+    title: "List the samples a template's file brought",
     description:
-      "The samples an imported pack came with (role: thumbnail, picture or narration; name; url), shown in the studio until the template makes its own. Empty for a template that didn't come from a pack.",
+      "The samples an imported template file came with (role: thumbnail, picture or narration; name; url), shown in Edit template until the template makes its own. Empty for a template that didn't come from a file.",
   },
   {
     name: "quote_bakeoff",
