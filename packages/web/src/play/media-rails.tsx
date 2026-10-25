@@ -393,10 +393,13 @@ export function ImageProviderControls({
   const generating = form.sources.images === "generate";
   const users = imageServiceUsers(form);
   const offMakes = generating ? kindAfterOff(form, "images") : undefined;
-  // Images None takes the video, and so its animated images, with it.
-  const leaving = generating
-    ? ["images", ...users.filter((part) => part !== "the animated images")]
-    : users;
+  // Images None takes the video, and so its animated images, with it. A run that makes nothing
+  // but its images (no article, no narration) has no way out here: None would leave it nothing.
+  const leaving = !generating
+    ? users
+    : form.sources.article === "off" && form.sources.audio === "off"
+      ? []
+      : ["images", ...users.filter((part) => part !== "the animated images")];
   const leaveLabel =
     leaving.length === 1 && generating
       ? "Set Images to None"
