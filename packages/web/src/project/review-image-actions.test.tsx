@@ -75,6 +75,37 @@ it("shows an image beside the version it replaced, each with its prompt", async 
   expect(within(dialog).getByAltText("Image 1, previous version")).toBeDefined();
 });
 
+it("offers no comparison where no earlier version is saved, and no More with nothing in it", async () => {
+  const first = viewWith("r1", null, now);
+  renderApp(
+    <RevisionMedia projectId="p1" revisionId="r1">
+      <EditRequestContext value={vi.fn()}>
+        <TileMore
+          output={now}
+          name="image 1"
+          aspect="landscape"
+          replaceable
+          disabled={false}
+          onDelete={() => undefined}
+        />
+        <TileMore
+          output={now}
+          name="card 1"
+          aspect="landscape"
+          replaceable={false}
+          disabled={false}
+        />
+      </EditRequestContext>
+    </RevisionMedia>,
+    testDeps({ "GET /api/projects/p1/revisions/r1": jsonAnswer({ view: first }) }),
+  );
+  await userEvent.click(await screen.findByRole("button", { name: "More for image 1" }));
+  expect(await screen.findByRole("menuitem", { name: "Replace with my file" })).toBeDefined();
+  expect(screen.queryByRole("menuitem", { name: "Compare with previous" })).toBeNull();
+  // A card's More would hold only the comparison: with nothing to compare it is not there.
+  expect(screen.queryByRole("button", { name: "More for card 1" })).toBeNull();
+});
+
 it("opens Edit project at the image to replace it with a file", async () => {
   const requestEdit = mount();
   await choose("Replace with my file");
