@@ -20,6 +20,7 @@ import { useToast } from "@/components/kit/toast";
 import { keys } from "@/queries";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
+import { ShortsStrip } from "./body-shorts.js";
 import { dockerFolderHelp, openFolder } from "./open-folder.js";
 import {
   DownloadMenu,
@@ -169,7 +170,8 @@ export function VideoBody({ stage, project, outputs }: BodyProps) {
             ? "grid items-start justify-start gap-x-6 gap-y-4 @min-[620px]:grid-cols-[minmax(0,360px)_300px]"
             : shape === "1:1"
               ? "grid items-start justify-start gap-x-6 gap-y-4 @min-[760px]:grid-cols-[minmax(0,520px)_300px]"
-              : "grid items-start justify-start gap-x-6 gap-y-4 @min-[760px]:grid-cols-[minmax(0,720px)_300px]"
+              : // A wide screen gives the player the room: 960 pixels from a 1,100 pixel column.
+                "grid items-start justify-start gap-x-6 gap-y-4 @min-[760px]:grid-cols-[minmax(0,720px)_300px] @min-[1100px]:grid-cols-[minmax(0,960px)_300px]"
         }
       >
         <div className="min-w-0">
@@ -202,7 +204,7 @@ export function VideoBody({ stage, project, outputs }: BodyProps) {
                   ? "max-w-[360px]"
                   : shape === "1:1"
                     ? "max-w-[520px]"
-                    : "max-w-[720px]"
+                    : "max-w-[720px] @min-[1100px]:max-w-[960px]"
               }
               {...(playedSubtitles === "files" && vtt && captions
                 ? { captions: { src: captions.url, lang: "en", label: "English" } }
@@ -294,6 +296,8 @@ export function VideoBody({ stage, project, outputs }: BodyProps) {
         )}
       </div>
 
+      {/* The shorts made from it, under the player, where the first screen has the room. */}
+      <ShortsStrip project={project} own={own} />
       {/* What the render could not do as asked: an image shown still because its clip could
           not be made. */}
       {video?.meta.warnings?.length ? (

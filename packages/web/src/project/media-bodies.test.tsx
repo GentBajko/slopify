@@ -396,3 +396,25 @@ it("says once, under the download, that the video is the previous one while it i
   // Nobody changed anything: it does not say "your last change".
   expect(screen.queryByText(/your last change/)).toBeNull();
 });
+
+it("shows the shorts made from the video under its player, each with its own download", async () => {
+  const video = output("video", "video", { id: "o-video", path: "video.mp4" });
+  const shorts = [1, 2].map((short) =>
+    output("short_video", "video", {
+      id: `o-short-${String(short)}`,
+      path: `short-${String(short)}.mp4`,
+      durationMs: 44_000,
+      meta: { short },
+    }),
+  );
+  const { props: given } = props([video, ...shorts]);
+  renderRouted(<VideoBody {...given} stage={stage("video", "done")} />, testDeps({}));
+  const strip = await screen.findByRole("region", { name: "Shorts made from it" });
+  expect(within(strip).getByRole("link", { name: "Open Shorts" })).not.toBeNull();
+  expect(
+    within(strip)
+      .getAllByRole("link", { name: /^Download short/ })
+      .map((link) => link.getAttribute("aria-label") ?? link.textContent),
+  ).toHaveLength(2);
+  expect(within(strip).getByRole("link", { name: "Download short 2 (.mp4)" })).not.toBeNull();
+});

@@ -1,3 +1,4 @@
+import type { ProjectSummary } from "@app/slices/admission/model.js";
 import {
   fullVideoLine,
   fullVideoPlaceholder,
@@ -7,12 +8,12 @@ import {
 import type { Output } from "@app/slices/storage/model.js";
 import { useNavigate } from "@tanstack/react-router";
 import { CopyIcon, DownloadIcon } from "lucide-react";
-import { use, useId, useState } from "react";
+import { type ReactElement, use, useId, useState } from "react";
 import { z } from "zod";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button, ButtonRow } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
-import { FileLink } from "@/components/kit/link";
+import { FileLink, TextLink } from "@/components/kit/link";
 import { MediaFrame, MediaGrid } from "@/components/kit/media";
 import { Player } from "@/components/kit/player";
 import { Switch } from "@/components/kit/switch";
@@ -374,6 +375,94 @@ function ShortCard({
             calls
           </span>
         </Button>
+      )}
+    </li>
+  );
+}
+
+// The shorts made from the video, small, under its player: each one's picture, title, length
+// and its own download, so the video's first screen holds every file a person takes away.
+// Shorts, a press away, has their text, Copy for YouTube and Make again. `own` is the Video
+// step's outputs.
+export function ShortsStrip({
+  project,
+  own,
+}: {
+  readonly project: ProjectSummary;
+  readonly own: readonly Output[];
+}): ReactElement | null {
+  const clips = useShortClips(own);
+  const videos = currentShorts(own, "short_video", clips);
+  const stills = currentShorts(own, "short_image", clips);
+  if (videos.length === 0) return null;
+  return (
+    <section aria-label="Shorts made from it" className="flex min-w-0 flex-col gap-2">
+      <div className="flex flex-wrap items-baseline gap-x-3">
+        <h3 className="sl-kicker m-0">{`Shorts made from it · ${String(videos.length)}`}</h3>
+        <TextLink
+          to="/projects/$projectId"
+          params={{ projectId: project.id }}
+          search={{ section: "shorts" }}
+          resetScroll={false}
+          className="text-small"
+        >
+          Open Shorts
+        </TextLink>
+      </div>
+      <ul className="m-0 flex list-none flex-wrap gap-4 p-0">
+        {videos.map((video) => {
+          const number = Number(video.meta.short ?? 1);
+          const clip = clips.find((one) => one.number === number);
+          return (
+            <StripShort
+              key={video.id}
+              video={video}
+              number={number}
+              title={clip?.title}
+              poster={
+                stills
+                  .filter((still) => still.meta.short === number)
+                  .toSorted((left, right) => (left.meta.index ?? 0) - (right.meta.index ?? 0))[0]
+              }
+            />
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+function StripShort({
+  video,
+  number,
+  title,
+  poster,
+}: {
+  readonly video: Output;
+  readonly number: number;
+  readonly title: string | undefined;
+  readonly poster: Output | undefined;
+}): ReactElement {
+  const media = useOutputMedia(video);
+  const picture = useOutputMedia(poster);
+  return (
+    <li className="flex w-[140px] flex-col gap-1">
+      <MediaFrame
+        alt={`Short ${String(number)}`}
+        aspect="portrait"
+        {...(picture === undefined ? {} : { src: picture.url })}
+      />
+      <span className="line-clamp-2 text-small font-semibold text-ink">
+        {title ?? `Short ${String(number)}`}
+      </span>
+      <span className="text-label text-ink-2 tabular-nums">{duration(video.durationMs ?? 0)}</span>
+      {media === undefined ? null : (
+        <FileLink href={media.url} download size="small" className="self-start">
+          <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
+          <span>
+            Download<span className="sr-only"> short {String(number)}</span> (.mp4)
+          </span>
+        </FileLink>
       )}
     </li>
   );
