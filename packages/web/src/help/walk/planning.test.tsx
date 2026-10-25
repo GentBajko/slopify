@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { ChannelPicker, CurrentChannelProvider } from "@/channels/current";
-import { selfExplanatory, unexplainedControls } from "@/help/coverage";
+import { selfExplanatory, stageEditors, unexplainedControls } from "@/help/coverage";
 import { freshDraftDocument } from "@/play/draft-state";
 import { CalendarRoute } from "@/routes/calendar";
 import { ChannelRoute, type ChannelTab } from "@/routes/channel";
@@ -32,8 +32,12 @@ const planningAllow: readonly (string | RegExp)[] = [
   / account$/,
 ];
 
+// A cast member's picture and voice are picked with Create's service groups ("Drawn by",
+// "Read by" over Service and Model, then Voice), named as Create names them.
 function expectExplained(): void {
-  expect(unexplainedControls(document.body, [...selfExplanatory, ...planningAllow])).toEqual([]);
+  expect(
+    unexplainedControls(document.body, [...selfExplanatory, ...stageEditors, ...planningAllow]),
+  ).toEqual([]);
 }
 
 const templateId = "11111111-1111-4111-8111-111111111111";

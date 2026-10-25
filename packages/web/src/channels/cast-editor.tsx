@@ -16,7 +16,8 @@ import { Badge, Chip } from "@/components/kit/status";
 import { Switch } from "@/components/kit/switch";
 import { FixActions } from "@/fixes/fix-actions";
 import { limitCount } from "@/lib/limit-count";
-import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
+import { OptionPicker } from "@/play/pickers";
+import { ServiceGroup } from "@/play/service-group";
 import { VoicePicker } from "@/play/voice-picker";
 import { providersQuery, voicesQuery } from "@/queries";
 import {
@@ -385,26 +386,22 @@ function Pictures({
           <HelpLine>
             A plain background with the whole figure in view makes the best reference.
           </HelpLine>
-          <div className="grid grid-cols-1 gap-4 min-[600px]:grid-cols-2">
-            <ProviderPicker
-              label="Image service"
-              family="image"
-              providers={providers.data?.providers ?? []}
-              value={provider}
-              problem={undefined}
-              onPick={(next) => {
-                setProvider(next);
-                setModel("");
-              }}
-            />
-            <ModelPicker
-              label="Image model"
-              provider={provider}
-              value={model}
-              problem={undefined}
-              onPick={setModel}
-            />
-          </div>
+          <ServiceGroup
+            family="image"
+            label="Drawn by"
+            providers={providers.data?.providers ?? []}
+            provider={provider}
+            model={model}
+            serviceField="cast.picture.provider"
+            modelField="cast.picture.model"
+            serviceProblem={undefined}
+            modelProblem={undefined}
+            onService={(next) => {
+              setProvider(next);
+              setModel("");
+            }}
+            onModel={setModel}
+          />
         </div>
         <Field
           label="Picture to make"
@@ -469,24 +466,21 @@ function CastVoiceFields({
         For videos with several voices: pick this member under Speakers on Create, and it reads with
         this voice in every video.
       </HelpLine>
-      <div className="grid grid-cols-1 gap-3 min-[600px]:grid-cols-2">
-        <ProviderPicker
-          label="Voice service"
-          family="tts"
-          providers={providers.data?.providers ?? []}
-          value={voice.provider}
-          problem={undefined}
-          onPick={(provider) =>
-            onChange(provider === "" ? undefined : { provider, model: "", voice: "" })
-          }
-        />
-        <ModelPicker
-          label="Voice model"
-          provider={voice.provider}
-          value={voice.model}
-          problem={undefined}
-          onPick={(model) => onChange({ ...voice, model })}
-        />
+      <ServiceGroup
+        family="tts"
+        label="Read by"
+        providers={providers.data?.providers ?? []}
+        provider={voice.provider}
+        model={voice.model}
+        serviceField="cast.voice.provider"
+        modelField="cast.voice.model"
+        serviceProblem={undefined}
+        modelProblem={undefined}
+        onService={(provider) =>
+          onChange(provider === "" ? undefined : { provider, model: "", voice: "" })
+        }
+        onModel={(model) => onChange({ ...voice, model })}
+      >
         <VoicePicker
           provider={voice.provider}
           providers={providers.data?.providers ?? []}
@@ -496,6 +490,8 @@ function CastVoiceFields({
           problem={undefined}
           onPick={(picked) => onChange({ ...voice, voice: picked })}
         />
+      </ServiceGroup>
+      <div className="grid grid-cols-1 gap-3 min-[600px]:grid-cols-2">
         <OptionPicker
           label="Pace"
           value={String(voice.pace ?? 1)}
