@@ -107,7 +107,7 @@ export interface BudgetRoom {
   // Calls today with no known price, on top of `spent`.
   readonly unpriced: number;
   readonly left: number;
-  // Whether samples may run on a CLI plan (Samples may use my CLI plans).
+  // Whether samples may run on a CLI plan (Let samples use my Claude Code or Codex plan).
   readonly plans: boolean;
 }
 
@@ -132,6 +132,10 @@ export function fitsBudget(room: BudgetRoom, high: number, usesPlan = false): bo
 
 const money = (value: number) => `$${value.toFixed(2)}`;
 
+// Settings → Production defaults' switch by its name on screen (web `budget-words.ts`
+// plansLabel), so a sentence that says to turn it on names what the person will find.
+export const plansSwitch = "Let samples use my Claude Code or Codex plan";
+
 // Why a sample that doesn't fit (`fitsBudget`) waits, and what lets it start, as one sentence
 // (no full stop) about `subject`: "This sample", "Comparing".
 export function budgetWords(
@@ -140,7 +144,7 @@ export function budgetWords(
   subject: string,
 ): string {
   if (cost.usesPlan && !room.plans)
-    return `${subject} runs on your CLI plan, and samples may not use CLI plans. Turn on Samples may use my CLI plans in Settings → Production defaults`;
+    return `${subject} runs on your Claude Code or Codex plan, and samples may not use it. Turn on ${plansSwitch} in Settings → Production defaults`;
   const unpriced =
     room.unpriced === 0
       ? ""

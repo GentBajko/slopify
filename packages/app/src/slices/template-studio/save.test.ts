@@ -185,7 +185,7 @@ describe("saveStudio", () => {
     );
     expect(refused).toMatchObject({ ok: false, reason: "over-budget" });
     expect(!refused.ok && refused.message).toBe(
-      "This sample runs on your CLI plan, and samples may not use CLI plans. Turn on Samples may use my CLI plans in Settings → Production defaults.",
+      "This sample runs on your Claude Code or Codex plan, and samples may not use it. Turn on Let samples use my Claude Code or Codex plan in Settings → Production defaults.",
     );
     expect(queuedJob(deps.db, id)).toBeUndefined();
     // Allowed, a sample whose only cost is plan usage starts at a $0 budget.

@@ -1,4 +1,5 @@
 import { transact } from "../../kernel/db/tx.js";
+import { plansSwitch } from "../template-studio/budget.js";
 import { budgetSentence } from "./budget.js";
 import { missingValues } from "./fields.js";
 import type { DesignResult } from "./model.js";
@@ -39,8 +40,9 @@ export interface SampleView {
 
 export interface DesignSampleDeps extends TemplateMakeDeps {
   readonly budget: () => number;
-  // Whether samples may run on a CLI plan (Settings → Production defaults → Samples may use my CLI
-  // plans); a Save's own sample of a picture on a plan waits while they may not.
+  // Whether samples may run on a CLI plan (Settings → Production defaults → Let samples use my
+  // Claude Code or Codex plan); a Save's own sample of a picture on a plan waits while they may
+  // not.
   readonly plans: () => boolean;
   readonly timeZone: () => string;
 }
@@ -125,7 +127,7 @@ export function createDesignSamples(deps: DesignSampleDeps): DesignSamples {
     const spent = sampleSpentToday(db, now(), deps.timeZone()) + sampleReserved(db, templateId);
     const budget = deps.budget();
     return quote.rows.some((one) => one.onPlan === true) && !deps.plans()
-      ? "Waiting: this sample's picture runs on your CLI plan, and samples may not use CLI plans. Turn on Samples may use my CLI plans in Settings → Production defaults, or press Make sample to make it anyway."
+      ? `Waiting: this sample's picture runs on your Claude Code or Codex plan, and samples may not use it. Turn on ${plansSwitch} in Settings → Production defaults, or press Make sample to make it anyway.`
       : quote.unknown > 0
         ? "Waiting: the price of this sample's picture isn't known, so Slopify didn't make it. Press Make sample to make it anyway."
         : quote.high > holdSlack(acknowledgedHigh)

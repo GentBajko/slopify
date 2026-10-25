@@ -493,6 +493,46 @@ it("never prices a sample at $0: free, plan usage, or why none can be made", asy
   expect(within(sample).queryByRole("switch", { name: /Write the whole article/ })).toBeNull();
 });
 
+it("never calls a sample with unpriced steps free, and links the plan setting instead of a wait", async () => {
+  open("script", {
+    [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer(passing),
+    [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(quote({ high: 0, unknown: 5 })),
+  });
+  let sample = await screen.findByRole("region", { name: "Article sample" });
+  expect(
+    await within(sample).findByRole("button", { name: "Make sample · price not known" }),
+  ).not.toBeNull();
+  cleanup();
+  open("script", {
+    [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer(passing),
+    [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(quote({ high: 0.3, unknown: 2 })),
+  });
+  sample = await screen.findByRole("region", { name: "Article sample" });
+  expect(
+    await within(sample).findByRole("button", { name: "Make sample · at least $0.30" }),
+  ).not.toBeNull();
+  cleanup();
+  open("script", {
+    [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer(passing),
+    [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(
+      quote({
+        high: 0,
+        onPlan: true,
+        usesPlan: true,
+        fits: false,
+        budget: { budget: 2, spent: 0, unpriced: 0, left: 2, plans: false },
+      }),
+    ),
+  });
+  sample = await screen.findByRole("region", { name: "Article sample" });
+  const link = await within(sample).findByRole("link", { name: "Settings → Production defaults" });
+  expect(link.getAttribute("href")).toBe("/settings?section=playback");
+  expect(link.parentElement?.textContent).toContain(
+    "Turn on Let samples use my Claude Code or Codex plan in Settings → Production defaults.",
+  );
+  expect(within(sample).queryByRole("button", { name: /^Make sample/ })).toBeNull();
+});
+
 it("puts a failing check's fix where Make sample would be", async () => {
   open("script");
   const sample = await screen.findByRole("region", { name: "Article sample" });
