@@ -42,7 +42,7 @@ it("flags a template's retired model on its row and switches it in one click", a
     }),
   );
   const row = await screen.findByRole("listitem", { name: "Retired models in Lore" });
-  expect(row.textContent).toContain("Text model old/model is retired.");
+  expect(row.textContent).toContain("Writing model old/model is retired.");
   // Only this template's own uses show on its row.
   expect(within(row).getAllByRole("button")).toHaveLength(1);
   await userEvent.click(within(row).getByRole("button", { name: "Switch to New Model" }));

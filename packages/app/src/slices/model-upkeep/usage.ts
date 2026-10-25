@@ -21,6 +21,18 @@ function familyOf(slot: UsageSlot): "llm" | "tts" | "image" {
   return slot === "llm" ? "llm" : slot === "audio" ? "tts" : "image";
 }
 
+// A Create draft's name as Create's header says it: its title once every keyword in it is
+// filled, else "Untitled draft". Never a raw {{Topic}}.
+export function draftName(title: string, values: Readonly<Record<string, string>>): string {
+  const filled = title
+    .replace(/\{\{\s*([^{}]+?)\s*\}\}/g, (keyword, name: string) => {
+      const value = values[name]?.trim() ?? "";
+      return value === "" ? keyword : value;
+    })
+    .trim();
+  return filled === "" || filled.includes("{{") ? "Untitled draft" : filled;
+}
+
 // The model choices a Play form (a draft or a template) makes.
 export function formChoices(form: PlayDraftForm): Partial<Record<UsageSlot, ModelChoice>> {
   const edit = form.videoEdit;
@@ -211,7 +223,7 @@ export function choiceSites(db: DatabaseSync): readonly ChoiceSite[] {
     sites.push({
       kind: "draft",
       id: row.id,
-      name: row.title.trim() === "" ? "Untitled draft" : row.title,
+      name: draftName(row.title, document.form.values),
       choices: formChoices(document.form),
       blocked: null,
     });

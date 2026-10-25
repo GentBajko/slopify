@@ -6,7 +6,7 @@ export type UsageSlot = (typeof usageSlots)[number];
 export const usageKinds = ["template", "schedule", "draft", "project"] as const;
 export type UsageKind = (typeof usageKinds)[number];
 export const slotLabels: Readonly<Record<UsageSlot, string>> = {
-  llm: "Text model",
+  llm: "Writing model",
   audio: "Voice model",
   images: "Image model",
   animate: "Animation model",
