@@ -1,5 +1,6 @@
 import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import {
   addOutputPreviewRequestSchema,
   addOutputRequestSchema,
@@ -35,12 +36,11 @@ const details: Readonly<Record<AddOutputRefusal["reason"], string>> = {
   "idempotency-conflict":
     "This output was already requested with different details. Reload the page, then try again.",
   "invalid-edit":
-    "This project is missing a choice the new output needs. Set the fields listed in this project's Settings, save, then add the output again.",
+    "This project is missing a choice the new output needs. Set the fields listed in Edit settings, save, then add the output again.",
   already: "This project already makes that output. Find it in its section on the left.",
   "needs-article":
     "That output is made from the article, which this project does not have yet. Wait for the Article step to finish, then add it.",
-  "narration-taken":
-    "This project already has narration, and a project has one. Keep it, or change its format under Speakers in this project's Settings → Keys & services.",
+  "narration-taken": `This project already has narration, and a project has one. Keep it, or change its format under Speakers in ${editSettings.narration}.`,
   "adaptation-not-accepted":
     'This output rewrites your article as a conversation. Tick "Adapt my article into a conversation" in Add another output, then add it.',
 };

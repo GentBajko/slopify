@@ -1,4 +1,5 @@
 import { type StageKind, stageKinds } from "../../kernel/pipeline.js";
+import { editSettings } from "../../kernel/ports/settings-places.js";
 import { type RunConfig, type StageSources, sourceOf } from "../admission/model.js";
 import { defaultVoicesSettings, type VoicesSettings } from "../voices/model.js";
 
@@ -82,7 +83,7 @@ export function planAddedOutput(
     return {
       ok: false,
       reason: "narration-taken",
-      message: `This project already has narration, and a project has one: ${kind === "podcast" ? "a podcast" : "an audiobook"} would replace it. Keep it, or change its format under Speakers in this project's Settings → Keys & services.`,
+      message: `This project already has narration, and a project has one: ${kind === "podcast" ? "a podcast" : "an audiobook"} would replace it. Keep it, or change its format under Speakers in ${editSettings.narration}.`,
     };
   const sources = switchedOn(config, kind);
   const next: RunConfig = {
@@ -108,7 +109,7 @@ export function planAddedOutput(
       created: createdWords(kind, stages),
       textUse:
         kind === "podcast"
-          ? "Adapted: the text model rewrites your article as a conversation between two hosts for the narration. The article stays as written; the conversation is kept beside it as the script."
+          ? "Adapted: the AI model rewrites your article as a conversation between two hosts for the narration. The article stays as written; the conversation is kept beside it as the script."
           : kind === "images"
             ? "Your text is not changed."
             : "Your text is used as written: nothing is rewritten.",

@@ -205,7 +205,7 @@ function newProblems(before: RunConfig, after: RunConfig): readonly FieldError[]
 function settingsHint(problem: FieldError): string {
   return /Settings|Edit settings/.test(problem.message)
     ? problem.message
-    : `${problem.message} Set it in this project's Settings, save, then add the output again.`;
+    : `${problem.message} Set it in Edit settings, save, then add the output again.`;
 }
 
 function catalogueOf(deps: AddOutputDeps): Catalogue {
