@@ -29,7 +29,7 @@ export function StepContent({
           </p>
           <p>
             Give it a recognizable name, such as <strong>Short travel narration</strong>. This is
-            the prompt’s library name, not your video’s title.
+            the prompt’s own name in Prompts, not your video’s title.
           </p>
           <p>The next steps will add its instructions and reusable keywords.</p>
         </>
@@ -71,7 +71,7 @@ export function StepContent({
         <>
           <p>
             Press the highlighted <strong>Save</strong> button in the editor. The prompt will appear
-            in your Article library.
+            under <strong>Article</strong> in Prompts.
           </p>
           <p>
             The tour continues when the save succeeds and the editor returns to the prompt list. If
@@ -99,8 +99,8 @@ export function StepContent({
       return (
         <>
           <p>
-            Press <strong>Save</strong> to add this to your Image library. Next you will combine
-            both prompts on Create.
+            Press <strong>Save</strong> to add it under <strong>Image</strong> in Prompts. Next you
+            will combine both prompts on Create.
           </p>
           <p>
             You can create more prompts later for different subjects, styles, lengths, or languages.
@@ -111,17 +111,19 @@ export function StepContent({
       return (
         <>
           <p>
-            Play is where you configure one project. Leave <strong>Article</strong> on{" "}
-            <strong>Write it for me</strong>, then select the article prompt you saved.
+            Create sets up one video. Leave <strong>Article</strong> on{" "}
+            <strong>Write it for me</strong>, then pick the article prompt you saved under{" "}
+            <strong>Article prompt</strong>.
           </p>
           <p>
-            <strong>Use my text as written</strong> is for an article you already have. For this
-            first run, use Write it for me and keep the script short. Article is required; every
-            other stage can be Off.
+            <strong>Use my text as written</strong> is for an article you already have, and{" "}
+            <strong>Adapt my text</strong> rewrites your notes with the prompt. For this first
+            video, use Write it for me and keep the text short.
           </p>
           <p>
-            Research starts Off. You can turn it on in a later run for web-grounded notes that are
-            automatically passed to the article writer.
+            <strong>Research</strong> starts Off. In a later video,{" "}
+            <strong>Let the AI research</strong> gathers notes from the web, and the article is
+            written from them.
           </p>
         </>
       );
@@ -141,9 +143,9 @@ export function StepContent({
             than one voice; leave it on one voice for now.
           </p>
           <p>
-            Use My own audio file to upload narration you already have, including any intro and
-            outro in that file, or Off to skip narration. The video can still run silently, with
-            each image shown for 5 seconds.
+            Use <strong>My own audio file</strong> to upload narration you already have, including
+            any intro and outro in that file, or <strong>Off</strong> to skip narration. The video
+            can still be made silent, with each image shown for 5 seconds.
           </p>
         </>
       );
@@ -151,7 +153,7 @@ export function StepContent({
       return (
         <>
           <p>
-            Leave <strong>Images</strong> on <strong>Made by AI</strong>. Under{" "}
+            Leave <strong>Images</strong> on <strong>Made by AI (paid)</strong>. Under{" "}
             <strong>Images by</strong>, pick the <strong>Service</strong> and <strong>Model</strong>
             , tick your image prompt under <strong>Which image style?</strong>, and type{" "}
             <strong>2</strong> in its <strong>How many images</strong> box for a small first run.
@@ -161,9 +163,9 @@ export function StepContent({
             per article paragraph. Tick more image prompts when you want different scenes.
           </p>
           <p>
-            Use My own images for your own pictures or None to skip them. Images None also turns the
-            video off. The thumbnail is separate, under Outputs; leave it unticked for this first
-            run.
+            Use <strong>My own images</strong> for your own pictures or <strong>None</strong> to
+            skip them. Images None also turns the video off. The thumbnail is separate, in the{" "}
+            <strong>Extras</strong> row; leave it off for this first video.
           </p>
         </>
       );
@@ -202,7 +204,8 @@ export function StepContent({
             the caption files.
           </p>
           <p>
-            Pick a font or upload a TTF/OTF file, then set its size and position. The style applies
+            Pick a <strong>Caption font</strong> or upload a .ttf or .otf file, then set its{" "}
+            <strong>Caption size</strong> and <strong>Caption position</strong>. The style applies
             to captions shown in the video. You can also add or change captions on a finished
             project later without making its narration again.
           </p>
@@ -212,18 +215,18 @@ export function StepContent({
       return (
         <>
           <p>
-            Enter a <strong>Project title</strong>, such as “A quick trip to Albania.” Set the title
-            in Content.
+            Type what the video is about under <strong>What’s the video about?</strong>, such as “A
+            quick trip to Albania.” Leave <strong>Start from</strong> on{" "}
+            <strong>A blank video</strong>: this tour builds the video from your own prompts.
           </p>
           <p>
-            Under <strong>Written by</strong>, pick the <strong>Service</strong> and{" "}
-            <strong>Model</strong> that write the article. The list shows the models that work for
-            your key; <strong>Show more models…</strong> and <strong>Type a model ID…</strong> are
-            at its end, and <strong>Manage models ↗</strong> (Settings → Models) refreshes and
-            checks them.
+            Under <strong>Written by</strong> in the Article row, pick the <strong>Service</strong>{" "}
+            and <strong>Model</strong> that write the article. The list shows the models that work
+            for your key; <strong>Type a model ID…</strong> is at its end, and{" "}
+            <strong>Manage models ↗</strong> (Settings → Models) checks them.
           </p>
           <p>
-            Intro and Outro are under Narration's <strong>More narration settings</strong> while
+            Intro and Outro are under Narration’s <strong>More narration settings</strong> while
             Narration is AI voice. Written by appears only when a stage needs the AI to write.
           </p>
         </>
@@ -232,7 +235,7 @@ export function StepContent({
       return (
         <>
           <p>
-            The prompts you picked created these fields. For the examples, enter{" "}
+            The prompts you picked ask for these keywords. For the examples, enter{" "}
             <strong>Albania</strong> for <strong>topic</strong> and{" "}
             <strong>first-time travelers</strong> for <strong>audience</strong>.
           </p>
@@ -242,8 +245,8 @@ export function StepContent({
             run.
           </p>
           <p>
-            Fill every visible field. Each value must fit on one line and be no more than 200
-            characters. Your saved prompt keeps its braces so you can reuse it next time.
+            Fill every keyword. Each value must fit on one line and be no more than 200 characters.
+            Your saved prompt keeps its braces so you can reuse it next time.
           </p>
         </>
       );
@@ -252,7 +255,8 @@ export function StepContent({
         <>
           <p>
             <strong>See everything this run will do</strong> lists what the run makes, what it costs
-            and anything still missing. If something is missing, use Back to fix its row.
+            and anything still missing. The line under the button names the first thing to fix;
+            press it to open that row.
           </p>
           <p>
             When ready, press the real <strong>Make the video</strong> button (
@@ -269,23 +273,24 @@ export function StepContent({
       return (
         <>
           <p>
-            The rail on the left lists the project's sections: Article, Narration, Images, Video and
-            the rest. The right rail says where the run stands and offers the one thing to do next,
-            named for its result: <strong>Pause</strong> while it runs,{" "}
-            <strong>Continue the run</strong> when it is paused, <strong>Try images again</strong>{" "}
-            when a step fails.
+            The list on the right shows each part the project makes, such as Article, Narration,
+            Images and Video, with its state in words; press one to open it. The title row’s first
+            button is the one thing to do next, named for its result: <strong>Pause</strong> while
+            it runs, <strong>Continue the run</strong> when it is paused,{" "}
+            <strong>Try images again</strong> when a step fails.
           </p>
           <p>
-            Press <strong>Edit settings</strong> to change providers, models, voice, prompts or
-            optional steps. <strong>Save changes</strong> keeps a new revision without starting
-            generation; what the change made outdated is then offered as the next action, such as{" "}
-            <strong>Remake 3 outdated images</strong>. Earlier revisions stay in{" "}
-            <strong>History</strong>.
+            Press <strong>Edit settings</strong> to change the services, models, voice, prompts or
+            extras. <strong>Save changes</strong> keeps a new version without making anything; what
+            the change made outdated is then offered as the next thing to do, with what it makes
+            again and what that costs. Earlier versions stay under Edit settings,{" "}
+            <strong>Versions</strong>.
           </p>
           <p>
-            A failed step says why beside it; open <strong>Error details</strong> for the provider's
-            own message. Rare actions, such as making a whole stage again, sit behind each section's{" "}
-            <strong>More</strong> button and in the command palette (Ctrl+K).
+            A failed step says why beside it; open <strong>Error details</strong> for the service’s
+            own message. Each part’s heading has the button that makes it all again, with its cost,
+            such as <strong>Make the video again (free)</strong>. Everything else is under{" "}
+            <strong>More</strong> and in the command palette (Ctrl+K).
           </p>
         </>
       );
@@ -295,39 +300,38 @@ export function StepContent({
           <p>
             {output === "audio" ? (
               <>
-                When Audio export finishes, press <strong>Download</strong>, then{" "}
-                <strong>Audio (.wav)</strong> for the combined narration.
+                When Audio export finishes, press <strong>Download audio (.wav)</strong> for the
+                combined narration.
               </>
             ) : output === "article" ? (
               <>
-                Use <strong>Download</strong> here to save the article. Audio and Video are Off for
-                this project.
+                Use <strong>Download</strong> here to save the article. Narration and Video are Off
+                for this project.
               </>
             ) : (
               <>
-                When Video finishes, press <strong>Download</strong>, then{" "}
-                <strong>Video (.mp4)</strong>.
+                When Video finishes, press <strong>Download video (.mp4)</strong>.
               </>
             )}{" "}
             The completed project stays in <strong>Projects</strong> so you can return to it.
           </p>
           <p>
-            Select Article, Audio or Images in the stage list on the <strong>Output</strong> tab to
-            download their outputs. <strong>Download all</strong> under Images gives an image ZIP,
-            not the video.
+            Each part has its own downloads: press Article, Narration or Images in the list on the
+            right. <strong>All files</strong> lists every file in one place. In Images,{" "}
+            <strong>Download all</strong> saves the pictures as one .zip, not the video.
           </p>
           <p>
-            If subtitles are enabled, download the <strong>.srt</strong> or <strong>.vtt</strong>{" "}
-            files beside the final export. File-mode captions are also available in the video
-            player.
+            With captions on, the <strong>.srt</strong> and <strong>.vtt</strong> caption files
+            download beside the video, and the player can show them.
           </p>
         </>
       );
     case "run-cost":
       return (
         <p>
-          <strong>Cost</strong> in the project's sections shows what this run really cost, per stage
-          and model. Totals for every project are in Settings, <strong>Usage</strong>.
+          The cost line under the list says what this run really cost, and{" "}
+          <strong>See the breakdown</strong> shows it per stage and model. Totals for every project
+          are in Settings, <strong>Usage</strong>.
         </p>
       );
     case "studio-prep":
@@ -335,14 +339,14 @@ export function StepContent({
         <>
           <p>
             Slopify never uploads for you. When the video is made,{" "}
-            <strong>Copy for YouTube Studio</strong> is the next action: it lists everything YouTube
+            <strong>Copy for YouTube Studio</strong> in the title row lists everything YouTube
             Studio asks for, in the order it asks, from the file and title to the thumbnail, tags
-            and the AI disclosure. The project's <strong>YouTube</strong> section keeps each one's
-            release date and link.
+            and the AI disclosure. The project’s <strong>YouTube</strong> section keeps each
+            upload’s release date and link.
           </p>
           <p>
-            The browser extension in Settings, <strong>YouTube Studio</strong>, can fill those in
-            for you.
+            The browser extension in Settings, <strong>YouTube Studio and posting</strong>, can fill
+            those in for you.
           </p>
         </>
       );
@@ -350,15 +354,16 @@ export function StepContent({
       return (
         <p>
           <strong>Home</strong> is the day at a glance: what needs you, what is running and at which
-          step, what is coming up this week and what is ready to upload.
+          step, what is coming up this week and what is finished.
         </p>
       );
     case "channels":
       return (
         <p>
           A <strong>channel</strong> keeps its brand kit, series brief, templates, schedules and a
-          cast that looks the same in every video. It also remembers finished episodes and your
-          existing videos, so new topics do not repeat them.
+          cast that looks the same in every video. It also remembers each finished video on its{" "}
+          <strong>Memory</strong> tab, and the titles you made before on{" "}
+          <strong>Titles to avoid</strong>, so new topics do not repeat them.
         </p>
       );
     case "calendar":

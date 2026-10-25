@@ -2,7 +2,7 @@ import { keyGuides } from "@app/slices/settings/key-guides.js";
 import { type ProviderFamily, type ProviderId, providers } from "@app/slices/settings/model.js";
 import { External } from "./content-parts";
 
-// The key steps link to the same pages Settings → Providers shows (`settings/key-guides.ts`),
+// The key steps link to the same pages Settings → Keys & services shows (`settings/key-guides.ts`),
 // so the tutorial and the key guides can't drift apart.
 export function keyLinks(
   family: ProviderFamily,
@@ -44,7 +44,7 @@ export function SetupContent({
     case "text-key":
       return (
         <>
-          <p>First, choose what will write your scripts. You only need one text provider.</p>
+          <p>First, choose what writes your articles. You only need one writing service.</p>
           <ol className="list-decimal space-y-1 pl-5">
             <li>
               Sign in to{" "}
@@ -54,14 +54,17 @@ export function SetupContent({
               , create an API key, and make sure the account can use your chosen model.
             </li>
             <li>
-              Paste it into OpenRouter’s <strong>API key</strong> field here, press{" "}
-              <strong>Test</strong> to check it, then <strong>Save</strong>.
+              Pick <strong>OpenRouter</strong> in the list, paste the key into{" "}
+              <strong>OpenRouter API key</strong> and press <strong>Save</strong>.{" "}
+              <strong>Test the key (free)</strong> then checks it.
             </li>
           </ol>
           <p>
-            Already using Claude Code, Codex or Antigravity CLI? You can use its existing CLI login
-            instead. “Installed” means Slopify found the CLI; sign in through that CLI before
-            generating. If it is missing, enter its executable path and save to check again.
+            Already using Claude Code, Codex or Antigravity CLI? Slopify uses its sign-in instead of
+            a key. <strong>Ready</strong> means Slopify found it and it is signed in; if it says{" "}
+            <strong>Signed out</strong>, sign in through that tool. If it says{" "}
+            <strong>Not found</strong>, press <strong>Change path</strong> and enter where it is
+            installed.
           </p>
           <p className="text-ink-3">
             These are the real Settings controls. The tutorial never reads your key. Skip any step
@@ -73,18 +76,18 @@ export function SetupContent({
       return (
         <>
           <p>
-            The voice provider turns the finished article into audio. Choose {listed("tts")}; you
-            only need one.
+            The voice service reads the finished article aloud. Choose {listed("tts")}; you only
+            need one.
           </p>
           <p>
-            Create a key in your provider’s account, enable the API access or credits it requires,
-            then paste the key into its row, press <strong>Test</strong> to check it, and press{" "}
-            <strong>Save</strong>.
+            Create a key in the service’s account and add the credit it needs. Then pick the service
+            here, paste the key into its <strong>API key</strong> box and press{" "}
+            <strong>Save</strong>. <strong>Test the key (free)</strong> checks it.
           </p>
           <KeyLinks family="tts" />
           <p>
-            Next, you’ll add the exact voice that this provider should use. Skip voice setup if you
-            plan to provide your own narration or turn Audio Off.
+            Next, you’ll add the voice this service should use. Skip voice setup if you plan to use
+            your own recording or set Narration to Off.
           </p>
         </>
       );
@@ -92,9 +95,9 @@ export function SetupContent({
       return (
         <>
           <p>
-            Choose one image provider ({listed("image")}), create a key in its dashboard, paste it
-            into the matching row, press <strong>Test</strong> to check it, and press{" "}
-            <strong>Save</strong>.
+            Choose one image service ({listed("image")}), create a key in its dashboard, paste it
+            into its <strong>API key</strong> box here and press <strong>Save</strong>.{" "}
+            <strong>Test the key (free)</strong> checks it.
           </p>
           <KeyLinks family="image" />
           <p>
@@ -103,8 +106,9 @@ export function SetupContent({
             image-model quota before retrying.
           </p>
           <p>
-            OpenAI’s voice and image rows are saved separately, even when you use the same API key.
-            Skip this step if you plan to provide your own images or turn Images and Thumbnail Off.
+            OpenAI is listed as a voice service and as an image service, and each keeps its own key,
+            even when you paste the same one. Skip this step if you plan to use your own images, or
+            set Images to None and leave the thumbnail off.
           </p>
         </>
       );
@@ -113,23 +117,24 @@ export function SetupContent({
         <>
           <ol className="list-decimal space-y-1 pl-5">
             <li>
-              Enter a <strong>Voice name</strong> you will recognize, such as “Travel narrator.”
+              Under <strong>Add a voice</strong>, pick the <strong>Voice service</strong> whose key
+              you saved.
             </li>
             <li>
-              Select the <strong>Provider</strong> whose voice key you saved.
+              Pick a <strong>Voice</strong> from its list, or{" "}
+              <strong>A voice of my own (paste its ID)</strong> and paste the ID from the service’s
+              voice library.
             </li>
             <li>
-              Copy the exact <strong>Voice ID</strong> from that provider’s voice library or
-              documentation.
+              Type a <strong>Name</strong> you will recognize, such as “Travel narrator.”
             </li>
             <li>
               Press <strong>Add voice</strong>.
             </li>
           </ol>
           <p>
-            The name is your label; the ID tells the provider which voice to use. Slopify checks the
-            ID with the provider when narration runs. A voice is only required when Audio is set to
-            Generate.
+            The name is how you pick the voice on Create; the voice itself tells the service who
+            reads. A voice is needed only when Narration is set to AI voice.
           </p>
         </>
       );
