@@ -17,7 +17,7 @@ import { Swatches, ThemeDetail, themeMeta } from "@/library/document-theme-parts
 import { EditorCrumb } from "@/library/editor-frame";
 import { ListSkeleton, LoadError, libraryListDetail, libraryRow } from "@/library/list-states";
 import { useLibraryItem } from "@/library/list-url";
-import { LibraryRowActions } from "@/library/row-actions";
+import { DuplicateLabel, LibraryRowActions } from "@/library/row-actions";
 import { sortLibrary, useLibrarySort } from "@/library/sort";
 import { SortMenu } from "@/library/sort-menu";
 import { Stamp } from "@/library/time";
@@ -195,15 +195,14 @@ export function DocumentThemesRoute() {
                                 </ButtonLink>
                               }
                               duplicate={
-                                <ButtonLink
+                                <Link
                                   to="/document-themes/new"
                                   search={{ from: theme.id }}
                                   aria-label={`Duplicate ${theme.name}`}
-                                  variant="quiet"
-                                  size="small"
+                                  className="no-underline"
                                 >
-                                  Duplicate
-                                </ButtonLink>
+                                  <DuplicateLabel />
+                                </Link>
                               }
                               onDelete={() => setDeleting(theme)}
                             />

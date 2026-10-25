@@ -13,14 +13,14 @@ import { plural } from "@/lib/format";
 import { useLibraryHistory, useLibraryUsedBy } from "./history-drawer";
 
 // The detail beside a prompt list: the selected prompt or intro/outro's text, what it asks you
-// for each time, and one line of bookkeeping (when it changed, its versions, what uses it).
-// Compare versions appears once there are two to compare; every version and Restore are in
-// the History drawer.
+// for each time, one line of bookkeeping (when it changed, its versions) and what uses it, said
+// once: "not used yet" on that line, or the Used by list under the text. Compare versions
+// appears once there are two to compare; every version and Restore are in the Versions drawer.
+// The list's head already names the kind, so the detail opens on the name.
 export function LibraryItemDetail({
   item,
   id,
   name,
-  kicker,
   meta,
   body,
   slots,
@@ -30,8 +30,7 @@ export function LibraryItemDetail({
   readonly item: LibraryItemKind;
   readonly id: string;
   readonly name: string;
-  readonly kicker: string;
-  // "Updated Oct 24, 2026": the versions and what uses it follow on the same line.
+  // "Updated Oct 24, 2026": the versions, and "not used yet", follow on the same line.
   readonly meta: ReactNode;
   readonly body: string;
   readonly slots: readonly string[];
@@ -48,12 +47,11 @@ export function LibraryItemDetail({
     <section aria-label={`${name} details`} className="flex min-w-0 flex-col gap-4">
       <SectionHead
         title={name}
-        kicker={kicker}
         meta={
           <>
             {meta}
             {versions === undefined ? null : ` · ${plural(versions, "version")}`}
-            {used === undefined ? null : ` · ${usedBySummary(used)}`}
+            {used === undefined || usedByTotal(used) > 0 ? null : " · not used yet"}
           </>
         }
         className="pb-0"
@@ -67,7 +65,7 @@ export function LibraryItemDetail({
       </SectionHead>
       <PromptText body={body} />
       <section aria-label="Asks you for" className="flex flex-col gap-2">
-        <h3 className="sl-section-head__title text-title-3">Asks you for</h3>
+        <SectionHead title="Asks you for" as="h3" className="pb-0" />
         {own.length === 0 ? (
           <p className="m-0 text-small text-ink-2">Nothing: it runs as written.</p>
         ) : (
@@ -142,7 +140,7 @@ function PromptText({ body }: { readonly body: string }): ReactElement {
 function UsedByList({ usedBy }: { readonly usedBy: UsedBy }): ReactElement {
   return (
     <section aria-label="Used by" className="flex flex-col gap-2">
-      <h3 className="sl-section-head__title text-title-3">Used by</h3>
+      <SectionHead title="Used by" as="h3" className="pb-0" />
       <List label="Used by">
         {usedBy.templates.map((one) => (
           <ListRow
@@ -184,23 +182,6 @@ function UsedByList({ usedBy }: { readonly usedBy: UsedBy }): ReactElement {
 
 function usedByTotal(usedBy: UsedBy): number {
   return usedBy.templates.length + usedBy.schedules.length + usedBy.projects.length;
-}
-
-// "not used yet", "used by History starter", "used by 2 templates and 1 project".
-function usedBySummary(usedBy: UsedBy): string {
-  const names = [
-    ...usedBy.templates.map((one) => one.name),
-    ...usedBy.schedules.map((one) => one.name),
-    ...usedBy.projects.map((one) => one.title),
-  ];
-  if (names.length === 0) return "not used yet";
-  if (names.length === 1) return `used by ${names[0] ?? ""}`;
-  const counts = [
-    usedBy.templates.length === 0 ? undefined : plural(usedBy.templates.length, "template"),
-    usedBy.schedules.length === 0 ? undefined : plural(usedBy.schedules.length, "schedule"),
-    usedBy.projects.length === 0 ? undefined : plural(usedBy.projects.length, "project"),
-  ].filter((part) => part !== undefined);
-  return `used by ${counts.join(", ")}`;
 }
 
 // "1 Sep 2026": the day a row was last saved, for its meta line.

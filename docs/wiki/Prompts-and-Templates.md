@@ -18,13 +18,13 @@ Your videos are made from reusable pieces you write once: prompts, intros and ou
 
 ## The Prompts page
 
-The kinds of prompt run down the left with how many of each you have: **Article**, **Image**, **Thumbnail**, **Narration preparation**, **YouTube description**, **Shorts**, **Review**, **Script (speakers)** and **Post**, then **Intros** and **Outros**. Pick one to list it.
+The kinds of prompt run down the left, each over a few words on what it writes and with how many of each you have: **Article**, **Image**, **Thumbnail**, **Narration preparation**, **YouTube description**, **Shorts**, **Review**, **Script** and **Post**, then **Intros** and **Outros**. Pick one to list it. On a phone they are one **Showing:** choice above the list.
 
 - The header holds **Import or export** and the button for a new one of the kind you are looking at (for example **New article prompt**).
-- Above the list: **Search all prompts** and **Sort: Name ▾**. Press `/` to jump to the search box.
+- Above the list: **Search all prompts** and **Sort: Name ▾**. Press `/` to jump to the search box. The search looks through every kind, intros and outros included; the number beside each kind then counts the matches there, and picking a kind ends the search.
 - Each row shows the name, what it **Asks for** (its keywords) and its first line, with **Edit**, **Make a video** and a **More** menu.
-- Press a row to show it beside the list: its kind, name, when it was last changed, how many versions it has and whether anything uses it, the full text, **Asks you for** (the keywords you will be asked on Create) and **Used by**.
-- Tick rows to act on several at once; the actions appear once something is ticked.
+- Press a row to show it beside the list: its name, when it was last changed and how many versions it has, the full text, **Asks you for** (the keywords you will be asked on Create) and **Used by** (or "not used yet" on the line under the name).
+- Tick rows to act on several at once. The bar above the list always shows **Select all** and the count; **Duplicate selected**, **Export selected** and **Delete selected** appear on the same line once something is ticked.
 
 ### What every row offers
 
@@ -33,7 +33,7 @@ The kinds of prompt run down the left with how many of each you have: **Article*
 | **Edit** | Opens the prompt (or intro or outro) in its editor. |
 | **Make a video** | Opens Create with this prompt picked, on the row that shows it. An article prompt switches the article to **Write it for me**, an image prompt is ticked, a thumbnail prompt turns the thumbnail on, and a description or shorts prompt turns that extra on. The rest of your draft stays as it was. |
 | **More** → **Duplicate** | Opens the editor with a copy, for you to rename and save. |
-| **More** → **History** | Opens the prompt's versions, a side-by-side compare, and what uses it. See [Prompts](Prompts#history-and-versions). |
+| **More** → **Versions** | Opens the prompt's versions and a side-by-side compare. See [Prompts](Prompts#history-and-versions). |
 | **More** → **Delete** | Asks first, then moves it to **Settings** → **Trash** for 30 days. See [Trash](Trash). |
 
 In the prompt and the intro and outro editors, `Ctrl+S` (`Cmd+S`) saves, even while you are typing in a field.

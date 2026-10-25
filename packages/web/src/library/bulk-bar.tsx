@@ -3,9 +3,11 @@ import type { ReactElement, ReactNode } from "react";
 import { Button } from "@/components/kit/button";
 import { type Selection, SelectionBar } from "@/components/selection";
 
-// The selection bar of a Library tab: shown only while a row is ticked, so the list stays
-// quiet until then. Duplicate selected, Export selected (where the tab exports) and Delete
-// selected; the tab decides whether Delete asks first (a permanent delete) or offers Undo.
+// The selection bar of a Library tab: at rest, Select all and the count, one line; once a row is
+// ticked, the count of ticked ones, Clear selection, Duplicate selected, Export selected (where
+// the tab exports) and Delete selected, on the same line, so ticking a box never moves the rows
+// under the pointer. The tab decides whether Delete asks first (a permanent delete) or offers
+// Undo.
 export function LibraryBulkBar({
   selection,
   total,
@@ -27,8 +29,7 @@ export function LibraryBulkBar({
   readonly onDelete: () => void;
   // "Remove selected" where the list is saved as a whole (Aliases).
   readonly deleteLabel?: string;
-}): ReactElement | null {
-  if (selection.count === 0) return null;
+}): ReactElement {
   return (
     <SelectionBar
       selection={selection}

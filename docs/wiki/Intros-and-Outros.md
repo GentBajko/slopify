@@ -57,17 +57,17 @@ the listener can think about tonight. Do not ask them to subscribe.
 
 ## Edit, duplicate, delete and history
 
-Intros and outros have the same row actions as prompts: **Edit**, **Make a video** and **More** (**Duplicate**, **History**, **Delete**):
+Intros and outros have the same row actions as prompts: **Edit**, **Make a video** and **More** (**Duplicate**, **Versions**, **Delete**):
 
 | Action | What it does |
 |---|---|
 | **Edit** | Opens the editor. Change it and press **Save**. |
 | **Duplicate** | Opens the editor with a copy to rename and save. |
 | **Make a video** | Picks the intro or outro in your open draft and opens Create on it. |
-| **History** | Versions, compare and **Used by**, exactly as for prompts. See [Prompts](Prompts#history-and-versions). |
+| **Versions** | Every version and a compare, exactly as for prompts. See [Prompts](Prompts#history-and-versions). |
 | **Delete** | Asks first, then moves it to **Settings → Trash** for 30 days. |
 
-Use **Search intros and outros** (`/`) to find one by name. Rename one in its editor.
+Use **Search all prompts** (`/`) to find one by name or words: it looks through the intros, the outros and every kind of prompt. Rename one in its editor.
 
 A project keeps its own copy of the intro and outro it started with, so editing one here changes only runs started later. Templates keep their own copies too.
 
