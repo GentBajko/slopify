@@ -28,7 +28,7 @@ it("defaults to Off and offers only narration prompts", async () => {
     <NarrationPreparation value="" prompts={prompts} supported onChange={onChange} />,
     testDeps({}),
   );
-  const picker = await screen.findByLabelText("Narration Preparation");
+  const picker = await screen.findByLabelText("Narration preparation");
   expect((picker as HTMLSelectElement).value).toBe("");
   expect(screen.queryByRole("option", { name: "Article" })).toBeNull();
   fireEvent.change(picker, { target: { value: "Delivery" } });
@@ -39,7 +39,7 @@ it("keeps an unavailable saved selection visible and explains model incompatibil
     <NarrationPreparation value="Missing" prompts={[]} supported={false} onChange={() => {}} />,
     testDeps({}),
   );
-  expect(((await screen.findByLabelText("Narration Preparation")) as HTMLSelectElement).value).toBe(
+  expect(((await screen.findByLabelText("Narration preparation")) as HTMLSelectElement).value).toBe(
     "Missing",
   );
   expect(screen.getByText(/Choose Inworld TTS-2 or turn preparation Off/)).not.toBeNull();

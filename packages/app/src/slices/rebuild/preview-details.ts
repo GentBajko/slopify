@@ -97,7 +97,7 @@ export function previewDetails(
       const peers = allRecipes.filter((one) => one.stage === row.stage && one.input.kind === "llm");
       const category =
         input.preparation !== undefined
-          ? "Narration Preparation"
+          ? "Narration preparation"
           : row.key.startsWith("entry:intro")
             ? "Intro text"
             : row.key.startsWith("entry:outro")
@@ -188,7 +188,7 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
   }
   add("Language", languageInfo(before.language).name, languageInfo(after.language).name);
   add("Narration voice", before.audio?.voice, after.audio?.voice);
-  add("Narration Preparation", before.narrationPrompt, after.narrationPrompt);
+  add("Narration preparation", before.narrationPrompt, after.narrationPrompt);
   add("Narration chunking", before.chunking, after.chunking);
   add(
     "Narration aliases",

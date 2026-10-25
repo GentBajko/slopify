@@ -97,18 +97,18 @@ describe("cost planning", () => {
       chunking: { mode: "paragraph" as const },
     };
     const estimate = estimateRun(selected, { narration: "Calm." }, 1500, catalogue);
-    expect(estimate.rows.find((row) => row.stage === "Narration Preparation")).toMatchObject({
+    expect(estimate.rows.find((row) => row.stage === "Narration preparation")).toMatchObject({
       low: 0,
       onPlan: true,
       apiLow: null,
     });
-    expect(estimate.rows.find((row) => row.stage === "Narration Preparation")?.detail).toContain(
-      "2 LLM calls",
+    expect(estimate.rows.find((row) => row.stage === "Narration preparation")?.detail).toContain(
+      "2 AI calls",
     );
     expect(estimate.rows.find((row) => row.stage === "Delivery cue overhead")?.low).toBeNull();
     expect(
       estimateRun({ ...selected, narrationPrompt: "" }, {}, 1500, catalogue).rows.some(
-        (row) => row.stage === "Narration Preparation",
+        (row) => row.stage === "Narration preparation",
       ),
     ).toBe(false);
     const generated = estimateRun(
@@ -117,8 +117,8 @@ describe("cost planning", () => {
       1500,
       catalogue,
     );
-    expect(generated.rows.find((row) => row.stage === "Narration Preparation")?.detail).toContain(
-      "future",
+    expect(generated.rows.find((row) => row.stage === "Narration preparation")?.detail).toContain(
+      "once the text is written",
     );
   });
   it("prices the YouTube description as one LLM call on the timed transcript", () => {

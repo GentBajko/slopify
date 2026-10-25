@@ -93,7 +93,7 @@ describe("rebuild estimate on CLI providers", () => {
     expect(estimate.rows.some((row) => row.onPlan === true)).toBe(false);
   });
 
-  it("gives Narration Preparation on a CLI no API figure, since its calls are not counted yet", () => {
+  it("gives narration preparation on a CLI no API figure, since its calls are not counted yet", () => {
     const narrated: RunConfig = {
       ...cli,
       sources: { ...cli.sources, audio: "generate" },
@@ -102,7 +102,7 @@ describe("rebuild estimate on CLI providers", () => {
       rendered: { ...cli.rendered, narration: "Prepare the narration." },
     };
     const estimate = estimateRequests(priced(narrated), catalogue);
-    const rows = estimate.rows.filter((row) => row.detail.includes("Narration Preparation"));
+    const rows = estimate.rows.filter((row) => row.detail.includes("Narration preparation"));
     expect(rows.length).toBeGreaterThan(0);
     for (const row of rows) expect(row).toMatchObject({ onPlan: true, low: 0, apiLow: null });
   });

@@ -115,7 +115,7 @@ export function SpokenText({ form }: { readonly form: PlayFormState }): ReactEle
     useAliases ? "Your narration aliases are applied." : undefined,
     spoken.glossary ? "The Pronunciation Glossary at the end is used, not read." : undefined,
     form.narrationPrompt
-      ? "Narration Preparation adds delivery cues; the words stay as shown."
+      ? "Narration preparation adds delivery cues; the words stay as shown."
       : undefined,
   ].filter((note) => note !== undefined);
   return (
