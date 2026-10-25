@@ -128,23 +128,29 @@ function FontPickerFields({
           ) : null}
           <FontSample url={fontUrl(api, value)} />
         </div>
+        {/* The browser's own file box ("Choose File · No file chosen") is hidden: the button
+            beside it says what it does, and opens it. The input keeps the focus a refusal
+            sends to it. */}
         <div className="min-w-0 basis-full">
-          <label htmlFor={uploadId} className="sl-field__label block mb-1">
-            Upload font (.ttf or .otf)
-          </label>
           <input
             id={uploadId}
             data-play-field="subtitles.fontUpload"
             type="file"
             accept=".ttf,.otf,font/ttf,font/otf"
             disabled={uploading}
-            className="w-full text-small text-ink-2 file:mr-2 file:rounded-control file:border file:border-line-strong file:bg-sunken file:px-2 file:py-1 file:text-ink"
+            className="peer sr-only"
             onChange={(event) => {
               const file = event.target.files?.[0];
               event.target.value = "";
               if (file) upload.pick(file);
             }}
           />
+          <label
+            htmlFor={uploadId}
+            className="sl-btn sl-btn--secondary sl-btn--small cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-focus peer-disabled:cursor-default peer-disabled:opacity-60"
+          >
+            Upload font (.ttf or .otf)
+          </label>
         </div>
       </div>
       {uploading ? (
