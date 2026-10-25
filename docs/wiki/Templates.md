@@ -48,7 +48,7 @@ Because the template keeps copies of its prompts, editing a prompt on Prompts la
 You can turn any project's current setup into a template, which is handy after you have tuned a project with **Edit settings**.
 
 1. Open the project.
-2. Open **More** in the title row and choose **Save as template…** (or press `Ctrl+K` and search for **Save as template**).
+2. Press **Save as template…** under the project's status (or press `Ctrl+K` and search for **Save as template**).
 3. Type a **Template name** (up to 120 characters) and press **Save template**.
 
 The template takes the settings of the version you are looking at.
