@@ -1,4 +1,12 @@
-import { cpSync } from "node:fs";
+import { cpSync, rmSync } from "node:fs";
+
+// A folder that is only a copy is emptied first, so a page renamed or deleted at the source
+// leaves no stale copy behind in dist for the server to list beside the new one.
+const mirror = (from, to) => {
+  const target = new URL(to, import.meta.url);
+  rmSync(target, { recursive: true, force: true });
+  cpSync(new URL(from, import.meta.url), target, { recursive: true });
+};
 
 // Bundled font and license remain beside the emitted font catalog module.
 cpSync(new URL("../src/assets/", import.meta.url), new URL("../dist/assets/", import.meta.url), {
@@ -12,17 +20,7 @@ cpSync(
 );
 
 // The patch notes Settings → Patch notes lists and GET /api/patch-notes serves.
-cpSync(
-  new URL("../../../docs/patch-notes/", import.meta.url),
-  new URL("../dist/patch-notes/", import.meta.url),
-  { recursive: true },
-);
+mirror("../../../docs/patch-notes/", "../dist/patch-notes/");
 
 // The tutorials Help → Tutorials shows and GET /api/tutorials serves: the GitHub wiki's pages.
-cpSync(
-  new URL("../../../docs/wiki/", import.meta.url),
-  new URL("../dist/tutorials/", import.meta.url),
-  {
-    recursive: true,
-  },
-);
+mirror("../../../docs/wiki/", "../dist/tutorials/");
