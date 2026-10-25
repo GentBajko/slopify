@@ -123,7 +123,7 @@ export function admit(input: AdmissionInput): AdmissionResult {
   }
 
   if (needsLlmFor(draft, input.keywordUses) && !chosen(draft.llm)) {
-    fields.push({ field: "llm", message: "Choose a text (LLM) provider and model." });
+    fields.push({ field: "llm", message: "Choose a Service and a Model under Written by." });
   }
 
   if (sources.article === "generate" && blank(draft.articlePrompt)) {

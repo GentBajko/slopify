@@ -57,8 +57,8 @@ describe("thumbnailMessages", () => {
 describe("writtenPrompt", () => {
   // Empty output is a failed attempt.
   it("calls an empty answer unusable, whitespace included", () => {
-    expect(writtenPrompt("")).toBe("the LLM wrote no thumbnail prompt");
-    expect(writtenPrompt("   \n\t ")).toBe("the LLM wrote no thumbnail prompt");
+    expect(writtenPrompt("")).toBe("the AI model wrote no thumbnail prompt");
+    expect(writtenPrompt("   \n\t ")).toBe("the AI model wrote no thumbnail prompt");
   });
 
   it("accepts anything the model actually wrote", () => {

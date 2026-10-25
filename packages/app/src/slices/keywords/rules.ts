@@ -229,7 +229,7 @@ export function textEntryProblems(
     ? [
         {
           field: category,
-          message: `{{Slopify_Release_Date}} can't be used in a Text ${category}: Text is narrated as written, and the release date is only filled in when a step asks the AI model. Set this ${category}'s Mode to LLM in Library → Intros & Outros, or remove the keyword.`,
+          message: `{{Slopify_Release_Date}} can't be used in an ${category} that says these exact words: those are narrated as written, and the release date is only filled in when a step asks the AI model. In Prompts → Intros and outros, set this ${category}'s What the narrator reads to Let the AI write it from these instructions, or remove the keyword.`,
         },
       ]
     : [];

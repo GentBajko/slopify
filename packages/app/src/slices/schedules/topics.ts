@@ -146,10 +146,10 @@ async function ask(
   const llm = schedule.topicGeneration.llm ?? template?.document.form.llm;
   if (llm === undefined)
     return fail(
-      "the template this schedule uses was deleted, so there is no LLM to ask. Edit the schedule and choose a template, or pick an LLM under Topic generation.",
+      "the template this schedule uses was deleted, so there is no AI model to ask. Edit the schedule and choose a template, or pick a Service and Model under Topic generation.",
     );
   if (deps.topicLlm === undefined)
-    return fail("no LLM is available in this Slopify. Restart Slopify and try again.");
+    return fail("no AI model is available in this Slopify. Restart Slopify and try again.");
   const wanted = Math.max(generationWanted(schedule), options.force ? spare : 0);
   const known = knownTitles(deps, schedule.id);
   const signal = AbortSignal.any([
@@ -178,13 +178,13 @@ async function ask(
       return { ok: false, reason: "failed", message: "Slopify was closing." };
     const detail = errorText(error);
     return fail(
-      `${llm.provider} (${llm.model}) did not answer: ${detail.trim().slice(0, 300)}. Check it in Settings → Providers, or pick another LLM under Edit → Topic generation.`,
+      `${llm.provider} (${llm.model}) did not answer: ${detail.trim().slice(0, 300)}. Check it in Settings → Keys & services, or pick another Service or Model under Edit → Topic generation.`,
     );
   }
   const suggested = parseTopics(answer);
   if (suggested.length === 0)
     return fail(
-      `${llm.provider} (${llm.model}) answered without a list of topics. Try again, or pick another LLM under Edit → Topic generation.`,
+      `${llm.provider} (${llm.model}) answered without a list of topics. Try again, or pick another Service or Model under Edit → Topic generation.`,
     );
   // Scored outside the transaction: search may take seconds, and never holds the database.
   const scores =
@@ -212,7 +212,7 @@ async function ask(
     ).slice(0, Math.max(0, Math.min(wanted, queueMax - current.items.length)));
     if (fresh.length === 0)
       return fail(
-        "every topic the LLM suggested was already made, queued or turned down for this schedule. Add more detail to the series brief under Edit, so it has new ground to cover.",
+        "every topic the AI model suggested was already made, queued or turned down for this schedule. Add more detail to the series brief under Edit, so it has new ground to cover.",
       );
     const at = deps.clock.now().toISOString();
     const mode = current.topicGeneration.mode === "hold" ? "hold" : "queue";

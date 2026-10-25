@@ -370,7 +370,7 @@ export function priceRecipes(
         model: typeof llmModel === "string" ? llmModel : "",
         inputCharacters: (typeof style === "string" ? style.length : 0) + 3000,
         outputCharacters: 2400,
-        detail: "One LLM call per short writes its image prompts; its length is estimated.",
+        detail: "One AI call per short writes its image prompts; its length is estimated.",
       }),
     ),
     ...Array.from(
@@ -441,14 +441,14 @@ export function priceRecipe(
       kind: "unknown",
       stage: work.key,
       detail:
-        "Narration Preparation: one LLM call per future logical chunk or entry; source length is not yet known.",
+        "Narration preparation: one AI call per future logical chunk or entry; source length is not yet known.",
     };
   if (input.kind === "deferred" && input.operation === "narration-description")
     return {
       kind: "unknown",
       stage: work.key,
       detail:
-        "Narration descriptions: one LLM call per table, figure, equation or code block in the article; how many is known once the article is written.",
+        "Narration descriptions: one AI call per table, figure, equation or code block in the article; how many is known once the article is written.",
     };
   if (input.kind === "llm")
     return {
