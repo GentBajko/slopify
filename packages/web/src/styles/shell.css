@@ -1106,8 +1106,9 @@
   .sl-workspace.sl-workspace--studio {
     grid-template-columns: 200px minmax(0, 1fr) 320px;
   }
-  /* Templates: one card per template, a still of what it makes over its facts and actions,
-     four across at 1440px. */
+  /* Templates: one card per template, a still of what it makes (once its sample has one) over
+     its facts and actions, four across at 1440px. A card with no still is only its words: the
+     facts already say its shape. */
   .sl-template-cards {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
@@ -1143,28 +1144,6 @@
   }
   .sl-template-card__still:not([data-format="16:9"]) img {
     object-fit: contain;
-  }
-  /* No picture yet: the template's shape, drawn to scale, with its ratio in it. */
-  .sl-template-card__shape {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    height: 72%;
-    aspect-ratio: 16 / 9;
-    border: 1px dashed var(--color-line-strong);
-    border-radius: var(--radius-control);
-    font-size: 12px;
-    line-height: 16px;
-    color: var(--color-ink-2);
-    text-align: center;
-  }
-  [data-format="9:16"] > .sl-template-card__shape {
-    aspect-ratio: 9 / 16;
-  }
-  [data-format="1:1"] > .sl-template-card__shape {
-    aspect-ratio: 1 / 1;
   }
   .sl-template-card__actions {
     display: flex;

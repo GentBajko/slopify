@@ -5,6 +5,7 @@ import { StatusSlot } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
 import { List, ListRow } from "@/components/kit/list-row";
+import { Status } from "@/components/kit/status";
 import { installPack, onboardingKey, readFirstRun } from "./api.js";
 
 // Templates → Add starter templates: the four starter templates, each adding its prompts, a
@@ -59,12 +60,14 @@ export function PacksDrawer({
             title={pack.name}
             meta={pack.summary}
             actions={
-              <Button
-                disabled={pack.installed || install.isPending}
-                onClick={() => install.mutate(pack.id)}
-              >
-                {pack.installed ? "Added" : "Add template"}
-              </Button>
+              // An added one says so in a word: there is nothing left to press on it.
+              pack.installed ? (
+                <Status tone="done">Added</Status>
+              ) : (
+                <Button disabled={install.isPending} onClick={() => install.mutate(pack.id)}>
+                  Add template
+                </Button>
+              )
             }
           />
         ))}

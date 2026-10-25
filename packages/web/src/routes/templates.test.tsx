@@ -1,3 +1,4 @@
+import { templateNameMax } from "@app/slices/project-templates/schema.js";
 import { useLocation } from "@tanstack/react-router";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -5,6 +6,7 @@ import { StrictMode, useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { PlayDraftProvider, usePlaySession } from "@/play/draft-context";
 import { freshDraftDocument } from "@/play/draft-state";
+import { copyName } from "@/templates/use-template-actions";
 import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
 import { TemplatesRoute } from "./templates.js";
 
@@ -79,7 +81,13 @@ it("shows each template as a card: what it makes, what it asks for, and what to 
     ),
   ).not.toBeNull();
   expect(within(one).getByText("Asks for: Topic")).not.toBeNull();
-  expect(within(one).getByText("No preview yet")).not.toBeNull();
+  // No still yet: the card is its words, with no empty box saying its shape again.
+  expect(within(one).queryByRole("img")).toBeNull();
+  expect(within(one).queryByText(/No preview/)).toBeNull();
+  // The name is a way in, as on a poster template's row.
+  expect(within(one).getByRole("link", { name: template.name }).getAttribute("href")).toBe(
+    `/templates/${templateId}`,
+  );
   const make = within(one).getByRole("button", { name: makeName });
   expect(make.className).toContain("sl-btn--primary");
   expect(
@@ -364,8 +372,7 @@ it("deletes a template and teaches what a template is for once none is left", as
   expect(remove).toHaveBeenCalledOnce();
 });
 
-it("adds starter templates from the header, and imports a file from More", async () => {
-  const user = userEvent.setup();
+it("adds starter templates and imports a file from the header, each a button saying what it does", async () => {
   renderRouted(<TemplatesRoute onApplied={vi.fn()} />, testDeps(routes));
   await screen.findByRole("list", { name: "Video templates" });
   const header = screen.getByRole("banner");
@@ -373,11 +380,43 @@ it("adds starter templates from the header, and imports a file from More", async
     within(header)
       .getAllByRole("button")
       .map((one) => one.textContent),
-  ).toEqual(["Add starter templates", "More"]);
-  await user.click(within(header).getByRole("button", { name: "More ways to add templates" }));
+  ).toEqual(["Add starter templates", "Import a template file (.zip)"]);
+});
+
+it("leaves Add starter templates out once every starter is added", async () => {
+  renderRouted(
+    <TemplatesRoute onApplied={vi.fn()} />,
+    testDeps({
+      ...routes,
+      "GET /api/onboarding": jsonAnswer({
+        packs: [
+          { id: "history", name: "History", summary: "s", installed: true },
+          { id: "sleep-lore", name: "Sleep lore", summary: "s", installed: true },
+        ],
+      }),
+    }),
+  );
+  await screen.findByRole("list", { name: "Video templates" });
+  const header = screen.getByRole("banner");
+  await waitFor(() =>
+    expect(within(header).queryByRole("button", { name: "Add starter templates" })).toBeNull(),
+  );
   expect(
-    await screen.findByRole("menuitem", { name: "Import a template file (.zip)" }),
+    within(header).getByRole("button", { name: "Import a template file (.zip)" }),
   ).not.toBeNull();
+});
+
+it("names a poster template's header for posters", async () => {
+  renderRouted(
+    <TemplatesRoute onApplied={vi.fn()} tab="posters" onTab={vi.fn()} />,
+    testDeps(routes),
+  );
+  expect(
+    await screen.findByText(
+      "A poster template is a saved poster with keywords. Make a poster from one, or edit what it makes.",
+    ),
+  ).not.toBeNull();
+  expect(screen.queryByText(/Make a video from one/)).toBeNull();
 });
 
 it("duplicates a template as a named copy", async () => {
@@ -406,6 +445,19 @@ it("duplicates a template as a named copy", async () => {
   await user.click(await screen.findByRole("menuitem", { name: `Duplicate ${template.name}` }));
   await waitFor(() => expect(created).toHaveBeenCalledOnce());
   expect(names).toEqual([`${template.name} copy`]);
+});
+
+it("names a second copy so no two cards read alike, and keeps a long name within its limit", () => {
+  expect(copyName("History starter", new Set(["History starter"]))).toBe("History starter copy");
+  expect(copyName("History starter", new Set(["History starter copy"]))).toBe(
+    "History starter copy 2",
+  );
+  expect(
+    copyName("History starter", new Set(["History starter copy", "History starter copy 2"])),
+  ).toBe("History starter copy 3");
+  const long = "a".repeat(templateNameMax);
+  expect(copyName(long, new Set())).toHaveLength(templateNameMax);
+  expect(copyName(long, new Set()).endsWith(" copy")).toBe(true);
 });
 
 it("lists a template's versions and restores an older one as a new version", async () => {
