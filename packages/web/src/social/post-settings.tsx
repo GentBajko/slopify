@@ -8,12 +8,12 @@ import {
   socialPlatforms,
 } from "@app/slices/social/model.js";
 import { type ReactElement, useId } from "react";
-import { Checkbox } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { Checkbox, HelpLine } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { PostChoiceFields } from "./post-choice-fields";
 
-// Which sites a template's projects post to, and what each gets: Template Studio's Upload pack
-// and Play's Outputs. No site on is no posting (`undefined`), as every template saved before.
+// Which sites a template's projects post to, and what each gets: Edit template and Create's
+// Extras. No site on is no posting (`undefined`), as every template saved before.
 export function PostSettings({
   value,
   onChange,
@@ -40,11 +40,8 @@ export function PostSettings({
   return (
     <div className="flex min-w-0 flex-col gap-4" data-slot="post-settings">
       <div className="sl-field" {...helpScope}>
-        <span className="flex min-w-0 items-center gap-1">
-          <span className="sl-field__label" id={labelId}>
-            Post to
-          </span>
-          <InfoTip id="social.platforms" className="-my-1" />
+        <span className="sl-field__label" id={labelId}>
+          Post to
         </span>
         {/* biome-ignore lint/a11y/useSemanticElements: a row of chips; a fieldset's box and legend would break the row. */}
         <div role="group" aria-labelledby={labelId} className="flex flex-wrap gap-2">
@@ -60,6 +57,10 @@ export function PostSettings({
             </label>
           ))}
         </div>
+        <HelpLine>
+          Each site you tick gets a post made with the video. Nothing is posted until you press
+          Post.
+        </HelpLine>
       </div>
       {on.map((platform) => {
         const choice = value?.[platform];
