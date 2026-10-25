@@ -221,6 +221,27 @@ describe("the Run cost tab", () => {
     expect(within(byModel).getByText("$0 · sample, free")).toBeTruthy();
     expect(within(byModel).getByText("Sample artist")).toBeTruthy();
   });
+
+  it("says a price nobody knows as Not known, as the make-again review does", async () => {
+    const unpriced: RunCost = {
+      ...cost,
+      unpriced: 3,
+      byStage: [
+        { ...line, stage: "article", wallMs: 1000, unpriced: 2, apiEquivalent: null },
+        { ...line, stage: "audio", wallMs: 1000, cost: 0.4, unpriced: 1, apiEquivalent: null },
+      ],
+      byModel: [],
+      plans: [],
+    };
+    renderApp(
+      <RunCostPanel projectId="p1" />,
+      testDeps({ "GET /api/projects/p1/run-cost": jsonAnswer(unpriced) }),
+    );
+    const byStage = await screen.findByRole("table", { name: "Run cost by step" });
+    expect(within(byStage).getByText("Not known")).toBeTruthy();
+    expect(within(byStage).getByText("$0.40 + not known")).toBeTruthy();
+    expect(byStage.textContent).not.toMatch(/unknown/i);
+  });
 });
 
 describe("the run clock", () => {

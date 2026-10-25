@@ -275,8 +275,8 @@ function lineCost(row: StageCost | ModelCost): string {
   if ("provider" in row && isSampleStandIn(row.provider)) return "$0 · sample, free";
   return row.unpriced > 0
     ? row.unpriced === row.calls
-      ? "Unknown"
-      : `${usd(row.cost)} + unknown`
+      ? "Not known"
+      : `${usd(row.cost)} + not known`
     : usd(row.cost);
 }
 

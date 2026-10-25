@@ -160,19 +160,19 @@ An uploaded narration is never levelled piece by piece; only the final master re
 The review shows:
 
 - What it does, in words: what is made again (and whether it is charged or on your plan), what is then put together on this computer for free, and what stays as it is.
-- Counts of work items: **to make**, **built on this computer**, **to confirm**, **kept as they are** and **can't run**, plus the known cost. Work on a Claude Code or Codex plan reads "$0 on your plan", with what the same work would cost through the API.
+- Counts of work items: **to make**, **built on this computer**, **to confirm**, **kept as they are** and **can't run**, plus the known cost (**Not known** when no call in it has a price). Work on a Claude Code or Codex plan reads "$0 on your plan", with what the same work would cost through the API.
 - **Changed inputs**: each changed input with **Before** and **After**.
-- **Work items**: every item, why it is made or kept, and **View request text** for the exact request.
+- **Item by item (N)**: every item, why it is made or kept, and **View request text** for the exact request.
 - **Cost by step**.
 
-Press **Make 3 outputs again** (the button counts them) to start, or **Keep things as they are** to close it with nothing spent. When the button is off, the line beside it says why, for example that an item can't run (its reasons are listed above) or that a box needs ticking:
+Press the button named for what it makes, **Make image 2 again** for one thing or **Make 3 items again** for several, to start, or **Keep things as they are** to close it with nothing spent. When the button is off, the line beside it says why, for example that an item can't run (its reasons are listed above) or that a box needs ticking:
 
 | Tick box | When it appears |
 | --- | --- |
 | **Keep the provided content for …** | A file uses something you supplied, and something it depends on (such as the narration) has changed since. Tick to confirm it still fits. To use something else, close the review and replace the file in Edit settings first. |
-| **I understand that N cost estimates are unknown.** | Some steps use a model with no published price, so their cost is left out of the total. Tick to start anyway; the real cost is recorded under the project's cost line once they run. |
+| **Start even though 1 call's price isn't known** (or **N calls' prices aren't known**) | Some steps use a model with no published price, so their cost is left out of the total. Tick to start anyway; the real cost is recorded under the project's cost line once they run. |
 
-The next action button and the outdated groups in the command palette start at once when nothing needs ticking; otherwise they open this review.
+The next action button and the outdated groups in the command palette start at once when nothing needs ticking; otherwise they open this review. A make-again button on the project page (**Make this image again**, **Make this short again**, **Fix this line**) asks first in its own dialog, which names the paid calls and their price or says the price isn't known; pressing on there starts the work at once. If that work still needs this review (it costs more than the dialog said, or something can't run), **Keep things as they are** puts the project back to the version it was on before the press, and a start that is refused does the same and lists the reasons under each step's name.
 
 ## Versions
 
