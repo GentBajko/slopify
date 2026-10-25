@@ -713,6 +713,20 @@
   .sl-grid--compact .sl-media__open-icon {
     display: none;
   }
+  /* On a phone a gallery's tiles are about 170px wide: the same small button, so it keeps to
+     the corner instead of covering half the picture. */
+  @media (max-width: 639px) {
+    .sl-media__frame .sl-media__open.sl-btn {
+      top: 6px;
+      right: 6px;
+      height: 24px;
+      padding: 0 8px;
+      font-size: 12px;
+    }
+    .sl-media__open-icon {
+      display: none;
+    }
+  }
   .sl-media__caption {
     display: flex;
     justify-content: space-between;

@@ -116,7 +116,18 @@ export function MediaFrame({
       </div>
       {title === undefined && meta === undefined ? null : (
         <figcaption className="sl-media__caption">
-          {title === undefined ? <span /> : <strong className="min-w-0 truncate">{title}</strong>}
+          {/* Two lines before it is cut, and the whole title on hover: a narrow tile on a phone
+              kept only about 20 characters of one line. */}
+          {title === undefined ? (
+            <span />
+          ) : (
+            <strong
+              className="min-w-0 line-clamp-2 break-words"
+              title={typeof title === "string" ? title : undefined}
+            >
+              {title}
+            </strong>
+          )}
           {meta === undefined ? null : <span className="shrink-0">{meta}</span>}
         </figcaption>
       )}
