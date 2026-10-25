@@ -117,7 +117,7 @@ Captions are timed against the narration by a speech model that runs on your com
 
 ## Anonymous usage stats
 
-The first time you open Slopify, a line on the bottom edge of the window says: "Slopify adds what it makes (videos, images, words) to the public totals on its website, slopify.stream, anonymously. Nothing you type leaves this computer." **What's counted** opens the full list in place, and **OK** puts the line away. Nothing is counted before you press **OK**, and the page above it works as usual meanwhile.
+The first time you open Slopify, a line on the bottom edge of the window says: "Slopify adds what it makes (videos, images, words) to the public totals on its website, slopify.stream, anonymously. Nothing you type is counted." **What's counted** opens the full list in place, and **Start counting** puts the line away. Nothing is counted before you press **Start counting**, and the page above it works as usual meanwhile.
 
 | Counted | Never counted |
 | --- | --- |

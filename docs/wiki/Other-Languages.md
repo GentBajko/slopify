@@ -61,8 +61,8 @@ English projects get no extra line, so they are exactly what they were before la
 Saved voices carry the languages they speak.
 
 1. Open **Settings → Voices** and add a voice.
-2. Leave **Languages** blank and Slopify asks ElevenLabs, Cartesia or Inworld which languages the voice speaks, or type codes yourself, such as `es, de`.
-3. Press **Edit** in the Languages column to change them later.
+2. Leave **Languages it speaks** on **Any language** and Slopify asks ElevenLabs, Cartesia or Inworld which languages the voice speaks, or pick them yourself by name.
+3. Change them later in the voice's row, under **Speaks**: pick a language to add it, or remove one.
 
 OpenAI has no voice API for this, and its voices read every language its model does. A voice whose languages are unknown is offered for every language.
 

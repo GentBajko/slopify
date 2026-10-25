@@ -6,15 +6,17 @@ Slopify does no AI work itself: it calls services you set up, on your own accoun
 
 ## How the page is laid out
 
-**Keys & services** opens with three lines saying what your videos have now, each with its state in words:
+**Keys & services** opens with three lines saying what your videos have now, each with its state in words (**Ready**, **No key** or **No voice saved**, the same words as the first-run screen):
 
-| Line | Ready when | Its button |
+| Line | Ready when | Its button while not ready |
 |---|---|---|
-| **Article** | A writing service is ready. The line names the one Create picks, for example "Claude Code CLI (Create picks it)". | **Show writing services**, or **Set up a writing service** |
-| **Narration** | A voice service is ready (a key saved, or the system voice found). Otherwise "No voice service yet, so videos have no narration." | **Show voice services**, or **Set up a voice service** |
-| **Images** | An image service is ready. Otherwise "No image service yet, so videos have no pictures." | **Show image services**, or **Set up an image service** |
+| **Article** | A writing service is ready. The line names the one Create picks, for example "Claude Code CLI (Create picks it)". | **Set up a writing service** |
+| **Narration** | A voice service can narrate: an OpenAI key (the first short saves its voice), the system voice found, or another voice service with a key and a voice saved under **Voices**. A key with no voice saved reads **No voice saved**. Otherwise "No voice service yet, so videos have no narration." | **Set up a voice service**, or **Save a voice** |
+| **Images** | An image service is ready. Otherwise "No image service yet, so videos have no pictures." | **Set up an image service** |
 
-Under them, **Check every service** (see below), then three lists, one per kind of work. Each row names the service, how it connects (**API key**, **Sign-in** or **Built in**) and its state. Pick a row to open its setup beside the list: what it does and how it bills, the key box or the tool's path, and the steps to get a key.
+A ready line has no button: its services are listed right under it.
+
+Under them, **Check every service** (see below), then three lists, one per kind of work. Each row names the service, how it connects (**API key**, **Sign-in** or **Built in**) and its state. Pick a row to open its setup: beside the list on a wide window, under its own row on a narrower one (a laptop with the Settings list beside it, or a phone). The setup holds what it does and how it bills, the key box or the tool's path, and the steps to get a key. A link from the first-run screen or Create opens the service it names and scrolls to its key box, with **Back to the welcome** (or **Back to Create**) beside it, which becomes **Done · back to …** once a key is saved.
 
 | List | What it makes | Services |
 |---|---|---|
@@ -229,13 +231,13 @@ The keyed services' numbers come from the model list.
 
 1. Open **Settings → Keys & services**.
 2. Press **Check every service** (or press `Ctrl+K` and run **Check every service**). The line beside it says when it last checked.
-3. Read the result, one row per service, under the button.
+3. Read the result under the button: one row for each service that needs something, then one line naming the services that are **Ready**, and one naming those not set up and not used anywhere.
 
 For each service it checks:
 
 - **Installed** and **Signed in** for a sign-in tool. For Antigravity CLI, Slopify runs `agy models`: a model list means signed in, "Please sign in" means signed out (run `agy` in a terminal), and anything else shows as unknown.
 - **Speech program found** for the System voice, with the program it speaks with.
-- **Key saved** and **Key valid** for a keyed service, using the same call as **Test the key (free)**. Nothing is made or billed.
+- **Key** and **Key valid** for a keyed service, using the same call as **Test the key (free)**. Nothing is made or billed. A service chosen somewhere with no key saved shows **No key**, with where it is chosen and where to paste its key.
 - **Model reachable** for a keyed service: Slopify asks the service, with the saved key, about each model you chose (its model page, or the model list for OpenRouter and ElevenLabs), without making anything.
 - **Chosen models**: that the models your templates, schedules, drafts and unfinished projects use are still offered. A retired one points you to Settings → Models (see [Models](Models#switch-away-from-a-retired-model)).
 
@@ -246,6 +248,7 @@ Each service's row has **Check again**, which checks that service alone; its res
 | **Ready** | Every check passed. |
 | **May need fixing** | Something might stop a run, such as a rate limit or the service being down during the check. |
 | **Needs fixing** | Something will stop a run. The line says how to fix it. |
+| **No key** | The service is chosen somewhere (a template, a schedule, a Create draft or a project) and has no key saved. |
 | **Not set up** | Neither set up nor used anywhere. These are listed together on one line. |
 
 The result stays while you move between Settings pages.
@@ -256,20 +259,20 @@ Narration needs a voice from your voice service. Slopify does not check a pasted
 
 1. Save a key for the voice service in **Settings → Keys & services**. (You can add a voice before, but it can't narrate until the key is saved.)
 2. Open **Settings → Voices**.
-3. Under **Add a voice**, fill in the fields and press **Add voice**.
+3. Under **Add a voice**, fill in the fields and press **Add voice**. Until it can add, the line beside it says what is still missing, such as "Pick a voice first".
 
 | Field | What it does | Rules |
 |---|---|---|
 | **Voice service** | The service the voice belongs to. Each says when it has no key or is not installed. | Voice services only. |
 | **Voice** | Pick from the service's own list (for example **Pick an OpenAI voice**), or **A voice of my own (paste its ID)** and paste the service's ID for it, from its voice library. For Inworld, an ID such as `Dennis`, or one from your workspace. For **System voice** it is a list of the voices found on this computer, grouped by speech program, with a filter and **Listen**. | Required, up to 200 characters, one per voice and service. |
 | **Name** | How you pick it on Create. Only you see it. | Required, up to 200 characters. Names can repeat. |
-| **Languages it speaks (optional)** | The languages the voice speaks, as codes such as `es, de`. Create lists the voice only for projects in these languages. | 2 or 3 letter codes. Empty means any: the service is asked when it can say, and a voice with unknown languages shows as **Any (not known)** and is offered for every language. |
+| **Languages it speaks** | The languages the voice speaks, picked by name; each picked one has its own remove button. Create lists the voice only for projects in these languages. | **Any language** until you pick one: the service is asked when it can say, and otherwise the voice is offered for every language. |
 
 ## Manage your voices
 
-The **Voices** table lists each voice with its **Service** (and that service's state), what it **Speaks**, **Sounds like a real person**, and **Listen** and **Remove**. When a voice's service has no key, a line above the table says so with a button to add the key.
+Each voice is one row: its name, its service (and that service's state) and its ID, with **Listen** and **Remove**; under them what it **Speaks** and **Sounds like a real person**. When a voice's service has no key, a line above the list says so with a button to add the key.
 
-- **Edit** in the Speaks cell changes the language codes; **Save** or **Cancel**.
+- **Speaks** changes the voice's languages in place: pick one from the list to add it, or remove one. Each change is saved at once.
 - **Sounds like a real person**: turn it on for a voice cloned from, or made to sound like, someone real. YouTube asks you to say so when you upload; Copy for YouTube Studio answers Yes for you. An AI voice that imitates no one stays off. Default: off. See [Publishing to YouTube](Publishing-to-YouTube).
 - **Listen** reads one sentence aloud: free with the system voice, one short paid request with a service that has a key.
 - **Remove**, then confirm, deletes it from the list. Projects that used the voice keep the audio they made with it.

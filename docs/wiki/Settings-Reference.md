@@ -17,7 +17,7 @@ Settings is one list of pages down the left, each named once: the name in the li
 | [Notifications](#notifications) | Browser notifications, run sounds, a notification URL, the weekly report | [Notifications](Notifications) |
 | [YouTube Studio and posting](#youtube-studio-and-posting) | Playlists, upload lead time, the Studio extension's pairing and install | [Studio Extension](Studio-Extension), [Posting to Social Sites](Posting-to-Social-Sites) |
 | [Backup & storage](#backup--storage) | Daily backup, your files folder, export and import, disk space, sample projects | [Where Your Files Live](Where-Your-Files-Live), [Backups](Backups) |
-| [Trash](#trash) | Deleted things, kept for 30 days | [Trash](Trash) |
+| [Trash](#trash) | What you deleted, to bring back or remove for good | [Trash](Trash) |
 | [General](#general) | Light or dark, and starting Slopify when you log in | [Start at Login](Start-at-Login) |
 | [Remote access](#remote-access) | Opening Slopify on your phone or laptop through Tailscale | [Remote Access](Remote-Access) |
 | [AI agents](#ai-agents) | Letting Claude Code or Codex on this computer run Slopify | [Agents (MCP)](Agents-MCP) |
@@ -31,9 +31,9 @@ Settings is one list of pages down the left, each named once: the name in the li
 
 | Control | What it does |
 |---|---|
-| **Article**, **Narration**, **Images** | One line each saying whether your videos have that part now (**Ready** or **Needs setup**) and why, with **Set up a voice service** (and the like) or **Show writing services** (and the like). |
-| **Check every service** | Checks every tool's sign-in, the system voice, every saved key, and whether each chosen model is still offered and reachable with your key. The result shows one row per service under it, each with **Check again**. The line beside it says when it last checked. |
-| **Writing services**, **Voice services**, **Image services** | Every supported service with how it connects (**API key**, **Sign-in** or **Built in**) and its state (**Ready**, **No key**, **Not found**, **Signed out**, **Needs fixing**, **Not installed**). Pick one to open its setup beside the list. |
+| **Article**, **Narration**, **Images** | One line each saying whether your videos have that part now (**Ready**, **No key** or **No voice saved**) and why, with **Set up a voice service** (and the like) or **Save a voice** while it is not ready. |
+| **Check every service** | Checks every tool's sign-in, the system voice, every saved key, and whether each chosen model is still offered and reachable with your key. The result lists each service that needs something, with **Check again**, then one line of the ready ones and one of those not used anywhere. The line beside it says when it last checked. |
+| **Writing services**, **Voice services**, **Image services** | Every supported service with how it connects (**API key**, **Sign-in** or **Built in**) and its state (**Ready**, **No key**, **Not found**, **Signed out**, **Needs fixing**, **Not installed**). Pick one to open its setup beside the list on a wide window, or under its own row. |
 | **<Service> API key** and **Save** | Stores a key on this computer only, sent only to that service, never in backups or exports. |
 | **Test the key (free)** | Checks a pasted key before you save it (without storing it), or the saved key, with the cheapest harmless call. Nothing is billed. |
 | **Remove the key** | Deletes the saved key after you confirm. |
@@ -52,9 +52,9 @@ Full details: [Keys and Services](Providers-and-Keys) and [AI CLIs](AI-CLIs).
 | **Voice service** | The service the voice belongs to. | Voice services only. |
 | **Voice** | The service's own voices to pick from, or **A voice of my own (paste its ID)**. For **System voice**, the voices found on this computer, with a filter and **Listen**. | Required, up to 200 characters, one per voice and service. |
 | **Name** | How you pick it on Create. | Required, up to 200 characters. |
-| **Languages it speaks (optional)** | Codes such as `es, de`. Create lists the voice only for projects in these languages. | Empty means any: asked from the service when it can say; otherwise offered for every language. |
-| **Add voice** | Adds the voice to the table. | |
-| **Edit** (Speaks cell) | Changes a voice's languages; **Save** or **Cancel**. | |
+| **Languages it speaks** | Picked by name. Create lists the voice only for projects in these languages. | **Any language** until you pick one: asked from the service when it can say; otherwise offered for every language. |
+| **Add voice** | Adds the voice to the list. The line beside it says what is still missing. | |
+| **Speaks** (each voice's row) | Picks or removes the voice's languages; each change is saved at once. | |
 | **Sounds like a real person** | On for a voice cloned from, or made to sound like, someone real. Copy for YouTube Studio then answers Yes to YouTube's question for videos it narrates. | Default: off. |
 | **Listen** | Reads one sentence aloud: free with the system voice, one short paid request with a service that has a key. | |
 | **Remove** | Removes the voice after you confirm. Projects keep the audio they made with it. | |
@@ -80,7 +80,7 @@ See [Models](Models).
 
 ## Production defaults
 
-"How new videos sound and render, and what template samples may spend."
+"How new videos sound and are encoded, and what template samples may spend."
 
 ### Silence between segments
 
@@ -103,20 +103,20 @@ The chosen model downloads once, the first time captions are timed (or when Slop
 | Control | What it does | Default / range |
 |---|---|---|
 | **Level the volume for new runs** | Whether a new run on Create (and a template or quick short) starts with **Level the volume** on. On evens out every narration piece and sets the finished files to a standard loudness. | On |
-| **Video volume** | How loud the long video and shorts are, in dB from the recommended −14 LUFS (the level YouTube and Spotify play at). Type dB or a percentage. Peaks stay under −1.5 dBTP. | 0 dB (−14 LUFS); −10 dB to +4 dB |
-| **Audio files volume** | How loud the sound-only WAV and an audiobook's MP3 and M4B are, in dB from the recommended −18 LUFS. Peaks stay under −3 dBTP. | 0 dB (−18 LUFS); −10 dB to +4 dB |
+| **Video volume** | How loud the long video and shorts are, in dB from the loudness YouTube plays videos at (−14 LUFS). Type dB or a percentage. Peaks stay under −1.5 dBTP. | 0 dB; −10 dB to +4 dB |
+| **Audio files volume** | How loud the sound-only WAV and an audiobook's MP3 and M4B are, in dB from the loudness audiobook shops ask for (−18 LUFS). Peaks stay under −3 dBTP. | 0 dB; −10 dB to +4 dB |
 
 The volume fields show only while the switch is on. A project keeps what it started with; change it there in **Edit settings**. Levelling runs on this computer and makes no service calls. Changes save as you make them.
 
-### Rendering
+### Encoding
 
-"How this computer encodes videos and shorts. Changing these never marks anything outdated." Like the caption timing model, these belong to the computer, not a project: no project copies them, because they change how a video is made, not what it is. A video reads them once as it starts; one already being made finishes as it began. Changes save as you make them.
+"How this computer turns videos and shorts into files. Changing these never marks anything outdated." Like the caption timing model, these belong to the computer, not a project: no project copies them, because they change how a video is made, not what it is. A video reads them once as it starts; one already being made finishes as it began. Changes save as you make them.
 
 | Control | What it does | Default |
 |---|---|---|
-| **Video encoder** | What turns the frames into the finished file. **Processor (x264)** is the one every computer has. **NVIDIA graphics card (NVENC)** encodes on the card at its highest-quality settings (preset p7, tune hq, constant quality) and leaves the processor for the rest. It is offered only when Slopify finds an ffmpeg with NVENC (its own, else the `ffmpeg` on your `PATH` or `/usr/bin/ffmpeg`) that passes a tiny test encode; otherwise the line under it says the card's encoder did not pass its test and videos are encoded on the processor, with **Details**. | Processor (x264) |
+| **Video encoder** | What turns the frames into the finished file. **Processor (x264)** is the one every computer has. **NVIDIA graphics card (NVENC)** encodes on the card at its highest-quality settings (preset p7, tune hq, constant quality) and leaves the processor for the rest. It is offered only when Slopify finds an ffmpeg with NVENC (its own, else the `ffmpeg` on your `PATH` or `/usr/bin/ffmpeg`) that passes a tiny test encode; otherwise the line under it says "No working NVIDIA graphics card was found on this computer" (or that none was found) and that videos are encoded on the processor, with what the test printed under **Details**. | Processor (x264) |
 | **Clip encoding** | How hard the processor works on each image's clip before the captions are drawn over them. **Thorough** is x264's medium preset; **Fast** is its veryfast preset at the same quality setting (CRF 16), about half the processor time for a slightly softer picture. Only the clips under captions in the video change. Has no effect with the NVIDIA encoder. | Thorough |
-| **Render priority** | **Background (your other programs come first)** runs every ffmpeg of a video, short or audio file, its volume mastering included, below normal priority, and that of the style preview, template samples, designs and posts' pictures too (nice 10 on Linux and macOS, below-normal on Windows): your browser, games and other programs take the processor first and the video gets what is left. **Normal** competes with them as an equal. The finished video is the same either way. | Background |
+| **Encoding priority** | **Background (your other programs come first)** runs every ffmpeg of a video, short or audio file, its volume mastering included, below normal priority, and that of the style preview, template samples, designs and posts' pictures too (nice 10 on Linux and macOS, below-normal on Windows): your browser, games and other programs take the processor first and the video gets what is left. **Normal** competes with them as an equal. The finished video is the same either way. | Background |
 
 What they cost and give, measured on two minutes of a real project with captions in the video (32-core processor, RTX 5080): **Fast** halved the clips' processor time and cut the whole video's by 30% (10 to 17% less waiting), for a slightly softer picture (0.9 VMAF less) at the same file size. **NVIDIA** cut the processor time by 80% and the waiting by a quarter (the zoom and pan on each image still runs on the processor), at about the same file size, but with a visibly softer picture than x264 (about 2.5 VMAF less): pick it when keeping the computer free matters more than the last bit of sharpness. **Background** makes no difference to the file at all.
 
@@ -163,11 +163,11 @@ See [Notifications](Notifications).
 | **Playlists** | The YouTube playlists a project can go into, each typed exactly as it is called in Studio. Pick **Every channel (default)** or one channel first: the default list is used by every channel without its own. **Add playlist** adds a row; ticked ones are on for every project; **Remove** drops one; **Save playlists** stores the list. A project's **Copy for YouTube Studio** changes them for that project. | None; up to 20, each up to 150 characters |
 | **Release times** | Each schedule sets when its videos and shorts go out, under **Edit** on Calendar → Schedules. | |
 | **Upload lead time** | How many hours before release the upload should happen, so YouTube's copyright and ad checks finish while the video is still private. Type it and press **Save**. | |
-| **Post and pin each video's comment once it is public** | The extension posts each video's pinned comment in your name once it is public. | Off |
+| **Post and pin each video's comment** | Once the video is public, the extension posts its comment in your name and pins it. | Off |
 | **Extension pairing token** | A secret the Slopify Studio extension needs before it may read your projects. **Copy** it into the extension and press Pair there. The line under it says whether an extension is paired. | |
 | **New pairing token** | Makes a fresh token, unpairs the extension until you paste the new one, and clears the uploads waiting for Studio. | |
 | **Install the Studio extension** | **Chrome, Edge, Brave** or **Firefox** (the browser you open YouTube Studio in), then the install steps, with **Copy folder path**. Updates arrive in that folder by themselves. To fill posts on X, LinkedIn, Instagram, TikTok, Reddit or Bluesky too, press **Allow posting on** each site in the extension's options. | |
-| **Named links** | Each channel keeps its own links now, on its **Name and look** tab under Channel links. **Open the default channel's links** goes there. Links saved here before fill the default channel's descriptions until you save that tab. | |
+| **Links saved here before** | Shown only while links saved here before channels had their own still fill the default channel's descriptions. **Open <channel>'s links** goes to its **Name and look** tab; saving that tab moves them. | |
 
 See [Studio Extension](Studio-Extension), [Publishing to YouTube](Publishing-to-YouTube), [Posting to Social Sites](Posting-to-Social-Sites) and [Channels](Channels#channel-links).
 
@@ -221,7 +221,7 @@ After importing, add your keys again on Keys & services. You can also run **Expo
 
 ## Trash
 
-"Deleted things, kept for 30 days." Deleted projects, prompts, intros and outros, templates, schedules and designs stay here for 30 days. Channels, cast members, PDF themes and episode summaries are deleted permanently and never come here.
+"What you deleted, to bring back or remove for good." Deleted projects, prompts, intros and outros, templates, schedules and designs stay here for 30 days. Channels, cast members, PDF themes and episode summaries are deleted permanently and never come here.
 
 | Control | What it does |
 |---|---|
@@ -287,7 +287,7 @@ There is nothing to turn on: the address works whenever Slopify runs. See [Agent
 
 "What this computer made. Slopify always adds these counts, anonymously, to slopify.stream's totals; there is no switch."
 
-Shows **Videos made**, **Hours of narration**, **Images made**, **Tokens used** and **Projects**, then **Tokens by stage** by service and model, and the machine ID and version. There are no controls. Money figures are on each project's cost line (**See the breakdown**) and Home's **This week**. See [Costs and Run Cost](Costs-and-Run-Cost).
+Shows **Videos made**, **Hours of narration**, **Images made**, **AI text read and written** (in tokens, pieces of about three quarters of a word) and **Projects**, then **AI text by part of the video**, read and written by service and model, and this computer's random number and the version. Before anything is made it says **Nothing made yet** with **Make your first video**. There are no other controls. Money figures are on each project's cost line (**See the breakdown**) and Home's **This week**. See [Costs and Run Cost](Costs-and-Run-Cost).
 
 ## What's new
 

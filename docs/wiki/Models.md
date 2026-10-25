@@ -80,7 +80,7 @@ If the file is missing or has a mistake, Slopify keeps using the last working li
 Each row shows:
 
 - the kind (**Template**, **Schedule**, **Draft** or **Project**) and its name,
-- which choice it is (**Text model**, **Voice model**, **Image model** or **Animation model**), the model, and whether it is "retired" or "no longer listed",
+- which choice it is (**Writing model**, **Voice model**, **Image model** or **Animation model**), the model, and whether it is "retired" or "no longer listed",
 - a button **Switch to <model>** with the suggested replacement: the active model from the same service whose ID shares the longest start with the old one.
 
 To switch:

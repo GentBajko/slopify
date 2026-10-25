@@ -107,10 +107,10 @@ Settings → **Usage** shows this install's own counters, worked out on this com
 | **Videos made** | Videos finished. |
 | **Hours of narration** | Narration made, in hours. |
 | **Images made** | Images drawn. |
-| **Tokens used** | Text tokens, in and out. |
+| **AI text read and written** | Text the AI read and wrote, in tokens (pieces of about three quarters of a word). |
 | **Projects** | Projects made. |
 
-Below them, **Tokens by stage** lists **Stage**, **Service · model**, **Tokens in** and **Tokens out**. A fresh install says "Numbers appear after your first run." The last line shows the install's machine ID and Slopify version.
+Beside them, **AI text by part of the video** lists **Part**, **Service · model**, **Read** and **Written**. A fresh install shows only **Nothing made yet** with **Make your first video**. The last line shows this computer's random number (the one each count carries) and the Slopify version.
 
 The same counters, anonymised, feed the public totals on slopify.stream. They never include your keys, prompts, keywords, titles, text or files.
 
