@@ -257,7 +257,7 @@ See [Remote Access](Remote-Access).
 
 ## AI agents
 
-"Let Claude Code or Codex on this computer run Slopify for you." An agent can start and fix runs, edit your prompts and templates and answer checks set to External agent. It needs no key, like this page, and never uploads to YouTube. What it changes is marked by agent in the project's versions, in notifications and in the list below.
+"Let Claude Code or Codex on this computer run Slopify for you." An agent can start and fix runs, edit your prompts and templates and answer AI checks set to Your own AI agent. It needs no key, like this page, and never uploads to YouTube. What it changes is marked by agent in the project's versions, in notifications and in the list below.
 
 | Control | What it does |
 |---|---|

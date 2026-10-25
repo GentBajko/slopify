@@ -15,7 +15,7 @@ Slopify can write the text with the Claude Code, Codex or Antigravity command-li
 
 Codex text and Codex images share one sign-in, one executable path and one plan allowance.
 
-Codex CLI must be version 0.149.1 or newer. An older Codex shows **Needs attention** and says to update it.
+Codex CLI must be version 0.149.1 or newer. An older Codex shows **Needs fixing** and says to update it.
 
 ## Set up a CLI
 
@@ -48,7 +48,7 @@ It works differently from the Gemini CLI in a few ways:
 | State | Meaning |
 |---|---|
 | **Ready** | Found, new enough and not reporting a sign-in problem. |
-| **Needs attention** | Found, but something is wrong (for example an old Codex version). The detail says what. |
+| **Needs fixing** | Found, but something is wrong (for example an old Codex version). The detail says what. |
 | **Not found** | Not on PATH, or not at the saved path. |
 
 ## Set the executable path

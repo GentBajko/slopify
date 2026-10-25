@@ -63,7 +63,7 @@ The Pronunciation Glossary is a section at the end of the article that lists nam
 
 ### Which voices support it
 
-Inworld **TTS-2** and **TTS-2 Flash**. With other services or models the switch is greyed out and says "Only Inworld TTS-2 voices read it; your choice is kept for when you pick one."
+Inworld **TTS-2** and **TTS-2 Flash**. With other services or models the tick is not shown; your choice is kept for when you pick one of those voices.
 
 ### Get a glossary into the article
 

@@ -65,7 +65,7 @@ Only steps the run makes itself, and has not started, can be ticked. Once every 
 
 ## AI checks
 
-An AI checks each finished item and saves its verdict and reasons on the project page. The checker is a model Slopify asks (each check is one AI call, counted in usage and in the estimate), or an agent you connected (free; see [The External agent reviewer](#the-external-agent-reviewer)).
+An AI checks each finished item and saves its verdict and reasons on the project page. The checker is a model Slopify asks (each check is one AI call, counted in usage and in the estimate), or an agent you connected (free; see [Your own AI agent as the checker](#your-own-ai-agent-as-the-checker)).
 
 **Have an AI check the results** sets every stage the run makes at once:
 
@@ -117,7 +117,7 @@ One cheap AI call before the paid narration. The checker reads the video's title
 3. Optional: open **Checker and stages** to pick who checks (**Checked by**, or **Your own AI agent**), set **Redos per item** (empty means 2), or set a stage on its own with a Review prompt. For image, thumbnail or shorts checks, pick Claude Code or Codex. With another checker, the row says "Checks of images need Claude Code or Codex as the checker: Slopify can't show images to this one." and the run cannot start.
 4. Check the estimate: each check adds one AI call. Redos are not in the estimate; each costs what the item cost, at most the redos allowed.
 
-### The External agent reviewer
+### Your own AI agent as the checker
 
 With **Who checks** set to **Your own AI agent**, no model is called: each check waits for an agent connected to Slopify to answer it (see [Agents (MCP)](Agents-MCP)). Every stage can use it, picture stages included, since the agent is shown the pictures. It adds nothing to the estimate.
 
@@ -129,7 +129,7 @@ With **Who checks** set to **Your own AI agent**, no model is called: each check
 
 ### Verdicts on the project page
 
-Beside the article (with the promise check's verdict under the article's), the narration, the thumbnail and each short, and on each image, the verdict shows as **Review passed**, **Flagged by review**, **Waiting to be made again**, **Being made again**, **Redone after review** or **Accepted by you**, with the reasons. With the External agent reviewer, or when an agent acted on it, it reads **Passed by agent**, **Flagged by agent**, **Redone after agent review**, **Accepted by agent**, **Made again by agent**, or **Passed without review** when no agent answered in time. For a failed item nobody has acted on:
+Beside the article (with the promise check's verdict under the article's), the narration, the thumbnail and each short, and on each image, the verdict shows as **Review passed**, **Flagged by review**, **Waiting to be made again**, **Being made again**, **Redone after review** or **Accepted by you**, with the reasons. With your own AI agent as the checker, or when an agent acted on it, it reads **Passed by agent**, **Flagged by agent**, **Redone after agent review**, **Accepted by agent**, **Made again by agent**, or **Passed without review** when no agent answered in time. For a failed item nobody has acted on:
 
 - **Overrule** accepts it as it is.
 - **Redo** makes it again (a new version of the project, then the item and what depends on it are made again), and it is checked again.

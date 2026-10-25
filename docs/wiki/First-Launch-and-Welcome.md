@@ -24,7 +24,7 @@ A 60-second short needs three things. Each has its own line, with its state and,
 | **Narration** | A voice key is saved, or your computer has a speech program. | **Add a voice key** (opens Settings at OpenAI: its key works at once with the voices Slopify sets up). On Linux, **Use your computer's free voice instead** shows the commands that install `espeak-ng`; run one, then press **Check again**. |
 | **Images** | Codex CLI is signed in, or an OpenAI, Google, fal.ai or Replicate key is saved. | **Add an image key** (opens Settings at OpenAI). |
 
-When the computer's own voice reads the script, the Voice line says so and offers **Add a voice key** for a better one. With an ElevenLabs, Cartesia or Inworld key but no voice saved, it says **No voice saved** with **Save a voice** (Settings → **Voices**).
+When the computer's own voice reads the article, the Narration line says so and offers **Add a voice key** for a better one. With an ElevenLabs, Cartesia or Inworld key but no voice saved, it says **No voice saved** with **Save a voice** (Settings → **Voices**).
 
 **Check again** looks again, including for a speech program installed a moment ago. **Other tools and services Slopify can use** opens Settings → **Keys & services**. Below the lines, the three finished samples are there to watch (see [Explore the samples](#explore-the-samples)).
 

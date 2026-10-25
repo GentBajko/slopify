@@ -120,7 +120,7 @@ A failed step stops only the steps that need what it makes. The video never read
 - **Continue the run** on the canceled project makes everything that is missing.
 - If you took one step up again after the cancel (with **Try ... again**), **Continue the run** carries on only that work. The steps you canceled stay canceled until you take them up too.
 
-A canceled run's AI checks waiting for an agent stop, and never pass on their own. See [Pauses and Checks](Reviews-and-Checkpoints#the-external-agent-reviewer).
+A canceled run's AI checks waiting for an agent stop, and never pass on their own. See [Pauses and Checks](Reviews-and-Checkpoints#your-own-ai-agent-as-the-checker).
 
 ## Pauses and paused runs
 

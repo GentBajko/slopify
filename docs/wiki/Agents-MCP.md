@@ -102,7 +102,7 @@ Everything an agent changes is marked, so you can always tell its work from your
 | Notifications | A run an agent started ends its notices with **· started by agent** ("Started: *title* · by agent" in the browser); a flag from an agent's review ends with **· by agent**. |
 | Settings → AI agents | **What agents did**: the latest 20 changes of every kind. |
 
-## The External agent reviewer
+## Your own AI agent as the checker
 
 Instead of paying a model to check, you can let your agent do the [AI checks](Reviews-and-Checkpoints#ai-checks).
 
@@ -153,7 +153,7 @@ The steps above are the **attend routine**. Slopify hands it to every agent that
 
 ## Tips
 
-- Pair the External agent reviewer with an hourly attend routine, and a [Notification URL](Notifications#get-notifications-on-your-phone-notification-url) so you hear when a review passed without an answer: that usually means the routine stopped running.
+- Pair your own AI agent as the checker with an hourly attend routine, and a [Notification URL](Notifications#get-notifications-on-your-phone-notification-url) so you hear when a review passed without an answer: that usually means the routine stopped running.
 - Check **What agents did** in Settings → AI agents now and then; each project's **Edit settings** → **Versions** has the full story for that project.
 - If an agent's request is refused because the project changed meanwhile, it reads the project again and retries once; you do not need to do anything.
 

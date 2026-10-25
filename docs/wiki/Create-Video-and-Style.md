@@ -34,7 +34,7 @@ Captions are timed from your narration on this computer, with no paid service. T
 | **Caption position** | Where captions in the video sit: **Top**, **Upper-middle**, **Center**, **Lower-middle** or **Bottom**. Move them up when the pictures have important detail near the bottom. | Bottom |
 | **Preview sentence** | The words the style preview's captions show. Only the preview shows it; real captions come from the narration. | "Every story begins with a word." |
 
-Font, size and position apply to captions shown in the video only. Players style `.srt` and `.vtt` files themselves. The channel's brand kit can fill the caption font when you leave it at the default.
+Font, size and position show only while captions are shown in the video: with caption files only (or no video) they are left out, since players style `.srt` and `.vtt` files themselves. The channel's brand kit can fill the caption font when you leave it at the default.
 
 ### Show captions in the video
 

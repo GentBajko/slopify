@@ -38,7 +38,7 @@ The state beside the title reads one of:
 | **Failed** | A step failed and the main result was not made. |
 | **Canceled** | You canceled the run. Finished files are kept. |
 | **Waiting for your review** | A pause is holding the run for you to approve what it made. |
-| **Waiting for the agent** | An [External agent](Agents-MCP#the-external-agent-reviewer) is checking what was made. It goes on by itself once the agent answers, or after 2 hours. |
+| **Waiting for the agent** | [Your own AI agent](Agents-MCP#your-own-ai-agent-as-the-checker) is checking what was made. It goes on by itself once the agent answers, or after 2 hours. |
 | **Waiting for its day** | Made ahead by its schedule; only the video is left, for its day. See [Schedules](Schedules#make-a-video-ahead). |
 | **Stopped** | The run stopped before it finished (for example after a restart). Press **Continue the run**. |
 | **Kept as is** | What is left was set aside with **Keep as is** and won't run. Editing the project brings it back. |
@@ -53,7 +53,7 @@ The title row shows at most one lime button, named for what it will do. It is th
 | Paused | **Continue the run** |
 | A step failed and will not try again by itself | The step's fix (for example **Copy sign-in command**, **Edit the prompt**, **Switch model**), or **Try the article again**, **Try images again** and so on. See [Recovery and Retries](Recovery-and-Retries#fix-it-buttons). |
 | A pause is holding the run | **Approve and make the narration**, **Approve and make the images**, **Approve and make the video** |
-| An External agent is checking what was made | None. The note says the run carries on once the agent answers, and that a check nobody answers passes by itself after 2 hours. |
+| Your own AI agent is checking what was made | None. The note says the run carries on once the agent answers, and that a check nobody answers passes by itself after 2 hours. |
 | A plan limit is used up | None. The note says, for example, "Waiting for Codex limits (resets at 14:00)." |
 | A step is waiting to try again | None. The note says when it tries again. |
 | Running | **Pause** |

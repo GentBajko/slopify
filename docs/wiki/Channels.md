@@ -59,7 +59,7 @@ Mark voices in **Settings → Voices** and Image prompts in **Prompts**. See [Pu
 |---|---|
 | **Caption font** | The caption font for videos whose template leaves the font at its default. Fonts you upload in the **Caption font** picker on Create appear here. |
 | **Caption color** | The captions' text color as `#` and six hex digits, such as `#FFFFFF`. |
-| **Caption outline** | The colour of the line around each caption letter, such as `#000000`. A dark outline keeps light captions readable on bright pictures. |
+| **Caption outline** | The color of the line around each caption letter, such as `#000000`. A dark outline keeps light captions readable on bright pictures. |
 | **Title font** | The font of chapter cards and the end screen, for videos whose template sets no title style. |
 | **Title color** | The text color of chapter cards and the end screen, such as `#FFD700`. |
 | **End screen text** | A line shown centred over the last 5 seconds of every video, such as "Subscribe for more". Up to 200 characters. Blank shows none. |
