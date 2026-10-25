@@ -61,7 +61,7 @@ In the project → **Edit settings** → **Pauses and checks** → **Pauses for 
 1. Tick a step that has not started to add a pause, or untick one to remove it. Work already let through for an unticked step carries on when ready.
 2. Press **Save pauses** (it appears once you change a tick). They take effect at once, without **Save changes**.
 
-Only steps the run makes itself, and has not started, can be ticked. Once every one has run, the line says "The run has finished; pauses apply when the project is made again." If the project was edited elsewhere in the meantime, press **Load the pauses again** and make your change again.
+Only steps the run makes itself, and has not started, can be ticked. Once the run has finished there is nothing left to pause: the ticks give way to the line "Nothing is left to pause: every step of this run has been made." Making something again starts once you have seen what it costs, without a pause. If the project was edited elsewhere in the meantime, press **Load the pauses again** and make your change again.
 
 ## AI checks
 

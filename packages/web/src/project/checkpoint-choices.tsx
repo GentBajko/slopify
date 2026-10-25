@@ -135,17 +135,29 @@ export function CheckpointChoices({
         : (current.source ?? "generate") === "generate")
     );
   };
-  // Nothing is left to pause: every step it could hold has run.
-  const finished = choices.every(({ stage }) => !enabledOf(stage));
+  // Nothing is left to pause: every step it could hold has run. Three greyed ticks would say
+  // nothing a person can act on, so the run says so in one line instead.
+  const finished =
+    !dirty &&
+    choices.every(({ stage }) => !enabledOf(stage)) &&
+    stages.every(
+      (one) => one.state === "done" || one.state === "provided" || one.state === "skipped",
+    );
+  if (finished)
+    return (
+      <section aria-label="Pauses for this run" className="space-y-1" {...helpScope}>
+        <p className="m-0 font-semibold">Pauses for this run</p>
+        <HelpLine>
+          Nothing is left to pause: every step of this run has been made. Making something again
+          starts once you have seen what it costs, without a pause.
+        </HelpLine>
+      </section>
+    );
   return (
     <div className="space-y-2">
       <fieldset ref={group} tabIndex={-1} className="space-y-1" {...helpScope}>
         <legend className="font-semibold">Pauses for this run</legend>
-        <HelpLine>
-          {finished
-            ? "The run has finished; pauses apply when the project is made again."
-            : "The run waits under Home → Needs you until you approve what it made."}
-        </HelpLine>
+        <HelpLine>The run waits under Home → Needs you until you approve what it made.</HelpLine>
         {choices.map(({ stage, name }) => {
           const enabled = enabledOf(stage);
           return (
