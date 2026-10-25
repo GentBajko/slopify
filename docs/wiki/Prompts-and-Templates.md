@@ -12,7 +12,7 @@ Your videos are made from reusable pieces you write once: prompts, intros and ou
 | **Intros** and **Outros**: short narrated openings and closings, said word for word or written by the AI for each video | **Prompts** → **Intros** / **Outros**, at the foot of the kinds | [Intros and outros](Intros-and-Outros) |
 | **Video templates**: saved setups a video starts from, and the starter templates | **Templates** → **Video templates** | [Templates](Templates) |
 | **Poster templates**: designed pieces such as posters | **Templates** → **Poster templates** | [Templates](Templates) |
-| **PDF themes**: the look of the PDF made from the article | Create → **Extras** → **PDF of the article** → **Edit themes ↗**, or Settings → **Production defaults** → **PDF look** → **Edit PDF looks** | [Document themes](Document-Themes) |
+| **PDF themes**: the look of the PDF made from the article | Create → **Extras** → **PDF of the article** → **Edit PDF looks ↗**, or Settings → **Production defaults** → **PDF look** → **Edit PDF looks** | [Document themes](Document-Themes) |
 | **Narration aliases**: words the narrator says differently from how they are written, such as Dr. as Doctor | Settings → **Voices** → **Pronunciation** | [Aliases and glossary](Narration-Aliases-and-Glossary) |
 | **A/B results**: how the versions of a thumbnail or title test did | A channel's page → **What worked on YouTube** (once a test of its videos was read) | [Channels](Channels) |
 

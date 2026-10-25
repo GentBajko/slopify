@@ -80,12 +80,12 @@ Drafts only: Slopify fills each post and you press Post. It needs the Slopify St
 
 ## PDF of the article
 
-**PDF of the article** lays out a PDF of the article and title on this computer, in the theme you pick. It needs no service and costs nothing. It is not offered while the article is **No text**.
+**PDF of the article** lays out a PDF of the article and title on this computer, in the look you pick. It needs no service and costs nothing. It is not offered while the article is **No text**.
 
 | Option | What it does | Default |
 | --- | --- | --- |
 | **PDF of the article** | Turns it on. | Off |
-| **Theme** | How the PDF looks: a built-in theme, or one of yours. A theme of yours is copied into the project, so editing it later leaves this project alone until you pick it again. **Edit themes ↗** opens the PDF themes. | Plain, or the channel's brand kit theme |
+| **PDF look** | How the PDF looks: one of the three ready looks (**Plain**, **Book** or **Modern**), or one of your PDF themes. A theme of yours is copied into the project, so editing it later leaves this project alone until you pick it again. **Edit PDF looks ↗** opens the PDF themes. | Plain, or the channel's PDF look |
 
 See [PDF Documents](PDF-Documents) and [Document Themes](Document-Themes).
 

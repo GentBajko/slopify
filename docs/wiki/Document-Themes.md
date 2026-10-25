@@ -17,7 +17,7 @@ A project keeps its own copy of the theme's settings. Editing or deleting a them
 
 1. Open **PDF themes** (Settings → Production defaults → PDF look → **Edit PDF looks**).
 2. Press **New theme** (it starts from Plain), or pick a built-in theme and press **Copy theme**, or press **Duplicate** on one of your themes.
-3. Type a **Name** (up to 80 characters). This is what the **Theme** picker on Create and a project's Edit settings shows.
+3. Type a **Name** (up to 80 characters). This is what the **PDF look** picker on Create and a project's Edit settings shows.
 4. Open the groups on the left and change what you like (every setting is listed below). The first two groups start open.
 5. Watch the **Preview** on the right. It lays out a sample article with this theme using the same renderer that makes a project's PDF, redrawn about half a second after you stop typing. It runs on your computer and costs nothing.
 6. Press **Save**. If a setting is out of range it is highlighted, and Save says "Fix the highlighted settings first."
