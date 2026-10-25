@@ -1,6 +1,6 @@
 # Backups
 
-A backup is one `.tar` file with everything you made in Slopify: every project with its files and history, your library, templates, schedules, channels and settings. Make one by hand at any time with **Export everything**, or let Slopify write one every day. Bring one back with **Import a backup**. Provider keys are never included.
+A backup is one `.tar` file with everything you made in Slopify: every project with its files and versions, your prompts, templates, schedules, channels and settings. Make one by hand at any time with **Export everything**, or let Slopify write one every day. Bring one back with **Import a backup**. Provider keys are never included.
 
 **Where to find it:** **Settings → Backup & storage**: daily backups and Back up now, Export everything and Import a backup.
 
@@ -8,8 +8,8 @@ A backup is one `.tar` file with everything you made in Slopify: every project w
 
 | Included | Left out on purpose |
 |---|---|
-| Every project with its files and history, and its channel | Provider keys |
-| Automatic review verdicts and run cost of each project | The Notification URL |
+| Every project with its files and versions, and its channel | Service keys |
+| AI check verdicts and run cost of each project | The Notification URL |
 | Prompts, intros and outros, with their history | The Studio extension's pairing |
 | Document themes and uploaded fonts | The tutorial's progress |
 | Templates, schedules and Create drafts | The daily backups' folder and status |

@@ -47,7 +47,7 @@ Each video template is a card with a preview, its name, a line saying what it ma
 | Action | What it does |
 | --- | --- |
 | **Make a video** | Opens Create with a fresh draft made from the template. |
-| **Edit template** | Opens the template's editor, in the same rows as Create. See [Template Studio](Template-Studio). |
+| **Edit template** | Opens the template's editor, in the same rows as Create. See [Edit template](Template-Studio). |
 | **More** → **Duplicate** | Copies the template. |
 | **More** → **Versions** | Lists the template's saved versions. |
 | **More** → **Export as a file (.zip)** | Saves the template as a file you can import on another computer. |
@@ -79,6 +79,6 @@ A project copies the prompts, intros, outros, aliases and theme settings it uses
 - [Prompts](Prompts)
 - [Intros and outros](Intros-and-Outros)
 - [Templates](Templates)
-- [Template Studio](Template-Studio)
+- [Edit template](Template-Studio)
 - [Document themes](Document-Themes)
 - [Aliases and glossary](Narration-Aliases-and-Glossary)

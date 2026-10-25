@@ -87,7 +87,7 @@ When Slopify changes a template itself (a retired model switched in Settings →
 **Compare models**, beside the model of **Article**, **Narration** or **Images**, makes that section's sample again with one or two other models, each on a hidden copy of the sample, so you can compare what each one makes, what it was charged and how long it took, beside the model the template uses now.
 
 1. Save first: models are compared on the saved version's sample, so it must be current.
-2. Press **Compare models** and pick one or two models. The list shows the models that work for your key or CLI first. Voice models are compared within the template's voice provider, because a voice is chosen per provider.
+2. Press **Compare models** and pick one or two models. The list shows the models that work for your key or CLI first. Voice models are compared within the template's voice service, because a voice is chosen per service.
 3. The drawer prices it, for example **Compare · about $0.04**, and shows what is left of today's budget. Press it to start.
 4. **Compared models** lists each model with **Made · $0.008 charged · 12 s** and what it made (the script's opening, the narration, the pictures).
 5. **Use this model** switches the section to that model and discards the copies; press **Save** to make the template's own sample with it, at the price on the button. **Discard** removes the copies without changing anything.

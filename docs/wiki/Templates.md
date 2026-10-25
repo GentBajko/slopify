@@ -2,7 +2,7 @@
 
 A template is a saved setup: prompts, voice, images, style, extras, pauses and checks, under a name. Start from it on Create, type a topic, and the video is set up the way you like it. Schedules run templates too, so a template is also the recipe every scheduled video follows.
 
-Set a template up section by section, with a live sample beside every setting, in **Edit template** (see [Template Studio](Template-Studio)).
+Set a template up section by section, with a live sample beside every setting, in **Edit template** (see [Edit template](Template-Studio)).
 
 **Where to find it:** **Templates** in the rail. You also pick templates under **Start from** on Create, save them with Create's **Save as template** or a project's **More** menu, and move them between channels on a channel's **Templates** tab.
 
@@ -15,7 +15,7 @@ Each video template is a card: a preview of what it makes, its name, one line of
 | Action | What it does |
 |---|---|
 | **Make a video** | Opens Create with a fresh draft made from the template. Nothing starts until you press **Make the video**. |
-| **Edit template** | Opens the template's editor, section by section, with a sample beside the settings. See [Template Studio](Template-Studio). |
+| **Edit template** | Opens the template's editor, section by section, with a sample beside the settings. See [Edit template](Template-Studio). |
 | **More** → **Duplicate** | Makes a copy in the same channel. |
 | **More** → **Versions** | Every saved version (see [Versions](#versions)). |
 | **More** → **Export as a file (.zip)** | Saves the template as a `<name>.slopify-template.zip` file you can import on another computer with **More** → **Import a template file (.zip)**. |
@@ -111,7 +111,7 @@ Adding one twice changes nothing, and it never replaces a prompt or template of 
 
 ## Related pages
 
-- [Template Studio](Template-Studio)
+- [Edit template](Template-Studio)
 - [Create Overview](Create-Overview)
 - [Prompts and Templates](Prompts-and-Templates)
 - [Schedules](Schedules)

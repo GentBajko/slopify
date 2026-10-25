@@ -20,7 +20,7 @@ You can rename, recast or remove the starter speakers. A run can have up to 10 s
 
 When the channel has hosts (cast members marked **One of the channel's hosts** that have a voice), a new **Podcast** or **Interview** starts with them as its speakers instead of Alex and Sam, or Host and Guest. See [Cast](Cast-Library#make-a-member-one-of-the-channels-hosts).
 
-The **speaker panel** (Podcast and Interview) is a row of tiles, one per speaker, with the one talking lit in their colour and their name as a lower third. It is drawn together with burned-in captions, so set **Captions** to **Show captions in the video** under Create → **Video and style** to see it. A speaker added from a channel's cast whose member has a reference picture shows that picture in their tile (the member's first picture, cropped square, taken when the run starts); everyone else shows their initials. Adding a picture to the cast later does not change projects already made.
+The **speaker panel** (Podcast and Interview) is a row of tiles, one per speaker, with the one talking lit in their colour and their name as a lower third. It is drawn together with the captions shown in the video, so set **Captions** to **Show captions in the video** under Create → **Video and style** to see it. A speaker added from a channel's cast whose member has a reference picture shows that picture in their tile (the member's first picture, cropped square, taken when the run starts); everyone else shows their initials. Adding a picture to the cast later does not change projects already made.
 
 ## Set up a multi-voice run
 

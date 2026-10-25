@@ -137,7 +137,7 @@ The standings only sort and filter the pickers. A run never asks for them: a mod
 
 ## Automatic checks
 
-With **Automatic checks** on **Free and near-free checks only** (the default), Slopify reads the key's model list and checks models by itself when you save a key, when a CLI becomes usable, and once a week. It checks only the models you use, ones that already worked and newly listed ones, at most 25 per provider, and only when a check is free, uses a CLI plan, or costs well under a tenth of a cent. Image checks never run by themselves. **Off** leaves checks to **Check models**; the free model-list reads still run when a picker opens.
+With **Automatic checks** on **Free and near-free checks only** (the default), Slopify reads the key's model list and checks models by itself when you save a key, when a CLI becomes usable, and once a week. It checks only the models you use, ones that already worked and newly listed ones, at most 25 per service, and only when a check is free, uses a CLI plan, or costs well under a tenth of a cent. Image checks never run by themselves. **Off** leaves checks to **Check models**; the free model-list reads still run when a picker opens.
 
 ## New for you
 

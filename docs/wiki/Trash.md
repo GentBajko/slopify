@@ -9,7 +9,7 @@ Deleting something in Slopify does not remove it at once. Deleted projects, prom
 | Kind | Shown as | Deleted from |
 | --- | --- | --- |
 | Project | Project | Projects (the delete button on a project's row, then **Delete project**) |
-| Library prompt | Prompt · *type* (for example Prompt · article) | Prompts |
+| Prompt | Prompt · *type* (for example Prompt · article) | Prompts |
 | Intro or outro | Intro or Outro | Prompts → Intros and Outros |
 | Template | Template | Templates |
 | Schedule | Schedule | Schedules |
@@ -29,7 +29,7 @@ It comes back as it was. A few kinds have their own rules:
 | Item | What happens on restore |
 | --- | --- |
 | Prompt, intro/outro or template whose name was taken meanwhile | It comes back as "Name (restored)", then "Name (restored 2)" and so on. The message says which name it got. A renamed template gets a new version. |
-| Project that was waiting its turn (a queued batch item, or held at a checkpoint) | It was held while in the trash and picks up where it was. |
+| Project that was waiting its turn (queued behind other videos, or held at a pause) | It was held while in the trash and picks up where it was. |
 | Schedule | It comes back **paused**, with no next run. Press **Resume** on Schedules to run it again. |
 | Schedule whose template is also in the trash | Restore the template first (it is listed in the trash too), then the schedule. |
 | Schedule whose template was removed for good | It cannot be restored: it has nothing to run. **Delete now** removes it from the trash. |

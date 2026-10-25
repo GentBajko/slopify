@@ -40,7 +40,7 @@ After updating Slopify, download the zip again from Settings → **YouTube Studi
 
 ## Pair it with Slopify
 
-Pairing gives the extension a secret so that only it, and no web page, can read your upload packs.
+Pairing gives the extension a secret so that only it, and no web page, can read what your projects are ready to upload.
 
 1. In Slopify, open **Settings → YouTube Studio and posting**.
 2. Under **Extension pairing token**, press **Copy**.
@@ -54,12 +54,10 @@ To unpair, press **New pairing token** in Settings. It makes a fresh token and u
 
 ## Settings → YouTube Studio and posting
 
-The section is headed **Upload pack and extension**.
-
 | Option | What it does | Default / range |
 |---|---|---|
-| **Playlists** | The YouTube playlists upload packs offer, so the extension ticks them in Studio's dialog. Pick **Every channel (default)** or one channel, **Add playlist** for each, type it exactly as it is called in Studio, tick **On by default** for the ones every video joins, and press **Save playlists**. A channel's own list wins for its videos; Copy for YouTube Studio changes the ticks for one project. | None; up to 20, each up to 150 characters |
-| **Extension pairing token** | The secret the extension needs before it may read your upload packs. **Copy** copies it; **New pairing token** makes a new one and unpairs the extension. | Made for you |
+| **Playlists** | The YouTube playlists Copy for YouTube Studio offers, so the extension ticks them in Studio's dialog. Pick **Every channel (default)** or one channel, **Add playlist** for each, type it exactly as it is called in Studio, tick **On by default** for the ones every video joins, and press **Save playlists**. A channel's own list wins for its videos; Copy for YouTube Studio changes the ticks for one project. | None; up to 20, each up to 150 characters |
+| **Extension pairing token** | The secret the extension needs before it may read what your projects are ready to upload. **Copy** copies it; **New pairing token** makes a new one and unpairs the extension. | Made for you |
 | **Install the Studio extension** | The download and install steps (see [Get the extension](#get-the-extension)). | |
 
 ## Fill in an upload
@@ -112,7 +110,7 @@ Before relying on the extension, try it on one real upload and read its messages
 
 - Only the extension's background worker talks to Slopify, and only at `127.0.0.1` or `localhost`.
 - Slopify answers the extension's requests only with the pairing token, and only from the extension that paired. It never answers web pages.
-- The extension reads only the upload pack you chose and its thumbnails.
+- The extension reads only the upload you chose and its thumbnails.
 - It runs on `studio.youtube.com` only, and needs no YouTube sign-in of its own: it works in the Studio tab you are already signed in to.
 
 ## Limits

@@ -1,6 +1,6 @@
 # Calendar
 
-The calendar shows the coming four weeks on one screen: what needs you, every scheduled run with the topic and title it will use, the projects running or finished on their day, and the batch queue. You can drag a topic to another day, move it to another schedule, add topics, and accept or reject topics Slopify suggested.
+The calendar shows the coming four weeks on one screen: how much needs you, every scheduled run with the topic and title it will use, the projects running or finished on their day, and the batch queue. You can drag a topic to another day, move it to another schedule, add topics, and accept or reject topics Slopify suggested.
 
 **Where to find it:** **Calendar** in the rail. It has two tabs: **Coming weeks**, described here, and **Schedules**, where you create, edit, pause and resume the schedules themselves (see [Schedules](Schedules)).
 
@@ -9,7 +9,7 @@ The calendar shows the coming four weeks on one screen: what needs you, every sc
 The calendar starts on this week's Monday and shows four weeks, Monday to Sunday.
 
 - **Scheduled runs**, each with the project title it will make. A run shows **Queued** when a topic is lined up, **Needs a topic** when its topic is still waiting for your approval or for generation, and **Paused** when its schedule is paused.
-- **Needs you**, above the weeks: every project that is waiting on you or ready to upload (see below).
+- **Needs you**, above the weeks: one line counting what waits on you and what is ready to upload (see below).
 - **Projects** running or finished on their day, with their state: **Running**, **Waiting for the agent**, **Paused**, **Queued**, **Waiting for your review**, **Waiting for its day**, **Stopped**, **Kept as is**, **Failed**, **Done with problems**, **Done** or **Canceled**. A project waiting for a CLI plan says so, for example **Waiting for Codex limits (resets at 14:00)**.
 - **Batch queue**: projects waiting to start (see below).
 - **Suggested topics**, beside the weeks, for schedules that hold generated topics for approval.
@@ -20,17 +20,9 @@ Each queued run has **Make ahead**, which makes everything but its video now (an
 
 ## Needs you
 
-Above the weeks, **Needs you** lists what cannot move on without you, then what is ready to upload. Its heading counts them, for example "2 waiting for you · 1 ready to upload". It is hidden when there is nothing.
+Above the weeks, one line says how much cannot move on without you and how much is ready to upload, for example "2 waiting for you · 1 ready to upload. Open Home to act on them.", with **Open Home**. It counts failed, paused and stopped projects, projects held at a pause or with an AI check that flagged an item and waits for **Overrule** or **Redo**, and finished videos not marked uploaded. It is hidden when there is nothing, and the bundled samples never count.
 
-| Item | Status | Button |
-| --- | --- | --- |
-| A failed project | **Failed** | **Open to fix** |
-| A project you paused | **Paused** | **Open to continue** |
-| A project a restart stopped before it finished | **Stopped** | **Open to continue** |
-| A project held at a review checkpoint, or with an automatic review that flagged an item and waits for **Overrule** or **Redo** | **Waiting for your review** | **Open to review** |
-| A finished video not marked uploaded | **Ready to upload** | **Copy for YouTube Studio** |
-
-The bundled samples never show here. A press anywhere on an entry opens its project. See [Pauses and Checks](Reviews-and-Checkpoints) and [Publishing to YouTube](Publishing-to-YouTube).
+Acting on them is Home's job: **Needs you** there lists each one with its button. The calendar keeps its space for what is planned. See [Home and Projects](Home-and-Projects), [Pauses and Checks](Reviews-and-Checkpoints) and [Publishing to YouTube](Publishing-to-YouTube).
 
 ## The batch queue
 
@@ -80,7 +72,7 @@ Schedules set to **Generate and hold for approval** list their suggestions under
 - **Queue** adds a topic to the end of that schedule's queue.
 - **Reject** drops it for good; it is never suggested again.
 - **Queue all** adds every suggestion of that schedule, in order.
-- **Suggest topics now** asks the schedule's LLM for more at once (one LLM call).
+- **Suggest topics now · 1 AI call** asks the schedule's AI for more at once.
 
 While Slopify is asking, the panel says so and the topics appear when it finishes. If the last try failed, the panel says so with the reason. When nothing is waiting it says **No suggestions are waiting.**
 

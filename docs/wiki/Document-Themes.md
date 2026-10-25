@@ -24,9 +24,9 @@ A project keeps its own copy of the theme's settings. Editing or deleting a them
 
 ## Use a theme
 
-- **On Create:** open the **Extras** row, tick **PDF of the article** and pick the **Theme**. See [PDF documents](PDF-Documents).
-- **On a finished project:** open **Edit project** (the **Edit settings** button), pick the theme under **Document theme**, save, and remake the document.
-- **For a channel:** set **Document theme** in the channel's brand kit. Videos whose template picks no theme get it. See [Channels](Channels).
+- **On Create:** open the **Extras** row, tick **PDF of the article** and pick the **PDF look**. See [PDF documents](PDF-Documents).
+- **On a finished project:** open **Edit settings** → **Extras**, pick the theme under **PDF look**, press **Save changes**, then **Make the PDF again (free)**.
+- **For a channel:** set **PDF look** in the channel's brand kit. Videos whose template picks no theme get it. See [Channels](Channels).
 
 ## Delete a theme
 
