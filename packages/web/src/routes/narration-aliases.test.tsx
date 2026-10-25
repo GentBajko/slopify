@@ -105,19 +105,25 @@ it("reads pasted lines as written = spoken, tabs too, and names the lines it ski
   expect(merged.rows.map((row) => row.spoken)).toEqual(["Doc", "Mount"]);
 });
 
-it("pastes many aliases at once and searches the list", async () => {
+it("pastes many aliases at once, and searches the list once it is longer than a screen", async () => {
   const user = userEvent.setup();
   renderRouted(<NarrationAliasesRoute />, listed([doctor]));
   const list = await screen.findByRole("list", { name: "Narration aliases" });
+  // One alias: nothing to search.
+  expect(screen.queryByRole("searchbox", { name: "Search aliases" })).toBeNull();
   await user.click(screen.getByRole("button", { name: "Paste many" }));
-  await user.type(screen.getByLabelText("Aliases, one per line"), "St. = Saint{Enter}Mt. = Mount");
-  await user.click(screen.getByRole("button", { name: "Add 2 aliases" }));
-  expect(within(list).getAllByRole("listitem")).toHaveLength(3);
-  expect(screen.getByText(/Unsaved changes|Added 2 and updated 0/u)).toBeTruthy();
+  await user.type(
+    screen.getByLabelText("Aliases, one per line"),
+    "St. = Saint{Enter}Mt. = Mount{Enter}Ft. = Fort{Enter}Pt. = Point{Enter}Rd. = Road{Enter}Ave. = Avenue{Enter}Sq. = Square{Enter}Ln. = Lane",
+  );
+  await user.click(screen.getByRole("button", { name: "Add 8 aliases" }));
+  expect(within(list).getAllByRole("listitem")).toHaveLength(9);
+  expect(screen.getByText(/Unsaved changes|Added 8 and updated 0/u)).toBeTruthy();
   await user.type(screen.getByRole("searchbox", { name: "Search aliases" }), "saint");
   expect(within(list).getAllByRole("listitem")).toHaveLength(1);
   // The row keeps its number in the whole list.
-  expect(within(list).getByText("Alias 2")).toBeTruthy();
+  expect(within(list).getByRole("checkbox", { name: "Select row: Alias 2 (St.)" })).toBeTruthy();
+  expect(within(list).getByRole("button", { name: "Remove alias 2" }).textContent).toBe("Remove");
 });
 
 it("puts the cursor in a new alias and brings a removed one back with Undo", async () => {
