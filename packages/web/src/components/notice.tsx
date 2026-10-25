@@ -45,9 +45,11 @@ function useHeightOnPage(element: HTMLElement | null): void {
   }, [element]);
 }
 
-// Shown on every page, until OK is pressed, on a machine that has not seen it. Nothing is
-// counted before: OK is what creates this computer's random number, and every count needs one.
-// It never blocks the page: the welcome under it can be read and used while it is there.
+// Shown on every page, until Start counting is pressed, on a machine that has not seen it.
+// Nothing is counted before: the press is what creates this computer's random number, and every
+// count needs one, so the button is named for that result. It never blocks the page: the welcome
+// under it can be read and used while it is there. On a phone it is one short line and its list
+// opens to a third of the screen, so the page's own header and action bar stay usable.
 export function FirstRunNotice(): ReactElement | null {
   const { api } = useApp();
   const queryClient = useQueryClient();
@@ -82,7 +84,7 @@ export function FirstRunNotice(): ReactElement | null {
       {listed ? (
         <div
           id={listId}
-          className="max-h-[50dvh] overflow-y-auto border-line border-b px-6 py-3 max-md:px-4"
+          className="max-h-[50dvh] overflow-y-auto border-line border-b px-6 py-3 max-md:max-h-[30dvh] max-md:px-4"
         >
           <div className="grid max-w-[60rem] grid-cols-2 gap-x-8 gap-y-3 max-sm:grid-cols-1">
             <Column heading="Counted" items={counted} />
@@ -93,10 +95,10 @@ export function FirstRunNotice(): ReactElement | null {
           </p>
         </div>
       ) : null}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-6 py-3 max-md:px-4">
-        <p className="m-0 min-w-[16rem] flex-1 text-body text-ink">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-6 py-3 max-md:px-4 max-md:py-2">
+        <p className="m-0 min-w-[16rem] flex-1 text-body text-ink max-md:text-small">
           Slopify adds what it makes (videos, images, words) to the public totals on its website,
-          slopify.stream, anonymously. Nothing you type leaves this computer.
+          slopify.stream, anonymously. Nothing you type is counted.
         </p>
         <div className="flex items-center gap-3">
           <Button
@@ -109,7 +111,7 @@ export function FirstRunNotice(): ReactElement | null {
             {listed ? "Hide the list" : "What's counted"}
           </Button>
           <Button disabled={dismiss.isPending} onClick={() => dismiss.mutate()}>
-            OK
+            Start counting
           </Button>
         </div>
         {dismiss.error === null ? null : (

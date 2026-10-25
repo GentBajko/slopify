@@ -1663,8 +1663,9 @@
   }
 }
 
-/* The usage-stats notice (components/notice.tsx) sits on the window's bottom edge until OK is
-   pressed: the page ends above it, and a page's action bar and the toasts stay just above it.
+/* The usage-stats notice (components/notice.tsx) sits on the window's bottom edge until Start
+   counting is pressed: the page ends above it, and a page's action bar and the toasts stay just
+   above it.
    The notice measures its own height into --usage-notice-height. Utilities, because the
    action bar's own bottom is a utility. */
 @layer utilities {

@@ -8,7 +8,7 @@ import { FirstRunNotice } from "./notice.js";
 afterEach(cleanup);
 
 const sentence =
-  "Slopify adds what it makes (videos, images, words) to the public totals on its website, slopify.stream, anonymously. Nothing you type leaves this computer.";
+  "Slopify adds what it makes (videos, images, words) to the public totals on its website, slopify.stream, anonymously. Nothing you type is counted.";
 
 // The notice's list is a promise made before anything is counted, so it is pinned to the code
 // that does the counting rather than to a reviewer's memory. Every key `payloadSchema` allows,
@@ -59,7 +59,7 @@ describe("the first-run notice", () => {
 
     const notice = await screen.findByRole("region", { name: "Usage stats" });
     expect(screen.getByText(sentence)).not.toBeNull();
-    expect(screen.getByRole("button", { name: "OK" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Start counting" })).not.toBeNull();
     expect(screen.queryByRole("dialog")).toBeNull();
     // The list waits behind its link.
     expect(screen.queryByText("Never counted")).toBeNull();
@@ -107,7 +107,7 @@ describe("the first-run notice", () => {
 
     await screen.findByText(sentence);
     expect(dismissed).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole("button", { name: "OK" }));
+    await userEvent.click(screen.getByRole("button", { name: "Start counting" }));
 
     await waitFor(() => {
       expect(screen.queryByText(sentence)).toBeNull();
@@ -115,7 +115,7 @@ describe("the first-run notice", () => {
     expect(dismissed).toHaveBeenCalledTimes(1);
   });
 
-  it("stays until OK: Esc does not answer it", async () => {
+  it("stays until Start counting: Esc does not answer it", async () => {
     renderApp(<FirstRunNotice />, testDeps({ "GET /api/telemetry/notice": fresh }));
 
     await screen.findByText(sentence);
@@ -177,7 +177,7 @@ describe("the first-run notice", () => {
       }),
     );
 
-    await userEvent.click(await screen.findByRole("button", { name: "OK" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Start counting" }));
 
     expect(await screen.findByText("The data directory is read-only.")).not.toBeNull();
     expect(screen.getByText(sentence)).not.toBeNull();
