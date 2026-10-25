@@ -430,7 +430,7 @@ Use the width; show more and waste less.
   16px. A blank band never waits for a message: an empty StatusSlot takes no height, and inside an
   ActionBar or a button row the buttons hold the line.
 - **Three page shapes**: Workspace (a main column beside a status, action or section column: the
-  project page, Create, Settings), List and detail (Prompts, Intros and outros, PDF themes,
+  project page, Create, Settings), List and detail (Prompts, Intros and outros, PDF looks,
   schedules), Board (Home, the calendar). A list and detail beside a section rail sizes its
   columns by its own container, not the window.
 - **A column lays out by its own width** (container queries: Tailwind `@container` and
@@ -701,7 +701,7 @@ approval a template a schedule uses says "Used by 2 schedules"; Ready for schedu
 for schedules apply only after one.
 
 Pages that used to sit under Library draw their own one-line header with a crumb to where they are
-reached from: PDF themes from Create's PDF choice and Settings → Production defaults (PDF look),
+reached from: PDF looks from Create's PDF choice and Settings → Production defaults (PDF look),
 Pronunciation from Settings → Voices, What worked on YouTube from the channel page. Crumbs never
 start with "Library ›".
 
