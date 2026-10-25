@@ -96,6 +96,8 @@ it("keeps each channel's own links, and saves an emptied list as empty", async (
 it("leaves the links out for a channel that never had any", async () => {
   const user = userEvent.setup();
   const seen = brandTab({ ...main, id: otherId, isDefault: false }, {});
+  // Save waits for a change: one that isn't a link.
+  await user.type(await screen.findByLabelText("Series brief"), " More.");
   await user.click(await screen.findByRole("button", { name: "Save channel" }));
   await waitFor(() => expect(seen).toHaveLength(1));
   expect(seen[0]).toMatchObject({ brand: {} });
