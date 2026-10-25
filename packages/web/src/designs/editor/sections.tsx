@@ -6,12 +6,12 @@ import { useApp } from "@/app-context";
 import { Callout } from "@/components/kit/callout";
 import { Field, Input, Select, Textarea } from "@/components/kit/field";
 import { Fold } from "@/components/kit/fold";
-import { Segmented, Switch } from "@/components/kit/switch";
+import { Switch } from "@/components/kit/switch";
 import { uploadPicture } from "../api";
 import { aiTextWarning } from "../design-panels";
 import { FormatsFields } from "../formats-fields";
 import { MadeWith } from "../made-with";
-import { TextLayoutFields, ValueFields } from "../text-fields";
+import { NamedChoice, TextLayoutFields, ValueFields } from "../text-fields";
 
 // The design template editor's sections, each at most four settings on show: Picture, Text
 // layout, Formats and Schedule (its settings; the rows are `schedule-rows.tsx`). Anything
@@ -40,7 +40,7 @@ export function PictureSection({
       <Field label="Template name">
         <Input value={name} maxLength={200} onChange={(event) => onName(event.target.value)} />
       </Field>
-      <Segmented
+      <NamedChoice
         label="Artwork"
         help="The AI draws a new paid picture for each poster; your own picture costs nothing."
         value={picture.source}

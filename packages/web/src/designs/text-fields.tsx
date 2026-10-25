@@ -14,7 +14,7 @@ import { Button } from "@/components/kit/button";
 import { Field, HelpLine, Input, Select } from "@/components/kit/field";
 import { Fold } from "@/components/kit/fold";
 import { helpScope } from "@/components/kit/info-tip";
-import { Segmented } from "@/components/kit/switch";
+import { Segmented, type SegmentedOption } from "@/components/kit/switch";
 import { fontsKey, listFonts } from "@/subtitles/api";
 import { nextBlockId } from "./document";
 
@@ -64,14 +64,14 @@ export function TextLayoutFields({
   ];
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      <Segmented
+      <NamedChoice
         label="Where the text sits"
         help="Every format puts it in the same place, fitted to its shape."
         value={text.preset}
         options={presets}
         onChange={(preset) => onChange({ ...text, preset })}
       />
-      <Segmented
+      <NamedChoice
         label="Behind the text"
         help="Band is a dark strip across the picture; Soft darkens only behind the lines."
         value={text.scrim}
@@ -218,5 +218,26 @@ export function ValueFields({
       </div>
       <HelpLine>{help}</HelpLine>
     </fieldset>
+  );
+}
+
+// A row of choices with its name shown above it, as a field's label is, and one line under it.
+export function NamedChoice<T extends string>({
+  label,
+  ...rest
+}: {
+  readonly label: string;
+  readonly help: string;
+  readonly value: T;
+  readonly options: readonly SegmentedOption<T>[];
+  readonly onChange: (next: T) => void;
+}): ReactElement {
+  return (
+    <div className="sl-field">
+      <span className="sl-field__label" aria-hidden="true">
+        {label}
+      </span>
+      <Segmented label={label} {...rest} />
+    </div>
   );
 }
