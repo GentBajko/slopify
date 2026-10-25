@@ -531,15 +531,21 @@ describe("the rail", () => {
     );
   });
 
-  it("checks the setup again when the person comes back to the window", async () => {
+  it("checks the setup again when the person comes back to the window, keeping the button ready", async () => {
     const { requests } = await mountPlay({}, generatedRun);
     const reviews = () => requests.filter((one) => one.url.endsWith("/review")).length;
-    await waitFor(() => expect(reviews()).toBeGreaterThan(0));
+    const start = within(screen.getByRole("region", { name: "Start" }));
+    const make = () => start.getByRole("button", { name: makeKey }) as HTMLButtonElement;
+    await waitFor(() => expect(make().disabled).toBe(false));
     const before = reviews();
     await act(async () => {
       window.dispatchEvent(new Event("focus"));
     });
+    // Nothing changed, so nothing flickers: the button stays ready and the estimate stays.
+    expect(make().disabled).toBe(false);
+    expect(start.queryByText(/^Estimated cost: (calculating|shown once)/)).toBeNull();
     await waitFor(() => expect(reviews()).toBeGreaterThan(before));
+    expect(make().disabled).toBe(false);
   });
 });
 

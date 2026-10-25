@@ -45,7 +45,9 @@ export interface ReviewOwner {
   readonly invalidate: (clearFields?: boolean) => void;
   readonly restore: (view: DraftView) => void;
   readonly reset: () => void;
-  readonly review: () => Promise<void>;
+  // `quiet`: a check again of a setup already checked (coming back to the window) keeps the
+  // button and the estimate as they are until the answer says otherwise.
+  readonly review: (options?: { readonly quiet?: boolean }) => Promise<void>;
   readonly start: () => Promise<void>;
 }
 export function createReviewOwner({
@@ -157,10 +159,11 @@ export function createReviewOwner({
       };
       render();
     },
-    review: async () => {
+    review: async (options) => {
       if (state.pending || state.starting || state.uncertain || state.created) return;
+      const quiet = options?.quiet === true && state.valid && valid();
       const selected = ++reviewSequence;
-      publish({ pending: true, valid: false, error: null, fields: [] });
+      if (!quiet) publish({ pending: true, valid: false, error: null, fields: [] });
       try {
         await Promise.all([
           refreshDraftChoices(api, queryClient),
@@ -212,7 +215,7 @@ export function createReviewOwner({
                 : "This setup couldn't be checked. Press Check again to try again.",
           });
       } finally {
-        if (selected === reviewSequence) publish({ pending: false });
+        if (selected === reviewSequence && !quiet) publish({ pending: false });
       }
     },
     start: async () => {

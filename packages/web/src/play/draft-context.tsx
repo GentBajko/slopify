@@ -27,7 +27,7 @@ export interface RevealRequest {
 }
 export interface PlaySession extends PlayNavigation {
   readonly review: import("./review-state").ReviewState;
-  readonly reviewDraft: () => Promise<void>;
+  readonly reviewDraft: (options?: { readonly quiet?: boolean }) => Promise<void>;
   readonly startRun: () => Promise<void>;
   readonly invalidateReview: (clearFields?: boolean) => void;
   readonly takeCreated: () => PlayStartResult | null;

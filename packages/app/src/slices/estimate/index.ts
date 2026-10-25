@@ -185,14 +185,14 @@ export function estimateRun(
     if (blocks === undefined)
       requests.push({
         kind: "unknown",
-        stage: "Narration descriptions",
+        stage: "Describing tables and figures",
         detail:
           "One AI call per table, figure, equation or code block in the article; how many is known once the article is written.",
       });
     else
       for (const block of blocks)
         text(
-          "Narration descriptions",
+          "Describing tables and figures",
           describeMessages(block, rendered.narration ?? "", draft.language).reduce(
             (n, message) => n + message.content.length,
             0,
@@ -236,7 +236,7 @@ export function estimateRun(
           );
       requests.push({
         kind: "unknown",
-        stage: "Delivery cue overhead",
+        stage: "Delivery cues",
         detail:
           "The voice service charges per character, delivery tags included; their length is known after preparation.",
       });
@@ -362,7 +362,10 @@ export function estimateRun(
   else local("Thumbnail", "Provided or off.");
   if (draft.sources.thumbnail === "prompt_by_llm")
     text("Thumbnail prompt", promptChars + articleChars, 1200);
-  local("Export / subtitles", "Local processing; no API fee.");
+  // Putting it together on this computer: the video (with its captions), or the sound alone.
+  if (draft.sources.video === "generate") local("Video", "Made on this computer; no API fee.");
+  else if (draft.sources.audio !== "off")
+    local("Audio export", "Made on this computer; no API fee.");
   // The timed transcript is the narration with a time before every passage of about 20 s,
   // plus the fixed rules of the answer.
   if (usesYoutubeDescription(draft))
@@ -478,7 +481,7 @@ export function estimateRun(
         });
     }
   if (sourceOf(draft.sources, "document") === "generate")
-    local("Document", "Laid out locally from the article; no API fee.");
+    local("PDF", "Laid out on this computer from the article; no API fee.");
   return {
     ...groupEstimateRows(estimateRequests(requests, data)),
     expectedWords,

@@ -99,9 +99,9 @@ const sectionOfRow: Readonly<Record<string, TemplateSection>> = {
   Research: "subject",
   Article: "script",
   "Intro / outro text": "script",
-  "Narration descriptions": "voice",
+  "Describing tables and figures": "voice",
   "Narration preparation": "voice",
-  "Delivery cue overhead": "voice",
+  "Delivery cues": "voice",
   Narration: "voice",
   "Speaker split": "voice",
   "Conversation script": "voice",
@@ -110,13 +110,14 @@ const sectionOfRow: Readonly<Record<string, TemplateSection>> = {
   "Establishing image": "pictures",
   Thumbnail: "thumbnail",
   "Thumbnail prompt": "thumbnail",
-  "Export / subtitles": "video",
+  Video: "video",
+  "Audio export": "video",
   "Animated images": "video",
   "YouTube description": "upload",
   Posts: "upload",
   Shorts: "shorts",
   Reviews: "reviews",
-  Document: "document",
+  PDF: "document",
 };
 
 export function totals(

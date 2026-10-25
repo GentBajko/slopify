@@ -61,7 +61,6 @@ export function RunReview({
 }): ReactElement {
   const low = estimates.reduce((n, e) => n + e.low, 0);
   const high = estimates.reduce((n, e) => n + e.high, 0);
-  const unknown = estimates.reduce((n, e) => n + e.unknown, 0);
   const rows =
     estimates[0]?.rows.map((r, i) => ({
       ...r,
@@ -81,52 +80,54 @@ export function RunReview({
   const onPlan = estimates.some((e) => e.apiLow !== undefined);
   const apiLow = estimates.reduce((n, e) => n + (e.apiLow ?? 0), 0);
   const apiHigh = estimates.reduce((n, e) => n + (e.apiHigh ?? 0), 0);
-  const apiUnknown = estimates.reduce((n, e) => n + (e.apiUnknown ?? 0), 0);
   if (estimates.length === 0) return <div />;
+  // The stages with no price here, by name, once however many videos: a run with any of them
+  // never reads as a total, and never as free.
+  const unpriced = [...new Set(rows.filter((r) => r.low === null).map((r) => r.stage))];
+  const headline =
+    unpriced.length === 0
+      ? `Estimated cost: ${money(low, high)}`
+      : high > 0
+        ? `Estimated cost: at least ${usd(low)}`
+        : "Estimated cost: not known";
   // The total is what decides a run; the stages, what each assumes and where the prices come
   // from fold away under it.
   return (
-    <div className="flex flex-col gap-2">
-      <p className="m-0 text-title-2 font-semibold">
-        {unknown ? "Known subtotal: " : "Estimated total: "}
-        {money(low, high)}
-      </p>
-      {unknown ? (
+    <div className="flex flex-col gap-1">
+      <p className="m-0 font-semibold">{headline}</p>
+      {unpriced.length > 0 ? (
         <p className="m-0 text-small text-ink-2">
-          Plus {unknown} stage charge{unknown === 1 ? "" : "s"} with unavailable pricing.
+          {listed(unpriced)}: price not known, so not counted.
         </p>
       ) : null}
       <Fold
-        summary={
-          <>
-            Cost by stage · {rows.length} {rows.length === 1 ? "stage" : "stages"}
-          </>
-        }
+        summary="Cost by stage"
+        state={`${rows.length} ${rows.length === 1 ? "stage" : "stages"}`}
       >
-        <div className="flex flex-col gap-3 pt-1 pb-3">
+        <div className="flex flex-col gap-2 pb-2">
           {onPlan ? (
             <p className="m-0 text-small text-ink-2">
               {apiLow === 0 && apiHigh === 0
-                ? "CLI steps: $0 on your plan · no API price is listed for their models."
-                : `CLI steps: $0 on your plan · ~${money(apiLow, apiHigh)} via API${apiUnknown ? ` (plus ${String(apiUnknown)} with no API price)` : ""}.`}
+                ? "Steps on your subscription cost $0."
+                : `Steps on your subscription cost $0 · about ${money(apiLow, apiHigh)} through the API.`}
             </p>
           ) : null}
           <ul aria-label="Cost by stage" className="m-0 list-none divide-y divide-line p-0">
             {rows.map((r) => (
-              <li key={r.stage} className="py-2">
+              <li key={r.stage} className="py-1.5">
                 <div className="flex justify-between gap-4 text-small">
                   <span>{r.stage}</span>
                   <span className="text-right tabular-nums">
                     {r.onPlan === true
                       ? r.apiLow === null || r.apiHigh === null
-                        ? "$0 on your plan · API price unknown"
+                        ? "$0 on your plan"
                         : `$0 on your plan · ~${money(r.apiLow, r.apiHigh)} via API`
                       : r.low === null || r.high === null
-                        ? "Unknown"
+                        ? "Not known"
                         : money(r.low, r.high)}
                   </span>
                 </div>
-                <p className="m-0 mt-0.5 text-label text-ink-3">{r.detail}</p>
+                <p className="m-0 text-label text-ink-3">{r.detail}</p>
               </li>
             ))}
           </ul>
@@ -136,8 +137,8 @@ export function RunReview({
             </p>
           ))}
           <p className="m-0 text-label text-ink-3">
-            Catalogue verified {estimates[0]?.catalogueDate ?? "date unavailable"}. Batch rows show
-            combined costs.
+            Prices checked {estimates[0]?.catalogueDate ?? "on an unknown date"}. With several
+            videos, each stage shows them together.
           </p>
         </div>
       </Fold>
@@ -146,4 +147,9 @@ export function RunReview({
 }
 function money(low: number, high: number): string {
   return low === high ? usd(low) : `${usd(low)} – ${usd(high)}`;
+}
+// "a, b and c".
+function listed(parts: readonly string[]): string {
+  if (parts.length <= 1) return parts[0] ?? "";
+  return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1] ?? ""}`;
 }

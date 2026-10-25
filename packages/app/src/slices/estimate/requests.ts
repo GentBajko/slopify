@@ -46,8 +46,8 @@ export function estimateRequests(
     catalogueDate: catalogue.updatedAt,
     assumptions: [
       "Planning estimate, not a spending limit. Generated lengths use a ±50% range; actual output can exceed it.",
-      "Assumes roughly 6 characters per word, 4 characters per token, and 150 spoken words per minute.",
-      "Retries, extra reasoning tokens, web tools, taxes, discounts and included credits are excluded. Unknown charges are not counted as zero.",
+      "Assumes about 6 letters per word and 150 spoken words a minute.",
+      "Retries, extra thinking, web search, taxes, discounts and included credits are not counted. A charge with no listed price is not counted as zero.",
     ],
   };
 }

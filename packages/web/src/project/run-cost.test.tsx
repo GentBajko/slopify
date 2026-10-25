@@ -271,6 +271,8 @@ describe("the estimate before Start", () => {
     };
     render(<RunReview estimates={[estimate]} />);
     expect(screen.getByText("$0 on your plan · ~$0.10 – $0.30 via API")).toBeTruthy();
-    expect(screen.getByText("CLI steps: $0 on your plan · ~$0.10 – $0.30 via API.")).toBeTruthy();
+    expect(
+      screen.getByText("Steps on your subscription cost $0 · about $0.10 – $0.30 through the API."),
+    ).toBeTruthy();
   });
 });

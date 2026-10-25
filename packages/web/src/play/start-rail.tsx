@@ -54,9 +54,9 @@ export function startReason({
   return undefined;
 }
 
-// The right rail of Create, top to bottom: how many it makes, how long, what it costs, the
-// Make button with the one next thing to do under it, the whole summary, and the style
-// preview. On a phone it follows the form, the button first.
+// The right rail of Create, top to bottom: how many it makes, how long, the Make button with
+// the one next thing to do under it, what it costs, the whole summary, and the style preview.
+// On a phone it follows the form, the button first.
 export function StartRail({
   problems,
   saveProblem,
@@ -85,11 +85,12 @@ export function StartRail({
   useEffect(() => {
     void session.reviewDraft();
   }, [session.reviewDraft]);
-  // A prompt edited in another tab or in Prompts is read again when the person comes back.
+  // A prompt edited in another tab or in Prompts is read again when the person comes back,
+  // quietly: the button and the estimate stay as they are unless the answer differs.
   useEffect(() => {
     const page = window.document;
     const again = () => {
-      if (page.visibilityState === "visible") void session.reviewDraft();
+      if (page.visibilityState === "visible") void session.reviewDraft({ quiet: true });
     };
     window.addEventListener("focus", again);
     page.addEventListener("visibilitychange", again);
@@ -139,20 +140,22 @@ export function StartRail({
         {document.form.sources.article === "generate" ? (
           <ExpectedLength narrated={document.form.sources.audio !== "off"} locked={locked} />
         ) : null}
+        {saveProblem ? <Callout tone="danger" title={saveProblem} /> : null}
+        <MakeButton problems={problems} onStart={onStart} onFix={onFix} tour />
+        {/* Under the button, so the button never moves when the estimate arrives or its
+            stages open. */}
         <div className="flex min-w-0 flex-col gap-2">
           {review.valid && review.receipt ? (
             <RunReview estimates={review.receipt.estimates} />
           ) : (
             <p role="status" className="m-0 text-small text-ink-2">
-              {review.pending
+              {review.pending || problems.length === 0
                 ? "Estimated cost: calculating…"
                 : "Estimated cost: shown once nothing is missing."}
             </p>
           )}
           <PlanAllowance form={document.form} />
         </div>
-        {saveProblem ? <Callout tone="danger" title={saveProblem} /> : null}
-        <MakeButton problems={problems} onStart={onStart} onFix={onFix} tour />
         <Button
           variant="quiet"
           size="small"
