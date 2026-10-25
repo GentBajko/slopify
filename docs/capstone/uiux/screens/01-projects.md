@@ -10,41 +10,44 @@ paths_covered:
   - ":(top)packages/web/src/routes/projects-row.tsx"
   - ":(top)packages/web/src/routes/projects-bulk.tsx"
   - ":(top)packages/web/src/routes/projects-order.ts"
+  - ":(top)packages/web/src/routes/projects-remake-review.tsx"
+  - ":(top)packages/web/src/home/finished-words.ts"
+  - ":(top)packages/web/src/home/ready.tsx"
 ---
 
 # Projects
 
 ## Mode & job
-Operate surface at `/projects`: every run ever started, newest first unless another order is picked, for the channel picked in the rail, with each row's state and actions visible on it and a selection bar for several at once (`packages/web/src/routes/projects.tsx`). The route keeps the filter, the search words and the order in the address (`?show=`, `?q=`, `?sort=`; defaults left out) and replaces the history entry on each change, so Back from a project, a reload and Home's "See all" links open the same list (`projectsSearchOf` in `packages/web/src/router.tsx`, `projectFilterOf` and `projectSortOf` in `packages/web/src/routes/projects-order.ts`). The rail's Projects item (film icon, shown on phones) lights for `/projects` and Ctrl+K carries "Open projects" (`packages/web/src/components/shell.tsx:87-94`, `packages/web/src/components/shell-commands.tsx:73-79`). A project's own page is `/projects/$projectId` (`packages/web/src/router.tsx:421-423`).
+Operate surface at `/projects`: every run ever started, newest first unless another order is picked, for the channel shown, at the page's full width, each row with its picture, its state in words, what it made and when, and its actions in words; a selection bar acts on several at once (`packages/web/src/routes/projects.tsx`). The route keeps the filter, the search words and the order in the address (`?show=`, `?q=`, `?sort=`; defaults left out) and replaces the history entry on each change, so Back from a project, a reload and Home's "See all" links open the same list (`projectsSearchOf` in `packages/web/src/router.tsx`, `projectFilterOf` and `projectSortOf` in `packages/web/src/routes/projects-order.ts`). The narrow rail's Projects item (film icon over the word) lights for `/projects` and `/projects/*`; Ctrl+K carries "Open Projects" in group "Go to" with the chord `G P` (`packages/web/src/components/shell.tsx`, `packages/web/src/components/shell-commands.tsx`, `packages/web/src/lib/shortcuts.ts`). A project's own page is `/projects/$projectId` (see 03-project).
 
 ## Composition
 | Region | What renders | Kit / tokens |
 |---|---|---|
-| Page header | Title "Projects"; meta line `N project(s) · <channel name>` or `· every channel` once data arrives; primary ButtonLink "Create" (plus icon) to `/play` (`packages/web/src/routes/projects.tsx:190-203`) | `PageHeader` (`packages/web/src/components/kit/layout.tsx:9`), `ButtonLink` (`packages/web/src/components/kit/link.tsx:38`) |
-| Tutorial invite | Only when the install has zero projects: "Make your first video", one line on the walkthrough, secondary "Start tutorial"; hidden while a tutorial is active (`packages/web/src/routes/projects.tsx:196`, `packages/web/src/tutorial/launcher.tsx:21-37`) | `rounded-media border-line bg-surface` box |
-| Board | `Board split="aside"`: a fluid list column beside a fixed 360px aside; below 1024px the columns stack (`packages/web/src/routes/projects.tsx:229`, `packages/web/src/styles/shell.css:1026-1028`, `packages/web/src/styles/shell.css:1037-1046`) | `Board`, `BoardColumn` (`packages/web/src/components/kit/board.tsx:15-58`) |
-| List column toolbar | Search input (search icon, placeholder "Search projects", max 320px wide, `/` focuses it via `useSearchShortcut`; the address follows 300 ms after typing stops), a `Segmented` "Show" group: All, Running, Queued, Needs you, Ready to upload, Failed, and a `Select` "Sort projects": Newest first, Recently changed, Name (A–Z), Status (`packages/web/src/routes/projects-order.ts`, `packages/web/src/routes/projects.tsx`) | `sl-input`, `Segmented` (`packages/web/src/components/kit/switch.tsx:58`), `Select` (`packages/web/src/components/kit/field.tsx`) |
-| Selection bar | The ticked rows are also what the Assistant sees as the selected projects (`useAssistantSelection("project", …)`, `packages/web/src/routes/projects.tsx:183-186`). `ProjectsBulkBar` above the rows: Select all (indeterminate while some are ticked; "Select all N shown" when a filter, search or Show more leaves rows out), "N projects" or "2 of 14 projects selected", then small buttons Mark uploaded (disabled "None of the selected projects is ready to upload"), Mark not uploaded (only when a selected row is marked uploaded), with two or more channels a `Select` "Move to channel…" and "Move to <channel>", destructive "Delete" (disabled "Running projects can't be deleted. Cancel the run first."), quiet "Clear selection"; every action disabled "Nothing is selected" until a row is ticked. Esc anywhere in the list clears the selection (`packages/web/src/routes/projects-bulk.tsx`, `packages/web/src/components/selection.tsx`) | `SelectionBar`, `Button`, `Select`, `ConfirmDialog` |
-| Project rows | `List label="Projects"` of `ProjectRow`s, the first 50 of the matching projects in the picked order; grouped under a small `SectionHead` per channel when the rail shows All channels (`packages/web/src/routes/projects.tsx`, `packages/web/src/routes/projects-row.tsx`) | `List`, `ListRow` (`packages/web/src/components/kit/list-row.tsx`) |
-| Show more | Under the rows while more match: secondary small "Show N more" (up to 50) and "50 of 62 shown"; a new filter, search or order starts from the first 50 again (`projectsPage` in `packages/web/src/routes/projects-order.ts`) | `Button` |
-| Aside: At a glance | `SectionHead` "At a glance" over one `Stat` per non-All filter, counting the channel's projects matching it (`packages/web/src/routes/projects.tsx:270-285`) | `Stats`, `Stat` (`packages/web/src/components/kit/stats.tsx:5-33`) |
-| Aside: Video queue | `SectionHead` "Video queue" with InfoTip `play.queue`, one line that the queue is on the calendar, TextLink "Open calendar" to `/calendar` (`packages/web/src/routes/projects.tsx:286-294`, `packages/web/src/help/entries/play.ts:528-532`) | `SectionHead`, `TextLink` |
+| Page header | One line: title "Projects", meta `N project(s)` for the channel shown once data arrives, and, with two or more channels, `ChannelPicker` "Showing: [All channels ▾]" as its action. There is no Create button here: the rail's lime Create (and the phone's bottom bar) carries it (`packages/web/src/routes/projects.tsx`, `packages/web/src/channels/current.tsx`) | `PageHeader` (`packages/web/src/components/kit/layout.tsx`) |
+| Tutorial invite | Only when the install has zero projects: "Make your first video", one line on the tour, secondary "Start the tour"; hidden while the tour runs (`TutorialInvite`, `packages/web/src/tutorial/launcher.tsx`) | `rounded-media border-line bg-surface` box |
+| Toolbar | Search input (search icon, placeholder "Search projects", up to 320px wide, `/` focuses it via `useSearchShortcut`; the address follows 300 ms after typing stops); the `Segmented` "Show" filters, each with its count, offering only filters that hold something (plus All and the one in use), hidden when only All is left; on a phone (≤767px) the filters are one `Select` "Show" with "Label (n)" options; the `Select` "Sort projects": Newest first, Finished first, Recently changed, Name (A–Z), Status (`filters`, `filterCounts`, `sortOptions` in `packages/web/src/routes/projects-order.ts`) | `sl-input`, `Segmented` (`packages/web/src/components/kit/switch.tsx`), `Select` (`packages/web/src/components/kit/field.tsx`) |
+| Selection bar | `ProjectsBulkBar` above the rows: "Select all" (indeterminate while some are ticked; "Select all N shown" when a filter, search or Show more leaves rows out) and "N projects" or "2 of 14 projects selected". Its actions appear only once a row is ticked, each only when it applies to a ticked row: "Mark uploaded" (ticked rows ready to upload), quiet "Mark not uploaded" (ticked uploaded rows), with two or more channels a `Select` "Move to channel…" and "Move to <channel>", "Make outdated parts again" (ticked rows with outdated files; opens a review drawer with what it makes and its cost before anything starts), destructive "Delete" (ticked rows that are not running), then quiet "Clear selection". Esc anywhere in the list clears the selection. The ticked rows are also what the Assistant sees as the selected projects (`useAssistantSelection("project", …)`) (`packages/web/src/routes/projects-bulk.tsx`, `packages/web/src/routes/projects-remake-review.tsx`, `packages/web/src/components/selection.tsx`) | `SelectionBar`, `Button`, `Select`, `ConfirmDialog`, `Drawer` |
+| Project rows | `List` (`.sl-projects`) of `ProjectRow`s, the first 50 of the matching projects in the picked order; with All channels shown and two or more channels, grouped under a small `SectionHead` per channel with its count. The Queued filter lists in the order the video queue starts them, whatever the sort (`inQueueOrder`) (`packages/web/src/routes/projects.tsx`, `packages/web/src/routes/projects-row.tsx`) | `List`, `ListRow` (`packages/web/src/components/kit/list-row.tsx`) |
+| Show more | Under the rows while more match: secondary small "Show N more" (up to 50) and "50 of 62 shown"; a new filter, search or order starts from the first 50 again (`projectsPage`) | `Button` |
+
+There is no aside: the counts that were "At a glance" are on the filters, and the video queue is under Home → Running → Waiting to start, on the Queued filter and on each queued row.
 
 A `ProjectRow` holds (`packages/web/src/routes/projects-row.tsx`):
-- Lead: `RowCheck` "Select row: <title>", a 16px box in a 24px label so the pointer target meets WCAG 2.5.8; Shift+click ticks a range, Space toggles (`packages/web/src/components/selection.tsx`).
-- Title: router Link to `/projects/$projectId` (truncated, the full title as its `title` tooltip), plus a "Sample" `Badge` for the bundled sample projects read from the onboarding record (`packages/web/src/routes/projects.tsx:120-124`, `packages/web/src/routes/projects.tsx:340-347`).
-- Meta: `madeOf` (voice book label · the run's article prompt name · format, e.g. "Documentary dossier · 16:9") and `started <time>`; the meta line truncates with the full text as its tooltip; a running project adds a `Meter progress` (max 240px, `role="progressbar"` because it measures a task towards done) valued `<n>% done` (`packages/web/src/routes/projects.tsx:94-106`, `packages/web/src/routes/projects.tsx:348-365`, `packages/web/src/components/kit/stats.tsx:36-66`).
-- Actions: `Status` lamp and word from `stateOf`, with an sr-only polite live region `<title>: <state>`; "Mark uploaded" quiet small button plus InfoTip `project.mark-uploaded` when the project is ready to upload; an "Uploaded" `Badge` when `uploadedAt` is set, plus quiet "Undo upload mark" (aria-label `Undo upload mark: <title>`, tooltip "Puts it back on Ready to upload. Offered for a day after marking.") only within 24 hours of `uploadedAt` (`uploadUndoable`); after that the selection bar's Mark not uploaded reverses it; an icon-only Delete (trash) button (`packages/web/src/routes/projects-row.tsx:37-45`, `packages/web/src/routes/projects-row.tsx:108-148`, `packages/web/src/help/entries/project.ts:336`).
+- Lead: `RowCheck` "Select row: <title>" (a 16px box in a 24px label; Shift+click ticks a range, Space toggles) and the project's thumbnail (`ProjectThumb`, a film-icon well when there is none).
+- Title: router Link to `/projects/$projectId` (truncated, the full title as its tooltip), a "Sample" `Badge` for the bundled samples, an "Outdated" `Badge` (waiting tone) when an edit left files outdated.
+- Meta, one line: the `Status` lamp with its word (`listState`), with an sr-only polite live region `<title>: <state>`, then for a finished run `finishedLine`: length · shape · what it made · when it finished ("3:05 · 16:9 · video + 2 shorts + PDF · finished Sep 27"), and for any other run `madeOf` · `started <time>` ("Documentary dossier · 16:9 · started 14:02"). A run done with problems adds "PDF failed" (the steps it lost) and the link "See what failed" to that part of the project (`FailedStep`, `packages/web/src/home/ready.tsx`). A running row adds a `Meter progress` (max 240px, `role="progressbar"`) valued `<n>% done`.
+- Actions, in words: "Open"; "Download video" (secondary) once a finished run made a video; then "Make my own copy" on a sample, "Mark uploaded" when the project is ready to upload, or "Undo upload mark" within 24 hours of marking (`uploadUndoable`; after that the selection bar's Mark not uploaded reverses it); "Earlier", "Later" and "Remove" on a row waiting in the video queue (`QueueItemActions`, `packages/web/src/components/batch-queue.tsx`); "Delete" (trash icon and word) on a row that is neither running nor queued, hidden on phones where the selection bar carries it.
 
-`stateOf` words and tones (`packages/web/src/routes/projects-row.tsx`):
+`listState` words and tones (`packages/web/src/home/ready.tsx`, then `projectStateOf` in `packages/web/src/lib/state-words.ts` with words from `packages/app/src/slices/admission/state-words.ts`, the same the MCP tools say):
 
-| Project status | Word | Tone |
+| Project | Word | Tone |
 |---|---|---|
-| running, a step held by a CLI plan limit | `limitWaitLine` text, e.g. "Waiting for Codex limits (resets at 14:00)" (`packages/web/src/project/limit-wait.ts:11`) | waiting |
-| otherwise `projectStateOf` (`packages/web/src/lib/state-words.ts`, words from `packages/app/src/slices/admission/state-words.ts`, the same the MCP tools say): | | |
-| held run (`heldRun`: pending with some of its run done, a step failed beside a wait, stopped, or parked on an agent), set aside | Kept as is | done |
+| running, a step held by a CLI plan limit | `limitWaitLine` text, e.g. "Waiting for Codex limits (resets at 14:00)" | waiting |
+| done and marked uploaded | Uploaded | done |
+| done, makes a video, not uploaded, not a sample | Ready to upload | done |
+| held run (`heldRun`), set aside | Kept as is | done |
 | held run parked on an External agent (MCP) review | Waiting for the agent | waiting |
-| held run a restart stopped (only Continue the run moves it) | Stopped | waiting |
+| held run a restart stopped | Stopped | waiting |
 | held run prepared by a schedule, waiting for its day | Prepared | waiting |
 | any other held run | Waiting for your review | waiting |
 | running | Running | running (pulsing lamp) |
@@ -52,60 +55,63 @@ A `ProjectRow` holds (`packages/web/src/routes/projects-row.tsx`):
 | pending, none of its run done | Queued | off |
 | failed | Failed | failed |
 | partial | Done with problems | waiting |
-| done (an uploaded project with nothing left to run reads done) | Done | done |
+| done | Done | done |
 | canceled | Canceled | off |
 
-Filter predicates (shared with Home, `packages/app/src/slices/admission/state-words.ts`): Running = `runningNow` (running, or parked on an External agent's review: exactly Home's "See all N running"; there is no separate "Running now" filter); Queued = `queuedRun`; Needs you = `waitsForPerson` (paused, or held for the person: not Waiting for the agent, Prepared or Kept as is); Ready to upload = `isReadyToUpload`; Failed = `failedRun` (failed, or a step failed while the run reads by a wait beside it) or partial (`matches` in `packages/web/src/routes/projects-order.ts`, `packages/app/src/slices/admission/state-words.ts:100-151`, `packages/web/src/home/ready.tsx:19`). The list is first narrowed to the rail's current channel (`useCurrentChannel`), then by filter and by case-insensitive title substring, then sorted (`sortProjects`: newest by `createdAt`; recently changed by `updatedAt`; name with numeric, case-insensitive collation; status ranks waiting on you, running, paused, queued, failed, done with problems, done, canceled; ties newest first) (`packages/web/src/routes/projects-order.ts`, `packages/web/src/channels/current.tsx:97-101`).
+Filter predicates (shared with Home, `packages/app/src/slices/admission/state-words.ts`, `matches` in `packages/web/src/routes/projects-order.ts`): Running = `runningNow` (running, or parked on an External agent's review: exactly Home's Running); Queued = `queuedRun`; Needs you = `waitsForPerson` (paused, or held for the person: not Waiting for the agent, Prepared or Kept as is); Ready to upload = `isReadyToUpload` (`packages/web/src/home/ready.tsx`; never a sample); Failed = `failedRun`. The list is first narrowed to the channel shown (`useCurrentChannel`), then by filter and by case-insensitive title substring, then sorted (`sortProjects`: newest by `createdAt`; finished by `finishedAt`, unfinished after; recently changed by `updatedAt`; name with numeric, case-insensitive collation; status ranks waiting on you, running, paused, queued, failed, done with problems, done, canceled; ties newest first).
 
 Bulk operations run each project on its own, so one refusal leaves the rest done, and report in a toast with Undo (`packages/web/src/routes/projects-bulk.tsx`):
 
 | Action | Request | Toast | Undo |
 |---|---|---|---|
-| Mark uploaded | `PUT /api/projects/:id/uploaded {uploaded:true}` per selected ready project | "Marked N projects uploaded." | the same with `false` |
-| Mark not uploaded | `{uploaded:false}` per selected uploaded project | "N projects back on Ready to upload." | marks them again |
-| Move to <channel> | `POST /api/projects/move-channel` with the selected ids | "Moved N projects to <channel>." | moves each back to the channel it came from |
-| Delete | asks first (`Delete N projects?`, "Moves these N projects to the trash for 30 days. Undo brings them back, or restore them later in Settings → Backup & storage → Trash." plus how many running ones stay); `DELETE /api/projects/:id` per non-running selected project | "Moved N projects to the trash." | `POST /api/trash/bulk/restore` with those projects |
+| Mark uploaded | `PUT /api/projects/:id/uploaded {uploaded:true}` per ticked ready project | "Marked N projects uploaded." | the same with `false` |
+| Mark not uploaded | `{uploaded:false}` per ticked uploaded project (it also forgets the long video's saved link) | "N projects back on Ready to upload." | marks them again |
+| Move to <channel> | `POST /api/projects/move-channel` with the ticked ids | "Moved N projects to <channel>." | moves each back to the channel it came from |
+| Make outdated parts again | plans each ticked project's remake, then a drawer "Make outdated parts again: N projects" lists what each makes again and what it costs; nothing starts until it is confirmed there | per project, in the drawer | none: nothing starts before the confirm |
+| Delete | asks first (`Delete N projects?`, moves them to the trash for 30 days, plus how many running ones stay); `DELETE /api/projects/:id` per non-running ticked project | "Moved N projects to the trash." | `POST /api/trash/bulk/restore` with those projects |
 
-A failure names the first project and the server's sentence in an error toast. There is no bulk re-run: a re-run spends money per project and needs a combined scope and cost review first.
+A failure names the first project and the server's sentence in an error toast.
 
-Commands registered in Ctrl+K while the screen is open: "Show projects that need you", "Show videos ready to upload", "Show failed projects" (group Projects), and "Search projects" (group This page, shortcut `/`) (`packages/web/src/routes/projects.tsx:127`, `packages/web/src/routes/projects.tsx:149-169`).
+Commands registered in Ctrl+K while the screen is open: "Show projects that need you", "Show videos ready to upload", "Show failed projects" (group Projects), and "Search projects" (group This page, shortcut `/`).
 
 ## States
 | State | Trigger | Rendered |
 |---|---|---|
-| Loading | `projects.data` undefined, no error | `SkeletonRows`: six `sl-row` items with `bg-sunken` bars matching title, meta and state widths, `aria-label="Loading projects"` (`packages/web/src/routes/projects.tsx:214-216`, `packages/web/src/routes/projects-row.tsx:156-169`) |
-| Load error | `projects.error` set | `role="alert"` paragraph in `text-danger` with the error message; no list, no retry control (`packages/web/src/routes/projects.tsx:207-211`) |
-| Empty install | zero projects in any channel | Tutorial invite plus `EmptyState` "No projects yet", "Set up a run on Play: pick a template, type a topic and start.", primary "Make your first video" to `/play` (`packages/web/src/routes/projects.tsx:196`, `packages/web/src/routes/projects.tsx:208-218`, `packages/web/src/components/kit/empty-state.tsx:6-24`) |
-| Empty channel | projects exist, none in the current channel | `No projects in <channel> yet. Pick All channels in the rail to see the others.` (`packages/web/src/routes/projects.tsx:267-272`) |
-| No match | filter or search leaves nothing | "No project matches. Clear the search or pick All." (`packages/web/src/routes/projects.tsx:252`) |
-| Running row | status running | progress bar shown; Delete disabled with tooltip "Cancel the run first, then delete it." (`packages/web/src/routes/projects-row.tsx:89-95`, `packages/web/src/routes/projects-row.tsx:138-148`) |
-| Upload mark busy | `markUploaded` in flight | Mark uploaded and Undo upload mark disabled with tooltip "Saving…" on every row (`packages/web/src/routes/projects-row.tsx`) |
-| Upload marked | `markUploaded` resolves | Success toast "Marked uploaded: <title>." with Undo, or "<title> is back on Ready to upload." (`packages/web/src/routes/projects.tsx`) |
-| Upload mark failed | `markUploaded` rejects | Error toast `<title> wasn't changed: <message> Press the button again.` (`packages/web/src/routes/projects.tsx`, `packages/web/src/home/api.ts:47`) |
-| Delete confirm | Delete pressed | `ConfirmDialog` `Delete "<title>"?`, consequence "Moves the project to the trash for 30 days. Undo brings it back, or restore it later in Settings → Backup & storage → Trash.", buttons "Keep it" (focused) and destructive "Delete project"; confirm disabled "Working on it" while pending (`packages/web/src/routes/projects.tsx`, `packages/web/src/components/kit/dialog.tsx:60-108`) |
-| Deleted | `removeProject` resolves | Success toast `Moved "<title>" to the trash.` with Undo, which restores it from the trash and says "Restored 1 project." (`restoreProjects` in `packages/web/src/routes/projects-bulk.tsx`) |
-| Delete failed | `removeProject` rejects | `role="alert"` small `text-danger` paragraph under the board with the message (`packages/web/src/routes/projects.tsx:299-303`) |
-| Live refresh | project step events or active runs | The shell invalidates the projects query at most once a second on global step events, and the query polls every 15 s while any project is running or pending (`packages/web/src/components/shell.tsx:255-260`, `packages/web/src/queries.ts:70-81`) |
+| Loading | `projects.data` undefined, no error | `SkeletonRows`: six `sl-row` items with `bg-sunken` bars for the thumbnail, title, meta and state, `aria-label="Loading projects"` |
+| Load error | `projects.error` set | `role="alert"` paragraph in `text-danger` with the error message; no list |
+| Empty install | zero projects in any channel | Tutorial invite plus `EmptyState` "No projects yet", "Every video you make is kept here with its files.", primary "Make your first video" to `/play` |
+| Empty channel | projects exist, none in the channel shown | `No projects in <channel> yet. Show all channels to see the others.` |
+| No match | filter or search leaves nothing | "No project matches. Clear the search or pick All." |
+| Running row | status running | progress bar; no Delete (the server refuses deleting a running project; cancel it on its page first) |
+| Upload mark busy | `markUploaded` in flight | Mark uploaded and Undo upload mark disabled, reason "Saving…", on every row |
+| Upload marked | `markUploaded` resolves | Success toast "Marked uploaded: <title>." with Undo, or "<title> is back on Ready to upload." |
+| Upload mark failed | `markUploaded` rejects | Error toast `<title> wasn't changed: <message> Press the button again.` |
+| Copying a sample | Make my own copy pressed | Button "Copying…"; the copy opens once made; a failure toast says "Press Make my own copy again." |
+| Delete confirm | Delete pressed | `ConfirmDialog` `Delete "<title>"?`, consequence that it moves to the trash for 30 days and Undo brings it back, buttons "Keep it" (focused) and destructive "Delete project" |
+| Deleted | `removeProject` resolves | Success toast `Moved "<title>" to the trash.` with Undo, which restores it from the trash and says "Restored 1 project." (`restoreProjects`) |
+| Delete failed | `removeProject` rejects | `role="alert"` small `text-danger` paragraph under the list with the message |
+| Live refresh | project step events or active runs | The shell invalidates the projects query at most once a second on global step events, and the query polls every 15 s while any project is running or pending (`packages/web/src/components/shell.tsx`, `packages/web/src/queries.ts`) |
 
-After delete or upload marking settles, the projects query is invalidated (`packages/web/src/routes/projects.tsx:131-134`, `packages/web/src/routes/projects.tsx:144-146`).
+After delete or upload marking settles, the projects query is invalidated.
 
 ## Motion
-- The running `Status` lamp pulses (`sl-pulse`, 1200ms, infinite); reduced motion stops it (`packages/web/src/styles/kit.css:444-448`).
-- The confirm dialog enters with `dialog-in` (200ms ease-out), off under reduced motion (`packages/web/src/styles/index.css:89`, `packages/web/src/components/ui/dialog.tsx:39`).
-- Toasts enter with `sl-enter` (200ms) (`packages/web/src/components/kit/toast.tsx:184`, `packages/web/src/styles/shell.css:187-194`).
-- The Meter fill has no transition (`packages/web/src/styles/kit.css:1252-1270`).
+- The running `Status` lamp pulses (`sl-pulse`, 1200ms, infinite); reduced motion stops it (`packages/web/src/styles/kit.css`).
+- The confirm dialog enters with `dialog-in` (200ms ease-out), off under reduced motion.
+- Toasts enter with `sl-enter` (200ms).
+- The Meter fill has no transition.
 
 ## Copy
-- Titles and labels: "Projects", "Create", "Search projects", "Show", "Sort projects", "At a glance", "Video queue", "Open calendar", "Mark uploaded", "Uploaded", "Undo upload mark", "Sample", "Select all", "Mark not uploaded", "Move to channel…", "Delete", "Clear selection", "Show N more" (`packages/web/src/routes/projects.tsx`, `packages/web/src/routes/projects-row.tsx`, `packages/web/src/routes/projects-bulk.tsx`).
-- Row meta: `<made of> · started <time>[ · <n> views[ · <n>% CTR]]`, views with locale thousands separators; meter value text `<n>% done` (`packages/web/src/routes/projects.tsx:350-363`).
-- Video queue line: "Videos started together, in the order they run, are on the calendar." (`packages/web/src/routes/projects.tsx:363-365`).
-- Control names: `Delete <title>`, `Undo upload mark: <title>`, `Select row: <title>` (`packages/web/src/routes/projects-row.tsx`).
-- Errors name what failed and the next step ("Press the button again.", "Cancel the run first, then delete it.") (`packages/web/src/routes/projects.tsx:135`, `packages/web/src/routes/projects-row.tsx:144`).
+- Titles and labels: "Projects", "Showing:", "Search projects", "Show", "Sort projects", "Open", "Download video", "Mark uploaded", "Undo upload mark", "Make my own copy", "Earlier", "Later", "Remove", "Delete", "Sample", "Outdated", "Select all", "Mark not uploaded", "Move to channel…", "Make outdated parts again", "Clear selection", "Show N more".
+- Filters: "All", "Running", "Queued", "Needs you", "Ready to upload", "Failed", each with its count.
+- Row meta: finished `<length> · <shape> · <what it made> · finished <time>`; otherwise `<made of> · started <time>`; meter value text `<n>% done`.
+- Control names: `Open <title>`, `Download video: <title>`, `Mark uploaded: <title>`, `Undo upload mark: <title>`, `Make my own copy of <title>`, `Delete <title>`, `Select row: <title>`.
+- Errors name what failed and the next step ("Press the button again.", "Pick the channel again and press Move.").
 
 ## Not in play
-- Row overflow menus: absent; every row action is visible inline (`packages/web/src/routes/projects-row.tsx:108-148`).
-- The batch-queue rail: absent; the aside links to the calendar instead (`packages/web/src/routes/projects.tsx:360-369`).
-- A first-run redirect from this screen to `/welcome`: not implemented in `packages/web/src/routes/projects.tsx`; the router comment at `packages/web/src/router.tsx:159` names one.
-- Bulk re-run: absent on purpose; see the bulk table above.
-- Retry on load error: absent; the error is a paragraph only (`packages/web/src/routes/projects.tsx:207-211`).
+- Row overflow menus: absent; every row action is a worded button on the row.
+- An aside (At a glance, Video queue): removed; counts sit on the filters, the queue on Home and the Queued filter.
+- A Create button in the header: removed; the rail's Create is the one way in.
+- Bulk actions before anything is ticked: hidden, not greyed.
+- A first-run redirect from this screen to `/welcome`: Home does that, not Projects.
+- Retry on load error: absent; the error is a paragraph only.
 - Offline and permission-denied states: not rendered.
