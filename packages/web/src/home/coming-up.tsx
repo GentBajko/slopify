@@ -6,7 +6,8 @@ import { Badge } from "@/components/kit/status";
 import { zonedFormat, zonedTime } from "@/lib/zoned";
 
 // Home's "Coming up": the scheduled runs of the next seven days, the title each will make and
-// its schedule. Reordering lives on the calendar.
+// its schedule. Reordering lives on the calendar. A run whose template has no version approved
+// for schedules is skipped, and its row says so and where to approve one, in words.
 
 // On the schedule's own clock, its zone named when it isn't this browser's.
 const when = { weekday: "short", day: "numeric", month: "short" } as const;
@@ -18,17 +19,18 @@ export function ComingUp({ runs }: { readonly runs: readonly CalendarRun[] }): R
         <ListRow
           key={`${run.scheduleId}-${run.at}`}
           title={`${zonedFormat(run.at, run.timezone, when)} · ${zonedTime(run.at, run.timezone)} · ${runTitle(run)}`}
-          meta={[run.scheduleName, run.templateName].filter((part) => part !== null).join(" · ")}
+          meta={[
+            run.scheduleName,
+            run.templateName,
+            !run.paused && run.notReady ? "To run it, approve a version in Edit template" : null,
+          ]
+            .filter((part) => part !== null)
+            .join(" · ")}
           actions={
             run.paused ? (
               <Badge tone="waiting">Paused</Badge>
             ) : run.notReady ? (
-              <Badge
-                tone="waiting"
-                title="No version of its template is marked ready, so this run is skipped. Open the template's studio and press Mark ready."
-              >
-                Waits for Mark ready
-              </Badge>
+              <Badge tone="waiting">Skipped until approved</Badge>
             ) : run.topicSource === "held" ? (
               <Badge tone="info">Needs a topic</Badge>
             ) : (
