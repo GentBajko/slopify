@@ -1,6 +1,6 @@
 # Keywords Slopify fills
 
-Most `{{keywords}}` in a prompt are yours: each becomes a field on Create that you fill in once per video. The keywords on this page are different. Slopify fills them itself, so they never become fields, and each one is written with the `Slopify_` prefix, like `{{Slopify_Title}}` or `{{Slopify_Thumbnail_Text}}`.
+Most `{{keywords}}` in a prompt are yours: each becomes a question on Create that you answer once per video. The keywords on this page are different. Slopify fills them itself, so they never become questions, and each one is written with the `Slopify_` prefix, like `{{Slopify_Title}}` or `{{Slopify_Thumbnail_Text}}`.
 
 The whole `Slopify_` prefix is Slopify's. `{{Title}}`, `{{Channel}}` and `{{Date}}` stay ordinary keywords of your own, so no prompt you already have changes meaning.
 

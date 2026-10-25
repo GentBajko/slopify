@@ -95,7 +95,7 @@ Each font has three controls: the family, its weight or italic, and the space be
 | **After a list item** | Extra space after each bulleted or numbered item | 0.2 | 0 to 3 |
 | **List indent** | How far lists are pushed in from the left margin | 6 mm | 0 to 30 |
 | **Quote indent** | How far quotes are pushed in | 8 mm | 0 to 40 |
-| **Divider width** | The width of the short centred line a `---` in the article becomes | 30 mm | 0 to 150 |
+| **Divider width** | The width of the short centered line a `---` in the article becomes | 30 mm | 0 to 150 |
 
 ### Drop caps
 

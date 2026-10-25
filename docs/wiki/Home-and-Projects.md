@@ -16,7 +16,7 @@ From top to bottom:
 | --- | --- |
 | Logo | The Slopify play logo. Click it to go Home. |
 | **Create** | The lime key. Opens Create to make a new video (`C` from anywhere). |
-| Destinations | **Home**, **Projects**, **Prompts** (also lit on Intros and outros), **Templates** (also lit on Designs), **Calendar** (also lit on Schedules), **Channels** (only once you have two or more channels; also lit on A/B results) and **Settings** (also lit on Usage, PDF looks and Pronunciation). |
+| Destinations | **Home**, **Projects**, **Prompts** (also lit on Intros and outros), **Templates** (also lit on Designs), **Calendar** (also lit on Schedules), **Channels** (only once you have two or more channels; also lit on What worked on YouTube) and **Settings** (also lit on Usage, PDF looks and Pronunciation). |
 | **N running** | Shown while runs are going: a lamp and the count over the word running. It links to **Running** on Home. |
 | **Update ready** | Shown only while a new version of Slopify is ready, waiting or installing. It opens a menu that says what installing does, with **Install update**. See [Updating and Patch Notes](Updating-and-Patch-Notes). |
 | **Search** | Opens the command palette (`Ctrl+K`). |
@@ -26,7 +26,7 @@ From top to bottom:
 
 ### On a phone
 
-Below 768 pixels wide the rail is hidden. A slim bar at the top holds the logo, the running count, **Search** and **Help**; on a phone Help also holds the **Assistant** and the support links, and turns lime-ink when an update is ready. A bottom bar has **Home**, **Projects**, the lime **Create** in the centre, **Prompts** and **More** (Templates, Calendar, Channels and Settings).
+Below 768 pixels wide the rail is hidden. A slim bar at the top holds the logo, the running count, **Search** and **Help**; on a phone Help also holds the **Assistant** and the support links, and turns lime-ink when an update is ready. A bottom bar has **Home**, **Projects**, the lime **Create** in the center, **Prompts** and **More** (Templates, Calendar, Channels and Settings).
 
 ### Rows open with one press
 

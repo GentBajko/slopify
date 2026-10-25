@@ -106,7 +106,7 @@ An article written to be read can contain tables, pictures, equations and code. 
 | --- | --- | --- |
 | **Describe tables and figures in the narration** | The AI writer writes a short spoken passage for each table, picture, equation and code block (a table's pattern, what a figure or equation means, what code does), and the narration says it in its place. One extra AI call per block, in the estimate and kept for reuse. The article and PDF keep the real table; captions show what is said. | On |
 | **Leave code out** | Shown under the switch above. Drops code blocks from the narration instead of summing each up in a sentence or two. Tables, figures and equations are still described. | Off |
-| **Also show them on screen** | Shown under the switch above. Each block the narration describes is also shown in the video while it is described: the article's own picture for a figure, a card drawn in your brand kit's title font and colour for the rest. The images take turns around them, and shorts that include one show it upright. Drawn on this computer at no cost. | On |
+| **Also show them on screen** | Shown under the switch above. Each block the narration describes is also shown in the video while it is described: the article's own picture for a figure, a card drawn in your brand kit's title font and color for the rest. The images take turns around them, and shorts that include one show it upright. Drawn on this computer at no cost. | On |
 
 Even with the switch off, some things are handled for you: links are read without their address, and footnote markers, the Sources Consulted section and the Pronunciation Glossary are never narrated.
 

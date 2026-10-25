@@ -13,8 +13,8 @@ Your videos are made from reusable pieces you write once: prompts, intros and ou
 | **Video templates**: saved setups a video starts from, and the starter templates | **Templates** → **Video templates** | [Templates](Templates) |
 | **Poster templates**: designed pieces such as posters | **Templates** → **Poster templates** | [Templates](Templates) |
 | **PDF looks**: how the PDF made from the article looks | Create → **Extras** → **PDF of the article** → **Edit PDF looks ↗**, or Settings → **Production defaults** → **PDF look** → **Edit PDF looks** | [PDF looks](Document-Themes) |
-| **Narration aliases**: words the narrator says differently from how they are written, such as Dr. as Doctor | Settings → **Voices** → **Pronunciation** | [Aliases and glossary](Narration-Aliases-and-Glossary) |
-| **A/B results**: how the versions of a thumbnail or title test did | A channel's page → **What worked on YouTube** (once a test of its videos was read) | [Channels](Channels) |
+| **Pronunciation**: words the narrator says differently from how they are written, such as Dr. as Doctor | Settings → **Voices** → **Pronunciation** | [Aliases and glossary](Narration-Aliases-and-Glossary) |
+| **What worked on YouTube**: which title or thumbnail won each test YouTube ran | A channel's page → **What worked on YouTube** (once a test of its videos was read) | [Channels](Channels) |
 
 ## The Prompts page
 
@@ -24,7 +24,7 @@ The kinds of prompt run down the left, each over a few words on what it writes a
 - Above the list: **Search all prompts** and **Sort: Name ▾**. Press `/` to jump to the search box. The search looks through every kind, intros and outros included; the number beside each kind then counts the matches there, and picking a kind ends the search.
 - Each row shows the name, what it **Asks for** (its keywords) and its first line, with **Edit**, **Make a video** and a **More** menu.
 - Press a row to show it beside the list: its name, when it was last changed and how many versions it has, the full text, **Asks you for** (the keywords you will be asked on Create) and **Used by** (or "not used yet" on the line under the name).
-- Tick rows to act on several at once. The bar above the list always shows **Select all** and the count; **Duplicate selected**, **Export selected** and **Delete selected** appear on the same line once something is ticked.
+- Tick rows to act on several at once. The bar above the list always shows **Select all** and the count; **Duplicate**, **Export** and **Delete** appear on the same line once something is ticked.
 
 ### What every row offers
 

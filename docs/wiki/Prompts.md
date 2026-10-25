@@ -1,6 +1,6 @@
 # Prompts
 
-Prompts are the instructions Slopify gives your models: how to write the article, what each picture shows, what the thumbnail looks like, how to write the YouTube description, which moments become shorts, and more. You write a prompt once, with `{{keywords}}` where the subject goes, and Create turns each keyword into a field you fill in per video.
+Prompts are the instructions Slopify gives your models: how to write the article, what each picture shows, what the thumbnail looks like, how to write the YouTube description, which moments become shorts, and more. You write a prompt once, with `{{keywords}}` where the subject goes, and Create asks you for each keyword every time you make a video.
 
 **Where to find it:** **Prompts** in the rail. Pick the kind in the list on the left, which says how many of each you have; **Intros** and **Outros** are at its foot (see [Intros and Outros](Intros-and-Outros)).
 
@@ -51,10 +51,10 @@ When the box already has text, Slopify asks "Replace the text with “…”?" f
 
 ## Keywords
 
-Every `{{keyword}}` in the body becomes one field on Create, except the two Slopify fills itself (below).
+Every `{{keyword}}` in the body becomes one question on Create, except the two Slopify fills itself (below).
 
 - You type a keyword's value once per video, and it is filled into every prompt, intro and outro that names it.
-- Names are case-sensitive: `{{Topic}}` and `{{topic}}` are two fields.
+- Names are case-sensitive: `{{Topic}}` and `{{topic}}` are two keywords.
 - A keyword the project title also names (for example a title of `History: {{Topic}}`) is typed per video, and templates save it empty.
 - A prompt with no keywords runs as written.
 
@@ -66,9 +66,9 @@ Mistakes the editor refuses, with the line and column:
 
 ### Keywords Slopify fills
 
-Keywords written with the `Slopify_` prefix, like `{{Slopify_Title}}`, `{{Slopify_Summary}}` or `{{Slopify_Setting}}`, never become fields either: Slopify fills them itself, and the editor's **Insert a keyword Slopify fills** menu lists the ones each kind of prompt can use. See [Keywords Slopify fills](Keywords-Slopify-Fills) for every one, where it works and what it costs. Any other name starting with `Slopify_` is refused when you save.
+Keywords written with the `Slopify_` prefix, like `{{Slopify_Title}}`, `{{Slopify_Summary}}` or `{{Slopify_Setting}}`, never become questions either: Slopify fills them itself, and the editor's **Insert a keyword Slopify fills** menu lists the ones each kind of prompt can use. See [Keywords Slopify fills](Keywords-Slopify-Fills) for every one, where it works and what it costs. Any other name starting with `Slopify_` is refused when you save.
 
-`{{Scene}}` and `{{Appearance}}` are the old names of `{{Slopify_Scene}}` and `{{Slopify_Appearance}}`. They never become fields. The project's AI model writes them during the run, once the article exists, and the picture waits for them:
+`{{Scene}}` and `{{Appearance}}` are the old names of `{{Slopify_Scene}}` and `{{Slopify_Appearance}}`. They never become questions. The project's AI model writes them during the run, once the article exists, and the picture waits for them:
 
 | Keyword | Filled with | Works in | Needs |
 | --- | --- | --- | --- |

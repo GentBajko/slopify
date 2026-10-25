@@ -23,7 +23,7 @@ Either way the intro or outro is narrated as its own audio file with the run's v
    - **Name**: what Create and a project's Edit settings list it by. Up to 200 characters, unique within its kind.
    - **Intro or outro**: **Intro, before the video** or **Outro, after the video**. You can change it later.
    - **What the narrator reads**: **Say these exact words** or **Let the AI write it from these instructions**.
-   - **Words to say** (or **Instructions for the AI**): the words the narrator says, or the instructions the AI writes from. Each `{{keyword}}` becomes a field on Create, just like in prompts.
+   - **Words to say** (or **Instructions for the AI**): the words the narrator says, or the instructions the AI writes from. Each `{{keyword}}` becomes a question on Create, just like in prompts.
 4. Press **Save** (or `Ctrl+S`).
 
 ### Examples
