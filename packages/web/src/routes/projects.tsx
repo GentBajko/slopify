@@ -29,6 +29,7 @@ import { RowCheck, useSelection } from "@/components/selection";
 import { markUploaded } from "@/home/api";
 import { plural } from "@/lib/format";
 import { keys, projectsQuery } from "@/queries";
+import { useOpenTrash } from "@/trash/open-trash";
 import { TutorialInvite } from "@/tutorial/launcher";
 import { ProjectsBulkBar, restoreProjects } from "./projects-bulk";
 import {
@@ -92,6 +93,7 @@ export function ProjectsRoute({
   const { api } = useApp();
   const queryClient = useQueryClient();
   const notify = useToast();
+  const openTrash = useOpenTrash();
   const current = useCurrentChannel();
   const projects = useQuery(projectsQuery(api));
   const queue = useBatchQueue();
@@ -128,7 +130,7 @@ export function ProjectsRoute({
     onSuccess: (_, project) =>
       notify(`Moved "${project.title}" to the trash.`, "success", {
         label: "Undo",
-        run: () => void restoreProjects(api, queryClient, notify, [project]),
+        run: () => void restoreProjects(api, queryClient, notify, [project], openTrash),
       }),
     onSettled: async () => {
       setDeleting(undefined);
@@ -403,7 +405,7 @@ export function ProjectsRoute({
         open={deleting !== undefined}
         title={deleting === undefined ? "" : `Delete "${deleting.title}"?`}
         // Settings → Trash puts it back, or removes the rows and the folder for good.
-        consequence="Moves the project to the trash for 30 days. Undo brings it back, or restore it later in Settings → Backup & storage → Trash."
+        consequence="Moves the project to the trash for 30 days. Undo brings it back, or restore it later in Settings → Trash."
         confirmLabel="Delete project"
         cancelLabel="Keep it"
         pending={remove.isPending}

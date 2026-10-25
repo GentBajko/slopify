@@ -79,5 +79,5 @@ it("duplicates a cast member under a free name, without its aliases or host role
 
 it("says every permanent deletion cannot be restored from Trash", () => {
   for (const text of [channelDeleteConsequence, castDeleteConsequence, episodeDeleteConsequence])
-    expect(text).toMatch(/deleted permanently: .* do not go to Settings → Trash/u);
+    expect(text).toMatch(/deleted permanently: .* do not go to the trash/u);
 });

@@ -70,6 +70,7 @@ import { suggestedStage } from "@/project/workspace";
 import { keys, projectQuery, projectsQuery, runCostQuery } from "@/queries";
 import { PrepareUploadDrawer } from "@/studio/prepare-upload";
 import { makeNextChapter } from "@/templates/api";
+import { useOpenTrash } from "@/trash/open-trash";
 import { useTutorialProjectStep } from "@/tutorial/context";
 import { ProjectMissing } from "./project-missing.js";
 import { restoreProjects } from "./projects-bulk.js";
@@ -148,6 +149,7 @@ function ProjectWorkspace({
 }) {
   const { api } = useApp();
   const notify = useToast();
+  const openTrash = useOpenTrash();
   const client = useQueryClient();
   const nextChapter = useNextChapter(projectId, openDraft);
   const project = useQuery(projectQuery(api, projectId));
@@ -296,7 +298,7 @@ function ProjectWorkspace({
         run: () =>
           void (listing === undefined
             ? undefined
-            : restoreProjects(api, client, notify, [listing])),
+            : restoreProjects(api, client, notify, [listing], openTrash)),
       });
       await client.invalidateQueries({ queryKey: keys.projects });
       await navigate({ to: "/projects" });
@@ -876,7 +878,7 @@ function ProjectWorkspace({
                 open={deleting}
                 title={`Delete "${summary.title}"?`}
                 // Settings → Trash puts it back, or removes the rows and the folder for good.
-                consequence="Moves the project to the trash for 30 days. Undo brings it back, or restore it later in Settings → Backup & storage → Trash."
+                consequence="Moves the project to the trash for 30 days. Undo brings it back, or restore it later in Settings → Trash."
                 confirmLabel="Delete project"
                 cancelLabel="Keep it"
                 pending={remove.isPending}

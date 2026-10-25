@@ -7,12 +7,13 @@ import { useCurrentChannel } from "@/channels/current";
 import { Button } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Select } from "@/components/kit/field";
-import { useToast } from "@/components/kit/toast";
+import { type ToastAction, useToast } from "@/components/kit/toast";
 import { counted, type Selection, SelectionBar } from "@/components/selection";
 import { eachOf, useBulkMarkUploaded } from "@/home/bulk-uploaded";
 import { isReadyToUpload } from "@/home/ready";
 import { keys } from "@/queries";
 import { restoreTrashItems, trashKey } from "@/trash/api";
+import { useOpenTrash } from "@/trash/open-trash";
 import { RemakeOutdated } from "./projects-remake-review.js";
 
 // The Projects list's selection bar, whose actions appear once a row is ticked, each only when
@@ -32,12 +33,14 @@ async function refresh(client: QueryClient): Promise<void> {
   ]);
 }
 
-// Undo for a delete: the projects come back out of the trash.
+// Undo for a delete: the projects come back out of the trash. One that can't says why, with
+// Open Trash (`openTrash`) to restore it there.
 export async function restoreProjects(
   api: Api,
   client: QueryClient,
   notify: Notify,
   projects: readonly ProjectListing[],
+  openTrash: ToastAction,
 ): Promise<void> {
   try {
     const answer = await restoreTrashItems(
@@ -47,14 +50,16 @@ export async function restoreProjects(
     if (answer.failed.length > 0) {
       const first = answer.failed[0];
       notify(
-        `${projectsWord(answer.failed.length)} couldn't be restored: ${first?.reason ?? ""} Restore ${answer.failed.length === 1 ? "it" : "them"} in Settings → Backup & storage → Trash.`,
+        `${projectsWord(answer.failed.length)} couldn't be restored: ${first?.reason ?? ""} Restore ${answer.failed.length === 1 ? "it" : "them"} in Settings → Trash.`,
         "error",
+        openTrash,
       );
     } else notify(`Restored ${projectsWord(answer.restored.length)}.`, "success");
   } catch (error) {
     notify(
-      `The projects weren't restored: ${error instanceof Error ? error.message : String(error)} Restore them in Settings → Backup & storage → Trash.`,
+      `The projects weren't restored: ${error instanceof Error ? error.message : String(error)} Restore them in Settings → Trash.`,
       "error",
+      openTrash,
     );
   } finally {
     await refresh(client);
@@ -75,6 +80,7 @@ export function ProjectsBulkBar({
   const { api } = useApp();
   const client = useQueryClient();
   const notify = useToast();
+  const openTrash = useOpenTrash();
   const current = useCurrentChannel();
   const [target, setTarget] = useState("");
   const [confirming, setConfirming] = useState(false);
@@ -106,7 +112,7 @@ export function ProjectsBulkBar({
       if (done.length > 0)
         notify(`Moved ${projectsWord(done.length)} to the trash.`, "success", {
           label: "Undo",
-          run: () => void restoreProjects(api, client, notify, done),
+          run: () => void restoreProjects(api, client, notify, done, openTrash),
         });
       report(failed, "deleted", "Cancel a running project first, then press Delete again.");
     },
@@ -241,7 +247,7 @@ export function ProjectsBulkBar({
       <ConfirmDialog
         open={confirming}
         title={`Delete ${projectsWord(deletable.length)}?`}
-        consequence={`Moves ${deletable.length === 1 ? `"${deletable[0]?.title ?? ""}"` : `these ${String(deletable.length)} projects`} to the trash for 30 days. Undo brings them back, or restore them later in Settings → Backup & storage → Trash.${
+        consequence={`Moves ${deletable.length === 1 ? `"${deletable[0]?.title ?? ""}"` : `these ${String(deletable.length)} projects`} to the trash for 30 days. Undo brings them back, or restore them later in Settings → Trash.${
           running === 0
             ? ""
             : ` ${projectsWord(running)} still running ${running === 1 ? "stays" : "stay"}: cancel the run first.`

@@ -4,6 +4,7 @@ import { Fragment, type ReactElement, type ReactNode } from "react";
 import { Button } from "@/components/kit/button";
 import { EmptyState } from "@/components/kit/empty-state";
 import { List } from "@/components/kit/list-row";
+import { LinkedText } from "@/components/linked-text";
 import { RetiredModelRow } from "@/components/retired-models";
 import { type Act, ScheduleRow } from "./schedule-row";
 
@@ -101,8 +102,7 @@ export function ScheduleList({
             Deleted schedules · {deleted.length}
           </summary>
           <p className="m-0 mt-2 mb-2 text-small text-ink-2">
-            Deleted schedules stay in Settings → Trash for 30 days, where Restore brings one back
-            paused. Pick one to see its run history.
+            <LinkedText text="Deleted schedules stay in Settings → Trash for 30 days, where Restore brings one back paused. Pick one to see its run history." />
           </p>
           <List label="Deleted schedules">
             {deleted.map((schedule) => (

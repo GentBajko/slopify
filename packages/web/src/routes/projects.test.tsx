@@ -387,11 +387,13 @@ describe("deleting a project", () => {
     await user.click(await screen.findByRole("button", { name: "Delete Rope Tricks" }));
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText('Delete "Rope Tricks"?')).not.toBeNull();
+    expect(dialog.textContent).toContain(
+      "Moves the project to the trash for 30 days. Undo brings it back, or restore it later in Settings → Trash.",
+    );
+    // The place it can be restored from is a link to it.
     expect(
-      within(dialog).getByText(
-        "Moves the project to the trash for 30 days. Undo brings it back, or restore it later in Settings → Backup & storage → Trash.",
-      ),
-    ).not.toBeNull();
+      within(dialog).getByRole("link", { name: "Settings → Trash" }).getAttribute("href"),
+    ).toBe("/settings?section=trash");
     expect(deleted).toBeUndefined();
 
     await user.click(within(dialog).getByRole("button", { name: "Delete project" }));
