@@ -3,6 +3,7 @@ import type { ProjectListing } from "@app/slices/admission/model.js";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { CurrentChannelProvider } from "@/channels/current";
 import { ToastProvider } from "@/components/kit/toast";
 import { projectStateOf } from "@/lib/state-words";
 import { startedAt } from "@/lib/utils";
@@ -829,5 +830,61 @@ describe("on a phone", () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+});
+
+describe("with two channels", () => {
+  const channel = (id: string, name: string) => ({
+    id,
+    name,
+    isDefault: id === defaultChannel,
+    brand: {},
+    seriesBrief: "",
+    version: 1,
+    createdAt: "x",
+    updatedAt: "x",
+    templates: 0,
+    cast: 0,
+  });
+  const sleep = "00000000-0000-4000-8000-000000000002";
+  const channels = [channel(defaultChannel, "My channel"), channel(sleep, "Sleep lore")];
+  const mount = (projects: readonly ProjectListing[]) =>
+    renderRouted(
+      <CurrentChannelProvider>
+        <ProjectsRoute />
+      </CurrentChannelProvider>,
+      deps(projects, { "GET /api/channels": jsonAnswer({ channels }) }),
+    );
+
+  // A group head only tells rows apart: with every row in one channel it would say the page's
+  // count again.
+  it("heads the rows by channel only when they come from two or more", async () => {
+    mount([listing("p1", "Rope Tricks", "done"), listing("p2", "Knots", "done")]);
+    await screen.findByLabelText("Showing:");
+    await screen.findByRole("link", { name: "Rope Tricks" });
+    expect(screen.queryByRole("heading", { name: "My channel" })).toBeNull();
+    cleanup();
+    mount([
+      listing("p1", "Rope Tricks", "done"),
+      listing("p2", "Moon tales", "done", { channelId: sleep }),
+    ]);
+    await screen.findByLabelText("Showing:");
+    expect(await screen.findByRole("heading", { name: "My channel" })).not.toBeNull();
+    expect(screen.getByRole("heading", { name: "Sleep lore" })).not.toBeNull();
+  });
+
+  // A channel that made nothing yet says so with the two ways on, instead of a sentence over
+  // an empty list and its tools.
+  it("offers Make a video and Show all channels for a channel with no projects", async () => {
+    const user = userEvent.setup();
+    mount([listing("p1", "Rope Tricks", "done")]);
+    await user.selectOptions(await screen.findByLabelText("Showing:"), sleep);
+    expect(
+      await screen.findByRole("heading", { name: "No projects in Sleep lore yet" }),
+    ).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Make a video" }).getAttribute("href")).toBe("/play");
+    expect(screen.queryByRole("combobox", { name: "Sort projects" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Show all channels" }));
+    expect(await screen.findByRole("link", { name: "Rope Tricks" })).not.toBeNull();
   });
 });

@@ -155,11 +155,13 @@ export function ProjectsBulkBar({
       );
       setTarget("");
     },
-    onError: (error: Error) =>
+    onError: (error: Error) => {
+      setTarget("");
       notify(
-        `The projects weren't moved: ${error.message} Pick the channel again and press Move.`,
+        `The projects weren't moved: ${error.message} Pick the channel again under Move to channel.`,
         "error",
-      ),
+      );
+    },
     onSettled: async () => {
       selection.clear();
       await client.invalidateQueries({ queryKey: keys.projects });
@@ -168,7 +170,6 @@ export function ProjectsBulkBar({
 
   const busy = remove.isPending || mark.isPending || move.isPending;
   const running = chosen.length - deletable.length;
-  const channelName = current.channels.find((one) => one.id === target)?.name ?? "";
 
   return (
     <>
@@ -176,6 +177,11 @@ export function ProjectsBulkBar({
         selection={selection}
         total={rows.length}
         noun={["project", "projects"]}
+        // Once a box is ticked the bar stays at the top while the list scrolls, so the bulk
+        // actions are in reach from a row far down.
+        {...(selection.count === 0
+          ? {}
+          : { className: "sticky top-0 z-10 border-b border-line bg-ground py-1" })}
         {...(scope === undefined ? {} : { scope })}
         actions={
           <>
@@ -200,27 +206,24 @@ export function ProjectsBulkBar({
                 Mark not uploaded
               </Button>
             )}
+            {/* Picking a channel moves them, with Undo in the toast, as a template's Move to…
+                does: no Move button drawn greyed until a channel is picked. */}
             {current.channels.length < 2 ? null : (
-              <span className="flex items-center gap-2">
-                <Select
-                  aria-label="Channel to move the selected projects to"
-                  className="w-[180px]"
-                  value={target}
-                  onChange={(event) => setTarget(event.currentTarget.value)}
-                  options={[
-                    { value: "", label: "Move to channel…" },
-                    ...current.channels.map((one) => ({ value: one.id, label: one.name })),
-                  ]}
-                />
-                <Button
-                  size="small"
-                  disabled={busy || target === ""}
-                  disabledReason={busy ? "Working on it" : "Pick the channel to move them to"}
-                  onClick={() => move.mutate({ list: chosen, to: target })}
-                >
-                  {channelName === "" ? "Move" : `Move to ${channelName}`}
-                </Button>
-              </span>
+              <Select
+                aria-label="Move the selected projects to a channel"
+                className="w-[180px] max-md:w-[150px]"
+                value={target}
+                disabled={busy}
+                onChange={(event) => {
+                  const to = event.currentTarget.value;
+                  setTarget(to);
+                  if (to !== "") move.mutate({ list: chosen, to });
+                }}
+                options={[
+                  { value: "", label: "Move to channel…" },
+                  ...current.channels.map((one) => ({ value: one.id, label: one.name })),
+                ]}
+              />
             )}
             {outdated ? (
               <RemakeOutdated

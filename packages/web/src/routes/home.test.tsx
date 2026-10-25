@@ -3,6 +3,7 @@ import type { ProjectListing } from "@app/slices/admission/model.js";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { CurrentChannelProvider } from "@/channels/current";
 import { startOfWeek } from "@/home/api";
 import { spentLabel } from "@/home/week";
 import { freshDraftDocument } from "@/play/draft-state";
@@ -953,6 +954,47 @@ describe("home's load states", () => {
     expect(screen.queryByRole("region", { name: "Running" })).toBeNull();
     // No schedules: nothing to come up.
     await waitFor(() => expect(screen.queryByRole("region", { name: "Coming up" })).toBeNull());
+  });
+
+  // With one channel shown, the empty Home names it (the rail's running count is every
+  // channel's) and offers the way back to all of them.
+  it("names the channel shown when it has nothing, with Show all channels", async () => {
+    const user = userEvent.setup();
+    const channel = (id: string, name: string) => ({
+      id,
+      name,
+      isDefault: id.endsWith("1"),
+      brand: {},
+      seriesBrief: "",
+      version: 1,
+      createdAt: "x",
+      updatedAt: "x",
+      templates: 0,
+      cast: 0,
+    });
+    renderRouted(
+      <CurrentChannelProvider>
+        <HomeRoute />
+      </CurrentChannelProvider>,
+      deps({
+        "GET /api/channels": jsonAnswer({
+          channels: [
+            channel("00000000-0000-4000-8000-000000000001", "My channel"),
+            channel("00000000-0000-4000-8000-000000000002", "Sleep lore"),
+          ],
+        }),
+        "GET /api/schedules": jsonAnswer({ schedules: [] }),
+      }),
+    );
+    await user.selectOptions(
+      await screen.findByLabelText("Showing:"),
+      "00000000-0000-4000-8000-000000000002",
+    );
+    expect(
+      await screen.findByText("Nothing in Sleep lore is finished, waiting or running"),
+    ).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "Show all channels" }));
+    expect(await screen.findByRole("region", { name: "Running" })).not.toBeNull();
   });
 
   it("says the calendar didn't load under Coming up, with Retry", async () => {

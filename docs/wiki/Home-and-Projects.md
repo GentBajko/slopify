@@ -153,7 +153,7 @@ Every run ever started, newest first unless you pick another order, for the chan
 
 The search, the filter and the order are part of the address, so Back from a project, a reload or a link opens Projects the same way: `/projects?show=running` (`queued`, `waiting` for Needs you, `ready` or `failed`), `?q=` for the search words and `?sort=finished`, `changed`, `name` or `status`. The list draws 50 projects at a time; **Show N more** under it adds the next ones. Press `/` to jump to the search box. The command palette has shortcuts: **Show projects that need you**, **Show videos ready to upload** and **Show failed projects**.
 
-If nothing matches, the list says **No project matches. Clear the search or pick All.** If the picked channel has no projects, pick **All channels** under **Showing:**.
+If nothing matches, the list says **No project matches. Clear the search or pick All.** If the channel picked under **Showing:** has no projects yet, the page says so with **Make a video** and **Show all channels**. With **All channels** shown, rows are grouped under each channel's name only when they come from two or more channels.
 
 ### What each row shows
 
@@ -191,14 +191,14 @@ Then its actions, in words:
 
 ### Work on several projects at once
 
-Tick the checkbox on each row you want, or **Select all** above the list (it covers the rows shown: a search, a filter or Show more changes which). Shift+click ticks every row between two; Esc clears the selection. Once something is ticked, the bar above the list says how many are selected and offers what applies to them:
+Tick the checkbox on each row you want, or **Select all** above the list (it covers the rows shown: a search, a filter or Show more changes which). Shift+click ticks every row between two; Esc clears the selection. Once something is ticked, the bar above the list says how many are selected and offers what applies to them; it stays at the top of the window while the list scrolls:
 
 | Button | Does |
 | --- | --- |
 | **Clear selection** | Unticks everything. |
 | **Mark uploaded** | Shown when a selected project is a finished video; marks the selected finished videos uploaded. |
 | **Mark not uploaded** | Shown when a selected video is marked uploaded; puts it back on Ready to upload. |
-| **Move to channel…** then **Move to <channel>** | Moves the selected projects to another channel (with more than one channel). |
+| **Move to channel…** | Picking a channel moves the selected projects there (with more than one channel). |
 | **Make outdated parts again** | Shown when a selected project is **Outdated**. It checks each one, then shows what each makes again and what it costs before anything starts. |
 | **Delete** | Asks first, then moves the selected projects to the trash. Running projects stay: cancel the run first. |
 
