@@ -11,7 +11,8 @@ import { useApp } from "@/app-context";
 import { EditorActions } from "@/components/editor-actions";
 import { EditorSkeleton } from "@/components/editor-states";
 import { ConfirmDialog } from "@/components/kit/dialog";
-import { Field, Input } from "@/components/kit/field";
+import { Field, HelpLine, Input } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
 import { ButtonLink, FileLink } from "@/components/kit/link";
 import { SectionHead } from "@/components/kit/section-head";
@@ -221,7 +222,11 @@ export function DocumentThemeEditorRoute({
                   {group.title}
                   <GroupMarks problems={state?.problems ?? 0} changed={state?.changed ?? 0} />
                 </summary>
-                <div className="grid grid-cols-[minmax(0,1fr)] gap-x-5 gap-y-4 pb-4 sm:grid-cols-2">
+                <div
+                  className="grid grid-cols-[minmax(0,1fr)] gap-x-5 gap-y-4 pb-4 sm:grid-cols-2"
+                  {...helpScope}
+                >
+                  <HelpLine className="sm:col-span-2 -mt-1">{group.help}</HelpLine>
                   {group.fields.map((field) => (
                     <Setting
                       key={field.path.join(".")}

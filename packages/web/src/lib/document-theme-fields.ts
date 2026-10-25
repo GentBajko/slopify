@@ -33,6 +33,9 @@ export type ThemeField =
 
 export interface ThemeGroup {
   readonly title: string;
+  // One sentence over the group's settings: what they shape and in what units. With it, a
+  // setting whose label says what it sets needs no line or info button of its own.
+  readonly help: string;
   readonly fields: readonly ThemeField[];
 }
 
@@ -88,6 +91,7 @@ const face = (key: string, label: string, help?: string): ThemeField => ({
 export const themeGroups: readonly ThemeGroup[] = [
   {
     title: "Page",
+    help: "The paper and its background. Lengths are in millimeters.",
     fields: [
       {
         kind: "choice",
@@ -106,19 +110,20 @@ export const themeGroups: readonly ThemeGroup[] = [
         label: "Background",
         options: [
           { value: "parchment", label: "Parchment texture" },
-          { value: null, label: "Flat colour" },
+          { value: null, label: "Flat color" },
         ],
       },
       {
         kind: "color",
         path: ["background", "color"],
-        label: "Page colour",
-        help: "Used when the background is a flat colour.",
+        label: "Page color",
+        help: "Used when the background is a flat color.",
       },
     ],
   },
   {
-    title: "Colours",
+    title: "Colors",
+    help: "Type a hex code, such as #1a1a1a, or pick one from the swatch.",
     fields: [
       {
         kind: "color",
@@ -143,6 +148,7 @@ export const themeGroups: readonly ThemeGroup[] = [
   },
   {
     title: "Fonts",
+    help: "Each one: the family, its weight or italic, and the space between letters in millimeters.",
     fields: [
       face("body", "Body"),
       face("strong", "Bold text"),
@@ -156,6 +162,7 @@ export const themeGroups: readonly ThemeGroup[] = [
   },
   {
     title: "Text sizes",
+    help: "In points; bigger text makes more pages.",
     fields: [
       pt(["sizes", "title"], "Title"),
       pt(["sizes", "brand"], "Brand"),
@@ -173,6 +180,7 @@ export const themeGroups: readonly ThemeGroup[] = [
   },
   {
     title: "Spacing",
+    help: "Line heights and indents in millimeters; gaps as a share of a body line (0.5 is half a line).",
     fields: [
       mm(["spacing", "bodyLine"], "Body line height"),
       mm(["spacing", "headingLine"], "Heading line height"),
@@ -187,6 +195,7 @@ export const themeGroups: readonly ThemeGroup[] = [
   },
   {
     title: "Drop caps",
+    help: "A large first letter that starts the first paragraph after each heading.",
     fields: [
       toggle(["dropCap", "enabled"], "Drop caps", "A large first letter after each heading."),
       {
@@ -219,6 +228,7 @@ export const themeGroups: readonly ThemeGroup[] = [
   },
   {
     title: "Title page",
+    help: "Where each line of the first page sits, in millimeters from the line above or the top of the page.",
     fields: [
       mm(["titlePage", "brandY"], "Brand from top"),
       mm(["titlePage", "taglineOffset"], "Tagline below brand"),
@@ -239,6 +249,7 @@ export const themeGroups: readonly ThemeGroup[] = [
   },
   {
     title: "Branding",
+    help: "Your name, tagline and website, printed on the title page and in the running header.",
     fields: [
       optional(["brand", "name"], "Brand name", "Leave empty to hide the brand."),
       optional(["brand", "tagline"], "Tagline"),
@@ -248,6 +259,7 @@ export const themeGroups: readonly ThemeGroup[] = [
   },
   {
     title: "Contents page",
+    help: "A page after the title page listing the headings, each linked to its page.",
     fields: [
       toggle(["contents", "enabled"], "Contents page"),
       text(["contents", "title"], "Title"),
@@ -269,6 +281,7 @@ export const themeGroups: readonly ThemeGroup[] = [
   },
   {
     title: "Header and footer",
+    help: "The brand and title at the top of each page, and the page number at the bottom.",
     fields: [
       toggle(["header", "enabled"], "Running header", "The title at the top of each page."),
       mm(["header", "top"], "Header from top"),
@@ -287,6 +300,7 @@ export const themeGroups: readonly ThemeGroup[] = [
   },
   {
     title: "Sources page",
+    help: "A page listing the web links the article and its research used.",
     fields: [
       toggle(["sources", "enabled"], "Sources page", "The links the article and research used."),
       text(["sources", "title"], "Title"),
@@ -298,6 +312,7 @@ export const themeGroups: readonly ThemeGroup[] = [
   },
   {
     title: "Closing page",
+    help: "A last page with your own text, such as a thank-you or a link to your site.",
     fields: [
       toggle(["endPage", "enabled"], "Closing page"),
       text(["endPage", "title"], "Title"),
@@ -316,6 +331,7 @@ export const themeGroups: readonly ThemeGroup[] = [
   },
   {
     title: "PDF details",
+    help: "What a PDF reader shows in the document's properties.",
     fields: [
       text(
         ["metadata", "author"],
