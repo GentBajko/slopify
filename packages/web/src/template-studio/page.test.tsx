@@ -719,16 +719,22 @@ it("plays the 30-second video sample in the template's frame, with no button whi
   expect(within(sample).queryByRole("button", { name: /^Make sample/ })).toBeNull();
 });
 
-it("plays the narration before and after levelling, its levels on the labels' titles", async () => {
+it("plays the narration before and after levelling in one player, its levels on the choices' titles", async () => {
+  const user = userEvent.setup();
   open("voice");
   const sample = await screen.findByRole("region", { name: "Narration sample" });
   expect(within(sample).getByText("Before levelling").getAttribute("title")).toBe("-19.4 LUFS");
   expect(within(sample).getByText("After levelling (YouTube loudness)").getAttribute("title")).toBe(
     "-14.0 LUFS",
   );
-  expect([...sample.querySelectorAll("audio")].map((one) => one.getAttribute("src"))).toEqual([
-    `http://slopify.test/api/template-studio/${templateId}/loudness/before.mp3`,
+  // One play key in the column: the choice above it picks what it plays.
+  const sources = () => [...sample.querySelectorAll("audio")].map((one) => one.getAttribute("src"));
+  expect(sources()).toEqual([
     `http://slopify.test/api/template-studio/${templateId}/loudness/after.mp3?v=1`,
+  ]);
+  await user.click(within(sample).getByRole("button", { name: "Before levelling" }));
+  expect(sources()).toEqual([
+    `http://slopify.test/api/template-studio/${templateId}/loudness/before.mp3`,
   ]);
 });
 

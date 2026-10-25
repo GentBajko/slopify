@@ -3,7 +3,6 @@ import type { StudioView } from "@app/slices/template-studio/schema.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
-import { AudioPlayer } from "@/components/kit/audio-player";
 import { Button } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
 import { Fold } from "@/components/kit/fold";
@@ -34,6 +33,15 @@ export const paidSections: readonly TemplateSection[] = [
 
 const audioRoles = ["audio_levelled", "audio_body", "audio_mp3", "audio_export"];
 
+// The narration the paid sample made, the levelled file first. The Narration sample column
+// plays it in its one player, beside the levelling's before and after (sample-panel.tsx).
+export function paidNarration(view: StudioView): Output | undefined {
+  const outputs = view.paid.outputs.filter((output) => output.section === "voice");
+  return audioRoles
+    .map((role) => outputs.find((one) => one.role === role))
+    .find((one) => one !== undefined);
+}
+
 // What a section's paid sample made, in the sample project as it is now.
 export function PaidBody({
   view,
@@ -51,12 +59,6 @@ export function PaidBody({
   switch (section) {
     case "script":
       return view.paid.article === null ? null : <ScriptSample markdown={view.paid.article} />;
-    case "voice": {
-      const audio = audioRoles.map((role) => of(role)[0]).find((one) => one !== undefined);
-      return audio === undefined ? null : (
-        <AudioPlayer src={at(audio.url)} label={`${view.template.name}: sample narration`} />
-      );
-    }
     case "pictures": {
       const images = of("image", "reference");
       return images.length === 0 ? null : (
