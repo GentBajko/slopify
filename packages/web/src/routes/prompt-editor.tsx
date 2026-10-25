@@ -507,8 +507,8 @@ const bodyTips = {
 } as const satisfies Record<PromptKind, HelpId>;
 
 // A new prompt's name until one is typed: the first six words of its text, without the
-// braces of its keywords or the end of a sentence.
-function nameFromText(body: string): string {
+// braces of its keywords or the end of a sentence. Create's New prompt drawer names the same way.
+export function nameFromText(body: string): string {
   const words = body
     .replace(/\{\{|\}\}/g, "")
     .split(/\s+/)
@@ -522,7 +522,7 @@ function nameFromText(body: string): string {
 
 // The kinds with a built-in text to start from: the documentary delivery cues, and the wording
 // the YouTube description, the shorts and the posts use when a project picks no prompt.
-function starterOf(
+export function starterOf(
   kind: PromptKind,
 ): { readonly label: string; readonly body: string } | undefined {
   if (kind === "narration")
