@@ -318,7 +318,7 @@ export function RevisionForm(
           {config.sources.research === "provide" ? (
             <Field
               label="Research notes"
-              tip="play.provided.research"
+              help="Given to the writer with the article prompt, in place of web research."
               error={problem("provided.research")}
             >
               <Textarea
@@ -512,7 +512,7 @@ export function RevisionForm(
               <div className="grid min-w-0 gap-4 md:grid-cols-2">
                 <Field
                   label="Silence gap (seconds)"
-                  tip="play.silence-gap"
+                  help="Quiet between the intro, the narration and the outro, when either is set."
                   error={problem("silenceGapSeconds")}
                 >
                   <Input
@@ -532,7 +532,7 @@ export function RevisionForm(
                 {config.sources.audio === "off" ? null : (
                   <Field
                     label="Silence at start and end (seconds)"
-                    tip="play.edge-silence"
+                    help="Quiet before the narration starts and after it ends."
                     error={problem("edgeSilenceSeconds")}
                   >
                     <Input

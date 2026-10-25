@@ -52,6 +52,11 @@ it("offers Article Off and pairs Images Off with Video Off", async () => {
   // The silences are sound polish, folded under the video's style.
   await user.click(screen.getByText("Sound polish"));
   const gap = screen.getByRole<HTMLInputElement>("spinbutton", { name: "Silence gap (seconds)" });
+  // What it does is one line under it, not behind an info button.
+  expect(
+    screen.getByText("Quiet between the intro, the narration and the outro, when either is set."),
+  ).not.toBeNull();
+  expect(screen.queryByRole("button", { name: "About Silence gap (seconds)" })).toBeNull();
   await user.clear(gap);
   expect(gap.value).toBe("0");
   expect(
