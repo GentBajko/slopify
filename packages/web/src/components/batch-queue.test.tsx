@@ -53,7 +53,7 @@ describe("BatchQueueCount", () => {
   it("says nothing while no video waits in the queue", async () => {
     const queue = { queue: [{ projectId: "p1", batchId: "b", position: 0, state: "active" }] };
     const { container } = renderRouted(
-      <BatchQueueCount />,
+      <BatchQueueCount projectId="p1" />,
       testDeps({
         "GET /api/projects/queue": jsonAnswer(queue),
         "GET /api/projects": jsonAnswer(listing),
@@ -72,16 +72,37 @@ describe("BatchQueueCount", () => {
       ],
     };
     renderRouted(
-      <BatchQueueCount />,
+      <BatchQueueCount projectId="p1" />,
       testDeps({
         "GET /api/projects/queue": jsonAnswer(queue),
         "GET /api/projects": jsonAnswer(listing),
       }),
     );
-    await userEvent.click(
-      await screen.findByRole("button", { name: "2 videos waiting in the queue" }),
-    );
+    await userEvent.click(await screen.findByRole("button", { name: "2 videos waiting to start" }));
     const list = await screen.findByRole("list", { name: "Waiting to start" });
     expect(list.querySelectorAll("li")).toHaveLength(2);
+  });
+
+  // A project started on its own has no part in the queue: its page says nothing of it.
+  it("says nothing on a project the queue does not hold", async () => {
+    const queue = {
+      queue: [
+        { projectId: "p1", batchId: "b", position: 0, state: "active" },
+        { projectId: "p2", batchId: "b", position: 1, state: "queued" },
+      ],
+    };
+    const fetched: string[] = [];
+    const { container } = renderRouted(
+      <BatchQueueCount projectId="solo" />,
+      testDeps({
+        "GET /api/projects/queue": (request) => {
+          fetched.push("queue");
+          return jsonAnswer(queue)(request);
+        },
+        "GET /api/projects": jsonAnswer(listing),
+      }),
+    );
+    await waitFor(() => expect(fetched.length).toBeGreaterThan(0));
+    await waitFor(() => expect(container.textContent).toBe(""));
   });
 });

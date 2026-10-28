@@ -73,6 +73,26 @@ function isPhone(): boolean {
   return typeof window.matchMedia === "function" && window.matchMedia(phoneQuery).matches;
 }
 
+// The rows under each channel's name, only while All channels shows rows of two or more: a
+// single group's head would repeat the page's count and say nothing new.
+function groupsOf(
+  shown: readonly ProjectListing[],
+  current: Pick<ReturnType<typeof useCurrentChannel>, "channel" | "channels">,
+): readonly {
+  readonly channel: ReturnType<typeof useCurrentChannel>["channels"][number] | undefined;
+  readonly projects: readonly ProjectListing[];
+}[] {
+  const one = [{ channel: undefined, projects: shown }];
+  if (current.channel !== undefined || current.channels.length < 2) return one;
+  const groups = current.channels
+    .map((channel) => ({
+      channel,
+      projects: shown.filter((row) => (row.channelId ?? current.channels[0]?.id) === channel.id),
+    }))
+    .filter((group) => group.projects.length > 0);
+  return groups.length < 2 ? one : groups;
+}
+
 export function ProjectsRoute({
   initialFilter = "all",
   filter: shownFilter,
@@ -257,10 +277,26 @@ export function ProjectsRoute({
         >
           Every video you make is kept here with its files.
         </EmptyState>
+      ) : inChannel.length === 0 ? (
+        // The channel shown has made nothing yet; the other channels have.
+        <EmptyState
+          title={`No projects in ${current.channel?.name ?? "this channel"} yet`}
+          actions={
+            <>
+              <ButtonLink to="/play" variant="primary">
+                Make a video
+              </ButtonLink>
+              <Button onClick={() => current.setChannelId(null)}>Show all channels</Button>
+            </>
+          }
+        >
+          Every video made in this channel is kept here with its files.
+        </EmptyState>
       ) : (
         <section aria-label="Project list" className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="relative w-full max-w-[320px] max-md:max-w-none">
+            {/* It gives way first, so the filters and the order stay on one line at 1024. */}
+            <div className="relative min-w-[12rem] max-w-[320px] flex-1 max-md:max-w-none">
               <SearchIcon
                 aria-hidden="true"
                 strokeWidth={1.75}
@@ -322,11 +358,7 @@ export function ProjectsRoute({
             />
           </div>
           {shown.length === 0 ? (
-            <p className="m-0 text-ink-2">
-              {inChannel.length === 0
-                ? `No projects in ${current.channel?.name ?? "this channel"} yet. Show all channels to see the others.`
-                : "No project matches. Clear the search or pick All."}
-            </p>
+            <p className="m-0 text-ink-2">No project matches. Clear the search or pick All.</p>
           ) : (
             <>
               {/* biome-ignore lint/a11y/noStaticElementInteractions: Esc clears the selection anywhere in the list; each row keeps its own controls. */}
@@ -338,17 +370,7 @@ export function ProjectsRoute({
                     ? { scope: `Select all ${String(shown.length)} shown` }
                     : {})}
                 />
-                {(current.channel === undefined && current.channels.length > 1
-                  ? current.channels
-                      .map((channel) => ({
-                        channel,
-                        projects: shown.filter(
-                          (one) => (one.channelId ?? current.channels[0]?.id) === channel.id,
-                        ),
-                      }))
-                      .filter((group) => group.projects.length > 0)
-                  : [{ channel: undefined, projects: shown }]
-                ).map((group) => (
+                {groupsOf(shown, current).map((group) => (
                   <section
                     key={group.channel?.id ?? "all"}
                     aria-label={group.channel?.name ?? "Projects"}

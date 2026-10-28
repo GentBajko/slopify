@@ -712,6 +712,7 @@ function ProjectWorkspace({
                       project={summary}
                       progress={progressOf(stages)}
                       stages={stages}
+                      holding={project.data.holding}
                       channel={channel}
                       uploadedAt={isSample ? null : listing?.uploadedAt}
                       primary={<NextActionButton state={next} />}
@@ -747,7 +748,7 @@ function ProjectWorkspace({
                             primary={next.next?.action === undefined}
                           />
                         )}
-                        <BatchQueueCount />
+                        <BatchQueueCount projectId={projectId} />
                         <ProjectActions actions={projectActions} />
                       </>
                     }

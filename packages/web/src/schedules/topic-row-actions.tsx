@@ -61,10 +61,13 @@ export function TopicRowActions({
   const last = index === count - 1;
   return (
     <>
+      {/* The first has no Up and the last no Down: hidden in place, so the columns stay put,
+          rather than drawn greyed. */}
       <IconButton
         size="small"
         label={`Move ${name} up`}
         disabled={busy || first}
+        className={first ? "invisible" : undefined}
         onClick={() => onMove(index - 1, "up")}
       >
         <ArrowUpIcon {...icon} />
@@ -73,6 +76,7 @@ export function TopicRowActions({
         size="small"
         label={`Move ${name} down`}
         disabled={busy || last}
+        className={last ? "invisible" : undefined}
         onClick={() => onMove(index + 1, "down")}
       >
         <ArrowDownIcon {...icon} />

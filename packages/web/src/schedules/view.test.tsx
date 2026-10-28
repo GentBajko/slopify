@@ -332,6 +332,27 @@ it("says which template version the schedule runs, and what to press when none i
   );
 });
 
+// A weekly schedule names its days on its row and in its detail; a live one offers no Delete
+// (Cancel schedule comes first), rather than drawing it greyed.
+it("names a weekly schedule's days, and offers Delete only once it can be deleted", async () => {
+  const weekly = { ...summary, cadence: { kind: "weekly", days: [5, 1, 3], time: "09:00" } };
+  renderRouted(
+    <SchedulesView />,
+    testDeps({
+      "GET /api/schedules": jsonAnswer({ schedules: [weekly] }),
+      "GET /api/project-templates": jsonAnswer({
+        templates: [{ id: templateId, name: "Stories", version: 1, updatedAt: summary.updatedAt }],
+      }),
+      [`GET /api/schedules/${scheduleId}`]: jsonAnswer({ schedule: weekly, runs: [] }),
+    }),
+  );
+  const detail = await screen.findByRole("region", { name: "Morning stories detail" });
+  expect(within(detail).getByText("Mon, Wed, Fri at 09:00")).toBeTruthy();
+  expect(screen.getByText(/· Mon, Wed, Fri at 09:00 ·/)).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Delete Morning stories" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Pause Morning stories" })).toBeTruthy();
+});
+
 it("says a schedule runs each version of its template as it is saved until one is approved", async () => {
   renderRouted(
     <SchedulesView />,
@@ -348,7 +369,8 @@ it("says a schedule runs each version of its template as it is saved until one i
     }),
   );
   const detail = await screen.findByRole("region", { name: "Morning stories detail" });
-  expect(within(detail).getByText("Runs each version you save")).toBeTruthy();
+  // The template by its name, then which of its versions runs.
+  expect(within(detail).getByText("Stories · runs each version you save")).toBeTruthy();
   expect(within(detail).queryByText(/Its runs are skipped/)).toBeNull();
 });
 
@@ -369,7 +391,7 @@ it("shows a gated template's schedule running an older version while a newer one
   );
   const detail = await screen.findByRole("region", { name: "Morning stories detail" });
   expect(
-    within(detail).getByText("Runs version 6 · version 7 waits for your approval"),
+    within(detail).getByText("Stories · runs version 6 · version 7 waits for your approval"),
   ).toBeTruthy();
   expect(within(detail).queryByText(/Its runs are skipped/)).toBeNull();
 });

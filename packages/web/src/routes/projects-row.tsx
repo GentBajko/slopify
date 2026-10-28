@@ -74,9 +74,11 @@ export function ProjectRow({
   // The server refuses a delete while the project is running, so a running row offers none.
   const running = project.status === "running";
   const sample = project.sample === true;
+  // A narrow row wraps its facts; the finish date's two words stay together ("Sep 27").
   const meta = finished(project)
-    ? finishedLine(project)
+    ? finishedLine(project).replace(/(finished \S+) (\S+)$/, "$1\u00a0$2")
     : `${madeOf(project)} · started ${startedAt(project.createdAt)}`;
+  const done = `${String(Math.round(project.progress * 100))}% done`;
   return (
     <ListRow
       lead={
@@ -109,7 +111,8 @@ export function ProjectRow({
                 {`${project.title}: ${state.word}`}
               </span>
             </Status>
-            <span className="min-w-0 truncate max-md:whitespace-normal" title={meta}>
+            {/* Wraps rather than cuts: the finish date at its end is what tells rows apart. */}
+            <span className="min-w-0 whitespace-normal">
               {meta}
               {project.status === "partial" ? (
                 <>
@@ -119,14 +122,20 @@ export function ProjectRow({
               ) : null}
             </span>
           </span>
-          {running ? (
-            <Meter
-              progress
-              value={project.progress}
-              label={`${project.title} progress`}
-              valueText={`${String(Math.round(project.progress * 100))}% done`}
-              className="max-w-[240px]"
-            />
+          {running && project.progress > 0 ? (
+            // The bar with its words: the share of the run's own work done, supplied steps
+            // left out (`progressOf`). Before any of it can be measured (a render that reports
+            // no count) a "0% done" bar would say nothing true: the state word stands alone.
+            <span className="flex items-center gap-2">
+              <Meter
+                progress
+                value={project.progress}
+                label={`${project.title} progress`}
+                valueText={done}
+                className="max-w-[240px] flex-1"
+              />
+              <span className="shrink-0 text-small text-ink-2 tabular-nums">{done}</span>
+            </span>
           ) : null}
         </span>
       }

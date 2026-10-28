@@ -3,6 +3,7 @@ import type { ProjectListing } from "@app/slices/admission/model.js";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { CurrentChannelProvider } from "@/channels/current";
 import { ToastProvider } from "@/components/kit/toast";
 import { projectStateOf } from "@/lib/state-words";
 import { startedAt } from "@/lib/utils";
@@ -70,13 +71,19 @@ describe("the projects list", () => {
   it("lists every run with its state in words and a link into it", async () => {
     renderRouted(
       <ProjectsRoute />,
-      deps([listing("p1", "Rope Tricks", "running"), listing("p2", "Knots", "done")]),
+      deps([
+        listing("p1", "Rope Tricks", "running", { progress: 0.45 }),
+        listing("p2", "Knots", "done"),
+      ]),
     );
 
     const row = await screen.findByRole("link", { name: "Rope Tricks" });
     expect(row.getAttribute("href")).toBe("/projects/p1");
     const list = screen.getByRole("list", { name: "Projects" });
     expect(within(list).getByText("Running")).not.toBeNull();
+    // The running row's bar says in words how far it is.
+    expect(within(list).getByText("45% done")).not.toBeNull();
+    expect(within(list).getAllByRole("progressbar")).toHaveLength(1);
     // A finished video says the same word as its filter and Home: Ready to upload.
     expect(within(list).getByText("Ready to upload")).not.toBeNull();
     // Open is in words on every row, not only behind the title.
@@ -324,8 +331,9 @@ describe("needs you", () => {
   });
 
   // A step failed beside another that still waits: the run reads by that wait (Running for the
-  // agent's, Needs you for the person's) and is listed under Failed too. A run that made its
-  // video and lost another step reads Done with problems and is ready to upload, not failed.
+  // agent's, Needs you for the person's) and is listed under Failed too. Its failed step is the
+  // person's to fix, so it is under Needs you as on Home. A run that made its video and lost
+  // another step reads Done with problems and is ready to upload, not failed.
   it("lists a run whose step failed beside a wait by that wait and under Failed", () => {
     const agent = listing("p1", "Agent one", "pending", {
       waitingForAgent: true,
@@ -333,7 +341,7 @@ describe("needs you", () => {
     });
     expect(projectStateOf(agent).word).toBe("Waiting for the agent");
     expect(matches(agent, "running")).toBe(true);
-    expect(matches(agent, "waiting")).toBe(false);
+    expect(matches(agent, "waiting")).toBe(true);
     expect(matches(agent, "failed")).toBe(true);
     const person = listing("p2", "Held one", "pending", { stepFailed: true });
     expect(projectStateOf(person).word).toBe("Waiting for your review");
@@ -344,6 +352,44 @@ describe("needs you", () => {
     const partial = listing("p4", "Partly", "partial", { failedSteps: ["document"] });
     expect(matches(partial, "failed")).toBe(false);
     expect(matches(partial, "ready")).toBe(true);
+  });
+
+  // Home's Needs you lists the decisions and the failures; the filter of the same name holds the
+  // same runs, and Failed the failures alone.
+  it("holds under Needs you what Home's Needs you lists, failures included", () => {
+    const projects = [
+      listing("p1", "Held one", "pending", { progress: 0.4 }),
+      listing("p2", "Broken", "failed", { progress: 0.4 }),
+      listing("p3", "Going", "running", { progress: 0.5 }),
+    ];
+    expect(projects.filter((one) => matches(one, "waiting")).map((one) => one.title)).toEqual([
+      "Held one",
+      "Broken",
+    ]);
+    expect(projects.filter((one) => matches(one, "failed")).map((one) => one.title)).toEqual([
+      "Broken",
+    ]);
+  });
+
+  // Held at a checkpoint with every step before it supplied: it made nothing, and still waits for
+  // the person, not its turn in the queue.
+  it("lists a run held before it made anything under Needs you, not Queued", () => {
+    const held = listing("p1", "Coral", "pending", {
+      progress: 0,
+      holding: [
+        {
+          checkpointId: "video-gate",
+          stage: "video",
+          waitsFor: "person",
+          revisionId: "r1",
+          fingerprint: "a".repeat(64),
+          since: "2026-09-01T00:00:00.000Z",
+        },
+      ],
+    });
+    expect(projectStateOf(held).word).toBe("Waiting for your review");
+    expect(matches(held, "waiting")).toBe(true);
+    expect(matches(held, "queued")).toBe(false);
   });
 
   // Parked on an agent's review before anything was made: it waits for the agent, not its turn.
@@ -524,8 +570,9 @@ describe("ordering and paging", () => {
     expect(names()).toEqual(["alpha", "Beta", "Gamma"]);
     await user.selectOptions(sort, "changed");
     expect(names()).toEqual(["alpha", "Beta", "Gamma"]);
+    // What needs a hand first (the failure to fix, as on Home's Needs you), then what moves.
     await user.selectOptions(sort, "status");
-    expect(names()).toEqual(["Gamma", "alpha", "Beta"]);
+    expect(names()).toEqual(["alpha", "Gamma", "Beta"]);
     expect(picked).toEqual(["name", "changed", "status"]);
     expect(projectsSearchOf({ sort: "name" })).toEqual({ sort: "name" });
     expect(projectsSearchOf({ sort: "newest" })).toEqual({});
@@ -774,6 +821,7 @@ describe("on a phone", () => {
       const show = await screen.findByRole("combobox", { name: "Show" });
       expect([...(show as HTMLSelectElement).options].map((option) => option.textContent)).toEqual([
         "All (2)",
+        "Needs you (1)",
         "Ready to upload (1)",
         "Failed (1)",
       ]);
@@ -783,5 +831,61 @@ describe("on a phone", () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+});
+
+describe("with two channels", () => {
+  const channel = (id: string, name: string) => ({
+    id,
+    name,
+    isDefault: id === defaultChannel,
+    brand: {},
+    seriesBrief: "",
+    version: 1,
+    createdAt: "x",
+    updatedAt: "x",
+    templates: 0,
+    cast: 0,
+  });
+  const sleep = "00000000-0000-4000-8000-000000000002";
+  const channels = [channel(defaultChannel, "My channel"), channel(sleep, "Sleep lore")];
+  const mount = (projects: readonly ProjectListing[]) =>
+    renderRouted(
+      <CurrentChannelProvider>
+        <ProjectsRoute />
+      </CurrentChannelProvider>,
+      deps(projects, { "GET /api/channels": jsonAnswer({ channels }) }),
+    );
+
+  // A group head only tells rows apart: with every row in one channel it would say the page's
+  // count again.
+  it("heads the rows by channel only when they come from two or more", async () => {
+    mount([listing("p1", "Rope Tricks", "done"), listing("p2", "Knots", "done")]);
+    await screen.findByLabelText("Showing:");
+    await screen.findByRole("link", { name: "Rope Tricks" });
+    expect(screen.queryByRole("heading", { name: "My channel" })).toBeNull();
+    cleanup();
+    mount([
+      listing("p1", "Rope Tricks", "done"),
+      listing("p2", "Moon tales", "done", { channelId: sleep }),
+    ]);
+    await screen.findByLabelText("Showing:");
+    expect(await screen.findByRole("heading", { name: "My channel" })).not.toBeNull();
+    expect(screen.getByRole("heading", { name: "Sleep lore" })).not.toBeNull();
+  });
+
+  // A channel that made nothing yet says so with the two ways on, instead of a sentence over
+  // an empty list and its tools.
+  it("offers Make a video and Show all channels for a channel with no projects", async () => {
+    const user = userEvent.setup();
+    mount([listing("p1", "Rope Tricks", "done")]);
+    await user.selectOptions(await screen.findByLabelText("Showing:"), sleep);
+    expect(
+      await screen.findByRole("heading", { name: "No projects in Sleep lore yet" }),
+    ).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Make a video" }).getAttribute("href")).toBe("/play");
+    expect(screen.queryByRole("combobox", { name: "Sort projects" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Show all channels" }));
+    expect(await screen.findByRole("link", { name: "Rope Tricks" })).not.toBeNull();
   });
 });

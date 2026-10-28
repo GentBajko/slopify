@@ -16,6 +16,7 @@ import {
 } from "../../slices/admission/repo.js";
 import {
   readsByWaitBesideFailure,
+  retryingAt,
   stepFailedWhileWaiting,
 } from "../../slices/admission/state-words.js";
 import { lastStarter } from "../../slices/agents/repo.js";
@@ -102,6 +103,7 @@ export function projectRoutes(deps: AppDeps) {
           const status = settledStatus(derive(stages, project.paused), settled.has(project.id));
           const made = facts.get(project.id);
           const finished = status === "done" || status === "partial";
+          const retry = status === "running" ? retryingAt(stages) : undefined;
           return {
             ...project,
             status,
@@ -117,6 +119,7 @@ export function projectRoutes(deps: AppDeps) {
               ? { stepFailures: failures.get(project.id) ?? [] }
               : {}),
             ...(holding === undefined ? {} : { holding }),
+            ...(retry === undefined ? {} : { retryAt: retry }),
             ...(waiting === undefined ? {} : { limitWaits: waiting.map(listingWait) }),
             ...(samples.has(project.id) ? { sample: true as const } : {}),
             ...(finished && made?.finishedAt !== undefined ? { finishedAt: made.finishedAt } : {}),

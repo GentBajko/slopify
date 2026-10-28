@@ -69,7 +69,7 @@ Mark voices in **Settings → Voices** and Image prompts in **Prompts**. See [Pu
 
 **Channel links.** This channel's named links, such as `Patreon` or `Discord`, that a YouTube description fills when it names them in braces (`{{Patreon}}`). See [Channel links](#channel-links).
 
-Press **Save channel** when you are done.
+Press **Save channel** when you are done. It waits for a change: until you change something, the bar says "Nothing to save yet: change a setting first."
 
 To keep one video exactly as its template was saved, untick **Use the channel's brand kit** on Create or in a project's **Edit settings** → **Channel**. The cast and language still apply. Nothing in the kit reaches a project that already started; a project keeps what it was started with.
 
@@ -77,9 +77,13 @@ To keep one video exactly as its template was saved, untick **Use the channel's 
 
 Recurring characters, creatures, places and objects, each with reference pictures that go with every image that names them. A cast member with a voice can also be one of the channel's hosts: a new podcast or interview on Create then starts with them as its speakers. See [Cast](Cast-Library).
 
+### Projects
+
+Everything made in this channel, newest first, as the Projects list shows it: its state in the same words (**Ready to upload**, **Uploaded**, **Done with problems**), its length, what it made and when it finished (or what it is made of and when it started), with **Watch** and **Download video** once it is done.
+
 ### Templates
 
-The channel's templates. Each has a channel picker: choosing another channel moves the template, and every schedule that runs it, to that channel. Their next runs use the new channel's brand kit, cast and series brief. Projects already made keep what they were made with.
+The channel's templates, each with **Make a video** (Create opens with it picked), **New schedule** and **Edit template**. While the channel has templates, the page header leaves out its own **Make a video**, which opens an empty Create. Each has a channel picker: choosing another channel moves the template, and every schedule that runs it, to that channel. Their next runs use the new channel's brand kit, cast and series brief. Projects already made keep what they were made with.
 
 ### Schedules
 

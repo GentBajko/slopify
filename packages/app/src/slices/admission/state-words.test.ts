@@ -5,6 +5,7 @@ import {
   projectStateWord,
   queuedRun,
   readsByWaitBesideFailure,
+  retryingAt,
   waitsForPerson,
 } from "./state-words.js";
 
@@ -35,6 +36,21 @@ it.each([
   [{ status: "running", progress: 0.5, waitingForAgent: true }, "Running"],
   [{ status: "running", progress: 0.5 }, "Running"],
   [{ status: "paused", progress: 0.5 }, "Paused"],
+  // Held at a checkpoint with every step before it supplied: it made nothing, and still waits for
+  // the person (or its day), not its turn.
+  [
+    { status: "pending", progress: 0, holding: [{ waitsFor: "person" }] },
+    "Waiting for your review",
+  ],
+  [
+    { status: "pending", progress: 0, holding: [{ waitsFor: "day" }], prepared: true },
+    "Waiting for its day",
+  ],
+  // Waiting to run a step again by itself, nothing else running.
+  [
+    { status: "running", progress: 0.5, retryAt: "2026-09-27T10:00:00.000Z" },
+    "Waiting to try again",
+  ],
   [{ status: "failed", progress: 0.5, prepared: true }, "Failed"],
   [{ status: "partial", progress: 0.5 }, "Done with problems"],
   [{ status: "done", progress: 0.5 }, "Done"],
@@ -53,7 +69,9 @@ it.each([
   [{ status: "pending", progress: 0, stopped: true }, true],
   [{ status: "pending", progress: 0.5, stopped: true, setAside: true }, false],
   [{ status: "running", progress: 0.5 }, false],
+  [{ status: "running", progress: 0.5, retryAt: "2026-09-27T10:00:00.000Z" }, false],
   [{ status: "paused", progress: 0.5 }, true],
+  [{ status: "pending", progress: 0, holding: [{ waitsFor: "person" }] }, true],
 ] as const)("counts %o as waiting for the person: %s", (project, waits) => {
   expect(waitsForPerson(project)).toBe(waits);
 });
@@ -64,8 +82,17 @@ it.each([
   [{ status: "pending", progress: 0, waitingForAgent: true }, false],
   [{ status: "pending", progress: 0.5 }, false],
   [{ status: "running", progress: 0 }, false],
+  [{ status: "pending", progress: 0, holding: [{ waitsFor: "person" }] }, false],
 ] as const)("counts %o as queued: %s", (project, queued) => {
   expect(queuedRun(project)).toBe(queued);
+});
+
+it("tells when a run tries a step again only while nothing of it runs", () => {
+  const waiting = { state: "pending", retryAt: "2026-09-27T10:05:00.000Z" } as const;
+  const sooner = { state: "pending", retryAt: "2026-09-27T10:01:00.000Z" } as const;
+  expect(retryingAt([{ state: "done" }, waiting, sooner])).toBe("2026-09-27T10:01:00.000Z");
+  expect(retryingAt([waiting, { state: "running" }])).toBeUndefined();
+  expect(retryingAt([{ state: "pending", retryAt: null }, { state: "failed" }])).toBeUndefined();
 });
 
 // Only a waiting run is parked: a running or paused one with a review out is said as such.

@@ -431,6 +431,9 @@ export interface ProjectListing
   // The checkpoints holding the run now (`reviews/holds.ts`), as a project's page has them, so
   // Home's Needs you offers the right one. Left out when none holds it.
   readonly holding?: readonly CheckpointHold[];
+  // When a step that failed on something time can fix runs again by itself, while no step runs
+  // (`state-words.ts` retryingAt): the row reads Waiting to try again. Left out otherwise.
+  readonly retryAt?: string;
   // One of the bundled samples (`onboarding/sample.ts`): read-only, never uploaded, so it is
   // never Ready to upload and its row offers Make my own copy. Left out on every other project.
   readonly sample?: true;

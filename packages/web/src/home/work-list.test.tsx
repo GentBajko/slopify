@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { TextLink } from "@/components/kit/link";
 import { renderRouted, testDeps } from "@/test-app";
 import { finishedLine, lengthWords, madeWords } from "./finished-words.js";
-import { FinishedList } from "./work-list.js";
+import { FinishedList, finishedMeta } from "./work-list.js";
 
 afterEach(cleanup);
 
@@ -81,6 +81,25 @@ describe("Finished on Home", () => {
     expect(screen.getByText("2 videos · 1 ready to upload")).not.toBeNull();
   });
 
+  // A video made with a failed step is ready to upload and reads Done with problems: the count
+  // says how many of the ready ones that is, so it matches the rows' words.
+  it("says how many of the videos ready to upload had a step fail", () => {
+    expect(
+      finishedMeta([
+        ready("p1", "Rope Tricks"),
+        ready("p2", "Moon jellyfish", { status: "partial", failedSteps: ["thumbnail"] }),
+        ready("p3", "Knots", { uploadedAt: "2026-09-28T10:00:00.000Z" }),
+      ]),
+    ).toBe("3 videos · 2 ready to upload (1 with a failed step)");
+    expect(
+      finishedMeta([
+        ready("p1", "Rope Tricks"),
+        ready("p2", "Moon jellyfish", { status: "partial", failedSteps: ["thumbnail"] }),
+      ]),
+    ).toBe("2 videos · 2 ready to upload (1 with a failed step)");
+    expect(finishedMeta([ready("p1", "Rope Tricks")])).toBe("1 video");
+  });
+
   // An audiobook has nothing to watch: its row opens the project.
   it("offers Open on finished work that made no video", async () => {
     renderRouted(
@@ -136,8 +155,9 @@ describe("Finished on Home", () => {
     );
   });
 
-  // The section's name says they are samples; each row says Done like any finished run.
-  it("shows a sample as Done, with Watch only", async () => {
+  // The section's name says they are samples; each row says Done like any finished run, with
+  // Watch and Download video like every list of finished work.
+  it("shows a sample as Done, with Watch and Download video", async () => {
     renderRouted(
       <FinishedList
         title="Finished samples"
@@ -152,7 +172,11 @@ describe("Finished on Home", () => {
     expect(
       within(item).getByRole("link", { name: "Watch The Library of Alexandria" }),
     ).not.toBeNull();
-    expect(within(section).queryByRole("link", { name: /^Download video/ })).toBeNull();
+    expect(
+      within(section)
+        .getByRole("link", { name: "Download video: The Library of Alexandria" })
+        .getAttribute("href"),
+    ).toMatch(/\/files\/s1\/video$/);
   });
 
   it("shows six and links to the rest", async () => {

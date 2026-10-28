@@ -113,11 +113,15 @@ export function AddTopics({
             Cancel
           </Button>
           {picked === undefined ? null : (
+            // Never greyed for want of a topic: pressed with none, it says so under the box.
             <Button
               variant="primary"
-              disabled={topics.length === 0 || add.isPending}
-              disabledReason={topics.length === 0 ? "Type at least one topic." : "Adding…"}
-              onClick={() => add.mutate(picked)}
+              disabled={add.isPending}
+              disabledReason="Adding…"
+              onClick={() => {
+                if (topics.length === 0) setError("Type at least one topic, one per line.");
+                else add.mutate(picked);
+              }}
             >
               {topics.length === 0
                 ? "Add topics"
@@ -173,13 +177,16 @@ export function AddTopics({
           <Field
             label="Topics, one per line"
             error={error}
-            help="Each topic fills the schedule's topic keyword; its other keywords stay as the schedule sets them."
+            help="For example Nefertiti, or The Library of Alexandria. Each topic fills the schedule's topic keyword; its other keywords stay as the schedule sets them."
           >
+            {/* No sample topics inside the box: they read as typed ones. */}
             <Textarea
               rows={8}
               value={text}
-              placeholder={"Nefertiti\nThe Library of Alexandria\nThe Old Kingdom"}
-              onChange={(event) => setText(event.target.value)}
+              onChange={(event) => {
+                setText(event.target.value);
+                setError(undefined);
+              }}
             />
           </Field>
         </div>

@@ -1,6 +1,5 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import type { ProjectListing } from "@app/slices/admission/model.js";
-import { shortReason } from "@app/slices/notifications/rules.js";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { readProject } from "@/api";
@@ -15,6 +14,28 @@ import { fixOf } from "@/project/fix-it";
 import { keys } from "@/queries";
 import { ProjectThumb } from "./project-thumb.js";
 import { projectLink, WorkItem } from "./work-item.js";
+
+// "Image 1: The chosen model is not …": a step's error names the item it failed on before its
+// sentence (`rebuild/runtime-piece-label.ts`). Home has room for the sentence whole, and its fix
+// is usually at the end, so it is never cut; the item ("Image 1") goes beside the state word,
+// where the step's name stands, when it is one of the step's own items.
+export function failureLine(
+  reason: string | null | undefined,
+  stageWord: string,
+): { readonly item?: string; readonly text: string } | undefined {
+  const line = reason
+    ?.split(/\r?\n/)
+    .map((part) => part.trim())
+    .find((part) => part !== "");
+  if (line === undefined) return undefined;
+  const at = line.indexOf(": ");
+  const item = at === -1 ? "" : line.slice(0, at);
+  // "Images" names "Image 1", "Thumbnail" "Thumbnail 2", "Narration" "Narration chunk 3 of 8".
+  const stem = stageWord.toLowerCase().replace(/s$/, "");
+  const own = item.length > 0 && item.length <= 48 && item.toLowerCase().startsWith(stem);
+  const text = own ? line.slice(at + 2) : line;
+  return own && text !== "" ? { item, text } : { text: line };
+}
 
 // A failed run on Home's Needs you, with the one thing that fixes it.
 export function FailedItem({
@@ -42,12 +63,15 @@ export function FailedItem({
   };
   const fix =
     stage === undefined || body.data === undefined ? undefined : fixOf(stage, body.data.project);
+  const stageWord = stage === undefined ? undefined : stageWords[stage.kind as StageKind];
+  const failure =
+    stageWord === undefined ? undefined : failureLine(stage?.failureReason, stageWord);
   const reason =
-    shortReason(stage?.failureReason) ??
+    failure?.text ??
     (body.error === null
       ? "The run stopped with an error."
       : `The run stopped with an error; its details didn't load (${body.error.message}). Open the project to see them.`);
-  const where: string = stage === undefined ? "" : ` · ${stageWords[stage.kind as StageKind]}`;
+  const where: string = stageWord === undefined ? "" : ` · ${failure?.item ?? stageWord}`;
   const variant = primary ? "primary" : "secondary";
   const action =
     fix?.kind === "provider-settings" ? (

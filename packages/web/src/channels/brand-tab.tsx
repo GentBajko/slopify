@@ -57,8 +57,8 @@ function draftOf(brand: BrandKit): Draft {
   return Object.fromEntries(fields.map((field) => [field, brand[field] ?? ""])) as Draft;
 }
 
-// The Name and look tab: the channel's name, language and series brief first, then its look
-// beside a frame drawn with it, its intro, outro, PDF look and ambient sound, and folded
+// The Name and look tab: the channel's name, language and series brief first, then its look,
+// intro, outro and PDF look beside a frame drawn with it and its ambient sound, and folded
 // below, its named links and how it posts (the YouTube AI disclosure, the X subscription and
 // its accounts). Every look field is optional: Not set leaves the template's own setting alone.
 // One Save channel saves all of it, and waits for a change: its bar is there only once something
@@ -163,7 +163,10 @@ export function BrandTab({
     disclosure !== channel.aiDisclosure ||
     posting.xTier !== (channel.xTier ?? "free") ||
     !same(posting.accounts, channel.socialAccounts ?? {}) ||
-    (linksDraft !== undefined && !same(linksDraft, channel.brand.links ?? legacyLinks.data ?? []));
+    (linksDraft !== undefined &&
+      !same(linksDraft, channel.brand.links ?? legacyLinks.data ?? [])) ||
+    // The default channel's links from Settings, shown here, are saved as its own on Save.
+    (channel.brand.links === undefined && (legacyLinks.data?.length ?? 0) > 0);
   useEffect(() => onChanged?.(changed), [changed, onChanged]);
   const barShown = changed || save.isPending || save.error !== null;
   return (
@@ -246,40 +249,41 @@ export function BrandTab({
                 onChange={(event) => set("endScreenText")(event.target.value)}
               />
             </Field>
+            <Choice
+              label="Intro"
+              help="Narrated before each video: one voice request."
+              value={kit.intro}
+              options={entryOptions("intro")}
+              onPick={set("intro")}
+            />
+            <Choice
+              label="Outro"
+              help="Narrated after each video: one voice request."
+              value={kit.outro}
+              options={entryOptions("outro")}
+              onPick={set("outro")}
+            />
+            <Choice
+              label="PDF look"
+              help="For videos that also make a PDF."
+              value={kit.documentTheme}
+              options={themeOptions}
+              onPick={set("documentTheme")}
+            />
           </div>
-          <BrandPreview
-            captionFontId={kit.captionFontId}
-            titleFontId={kit.titleFontId}
-            captionColor={kit.captionColor}
-            captionOutlineColor={kit.captionOutlineColor}
-            titleColor={kit.titleColor}
-            endScreenText={kit.endScreenText}
-          />
+          {/* The sound under the frame, so the two columns end together with no blank band. */}
+          <div className="flex min-w-0 flex-col gap-4">
+            <BrandPreview
+              captionFontId={kit.captionFontId}
+              titleFontId={kit.titleFontId}
+              captionColor={kit.captionColor}
+              captionOutlineColor={kit.captionOutlineColor}
+              titleColor={kit.titleColor}
+              endScreenText={kit.endScreenText}
+            />
+            <ChannelAmbientBed value={bed} onChange={setBed} />
+          </div>
         </div>
-        <div className="sl-fields">
-          <Choice
-            label="Intro"
-            help="Narrated before each video: one voice request."
-            value={kit.intro}
-            options={entryOptions("intro")}
-            onPick={set("intro")}
-          />
-          <Choice
-            label="Outro"
-            help="Narrated after each video: one voice request."
-            value={kit.outro}
-            options={entryOptions("outro")}
-            onPick={set("outro")}
-          />
-          <Choice
-            label="PDF look"
-            help="For videos that also make a PDF."
-            value={kit.documentTheme}
-            options={themeOptions}
-            onPick={set("documentTheme")}
-          />
-        </div>
-        <ChannelAmbientBed value={bed} onChange={setBed} />
       </section>
       <div className="flex flex-col gap-2 border-t border-line pt-4">
         <Fold

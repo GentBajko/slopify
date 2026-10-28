@@ -38,7 +38,10 @@ const toneOf = (stage: Stage): Tone => {
     case "provided":
       return "done";
     case "failed":
-      return stage.retryAt === undefined ? "failed" : "waiting";
+      return "failed";
+    // A step that failed on something time can fix waits, pending, to run again by itself.
+    case "pending":
+      return stage.retryAt === undefined ? "off" : "waiting";
     default:
       return "off";
   }
@@ -56,7 +59,7 @@ const holdLook: Readonly<Record<StepHold, { readonly state: string; readonly det
 
 // A step the person supplied is done like any other; its detail says who supplied it.
 const stateWord = (stage: Stage): string => {
-  if (stage.state === "failed" && stage.retryAt !== undefined) return retryingWord;
+  if (stage.state === "pending" && stage.retryAt !== undefined) return retryingWord;
   if (stage.state === "provided") return stageStateWords.done;
   return stageStateWords[stage.state];
 };

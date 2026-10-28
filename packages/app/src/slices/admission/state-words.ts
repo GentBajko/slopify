@@ -37,6 +37,9 @@ export const stoppedWord = "Stopped";
 // put together on the run's day.
 export const preparedWord = "Waiting for its day";
 export const keptAsIsWord = "Kept as is";
+// A running run whose only movement is a step that failed on something time can fix (a rate
+// limit, a dropped connection) and runs again by itself at a set time.
+export const retryingWord = "Waiting to try again";
 export const heldStateWords = [
   heldWord,
   waitingForAgentWord,
@@ -56,21 +59,40 @@ interface ProjectStanding {
   readonly prepared?: boolean | undefined;
   readonly waitingForAgent?: boolean | undefined;
   readonly stopped?: boolean | undefined;
+  // The checkpoints holding the run now (`reviews/holds.ts`): one reached holds a run that made
+  // nothing yet, every step before it supplied by the person.
+  readonly holding?: readonly unknown[] | undefined;
+  // When a step waiting to run again by itself tries, while nothing else runs (`retryingAt`).
+  readonly retryAt?: string | undefined;
 }
 
 type Holds = Pick<ProjectStanding, "setAside" | "prepared" | "waitingForAgent" | "stopped">;
 
 // A run that ran and is held: a waiting project with some of its run done (`progress` is the
-// run's share done, `progressOf`) or a step failed, or one stopped or parked on an agent's review
-// before it got going. One with none done that waits for neither is Queued, waiting its turn.
+// run's share done, `progressOf`) or a step failed, one a checkpoint holds (it reached it with
+// every step before it supplied), or one stopped or parked on an agent's review before it got
+// going. One with none done that waits for none of these is Queued, waiting its turn.
 export function heldRun(project: ProjectStanding): boolean {
   return (
     project.status === "pending" &&
     (project.progress > 0 ||
       project.stepFailed === true ||
+      (project.holding?.length ?? 0) > 0 ||
       project.stopped === true ||
       project.waitingForAgent === true)
   );
+}
+
+// When the run tries again by itself: the soonest wait of a step that failed on something time
+// can fix, while no step runs. Undefined while one runs (the run reads Running) or none waits.
+export function retryingAt(
+  stages: readonly { readonly state: StageState; readonly retryAt?: string | null | undefined }[],
+): string | undefined {
+  if (stages.some((stage) => stage.state === "running")) return undefined;
+  const waits = stages.flatMap((stage) =>
+    stage.state === "pending" && typeof stage.retryAt === "string" ? [stage.retryAt] : [],
+  );
+  return waits.toSorted()[0];
 }
 
 // Whether the person is the one it waits for (to approve, or to Continue the run): not when it
@@ -111,9 +133,17 @@ export function queuedRun(project: ProjectStanding): boolean {
   return project.status === "pending" && !heldRun(project);
 }
 
-// A settled project already reads "done" from the projects route (`settledProjects`).
+// A settled project already reads "done" from the projects route (`settledProjects`). A
+// running run that only waits to try a step again says so.
 export function projectStateWord(project: ProjectStanding): string {
-  return heldRun(project) ? heldStateWord(project) : projectStateWords[project.status];
+  if (heldRun(project)) return heldStateWord(project);
+  if (retryingRun(project)) return retryingWord;
+  return projectStateWords[project.status];
+}
+
+// Running, and the one thing it does is wait to try a failed step again at a set time.
+export function retryingRun(project: Pick<ProjectStanding, "status" | "retryAt">): boolean {
+  return project.status === "running" && project.retryAt !== undefined;
 }
 
 // A run that ran and now waits for the person, held or paused: Home's Needs you, the Projects
@@ -152,4 +182,10 @@ export function stepFailedWhileWaiting(
 // a step failed while the run still waits for the agent or the person (`stepFailed`).
 export function failedRun(project: Pick<ProjectStanding, "status" | "stepFailed">): boolean {
   return project.status === "failed" || project.stepFailed === true;
+}
+
+// Everything a run asks of the person, the one set Home's Needs you lists and the Projects
+// "Needs you" filter holds: a decision (approve, Continue the run, resume) or a failure to fix.
+export function needsYou(project: ProjectStanding): boolean {
+  return waitsForPerson(project) || failedRun(project);
 }

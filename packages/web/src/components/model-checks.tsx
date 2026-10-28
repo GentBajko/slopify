@@ -221,7 +221,7 @@ export function NewModelsSlot(): ReactElement {
     <StatusSlot tone="info">
       {count === 0 ? null : (
         <TextLink to="/settings" search={{ section: "models" }}>
-          {`${String(count)} new model${count === 1 ? "" : "s"} work${count === 1 ? "s" : ""} for you`}
+          {`${String(count)} new AI model${count === 1 ? "" : "s"} work${count === 1 ? "s" : ""} for you`}
         </TextLink>
       )}
     </StatusSlot>

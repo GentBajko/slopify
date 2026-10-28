@@ -2,7 +2,7 @@ import type { CalendarRun } from "@app/slices/schedules/schema.js";
 import type { ReactElement } from "react";
 import { runTitle } from "@/calendar/plan";
 import { List, ListRow } from "@/components/kit/list-row";
-import { Badge } from "@/components/kit/status";
+import { Status } from "@/components/kit/status";
 import { zonedFormat, zonedTime } from "@/lib/zoned";
 
 // Home's "Coming up": the scheduled runs of the next seven days, the title each will make and
@@ -26,15 +26,16 @@ export function ComingUp({ runs }: { readonly runs: readonly CalendarRun[] }): R
           ]
             .filter((part) => part !== null)
             .join(" · ")}
+          // A state, so its lamp with its word, as every list says states.
           actions={
             run.paused ? (
-              <Badge tone="waiting">Paused</Badge>
+              <Status tone="waiting">Paused</Status>
             ) : run.notReady ? (
-              <Badge tone="waiting">Skipped until approved</Badge>
+              <Status tone="waiting">Skipped until approved</Status>
             ) : run.topicSource === "held" ? (
-              <Badge tone="info">Needs a topic</Badge>
+              <Status tone="info">Needs a topic</Status>
             ) : (
-              <Badge>Queued</Badge>
+              <Status tone="off">Queued</Status>
             )
           }
         />

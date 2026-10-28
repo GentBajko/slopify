@@ -12,13 +12,30 @@ import { formatScheduleDate } from "./time";
 export type Reply = { readonly ok: true } | { readonly ok: false; readonly message: string };
 export type Act = (job: () => Promise<Reply>) => void;
 
+// Monday first, as the form's Weekdays read.
+const weekdayNames: readonly (readonly [number, string])[] = [
+  [1, "Mon"],
+  [2, "Tue"],
+  [3, "Wed"],
+  [4, "Thu"],
+  [5, "Fri"],
+  [6, "Sat"],
+  [0, "Sun"],
+];
+
+// "Mon, Wed, Fri at 09:00": a weekly schedule names its days, and all seven read Every day.
+export function weekdaysAt(days: readonly number[], time: string): string {
+  const named = weekdayNames.filter(([day]) => days.includes(day)).map(([, name]) => name);
+  return named.length === 7 ? `Every day at ${time}` : `${named.join(", ")} at ${time}`;
+}
+
 function cadenceOf(schedule: ScheduleSummary): string {
   if (schedule.cadence.kind === "by-date") return `Ahead of each date at ${schedule.cadence.time}`;
   return schedule.cadence.kind === "once"
     ? "One time"
     : schedule.cadence.kind === "daily"
       ? `Daily at ${schedule.cadence.time}`
-      : `Weekly at ${schedule.cadence.time}`;
+      : weekdaysAt(schedule.cadence.days, schedule.cadence.time);
 }
 
 export function ScheduleStatus({ schedule }: { readonly schedule: ScheduleSummary }): ReactElement {
@@ -95,22 +112,19 @@ export function ScheduleRow({
               >
                 Edit
               </ButtonLink>
-            ) : (
+            ) : // A completed or canceled schedule cannot change: no Edit drawn greyed.
+            editable ? (
               <Button
                 variant="quiet"
                 size="small"
                 aria-label={`Edit ${schedule.name}`}
-                disabled={pending || !editable}
-                disabledReason={
-                  editable
-                    ? "Finish or cancel the open form first"
-                    : "Only a live schedule can change"
-                }
+                disabled={pending}
+                disabledReason="Finish or cancel the open form first"
                 onClick={onEdit}
               >
                 Edit
               </Button>
-            )}
+            ) : null}
             {schedule.status === "paused" ? (
               <Button
                 variant="quiet"
@@ -123,30 +137,32 @@ export function ScheduleRow({
               >
                 Resume
               </Button>
-            ) : (
+            ) : schedule.status === "active" ? (
               <Button
                 variant="quiet"
                 size="small"
                 aria-label={`Pause ${schedule.name}`}
-                disabled={pending || schedule.status !== "active"}
-                disabledReason="Only an active schedule can pause"
+                disabled={pending}
                 onClick={() =>
                   onAction(() => scheduleAction(api, schedule.id, "pause", schedule.version))
                 }
               >
                 Pause
               </Button>
-            )}
-            <Button
-              variant="quiet"
-              size="small"
-              aria-label={`Delete ${schedule.name}`}
-              disabled={pending || !deletable}
-              disabledReason="Cancel the schedule first; a completed or canceled one can be deleted"
-              onClick={() => onConfirm("delete")}
-            >
-              Delete
-            </Button>
+            ) : null}
+            {/* Only a completed or canceled schedule can be deleted (Cancel schedule is in its
+                detail): offered then, not drawn greyed before. */}
+            {deletable ? (
+              <Button
+                variant="quiet"
+                size="small"
+                aria-label={`Delete ${schedule.name}`}
+                disabled={pending}
+                onClick={() => onConfirm("delete")}
+              >
+                Delete
+              </Button>
+            ) : null}
           </>
         ) : undefined
       }

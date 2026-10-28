@@ -1,4 +1,6 @@
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
+import { retryingAt } from "@app/slices/admission/state-words.js";
+import type { CheckpointHold } from "@app/slices/reviews/holds.js";
 import { bookLabel } from "@app/slices/voices/model.js";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeftIcon, SlidersHorizontalIcon, XIcon } from "lucide-react";
@@ -31,6 +33,7 @@ export function ProjectHeader({
   project,
   progress,
   stages,
+  holding,
   channel,
   uploadedAt,
   primary,
@@ -45,6 +48,8 @@ export function ProjectHeader({
   readonly progress: number;
   // The run's steps, for when it finished and how long it took.
   readonly stages: readonly Stage[];
+  // The checkpoints holding the run now: one reached holds a run that made nothing yet.
+  readonly holding?: readonly CheckpointHold[] | undefined;
   // The channel's name, when there is more than one channel to tell apart.
   readonly channel?: string | undefined;
   // When the finished video was marked uploaded.
@@ -60,7 +65,12 @@ export function ProjectHeader({
   // The run clock, at the end of the meta line while a run goes.
   readonly clock?: ReactNode;
 }): ReactElement {
-  const state = projectStateOf({ ...project, progress });
+  const state = projectStateOf({
+    ...project,
+    progress,
+    holding,
+    retryAt: project.status === "running" ? retryingAt(stages) : undefined,
+  });
   // The way back goes where the project was opened from: Projects as it was filtered, Home,
   // the calendar or the channel.
   const origin = cameFrom();
@@ -160,8 +170,10 @@ export function ProjectActions({
 // "Audiobook", "Sea Tales, chapter 3", "finished Sep 27 17:18, 3 min", "My channel", "uploaded
 // Sep 28": what a person checks on a project each morning, after its state. An audiobook or a
 // podcast says first what it is, since its page otherwise reads like a video's. While a step
-// runs, the last fact is where the run stands, as Home says it: "Step 2 of 4 · Narration · about
-// 4 min left on this step", the time measured as Progress measures it (`measured-eta.ts`).
+// runs, the last fact is where the run stands, as Home says it ("Step 2 of 4 · Narration · about
+// 4 min left on this step"), the time measured as Progress measures it (`measured-eta.ts`), and
+// the clock after it says how long it has worked, so "started 06:07 PM" is left out and the line
+// keeps its clock.
 function facts(
   project: ProjectSummary,
   stages: readonly Stage[],
@@ -172,21 +184,24 @@ function facts(
   const finished = project.status === "done" || project.status === "partial";
   const end = finishedAt(stages);
   const took = runLength(stages);
+  const where = runPosition(
+    stages.filter((stage) => stage.source !== "off" && stage.state !== "skipped"),
+    Date.now(),
+    (kind) => stageName(kind, project.config),
+  );
   return [
     project.config.voices === undefined ? undefined : listeningKinds[project.config.voices.format],
     book === undefined ? undefined : bookLabel(book),
     finished && end !== undefined
       ? `finished ${startedAt(end)}${took === undefined ? "" : `, ${took}`}`
-      : `started ${startedAt(runStart(stages) ?? project.createdAt)}`,
+      : where === undefined
+        ? `started ${startedAt(runStart(stages) ?? project.createdAt)}`
+        : undefined,
     channel,
     uploadedAt === null || uploadedAt === undefined
       ? undefined
       : `uploaded ${startedAt(uploadedAt)}`,
-    runPosition(
-      stages.filter((stage) => stage.source !== "off" && stage.state !== "skipped"),
-      Date.now(),
-      (kind) => stageName(kind, project.config),
-    ),
+    where,
   ].filter((fact): fact is string => fact !== undefined && fact !== "");
 }
 

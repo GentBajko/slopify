@@ -156,11 +156,13 @@
   .sl-hit:has(:is(.sl-hit__target, .sl-row__title a)) {
     cursor: pointer;
   }
-  .sl-hit
-    :is(a, button, input, select, textarea, label, summary, [tabindex], .sl-row__body):not(
-      .sl-hit__target,
-      .sl-row__title a
-    ) {
+  /* Without specificity (:where), so it lifts a control that has no position of its own and
+     never moves one its component placed itself: a frame's Full size button in its corner, the
+     picture's own hit layer. */
+  :where(.sl-hit)
+  :where(a, button, input, select, textarea, label, summary, [tabindex], .sl-row__body):where(
+    :not(.sl-hit__target, .sl-row__title a)
+  ) {
     position: relative;
     z-index: 1;
   }
@@ -686,9 +688,10 @@
     border-top: 1px solid var(--color-line);
     background: var(--color-surface);
   }
-  /* A short window (a laptop under the browser's own bars, or a zoomed page): the items close
-     up so the whole rail still fits down to about 600px. */
-  @media (max-height: 760px) {
+  /* A short window (a laptop under the browser's own bars, a 1024x768 screen, or a zoomed page):
+     the items close up so the whole rail, its "● 1 running" included, fits above the foot down
+     to about 600px instead of sliding under it. */
+  @media (max-height: 860px) {
     .sl-app__rail {
       gap: 4px;
       padding-top: var(--space-2);

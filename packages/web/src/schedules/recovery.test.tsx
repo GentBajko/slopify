@@ -347,6 +347,7 @@ it("keeps an older topic's saved values when the list is edited", async () => {
   await waitFor(() => expect(update).toHaveBeenCalledOnce());
 });
 
+// A finished schedule cannot change: its row offers Delete, and no Edit or Pause drawn greyed.
 it.each(["completed", "canceled"])("does not offer Edit for a %s schedule", async (status) => {
   renderRouted(
     <SchedulesView />,
@@ -355,8 +356,9 @@ it.each(["completed", "canceled"])("does not offer Edit for a %s schedule", asyn
       "GET /api/project-templates": jsonAnswer({ templates: [] }),
     }),
   );
-  const edit = await screen.findByRole("button", { name: "Edit Morning stories" });
-  expect(edit.hasAttribute("disabled")).toBe(true);
+  expect(await screen.findByRole("button", { name: "Delete Morning stories" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Edit Morning stories" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Pause Morning stories" })).toBeNull();
 });
 
 it("keeps deleted schedule history discoverable with project links and no live controls", async () => {

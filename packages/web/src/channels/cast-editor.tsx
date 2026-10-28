@@ -43,13 +43,16 @@ const pictureMax = 4000;
 
 // The editor beside the cast that adds or edits one member: its kind, name, aliases and
 // description, and once it is saved, its reference pictures - uploaded, or made from a prompt.
+// `wide` lays the fields out in two columns, for the empty cast where the form is the page.
 export function CastEditor({
   channelId,
   member,
   open,
   onClose,
   onCreated,
+  wide = false,
 }: {
+  readonly wide?: boolean;
   readonly channelId: string;
   // Undefined while adding a new member.
   readonly member: CastMember | undefined;
@@ -67,6 +70,9 @@ export function CastEditor({
   const [description, setDescription] = useState(member?.description ?? "");
   const [voice, setVoice] = useState<CastVoice | undefined>(member?.voice);
   const [host, setHost] = useState(member?.host === true);
+  // Add to cast is never drawn greyed: pressed with no name, it says so and puts the cursor there.
+  const [unnamed, setUnnamed] = useState(false);
+  const nameField = useRef<HTMLInputElement>(null);
   const refresh = () =>
     Promise.all([
       client.invalidateQueries({ queryKey: channelKey(channelId) }),
@@ -131,114 +137,158 @@ export function CastEditor({
         id="cast-member-form"
         aria-label="Cast member"
         className="mt-4 flex flex-col gap-4"
+        noValidate
         onSubmit={(event) => {
           event.preventDefault();
-          if (name.trim() !== "") save.mutate();
+          if (name.trim() === "") {
+            setUnnamed(true);
+            nameField.current?.focus();
+            return;
+          }
+          save.mutate();
         }}
       >
-        <div className="grid grid-cols-1 gap-4 min-[600px]:grid-cols-[160px_minmax(0,1fr)]">
-          <Field
-            label="Kind"
-            help="Characters and creatures get tall pictures; places and objects wide ones."
-          >
-            <Select
-              value={kind}
-              onChange={(event) =>
-                setKind(castKinds.find((one) => one === event.target.value) ?? "character")
-              }
-              options={castKinds.map((one) => ({ value: one, label: castKindLabels[one] }))}
-            />
-          </Field>
-          <Field label="Name" help="A video or image that names it reuses its pictures.">
-            <Input
-              value={name}
-              maxLength={200}
-              required
-              placeholder="Ronald the Rat"
-              onChange={(event) => setName(event.target.value)}
-            />
-          </Field>
-        </div>
-        <Field
-          label="Aliases"
-          help="Other names that count as it, such as plurals or titles. Press Enter to add each one."
+        <div
+          className={
+            wide
+              ? "grid grid-cols-1 items-start gap-x-8 gap-y-4 min-[1024px]:grid-cols-2"
+              : "contents"
+          }
         >
-          <div className="flex gap-2">
-            <Input
-              value={alias}
-              maxLength={200}
-              placeholder="Another name, such as the Last Pharaoh"
-              onChange={(event) => setAlias(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  addAlias();
-                }
-              }}
-            />
-            <Button onClick={addAlias} disabled={alias.trim() === ""}>
-              <PlusIcon aria-hidden="true" className="size-4" strokeWidth={1.75} />
-              Add alias
-            </Button>
+          <div className={wide ? "flex min-w-0 flex-col gap-4" : "contents"}>
+            <div className="grid grid-cols-1 gap-4 min-[600px]:grid-cols-[160px_minmax(0,1fr)]">
+              <Field
+                label="Kind"
+                help="Characters and creatures get tall pictures; places and objects wide ones."
+              >
+                <Select
+                  value={kind}
+                  onChange={(event) =>
+                    setKind(castKinds.find((one) => one === event.target.value) ?? "character")
+                  }
+                  options={castKinds.map((one) => ({ value: one, label: castKindLabels[one] }))}
+                />
+              </Field>
+              <Field label="Name" help="A video or image that names it reuses its pictures.">
+                <Input
+                  ref={nameField}
+                  value={name}
+                  maxLength={200}
+                  required
+                  placeholder="Ronald the Rat"
+                  onChange={(event) => {
+                    setName(event.target.value);
+                    setUnnamed(false);
+                  }}
+                />
+              </Field>
+            </div>
+            <Field
+              label="Aliases"
+              help="Other names that count as it, such as plurals or titles. Press Enter to add each one."
+            >
+              <div className="flex gap-2">
+                <Input
+                  value={alias}
+                  maxLength={200}
+                  placeholder="Another name, such as the Last Pharaoh"
+                  onChange={(event) => setAlias(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      addAlias();
+                    }
+                  }}
+                />
+                {/* Offered once there is a name to add, rather than drawn greyed before. */}
+                {alias.trim() === "" ? null : (
+                  <Button onClick={addAlias}>
+                    <PlusIcon aria-hidden="true" className="size-4" strokeWidth={1.75} />
+                    Add alias
+                  </Button>
+                )}
+              </div>
+            </Field>
+            {aliases.length > 0 ? (
+              <ul aria-label="Aliases added" className="m-0 flex list-none flex-wrap gap-2 p-0">
+                {aliases.map((one) => (
+                  <li key={one}>
+                    <Chip
+                      removeLabel={`Remove alias ${one}`}
+                      onRemove={() => setAliases(aliases.filter((value) => value !== one))}
+                    >
+                      {one}
+                    </Chip>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <Field
+              label="Description for the image model"
+              help="Sent with its pictures whenever an image shows it."
+            >
+              <Textarea
+                rows={3}
+                value={description}
+                maxLength={2000}
+                placeholder="What they look like, in a sentence."
+                onChange={(event) => setDescription(event.target.value)}
+              />
+            </Field>
           </div>
-        </Field>
-        {aliases.length > 0 ? (
-          <ul aria-label="Aliases added" className="m-0 flex list-none flex-wrap gap-2 p-0">
-            {aliases.map((one) => (
-              <li key={one}>
-                <Chip
-                  removeLabel={`Remove alias ${one}`}
-                  onRemove={() => setAliases(aliases.filter((value) => value !== one))}
-                >
-                  {one}
-                </Chip>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        <Field
-          label="Description for the image model"
-          help="Sent with its pictures whenever an image shows it."
-        >
-          <Textarea
-            rows={3}
-            value={description}
-            maxLength={2000}
-            placeholder="What they look like, in a sentence."
-            onChange={(event) => setDescription(event.target.value)}
-          />
-        </Field>
-        <CastVoiceFields channelId={channelId} value={voice} onChange={setVoice} />
-        <div className="flex flex-col items-start gap-1">
-          <Switch
-            label="One of the channel's hosts"
-            help="New podcasts and interviews in this channel start with it as a host."
-            checked={host}
-            onChange={setHost}
-          />
-          {host && (voice === undefined || voice.voice === "") ? (
-            <p className="m-0 text-small text-waiting">
-              A host joins new podcasts and interviews only with a voice. Pick one under Voice
-              above.
-            </p>
-          ) : null}
+          <div className={wide ? "flex min-w-0 flex-col gap-4" : "contents"}>
+            <CastVoiceFields channelId={channelId} value={voice} onChange={setVoice} />
+            <div className="flex flex-col items-start gap-1">
+              <Switch
+                label="One of the channel's hosts"
+                help="New podcasts and interviews in this channel start with it as a host."
+                checked={host}
+                onChange={setHost}
+              />
+              {host && (voice === undefined || voice.voice === "") ? (
+                <p className="m-0 text-small text-waiting">
+                  A host joins new podcasts and interviews only with a voice. Pick one under Voice
+                  above.
+                </p>
+              ) : null}
+            </div>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <StatusSlot tone={save.error ? "error" : "info"}>
+          <StatusSlot tone={save.error || unnamed ? "error" : "info"}>
             {save.error?.message ??
-              (save.isPending ? "Saving…" : save.isSuccess ? "Saved." : undefined)}
+              (unnamed
+                ? "Give it a name first."
+                : save.isPending
+                  ? "Saving…"
+                  : save.isSuccess
+                    ? "Saved."
+                    : undefined)}
           </StatusSlot>
           <Button
             type="submit"
             form="cast-member-form"
             variant={member === undefined ? "primary" : "secondary"}
-            disabled={save.isPending || name.trim() === ""}
+            disabled={save.isPending}
+            disabledReason="Saving…"
           >
             {member === undefined ? "Add to cast" : "Save"}
           </Button>
         </div>
       </form>
-      {member === undefined ? null : <Pictures channelId={channelId} member={member} />}
+      {member === undefined ? (
+        // What a member is made of, before it has a name: its pictures come next.
+        <section aria-label="Reference pictures" className="mt-6">
+          <Rule className="mb-6" />
+          <SectionHead
+            as="h3"
+            title="Reference pictures"
+            meta="Up to 4, uploaded or made with an image service, once it is added to the cast."
+          />
+        </section>
+      ) : (
+        <Pictures channelId={channelId} member={member} />
+      )}
     </section>
   );
 }

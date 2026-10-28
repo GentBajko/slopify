@@ -11,6 +11,7 @@ import { type ReactElement, useEffect, useMemo, useState } from "react";
 import { useApp } from "@/app-context";
 import { ChannelPicker, useCurrentChannel } from "@/channels/current";
 import { Board, BoardColumn } from "@/components/kit/board";
+import { Button } from "@/components/kit/button";
 import { EmptyState } from "@/components/kit/empty-state";
 import { PageHeader } from "@/components/kit/layout";
 import { ButtonLink, TextLink } from "@/components/kit/link";
@@ -231,12 +232,25 @@ export function HomeRoute({
                 </section>
               ) : null}
               {firstTime || finished.length > 0 || deciding || active ? null : (
+                // With one channel shown, it names that channel (the rail's "● 2 running" counts
+                // every channel) and offers the way back to all of them.
                 <EmptyState
-                  title="Nothing is finished, waiting or running"
+                  title={
+                    current.channel === undefined
+                      ? "Nothing is finished, waiting or running"
+                      : `Nothing in ${current.channel.name} is finished, waiting or running`
+                  }
                   actions={
-                    <ButtonLink to="/play" variant="primary">
-                      Make a video
-                    </ButtonLink>
+                    <>
+                      <ButtonLink to="/play" variant="primary">
+                        Make a video
+                      </ButtonLink>
+                      {current.channel === undefined ? null : (
+                        <Button onClick={() => current.setChannelId(null)}>
+                          Show all channels
+                        </Button>
+                      )}
+                    </>
                   }
                 >
                   Finished videos show here with Watch and Download, and so does anything that needs
@@ -288,8 +302,10 @@ export function HomeRoute({
           {startFrom === undefined ? null : (
             <StartFromTemplate templates={myTemplates} start={startFrom} />
           )}
-          {/* Last, so its empty slot never opens a gap above the column's first section. */}
-          <NewModelsSlot />
+          {/* Last, so its empty slot never opens a gap above the column's first section. Not
+              before a project of the person's own: beside what a video still needs on this
+              computer, "new AI models work for you" would contradict it. */}
+          {projects.data === undefined || firstTime ? null : <NewModelsSlot />}
         </BoardColumn>
       </Board>
     </div>

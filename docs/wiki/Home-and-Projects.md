@@ -53,7 +53,7 @@ On a fresh install, Home sends you to the first-run screen once. See [First Laun
 Until you have a project of your own, Home shows:
 
 - **Your first video**: what a video needs on this computer (Article, Narration, Images), each with its state (**Ready** or **Needs setup**) and the button that fixes it, the same list as the first-run screen. **Make your first video** opens Create; it is lime once nothing is missing.
-- **Finished samples**: the bundled samples, each with its picture, its length, what it made and **Watch**. They stay on Home until you have finished a video of your own.
+- **Finished samples**: the bundled samples, each with its picture, its length, what it made, **Watch** and **Download video**. They stay on Home until you have finished a video of your own.
 
 ### Finished
 
@@ -104,7 +104,7 @@ Shown once you have a schedule: the schedule runs due in the next 7 days, with t
 
 ### Autopilot
 
-At the top of **Coming up**, one line says how far ahead you are: "9 days of content ready · the queue runs dry on Oct 30". Each run a schedule will make in the next 60 days needs a video; a run made ahead (**Make ahead**) is its own, and each finished video not uploaded yet fills the next run without one. The days count to the first run nothing fills ("60+" when all of them are filled). **Runs dry** is the first run that will have no topic: the run after a queue's last topic when the schedule doesn't find its own, the first run past the approved topics when new ones wait for approval, and never for a schedule that finds topics by itself unless finding them fails. Paused schedules count for neither, and neither do runs a schedule skips because its template has no version approved for schedules.
+At the top of **Coming up**, one line says how far ahead you are: "9 days of content ready · topics run out on Oct 30". Each run a schedule will make in the next 60 days needs a video; a run made ahead (**Make ahead**) is its own, and each finished video not uploaded yet fills the next run without one. The days count to the first run nothing fills ("60+" when all of them are filled; "Every run has a video ready" when they are and the topics run out first). **Topics run out** on the first run that will have no topic: the run after a queue's last topic when the schedule doesn't find its own, the first run past the approved topics when new ones wait for approval, and never for a schedule that finds topics by itself unless finding them fails. Paused schedules count for neither, and neither do runs a schedule skips because its template has no version approved for schedules.
 
 Below it, warnings name what may stop the schedules before it does, each with the button that opens the fix and **Hide** (hidden for 7 days, or until it changes):
 
@@ -119,7 +119,7 @@ Below it, warnings name what may stop the schedules before it does, each with th
 | A scheduled template or schedule uses a model that is retiring or gone | Templates, or the schedule |
 | A schedule skips its runs because its template has no version approved for schedules | Templates (**Edit template** → **More** → **Approve for schedules**) |
 
-Sign-ins, the OpenRouter key and the disk are checked hourly, the first time 30 seconds after Slopify starts; Home shows the last check and never waits for one. Only the CLIs a scheduled template uses are asked, and asking never starts a run. **Last 7 days**, folded, lists what was made, each failed step with a link to its project, and what it cost. Settings → Notifications → **Weekly report** sends the same to your phone each Monday (see [Notifications](Notifications#weekly-report)).
+Sign-ins, the OpenRouter key and the disk are checked hourly, the first time 30 seconds after Slopify starts; Home shows the last check and never waits for one. Only the CLIs a scheduled template uses are asked, and asking never starts a run. **Failed in the last 7 days**, folded, lists each failed step with a link to its project; it is hidden when no step failed. What was made and spent is under **This week**. Settings → Notifications → **Weekly report** sends the same to your phone each Monday (see [Notifications](Notifications#weekly-report)).
 
 ### This week
 
@@ -145,15 +145,15 @@ Every run ever started, newest first unless you pick another order, for the chan
 | **All** | Everything. |
 | **Running** | Projects running, and those **Waiting for the agent**: the same runs Home's **See all N running** counts. |
 | **Queued** | Projects waiting for their turn in the video queue, in the order they will start, each with **Earlier**, **Later** and **Remove**. |
-| **Needs you** | Projects waiting for you: at a review or held step, paused, or **Stopped**. |
+| **Needs you** | What Home's **Needs you** lists: projects waiting for you (at a review or held step, paused, or **Stopped**) and the failures to fix. |
 | **Ready to upload** | Finished videos not marked uploaded, including those **Done with problems**. Never a sample. |
 | **Failed** | Failed projects, and runs with a failed step that still wait on something else. |
 
-3. Pick an order beside the filter: **Newest first**, **Finished first**, **Recently changed**, **Name (A–Z)** or **Status** (waiting for you first, then running, queued, failed and finished).
+3. Pick an order beside the filter: **Newest first**, **Finished first**, **Recently changed**, **Name (A–Z)** or **Status** (what needs you first, then running, queued and finished).
 
 The search, the filter and the order are part of the address, so Back from a project, a reload or a link opens Projects the same way: `/projects?show=running` (`queued`, `waiting` for Needs you, `ready` or `failed`), `?q=` for the search words and `?sort=finished`, `changed`, `name` or `status`. The list draws 50 projects at a time; **Show N more** under it adds the next ones. Press `/` to jump to the search box. The command palette has shortcuts: **Show projects that need you**, **Show videos ready to upload** and **Show failed projects**.
 
-If nothing matches, the list says **No project matches. Clear the search or pick All.** If the picked channel has no projects, pick **All channels** under **Showing:**.
+If nothing matches, the list says **No project matches. Clear the search or pick All.** If the channel picked under **Showing:** has no projects yet, the page says so with **Make a video** and **Show all channels**. With **All channels** shown, rows are grouped under each channel's name only when they come from two or more channels.
 
 ### What each row shows
 
@@ -166,6 +166,7 @@ If nothing matches, the list says **No project matches. Clear the search or pick
 | State | Meaning |
 | --- | --- |
 | **Running** | A step is being made. A run waiting for a CLI plan says **Waiting for Codex limits (resets at 14:00)** instead. |
+| **Waiting to try again** | A step failed on something time fixes (a rate limit, a dropped connection) and runs again by itself at the time its step names. Nothing to do. |
 | **Paused** | Paused by you or an agent; nothing runs until it is continued. |
 | **Queued** | Waiting for its turn in the video queue. |
 | **Waiting for your review** | Held at a pause for your approval. |
@@ -190,14 +191,14 @@ Then its actions, in words:
 
 ### Work on several projects at once
 
-Tick the checkbox on each row you want, or **Select all** above the list (it covers the rows shown: a search, a filter or Show more changes which). Shift+click ticks every row between two; Esc clears the selection. Once something is ticked, the bar above the list says how many are selected and offers what applies to them:
+Tick the checkbox on each row you want, or **Select all** above the list (it covers the rows shown: a search, a filter or Show more changes which). Shift+click ticks every row between two; Esc clears the selection. Once something is ticked, the bar above the list says how many are selected and offers what applies to them; it stays at the top of the window while the list scrolls:
 
 | Button | Does |
 | --- | --- |
 | **Clear selection** | Unticks everything. |
 | **Mark uploaded** | Shown when a selected project is a finished video; marks the selected finished videos uploaded. |
 | **Mark not uploaded** | Shown when a selected video is marked uploaded; puts it back on Ready to upload. |
-| **Move to channel…** then **Move to <channel>** | Moves the selected projects to another channel (with more than one channel). |
+| **Move to channel…** | Picking a channel moves the selected projects there (with more than one channel). |
 | **Make outdated parts again** | Shown when a selected project is **Outdated**. It checks each one, then shows what each makes again and what it costs before anything starts. |
 | **Delete** | Asks first, then moves the selected projects to the trash. Running projects stay: cancel the run first. |
 
@@ -211,7 +212,7 @@ Each one says what it did in a notice with **Undo**: Undo after a delete restore
 
 ### The video queue
 
-Videos started together (**Queue 3 videos** in Create, for example) run one at a time. Home lists the ones waiting under **Running**, and the **Queued** filter here lists them in the order they start, each with **Earlier**, **Later** and **Remove**; the calendar has the same list under **Batch queue** (see [Calendar](Calendar#the-batch-queue)). A project page says how many videos wait while any do. Pausing a project holds the queue; when one fails or is canceled, the next one starts.
+Videos started together (**Queue 3 videos** in Create, for example) run one at a time. Home lists the ones waiting under **Running**, and the **Queued** filter here lists them in the order they start, each with **Earlier**, **Later** and **Remove**; the calendar has the same list under **Waiting to start** (see [Calendar](Calendar#the-batch-queue)). The page of a project in the queue says how many videos wait to start. Pausing a project holds the queue; when one fails or is canceled, the next one starts.
 
 ### When there are no projects
 

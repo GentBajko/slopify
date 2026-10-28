@@ -25,6 +25,8 @@ const run = {
 it("says a run is skipped until its template is approved, and where, instead of calling it queued", () => {
   render(<ComingUp runs={[run, { ...run, at: "2026-10-22T20:00:00.000Z", notReady: true }]} />);
   expect(screen.getAllByText("Queued")).toHaveLength(1);
+  // A state wears its lamp, not a bare pill.
+  expect(screen.getByText("Queued").closest("[data-slot=status]")).not.toBeNull();
   expect(screen.getByText("Skipped until approved")).not.toBeNull();
   // What to do is on the row, not only on hover.
   expect(

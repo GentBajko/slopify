@@ -95,7 +95,9 @@ it("says where a running run stands, beside its clock, as Home does", async () =
     testDeps({}),
   );
   const line = (await screen.findByText(/^Step 2 of 3 · Narration/)).closest(".sl-project__meta");
-  expect(line?.textContent).toMatch(/· started .+· Step 2 of 3 · Narration.*Working · 0:01:12$/);
+  // The clock says how long it has worked, so the start time gives way to it.
+  expect(line?.textContent).toMatch(/^Running.*· Step 2 of 3 · Narration.*Working · 0:01:12$/);
+  expect(line?.textContent).not.toContain("started");
 });
 
 it("puts the next action first, then Edit settings, named for what a press does", async () => {

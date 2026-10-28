@@ -323,6 +323,9 @@ export const calendarProjectSchema = z
     // A step failed while the run still reads by a wait (`readsByWaitBesideFailure`): listed as a
     // failed item beside what it waits for, as on Home. Older servers leave it out.
     stepFailed: z.literal(true).optional(),
+    // When a step that failed on something time can fix runs again by itself, while no step
+    // runs (`admission/state-words.ts` retryingAt): it reads Waiting to try again, as on Home.
+    retryAt: z.string().optional(),
     // Stages waiting for a CLI plan's limits to reset.
     limitWaits: z
       .array(

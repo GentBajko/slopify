@@ -114,6 +114,12 @@ export function TemplatesTab({
   };
   return (
     <div {...helpScope} className="flex flex-col gap-3">
+      {own.length > 0 ? (
+        <p className="m-0 text-small text-ink-2">
+          The templates whose videos land in this channel. Make a video opens Create with one
+          picked.
+        </p>
+      ) : null}
       {templates.data && own.length === 0 ? (
         <EmptyState title="No templates in this channel">
           A template is a saved setup for one kind of video. Press Make a video, then choose Save as
@@ -151,6 +157,15 @@ export function TemplatesTab({
                       </Button>
                     )}
                     <NewScheduleLink variant="row" template={template} />
+                    <ButtonLink
+                      to="/templates/$templateId"
+                      params={{ templateId: template.id }}
+                      size="small"
+                      variant="quiet"
+                      aria-label={`Edit template ${template.name}`}
+                    >
+                      Edit template
+                    </ButtonLink>
                     {others.length === 0 ? null : (
                       <Select
                         aria-label={`Move ${template.name} to`}

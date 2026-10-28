@@ -106,6 +106,16 @@ export function TimeEditor({
     onError: (error: Error) => notify(`The time wasn't changed: ${error.message}`, "error"),
   });
   const label = uploadName(item.short);
+  const keep = () => {
+    try {
+      save.mutate(scheduleInstant(value, zone));
+    } catch (error) {
+      notify(
+        `The time wasn't changed: ${error instanceof Error ? error.message : String(error)}`,
+        "error",
+      );
+    }
+  };
   return (
     <span className="flex flex-wrap items-center gap-1">
       <Input
@@ -114,27 +124,28 @@ export function TimeEditor({
         className="w-[200px]"
         value={value}
         onChange={(event) => setValue(event.currentTarget.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && value !== "" && !save.isPending) {
+            event.preventDefault();
+            keep();
+          }
+        }}
       />
       {zoneDiffers(new Date().toISOString(), zone) ? (
         <span className="text-small text-ink-3">{`${zoneName(zone)} time`}</span>
       ) : null}
-      <Button
-        type="button"
-        size="small"
-        disabled={value === "" || save.isPending}
-        onClick={() => {
-          try {
-            save.mutate(scheduleInstant(value, zone));
-          } catch (error) {
-            notify(
-              `The time wasn't changed: ${error instanceof Error ? error.message : String(error)}`,
-              "error",
-            );
-          }
-        }}
-      >
-        Save
-      </Button>
+      {/* Offered once a time is picked (Enter saves it too), not drawn greyed before. */}
+      {value === "" ? null : (
+        <Button
+          type="button"
+          size="small"
+          disabled={save.isPending}
+          disabledReason="Saving…"
+          onClick={keep}
+        >
+          Save
+        </Button>
+      )}
       {item.short === 0 && unschedule ? (
         <Button
           type="button"

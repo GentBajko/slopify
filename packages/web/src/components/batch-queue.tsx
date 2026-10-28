@@ -37,22 +37,28 @@ export function waitingOf(queue: readonly QueueEntry[] | undefined): readonly Qu
   return (queue ?? []).filter((entry) => entry.state === "queued");
 }
 
-// For a project page: "2 videos waiting in the queue", opening the list with its order and
-// Earlier, Later and Remove. Nothing at all while nothing waits, so a finished project carries
-// no queue it has no part in.
-export function BatchQueueCount(): ReactElement | null {
+// For the page of a project in the queue (running at its head, or waiting its turn): "2 videos
+// waiting to start", opening the list with its order and Earlier, Later and Remove, in Home's
+// words. Nothing at all on a project the queue does not hold, or while nothing waits, so a
+// project carries no queue it has no part in.
+export function BatchQueueCount({
+  projectId,
+}: {
+  readonly projectId: string;
+}): ReactElement | null {
   const { api } = useApp();
   const queue = useBatchQueue();
   const projects = useQuery(projectsQuery(api));
   const waiting = waitingOf(queue.data?.queue);
+  const inQueue = (queue.data?.queue ?? []).some((entry) => entry.projectId === projectId);
   // Unknown is not zero: when the queue can't be read the button says so and opens on Retry.
-  if (queue.error === null && waiting.length === 0) return null;
+  if (queue.error === null && (waiting.length === 0 || !inQueue)) return null;
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="quiet">
           {queue.error === null
-            ? `${plural(waiting.length, "video", "videos")} waiting in the queue`
+            ? `${plural(waiting.length, "video", "videos")} waiting to start`
             : "The video queue didn't load"}
         </Button>
       </PopoverTrigger>

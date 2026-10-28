@@ -172,14 +172,20 @@ it("lists finished videos with no release time and gives one a time", async () =
       },
     }),
   );
-  // No release times yet: the way to get them, as a button, not a path in words.
+  // No release times yet, but a finished video waits for one: it leads, and the way to get
+  // times from a schedule is one line under it, as a button, not a path in words.
+  const list = await screen.findByRole("list", { name: "Finished, no date yet" });
   expect(
-    await screen.findByRole("heading", { name: "No release times in the next two weeks" }),
-  ).toBeTruthy();
+    screen.queryByRole("heading", { name: "No release times in the next two weeks" }),
+  ).toBeNull();
+  expect(screen.getByText(/^Nothing is set to go public in the next two weeks/)).toBeTruthy();
   expect(screen.getByRole("link", { name: "New schedule" }).getAttribute("href")).toBe(
     "/calendar?tab=schedules",
   );
-  const list = screen.getByRole("list", { name: "Finished, no date yet" });
+  expect(
+    list.compareDocumentPosition(screen.getByRole("link", { name: "New schedule" })) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
   expect(
     within(list).getByRole("link", { name: "The Harbour | Stories To Sleep To" }),
   ).toBeTruthy();
@@ -192,8 +198,9 @@ it("lists finished videos with no release time and gives one a time", async () =
       name: "Set the date for The Harbour | Stories To Sleep To",
     }),
   );
-  // Only a time to set: there is nothing to take back yet.
+  // Only a time to set: there is nothing to take back yet, and Save comes with a time.
   expect(within(list).queryByRole("button", { name: "Not scheduled" })).toBeNull();
+  expect(within(list).queryByRole("button", { name: "Save" })).toBeNull();
   fireEvent.change(within(list).getByLabelText("Video: release"), {
     target: { value: "2026-11-02T18:00" },
   });

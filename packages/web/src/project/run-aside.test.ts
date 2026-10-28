@@ -126,3 +126,19 @@ it("says Outdated for a made step waiting after an edit", () => {
     ["PDF", "Outdated", undefined],
   ]);
 });
+
+// The server's shape for a step that failed on something time can fix: pending again, with when
+// it tries (`kernel/runner` emitStage). It reads Waiting to try again, in the waiting colour.
+it("says a step waiting to run again by itself is Waiting to try again", () => {
+  const retrying = { ...stage("images", "pending"), retryAt: "2026-09-10T14:05:00.000Z" };
+  const [, images] = runSteps({
+    stages: [stage("article", "done"), retrying, stage("video", "pending")],
+    outputs: [],
+    project: { ...project, status: "running" },
+    resumable: false,
+    holding: [],
+    now: 0,
+  });
+  expect(images).toMatchObject({ tone: "waiting", state: "Waiting to try again" });
+  expect(images?.detail).toMatch(/^Trying again at /);
+});

@@ -374,6 +374,10 @@ describe("the calendar", () => {
     await screen.findByRole("article", { name: /^Cleopatra,/ });
     await user.click(screen.getByRole("button", { name: "Add topics to a schedule" }));
     const dialog = screen.getByRole("dialog", { name: "Add topics to a schedule" });
+    // Never greyed: pressed with nothing typed, it says what it needs, and sends nothing.
+    await user.click(within(dialog).getByRole("button", { name: "Add topics" }));
+    expect(within(dialog).getByText("Type at least one topic, one per line.")).not.toBeNull();
+    expect(put).not.toHaveBeenCalled();
     await user.type(
       within(dialog).getByLabelText("Topics, one per line"),
       "Nefertiti\n\n  Solon  ",
@@ -474,8 +478,14 @@ describe("an empty calendar", () => {
             finished("p-new", "The Library of Alexandria", {
               finishedAt: "2026-09-27T10:00:00.000Z",
               durationSeconds: 185,
+              outputs: { video: true, shorts: 0, pdf: false, audio: false },
             }),
             finished("p-run", "Still going", { status: "running", progress: 0.4 }),
+            // A bundled sample is not the person's work: it never pushes their own out.
+            finished("p-sample", "The Antikythera Mechanism", {
+              sample: true,
+              finishedAt: "2026-09-28T10:00:00.000Z",
+            }),
           ],
         }),
       }),
@@ -489,7 +499,7 @@ describe("an empty calendar", () => {
     // Its length, what it is and when it finished; a run with a failed step says so in its
     // state word.
     expect(
-      within(tiles[0] as HTMLElement).getByText(/^3:05 · 16:9 · finished Sep 27/),
+      within(tiles[0] as HTMLElement).getByText(/^3:05 · 16:9 · video · finished Sep 27/),
     ).not.toBeNull();
     expect(within(tiles[1] as HTMLElement).getByText("Done with problems")).not.toBeNull();
     expect(within(strip).queryByText(/a step failed/)).toBeNull();
@@ -498,6 +508,13 @@ describe("an empty calendar", () => {
         .getByRole("link", { name: "Watch The Library of Alexandria" })
         .getAttribute("href"),
     ).toBe("/projects/p-new?section=video");
+    // Watch and Download video, as every list of finished work offers them.
+    expect(
+      within(strip)
+        .getByRole("link", { name: "Download video: The Library of Alexandria" })
+        .getAttribute("href"),
+    ).toMatch(/\/files\/p-new\/video$/);
+    expect(within(strip).queryByText("The Antikythera Mechanism")).toBeNull();
   });
 
   it("keeps the drag sentence for a topic that can be picked up", async () => {
@@ -523,6 +540,20 @@ describe("an empty calendar", () => {
 });
 
 describe("what needs you and what is ready", () => {
+  const listed = (id: string, status: string, over: Partial<ProjectListing> = {}) =>
+    ({
+      id,
+      title: id,
+      status,
+      progress: 1,
+      format: "16:9",
+      channelId: "00000000-0000-4000-8000-000000000001",
+      uploadedAt: null,
+      config: { sources: { video: "generate" } },
+      createdAt: inDays(0, 1),
+      updatedAt: inDays(0, 1),
+      ...over,
+    }) as ProjectListing;
   const project = (id: string, title: string, over: Record<string, unknown>) => ({
     id,
     title,
@@ -566,10 +597,27 @@ describe("what needs you and what is ready", () => {
           queued: [],
         }),
         "GET /api/schedules": jsonAnswer({ schedules: [] }),
+        // Home's counts come from every project, not only the ones in these weeks.
+        "GET /api/projects": jsonAnswer({
+          projects: [
+            listed("p-ready", "done"),
+            listed("p-older", "done"),
+            listed("p-review", "pending", { progress: 0.5 }),
+            listed("p-failed", "failed", { progress: 0.5 }),
+            listed("p-wait", "running", { progress: 0.5 }),
+            listed("p-done", "done", { uploadedAt: inDays(0, 3) }),
+          ],
+        }),
       }),
     );
-    // What needs a decision is Home's list: the calendar says how much and links there.
-    expect(await screen.findByText(/^2 waiting for you · 1 ready to upload\./)).not.toBeNull();
+    // What needs a decision is Home's list: the calendar says how much, in Home's words, and
+    // links there.
+    const line = await screen.findByText(
+      (_, element) => element?.tagName === "P" && /ready to upload/.test(element.textContent ?? ""),
+    );
+    expect(line.textContent).toBe(
+      "1 decision · 1 failed · 2 ready to upload. Open Home to act on them.",
+    );
     expect(screen.getByRole("link", { name: "Open Home" }).getAttribute("href")).toBe("/");
     expect(screen.queryByRole("list", { name: "Needs you" })).toBeNull();
     // On its day, a project waiting for CLI limits says when they reset.
@@ -588,7 +636,7 @@ describe("what needs you and what is ready", () => {
 });
 
 describe("the batch queue", () => {
-  it("shows every queued video in its order, and a paused one as paused (Projects no longer repeats it)", async () => {
+  it("lists the videos still to start as Home does, and says when a paused one holds them", async () => {
     const item = (projectId: string, title: string, position: number, state: string) => ({
       projectId,
       title,
@@ -620,15 +668,19 @@ describe("the batch queue", () => {
         "GET /api/schedules": jsonAnswer({ schedules: [] }),
       }),
     );
-    const queue = await screen.findByRole("list", { name: "Batch queue" });
+    // Home's list in Home's words: the videos still to start, numbered, the started one left out
+    // of the count; that it is paused, holding the rest, is said once above them.
+    const section = await screen.findByRole("region", { name: "Waiting to start" });
+    expect(within(section).getByText("1 video, in the order they start")).not.toBeNull();
+    expect(
+      within(section).getByText("Second is paused, so none of these starts until it continues."),
+    ).not.toBeNull();
+    const queue = within(section).getByRole("list", { name: "Waiting to start" });
     const rows = within(queue).getAllByRole("listitem");
-    expect(rows.map((row) => within(row).getByRole("link").textContent)).toEqual([
-      "First",
-      "Second",
-    ]);
-    expect(within(rows[0] as HTMLElement).getByText("1 in line")).not.toBeNull();
-    expect(within(rows[0] as HTMLElement).getByText("Waiting its turn")).not.toBeNull();
-    expect(within(rows[1] as HTMLElement).getByText("Paused")).not.toBeNull();
+    expect(rows).toHaveLength(1);
+    expect(within(rows[0] as HTMLElement).getByText("1.")).not.toBeNull();
+    expect(within(rows[0] as HTMLElement).getByText("Queued")).not.toBeNull();
+    expect(screen.queryByText(/in line|Waiting its turn|Running now/)).toBeNull();
   });
 });
 

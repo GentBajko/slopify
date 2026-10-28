@@ -9,9 +9,9 @@ The calendar shows the coming four weeks on one screen: how much needs you, ever
 The calendar starts on this week's Monday and shows four weeks, Monday to Sunday.
 
 - **Scheduled runs**, each with the project title it will make. A run shows **Queued** when a topic is lined up, **Needs a topic** when its topic is still waiting for your approval or for generation, and **Paused** when its schedule is paused.
-- **Needs you**, above the weeks: one line counting what waits on you and what is ready to upload (see below).
+- **Needs you**, above the weeks: one line with Home's counts of what waits on you and what is ready to upload (see below).
 - **Projects** running or finished on their day, with their state: **Running**, **Waiting for the agent**, **Paused**, **Queued**, **Waiting for your review**, **Waiting for its day**, **Stopped**, **Kept as is**, **Failed**, **Done with problems**, **Done** or **Canceled**. A project waiting for a CLI plan says so, for example **Waiting for Codex limits (resets at 14:00)**.
-- **Batch queue**: projects waiting to start (see below).
+- **Waiting to start**: the batch queue, videos started together that wait their turn (see below).
 - **Suggested topics**, beside the weeks, for schedules that hold generated topics for approval.
 
 The calendar follows the channel picked under **Showing:** in the page header, or shows every channel. See [Channels](Channels).
@@ -20,13 +20,13 @@ Each queued run has **Make ahead**, which makes everything but its video now (an
 
 ## Needs you
 
-Above the weeks, one line says how much cannot move on without you and how much is ready to upload, for example "2 waiting for you · 1 ready to upload. Open Home to act on them.", with **Open Home**. It counts failed, paused and stopped projects, projects held at a pause or with an AI check that flagged an item and waits for **Overrule** or **Redo**, and finished videos not marked uploaded. It is hidden when there is nothing, and the bundled samples never count.
+Above the weeks, one line says what Home's **Needs you** and **Finished** count, in Home's words, for every project of the channel shown (not only the ones in these weeks), for example "1 decision · 1 failed · 2 ready to upload. Open Home to act on them.", with **Open Home**. Decisions are projects held at a pause, paused or **Stopped**; failed are the failed projects and the steps that failed beside a wait; ready to upload are finished videos not marked uploaded. It is hidden when there is nothing, and the bundled samples never count.
 
 Acting on them is Home's job: **Needs you** there lists each one with its button. The calendar keeps its space for what is planned. See [Home and Projects](Home-and-Projects), [Pauses and Checks](Reviews-and-Checkpoints) and [Publishing to YouTube](Publishing-to-YouTube).
 
 ## The batch queue
 
-Videos started together, such as extra videos queued from Create, run one at a time. **Batch queue** lists them in the order they run, numbered (**1 in line**, **2 in line**, …), each marked **Running now**, **Waiting its turn** or **Paused**. Its heading says how many are waiting to start. Pausing a queued project holds the whole queue; when one fails or is canceled, the next one starts. Home lists the same videos under **Running** → **Waiting to start**, and Projects has a **Queued** filter. The batch queue is hidden when nothing is queued.
+Videos started together, such as extra videos queued from Create, run one at a time. **Waiting to start** is the same list as Home's: the videos still to start, numbered in the order they start (**1.**, **2.**, …), each marked **Queued** (or **Paused**) with **Earlier**, **Later** and **Remove**. Its heading says how many there are; the one already running is on Home under **Running**. Pausing the started project holds the whole queue, and the list says so; when one fails or is canceled, the next one starts. It follows the channel shown under **Showing:**, and is hidden when nothing waits.
 
 ## Switch between weeks and a list
 

@@ -38,6 +38,19 @@ function routes(saved: unknown[], disclosed: unknown[] = []) {
 }
 
 describe("Brand tab", () => {
+  // Save waits for a change: at rest the bar's one lime would do nothing, so it says so.
+  it("shows Save channel only once something changed", async () => {
+    const user = userEvent.setup();
+    renderRouted(<BrandTab channel={channel} />, routes([]));
+    await screen.findByLabelText("Series brief");
+    // Nothing to save: no bar and no greyed button.
+    expect(screen.queryByRole("button", { name: "Save channel" })).toBeNull();
+    await user.type(screen.getByLabelText("Series brief"), " More.");
+    const save = screen.getByRole("button", { name: "Save channel" });
+    expect(save.hasAttribute("disabled")).toBe(false);
+    expect(screen.getByText("Unsaved changes. Press Save channel to keep them.")).not.toBeNull();
+  });
+
   it("counts the series brief as it is typed", async () => {
     const user = userEvent.setup();
     renderRouted(<BrandTab channel={channel} />, routes([]));

@@ -317,6 +317,12 @@ it("says which projects need the person, which are ready to upload and which wai
     db.prepare(
       "INSERT INTO plan_limit_waiters (project_id, stage, account, since) VALUES (?, 'article', 'codex', ?)",
     ).run(waiting, finished);
+    // A step that failed on something time can fix, waiting to run again by itself.
+    const retrying = f.project("Retrying", "pending", null);
+    db.prepare("UPDATE stages SET retry_at=? WHERE project_id=?").run(
+      "2026-09-12T14:05:00.000Z",
+      retrying,
+    );
 
     const result = calendarRange(
       f.deps,
@@ -361,6 +367,12 @@ it("says which projects need the person, which are ready to upload and which wai
       },
     ]);
     expect(byTitle.get("Ready")?.limitWaits).toBeUndefined();
+    // Running by its wait, and saying when it tries, as Home and Projects say it.
+    expect(byTitle.get("Retrying")).toMatchObject({
+      state: "running",
+      retryAt: "2026-09-12T14:05:00.000Z",
+    });
+    expect(byTitle.get("Waiting")?.retryAt).toBeUndefined();
   } finally {
     f.h.close();
   }

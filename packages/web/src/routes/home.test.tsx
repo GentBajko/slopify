@@ -3,6 +3,7 @@ import type { ProjectListing } from "@app/slices/admission/model.js";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { CurrentChannelProvider } from "@/channels/current";
 import { startOfWeek } from "@/home/api";
 import { spentLabel } from "@/home/week";
 import { freshDraftDocument } from "@/play/draft-state";
@@ -491,8 +492,9 @@ describe("home", () => {
     expect(within(running).getByText("Step 2 of 3 · Images")).not.toBeNull();
     expect(within(running).getAllByText("Running").length).toBeGreaterThan(0);
     expect(within(steps).getByText("7 min")).not.toBeNull();
-    // No start time to measure the rate against: the time left is unknown, and says so.
-    expect(within(steps).getByText("2 of 8 · time left unknown")).not.toBeNull();
+    // No start time to measure the rate against: the time left is left out, not said unknown.
+    expect(within(steps).getByText("2 of 8")).not.toBeNull();
+    expect(within(steps).queryByText(/time left unknown/)).toBeNull();
     // A step with no time to tell shows none, not a dash.
     expect(within(steps).queryByText("—")).toBeNull();
     const images = within(running).getByRole("list", { name: "Images of Sargon" });
@@ -634,6 +636,29 @@ describe("home", () => {
     await user.click(await within(needs).findByRole("button", { name: "Copy sign-in command" }));
     expect(await navigator.clipboard.readText()).toBe("codex login");
     expect(within(needs).getByRole("link", { name: "Open to retry" })).not.toBeNull();
+  });
+
+  // Home has room for the error whole, and its fix is at its end: never cut. The item it failed
+  // on stands beside the state word, so the line starts with the sentence.
+  it("says a failed step's error whole, with the item it failed on beside Failed", async () => {
+    const sentence = `The chosen Codex model for images is not in the Codex CLI's model list on your computer. Update Codex CLI, or pick another image model in Settings → Keys & services.`;
+    const failed = body({
+      status: "failed",
+      stages: [stage("images", "failed", { failureReason: `Image 1: ${sentence}\nstack` })],
+      outputs: [],
+    });
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/projects/p-fail": jsonAnswer({
+          ...failed,
+          project: { ...failed.project, id: "p-fail" },
+        }),
+      }),
+    );
+    const needs = await screen.findByRole("region", { name: "Needs you" });
+    expect(await within(needs).findByText(sentence)).not.toBeNull();
+    expect(within(needs).getByText("Failed · Image 1")).not.toBeNull();
   });
 
   // Kept as is wins over waiting for the agent, as in its state word: nothing of it runs.
@@ -831,6 +856,20 @@ describe("home", () => {
           samples: { library: "s1", audiobook: null, podcast: "s2" },
           packs: [],
         }),
+        // Models found to work: not news beside what a video still needs.
+        "GET /api/model-checks": jsonAnswer({
+          auto: "free",
+          providers: [],
+          newForYou: [
+            {
+              provider: "openrouter",
+              family: "llm",
+              model: "x/new",
+              name: "New One",
+              firstWorksAt: new Date().toISOString(),
+            },
+          ],
+        }),
       }),
     );
     const first = await screen.findByRole("region", { name: "Your first video" });
@@ -842,6 +881,7 @@ describe("home", () => {
     const samples = screen.getByRole("region", { name: "Finished samples" });
     expect(within(samples).getAllByRole("link", { name: /^Watch / })).toHaveLength(2);
     expect(within(samples).getByText(/^3:05 · 16:9 · video \+ 2 shorts \+ PDF/)).not.toBeNull();
+    expect(screen.queryByRole("link", { name: /new AI model/ })).toBeNull();
     // No contradiction, no calendar without a schedule, no second Create.
     expect(screen.queryByText(/Nothing needs you/)).toBeNull();
     expect(screen.queryByRole("link", { name: "Open calendar" })).toBeNull();
@@ -929,6 +969,47 @@ describe("home's load states", () => {
     expect(screen.queryByRole("region", { name: "Running" })).toBeNull();
     // No schedules: nothing to come up.
     await waitFor(() => expect(screen.queryByRole("region", { name: "Coming up" })).toBeNull());
+  });
+
+  // With one channel shown, the empty Home names it (the rail's running count is every
+  // channel's) and offers the way back to all of them.
+  it("names the channel shown when it has nothing, with Show all channels", async () => {
+    const user = userEvent.setup();
+    const channel = (id: string, name: string) => ({
+      id,
+      name,
+      isDefault: id.endsWith("1"),
+      brand: {},
+      seriesBrief: "",
+      version: 1,
+      createdAt: "x",
+      updatedAt: "x",
+      templates: 0,
+      cast: 0,
+    });
+    renderRouted(
+      <CurrentChannelProvider>
+        <HomeRoute />
+      </CurrentChannelProvider>,
+      deps({
+        "GET /api/channels": jsonAnswer({
+          channels: [
+            channel("00000000-0000-4000-8000-000000000001", "My channel"),
+            channel("00000000-0000-4000-8000-000000000002", "Sleep lore"),
+          ],
+        }),
+        "GET /api/schedules": jsonAnswer({ schedules: [] }),
+      }),
+    );
+    await user.selectOptions(
+      await screen.findByLabelText("Showing:"),
+      "00000000-0000-4000-8000-000000000002",
+    );
+    expect(
+      await screen.findByText("Nothing in Sleep lore is finished, waiting or running"),
+    ).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "Show all channels" }));
+    expect(await screen.findByRole("region", { name: "Running" })).not.toBeNull();
   });
 
   it("says the calendar didn't load under Coming up, with Retry", async () => {

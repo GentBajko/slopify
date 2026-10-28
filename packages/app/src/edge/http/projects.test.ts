@@ -16,6 +16,7 @@ import type {
   RunDraft,
   Stage,
 } from "../../slices/admission/model.js";
+import { projectStateWord, queuedRun, waitsForPerson } from "../../slices/admission/state-words.js";
 import { defaultChannelId } from "../../slices/channels/model.js";
 import { createCastMember } from "../../slices/channels/service.js";
 import { writeSampleRecord } from "../../slices/onboarding/state.js";
@@ -594,6 +595,63 @@ describe("GET /api/projects", () => {
     expect(agent.page.waitingForAgent).toBe(true);
     expect(agent.resumable).toBe(false);
     expect(agent.holding).toEqual([]);
+  });
+
+  // A run held at "Pause after the images (before the video)" with every step before it supplied
+  // made nothing itself: it waits for the person all the same, never its turn in the queue.
+  it("lists a run held at a checkpoint before it made anything as waiting for the person", async () => {
+    const { app, db } = harness();
+    db.exec(
+      'INSERT INTO projects VALUES (\'p1\',\'First\',\'16:9\',\'{"title":"First","format":"16:9","sources":{"research":"off","article":"provide","audio":"off","images":"provide","thumbnail":"off","video":"generate"},"imagePrompts":[],"values":{},"provided":{},"silenceGapSeconds":3,"rendered":{}}\',\'2026-09-01\',\'2026-09-01\')',
+    );
+    db.exec("PRAGMA foreign_keys=OFF");
+    db.exec("INSERT INTO project_heads VALUES ('p1','r1')");
+    db.exec(
+      "INSERT INTO stages (id, project_id, kind, source, state) VALUES ('s1','p1','article','provide','provided'), ('s2','p1','images','provide','provided'), ('s3','p1','video','generate','pending')",
+    );
+    db.prepare(
+      "INSERT INTO review_checkpoints (project_id,revision_id,checkpoint_id,stage,work_id,fingerprint,state,created_at) VALUES ('p1','r1','video-gate','video','w1',?,'held','2026-09-01')",
+    ).run("a".repeat(64));
+    const listed = (
+      (await (await app.request("/api/projects")).json()) as { projects: ProjectListing[] }
+    ).projects[0];
+    expect(listed).toMatchObject({ status: "pending", progress: 0 });
+    expect(listed?.holding?.map((hold) => hold.waitsFor)).toEqual(["person"]);
+    if (listed === undefined) throw new Error("no row");
+    expect(projectStateWord(listed)).toBe("Waiting for your review");
+    expect(waitsForPerson(listed)).toBe(true);
+    expect(queuedRun(listed)).toBe(false);
+  });
+
+  // A step that failed on something time can fix waits to run again by itself: the list reads the
+  // run as its page does, running, and says when it tries; the person has nothing to do.
+  it("lists a run waiting to try a step again as running, with when it tries", async () => {
+    const { app, db } = harness();
+    db.exec(
+      'INSERT INTO projects VALUES (\'p1\',\'First\',\'16:9\',\'{"title":"First","format":"16:9","sources":{"research":"off","article":"provide","audio":"generate","images":"provide","thumbnail":"off","video":"generate"},"imagePrompts":[],"values":{},"provided":{},"silenceGapSeconds":3,"rendered":{}}\',\'2026-09-01\',\'2026-09-01\')',
+    );
+    db.exec(
+      "INSERT INTO stages (id, project_id, kind, source, state, retry_at) VALUES ('s1','p1','article','provide','provided',NULL), ('s2','p1','audio','generate','pending','2026-09-02T10:05:00.000Z'), ('s3','p1','images','provide','provided',NULL), ('s4','p1','video','generate','pending',NULL)",
+    );
+    const listed = (
+      (await (await app.request("/api/projects")).json()) as { projects: ProjectListing[] }
+    ).projects[0];
+    const page = (await (await app.request("/api/projects/p1")).json()) as {
+      project: ProjectSummary;
+    };
+    expect(listed).toMatchObject({ status: "running", retryAt: "2026-09-02T10:05:00.000Z" });
+    expect(page.project.status).toBe("running");
+    if (listed === undefined) throw new Error("no row");
+    expect(projectStateWord(listed)).toBe("Waiting to try again");
+    expect(waitsForPerson(listed)).toBe(false);
+    expect(queuedRun(listed)).toBe(false);
+    // Another step at work: the run reads Running again, with no wait to tell.
+    db.exec("UPDATE stages SET state='running' WHERE kind='video'");
+    const working = (
+      (await (await app.request("/api/projects")).json()) as { projects: ProjectListing[] }
+    ).projects[0];
+    expect(working?.status).toBe("running");
+    expect(working).not.toHaveProperty("retryAt");
   });
 
   // The person's decision (2026-10-11): a step failed while another waits is told right away,

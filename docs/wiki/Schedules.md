@@ -156,24 +156,23 @@ Waiting topics count toward **Keep at least**, so nothing more is asked for whil
 
 ## Manage a schedule
 
-Pick a schedule in the list to see its detail: **When**, **Timezone**, **Next run**, **Topics** left, **Missed runs**, **Overlap**, **Spend ceiling** and its **Run history**.
+Pick a schedule in the list to see its detail: **When** (a weekly one names its days, for example "Mon, Wed, Fri at 09:00"), **Timezone**, **Next run**, **Topics** left, **Template** (its name, and which version runs), **Missed runs**, **Overlap**, **Spend ceiling** and its **Run history**. With two or more channels, the list shows the channel picked under **Showing:** in the page header.
 
 | Action | What it does |
 |---|---|
-| **Edit** | Opens the **Edit schedule** form on the right. Only an active or paused schedule can change. Press **Save changes**. |
-| **Pause** / **Resume** | Stops runs until you resume. Only an active schedule can pause. |
+| **Edit** | Opens the **Edit schedule** form on the right. Offered on an active or paused schedule, the ones that can change. Press **Save changes**. |
+| **Pause** / **Resume** | Stops runs until you resume. **Pause** is offered on an active schedule. |
 | **Cancel schedule** | Stops future runs for good. Existing projects and run history are kept. |
-| **Delete schedule** | Moves the schedule to **Settings → Trash** for 30 days. Its run history is kept. Restore brings it back paused. |
-| **Filter schedules by channel** | Shows only one channel's schedules. |
+| **Delete schedule** | Moves the schedule to **Settings → Trash** for 30 days. Its run history is kept. Restore brings it back paused. Offered once the schedule is completed or canceled. |
 | **Switch to <model>** | Shown under a schedule whose template picks a retired model, with "<model> is retired." Switches that model to its replacement in one press, as in Settings → **Models**. See [Models](Models). |
 
 **Run history** lists each run with its status (running, done, failed, skipped and so on), the time it was due, and either the project it made or the reason it didn't run. Deleted schedules are listed under **Deleted schedules** at the bottom; pick one to see its history.
 
 ## When you edit the template
 
-A schedule runs the newest version of its template, so a change you save applies from the next run, as before. The schedule's **Template** line says **Runs each version you save**.
+A schedule runs the newest version of its template, so a change you save applies from the next run, as before. The schedule's **Template** line names it and says **runs each version you save**, for example "History starter · runs each version you save".
 
-That changes once you approve a version for schedules in [Edit template](Template-Studio#approve-for-schedules) (**More → Approve for schedules**) for the first time. From then on the schedule runs the newest approved version (or one Slopify carried over from it), and a version you save later waits until you look it over and approve it. The line then says, for example, **Runs version 6 · version 7 waits for your approval**. The schedule is never stopped or switched to an unchecked version by itself. If the change adds a keyword the schedule has no value for, fill it in under the schedule's topics or every-run values.
+That changes once you approve a version for schedules in [Edit template](Template-Studio#approve-for-schedules) (**More → Approve for schedules**) for the first time. From then on the schedule runs the newest approved version (or one Slopify carried over from it), and a version you save later waits until you look it over and approve it. The line then says, for example, "History starter · runs version 6 · version 7 waits for your approval". The schedule is never stopped or switched to an unchecked version by itself. If the change adds a keyword the schedule has no value for, fill it in under the schedule's topics or every-run values.
 
 ## Tips
 
