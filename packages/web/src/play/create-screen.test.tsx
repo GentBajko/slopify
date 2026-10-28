@@ -451,6 +451,8 @@ describe("what Create starts from", () => {
   });
 
   it("picks the writer's model a first short picks, not the first listed, so visits agree", async () => {
+    // Checked or not: the background checks have only reached the first model yet.
+    const checked = { checkedAt: "2026-10-24T07:00:00.000Z", sentence: null, source: "check" };
     const { session } = await mountStarter({
       "GET /api/providers/first-run": jsonAnswer({
         firstRun: false,
@@ -465,6 +467,10 @@ describe("what Create starts from", () => {
           { id: "sonnet", name: "Sonnet 5.5" },
         ],
         allowsCustom: true,
+        standings: {
+          fable: { standing: "works", ...checked },
+          sonnet: { standing: "listed", checkedAt: null, sentence: null, source: null },
+        },
       }),
     });
     await waitFor(() => expect(startFrom().value).toBe(templateId));

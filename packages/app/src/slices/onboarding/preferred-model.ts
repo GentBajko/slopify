@@ -7,12 +7,13 @@ const preferred: Readonly<Record<string, RegExp>> = {
   "openai-tts": /^gpt-4o-mini-tts$/,
 };
 
+export function isPreferredModel(provider: string, model: string): boolean {
+  return preferred[provider]?.test(model) === true;
+}
+
 export function preferredModel<T extends { readonly id: string }>(
   provider: string,
   models: readonly T[],
 ): T | undefined {
-  const liked = preferred[provider];
-  return (
-    (liked === undefined ? undefined : models.find((model) => liked.test(model.id))) ?? models[0]
-  );
+  return models.find((model) => isPreferredModel(provider, model.id)) ?? models[0];
 }

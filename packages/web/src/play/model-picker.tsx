@@ -1,7 +1,6 @@
 import type { ModelInfo } from "@app/kernel/ports/model.js";
 import type { ModelStandingView } from "@app/slices/model-checks/model.js";
 import { badgeOf, pickerEntries } from "@app/slices/model-checks/rules.js";
-import { preferredModel } from "@app/slices/onboarding/preferred-model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { useEffect, useId, useState } from "react";
@@ -15,6 +14,7 @@ import { customModelFallback, listProviderModels, modelsKey, modelsQuery } from 
 import { useCheckModels } from "@/lib/use-check-models";
 import { cn } from "@/lib/utils";
 import { type FieldProps, LabelledField } from "./pickers";
+import { suggestedModel } from "./suggested-model";
 
 // The line under the select: the chosen model's badge once something is known about it, or
 // "Not checked yet." while nothing works for the key yet.
@@ -57,7 +57,7 @@ export function ModelPicker(
     // are the list's last two entries. Without it every upkeep button sits under the select.
     readonly quiet?: boolean | undefined;
     // A service picked with no model takes the one Slopify would pick for it once its list is
-    // in (`preferredModel`), so a new service is one choice, not two.
+    // in (`suggestedModel`), so a new service is one choice, not two.
     readonly fillEmpty?: boolean | undefined;
   },
 ) {
@@ -98,8 +98,8 @@ function ProviderModelPicker({
   const shown = pickerEntries(every, standings, value, showAll || standings === undefined);
   const all = shown.entries.map((entry) => entry.model);
   const suggested =
-    fillEmpty && provider !== "" && value === "" && !custom
-      ? preferredModel(provider, all)?.id
+    fillEmpty && provider !== "" && value === "" && !custom && catalogue.isSuccess
+      ? suggestedModel(provider, every, standings)
       : undefined;
   // biome-ignore lint/correctness/useExhaustiveDependencies: once per suggestion, with the pick as drawn.
   useEffect(() => {
