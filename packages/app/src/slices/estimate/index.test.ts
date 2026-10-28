@@ -79,8 +79,23 @@ describe("cost planning", () => {
       1500,
       catalogue,
     );
+    // A writer on a subscription: however many there are, they cost nothing more.
+    expect(generated.rows.find((one) => one.stage === "Describing tables and figures")?.high).toBe(
+      0,
+    );
+    // A paid writer: unknown until the article is written.
     expect(
-      generated.rows.find((one) => one.stage === "Describing tables and figures")?.low,
+      estimateRun(
+        {
+          ...described,
+          llm: { provider: "openrouter", model: "test" },
+          sources: { ...described.sources, article: "generate" },
+          articlePrompt: "x",
+        },
+        { article: "x" },
+        1500,
+        catalogue,
+      ).rows.find((one) => one.stage === "Describing tables and figures")?.low,
     ).toBeNull();
     const { describeFigures: _off, ...plain } = described.audio;
     expect(
