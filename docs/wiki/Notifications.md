@@ -17,7 +17,7 @@ Runs can take a while, so Slopify can tell you when one needs you: in the browse
 | An AI check **needs a decision** | "Review needs a decision: <title>", when an AI check flags an item and keeps it (its redos ran out, or the stage only flags). It says what was flagged and to press **Overrule** or **Redo** on the project. Sent once per verdict. |
 | A schedule has **new topics waiting** for approval | For example "5 new topics are waiting for you" |
 
-Pausing or cancelling a run yourself sends nothing, and neither does a project that was already finished when the page loaded. A run waiting for an [agent's check](Agents-MCP#the-external-agent-reviewer), or a video made ahead waiting for its day, sends no "Waiting for you": nobody needs to act. A message holds the project title and what happened, never your keys, prompts or files.
+Pausing or cancelling a run yourself sends nothing, and neither does a project that was already finished when the page loaded. A run waiting for an [agent's check](Agents-MCP#your-own-ai-agent-as-the-checker), or a video made ahead waiting for its day, sends no "Waiting for you": nobody needs to act. A message holds the project title and what happened, never your keys, prompts or files.
 
 A run an [agent](Agents-MCP) started ends its messages with **· started by agent**, and a flag from an agent's check ends with **· by agent**.
 

@@ -15,7 +15,7 @@ Slopify can write the text with the Claude Code, Codex or Antigravity command-li
 
 Codex text and Codex images share one sign-in, one executable path and one plan allowance.
 
-Codex CLI must be version 0.149.1 or newer. An older Codex shows **Needs attention** and says to update it.
+Codex CLI must be version 0.149.1 or newer. An older Codex shows **Needs fixing** and says to update it.
 
 ## Set up a CLI
 
@@ -48,7 +48,7 @@ It works differently from the Gemini CLI in a few ways:
 | State | Meaning |
 |---|---|
 | **Ready** | Found, new enough and not reporting a sign-in problem. |
-| **Needs attention** | Found, but something is wrong (for example an old Codex version). The detail says what. |
+| **Needs fixing** | Found, but something is wrong (for example an old Codex version). The detail says what. |
 | **Not found** | Not on PATH, or not at the saved path. |
 
 ## Set the executable path
@@ -83,7 +83,7 @@ A CLI's model list comes from the tool installed on your computer, not from the 
 
 1. Pick the tool as the **Service** under **Written by** (or Codex CLI under **Images by** for images).
 2. Pick a **Text model** from the list. The refresh button beside it (**Refresh models**) asks the tool for its current list; **Custom ID** lets you type a model the list does not show.
-3. If the model offers it, pick **Thinking** (text) or **Effort** (images). **Model default** leaves it to the tool. The levels come from the model: for example Low, Medium, High and Xhigh. Higher levels can write or draw more carefully, but take longer and use more of your plan.
+3. If the model offers it, pick **Thinking** (text) or **Effort** (images). **Model default** leaves it to the tool. The levels come from the model: for example Low, Medium, High and Extra high. Higher levels can write or draw more carefully, but take longer and use more of your plan.
 
 If a model is missing when a run reaches it, the run stops with "The chosen model is not available in the AI command-line tool on your computer." Update the tool, or pick another model in **Edit settings** (under **Written by**, or **Images by** for Codex images), then **Continue the run**. A thinking level the model does not support stops the same way.
 

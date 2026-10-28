@@ -4,7 +4,7 @@ import { defaultSubtitles, subtitlePositions } from "@app/slices/subtitles/model
 import { type ReactElement, useId, useState } from "react";
 import { Button } from "@/components/kit/button";
 import { HelpLine, Input } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { helpScope } from "@/components/kit/info-tip";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { validSubtitleStyle } from "./config";
 import { type ControlledFontUpload, FontPicker } from "./font-picker";
@@ -57,6 +57,8 @@ export function SubtitleControls({
   const fontProblem = problem?.("subtitles.fontId");
   const sizeProblem = problem?.("subtitles.fontSize");
   const modeProblem = problem?.("subtitles.mode") ?? problem?.("subtitles");
+  // A refused or unfinished font upload: the upload control it names stays in reach.
+  const uploadProblem = problem?.("fontUpload") ?? problem?.("subtitles.fontUpload");
   const facts = subtitleFacts(language);
   const sizeShown = rawFontSize?.value ?? String(value.fontSize);
   const sizeChanged = sizeShown.trim() !== String(defaultSubtitles.fontSize);
@@ -64,19 +66,34 @@ export function SubtitleControls({
     if (rawFontSize) rawFontSize.onChange(String(defaultSubtitles.fontSize));
     else onChange({ ...value, fontSize: defaultSubtitles.fontSize });
   };
+  // Font, size and position only style captions shown in the video: with caption files only
+  // (or no video) they would do nothing, so they are not drawn, unless one of them needs fixing.
+  const styled =
+    audioEnabled &&
+    (value.mode === "burn-in" ||
+      (value.mode === "files" &&
+        (!validSubtitleStyle(value) ||
+          sizeProblem !== undefined ||
+          fontProblem !== undefined ||
+          uploadProblem !== undefined ||
+          fontUpload?.pending === true ||
+          uploading)));
   return (
-    <section className="flex min-w-0 flex-col gap-3" aria-label="Captions">
+    <section className="flex min-w-0 flex-col gap-3" aria-label="Captions" {...helpScope}>
       <fieldset
         disabled={disabled || !audioEnabled}
         className="flex min-w-0 flex-col gap-3 disabled:opacity-60"
       >
         <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-0 max-w-[22rem] flex-1" {...helpScope}>
-            <div className="mb-1 flex items-center gap-1">
+          {/* The timing note sits beside the label, never beside the select, so on a phone the
+              select keeps its whole width and its words. The line under the section explains
+              the choice, so there is no info button. */}
+          <div className="min-w-0 max-w-[22rem] flex-1">
+            <div className="mb-1 flex flex-wrap items-baseline gap-x-2">
               <label htmlFor={id} className="sl-field__label block">
                 Captions
               </label>
-              <InfoTip id="project.subtitles.mode" className="-my-1" />
+              <span className="text-label text-ink-3">{facts.tag}</span>
             </div>
             <select
               id={id}
@@ -97,9 +114,11 @@ export function SubtitleControls({
               <option value="files">Caption files only (.srt + .vtt)</option>
             </select>
           </div>
-          <span className="pb-1 text-label text-ink-3">{facts.tag}</span>
         </div>
-        {value.mode !== "off" && audioEnabled ? (
+        {value.mode !== "off" && audioEnabled && !styled ? (
+          <HelpLine>{facts.detail}</HelpLine>
+        ) : null}
+        {styled ? (
           <div className="flex min-w-0 flex-col gap-3" {...helpScope}>
             <HelpLine>{facts.detail}</HelpLine>
             <div
@@ -272,16 +291,10 @@ export function SubtitleControls({
                 {fontProblem}
               </p>
             ) : null}
-            {value.mode === "files" ? (
-              <p className="text-label text-ink-3">
-                Font, size and position apply to captions shown in the video; a caption file is
-                styled by the player that shows it.
-              </p>
-            ) : null}
           </div>
         ) : null}
       </fieldset>
-      {session?.fontUpload && (value.mode === "off" || !audioEnabled) ? (
+      {session?.fontUpload && (value.mode !== "burn-in" || !audioEnabled) ? (
         <div className="flex flex-col items-start gap-3">
           <p role={session.fontUploading ? "status" : "alert"} className="text-small text-ink-2">
             {session.fontUploading
@@ -313,7 +326,7 @@ export function SubtitleControls({
           : !videoEnabled
             ? "With no video, captions come as files to upload beside the sound (.srt + .vtt)."
             : value.mode === "files"
-              ? "Files to upload beside the video; the video itself shows none."
+              ? "Files to upload beside the video; the video shows none, and the player that shows them styles them."
               : value.mode === "burn-in"
                 ? "Also saved as .srt and .vtt files for YouTube."
                 : "Captions shown in the video are also saved as .srt and .vtt files for YouTube."}

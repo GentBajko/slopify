@@ -96,8 +96,10 @@ export function overallMode(
 }
 
 // AI checks, on Create's Pauses and checks row and in a project's Edit settings: one choice
-// for the whole run, and under Advanced who checks, how many redos, and each stage's own mode
-// and prompt. A stage this run makes nothing for has its row greyed with the reason.
+// for the whole run, and under Checker and stages who checks, how many redos, and each stage's
+// own mode and prompt, in the order the run makes them. A stage this run makes nothing for has
+// no row (unless one was set before, which keeps its reason); the promise check says why it
+// can't apply while the article is not written by the AI.
 export function ReviewSettings({
   value,
   providers,
@@ -132,7 +134,7 @@ export function ReviewSettings({
     !imageReviewers.includes(value.provider);
   const overall = overallMode(value, makes);
   // One choice for every stage this run makes something for; the promise check stays as it is
-  // set under Advanced. Turning checks on with no checker picked uses the run's writer.
+  // set under Checker and stages. Turning checks on with no checker picked uses the run's writer.
   const setAll = (mode: ReviewMode): void => {
     const stages = { ...value.stages };
     for (const stage of reviewStagesInRunOrder) {
@@ -176,17 +178,17 @@ export function ReviewSettings({
         options={reviewModes.map((mode) => ({ value: mode, label: modeWords[mode] }))}
         help={
           overall === undefined
-            ? "Each stage is set on its own under Advanced."
+            ? "Each stage is set on its own under Checker and stages."
             : "Each check is one more AI call per item; a redo makes the item again, at its price."
         }
         onChange={(mode) => {
           if (mode !== "mixed") setAll(mode);
         }}
       />
-      <Fold summary="Advanced" state={advancedState === "" ? undefined : advancedState}>
+      <Fold summary="Checker and stages" state={advancedState === "" ? undefined : advancedState}>
         <div className="flex min-w-0 flex-col gap-4 pt-2 pb-3" {...helpScope}>
           <HelpLine>
-            Who checks, how often a failed item is made again, and each stage's own check and Review
+            Who checks, how often a failed item is made again, and each stage's own check and review
             prompt.
           </HelpLine>
           <div className="sl-fields">
@@ -197,7 +199,7 @@ export function ReviewSettings({
               </p>
               <Segmented<Reviewer>
                 label="Who checks"
-                help="A model is one paid call per item. An agent connected over MCP answers for free; a check nobody answers within 2 hours passes."
+                help="An AI model is one paid call per item. Your own agent, connected under Settings → AI agents, answers for free; a check nobody answers within 2 hours passes."
                 value={value.reviewer ?? "model"}
                 options={reviewers.map((one) => ({ value: one, label: reviewerLabels[one] }))}
                 onChange={(reviewer) => onChange({ ...value, reviewer })}
@@ -219,7 +221,7 @@ export function ReviewSettings({
           </div>
           {byAgent ? (
             <p className="m-0 text-small text-ink-2">
-              The external agent answers through MCP and is shown the pictures; no API fee.
+              Your own agent is shown the images and answers for free.
             </p>
           ) : (
             <ServiceGroup
@@ -238,12 +240,12 @@ export function ReviewSettings({
           )}
           {blind ? (
             <p className="m-0 text-small text-danger">
-              Picture checks need Claude Code or Codex as the checker: Slopify can't show pictures
+              Checks of images need Claude Code or Codex as the checker: Slopify can't show images
               to this one.
             </p>
           ) : byAgent ? null : (
             <p className="m-0 text-label text-ink-3">
-              Pictures (images, thumbnail, shorts) need Claude Code or Codex as the checker.
+              Checks of the images, thumbnail and shorts need Claude Code or Codex as the checker.
             </p>
           )}
           {/* The two pickers share a cell and wrap under each other in a narrow drawer, so
@@ -260,6 +262,7 @@ export function ReviewSettings({
                 const mode = modeOf(stage);
                 const prompt = value.stages[stage]?.prompt ?? "";
                 const available = makes(stage);
+                if (!available && mode === "off" && stage !== "promise") return null;
                 const saved = prompt !== "" && !choices.some((one) => one.name === prompt);
                 return (
                   <tr key={stage} className="border-t border-line">

@@ -12,10 +12,10 @@ it("names shorts work by short and step", () => {
     ].map(workName),
   ).toEqual([
     "Shorts: pick the moments",
-    "Shorts: prompts, images and renders",
+    "Shorts: prompts, images and videos",
     "Short 2: image prompts",
     "Short 2: image 3",
-    "Short 12: render",
+    "Short 12: video",
   ]);
 });
 
@@ -23,4 +23,13 @@ it("names the caption work Captions, never Subtitles", () => {
   expect(
     ["subtitles:timing", "subtitles:cues", "subtitles:files", "subtitles:other"].map(workName),
   ).toEqual(["Caption timing", "Caption text and timing", "Caption files", "Captions"]);
+});
+
+it("names the video work Video, as every other screen names the stage", () => {
+  expect(["export:video", "video:video", "export:wav", "export:other"].map(workName)).toEqual([
+    "Video",
+    "Video",
+    "Audio export (WAV)",
+    "Finished file",
+  ]);
 });

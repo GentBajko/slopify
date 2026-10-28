@@ -56,7 +56,9 @@ describe("LoudnessControls", () => {
       audioFilesLufs: -18,
     });
     expect(screen.getByRole("textbox", { name: "Video volume" })).toHaveProperty("value", "−6");
-    expect(screen.getByText(/this is −20 LUFS/)).toBeTruthy();
+    expect(
+      screen.getByText("0 dB is the level YouTube and Spotify play everything at."),
+    ).toBeTruthy();
   });
 
   it("says the range when a volume is out of it, and keeps the last good one", async () => {

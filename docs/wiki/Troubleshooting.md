@@ -132,7 +132,7 @@ If an install or update fails, the message names what failed and, in Docker, the
 | **Waiting for limits** / "Waiting for Codex limits (resets at 14:00)" | A CLI plan is used up; the run waits and carries on after the reset time shown. |
 | **Waiting to try again** | A rate limit or timeout; it retries at the time shown. |
 | **Waiting for your review** | A pause is holding the run. Press **Approve and make the …**. See [Pauses and Checks](Reviews-and-Checkpoints). |
-| **Waiting for the agent** | An AI check set to **External agent (MCP)** waits for your agent. Check the agent's routine is running; with no answer, the review passes by itself after 2 hours. See [Agents (MCP)](Agents-MCP). |
+| **Waiting for the agent** | An AI check set to **Your own AI agent** waits for your agent. Check the agent's routine is running; with no answer, the review passes by itself after 2 hours. See [Agents (MCP)](Agents-MCP). |
 | **Waiting for its day** | Its schedule made it ahead; the video is made on its day. |
 | A step says **taking longer than usual** | It has run longer than the same step usually takes in your finished runs. It is still going; open **Progress** to see whether text or images are still arriving. |
 | **Paused** | Press **Continue the run**. |

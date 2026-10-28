@@ -93,7 +93,15 @@ export function useVideoEditControls({
 
   const noWordTiming = wordTimingUnavailable(language);
   const cuts = (
-    <Row id={`${id}-cuts`} label="Cuts" tip="project.video.cuts">
+    <Row
+      id={`${id}-cuts`}
+      label="Cuts"
+      help={
+        noWordTiming === undefined
+          ? "Follow the narration starts each image at a sentence end, about Seconds per image apart. The images start again when they run out."
+          : undefined
+      }
+    >
       <Picker
         id={`${id}-cuts`}
         data-play-field={`${fieldPrefix}.cuts`}
@@ -279,14 +287,17 @@ function Row({
   id,
   label,
   tip,
+  help,
   wide = false,
   children,
 }: {
   readonly id: string;
   readonly label: string;
   // Only for a setting whose consequence needs a paragraph; the rest are explained by the
-  // line their group opens with.
+  // line their group opens with, or by their own `help` line.
   readonly tip?: HelpId;
+  // One visible sentence under the control, in place of an info button.
+  readonly help?: string | undefined;
   readonly wide?: boolean;
   readonly children: ReactNode;
 }): ReactElement {
@@ -294,7 +305,7 @@ function Row({
   return (
     <div
       className={cn("sl-field", wide && "sl-fields__wide")}
-      {...(tip === undefined ? {} : helpScope)}
+      {...(tip === undefined && help === undefined ? {} : helpScope)}
     >
       <span className="flex min-w-0 items-center gap-1">
         <label htmlFor={id} className="sl-field__label">
@@ -308,6 +319,7 @@ function Row({
       <div className="flex min-w-0 flex-wrap items-start gap-2 [&>select]:min-w-0 [&>select]:flex-1">
         {children}
       </div>
+      {help === undefined ? null : <HelpLine>{help}</HelpLine>}
     </div>
   );
 }

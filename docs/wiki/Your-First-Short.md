@@ -32,7 +32,7 @@ To set these up:
 
 1. Install and sign in to Claude Code, Codex or Antigravity CLI (see [AI CLIs](AI-CLIs)), or add keys in Settings → **Keys & services** (see [Keys and Services](Providers-and-Keys)).
 2. Optional: add a voice key in Settings → **Keys & services**. An OpenAI key is the simplest: the suggested voice works with it right away.
-3. Back on the first-run screen, step 1, **What a short needs**, shows the Script, Voice and Images lines, each **Ready** or **Not connected** with its fix. Press **Check again** after installing a speech program.
+3. Back on the first-run screen, step 1, **What a short needs**, shows the Article, Narration and Images lines, each **Ready** or **Needs setup** with its fix. Press **Check again** after installing a speech program.
 
 ## Make the short
 
@@ -88,9 +88,9 @@ The status line says "The short didn't start." and the lines above the topic say
 
 | Line says | Fix |
 | --- | --- |
-| Nothing can write the script yet. | Sign in to Claude Code, Codex or Antigravity CLI, or press **Add a key for writing** (OpenRouter). |
+| Nothing can write the article yet. | Sign in to Claude Code, Codex or Antigravity CLI, or press **Add a key for writing** (OpenRouter). |
 | Nothing can make the images yet. | Press **Add an image key** (OpenAI, Google, fal.ai or Replicate), or sign in to Codex CLI. |
-| Nothing can read the script aloud yet. | Press **Add a voice key** (OpenAI works at once), or on Linux install `espeak-ng` and press **Check again**. |
+| Nothing can read the article aloud yet. | Press **Add a voice key** (OpenAI works at once), or on Linux install `espeak-ng` and press **Check again**. |
 | *Voice service* has a key but no voice saved yet. | Press **Save a voice** (Settings → Voices), or add an OpenAI key. |
 | Slopify can't list the models on this machine right now. | Restart Slopify and try again. |
 

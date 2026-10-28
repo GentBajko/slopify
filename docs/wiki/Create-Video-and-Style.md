@@ -10,10 +10,10 @@ The row starts with a **Video** switch:
 
 | Choice | What happens | Cost |
 | --- | --- | --- |
-| **Make the video** (default) | Puts the slideshow video together on this computer from the images and narration. | No service money, only time |
+| **On (free)** (default) | Puts the slideshow video together on this computer from the images and narration. | No service money, only time |
 | **Off (sound only)** | No video. With narration on, you get the narration as one audio file (a WAV with the intro, the article, the outro and the gaps between them). Without narration, each finished part downloads on its own. | None |
 
-**Make the video** needs images, so the video is off while Images is **None**. The line under the switch says what you will get: "The narration over the images, put together on this computer · free.", "Sound only: the narration as one audio file." or "Each finished stage downloads on its own."
+**On** needs images, so the video is off while Images is **None**. The line under the switch says what you will get: "The narration over the images, put together on this computer · free.", "Sound only: the narration as one audio file." or "Each finished stage downloads on its own."
 
 ## Frame format
 
@@ -34,7 +34,7 @@ Captions are timed from your narration on this computer, with no paid service. T
 | **Caption position** | Where captions in the video sit: **Top**, **Upper-middle**, **Center**, **Lower-middle** or **Bottom**. Move them up when the pictures have important detail near the bottom. | Bottom |
 | **Preview sentence** | The words the style preview's captions show. Only the preview shows it; real captions come from the narration. | "Every story begins with a word." |
 
-Font, size and position apply to captions shown in the video only. Players style `.srt` and `.vtt` files themselves. The channel's brand kit can fill the caption font when you leave it at the default.
+Font, size and position show only while captions are shown in the video: with caption files only (or no video) they are left out, since players style `.srt` and `.vtt` files themselves. The channel's brand kit can fill the caption font when you leave it at the default.
 
 ### Show captions in the video
 

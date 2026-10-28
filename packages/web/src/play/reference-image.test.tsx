@@ -42,7 +42,7 @@ function Subject({
   );
 }
 
-const source = "Establishing image (keeps characters and style the same)";
+const source = "Establishing image";
 const tick = "Use it as a reference for the thumbnail too";
 
 describe("the establishing image control", () => {
@@ -52,7 +52,11 @@ describe("the establishing image control", () => {
     expect(picker.value).toBe("");
     expect(screen.queryByLabelText("Establishing prompt")).toBeNull();
     expect(screen.queryByLabelText(tick)).toBeNull();
-    expect(screen.getByText("Off: each image is drawn on its own.")).not.toBeNull();
+    expect(
+      screen.getByText(
+        "Off: each image is drawn on its own. Pick one to keep characters and style the same.",
+      ),
+    ).not.toBeNull();
   });
 
   it("offers only image prompts, then an upload slot for Upload", async () => {
@@ -72,7 +76,9 @@ describe("the establishing image control", () => {
       thumbnail: true,
     });
     expect((screen.getByLabelText(tick) as HTMLInputElement).checked).toBe(true);
-    expect(screen.getByText("The thumbnail itself has its own switch, Thumbnail.")).not.toBeNull();
+    expect(
+      screen.getByText("The thumbnail itself is set under Extras → Thumbnail."),
+    ).not.toBeNull();
     fireEvent.click(screen.getByLabelText(tick));
     expect(onChange).toHaveBeenLastCalledWith({
       source: "prompt",
@@ -134,7 +140,9 @@ describe("the images' Effort", () => {
       model: "gpt-6-sol",
       thinking: "ultra",
     });
-    fireEvent.change(picker, { target: { value: "default" } });
+    // Model default is the list's one empty first entry, never listed twice.
+    expect(screen.getAllByRole("option", { name: "Model default" })).toHaveLength(1);
+    fireEvent.change(picker, { target: { value: "" } });
     expect(onChange).toHaveBeenLastCalledWith({ provider: "codex-image", model: "gpt-6-sol" });
   });
 

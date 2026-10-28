@@ -191,12 +191,8 @@ describe("Make outdated parts again for the ticked projects", () => {
     expect(within(total).getByText("About $0.04–$0.06")).not.toBeNull();
     const toMake = within(review).getByRole("list", { name: "Projects to make again" });
     expect(within(toMake).getByText("Made again: Image request.")).not.toBeNull();
-    expect(
-      within(toMake).getByText("Then rebuilt on this computer, free: Video export."),
-    ).not.toBeNull();
-    expect(
-      within(toMake).getByText("Rebuilt on this computer, free: Video export."),
-    ).not.toBeNull();
+    expect(within(toMake).getByText("Then rebuilt on this computer, free: Video.")).not.toBeNull();
+    expect(within(toMake).getByText("Rebuilt on this computer, free: Video.")).not.toBeNull();
     const left = within(review).getByRole("list", { name: "Left out" });
     expect(within(left).getByText(/running now/)).not.toBeNull();
     expect(within(left).getByText(/sample project/)).not.toBeNull();

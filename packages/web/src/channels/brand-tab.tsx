@@ -187,7 +187,6 @@ export function BrandTab({
         {/* The channel's language applies with the look off too: it is not styling. */}
         <LanguageSelect
           label="Language of new projects"
-          tip={null}
           value={kit.language === "" ? undefined : kit.language}
           inherited={{ label: "Not set", language: undefined }}
           onChange={(language) => set("language")(language ?? "")}

@@ -287,4 +287,8 @@ export const stageEditors: readonly (string | RegExp)[] = [
   /^(Research|Article|Narration|Images|Video)$/,
   /^(.+ is read|Read|Intro and outro read|Written|Images|Drawn|Checked) by (Service|Model)$/,
   /^(Voice|Intro and outro voice)$/,
+  // The speakers editor (voices/): a speaker's name, role and pace and the gap between turns say
+  // what they set, Add from the cast lists the channel's cast by name, and Speaker names on
+  // captions says what it adds.
+  /^(Speaker name|Role|Pace|Gap between turns|Add from the cast|Speaker names on captions)$/,
 ];

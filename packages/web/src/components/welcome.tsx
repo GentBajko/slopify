@@ -6,6 +6,7 @@ import { Fold } from "@/components/kit/fold";
 import { ButtonLink, TextLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { Status } from "@/components/kit/status";
+import { stageWords } from "@/lib/stage-words";
 import { cn } from "@/lib/utils";
 import {
   checkFirstRun,
@@ -23,10 +24,11 @@ export interface ChecklistBack {
 }
 
 type Need = ShortGap["need"];
+// The parts by their stage names, as Settings' readiness lines name the same parts.
 const needNames: Readonly<Record<Need, string>> = {
-  text: "Script",
-  voice: "Voice",
-  images: "Images",
+  text: stageWords.article,
+  voice: stageWords.audio,
+  images: stageWords.images,
 };
 
 // "Claude Code CLI" is "Claude Code" to a person: the tool, not how Slopify talks to it.
@@ -108,7 +110,7 @@ function GapRow({
       need={gap.need}
       status={
         <Status tone="waiting">
-          {gap.fix === "saved-voice" ? "No voice saved" : "Not connected"}
+          {gap.fix === "saved-voice" ? "No voice saved" : "Needs setup"}
         </Status>
       }
       line={gap.message}
@@ -135,7 +137,7 @@ function NeedRow({
     <ListRow
       title={
         <span className="flex items-center gap-3">
-          <span className="w-16 shrink-0">{needNames[need]}</span>
+          <span className="w-20 shrink-0">{needNames[need]}</span>
           {status}
         </span>
       }

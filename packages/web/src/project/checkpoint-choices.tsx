@@ -5,6 +5,7 @@ import { Button } from "@/components/kit/button";
 import { HelpLine } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
 import { sentence } from "@/http";
+import { pauseLabel } from "@/play/checkpoints";
 import {
   type CheckpointChange,
   type CheckpointGate,
@@ -16,12 +17,10 @@ type Outcome = {
   readonly kind: "success" | "transport" | "refused";
   readonly message: string;
 } | null;
-// Each pause is named for what is ready to look at when it holds the run, and what waits.
-const choices = [
-  { stage: "audio", name: "Pause after the article (before the narration)" },
-  { stage: "images", name: "Pause after the narration (before the images)" },
-  { stage: "video", name: "Pause after the images (before the video)" },
-] as const;
+// Each pause is named for what is ready to look at when it holds the run, and what waits, by
+// the same words as Create's ticks (`pauseLabel`), read from this run's own stages: a silent
+// video pauses "after the article (before the images)", a sound-only run "before the sound file".
+const choices = [{ stage: "audio" }, { stage: "images" }, { stage: "video" }] as const;
 export function CheckpointChoices({
   projectId,
   revisionId,
@@ -137,6 +136,16 @@ export function CheckpointChoices({
   };
   // Nothing is left to pause: every step it could hold has run.
   const finished = choices.every(({ stage }) => !enabledOf(stage));
+  // A stage this run lists without a source was made by the AI, as every run before sources.
+  const sourceOf = (kind: "audio" | "images" | "video"): string => {
+    const found = stages.find((one) => one.kind === kind);
+    return found === undefined ? "off" : (found.source ?? "generate");
+  };
+  const sources = {
+    audio: sourceOf("audio"),
+    images: sourceOf("images"),
+    video: sourceOf("video"),
+  };
   return (
     <div className="space-y-2">
       <fieldset ref={group} tabIndex={-1} className="space-y-1" {...helpScope}>
@@ -146,7 +155,7 @@ export function CheckpointChoices({
             ? "The run has finished; pauses apply when the project is made again."
             : "The run waits under Home → Needs you until you approve what it made."}
         </HelpLine>
-        {choices.map(({ stage, name }) => {
+        {choices.map(({ stage }) => {
           const enabled = enabledOf(stage);
           return (
             <label key={stage} className="flex min-h-10 items-center gap-3">
@@ -164,7 +173,7 @@ export function CheckpointChoices({
                   setOutcome(null);
                 }}
               />
-              {name}
+              {pauseLabel(stage, { sources })}
             </label>
           );
         })}

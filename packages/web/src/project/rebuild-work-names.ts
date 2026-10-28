@@ -1,9 +1,10 @@
 import type { RebuildPreview } from "@app/slices/rebuild/model.js";
 
-// What a rebuild work key is called on screen: "Video export", "Image request 3".
+// What a rebuild work key is called on screen, by the stage names everywhere else ("Video",
+// "Image request 3"): "Audio export" only for a sound-only export.
 const workNames: Readonly<Record<string, string>> = {
   "export:wav": "Audio export (WAV)",
-  "export:video": "Video export",
+  "export:video": "Video",
   "subtitles:timing": "Caption timing",
   "subtitles:cues": "Caption text and timing",
   "subtitles:files": "Caption files",
@@ -17,15 +18,15 @@ const workNames: Readonly<Record<string, string>> = {
   "entry:intro:text": "Intro text",
   "entry:outro:text": "Outro text",
   "shorts:pick": "Shorts: pick the moments",
-  "shorts:future": "Shorts: prompts, images and renders",
+  "shorts:future": "Shorts: prompts, images and videos",
 };
 export function workName(key: string): string {
   const exact = workNames[key];
   if (exact !== undefined) return exact;
-  // A short's own work, by its number: "Short 2: render", "Short 4: image 3".
+  // A short's own work, by its number: "Short 2: video", "Short 4: image 3".
   const short = /^shorts:(\d+):(prompts|render|image:(\d+))$/.exec(key);
   if (short !== null)
-    return `Short ${short[1] ?? ""}: ${short[2] === "prompts" ? "image prompts" : short[2] === "render" ? "render" : `image ${short[3] ?? ""}`}`;
+    return `Short ${short[1] ?? ""}: ${short[2] === "prompts" ? "image prompts" : short[2] === "render" ? "video" : `image ${short[3] ?? ""}`}`;
   const prefix = key.split(":")[0];
   const families: Readonly<Record<string, string>> = {
     image: "Image request",
@@ -35,8 +36,9 @@ export function workName(key: string): string {
     research: "Research",
     thumbnail: "Thumbnail",
     subtitles: "Captions",
-    video: "Video export",
-    export: "Export",
+    video: "Video",
+    // Only the video and the WAV are exported today; anything else is a finished file.
+    export: "Finished file",
     entry: "Intro or outro",
   };
   return families[prefix ?? ""] ?? "Output";

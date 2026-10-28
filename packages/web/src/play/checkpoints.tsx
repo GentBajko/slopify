@@ -65,6 +65,28 @@ export function CheckpointControls({
   const { form } = document;
   const prefix = useId();
   const selected = form.checkpoints ?? [];
+  // A pause needs something made before it to look at: the images of a run with no article and
+  // no narration (the Images kind) are the first thing it makes, so there is no pause before them.
+  const madeBefore = (stage: CheckpointStage): boolean =>
+    stage !== "images" || form.sources.article !== "off" || form.sources.audio !== "off";
+  const enabledOf = (stage: CheckpointStage): boolean =>
+    madeBefore(stage) &&
+    (stage === "video"
+      ? (form.sources.video !== "off" && form.sources.images !== "off") ||
+        form.sources.audio !== "off"
+      : form.sources[stage] === "generate");
+  const shown = checkpointOptions.filter(
+    ({ stage }) => enabledOf(stage) || selected.includes(stage),
+  );
+  if (shown.length === 0 && form.sources.article === "off" && form.sources.audio === "off")
+    return (
+      <div className="flex min-w-0 flex-col gap-1">
+        <p className="m-0 text-body font-semibold">Pause for my approval</p>
+        <p className="m-0 text-small text-ink-2">
+          Nothing to pause for: the images are the first thing this run makes.
+        </p>
+      </div>
+    );
   return (
     <fieldset
       data-play-field="checkpoints"
@@ -75,14 +97,9 @@ export function CheckpointControls({
       {...helpScope}
     >
       <legend className="mb-1 p-0 text-body font-semibold">Pause for my approval</legend>
-      {checkpointOptions.map(({ stage, label }) => {
+      {shown.map(({ stage, label }) => {
         const checked = selected.includes(stage);
-        const enabled =
-          stage === "video"
-            ? (form.sources.video !== "off" && form.sources.images !== "off") ||
-              form.sources.audio !== "off"
-            : form.sources[stage] === "generate";
-        if (!enabled && !checked) return null;
+        const enabled = enabledOf(stage);
         const error =
           problem(`checkpoints.${stage}`) ??
           (enabled

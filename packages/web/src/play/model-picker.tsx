@@ -9,7 +9,7 @@ import { Button } from "@/components/kit/button";
 import { HelpLine, Input, Select } from "@/components/kit/field";
 import { TextLink } from "@/components/kit/link";
 import { estimateChecks } from "@/lib/model-checks";
-import { modelOptionLabel } from "@/lib/model-label";
+import { modelChoiceLabel, modelOptionLabel } from "@/lib/model-label";
 import { customModelFallback, listProviderModels, modelsKey, modelsQuery } from "@/lib/models";
 import { useCheckModels } from "@/lib/use-check-models";
 import { cn } from "@/lib/utils";
@@ -90,10 +90,9 @@ function ProviderModelPicker({
   const all = shown.entries.map((entry) => entry.model);
   const now = new Date();
   const labelOf = (model: ModelInfo): string => {
+    if (quiet) return modelChoiceLabel(model);
     const label = modelOptionLabel(model);
-    return standings === undefined || quiet
-      ? label
-      : `${label} · ${badgeOf(standings[model.id], now)}`;
+    return standings === undefined ? label : `${label} · ${badgeOf(standings[model.id], now)}`;
   };
   const checks = useCheckModels(provider, "");
   const checkOne = standings !== undefined && value !== "" && !shown.fallback;
@@ -212,7 +211,9 @@ function ProviderModelPicker({
                     </optgroup>
                   ))}
                   {quiet && !showAll && shown.hidden > 0 ? (
-                    <option value={showMore}>{`Show ${String(shown.hidden)} more models…`}</option>
+                    <option value={showMore}>
+                      {`Show ${String(shown.hidden)} more ${shown.hidden === 1 ? "model" : "models"}…`}
+                    </option>
                   ) : null}
                   {quiet && allowsCustom && provider !== "" ? (
                     <option value={typeId}>Type a model ID…</option>

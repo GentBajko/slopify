@@ -122,7 +122,7 @@ it.each([undefined, false, true])(
       expect(await current().open(id)).toBe(true);
     });
     const checkbox = screen.getByRole<HTMLInputElement>("checkbox", {
-      name: "Use Pronunciation Glossary",
+      name: "Use the article's pronunciation glossary",
     });
     expect(checkbox.checked).toBe(preference === true);
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Edited title" } });
@@ -145,8 +145,9 @@ it.each([undefined, false, true])(
     });
     expect(current().document.form.audio).toStrictEqual(changed);
     expect(
-      screen.getByRole<HTMLInputElement>("checkbox", { name: "Use Pronunciation Glossary" })
-        .checked,
+      screen.getByRole<HTMLInputElement>("checkbox", {
+        name: "Use the article's pronunciation glossary",
+      }).checked,
     ).toBe(preference !== true);
     window.localStorage?.clear();
   },

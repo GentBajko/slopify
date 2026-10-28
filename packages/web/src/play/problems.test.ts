@@ -1,5 +1,6 @@
 import type { FieldError } from "@app/slices/admission/rules.js";
 import type { ProviderStatus } from "@app/slices/settings/model.js";
+import { defaultVoicesSettings } from "@app/slices/voices/model.js";
 import { describe, expect, it } from "vitest";
 import { readinessProblems, setupProblems } from "./problems";
 import { freshForm, type PlayFormState } from "./state";
@@ -42,6 +43,34 @@ describe("the services a setup calls that will not answer", () => {
         hint: "Add an OpenAI key first",
       },
     ]);
+  });
+
+  it("checks each speaker's voice service, not the hidden one voice, with no intro or outro", () => {
+    const podcast = defaultVoicesSettings("podcast", []);
+    const speakers = podcast.speakers.map((speaker, at) => ({
+      ...speaker,
+      voice: { provider: at === 0 ? "elevenlabs" : "", model: "", voice: "" },
+    }));
+    const twoVoices: PlayFormState = { ...form, voices: { ...podcast, speakers } };
+    const eleven: ProviderStatus = {
+      id: "elevenlabs",
+      family: "tts",
+      displayName: "ElevenLabs",
+      readiness: { kind: "keyed", hasKey: false },
+    };
+    const withVoice = [...providers, eleven];
+    // The hidden voice (OpenAI, no key) is not asked for; the first speaker's service is.
+    expect(
+      readinessProblems(twoVoices, [], withVoice, "article")
+        .filter((one) => one.row === "narration")
+        .map((one) => one.field),
+    ).toEqual(["voices.speakers.0.voice"]);
+    // With an intro, the one voice reads it and is checked again.
+    expect(
+      readinessProblems({ ...twoVoices, intro: "Cold open" }, [], withVoice, "article")
+        .filter((one) => one.row === "narration")
+        .map((one) => one.field),
+    ).toEqual(["audio.provider"]);
   });
 
   it("says what the computer's own voice lacks in a sentence, leaving the commands to the row", () => {
@@ -101,8 +130,9 @@ describe("one list of what stops the Make button", () => {
     expect(problems.map((one) => [one.row, one.hint])).toEqual([
       ["topic", "Type what the video is about first"],
       ["article", "Pick an article prompt first"],
-      ["narration", "Pick a voice service first"],
-      ["images", "Pick an image service and model first"],
+      // The form has its services picked, so what is missing is each model.
+      ["narration", "Pick a voice model first"],
+      ["images", "Pick an image model first"],
     ]);
     // The row says the same thing to do, without "first".
     expect(problems[1]?.text).toBe("Pick an article prompt");
@@ -139,7 +169,7 @@ describe("one list of what stops the Make button", () => {
     });
     expect(problems.map((one) => one.hint)).toEqual([
       "Wait for the uploads to finish first",
-      "Pick a voice service first",
+      "Pick a voice model first",
       "A new rule requires attention.",
     ]);
   });

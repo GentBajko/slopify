@@ -18,6 +18,10 @@ describe("the promise check", () => {
     expect(visionStages).not.toContain("promise");
     expect(reviewKey(promiseItemKey)).toBe("review:promise");
     expect(reviewStagesInRunOrder.slice(0, 2)).toEqual(["article", "promise"]);
+    // The narration is made before the images, so its check comes first.
+    expect(reviewStagesInRunOrder.indexOf("narration")).toBeLessThan(
+      reviewStagesInRunOrder.indexOf("images"),
+    );
     expect([...reviewStagesInRunOrder].sort()).toEqual([...reviewStages].sort());
   });
 

@@ -38,7 +38,7 @@ With **Codex CLI** as the image service, the **Model** list holds **Codex defaul
 
 ## Pick the image styles
 
-1. Under **Which image style?**, tick the image prompts that should draw the video's images.
+1. Under **Image prompts**, tick the image prompts that should draw the video's images. Each one shows the first sentence of its text, so you can see what it draws.
 2. Type in each ticked prompt's box how many images it makes, 1 to 20.
 3. Check the total under the list, for example **16 of at most 60 images · each is one paid image call.**
 
@@ -61,7 +61,7 @@ The establishing image is made first and never shown in the video. Every other i
 
 | Option | What it does | Default |
 | --- | --- | --- |
-| **Establishing image (keeps characters and style the same)** | **Off** (each image is drawn on its own), **Drawn from an image prompt** (one more image call) or **Upload mine** (your own PNG or JPEG, **Establishing image file**). | Off |
+| **Establishing image** (keeps characters and style the same) | **Off** (each image is drawn on its own), **Drawn from an image prompt** (one more image call) or **Upload mine** (your own PNG or JPEG, **Establishing image file**). | Off |
 | **Establishing prompt** | The image prompt that draws it, keywords filled like the others. Describe the characters, setting and style every other image should share. | None |
 | **Use it as a reference for the thumbnail too** | Draws the thumbnail with the establishing image as a reference too, so it matches the video. Untick it for a thumbnail drawn on its own. Shown while a thumbnail is on (in the Extras row). | On |
 

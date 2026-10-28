@@ -5,9 +5,12 @@ import { jsonAnswer } from "@/test-app";
 
 const draftId = "00000000-0000-4000-8000-000000000001";
 const audioId = "00000000-0000-4000-8000-000000000002";
+const imageId = "00000000-0000-4000-8000-000000000003";
 export async function mountSupplied(
   over: Readonly<Record<string, import("@/test-app").Answer>> = {},
   interrupted = false,
+  // With a video (your own images), so captions can be shown in it and a font uploaded.
+  withVideo = false,
 ): Promise<Awaited<ReturnType<typeof import("./play-test-fixture").mountPlay>>> {
   const { draftView, mountPlay } = await import("./play-test-fixture");
   const view = draftView(draftId, "Supplied draft");
@@ -36,14 +39,15 @@ export async function mountSupplied(
               research: "off",
               article: "provide",
               audio: "provide",
-              images: "off",
+              images: withVideo ? "provide" : "off",
               thumbnail: "off",
-              video: "off",
+              video: withVideo ? "generate" : "off",
             },
             provided: {
               ...form.provided,
               article: "A supplied article.",
               audio: { attachmentId: audioId, name: "saved.wav" },
+              images: withVideo ? [{ attachmentId: imageId, name: "still.png" }] : [],
             },
           },
         },
@@ -58,6 +62,19 @@ export async function mountSupplied(
           bytes: 10,
           error: interrupted ? "Upload interrupted" : null,
         },
+        ...(withVideo
+          ? [
+              {
+                id: imageId,
+                kind: "images" as const,
+                name: "still.png",
+                state: "ready" as const,
+                stagedFileId: "00000000-0000-4000-8000-000000000098",
+                bytes: 10,
+                error: null,
+              },
+            ]
+          : []),
       ],
     }),
     ...over,

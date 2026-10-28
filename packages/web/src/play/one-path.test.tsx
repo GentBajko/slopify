@@ -199,7 +199,7 @@ it("names each stage once: the row says it, the editor under it starts at its sw
     ],
     ["Narration", "Narration", ["Off", "AI voice (paid per character)", "My own audio file"]],
     ["Images", "Images", ["None", "Made by AI (paid)", "My own images"]],
-    ["Video and style", "Video", ["Off (sound only)", "Make the video"]],
+    ["Video and style", "Video", ["Off (sound only)", "On (free)"]],
   ] as const) {
     await openRow(row);
     const editor = screen.getByRole("region", { name: row });

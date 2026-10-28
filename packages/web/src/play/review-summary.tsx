@@ -29,6 +29,7 @@ import { requiredProviders } from "./problems";
 import { CheckpointReview } from "./run-review";
 import { rowLabel, type SetupRowId } from "./setup-rows";
 import { type ShortsForm, shortsOn, sourceLabel } from "./state";
+import { thinkingLabel } from "./thinking";
 
 // The Look in one line: only what differs from plain cuts, and the animated images with their
 // model and that they are paid.
@@ -168,7 +169,12 @@ export function ReviewSummary({
               )}
               {form.llm.thinking ||
               textModels?.models.find((model) => model.id === form.llm.model)?.thinkingModes?.length
-                ? row("Thinking", form.llm.thinking ?? "Model default")
+                ? row(
+                    "Thinking",
+                    form.llm.thinking === undefined
+                      ? "Model default"
+                      : thinkingLabel(form.llm.thinking),
+                  )
                 : null}
             </>
           ) : null}
@@ -202,14 +208,14 @@ export function ReviewSummary({
                     ? "Read as one piece"
                     : "By paragraph",
               )}
-              {row("Intro", form.intro || "None")}
+              {row("Intro", form.intro || "Off")}
               {row(
-                "Prepared for speech",
+                "Narration preparation",
                 form.narrationPrompt
                   ? `${form.narrationPrompt} · one AI call per narration piece and entry`
-                  : "No",
+                  : "Off",
               )}
-              {row("Outro", form.outro || "None")}
+              {row("Outro", form.outro || "Off")}
             </>
           ) : null}
           {form.sources.audio === "provide"
@@ -232,7 +238,7 @@ export function ReviewSummary({
               )}
               {form.images.thinking === undefined
                 ? null
-                : row("Image effort", form.images.thinking)}
+                : row("Image effort", thinkingLabel(form.images.thinking))}
             </>
           ) : null}
           {form.sources.images === "generate" &&
@@ -282,7 +288,7 @@ export function ReviewSummary({
         "video",
         "format",
         <>
-          {row("Shape", form.format)}
+          {row("Frame format", form.format)}
           {kind === "video" ? row("Video", sourceLabel("video", form.sources.video)) : null}
           {form.sources.video === "generate"
             ? row("Seconds per image", form.imageSeconds || "(not entered)")

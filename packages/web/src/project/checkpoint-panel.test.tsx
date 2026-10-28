@@ -127,9 +127,10 @@ it("adds and removes pending gates with explicit revision-bound saves", async ()
   const audio = await screen.findByRole("checkbox", {
     name: "Pause after the article (before the narration)",
   });
+  // This run makes no video, so the last pause is named for the sound file, as on Create.
   expect(
     screen
-      .getByRole("checkbox", { name: "Pause after the images (before the video)" })
+      .getByRole("checkbox", { name: "Pause after the images (before the sound file)" })
       .hasAttribute("disabled"),
   ).toBe(false);
   audio.focus();
@@ -169,7 +170,7 @@ it("keeps running and unavailable checkpoint choices disabled", async () => {
   for (const name of [
     "Pause after the article (before the narration)",
     "Pause after the narration (before the images)",
-    "Pause after the images (before the video)",
+    "Pause after the images (before the sound file)",
   ])
     expect((await screen.findByRole("checkbox", { name })).hasAttribute("disabled")).toBe(true);
 });

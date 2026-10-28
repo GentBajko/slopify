@@ -1,5 +1,5 @@
 import { type ReactElement, useId } from "react";
-import { Checkbox } from "@/components/kit/field";
+import { Checkbox, HelpLine } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import type { HelpId } from "@/help/catalog";
 
@@ -29,28 +29,35 @@ export function DescribeFiguresToggle({
   const on = value === true;
   return (
     <div className="col-span-full min-w-0 space-y-1">
-      <span className="flex items-center gap-1" {...helpScope}>
-        <label
-          htmlFor={id}
-          className="flex min-h-10 items-center gap-3 text-small font-semibold max-[1099px]:min-h-11"
-        >
-          <Checkbox
-            id={id}
-            data-play-field="audio.describeFigures"
-            checked={on}
-            onChange={(event) =>
-              onChange({
-                describeFigures: event.currentTarget.checked,
-                skipCode: skipCode === true,
-              })
-            }
-          />
-          Describe tables and figures in the narration
-        </label>
-        <InfoTip id={tip} />
-      </span>
+      <div {...helpScope}>
+        <span className="flex items-center gap-1">
+          <label
+            htmlFor={id}
+            className="flex min-h-10 items-center gap-3 text-small font-semibold max-[1099px]:min-h-11"
+          >
+            <Checkbox
+              id={id}
+              data-play-field="audio.describeFigures"
+              checked={on}
+              aria-describedby={`${id}-cost`}
+              onChange={(event) =>
+                onChange({
+                  describeFigures: event.currentTarget.checked,
+                  skipCode: skipCode === true,
+                })
+              }
+            />
+            Describe tables and figures in the narration
+          </label>
+          <InfoTip id={tip} />
+        </span>
+        {/* What it spends, on the control itself rather than only in its info button. */}
+        <HelpLine id={`${id}-cost`} className="pl-7">
+          One AI call for each table, figure, equation or code block.
+        </HelpLine>
+      </div>
       {on ? (
-        <span className="flex items-center gap-1 pl-7" {...helpScope}>
+        <div className="pl-7" {...helpScope}>
           <label
             htmlFor={`${id}-code`}
             className="flex min-h-10 items-center gap-3 text-small max-[1099px]:min-h-11"
@@ -65,8 +72,8 @@ export function DescribeFiguresToggle({
             />
             Leave code out
           </label>
-          <InfoTip id="play.skip-code" />
-        </span>
+          <HelpLine className="pl-7">Code blocks are skipped instead of summed up.</HelpLine>
+        </div>
       ) : null}
       {on && onScreen !== undefined ? (
         <div className="pl-7">

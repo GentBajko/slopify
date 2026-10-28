@@ -375,7 +375,7 @@ describe("the source switches", () => {
       "NoneMade by AI (paid)My own images",
     );
     expect(screen.getByRole("radiogroup", { name: "Video" }).textContent).toBe(
-      "Off (sound only)Make the video",
+      "Off (sound only)On (free)",
     );
     // The thumbnail and the PDF are ticks; ticked, the thumbnail says how it is made.
     expect(screen.queryByRole("radiogroup", { name: "Thumbnail" })).toBeNull();
@@ -551,7 +551,12 @@ describe("optional stages", () => {
     await userEvent.click(segment("thumbnail", "from_prompt"));
     await pick("Thumbnail prompt", "Title card");
     await userEvent.selectOptions(screen.getByLabelText("Drawn by Service"), "fal");
-    await userEvent.selectOptions(imageModel(), "fal-ai/flux-2");
+    await userEvent.selectOptions(screen.getByLabelText("Drawn by Model"), "fal-ai/flux-2");
+    // The Images row offers the same image service while the images themselves are off, so the
+    // thumbnail's need for one is in reach where its problem is said.
+    expect(
+      screen.getByRole<HTMLSelectElement>("combobox", { name: "Images by Service" }).value,
+    ).toBe("fal");
     await section("Content");
     await fill(screen.getByLabelText("topic"), "Albania");
     await section("Content");
@@ -560,7 +565,7 @@ describe("optional stages", () => {
     await section("Outputs");
     await userEvent.click(segment("images", "provide"));
     expect(screen.getByLabelText("Drawn by Service")).not.toBeNull();
-    expect(imageModel()).not.toBeNull();
+    expect(screen.getByLabelText("Drawn by Model")).not.toBeNull();
     expect(segment("video", "off").getAttribute("aria-checked")).toBe("true");
     expect((segment("video", "generate") as HTMLButtonElement).disabled).toBe(false);
   });

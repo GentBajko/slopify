@@ -31,9 +31,9 @@ it("offers the external agent as the checker, which needs no service or model", 
   const seen: ReviewSettingsForm[] = [];
   renderApp(<Harness seen={seen} />, testDeps({}));
   expect(screen.getByRole("combobox", { name: "Checked by Model" })).not.toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "External agent (MCP)" }));
+  fireEvent.click(screen.getByRole("button", { name: "Your own AI agent" }));
   expect(seen.at(-1)?.reviewer).toBe("agent");
-  expect(screen.getByText(/answers through MCP/)).toBeTruthy();
+  expect(screen.getByText(/Your own agent is shown the images/)).toBeTruthy();
   expect(screen.queryByText(/need Claude Code or Codex/)).toBeNull();
   expect(screen.queryByRole("combobox", { name: "Checked by Model" })).toBeNull();
 });
@@ -87,10 +87,10 @@ it("says when the stages are set differently, and sets none by itself", () => {
   );
   const all = screen.getByRole("group", { name: "Have an AI check the results" });
   expect(all.querySelector("[aria-pressed=true]")).toBeNull();
-  expect(screen.getByText("Each stage is set on its own under Advanced.")).not.toBeNull();
+  expect(screen.getByText("Each stage is set on its own under Checker and stages.")).not.toBeNull();
 });
 
-it("lists the promise check right after the article and greys it, with the reason, for a provided article", () => {
+it("lists the promise check first and greys it, with the reason, for a provided article", () => {
   renderApp(
     <ReviewSettings
       value={emptyReviews}
@@ -102,8 +102,11 @@ it("lists the promise check right after the article and greys it, with the reaso
     />,
     testDeps({}),
   );
+  // A provided article has no check of its own, so its row is left out; the promise check
+  // stays to say why it can't apply.
   const rows = screen.getAllByRole("rowheader").map((cell) => cell.textContent);
-  expect(rows.slice(0, 2)).toEqual(["Article", "Promise check (before narration)"]);
+  expect(rows[0]).toBe("Promise check (before narration)");
+  expect(rows).not.toContain("Article");
   const picker = screen.getByLabelText("Promise check (before narration): check");
   expect((picker as HTMLSelectElement).disabled).toBe(true);
   expect(screen.getByText("Needs an article the AI writes.")).toBeTruthy();
@@ -150,4 +153,21 @@ it("puts a stage's check and prompt pickers in one wrapping cell, the prompt onc
   expect(cell).not.toBeNull();
   expect(cell?.contains(prompt)).toBe(true);
   expect(mode.closest(".flex-wrap")?.contains(prompt)).toBe(true);
+});
+
+it("lists the stages in the order the run makes them, and only those it makes", () => {
+  renderApp(
+    <ReviewSettings
+      value={emptyReviews}
+      providers={[]}
+      prompts={[]}
+      makes={(stage) => stage !== "shorts" && stage !== "thumbnail"}
+      problem={() => undefined}
+      onChange={() => undefined}
+    />,
+    testDeps({}),
+  );
+  const rows = screen.getAllByRole("rowheader").map((cell) => cell.textContent);
+  expect(rows).toEqual(["Article", "Promise check (before narration)", "Narration", "Images"]);
+  expect(screen.queryByText("This run makes nothing here to check.")).toBeNull();
 });

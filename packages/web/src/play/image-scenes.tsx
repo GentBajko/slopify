@@ -47,6 +47,7 @@ export function ImageScenesControl({
           checked={form.imageScenes === true}
           label="Scenes from the article"
           tip="play.image-scenes"
+          help="Gives every image its own moment of the article · one more AI call."
           onChange={(on) => {
             const { imageScenes: _dropped, ...rest } = form;
             onEdit({ ...document, form: { ...rest, ...(on ? { imageScenes: true } : {}) } });

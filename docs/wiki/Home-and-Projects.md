@@ -52,7 +52,7 @@ On a fresh install, Home sends you to the first-run screen once. See [First Laun
 
 Until you have a project of your own, Home shows:
 
-- **Your first video**: what a video needs on this computer (Script, Voice, Images), each with its state (**Ready** or **Not connected**) and the button that fixes it, the same list as the first-run screen. **Make your first video** opens Create; it is lime once nothing is missing.
+- **Your first video**: what a video needs on this computer (Article, Narration, Images), each with its state (**Ready** or **Needs setup**) and the button that fixes it, the same list as the first-run screen. **Make your first video** opens Create; it is lime once nothing is missing.
 - **Finished samples**: the bundled samples, each with its picture, its length, what it made and **Watch**. They stay on Home until you have finished a video of your own.
 
 ### Finished
@@ -78,13 +78,13 @@ The things that don't move on until you act:
 | A failed run | **Failed · <step>**, with a short reason | The fix to try: a button to Settings → Keys & services or Backup & storage when that is the fix, otherwise **Open to retry**. |
 | A run that failed because a CLI is signed out | **Failed · <step>** | **Copy sign-in command** copies the command (`claude auth login`, `codex login` or `agy`). Run it in a terminal on the computer running Slopify, then **Open to retry** and press **Check again** on the project. |
 
-A held run also offers **Keep as is**, which takes it off Needs you and leaves the rest unmade (with **Undo**); editing the project brings it back. A run waiting for an [agent's review](Agents-MCP#the-external-agent-reviewer) is not here: it goes on by itself, so it shows under Running. A step that failed while the run waits on something else shows here as a failed item. Up to 4 failed runs show; **See all N failed** opens Projects filtered to them.
+A held run also offers **Keep as is**, which takes it off Needs you and leaves the rest unmade (with **Undo**); editing the project brings it back. A run waiting for an [agent's review](Agents-MCP#your-own-ai-agent-as-the-checker) is not here: it goes on by itself, so it shows under Running. A step that failed while the run waits on something else shows here as a failed item. Up to 4 failed runs show; **See all N failed** opens Projects filtered to them.
 
 Only one button in the column is lime: the first decision's when there is one, otherwise **Watch** on the newest video. With nothing finished, waiting or running, Home says so, with **Make a video**. See [Pauses and Checks](Reviews-and-Checkpoints), [Schedules](Schedules) and [Recovery and Retries](Recovery-and-Retries).
 
 ### Running
 
-Videos being made, and runs **Waiting for the agent** (an External agent reviews what they made; they carry on once it answers or after 2 hours), up to 3. Paused runs are under Needs you. Each shows:
+Videos being made, and runs **Waiting for the agent** (your own AI agent checks what they made; they carry on once it answers or after 2 hours), up to 3. Paused runs are under Needs you. Each shows:
 
 - **Running** beside the title, and where the whole run stands, for example `Step 2 of 4 · Narration · about 4 min left on this step`.
 - Each step with its state, how long it took, and the running step's time left (for example `2 of 8 · about 4 min left`).
@@ -169,7 +169,7 @@ If nothing matches, the list says **No project matches. Clear the search or pick
 | **Paused** | Paused by you or an agent; nothing runs until it is continued. |
 | **Queued** | Waiting for its turn in the video queue. |
 | **Waiting for your review** | Held at a pause for your approval. |
-| **Waiting for the agent** | An External agent is reviewing what it made; it goes on by itself. |
+| **Waiting for the agent** | Your own AI agent is checking what it made; it goes on by itself. |
 | **Waiting for its day** | Made ahead by its schedule; only the video is left, for its day. |
 | **Stopped** | Stopped before it finished, for example by a restart. Open it and press **Continue the run**. |
 | **Kept as is** | What is left was set aside with **Keep as is**. |

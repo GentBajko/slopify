@@ -58,10 +58,16 @@ it.each(cases)(
         ...suppliedDocument,
         form: {
           ...suppliedDocument.form,
-          sources: { ...suppliedDocument.form.sources, audio: "generate" },
+          // A video to show captions in: a font is only uploaded for captions shown in it.
+          sources: {
+            ...suppliedDocument.form.sources,
+            audio: "generate",
+            images: "generate",
+            video: "generate",
+          },
           subtitles: {
             ...suppliedDocument.form.subtitles,
-            mode: "files",
+            mode: "burn-in",
             fontSize: "67",
             position: "top",
           },
@@ -131,8 +137,13 @@ it("keeps an inactive in-flight font locked until explicit recovery and ignores 
     ...suppliedDocument,
     form: {
       ...suppliedDocument.form,
-      sources: { ...suppliedDocument.form.sources, audio: "generate" },
-      subtitles: { ...suppliedDocument.form.subtitles, mode: "files" },
+      sources: {
+        ...suppliedDocument.form.sources,
+        audio: "generate",
+        images: "generate",
+        video: "generate",
+      },
+      subtitles: { ...suppliedDocument.form.subtitles, mode: "burn-in" },
     },
   });
   await openSection("Style");

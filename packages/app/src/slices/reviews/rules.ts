@@ -69,7 +69,7 @@ export function reviewFields(draft: ReviewDraft): readonly FieldError[] {
     fields.push({
       field: "reviews.provider",
       message:
-        "AI checks need a model to check with. Choose one under Pauses and checks → Advanced → Checked by, or set every check to Off.",
+        "AI checks need a model to check with. Choose one under Pauses and checks → Checker and stages → Checked by, or set every check to Off.",
     });
   const retries = reviews.retries;
   if (
@@ -78,7 +78,7 @@ export function reviewFields(draft: ReviewDraft): readonly FieldError[] {
   )
     fields.push({
       field: "reviews.retries",
-      message: `Enter a number of redos between ${reviewRetriesMin} and ${reviewRetriesMax} under Pauses and checks → Advanced.`,
+      message: `Enter a number of redos between ${reviewRetriesMin} and ${reviewRetriesMax} under Pauses and checks → Checker and stages.`,
     });
   const pictures = active.filter((stage) => visionStages.includes(stage));
   if (
@@ -89,7 +89,7 @@ export function reviewFields(draft: ReviewDraft): readonly FieldError[] {
   )
     fields.push({
       field: "reviews.provider",
-      message: `The ${pictures.map((stage) => reviewStageLabels[stage]).join(", ")} ${pictures.length === 1 ? "check looks" : "checks look"} at pictures, and Slopify can't show pictures to this checker. Under Pauses and checks → Advanced → Checked by, choose Claude Code or Codex, or set ${pictures.length === 1 ? "that check" : "those checks"} to Off.`,
+      message: `The ${pictures.map((stage) => reviewStageLabels[stage]).join(", ")} ${pictures.length === 1 ? "check looks" : "checks look"} at images, and Slopify can't show images to this checker. Under Pauses and checks → Checker and stages → Checked by, choose Claude Code or Codex, or set ${pictures.length === 1 ? "that check" : "those checks"} to Off.`,
     });
   return fields;
 }

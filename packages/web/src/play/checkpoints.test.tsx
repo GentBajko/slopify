@@ -21,6 +21,28 @@ const choices = [
   "Pause after the images (before the video)",
 ] as const;
 
+it("offers no pause for a set of images, whose images are the first thing it makes", async () => {
+  const h = reviewHarness();
+  await h.prepare({
+    ...generated,
+    form: {
+      ...generated.form,
+      sources: {
+        ...generated.form.sources,
+        research: "off",
+        article: "off",
+        audio: "off",
+        video: "off",
+      },
+    },
+  });
+  await openRow("Pauses and checks");
+  expect(screen.queryByRole("checkbox", { name: /^Pause after/ })).toBeNull();
+  expect(
+    screen.getByText("Nothing to pause for: the images are the first thing this run makes."),
+  ).not.toBeNull();
+});
+
 it("selects each checkpoint and preserves it through saves, unrelated edits and reload", async () => {
   const h = reviewHarness();
   await h.prepare(generated);

@@ -136,7 +136,7 @@ describe("the provider picker", () => {
     );
 
     const outdated = option(/Antigravity CLI/);
-    expect(outdated.textContent).toBe("Antigravity CLI · Needs an update");
+    expect(outdated.textContent).toBe("Antigravity CLI · Needs fixing");
     expect(outdated.disabled).toBe(true);
   });
 

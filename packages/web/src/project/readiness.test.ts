@@ -65,10 +65,10 @@ describe("a stage whose provider is not ready", () => {
     expect(unreadyFor("article", config, [cli("claude-code", false)])?.label).toBe("Not found");
   });
 
-  it("requires an update when an installed CLI has a compatibility issue", () => {
+  it("says Needs fixing, as Settings does, when an installed CLI has a compatibility issue", () => {
     expect(
       unreadyFor("article", config, [cli("claude-code", true, "Update this CLI.")])?.label,
-    ).toBe("Needs an update");
+    ).toBe("Needs fixing");
   });
 
   it("says nothing when the key is stored or the binary answers", () => {

@@ -5,6 +5,7 @@ import { useId } from "react";
 import { Checkbox, HelpLine, Input } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
 import { cn } from "@/lib/utils";
+import { promptGist } from "./prompt-cards";
 
 // Several image prompts run at once, each ticked and each with its own Number, bounded at
 // 1 to 20 per prompt and 60 across the run. Admission refuses a Number outside them; the
@@ -47,15 +48,19 @@ export function ImagePrompts({
 
   const missing = picked.filter((choice) => !prompts.some((prompt) => prompt.name === choice.name));
   const options = [
-    ...prompts.map((prompt) => ({ name: prompt.name, missing: false })),
-    ...missing.map((choice) => ({ name: choice.name, missing: true })),
+    ...prompts.map((prompt) => ({
+      name: prompt.name,
+      missing: false,
+      gist: promptGist(prompt.body).sentence,
+    })),
+    ...missing.map((choice) => ({ name: choice.name, missing: true, gist: "" })),
   ];
 
   if (options.length === 0) {
     return (
       <p className="sl-fields__wide basis-full text-small text-ink-2">
-        No image prompts yet. An image prompt describes the style every picture is drawn in; write
-        one on Prompts.
+        No image prompts yet. An image prompt describes the look every image is drawn in; write one
+        on Prompts.
       </p>
     );
   }
@@ -63,7 +68,7 @@ export function ImagePrompts({
   return (
     <div className="sl-fields__wide flex w-full basis-full flex-col gap-2" {...helpScope}>
       <span id={listId} className="sl-field__label">
-        Which image style?
+        Image prompts
       </span>
       {/* The prompts in columns, each name with its Number at the end of its own row, so the
           boxes line up down every column. A column is wide enough for a name beside "How many
@@ -84,6 +89,7 @@ export function ImagePrompts({
               ) : null}
               <PromptTick
                 name={prompt.name}
+                gist={prompt.gist}
                 number={choice?.number}
                 rawNumber={
                   rawNumbers
@@ -122,7 +128,7 @@ export function ImagePrompts({
           ? `Tick one or more. Each image is one paid image call; a run makes at most ${String(imagesPerRunMax)}.`
           : Number.isFinite(total)
             ? `${String(total)} of at most ${String(imagesPerRunMax)} images · each is one paid image call.`
-            : "Give each ticked style a number of images to see the total."}
+            : "Give each ticked prompt a number of images to see the total."}
       </HelpLine>
     </div>
   );
@@ -130,6 +136,7 @@ export function ImagePrompts({
 
 function PromptTick({
   name,
+  gist,
   number,
   problem,
   onTick,
@@ -140,6 +147,8 @@ function PromptTick({
     | { readonly value: string; readonly onChange: (number: string) => void }
     | undefined;
   readonly name: string;
+  // What the prompt draws, from its own first sentence, as the article cards say it.
+  readonly gist: string;
   readonly number: number | undefined;
   readonly problem: string | undefined;
   readonly onTick: (ticked: boolean) => void;
@@ -201,6 +210,9 @@ function PromptTick({
             }}
           />
         </>
+      )}
+      {gist === "" ? null : (
+        <span className="line-clamp-2 basis-full pl-7 text-label text-ink-2">{gist}</span>
       )}
       {problem === undefined ? null : (
         <span id={noteId} className="basis-full text-label text-danger">

@@ -7,9 +7,7 @@ import {
   loudnessDbMin,
   lufsOfDb,
   percentOfDb,
-  recommendedLufs,
   snapDb,
-  truePeakOf,
 } from "@app/slices/loudness/model.js";
 import { type ReactElement, useId, useState } from "react";
 import { Field, Input } from "@/components/kit/field";
@@ -134,7 +132,13 @@ function VolumeField({
     <Field
       label={label}
       tip={tip}
-      help={`0 dB is the recommended ${minus(recommendedLufs(target))} LUFS; this is ${minus(lufs)} LUFS. Peaks stay under ${minus(truePeakOf(target))} dBTP.`}
+      // In words a listener uses: what 0 dB is matched to. The LUFS and true-peak numbers stay in
+      // the info button and the finished project's sound report.
+      help={
+        target === "video"
+          ? "0 dB is the level YouTube and Spotify play everything at."
+          : "0 dB is the level audiobook shops ask for."
+      }
       error={local ? error : rangeMessage}
     >
       <span className="flex flex-wrap items-center gap-2 text-small">

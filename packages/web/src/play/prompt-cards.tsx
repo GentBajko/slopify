@@ -53,9 +53,10 @@ function lengthOf(body: string): string | undefined {
   return `About ${String(minutes)} min · ${counted ?? ""}`;
 }
 
-// More prompts than this and the list scrolls in its own box; more than `filterFrom` and a
-// filter box narrows it.
-const scrollFrom = 6;
+// More prompts than this and the list shows the first few (the picked one always among them)
+// with a button for the rest, rather than a scroll box inside the page that cut cards in half;
+// more than `filterFrom` and a filter box narrows it.
+const shortList = 6;
 const filterFrom = 8;
 
 // The article (or script) prompt, the heart of a run: every prompt of the kind as a card with
@@ -83,6 +84,7 @@ export function PromptCards({
   const name = useId();
   const [filter, setFilter] = useState("");
   const [writing, setWriting] = useState(false);
+  const [everyCard, setEveryCard] = useState(false);
   const mine = prompts.filter((prompt) => prompt.kind === kind);
   const picked = mine.find((prompt) => prompt.name === value);
   const words = filter.trim().toLowerCase();
@@ -97,6 +99,15 @@ export function PromptCards({
       )
       .map((prompt) => ({ name: prompt.name, body: prompt.body })),
   ];
+  // A typed filter shows every match; otherwise a long list shows its first few, keeping the
+  // picked card in view.
+  const folded = !everyCard && words === "" && cards.length > shortList;
+  const pickedAt = cards.findIndex((card) => card.name === value);
+  const shown = folded
+    ? cards.filter(
+        (card, at) => at < shortList - (pickedAt >= shortList ? 1 : 0) || card.name === value,
+      )
+    : cards;
   // The radio a refusal focuses: the picked one, else the first.
   const focusName = cards.some((card) => card.name === value) ? value : cards[0]?.name;
   const kindWord = kind === "script" ? "script" : "article";
@@ -133,12 +144,9 @@ export function PromptCards({
             role="radiogroup"
             aria-labelledby={labelId}
             aria-invalid={problem !== undefined}
-            className={cn(
-              "grid gap-2 grid-cols-[repeat(auto-fill,minmax(min(100%,15rem),1fr))]",
-              cards.length > scrollFrom && "max-h-[19rem] overflow-y-auto pr-1",
-            )}
+            className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,15rem),1fr))] gap-2"
           >
-            {cards.map((card) => {
+            {shown.map((card) => {
               const checked = card.name === value;
               const gist =
                 card.body === undefined
@@ -177,6 +185,16 @@ export function PromptCards({
               );
             })}
           </div>
+          {folded ? (
+            <Button
+              variant="quiet"
+              size="small"
+              className="self-start"
+              onClick={() => setEveryCard(true)}
+            >
+              Show all {String(cards.length)} {kindWord} prompts
+            </Button>
+          ) : null}
           {problem === undefined ? null : <p className="sl-field__error m-0">{problem}</p>}
           <HelpLine>A prompt tells the AI what to write, and at what length. {newPrompt}</HelpLine>
         </>

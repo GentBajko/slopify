@@ -65,7 +65,7 @@ Anything you can do in the web page, except the few things listed under [What ag
 
 - **Projects:** make projects from Create drafts and templates (after the same review and estimate you see), read them, edit them, pause, continue and cancel runs, **Keep as is**, move projects to another channel, delete and restore them.
 - **Fixing runs:** **Try ... again**, **Soften and retry**, make a step or one item again, make a narration chunk again, and **Choose what to make again**, with its estimate.
-- **Pauses and checks:** answer AI checks set to **External agent (MCP)**, **Overrule** or **Redo** flagged items, and approve pauses.
+- **Pauses and checks:** answer AI checks set to **Your own AI agent**, **Overrule** or **Redo** flagged items, and approve pauses.
 - **Planning:** release times, the posting plan, **Mark uploaded**, **Deleted on YouTube**, and **Copy for YouTube Studio** up to **Ready to upload**.
 - **Schedules:** schedules, their topic lists, approving or turning down held topics, and **Prepare**.
 - **Prompts, templates and settings:** prompts (with history), templates, channels and cast, export and import, and settings other than those below.
@@ -102,12 +102,12 @@ Everything an agent changes is marked, so you can always tell its work from your
 | Notifications | A run an agent started ends its notices with **· started by agent** ("Started: *title* · by agent" in the browser); a flag from an agent's review ends with **· by agent**. |
 | Settings → AI agents | **What agents did**: the latest 20 changes of every kind. |
 
-## The External agent reviewer
+## Your own AI agent as the checker
 
 Instead of paying a model to check, you can let your agent do the [AI checks](Reviews-and-Checkpoints#ai-checks).
 
 1. On Create, open the **Pauses and checks** row (or **Edit settings** → **Pauses and checks** on a project).
-2. Under **Have an AI check the results**, open **Advanced** and set **Who checks** to **External agent (MCP)**. **Checked by** goes away: the agent needs no service or model.
+2. Under **Have an AI check the results**, open **Checker and stages** and set **Who checks** to **Your own AI agent**. **Checked by** goes away: the agent needs no service or model.
 3. Pick **Flag problems** or **Flag and redo**, for every stage or each on its own, as usual. Picture stages (images, the thumbnail, shorts) work too: the agent is shown the pictures.
 
 Reviews by the agent cost nothing and add nothing to the estimate. Redos it asks for cost what the item cost, as always.
@@ -153,7 +153,7 @@ The steps above are the **attend routine**. Slopify hands it to every agent that
 
 ## Tips
 
-- Pair the External agent reviewer with an hourly attend routine, and a [Notification URL](Notifications#get-notifications-on-your-phone-notification-url) so you hear when a review passed without an answer: that usually means the routine stopped running.
+- Pair your own AI agent as the checker with an hourly attend routine, and a [Notification URL](Notifications#get-notifications-on-your-phone-notification-url) so you hear when a review passed without an answer: that usually means the routine stopped running.
 - Check **What agents did** in Settings → AI agents now and then; each project's **Edit settings** → **Versions** has the full story for that project.
 - If an agent's request is refused because the project changed meanwhile, it reads the project again and retries once; you do not need to do anything.
 

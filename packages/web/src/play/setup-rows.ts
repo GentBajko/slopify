@@ -11,11 +11,13 @@ import {
   atmosphereLabels,
   colorGradeLabels,
   transitionLabels,
+  usesNarrationCuts,
   type VideoEditSettings,
   videoEditOf,
 } from "@app/slices/video/edit-settings.js";
 import { voiceFormatLabels } from "@app/slices/voices/model.js";
 import { pauseLabel } from "./checkpoints";
+import { imageServiceUsers, listed } from "./image-needs";
 import type { OutputKind } from "./output-kind";
 import type { PlaySection } from "./sections";
 import { type PlayFormState, shortsOn } from "./state";
@@ -180,12 +182,6 @@ const shapes: Readonly<Record<string, string>> = {
 
 const article = (word: string): string => (/^[aeiou]/i.test(word) ? "an" : "a");
 
-// "a, b and c".
-function listed(parts: readonly string[]): string {
-  if (parts.length <= 1) return parts[0] ?? "";
-  return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1] ?? ""}`;
-}
-
 // Each row's one sentence: what the run will do, in the person's words and the services'
 // own names. Defaults read as defaults; nothing is a raw setting or id.
 export function rowSummary(row: SetupRowId, form: PlayFormState, context: SummaryContext): string {
@@ -252,27 +248,52 @@ export function rowSummary(row: SetupRowId, form: PlayFormState, context: Summar
         return form.provided.audio === undefined
           ? "Your own recording, not attached yet."
           : `Your own recording: ${form.provided.audio.name}.`;
-      const voiceService = service(form.audio.provider);
-      if (voiceService === undefined) return "No voice service picked yet.";
       const extras = [
         form.intro ? `the “${form.intro}” intro` : undefined,
         form.outro ? `the “${form.outro}” outro` : undefined,
       ].filter((part) => part !== undefined);
       const after = extras.length > 0 ? `, with ${listed(extras)}` : "";
+      // Several speakers with no intro or outro are read by their own voices' services only.
+      if (form.voices !== undefined && extras.length === 0) {
+        const services = [
+          ...new Set(
+            form.voices.speakers.flatMap((speaker) => {
+              const name = service(speaker.voice.provider);
+              return name === undefined ? [] : [name];
+            }),
+          ),
+        ];
+        const format = `${voiceFormatLabels[form.voices.format]} with ${String(form.voices.speakers.length)} speakers`;
+        return services.length === 0
+          ? `${format}; no voices picked yet.`
+          : `${format}, read by ${listed(services)}.`;
+      }
+      const voiceService = service(form.audio.provider);
+      if (voiceService === undefined) return "No voice service picked yet.";
       if (form.voices !== undefined)
         return `${voiceFormatLabels[form.voices.format]} with ${String(form.voices.speakers.length)} speakers, read by ${voiceService}${after}.`;
       const voice = context.voices.find(
         (one) => one.provider === form.audio.provider && one.voiceId === form.audio.voice,
       );
+      if (form.audio.model === "") return `${voiceService}: no voice model picked yet.`;
       if (form.audio.voice === "") return `${voiceService}: no voice picked yet.`;
       return `Read by ${voice?.name ?? form.audio.voice}, ${article(voiceService)} ${voiceService} voice${after}.`;
     }
     case "images": {
-      if (form.sources.images === "off") return "No images.";
+      // With no images drawn here, the thumbnail and the shorts may still be: the row says who
+      // draws them, or that nobody is picked to.
+      const users = imageServiceUsers(form);
+      const others =
+        users.length === 0
+          ? ""
+          : by(form.images) === undefined
+            ? ` ${capitalised(listed(users))} still ${users.length === 1 ? "needs" : "need"} an image service.`
+            : ` ${capitalised(listed(users))} drawn by ${by(form.images) ?? ""}.`;
+      if (form.sources.images === "off") return `No images.${others}`;
       if (form.sources.images === "provide")
         return form.provided.images.length === 0
-          ? "Your own images, none attached yet."
-          : `${String(form.provided.images.length)} of your own images.`;
+          ? `Your own images, none attached yet.${others}`
+          : `${String(form.provided.images.length)} of your own images.${others}`;
       const counts = form.imagePrompts.map((one) => Number(one.number) || 0);
       const total = counts.reduce((sum, count) => sum + count, 0);
       const styles = listed(form.imagePrompts.map((one) => `“${one.name}”`));
@@ -299,10 +320,15 @@ export function rowSummary(row: SetupRowId, form: PlayFormState, context: Summar
       if (kind === "audiobook" || kind === "podcast")
         return `${captions[0]?.toUpperCase() ?? ""}${captions.slice(1)}.`;
       if (form.sources.video === "off") return `No video: sound only, ${captions}.`;
+      // Cuts that follow the narration still hold each image about this long, then wait for a
+      // sentence to end.
+      const seconds = Number.isFinite(form.imageSeconds) ? String(form.imageSeconds) : undefined;
       const cuts =
-        videoEditOf(form).cuts === "narration"
-          ? "a new image at each sentence"
-          : "a new image every few seconds";
+        seconds === undefined
+          ? "a new image every few seconds"
+          : usesNarrationCuts(form)
+            ? `a new image about every ${seconds} s, at the end of a sentence`
+            : `a new image every ${seconds} s`;
       return `${shape}, ${cuts}, ${lookWords(videoEditOf(form))}, ${captions}.`;
     }
     case "outputs": {
@@ -374,6 +400,10 @@ export function lookWords(edit: VideoEditSettings): string {
         : "chapter openers animated (paid)",
   ].filter((part) => part !== undefined);
   return parts.length === 0 ? "no effects" : listed(parts);
+}
+
+function capitalised(text: string): string {
+  return `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
 }
 
 function nonEmpty(values: Readonly<Record<string, string>>): Readonly<Record<string, string>> {

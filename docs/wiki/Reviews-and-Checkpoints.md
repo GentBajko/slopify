@@ -65,7 +65,7 @@ Only steps the run makes itself, and has not started, can be ticked. Once every 
 
 ## AI checks
 
-An AI checks each finished item and saves its verdict and reasons on the project page. The checker is a model Slopify asks (each check is one AI call, counted in usage and in the estimate), or an agent you connected (free; see [The External agent reviewer](#the-external-agent-reviewer)).
+An AI checks each finished item and saves its verdict and reasons on the project page. The checker is a model Slopify asks (each check is one AI call, counted in usage and in the estimate), or an agent you connected (free; see [Your own AI agent as the checker](#your-own-ai-agent-as-the-checker)).
 
 **Have an AI check the results** sets every stage the run makes at once:
 
@@ -75,19 +75,19 @@ An AI checks each finished item and saves its verdict and reasons on the project
 | **Flag problems** | The item is marked failed, with the reasons, and the run carries on. |
 | **Flag and redo** | The item is made again and checked again, up to **Redos per item**. After that it is kept and flagged. It never loops. |
 
-The line under it says "Each check is one more AI call per item; a redo makes the item again, at its price." Turning checks on with no checker picked uses the AI that writes the article. When the stages are set differently, the choice shows none of the three and the line says "Each stage is set on its own under Advanced."
+The line under it says "Each check is one more AI call per item; a redo makes the item again, at its price." Turning checks on with no checker picked uses the AI that writes the article. When the stages are set differently, the choice shows none of the three and the line says "Each stage is set on its own under Checker and stages."
 
-### Advanced
+### Checker and stages
 
-**Advanced** under it folds out the rest. Its summary says who checks and how many stages are checked.
+**Checker and stages** under it folds out the rest. Its summary says who checks and how many stages are checked.
 
 | Option | What it does | Default / range |
 | --- | --- | --- |
-| **Who checks** | **Model**: Slopify asks the model under **Checked by**, one paid call per item. **External agent (MCP)**: an agent connected in Settings → **AI agents** answers each check instead, at no cost. | Model |
+| **Who checks** | **An AI model**: Slopify asks the model under **Checked by**, one paid call per item. **Your own AI agent**: an agent connected in Settings → **AI agents** answers each check instead, at no cost. | An AI model |
 | **Redos per item** | How many times **Flag and redo** makes a failed item again before it keeps the last one and flags it. Each redo costs the item again plus one more check. | 2; 0 to 5 |
-| **Checked by** | The **Service** and **Model** that judge each item. A stronger model catches more but costs more per check. It can differ from the one that wrote the text. Pictures (images, the thumbnail and shorts) need Claude Code or Codex, which can look at images; other services check text only. | The article's writer |
+| **Checked by** | The **Service** and **Model** that judge each item. A stronger model catches more but costs more per check. It can differ from the one that wrote the text. Checks of the images, the thumbnail and shorts need Claude Code or Codex, which can look at images; other services check text only. | The article's writer |
 
-Then the table **Stage** / **Check, and the prompt it uses** sets each stage (**Article**, **Promise check (before narration)**, **Images**, **Narration**, **Thumbnail**, **Shorts**) on its own: **Off**, **Flag problems** or **Flag and redo**, and, once it is on, the prompt: **Built-in prompt** or one of your **Review** prompts (see [Prompts](Prompts)). A stage the run makes nothing for is greyed and says "This run makes nothing here to check."
+Then the table **Stage** / **Check, and the prompt it uses** sets each stage, in the order the run makes them (**Article**, **Promise check (before narration)**, **Narration**, **Images**, **Thumbnail**, **Shorts**), on its own: **Off**, **Flag problems** or **Flag and redo**, and, once it is on, the prompt: **Built-in prompt** or one of your **Review** prompts (see [Prompts](Prompts)). A stage the run makes nothing for is left out; the promise check stays, greyed, saying it "Needs an article the AI writes."
 
 ### What each check looks at
 
@@ -108,18 +108,18 @@ One cheap AI call before the paid narration. The checker reads the video's title
 - **Fails** on a slow preamble, a greeting or channel housekeeping (subscribe, welcome back) before the subject, an opening about something else, or a promise the article never keeps. The reasons name the sentence that should come first.
 - **Flag and redo** writes the article again and checks the new one. The narration, the pictures and everything else that reads the article wait for the answer, so nothing paid is made from an opening that failed.
 - It needs an article the AI writes: otherwise its row is greyed and says "Needs an article the AI writes."
-- It uses the checker above and adds one AI call to the estimate. **Have an AI check the results** leaves it as it is; set it on its own under Advanced. Default: Off.
+- It uses the checker above and adds one AI call to the estimate. **Have an AI check the results** leaves it as it is; set it on its own under Checker and stages. Default: Off.
 
 ### Set up the AI checks
 
 1. Open the **Pauses and checks** row.
 2. Under **Have an AI check the results**, pick **Flag problems** or **Flag and redo**.
-3. Optional: open **Advanced** to pick who checks (**Checked by**, or **External agent (MCP)**), set **Redos per item** (empty means 2), or set a stage on its own with a Review prompt. For image, thumbnail or shorts checks, pick Claude Code or Codex. With another checker, the row says "Picture checks need Claude Code or Codex as the checker: Slopify can't show pictures to this one." and the run cannot start.
+3. Optional: open **Checker and stages** to pick who checks (**Checked by**, or **Your own AI agent**), set **Redos per item** (empty means 2), or set a stage on its own with a Review prompt. For image, thumbnail or shorts checks, pick Claude Code or Codex. With another checker, the row says "Checks of images need Claude Code or Codex as the checker: Slopify can't show images to this one." and the run cannot start.
 4. Check the estimate: each check adds one AI call. Redos are not in the estimate; each costs what the item cost, at most the redos allowed.
 
-### The External agent reviewer
+### Your own AI agent as the checker
 
-With **Who checks** set to **External agent (MCP)**, no model is called: each check waits for an agent connected to Slopify to answer it (see [Agents (MCP)](Agents-MCP)). Every stage can use it, picture stages included, since the agent is shown the pictures. It adds nothing to the estimate.
+With **Who checks** set to **Your own AI agent**, no model is called: each check waits for an agent connected to Slopify to answer it (see [Agents (MCP)](Agents-MCP)). Every stage can use it, picture stages included, since the agent is shown the pictures. It adds nothing to the estimate.
 
 - While a check waits, what depends on the item waits, as with any check. If nothing else holds the run, the project reads **Waiting for the agent** (title row, Projects, Home's Running, the calendar). It is not in **Needs you**, sends no "Waiting for you" notice and has no **Continue the run**: it goes on by itself.
 - The agent answers **pass** or **fail**. A fail needs at least one reason, at most 10, each up to 500 characters. The answer then follows the stage's choice like a model's verdict: **Flag problems** flags it, **Flag and redo** makes it again up to **Redos per item**.
@@ -129,7 +129,7 @@ With **Who checks** set to **External agent (MCP)**, no model is called: each ch
 
 ### Verdicts on the project page
 
-Beside the article (with the promise check's verdict under the article's), the narration, the thumbnail and each short, and on each image, the verdict shows as **Review passed**, **Flagged by review**, **Waiting to be made again**, **Being made again**, **Redone after review** or **Accepted by you**, with the reasons. With the External agent reviewer, or when an agent acted on it, it reads **Passed by agent**, **Flagged by agent**, **Redone after agent review**, **Accepted by agent**, **Made again by agent**, or **Passed without review** when no agent answered in time. For a failed item nobody has acted on:
+Beside the article (with the promise check's verdict under the article's), the narration, the thumbnail and each short, and on each image, the verdict shows as **Review passed**, **Flagged by review**, **Waiting to be made again**, **Being made again**, **Redone after review** or **Accepted by you**, with the reasons. With your own AI agent as the checker, or when an agent acted on it, it reads **Passed by agent**, **Flagged by agent**, **Redone after agent review**, **Accepted by agent**, **Made again by agent**, or **Passed without review** when no agent answered in time. For a failed item nobody has acted on:
 
 - **Overrule** accepts it as it is.
 - **Redo** makes it again (a new version of the project, then the item and what depends on it are made again), and it is checked again.
@@ -148,7 +148,7 @@ When a check flags an item and keeps it (its redos ran out, or the stage is on *
 | Look at the images before the video is put together | **Pause after the images (before the video)** |
 | Catch broken hands or stray text without watching every run | **Have an AI check the results**: **Flag and redo** |
 | Run unattended on a schedule and fix things later | Checks on **Flag problems**, no pauses |
-| Have the checks done without paying for a model | **External agent (MCP)** with an hourly agent routine; see [Agents (MCP)](Agents-MCP) |
+| Have the checks done without paying for a model | **Your own AI agent** with an hourly agent routine; see [Agents (MCP)](Agents-MCP) |
 
 ## Tips
 

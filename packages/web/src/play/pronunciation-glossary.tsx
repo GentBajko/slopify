@@ -2,6 +2,9 @@ import { type ReactElement, type ReactNode, useId } from "react";
 import { Checkbox } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 
+// "Use the article's pronunciation glossary": names read with the IPA the article lists under its
+// Pronunciation Glossary heading. Only Inworld TTS-2 voices read it, so for any other voice the
+// tick is not shown at all; the choice is kept on the draft for when such a voice is picked.
 export function PronunciationGlossary({
   value,
   supported,
@@ -17,9 +20,10 @@ export function PronunciationGlossary({
     readonly onChange: (value: boolean) => void;
     readonly note?: ReactNode;
   };
-}): ReactElement {
+}): ReactElement | null {
   const id = useId();
-  const sharing = supported && value === true;
+  if (!supported) return null;
+  const sharing = value === true;
   return (
     <div className="col-span-full min-w-0 space-y-2">
       <span className="flex items-center gap-1" {...helpScope}>
@@ -31,15 +35,14 @@ export function PronunciationGlossary({
             id={id}
             data-play-field="audio.usePronunciationGlossary"
             checked={value === true}
-            disabled={!supported}
-            aria-describedby={supported ? undefined : `${id}-support`}
             onChange={(event) => onChange(event.currentTarget.checked)}
           />
-          Use Pronunciation Glossary
+          Use the article's pronunciation glossary
         </label>
         <InfoTip id="play.pronunciation-glossary" />
       </span>
-      {shared === undefined ? null : (
+      {/* Only while the glossary is used: the other projects' entries join it. */}
+      {shared === undefined || !sharing ? null : (
         <div className="space-y-1 pl-7" {...helpScope}>
           <span className="flex items-center gap-1">
             <label
@@ -50,7 +53,6 @@ export function PronunciationGlossary({
                 id={`${id}-shared`}
                 data-play-field="audio.shareGlossary"
                 checked={shared.value === true}
-                disabled={!sharing}
                 onChange={(event) => shared.onChange(event.currentTarget.checked)}
               />
               Also use pronunciations from my other projects
@@ -60,11 +62,6 @@ export function PronunciationGlossary({
           {shared.note === undefined ? null : shared.note}
         </div>
       )}
-      {!supported ? (
-        <p id={`${id}-support`} className="text-label text-ink-3">
-          Only Inworld TTS-2 voices read it; your choice is kept for when you pick one.
-        </p>
-      ) : null}
     </div>
   );
 }

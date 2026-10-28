@@ -56,7 +56,7 @@ it("summarizes the run in the rows' own groups, with one Change per group", asyn
   expect(within(region("Extras")).getByText("Title card")).not.toBeNull();
   const article = region("Article");
   expect(within(article).getByText("Claude Code CLI")).not.toBeNull();
-  expect(within(article).getByText("high")).not.toBeNull();
+  expect(within(article).getByText("High")).not.toBeNull();
   const style = region("Video and style");
   expect(within(style).getByText("048 px")).not.toBeNull();
   expect(within(style).getByText("upper-middle")).not.toBeNull();
@@ -90,7 +90,7 @@ it.each([
       Research: "Off",
       Narration: "AI voice (paid per character)",
       Images: "Made by AI (paid)",
-      Video: "Make the video",
+      Video: "On (free)",
       Thumbnail: "From my thumbnail prompt",
     },
   ],
