@@ -15,19 +15,21 @@ import { frameAspect } from "./body-images.js";
 import { OpenProjectTab } from "./fix-it.js";
 import { LiveAudio } from "./live-audio.js";
 import { LiveWriting } from "./live-writing.js";
+import { runStep } from "./measured-eta.js";
+import type { SectionId } from "./next-action.js";
 import { useOutputMedia } from "./revision-media.js";
-import { runSteps } from "./run-aside.js";
+import { runSectionSteps } from "./run-aside.js";
 import { workDuration } from "./run-cost.js";
 import { timeLeft } from "./status-rows.js";
 import { duration, finalOutput, stageFraction, summaryOf } from "./summary.js";
 import { WaveAudioPlayer } from "./waveform.js";
 import { overallProgress } from "./workspace.js";
 
-// Progress: watching the run while it goes. A headline with the whole run's share and time
-// left ("Making your video · 3 of 5 · about 6 min left") over one bar, the steps with their
-// times, then what each makes as it lands: the article as it is written, the narration's
-// waveform growing, the images as they are drawn and the video while it renders, which becomes
-// its player the moment the file is there. A finished step says so in the past tense. Fed by
+// Progress: watching the run while it goes. A headline with where the run stands and its time
+// left ("Making your video · Step 3 of 5 · about 6 min left", counted as the title row counts)
+// over one bar, the steps with their times, one per section, then what each makes as it lands:
+// the article as it is written, the narration's waveform growing, the images as they are drawn
+// and the video while it renders, which becomes its player the moment the file is there. A finished step says so in the past tense. Fed by
 // the page's event stream; nothing here starts or changes work.
 export function LiveBuild({
   project,
@@ -36,6 +38,7 @@ export function LiveBuild({
   outputs,
   resumable,
   holding,
+  outdated,
 }: {
   readonly project: ProjectSummary;
   readonly revisionId: string | null;
@@ -43,11 +46,13 @@ export function LiveBuild({
   readonly outputs: readonly Output[];
   readonly resumable: boolean;
   readonly holding: readonly CheckpointHold[];
+  // Outdated outputs per section, as the status list reads them.
+  readonly outdated?: ((section: SectionId) => number) | undefined;
 }): ReactElement {
   const now = useNow(project.status === "running");
   const overall = overallProgress(stages);
   const left = project.status === "paused" ? undefined : timeLeft(stages, now);
-  const steps = runSteps({ stages, outputs, project, resumable, holding, now });
+  const steps = runSectionSteps({ stages, outputs, project, resumable, holding, now, outdated });
   // In the order they are shown, not the order they happened to land in.
   const images = outputs
     .filter((output) => output.role === "image")
@@ -60,7 +65,7 @@ export function LiveBuild({
   const video = stageOf("video");
   const headline = [
     project.status === "paused" ? "Paused" : makingWords(project),
-    `${String(overall.completed)} of ${String(overall.total)}`,
+    runStep(stages),
     left,
   ]
     .filter((part) => part !== undefined)

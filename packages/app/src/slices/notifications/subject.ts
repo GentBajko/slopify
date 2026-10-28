@@ -5,7 +5,7 @@ import { stepFailedWhileWaiting } from "../admission/state-words.js";
 import { lastStarter } from "../agents/repo.js";
 import { projectHolds } from "../reviews/holds.js";
 import { isTemplateSample } from "../template-studio/repo.js";
-import { uploadedAndSettled } from "../uploads/repo.js";
+import { settledProjects } from "../uploads/repo.js";
 import { settledStatus } from "../uploads/rules.js";
 import { atItsDay, failuresOf, type NoticeSubject } from "./rules.js";
 
@@ -18,7 +18,7 @@ export function noticeSubject(
   const project = projectById(db, projectId);
   if (project === undefined || isTemplateSample(db, projectId)) return undefined;
   const stages = stagesOf(db, projectId);
-  const settled = uploadedAndSettled(db, projectId);
+  const settled = settledProjects(db, projectId);
   const holds = projectHolds(db, { projectId, standings: new Map([[projectId, stages]]), settled });
   const status = settledStatus(derive(stages, project.paused), settled.has(projectId));
   const failures = failuresOf(stages);

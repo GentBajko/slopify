@@ -165,9 +165,11 @@ describe("Copy for YouTube Studio", () => {
     expect(within(titles).getByRole("radio", { name: "The Fox" })).toHaveProperty("checked", true);
     expect(within(drawer).getAllByRole("button", { name: "Use for upload" })).toHaveLength(1);
     expect(within(drawer).getByRole("button", { name: "Copy the other titles" })).not.toBeNull();
+    // Named for what it holds and its kind, with one Open folder for the video and thumbnails.
     expect(
-      within(drawer).getByRole("link", { name: "Download the-fox-video.mp4" }).getAttribute("href"),
+      within(drawer).getByRole("link", { name: "Download video (.mp4)" }).getAttribute("href"),
     ).toBe("http://slopify.test/files/p1/video");
+    expect(within(drawer).getAllByRole("button", { name: /^Open folder/ })).toHaveLength(1);
     // The thumbnails sit under the list, lettered for Test & compare.
     const thumbnails = within(drawer).getByRole("region", { name: "Thumbnails to upload" });
     expect(
@@ -454,6 +456,9 @@ describe("Copy for YouTube Studio", () => {
     expect(within(drawer).queryByRole("button", { name: "I've uploaded it" })).toBeNull();
     expect(within(drawer).queryByRole("radiogroup")).toBeNull();
     expect(within(drawer).queryByRole("button", { name: "Use for upload" })).toBeNull();
+    // Its release step does not send the person to a date box the sample doesn't have.
+    expect(within(drawer).getByText(/^No date: the sample isn't on YouTube/u)).not.toBeNull();
+    expect(within(drawer).queryByText(/Set one under/u)).toBeNull();
   });
 
   it("is disabled until the video is made", async () => {

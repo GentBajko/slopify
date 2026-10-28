@@ -348,7 +348,9 @@ it("on the read-only sample, copies the text and says in one sentence that it ca
     },
   });
   expect(await screen.findByText(/This sample isn't on YouTube and can't be/u)).not.toBeNull();
-  expect(screen.getByRole("button", { name: "Make my own copy" })).not.toBeNull();
+  // Make my own copy is the title row's button: named here, not drawn a second time.
+  expect(screen.getByText(/Press Make my own copy at the top/u)).not.toBeNull();
+  expect(screen.queryByRole("button", { name: "Make my own copy" })).toBeNull();
   expect(await screen.findByRole("button", { name: "Copy description" })).not.toBeNull();
   // Nothing on it edits, writes again, takes a date or a link.
   expect(screen.queryByRole("button", { name: /^Edit /u })).toBeNull();

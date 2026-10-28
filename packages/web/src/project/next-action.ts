@@ -391,7 +391,7 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
         group.count === 1 || group.singular
           ? `The ${group.noun} ${group.noun.endsWith("s") ? "are" : "is"} outdated after your edit.`
           : `${String(group.count)} ${group.plural} are outdated after your edit.`,
-      why: "They keep their current version until you make them again. Before anything charged starts, you see what is made again and its estimated cost; nothing else is made again.",
+      why: `${group.count === 1 || group.singular ? "It keeps its current version until you make it" : "They keep their current version until you make them"} again. Before anything charged starts, you see what is made again and its estimated cost; nothing else is made again.`,
       action: {
         label: makeAgainLabel(group),
         intent: { kind: "remake", workKeys: group.workKeys },

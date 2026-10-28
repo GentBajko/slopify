@@ -96,6 +96,31 @@ describe("ReleaseTimes", () => {
     await waitFor(() => expect(calls).toEqual(['put {"short":0,"at":null}']));
   });
 
+  // A day typed or picked without a time: the browser reports the box as empty (badInput). The
+  // line under it asks for the time rather than saying "No date yet" while the box shows a day.
+  it("asks for the time when a box is left with a day but no time", async () => {
+    const calls = setup();
+    const input = (await screen.findByLabelText("Short 1 release date")) as HTMLInputElement;
+    Object.defineProperty(input, "validity", {
+      configurable: true,
+      get: () => ({ badInput: true }),
+    });
+    fireEvent.blur(input);
+    expect(calls).toEqual([]);
+    expect(screen.getByText("Add a time too: the date is saved once it has one.")).not.toBeNull();
+    expect(screen.queryByText("No date yet")).toBeNull();
+    // With the time added, the whole date saves and the line says so.
+    Object.defineProperty(input, "validity", {
+      configurable: true,
+      get: () => ({ badInput: false }),
+    });
+    fireEvent.change(input, { target: { value: "2036-11-05T09:00" } });
+    expect(screen.queryByText(/^Add a time too/u)).toBeNull();
+    fireEvent.blur(input);
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toContain('"short":1');
+  });
+
   it("takes a free plan time only after Take this time, not on picking it", async () => {
     const calls = setup();
     await userEvent.click(await screen.findByText("Posting plan"));

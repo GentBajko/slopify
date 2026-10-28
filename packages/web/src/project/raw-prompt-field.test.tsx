@@ -31,7 +31,7 @@ function Raw({
   );
 }
 
-const box = () => screen.getByLabelText("Raw prompt for Thing") as HTMLTextAreaElement;
+const box = () => screen.getByLabelText("Prompt for Thing") as HTMLTextAreaElement;
 
 describe("a project's raw prompt", () => {
   it("judges keywords by where the prompt runs", () => {

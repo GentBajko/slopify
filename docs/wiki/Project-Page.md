@@ -8,10 +8,10 @@ Every run you start gets a project page. It shows each part as it is made, puts 
 
 | Part | What it holds |
 | --- | --- |
-| Title row | **Projects** (the way back), the project title, its state in words beside its lamp (for example **● Done**), a short line of facts (finished when and how long it took, or when it started; its channel; when it was uploaded; "Audiobook" or "Podcast episode" for spoken work), then the one thing to do next (the page's only lime button), **Edit settings** and **More**. While a step works, the line says where the run stands, as Home does (`Step 2 of 4 · Narration · about 4 min left on this step`), beside a clock: `Working · 9 min 30 s`, holding still as `9 min 30 s of work so far` while the run is paused or waits on you. |
+| Title row | **Projects** (the way back), the project title, its state in words beside its lamp (for example **● Done**), a short line of facts (finished when and how long it took, or when it started; its channel; when it was uploaded; "Audiobook" or "Podcast episode" for spoken work), then the one thing to do next (the page's only lime button) and **Edit settings**. Facts that do not fit beside the title go on a line under it, each one whole. While a step works, the line says where the run stands, as Home does (`Step 2 of 4 · Narration · about 4 min left on this step`), beside a clock: `Working · 9 min 30 s`, holding still as `9 min 30 s of work so far` while the run is paused or waits on you. |
 | Note under the title | One line, only when the situation needs saying: the read-only sample, a paused, stopped or queued run, a run an agent is reviewing, a finished short. |
 | Main column | The part you picked. |
-| Status list (right) | One row per thing the project makes: **Article**, **Narration**, **Images**, **Video**, **Shorts**, **YouTube**, **PDF**, each with its state in words and one detail, for example **Done · 4 images + 1 thumbnail**. **All files** closes the list with how many files there are. While the run goes, **Progress** leads the list, and a row that works, waits or failed gets a second line saying what it is doing and the time left. A part with outdated files says how many, for example **Done · 2 outdated**. |
+| Status list (right) | One row per thing the project makes: **Article**, **Narration**, **Images**, **Video**, **Shorts**, **YouTube**, **PDF**, each with its state in words and one detail, for example **Done · 4 images + 1 thumbnail**. **All files** closes the list as a button with a folder and how many files there are. While the run goes, **Progress** leads the list, and a row that works, waits or failed gets a second line saying what it is doing and the time left. A part with outdated files says how many, for example **Done · 2 outdated**, or **Outdated** when an edit sent it back to wait (a renamed project's PDF, which prints the title). Under the list, the cost line, then the project's other actions in words (see [Project actions](#project-actions)). |
 | Under the list | The cost line (see below), **Make the next chapter** on a finished audiobook that is a chapter of a book, and, while videos wait in the queue, how many with the list to reorder them. |
 
 Press a row of the status list to open that part. The page opens where the next action points: the failed step, the held review or the outdated images. When nothing needs you, it opens on the part the run is at, and a finished video opens on **Video**: the player, **Download video (.mp4)**, **Open folder**, the chapters, **Copy description** and **Copy tags**.
@@ -84,9 +84,8 @@ A step that is waiting to try again or waiting for a plan limit also stays held 
 
 ### Cancel a run
 
-1. Open **More** in the title row.
-2. Choose **Cancel the run…**.
-3. Confirm, or keep it running.
+1. Press **Cancel the run…** under the project's status, on the right.
+2. Confirm, or keep it running.
 
 Canceling stops every running step; finished files are kept. You can continue a canceled run later with **Continue the run**. If you tried a step again after canceling (**Try … again**), Continue carries on only that work; see [Recovery and Retries](Recovery-and-Retries#cancel-then-continue). A running project has to be canceled before you can delete it.
 
@@ -99,7 +98,7 @@ A part appears only when the run makes it. The research notes are a tab of Artic
 | **Article** | The article in a reading view, with tabs for **Research** notes, **Sources**, **Speakers** (scripts for several voices) and **Pronunciation** when those exist, its length and how long it reads aloud, its download, **Open folder** and **Copy article**. |
 | **Narration** | A player for the intro, the article and the outro, the downloads, and the text that plays along: press a line to play from there. Podcasts and interviews show the conversation turn by turn with speaker names. |
 | **Images** | The thumbnail (with **See it as YouTube shows it**), every image in order, on-screen cards for tables and figures, and the establishing image (a reference that is not in the video). Each picture has its actions under it in words: **Make this image again**, **Download**, **More** (**Compare with previous**, **Replace with my file**, **Delete**) and **Full size**. **Download all 4 images (.zip)** saves them all. |
-| **Video** (or **Audio export** when the video is off) | The player, **Download video (.mp4)**, **Open folder**, the caption files, the length, shape, size and loudness, the chapters (press one to play from there), **Copy description** and **Copy tags**. **Technical details** folds out the rest. |
+| **Video** (or **Audio export** when the video is off) | The player, **Download video (.mp4)**, **Open folder**, **Download captions (.srt)** (the .vtt is in **All files**), the length, shape, size and loudness, **Copy description** and **Copy tags**, then the chapters (press one to play from there). **Measured loudness** folds out the loudness measured in LUFS. |
 | **Shorts** | The vertical clips picked from the video, each with its title and hashtags. See [Shorts](Shorts). |
 | **YouTube** | The title, description, chapters, hashtags and tags as they go into YouTube Studio, each with its copy button, and each upload's release date and link. See [YouTube Description](YouTube-Description) and [Publishing to YouTube](Publishing-to-YouTube). |
 | **PDF** | The laid-out document and its download. See [PDF Documents](PDF-Documents). |
@@ -186,7 +185,7 @@ While the run goes, **Progress** leads the status list and shows the run as it i
 - **Settings**: every setting of the project, section by section, with **Save changes** and **Discard changes**. Saving keeps a new version without making anything; what the change made outdated is then the next action. Pauses and checks is one of the sections: the pauses for this run (**Pause after the article (before the narration)** and the others) with **Save pauses**, and whether an AI checks the results. See [Editing a Project](Editing-a-Project) and [Pauses and Checks](Reviews-and-Checkpoints).
 - **Versions**: every saved version and its files (**Show its files**), **Free space** on a finished project, and the **Project ID** with **Copy project ID**. See [Editing a Project](Editing-a-Project#versions).
 
-Press **Edit settings** again to close the settings.
+While the settings are open the same button reads **Close settings**.
 
 ## Free space
 
@@ -197,9 +196,9 @@ A finished project can drop the working files it was made from (narration pieces
 
 When there are old versions, **Delete old versions** frees their files too. Changing the project later makes the working files again first, which takes time and service credits. The offer is hidden on the bundled samples, while the project runs or waits, and when nothing is left to drop. Settings → **Backup & storage** offers the same for every project. See [Where Your Files Live](Where-Your-Files-Live).
 
-## More
+## Project actions
 
-**More** in the title row holds:
+Under the status list and the cost line, everything else you can do to the project is listed in words, so nothing hides behind a menu:
 
 | Action | What it does |
 | --- | --- |
@@ -208,8 +207,10 @@ When there are old versions, **Delete old versions** frees their files too. Chan
 | **Rename…** | Opens the settings on the project title. |
 | **Save as template…** | Saves this project's settings as a template (not for the sample). See [Templates](Templates). |
 | **Move to channel…** | Only with two or more channels. |
-| **Posters & pictures…** | The posters and pictures made for this project. |
-| **Cancel the run…** / **Delete project…** | Stops the run while it runs; otherwise deletes the project (it goes to Settings → Trash for 30 days). |
+| **Posters and edited images…** | The posters and edited images kept with this project, and **Design a poster** or **Edit an image** for it. |
+| **Cancel the run…** / **Delete project…** | Stops the run while it runs; otherwise deletes the project (it goes to Settings → Trash for 30 days). It sits apart, below the others. |
+
+On a sample only **Delete project…** is listed: press **Make my own copy** to rename, save or move your copy. **Mark not uploaded** forgets the video's YouTube link, and its **Undo** saves the link again.
 
 ## Command palette
 

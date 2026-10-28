@@ -251,7 +251,8 @@ export function RevisionForm(
   return (
     <div className="grid min-w-0 gap-6 md:grid-cols-[180px_minmax(0,1fr)]">
       <nav aria-label="Edit sections" className="min-w-0 md:sticky md:top-4 md:self-start">
-        <ul className="m-0 flex list-none gap-1 overflow-x-auto p-0 [scrollbar-width:none] md:flex-col">
+        {/* Narrow, the sections wrap onto lines rather than scroll out of sight. */}
+        <ul className="m-0 flex list-none flex-wrap gap-1 p-0 md:flex-col md:flex-nowrap">
           {sections.map((one) => (
             <li key={one.id} className="shrink-0">
               <RailButton
@@ -317,7 +318,7 @@ export function RevisionForm(
           {config.sources.research === "provide" ? (
             <Field
               label="Research notes"
-              tip="play.provided.research"
+              help="Given to the writer with the article prompt, in place of web research."
               error={problem("provided.research")}
             >
               <Textarea
@@ -433,7 +434,7 @@ export function RevisionForm(
             <Group title="Images and cuts">
               <Field
                 label="Seconds per image"
-                tip="play.image-seconds"
+                help="How long each image stays on screen, 1 to 600 seconds."
                 error={problem("imageSeconds")}
               >
                 <Input
@@ -450,7 +451,11 @@ export function RevisionForm(
                   }
                 />
               </Field>
-              <Field label="Zoom (%)" tip="play.zoom" error={problem("zoomPercent")}>
+              <Field
+                label="Zoom (%)"
+                help="How far each image zooms over its time on screen; 0 keeps it still."
+                error={problem("zoomPercent")}
+              >
                 <Input
                   type="number"
                   min={0}
@@ -465,7 +470,7 @@ export function RevisionForm(
                   }
                 />
               </Field>
-              <Field label="Motion" tip="play.motion">
+              <Field label="Motion" help="A mix of zooms and pans keeps a long video watchable.">
                 <Select
                   value={config.motionStyle}
                   onChange={(event) =>
@@ -507,7 +512,7 @@ export function RevisionForm(
               <div className="grid min-w-0 gap-4 md:grid-cols-2">
                 <Field
                   label="Silence gap (seconds)"
-                  tip="play.silence-gap"
+                  help="Quiet between the intro, the narration and the outro, when either is set."
                   error={problem("silenceGapSeconds")}
                 >
                   <Input
@@ -527,7 +532,7 @@ export function RevisionForm(
                 {config.sources.audio === "off" ? null : (
                   <Field
                     label="Silence at start and end (seconds)"
-                    tip="play.edge-silence"
+                    help="Quiet before the narration starts and after it ends."
                     error={problem("edgeSilenceSeconds")}
                   >
                     <Input
@@ -632,7 +637,11 @@ export function RevisionForm(
           {config.sources.article === "off" ||
           sourceOf(config.sources, "document") === "off" ? null : (
             <div className="grid min-w-0 gap-4 md:grid-cols-2">
-              <Field label="PDF look" id={`${formId}-document-theme`} tip="play.document-theme">
+              <Field
+                label="PDF look"
+                id={`${formId}-document-theme`}
+                help="One of the three ready looks, or one of your PDF themes."
+              >
                 <DocumentThemePicker
                   id={`${formId}-document-theme`}
                   disabled={false}

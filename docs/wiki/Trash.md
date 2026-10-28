@@ -58,7 +58,7 @@ A project's disk space is freed only when it leaves the trash. Settings → **Ba
 
 | Situation | What to do |
 | --- | --- |
-| A project that is still running | Open the project and use **More project actions → Cancel the run…** first. On Projects the delete button says "Cancel the run first, then delete it." |
+| A project that is still running | Open the project and press **Cancel the run…** under its status first. On Projects the delete button says "Cancel the run first, then delete it." |
 | A template that a schedule (not in the trash) uses | Delete that schedule first. |
 
 ## Messages you may see

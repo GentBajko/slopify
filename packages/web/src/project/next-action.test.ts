@@ -449,6 +449,8 @@ describe("the next action", () => {
       intent: { kind: "remake", workKeys: ["export:video", "subtitles:files"] },
     });
     expect(next?.title).toBe("The video is outdated after your edit.");
+    // One thing is "it", not "they".
+    expect(next?.why).toMatch(/^It keeps its current version until you make it again\./);
   });
 
   it("lists every outdated group for the palette", () => {

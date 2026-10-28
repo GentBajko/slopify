@@ -171,7 +171,7 @@ function done(kind: StageKind, mine: readonly Output[], project: ProjectSummary)
     case "images":
       return count(mine.filter((output) => output.role === "image").length, "image");
     case "thumbnail":
-      return mine.length === 0 ? "Thumbnail ready" : "1 image";
+      return mine.length === 0 ? "Thumbnail ready" : "1 thumbnail";
     case "video":
       return join([
         duration(total(mine)),

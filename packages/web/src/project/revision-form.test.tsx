@@ -52,6 +52,11 @@ it("offers Article Off and pairs Images Off with Video Off", async () => {
   // The silences are sound polish, folded under the video's style.
   await user.click(screen.getByText("Sound polish"));
   const gap = screen.getByRole<HTMLInputElement>("spinbutton", { name: "Silence gap (seconds)" });
+  // What it does is one line under it, not behind an info button.
+  expect(
+    screen.getByText("Quiet between the intro, the narration and the outro, when either is set."),
+  ).not.toBeNull();
+  expect(screen.queryByRole("button", { name: "About Silence gap (seconds)" })).toBeNull();
   await user.clear(gap);
   expect(gap.value).toBe("0");
   expect(
@@ -154,10 +159,10 @@ it("shows the video timing settings only where the export uses them", async () =
   await openEditSection("Video and style");
   const seconds = screen.getByRole<HTMLInputElement>("spinbutton", { name: "Seconds per image" });
   expect(seconds.value).toBe("15");
-  // What each timing setting does is behind its info button, from the help catalogue.
-  expect(
-    screen.getByRole("button", { name: "About Seconds per image" }).getAttribute("data-help-id"),
-  ).toBe("play.image-seconds");
+  // What each timing setting does is one visible line under it, not behind an info button.
+  expect(seconds.getAttribute("aria-describedby")).toContain("help");
+  expect(screen.getByText("How long each image stays on screen, 1 to 600 seconds.")).not.toBeNull();
+  expect(screen.queryByRole("button", { name: "About Seconds per image" })).toBeNull();
   // In the summary above the sections, and under the field itself.
   expect(screen.getAllByText("Enter a whole number of seconds between 1 and 600.")).toHaveLength(2);
   await user.clear(seconds);
@@ -165,17 +170,15 @@ it("shows the video timing settings only where the export uses them", async () =
   expect(latest.config.imageSeconds).toBe(20);
   const zoom = screen.getByRole<HTMLInputElement>("spinbutton", { name: "Zoom (%)" });
   expect(zoom.value).toBe("22.5");
-  expect(screen.getByRole("button", { name: "About Zoom (%)" }).getAttribute("data-help-id")).toBe(
-    "play.zoom",
-  );
+  expect(
+    screen.getByText("How far each image zooms over its time on screen; 0 keeps it still."),
+  ).not.toBeNull();
   await user.clear(zoom);
   await user.type(zoom, "0");
   expect(latest.config.zoomPercent).toBe(0);
   const motion = screen.getByRole<HTMLSelectElement>("combobox", { name: "Motion" });
   expect(motion.value).toBe("zoom");
-  expect(screen.getByRole("button", { name: "About Motion" }).getAttribute("data-help-id")).toBe(
-    "play.motion",
-  );
+  expect(screen.getByText("A mix of zooms and pans keeps a long video watchable.")).not.toBeNull();
   expect([...motion.options].map((option) => option.text)).toEqual([
     "Zoom in and out",
     "Pan across",
@@ -342,7 +345,7 @@ it("copies an explicitly selected entry and ignores subsequent library changes",
   expect(latest.config.intro).toEqual({ name: "Greeting", mode: "text" });
   expect(latest.config.rendered.intro).toBe("Hello world");
   await user.click(screen.getByRole("button", { name: "Update library" }));
-  expect((screen.getByLabelText("Raw prompt for Intro") as HTMLTextAreaElement).value).toBe(
+  expect((screen.getByLabelText("Prompt for Intro") as HTMLTextAreaElement).value).toBe(
     "Hello {{topic}}",
   );
   expect(latest.config.intro?.mode).toBe("text");
@@ -440,7 +443,7 @@ it("adopts saved wording as a template only after an explicit click", async () =
   );
   expect(latest.content.promptTemplates.article).toBe("Saved literal wording.");
   expect(latest.config.rendered.article).toBe("Saved literal wording.");
-  expect((screen.getByLabelText("Raw prompt for Article") as HTMLTextAreaElement).value).toBe(
+  expect((screen.getByLabelText("Prompt for Article") as HTMLTextAreaElement).value).toBe(
     "Saved literal wording.",
   );
 });

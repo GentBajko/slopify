@@ -105,21 +105,6 @@ export const playHelp = {
   },
 
   // Video and style row
-  "play.image-seconds": {
-    title: "Seconds per image",
-    body: "How long each image stays on screen, 1 to 600 seconds. When cuts follow the narration, it is the target and a cut waits for a sentence end. When images run out they start again. Default: 15.",
-    tutorial: { page: "Create-Video-and-Style", anchor: "images-and-cuts" },
-  },
-  "play.zoom": {
-    title: "Zoom",
-    body: "How far each image zooms in or out over its time on screen, 0 to 50 percent. 0 keeps images still. Default: 22.5 percent.",
-    tutorial: { page: "Create-Video-and-Style", anchor: "images-and-cuts" },
-  },
-  "play.motion": {
-    title: "Motion",
-    body: "How each image moves while on screen: Zoom in and out, Pan across, a Mix of both by turns, or Still. A mix keeps a long video watchable. Default: Zoom in and out.",
-    tutorial: { page: "Create-Video-and-Style", anchor: "images-and-cuts" },
-  },
   "play.edge-silence": {
     title: "Silence at start and end",
     body: "Quiet time before the narration starts and after it ends, 0 to 30 seconds. Default: 2.",
@@ -161,23 +146,6 @@ export const playHelp = {
     title: "Full video link",
     body: "Each short's description ends with a line pointing to the full video. Paste the video's link here; without it the line says [PASTE THE FULL VIDEO LINK HERE] for you to fill in.",
     tutorial: { page: "Shorts", anchor: "options" },
-  },
-  "play.document-theme": {
-    title: "PDF look",
-    body: "How the PDF looks: one of three ready looks (Plain, Book in book type on parchment, Modern in a sans-serif on white) or one of your own PDF looks. Preview shows it. A look of yours is copied into the project, so editing it later leaves this project alone until you pick it again.",
-    tutorial: { page: "PDF-Documents", anchor: "options" },
-  },
-
-  // Channel row
-  "play.channel": {
-    title: "Channel",
-    body: "The channel this video belongs to. Its brand kit fills what these settings leave at their default, and its cast of characters goes with the images. A draft that picks none runs in its template's channel, or the default one.",
-    tutorial: { page: "Create-Overview", anchor: "channel-row" },
-  },
-  "play.brand-kit": {
-    title: "Channel's brand kit",
-    body: "Fills what these settings leave at their default from the channel: the caption font, intro, outro, PDF look and ambient sound. What you set here wins. Turn it off to take none of it; the cast and language still apply. Default: on.",
-    tutorial: { page: "Create-Overview", anchor: "channel-row" },
   },
 
   // Right rail and dialogs

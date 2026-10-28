@@ -38,21 +38,6 @@ export const projectHelp = {
     body: "The script the narrator reads, in Markdown. Your edits are kept when other settings change and are saved as a new version; the narration, images and video made from the old text turn outdated and are made again when you choose. Headings become chapters.",
     tutorial: { page: "Editing-a-Project", anchor: "change-the-article-text" },
   },
-  "project.prompts.template": {
-    title: "Use a saved prompt",
-    body: "Copies one of your saved prompts into this project, replacing the raw prompt below. The project keeps its own copy, so later edits to the saved prompt reach it only when you pick it again or press Use the new wording. What was made from the old wording turns outdated; nothing is made again until you choose.",
-    tutorial: { page: "Editing-a-Project", anchor: "prompts" },
-  },
-  "project.prompts.raw": {
-    title: "Raw prompt",
-    body: "This project's own copy of the prompt, with keywords still in double braces such as {{Topic}}. Edit it to change what the model is asked for this project only; your saved prompt is untouched. Saving fills the keywords in again, and what was made from the old wording turns outdated.",
-    tutorial: { page: "Editing-a-Project", anchor: "prompts" },
-  },
-  "project.shorts.range": {
-    title: "Clip range",
-    body: "The first and last sentence of this short, from the narration's timed sentences. The clip must stay between the shortest and longest length you set for shorts and must not overlap another clip; the line under the clip says what to change. Back to the AI's choice restores its pick.",
-    tutorial: { page: "Shorts", anchor: "change-the-picked-moments" },
-  },
   "project.images.prompt": {
     title: "Image prompt",
     body: "The words this one image is drawn from, with keywords in double braces filled in from the project. Editing it outdates only this image and the video; it is drawn again, one image call, when you make the outdated images again. Use saved wording as template copies the prompt as sent so you can edit it.",

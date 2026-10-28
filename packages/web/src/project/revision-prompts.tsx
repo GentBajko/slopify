@@ -14,6 +14,7 @@ import { KeywordList } from "@/components/keyword-list";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { Field, Select } from "@/components/kit/field";
+import { Fold } from "@/components/kit/fold";
 import { useToast } from "@/components/kit/toast";
 import { reapplyEdit } from "./draft-merge.js";
 import { KeywordFactsRefresh } from "./keyword-facts-refresh.js";
@@ -216,7 +217,7 @@ export function RevisionPrompts({
             <Field
               label={`Use a saved prompt for ${name}`}
               id={`${formId}-library-${key}`}
-              tip="project.prompts.template"
+              help="Copies it into this project in place of the prompt below."
             >
               <Select
                 value=""
@@ -277,12 +278,11 @@ export function RevisionPrompts({
               value={raw ?? ""}
               onChange={(text) => onChange(setPrompt(edit, key, text))}
             />
-            <details>
-              <summary className="text-small text-ink-2">Saved rendered prompt</summary>
+            <Fold summary="As it was sent, keywords filled in">
               <pre className="m-0 mt-2 whitespace-pre-wrap break-words text-small">
                 {edit.config.rendered[key] ?? ""}
               </pre>
-            </details>
+            </Fold>
           </div>
         );
       })}

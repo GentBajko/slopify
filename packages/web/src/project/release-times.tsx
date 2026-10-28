@@ -54,6 +54,17 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
   const key = projectReleasesKey(projectId);
   const read = useQuery({ queryKey: key, queryFn: () => readProjectReleases(api, projectId) });
   const [drafts, setDrafts] = useState<Readonly<Record<number, string>>>({});
+  // The boxes left with a day but no time: the browser reports such a box as empty, so nothing
+  // can be saved from it, and its line asks for the time instead of losing the day in silence.
+  const [halfTyped, setHalfTyped] = useState<ReadonlySet<number>>(new Set());
+  const markHalf = (short: number, half: boolean) =>
+    setHalfTyped((all) => {
+      if (all.has(short) === half) return all;
+      const next = new Set(all);
+      if (half) next.add(short);
+      else next.delete(short);
+      return next;
+    });
   // The other videos with a date, for Swap with….
   const calendar = useQuery({
     queryKey: [...keys.studioReleases, "swap", 8],
@@ -133,9 +144,15 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
   if (read.data === undefined || read.data.items.length === 0) return null;
   const { items, free, leadHours } = read.data;
   const long = items.find((item) => item.short === 0);
-  // A box saves its date when it is left: a whole date that changed is saved; one half typed
-  // (the browser reports it as empty) goes back to what was saved. Clear the date empties it.
-  const commit = (item: (typeof items)[number]) => {
+  // A box saves its date when it is left: a whole date that changed is saved. One half typed
+  // (a day with no time, which the browser reports as empty) keeps what is typed and asks for
+  // the time; nothing is saved until it has one. Clear the date empties it.
+  const commit = (item: (typeof items)[number], box: HTMLInputElement) => {
+    if (box.validity.badInput) {
+      markHalf(item.short, true);
+      return;
+    }
+    markHalf(item.short, false);
     const draft = drafts[item.short];
     if (draft === undefined) return;
     const was = item.at === null ? "" : zonedInput(item.at, zone);
@@ -164,7 +181,10 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
           const draft = drafts[item.short] ?? (item.at === null ? "" : zonedInput(item.at, zone));
           const late =
             !item.onYoutube && item.uploadBy !== null && Date.parse(item.uploadBy) < Date.now();
-          const state: ReactNode = item.onYoutube ? (
+          const half = halfTyped.has(item.short);
+          const state: ReactNode = half ? (
+            "Add a time too: the date is saved once it has one."
+          ) : item.onYoutube ? (
             <>
               <Status tone="done">Uploaded</Status>
               {item.at === null ? null : ` · goes public ${when(item.at)}`}
@@ -198,11 +218,12 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
                   disabled={save.isPending && save.variables?.short === item.short}
                   onChange={(event) => {
                     const value = event.currentTarget.value;
+                    if (value !== "") markHalf(item.short, false);
                     setDrafts((all) => ({ ...all, [item.short]: value }));
                   }}
-                  onBlur={() => commit(item)}
+                  onBlur={(event) => commit(item, event.currentTarget)}
                   onKeyDown={(event) => {
-                    if (event.key === "Enter") commit(item);
+                    if (event.key === "Enter") commit(item, event.currentTarget);
                   }}
                 />
                 {zone !== undefined && item.at !== null && zoneDiffers(item.at, zone) ? (
@@ -222,7 +243,7 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
               </div>
               <p
                 id={`${id}-${String(item.short)}-state`}
-                className={`m-0 pl-19 text-small ${late ? "text-danger" : "text-ink-2"} max-sm:pl-0`}
+                className={`m-0 pl-19 text-small ${late || half ? "text-danger" : "text-ink-2"} max-sm:pl-0`}
               >
                 {state}
               </p>

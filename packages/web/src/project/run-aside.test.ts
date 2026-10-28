@@ -2,7 +2,7 @@ import type { StageKind, StageState } from "@app/kernel/pipeline.js";
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
 import type { CheckpointHold } from "@app/slices/reviews/holds.js";
 import { expect, it } from "vitest";
-import { runSteps } from "./run-aside.js";
+import { runSectionSteps, runSteps } from "./run-aside.js";
 
 const project = {
   id: "p1",
@@ -74,4 +74,55 @@ it("says every step left waits for the agent while its review holds the run", ()
   ]);
   // Kept as is, its steps wait for nobody, as the project's state word says.
   expect(steps({ waitingForAgent: true, setAside: true }, [])[1]?.[1]).toBe("Not started");
+});
+
+// Progress lists the run as the title row counts it: one step per section, so "Step 4 of 4"
+// sits over four rows, and an audiobook's last step is its Audiobook, as the status list says.
+it("lists one step per section, named as the status list names it", () => {
+  const book = {
+    ...project,
+    status: "running",
+    config: { sources: { video: "generate", audio: "generate" }, voices: { format: "audiobook" } },
+  } as unknown as ProjectSummary;
+  const listed = runSectionSteps({
+    stages: [
+      stage("research", "skipped"),
+      stage("article", "done"),
+      stage("audio", "done"),
+      stage("images", "done"),
+      stage("thumbnail", "running"),
+      stage("video", "pending"),
+    ],
+    outputs: [],
+    project: book,
+    resumable: false,
+    holding: [],
+    now: 0,
+  });
+  expect(listed.map((step) => [step.name, step.state])).toEqual([
+    ["Article", "Done"],
+    ["Narration", "Done"],
+    // The thumbnail at work speaks for Images.
+    ["Images", "Running"],
+    ["Audiobook", "Not started"],
+  ]);
+});
+
+// A step made before that an edit sent back to waiting reads Outdated, as the status list
+// says it, not "Not started".
+it("says Outdated for a made step waiting after an edit", () => {
+  const listed = runSectionSteps({
+    stages: [stage("article", "done"), stage("video", "running"), stage("document", "pending")],
+    outputs: [],
+    project,
+    resumable: false,
+    holding: [],
+    now: 0,
+    outdated: (section) => (section === "document" ? 1 : 0),
+  });
+  expect(listed.map((step) => [step.name, step.state, step.detail])).toEqual([
+    ["Article", "Done", expect.anything()],
+    ["Video", "Running", expect.anything()],
+    ["PDF", "Outdated", undefined],
+  ]);
 });

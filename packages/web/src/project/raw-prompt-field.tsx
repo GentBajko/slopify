@@ -55,7 +55,12 @@ export function RawPromptField({
       {place === undefined || place === "title" ? null : (
         <KeywordInsertBar place={place} targetId={id} value={value} onChange={onChange} />
       )}
-      <Field label={`Raw prompt for ${name}`} id={id} tip="project.prompts.raw" error={error}>
+      <Field
+        label={`Prompt for ${name}`}
+        id={id}
+        help="This project's own copy: editing it changes this project, not your saved prompt."
+        error={error}
+      >
         <SlotBody
           id={id}
           value={value}

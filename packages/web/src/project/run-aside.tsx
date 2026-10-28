@@ -1,3 +1,4 @@
+import type { StageKind } from "@app/kernel/pipeline.js";
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
 import {
   heldWord,
@@ -6,10 +7,11 @@ import {
   stageStateWords,
   waitingForAgentWord,
 } from "@app/slices/admission/state-words.js";
-import { etaLabel, stageEta } from "@app/slices/eta/model.js";
+import { etaLabel } from "@app/slices/eta/model.js";
 import type { CheckpointHold } from "@app/slices/reviews/holds.js";
 import type { RunCost } from "@app/slices/run-cost/panel.js";
 import type { Output } from "@app/slices/storage/model.js";
+import { FolderOpenIcon } from "lucide-react";
 import type { ReactElement } from "react";
 import { TextLink } from "@/components/kit/link";
 import { Rail, RailLink } from "@/components/kit/rail";
@@ -18,10 +20,12 @@ import type { Step } from "@/components/kit/steps";
 import { usd } from "@/lib/format";
 import { stageWords } from "@/lib/stage-words";
 import { retryingWord } from "@/lib/state-words";
-import type { SectionId } from "./next-action.js";
+import { measuredEta } from "./measured-eta.js";
+import { type SectionId, sectionForStage } from "./next-action.js";
 import { workDuration } from "./run-cost.js";
+import { sectionLead, sectionsOf } from "./sections.js";
 import type { StatusRow } from "./status-rows.js";
-import { finalOutput, summaryOf } from "./summary.js";
+import { stageName, summaryOf } from "./summary.js";
 
 // The status column beside the open section: the run's steps (`runSteps`, which the status
 // list and the Progress view read), the one status list and the cost line.
@@ -75,7 +79,7 @@ export function elapsed(stage: Stage, now: number): string | undefined {
 // A running step's line ends with its time left, recomputed every second (`slices/eta`):
 // "12 of 40 chunks · about 4 min left", or "time left unknown" when nothing gives one.
 function withEta(detail: string | undefined, stage: Stage, now: number): string | undefined {
-  const eta = stageEta(stage, now);
+  const eta = measuredEta(stage, now);
   if (eta === undefined) return detail;
   return detail === undefined || detail === "" ? etaLabel(eta) : `${detail} · ${etaLabel(eta)}`;
 }
@@ -108,10 +112,8 @@ export function runSteps({
       const time = elapsed(stage, now);
       return {
         id: stage.id,
-        name:
-          stage.kind === "video" && finalOutput(project.config) === "audio"
-            ? "Audio export"
-            : stageWords[stage.kind],
+        // The name the status list gives it: an audiobook's Video stage is its Audiobook.
+        name: stageName(stage.kind, project.config),
         tone: hold === undefined ? toneOf(stage) : "waiting",
         state: hold === undefined ? stateWord(stage) : holdLook[hold].state,
         ...(time === undefined ? {} : { time }),
@@ -121,6 +123,70 @@ export function runSteps({
             : holdLook[hold].detail,
       };
     });
+}
+
+// The step that speaks for a section of two stages (Article with its research, Images with the
+// thumbnail): the one that needs the reader most.
+const loudness: Readonly<Record<Tone, number>> = {
+  failed: 0,
+  waiting: 1,
+  running: 2,
+  info: 3,
+  off: 4,
+  done: 5,
+};
+
+// The run's steps as the page counts them, one per section (`overallProgress`, the title row's
+// "Step 3 of 4"): research inside Article, the thumbnail inside Images. A section of two stages
+// stands as the one that needs the reader most; once both are done it says what each made.
+export function runSectionSteps(
+  input: Parameters<typeof runSteps>[0] & {
+    // Outdated outputs per section, from the saved version: a made step an edit sent back to
+    // waiting reads Outdated, as the status list says it.
+    readonly outdated?: ((section: SectionId) => number) | undefined;
+  },
+): readonly Step[] {
+  // `runSteps` gives one step per stage that is not skipped, in order.
+  const shown = input.stages.filter((stage) => stage.state !== "skipped");
+  const steps = runSteps(input).map((step, at): Step => {
+    const stage = shown[at];
+    if (
+      stage === undefined ||
+      step.tone !== "off" ||
+      (input.outdated?.(sectionForStage(stage.kind)) ?? 0) === 0
+    )
+      return step;
+    const { detail: _waits, ...rest } = step;
+    return { ...rest, tone: "info", state: "Outdated" };
+  });
+  const stepOf = new Map<StageKind, Step>();
+  shown.forEach((stage, at) => {
+    const step = steps[at];
+    if (step !== undefined) stepOf.set(stage.kind, step);
+  });
+  return sectionsOf(input.stages).flatMap((section) => {
+    const members = [section.stage, section.companion].flatMap((stage) =>
+      stage === undefined ? [] : (stepOf.get(stage.kind) ?? []),
+    );
+    const lead = stepOf.get(sectionLead(section)) ?? members[0];
+    if (lead === undefined) return [];
+    if (members.length < 2) return [lead];
+    const loudest = members.toSorted((a, b) => loudness[a.tone] - loudness[b.tone])[0] ?? lead;
+    const details = members.flatMap((step) =>
+      typeof step.detail === "string" && step.detail !== "" && step.detail !== step.state
+        ? [step.detail]
+        : [],
+    );
+    return [
+      {
+        ...lead,
+        tone: loudest.tone,
+        state: loudest.state,
+        ...(loudest.time === undefined ? {} : { time: loudest.time }),
+        detail: loudest.tone === "done" ? details.join(" · ") : loudest.detail,
+      },
+    ];
+  });
 }
 
 // A step changing state is said aloud ("Video: running"), wherever the status list is on
@@ -145,7 +211,8 @@ export function StageAnnouncements({
 
 // The status column's list: one row per thing the project makes, each a link to its section,
 // with its lamp, its state in words and one detail; a row at work or waiting says what it does
-// on a second line. All files ends it.
+// on a second line. All files ends it, drawn as a button with its folder: a place to go, not
+// one more thing made.
 export function ProjectStatusList({
   rows,
   projectId,
@@ -165,6 +232,12 @@ export function ProjectStatusList({
             resetScroll={false}
             data-tour={`project-rail-${row.id}`}
             current={row.id === selected}
+            {...(row.id === "outputs"
+              ? {
+                  icon: <FolderOpenIcon aria-hidden="true" strokeWidth={1.75} />,
+                  className: "sl-status-list__files",
+                }
+              : {})}
             {...(row.tone === undefined || row.state === undefined
               ? {}
               : { tone: row.tone, state: row.state })}

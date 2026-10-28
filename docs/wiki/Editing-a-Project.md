@@ -2,7 +2,7 @@
 
 You can change almost anything about a project after it has run: the article, one narration chunk, one image, the prompts, the services and models, the captions or the volume. Slopify saves each change as a new version and makes again only what the change affects, after you have seen what that costs.
 
-**Where to find it:** a project → **Edit settings** in the title row. It opens the project's settings in the main column, with two tabs: **Settings** and **Versions**. Press **Edit settings** again to close them.
+**Where to find it:** a project → **Edit settings** in the title row. It opens the project's settings in the main column, with two tabs: **Settings** and **Versions**. While they are open the same button reads **Close settings**.
 
 ## How editing works
 
@@ -116,8 +116,8 @@ Each prompt the project used sits in the section of the stage it writes for: the
 | Control | What it does |
 | --- | --- |
 | **Use a saved prompt for …** | Copies one of your prompts (from **Prompts**) into this project, replacing its own copy, with **Undo**. |
-| **Raw prompt for …** | This project's own copy of the prompt, with keywords still in double braces such as `{{Topic}}`. Edit it to change what the model is asked, for this project only; the prompt in Prompts is untouched. |
-| **Saved rendered prompt** | The prompt as it was sent, with keywords filled in. |
+| **Prompt for …** | This project's own copy of the prompt, with keywords still in double braces such as `{{Topic}}`. Edit it to change what the model is asked, for this project only; the prompt in Prompts is untouched. |
+| **As it was sent, keywords filled in** | The prompt as it was sent, with keywords filled in (folded). |
 | **Use the new wording** / **Keep this project's version** | Shown when the prompt in Prompts changed since the project copied it. Use the new wording copies it in. |
 
 The project keeps its own copy of each prompt, so later edits in Prompts reach it only when you pick it again or press **Use the new wording**. Saving fills the keywords in again, and whatever was made from the old wording turns outdated. Nothing is made again until you choose.

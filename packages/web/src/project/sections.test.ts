@@ -66,7 +66,9 @@ describe("the project page's sections", () => {
     };
     expect(sectionLead(section)).toBe("thumbnail");
     expect(sectionName(section, config)).toBe("Thumbnail");
-    expect(sectionSummary(section, [output("thumbnail", "thumbnail")], project)).toBe("1 image");
+    expect(sectionSummary(section, [output("thumbnail", "thumbnail")], project)).toBe(
+      "1 thumbnail",
+    );
     expect(sectionName({ kind: "images", stage: stage("images", "skipped") }, config)).toBe(
       "Images",
     );

@@ -11,8 +11,10 @@ import { designsQuery, stepPictureUrl } from "./api";
 import { headStep } from "./design-picture";
 import { useDesignStarts } from "./start";
 
-// A project's designs, from its More menu: the posters and pictures kept with it (linked, never
-// written into its video), and the two ways to start another for it.
+// A project's designs, from its actions under the status list: the posters and edited images
+// kept with it (linked, never written into its video), and the two ways to start another for
+// it. The button that opens it and the drawer say the same name.
+export const designsTitle = "Posters and edited images";
 
 export function useProjectDesignCount(projectId: string): number | undefined {
   const { api } = useApp();
@@ -34,7 +36,7 @@ export function ProjectDesigns({
   return (
     <Drawer
       open={open}
-      title="Designs"
+      title={designsTitle}
       onClose={onClose}
       footer={
         <>
@@ -42,7 +44,7 @@ export function ProjectDesigns({
             Design a poster
           </Button>
           <Button variant="primary" disabled={starts.busy} onClick={starts.pickPicture}>
-            Edit a picture
+            Edit an image
           </Button>
           {starts.input}
           {starts.problem === null ? null : (
@@ -64,9 +66,9 @@ export function ProjectDesigns({
       ) : query.data === undefined ? (
         <LoadingBlock label="Loading the project's designs" />
       ) : query.data.length === 0 ? (
-        <EmptyState title="No designs kept with this project">
-          A poster or picture made here is kept with the project. To keep one you already made, open
-          it and choose this project under Formats → Keep in project.
+        <EmptyState title="No posters or edited images kept with this project">
+          A poster or edited image made here is kept with the project. To keep one you already made,
+          open it and choose this project under Formats → Keep in project.
         </EmptyState>
       ) : (
         <List label="The project's designs">
@@ -89,7 +91,7 @@ export function ProjectDesigns({
                     {design.name}
                   </Link>
                 }
-                meta={design.kind === "edit" ? "Picture edit" : "Designed piece"}
+                meta={design.kind === "edit" ? "Edited image" : "Designed piece"}
               />
             );
           })}

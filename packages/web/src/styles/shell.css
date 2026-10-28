@@ -265,6 +265,11 @@
   .sl-toast {
     pointer-events: auto;
   }
+  /* A drawer's footer holds its actions (Copy for YouTube Studio's Fill in and I've uploaded
+     it): a notice rises above the footer rather than cover them. */
+  html:has([data-slot="drawer"]) .sl-toasts {
+    bottom: calc(64px + var(--space-4));
+  }
   /* Skip to content: out of sight until the Tab key reaches it, then over the top left. */
   .sl-skip {
     position: fixed;
@@ -942,31 +947,28 @@
     overflow-y: auto;
     overscroll-behavior: contain;
   }
-  /* The title row stays one line: a long title is cut (whole on hover) and the meta gives way
-     with an ellipsis, so the actions stay beside them. Only a window too narrow for 24rem of
-     title beside the actions puts the actions on a line of their own, instead of cutting the
-     title to a word. */
+  /* The title row is one line while it fits: the title, then its state and facts, then the
+     actions. Nothing is cut mid-word: facts that do not fit beside the title go under it, each
+     whole, and a window with less than 24rem for the title beside the actions puts the actions
+     on a line of their own. Only a title longer than the whole row is cut (whole on hover). */
   .sl-project__header {
     margin-bottom: 0;
   }
   .sl-project__header .sl-page-header__lead {
     flex: 1 1 24rem;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
   }
   .sl-project__header .sl-page-header__lead > h1 {
     flex: 0 1 auto;
+    max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     overflow-wrap: normal;
   }
-  /* The meta gives way before the title does, down to room for its state word. */
   .sl-project__header .sl-page-header__meta {
-    flex: 0 4 auto;
-    min-width: 8rem;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+    flex: 0 1 auto;
+    min-width: 0;
     font-size: var(--text-body);
     line-height: var(--text-body--line-height);
   }
@@ -974,9 +976,15 @@
     flex: none;
     flex-wrap: nowrap;
   }
-  /* Inline, so a meta too long for the row ends in an ellipsis rather than a cut word. */
-  .sl-project__meta > * + * {
-    margin-left: var(--space-2);
+  /* Each fact whole: a fact that does not fit goes to the next line, never cut. */
+  .sl-project__meta {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: var(--space-2);
+  }
+  .sl-project__meta > * {
+    white-space: nowrap;
   }
   .sl-project__meta .sl-status {
     font-size: inherit;
@@ -1012,6 +1020,30 @@
     font-size: 13px;
     line-height: 19px;
     color: var(--color-ink-2);
+  }
+  /* All files ends the list as a place to go, drawn as a button: a folder and a line around. */
+  .sl-status-list .sl-status-list__files {
+    margin-top: var(--space-1);
+    border: 1px solid var(--color-line-strong);
+    color: var(--color-ink);
+  }
+  /* What else can be done to the project, in words under the cost: one quiet button a line,
+     deleting or cancelling apart below. */
+  .sl-project-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--color-line);
+  }
+  .sl-project-actions ul {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
   /* The narration as text to read and follow (project/review-transcript.tsx): each paragraph
      is one button whose words flow at the reading measure, its time small before it; the line
@@ -1086,6 +1118,12 @@
       order: 1;
       max-height: none;
       overflow: visible;
+    }
+    /* While the settings are open the status column would follow them, and the settings' Save
+       bar, which sticks only within them, would stop mid-page above it. Close settings brings
+       it back. */
+    .sl-project:has([data-slot="project-settings"]:not([hidden])) .sl-workspace__aside {
+      display: none;
     }
   }
   /* Phones: the title and its meta wrap, the actions go under them, and nothing scrolls

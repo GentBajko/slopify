@@ -9,7 +9,7 @@ import { Button } from "@/components/kit/button";
 import { Input, Select } from "@/components/kit/field";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
-import { Badge, type BadgeTone } from "@/components/kit/status";
+import { Status, type Tone } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
 import { ProjectThumb } from "@/home/project-thumb";
 import { browserZone, zoneDiffers, zonedFormat, zonedTime, zoneName } from "@/lib/zoned";
@@ -32,23 +32,24 @@ export const day = new Intl.DateTimeFormat(undefined, {
 export const when = (iso: string, zone?: string) =>
   `${zonedFormat(iso, zone, { weekday: "short", day: "numeric", month: "short" })}, ${zonedTime(iso, zone)}`;
 
-function look(item: CalendarItem): { readonly tone: BadgeTone; readonly word: string } {
+// Where each upload stands, in the words the project's Release rows and Projects use, its lamp
+// always beside its word: Uploaded (its link saved, or the project marked uploaded), Late, Ready
+// to upload. YouTube's own checks are said only when they found something.
+function look(item: CalendarItem): { readonly tone: Tone; readonly word: string } {
   switch (item.state) {
     case "scheduled":
-      return item.checks === "ok"
-        ? { tone: "neutral", word: "✓ Scheduled · checks clear" }
-        : item.checks === null
-          ? { tone: "info", word: "✓ Scheduled · checks pending" }
-          : { tone: "failed", word: `Scheduled · ${item.checks}` };
+      return item.checks === "ok" || item.checks === null
+        ? { tone: "done", word: "Uploaded" }
+        : { tone: "failed", word: `Uploaded · ${item.checks}` };
     case "filled":
       return { tone: "waiting", word: "Filled in Studio, not scheduled" };
     case "late":
       return { tone: "failed", word: "Late · upload now" };
     case "not-ready":
-      return { tone: "neutral", word: "Not rendered yet" };
+      return { tone: "off", word: "Not made yet" };
     default:
       // Ready: it can be uploaded and scheduled any time; only a late one is flagged.
-      return { tone: "neutral", word: "Ready to upload" };
+      return { tone: "done", word: "Ready to upload" };
   }
 }
 
@@ -195,10 +196,12 @@ export function ItemCell({
           aria-label={`${label}: move from ${item.at === null ? "no time" : when(item.at, zone)}`}
           onClick={() => onEdit({ projectId, short: item.short })}
         >
-          {item.at === null ? "Set a release time" : when(item.at, zone)}
+          {item.at === null ? "Set the date" : when(item.at, zone)}
         </Button>
       )}
-      <Badge tone={state.tone}>{state.word}</Badge>
+      <Status tone={state.tone} className="text-small">
+        {state.word}
+      </Status>
     </div>
   );
 }
@@ -277,7 +280,7 @@ export function FreeTime({
   );
 }
 
-// Finished videos with no release time yet, each with its picture, what it is and when it
+// Finished videos with no release date yet, each with its picture, what it is and when it
 // finished, and a way to give it one; a time saved moves it up into its week.
 export function Unscheduled({
   candidates,
@@ -296,13 +299,13 @@ export function Unscheduled({
   const listed = new Map((projects.data?.projects ?? []).map((one) => [one.id, one]));
   if (candidates.length === 0) return null;
   return (
-    <section aria-label="Finished, no release time yet" className="flex flex-col gap-2">
+    <section aria-label="Finished, no date yet" className="flex flex-col gap-2">
       <SectionHead
-        title="Finished, no release time yet"
+        title="Finished, no date yet"
         meta={`${String(candidates.length)} ${candidates.length === 1 ? "video" : "videos"} · pick when each goes public`}
         className="mb-0"
       />
-      <List label="Finished, no release time yet">
+      <List label="Finished, no date yet">
         {candidates.map((candidate) => (
           <ListRow
             key={candidate.id}
@@ -325,10 +328,10 @@ export function Unscheduled({
               ) : (
                 <Button
                   size="small"
-                  aria-label={`Set a release time for ${candidate.title}`}
+                  aria-label={`Set the date for ${candidate.title}`}
                   onClick={() => onEdit({ projectId: candidate.id, short: 0 })}
                 >
-                  Set a release time
+                  Set the date
                 </Button>
               )
             }

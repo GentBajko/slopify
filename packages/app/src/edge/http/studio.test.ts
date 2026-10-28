@@ -15,7 +15,7 @@ import { outputPath } from "../../slices/storage/layout.js";
 import type { Output, OutputMeta, OutputRole } from "../../slices/storage/model.js";
 import { insertOutput } from "../../slices/storage/repo.js";
 import type { UploadPack } from "../../slices/studio/model.js";
-import { uploadedProjects } from "../../slices/uploads/repo.js";
+import { markUploaded, uploadedProjects } from "../../slices/uploads/repo.js";
 import { createHub } from "../events/hub.js";
 import { createApp } from "./app.js";
 
@@ -1229,6 +1229,17 @@ describe("the posting plan, Upload all Shorts and Studio's numbers", () => {
     expect(own.timeZone).toBe(mine?.timeZone);
     expect(own.items.find((item) => item.short === 0)?.at).toBe(long?.at);
     expect(own.items.find((item) => item.short === 0)?.uploadBy).toBe(long?.uploadBy);
+    // Marked uploaded by hand (no link), the long video reads as on YouTube here as it does on
+    // its page: Calendar said Ready to upload beside a project that says Uploaded.
+    expect(long?.state).not.toBe("scheduled");
+    markUploaded(h.db, "p1", true, "2026-09-28T10:00:00.000Z");
+    const marked = (await (await h.call("/releases?weeks=2")).json()) as typeof calendar;
+    expect(
+      marked.entries
+        .find((entry) => entry.project?.id === "p1")
+        ?.items.find((item) => item.short === 0)?.state,
+    ).toBe("scheduled");
+    markUploaded(h.db, "p1", false, "2026-09-28T10:00:00.000Z");
     // Moved by hand to "not scheduled": it leaves the calendar, and its time is free again.
     const moved = await h.call("/releases/p1", json({ short: 0, at: null }));
     expect(moved.status).toBe(200);

@@ -9,8 +9,8 @@ import { Field, Select } from "@/components/kit/field";
 import { useToast } from "@/components/kit/toast";
 import { keys } from "@/queries";
 
-// The project page's More → Move to channel…: the project goes to another channel's list,
-// brand and playlists. Nothing it made changes.
+// The project page's Move to channel…, under its status: the project goes to another channel's
+// list, brand and playlists. Nothing it made changes.
 export function MoveToChannel({
   projectId,
   title,

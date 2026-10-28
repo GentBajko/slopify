@@ -10,7 +10,7 @@ import { readSampleRecord } from "../onboarding/state.js";
 import { type ProjectHolds, projectHolds } from "../reviews/holds.js";
 import { limitWaitsByProject, listingWait } from "../run-cost/panel.js";
 import { notTemplateSample } from "../template-studio/repo.js";
-import { setAsideProjects, uploadedAndSettled, uploadedProjects } from "../uploads/repo.js";
+import { setAsideProjects, settledProjects, uploadedProjects } from "../uploads/repo.js";
 import { settledStatus } from "../uploads/rules.js";
 import { nextOccurrence } from "./calendar.js";
 import { upcomingDesignRuns } from "./design-agenda.js";
@@ -187,8 +187,8 @@ function sampleProjectIds(db: DatabaseSync): ReadonlySet<string> {
 // What a project on the calendar asks of the person, if anything. The same readings Home's
 // Needs you uses: a failed run, a paused run, one a restart stopped (Continue the run), or one
 // waiting for a review. A step failed beside a wait reads by that wait and is listed apart
-// (`stepFailed`). One Kept as is asks nothing, nor does an uploaded one that reads Done
-// (`uploadedAndSettled`).
+// (`stepFailed`). One Kept as is asks nothing, nor does an uploaded or edited one that reads
+// Done (`settledProjects`).
 function needsOf(
   state: ProjectState,
   ask: {
@@ -210,7 +210,7 @@ function needsOf(
 // the range, with what each needs from the person and whether its video is ready to upload.
 function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calendar["projects"] {
   const standings = stageStandingsByProject(deps.db);
-  const settled = uploadedAndSettled(deps.db);
+  const settled = settledProjects(deps.db);
   const holds = projectHolds(deps.db, { standings, settled });
   const reviewing = awaitingReview(deps.db, holds);
   const uploads = uploadedProjects(deps.db);

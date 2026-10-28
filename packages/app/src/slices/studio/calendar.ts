@@ -1,4 +1,5 @@
 import { listProjects } from "../admission/repo.js";
+import { uploadedProjects } from "../uploads/repo.js";
 import { type PackDeps, uploadPack } from "./pack.js";
 import { readPlan } from "./plan.js";
 import { seriesOf } from "./plan-model.js";
@@ -25,7 +26,8 @@ export type ItemState =
   | "late"
   // Filled in Studio but not confirmed (cancelled, or left as a draft).
   | "filled"
-  // Scheduled or published on YouTube.
+  // Scheduled or published on YouTube: its link is saved, or, the long video, the project is
+  // marked uploaded (one fact, `videos.ts`), as the project's Release rows read it.
   | "scheduled";
 
 export interface CalendarItem {
@@ -82,6 +84,7 @@ export function releaseCalendar(
     return at >= from.getTime() && at < until.getTime();
   };
   const projects = new Map(listProjects(deps.db).map((project) => [project.id, project]));
+  const uploaded = uploadedProjects(deps.db);
   const longs = allReleases(deps.db).filter(
     (release) => release.short === 0 && projects.has(release.projectId) && inWindow(release.at),
   );
@@ -109,7 +112,7 @@ export function releaseCalendar(
         const uploadBy = release === null ? null : new Date(Date.parse(release) - leadMs);
         const video = videoOf(deps.db, long.projectId, item.short ?? null);
         const state: ItemState =
-          video?.uploadState === "done"
+          video?.uploadState === "done" || (short === 0 && uploaded.has(long.projectId))
             ? "scheduled"
             : video?.uploadState === "filled"
               ? "filled"

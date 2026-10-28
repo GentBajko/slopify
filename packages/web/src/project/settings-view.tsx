@@ -52,7 +52,12 @@ export function SettingsView({
     if (opening !== undefined) setSection(opening);
   }, [opening]);
   return (
-    <section hidden={!shown} aria-label="Settings" className="flex min-w-0 flex-col gap-3">
+    <section
+      hidden={!shown}
+      aria-label="Settings"
+      data-slot="project-settings"
+      className="flex min-w-0 flex-col gap-3"
+    >
       <Tabs
         items={[
           {

@@ -1,32 +1,30 @@
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
 import { bookLabel } from "@app/slices/voices/model.js";
 import { Link } from "@tanstack/react-router";
-import { ChevronDownIcon, ChevronLeftIcon, SlidersHorizontalIcon } from "lucide-react";
-import { type ReactElement, type ReactNode, useRef } from "react";
+import { ChevronLeftIcon, SlidersHorizontalIcon, XIcon } from "lucide-react";
+import type { ReactElement, ReactNode } from "react";
 import { cameFrom } from "@/components/came-from";
 import { Button } from "@/components/kit/button";
 import { PageHeader } from "@/components/kit/layout";
-import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/components/kit/menu";
 import { Badge, Status } from "@/components/kit/status";
-import { runLine } from "@/home/running-now";
 import { projectStateOf } from "@/lib/state-words";
 import { startedAt } from "@/lib/utils";
+import { runPosition } from "./measured-eta.js";
 import { stageName } from "./summary.js";
 
 // The project's title row, one line: the way back (to the list it was opened from), the title,
 // its state with when it finished, how long it took and its channel (while it runs, where the
-// run stands beside its clock), then the one thing to do next (the page's only lime button),
-// Edit settings and a worded More for the rest.
-export interface MoreAction {
+// run stands beside its clock), then the one thing to do next (the page's only lime button)
+// and Edit settings. The rest of what can be done to the project (Rename, Delete…) is listed
+// in words in the status column (`ProjectActions`), not behind a menu whose name says nothing.
+export interface ProjectAction {
   readonly id: string;
   readonly label: string;
   readonly run: () => void;
-  // A row that cannot act says why in its own words, and is drawn dim.
-  readonly disabled?: boolean;
-  // A line above it in the menu: destructive actions sit apart.
+  // Why it cannot act now, said on hover and to a screen reader; it is drawn dim.
+  readonly disabledReason?: string | undefined;
+  // Deletes or cancels: it sits apart, below the others.
   readonly apart?: boolean;
-  // It puts the cursor somewhere else (Rename), so the menu does not take it back on close.
-  readonly movesFocus?: boolean;
 }
 
 export function ProjectHeader({
@@ -39,7 +37,6 @@ export function ProjectHeader({
   editing,
   unsaved = false,
   onEdit,
-  more,
   clock,
 }: {
   readonly project: ProjectSummary;
@@ -58,13 +55,12 @@ export function ProjectHeader({
   readonly editing: boolean;
   // A settings draft waits unsaved: said beside Edit settings while the view is shut.
   readonly unsaved?: boolean;
+  // Opens the settings, or, open, closes them.
   readonly onEdit: () => void;
-  readonly more: readonly MoreAction[];
   // The run clock, at the end of the meta line while a run goes.
   readonly clock?: ReactNode;
 }): ReactElement {
   const state = projectStateOf({ ...project, progress });
-  const moved = useRef(false);
   // The way back goes where the project was opened from: Projects as it was filtered, Home,
   // the calendar or the channel.
   const origin = cameFrom();
@@ -104,36 +100,15 @@ export function ProjectHeader({
         <>
           {primary}
           {unsaved && !editing ? <Badge tone="waiting">Unsaved changes</Badge> : null}
-          <Button variant="secondary" aria-pressed={editing} onClick={onEdit}>
-            <SlidersHorizontalIcon aria-hidden="true" strokeWidth={1.75} />
-            Edit settings
+          {/* Named for what a press does now: open, it closes the settings. */}
+          <Button variant="secondary" onClick={onEdit}>
+            {editing ? (
+              <XIcon aria-hidden="true" strokeWidth={1.75} />
+            ) : (
+              <SlidersHorizontalIcon aria-hidden="true" strokeWidth={1.75} />
+            )}
+            {editing ? "Close settings" : "Edit settings"}
           </Button>
-          {more.length === 0 ? null : (
-            <Menu modal={false}>
-              <MenuTrigger asChild>
-                <Button variant="secondary">
-                  More
-                  <ChevronDownIcon aria-hidden="true" strokeWidth={1.75} />
-                </Button>
-              </MenuTrigger>
-              <MenuContent
-                onCloseAutoFocus={(event) => {
-                  if (moved.current) event.preventDefault();
-                  moved.current = false;
-                }}
-              >
-                {more.map((item) => (
-                  <MenuItemWithApart
-                    key={item.id}
-                    item={item}
-                    onPick={() => {
-                      moved.current = item.movesFocus === true;
-                    }}
-                  />
-                ))}
-              </MenuContent>
-            </Menu>
-          )}
         </>
       }
     />
@@ -148,26 +123,37 @@ export function finishedAudiobook(project: ProjectSummary): boolean {
   );
 }
 
-function MenuItemWithApart({
-  item,
-  onPick,
+// What can be done to the project besides its next action, each named for its result and on
+// show (Rename…, Save as template…, Mark uploaded, Delete project…), in the status column under
+// the cost: nothing needs a press to find out what it is. Deleting or cancelling sits apart.
+export function ProjectActions({
+  actions,
 }: {
-  readonly item: MoreAction;
-  readonly onPick: () => void;
-}): ReactElement {
-  return (
-    <>
-      {item.apart ? <MenuSeparator /> : null}
-      <MenuItem
-        {...(item.disabled ? { disabled: true } : {})}
-        onSelect={() => {
-          onPick();
-          item.run();
-        }}
+  readonly actions: readonly ProjectAction[];
+}): ReactElement | null {
+  if (actions.length === 0) return null;
+  const main = actions.filter((action) => action.apart !== true);
+  const apart = actions.filter((action) => action.apart === true);
+  const button = (action: ProjectAction) => (
+    <li key={action.id}>
+      <Button
+        variant="quiet"
+        size="small"
+        className={action.apart === true ? "text-danger" : undefined}
+        disabled={action.disabledReason !== undefined}
+        disabledReason={action.disabledReason}
+        focusableWhenDisabled
+        onClick={action.run}
       >
-        {item.label}
-      </MenuItem>
-    </>
+        {action.label}
+      </Button>
+    </li>
+  );
+  return (
+    <section aria-label="Project actions" className="sl-project-actions">
+      {main.length === 0 ? null : <ul>{main.map(button)}</ul>}
+      {apart.length === 0 ? null : <ul>{apart.map(button)}</ul>}
+    </section>
   );
 }
 
@@ -175,7 +161,7 @@ function MenuItemWithApart({
 // Sep 28": what a person checks on a project each morning, after its state. An audiobook or a
 // podcast says first what it is, since its page otherwise reads like a video's. While a step
 // runs, the last fact is where the run stands, as Home says it: "Step 2 of 4 · Narration · about
-// 4 min left on this step".
+// 4 min left on this step", the time measured as Progress measures it (`measured-eta.ts`).
 function facts(
   project: ProjectSummary,
   stages: readonly Stage[],
@@ -191,12 +177,12 @@ function facts(
     book === undefined ? undefined : bookLabel(book),
     finished && end !== undefined
       ? `finished ${startedAt(end)}${took === undefined ? "" : `, ${took}`}`
-      : `started ${startedAt(project.createdAt)}`,
+      : `started ${startedAt(runStart(stages) ?? project.createdAt)}`,
     channel,
     uploadedAt === null || uploadedAt === undefined
       ? undefined
       : `uploaded ${startedAt(uploadedAt)}`,
-    runLine(
+    runPosition(
       stages.filter((stage) => stage.source !== "off" && stage.state !== "skipped"),
       Date.now(),
       (kind) => stageName(kind, project.config),
@@ -227,6 +213,33 @@ export function finishedAt(stages: readonly Stage[]): string | undefined {
   });
   return ends.length === 0 ? undefined : new Date(Math.max(...ends)).toISOString();
 }
+
+// When the run now going (or stopped) began: the first step it is making, and before it the
+// steps that ran one after another up to it. A remake of the video days after the first run
+// starts at its own render, not when the project (or the copy) was made. Undefined when no step
+// still to finish has started.
+export function runStart(stages: readonly Stage[]): string | undefined {
+  const started = stages.flatMap((stage) => {
+    const at = timeOf(stage.startedAt);
+    return at === undefined ? [] : [{ stage, at }];
+  });
+  const going = started.filter(({ stage }) => stage.state !== "done" && stage.state !== "provided");
+  if (going.length === 0) return undefined;
+  let start = Math.min(...going.map(({ at }) => at));
+  // A step that finished at most a few minutes before the run's start was part of it.
+  const before = started
+    .filter(({ stage }) => stage.state === "done" || stage.state === "provided")
+    .toSorted((a, b) => b.at - a.at);
+  for (const { stage, at } of before) {
+    const end = timeOf(stage.finishedAt);
+    if (end === undefined || end > start || start - end > chainGapMs) continue;
+    start = Math.min(start, at);
+  }
+  return new Date(start).toISOString();
+}
+
+// Steps of one run follow each other within seconds; a later remake comes minutes or days on.
+const chainGapMs = 5 * 60_000;
 
 // "3 min", "41 s", "1 h 12 min": from the first step's start to the last one's end.
 export function runLength(stages: readonly Stage[]): string | undefined {

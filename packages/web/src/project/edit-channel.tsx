@@ -38,18 +38,20 @@ export function EditChannel({
     <div className="grid gap-4 md:grid-cols-2">
       <Field
         label="Channel"
-        tip="play.channel"
         error={problem("channelId")}
         help={
-          channel === undefined ? undefined : (
-            <Link
-              to="/channels/$channelId"
-              params={{ channelId: channel.id }}
-              className="underline"
-            >
-              Edit {channel.name}
-            </Link>
-          )
+          <>
+            Its cast goes with the images.{" "}
+            {channel === undefined ? null : (
+              <Link
+                to="/channels/$channelId"
+                params={{ channelId: channel.id }}
+                className="underline"
+              >
+                Edit {channel.name}
+              </Link>
+            )}
+          </>
         }
       >
         <Select
@@ -71,7 +73,7 @@ export function EditChannel({
         <Switch
           checked={useKit}
           label="Use the channel's brand kit"
-          tip="play.brand-kit"
+          help="Fills the caption font, intro, outro, PDF look and ambient sound you leave at their default."
           onChange={(on) => {
             const { useBrandKit: _kit, ...rest } = config;
             onChange({ ...edit, config: on ? rest : { ...rest, useBrandKit: false } });

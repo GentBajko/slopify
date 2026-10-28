@@ -12,7 +12,7 @@ import { liveProject, oneProject, stageStandingsByProject } from "../admission/r
 import type { CheckpointStage } from "../checkpoints/model.js";
 import { checkpointStageSchema } from "../checkpoints/schema.js";
 import { heldForItsDay } from "../schedules/prepare.js";
-import { uploadedAndSettled } from "../uploads/repo.js";
+import { settledProjects } from "../uploads/repo.js";
 import { projectsWaitingOnAgents } from "./external-waiting.js";
 
 // What a held run waits for when it isn't the person: the one rule the Projects list, a
@@ -59,7 +59,7 @@ const projectRow = z.object({ project_id: z.string() });
 
 // Every project's holds, or one project's alone when `projectId` is given. A caller that has
 // already read the stage standings (`stageStandingsByProject`) or the uploaded projects that
-// read Done (`uploadedAndSettled`) passes them; one that lists what it can read passes `skip`,
+// read Done (`settledProjects`) passes them; one that lists what it can read passes `skip`,
 // given each checkpoint row that can't be read instead of failing them all.
 export function projectHolds(
   db: DatabaseSync,
@@ -120,8 +120,9 @@ export function projectHolds(
     .map((row) => projectRow.parse(row).project_id);
   const agents = projectsWaitingOnAgents(db, projectId);
   const runs = heldRuns(db, projectId);
-  // An uploaded project with nothing admitted reads Done (`edge/http/projects.ts`).
-  const settled = scope.settled ?? uploadedAndSettled(db, projectId);
+  // An uploaded project with nothing admitted, or a finished one an edit left only outdated,
+  // reads Done (`edge/http/projects.ts`).
+  const settled = scope.settled ?? settledProjects(db, projectId);
   const waitingForAgent = new Set(
     [...agents].filter((id) => !reachedTheirs.has(id) && runs.get(id)?.held !== true),
   );

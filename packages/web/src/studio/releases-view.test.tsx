@@ -60,8 +60,10 @@ it("shows each release with its state, and puts a finished project into a free t
       },
     }),
   );
-  expect(await screen.findByText("✓ Scheduled · checks clear")).toBeTruthy();
+  // The project's words, each beside its lamp: Uploaded, Late.
+  expect(await screen.findByText("Uploaded")).toBeTruthy();
   expect(screen.getByText("Late · upload now")).toBeTruthy();
+  expect(screen.getByText("Uploaded").closest("[data-slot=status]")).not.toBeNull();
   expect(screen.getByText("The keeper's lamp")).toBeTruthy();
   const user = userEvent.setup();
   await user.selectOptions(screen.getByRole("combobox"), "p2");
@@ -95,11 +97,11 @@ it("pages through the coming weeks with Earlier and Later and comes back to this
   await user.click(screen.getByRole("button", { name: "Later" }));
   await waitFor(() => expect(asked).toContain("4"));
   // Weeks three and four: only the free time twenty days ahead.
-  await waitFor(() => expect(screen.queryByText("✓ Scheduled · checks clear")).toBeNull());
+  await waitFor(() => expect(screen.queryByText("Uploaded")).toBeNull());
   expect(screen.getAllByRole("combobox")).toHaveLength(1);
   expect(screen.getByRole("button", { name: "Earlier" })).not.toBeNull();
   await user.click(screen.getByRole("button", { name: "Back to this week" }));
-  expect(await screen.findByText("✓ Scheduled · checks clear")).toBeTruthy();
+  expect(await screen.findByText("Uploaded")).toBeTruthy();
   expect(screen.getByText("The next two weeks")).toBeTruthy();
 });
 
@@ -177,7 +179,7 @@ it("lists finished videos with no release time and gives one a time", async () =
   expect(screen.getByRole("link", { name: "New schedule" }).getAttribute("href")).toBe(
     "/calendar?tab=schedules",
   );
-  const list = screen.getByRole("list", { name: "Finished, no release time yet" });
+  const list = screen.getByRole("list", { name: "Finished, no date yet" });
   expect(
     within(list).getByRole("link", { name: "The Harbour | Stories To Sleep To" }),
   ).toBeTruthy();
@@ -187,7 +189,7 @@ it("lists finished videos with no release time and gives one a time", async () =
   ).toBeTruthy();
   await user.click(
     within(list).getByRole("button", {
-      name: "Set a release time for The Harbour | Stories To Sleep To",
+      name: "Set the date for The Harbour | Stories To Sleep To",
     }),
   );
   // Only a time to set: there is nothing to take back yet.

@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { EventSourceLike } from "@/events";
@@ -173,6 +173,50 @@ it("keeps running and unavailable checkpoint choices disabled", async () => {
     "Pause after the images (before the sound file)",
   ])
     expect((await screen.findByRole("checkbox", { name })).hasAttribute("disabled")).toBe(true);
+});
+
+// A finished run has nothing left to pause: three greyed ticks said nothing a person could act
+// on, so one line says so instead.
+it("says in one line that a finished run has nothing left to pause", async () => {
+  renderApp(
+    <CheckpointPanel
+      projectId="p1"
+      revisionId="r1"
+      paused={false}
+      stages={[
+        { kind: "article", state: "done", source: "generate" },
+        { kind: "audio", state: "done", source: "generate" },
+        { kind: "images", state: "done", source: "generate" },
+        { kind: "video", state: "done", source: "generate" },
+      ]}
+    />,
+    testDeps({ "GET /api/projects/p1/checkpoints": jsonAnswer({ ...status, checkpoints: [] }) }),
+  );
+  const pauses = await screen.findByRole("region", { name: "Pauses for this run" });
+  expect(pauses.textContent).toContain("Nothing is left to pause");
+  expect(within(pauses).queryAllByRole("checkbox")).toEqual([]);
+});
+
+// Renamed, a finished project with a PDF reads Done with its PDF waiting, outdated: the PDF
+// holds no pause, so there is still nothing to pause.
+it("says nothing is left to pause when only an outdated PDF waits", async () => {
+  renderApp(
+    <CheckpointPanel
+      projectId="p1"
+      revisionId="r1"
+      paused={false}
+      stages={[
+        { kind: "audio", state: "done", source: "generate" },
+        { kind: "images", state: "done", source: "generate" },
+        { kind: "video", state: "done", source: "generate" },
+        { kind: "document", state: "pending", source: "generate" },
+      ]}
+    />,
+    testDeps({ "GET /api/projects/p1/checkpoints": jsonAnswer({ ...status, checkpoints: [] }) }),
+  );
+  expect(
+    (await screen.findByRole("region", { name: "Pauses for this run" })).textContent,
+  ).toContain("Nothing is left to pause");
 });
 
 it("keeps refused choices frozen until an explicit reload and restores keyboard focus", async () => {

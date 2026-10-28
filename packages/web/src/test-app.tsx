@@ -223,8 +223,9 @@ export async function openProjectSection(name: string): Promise<void> {
     return;
   }
   if (name === "Settings" || name === "Versions" || name === "Pauses and checks") {
-    const edit = await screen.findByRole("button", { name: "Edit settings" });
-    if (edit.getAttribute("aria-pressed") !== "true") await userEvent.click(edit);
+    // Open, the title row's button reads Close settings.
+    const edit = await screen.findByRole("button", { name: /^(Edit|Close) settings$/ });
+    if (edit.textContent === "Edit settings") await userEvent.click(edit);
     if (name === "Versions")
       await userEvent.click(await screen.findByRole("tab", { name: "Versions" }));
     if (name === "Pauses and checks") await openEditSection("Pauses and checks");

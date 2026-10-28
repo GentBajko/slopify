@@ -396,8 +396,8 @@ function PreviousEpisode({ projectId }: { readonly projectId: string }): ReactEl
         <p className="m-0 pl-19 text-small text-danger max-sm:pl-0">{error}</p>
       )}
       <HelpLine className="pl-19 max-sm:pl-0">
-        Fills {"{{Previous video}}"} in the description and goes in the end screen. Left empty, the
-        end screen uses the last long video you uploaded.
+        Goes in the description where its template asks for the previous episode, and in the end
+        screen. Left empty, the end screen uses the last long video you uploaded.
       </HelpLine>
     </div>
   );

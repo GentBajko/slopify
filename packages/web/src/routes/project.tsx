@@ -3,7 +3,7 @@ import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { type ReactElement, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
-import { removeProject } from "@/api";
+import { readProjectVideos, removeProject, saveProjectVideo } from "@/api";
 import { useApp } from "@/app-context";
 import { useCurrentChannel } from "@/channels/current";
 import { BatchQueueCount } from "@/components/batch-queue";
@@ -14,7 +14,7 @@ import { useCommand } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Workspace } from "@/components/kit/layout";
 import { useToast } from "@/components/kit/toast";
-import { ProjectDesigns, useProjectDesignCount } from "@/designs/project-designs";
+import { designsTitle, ProjectDesigns, useProjectDesignCount } from "@/designs/project-designs";
 import { copyText } from "@/fixes/fix-actions";
 import { markUploaded } from "@/home/api";
 import { isReadyToUpload } from "@/home/ready";
@@ -31,7 +31,12 @@ import {
 } from "@/project/checkpoint-api";
 import { confirmationFor } from "@/project/confirmations";
 import { OpenProjectTab } from "@/project/fix-it";
-import { finishedAudiobook, type MoreAction, ProjectHeader } from "@/project/header";
+import {
+  finishedAudiobook,
+  type ProjectAction,
+  ProjectActions,
+  ProjectHeader,
+} from "@/project/header";
 import { LiveBuild } from "@/project/live-build";
 import { MoveToChannel } from "@/project/move-channel";
 import {
@@ -46,8 +51,10 @@ import {
   NextChapterOffer,
   useNextAction,
 } from "@/project/next-action-view";
+import { knownVideoLink } from "@/project/on-youtube";
 import { ProjectOutputs } from "@/project/project-outputs";
 import { fileCount } from "@/project/project-outputs-model";
+import { projectReleasesKey } from "@/project/release-times";
 import {
   EditRequestContext,
   RegenerateNowContext,
@@ -274,21 +281,57 @@ function ProjectWorkspace({
   }, [settingsShown, controller]);
 
   const title = summary?.title ?? "";
+  // The long video's YouTube link and the uploaded mark are one fact (`studio/videos.ts`):
+  // marking not uploaded forgets the link, so its Undo saves the link again, which marks it
+  // uploaded. Every place that reads either is refreshed: the title row, the YouTube section's
+  // links and Release, Projects and Calendar → Releases.
   const uploaded = useMutation({
-    mutationFn: (mark: boolean) => markUploaded(api, projectId, mark),
-    onSuccess: (_, mark) =>
+    mutationFn: async (change: {
+      readonly mark: boolean;
+      readonly link?: string;
+    }): Promise<string | undefined> => {
+      if (change.link !== undefined) {
+        await saveProjectVideo(api, projectId, null, change.link);
+        return undefined;
+      }
+      const link = change.mark
+        ? undefined
+        : knownVideoLink(await readProjectVideos(api, projectId).catch(() => undefined));
+      await markUploaded(api, projectId, change.mark);
+      return link;
+    },
+    onSuccess: (link, change) =>
       notify(
-        mark
+        change.mark
           ? `Marked uploaded: ${title}.`
-          : // The long video's YouTube link and the mark are one fact (`studio/videos.ts`).
-            `${title} is back on Ready to upload, and any YouTube link saved for its video is forgotten.`,
+          : link === undefined
+            ? `${title} is back on Ready to upload.`
+            : `${title} is back on Ready to upload, and its YouTube link is forgotten.`,
         "success",
-        mark ? { label: "Undo", run: () => uploaded.mutate(false) } : undefined,
+        {
+          label: "Undo",
+          run: () =>
+            uploaded.mutate(
+              change.mark
+                ? { mark: false }
+                : link === undefined
+                  ? { mark: true }
+                  : { mark: true, link },
+            ),
+        },
       ),
     onError: (error: Error) =>
-      notify(`${title} wasn't changed: ${error.message} Choose it in More again.`, "error"),
+      notify(
+        `${title} wasn't changed: ${error.message} Press it again under the project's status.`,
+        "error",
+      ),
     onSettled: async () => {
-      await client.invalidateQueries({ queryKey: keys.projects });
+      await Promise.all([
+        client.invalidateQueries({ queryKey: keys.projects }),
+        client.invalidateQueries({ queryKey: ["project", projectId, "youtube-videos"] }),
+        client.invalidateQueries({ queryKey: projectReleasesKey(projectId) }),
+        client.invalidateQueries({ queryKey: keys.studioReleases }),
+      ]);
     },
   });
   const remove = useMutation({
@@ -547,57 +590,54 @@ function ProjectWorkspace({
     );
 
   const ready = listing !== undefined && !isSample && isReadyToUpload(listing) && uploadReady;
-  const more: readonly MoreAction[] = [
+  // Everything else that can be done to the project, in words in the status column. The sample
+  // is read-only: the line under the title row says so, and only its own copy offers the edits.
+  const projectActions: readonly ProjectAction[] = [
     ...(ready
-      ? [{ id: "uploaded", label: "Mark uploaded", run: () => uploaded.mutate(true) }]
+      ? [{ id: "uploaded", label: "Mark uploaded", run: () => uploaded.mutate({ mark: true }) }]
       : listing?.uploadedAt !== null && listing?.uploadedAt !== undefined && !isSample
-        ? [{ id: "uploaded", label: "Mark not uploaded", run: () => uploaded.mutate(false) }]
+        ? [
+            {
+              id: "uploaded",
+              label: "Mark not uploaded",
+              run: () => uploaded.mutate({ mark: false }),
+            },
+          ]
         : []),
-    // Only with outdated outputs: then what is made again is chosen file by file.
-    ...(groups.length === 0
+    // Only with outdated outputs: then what is made again is chosen file by file. Not while a
+    // settings draft is open or a change is being saved: it reviews the saved version.
+    ...(groups.length === 0 || controller.busy
       ? []
       : [
           {
             id: "rebuild",
             label: "Choose what to make again…",
             run: () => controller.review({ kind: "allAffected" }),
-            disabled: controller.busy,
           },
         ]),
-    // The sample is read-only: its copy is where these act.
-    ...(isSample
-      ? [
-          {
-            id: "sample",
-            label: "Read-only sample. Press Make my own copy first.",
-            run: () => undefined,
-            disabled: true,
-          },
-        ]
+    // The title is the first setting: Rename opens the settings there, the field in focus.
+    ...(isSample || revisionId === null
+      ? []
       : [
-          // The title is the first setting: Rename opens the settings there, the field in focus.
           {
             id: "rename",
             label: "Rename…",
             run: () => controller.requestEdit({ section: "title", change: (edit) => edit }),
-            disabled: revisionId === null,
-            movesFocus: true,
           },
-          {
-            id: "template",
-            label: "Save as template…",
-            run: () => setTemplateOpen(true),
-            disabled: revisionId === null,
-          },
-          ...(channels.length < 2
-            ? []
-            : [{ id: "channel", label: "Move to channel…", run: () => setMoveOpen(true) }]),
+          { id: "template", label: "Save as template…", run: () => setTemplateOpen(true) },
+        ]),
+    ...(isSample || channels.length < 2
+      ? []
+      : [{ id: "channel", label: "Move to channel…", run: () => setMoveOpen(true) }]),
+    ...(isSample
+      ? []
+      : [
           {
             id: "designs",
             label:
               designCount === undefined || designCount === 0
-                ? "Posters & pictures…"
-                : `Posters & pictures (${String(designCount)})…`,
+                ? `${designsTitle}…`
+                : `${designsTitle} (${String(designCount)})…`,
             run: () => setDesignsOpen(true),
           },
         ]),
@@ -607,7 +647,7 @@ function ProjectWorkspace({
           id: "cancel",
           label: "Cancel the run…",
           run: () => setCancelling(true),
-          disabled: actions.pending,
+          disabledReason: actions.pending ? "Working on the last press" : undefined,
           apart: true,
         }
       : { id: "delete", label: "Delete project…", run: () => setDeleting(true), apart: true },
@@ -677,7 +717,6 @@ function ProjectWorkspace({
                       unsaved={controller.unsaved}
                       // Pressed again, it closes the settings onto the section the page opens on.
                       onEdit={() => setChosen(settingsTab === undefined ? "settings" : suggested)}
-                      more={more}
                       clock={
                         <RunClock
                           cost={runCost.data}
@@ -707,6 +746,7 @@ function ProjectWorkspace({
                           />
                         )}
                         <BatchQueueCount />
+                        <ProjectActions actions={projectActions} />
                       </>
                     }
                   >
@@ -819,6 +859,7 @@ function ProjectWorkspace({
                             outputs={outputs}
                             resumable={project.data.resumable}
                             holding={project.data.holding}
+                            outdated={outdatedIn}
                           />
                         ) : null}
                       </View>

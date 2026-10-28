@@ -16,7 +16,7 @@ import { ErrorDetails } from "./error-details.js";
 import { LiveWriting } from "./live-writing.js";
 import type { SectionId } from "./next-action.js";
 import { NextActionBeside, type NextActionState } from "./next-action-view.js";
-import { LeadDownloadContext, sampleReason, useReadOnlySample } from "./read-only.js";
+import { LeadDownloadContext, useReadOnlySample } from "./read-only.js";
 import { RevisionControlContext } from "./revision-action-context.js";
 import { useCurrentRevisionView } from "./revision-media.js";
 import { rerunPrice, useRunCost } from "./stage-price.js";
@@ -235,7 +235,8 @@ export function SectionEmpty({
 
 // Making each of the section's stages again from scratch, as a button in its head: a person who
 // wants a stage made again should see how, not hunt for it behind a menu. Each asks first,
-// with its price first. On a sample it stays in place, disabled, and the section says why.
+// with its price first. A sample can't be made again: there is no button to grey out, and the
+// line under the title row says to make a copy first.
 export function SectionMore({
   stages,
   project,
@@ -249,7 +250,7 @@ export function SectionMore({
   const cost = useRunCost(project.id);
   const sample = useReadOnlySample(project.id);
   const rerunnable = useRerunnable(stages);
-  if (rerunnable.length === 0) return null;
+  if (rerunnable.length === 0 || sample) return null;
   const busy =
     actions.pending ||
     project.status === "running" ||
@@ -264,9 +265,9 @@ export function SectionMore({
         <Button
           key={stage.id}
           size="small"
-          disabled={busy || sample}
+          disabled={busy}
           focusableWhenDisabled
-          disabledReason={sample ? sampleReason : "Wait until the work on this project is done"}
+          disabledReason="Wait until the work on this project is done"
           onClick={() => setAsking(stage.kind)}
         >
           <RefreshCwIcon aria-hidden="true" strokeWidth={1.75} />

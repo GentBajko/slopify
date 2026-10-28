@@ -51,7 +51,7 @@ Hashtags come from the video's YouTube tags, then the shorts' hashtags, up to ea
 
 ## Pictures and video
 
-A post can carry the long video, one of the shorts, the thumbnail, any number of the project's pictures, and the project's posters and pictures kept in it (**More** → **Posters & pictures…**, then **Keep in project**), in any mix. Instagram's pictures are cut to 4:5 the first time they are needed; a design goes in its own format closest to the site's shape (portrait on Instagram, a story on TikTok, square elsewhere), drawn when the post needs it; shorts are already vertical; the long video is never re-encoded. Sites that don't mix a video with pictures (LinkedIn, TikTok, Reddit, Bluesky) get a warning rather than a refusal.
+A post can carry the long video, one of the shorts, the thumbnail, any number of the project's pictures, and the project's posters and edited images kept in it (**Posters and edited images…** under the project's status, then **Keep in project**), in any mix. Instagram's pictures are cut to 4:5 the first time they are needed; a design goes in its own format closest to the site's shape (portrait on Instagram, a story on TikTok, square elsewhere), drawn when the post needs it; shorts are already vertical; the long video is never re-encoded. Sites that don't mix a video with pictures (LinkedIn, TikTok, Reddit, Bluesky) get a warning rather than a refusal.
 
 ## Each site's limits
 

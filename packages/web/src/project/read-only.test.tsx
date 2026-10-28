@@ -30,13 +30,16 @@ function mount(sample: boolean) {
 }
 
 describe("the sample project", () => {
-  it("keeps each make-again button in sight, disabled with the reason, and the tiles' paid actions out", async () => {
+  // Rule 9: a control that cannot apply is left out, not greyed. The line under the title row
+  // says the sample is read-only and that Make my own copy is the way to change it.
+  it("leaves the make-again buttons and the tiles' paid actions out, and says why under the title", async () => {
     mount(true);
     await openProjectSection("Video");
     const video = await screen.findByRole("region", { name: "Video" });
-    const again = await within(video).findByRole("button", { name: /^Make the video again/ });
-    await waitFor(() => expect(again.getAttribute("aria-disabled")).toBe("true"));
-    expect(again.textContent).toContain("Read-only sample. Press Make my own copy first.");
+    expect(
+      await screen.findByText(/It is read-only: Make my own copy to edit it and make it again\./),
+    ).not.toBeNull();
+    expect(within(video).queryByRole("button", { name: /^Make the video again/ })).toBeNull();
     await openProjectSection("Images");
     const images = await screen.findByRole("region", { name: "Images" });
     await waitFor(() => expect(images.querySelectorAll("figure").length).toBeGreaterThan(0));

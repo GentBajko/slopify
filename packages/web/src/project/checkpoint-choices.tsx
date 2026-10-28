@@ -134,8 +134,24 @@ export function CheckpointChoices({
         : (current.source ?? "generate") === "generate")
     );
   };
-  // Nothing is left to pause: every step it could hold has run.
-  const finished = choices.every(({ stage }) => !enabledOf(stage));
+  // Nothing is left to pause: every step it could hold has run. Three greyed ticks would say
+  // nothing a person can act on, so the run says so in one line instead.
+  // A step still at work keeps its ticks in view (the run is going); an outdated PDF waiting
+  // after an edit holds no pause.
+  const finished =
+    !dirty &&
+    choices.every(({ stage }) => !enabledOf(stage)) &&
+    stages.every((one) => one.state !== "running" && one.state !== "failed");
+  if (finished)
+    return (
+      <section aria-label="Pauses for this run" className="space-y-1" {...helpScope}>
+        <p className="m-0 font-semibold">Pauses for this run</p>
+        <HelpLine>
+          Nothing is left to pause: every step a pause can hold has run. Making something again
+          starts once you have seen what it costs, without a pause.
+        </HelpLine>
+      </section>
+    );
   // A stage this run lists without a source was made by the AI, as every run before sources.
   const sourceOf = (kind: "audio" | "images" | "video"): string => {
     const found = stages.find((one) => one.kind === kind);
@@ -150,11 +166,7 @@ export function CheckpointChoices({
     <div className="space-y-2">
       <fieldset ref={group} tabIndex={-1} className="space-y-1" {...helpScope}>
         <legend className="font-semibold">Pauses for this run</legend>
-        <HelpLine>
-          {finished
-            ? "The run has finished; pauses apply when the project is made again."
-            : "The run waits under Home → Needs you until you approve what it made."}
-        </HelpLine>
+        <HelpLine>The run waits under Home → Needs you until you approve what it made.</HelpLine>
         {choices.map(({ stage }) => {
           const enabled = enabledOf(stage);
           return (

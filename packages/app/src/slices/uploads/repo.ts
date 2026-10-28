@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { admittedUnfinished } from "../admission/admitted-work.js";
-import { oneProject } from "../admission/repo.js";
+import { liveProject, oneProject } from "../admission/repo.js";
 
 // "Mark uploaded": the person's own note that a finished video is on YouTube. Slopify never
 // uploads, so this is the only way it learns; Home's Ready to upload leaves such a project out.
@@ -58,6 +58,44 @@ export function uploadedAndSettled(db: DatabaseSync, projectId?: string): Readon
       .all(...one.params)
       .map((row) => String(row.project_id)),
   );
+}
+
+// A finished project an edit left with outdated files reads done too, not "Stopped": every step
+// still to run made its files before the edit (a selected output of the current version, now
+// outdated), and nothing runs it until the person chooses to make those files again, which shows
+// the cost first. Renaming a project with a PDF is one: its PDF prints the title. A step that
+// never made a file, a failed or canceled step, a step a run admitted (`admittedUnfinished`, as
+// a restart holds it), a pause or a queued run keep it unsettled, so a run a restart stopped
+// still reads Stopped. One project's alone when `projectId` is given.
+export function editedAndSettled(db: DatabaseSync, projectId?: string): ReadonlySet<string> {
+  const one = oneProject("h", projectId);
+  const unfinished = "s.project_id=h.project_id AND s.state NOT IN ('done','provided','skipped')";
+  return new Set(
+    db
+      .prepare(
+        `SELECT h.project_id FROM project_heads h
+         WHERE ${liveProject("h", "project_id")}
+           AND EXISTS(SELECT 1 FROM stages s WHERE ${unfinished})
+           AND NOT EXISTS(SELECT 1 FROM stages s WHERE ${unfinished}
+             AND (s.state!='pending' OR NOT EXISTS(SELECT 1 FROM revision_outputs o
+               WHERE o.project_id=h.project_id AND o.revision_id=h.revision_id AND o.selected=1
+                 AND o.state='outdated' AND json_extract(o.descriptor,'$.stageKind')=s.kind)))
+           AND NOT EXISTS(SELECT 1 FROM revision_work w WHERE w.project_id=h.project_id
+             AND w.state IN ('pending','running')
+             AND (w.dispatch_state!='held' OR ${admittedUnfinished("w")}))
+           AND NOT EXISTS(SELECT 1 FROM project_controls c WHERE c.project_id=h.project_id AND c.paused=1)
+           AND NOT EXISTS(SELECT 1 FROM project_queue q WHERE q.project_id=h.project_id AND q.state='queued')${one.sql}`,
+      )
+      .all(...one.params)
+      .map((row) => String(row.project_id)),
+  );
+}
+
+// Every project that reads done though a step is left: uploaded with nothing left to run
+// (`uploadedAndSettled`), or finished and left only with files an edit made outdated
+// (`editedAndSettled`).
+export function settledProjects(db: DatabaseSync, projectId?: string): ReadonlySet<string> {
+  return new Set([...uploadedAndSettled(db, projectId), ...editedAndSettled(db, projectId)]);
 }
 
 // "Keep as is": a waiting run the person leaves as it is, until the project's next edit. Set on

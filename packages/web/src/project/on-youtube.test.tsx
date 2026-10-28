@@ -150,7 +150,9 @@ it("saves this project's Previous episode with one Save and says what it fills",
   });
   const box = await screen.findByRole("textbox", { name: "Previous episode" });
   const row = box.closest("[data-help-scope]") as HTMLElement;
-  expect(within(row).getByText(/Fills \{\{Previous video\}\} in the description/u)).not.toBeNull();
+  // In words, not template braces: the person sees no {{Previous video}} anywhere else.
+  expect(within(row).getByText(/where its template asks for the previous episode/u)).not.toBeNull();
+  expect(row.textContent).not.toContain("{{");
   await waitFor(() =>
     expect(within(row).getByRole("button", { name: "Save" }).hasAttribute("disabled")).toBe(false),
   );
