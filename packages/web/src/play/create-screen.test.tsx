@@ -450,6 +450,29 @@ describe("what Create starts from", () => {
     );
   });
 
+  it("picks the writer's model a first short picks, not the first listed, so visits agree", async () => {
+    const { session } = await mountStarter({
+      "GET /api/providers/first-run": jsonAnswer({
+        firstRun: false,
+        detected: [],
+        defaults: {},
+        message: null,
+        detail: null,
+      }),
+      "GET /api/providers/claude-code/models": jsonAnswer({
+        models: [
+          { id: "fable", name: "Fable 5.1" },
+          { id: "sonnet", name: "Sonnet 5.5" },
+        ],
+        allowsCustom: true,
+      }),
+    });
+    await waitFor(() => expect(startFrom().value).toBe(templateId));
+    await waitFor(() =>
+      expect(session().document.form.llm).toEqual({ provider: "claude-code", model: "sonnet" }),
+    );
+  });
+
   it("takes the topic typed while the starter is applied into it, every key, in one draft", async () => {
     let made: () => void = () => {};
     const instantiating = new Promise<void>((resolve) => {

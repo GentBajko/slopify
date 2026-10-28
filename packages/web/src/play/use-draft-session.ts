@@ -1,4 +1,5 @@
 import { pickerEntries } from "@app/slices/model-checks/rules.js";
+import { preferredModel } from "@app/slices/onboarding/preferred-model.js";
 import type { DraftView, PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import { type ProviderFamily, systemVoiceProvider } from "@app/slices/settings/model.js";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -500,7 +501,8 @@ export function useDraftSession(): PlaySession {
 // The writer and image service this machine's first launch found, read once and handed to the
 // session: the fresh form and a draft just made from a template start with them picked. For a
 // kind the first launch found nothing of, they take the first service of that kind that
-// answers (a key saved in Settings, a tool installed), with its first listed model. A draft
+// answers (a key saved in Settings, a tool installed), with the model a first short would pick
+// for it (`preferredModel`), else its first listed one. A draft
 // whose voice service can't read here takes a saved voice of one that can (a keyed service
 // first, the computer's own voice last), with that service's first model. True once every
 // answer (or a failure) has arrived and the session has taken them, so what Create decides on
@@ -550,8 +552,18 @@ export function useFirstRunDefaults(session: Pick<PlaySession, "adoptDefaults">)
     if (provider === undefined) return undefined;
     const list = lists[asked.indexOf(provider)]?.data;
     if (list === undefined) return undefined;
-    const model = pickerEntries(list.models, list.standings, "", list.standings === undefined)
-      .entries[0]?.model.id;
+    // The model the first short picks for the same service, so the row names the same one
+    // whichever way the service was found ("Sonnet 5.5", not the first listed).
+    const listed = pickerEntries(
+      list.models,
+      list.standings,
+      "",
+      list.standings === undefined,
+    ).entries;
+    const model = preferredModel(
+      provider,
+      listed.map((entry) => entry.model),
+    )?.id;
     return model === undefined ? undefined : { provider, model };
   };
   const reader = choice(spare.audio);
