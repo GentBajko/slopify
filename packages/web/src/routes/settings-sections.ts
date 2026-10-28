@@ -28,7 +28,7 @@ export const settingsSections = [
     id: "playback",
     label: "Production defaults",
     formerly: ["Template studio"],
-    meta: "How new videos sound and render, and what template samples may spend.",
+    meta: "How new videos sound and are encoded, and what template samples may spend.",
     run: 1,
   },
   {
@@ -53,7 +53,7 @@ export const settingsSections = [
   {
     id: "trash",
     label: "Trash",
-    meta: "Deleted things, kept for 30 days.",
+    meta: "What you deleted, to bring back or remove for good.",
     run: 2,
   },
   {
@@ -120,4 +120,12 @@ export type SettingsSection = ListedSection | keyof typeof folded;
 export function settingsSectionOf(value: unknown): ListedSection {
   if (typeof value === "string" && value in folded) return folded[value as keyof typeof folded];
   return settingsSections.find((section) => section.id === value)?.id ?? "providers";
+}
+
+// Keys & services, with or without a service named (`?family=image&provider=openai-image`):
+// the page sets its own scroll once its lists are in (to the top, or to the setup it opens),
+// so the router leaves the scroll alone for it rather than resetting to the top after the page
+// has scrolled.
+export function keysArrival(pathname: string, search: Readonly<Record<string, unknown>>): boolean {
+  return pathname === "/settings" && settingsSectionOf(search.section) === "providers";
 }

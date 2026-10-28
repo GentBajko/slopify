@@ -1,12 +1,16 @@
 import type { ChannelLink } from "@app/slices/youtube/placeholders.js";
+import { useQuery } from "@tanstack/react-query";
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import type { ReactElement } from "react";
-import { defaultChannelId } from "@/channels/api";
+import { readChannelLinks } from "@/api";
+import { useApp } from "@/app-context";
+import { channelsQuery } from "@/channels/api";
 import { Button } from "@/components/kit/button";
 import { HelpLine, Input } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
 import { ButtonLink } from "@/components/kit/link";
 import { SectionHead } from "@/components/kit/section-head";
+import { keys } from "@/queries";
 
 // A channel's named links, edited on its Name and look tab: the links a YouTube description's
 // `{{Name}}` placeholders fill from when it is shown, copied or downloaded, such as {{Patreon}}
@@ -90,22 +94,26 @@ export function ChannelLinksEditor({
   );
 }
 
-// Settings → Channel links: the links moved to each channel's Name and look tab, so every
-// channel fills `{{Patreon}}` with its own. A list saved here before still fills the default
-// channel's projects until that tab is saved.
-export function ChannelLinksSettings(): ReactElement {
+// Settings → YouTube Studio and posting: the named links moved to each channel's Name and look
+// tab, so every channel fills `{{Patreon}}` with its own. Only while links saved here before
+// still fill the default channel's descriptions (it has not saved a list of its own) is there
+// anything to say; a new install, or one whose links moved, shows nothing.
+export function ChannelLinksSettings(): ReactElement | null {
+  const { api } = useApp();
+  const channels = useQuery(channelsQuery(api));
+  const legacy = useQuery({ queryKey: keys.channelLinks, queryFn: () => readChannelLinks(api) });
+  const main = channels.data?.find((channel) => channel.isDefault);
+  const count = legacy.data?.length ?? 0;
+  if (main === undefined || main.brand.links !== undefined || count === 0) return null;
   return (
-    <div {...helpScope}>
-      <SectionHead title="Named links" />
-      <p className="m-0 max-w-[60ch] text-ink-2">
-        Each channel keeps its own links now, on its Name and look tab under Channel links. Links
-        saved here before fill the default channel's descriptions until you save that tab.
-      </p>
-      <div className="mt-3">
-        <ButtonLink to="/channels/$channelId" params={{ channelId: defaultChannelId }}>
-          Open the default channel's links
-        </ButtonLink>
-      </div>
+    <div className="flex flex-col items-start gap-2" {...helpScope}>
+      <SectionHead title="Links saved here before" size="small" />
+      <HelpLine>
+        {`${count === 1 ? "A link" : `${String(count)} links`} saved here before still ${count === 1 ? "fills" : "fill"} ${main.name}'s descriptions. They move to its Channel links when you save its Name and look tab.`}
+      </HelpLine>
+      <ButtonLink to="/channels/$channelId" params={{ channelId: main.id }}>
+        {`Open ${main.name}'s links`}
+      </ButtonLink>
     </div>
   );
 }

@@ -293,7 +293,10 @@ export function StorageTools() {
                 <span className="tabular-nums">
                   {" "}
                   · {fileSize(Math.max(0, usage.data.projects - usage.data.trash.bytes))} project
-                  files · {fileSize(usage.data.staging)} staged files
+                  files
+                  {usage.data.staging > 0
+                    ? ` · ${fileSize(usage.data.staging)} of uploads not used yet`
+                    : null}
                   {usage.data.trash.projects > 0
                     ? ` · ${fileSize(usage.data.trash.bytes)} in the trash (${trashedProjects(usage.data.trash.projects)}), freed when removed for good`
                     : null}

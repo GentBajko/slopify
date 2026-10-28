@@ -1,118 +1,96 @@
 import { languageInfo, languageList } from "@app/kernel/ports/languages.js";
 import type { Voice } from "@app/slices/settings/model.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { type ReactElement, useId, useState } from "react";
+import { XIcon } from "lucide-react";
+import type { ReactElement } from "react";
 import { setVoiceLanguages } from "@/api";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/kit/button";
-import { Input } from "@/components/kit/field";
+import { IconButton } from "@/components/kit/button";
+import { Select } from "@/components/kit/field";
 import { keys } from "@/queries";
 
-// "es, de" typed in the box, as the list the server stores.
-export function languagesOfText(text: string): readonly string[] {
-  return text
-    .split(/[\s,;]+/)
-    .map((one) => one.trim().toLowerCase())
-    .filter((one) => one !== "");
+// A language's name as the lists say it ("Spanish"); a code Slopify does not know stays a code.
+function nameOf(code: string): string {
+  return languageInfo(code).code === code ? languageInfo(code).name : code;
 }
 
-// What the typed codes read as, under the box: the names Slopify knows, and the codes it does
-// not, so "es, dee" says at once that "dee" is not a language before Add voice is pressed.
-export function languagesReading(text: string): string {
-  const codes = languagesOfText(text);
-  if (codes.length === 0) return "Codes such as es, de. Empty means any language.";
-  const known = codes.filter((code) => languageList.some((one) => one.code === code));
-  const unknown = codes.filter((code) => !known.includes(code));
-  const names = known.map((code) => languageInfo(code).name).join(", ");
-  if (unknown.length === 0) return `Reads as: ${names}.`;
-  const list = languageList.map((one) => one.code).join(", ");
-  return `${names === "" ? "" : `Reads as: ${names}. `}Not a language code Slopify knows: ${unknown.join(", ")}. Use one of ${list}.`;
+// A voice's languages, picked by name rather than typed as codes: each picked one is a chip
+// with its own Remove, and the select adds another. With none picked the select reads "Any
+// language", which is what an empty list means to Create's voice lists.
+export function VoiceLanguagesPicker({
+  value,
+  onChange,
+  label,
+  disabled = false,
+}: {
+  readonly value: readonly string[];
+  readonly onChange: (codes: readonly string[]) => void;
+  // The select's accessible name ("Languages Narrator M speaks").
+  readonly label: string;
+  readonly disabled?: boolean;
+}): ReactElement {
+  const left = languageList.filter((language) => !value.includes(language.code));
+  return (
+    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+      {value.map((code) => (
+        <span key={code} className="sl-chip h-8 gap-1 pr-1">
+          {nameOf(code)}
+          <IconButton
+            label={`Remove ${nameOf(code)}`}
+            size="small"
+            tip={false}
+            disabled={disabled}
+            onClick={() => onChange(value.filter((one) => one !== code))}
+          >
+            <XIcon aria-hidden="true" className="size-3.5" strokeWidth={2} />
+          </IconButton>
+        </span>
+      ))}
+      {left.length === 0 ? null : (
+        <Select
+          aria-label={label}
+          className="sl-select--compact"
+          value=""
+          disabled={disabled}
+          options={[
+            { value: "", label: value.length === 0 ? "Any language" : "Add a language" },
+            ...left.map((language) => ({ value: language.code, label: language.name })),
+          ]}
+          onChange={(event) => {
+            if (event.target.value !== "") onChange([...value, event.target.value]);
+          }}
+        />
+      )}
+    </div>
+  );
 }
 
-// The languages a voice speaks, by name; unknown is offered for every language.
-export function voiceLanguagesText(voice: Pick<Voice, "languages">): string {
-  if (voice.languages === undefined) return "Any (not known)";
-  return voice.languages
-    .map((code) => (languageInfo(code).code === code ? languageInfo(code).name : code))
-    .join(", ");
-}
-
-// Settings → Voices' Languages cell: what the voice speaks, and an Edit button that turns the
-// cell into a box of codes with Save and Cancel.
+// Settings → Voices: what a saved voice speaks, changed in place; each change is saved at once.
 export function VoiceLanguagesCell({ voice }: { readonly voice: Voice }): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
-  const id = useId();
-  const [editing, setEditing] = useState(false);
-  const [text, setText] = useState((voice.languages ?? []).join(", "));
-  const [refusal, setRefusal] = useState<string | undefined>(undefined);
   const save = useMutation({
-    mutationFn: () => setVoiceLanguages(api, voice.id, languagesOfText(text)),
-    onSuccess: async (refused) => {
-      if (refused !== undefined) {
-        setRefusal(refused.message);
-        return;
-      }
-      setEditing(false);
-      setRefusal(undefined);
+    mutationFn: (codes: readonly string[]) => setVoiceLanguages(api, voice.id, codes),
+    onSettled: async () => {
       await client.invalidateQueries({ queryKey: keys.voices });
     },
   });
-  if (!editing)
-    return (
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-ink-2">{voiceLanguagesText(voice)}</span>
-        <Button
-          variant="quiet"
-          size="small"
-          aria-label={`Edit the languages of ${voice.name}`}
-          onClick={() => setEditing(true)}
-        >
-          Edit
-        </Button>
-      </div>
-    );
+  const shown =
+    save.isPending && save.variables !== undefined ? save.variables : (voice.languages ?? []);
+  const problem = save.error?.message ?? save.data?.message;
   return (
-    // A form so Enter in the box saves, as Save does.
-    <form
-      className="grid gap-1"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (!save.isPending) save.mutate();
-      }}
-    >
-      <Input
-        id={id}
-        aria-label={`Languages of ${voice.name}`}
-        value={text}
-        placeholder="es, de"
-        aria-invalid={refusal !== undefined}
-        onChange={(event) => {
-          setText(event.target.value);
-          setRefusal(undefined);
-        }}
+    <div className="flex min-w-0 flex-col gap-1">
+      <VoiceLanguagesPicker
+        value={shown}
+        label={`Languages ${voice.name} speaks`}
+        disabled={save.isPending}
+        onChange={(codes) => save.mutate(codes)}
       />
-      <p className="m-0 text-small text-ink-2">{languagesReading(text)}</p>
-      {refusal === undefined ? null : <p className="m-0 text-small text-danger">{refusal}</p>}
-      {save.error === null ? null : (
-        <p className="m-0 text-small text-danger">{save.error.message}</p>
+      {problem === undefined ? null : (
+        <p role="alert" className="m-0 text-small text-danger">
+          {problem}
+        </p>
       )}
-      <div className="flex gap-2">
-        <Button type="submit" size="small" disabled={save.isPending}>
-          Save
-        </Button>
-        <Button
-          variant="quiet"
-          size="small"
-          onClick={() => {
-            setEditing(false);
-            setRefusal(undefined);
-            setText((voice.languages ?? []).join(", "));
-          }}
-        >
-          Cancel
-        </Button>
-      </div>
-    </form>
+    </div>
   );
 }

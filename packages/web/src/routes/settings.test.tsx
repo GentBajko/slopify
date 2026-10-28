@@ -3,7 +3,7 @@ import { useRouterState } from "@tanstack/react-router";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { CommandPaletteProvider, CommandRegistry } from "@/components/kit/command-palette";
 import { AppearanceSkin } from "@/components/theme";
 import type { Answer } from "@/test-app";
@@ -32,7 +32,7 @@ function deps(extra: Readonly<Record<string, Answer>> = {}) {
     "GET /api/settings/encoders": jsonAnswer({
       nvidia: {
         available: false,
-        reason: "No NVIDIA graphics card encoder was found on this computer.",
+        reason: "No NVIDIA graphics card was found on this computer.",
       },
     }),
     // Backup & storage shows the daily backups first.
@@ -219,13 +219,13 @@ describe("the settings screen", () => {
       deps({ "GET /api/channels": jsonAnswer({ channels: [one] }) }),
     );
     const nav = await screen.findByRole("navigation", { name: "Settings pages" });
-    const link = await within(nav).findByRole("link", { name: "Your channel" });
+    const link = await within(nav).findByRole("link", { name: "Your channel ↗" });
     expect(link.getAttribute("href")).toBe("/channels");
     // It sits after the publishing pages, as a link: the list's pages stay buttons.
     expect(link.previousElementSibling?.textContent).toBe("YouTube Studio and posting");
     // On a phone the page select carries it too, and picking it opens the channel.
     const select = screen.getByLabelText("Settings page") as HTMLSelectElement;
-    await userEvent.selectOptions(select, "Your channel");
+    await userEvent.selectOptions(select, "Your channel ↗");
     await waitFor(() => expect(screen.getByLabelText("Where").textContent).toBe("/channels"));
   });
 
@@ -240,8 +240,8 @@ describe("the settings screen", () => {
     );
     // The services are listed once the answers are in, the channels' among them.
     await screen.findByRole("heading", { name: "Voice services" });
-    expect(screen.queryByRole("link", { name: "Your channel" })).toBeNull();
-    expect(screen.queryByRole("option", { name: "Your channel" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Your channel ↗" })).toBeNull();
+    expect(screen.queryByRole("option", { name: "Your channel ↗" })).toBeNull();
   });
 
   it.each([
@@ -297,6 +297,26 @@ describe("the settings screen", () => {
                 state: "ok",
                 checks: [{ label: "Signed in", state: "ok", detail: "Signed in as you." }],
               },
+              {
+                id: "openai-tts",
+                displayName: "OpenAI",
+                family: "tts",
+                state: "no-key",
+                checks: [
+                  {
+                    label: "Key",
+                    state: "problem",
+                    detail: "None is saved, and OpenAI is chosen for gpt-4o-mini-tts.",
+                  },
+                ],
+              },
+              {
+                id: "openai-image",
+                displayName: "OpenAI",
+                family: "image",
+                state: "unused",
+                checks: [],
+              },
             ],
           })(request);
         },
@@ -304,7 +324,17 @@ describe("the settings screen", () => {
     );
     expect(await screen.findByText("Last checked: not yet.")).not.toBeNull();
     await user.click(screen.getByRole("button", { name: "Check every service" }));
-    expect(await screen.findByText("Signed in as you.")).not.toBeNull();
+    // Only what needs something is listed with its checks, in the lists' own state words; a
+    // name two kinds share says which.
+    const listed = await screen.findByRole("list", { name: "Check by service" });
+    expect(within(listed).getByText("OpenAI (voices)")).not.toBeNull();
+    expect(within(listed).getByText("No key")).not.toBeNull();
+    expect(
+      within(listed).getByText("None is saved, and OpenAI is chosen for gpt-4o-mini-tts."),
+    ).not.toBeNull();
+    expect(screen.getByText("Ready: Codex CLI.")).not.toBeNull();
+    expect(screen.queryByText("Signed in as you.")).toBeNull();
+    expect(screen.getByText("Not set up and not used anywhere: OpenAI (images).")).not.toBeNull();
     expect(screen.getByText(/^Last checked at /)).not.toBeNull();
     expect(checks).toBe(1);
   });
@@ -316,6 +346,58 @@ describe("the settings screen", () => {
     );
     const back = await screen.findByRole("link", { name: "Back to the welcome" });
     expect(back.getAttribute("href")).toBe("/welcome?step=make");
+  });
+
+  it("scrolls to the setup a welcome link opens only once the readiness lines above are drawn", async () => {
+    const scrolled = vi.spyOn(window, "scrollBy").mockImplementation(() => {});
+    vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      top: 1400,
+      bottom: 1700,
+    } as DOMRect);
+    let answer = () => {};
+    const voices = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    try {
+      renderRouted(
+        <SettingsRoute
+          section="providers"
+          family="image"
+          provider="openai-image"
+          back={{ to: "welcome", step: "make" }}
+        />,
+        deps({
+          "GET /api/providers": jsonAnswer({
+            providers: [
+              {
+                id: "openai-image",
+                family: "image",
+                displayName: "OpenAI",
+                readiness: { kind: "keyed", hasKey: false },
+              },
+            ],
+          }),
+          // The readiness lines wait for the voices; they come last.
+          "GET /api/settings/voices": async (request) => {
+            await voices;
+            return jsonAnswer({ voices: [] })(request);
+          },
+          // The welcome's picks never answer: the lines do not wait for them.
+          "GET /api/providers/first-run": () => new Promise(() => {}),
+        }),
+      );
+      expect(await screen.findByLabelText("OpenAI API key")).not.toBeNull();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(screen.queryByRole("list", { name: "What your videos have" })).toBeNull();
+      // Measured now, the lines still to come above would push the key box back out of view.
+      expect(scrolled).not.toHaveBeenCalled();
+      answer();
+      expect(await screen.findByRole("list", { name: "What your videos have" })).not.toBeNull();
+      await waitFor(() => expect(scrolled).toHaveBeenCalledTimes(1));
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 
   it("offers the way back to Create, and nothing without a return", async () => {
@@ -403,13 +485,13 @@ describe("the settings screen", () => {
   it("shows the render settings at their defaults, without NVIDIA where there is none", async () => {
     renderRouted(<SettingsRoute section="playback" />, deps());
 
-    expect(await screen.findByRole("heading", { name: "Rendering" })).not.toBeNull();
+    expect(await screen.findByRole("heading", { name: "Encoding" })).not.toBeNull();
     const encoder = (await screen.findByLabelText("Video encoder")) as HTMLSelectElement;
     expect(encoder.value).toBe("cpu");
     expect([...encoder.options].map((option) => option.text)).toEqual(["Processor (x264)"]);
     expect(
       await screen.findByText(
-        "No NVIDIA graphics card encoder was found on this computer. Videos are encoded on the processor.",
+        "No NVIDIA graphics card was found on this computer. Videos are encoded on the processor.",
       ),
     ).not.toBeNull();
     // Nothing the test printed, so nothing to fold.
@@ -417,7 +499,7 @@ describe("the settings screen", () => {
     const clips = screen.getByLabelText("Clip encoding") as HTMLSelectElement;
     expect(clips.value).toBe("thorough");
     expect([...clips.options].map((option) => option.text)).toEqual(["Thorough", "Fast"]);
-    const priority = screen.getByLabelText("Render priority") as HTMLSelectElement;
+    const priority = screen.getByLabelText("Encoding priority") as HTMLSelectElement;
     expect(priority.value).toBe("background");
     expect([...priority.options].map((option) => option.text)).toEqual([
       "Normal",
@@ -433,8 +515,7 @@ describe("the settings screen", () => {
         "GET /api/settings/encoders": jsonAnswer({
           nvidia: {
             available: false,
-            reason:
-              "This computer's NVIDIA graphics card encoder did not pass its test, so it is not used.",
+            reason: "No working NVIDIA graphics card was found on this computer.",
             detail:
               "the ffmpeg at ffmpeg lists NVENC but its test encode failed: Operation not permitted",
           },
@@ -443,7 +524,7 @@ describe("the settings screen", () => {
     );
     expect(
       await screen.findByText(
-        "This computer's NVIDIA graphics card encoder did not pass its test, so it is not used. Videos are encoded on the processor.",
+        "No working NVIDIA graphics card was found on this computer. Videos are encoded on the processor.",
       ),
     ).not.toBeNull();
     const details = screen.getByText("Details").closest("details");
@@ -479,7 +560,7 @@ describe("the settings screen", () => {
     await waitFor(() => expect(sent.at(-1)).toEqual({ ...settings, videoEncoder: "nvidia" }));
     await user.selectOptions(screen.getByLabelText("Clip encoding"), "fast");
     await waitFor(() => expect(sent.at(-1)).toMatchObject({ clipEncodeSpeed: "fast" }));
-    await user.selectOptions(screen.getByLabelText("Render priority"), "normal");
+    await user.selectOptions(screen.getByLabelText("Encoding priority"), "normal");
     await waitFor(() => expect(sent.at(-1)).toMatchObject({ renderPriority: "normal" }));
   });
 
@@ -508,7 +589,7 @@ describe("the settings screen", () => {
     // Trashed projects' folders are shown apart from the live project files.
     expect(
       screen.getByText(
-        /256 KB project files · 128 B staged files · 256 KB in the trash \(2 deleted projects\), freed when removed for good/,
+        /256 KB project files · 128 B of uploads not used yet · 256 KB in the trash \(2 deleted projects\), freed when removed for good/,
       ),
     ).not.toBeNull();
     expect(screen.getByText("A finished run")).not.toBeNull();

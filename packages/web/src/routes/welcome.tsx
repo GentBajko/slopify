@@ -281,11 +281,12 @@ export function WelcomeRoute({
             ? undefined
             : {
                 tone: "error" as const,
-                // The checklist above names each gap with its fix; a gap it can't see (a
-                // service that lists no model) is said here in the server's words.
+                // The checklist under the topic names each gap with its fix, in its own state
+                // words; a gap it can't see (a service that lists no model) is said here in the
+                // server's words.
                 text:
                   missing.length > 0
-                    ? "The short didn't start. Fix what is marked Needs setup above, then press Make a 60-second short again."
+                    ? "The short didn't start. Fix the lines below that are not Ready, then press Make a 60-second short again."
                     : refused.map((gap) => gap.message).join(" "),
               };
   const at = welcomeSteps.indexOf(step);
@@ -308,7 +309,14 @@ export function WelcomeRoute({
     <>
       <PageHeader
         title="Welcome to Slopify"
-        meta="Make a video from a topic, with the tools already on this computer."
+        // On a phone the title and Skip share the one line (the title gives up its usual
+        // width, the meta is left out); the steps say the rest.
+        className="max-sm:[&>div:first-child]:basis-0"
+        meta={
+          <span className="max-sm:hidden">
+            Make a video from a topic, with the tools already on this computer.
+          </span>
+        }
         actions={
           <Button variant="quiet" disabled={skip.isPending} onClick={() => skip.mutate()}>
             {made === undefined ? "Skip" : "Done"}
@@ -359,14 +367,8 @@ export function WelcomeRoute({
       <StepPanel id="make" at={step}>
         {made === undefined ? (
           <>
-            {missing.length === 0 ? null : (
-              <>
-                <p className="m-0 mb-2 text-small font-semibold text-waiting">
-                  The short needs every line Ready before it can start.
-                </p>
-                <SetupChecklist back={{ return: "welcome", step: "make" }} className="mb-4" />
-              </>
-            )}
+            {/* The step's one box first, so it is in the first screen on a phone too; what is
+                still missing follows it. */}
             <form id="welcome-short" onSubmit={submit} className="mb-4">
               <Field label="Topic" help={plan(packName, data?.needs)}>
                 <Input
@@ -381,6 +383,14 @@ export function WelcomeRoute({
                 />
               </Field>
             </form>
+            {missing.length === 0 ? null : (
+              <>
+                <p className="m-0 mb-2 text-small font-semibold text-waiting">
+                  The short needs every line Ready before it can start.
+                </p>
+                <SetupChecklist back={{ return: "welcome", step: "make" }} className="mb-4" />
+              </>
+            )}
           </>
         ) : (
           <Callout tone="info" className="mb-4" title="Your short is being made.">
@@ -407,7 +417,12 @@ export function WelcomeRoute({
           </StatusSlot>
         }
       >
-        {step === "make" ? null : <TextLink to="/play">Make a long video instead</TextLink>}
+        {/* A phone has Create in its bottom bar already, so the bar keeps to one row there. */}
+        {step === "make" ? null : (
+          <TextLink to="/play" className="max-sm:hidden">
+            Make a long video instead
+          </TextLink>
+        )}
         {back === undefined ? null : <Button onClick={() => go(back)}>Back</Button>}
         {/* Each forward button has its own key: a browser runs a click's default action after
             the step has changed, so Next must not become Make's submit button in place, or the

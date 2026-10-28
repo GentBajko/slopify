@@ -32,7 +32,7 @@ To set these up:
 
 1. Install and sign in to Claude Code, Codex or Antigravity CLI (see [AI CLIs](AI-CLIs)), or add keys in Settings → **Keys & services** (see [Keys and Services](Providers-and-Keys)).
 2. Optional: add a voice key in Settings → **Keys & services**. An OpenAI key is the simplest: the suggested voice works with it right away.
-3. Back on the first-run screen, step 1, **What a short needs**, shows the Article, Narration and Images lines, each **Ready** or **Needs setup** with its fix. Press **Check again** after installing a speech program.
+3. Back on the first-run screen, step 1, **What a short needs**, shows the Article, Narration and Images lines, each **Ready**, **No key** or **No voice saved** with its fix. Press **Check again** after installing a speech program.
 
 ## Make the short
 
@@ -84,14 +84,14 @@ The file is also in the project's folder under your Projects folder (see [Where 
 
 ## If it refuses to start
 
-The status line says "The short didn't start." and the lines above the topic say what is missing, each with the button that fixes it. They are the same lines as step 1:
+The status line says "The short didn't start. Fix the lines below that are not Ready, then press Make a 60-second short again." and the lines under the topic say what is missing, each with the button that fixes it. They are the same lines as step 1:
 
 | Line says | Fix |
 | --- | --- |
-| Nothing can write the article yet. | Sign in to Claude Code, Codex or Antigravity CLI, or press **Add a key for writing** (OpenRouter). |
-| Nothing can make the images yet. | Press **Add an image key** (OpenAI, Google, fal.ai or Replicate), or sign in to Codex CLI. |
+| Nothing can write the article yet. | Sign in to Claude Code, Codex or Antigravity, or press **Add a key for writing** (OpenRouter). |
+| Nothing can make the images yet. | Press **Add an image key** (OpenAI, Google, fal.ai or Replicate), or sign in to Codex. |
 | Nothing can read the article aloud yet. | Press **Add a voice key** (OpenAI works at once), or on Linux install `espeak-ng` and press **Check again**. |
-| *Voice service* has a key but no voice saved yet. | Press **Save a voice** (Settings → Voices), or add an OpenAI key. |
+| *Voice service* has a key but no voice saved yet. | Press **Save a voice** (Settings → Voices), or **Add an OpenAI key**. |
 | Slopify can't list the models on this machine right now. | Restart Slopify and try again. |
 
 If the run fails later, the project page and Home's **Needs you** say which step failed and offer the fix. See [Recovery and Retries](Recovery-and-Retries).

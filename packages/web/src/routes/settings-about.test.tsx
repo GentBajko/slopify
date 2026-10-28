@@ -57,7 +57,7 @@ describe("Settings → About", () => {
     expect(screen.queryByRole("link", { name: "Patreon" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Buy Me a Coffee" })).toBeNull();
     expect(
-      screen.getByRole("link", { name: "How I run a channel with it" }).getAttribute("href"),
+      screen.getByRole("link", { name: "How I run a channel with it ↗" }).getAttribute("href"),
     ).toBe(channelStoryUrl);
     expect(channelStoryUrl.startsWith("https://")).toBe(true);
   });

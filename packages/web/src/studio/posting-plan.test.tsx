@@ -24,7 +24,7 @@ it("points to the schedules for release times, and removes an older posting plan
       },
     }),
   );
-  expect(await screen.findByRole("link", { name: "Calendar → Schedules" })).toBeTruthy();
+  expect(await screen.findByRole("link", { name: "Calendar → Schedules ↗" })).toBeTruthy();
   expect(await screen.findByText("An older posting plan still applies")).toBeTruthy();
   const user = userEvent.setup();
   await user.click(screen.getByRole("button", { name: "Remove the old plan" }));

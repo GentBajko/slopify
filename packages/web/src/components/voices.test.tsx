@@ -30,6 +30,13 @@ const narrator: Voice = {
   voiceId: "abc123",
 };
 
+// A voice's row: its name, then its service, state, ID, languages, switch and actions.
+async function rowOf(name: string): Promise<HTMLElement> {
+  const row = (await screen.findByText(name)).closest("li");
+  if (row === null) throw new Error(`No row for ${name}`);
+  return row;
+}
+
 function deps(voices: readonly Voice[], extra: Readonly<Record<string, Answer>> = {}) {
   return testDeps({
     "GET /api/providers": jsonAnswer({ providers: tts }),
@@ -46,20 +53,56 @@ describe("the voice list", () => {
     ).not.toBeNull();
   });
 
-  it("lists each voice with its service, its ID, whether it can speak, and Listen", async () => {
+  it("lists each voice as a row with its service, its ID, whether it can speak, and Listen", async () => {
     renderRouted(<Voices />, deps([narrator]));
-    const row = await screen.findByRole("row", { name: /Narrator M/ });
+    const row = await rowOf("Narrator M");
     expect(within(row).getByText("ElevenLabs")).not.toBeNull();
-    expect(within(row).getByText("abc123")).not.toBeNull();
+    expect(within(row).getByText("· abc123")).not.toBeNull();
     expect(within(row).getByText("Ready")).not.toBeNull();
     expect(within(row).getByRole("button", { name: "Listen to Narrator M" })).not.toBeNull();
+    // Rows, not a wide table that a narrow column cuts off.
+    expect(screen.queryByRole("table")).toBeNull();
+    // What it speaks is picked in the row by name: no Edit, no codes.
+    expect(within(row).queryByRole("button", { name: /^Edit/ })).toBeNull();
+    expect(
+      within(row).getByRole("combobox", { name: "Languages Narrator M speaks" }),
+    ).not.toBeNull();
+    expect(screen.getByText(/Listen reads one sentence aloud/)).not.toBeNull();
     expect(
       screen.queryByText("No voices yet. Add one below: narration reads your script in it."),
     ).toBeNull();
-    // Where pronunciation is set, from the page that holds the voices.
-    expect(screen.getByRole("link", { name: "Pronunciation" }).getAttribute("href")).toBe(
+    // Where pronunciation is set, from the page that holds the voices: another page, so ↗.
+    expect(screen.getByRole("link", { name: "Pronunciation ↗" }).getAttribute("href")).toBe(
       "/narration-aliases",
     );
+  });
+
+  it("saves a voice's languages as soon as one is picked or removed", async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    let voices: readonly Voice[] = [{ ...narrator, languages: ["es"] }];
+    renderRouted(
+      <Voices />,
+      deps([], {
+        "GET /api/settings/voices": (request) => jsonAnswer({ voices })(request),
+        "PUT /api/settings/voices/v1/languages": async (request) => {
+          const body = (await request.json()) as { languages: string[] };
+          sent.push(body);
+          voices = [{ ...narrator, languages: body.languages }];
+          return emptyAnswer()(request);
+        },
+      }),
+    );
+    const row = await rowOf("Narrator M");
+    expect(within(row).getByText("Spanish")).not.toBeNull();
+    await user.selectOptions(
+      within(row).getByRole("combobox", { name: "Languages Narrator M speaks" }),
+      "German",
+    );
+    await waitFor(() => expect(sent).toEqual([{ languages: ["es", "de"] }]));
+    await user.click(await within(row).findByRole("button", { name: "Remove Spanish" }));
+    await waitFor(() => expect(sent).toHaveLength(2));
+    expect(sent[1]).toEqual({ languages: ["de"] });
   });
 
   it("says which service has no key yet, with its key one press away, and offers no Listen", async () => {
@@ -71,7 +114,7 @@ describe("the voice list", () => {
     expect(screen.getByRole("link", { name: "Add a Cartesia key" }).getAttribute("href")).toBe(
       "/settings?section=providers&family=tts&provider=cartesia",
     );
-    const row = screen.getByRole("row", { name: /Calm/ });
+    const row = await rowOf("Calm");
     expect(within(row).getByText("No key")).not.toBeNull();
     expect(within(row).queryByRole("button", { name: /^Listen/ })).toBeNull();
   });
@@ -168,7 +211,7 @@ describe("the voice list", () => {
     });
   });
 
-  it("adds a voice on Enter and reads the typed language codes back by name", async () => {
+  it("adds a voice on Enter, with the languages picked by name", async () => {
     const user = userEvent.setup();
     let posted: unknown;
     renderRouted(
@@ -183,12 +226,10 @@ describe("the voice list", () => {
     const name = await screen.findByLabelText("Name");
     await user.type(name, "Narrator M");
     await user.type(screen.getByLabelText("Voice ID"), "abc123");
-    await user.type(screen.getByLabelText("Languages it speaks (optional)"), "es, xx");
-    expect(
-      screen.getByText(/Reads as: Spanish\. Not a language code Slopify knows: xx/),
-    ).not.toBeNull();
-    await user.clear(screen.getByLabelText("Languages it speaks (optional)"));
-    await user.type(screen.getByLabelText("Languages it speaks (optional)"), "de{Enter}");
+    const languages = screen.getByRole("combobox", { name: "Languages it speaks" });
+    expect((languages as HTMLSelectElement).selectedOptions[0]?.textContent).toBe("Any language");
+    await user.selectOptions(languages, "German");
+    await user.type(name, "{Enter}");
     await waitFor(() => {
       expect(posted).toEqual({
         provider: "elevenlabs",
@@ -248,7 +289,7 @@ describe("the voice list", () => {
     );
 
     const name = await screen.findByLabelText("Name");
-    await user.type(name, " ");
+    await user.type(name, "Narrator M");
     await user.type(screen.getByLabelText("Voice ID"), "abc123");
     await user.click(screen.getByRole("button", { name: "Add voice" }));
 
@@ -419,6 +460,12 @@ describe("the voice list", () => {
     await user.selectOptions(voice, "fable");
     expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("fable");
     await user.selectOptions(voice, "A voice of my own (paste its ID)");
+    // The way back to OpenAI's own voices stays one press away.
+    await user.click(screen.getByRole("button", { name: "Pick from OpenAI's voices" }));
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Voice" }),
+      "A voice of my own (paste its ID)",
+    );
     const id = screen.getByLabelText("Voice ID");
     expect(screen.getByText(/starts with voice_/)).not.toBeNull();
     await user.type(id, "voice_123");
@@ -462,10 +509,12 @@ describe("the voice list", () => {
     const user = userEvent.setup();
     renderRouted(<Voices />, deps([]));
     expect(
-      (await screen.findByRole("link", { name: "ElevenLabs voice library" })).getAttribute("href"),
+      (await screen.findByRole("link", { name: "ElevenLabs voice library ↗" })).getAttribute(
+        "href",
+      ),
     ).toBe("https://elevenlabs.io/app/voice-library");
     await user.selectOptions(screen.getByLabelText("Voice service"), "cartesia");
-    expect(screen.getByRole("link", { name: "Cartesia voice library" })).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Cartesia voice library ↗" })).not.toBeNull();
     expect(
       screen.getByText(/Cartesia has no key yet: you can add the voice now, but it can't narrate/),
     ).not.toBeNull();
@@ -500,13 +549,57 @@ describe("the voice list", () => {
     expect(
       await screen.findByText("OpenAI has no key yet, so its voice can't narrate."),
     ).not.toBeNull();
-    // Add a voice starts on OpenAI too, and says it can't narrate, without a second button.
-    expect(screen.getByText(/OpenAI has no key yet: you can add the voice now/)).not.toBeNull();
+    // Add a voice starts on OpenAI too, and does not say it again under the form.
+    expect(screen.queryByText(/OpenAI has no key yet: you can add the voice now/)).toBeNull();
     const links = screen.getAllByRole("link", { name: "Add an OpenAI key" });
     expect(links).toHaveLength(1);
     expect(links[0]?.getAttribute("href")).toBe(
       "/settings?section=providers&family=tts&provider=openai-tts&return=welcome&step=found",
     );
     expect(screen.getByRole("option", { name: "System voice (not installed)" })).not.toBeNull();
+    // No Listen to explain while no row can speak.
+    expect(screen.queryByText(/Listen reads one sentence aloud/)).toBeNull();
+  });
+
+  it("says what Add voice still needs instead of pressing it in vain", async () => {
+    const user = userEvent.setup();
+    renderRouted(<Voices />, deps([]));
+    const add = await screen.findByRole("button", { name: "Add voice" });
+    expect(add.hasAttribute("disabled")).toBe(true);
+    expect(await screen.findByText("Paste a voice ID first")).not.toBeNull();
+    await user.type(screen.getByLabelText("Voice ID"), "abc123");
+    expect(screen.getByText("Type a name first")).not.toBeNull();
+    await user.type(screen.getByLabelText("Name"), "Narrator M");
+    expect(add.hasAttribute("disabled")).toBe(false);
+    expect(screen.queryByText(/ first$/)).toBeNull();
+  });
+
+  it("says once that the system voice is not installed, with nothing to pick and nothing to add", async () => {
+    const user = userEvent.setup();
+    renderRouted(
+      <Voices />,
+      testDeps({
+        "GET /api/providers": jsonAnswer({
+          providers: [
+            ...tts,
+            {
+              id: "system-voice",
+              family: "tts",
+              displayName: "System voice",
+              readiness: { kind: "local", available: false },
+            },
+          ],
+        }),
+        "GET /api/settings/voices": jsonAnswer({ voices: [] }),
+      }),
+    );
+    await screen.findByRole("option", { name: "System voice (not installed)" });
+    await user.selectOptions(screen.getByLabelText("Voice service"), "system-voice");
+    expect(
+      screen.getByText(/The system voice isn't installed on this computer, so it has no voices/),
+    ).not.toBeNull();
+    expect(screen.getAllByRole("link", { name: "Set up the system voice" })).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "Add voice" })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "Voice" })).toBeNull();
   });
 });

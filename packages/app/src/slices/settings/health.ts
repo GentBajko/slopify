@@ -5,10 +5,10 @@ import {
   choiceSites,
   retiredModelUsage,
   slotLabels,
+  type UsageKind,
   type UsageSlot,
 } from "../model-upkeep/usage.js";
 import { cliPathStatus } from "./cli-paths.js";
-import { keyGuides } from "./key-guides.js";
 import { type KeyTestDeps, testProviderKey } from "./key-test.js";
 import type { ProviderId, ProviderStatus } from "./model.js";
 import { isLocalCliProvider } from "./model.js";
@@ -27,7 +27,9 @@ export interface ProviderHealth {
   readonly displayName: string;
   readonly family: ProviderFamily;
   // "unused" is a provider that is neither set up nor chosen anywhere: nothing to fix.
-  readonly state: "ok" | "problem" | "warning" | "unused";
+  // "no-key" is a keyed provider chosen somewhere with no key saved: the same state its line
+  // on Keys & services shows.
+  readonly state: "ok" | "problem" | "warning" | "unused" | "no-key";
   readonly checks: readonly HealthCheck[];
 }
 export interface HealthReport {
@@ -47,6 +49,13 @@ export interface HealthDeps extends ReadinessDeps, KeyTestDeps {
   readonly login?: LoginReader;
 }
 
+// The kinds as Keys & services heads its lists.
+const familyTitles: Readonly<Record<ProviderFamily, string>> = {
+  llm: "Writing services",
+  tts: "Voice services",
+  image: "Image services",
+};
+
 const signInCommand: Readonly<Record<HostLlmId, string>> = {
   "claude-code": "claude auth login",
   codex: "codex login",
@@ -56,7 +65,16 @@ function loginSource(id: HostCliId): HostLlmId {
   return id === "codex-image" ? "codex" : id;
 }
 
-// Where each provider's models are chosen, as "Text model in template “Weekly”".
+// Where a model is chosen, as a person finds it: "template “Weekly”", "the draft “Moon” on
+// Create".
+function siteWords(kind: UsageKind, name: string): string {
+  if (kind !== "draft") return `${kind} “${name}”`;
+  return name === "Untitled draft"
+    ? "an untitled draft on Create"
+    : `the draft “${name}” on Create`;
+}
+
+// Where each provider's models are chosen, as "Writing model in template “Weekly”".
 function uses(db: HealthDeps["db"]): Map<string, { model: string; where: string }[]> {
   const found = new Map<string, { model: string; where: string }[]>();
   for (const site of choiceSites(db))
@@ -66,7 +84,7 @@ function uses(db: HealthDeps["db"]): Map<string, { model: string; where: string 
       const list = found.get(choice.provider) ?? [];
       list.push({
         model: choice.model,
-        where: `${slotLabels[slot as UsageSlot]} in ${site.kind} “${site.name}”`,
+        where: `${slotLabels[slot as UsageSlot]} in ${siteWords(site.kind, site.name)}`,
       });
       found.set(choice.provider, list);
     }
@@ -151,7 +169,7 @@ async function cliHealth(
       state: used.length > 0 ? "problem" : "skipped",
       detail:
         readiness.issue ??
-        `${name} was not found on this computer. Install it, sign in once in a terminal, then choose Check all again. If it is installed somewhere unusual, set its path in Settings → Keys & services.`,
+        `${name} was not found on this computer. Install it, sign in once in a terminal, then press Check again. If it is installed somewhere unusual, set its path in Settings → Keys & services.`,
     });
     return { ...base, state: used.length > 0 ? "problem" : "unused", checks };
   }
@@ -160,7 +178,7 @@ async function cliHealth(
     state: readiness.issueKind === "version" ? "problem" : "ok",
     detail:
       readiness.issueKind === "version"
-        ? (readiness.issue ?? `Update ${name}, then choose Check all again.`)
+        ? (readiness.issue ?? `Update ${name}, then press Check again.`)
         : `Found ${command}${readiness.version === undefined ? "" : ` (version ${readiness.version})`}.`,
   });
   const source = loginSource(status.id);
@@ -185,7 +203,7 @@ async function cliHealth(
         ? {
             label: "Signed in",
             state: "problem",
-            detail: `${name} is not signed in. Open a terminal on the computer running it, run "${signInCommand[source]}" and sign in, then choose Check all again.`,
+            detail: `${name} is not signed in. Open a terminal on the computer running it, run "${signInCommand[source]}" and sign in, then press Check again.`,
           }
         : {
             label: "Signed in",
@@ -215,7 +233,7 @@ async function cliModels(
     return {
       label: "Chosen models",
       state: "warning",
-      detail: `Slopify could not read ${status.displayName}'s model list, so it could not check the chosen models. Make sure it is signed in and up to date, then choose Check all again.`,
+      detail: `Slopify could not read ${status.displayName}'s model list, so it could not check the chosen models. Make sure it is signed in and up to date, then press Check again.`,
     };
   }
   const ids = new Set(offered.map((model) => model.id));
@@ -257,14 +275,14 @@ async function reachable(
     return {
       label: "Model reachable",
       state: "problem",
-      detail: `${name} does not offer ${describe(missing)} to this key: the model id is wrong, retired, or the account has no access to it. Pick another model there and save, or enable the model for your account, then choose Check all again.`,
+      detail: `${name} does not offer ${describe(missing)} to this key: the model id is wrong, retired, or the account has no access to it. Pick another model there and save, or enable the model for your account, then press Check again.`,
     };
   const unknown = [...found].filter(([, reach]) => reach === "unknown").map(([model]) => model);
   if (unknown.length > 0)
     return {
       label: "Model reachable",
       state: "warning",
-      detail: `${name} didn't answer for ${unknown.join(", ")}, so Slopify couldn't confirm the key can use ${unknown.length === 1 ? "it" : "them"}. Check your internet connection, then choose Check all again.`,
+      detail: `${name} didn't answer for ${unknown.join(", ")}, so Slopify couldn't confirm the key can use ${unknown.length === 1 ? "it" : "them"}. Check your internet connection, then press Check again.`,
     };
   return {
     label: "Model reachable",
@@ -288,16 +306,17 @@ async function keyedHealth(
 ): Promise<ProviderHealth> {
   const { readiness } = status;
   const base = { id: status.id, displayName: status.displayName, family: status.family };
-  const guide = keyGuides[status.id];
   const checks: HealthCheck[] = [];
   const hasKey = readiness.kind === "keyed" && readiness.hasKey;
   if (!hasKey) {
+    // Said where it is read, Keys & services: the service's own setup, under its kind, has
+    // the key box and where to get a key.
     checks.push({
-      label: "Key saved",
+      label: "Key",
       state: used.length > 0 ? "problem" : "skipped",
-      detail: `No key is saved.${used.length > 0 ? ` It is chosen for ${describe(used)}.` : ""} Make one at ${guide?.keyPage.url ?? "the provider's website"}, paste it in Settings → Keys & services → ${status.displayName} and choose Save.`,
+      detail: `${used.length > 0 ? `None is saved, and ${status.displayName} is chosen for ${describe(used)}.` : "None is saved."} Open ${status.displayName} under ${familyTitles[status.family]}, paste a key and press Save.`,
     });
-    return { ...base, state: used.length > 0 ? "problem" : "unused", checks };
+    return { ...base, state: used.length > 0 ? "no-key" : "unused", checks };
   }
   const test = await testProviderKey(deps, status.id);
   checks.push({
@@ -319,7 +338,7 @@ async function keyedHealth(
       detail: `${describe(
         mine.map((usage) => ({
           model: usage.model,
-          where: `${slotLabels[usage.slot]} in ${usage.kind} “${usage.name}”`,
+          where: `${slotLabels[usage.slot]} in ${siteWords(usage.kind, usage.name)}`,
         })),
       )} ${mine.length === 1 ? "is" : "are"} no longer offered. Use Switch in Settings → Models → Retired models in use.`,
     });

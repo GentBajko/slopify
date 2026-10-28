@@ -86,7 +86,7 @@ export function PostingPlanSettings({
           <>
             Each schedule sets when its videos and shorts go out, under Edit on{" "}
             <TextLink to="/calendar" search={{ tab: "schedules" }}>
-              Calendar → Schedules
+              Calendar → Schedules ↗
             </TextLink>
             .
           </>
@@ -130,7 +130,8 @@ export function PostingPlanSettings({
         checked={autoComment === true}
         disabled={comment.isPending || autoComment === undefined}
         onChange={(on) => comment.mutate(on)}
-        label="Post and pin each video's comment once it is public (the extension posts it in your name)"
+        label="Post and pin each video's comment"
+        help="Once the video is public, the extension posts its comment in your name and pins it."
       />
     </section>
   );

@@ -6,7 +6,7 @@ The first time you open Slopify it walks you through three steps: what a short n
 
 ## What happens the first time
 
-1. **Usage stats.** A line on the bottom edge of the window says that Slopify adds what it makes (videos, images, words) to the public totals on its website, slopify.stream, anonymously, and that nothing you type leaves your computer. **What's counted** opens the full list in place; **OK** puts the line away. Nothing is counted before you press **OK**. The page above it works as usual. See [Install](Install#anonymous-usage-stats).
+1. **Usage stats.** A line on the bottom edge of the window says that Slopify adds what it makes (videos, images, words) to the public totals on its website, slopify.stream, anonymously, and that nothing you type is counted. **What's counted** opens the full list in place; **Start counting** puts the line away. Nothing is counted before you press **Start counting**. The page above it works as usual. See [Install](Install#anonymous-usage-stats).
 2. **Welcome to Slopify.** Home sends you to the first-run screen once. Each step has a title and "Step 1 of 3"; **Next** and **Back** in the bar at the bottom of the window move between them.
 3. **Start at login.** Step 3 asks once, in one line: **Start when I log in** or **No thanks**.
 
@@ -16,15 +16,15 @@ If you leave for Settings to add a key, the welcome keeps its step, your topic a
 
 ## Step 1: What a short needs
 
-A 60-second short needs three things. Each has its own line, with its state and, when it is missing, the one button that fixes it:
+A 60-second short needs three things, named by the stage each makes, as Settings → **Keys & services** names them. Each has its own line, with its state and, when it is missing, the one button that fixes it:
 
-| Line | Ready when | Fix when it says **Needs setup** |
+| Line | Ready when | Fix when it says **No key** |
 | --- | --- | --- |
-| **Article** | Claude Code, Codex or Antigravity CLI is installed and signed in, or an OpenRouter key is saved. It says who writes it, for example "Claude Code writes it with your sign-in." | **Add a key for writing** (opens Settings at OpenRouter), or sign in to a CLI. |
+| **Article** | Claude Code, Codex or Antigravity is installed and signed in, or an OpenRouter key is saved. It says who writes it, for example "Claude Code writes it with your sign-in." | **Add a key for writing** (opens Settings at OpenRouter), or sign in to one of the tools. |
 | **Narration** | A voice key is saved, or your computer has a speech program. | **Add a voice key** (opens Settings at OpenAI: its key works at once with the voices Slopify sets up). On Linux, **Use your computer's free voice instead** shows the commands that install `espeak-ng`; run one, then press **Check again**. |
-| **Images** | Codex CLI is signed in, or an OpenAI, Google, fal.ai or Replicate key is saved. | **Add an image key** (opens Settings at OpenAI). |
+| **Images** | Codex is signed in, or an OpenAI, Google, fal.ai or Replicate key is saved. | **Add an image key** (opens Settings at OpenAI). |
 
-When the computer's own voice reads the article, the Narration line says so and offers **Add a voice key** for a better one. With an ElevenLabs, Cartesia or Inworld key but no voice saved, it says **No voice saved** with **Save a voice** (Settings → **Voices**).
+When the computer's own voice reads the article, the Narration line says so and offers **Add a voice key** for a better one. With an ElevenLabs, Cartesia or Inworld key but no voice saved, it says **No voice saved** with **Save a voice** (Settings → **Voices**) and **Add an OpenAI key**.
 
 **Check again** looks again, including for a speech program installed a moment ago. **Other tools and services Slopify can use** opens Settings → **Keys & services**. Below the lines, the three finished samples are there to watch (see [Explore the samples](#explore-the-samples)).
 
@@ -44,7 +44,7 @@ A topic in, a captioned vertical short out, usually in about five minutes with t
 | --- | --- | --- |
 | **Topic** | What the short is about, in a few words or a question. A specific topic gives a sharper short than a broad one. The line under it says the style and who writes, reads and draws it. | Up to 200 characters |
 
-If something is still missing, the step shows the same lines as step 1 above the topic, and **Make a 60-second short** is not lime until they are ready.
+If something is still missing, the step shows the same lines as step 1 under the topic, and **Make a 60-second short** is not lime until they are ready. Pressed anyway, the status line says "The short didn't start. Fix the lines below that are not Ready, then press Make a 60-second short again."
 
 Press **Make a 60-second short** in the bar at the bottom. With no topic it puts you in the field and says "Type a topic first." Otherwise the status line says **Starting your short…**, then the step says "Your short is being made." and the bar offers **Watch it being made**, which opens the project's page. The samples are listed below while it runs.
 

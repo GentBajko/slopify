@@ -1,7 +1,8 @@
 import type { ProviderStatus, Voice } from "@app/slices/settings/model.js";
-import { cleanup, screen, within } from "@testing-library/react";
+import { useNavigate } from "@tanstack/react-router";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
 import { modelStatusWords } from "./model-picker";
@@ -96,6 +97,35 @@ describe("who does a stage", () => {
     expect(href.searchParams.get("family")).toBe("tts");
     await userEvent.click(screen.getByRole("button", { name: "Set Narration to Off" }));
     expect(onLeave).toHaveBeenCalledOnce();
+  });
+
+  it("carries the way back to Create on its links to Settings only when it is on Create", async () => {
+    // Elsewhere (Edit template, a project's settings) there is no way back to offer.
+    const { unmount } = renderRouted(
+      <Group providers={[keyed("openai-tts", "OpenAI", false)]} />,
+      testDeps({}),
+    );
+    const elsewhere = await screen.findByRole("link", { name: "Add a voice key ↗" });
+    expect(elsewhere.getAttribute("href")).toBe("/settings?section=providers&family=tts");
+    unmount();
+    function OnCreate({ children }: { readonly children: ReactNode }) {
+      const navigate = useNavigate();
+      useEffect(() => {
+        void navigate({ to: "/play" });
+      }, [navigate]);
+      return children;
+    }
+    renderRouted(
+      <OnCreate>
+        <Group providers={[keyed("openai-tts", "OpenAI", false)]} />
+      </OnCreate>,
+      testDeps({}),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("link", { name: "Add a voice key ↗" }).getAttribute("href")).toBe(
+        "/settings?section=providers&family=tts&return=play",
+      ),
+    );
   });
 
   it("says when the picked service can't be used, with the way to add its key", async () => {

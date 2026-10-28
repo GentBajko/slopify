@@ -1,3 +1,4 @@
+import { costPhrase } from "@app/slices/model-checks/rules.js";
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
@@ -73,7 +74,7 @@ export function useCheckModels(provider: string, providerName: string): CheckMod
       open={asking !== undefined}
       tone="primary"
       title={`Check ${String(count)} ${providerName === "" ? "" : `${providerName} `}model${count === 1 ? "" : "s"}?`}
-      consequence={`Each model gets one small request, so this costs ${asking?.estimate.text ?? ""} at list price.`}
+      consequence={`Each model gets one small request, so this costs ${costPhrase(asking?.estimate.totalDollars ?? 0, asking?.estimate.unpriced ?? 0)}.`}
       confirmLabel="Check models"
       cancelLabel="Cancel"
       pending={pending}

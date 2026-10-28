@@ -169,3 +169,17 @@ export function dollarsText(dollars: number, unpriced = 0): string {
   const more = `${String(unpriced)} model${unpriced === 1 ? "" : "s"} with no listed price`;
   return dollars <= 0 ? `${more} (price unknown)` : `${base}, plus ${more}`;
 }
+
+// The same estimate as the end of a sentence, "this costs …": "about $0.04 at list price",
+// and for models with no listed price "an unknown amount: 3 models have no listed price".
+export function costPhrase(dollars: number, unpriced = 0): string {
+  const base =
+    dollars <= 0
+      ? "nothing"
+      : `${dollars < 0.01 ? "less than a cent" : `about $${dollars.toFixed(2)}`} at list price`;
+  if (unpriced === 0) return base;
+  const models = `${String(unpriced)} model${unpriced === 1 ? "" : "s"}`;
+  return dollars <= 0
+    ? `an unknown amount: ${models} ${unpriced === 1 ? "has" : "have"} no listed price`
+    : `${base}, plus an unknown amount for ${models} with no listed price`;
+}

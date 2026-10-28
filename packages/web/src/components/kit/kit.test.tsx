@@ -620,6 +620,7 @@ Again.
     await user.clear(search);
     await user.type(search, "steel");
     expect(await screen.findByText("No matches")).not.toBeNull();
+    expect(screen.queryByRole("button", { name: "Previous match" })).toBeNull();
   });
 
   it("hands copies to the caller, prefixes its anchors and scrolls in a named region", async () => {

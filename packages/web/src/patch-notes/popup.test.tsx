@@ -48,7 +48,7 @@ describe("the patch notes that open after an update", () => {
     expect(await screen.findByRole("dialog", { name: title })).not.toBeNull();
     expect(await screen.findByRole("heading", { name: "Highlights" })).not.toBeNull();
     expect(screen.getByRole("navigation", { name: "Patch notes contents" })).not.toBeNull();
-    expect(screen.getByRole("searchbox", { name: "Search the patch notes" })).not.toBeNull();
+    expect(screen.getByRole("searchbox", { name: "Search the notes" })).not.toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: "Close notes" }));
     await waitFor(() => {

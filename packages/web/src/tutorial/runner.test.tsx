@@ -57,10 +57,17 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     });
     const notice = await screen.findByRole("region", { name: "Usage stats" });
     expect(screen.queryByRole("region", { name: "Interactive getting started guide" })).toBeNull();
-    await user.click(within(notice).getByRole("button", { name: "OK" }));
+    await user.click(within(notice).getByRole("button", { name: "Start counting" }));
     await at("text-key");
     expect(router.state.location.pathname).toBe("/settings");
     expect(nextHeld()).toBe(true);
+    // The boxes here are 600px wide, a column too narrow for a setup beside its list: as the
+    // step says, the person picks OpenRouter in the list and its setup opens under its line.
+    await user.click(
+      within(screen.getByRole("list", { name: "Writing services" })).getByRole("button", {
+        name: "OpenRouter",
+      }),
+    );
     await user.type(screen.getByLabelText("OpenRouter API key"), "test-only-key");
     expect(nextHeld()).toBe(true);
     expect(guide().getByRole("heading", { name: "1. Connect a writing service" })).not.toBeNull();

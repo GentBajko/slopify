@@ -93,3 +93,13 @@ export async function switchAllRetired(api: Api): Promise<{
 export async function readFirstRun(api: Api): Promise<FirstRunStatus> {
   return read<FirstRunStatus>(await api.fetch(`${api.origin}/api/providers/first-run`));
 }
+
+// What the welcome picked for Create, read once: Keys & services' readiness lines name it.
+export function firstRunQuery(api: Api) {
+  return {
+    queryKey: upkeepKeys.firstRun,
+    queryFn: () => readFirstRun(api),
+    retry: false,
+    staleTime: Number.POSITIVE_INFINITY,
+  } as const;
+}

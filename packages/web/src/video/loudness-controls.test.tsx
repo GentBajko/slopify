@@ -57,8 +57,12 @@ describe("LoudnessControls", () => {
     });
     expect(screen.getByRole("textbox", { name: "Video volume" })).toHaveProperty("value", "−6");
     expect(
-      screen.getByText("0 dB is the level YouTube and Spotify play everything at."),
+      screen.getByText(
+        "0 dB is the loudness YouTube plays videos at; −6 dB is about half as loud.",
+      ),
     ).toBeTruthy();
+    // The field speaks in dB and percent; LUFS and dBTP are the export's details.
+    expect(screen.queryByText(/LUFS|dBTP/)).toBeNull();
   });
 
   it("says the range when a volume is out of it, and keeps the last good one", async () => {
@@ -96,8 +100,9 @@ describe("LoudnessControls", () => {
   it("says when a volume left its default and resets it", async () => {
     const onChange = vi.fn();
     render(<Harness onChange={onChange} />);
-    // Nothing to reset at the default, so no Reset is drawn until the volume changes.
+    // Nothing to reset at the default, so no Reset, and no bare "Default", until it changes.
     expect(screen.queryByRole("button", { name: "Reset video volume to 0 dB" })).toBeNull();
+    expect(screen.queryByText("Default")).toBeNull();
     const db = screen.getByRole("textbox", { name: "Video volume" });
     await userEvent.clear(db);
     await userEvent.type(db, "-3");

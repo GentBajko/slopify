@@ -123,11 +123,9 @@ describe("Keys & services' lists", () => {
     expect(screen.queryByLabelText("OpenRouter API key")).toBeNull();
   });
 
-  it("scrolls to the kind a link names only when it does not already show in the window", async () => {
-    const scrolled = vi.fn();
-    const proto = HTMLElement.prototype as { scrollIntoView?: unknown };
-    const before = proto.scrollIntoView;
-    proto.scrollIntoView = scrolled;
+  it("brings the setup a link opens into the window only when its key box is not already there", async () => {
+    const scrolled = vi.spyOn(window, "scrollBy").mockImplementation(() => {});
+    vi.spyOn(window, "scrollTo").mockImplementation(() => {});
     const at = (top: number) =>
       vi
         .spyOn(HTMLElement.prototype, "getBoundingClientRect")
@@ -144,11 +142,13 @@ describe("Keys & services' lists", () => {
         deps(services),
       );
       expect(await screen.findByLabelText("OpenAI API key")).not.toBeNull();
+      await new Promise((resolve) => setTimeout(resolve, 50));
       expect(scrolled).not.toHaveBeenCalled();
       cleanup();
-      vi.restoreAllMocks();
+      vi.mocked(HTMLElement.prototype.getBoundingClientRect).mockRestore();
 
-      // Below the fold, as on a phone: the page brings that kind to the top.
+      // Below the fold, as on a phone: the page scrolls just enough to show the key box under
+      // the setup's heading (768 is jsdom's window height; 16 the margin).
       at(1400);
       renderRouted(
         <ProviderKeys focus={{ family: "tts", provider: undefined, arrival: true }} />,
@@ -156,11 +156,77 @@ describe("Keys & services' lists", () => {
       );
       expect(await screen.findByLabelText("OpenAI API key")).not.toBeNull();
       await waitFor(() => {
-        expect(scrolled).toHaveBeenCalledWith({ block: "start", behavior: "auto" });
+        expect(scrolled).toHaveBeenCalledWith({ top: 1700 + 16 - 768, behavior: "auto" });
       });
     } finally {
       vi.restoreAllMocks();
-      proto.scrollIntoView = before;
+    }
+  });
+
+  it("on a plain visit, brings the setup it opened by itself into view, or starts at the top", async () => {
+    const scrolled = vi.spyOn(window, "scrollBy").mockImplementation(() => {});
+    const top = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      top: 1400,
+      bottom: 1700,
+    } as DOMRect);
+    try {
+      // The image service is the first still to set up: its key box is brought into view.
+      renderRouted(
+        <ProviderKeys />,
+        deps([
+          keyed("openrouter", "llm", "OpenRouter", true),
+          keyed("openai-tts", "tts", "OpenAI", true),
+          keyed("fal", "image", "fal.ai", false),
+        ]),
+      );
+      expect(await screen.findByLabelText("fal.ai API key")).not.toBeNull();
+      await waitFor(() => expect(scrolled).toHaveBeenCalledTimes(1));
+      cleanup();
+      scrolled.mockClear();
+      top.mockClear();
+      // Everything is ready: nothing opens, and the visit starts at the top.
+      renderRouted(<ProviderKeys />, deps([keyed("openrouter", "llm", "OpenRouter", true)]));
+      expect(await screen.findByRole("list", { name: "Writing services" })).not.toBeNull();
+      await waitFor(() => expect(top).toHaveBeenCalledWith({ top: 0, left: 0 }));
+      expect(scrolled).not.toHaveBeenCalled();
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
+
+  it("waits for the voices, which the readiness lines above also wait for, before it measures for a link", async () => {
+    const scrolled = vi.spyOn(window, "scrollBy").mockImplementation(() => {});
+    vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      top: 1400,
+      bottom: 1700,
+    } as DOMRect);
+    let answer = () => {};
+    const voices = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    try {
+      renderRouted(
+        <ProviderKeys focus={{ family: "image", provider: "openai-image", arrival: true }} />,
+        testDeps({
+          "GET /api/providers": listing([keyed("openai-image", "image", "OpenAI", false)]),
+          // The voices come last, as they can on a fresh start.
+          "GET /api/settings/voices": async (request) => {
+            await voices;
+            return jsonAnswer({ voices: [] })(request);
+          },
+        }),
+      );
+      expect(await screen.findByLabelText("OpenAI API key")).not.toBeNull();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      // Measured now, the readiness lines still to come above would push the key box back out
+      // of the window after the scroll.
+      expect(scrolled).not.toHaveBeenCalled();
+      answer();
+      await waitFor(() => expect(scrolled).toHaveBeenCalledTimes(1));
+    } finally {
+      vi.restoreAllMocks();
     }
   });
 
@@ -331,12 +397,47 @@ describe("Keys & services' lists", () => {
     );
     const field = await screen.findByLabelText("OpenAI API key");
     expect(screen.queryByRole("link", { name: /^Done/ })).toBeNull();
+    // The way back is in the setup too, where the arrival leaves the person on a phone.
+    expect(screen.getByRole("link", { name: "Back to the welcome" }).getAttribute("href")).toBe(
+      "/welcome?step=found",
+    );
     await user.type(field, "sk-test{Enter}");
     const done = await screen.findByRole("link", { name: "Done · back to the welcome" });
     expect(done.getAttribute("href")).toBe("/welcome?step=found");
-    // No voice uses OpenAI yet, so a voice is the next thing to add, with the way back kept.
+    expect(screen.queryByRole("link", { name: "Back to the welcome" })).toBeNull();
+    // No voice uses OpenAI yet: the first short saves one, and one can be added now, with the
+    // way back kept. Nothing says narration can't use the key, as the welcome says it can.
+    expect(screen.getByText(/Your first short saves an OpenAI voice by itself/)).not.toBeNull();
+    expect(screen.queryByText(/narration can't use it/)).toBeNull();
     const next = screen.getByRole("link", { name: "Add an OpenAI voice" });
-    expect(next.getAttribute("href")).toBe("/settings?section=voices&return=welcome&step=found");
+    expect(next.getAttribute("href")).toBe(
+      "/settings?section=voices&provider=openai-tts&return=welcome&step=found",
+    );
+  });
+
+  it("says a voice service other than OpenAI can't narrate with its key until a voice is saved", async () => {
+    renderRouted(
+      <ProviderKeys focus={{ family: "tts", provider: "elevenlabs", arrival: true }} />,
+      deps([keyed("elevenlabs", "tts", "ElevenLabs", true)]),
+    );
+    expect(
+      await screen.findByText(/No ElevenLabs voice is saved yet, so narration can't use it/),
+    ).not.toBeNull();
+  });
+
+  it("says the same company's key saved for its other kind works here too", async () => {
+    renderRouted(
+      <ProviderKeys focus={{ family: "image", provider: "openai-image", arrival: true }} />,
+      deps([
+        keyed("openai-tts", "tts", "OpenAI", true),
+        keyed("openai-image", "image", "OpenAI", false),
+      ]),
+    );
+    expect(
+      await screen.findByText(
+        "Your OpenAI key for voices is saved, and the same key works here: paste it again. Stored on this computer only.",
+      ),
+    ).not.toBeNull();
   });
 
   it("says nothing about adding a voice once a saved voice uses the service", async () => {

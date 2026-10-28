@@ -122,24 +122,66 @@ function openingOf(
     : targetOf(listed, { family, provider: undefined, arrival: false }, voices);
 }
 
-// How much of a kind (its heading, a few services and the top of the setup beside them) must
-// already show for a link to it to leave the page where it is.
-const inViewPx = 240;
+// Where the window's own bottom bars begin: the usage-stats line, and the phone's navigation.
+function windowBottom(): number {
+  let bottom = window.innerHeight;
+  for (const bar of document.querySelectorAll('[data-slot="usage-notice"], .sl-bottomnav')) {
+    const box = bar.getBoundingClientRect();
+    if (box.height > 0 && box.top < bottom) bottom = box.top;
+  }
+  return bottom;
+}
 
-// Two columns from 1024px: a kind's list with the picked service's setup beside it. On one
-// column the setup opens under its own row, so the three lists stay together.
-function useWide(): boolean {
+// Brings a service's setup into the window, above its bottom bars: as little scrolling as
+// shows its heading down to its key box and the buttons under it (the whole setup when it has
+// no key box), and never past its heading. A setup already in view leaves the page where it is,
+// so the page header and its way back stay in view on a wide screen.
+function bringSetupIntoView(setup: HTMLElement, arrival: boolean): void {
+  // A link's arrival starts from the top, as any new page does (the router leaves this one's
+  // scroll to the page: `keysArrival`), so the header stays in view when it can.
+  if (arrival) window.scrollTo({ top: 0, left: 0 });
+  const margin = 16;
+  const visibleBottom = windowBottom();
+  const top = setup.getBoundingClientRect().top;
+  const marked = [...setup.querySelectorAll("[data-setup-key]")];
+  const bottom = Math.max(
+    ...(marked.length === 0 ? [setup] : marked).map((part) => part.getBoundingClientRect().bottom),
+  );
+  if (top >= 0 && bottom + margin <= visibleBottom) return;
+  const by = Math.min(bottom + margin - visibleBottom, top - margin);
+  window.scrollBy({ top: by, behavior: arrival ? "auto" : "smooth" });
+}
+
+// Two columns where the page's own column has room for a list (400px) and, beside it, a setup
+// whose key box and Save fit on one line: from 860px of column, which a 1200px window gives
+// beside the Settings list. Narrower (a laptop at 1024px, the Assistant open, a phone) is one
+// column, where the setup opens under its own row and the three lists stay together. The
+// column is measured, not the window; a window of 1024px or more is the first guess, and the
+// only answer where nothing can measure.
+const twoColumnsPx = 860;
+function useWide(element: HTMLElement | null): boolean {
   const query = "(min-width: 1024px)";
   const [wide, setWide] = useState(
     () => typeof window.matchMedia !== "function" || window.matchMedia(query).matches,
   );
   useEffect(() => {
+    if (element !== null && typeof ResizeObserver !== "undefined") {
+      // A column not laid out yet (or never, as in a test's document) keeps the guess.
+      const measure = () => {
+        const width = element.getBoundingClientRect().width;
+        if (width > 0) setWide(width >= twoColumnsPx);
+      };
+      measure();
+      const watch = new ResizeObserver(measure);
+      watch.observe(element);
+      return () => watch.disconnect();
+    }
     if (typeof window.matchMedia !== "function") return;
     const list = window.matchMedia(query);
     const change = () => setWide(list.matches);
     list.addEventListener?.("change", change);
     return () => list.removeEventListener?.("change", change);
-  }, []);
+  }, [element]);
   return wide;
 }
 
@@ -156,10 +198,15 @@ export function ProviderKeys({
   const { api } = useApp();
   const providers = useQuery(providersQuery(api));
   const voices = useQuery(voicesQuery(api));
-  const wide = useWide();
+  const [frame, setFrame] = useState<HTMLDivElement | null>(null);
+  const wide = useWide(frame);
   // undefined until the first answer decides it; null for none open.
   const [picked, setPicked] = useState<ProviderId | null | undefined>(undefined);
-  const sections = useRef(new Map<ProviderFamily, HTMLElement>());
+  // The setup to bring into view once it is drawn and the page around it has settled.
+  const [bring, setBring] = useState<
+    { readonly id: ProviderId; readonly arrival: boolean } | undefined
+  >(undefined);
+  const setupRef = useRef<HTMLDivElement>(null);
 
   const listed = familyOrder.flatMap((family) =>
     (providers.data?.providers ?? []).filter((provider) => provider.family === family),
@@ -167,6 +214,9 @@ export function ProviderKeys({
   const saved = voices.data?.voices ?? [];
   // What opens when the page arrives, once: the service asked for, or on two columns the
   // first one still to set up. It stays open after it is set up rather than jumping on.
+  // `byItself`: the open setup is the one the page opened by itself, which only two columns
+  // do; on one column the lists come first.
+  const [byItself, setByItself] = useState(false);
   if (picked === undefined && providers.data !== undefined) {
     const first =
       focus === undefined
@@ -175,24 +225,70 @@ export function ProviderKeys({
           : undefined
         : targetOf(listed, focus, saved);
     setPicked(first?.id ?? null);
+    setByItself(focus === undefined && first !== undefined);
   }
-
-  // A readiness line's button, or the address, asks for a kind: open it and bring it into view.
-  const loaded = providers.data !== undefined;
-  // biome-ignore lint/correctness/useExhaustiveDependencies: only a new focus, or the first answer, moves the page.
+  // The first guess of the width came from the window; once the column measures as one column,
+  // a setup opened by itself closes again, so the lists come first there too.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only the width deciding closes it.
   useEffect(() => {
-    if (focus === undefined || !loaded) return;
+    if (wide || !byItself) return;
+    setByItself(false);
+    setPicked(null);
+    // Its scroll into view is off too: the visit starts at the top instead.
+    if (bring !== undefined) {
+      setBring(undefined);
+      window.scrollTo({ top: 0, left: 0 });
+    }
+  }, [wide, byItself]);
+
+  // A readiness line's button, or the address, asks for a kind: open its service, then bring
+  // that setup into view. The page is measured only once everything that sets its height has
+  // answered: the services and the voices, which the readiness lines above the lists wait for
+  // too (`routes/settings-readiness.tsx`). Measured earlier, lines arriving above would push the
+  // setup back out of the window after the scroll.
+  const settled = providers.data !== undefined && !voices.isPending;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only a new focus, or the page settling, moves the page.
+  useEffect(() => {
+    if (focus === undefined || !settled) return;
     const target = targetOf(listed, focus, saved);
-    if (target !== undefined) setPicked(target.id);
-    const family = target?.family ?? focus.family;
-    if (family === undefined) return;
-    const section = sections.current.get(family);
-    // A kind whose heading and first lines are already in the window stays where it is, so the
-    // page header (and its way back to the welcome or Create) stays in view on a wide screen.
-    const top = section?.getBoundingClientRect().top;
-    if (top !== undefined && top >= 0 && top + inViewPx <= window.innerHeight) return;
-    section?.scrollIntoView?.({ block: "start", behavior: focus.arrival ? "auto" : "smooth" });
-  }, [focus, loaded]);
+    if (target === undefined) {
+      // Nothing to open: an arrival starts at the top, as the router would have put it.
+      if (focus.arrival) window.scrollTo({ top: 0, left: 0 });
+      return;
+    }
+    setByItself(false);
+    setPicked(target.id);
+    setBring({ id: target.id, arrival: focus.arrival });
+  }, [focus, settled]);
+  // A visit with no link's focus (the app's rail, the Settings list, Back): the router leaves
+  // this page's scroll to it (`keysArrival`), so the visit starts at the top, or brings the
+  // setup the page opened by itself into view as a link's arrival would.
+  const [visited, setVisited] = useState(false);
+  useEffect(() => {
+    if (focus !== undefined || !settled || visited) return;
+    setVisited(true);
+    if (byItself && typeof picked === "string") setBring({ id: picked, arrival: true });
+    else window.scrollTo({ top: 0, left: 0 });
+  }, [focus, settled, visited, byItself, picked]);
+  useEffect(() => {
+    if (bring === undefined || picked !== bring.id) return;
+    const setup = setupRef.current;
+    if (setup === null) return;
+    let live = true;
+    let frame = 0;
+    // After the fonts, whose metrics set where lines wrap, and after this render is painted.
+    void (document.fonts?.ready ?? Promise.resolve()).then(() => {
+      if (!live) return;
+      frame = requestAnimationFrame(() => {
+        bringSetupIntoView(setup, bring.arrival);
+        setBring(undefined);
+      });
+    });
+    return () => {
+      live = false;
+      cancelAnimationFrame(frame);
+    };
+  }, [bring, picked]);
 
   if (providers.error !== null) {
     return (
@@ -206,6 +302,22 @@ export function ProviderKeys({
   }
 
   const selected = listed.find((provider) => provider.id === picked);
+  // The setup a link brings into view: the one open, beside its list or under its line.
+  const setupOf = (provider: ProviderStatus): ReactElement => (
+    <div ref={setupRef} className="min-w-0 scroll-mt-4">
+      {detailOf(provider)}
+    </div>
+  );
+  // OpenAI keeps a key for its voices and one for its images: a setup without its own says
+  // the other is saved.
+  const twinKeyed = (provider: ProviderStatus): boolean =>
+    listed.some(
+      (one) =>
+        one.id !== provider.id &&
+        one.displayName === provider.displayName &&
+        one.readiness.kind === "keyed" &&
+        one.readiness.hasKey,
+    );
   const detailOf = (provider: ProviderStatus): ReactElement =>
     provider.readiness.kind === "cli" ? (
       <CliProviderDetail
@@ -237,24 +349,21 @@ export function ProviderKeys({
           voices.data !== undefined &&
           !saved.some((voice) => voice.provider === provider.id)
         }
+        twinKeyed={twinKeyed(provider)}
         back={back}
       />
     );
 
   return (
-    <div className="flex min-w-0 flex-col gap-6">
+    <div ref={setFrame} className="@container flex min-w-0 flex-col gap-6">
       {familyOrder.map((family) => (
         // The picked service's setup sits beside its own kind's list, inside the same section,
         // so the tutorial's spotlight on a kind holds both the list and the setup.
         <section
           key={family}
-          ref={(element) => {
-            if (element === null) sections.current.delete(family);
-            else sections.current.set(family, element);
-          }}
           data-tour={`keys-${family}`}
           aria-labelledby={`keys-${family}-title`}
-          className="grid scroll-mt-4 items-start gap-x-8 gap-y-4 lg:grid-cols-[minmax(0,400px)_minmax(0,1fr)]"
+          className="grid scroll-mt-4 items-start gap-x-8 gap-y-4 @min-[860px]:grid-cols-[minmax(0,400px)_minmax(0,1fr)]"
         >
           <div className="min-w-0">
             <SectionHead
@@ -272,18 +381,17 @@ export function ProviderKeys({
                     provider={provider}
                     selected={provider.id === selected?.id}
                     expands={!wide}
-                    onSelect={() =>
-                      setPicked((now) => (!wide && now === provider.id ? null : provider.id))
-                    }
+                    onSelect={() => {
+                      setByItself(false);
+                      setPicked((now) => (!wide && now === provider.id ? null : provider.id));
+                    }}
                   >
-                    {!wide && provider.id === selected?.id ? detailOf(provider) : null}
+                    {!wide && provider.id === selected?.id ? setupOf(provider) : null}
                   </ServiceRow>
                 ))}
             </ul>
           </div>
-          {wide && selected !== undefined && selected.family === family ? (
-            <div className="min-w-0">{detailOf(selected)}</div>
-          ) : null}
+          {wide && selected !== undefined && selected.family === family ? setupOf(selected) : null}
         </section>
       ))}
     </div>
@@ -341,12 +449,15 @@ function KeyDetail({
   provider,
   hasKey,
   voiceless,
+  twinKeyed,
   back,
 }: {
   readonly provider: ProviderStatus;
   readonly hasKey: boolean;
   // A voice service no saved voice uses: with its key saved, a voice is the next thing to add.
   readonly voiceless: boolean;
+  // The same company's key is saved for its other kind (OpenAI's voices or images).
+  readonly twinKeyed: boolean;
   readonly back: SettingsBack | undefined;
 }) {
   const { api } = useApp();
@@ -446,41 +557,49 @@ function KeyDetail({
       </div>
       <ServiceAbout provider={provider} />
 
-      <Field
-        label={`${provider.displayName} API key`}
-        help="Stored on this computer only, sent only to this service, never in backups or exports."
-        error={failure}
-      >
-        {/* A form so Enter in the box saves, as the Save button does. */}
-        <form
-          className="flex flex-wrap items-center gap-2"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (draft.trim() !== "" && !saving) void save();
-          }}
+      {/* The key box and its Save, and the buttons under it: what a link here brings into
+          view. */}
+      <div data-setup-key="" className="min-w-0">
+        <Field
+          label={`${provider.displayName} API key`}
+          help={
+            !hasKey && twinKeyed
+              ? `Your ${provider.displayName} key for ${provider.family === "image" ? "voices" : "images"} is saved, and the same key works here: paste it again. Stored on this computer only.`
+              : "Stored on this computer only, sent only to this service, never in backups or exports."
+          }
+          error={failure}
         >
-          <SecretInput
-            autoComplete="off"
-            spellCheck={false}
-            className="flex-1 basis-[200px]"
-            aria-describedby={described === "" ? undefined : described}
-            placeholder={hasKey ? keyMask : "Paste API key"}
-            value={draft}
-            onChange={(event) => {
-              setDraft(event.target.value);
+          {/* A form so Enter in the box saves, as the Save button does. */}
+          <form
+            className="flex flex-wrap items-center gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (draft.trim() !== "" && !saving) void save();
             }}
-          />
-          <Button
-            type="submit"
-            variant="primary"
-            aria-label={`Save ${provider.displayName} key`}
-            disabled={draft.trim() === "" || saving}
           >
-            Save
-          </Button>
-          <span className="inline-flex w-[52px]">{saved ? <SavedTick /> : null}</span>
-        </form>
-      </Field>
+            <SecretInput
+              autoComplete="off"
+              spellCheck={false}
+              className="flex-1 basis-[200px]"
+              aria-describedby={described === "" ? undefined : described}
+              placeholder={hasKey ? keyMask : "Paste API key"}
+              value={draft}
+              onChange={(event) => {
+                setDraft(event.target.value);
+              }}
+            />
+            <Button
+              type="submit"
+              variant="primary"
+              aria-label={`Save ${provider.displayName} key`}
+              disabled={draft.trim() === "" || saving}
+            >
+              Save
+            </Button>
+            <span className="inline-flex w-[52px]">{saved ? <SavedTick /> : null}</span>
+          </form>
+        </Field>
+      </div>
       {hasKey ? (
         <span id={storedId} className="sr-only">
           A key is stored for this provider.
@@ -496,22 +615,28 @@ function KeyDetail({
         </p>
       )}
 
-      {/* Nothing to test or remove until a key is pasted or saved, so neither shows before. */}
-      {!hasKey && pasted === "" ? null : (
-        <ButtonRow>
-          {back !== undefined && hasKey ? (
+      {/* Nothing to test or remove until a key is pasted or saved, so neither shows before. The
+          way back to the welcome or Create is here too, where the scroll to this box leaves
+          the person, and becomes Done once the key is saved. */}
+      {!hasKey && pasted === "" && back === undefined ? null : (
+        <ButtonRow data-setup-key="">
+          {back === undefined ? null : hasKey ? (
             <BackLink back={back} variant="primary">
               {`Done · back to ${backPlace(back)}`}
             </BackLink>
-          ) : null}
-          <Button
-            disabled={testing}
-            onClick={() => {
-              void test();
-            }}
-          >
-            {testing ? "Testing…" : "Test the key (free)"}
-          </Button>
+          ) : (
+            <BackLink back={back}>{`Back to ${backPlace(back)}`}</BackLink>
+          )}
+          {!hasKey && pasted === "" ? null : (
+            <Button
+              disabled={testing}
+              onClick={() => {
+                void test();
+              }}
+            >
+              {testing ? "Testing…" : "Test the key (free)"}
+            </Button>
+          )}
           {hasKey ? (
             <Button
               variant="quiet"
@@ -526,8 +651,13 @@ function KeyDetail({
       )}
       {hasKey && voiceless ? (
         <p className="m-0 text-small text-ink-2">
-          {`No ${provider.displayName} voice is saved yet, so narration can't use it. `}
-          <TextLink to="/settings" search={{ section: "voices", ...backSearch(back) }}>
+          {provider.id === openAiVoice
+            ? "Your first short saves an OpenAI voice by itself. To pick one now: "
+            : `No ${provider.displayName} voice is saved yet, so narration can't use it. `}
+          <TextLink
+            to="/settings"
+            search={{ section: "voices", provider: provider.id, ...backSearch(back) }}
+          >
             {`Add ${articleOf(provider.displayName)} ${provider.displayName} voice`}
           </TextLink>
         </p>

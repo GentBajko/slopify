@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LanguageSelect, languageHelp } from "./language-select";
 import { useVoicesForLanguage, VoiceLanguageNote } from "./voice-language";
-import { languagesOfText, languagesReading, voiceLanguagesText } from "./voice-languages-cell";
+import { VoiceLanguagesPicker } from "./voice-languages-cell";
 
 afterEach(cleanup);
 
@@ -75,19 +75,28 @@ describe("voices by language", () => {
     expect(screen.getByRole("status").textContent).toMatch(/Bob is listed for English/);
   });
 
-  it("reads and shows a voice's languages", () => {
-    expect(languagesOfText(" ES, de;pt ")).toEqual(["es", "de", "pt"]);
-    expect(voiceLanguagesText({ languages: ["es", "xx"] })).toBe("Spanish, xx");
-    expect(voiceLanguagesText({})).toBe("Any (not known)");
-  });
-});
-
-describe("languagesReading", () => {
-  it("names known codes and lists the ones it does not know", () => {
-    expect(languagesReading("")).toBe("Codes such as es, de. Empty means any language.");
-    expect(languagesReading("es de")).toBe("Reads as: Spanish, German.");
-    expect(languagesReading("es, klingon")).toMatch(
-      /^Reads as: Spanish\. Not a language code Slopify knows: klingon\. Use one of en, es/,
+  it("picks a voice's languages by name, and reads Any language with none", async () => {
+    const user = userEvent.setup();
+    const changed = vi.fn();
+    const { rerender } = render(
+      <VoiceLanguagesPicker value={[]} label="Languages it speaks" onChange={changed} />,
     );
+    const select = screen.getByRole("combobox", { name: "Languages it speaks" });
+    expect((select as HTMLSelectElement).selectedOptions[0]?.textContent).toBe("Any language");
+    // No codes to type: the languages are offered by name.
+    expect(screen.getByRole("option", { name: "Spanish" })).not.toBeNull();
+    await user.selectOptions(select, "Spanish");
+    expect(changed).toHaveBeenLastCalledWith(["es"]);
+    rerender(
+      <VoiceLanguagesPicker value={["es"]} label="Languages it speaks" onChange={changed} />,
+    );
+    expect(screen.getByText("Spanish")).not.toBeNull();
+    expect(screen.queryByRole("option", { name: "Spanish" })).toBeNull();
+    expect(
+      (screen.getByRole("combobox", { name: "Languages it speaks" }) as HTMLSelectElement)
+        .selectedOptions[0]?.textContent,
+    ).toBe("Add a language");
+    await user.click(screen.getByRole("button", { name: "Remove Spanish" }));
+    expect(changed).toHaveBeenLastCalledWith([]);
   });
 });

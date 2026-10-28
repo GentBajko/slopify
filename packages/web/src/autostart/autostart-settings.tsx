@@ -41,9 +41,19 @@ export function useAutostart() {
 export function AutostartSettings(): ReactElement {
   const { view, turn } = useAutostart();
   const data = view.data;
+  // The switch's label and help say what it does; the line under them only adds what they
+  // don't: why it can't be turned on, or where the login entry is once it is on.
+  const note =
+    data === undefined || data.kind === "docker"
+      ? undefined
+      : !data.available
+        ? data.summary
+        : data.enabled === true && data.where !== null
+          ? `Login entry: ${data.where}`
+          : undefined;
   return (
     <div>
-      <SectionHead title="Start at login" />
+      {data?.kind === "docker" ? <SectionHead title="Start at login" /> : null}
       {view.error === null ? null : (
         <p role="alert" className="m-0 mb-3 text-body text-danger">
           Starting at login couldn't be checked: {view.error.message}
@@ -63,14 +73,15 @@ export function AutostartSettings(): ReactElement {
             label={title}
             checked={data.enabled === true}
             disabled={!data.available || turn.isPending}
-            describedBy="autostart-summary"
+            {...(note === undefined ? {} : { describedBy: "autostart-summary" })}
             help="Slopify starts in the background when you log in, without opening a browser tab, so your bookmark always opens it."
             onChange={(next) => turn.mutate(next)}
           />
-          <p id="autostart-summary" className="m-0 text-small text-ink-2">
-            {data.summary}
-            {data.enabled === true && data.where !== null ? ` Login entry: ${data.where}` : ""}
-          </p>
+          {note === undefined ? null : (
+            <p id="autostart-summary" className="m-0 text-small break-all text-ink-2">
+              {note}
+            </p>
+          )}
           {turn.error === null ? null : (
             <p role="alert" className="m-0 text-small text-danger">
               {turn.error.message}

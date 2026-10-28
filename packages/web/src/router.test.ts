@@ -53,3 +53,34 @@ describe("addresses that keep a place", () => {
     expect(projectsSearchOf({ show: "nonsense" })).toEqual({});
   });
 });
+
+describe("scroll on arrival", () => {
+  // The router resets a new screen to the top once it has rendered; landing after Keys &
+  // services scrolled to the setup a link opened, that reset undid the scroll (the first
+  // arrival from the welcome sometimes stayed at the top). The page owns that scroll instead.
+  async function restores(path: string): Promise<boolean> {
+    const router = createAppRouter();
+    router.update({ history: createMemoryHistory({ initialEntries: [path] }) });
+    await router.load();
+    const restore = router.options.scrollRestoration;
+    if (typeof restore !== "function") throw new Error("Expected a per-location choice.");
+    return restore({ location: router.state.location });
+  }
+
+  it("leaves the scroll to Keys & services, which scrolls to the setup it opens", async () => {
+    expect(
+      await restores(
+        "/settings?section=providers&family=image&provider=openai-image&return=welcome",
+      ),
+    ).toBe(false);
+    expect(await restores("/settings?family=tts")).toBe(false);
+    expect(await restores("/settings?section=providers")).toBe(false);
+    expect(await restores("/settings")).toBe(false);
+  });
+
+  it("resets or restores every other screen as before", async () => {
+    expect(await restores("/settings?section=voices&provider=elevenlabs")).toBe(true);
+    expect(await restores("/settings?section=models")).toBe(true);
+    expect(await restores("/projects")).toBe(true);
+  });
+});

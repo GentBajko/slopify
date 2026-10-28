@@ -78,7 +78,7 @@ export function FilesFolder({
           meta={
             view.folder === null
               ? "The Docker project folder isn't set up."
-              : "Where your projects, backups and exports are kept."
+              : "Where your projects and exports are kept."
           }
         >
           <Button disabled={view.folder === null || open.isPending} onClick={() => open.mutate()}>
@@ -124,7 +124,7 @@ export function FilesFolder({
   const resumable = phase === "failed" || phase === "interrupted";
   return (
     <div>
-      <SectionHead title="Your files" meta="Where your projects, backups and exports are kept.">
+      <SectionHead title="Your files" meta="Where your projects and exports are kept.">
         {view.inDocuments || view.documentsRoot === null ? null : (
           <Button
             variant="secondary"
@@ -232,7 +232,6 @@ export function FilesFolder({
 function FolderLines({ view }: { readonly view: FilesView }): ReactElement {
   const lines = [
     ["Projects", view.projects],
-    ["Automatic backups", view.backups],
     ["Exports", view.exports],
   ].filter((line): line is [string, string] => line[1] !== null);
   return (

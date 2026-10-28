@@ -191,16 +191,15 @@ function SamplesForAll(): ReactElement {
     );
   const data = quote.data;
   const unknown = data?.items.some((item) => item.unknown > 0 && item.fits) ?? false;
+  // With nothing to make (or while it is being priced) there is no button at all: the sentence
+  // says why, and a greyed button with a price of $0 would only repeat it.
+  const makeable = data?.items.filter((item) => item.problem === null).length ?? 0;
   const reason =
-    data === undefined
-      ? "Pricing every template's sample"
-      : data.items.length === 0
-        ? "Every template's sample is made for its newest version"
-        : data.fitting === 0
-          ? "No sample fits today's budget or plan setting: change them above, or press this tomorrow"
-          : make.isPending
-            ? "Asking for the samples"
-            : undefined;
+    data !== undefined && data.fitting === 0
+      ? "No sample fits today's budget or plan setting: change them above, or press this tomorrow"
+      : make.isPending
+        ? "Asking for the samples"
+        : undefined;
   return (
     <section aria-label="Samples for all templates" className="flex flex-col gap-2">
       <h3 className="m-0 text-body font-medium text-ink">Samples for all templates</h3>
@@ -217,19 +216,19 @@ function SamplesForAll(): ReactElement {
           Accept steps with no known price
         </label>
       ) : null}
-      <div>
-        <Button
-          variant="secondary"
-          disabled={reason !== undefined}
-          disabledReason={reason}
-          focusableWhenDisabled
-          onClick={() => data !== undefined && make.mutate(data.total)}
-        >
-          {data === undefined || data.items.length === 0
-            ? "Make samples for all"
-            : `Make samples for all · ${about(data.total)}`}
-        </Button>
-      </div>
+      {data === undefined || makeable === 0 ? null : (
+        <div>
+          <Button
+            variant="secondary"
+            disabled={reason !== undefined}
+            disabledReason={reason}
+            focusableWhenDisabled
+            onClick={() => make.mutate(data.total)}
+          >
+            {`Make samples for all · ${about(data.total)}`}
+          </Button>
+        </div>
+      )}
       {note === undefined ? null : (
         <p
           role={note.error ? "alert" : "status"}

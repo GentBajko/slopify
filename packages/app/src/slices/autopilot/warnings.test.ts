@@ -170,7 +170,7 @@ describe("warningsOf", () => {
             kind: "template",
             id: "t1",
             name: "Weekly",
-            slot: "Text model",
+            slot: "Writing model",
             model: "old-1",
             why: "retired",
             replacement: "New 2",
@@ -179,7 +179,7 @@ describe("warningsOf", () => {
             kind: "schedule",
             id: "s1",
             name: "Canals",
-            slot: "Text model",
+            slot: "Writing model",
             model: "gone",
             why: "unlisted",
             replacement: null,
@@ -191,11 +191,11 @@ describe("warningsOf", () => {
     );
     expect(warnings.map((one) => [one.text, one.fix])).toEqual([
       [
-        "The text model “old-1” in template “Weekly” is being retired, so its runs will fail once it is gone. Switch it to “New 2”.",
+        "The writing model “old-1” in template “Weekly” is being retired, so its runs will fail once it is gone. Switch it to “New 2”.",
         { kind: "templates", label: "Open Templates" },
       ],
       [
-        "The text model “gone” in schedule “Canals” is no longer offered, so its runs will fail once it is gone. Switch it to another model.",
+        "The writing model “gone” in schedule “Canals” is no longer offered, so its runs will fail once it is gone. Switch it to another model.",
         { kind: "schedule", scheduleId: "s1", label: "Open the schedule" },
       ],
     ]);

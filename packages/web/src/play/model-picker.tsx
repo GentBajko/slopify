@@ -7,12 +7,12 @@ import { useId, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { HelpLine, Input, Select } from "@/components/kit/field";
-import { TextLink } from "@/components/kit/link";
 import { estimateChecks } from "@/lib/model-checks";
 import { modelChoiceLabel, modelOptionLabel } from "@/lib/model-label";
 import { customModelFallback, listProviderModels, modelsKey, modelsQuery } from "@/lib/models";
 import { useCheckModels } from "@/lib/use-check-models";
 import { cn } from "@/lib/utils";
+import { SettingsLink } from "@/routes/settings-back";
 import { type FieldProps, LabelledField } from "./pickers";
 
 // The line under the select: the chosen model's badge once something is known about it, or
@@ -243,9 +243,7 @@ function ProviderModelPicker({
           {provider === "" ? null : (
             <HelpLine className="mt-1">
               {status === "" ? null : <>{status} · </>}
-              <TextLink to="/settings" search={{ section: "models" }}>
-                Manage models ↗
-              </TextLink>
+              <SettingsLink search={{ section: "models" }}>Manage models ↗</SettingsLink>
             </HelpLine>
           )}
         </>

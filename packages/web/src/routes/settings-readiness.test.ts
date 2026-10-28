@@ -26,14 +26,15 @@ const providers: readonly ProviderStatus[] = [
 describe("the readiness lines", () => {
   it("names each part of a video by its stage, and what the video lacks without it", () => {
     const lines = readinessLines(providers);
-    expect(lines.map((line) => [line.label, line.ready])).toEqual([
-      ["Article", true],
-      ["Narration", false],
-      ["Images", false],
+    expect(lines.map((line) => [line.label, line.state])).toEqual([
+      ["Article", "ready"],
+      ["Narration", "no-key"],
+      ["Images", "no-key"],
     ]);
     expect(lines[1]?.text).toBe("No voice service yet, so videos have no narration.");
-    expect(lines.map((line) => line.action)).toEqual([
-      "Show writing services",
+    // A ready part has no button: its services are listed right under the lines.
+    expect(lines.map((line) => line.action?.words)).toEqual([
+      undefined,
       "Set up a voice service",
       "Set up an image service",
     ]);
@@ -49,5 +50,33 @@ describe("the readiness lines", () => {
   it("leaves out a pick that is no longer usable", () => {
     const [article] = readinessLines(providers, { llm: { provider: "gemini", model: "x" } });
     expect(article?.text).toBe("Codex CLI, Claude Code CLI");
+  });
+
+  it("says Narration is ready only when a voice service can narrate, as the welcome does", () => {
+    const eleven: ProviderStatus = {
+      id: "elevenlabs",
+      family: "tts",
+      displayName: "ElevenLabs",
+      readiness: { kind: "keyed", hasKey: true },
+    };
+    // A key alone does not narrate with ElevenLabs: a voice of its own must be saved.
+    const [, keyOnly] = readinessLines([...providers, eleven]);
+    expect(keyOnly).toMatchObject({
+      state: "no-voice",
+      text: "ElevenLabs has a key but no voice saved yet, so videos have no narration.",
+      action: { kind: "voices", words: "Save a voice", provider: "elevenlabs" },
+    });
+    const [, withVoice] = readinessLines([...providers, eleven], undefined, [
+      { id: "v1", provider: "elevenlabs", name: "Rachel", voiceId: "21m00" },
+    ]);
+    expect(withVoice).toMatchObject({ state: "ready", text: "ElevenLabs" });
+    expect(withVoice?.action).toBeUndefined();
+    // An OpenAI key narrates at once: the first short saves its voice.
+    const openAi = providers.map((one) =>
+      one.id === "openai-tts"
+        ? { ...one, readiness: { kind: "keyed" as const, hasKey: true } }
+        : one,
+    );
+    expect(readinessLines(openAi)[1]).toMatchObject({ state: "ready", text: "OpenAI" });
   });
 });

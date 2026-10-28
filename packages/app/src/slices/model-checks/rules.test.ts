@@ -4,6 +4,7 @@ import type { ModelCheckRow, ModelStandingView } from "./model.js";
 import {
   ago,
   badgeOf,
+  costPhrase,
   dollarsText,
   mergeVerdict,
   newForYou,
@@ -231,6 +232,19 @@ describe("newForYou", () => {
       row({ model: "e", verdict: "works", firstWorksAt: null }),
     ];
     expect(newForYou(rows).map((r) => r.model)).toEqual(["b", "a"]);
+  });
+});
+
+describe("costPhrase", () => {
+  it("finishes a sentence 'this costs …' whatever is priced", () => {
+    expect(costPhrase(0)).toBe("nothing");
+    expect(costPhrase(0.0004)).toBe("less than a cent at list price");
+    expect(costPhrase(0.0412)).toBe("about $0.04 at list price");
+    expect(costPhrase(0, 3)).toBe("an unknown amount: 3 models have no listed price");
+    expect(costPhrase(0, 1)).toBe("an unknown amount: 1 model has no listed price");
+    expect(costPhrase(0.05, 2)).toBe(
+      "about $0.05 at list price, plus an unknown amount for 2 models with no listed price",
+    );
   });
 });
 

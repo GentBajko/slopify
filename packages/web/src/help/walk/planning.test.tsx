@@ -353,11 +353,15 @@ describe("the planning screens explain every control", () => {
       testDeps({
         ...channelRoutes,
         "GET /api/channels": jsonAnswer({ channels: [summary, second] }),
+        // Links saved on Settings before channels had their own: the note that moves them.
+        "GET /api/settings/channel-links": jsonAnswer({
+          links: [{ name: "Patreon", url: "https://patreon.com/me" }],
+        }),
       }),
     );
     expect(await screen.findAllByRole("option", { name: "History at Bedtime" })).toHaveLength(1);
     expect(screen.getByRole("combobox", { name: "Showing:" })).not.toBeNull();
-    await screen.findByRole("link", { name: "Open the default channel's links" });
+    await screen.findByRole("link", { name: /^Open .*'s links$/ });
     await waitFor(expectExplained);
   });
 });

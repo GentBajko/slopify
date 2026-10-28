@@ -367,8 +367,7 @@ describe("GET /api/settings/encoders", () => {
     const { app } = harness({
       nvenc: async () => ({
         available: false,
-        reason:
-          "This computer's NVIDIA graphics card encoder did not pass its test, so it is not used.",
+        reason: "No working NVIDIA graphics card was found on this computer.",
         detail:
           "the ffmpeg at ffmpeg lists NVENC but its test encode failed: Operation not permitted",
       }),
@@ -376,8 +375,7 @@ describe("GET /api/settings/encoders", () => {
     expect(await (await app.request("/api/settings/encoders")).json()).toEqual({
       nvidia: {
         available: false,
-        reason:
-          "This computer's NVIDIA graphics card encoder did not pass its test, so it is not used.",
+        reason: "No working NVIDIA graphics card was found on this computer.",
         detail:
           "the ffmpeg at ffmpeg lists NVENC but its test encode failed: Operation not permitted",
       },
@@ -385,7 +383,7 @@ describe("GET /api/settings/encoders", () => {
     expect(await (await harness().app.request("/api/settings/encoders")).json()).toEqual({
       nvidia: {
         available: false,
-        reason: "No NVIDIA graphics card encoder was found on this computer.",
+        reason: "No NVIDIA graphics card was found on this computer.",
       },
     });
   });

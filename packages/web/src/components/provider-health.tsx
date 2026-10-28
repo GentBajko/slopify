@@ -8,19 +8,34 @@ import { Status, type Tone } from "@/components/kit/status";
 import { checkHealth } from "@/components/provider-upkeep-api";
 import { cn } from "@/lib/utils";
 
-// The same words the service lists use: a warning may stop a run, a problem will.
+// The same words the service lists use: a warning may stop a run, a problem will, and a
+// service chosen somewhere without its key says No key, as its line in the list does.
 const stateWords: Readonly<Record<ProviderHealth["state"], string>> = {
   ok: "Ready",
   warning: "May need fixing",
   problem: "Needs fixing",
   unused: "Not set up",
+  "no-key": "No key",
 };
 const toneOf: Readonly<Record<ProviderHealth["state"], Tone>> = {
   ok: "done",
   warning: "waiting",
   problem: "failed",
   unused: "off",
+  "no-key": "waiting",
 };
+const familyWords: Readonly<Record<ProviderHealth["family"], string>> = {
+  llm: "writing",
+  tts: "voices",
+  image: "images",
+};
+
+// A service's name, with its kind when another row of the report shares the name ("OpenAI
+// (voices)", "OpenAI (images)").
+function nameIn(rows: readonly ProviderHealth[], row: ProviderHealth): string {
+  const shared = rows.some((one) => one.id !== row.id && one.displayName === row.displayName);
+  return shared ? `${row.displayName} (${familyWords[row.family]})` : row.displayName;
+}
 const checkTone: Readonly<Record<HealthCheck["state"], string>> = {
   ok: "text-ink-2",
   warning: "text-waiting",
@@ -61,16 +76,19 @@ function useRecheck(checkedAt: string | undefined) {
 
 // Check every service: every command-line tool found and signed in, every saved key accepted,
 // every chosen model still offered. It sits under the readiness lines on Keys & services, with
-// when it last ran; the report lands right under it. Providers neither set up nor chosen
-// anywhere are summed up in one line rather than listed. Handed a `run`, the check is the
-// caller's (so Ctrl+K can start it too); alone, it holds its own.
+// when it last ran; the report lands right under it. Only the services that need something
+// are listed with their checks; the ready ones, and those neither set up nor chosen anywhere,
+// are summed up in a line each, so the setup below stays near. Handed a `run`, the check is
+// the caller's (so Ctrl+K can start it too); alone, it holds its own.
 export function ProviderHealthCheck({ run: given }: { readonly run?: HealthRun } = {}) {
   const own = useProviderHealth();
   const run = given ?? own;
   const report = run.data;
   const recheck = useRecheck(report?.checkedAt);
-  const shown = report?.providers.filter((row) => row.state !== "unused").map(recheck.latest) ?? [];
-  const unused = report?.providers.filter((row) => row.state === "unused") ?? [];
+  const rows = report?.providers.map(recheck.latest) ?? [];
+  const shown = rows.filter((row) => row.state !== "unused" && row.state !== "ok");
+  const fine = rows.filter((row) => row.state === "ok");
+  const unused = rows.filter((row) => row.state === "unused");
   return (
     <section aria-label="Check every service" className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-small">
@@ -106,41 +124,48 @@ export function ProviderHealthCheck({ run: given }: { readonly run?: HealthRun }
       )}
       {report === undefined ? null : (
         <>
-          <ul aria-label="Check by service" className="sl-list m-0 list-none p-0">
-            {shown.map((row) => (
-              <li key={row.id} className="sl-row grid-cols-1 gap-1 py-2">
-                <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-                  <span className="sl-row__title">{row.displayName}</span>
-                  <span className="flex items-center gap-2">
-                    <Status tone={toneOf[row.state]}>{stateWords[row.state]}</Status>
-                    <Button
-                      variant="quiet"
-                      size="small"
-                      aria-label={`Check ${row.displayName} again`}
-                      disabled={recheck.one.isPending}
-                      onClick={() => {
-                        recheck.one.mutate(row.id);
-                      }}
-                    >
-                      {recheck.one.isPending && recheck.one.variables === row.id
-                        ? "Checking…"
-                        : "Check again"}
-                    </Button>
-                  </span>
-                </div>
-                <ul className="m-0 list-none space-y-1 p-0">
-                  {row.checks.map((check) => (
-                    <li key={check.label} className={cn("text-small", checkTone[check.state])}>
-                      <span className="font-semibold">{check.label}:</span> {check.detail}
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
-          </ul>
+          {shown.length === 0 ? null : (
+            <ul aria-label="Check by service" className="sl-list m-0 list-none p-0">
+              {shown.map((row) => (
+                <li key={row.id} className="sl-row grid-cols-1 gap-1 py-2">
+                  <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+                    <span className="sl-row__title">{nameIn(rows, row)}</span>
+                    <span className="flex items-center gap-2">
+                      <Status tone={toneOf[row.state]}>{stateWords[row.state]}</Status>
+                      <Button
+                        variant="quiet"
+                        size="small"
+                        aria-label={`Check ${nameIn(rows, row)} again`}
+                        disabled={recheck.one.isPending}
+                        onClick={() => {
+                          recheck.one.mutate(row.id);
+                        }}
+                      >
+                        {recheck.one.isPending && recheck.one.variables === row.id
+                          ? "Checking…"
+                          : "Check again"}
+                      </Button>
+                    </span>
+                  </div>
+                  <ul className="m-0 list-none space-y-1 p-0">
+                    {row.checks.map((check) => (
+                      <li key={check.label} className={cn("text-small", checkTone[check.state])}>
+                        <span className="font-semibold">{check.label}:</span> {check.detail}
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          )}
+          {fine.length === 0 ? null : (
+            <p className="m-0 text-small text-ink-2">
+              {`Ready: ${fine.map((row) => nameIn(rows, row)).join(", ")}.`}
+            </p>
+          )}
           {unused.length === 0 ? null : (
             <p className="m-0 text-small text-ink-2">
-              {`Not set up and not used anywhere: ${unused.map((row) => row.displayName).join(", ")}.`}
+              {`Not set up and not used anywhere: ${unused.map((row) => nameIn(rows, row)).join(", ")}.`}
             </p>
           )}
         </>

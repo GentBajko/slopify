@@ -61,7 +61,9 @@ describe("the providers health check", () => {
           {
             label: "Chosen models",
             state: "problem",
-            detail: expect.stringContaining("opus-old (Text model in draft “Moon”)"),
+            detail: expect.stringContaining(
+              "opus-old (Writing model in the draft “Moon” on Create)",
+            ),
           },
         ],
       });
@@ -83,6 +85,36 @@ describe("the providers health check", () => {
       });
       // Neither set up nor chosen: nothing to fix.
       expect(of("fal")).toMatchObject({ state: "unused" });
+    } finally {
+      h.close();
+    }
+  });
+
+  it("says No key for a keyed service chosen somewhere without one, and where to paste it", async () => {
+    const h = draftFixture();
+    try {
+      must(
+        createDraft(h.deps, {
+          id: randomUUID(),
+          document: {
+            ...h.document,
+            form: {
+              ...h.document.form,
+              title: "{{Topic}}",
+              audio: { provider: "openai-tts", model: "gpt-4o-mini-tts", voice: "alloy" },
+            },
+          },
+        }),
+      );
+      const report = await checkProviderHealth(deps(h, installed), "openai-tts");
+      const row = report.providers[0];
+      expect(row).toMatchObject({ state: "no-key", checks: [{ label: "Key", state: "problem" }] });
+      const detail = row?.checks[0]?.detail ?? "";
+      // The draft is named as Create names it, never by its raw keyword, and the fix is the
+      // setup on the page the report is read on: no address, no Settings path.
+      expect(detail).toContain("gpt-4o-mini-tts (Voice model in an untitled draft on Create)");
+      expect(detail).toContain("Open OpenAI under Voice services, paste a key and press Save.");
+      expect(detail).not.toMatch(/\{\{|https?:|Settings →/);
     } finally {
       h.close();
     }
@@ -182,7 +214,9 @@ describe("model reachable", () => {
       expect(report.providers[0]?.checks.at(-1)).toMatchObject({
         label: "Model reachable",
         state: "problem",
-        detail: expect.stringContaining("anthropic/claude-gone (Text model in draft “Moon”)"),
+        detail: expect.stringContaining(
+          "anthropic/claude-gone (Writing model in the draft “Moon” on Create)",
+        ),
       });
     } finally {
       h.close();
