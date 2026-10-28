@@ -20,7 +20,7 @@ You can rename, recast or remove the starter speakers. A run can have up to 10 s
 
 When the channel has hosts (cast members marked **One of the channel's hosts** that have a voice), a new **Podcast** or **Interview** starts with them as its speakers instead of Alex and Sam, or Host and Guest. See [Cast](Cast-Library#make-a-member-one-of-the-channels-hosts).
 
-The **speaker panel** (Podcast and Interview) is a row of tiles, one per speaker, with the one talking lit in their colour and their name as a lower third. It is drawn together with the captions shown in the video, so set **Captions** to **Show captions in the video** under Create → **Video and style** to see it. A speaker added from a channel's cast whose member has a reference picture shows that picture in their tile (the member's first picture, cropped square, taken when the run starts); everyone else shows their initials. Adding a picture to the cast later does not change projects already made.
+The **speaker panel** (Podcast and Interview) is a row of tiles, one per speaker, with the one talking lit in their color and their name as a lower third. It is drawn together with the captions shown in the video, so set **Captions** to **Show captions in the video** under Create → **Video and style** to see it. A speaker added from a channel's cast whose member has a reference picture shows that picture in their tile (the member's first picture, cropped square, taken when the run starts); everyone else shows their initials. Adding a picture to the cast later does not change projects already made.
 
 ## Set up a multi-voice run
 
@@ -62,7 +62,7 @@ Sam: The next turn.
 - Text in `[square brackets]`, such as `[laughs]`, is a stage direction and is never read aloud.
 - A script that names someone who is not one of your speakers, or has a paragraph that is not a turn, stops the Article stage with the line to fix.
 
-On the project page the Article section shows the script as the speakers read it: each turn under its speaker's name in their colour, with the sections as headings. If the script can't be narrated, it says why and points you to **Edit settings** → **Article**.
+On the project page the Article section shows the script as the speakers read it: each turn under its speaker's name in their color, with the sections as headings. If the script can't be narrated, it says why and points you to **Edit settings** → **Article**.
 
 ## Speaker options
 
@@ -134,7 +134,7 @@ Each turn is its own request, so a direction never leaks into the next speaker, 
 
 ## Captions with several speakers
 
-- Captions never mix two speakers in one line, and each speaker's captions carry their colour.
+- Captions never mix two speakers in one line, and each speaker's captions carry their color.
 - Captions you edit by hand in **Edit settings** → **Captions** keep their speaker. A caption you add takes the speaker of the narration under it.
 - [Shorts](Shorts) cut from a multi-voice video start and end on a speaker's turn.
 

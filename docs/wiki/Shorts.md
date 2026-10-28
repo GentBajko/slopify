@@ -10,7 +10,7 @@ For each short:
 
 - A vertical 1080×1920 MP4, cut from the long video's narration at sentence edges.
 - New 9:16 images drawn for that clip (the long video's images are not reused).
-- Big captions a little below the middle of the frame, two to four words at a time, with the word being spoken in a strong colour.
+- Big captions a little below the middle of the frame, two to four words at a time, with the word being spoken in a strong color.
 - The short's title at the top for the whole clip, if **Title on screen** is on.
 - A title (up to 60 characters), a one-line description ending with a link to the full video, and 3 to 5 hashtags.
 

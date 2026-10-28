@@ -101,7 +101,7 @@ Cast members and their pictures travel in a backup made with **Export everything
 ## Tips
 
 - Upload or generate a picture with the whole figure on a plain background. Busy backgrounds leak into every image.
-- Keep the description short and visual: colours, shape, clothing, one distinctive feature.
+- Keep the description short and visual: colors, shape, clothing, one distinctive feature.
 - Add the plural and possessive-free forms as aliases ("pharaohs", "the Queen"). Matching is whole-word only.
 
 ## Related pages

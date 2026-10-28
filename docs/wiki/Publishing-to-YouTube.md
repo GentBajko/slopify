@@ -59,14 +59,14 @@ Studio asks every upload one question, behind **Show more**: whether AI was used
 2. Alters footage of a real event or place.
 3. Generates a realistic-looking scene that didn't actually occur.
 
-Selecting Yes adds YouTube's AI label to your video. YouTube does not ask for the label for clearly unrealistic content, minor edits such as colour or filters, or AI used for the script, title, thumbnail or captions.
+Selecting Yes adds YouTube's AI label to your video. YouTube does not ask for the label for clearly unrealistic content, minor edits such as color or filters, or AI used for the script, title, thumbnail or captions.
 
 Slopify answers **Yes only when one of those three cases applies**, and **No** otherwise. An AI narrator and stylised AI pictures on their own are none of the three. Each case is something you mark, and every mark is off until you set it:
 
 | Case | What you mark | Where |
 |---|---|---|
 | 1. A voice that imitates a real person | **Sounds like a real person** on a voice cloned from, or made to sound like, a real person. A video or short narrated by that voice (the narration voice or any speaker) gets Yes. | Settings → **Voices**, the Real person column |
-| 2. Real footage that is altered | In Copy for YouTube Studio's AI use step, the switch **The uploaded clip is real footage (filmed, not made by AI)** (or "The N uploaded clips are…"). It appears when the project's images include uploaded video clips. With it on, the video gets Yes when the Look's **Atmosphere** overlay (embers, dust or fog) is laid over them. A colour grade, vignette or grain alone counts as a minor edit and stays No. | Copy for YouTube Studio, per project |
+| 2. Real footage that is altered | In Copy for YouTube Studio's AI use step, the switch **The uploaded clip is real footage (filmed, not made by AI)** (or "The N uploaded clips are…"). It appears when the project's images include uploaded video clips. With it on, the video gets Yes when the Look's **Atmosphere** overlay (embers, dust or fog) is laid over them. A color grade, vignette or grain alone counts as a minor edit and stays No. | Copy for YouTube Studio, per project |
 | 3. Photorealistic AI pictures | **Draws photorealistic pictures** on an Image prompt whose style looks like real photos or film. A video whose images are drawn from such a prompt, or a short whose **Image prompt** is one, gets Yes. The Built-in shorts style is not photorealistic. | Library → **Prompts**, in the Image prompt's editor (save the prompt first) |
 
 The AI use step shows the answer and why, naming the case in YouTube's words, for example that the narration uses a named voice marked in Settings → Voices as imitating a real person. When none applies, it says No and lists what was checked.
