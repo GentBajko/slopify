@@ -569,6 +569,31 @@ describe("what Create starts from", () => {
     await waitFor(() => expect(startFrom().value).toBe(templateId));
   });
 
+  it("with no article prompt saved, sends the person to a starter template, not to writing one", async () => {
+    const routes = starterRoutes();
+    await mountPlay(
+      {
+        ...routes,
+        "GET /api/prompts": jsonAnswer({ prompts: [] }),
+        "GET /api/project-templates": jsonAnswer({ templates: [] }),
+        "GET /api/onboarding": jsonAnswer({
+          packs: [{ id: "lore", name: "Lore", summary: "", installed: false, templateId: null }],
+        }),
+      },
+      undefined,
+      () => screen.findByRole("option", { name: "Lore starter" }),
+    );
+    await userEvent.type(screen.getByLabelText(topicLabel), "Cleopatra");
+    const start = within(screen.getByRole("region", { name: "Start" }));
+    const hint = await start.findByRole("button", { name: "Pick a starter template first" });
+    // The Article row still says what it lacks.
+    expect(
+      document.querySelector('[data-setup-row="article"] [data-row-problem]')?.textContent,
+    ).toBe("Pick an article prompt");
+    await userEvent.click(hint);
+    expect(document.activeElement).toBe(startFrom());
+  });
+
   it("gives a fresh draft the writer and image service the first launch found", async () => {
     const { session } = await mountPlay({
       "GET /api/providers/first-run": jsonAnswer({

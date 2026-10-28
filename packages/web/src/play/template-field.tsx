@@ -62,6 +62,17 @@ export function useStarterTemplate(): {
   };
 }
 
+// The starter templates not added yet, which Start from offers to add.
+export function useAddableStarters() {
+  const { api } = useApp();
+  const firstRun = useQuery({
+    queryKey: onboardingKey,
+    queryFn: () => readFirstRun(api),
+    retry: false,
+  });
+  return (firstRun.data?.packs ?? []).filter((pack) => !pack.installed);
+}
+
 // Whether the page shows this visit's fresh form, which the starter template is about to
 // replace: nothing reopened or picked, and nothing but the topic typed in it (the services the
 // first launch found may be filled in). Its first save waits meanwhile, so the draft made
@@ -224,12 +235,7 @@ export function TemplateField({
   // A starter template not added yet, offered in the same list: picking one adds it (its
   // prompts, voice and template) and starts from it, so a person who skipped the welcome is one
   // pick away from a setup that can make a video.
-  const firstRun = useQuery({
-    queryKey: onboardingKey,
-    queryFn: () => readFirstRun(api),
-    retry: false,
-  });
-  const addable = (firstRun.data?.packs ?? []).filter((pack) => !pack.installed);
+  const addable = useAddableStarters();
   const add = async (packId: string): Promise<void> => {
     onError(null);
     setBusy(true);
