@@ -230,6 +230,82 @@ describe("Keys & services' lists", () => {
     }
   });
 
+  it("waits for the usage-stats line, which covers the window's bottom edge, before it measures for a link", async () => {
+    const scrolled = vi.spyOn(window, "scrollBy").mockImplementation(() => {});
+    vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      top: 1400,
+      bottom: 1700,
+    } as DOMRect);
+    let answer = () => {};
+    const notice = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    try {
+      renderRouted(
+        <ProviderKeys focus={{ family: "image", provider: "openai-image", arrival: true }} />,
+        deps([keyed("openai-image", "image", "OpenAI", false)], {
+          "GET /api/telemetry/notice": async (request) => {
+            await notice;
+            return jsonAnswer({ seen: true, appVersion: "4.0.0" })(request);
+          },
+        }),
+      );
+      expect(await screen.findByLabelText("OpenAI API key")).not.toBeNull();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(scrolled).not.toHaveBeenCalled();
+      answer();
+      await waitFor(() => expect(scrolled).toHaveBeenCalledTimes(1));
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
+
+  it("keeps an arrival's key box in view while the page settles, until the person scrolls", async () => {
+    const scrolled = vi.spyOn(window, "scrollBy").mockImplementation(() => {});
+    vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    const box = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockReturnValue({ top: 1400, bottom: 1700 } as DOMRect);
+    // The page's own watchers: the one on the whole page is the settling one.
+    const onPage: (() => void)[] = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        readonly #call: () => void;
+        constructor(call: () => void) {
+          this.#call = call;
+        }
+        observe(target: Element) {
+          if (target === document.body) onPage.push(this.#call);
+        }
+        disconnect() {
+          const at = onPage.indexOf(this.#call);
+          if (at >= 0) onPage.splice(at, 1);
+        }
+      },
+    );
+    try {
+      renderRouted(
+        <ProviderKeys focus={{ family: "image", provider: "openai-image", arrival: true }} />,
+        deps([keyed("openai-image", "image", "OpenAI", false)]),
+      );
+      expect(await screen.findByLabelText("OpenAI API key")).not.toBeNull();
+      await waitFor(() => expect(scrolled).toHaveBeenCalledTimes(1));
+      expect(onPage).toHaveLength(1);
+      // Something lands above the setup and pushes its key box down again: it is brought back.
+      box.mockReturnValue({ top: 900, bottom: 1200 } as DOMRect);
+      for (const call of [...onPage]) call();
+      expect(scrolled).toHaveBeenLastCalledWith({ top: 1200 + 16 - 768, behavior: "auto" });
+      // Once the person scrolls, the page is theirs.
+      window.dispatchEvent(new Event("wheel"));
+      expect(onPage).toHaveLength(0);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+    }
+  });
+
   it("names the problem when the services cannot be read", async () => {
     renderRouted(
       <ProviderKeys />,
