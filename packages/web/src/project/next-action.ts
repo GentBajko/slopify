@@ -89,6 +89,9 @@ export interface NextActionInput {
   readonly waits: readonly LimitWaitLike[];
   // A finished video file is there to download.
   readonly videoReady: boolean;
+  // An audiobook's or a podcast's own file, which a finished one downloads instead of its
+  // video: its asset ("audio-m4b") and the button's words ("Download audiobook (.m4b)").
+  readonly listening?: { readonly asset: string; readonly label: string } | undefined;
   // The fix-it a failed step offers (`slices/fixes/rules.ts`), looked up by the caller.
   readonly fixOf: (stage: Stage) => Fix | undefined;
   // "14:05": how a time reads in a sentence. Injected so tests do not depend on the clock.
@@ -111,7 +114,8 @@ export type NextIntent =
   | { readonly kind: "soften"; readonly stage: StageKind }
   | { readonly kind: "edit" }
   | { readonly kind: "open-settings"; readonly section: "providers" | "storage" }
-  | { readonly kind: "download" }
+  // The file the title row downloads, by its asset name ("video", "audio-m4b").
+  | { readonly kind: "download"; readonly asset: string }
   | { readonly kind: "full-video" };
 
 export type Situation =
@@ -149,11 +153,14 @@ export const stoppedLines = {
   why: "Continuing makes only what is missing; everything made so far is kept.",
 } as const;
 
-// The finished video's file, from the title row: the one thing to do once it is made.
-const downloadVideo: NonNullable<NextAction["action"]> = {
-  label: "Download video",
-  intent: { kind: "download" },
-};
+// The finished file, from the title row: the one thing to do once it is made, named for it.
+// An audiobook or a podcast leads with its listening file, a video project with its video.
+// The section that holds the same file does not offer it again.
+function downloadFinished(input: NextActionInput): NonNullable<NextAction["action"]> {
+  return input.listening === undefined
+    ? { label: "Download video (.mp4)", intent: { kind: "download", asset: "video" } }
+    : { label: input.listening.label, intent: { kind: "download", asset: input.listening.asset } };
+}
 
 const lower = (text: string): string =>
   /^[A-Z]{2}/.test(text) ? text : text.charAt(0).toLowerCase() + text.slice(1);
@@ -347,7 +354,7 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
           status: keptAsIsWord,
           title: "The video is ready; what is left won't run.",
           why: "Editing the project brings the rest back to Needs you.",
-          action: downloadVideo,
+          action: downloadFinished(input),
           section: "video",
         }
       : {
@@ -420,7 +427,7 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
       tone: "done",
       status: "Done",
       title: "Your video is ready.",
-      action: downloadVideo,
+      action: downloadFinished(input),
       section: "video",
     };
 

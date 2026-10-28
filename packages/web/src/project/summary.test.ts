@@ -224,6 +224,15 @@ describe("the summary in a rundown row", () => {
     expect(summaryOf(stage("video", "done"), outputs, project)).toBe("22:14 · 16:9");
     expect(summaryOf(stage("video", "done"), [], project)).toBe("16:9");
   });
+
+  it("gives an audiobook's or a podcast's last step its length alone", () => {
+    const book = {
+      ...project,
+      config: { ...project.config, voices: { format: "audiobook" } },
+    } as unknown as ProjectSummary;
+    const outputs = [output("video", "video", { durationMs: 107_000 })];
+    expect(summaryOf(stage("video", "done"), outputs, book)).toBe("01:47");
+  });
 });
 
 describe("a duration", () => {

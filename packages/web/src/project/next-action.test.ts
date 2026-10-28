@@ -394,7 +394,7 @@ describe("the next action", () => {
     ).toMatchObject({
       status: "Kept as is",
       title: "The video is ready; what is left won't run.",
-      action: { label: "Download video", intent: { kind: "download" } },
+      action: { label: "Download video (.mp4)", intent: { kind: "download", asset: "video" } },
     });
   });
 
@@ -470,11 +470,22 @@ describe("the next action", () => {
       status: "Done",
       title: "Your video is ready.",
       section: "video",
-      action: { label: "Download video", intent: { kind: "download" } },
+      action: { label: "Download video (.mp4)", intent: { kind: "download", asset: "video" } },
     });
     expect(nextActionFor(input({ project: { status: "partial", config } }))?.situation).toBe(
       "done",
     );
+  });
+
+  it("downloads an audiobook's or a podcast's own file, not its video", () => {
+    expect(
+      nextActionFor(
+        input({ listening: { asset: "audio-m4b", label: "Download audiobook (.m4b)" } }),
+      )?.action,
+    ).toEqual({
+      label: "Download audiobook (.m4b)",
+      intent: { kind: "download", asset: "audio-m4b" },
+    });
   });
 
   it("shows nothing when a finished run made no video", () => {

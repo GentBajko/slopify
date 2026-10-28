@@ -1,5 +1,6 @@
 import type { RebuildPreview, RebuildSelection } from "@app/slices/rebuild/model.js";
 import type { RevisionEdit, RevisionView } from "@app/slices/revisions/model.js";
+import type { OutputRole } from "@app/slices/storage/model.js";
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { RebuildConsent } from "./rebuild-review.js";
 import type { EditRequest } from "./revision-action-context.js";
@@ -27,10 +28,30 @@ export type DraftNotice =
   // The draft was saved as the current version; the editor opens again on it.
   | { readonly kind: "saved" };
 
+// One piece of work in a saved version, as a make-again picks what it starts.
+export interface SavedWork {
+  readonly key: string;
+  readonly role?: OutputRole | undefined;
+  readonly outdated: boolean;
+}
+
 export interface RegenerateOptions {
   // The charge the person saw and accepted at the button, in USD. A remake whose estimate is
   // no higher starts at once; anything dearer, or with no amount shown, opens the review.
   readonly approvedUpTo?: number | undefined;
+  // The button's dialog said the price isn't known in advance and the person pressed on: a
+  // preview whose prices are unknown starts at once, with them acknowledged.
+  readonly unknownPrices?: boolean | undefined;
+  // A change saved with the marks: picking the shorts' moments again drops the ranges set by
+  // hand for the current pick.
+  readonly change?: ((edit: RevisionEdit) => RevisionEdit) | undefined;
+  // What to start once the version is saved, when the marks are not themselves work (a short's
+  // token, a narration passage): the saved version's work this accepts, by its key, the role
+  // of its output and whether the save made that output outdated ("shorts:2:prompts", from
+  // which the short's images and render unfold on the server; the outdated narration files).
+  readonly starts?: ((work: SavedWork) => boolean) | undefined;
+  // Where an open draft with changes of its own shows the marks; Images by default.
+  readonly section?: EditSection | undefined;
 }
 
 // Everything the project's saved revisions do: the settings draft and its save, the history
@@ -66,14 +87,21 @@ export interface RevisionController {
   readonly copyEdit: () => void;
   readonly reloadCurrent: () => void;
   readonly requestEdit: (request: EditRequest) => void;
-  // Makes pictures again now: saves a version with them marked and starts only them. A draft
-  // with changes of its own gets the marks instead, to go with them when it is saved.
+  // Makes pictures (or a short, or the shorts' pick) again now: saves a version with them
+  // marked and starts only them. When the preview still needs a look (a cost above what the
+  // button said, something blocked), its review opens, and Keep things as they are puts the
+  // version from before the press back. A draft with changes of its own gets the marks
+  // instead, to go with them when it is saved.
   readonly regenerateNow: (workKeys: readonly string[], options?: RegenerateOptions) => void;
   // Previews a rebuild. With `autoStart`, a preview that charges nothing starts at once
   // (`startsWithoutReview`); otherwise the review drawer opens with its scope and cost.
   readonly review: (
     selection: RebuildSelection,
-    options?: { readonly autoStart?: boolean; readonly approvedUpTo?: number | undefined },
+    options?: {
+      readonly autoStart?: boolean;
+      readonly approvedUpTo?: number | undefined;
+      readonly unknownPrices?: boolean | undefined;
+    },
   ) => void;
   readonly start: (consent: RebuildConsent) => void;
   readonly closePreview: () => void;

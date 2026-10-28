@@ -57,15 +57,16 @@ If nothing has been spent yet, it says "Nothing has been spent yet. The cost of 
 
 ### Summary
 
+The summary shows only what the cost line beside it does not: the total cost and the working time are in the cost line, and again in the last line under the tables. It appears when one of these applies.
+
 | Figure | What it is |
 |---|---|
-| **paid to the AI services** | The total cost of this project's calls. Reads "known cost, paid to the AI services" when some calls have no price, with a line "Plus N calls the model catalogue has no price for." |
 | **same work via API** | The API equivalent of the calls that ran on a CLI plan. |
 | Plan meters | One per plan window a CLI reported, for example "3% of weekly Codex limit". Hover or read the line below for the level it is at now. |
-| **this run's working time** | How long some step of the run was working. Waiting on a review, a limit or a pause never counts, and steps that ran side by side count once. Each save that makes something again starts a new run. |
 
 Lines under the summary:
 
+- "Plus N calls the model catalogue has no price for.", when some calls have no price.
 - "CLI calls: $0 on your plan · ~$1.20 via API", when any call ran on a plan.
 - "This run used ~3% of your weekly Codex limit (now at 41%, resets Mon 09:00)." Codex reports whole percents, so a short run can read "under 1%".
 - When a CLI reported nothing (Gemini, or a Docker host helper older than the app), it says the share is not known.
@@ -76,17 +77,17 @@ Lines under the summary:
 
 | Column | What it shows |
 |---|---|
-| **Stage** | Research, Article, Narration, Images, Thumbnail, Video, PDF. |
-| **Cost** | What you paid. "$0 on plan" for CLI stages; "Unknown" when no call in it has a price; "$0.40 + unknown" when some do not. |
+| **Step** | Research, Article, Narration, Images, Thumbnail, Video, PDF. |
+| **Cost** | What you paid. "$0 on plan" for CLI stages; "Not known" when no call in it has a price; "$0.40 + not known" when some do not. |
 | **Via API** | The API equivalent for CLI calls, or "No API price". |
 | **Usage** | Tokens in and out (and cached), characters, images, seconds of video. |
-| **Time** | How long the stage ran. |
+| **Working time** | How long the step's work ran, over every run. |
 
 ### By model
 
-**By model**: the same spending split by service and model, with **Cost**, **Via API**, **Usage** and **Calls**. A CLI model shows the API model it was priced as, in brackets after "as". The CLI's own default model shows as "default model".
+**By model**: the same spending split by service and model, named as Create names them (for example **Inworld · Inworld TTS-2**), with **Cost**, **Via API**, **Usage** and **Calls**. A CLI model shows the API model it was priced as, in brackets after "as". The CLI's own default model shows as "its default model", and a sample's own services as **Sample artist**, **Sample writer** and so on.
 
-The last lines give the total usage and the working time over every run, and "Priced from the model catalogue of <date> when each call finished."
+The last lines give the total, for example "In total: $0.42 · 12,400 characters · 9 images · 12 min working, over every run." (with **known** after the amount when some calls have no price), and "Priced from the model catalogue of <date> when each call finished."
 
 ## Across all projects: Home → This week
 

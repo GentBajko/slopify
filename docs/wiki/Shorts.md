@@ -57,11 +57,12 @@ With the establishing image on, the shorts' images are drawn with it as a refere
 
 ## See, copy and download your shorts
 
-When the run finishes, the project page's **Shorts** part shows the shorts side by side. Above them sit **Download all 3 shorts (.zip)** (or **Download both shorts (.zip)**; none with one short), **Open folder** and **Pick different moments · 1 AI call**, and **Show what YouTube covers on a phone** draws the parts of the frame YouTube's buttons hide. Each short has:
+When the run finishes, the project page's **Shorts** part shows the shorts side by side. Above them sit **Download all 3 shorts (.zip)** (or **Download both shorts (.zip)**; none with one short), **Open folder** and **Pick different moments · AI and image calls**, and **Show what YouTube covers on a phone** draws the parts of the frame YouTube's buttons hide. Each short has:
 
 - A vertical player (Slopify's own, showing the short's first picture until it plays), its title and length.
-- Its description and its hashtags.
-- Its actions in words: **Download (.mp4)**, **Copy for YouTube**, which puts its title, description, full video line and hashtags on the clipboard in one go, and **Make this short again** under them.
+- Right under them, its actions in words: **Download (.mp4)**, **Copy for YouTube**, which puts its title, description, full video line and hashtags on the clipboard in one go, then its description and its hashtags, and **Make this short again · 4 calls** last (one AI call for its image prompts and one image call per image).
+
+**Pick different moments** and **Make this short again** each ask first, naming their paid calls; press the button in the dialog and the work starts at once. The new version is saved for you, so the current shorts stay under **Versions**.
 
 While the stage runs, a short not rendered yet says how far it got, such as "Making images · 2 of 5" or "Rendering". A short that failed says so and points you to Error details in the Video part.
 
@@ -69,7 +70,7 @@ To upload them, open **Copy for YouTube Studio**: each short is listed on its ow
 
 ## Change the picked moments
 
-1. Open the project and press **Edit settings**, then open **Shorts**. (**Make short N again** on the project page opens the same place with the change made.)
+1. Open the project and press **Edit settings**, then open **Shorts**.
 2. Under **Picked clips**, each clip is shown by its first and last sentence.
 3. Move a clip with **Earlier start**, **Later start**, **Earlier end** and **Later end**, one sentence at a time.
 4. Or press **Use my own range** and pick the **Start sentence** and **End sentence** from the lists. **Back to the AI's choice** restores the model's pick.
@@ -79,10 +80,10 @@ A clip must stay between the shortest and longest length you set and must not ov
 
 ## Pick new moments or make one short again
 
-| Action | What happens when you save and continue the run | Cost |
+| Action | What happens | Cost |
 |---|---|---|
-| **Pick different moments** | The AI picks new moments. Ranges you set by hand are dropped. A new clip on the same sentences as an old one keeps its images; any other clip gets new images and is rendered again. **Keep the current moments** cancels it. | One AI call, plus one image call per new image |
-| **Make this short again** | This one short's image prompts are written again, its images drawn again and the short rendered again. Its moment, title and the other shorts stay as they are. | One image call per image |
+| **Pick different moments** | After its dialog, the AI picks new moments at once. Ranges you set by hand are dropped. A new clip on the same sentences as an old one keeps its images; any other clip gets new image prompts and images and is rendered again. **Keep these moments** cancels it. | One AI call, then for each new clip one AI call plus one image call per image |
+| **Make this short again** | After its dialog, this one short's image prompts are written again, its images drawn again and the short rendered again, at once. Its moment, title and the other shorts stay as they are. | One AI call plus one image call per image |
 | Change **Shorts per video**, **Length** or **Shorts prompt** | The moments are picked again, as with Pick different moments. | As above |
 
 ## Add background music

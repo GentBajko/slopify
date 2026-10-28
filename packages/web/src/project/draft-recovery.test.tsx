@@ -266,7 +266,7 @@ describe("a remake asked for from a button", () => {
     expect(await screen.findByRole("dialog", { name: "Choose what to make again" })).toBeTruthy();
     expect(screen.getByText("$0.04")).toBeTruthy();
     expect(start).not.toHaveBeenCalled();
-    await user.click(screen.getByRole("button", { name: "Make 1 output again" }));
+    await user.click(screen.getByRole("button", { name: "Make image again" }));
     await waitFor(() => expect(start).toHaveBeenCalledTimes(1));
   });
 

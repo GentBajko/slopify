@@ -162,7 +162,7 @@ describe("the destructive actions", () => {
     // The price first, then what it does.
     expect(
       within(dialog).getByText(
-        "No charge: it runs on this computer. Makes the video file again from the narration and images you already have; nothing is drawn or recorded again.",
+        "No charge: it runs on this computer. Makes the video file again from the narration and images you already have; nothing is drawn or recorded again, and the current video stays under Versions.",
       ),
     ).not.toBeNull();
     expect(rerun).not.toHaveBeenCalled();

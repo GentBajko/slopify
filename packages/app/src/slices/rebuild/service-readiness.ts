@@ -53,10 +53,15 @@ export async function checkReadiness(
     if (provider === undefined || !readinessIsUsable(provider.readiness)) {
       fields.push({
         field: choice.family,
+        // Said under the step's name on the project page ("Images: …"), in the person's words:
+        // a service Slopify does not offer here (a sample's own) is changed in the project's
+        // settings, one it offers is set up under Keys & services.
         message:
           provider !== undefined && provider.readiness.kind !== "keyed" && provider.readiness.issue
             ? provider.readiness.issue
-            : "Configure this provider before rebuilding.",
+            : provider === undefined
+              ? "This project's service isn't one Slopify can use here. Choose another in Edit settings, then try again."
+              : "Its service isn't set up yet. Add it in Settings → Keys & services, then try again.",
       });
       continue;
     }
@@ -110,7 +115,10 @@ export function localReadiness(
         message: "The configured CLI command changed. Check readiness again before rebuilding.",
       });
     if (provider?.readiness.kind === "keyed" && !hasKey(deps.db, provider.id))
-      fields.push({ field: choice.family, message: "Save the provider key before rebuilding." });
+      fields.push({
+        field: choice.family,
+        message: "Its key isn't saved yet. Add it in Settings → Keys & services, then try again.",
+      });
     if (
       choice.voice !== undefined &&
       !listVoices(deps.db).some(

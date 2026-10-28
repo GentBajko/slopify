@@ -10,8 +10,10 @@ import { ShortsBlock } from "./body-shorts.js";
 import {
   type EditRequest,
   EditRequestContext,
+  RegenerateNowContext,
   RevisionControlContext,
 } from "./revision-action-context.js";
+import type { RegenerateOptions } from "./revision-controller-types.js";
 import { revisionView } from "./revision-fixture.js";
 import { RevisionMedia } from "./revision-media.js";
 
@@ -69,6 +71,7 @@ function mount(
   options: {
     readonly fullVideoLink?: string;
     readonly requestEdit?: (request: EditRequest) => void;
+    readonly regenerateNow?: (workKeys: readonly string[], options?: RegenerateOptions) => void;
     readonly beside?: ReactNode;
   } = {},
 ) {
@@ -108,8 +111,10 @@ function mount(
     <RevisionMedia projectId="p1" revisionId="r1">
       <RevisionControlContext value>
         <EditRequestContext value={options.requestEdit}>
-          <ShortsBlock stage={video} project={project} outputs={outputs} />
-          {options.beside}
+          <RegenerateNowContext value={options.regenerateNow}>
+            <ShortsBlock stage={video} project={project} outputs={outputs} />
+            {options.beside}
+          </RegenerateNowContext>
         </EditRequestContext>
       </RevisionControlContext>
     </RevisionMedia>,
@@ -238,17 +243,31 @@ it("keeps showing a short made before the pick when the pick chose the same sent
   expect(await within(cards[0] as HTMLElement).findByLabelText("Short 1")).not.toBeNull();
 });
 
-it("opens Edit settings to make one short again, or to pick different moments", async () => {
-  const requests: EditRequest[] = [];
-  mount([pick, first], "done", undefined, { requestEdit: (request) => requests.push(request) });
+it("makes one short again, or picks different moments, at once after naming the calls", async () => {
+  const regenerateNow = vi.fn();
+  mount([pick, first], "done", undefined, { regenerateNow });
   const cards = await screen.findAllByRole("listitem");
-  // Make this short again is the rare one: quiet, in words, under the card's other actions.
+  // Make this short again is the rare one: quiet, in words, under the card's other actions,
+  // with its calls: 1 AI call for the prompts and one per image (90 s at 15 s is six).
   await userEvent.click(
     within(cards[1] as HTMLElement).getByRole("button", {
-      name: "Make this short again (short 2)",
+      name: "Make this short again (short 2) · 7 calls",
     }),
   );
-  await userEvent.click(screen.getByRole("button", { name: "Pick different moments · 1 AI call" }));
+  let dialog = await screen.findByRole("dialog", { name: "Make short 2 again?" });
+  expect(dialog.textContent).toContain(
+    "7 paid calls: 1 AI call for its image prompts and 6 image calls",
+  );
+  expect(dialog.textContent).toContain("The current short stays under Versions.");
+  await userEvent.click(within(dialog).getByRole("button", { name: "Make it again" }));
+  expect(regenerateNow).toHaveBeenCalledTimes(1);
+  await userEvent.click(
+    screen.getByRole("button", { name: "Pick different moments · AI and image calls" }),
+  );
+  dialog = await screen.findByRole("dialog", { name: "Pick different moments?" });
+  expect(dialog.textContent).toContain("A short whose moment comes back is kept");
+  await userEvent.click(within(dialog).getByRole("button", { name: "Pick different moments" }));
+  expect(regenerateNow).toHaveBeenCalledTimes(2);
   const view = revisionView();
   const edit = {
     config: view.revision.config,
@@ -257,13 +276,22 @@ it("opens Edit settings to make one short again, or to pick different moments", 
       shortsRanges: { "1": { first: 2, last: 4, pick: "fingerprint" } },
     },
   };
-  // Shorts are set under the settings' Outputs, as in Create.
-  expect(requests.map((request) => request.section)).toEqual(["outputs", "outputs"]);
-  expect(requests[0]?.change(edit, view).regenerate).toEqual(["shorts:2"]);
+  const [short, moments] = regenerateNow.mock.calls as [string[], RegenerateOptions][];
+  // Short 2's token renewed, and only short 2's prompts started: its images and render
+  // unfold from them on the server.
+  expect(short?.[1].change?.(edit).regenerate).toEqual(["shorts:2"]);
+  const work = (key: string) => ({ key, outdated: false });
+  expect(short?.[1].starts?.(work("shorts:2:prompts"))).toBe(true);
+  expect(short?.[1].starts?.(work("shorts:2:render"))).toBe(false);
+  expect(short?.[1].starts?.(work("shorts:1:prompts"))).toBe(false);
+  expect(short?.[1].starts?.(work("shorts:20:prompts"))).toBe(false);
+  expect(short?.[1]).toMatchObject({ unknownPrices: true, section: "outputs" });
   // The moments picked again drop the ranges set on the old ones.
-  const again = requests[1]?.change(edit, view);
+  const again = moments?.[1].change?.(edit);
   expect(again?.regenerate).toEqual(["shorts:pick"]);
   expect(again?.content.shortsRanges).toBeUndefined();
+  expect(moments?.[1].starts?.(work("shorts:pick"))).toBe(true);
+  expect(moments?.[1].starts?.(work("export:video"))).toBe(false);
 });
 
 it("lays the shorts out in the shorts media grid, each player showing its first still as the poster", async () => {

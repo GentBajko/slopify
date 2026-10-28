@@ -1,7 +1,7 @@
 import type { RebuildPreview } from "@app/slices/rebuild/model.js";
 
 // What a rebuild work key is called on screen, by the stage names everywhere else ("Video",
-// "Image request 3"): "Audio export" only for a sound-only export.
+// "Image 3", "Narration part 2"): "Audio export" only for a sound-only export.
 const workNames: Readonly<Record<string, string>> = {
   "export:wav": "Audio export (WAV)",
   "export:video": "Video",
@@ -29,9 +29,9 @@ export function workName(key: string): string {
     return `Short ${short[1] ?? ""}: ${short[2] === "prompts" ? "image prompts" : short[2] === "render" ? "video" : `image ${short[3] ?? ""}`}`;
   const prefix = key.split(":")[0];
   const families: Readonly<Record<string, string>> = {
-    image: "Image request",
+    image: "Image",
     images: "Images",
-    audio: "Narration request",
+    audio: "Narration part",
     article: "Article",
     research: "Research",
     thumbnail: "Thumbnail",

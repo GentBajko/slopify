@@ -1,11 +1,11 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import { type RunConfig, type Stage, thumbnailCountOf } from "@app/slices/admission/model.js";
 import type { Output, OutputRole } from "@app/slices/storage/model.js";
-import { voiceFormatLabels } from "@app/slices/voices/model.js";
 import type { Tone } from "@/components/kit/status";
 import { extensionOf } from "./narration-downloads.js";
 import type { ZipSet } from "./output-api.js";
 import { nextWords, stateOf, versionLine } from "./project-outputs-state.js";
+import { stageName } from "./summary.js";
 
 export { when } from "./project-outputs-state.js";
 
@@ -30,7 +30,7 @@ export type OutputState = "current" | "older" | "working" | "failed" | "waiting"
 
 export interface ExportFile {
   readonly output: Output;
-  // "Video (.mp4)", "Subtitles (.srt)".
+  // "Video (.mp4)", "Captions (.srt)".
   readonly label: string;
 }
 
@@ -77,7 +77,14 @@ export function projectOutputs(input: OutputsInput): readonly ProjectOutput[] {
     output === undefined ? [] : [{ output, label: `${name}${extensionOf(output)}` }];
   // A provided article is kept as the text it was given; a written one also has Markdown.
   const article = role("article_md") ?? role("article_txt");
-  const narration = role("audio_export") ?? role("audio_body");
+  // The narration the Narration section plays and downloads: its evened-out recording when
+  // the volume was levelled, so the two name one file.
+  const narration =
+    role("audio_export") ??
+    outputs.find(
+      (output) => output.role === "audio_levelled" && (output.meta.segment ?? "body") === "body",
+    ) ??
+    role("audio_body");
   const voiced = config.voices !== undefined && config.sources.audio === "generate";
   const list: ProjectOutput[] = [];
   const build = (
@@ -120,7 +127,7 @@ export function projectOutputs(input: OutputsInput): readonly ProjectOutput[] {
 
   if (on("article") || on("research") || article !== undefined)
     build("article", "Article", "article", ["research", "article"], article, {
-      primary: file(article, article?.role === "article_md" ? "Markdown" : "Plain text")[0],
+      primary: file(article, "Article")[0],
       // The PDF has its own row.
       alternatives: [
         ...(article?.role === "article_md" ? file(role("article_txt"), "Plain text") : []),
@@ -129,26 +136,9 @@ export function projectOutputs(input: OutputsInput): readonly ProjectOutput[] {
       ],
     });
 
-  if (voiced) {
-    const format = config.voices?.format ?? "audiobook";
-    const book = format === "audiobook" || format === "drama";
-    const m4b = role("audio_m4b");
-    const mp3 = role("audio_mp3");
-    const primary = book
-      ? (file(m4b, "Audiobook with chapters")[0] ?? file(mp3, "Audiobook with chapters")[0])
-      : (file(mp3, "Episode")[0] ?? file(m4b, "Episode")[0]);
-    build("voices", voiceFormatLabels[format], "narration", ["audio", "video"], primary?.output, {
-      primary,
-      alternatives: [
-        ...file(book ? mp3 : m4b, book ? "MP3 with chapters" : "M4B with chapters").filter(
-          (one) => one.output.id !== primary?.output.id,
-        ),
-        ...file(role("script_md"), "Transcript by speaker"),
-        ...file(role("audio_body"), "Narration track"),
-      ],
-      source: { name: "text", output: article },
-    });
-  } else if (on("audio") || narration !== undefined)
+  // The narration, named as the status list names its step. An audiobook's or a podcast's
+  // own file is the last step's (its Audiobook or Episode row, below), so one name is one row.
+  if (on("audio") || narration !== undefined)
     build(
       "narration",
       "Narration",
@@ -165,6 +155,7 @@ export function projectOutputs(input: OutputsInput): readonly ProjectOutput[] {
             outputs.find((one) => one.role === "narration_txt" && one.meta.segment === "body"),
             "Spoken text",
           ),
+          ...(voiced ? file(role("script_md"), "Transcript by speaker") : []),
         ],
         source: { name: "text", output: article },
       },
@@ -202,6 +193,29 @@ export function projectOutputs(input: OutputsInput): readonly ProjectOutput[] {
       },
     );
 
+  // An audiobook's or a podcast's own file: the last step's, under the name the status list
+  // and its section give it ("Audiobook", "Episode"), ahead of the video made with it.
+  if (voiced) {
+    const format = config.voices?.format ?? "audiobook";
+    const book = format === "audiobook" || format === "drama";
+    // The file is named for what it is; the row for the step, as the status list names it.
+    const own =
+      format === "audiobook" ? "Audiobook" : format === "drama" ? "Radio drama" : "Episode";
+    const m4b = role("audio_m4b");
+    const mp3 = role("audio_mp3");
+    // Named as the title row and the section name it: "Download audiobook (.m4b)".
+    const primary = book
+      ? (file(m4b, own)[0] ?? file(mp3, own)[0])
+      : (file(mp3, own)[0] ?? file(m4b, own)[0]);
+    build("voices", stageName("video", config), "video", ["video"], primary?.output, {
+      primary,
+      alternatives: file(book ? mp3 : m4b, book ? "MP3 with chapters" : "M4B with chapters").filter(
+        (one) => one.output.id !== primary?.output.id,
+      ),
+      source: { name: "narration", output: narration },
+    });
+  }
+
   const video = role("video");
   if ((on("video") && config.sources.video !== "off") || video !== undefined)
     build("video", "Video", "video", ["video"], video, {
@@ -220,10 +234,17 @@ export function projectOutputs(input: OutputsInput): readonly ProjectOutput[] {
   const shorts = [...roles("short_video")].sort(
     (a, b) => Number(a.meta.short ?? 0) - Number(b.meta.short ?? 0),
   );
+  const shortFiles = shorts.flatMap((one) => file(one, `Short ${String(one.meta.short ?? 1)}`));
   if (shorts.length > 0 || config.shorts?.enabled === true)
     build("shorts", "Shorts", "shorts", ["video"], shorts[0], {
-      set: shorts.length === 0 ? undefined : { set: "shorts", members: shorts },
-      alternatives: shorts.flatMap((one) => file(one, `Short ${String(one.meta.short ?? 1)}`)),
+      // One short is its own download, as one thumbnail is; several are a zip, each listed.
+      ...(shorts.length === 1
+        ? { primary: shortFiles[0] }
+        : {
+            set: shorts.length === 0 ? undefined : { set: "shorts" as const, members: shorts },
+            alternatives: shortFiles,
+          }),
+      members: shorts,
       // Shorts are cut from the narration and pictures, not from the finished video.
       source: { name: "narration", output: narration },
     });

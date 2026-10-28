@@ -6,7 +6,7 @@ import {
   RevisionControlContext,
 } from "./revision-action-context.js";
 import { useCurrentRevisionView } from "./revision-media.js";
-import { imagePrice, type Price, useRunCost } from "./stage-price.js";
+import { imageCallsLine, imagePrice, useRunCost } from "./stage-price.js";
 import type { ProjectActions } from "./use-actions.js";
 
 export type OutputChange = "regenerate-image" | "delete-image";
@@ -43,8 +43,9 @@ export function useOutputChange(
   readonly now: boolean;
   // Whether the project's revision has loaded, so `act` takes the path it will keep taking.
   readonly ready: boolean;
-  // What making it again is likely to cost, for the confirm dialog; undefined when unknown.
-  readonly price: string | undefined;
+  // The confirm dialog's first line: the paid image call and its price, or that the price
+  // isn't known in advance.
+  readonly price: string;
 } {
   const [asking, setAsking] = useState<OutputChange | undefined>();
   const revisioned = use(RevisionControlContext);
@@ -92,8 +93,13 @@ export function useOutputChange(
       const kind = asking;
       setAsking(undefined);
       if (kind === undefined || output === undefined) return;
+      // The dialog said the price, or that it isn't known: pressing on accepts either, so the
+      // picture is made without a second review of the same call.
       if (viaEdit && workKey !== undefined && kind === "regenerate-image")
-        regenerateNow?.([workKey], { approvedUpTo: price?.approvedUpTo });
+        regenerateNow?.([workKey], {
+          approvedUpTo: price?.approvedUpTo,
+          unknownPrices: price === undefined,
+        });
       else actions.run({ kind, outputId: output.id });
     },
     dismiss: () => setAsking(undefined),
@@ -105,7 +111,7 @@ export function useOutputChange(
     viaEdit,
     now: viaEdit,
     ready: !revisioned || view !== undefined,
-    price: price?.text,
+    price: imageCallsLine(price, 1),
   };
 }
 
@@ -123,7 +129,8 @@ export function useRegenerateAll(
       readonly confirm: () => void;
       readonly dismiss: () => void;
       readonly unavailable: boolean;
-      readonly price: Price | undefined;
+      // The dialog's first line: the paid image calls and their price, or that it isn't known.
+      readonly price: string;
     }
   | undefined {
   const [asking, setAsking] = useState(false);
@@ -144,10 +151,13 @@ export function useRegenerateAll(
     act: () => setAsking(true),
     confirm: () => {
       setAsking(false);
-      regenerateNow?.(workKeys, { approvedUpTo: price?.approvedUpTo });
+      regenerateNow?.(workKeys, {
+        approvedUpTo: price?.approvedUpTo,
+        unknownPrices: price === undefined,
+      });
     },
     dismiss: () => setAsking(false),
     unavailable: busy || regenerateNow === undefined,
-    price,
+    price: imageCallsLine(price, workKeys.length),
   };
 }

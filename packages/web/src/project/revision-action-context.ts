@@ -1,5 +1,6 @@
 import type { RevisionEdit, RevisionView } from "@app/slices/revisions/model.js";
 import { createContext } from "react";
+import type { RegenerateOptions } from "./revision-controller-types.js";
 import type { EditSection } from "./revision-workspace.js";
 
 export const RevisionControlContext = createContext(false);
@@ -16,12 +17,9 @@ export const EditRequestContext = createContext<((request: EditRequest) => void)
   undefined,
 );
 
-// Makes the given pictures again now (`RevisionController.regenerateNow`). Undefined while
-// the workspace is busy or outside a project page, like `EditRequestContext`.
+// Makes the given pictures, a short or the shorts' pick again now
+// (`RevisionController.regenerateNow`). Undefined while the workspace is busy or outside a
+// project page, like `EditRequestContext`.
 export const RegenerateNowContext = createContext<
-  | ((
-      workKeys: readonly string[],
-      options?: { readonly approvedUpTo?: number | undefined },
-    ) => void)
-  | undefined
+  ((workKeys: readonly string[], options?: RegenerateOptions) => void) | undefined
 >(undefined);

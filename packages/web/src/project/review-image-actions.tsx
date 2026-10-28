@@ -12,9 +12,10 @@ import { useCurrentRevisionView } from "./revision-media.js";
 import { thumbnailPiece } from "./revision-thumbnail-files.js";
 
 // A picture tile's rarer actions behind one worded "More": compare it with the version it
-// replaced; for a slideshow image or a drawn thumbnail, replace it with a file of one's own
-// (the settings open at its Replace field, to choose the file, save, and remake only what uses
-// it); and Delete, last and apart. Nothing when none applies.
+// replaced, offered only once an earlier picture is found; for a slideshow image or a drawn
+// thumbnail, replace it with a file of one's own (the settings open at its Replace field, to
+// choose the file, save, and remake only what uses it); and Delete, last and apart. Nothing
+// when none applies.
 export function TileMore({
   output,
   name,
@@ -32,7 +33,6 @@ export function TileMore({
   readonly disabled: boolean;
   readonly onDelete?: (() => void) | undefined;
 }): ReactElement | null {
-  const compare = useCompare(output, name, aspect);
   const view = useCurrentRevisionView();
   const requestEdit = use(EditRequestContext);
   const workKey = view?.outputs.find((row) => row.output.id === output.id && row.selected)?.workKey;
@@ -52,10 +52,18 @@ export function TileMore({
           focusPiece(piece);
         }
       : undefined;
-  if (compare.open === undefined && replace === undefined && !onDelete) return null;
+  // With nothing else in it, More waits for the earlier picture before it shows at all.
+  const alone = replace === undefined && onDelete === undefined;
+  const compare = useCompare(output, name, aspect, alone);
+  if (alone && compare.open === undefined) return null;
   return (
     <>
-      <Menu modal={false}>
+      <Menu
+        modal={false}
+        onOpenChange={(opened) => {
+          if (opened) compare.look();
+        }}
+      >
         <MenuTrigger asChild>
           <Button size="small">
             More<span className="sr-only"> for {name}</span>

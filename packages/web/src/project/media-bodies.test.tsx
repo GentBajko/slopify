@@ -126,7 +126,7 @@ it("shows the images in one grid, each with its actions in words at rest and at 
   );
   // A project without saved versions asks first, price first, then makes the picture shown.
   const dialog = await screen.findByRole("dialog", { name: "Make this image again?" });
-  expect(dialog.textContent).toContain("one paid image call");
+  expect(dialog.textContent).toContain("1 paid image call");
   await userEvent.click(within(dialog).getByRole("button", { name: "Make it again" }));
   expect(run).toHaveBeenCalledWith({ kind: "regenerate-image", outputId: "o-image-2" });
 });
@@ -141,9 +141,13 @@ it("deletes an image from its More menu, after asking", async () => {
   expect(run).toHaveBeenCalledWith({ kind: "delete-image", outputId: "o-image-1" });
 });
 
-function mountRevisioned(regenerateNow: (workKeys: readonly string[]) => void) {
+function mountRevisioned(
+  regenerateNow: (workKeys: readonly string[]) => void,
+  status: "done" | "running" = "done",
+) {
   const requests: EditRequest[] = [];
-  const { props: given, run } = props(pictures);
+  const { props: made, run } = props(pictures);
+  const given = { ...made, project: { ...made.project, status } };
   const base = revisionView();
   const view = {
     ...base,
@@ -213,11 +217,24 @@ it("makes every image again from the head's one button, with or without the vide
   await userEvent.click(within(dialog).getByRole("checkbox"));
   expect(dialog.textContent).toContain("the video keeps the current pictures");
   await userEvent.click(within(dialog).getByRole("button", { name: "Make all 2 images again" }));
+  // No price on record: the dialog said so, and pressing on accepts it.
+  expect(dialog.textContent).toContain(
+    "2 paid image calls; the image service's price isn't known in advance. Draws every image again now",
+  );
   expect(regenerateNow).toHaveBeenCalledWith(["image:key-1", "image:key-2"], {
     approvedUpTo: undefined,
+    unknownPrices: true,
   });
   // Nothing opens the settings on the way.
   expect(requests).toEqual([]);
+});
+
+it("leaves the pictures' make-again buttons out while the project is at work", async () => {
+  mountRevisioned(vi.fn(), "running");
+  // The tiles are there, with their downloads; nothing that could not start is drawn greyed.
+  expect(await screen.findAllByRole("link", { name: /^Download image/ })).toHaveLength(2);
+  expect(screen.queryByRole("button", { name: /^Make all 2 images again/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Make this image again/ })).toBeNull();
 });
 
 it("makes one image again at once on a project with saved versions, leaving the video", async () => {
@@ -229,8 +246,15 @@ it("makes one image again at once on a project with saved versions, leaving the 
   expect(dialog.textContent).toContain(
     "the video keeps the current one until the video is made again",
   );
+  expect(dialog.textContent).toContain(
+    "1 paid image call; the image service's price isn't known in advance.",
+  );
+  expect(dialog.textContent).toContain("the old image stays under Versions");
   await userEvent.click(within(dialog).getByRole("button", { name: "Make it again" }));
-  expect(regenerateNow).toHaveBeenCalledWith(["image:key-2"], { approvedUpTo: undefined });
+  expect(regenerateNow).toHaveBeenCalledWith(["image:key-2"], {
+    approvedUpTo: undefined,
+    unknownPrices: true,
+  });
   expect(run).not.toHaveBeenCalled();
   expect(requests).toEqual([]);
 });
@@ -332,4 +356,65 @@ it("leads an audiobook with its chaptered file, the video beside it and the othe
   ).toBe("Download audio with chapters (.mp3)");
   // Neither is a menu: each names the one file it fetches.
   expect(screen.queryByRole("button", { name: /^Download/ })).toBeNull();
+});
+
+it("says once, under the download, that the video is the previous one while it is made again", async () => {
+  const video = output("video", "video", { id: "o-video", path: "video.mp4" });
+  const { props: given } = props([video]);
+  const base = revisionView();
+  const view = {
+    ...base,
+    outputs: [
+      {
+        recordId: "rec-video",
+        publicationId: null,
+        selected: true,
+        available: true,
+        slot: "export:video",
+        workKey: "export:video",
+        assetId: video.id,
+        output: video,
+        fingerprint: "video",
+        state: "outdated" as const,
+      },
+    ],
+  };
+  renderRouted(
+    <RevisionMedia projectId="p1" revisionId="r1">
+      <VideoBody {...given} stage={stage("video", "running")} />
+    </RevisionMedia>,
+    testDeps({ "GET /api/projects/p1/revisions/r1": jsonAnswer({ view }) }),
+  );
+  // The button keeps its plain name, so it fits the side column; the line under it says it.
+  expect(await screen.findByRole("link", { name: "Download video (.mp4)" })).not.toBeNull();
+  expect(screen.queryByText(/\(previous version\)/)).toBeNull();
+  expect(
+    screen.getByText(
+      "Being made again: the download is the current file until the new one is ready.",
+    ),
+  ).not.toBeNull();
+  // Nobody changed anything: it does not say "your last change".
+  expect(screen.queryByText(/your last change/)).toBeNull();
+});
+
+it("shows the shorts made from the video under its player, each with its own download", async () => {
+  const video = output("video", "video", { id: "o-video", path: "video.mp4" });
+  const shorts = [1, 2].map((short) =>
+    output("short_video", "video", {
+      id: `o-short-${String(short)}`,
+      path: `short-${String(short)}.mp4`,
+      durationMs: 44_000,
+      meta: { short },
+    }),
+  );
+  const { props: given } = props([video, ...shorts]);
+  renderRouted(<VideoBody {...given} stage={stage("video", "done")} />, testDeps({}));
+  const strip = await screen.findByRole("region", { name: "Shorts made from it" });
+  expect(within(strip).getByRole("link", { name: "Open Shorts" })).not.toBeNull();
+  expect(
+    within(strip)
+      .getAllByRole("link", { name: /^Download short/ })
+      .map((link) => link.getAttribute("aria-label") ?? link.textContent),
+  ).toHaveLength(2);
+  expect(within(strip).getByRole("link", { name: "Download short 2 (.mp4)" })).not.toBeNull();
 });

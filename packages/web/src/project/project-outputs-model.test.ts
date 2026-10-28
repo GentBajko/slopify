@@ -24,7 +24,7 @@ describe("projectOutputs", () => {
     expect(article?.state).toBe("current");
     // The lamp and Done say it is the current file; no fourth word for finished.
     expect(article?.stateWords).toBe("Done");
-    expect(article?.primary?.label).toBe("Markdown (.bin)");
+    expect(article?.primary?.label).toBe("Article (.bin)");
     expect(article?.alternatives.map((one) => one.label)).toEqual(["Plain text (.bin)"]);
     expect(article?.version).toMatch(/^made (Oct \d+|\d+ Oct)/);
   });
@@ -37,7 +37,7 @@ describe("projectOutputs", () => {
       outputs: [txt],
     });
     expect(article?.state).toBe("current");
-    expect(article?.primary?.label).toBe("Plain text (.bin)");
+    expect(article?.primary?.label).toBe("Article (.bin)");
     expect(article?.alternatives).toEqual([]);
   });
 
@@ -73,7 +73,7 @@ describe("projectOutputs", () => {
     const stages = [stage("article", "done"), stage("audio", "done"), stage("video", "done")];
     const voiced = (format: "audiobook" | "podcast"): RunConfig => ({
       ...articleOnly,
-      sources: { ...articleOnly.sources, audio: "generate" },
+      sources: { ...articleOnly.sources, audio: "generate", video: "generate" },
       voices: {
         format,
         source: "attribute",
@@ -90,16 +90,25 @@ describe("projectOutputs", () => {
       outputs: [m4b, mp3, script],
     });
     const audiobook = book.find((row) => row.kind === "voices");
+    // Named as the status list and its section name the last step, and opening that section.
     expect(audiobook?.title).toBe("Audiobook");
-    expect(audiobook?.primary?.label).toBe("Audiobook with chapters (.bin)");
+    expect(audiobook?.section).toBe("video");
+    // Its file is named as the title row's download names it.
+    expect(audiobook?.primary?.label).toBe("Audiobook (.bin)");
     expect(audiobook?.primary?.output.id).toBe(m4b.id);
-    expect(audiobook?.alternatives.map((one) => one.output.id)).toEqual([mp3.id, script.id]);
+    expect(audiobook?.alternatives.map((one) => one.output.id)).toEqual([mp3.id]);
     const show = projectOutputs({ config: voiced("podcast"), stages, outputs: [m4b, mp3, script] });
     const podcast = show.find((row) => row.kind === "voices");
-    expect(podcast?.title).toBe("Podcast");
+    expect(podcast?.title).toBe("Episode");
     expect(podcast?.primary?.output.id).toBe(mp3.id);
-    expect(podcast?.alternatives.map((one) => one.label)).toContain("Transcript by speaker (.bin)");
-    expect(book.some((row) => row.kind === "narration")).toBe(false);
+    // The narration is its own row, named Narration as in the status list, with the speakers'
+    // transcript.
+    const narration = show.find((row) => row.kind === "narration");
+    expect(narration?.title).toBe("Narration");
+    expect(narration?.alternatives.map((one) => one.label)).toContain(
+      "Transcript by speaker (.bin)",
+    );
+    expect(show.filter((row) => row.title === "Episode")).toHaveLength(1);
   });
 
   it("downloads images, thumbnails and shorts as sets, and lists each file once", () => {
@@ -132,6 +141,15 @@ describe("projectOutputs", () => {
     expect(shortsRow?.set?.members.map((one) => one.id)).toEqual(["short-1", "short-2"]);
     expect(shortsRow?.section).toBe("shorts");
     expect(shortsRow?.next).toBe("Review it in Shorts");
+    // One short is its own download, as one thumbnail is: no zip of one file.
+    const one = projectOutputs({
+      config,
+      stages: [stage("video", "done")],
+      outputs: [video, ...shorts.filter((one) => one.id === "short-1")],
+    }).find((row) => row.kind === "shorts");
+    expect(one?.set).toBeUndefined();
+    expect(one?.primary?.label).toBe("Short 1 (.bin)");
+    expect(one?.alternatives).toEqual([]);
   });
 
   it("keeps the PDF on its own row, not under the article", () => {

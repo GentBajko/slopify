@@ -20,11 +20,12 @@ import { useToast } from "@/components/kit/toast";
 import { keys } from "@/queries";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
+import { ShortsStrip } from "./body-shorts.js";
 import { dockerFolderHelp, openFolder } from "./open-folder.js";
 import {
   DownloadMenu,
+  downloadWords,
   fileSize,
-  lengthWords,
   MetaLine,
   OutputFolder,
   StageBody,
@@ -32,7 +33,7 @@ import {
   useOlderOutputs,
   useOutputText,
 } from "./parts.js";
-import { LeadDownloadContext } from "./read-only.js";
+import { LeadDownloadContext, TitleDownloadContext } from "./read-only.js";
 import { VideoChapters, VideoOmissions } from "./review-video.js";
 import { useOutputMedia } from "./revision-media.js";
 import { YoutubeCopyContext } from "./section-copy.js";
@@ -49,6 +50,8 @@ export function VideoBody({ stage, project, outputs }: BodyProps) {
   const { api } = useApp();
   const notify = useToast();
   const lead = use(LeadDownloadContext);
+  // The title row already downloads this file: the section does not offer it again.
+  const carried = use(TitleDownloadContext);
   const copies = use(YoutubeCopyContext);
   const audioExport =
     project.config.sources.video === "off" && project.config.sources.audio !== "off";
@@ -117,9 +120,8 @@ export function VideoBody({ stage, project, outputs }: BodyProps) {
   if (project.config.sources.video === "off" && !audioExport) return null;
 
   const shape = project.format;
+  // The length and the shape are the status list's, beside the section: said once.
   const facts = [
-    lengthWords(video?.durationMs),
-    audioExport ? "WAV, stereo" : shape,
     fileSize(video?.bytes),
     video?.meta.master === undefined
       ? undefined
@@ -170,7 +172,8 @@ export function VideoBody({ stage, project, outputs }: BodyProps) {
             ? "grid items-start justify-start gap-x-6 gap-y-4 @min-[620px]:grid-cols-[minmax(0,360px)_300px]"
             : shape === "1:1"
               ? "grid items-start justify-start gap-x-6 gap-y-4 @min-[760px]:grid-cols-[minmax(0,520px)_300px]"
-              : "grid items-start justify-start gap-x-6 gap-y-4 @min-[760px]:grid-cols-[minmax(0,720px)_300px]"
+              : // A wide screen gives the player the room: 960 pixels from a 1,100 pixel column.
+                "grid items-start justify-start gap-x-6 gap-y-4 @min-[760px]:grid-cols-[minmax(0,720px)_300px] @min-[1100px]:grid-cols-[minmax(0,960px)_300px]"
         }
       >
         <div className="min-w-0">
@@ -203,7 +206,7 @@ export function VideoBody({ stage, project, outputs }: BodyProps) {
                   ? "max-w-[360px]"
                   : shape === "1:1"
                     ? "max-w-[520px]"
-                    : "max-w-[720px]"
+                    : "max-w-[720px] @min-[1100px]:max-w-[960px]"
               }
               {...(playedSubtitles === "files" && vtt && captions
                 ? { captions: { src: captions.url, lang: "en", label: "English" } }
@@ -214,19 +217,29 @@ export function VideoBody({ stage, project, outputs }: BodyProps) {
         {video === undefined && listening === undefined ? null : (
           <div className="flex min-w-0 flex-col gap-3">
             <ButtonRow>
-              {listening === undefined ? null : (
-                <DownloadMenu files={[listening.main]} variant={lead ? "primary" : "secondary"} />
+              {listening === undefined || carried === assetOf(listening.main.output) ? null : (
+                <DownloadMenu
+                  files={[listening.main]}
+                  variant={lead ? "primary" : "secondary"}
+                  noteOlder={false}
+                />
               )}
-              <DownloadMenu
-                files={[main]}
-                variant={lead && listening === undefined ? "primary" : "secondary"}
-              />
+              {video !== undefined && carried === assetOf(video) ? null : (
+                <DownloadMenu
+                  files={[main]}
+                  variant={lead && listening === undefined ? "primary" : "secondary"}
+                  noteOlder={false}
+                />
+              )}
               <OutputFolder output={video ?? listening?.main.output} />
             </ButtonRow>
+            {/* Said once, here, rather than on the button: a button named "… (previous
+                version)" ran out of the 300px column. */}
             {older.size === 0 ? null : (
               <MetaLine>
-                Made before your last change: the download is that previous version until you make
-                it again.
+                {rendering
+                  ? "Being made again: the download is the current file until the new one is ready."
+                  : "Made before your last change: the download is that previous version until you make it again."}
               </MetaLine>
             )}
             {subtitles.length === 0 && listening?.other === undefined ? null : (
@@ -279,6 +292,8 @@ export function VideoBody({ stage, project, outputs }: BodyProps) {
         )}
       </div>
 
+      {/* The shorts made from it, under the player, where the first screen has the room. */}
+      <ShortsStrip project={project} own={own} />
       {/* What the render could not do as asked: an image shown still because its clip could
           not be made. */}
       {video?.meta.warnings?.length ? (
@@ -306,6 +321,23 @@ export function VideoBody({ stage, project, outputs }: BodyProps) {
       )}
     </StageBody>
   );
+}
+
+// What a finished audiobook or podcast downloads from the title row: its own file, named for
+// it ("Download audiobook (.m4b)"), by the asset name its URL takes. Undefined for a video
+// project, or before the file is made.
+export function listeningDownload(
+  project: ProjectSummary,
+  outputs: readonly Output[],
+): { readonly asset: string; readonly label: string } | undefined {
+  const listening = listeningFiles(
+    project,
+    outputs.find((output) => output.role === "audio_mp3"),
+    outputs.find((output) => output.role === "audio_m4b"),
+  );
+  return listening === undefined
+    ? undefined
+    : { asset: assetOf(listening.main.output), label: downloadWords(listening.main.label) };
 }
 
 // An audiobook's or a podcast's own file, which it leads with: the chaptered M4B for a book or

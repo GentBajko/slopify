@@ -24,14 +24,14 @@ import { groupImages } from "./image-groups.js";
 import { imageTitles } from "./image-titles.js";
 import { useOutdated, useOutputChange, useRegenerateAll } from "./output-change.js";
 import { OutputFolder } from "./parts.js";
-import { sampleReason, useReadOnlySample } from "./read-only.js";
+import { useReadOnlySample } from "./read-only.js";
 import { useRegenerateByNumber } from "./regenerate-by-number.js";
 import type { Review } from "./review-api.js";
 import { TileMore } from "./review-image-actions.js";
 import { ReviewActions, ReviewChip, reviewFor, useReviews } from "./review-verdict.js";
 import { useOutputMedia, useOutputMediaList } from "./revision-media.js";
 import { SetDownload } from "./set-download.js";
-import { rerunPrice, useRunCost } from "./stage-price.js";
+import { imageCallsLine, imagePrice, useRunCost } from "./stage-price.js";
 import { useRerunnable } from "./stage-section.js";
 
 // Images: one grid, the thumbnail first (badged Thumbnail) and then the slideshow images,
@@ -52,7 +52,9 @@ const gridColumns =
 
 export function ImagesBody({ stage, companion, project, outputs, actions, busy }: BodyProps) {
   const reviews = useReviews(project.id);
-  const sample = useReadOnlySample(project.id);
+  // Nothing here may spend or change the pictures on a read-only sample, or while the project
+  // is at work (making the video again, say): those buttons are left out, not greyed.
+  const locked = useReadOnlySample(project.id) || project.status === "running";
   const own = outputsOf(outputs, stage);
   const groups = groupImages(own, project.config.imagePrompts?.map((prompt) => prompt.name) ?? []);
   const all = groups.flatMap((group) => group.images);
@@ -132,7 +134,7 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
         outputs={outputs}
         actions={actions}
         busy={busy}
-        sample={sample}
+        locked={locked}
         onOpen={slot.output === undefined ? () => undefined : opener(slot.output)}
       />
     ),
@@ -160,7 +162,7 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
       format={project.format}
       actions={actions}
       busy={busy}
-      sample={sample}
+      locked={locked}
       onOpen={opener(image)}
     />
   );
@@ -186,13 +188,13 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
             images={all}
             actions={actions}
             busy={busy}
-            sample={sample}
+            locked={locked}
           />
         ) : null}
       </SectionHead>
       {/* What a tile's "Make this image again" costs, said once for the grid. A sample's line
           under the title row says why it has none. */}
-      {shown.length === 0 || sample ? null : (
+      {shown.length === 0 || locked ? null : (
         <p className="m-0 text-small text-ink-2">
           Making a picture again is one paid image call; the video shows it once the video is made
           again.
@@ -251,7 +253,7 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
                   format={project.format}
                   actions={actions}
                   busy={busy}
-                  sample={sample}
+                  locked={locked}
                   card
                   onOpen={opener(card)}
                 />
@@ -267,7 +269,7 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
           affected={all.length}
           actions={actions}
           busy={busy}
-          sample={sample}
+          locked={locked}
         />
       )}
       <Lightbox
@@ -293,7 +295,7 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
               thumbnail={slot !== undefined}
               actions={actions}
               busy={busy}
-              sample={sample}
+              locked={locked}
             />
           );
         }}
@@ -322,39 +324,38 @@ function ImagesAgain({
   images,
   actions,
   busy,
-  sample,
+  locked,
 }: {
   readonly stage: BodyProps["stage"];
   readonly project: BodyProps["project"];
   readonly images: readonly Output[];
   readonly actions: BodyProps["actions"];
   readonly busy: boolean;
-  readonly sample: boolean;
+  readonly locked: boolean;
 }): ReactElement | null {
   const rerun = useRerunnable([stage]).length > 0;
   const now = useRegenerateAll(images, busy);
   const cost = useRunCost(project.id);
   const [asking, setAsking] = useState(false);
   const [withVideo, setWithVideo] = useState(true);
-  if (!rerun && now === undefined) return null;
+  if ((!rerun && now === undefined) || locked) return null;
   const count = now?.count ?? images.length;
   const both = rerun && now !== undefined;
   const videoToo = now === undefined || (both && withVideo);
-  const working =
-    actions.pending || project.status === "running" || stage.state === "running" || busy;
+  const working = actions.pending || stage.state === "running" || busy;
   const many = count === 1 ? "the image" : `all ${String(count)} images`;
   const calls = `${String(count)} image ${count === 1 ? "call" : "calls"}`;
-  const price = videoToo ? rerunPrice(cost, "images") : now?.price?.text;
+  // The dialog leads with the calls it makes and their price.
+  const price = now?.price ?? imageCallsLine(imagePrice(cost, "images", count), count);
   const consequence = videoToo
     ? confirmationFor({ kind: "rerun", stage: "images", price }).consequence
-    : `${price === undefined ? "" : `${price} `}Draws every image again now, one paid image call each; the video keeps the current pictures until you make it again.`;
+    : `${price} Draws every image again now; the video keeps the current pictures until you make it again, and the current images stay under Versions.`;
   return (
     <>
       <Button
         size="small"
-        disabled={sample || working}
-        focusableWhenDisabled
-        disabledReason={sample ? sampleReason : "Wait until the work on this project is done"}
+        disabled={working}
+        disabledReason="Wait until the work on this project is done"
         onClick={() => {
           setWithVideo(true);
           setAsking(true);
@@ -416,7 +417,7 @@ function OutputLightboxActions({
   thumbnail,
   actions,
   busy,
-  sample,
+  locked,
 }: {
   readonly output: Output;
   // "image 4", "thumbnail B", "the thumbnail".
@@ -424,7 +425,7 @@ function OutputLightboxActions({
   readonly thumbnail: boolean;
   readonly actions: BodyProps["actions"];
   readonly busy: boolean;
-  readonly sample: boolean;
+  readonly locked: boolean;
 }): ReactElement {
   const media = useOutputMedia(output);
   const change = useOutputChange(output, actions, busy);
@@ -440,7 +441,7 @@ function OutputLightboxActions({
         });
   return (
     <>
-      {sample ? null : (
+      {locked ? null : (
         <Button
           size="small"
           disabled={change.unavailable}
@@ -482,7 +483,7 @@ function ReferencePanel({
   affected,
   actions,
   busy,
-  sample,
+  locked,
 }: {
   readonly image: Output | undefined;
   readonly format: Format;
@@ -491,12 +492,12 @@ function ReferencePanel({
   readonly affected: number;
   readonly actions: BodyProps["actions"];
   readonly busy: boolean;
-  readonly sample: boolean;
+  readonly locked: boolean;
 }) {
   const media = useOutputMedia(image);
   const change = useOutputChange(image, actions, busy);
   const [open, setOpen] = useState<number | null>(null);
-  const remakes = image !== undefined && generated && !sample;
+  const remakes = image !== undefined && generated && !locked;
   return (
     <section aria-label="Establishing image" className="flex min-w-0 flex-col gap-3">
       <SectionHead
@@ -585,7 +586,7 @@ function ReferencePanel({
         open={change.asking !== undefined}
         tone="primary"
         title="Make the establishing image again?"
-        consequence={`${change.price === undefined ? "" : `${change.price} `}A new establishing image replaces this one${affected > 0 ? `, and the ${String(affected)} images drawn from it become outdated until you make them again` : ""}; the old one stays under Versions.`}
+        consequence={`${change.price} A new establishing image replaces this one${affected > 0 ? `, and the ${String(affected)} images drawn from it become outdated until you make them again` : ""}; the old one stays under Versions.`}
         confirmLabel="Make it again"
         cancelLabel="Keep this one"
         pending={actions.pending}
@@ -647,7 +648,7 @@ function ImageTile({
   format,
   actions,
   busy,
-  sample,
+  locked,
   card = false,
   title,
   onOpen,
@@ -663,8 +664,8 @@ function ImageTile({
   readonly format: Format;
   readonly actions: BodyProps["actions"];
   readonly busy: boolean;
-  // A read-only sample: nothing here may spend or change it.
-  readonly sample: boolean;
+  // A read-only sample, or a project at work: nothing here may spend or change it.
+  readonly locked: boolean;
   readonly onOpen: () => void;
 }): ReactElement {
   const media = useOutputMedia(image);
@@ -708,7 +709,7 @@ function ImageTile({
             {flagged && review !== undefined ? (
               <ReviewActions review={review} projectId={projectId} busy={busy} />
             ) : null}
-            {sample ? null : (
+            {locked ? null : (
               <Button
                 size="small"
                 disabled={change.unavailable}
@@ -729,9 +730,9 @@ function ImageTile({
               output={image}
               name={name}
               aspect={frameAspect(format)}
-              replaceable={!card && !sample}
+              replaceable={!card && !locked}
               disabled={change.unavailable}
-              {...(card || sample ? {} : { onDelete: () => change.act("delete-image") })}
+              {...(card || locked ? {} : { onDelete: () => change.act("delete-image") })}
             />
           </>
         }

@@ -23,6 +23,7 @@ import { shortcuts } from "@/lib/shortcuts";
 import { isSample as isBundledSample, readSample, sampleKey } from "@/onboarding/api";
 import { StageBodyFor } from "@/project/bodies";
 import { ShortsBlock } from "@/project/body-shorts";
+import { listeningDownload } from "@/project/body-video";
 import { YoutubeBlock } from "@/project/body-youtube";
 import {
   type CheckpointGate,
@@ -60,6 +61,7 @@ import {
   RegenerateNowContext,
   RevisionControlContext,
 } from "@/project/revision-action-context";
+import { RevisionFeedback } from "@/project/revision-feedback";
 import { RevisionMedia } from "@/project/revision-media";
 import { RebuildDrawer, useRevisionController } from "@/project/revision-workspace";
 import { CostLine, ProjectStatusList, StageAnnouncements } from "@/project/run-aside";
@@ -248,6 +250,7 @@ function ProjectWorkspace({
     outdated,
     waits: runCost.data?.waits ?? [],
     videoReady,
+    listening: summary === undefined ? undefined : listeningDownload(summary, outputs),
     actions,
     controller,
     openSection,
@@ -670,9 +673,8 @@ function ProjectWorkspace({
     ) : controller.preview === undefined &&
       (controller.error || controller.refusal) &&
       settingsTab === undefined ? (
-      <p role="alert" className="m-0 text-danger">
-        {controller.error ?? controller.refusal?.message}
-      </p>
+      // A make-again that could not start says why, item by item ("Images: …").
+      <RevisionFeedback error={controller.error} refusal={controller.refusal} />
     ) : undefined;
   const channel =
     channels.length < 2 || listing === undefined

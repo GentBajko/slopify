@@ -46,7 +46,7 @@ export interface NextActionState {
   readonly pending: boolean;
   // What the last press said, when it did not work.
   readonly message: string | undefined;
-  // The project's finished video, which Download video saves.
+  // The project's finished file, which the title row's Download saves.
   readonly download: string;
 }
 
@@ -60,6 +60,7 @@ export function useNextAction({
   outdated,
   waits,
   videoReady,
+  listening,
   actions,
   controller,
   openSection,
@@ -75,6 +76,8 @@ export function useNextAction({
   readonly waits: readonly LimitWait[];
   // A finished video file is there to download.
   readonly videoReady: boolean;
+  // A finished audiobook's or podcast's own file, which it downloads instead.
+  readonly listening?: { readonly asset: string; readonly label: string } | undefined;
   readonly actions: ProjectActions;
   readonly controller: RevisionController;
   readonly openSection: (section: SectionId) => void;
@@ -100,7 +103,6 @@ export function useNextAction({
       stage: gate.stage,
       dependents: gate.dependents,
     }));
-  const download = fileUrl(api, project.id, "video");
   const next = nextActionFor({
     project,
     stages,
@@ -110,9 +112,15 @@ export function useNextAction({
     outdated,
     waits,
     videoReady,
+    listening,
     fixOf: (stage) => fixOf(stage, project),
     clock: clockTime,
   });
+  const download = fileUrl(
+    api,
+    project.id,
+    next?.action?.intent.kind === "download" ? next.action.intent.asset : "video",
+  );
   const copy = useMutation({
     mutationFn: () => copySample(api, project.id),
     onSuccess: async ({ projectId: copied }) => {

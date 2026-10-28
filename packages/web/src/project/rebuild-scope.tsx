@@ -39,7 +39,7 @@ export function RebuildScope({
   );
 }
 
-// "Image request 3", or "12 narration requests" when a kind repeats; at most four kinds.
+// "Image 3", or "12 narration parts" when a kind repeats; at most four kinds.
 export function named(keys: readonly string[], label: (key: string) => string): string {
   const groups = new Map<string, string[]>();
   for (const key of keys) groups.set(workName(key), [...(groups.get(workName(key)) ?? []), key]);

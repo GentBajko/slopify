@@ -19,6 +19,7 @@ import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/kit/menu"
 import { Status } from "@/components/kit/status";
 import { cn } from "@/lib/utils";
 import { AddOutputDialog, addableChoices } from "./add-output.js";
+import { downloadWords } from "./parts.js";
 import {
   type ExportFile,
   type OutputKind,
@@ -195,20 +196,23 @@ function PrimaryDownload({
 }): ReactElement | null {
   const media = useOutputMedia(file.output);
   if (media === undefined) return null;
+  // Named with its verb like every download button on the page: "Download video (.mp4)",
+  // "Download PDF (.pdf)", "Download all 4 images (.zip)".
+  const words = downloadWords(file.label);
   return (
     <FileLink
       href={media.url}
       download
       variant="secondary"
-      title={older ? `${file.label}, the previous version` : file.label}
+      title={older ? `${words}, the previous version` : words}
     >
       <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
-      {older ? `${file.label} · previous version` : file.label}
+      {older ? `${words} · previous version` : words}
     </FileLink>
   );
 }
 
-// One of a row's other files, named as what it is: "Subtitles (.srt)", "Spoken text (.txt)".
+// One of a row's other files, named as what it is: "Captions (.srt)", "Spoken text (.txt)".
 function FormatLink({ file }: { readonly file: ExportFile }): ReactElement | null {
   const media = useOutputMedia(file.output);
   if (media === undefined) return null;

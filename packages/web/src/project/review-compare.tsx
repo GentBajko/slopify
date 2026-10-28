@@ -49,13 +49,21 @@ async function earlierPicture(
 
 // A picture beside the one it replaced, to judge a remake or a replacement: before on the
 // left, now on the right, each with the prompt that made it. `open` is what a tile's "Compare
-// with previous" calls; undefined while the picture has no saved version to compare.
+// with previous" calls, defined only once an earlier picture is found: a project with one
+// saved version has none, so it is never offered there. The search runs when `look` is called
+// (the tile's More opening), or at once with `eager`, for a More that would hold nothing else.
 export function useCompare(
   output: Output | undefined,
   name: string,
   aspect: Aspect,
-): { readonly open: (() => void) | undefined; readonly dialog: ReactElement | null } {
+  eager = false,
+): {
+  readonly open: (() => void) | undefined;
+  readonly dialog: ReactElement | null;
+  readonly look: () => void;
+} {
   const [open, setOpen] = useState(false);
+  const [asked, setAsked] = useState(false);
   const { api } = useApp();
   const client = useQueryClient();
   const view = useCurrentRevisionView();
@@ -64,9 +72,10 @@ export function useCompare(
     output === undefined
       ? undefined
       : view?.outputs.find((row) => row.output.id === output.id && row.selected);
+  const possible = view !== undefined && view.revision.parentId !== null && current !== undefined;
   const earlier = useQuery({
     queryKey: ["earlier-picture", view?.revision.id, current?.workKey],
-    enabled: open && view !== undefined && current !== undefined,
+    enabled: possible && (asked || eager),
     staleTime: Number.POSITIVE_INFINITY,
     queryFn: () => {
       if (view === undefined || current === undefined) return null;
@@ -88,10 +97,13 @@ export function useCompare(
       );
     },
   });
-  if (output === undefined || current === undefined || media === undefined)
-    return { open: undefined, dialog: null };
+  const look = () => setAsked(true);
+  const found = earlier.data ?? undefined;
+  if (output === undefined || media === undefined || found === undefined)
+    return { open: undefined, dialog: null, look };
   const title = name.charAt(0).toUpperCase() + name.slice(1);
   return {
+    look,
     open: () => setOpen(true),
     dialog: (
       <Dialog
@@ -101,29 +113,14 @@ export function useCompare(
         className="max-w-[min(1100px,calc(100vw-32px))]"
         footer={<Button onClick={() => setOpen(false)}>Close</Button>}
       >
-        {earlier.error !== null ? (
-          <p role="alert" className="m-0 text-small text-danger">
-            {`Couldn't load the earlier versions: ${earlier.error.message} Close this and try again; Versions lists every saved version.`}
-          </p>
-        ) : earlier.data === undefined ? (
-          <p className="m-0 text-small text-ink-2">Looking for the previous version…</p>
-        ) : null}
         <div className="grid gap-4 md:grid-cols-2">
-          {earlier.data === null ? (
-            <p className="m-0 text-small text-ink-2">
-              {`No earlier version of ${name} is saved. It has been this picture since it was first made.`}
-            </p>
-          ) : earlier.data === undefined ? (
-            <span />
-          ) : (
-            <Side
-              label={`Before · saved ${startedAt(earlier.data.savedAt)}`}
-              src={earlier.data.url}
-              alt={`${title}, previous version`}
-              prompt={earlier.data.prompt}
-              aspect={aspect}
-            />
-          )}
+          <Side
+            label={`Before · saved ${startedAt(found.savedAt)}`}
+            src={found.url}
+            alt={`${title}, previous version`}
+            prompt={found.prompt}
+            aspect={aspect}
+          />
           <Side
             label="Now"
             src={media.url}

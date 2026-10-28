@@ -44,14 +44,19 @@ describe("the dialog in front of a destructive action", () => {
 
   it("names each remake's consequence in plain words, and keeps Versions", () => {
     expect(confirmationFor({ kind: "rerun", stage: "images" }).consequence).toBe(
-      "Draws every image made from a prompt again, then makes the video again with them; pictures you supplied stay as they are.",
+      "Draws every image made from a prompt again, then makes the video again with them; pictures you supplied stay as they are, and the current images stay under Versions.",
     );
     expect(confirmationFor({ kind: "rerun", stage: "video" }).consequence).toBe(
-      "Makes the video file again from the narration and images you already have; nothing is drawn or recorded again.",
+      "Makes the video file again from the narration and images you already have; nothing is drawn or recorded again, and the current video stays under Versions.",
     );
-    expect(confirmationFor({ kind: "rerun", stage: "audio" }).consequence).toContain(
-      "stays under Versions",
-    );
+    // Every make-again says where the one it replaces stays.
+    for (const stage of stageKinds)
+      expect(confirmationFor({ kind: "rerun", stage }).consequence).toMatch(
+        /stays? under Versions\.$/u,
+      );
+    expect(
+      confirmationFor({ kind: "regenerate-image", outputId: "o1", now: true }).consequence,
+    ).toContain("stays under Versions");
     for (const stage of stageKinds)
       expect(confirmationFor({ kind: "rerun", stage }).consequence).not.toMatch(
         /History|Regenerat|export|cue/u,
@@ -71,9 +76,9 @@ describe("the dialog in front of a destructive action", () => {
         kind: "regenerate-image",
         outputId: "o1",
         now: true,
-        price: "About $0.04.",
+        price: "1 paid image call, about $0.04.",
       }).consequence,
-    ).toMatch(/^About \$0\.04\. Draws a new image/u);
+    ).toMatch(/^1 paid image call, about \$0\.04\. Draws a new image/u);
   });
 
   it("never names the way out the same thing as the action", () => {

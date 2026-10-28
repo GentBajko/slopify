@@ -2,14 +2,16 @@ import type { OutputRole } from "@app/slices/storage/model.js";
 import { outdatedGroupOf } from "./next-action.js";
 
 // What an outdated file was made from, in words, so its state never rests on a colour or a
-// bare "Outdated": "Uses the previous text". Said beside the file and on its download.
+// bare "Outdated": "Uses the previous text". Said beside the file and on its download. A
+// picture is outdated for many reasons (its prompt, the look, or a press of Make this image
+// again), so it says only what is sure: it is older than the last change.
 const madeFrom: Readonly<Record<string, string>> = {
   article: "Written from the previous brief, sources or prompt",
   narration: "Uses the previous text",
-  reference: "Uses the previous prompt",
-  images: "Uses the previous prompt or establishing image",
+  reference: "Older than your last change",
+  images: "Older than your last change",
   animated: "Uses the previous image",
-  thumbnails: "Uses the previous prompt",
+  thumbnails: "Older than your last change",
   video: "Uses the previous narration, images or settings",
   shorts: "Uses the previous video",
   youtube: "Uses the previous article",

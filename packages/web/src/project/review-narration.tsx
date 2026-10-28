@@ -1,13 +1,15 @@
 import type { ProjectSummary } from "@app/slices/admission/model.js";
-import type { Output } from "@app/slices/storage/model.js";
+import { usesNarrationPreparation } from "@app/slices/admission/rules.js";
+import type { RevisionEdit } from "@app/slices/revisions/model.js";
+import type { Output, OutputRole } from "@app/slices/storage/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { type RefObject, use, useMemo, useRef } from "react";
 import { useApp } from "@/app-context";
 import type { PlayerChapter } from "@/components/kit/player";
 import { narrationGroups, orderedGroups } from "./narration-editor.js";
+import type { Passage } from "./narration-fix.js";
 import { useOutdated } from "./output-change.js";
 import { useOutputText } from "./parts.js";
-import { focusPiece } from "./review-focus.js";
 import {
   chunkOfLine,
   chunkTexts,
@@ -18,7 +20,7 @@ import {
   timedLines,
 } from "./review-timing.js";
 import { speakerNames, type TranscriptLine } from "./review-transcript.js";
-import { EditRequestContext } from "./revision-action-context.js";
+import { RegenerateNowContext } from "./revision-action-context.js";
 import { narrationChunkOrderOf } from "./revision-api.js";
 import { useCurrentRevisionView } from "./revision-media.js";
 
@@ -28,22 +30,72 @@ export interface NarrationTiming {
   readonly refs: Refs;
   // Every line, each tied to the segment player it plays in; empty without current timing.
   readonly lines: readonly TranscriptLine[];
-  // Where each narration chunk starts, as marks on its segment's waveform.
+  // Where each passage starts, as marks on its segment's waveform.
   readonly marks: Readonly<Partial<Record<SpokenSegment, readonly PlayerChapter[]>>>;
-  // Opens Edit project → Narration at the chunk a line was spoken from; absent outside a
-  // project with saved versions.
-  readonly fix?: ((line: TranscriptLine) => void) | undefined;
+  // Fix this line; absent outside a project with saved versions and while the page is busy.
+  readonly fix?: NarrationFix | undefined;
 }
 
-// The narration chunks in the order Edit project → Narration numbers them, and the way to open
-// that editor at one of them. `open` is absent outside a project with saved versions.
+// Fix this line: the passage a line was spoken in, and making it again, with corrected words
+// or as it is.
+export interface NarrationFix {
+  readonly passageOf: (line: TranscriptLine) => Passage | undefined;
+  readonly makeAgain: (passage: Passage, words: string) => void;
+}
+
+// What the narration is made of once a passage is made again: the outdated narration files,
+// whose work reads the passage again and joins it with the others. The video keeps the current
+// narration until it is made again.
+const narrationRoles: ReadonlySet<OutputRole> = new Set<OutputRole>([
+  "narration_txt",
+  "tts_script",
+  "glossary",
+  "audio_body",
+  "audio_intro",
+  "audio_outro",
+  "audio_levelled",
+]);
+
+// The saved version's change for one passage: the corrected words, or the same words read
+// again (a file of the person's own for it goes, as the Narration editor's Make again does).
+export function passageAgain(
+  passage: Passage,
+  words: string,
+): (edit: RevisionEdit) => RevisionEdit {
+  return (edit) => {
+    const uploads = edit.uploads?.filter(
+      (one) => one.destination.kind !== "narration" || one.destination.key !== passage.key,
+    );
+    const overrides = { ...edit.content.narrationOverrides };
+    const kept = { ...edit, ...(uploads === undefined ? {} : { uploads }) };
+    if (words.trim() !== passage.text.trim())
+      return {
+        ...kept,
+        content: {
+          ...edit.content,
+          narrationOverrides: { ...overrides, [passage.key]: { kind: "text", text: words } },
+        },
+      };
+    if (overrides[passage.key]?.kind === "asset") delete overrides[passage.key];
+    return {
+      ...kept,
+      content: { ...edit.content, narrationOverrides: overrides },
+      regenerate: [...new Set([...(edit.regenerate ?? []), passage.key])],
+    };
+  };
+}
+
+// The narration's passages in the order Edit settings → Narration numbers them, each with the
+// words it says now and how many voice calls reading it takes, and the way to make one again.
+// `remake` is absent outside a project with saved versions, for a narration that was supplied,
+// and while the page is busy.
 function useNarrationChunks(): {
-  readonly chunks: readonly { readonly key: string; readonly text: string }[];
-  readonly open: ((chunk: number | undefined) => void) | undefined;
+  readonly chunks: readonly Passage[];
+  readonly remake: ((passage: Passage, words: string) => void) | undefined;
 } {
   const view = useCurrentRevisionView();
   const { api } = useApp();
-  const requestEdit = use(EditRequestContext);
+  const regenerateNow = use(RegenerateNowContext);
   // The same query, and so the same spoken order, as the narration editor's.
   const order = useQuery({
     queryKey: ["narration-chunks", view?.revision.projectId, view?.revision.id],
@@ -56,20 +108,38 @@ function useNarrationChunks(): {
     staleTime: Number.POSITIVE_INFINITY,
   }).data;
   return useMemo(() => {
-    const chunks = view === undefined ? [] : orderedGroups(narrationGroups(view).groups, order);
+    const groups = view === undefined ? [] : orderedGroups(narrationGroups(view).groups, order);
+    const overrides = view?.revision.content.narrationOverrides ?? {};
+    const prepared = view !== undefined && usesNarrationPreparation(view.revision.config);
+    const chunks = groups.map((group) => {
+      const override = overrides[group.key];
+      return {
+        key: group.key,
+        text: override?.kind === "text" ? override.text : group.text,
+        calls: group.parts,
+        whole: groups.length === 1,
+        prepared,
+      };
+    });
     const generated = view?.revision.config.sources.audio === "generate";
     return {
       chunks,
-      open:
-        requestEdit === undefined || !generated
+      remake:
+        regenerateNow === undefined || !generated
           ? undefined
-          : (chunk: number | undefined) => {
-              const target = chunk === undefined ? undefined : chunks[chunk];
-              requestEdit({ section: "narration", change: (edit) => edit });
-              focusPiece(target === undefined ? undefined : `narration:${target.key}`);
-            },
+          : (passage: Passage, words: string) =>
+              // Saved as a version, then started at once: the form named the calls (an AI call
+              // first for corrected words under a narration prompt) and said their price isn't
+              // known in advance.
+              regenerateNow([], {
+                change: passageAgain(passage, words),
+                starts: (work) =>
+                  work.outdated && work.role !== undefined && narrationRoles.has(work.role),
+                unknownPrices: true,
+                section: "narration",
+              }),
     };
-  }, [view, order, requestEdit]);
+  }, [view, order, regenerateNow]);
 }
 
 // The caption timing (`subtitles.json`, made with the video) when it is current.
@@ -93,7 +163,7 @@ export function useNarrationTiming(
   const outro = useRef<HTMLAudioElement | null>(null);
   const refs = useMemo(() => ({ intro, body, outro }), []);
   const timed = useTimedLines(outputs);
-  const { chunks, open } = useNarrationChunks();
+  const { chunks, remake } = useNarrationChunks();
   const config = project.config;
   const lengths = played
     .map(({ segment, output }) => `${segment}:${String(output.durationMs ?? 0)}`)
@@ -136,13 +206,21 @@ export function useNarrationTiming(
         chunkOf.set(key, chunk);
         if (chunk !== lastChunk && chunks.length > 1) {
           const segmentMarks = marks[placed.segment] ?? [];
-          segmentMarks.push({ start: placed.start, title: `Narration chunk ${String(chunk + 1)}` });
+          segmentMarks.push({ start: placed.start, title: `Passage ${String(chunk + 1)}` });
           marks[placed.segment] = segmentMarks;
         }
         lastChunk = chunk;
       }
-    const fix =
-      open === undefined ? undefined : (line: TranscriptLine) => open(chunkOf.get(line.key));
+    const fix: NarrationFix | undefined =
+      remake === undefined
+        ? undefined
+        : {
+            passageOf: (line) => {
+              const at = chunkOf.get(line.key);
+              return at === undefined ? undefined : chunks[at];
+            },
+            makeAgain: remake,
+          };
     return { refs, lines, marks, fix };
-  }, [lengths, config, timed, chunks, open, refs]);
+  }, [lengths, config, timed, chunks, remake, refs]);
 }

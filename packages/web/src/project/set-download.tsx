@@ -77,7 +77,8 @@ function zipOf(
 // Download all for a set of files (images, thumbnails, shorts) as one zip, named with what it
 // holds. A direct download while every file is current; once an edit made some of them the
 // previous version, the files are listed first, each with a tick, so the zip holds exactly
-// the ones picked.
+// the ones picked. Nothing for a set of one: that file's own download is beside it, and a zip
+// of one file is no use.
 export function SetDownload({
   projectId,
   set,
@@ -95,7 +96,7 @@ export function SetDownload({
   // Nothing until the files can be fetched: a saved version's files once it has loaded.
   const files = useOutputMediaList(members);
   const rows = setRows(view, members);
-  if (rows.length === 0 || files.size === 0) return null;
+  if (rows.length < 2 || files.size === 0) return null;
   if (!rows.some((row) => row.older))
     return (
       <FileLink
@@ -204,7 +205,7 @@ function SetDownloadDialog({
                 <span className="text-ink">{outputLabel(row.output)}</span>
                 <span className="text-ink-2">
                   {` · made ${when(row.output.createdAt)}`}
-                  {row.older ? ` · previous version: ${outdatedWords(row.output.role)}` : ""}
+                  {row.older ? ` · ${outdatedWords(row.output.role).toLowerCase()}` : ""}
                 </span>
               </span>
             </label>

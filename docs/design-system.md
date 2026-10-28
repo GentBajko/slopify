@@ -65,7 +65,7 @@ write in visible text.
 | Who does a stage | A group named for the role, over two selects, Service and Model: Written by, Read by, Images by, Drawn by, Checked by. In a sentence: the voice service, the image service | LLM, Text model, TTS model, Speech provider, Provider on its own |
 | Who reads the narration | Voice | TTS voice |
 | The pictures a run makes | Images; the image service | Pictures in a label for them |
-| On-screen text over the video | Captions (the `.srt` and `.vtt` files are Subtitles (.srt) and Subtitles (.vtt)) | Subtitles for the on-screen text |
+| On-screen text over the video | Captions (the `.srt` and `.vtt` files are Captions (.srt) and Captions (.vtt)) | Subtitles for the on-screen text |
 | `{{Topic}}` and friends | keyword: "Asks for: Topic", "Asks you for" | slot, field |
 | A saved setup | template; starter templates for the bundled ones | setup (as the saved thing), pack, studio |
 | Editing a template | Edit template | Open studio, Template Studio |
@@ -93,10 +93,8 @@ name.
 
 Some strings are not in these words yet. Don't copy them; move them when you touch them:
 
-- Remake, Render, Redo: the outdated next action and its palette commands ("Remake 3 outdated
-  images", "Remake outdated outputs", "Remake everything outdated", "Choose what to remake" in
-  More and Ctrl+K), the style preview's "Render again", an AI check's "Redo", Edit settings'
-  "press Remake" for new shorts music, and Settings' "Render priority".
+- Render, Redo: an AI check's "Redo" and Create's "Redos per item", and Settings' "Render
+  priority".
 - Library, Play, revision: Edit settings' "Update from Library", "Library → Narration aliases",
   "the Library version" and "Library wording" (`project/revision-providers.tsx`,
   `revision-prompts.tsx`, `revision-form.tsx`), Save as template's "Save this revision's setup
@@ -798,24 +796,34 @@ work.
 The section head has ONE make-again button, named for its result with its cost on it ("Make the
 video again (free)", "Make all 4 images again · 4 image calls", "Make the narration again · voice
 calls", "Write the article again · AI calls"), confirmed first with what it replaces and costs.
-The per-piece form sits on the piece ("Make this image again"). Under the files, one facts line
-a person can use: "3 min 5 s · 16:9 · 10 MB · loudness set for YouTube" (`MetaLine`);
-measurements (LUFS, dBTP, the narration's parts) go behind a Technical details fold. A section
+The per-piece form sits on the piece ("Make this image again"). Its dialog opens with the paid
+calls and their price, or says the price isn't known in advance ("1 paid image call; the image
+service's price isn't known in advance."), and ends with where the old one stays (Versions);
+pressing on there starts the work, with no second review unless it costs more than it said.
+Under the files, one facts line a person can use: "10 MB · loudness set for YouTube"
+(`MetaLine`), without the length and shape the status list already says; measurements (LUFS, dBTP, the narration's parts) go behind a Technical details fold. A section
 head does not repeat what the status list says. The full review of outdated work stays in More
 and Ctrl+K. Section callouts (the next action beside its item) show at every width.
 
-**Video**: the player is capped at 720px; with a column of 760px or more, a 300px side column
-beside it holds the downloads, Open folder, the subtitle file links, the facts, chapters, Copy
-description and Copy tags, and Read the narration; narrower, it stacks under the player. An
-audiobook or podcast leads with its listening file. Shorts are 9:16 players in the shorts grid.
+**Video**: the player is capped at 720px (960px once the column is 1,100px wide); with a column
+of 760px or more, a 300px side column beside it holds the downloads the title row does not already
+offer, Open folder, the caption file links, the facts, chapters, Copy description and Copy tags,
+and Read the narration; narrower, it stacks under the player. Under the player, "Shorts made from
+it" shows each short's picture, title, length and Download (.mp4), with Open Shorts. An audiobook
+or podcast leads with its listening file, from the title row. In Shorts, the shorts are 9:16
+players 180px wide in the shorts grid, each with its Download and Copy for YouTube right under
+its title, and their play keys are light, not lime.
 The thumbnail is the first tile of the Images grid, named in its caption, with "See it as YouTube
 shows it" in sight.
 
 **Narration** reads as flowing paragraphs at the reading measure, each opening with its time; a
 heading the narration reads out is its own bold line. The words are the play target, and one line
 beside the search says so ("Press a line to play from there."). The spoken line is tinted, with
-one worded Fix this line under it. Search the narration and Copy the text are in sight; there is
-no inner scroll box for 150 lines or fewer.
+one worded Fix this line under it, which opens the words of the line's passage in place under
+the paragraph: correct them or leave them, and "Make this passage again · 1 voice call" (with
+your words; an AI call first under a narration prompt) saves a version and starts at once.
+Search the narration and Copy the text are in sight; there is no inner scroll box for 150 lines
+or fewer.
 
 **YouTube**: Description, Tags, Pinned comment, Other titles, Release and YouTube links. Text that
 will be pasted is shown once, exactly as pasted, in a well, with "Copy <object>" in its head and
@@ -879,12 +887,12 @@ only for its own press. The first situation that holds wins, in this order:
 | Prepared | a schedule prepared it ahead and its own pause before the video now holds it | Prepared | Approve and make the video (approving now makes it before its day) | Video |
 | Waiting | a CLI plan's limit is reached, or a step waits to retry by itself | Waiting for limits / Waiting to try again | none: when it carries on, in words | the waiting stage's section |
 | Running | the run is at work | Running | Pause | none (the section shows progress) |
-| Kept as is | pending and set aside with Keep as is | Kept as is | Copy for YouTube Studio when the video is ready, else none | YouTube, or none |
+| Kept as is | pending and set aside with Keep as is | Kept as is | the finished file's download (as Done) when the video is ready, else none | Video, or none |
 | Stopped | canceled, failed without a failed step, or resumable work nothing will start (a restart stopped the run) | Stopped / Canceled | Continue the run (after a Cancel, only work taken up again runs; canceled steps stay canceled) | none |
 | Queued | pending in the queue | Queued | none | none |
-| Outdated | the last saved edit made outputs outdated | Outdated | Remake 3 outdated images (the first group in run order: article, narration, establishing image, images, animated images, thumbnails, video, shorts, YouTube description, PDF) | that group's section |
+| Outdated | the last saved edit made outputs outdated | Outdated | Make the 3 outdated images again (the first group in run order: article, narration, establishing image, images, animated images, thumbnails, video, shorts, YouTube description, PDF) | that group's section |
 | Done (a short) | a short-mode project is done | Done | Make the full video on this topic (Create opens on a long video with the same topic, starter template and services) | none |
-| Done | done or done with problems, and a video exists | Done | Copy for YouTube Studio | YouTube |
+| Done | done or done with problems, and a video exists | Done | Download video (.mp4); an audiobook or podcast downloads its listening file instead (Download audiobook (.m4b), Download episode (.mp3)). The section that holds that file does not offer it a second time; Copy for YouTube Studio sits in the Video and YouTube section heads | Video |
 
 The fix-it of a failed step (`slices/fixes/rules.ts`): a signed-out CLI offers Copy sign-in
 command (`codex login`, `claude auth login`) and Check again, which asks that CLI alone whether it

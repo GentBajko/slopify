@@ -116,13 +116,14 @@ export function MediaFrame({
       </div>
       {title === undefined && meta === undefined ? null : (
         <figcaption className="sl-media__caption">
-          {/* Two lines before it is cut, and the whole title on hover: a narrow tile on a phone
-              kept only about 20 characters of one line. */}
+          {/* Up to three lines before it is cut, so a picture's scene reads whole on its tile in
+              all but the longest prompts (a narrow tile on a phone kept about 20 characters of
+              one line); the whole title on hover, and Full size shows the whole prompt. */}
           {title === undefined ? (
             <span />
           ) : (
             <strong
-              className="min-w-0 line-clamp-2 break-words"
+              className="min-w-0 line-clamp-3 break-words"
               title={typeof title === "string" ? title : undefined}
             >
               {title}
@@ -243,14 +244,18 @@ export function Lightbox({
         >
           {item === undefined || index === null ? null : (
             <>
+              {/* One line of title (the whole prompt is the caption under the picture), the
+                  item's actions, then paging and Close always in the top right corner; on a
+                  narrower screen the actions take the line under the title and, on a phone,
+                  the zoom keys give way to pinching. */}
               <div className="sl-lightbox__bar">
-                <DialogPrimitive.Title className="m-0 text-small font-semibold">
+                <DialogPrimitive.Title className="sl-lightbox__title m-0 text-small font-semibold">
                   {`${String(index + 1)} of ${String(count)} · ${item.title ?? item.alt}`}
                 </DialogPrimitive.Title>
-                <div className="sl-btn-row">
+                <div className="sl-lightbox__tools sl-btn-row">
                   {actions?.(item, index)}
                   {picture ? (
-                    <>
+                    <span className="sl-lightbox__zoom">
                       <IconButton
                         label="Zoom out"
                         disabled={zoom === 1}
@@ -268,8 +273,10 @@ export function Lightbox({
                       <IconButton label="Fit" disabled={zoom === 1} onClick={() => setZoom(1)}>
                         <Maximize2Icon aria-hidden="true" strokeWidth={1.75} />
                       </IconButton>
-                    </>
+                    </span>
                   ) : null}
+                </div>
+                <div className="sl-lightbox__nav sl-btn-row">
                   <IconButton label="Previous" onClick={() => page(-1)} disabled={count < 2}>
                     <ChevronLeftIcon aria-hidden="true" strokeWidth={1.75} />
                   </IconButton>

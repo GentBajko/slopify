@@ -172,10 +172,15 @@ function done(kind: StageKind, mine: readonly Output[], project: ProjectSummary)
       return count(mine.filter((output) => output.role === "image").length, "image");
     case "thumbnail":
       return mine.length === 0 ? "Thumbnail ready" : "1 thumbnail";
+    // An audiobook or a podcast is listened to: its video's shape is not news.
     case "video":
       return join([
         duration(total(mine)),
-        finalOutput(project.config) === "audio" ? "WAV · stereo · 48 kHz" : project.format,
+        finalOutput(project.config) === "audio"
+          ? "WAV · stereo · 48 kHz"
+          : project.config.voices === undefined
+            ? project.format
+            : undefined,
       ]);
     case "document":
       return `${documentThemeLabel(project.config.document)} theme`;

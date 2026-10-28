@@ -16,7 +16,7 @@ import { ErrorDetails } from "./error-details.js";
 import { LiveWriting } from "./live-writing.js";
 import type { SectionId } from "./next-action.js";
 import { NextActionBeside, type NextActionState } from "./next-action-view.js";
-import { LeadDownloadContext, useReadOnlySample } from "./read-only.js";
+import { LeadDownloadContext, TitleDownloadContext, useReadOnlySample } from "./read-only.js";
 import { RevisionControlContext } from "./revision-action-context.js";
 import { useCurrentRevisionView } from "./revision-media.js";
 import { rerunPrice, useRunCost } from "./stage-price.js";
@@ -203,7 +203,17 @@ export function StageSection({
         <LiveWriting projectId={project.id} stage={own.kind} />
       ) : null}
       {/* The section's main download wears the lime only when the title row has no next action. */}
-      <LeadDownloadContext value={next.next?.action === undefined}>{children}</LeadDownloadContext>
+      <LeadDownloadContext value={next.next?.action === undefined}>
+        <TitleDownloadContext
+          value={
+            next.next?.action?.intent.kind === "download"
+              ? next.next.action.intent.asset
+              : undefined
+          }
+        >
+          {children}
+        </TitleDownloadContext>
+      </LeadDownloadContext>
     </section>
   );
 }

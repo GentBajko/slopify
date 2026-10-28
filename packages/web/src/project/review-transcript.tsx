@@ -3,6 +3,7 @@ import {
   type MouseEvent,
   memo,
   type ReactElement,
+  type ReactNode,
   type RefObject,
   useCallback,
   useEffect,
@@ -25,6 +26,13 @@ export interface TranscriptLine {
   // The time shown beside the line, on the whole narration: "4:12".
   readonly shownAt: number;
   readonly speaker?: { readonly name: string; readonly index: number } | undefined;
+}
+
+// What Fix this line offers: whether a line can be fixed, and the form that fixes it, drawn in
+// place under the line's paragraph until it is closed.
+export interface LineFixing {
+  readonly offers: (line: TranscriptLine) => boolean;
+  readonly form: (line: TranscriptLine, close: () => void) => ReactNode;
 }
 
 // Plays `media` from `seconds`.
@@ -64,21 +72,21 @@ export function useMediaClock(): { readonly target: EventTarget | null; readonly
 // The narration's words to read and follow: paragraphs of flowing text at the reading measure,
 // each opening with its time. Pressing the words plays from the line pressed, the line being
 // spoken is tinted, and a multi-voice run names each speaker in their colour. One worded "Fix
-// this line" sits under the paragraph of the line last played or pressed, and opens the
-// narration's editor at it, to correct its words or record it again. A narration of more than
+// this line" sits under the paragraph of the line last played or pressed, and opens its form
+// there, to correct the words or have them read again. A narration of more than
 // 150 lines is drawn a page at a time in a box that follows the spoken line; a shorter one
 // reads straight down the page. `query` marks the lines that hold it; each change of `seek`
 // brings the next of them into view.
 export function Transcript({
   lines,
   label,
-  onFix,
+  fix,
   query = "",
   seek = 0,
 }: {
   readonly lines: readonly TranscriptLine[];
   readonly label: string;
-  readonly onFix?: ((line: TranscriptLine) => void) | undefined;
+  readonly fix?: LineFixing | undefined;
   readonly query?: string;
   readonly seek?: number;
 }): ReactElement {
@@ -88,7 +96,10 @@ export function Transcript({
   const at = lineAt(mine, clock.seconds);
   const playing = at === -1 ? undefined : mine[at]?.key;
   const [pressed, setPressed] = useState<string | undefined>();
+  // The line whose Fix this line form is open; it stays open while the audio plays on.
+  const [fixing, setFixing] = useState<string | undefined>();
   const active = playing ?? pressed;
+  const close = useCallback(() => setFixing(undefined), []);
   const long = lines.length > longNarration;
   // A two-hour narration has thousands of lines; drawing them all froze the project page for
   // seconds. Only a page of lines is drawn, and it follows the line being spoken.
@@ -170,7 +181,10 @@ export function Transcript({
             active={active}
             needle={needle}
             onPlay={play}
-            onFix={onFix}
+            fix={fix}
+            fixing={fixing}
+            onFix={setFixing}
+            onClose={close}
           />
         ))}
       </ol>
@@ -265,7 +279,10 @@ const Paragraph = memo(function Paragraph({
   active,
   needle,
   onPlay,
+  fix,
+  fixing,
   onFix,
+  onClose,
 }: {
   readonly lines: readonly TranscriptLine[];
   readonly playing: string | undefined;
@@ -273,13 +290,21 @@ const Paragraph = memo(function Paragraph({
   // What the search box holds, lower case; empty marks nothing.
   readonly needle: string;
   readonly onPlay: (line: TranscriptLine) => void;
-  readonly onFix: ((line: TranscriptLine) => void) | undefined;
+  readonly fix: LineFixing | undefined;
+  // The line whose form is open, anywhere in the transcript.
+  readonly fixing: string | undefined;
+  readonly onFix: (key: string) => void;
+  readonly onClose: () => void;
 }): ReactElement | null {
   const first = lines[0];
   if (first === undefined) return null;
   // A heading read out stands alone and reads as one.
   const heading = lines.length <= 2 && lines.every((line) => !endsPhrase(line.text));
-  const fixing = onFix === undefined ? undefined : lines.find((line) => line.key === active);
+  const open = lines.find((line) => line.key === fixing);
+  const offered =
+    fix === undefined || open !== undefined
+      ? undefined
+      : lines.find((line) => line.key === active && fix.offers(line));
   const pressed = (event: MouseEvent<HTMLButtonElement>) => {
     const key =
       event.target instanceof Element
@@ -321,10 +346,11 @@ const Paragraph = memo(function Paragraph({
           </span>
         ))}
       </Button>
-      {fixing === undefined || onFix === undefined ? null : (
-        <Button size="small" onClick={() => onFix(fixing)}>
+      {open !== undefined && fix !== undefined ? fix.form(open, onClose) : null}
+      {offered === undefined ? null : (
+        <Button size="small" onClick={() => onFix(offered.key)}>
           Fix this line
-          <span className="sr-only">: “{fixing.text.slice(0, 60)}”</span>
+          <span className="sr-only">: “{offered.text.slice(0, 60)}”</span>
         </Button>
       )}
     </li>

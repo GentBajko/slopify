@@ -4,7 +4,7 @@ import { ProjectRoute } from "@/routes/project";
 import { deps, finished } from "@/routes/project-fixtures";
 import { revisionRouteFixture } from "@/routes/project-revision.fake";
 import { jsonAnswer, openProjectSection, renderRouted } from "@/test-app";
-import { fileSize, lengthWords } from "./parts.js";
+import { fileSize } from "./parts.js";
 
 // A bundled sample is read-only on the server; the page says so where the press would be.
 
@@ -88,11 +88,7 @@ describe("a project's own settings", () => {
 });
 
 describe("the facts lines' words", () => {
-  it("say lengths and sizes as a person would", () => {
-    expect(lengthWords(185_233)).toBe("3 min 5 s");
-    expect(lengthWords(44_000)).toBe("44 s");
-    expect(lengthWords(3_780_000)).toBe("1 h 3 min");
-    expect(lengthWords(0)).toBeUndefined();
+  it("say sizes as a person would", () => {
     expect(fileSize(394_567)).toBe("395 KB");
     expect(fileSize(10_134_393)).toBe("10 MB");
     expect(fileSize(2_503_900)).toBe("2.5 MB");

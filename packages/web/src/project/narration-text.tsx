@@ -1,10 +1,11 @@
 import type { Output } from "@app/slices/storage/model.js";
 import { SearchIcon } from "lucide-react";
-import { type ReactElement, useId, useState } from "react";
+import { type ReactElement, useId, useMemo, useState } from "react";
 import { ReadingView } from "@/components/kit/reading-view";
+import { LineFix } from "./narration-fix.js";
 import { useOutputText } from "./parts.js";
-import type { NarrationTiming } from "./review-narration.js";
-import { Transcript } from "./review-transcript.js";
+import type { NarrationFix, NarrationTiming } from "./review-narration.js";
+import { type LineFixing, Transcript } from "./review-transcript.js";
 
 // The narration's clean text (what was spoken: intro, body and outro) as one piece of Markdown,
 // for Copy the text. One segment reads as itself; more get a heading each.
@@ -29,7 +30,7 @@ export function useNarrationMarkdown(outputs: readonly Output[]): string | undef
 
 // The Narration section's words. With the caption timing current they read as a transcript in
 // step with the players above, with a search box over it: press the words to play from there,
-// the line being spoken is marked, and Fix this line opens the editor at it. Without timing
+// the line being spoken is marked, and Fix this line opens its form in place. Without timing
 // the clean text shows in the reading view, which searches and copies it the same way.
 export function NarrationText({
   outputs,
@@ -45,6 +46,7 @@ export function NarrationText({
   const markdown = useNarrationMarkdown(outputs);
   const [query, setQuery] = useState("");
   const [seek, setSeek] = useState(0);
+  const fixing = useLineFixing(timing?.fix);
   if (!outputs.some((output) => output.role === "narration_txt")) return null;
   const lines = timing?.lines ?? [];
   const needle = query.trim().toLowerCase();
@@ -105,12 +107,40 @@ export function NarrationText({
           <Transcript
             lines={lines}
             label="Narration transcript"
-            onFix={timing?.fix}
+            fix={fixing}
             query={query}
             seek={seek}
           />
         </>
       )}
     </section>
+  );
+}
+
+// Fix this line for a line whose passage is known: the form under its paragraph, which makes
+// the passage again and closes.
+function useLineFixing(fix: NarrationFix | undefined): LineFixing | undefined {
+  return useMemo(
+    () =>
+      fix === undefined
+        ? undefined
+        : {
+            offers: (line) => fix.passageOf(line) !== undefined,
+            form: (line, close) => {
+              const passage = fix.passageOf(line);
+              return passage === undefined ? null : (
+                <LineFix
+                  passage={passage}
+                  line={line.text}
+                  onMake={(words) => {
+                    close();
+                    fix.makeAgain(passage, words);
+                  }}
+                  onClose={close}
+                />
+              );
+            },
+          },
+    [fix],
   );
 }
