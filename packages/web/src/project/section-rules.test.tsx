@@ -104,6 +104,20 @@ describe("a finished project's sections", () => {
     );
   });
 
+  it("keep Pause out of lime while the run is making things: nothing waits on the person", async () => {
+    const running = body({
+      status: "running",
+      stages: [stage("article", "done"), stage("audio", "running"), stage("video", "pending")],
+      outputs: [output("article_md", "article")],
+    });
+    renderRouted(
+      <ProjectRoute projectId="p1" />,
+      deps({ "GET /api/projects/p1": jsonAnswer(running) }),
+    );
+    const pause = await screen.findByRole("button", { name: "Pause" });
+    expect(pause.className).not.toContain("sl-btn--primary");
+  });
+
   it("keep one lime button on a paused project", async () => {
     const paused = body({
       status: "paused",
