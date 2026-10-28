@@ -42,6 +42,7 @@ export function ServiceGroup({
   serviceProblem,
   modelProblem,
   leaveOut,
+  fillModel = false,
   className,
   onService,
   onModel,
@@ -61,6 +62,8 @@ export function ServiceGroup({
   readonly modelProblem: string | undefined;
   // The stage's own way out when no service can be used: "Set Narration to Off".
   readonly leaveOut?: { readonly label: string; readonly onLeave: () => void } | undefined;
+  // A service picked here takes its model by itself (see ModelPicker's fillEmpty).
+  readonly fillModel?: boolean | undefined;
   readonly className?: string | undefined;
   readonly onService: (provider: string) => void;
   readonly onModel: (model: string) => void;
@@ -109,6 +112,7 @@ export function ServiceGroup({
         label="Model"
         group={id}
         quiet
+        fillEmpty={fillModel}
         provider={provider}
         value={model}
         problem={modelProblem}

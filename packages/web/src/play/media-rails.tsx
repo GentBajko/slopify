@@ -134,6 +134,7 @@ export function AudioRail({
                 label: "Set Narration to Off",
                 onLeave: () => update({ sources: { ...form.sources, audio: "off" } }),
               }}
+              fillModel
               onService={(provider) =>
                 update({ audio: { ...form.audio, provider, model: "", voice: "" } })
               }
@@ -374,6 +375,7 @@ export function ImageProviderControls({
             }
           : undefined
       }
+      fillModel
       onService={(provider) => update({ images: { provider, model: "" } })}
       onModel={(model) => update({ images: { ...form.images, model } })}
     >

@@ -42,6 +42,7 @@ export function TextGeneration({
           problem("llm.model") ??
           (form.llm.provider !== "" && problem("llm") ? "Pick a model." : undefined)
         }
+        fillModel
         onService={(provider) => update({ llm: { provider, model: "" } })}
         onModel={(model) => update({ llm: { ...form.llm, model } })}
       >

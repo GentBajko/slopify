@@ -21,10 +21,12 @@ function Group({
   providers,
   provider: initial = "",
   onLeave = () => {},
+  fillModel = false,
 }: {
   readonly providers: readonly ProviderStatus[];
   readonly provider?: string;
   readonly onLeave?: () => void;
+  readonly fillModel?: boolean;
 }) {
   const [provider, setProvider] = useState(initial);
   const [model, setModel] = useState("");
@@ -39,6 +41,7 @@ function Group({
       serviceProblem={undefined}
       modelProblem={undefined}
       leaveOut={{ label: "Set Narration to Off", onLeave }}
+      fillModel={fillModel}
       onService={(next) => {
         setProvider(next);
         setModel("");
@@ -149,6 +152,42 @@ describe("who does a stage", () => {
     expect(typed.value).toBe("mini");
     await userEvent.click(screen.getByRole("button", { name: "Pick from the list" }));
     expect(screen.getByRole("combobox", { name: "Read by Model" })).not.toBeNull();
+  });
+
+  it("on Create, a service picked takes the model Slopify would pick for it", async () => {
+    renderRouted(
+      <Group providers={[keyed("openai-tts", "OpenAI", true)]} fillModel />,
+      testDeps({
+        "GET /api/providers/openai-tts/models": jsonAnswer({
+          models: [
+            { id: "tts-1", name: "TTS 1" },
+            { id: "gpt-4o-mini-tts", name: "GPT-4o mini TTS" },
+          ],
+          allowsCustom: true,
+        }),
+      }),
+    );
+    const service = await screen.findByRole("combobox", { name: "Read by Service" });
+    await userEvent.selectOptions(service, "openai-tts");
+    const model = screen.getByRole<HTMLSelectElement>("combobox", { name: "Read by Model" });
+    await vi.waitFor(() => expect(model.value).toBe("gpt-4o-mini-tts"));
+  });
+
+  it("elsewhere, a service picked leaves the model to the person", async () => {
+    renderRouted(
+      <Group providers={[keyed("openai-tts", "OpenAI", true)]} />,
+      testDeps({
+        "GET /api/providers/openai-tts/models": jsonAnswer({
+          models: [{ id: "gpt-4o-mini-tts", name: "GPT-4o mini TTS" }],
+          allowsCustom: true,
+        }),
+      }),
+    );
+    const service = await screen.findByRole("combobox", { name: "Read by Service" });
+    await userEvent.selectOptions(service, "openai-tts");
+    const model = screen.getByRole<HTMLSelectElement>("combobox", { name: "Read by Model" });
+    await within(model).findByRole("option", { name: "GPT-4o mini TTS" });
+    expect(model.value).toBe("");
   });
 });
 

@@ -1,9 +1,10 @@
 import type { ModelInfo } from "@app/kernel/ports/model.js";
 import type { ModelStandingView } from "@app/slices/model-checks/model.js";
 import { badgeOf, pickerEntries } from "@app/slices/model-checks/rules.js";
+import { preferredModel } from "@app/slices/onboarding/preferred-model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { HelpLine, Input, Select } from "@/components/kit/field";
@@ -55,6 +56,9 @@ export function ModelPicker(
     // link to Settings → Models, where Refresh and Check live. Show all and typing a model id
     // are the list's last two entries. Without it every upkeep button sits under the select.
     readonly quiet?: boolean | undefined;
+    // A service picked with no model takes the one Slopify would pick for it once its list is
+    // in (`preferredModel`), so a new service is one choice, not two.
+    readonly fillEmpty?: boolean | undefined;
   },
 ) {
   return <ProviderModelPicker key={props.provider} {...props} />;
@@ -69,8 +73,13 @@ function ProviderModelPicker({
   tip,
   group,
   quiet = false,
+  fillEmpty = false,
   onPick,
-}: FieldProps & { readonly provider: string; readonly quiet?: boolean | undefined }) {
+}: FieldProps & {
+  readonly provider: string;
+  readonly quiet?: boolean | undefined;
+  readonly fillEmpty?: boolean | undefined;
+}) {
   const { api } = useApp();
   const client = useQueryClient();
   const catalogue = useQuery(modelsQuery(api, provider));
@@ -88,6 +97,14 @@ function ProviderModelPicker({
   const [showAll, setShowAll] = useState(false);
   const shown = pickerEntries(every, standings, value, showAll || standings === undefined);
   const all = shown.entries.map((entry) => entry.model);
+  const suggested =
+    fillEmpty && provider !== "" && value === "" && !custom
+      ? preferredModel(provider, all)?.id
+      : undefined;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once per suggestion, with the pick as drawn.
+  useEffect(() => {
+    if (suggested !== undefined) onPick(suggested);
+  }, [suggested]);
   const now = new Date();
   const labelOf = (model: ModelInfo): string => {
     const label = modelOptionLabel(model);
