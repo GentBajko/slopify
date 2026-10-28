@@ -63,7 +63,8 @@ export function StylePreview({
   readonly settings: StylePreviewSettings;
   readonly label?: string;
   // False where the caller already names the preview (Create's dialog, under its own title):
-  // the preview then draws no heading of its own, only its line and Make the preview again.
+  // the preview then draws no heading of its own, only its line, and Make the preview again
+  // after the video.
   readonly titled?: boolean;
   // What the picture in settings.image is, in words ("the establishing image").
   readonly drawnOn?: string | undefined;
@@ -202,10 +203,7 @@ export function StylePreview({
           {makeAgain}
         </SectionHead>
       ) : (
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-          <p className="m-0 text-small text-ink-2">{meta}</p>
-          {makeAgain}
-        </div>
+        <p className="m-0 text-small text-ink-2">{meta}</p>
       )}
       {shown === undefined ? null : (
         <Player
@@ -238,6 +236,9 @@ export function StylePreview({
         {summary}
         {image === undefined || drawnOn === undefined ? "" : ` · Drawn on ${drawnOn}`}
       </p>
+      {/* Under its own heading-less dialog, Make the preview again comes after the video it
+          makes again, not above one not watched yet. */}
+      {titled ? null : makeAgain}
     </section>
   );
 }

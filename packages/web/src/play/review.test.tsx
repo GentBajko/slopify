@@ -167,10 +167,11 @@ it("shows costs and resolved text from one receipt without treating unknown char
     form: { ...suppliedDocument.form, values: { dormant: "Keep dormant" } },
   });
   await waitFor(() => expect(harness.session().review.valid).toBe(true));
-  expect(screen.getByText("Known subtotal: $1.20 – $2.40")).not.toBeNull();
-  expect(screen.getByText("Unknown")).not.toBeNull();
-  expect(screen.getByText(/Plus 1 stage charge/)).not.toBeNull();
-  expect(screen.getByText(/Catalogue verified 2026-09-13/)).not.toBeNull();
+  // A stage with no price never reads as free: the figure is a floor, and it says which.
+  expect(screen.getByText("Estimated cost: at least $1.20")).not.toBeNull();
+  expect(screen.getByText("Article: price not known, so not counted.")).not.toBeNull();
+  expect(screen.getByText("Not known")).not.toBeNull();
+  expect(screen.getByText(/Prices checked 2026-09-13/)).not.toBeNull();
   expect(screen.queryByText("Keep dormant")).toBeNull();
   await userEvent.click(screen.getByText("Your article and the prompts as they will be sent"));
   expect(screen.getByText("The exact reviewed prompt.")).not.toBeNull();
@@ -179,10 +180,11 @@ it("shows costs and resolved text from one receipt without treating unknown char
     within(screen.getByRole("dialog", { name: summaryTitle })).getByText("The supplied article."),
   ).not.toBeNull();
   // The rail shows the total; the stages and their assumptions fold away under it.
-  const breakdown = screen.getByText("Cost by stage · 2 stages").closest("details");
+  const breakdown = screen.getByText("Cost by stage").closest("details");
   expect(breakdown?.open).toBe(false);
+  expect(within(breakdown as HTMLElement).getByText("2 stages")).not.toBeNull();
   expect(within(breakdown as HTMLElement).getByText("Known provider rate")).not.toBeNull();
-  await userEvent.click(screen.getByText("Cost by stage · 2 stages"));
+  await userEvent.click(screen.getByText("Cost by stage"));
   expect(breakdown?.open).toBe(true);
   expect(within(breakdown as HTMLElement).getByText("Actual usage may differ")).not.toBeNull();
 });

@@ -190,6 +190,28 @@ export function readinessProblems(
   });
 }
 
+// A service to pick when none of its kind answers here (no key saved, no tool installed): what
+// can be done is adding one, or leaving the stage out, not picking from greyed choices.
+const noneReady: Readonly<
+  Record<string, { readonly family: ProviderFamily; readonly text: string; readonly hint: string }>
+> = {
+  llm: {
+    family: "llm",
+    text: "No writing service is set up yet: add a key or a tool in Settings.",
+    hint: "Set up a writing service first",
+  },
+  audio: {
+    family: "tts",
+    text: "No voice service has a key yet: add one in Settings, or set Narration to Off.",
+    hint: "Add a voice service key first",
+  },
+  images: {
+    family: "image",
+    text: "No image service has a key yet: add one in Settings, or set Images to None.",
+    hint: "Add an image service key first",
+  },
+};
+
 // One list, in the order a person meets them: the topic at the top, then the rows top to
 // bottom, then anything no row holds. Each row counts once, with its first problem.
 export function setupProblems({
@@ -200,6 +222,7 @@ export function setupProblems({
   llmRow,
   blocker,
   readinessFirst = [],
+  providers = [],
 }: {
   readonly form: PlayFormState;
   readonly errors: readonly FieldError[];
@@ -210,6 +233,8 @@ export function setupProblems({
   // An upload still copying or one that failed: it stops the button before anything else.
   readonly blocker?: Blocker | undefined;
   readonly readinessFirst?: readonly SetupProblem[];
+  // The services and whether each answers; while unknown, nothing is said about them.
+  readonly providers?: readonly ProviderStatus[];
 }): readonly SetupProblem[] {
   const topicField = (field: string): boolean =>
     (field === "title" && topics.length === 0) ||
@@ -222,8 +247,22 @@ export function setupProblems({
       !errors.some(
         (other) => other !== error && !refused.includes(other) && other.field === error.field,
       );
+    const row = topicField(error.field) ? "topic" : rowOf(error.field, llmRow);
+    const none = noneReady[error.field];
+    const unpicked =
+      (error.field === "llm" && form.llm.provider === "") ||
+      (error.field === "audio" && form.audio.provider === "") ||
+      (error.field === "images" && form.images.provider === "");
+    if (
+      !server &&
+      none !== undefined &&
+      unpicked &&
+      providers.some((one) => one.family === none.family) &&
+      !providers.some((one) => one.family === none.family && readiness(one).ok)
+    )
+      return { row, field: error.field, text: none.text, hint: none.hint };
     return {
-      row: topicField(error.field) ? "topic" : rowOf(error.field, llmRow),
+      row,
       field: error.field,
       text: server ? error.message : (fixOf(form, error) ?? error.message),
       hint: server ? error.message : hintOf(form, error),

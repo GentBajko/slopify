@@ -102,6 +102,21 @@ export function outputKindPatch(
   }
 }
 
+// What a change of kind touches, kept per kind so coming back to one puts it back as it was.
+export type KindSettings = Pick<
+  PlayFormState,
+  "sources" | "youtubeDescription" | "shorts" | "voices" | "subtitles"
+>;
+export function kindSettingsOf(form: PlayFormState): KindSettings {
+  return {
+    sources: form.sources,
+    youtubeDescription: form.youtubeDescription,
+    shorts: form.shorts,
+    voices: form.voices,
+    subtitles: form.subtitles,
+  };
+}
+
 // The setup rows each starting point needs. A row that holds a problem, or that is open, shows
 // whatever was picked, so nothing that blocks Start is ever out of reach.
 const rowsOfKind: Readonly<Record<OutputKind, readonly SetupRowId[]>> = {
@@ -148,7 +163,7 @@ const nouns: Readonly<Record<OutputKind, readonly [string, string]>> = {
   article: ["article", "articles"],
   audiobook: ["audiobook", "audiobooks"],
   podcast: ["episode", "episodes"],
-  images: ["image set", "image sets"],
+  images: ["set of images", "sets of images"],
 };
 
 // "1 video", "3 articles": what Start makes, named after the work being made.
@@ -159,4 +174,12 @@ export function outputCount(kind: OutputKind, count: number): string {
 
 export function outputNoun(kind: OutputKind): string {
   return nouns[kind][0];
+}
+
+// What the topic box asks for, as the next thing to do: "Type what the video is about",
+// "Type what the images are of" (the words of its question).
+export function topicFix(kind: OutputKind): string {
+  return kind === "images"
+    ? "Type what the images are of"
+    : `Type what the ${outputNoun(kind)} is about`;
 }

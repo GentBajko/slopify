@@ -2,8 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useEffect, useId, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
-import { Input, Select } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { HelpLine, Input, Select } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { type FontSummary, fontsKey, fontUrl, listFonts, uploadFont } from "./api";
 import { usePreviewFont } from "./use-preview-font";
 
@@ -95,7 +95,6 @@ function FontPickerFields({
             <label htmlFor={id} className="sl-field__label block">
               Caption font
             </label>
-            <InfoTip id="project.subtitles.font" className="-my-1" />
           </div>
           {listed.length > filterFrom ? (
             <Input
@@ -129,6 +128,9 @@ function FontPickerFields({
             <p className="m-0 mt-1 text-small text-ink-2">{`No font name contains "${filter.trim()}".`}</p>
           ) : null}
           <FontSample url={fontUrl(api, value)} />
+          <HelpLine className="mt-1">
+            For the captions in the video and the chapter cards; caption files carry no font.
+          </HelpLine>
         </div>
         <div className="min-w-0 basis-full">
           {/* The browser's own file box ("Choose File · No file chosen") is hidden: the button

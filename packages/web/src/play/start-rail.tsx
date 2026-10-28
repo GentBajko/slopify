@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { ArrowRightIcon, PencilIcon, PlayIcon } from "lucide-react";
 import {
   type ReactElement,
@@ -7,19 +8,23 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { useApp } from "@/app-context";
 import { Button, PlayKey } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { ariaKeyShortcuts } from "@/components/kit/command-palette";
 import { Dialog } from "@/components/kit/dialog";
-import { Field, Input } from "@/components/kit/field";
-import { Switch } from "@/components/kit/switch";
+import { Field, HelpLine, Input } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
+import { Segmented } from "@/components/kit/switch";
 import { shortcuts } from "@/lib/shortcuts";
+import { promptsQuery } from "@/queries";
 import { usePlaySession } from "./draft-context";
 import { outputCount, outputKindOf } from "./output-kind";
 import { PlanAllowance } from "./plan-allowance";
 import type { SetupProblem } from "./problems";
+import { promptWords } from "./prompt-cards";
 import { pageVideos, pendingReviewUpload, queued, startLabel } from "./review-state";
-import { RunReview } from "./run-review";
+import { estimateHeadline, RunReview } from "./run-review";
 
 // One spoken minute is about this many words, so the expected length reads in minutes.
 const wordsPerMinute = 150;
@@ -54,9 +59,9 @@ export function startReason({
   return undefined;
 }
 
-// The right rail of Create, top to bottom: how many it makes, how long, what it costs, the
-// Make button with the one next thing to do under it, the whole summary, and the style
-// preview. On a phone it follows the form, the button first.
+// The right rail of Create, top to bottom: how many it makes, how long, the Make button with
+// the one next thing to do under it, what it costs, the whole summary, and the style preview.
+// On a phone it follows the form, the button first.
 export function StartRail({
   problems,
   saveProblem,
@@ -65,6 +70,7 @@ export function StartRail({
   onWholeSetup,
   preview,
   previewLine,
+  keyHere = true,
 }: {
   readonly problems: readonly SetupProblem[];
   readonly saveProblem: string | undefined;
@@ -77,6 +83,8 @@ export function StartRail({
   readonly preview?: ReactNode;
   // What the preview shows, in words: "Captions: Barlow 48, at the bottom".
   readonly previewLine?: string | undefined;
+  // False on a phone, where the Make button rides in the bar at the bottom (MakeBar).
+  readonly keyHere?: boolean;
 }): ReactElement {
   const session = usePlaySession();
   const { document, review } = session;
@@ -85,11 +93,12 @@ export function StartRail({
   useEffect(() => {
     void session.reviewDraft();
   }, [session.reviewDraft]);
-  // A prompt edited in another tab or in Prompts is read again when the person comes back.
+  // A prompt edited in another tab or in Prompts is read again when the person comes back,
+  // quietly: the button and the estimate stay as they are unless the answer differs.
   useEffect(() => {
     const page = window.document;
     const again = () => {
-      if (page.visibilityState === "visible") void session.reviewDraft();
+      if (page.visibilityState === "visible") void session.reviewDraft({ quiet: true });
     };
     window.addEventListener("focus", again);
     page.addEventListener("visibilitychange", again);
@@ -123,36 +132,43 @@ export function StartRail({
         <div className="flex min-h-8 flex-wrap items-center justify-between gap-x-3 gap-y-1">
           <span className="font-semibold">{outputCount(kind, count)}</span>
           {count > 1 ? (
-            <Switch
-              label="One after another"
+            // A choice of two, not a lime switch: the Make button under it is the one lime
+            // control here.
+            <Segmented
+              label="How they run"
+              value={queued(document) ? "queue" : "together"}
+              options={[
+                { value: "queue", label: "One after another", disabled: locked },
+                { value: "together", label: "All at once", disabled: locked },
+              ]}
               help={
                 queued(document)
                   ? "Each starts when the one before finishes."
-                  : "Off: they all start at once."
+                  : "They all start together."
               }
-              checked={queued(document)}
-              disabled={locked}
-              onChange={(next) => session.edit({ ...document, queue: next })}
+              onChange={(next) => session.edit({ ...document, queue: next === "queue" })}
             />
           ) : null}
         </div>
         {document.form.sources.article === "generate" ? (
           <ExpectedLength narrated={document.form.sources.audio !== "off"} locked={locked} />
         ) : null}
+        {saveProblem ? <Callout tone="danger" title={saveProblem} /> : null}
+        {keyHere ? <MakeButton problems={problems} onStart={onStart} onFix={onFix} tour /> : null}
+        {/* Under the button, so the button never moves when the estimate arrives or its
+            stages open. */}
         <div className="flex min-w-0 flex-col gap-2">
           {review.valid && review.receipt ? (
             <RunReview estimates={review.receipt.estimates} />
           ) : (
             <p role="status" className="m-0 text-small text-ink-2">
-              {review.pending
+              {review.pending || problems.length === 0
                 ? "Estimated cost: calculating…"
                 : "Estimated cost: shown once nothing is missing."}
             </p>
           )}
           <PlanAllowance form={document.form} />
         </div>
-        {saveProblem ? <Callout tone="danger" title={saveProblem} /> : null}
-        <MakeButton problems={problems} onStart={onStart} onFix={onFix} tour />
         <Button
           variant="quiet"
           size="small"
@@ -243,19 +259,55 @@ export function MakeButton({
   );
 }
 
-// Below 900px the summary drawer covers the whole window, rail and all.
-const narrowQuery = "(max-width: 899px)";
-function subscribeNarrow(listener: () => void): () => void {
-  if (typeof window.matchMedia !== "function") return () => {};
-  const query = window.matchMedia(narrowQuery);
-  query.addEventListener("change", listener);
-  return () => query.removeEventListener("change", listener);
+function useMedia(query: string): boolean {
+  return useSyncExternalStore(
+    (listener) => {
+      if (typeof window.matchMedia !== "function") return () => {};
+      const list = window.matchMedia(query);
+      list.addEventListener("change", listener);
+      return () => list.removeEventListener("change", listener);
+    },
+    () => typeof window.matchMedia === "function" && window.matchMedia(query).matches,
+    () => false,
+  );
 }
-function isNarrow(): boolean {
-  return typeof window.matchMedia === "function" && window.matchMedia(narrowQuery).matches;
-}
+// Below 1024px there is no room for the summary drawer beside the rail (it would cover half of
+// it), so it covers the whole window, rail and all, with the Make button in its foot.
 export function useNarrow(): boolean {
-  return useSyncExternalStore(subscribeNarrow, isNarrow, () => false);
+  return useMedia("(max-width: 1023px)");
+}
+// A phone: the rail follows the whole form, so the Make button rides in a bar pinned above the
+// bottom navigation instead, in reach from the topic on.
+export function usePhone(): boolean {
+  return useMedia("(max-width: 767px)");
+}
+
+// The Make button pinned to the bottom of a phone's screen, over the form, with the one next
+// thing to do (or what it costs) under it.
+export function MakeBar({
+  problems,
+  onStart,
+  onFix,
+}: {
+  readonly problems: readonly SetupProblem[];
+  readonly onStart: () => void;
+  readonly onFix: (problem: SetupProblem) => void;
+}): ReactElement {
+  const { review } = usePlaySession();
+  const ready = review.valid && review.receipt !== null && problems.length === 0;
+  return (
+    <div
+      data-slot="make-bar"
+      className="sticky bottom-[calc(48px+max(12px,env(safe-area-inset-bottom)))] z-20 -mx-4 mt-4 flex flex-col gap-1 border-t border-line bg-surface px-4 py-2"
+    >
+      <MakeButton problems={problems} onStart={onStart} onFix={onFix} tour />
+      {ready && review.receipt ? (
+        <p className="m-0 text-center text-small text-ink-2">
+          {estimateHeadline(review.receipt.estimates)}
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 // "Expected length: about 10 min · 1,500 words", and the pencil to change the words. It only
@@ -269,6 +321,8 @@ function ExpectedLength({
   readonly locked: boolean;
 }): ReactElement {
   const session = usePlaySession();
+  const { api } = useApp();
+  const prompts = useQuery(promptsQuery(api));
   const { document } = session;
   const [editing, setEditing] = useState(false);
   const words = Number(document.expectedWords);
@@ -304,21 +358,45 @@ function ExpectedLength({
         </Button>
       </div>
     );
+  // The picked article prompt decides the real length; where it names a count the length here
+  // is set apart from, that is said at rest, not only while editing.
+  const asked = articlePromptWords(prompts.data?.prompts ?? [], document.form.articlePrompt);
+  const off = asked !== undefined && known && (words < asked.low || words > asked.high);
   return (
-    <p className="m-0 flex min-w-0 flex-wrap items-center gap-x-1 text-small text-ink-2">
-      <span>Expected length: {length}</span>
-      <Button
-        variant="quiet"
-        size="small"
-        disabled={locked}
-        aria-label="Change the expected length"
-        onClick={() => setEditing(true)}
-      >
-        <PencilIcon aria-hidden="true" strokeWidth={1.75} />
-        Change
-      </Button>
-    </p>
+    <div className="flex min-w-0 flex-col gap-0.5" {...helpScope}>
+      <p className="m-0 flex min-w-0 flex-wrap items-center gap-x-1 text-small text-ink-2">
+        <span>Expected length: {length}</span>
+        <Button
+          variant="quiet"
+          size="small"
+          disabled={locked}
+          aria-label="Change the expected length"
+          onClick={() => setEditing(true)}
+        >
+          <PencilIcon aria-hidden="true" strokeWidth={1.75} />
+          Change
+        </Button>
+      </p>
+      <HelpLine className={off ? "text-waiting" : undefined}>
+        {off && asked !== undefined
+          ? `The “${document.form.articlePrompt}” prompt asks for ${range(asked)}, so the video will be about ${String(Math.round((asked.low + asked.high) / 2 / wordsPerMinute))} min.`
+          : "For the estimate and the image count; the article prompt decides the real length."}
+      </HelpLine>
+    </div>
   );
+}
+
+function articlePromptWords(
+  prompts: readonly { readonly kind: string; readonly name: string; readonly body: string }[],
+  name: string,
+): { readonly low: number; readonly high: number } | undefined {
+  const body = prompts.find((one) => one.kind === "article" && one.name === name)?.body;
+  return body === undefined ? undefined : promptWords(body);
+}
+function range({ low, high }: { readonly low: number; readonly high: number }): string {
+  return low === high
+    ? `${low.toLocaleString("en-US")} words`
+    : `${low.toLocaleString("en-US")}–${high.toLocaleString("en-US")} words`;
 }
 
 // The style preview on demand: what it shows in words, and a button that renders six seconds
@@ -340,7 +418,16 @@ function StylePreviewEntry({
       <Button variant="quiet" size="small" onClick={() => setOpen(true)}>
         Watch a 6-second preview
       </Button>
-      <Dialog open={open} onOpenChange={setOpen} title="Preview with your captions and look">
+      <Dialog
+        open={open}
+        onOpenChange={setOpen}
+        title="Preview with your captions and look"
+        footer={
+          <Button variant="secondary" onClick={() => setOpen(false)}>
+            Close
+          </Button>
+        }
+      >
         {open ? children : null}
       </Dialog>
     </section>

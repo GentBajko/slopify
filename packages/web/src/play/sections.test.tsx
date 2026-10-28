@@ -41,8 +41,10 @@ it("folds the setup into rows, one open at a time, that keep what was typed", as
     "Extras",
     "Pauses and checks",
   ]);
-  // A row that needs something says Fix; the first of them is open on arrival.
-  expect(rows.getByRole("button", { name: "Fix narration" })).not.toBeNull();
+  // A row that needs something says Fix; the first of them is open on arrival. (The voice
+  // whose service has a key is picked by itself, so Narration needs nothing.)
+  expect(rows.getByRole("button", { name: "Fix images" })).not.toBeNull();
+  expect(rows.getByRole("button", { name: "Change narration" })).not.toBeNull();
   expect(screen.getByRole("region", { name: "Article" })).not.toBeNull();
   await userEvent.type(screen.getByLabelText(topicLabel), "Retained");
   for (const name of ["Video and style", "Extras", "Pauses and checks"]) {

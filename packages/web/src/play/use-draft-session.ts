@@ -1,8 +1,9 @@
 import { pickerEntries } from "@app/slices/model-checks/rules.js";
+import { preferredModel } from "@app/slices/onboarding/preferred-model.js";
 import type { DraftView, PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import { type ProviderFamily, systemVoiceProvider } from "@app/slices/settings/model.js";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useReducer, useRef } from "react";
+import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { readFirstRun, upkeepKeys } from "@/components/provider-upkeep-api";
 import { modelsQuery } from "@/lib/models";
@@ -24,6 +25,7 @@ import {
   freezeSave,
   remapForkEdits,
   retainUploadSettlements,
+  servicesOf,
 } from "./draft-save";
 import {
   type FreshProviderDefaults,
@@ -79,6 +81,9 @@ export function useDraftSession(): PlaySession {
     };
     // The remembered draft `start` is reopening, which says so once it is on the page.
     let restoring: string | null = null;
+    // While true, the fresh form is not saved yet: the starter template is on its way and
+    // will replace it, taking the typed topic along, so no blank draft is left behind.
+    let holding = false;
     const install = (view: DraftView) => {
       review.restore(view);
       publish({
@@ -88,6 +93,8 @@ export function useDraftSession(): PlaySession {
         id: view.draft.id,
         clock: { edited: 0, acknowledged: 0, version: view.draft.version },
         status: "saved",
+        // A draft the template just made (its first version) takes the found services.
+        fillServices: view.draft.version === 1 && view.draft.document.templateSource !== undefined,
         ...(restoring === view.draft.id
           ? { restored: { id: view.draft.id, updatedAt: view.draft.updatedAt } }
           : {}),
@@ -154,6 +161,7 @@ export function useDraftSession(): PlaySession {
       if (running) return running;
       if (state.current.clock.edited === state.current.clock.acknowledged)
         return Promise.resolve(true);
+      if (holding && state.current.id === null) return Promise.resolve(true);
       if (discardingId !== null && discardingId === state.current.id) return Promise.resolve(false);
       running = drain().finally(() => {
         running = null;
@@ -175,6 +183,8 @@ export function useDraftSession(): PlaySession {
         if (alive) render();
       },
     });
+    // True while the found services are being written in, which is not the person's pick.
+    let filling = false;
     const edit = (document: PlayDraftDocument) => {
       if (review.state().starting || review.state().uncertain || review.state().created) return;
       review.invalidate(
@@ -188,6 +198,9 @@ export function useDraftSession(): PlaySession {
         view: current.view ? { ...current.view, review: null } : null,
         status:
           current.status === "conflict" || current.status === "error" ? current.status : "unsaved",
+        fillServices:
+          current.fillServices &&
+          (filling || servicesOf(document) === servicesOf(current.document)),
       });
       cancelTimer();
       if (
@@ -205,23 +218,35 @@ export function useDraftSession(): PlaySession {
           void flush();
         }, 500);
     };
-    // A draft just made from a template (still its first saved version, untouched here) gets
-    // the writer and image service the first launch found, else the ones whose key is saved,
-    // where the template names none, and keeps them: they are saved with it. What arrives
-    // later fills what is still empty, as long as nothing but these fills changed the draft.
-    let filled: { readonly id: string | null; readonly edited: number } | null = null;
-    const fillTemplateProviders = (defaults?: FreshProviderDefaults) => {
+    // The fresh form and a draft just made from a template get the writer, voice and image
+    // service the first launch found, else the ones whose key is saved, wherever none is picked
+    // yet, and keep them: they are saved with it. What arrives late (the model lists answer
+    // after the person started typing the topic) still fills what is empty, until the person
+    // picks a service in that draft. The fresh form untouched is filled without being saved.
+    const fillServices = (defaults?: FreshProviderDefaults) => {
       const current = state.current;
-      if (current.document.templateSource === undefined) return;
-      const onlyFilled =
-        filled !== null && filled.id === current.id && filled.edited === current.clock.edited;
-      if (!onlyFilled && (current.view?.draft.version !== 1 || current.clock.edited > 0)) return;
+      if (!current.fillServices) return;
       const document = withProviderDefaults(current.document, templateProviderDefaults(defaults));
       if (document === current.document) return;
-      edit(document);
-      filled = { id: state.current.id, edited: state.current.clock.edited };
+      if (current.id === null && current.clock.edited === 0) {
+        publish({ document });
+        return;
+      }
+      filling = true;
+      try {
+        edit(document);
+      } finally {
+        filling = false;
+      }
     };
-    const open = async (id: string, isCurrent: () => boolean = () => true): Promise<boolean> => {
+    // `carry` takes along what was typed in the draft being left (the topic) into the one
+    // opened: what is typed while the opened draft is read is then kept rather than lost, and
+    // does not stop it from opening.
+    const open = async (
+      id: string,
+      isCurrent: () => boolean = () => true,
+      carry?: (typed: PlayDraftDocument, opened: PlayDraftDocument) => PlayDraftDocument,
+    ): Promise<boolean> => {
       if (review.state().starting || review.state().uncertain || review.state().created)
         return false;
       if ((state.current.id !== id || state.current.status !== "conflict") && !(await flush()))
@@ -232,15 +257,26 @@ export function useDraftSession(): PlaySession {
       cancelTimer();
       try {
         const reply = await readPlayDraft(api, id);
-        if (selected !== operation || generation !== state.current.clock.edited || !isCurrent())
-          return false;
+        if (selected !== operation || !isCurrent()) return false;
+        if (generation !== state.current.clock.edited && carry === undefined) return false;
         if (!accept(reply)) {
           if (!state.current.id) publish({ recoveryId: id });
           return false;
         }
+        // A save of the draft being left that typing started meanwhile lands before the
+        // opened one takes the page; nothing is awaited between reading the typed text and
+        // installing, so no keystroke falls between them.
+        while (running) await running;
+        if (selected !== operation || !isCurrent()) return false;
+        cancelTimer();
+        const typed = state.current.document;
         fork = null;
         install(reply.value);
-        fillTemplateProviders();
+        if (carry !== undefined) {
+          const carried = carry(typed, reply.value.draft.document);
+          if (carried !== reply.value.draft.document) edit(carried);
+        }
+        fillServices();
         await refreshDraftChoices(api, queryClient);
         return isCurrent();
       } catch (error) {
@@ -335,12 +371,16 @@ export function useDraftSession(): PlaySession {
         forking = false;
       }
     };
-    const navigate = async (section: PlaySection, field?: string): Promise<void> => {
+    const navigate = async (
+      section: PlaySection,
+      field?: string,
+      options?: { readonly reveal?: boolean },
+    ): Promise<void> => {
       const selected = operation;
       const next = { ...state.current.document, section };
       if (state.current.id || state.current.clock.edited > 0) edit(next);
       else publish({ document: next });
-      if (!(await flush()) || selected !== operation) return;
+      if (!(await flush()) || selected !== operation || options?.reveal === false) return;
       publish({
         reveal: {
           section,
@@ -363,21 +403,23 @@ export function useDraftSession(): PlaySession {
         return created;
       },
       edit,
+      latest: () => state.current.document,
       flush,
       open,
       newDraft,
-      // Defaults that arrive after Play opened fill a draft nobody has touched yet, without
-      // saving it: it is still the fresh form, only with the found providers picked. A draft
-      // just made from a template gets them too, saved.
-      adoptDefaults: (defaults: FreshProviderDefaults) => {
+      // Defaults that arrive after Create opened fill what is still empty in the fresh form or
+      // in a draft just made from a template (see fillServices).
+      adoptDefaults: fillServices,
+      // Holds the fresh form's first save while the starter template is on its way; let go,
+      // what was typed meanwhile is saved.
+      holdFresh: (hold: boolean) => {
+        if (holding === hold) return;
+        holding = hold;
         const current = state.current;
-        if (current.id !== null || current.view !== null) {
-          fillTemplateProviders(defaults);
+        if (hold || current.id !== null || current.clock.edited === current.clock.acknowledged)
           return;
-        }
-        if (current.clock.edited > 0) return;
-        const document = withProviderDefaults(current.document, defaults);
-        if (document !== current.document) publish({ document });
+        drainRequested = false;
+        void begin();
       },
       // The channel picked in the sidebar becomes a fresh draft's channel, the same way and with
       // the same guard: a draft somebody typed in, opened or made from a template keeps its own.
@@ -441,11 +483,13 @@ export function useDraftSession(): PlaySession {
     reveal: current.reveal,
     restored: current.restored?.id === current.id ? current.restored : undefined,
     edit: owner.edit,
+    latest: owner.latest,
     flush: owner.flush,
     open: owner.open,
     generation: owner.generation,
     newDraft: owner.newDraft,
     adoptDefaults: owner.adoptDefaults,
+    holdFresh: owner.holdFresh,
     adoptChannel: owner.adoptChannel,
     discard: owner.discard,
     saveAsNew: owner.saveAsNew,
@@ -455,17 +499,15 @@ export function useDraftSession(): PlaySession {
 }
 
 // The writer and image service this machine's first launch found, read once and handed to the
-// session: a fresh draft and a draft just made from a template start with them picked. For a
-// kind the first launch found nothing of, a draft made from a template takes the first service
-// of that kind that answers (a key saved in Settings), with its first listed model; those lists
-// are asked for only while `templates` says a template-made draft is open or on its way. Such a
-// draft whose voice service can't read here takes a saved voice of one that can (a keyed
-// service first, the computer's own voice last), with that service's first model. True once
-// every answer (or a failure) has arrived.
-export function useFirstRunDefaults(
-  session: Pick<PlaySession, "adoptDefaults">,
-  templates: boolean,
-): boolean {
+// session: the fresh form and a draft just made from a template start with them picked. For a
+// kind the first launch found nothing of, they take the first service of that kind that
+// answers (a key saved in Settings, a tool installed), with the model a first short would pick
+// for it (`preferredModel`), else its first listed one. A draft
+// whose voice service can't read here takes a saved voice of one that can (a keyed service
+// first, the computer's own voice last), with that service's first model. True once every
+// answer (or a failure) has arrived and the session has taken them, so what Create decides on
+// arrival (which row opens) reads the draft with them filled in.
+export function useFirstRunDefaults(session: Pick<PlaySession, "adoptDefaults">): boolean {
   const { api } = useApp();
   const status = useQuery({
     queryKey: upkeepKeys.firstRun,
@@ -474,12 +516,12 @@ export function useFirstRunDefaults(
     staleTime: Number.POSITIVE_INFINITY,
   });
   const providers = useQuery(providersQuery(api));
-  const voices = useQuery({ ...voicesQuery(api), enabled: templates });
+  const voices = useQuery(voicesQuery(api));
   const found = status.data?.defaults;
   const known =
     (status.isSuccess || status.isError) &&
-    (!templates ||
-      ((providers.isSuccess || providers.isError) && (voices.isSuccess || voices.isError)));
+    (providers.isSuccess || providers.isError) &&
+    (voices.isSuccess || voices.isError);
   const readyOf = (family: ProviderFamily): string | undefined =>
     providers.data?.providers.find(
       (provider) => provider.family === family && readiness(provider).ok,
@@ -490,13 +532,12 @@ export function useFirstRunDefaults(
   const readable = (voices.data?.voices ?? []).filter((voice) =>
     voiceServices.includes(voice.provider),
   );
-  const voice =
-    templates && known
-      ? (readable.find((one) => one.provider !== systemVoiceProvider) ?? readable[0])
-      : undefined;
+  const voice = known
+    ? (readable.find((one) => one.provider !== systemVoiceProvider) ?? readable[0])
+    : undefined;
   const spare = {
-    llm: templates && known && found?.llm === undefined ? readyOf("llm") : undefined,
-    images: templates && known && found?.images === undefined ? readyOf("image") : undefined,
+    llm: known && found?.llm === undefined ? readyOf("llm") : undefined,
+    images: known && found?.images === undefined ? readyOf("image") : undefined,
     audio: voice?.provider,
   };
   const asked = [spare.llm, spare.images, spare.audio].filter((id) => id !== undefined);
@@ -511,8 +552,18 @@ export function useFirstRunDefaults(
     if (provider === undefined) return undefined;
     const list = lists[asked.indexOf(provider)]?.data;
     if (list === undefined) return undefined;
-    const model = pickerEntries(list.models, list.standings, "", list.standings === undefined)
-      .entries[0]?.model.id;
+    // The model the first short picks for the same service, so the row names the same one
+    // whichever way the service was found ("Sonnet 5.5", not the first listed).
+    const listed = pickerEntries(
+      list.models,
+      list.standings,
+      "",
+      list.standings === undefined,
+    ).entries;
+    const model = preferredModel(
+      provider,
+      listed.map((entry) => entry.model),
+    )?.id;
     return model === undefined ? undefined : { provider, model };
   };
   const reader = choice(spare.audio);
@@ -530,6 +581,7 @@ export function useFirstRunDefaults(
       })
     : undefined;
   const { adoptDefaults } = session;
+  const [taken, setTaken] = useState<string | undefined>(undefined);
   useEffect(() => {
     if (handOver === undefined) return;
     const { found, ready } = JSON.parse(handOver) as {
@@ -539,6 +591,7 @@ export function useFirstRunDefaults(
     setReadyServices(ready);
     setFreshProviderDefaults(found);
     adoptDefaults?.(found);
+    setTaken(handOver);
   }, [handOver, adoptDefaults]);
-  return settled;
+  return settled && taken === handOver;
 }

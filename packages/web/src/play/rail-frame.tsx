@@ -47,7 +47,6 @@ export const RailName = createContext<string | undefined>(undefined);
 export function StageRail({
   kind,
   name,
-  dim,
   titled = true,
   bare = false,
   source,
@@ -56,7 +55,6 @@ export function StageRail({
 }: {
   readonly kind: StageKind;
   readonly name: string;
-  readonly dim: boolean;
   readonly titled?: boolean | undefined;
   // No name and no switch: only the stage's settings (RailProps `bare`).
   readonly bare?: boolean | undefined;
@@ -80,9 +78,9 @@ export function StageRail({
         >
           {titled ? (
             <>
-              {/* The name stays in full ink while the stage is off: a grey name beside its glyph
-                  (Research's magnifier) read as an empty search box. The switch says Off. */}
-              <StageGlyph kind={kind} className={dim ? "text-ink-3" : "text-ink-2"} />
+              {/* Never dimmed when the stage is off: a grey name beside its glyph (Research's
+                  magnifier) read as an empty search box. The switch beside it says Off. */}
+              <StageGlyph kind={kind} className="text-ink-2" />
               <h3 id={nameId} className="m-0 text-title-3">
                 {name}
               </h3>

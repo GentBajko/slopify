@@ -236,7 +236,9 @@ describe("clicks from the landing screen to done", () => {
     await waitFor(() => expect(created).toHaveBeenCalledWith("p1"));
 
     expect(you.clicks()).toBeLessThanOrEqual(clickBudget.makeVideo);
-    expect(you.clicks()).toBe(3);
+    // Create, then Make the video: the topic box has the cursor on arrival, so typing the
+    // topic costs no click.
+    expect(you.clicks()).toBe(2);
   });
 
   it("queues a video from another template: pick it, type the topic, press Make", async () => {

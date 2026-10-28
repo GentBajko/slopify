@@ -36,20 +36,40 @@ function stable(value: unknown): string {
 // The services a template may leave empty, for Create to fill from what this computer has.
 const services = new Set(["llm", "audio", "images"]);
 
+// What Create fills an empty service with (the first launch's find, else the ready one).
+export interface ServiceFills {
+  readonly llm?: { readonly provider: string; readonly model: string } | undefined;
+  readonly images?: { readonly provider: string; readonly model: string } | undefined;
+  readonly audio?:
+    | { readonly provider: string; readonly model: string; readonly voice: string }
+    | undefined;
+}
+
 // A service the template left empty, or picked but can't use here (no key saved), that the
 // draft filled (from the first launch, or a key saved in Settings) is still the template's:
-// the person changed nothing. Its other settings (a voice's glossary switches) still count.
+// the person changed nothing. One the person picked instead of the fill is their change. Its
+// other settings (a voice's glossary switches) still count.
 function serviceOf(
   field: string,
   form: Form,
   template: Form,
   unusable: (service: string) => boolean,
+  fills: ServiceFills = {},
 ): unknown {
   const value = at(form, [field]);
   const left = at(template, [field, "provider"]);
   const filled = left === undefined || left === "" || (typeof left === "string" && unusable(left));
   if (!services.has(field) || !filled) return value;
   if (typeof value !== "object" || value === null) return value;
+  const fill = fills[field as keyof ServiceFills];
+  const chosen = value as Readonly<Record<string, unknown>>;
+  const own =
+    fill !== undefined &&
+    chosen.provider !== "" &&
+    (chosen.provider !== fill.provider ||
+      chosen.model !== fill.model ||
+      ("voice" in fill && chosen.voice !== fill.voice));
+  if (own) return value;
   const {
     provider: _provider,
     model: _model,
@@ -65,13 +85,15 @@ export function rowOrigin(
   template: { readonly form: Form; readonly channelId?: string | undefined },
   // Whether a service can't be used on this computer, as Create's rows say it.
   unusable: (service: string) => boolean = () => false,
+  // What Create fills an empty or unusable service with, to tell the person's own pick from it.
+  fills: ServiceFills = {},
 ): RowOrigin {
   const fields = row === "title" ? ["title"] : rowFields(row);
   const same = fields.every((field) => {
     if (field === "channelId") return draft.channelId === template.channelId;
     if (services.has(field))
       return (
-        stable(serviceOf(field, draft.form, template.form, unusable)) ===
+        stable(serviceOf(field, draft.form, template.form, unusable, fills)) ===
         stable(serviceOf(field, template.form, template.form, unusable))
       );
     const path = field.split(".");

@@ -128,6 +128,10 @@ function imageModel(): HTMLElement {
 }
 
 // Mounts Play on a fresh draft, or on `start` (a complete generated run is `generatedRun`).
+// The hint under the rail's Make button.
+const hint = (text: string): HTMLElement =>
+  within(screen.getByRole("region", { name: "Start" })).getByText(text);
+
 async function mount(
   over: Readonly<Record<string, Answer>> = {},
   start?: PlayDraftDocument,
@@ -163,9 +167,10 @@ function reviewDrawer(): HTMLElement {
 describe("tutorial completion from the Play form", () => {
   it("tracks valid stage choices and keywords, and emits creation before leaving the form", async () => {
     const created = await mount();
+    // The voice whose service has a key is picked by itself; the rest waits for the person.
     expect(tutorial.progress.mock.lastCall?.[0]).toEqual({
       playArticleReady: false,
-      playAudioReady: false,
+      playAudioReady: true,
       playImagesReady: false,
       playVideoReady: true,
       playSubtitlesReady: true,
@@ -263,11 +268,19 @@ describe("the Make button and its hint", () => {
     await openRow("Title and keywords");
     await fill(screen.getByLabelText("topic"), "rope");
     await fill(screen.getByLabelText("minWords"), "3000");
+    // The writer, the voice and the image service that answer here were picked by Create, so
+    // the image prompt is next.
+    expect(screen.getByText("Tick an image prompt first")).not.toBeNull();
+
+    // Unpicked by the person, each is asked for again, in the order of the rows.
+    await pick("Read by Service", "");
+    expect(hint("Pick a voice service first")).not.toBeNull();
+    await pick("Written by Service", "");
     expect(screen.getByText("Pick a service and model to write the text first")).not.toBeNull();
 
     await pick("Written by Service", "claude-code");
     await pick("Written by Model", "sonnet");
-    expect(screen.getByText("Pick a voice service first")).not.toBeNull();
+    expect(hint("Pick a voice service first")).not.toBeNull();
 
     await pick("Read by Service", "elevenlabs");
     await pick("Read by Model", "eleven_multilingual_v2");

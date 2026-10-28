@@ -1,10 +1,10 @@
 import { render } from "@app/slices/admission/substitute.js";
 import type { DraftSummary } from "@app/slices/play-drafts/model.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDownIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { ChevronDownIcon, PlusIcon } from "lucide-react";
 import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
-import { Button, IconButton } from "@/components/kit/button";
+import { Button } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { List, ListRow } from "@/components/kit/list-row";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/kit/popover";
@@ -38,7 +38,12 @@ const saved: Readonly<Record<string, string>> = {
 // "Draft: Untitled ▾" in Create's header: the draft being set up, and a menu with whether it
 // is saved, New draft, and the saved drafts to open again or delete. Only a draft that could
 // not be saved, or was changed in another tab, says so beside it, with the way out.
-export function DraftList(): ReactElement {
+export function DraftList({
+  onSaveTemplate,
+}: {
+  // On a phone, Save as template sits in this menu rather than in the page header.
+  readonly onSaveTemplate?: () => void;
+} = {}): ReactElement {
   const { api } = useApp();
   const session = usePlaySession();
   const queryClient = useQueryClient();
@@ -120,7 +125,7 @@ export function DraftList(): ReactElement {
       ) : null}
       <Popover open={menu} onOpenChange={setMenu}>
         <PopoverTrigger asChild>
-          <Button variant="quiet" className="max-w-[280px]">
+          <Button variant="quiet" className="min-w-0 max-w-[280px]">
             <span className="truncate">Draft: {name}</span>
             <ChevronDownIcon aria-hidden="true" className="size-4 shrink-0" />
           </Button>
@@ -130,16 +135,30 @@ export function DraftList(): ReactElement {
             <p role="status" className="m-0 text-small text-ink-2">
               {saved[session.status]}
             </p>
-            <Button
-              size="small"
-              onClick={() => {
-                setMenu(false);
-                void session.newDraft();
-              }}
-            >
-              <PlusIcon aria-hidden="true" strokeWidth={1.75} />
-              New draft
-            </Button>
+            <div className="flex flex-wrap justify-end gap-2">
+              {onSaveTemplate === undefined ? null : (
+                <Button
+                  variant="quiet"
+                  size="small"
+                  onClick={() => {
+                    setMenu(false);
+                    onSaveTemplate();
+                  }}
+                >
+                  Save as template
+                </Button>
+              )}
+              <Button
+                size="small"
+                onClick={() => {
+                  setMenu(false);
+                  void session.newDraft();
+                }}
+              >
+                <PlusIcon aria-hidden="true" strokeWidth={1.75} />
+                New draft
+              </Button>
+            </div>
           </div>
           {list.isPending ? (
             <p role="status" className="m-0 border-t border-line px-3 py-2">
@@ -163,34 +182,42 @@ export function DraftList(): ReactElement {
             </p>
           ) : null}
           {list.data?.length ? (
-            // The title opens the draft; Delete sits on the row.
-            <List label="Saved drafts" className="max-h-72 overflow-y-auto">
+            // The title (with the topic typed in) opens the draft; Delete sits on the same line,
+            // so eight or more fit.
+            <List label="Saved drafts" className="max-h-80 overflow-y-auto">
               {list.data.map((draft) => {
                 const title = draftName({ title: draft.title, values: {} });
+                const named = title === "Untitled" ? "Untitled draft" : title;
+                const open = draft.id === session.activeId;
                 return (
                   <ListRow
                     key={draft.id}
-                    title={title === "Untitled" ? "Untitled draft" : title}
+                    className="grid-cols-[minmax(0,1fr)_auto] gap-2 px-3 py-1.5"
+                    title={named}
                     onSelect={() => {
                       setMenu(false);
                       void session.open(draft.id);
                     }}
                     meta={
-                      <time dateTime={draft.updatedAt} title={exactTime(draft.updatedAt)}>
-                        Last edited {startedAt(draft.updatedAt)}
-                      </time>
+                      <>
+                        {open ? "Open now · " : null}
+                        <time dateTime={draft.updatedAt} title={exactTime(draft.updatedAt)}>
+                          Last edited {startedAt(draft.updatedAt)}
+                        </time>
+                      </>
                     }
                     actions={
-                      <IconButton
+                      <Button
+                        variant="quiet"
                         size="small"
-                        label={`Delete ${title === "Untitled" ? "Untitled draft" : title}`}
+                        aria-label={`Delete ${named}`}
                         onClick={() => {
                           setConfirm(draft);
                           setError(null);
                         }}
                       >
-                        <Trash2Icon aria-hidden="true" />
-                      </IconButton>
+                        Delete
+                      </Button>
                     }
                   >
                     {draft.readable ? null : (

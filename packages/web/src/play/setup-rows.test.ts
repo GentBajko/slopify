@@ -58,6 +58,12 @@ describe("each setup row's one sentence", () => {
     expect(summary("article", { articlePrompt: "", llm: { provider: "", model: "" } })).toBe(
       "No article prompt picked yet. No writing service picked yet.",
     );
+    // Until the service's model list arrives, the row names the service, never a raw id.
+    expect(
+      rowSummary("article", form, { ...context, modelName: () => null }).startsWith(
+        "Written by Claude Code CLI from",
+      ),
+    ).toBe(true);
     expect(summary("article", { sources: { ...form.sources, article: "provide" } })).toBe(
       "Your own text, used as written.",
     );

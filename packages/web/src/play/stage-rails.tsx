@@ -37,7 +37,6 @@ export function ResearchRail({ form, problem, update }: RailProps) {
     <StageRail
       kind="research"
       name="Research"
-      dim={form.sources.research === "off"}
       source={<SourceSwitch kind="research" form={form} update={update} />}
       note={
         form.sources.research === "generate"
@@ -67,7 +66,6 @@ export function ArticleRail({ form, prompts, problem, update, titled }: RailProp
     <StageRail
       kind="article"
       name="Article"
-      dim={false}
       titled={titled}
       source={<ArticleTaskSwitch form={form} update={update} />}
     >
@@ -249,7 +247,6 @@ export function VideoRail({ form, update, titled }: Pick<RailProps, "form" | "up
     <StageRail
       kind="video"
       name="Video"
-      dim={form.sources.video === "off"}
       titled={titled}
       source={<SourceSwitch kind="video" form={form} update={update} />}
       note={note}
@@ -462,6 +459,7 @@ export function NumberField({
   field,
   label,
   tip,
+  help,
   placeholder,
   step,
   problem,
@@ -471,6 +469,8 @@ export function NumberField({
   readonly field: string;
   readonly label: string;
   readonly tip?: HelpId | undefined;
+  // One visible sentence under the box, in place of the info button.
+  readonly help?: string | undefined;
   readonly placeholder?: string | undefined;
   readonly step: number;
   readonly problem: string | undefined;
@@ -478,7 +478,7 @@ export function NumberField({
   readonly onChange: (value: string) => void;
 }) {
   return (
-    <LabelledField label={label} tip={tip} problem={problem}>
+    <LabelledField label={label} tip={tip} help={help} problem={problem}>
       {({ id, describedBy }) => (
         <Input
           id={id}

@@ -42,10 +42,15 @@ export function TextGeneration({
           problem("llm.model") ??
           (form.llm.provider !== "" && problem("llm") ? "Pick a model." : undefined)
         }
+        fillModel
         onService={(provider) => update({ llm: { provider, model: "" } })}
         onModel={(model) => update({ llm: { ...form.llm, model } })}
       >
-        <ThinkingPicker choice={form.llm} onChange={(llm) => update({ llm })} />
+        <ThinkingPicker
+          choice={form.llm}
+          help="How long the model thinks before it writes: higher is more careful, and slower."
+          onChange={(llm) => update({ llm })}
+        />
       </ServiceGroup>
     </section>
   );

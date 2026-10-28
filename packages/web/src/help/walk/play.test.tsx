@@ -31,7 +31,7 @@ const areaAllow: readonly (string | RegExp)[] = [
   "Start from",
   "For channel",
   // The box Another topic opens: "Topic of another video".
-  / of another (video|article|audiobook|episode|image set)$/,
+  / of another (video|article|audiobook|episode|set of images)$/,
 ];
 
 function expectExplained(): void {

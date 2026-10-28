@@ -104,18 +104,6 @@ export const playHelp = {
     tutorial: { page: "Create-Images", anchor: "more-images-for-long-videos" },
   },
 
-  // Video and style row
-  "play.edge-silence": {
-    title: "Silence at start and end",
-    body: "Quiet time before the narration starts and after it ends, 0 to 30 seconds. Default: 2.",
-    tutorial: { page: "Create-Video-and-Style", anchor: "images-and-cuts" },
-  },
-  "play.silence-gap": {
-    title: "Silence between segments",
-    body: "Seconds of quiet between the intro and the narration, and between the narration and the outro, 0 to 30. It only matters when an intro or outro is set. Leave it empty to use the gap set in Settings, 3 seconds unless you changed it.",
-    tutorial: { page: "Create-Narration", anchor: "silence-at-the-edges-and-between-segments" },
-  },
-
   // Outputs row
   "play.thumbnail-prompt": {
     title: "Thumbnail prompt",

@@ -213,7 +213,7 @@ function SoundPolish({
             <NumberField
               field="edgeSilenceSeconds"
               label="Silence at start and end (seconds)"
-              tip="play.edge-silence"
+              help="Quiet before the narration starts and after it ends, 0 to 30."
               step={0.5}
               problem={problem("edgeSilenceSeconds")}
               {...timing("edgeSilenceSeconds")}
@@ -221,7 +221,7 @@ function SoundPolish({
             <NumberField
               field="silenceGapSeconds"
               label="Silence between segments (seconds)"
-              tip="play.silence-gap"
+              help={`Between the intro, the narration and the outro; empty uses Settings' ${String(silenceGapSeconds)} s.`}
               placeholder={String(silenceGapSeconds)}
               step={0.1}
               problem={problem("silenceGapSeconds")}

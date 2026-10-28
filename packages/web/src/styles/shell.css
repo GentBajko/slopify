@@ -839,6 +839,16 @@
     flex-direction: column;
     align-items: flex-start;
   }
+  /* A header whose title and actions share one line on a phone (Create: the title and the
+     Draft menu), instead of the actions wrapping under a title that claims the whole width. */
+  @media (max-width: 767px) {
+    .sl-page-header--one-line {
+      flex-wrap: nowrap;
+    }
+    .sl-page-header--one-line .sl-page-header__lead {
+      flex-basis: auto;
+    }
+  }
   .sl-page-header__meta {
     margin: 0;
     min-width: 0;

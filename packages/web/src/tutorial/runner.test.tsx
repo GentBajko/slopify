@@ -185,11 +185,10 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     await next(user, "play-keywords");
     await fill(user, "topic", "Albanian mountains");
     await next(user, "play-audio");
-    expect(nextHeld()).toBe(true);
-    await user.selectOptions(screen.getByLabelText("Read by Service"), "elevenlabs");
-    await user.selectOptions(screen.getByLabelText("Read by Model"), "eleven_multilingual_v2");
-    expect(nextHeld()).toBe(true);
-    await user.selectOptions(screen.getByLabelText("Voice"), "narrator-1");
+    // The saved voice whose service has a key is picked by Create itself, so this step is
+    // already answered.
+    expect((screen.getByLabelText("Voice") as HTMLSelectElement).value).toBe("narrator-1");
+    expect(nextHeld()).toBe(false);
     await next(user, "play-images");
     expect(nextHeld()).toBe(true);
     await user.selectOptions(screen.getByLabelText("Images by Service"), "fal");
@@ -259,7 +258,8 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     ).toHaveLength(1);
     await act(() => router.navigate({ to: "/play" }));
     expect(((await screen.findByLabelText(topicLabel)) as HTMLInputElement).value).toBe("");
-    const articlePrompts = screen.getByRole("radiogroup", { name: "Article prompt" });
+    // The Article row opens once the services that answer here are filled in.
+    const articlePrompts = await screen.findByRole("radiogroup", { name: "Article prompt" });
     expect(within(articlePrompts).queryByRole("radio", { checked: true })).toBeNull();
     // About 2.5 s alone; under the full suite's load it reaches about 6 s.
   }, 20000);

@@ -101,17 +101,16 @@ export function estimateRun(
   const tts = draft.audio ?? { provider: "", model: "" };
   const image = draft.images ?? { provider: "", model: "" };
   const textNote = isLocalCliProvider(llm.provider)
-    ? "Runs on your CLI plan, so it adds no charge; the API figure is what the same tokens would cost through the API."
+    ? "Runs on your subscription at no extra charge; the API figure is what the same work would cost through the API."
     : (data.llm.find(
         (model) =>
           model.provider === llm.provider &&
           model.id === llm.model &&
           model.enabled &&
           !model.deprecated,
-      )?.pricing.note ??
-      "CLI subscription or model pricing is unavailable; usage may be billed by your account.");
+      )?.pricing.note ?? "No price is listed for this model; your account may be billed for it.");
   const imageNote = isLocalCliProvider(image.provider)
-    ? "Runs on your Codex plan, so it adds no charge; no API price is given for agent-drawn images."
+    ? "Runs on your Codex subscription at no extra charge."
     : (data.image.find(
         (model) =>
           model.provider === image.provider &&
@@ -185,14 +184,14 @@ export function estimateRun(
     if (blocks === undefined)
       requests.push({
         kind: "unknown",
-        stage: "Narration descriptions",
+        stage: "Describing tables and figures",
         detail:
           "One AI call per table, figure, equation or code block in the article; how many is known once the article is written.",
       });
     else
       for (const block of blocks)
         text(
-          "Narration descriptions",
+          "Describing tables and figures",
           describeMessages(block, rendered.narration ?? "", draft.language).reduce(
             (n, message) => n + message.content.length,
             0,
@@ -236,7 +235,7 @@ export function estimateRun(
           );
       requests.push({
         kind: "unknown",
-        stage: "Delivery cue overhead",
+        stage: "Delivery cues",
         detail:
           "The voice service charges per character, delivery tags included; their length is known after preparation.",
       });
@@ -362,7 +361,10 @@ export function estimateRun(
   else local("Thumbnail", "Provided or off.");
   if (draft.sources.thumbnail === "prompt_by_llm")
     text("Thumbnail prompt", promptChars + articleChars, 1200);
-  local("Export / subtitles", "Local processing; no API fee.");
+  // Putting it together on this computer: the video (with its captions), or the sound alone.
+  if (draft.sources.video === "generate") local("Video", "Made on this computer; no API fee.");
+  else if (draft.sources.audio !== "off")
+    local("Audio export", "Made on this computer; no API fee.");
   // The timed transcript is the narration with a time before every passage of about 20 s,
   // plus the fixed rules of the answer.
   if (usesYoutubeDescription(draft))
@@ -478,7 +480,7 @@ export function estimateRun(
         });
     }
   if (sourceOf(draft.sources, "document") === "generate")
-    local("Document", "Laid out locally from the article; no API fee.");
+    local("PDF", "Laid out on this computer from the article; no API fee.");
   return {
     ...groupEstimateRows(estimateRequests(requests, data)),
     expectedWords,

@@ -115,8 +115,12 @@ it("offers seconds per image only for a video and the edge silence only with nar
   expect(screen.queryByLabelText("Zoom (%)")).toBeNull();
   expect(screen.queryByLabelText("Motion")).toBeNull();
   expect(screen.getByLabelText("Silence at start and end (seconds)")).toBeDefined();
+  // Said in one visible line under the box, not in an info button.
   expect(
-    screen.getByRole("button", { name: "About Silence at start and end (seconds)" }),
+    screen.queryByRole("button", { name: "About Silence at start and end (seconds)" }),
+  ).toBeNull();
+  expect(
+    screen.getByText("Quiet before the narration starts and after it ends, 0 to 30."),
   ).toBeDefined();
 });
 

@@ -13,7 +13,12 @@ export type DraftSaveStatus = "unsaved" | "saving" | "saved" | "error" | "confli
 export type { PlaySection } from "./sections";
 export interface PlayNavigation {
   readonly section: PlaySection;
-  readonly navigate: (section: PlaySection, field?: string) => Promise<void>;
+  // `reveal: false` only moves to the section (closing the summary), opening nothing.
+  readonly navigate: (
+    section: PlaySection,
+    field?: string,
+    options?: { readonly reveal?: boolean },
+  ) => Promise<void>;
 }
 export interface RevealRequest {
   readonly section: PlaySection;
@@ -22,7 +27,7 @@ export interface RevealRequest {
 }
 export interface PlaySession extends PlayNavigation {
   readonly review: import("./review-state").ReviewState;
-  readonly reviewDraft: () => Promise<void>;
+  readonly reviewDraft: (options?: { readonly quiet?: boolean }) => Promise<void>;
   readonly startRun: () => Promise<void>;
   readonly invalidateReview: (clearFields?: boolean) => void;
   readonly takeCreated: () => PlayStartResult | null;
@@ -43,12 +48,23 @@ export interface PlaySession extends PlayNavigation {
   readonly restored?: { readonly id: string; readonly updatedAt: string } | undefined;
   readonly attach: (slot: UploadSlot, files: readonly File[], replaceId?: string) => Promise<void>;
   readonly edit: (document: PlayDraftDocument) => void;
+  // The draft as it is now, with edits and fills not drawn yet: what a change made from the
+  // last drawing of the page applies to, so it never undoes them.
+  readonly latest?: () => PlayDraftDocument;
   readonly flush: () => Promise<boolean>;
-  readonly open: (id: string, isCurrent?: () => boolean) => Promise<boolean>;
+  readonly open: (
+    id: string,
+    isCurrent?: () => boolean,
+    // Takes what was typed in the draft being left into the opened one (the topic).
+    carry?: (typed: PlayDraftDocument, opened: PlayDraftDocument) => PlayDraftDocument,
+  ) => Promise<boolean>;
   readonly generation: () => number;
   readonly newDraft: () => Promise<void>;
-  // Picks the providers the first launch found, on a fresh draft nobody has edited.
+  // Picks the services the first launch found (else the ready ones) wherever none is picked,
+  // on the fresh form and on a draft just made from a template.
   readonly adoptDefaults?: (defaults: import("./draft-state").FreshProviderDefaults) => void;
+  // Holds the fresh form's first save while the starter template is on its way.
+  readonly holdFresh?: (hold: boolean) => void;
   // Makes the sidebar's channel a fresh, untouched draft's channel.
   readonly adoptChannel?: (channelId: string) => void;
   readonly discard: (target: { readonly id: string; readonly version: number }) => Promise<void>;

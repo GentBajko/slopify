@@ -46,8 +46,8 @@ export function estimateRequests(
     catalogueDate: catalogue.updatedAt,
     assumptions: [
       "Planning estimate, not a spending limit. Generated lengths use a ±50% range; actual output can exceed it.",
-      "Assumes roughly 6 characters per word, 4 characters per token, and 150 spoken words per minute.",
-      "Retries, extra reasoning tokens, web tools, taxes, discounts and included credits are excluded. Unknown charges are not counted as zero.",
+      "Assumes about 6 letters per word and 150 spoken words a minute.",
+      "Retries, extra thinking, web search, taxes, discounts and included credits are not counted. A charge with no listed price is not counted as zero.",
     ],
   };
 }
@@ -123,8 +123,8 @@ function onPlan(
     detail:
       request.detail ??
       (amount === null
-        ? "Runs on your CLI plan, so it adds no charge; no API price is listed for this model."
-        : `Runs on your CLI plan, so it adds no charge; priced as ${api?.name ?? "the API model"} through the API.`),
+        ? "Runs on your subscription at no extra charge; no API price is listed for this model."
+        : `Runs on your subscription at no extra charge; through the API it would cost what ${api?.name ?? "the API model"} costs.`),
     onPlan: true,
     apiLow: amount === null ? null : amount * 0.5,
     apiHigh: amount === null ? null : amount * 1.5,

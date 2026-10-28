@@ -57,11 +57,18 @@ export function SaveTemplateDialog({
   const notes = oneOffNotes(document.form.title, document.form.values, document.variants.length);
   const close = (): void => {
     setError(null);
+    setUnnamed(false);
     onClose();
   };
+  // Said under the name once Save is pressed without one, rather than a greyed button.
+  const [unnamed, setUnnamed] = useState(false);
   const save = async (): Promise<void> => {
     const trimmed = name.trim();
-    if (trimmed === "" || pending) return;
+    if (pending) return;
+    if (trimmed === "") {
+      setUnnamed(true);
+      return;
+    }
     setPending(true);
     setError(null);
     try {
@@ -107,7 +114,7 @@ export function SaveTemplateDialog({
         if (!next) close();
       }}
       title="Save as template"
-      description="Saves these settings as a new template. Projects you start from it and schedules that use it take its settings; videos already made stay as they are. Schedules take each new version at once until you approve one in Edit template (More → Approve for schedules); after that, new versions wait for your approval."
+      description="Saves these settings under a name, to start new videos from with Start from."
       footer={
         <>
           <Button variant="secondary" onClick={close}>
@@ -115,8 +122,8 @@ export function SaveTemplateDialog({
           </Button>
           <Button
             variant="primary"
-            disabled={name.trim() === "" || pending}
-            disabledReason={pending ? "Saving the template" : "Name the template first"}
+            disabled={pending}
+            disabledReason="Saving the template"
             onClick={() => void save()}
           >
             Save template
@@ -131,12 +138,17 @@ export function SaveTemplateDialog({
           void save();
         }}
       >
-        <Field label="Template name" tip="play.template-name">
+        <Field
+          label="Template name"
+          help="Listed under Start from and in Templates."
+          error={unnamed && name.trim() === "" ? "Name the template first." : undefined}
+        >
           <Input
             autoFocus
             value={name}
             maxLength={templateNameMax}
             placeholder={document.form.title.replace(/\{\{[^}]*\}\}/g, "").trim() || "My template"}
+            aria-invalid={unnamed && name.trim() === ""}
             onChange={(event) => setName(event.target.value)}
           />
         </Field>

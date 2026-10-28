@@ -129,8 +129,10 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
   const latest = useRef(legacy);
   latest.current = legacy;
   const update = useCallback((action: SetStateAction<PlayFormState>) => {
-    const before = current.current.document;
-    const next = typeof action === "function" ? action(latest.current) : action;
+    // The draft as it is now: a fill or a key typed since the page was last drawn is in it.
+    const before = current.current.latest?.() ?? current.current.document;
+    const base = latest.current;
+    const next = typeof action === "function" ? action(base) : action;
     latest.current = next;
     const rawNumber = (value: number | undefined, raw: string) =>
       value === undefined ? "" : Object.is(value, Number(raw)) ? raw : String(value);
@@ -145,6 +147,16 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
       before.form.document !== undefined ||
       documentSettings.theme !== draftDocumentThemeOf(before.form.document) ||
       documentSettings.custom !== undefined;
+    // What this change left as it found it is taken from the draft as it is now, so a change
+    // made from the last drawing of the page never undoes what came after it (the services
+    // Create filled in, the topic being typed).
+    const untouched = Object.fromEntries(
+      Object.entries(before.form).filter(
+        ([key]) =>
+          key in base &&
+          Object.is(next[key as keyof PlayFormState], base[key as keyof PlayFormState]),
+      ),
+    );
     current.current.edit({
       ...before,
       form: {
@@ -208,6 +220,7 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
             ? { ambientBed: ref(ambientBed) }
             : {}),
         },
+        ...untouched,
       },
     });
   }, []);

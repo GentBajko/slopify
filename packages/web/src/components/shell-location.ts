@@ -7,7 +7,8 @@ import { setFallbackTitle, titleForPath } from "./document-title.js";
 // What the shell does each time the address changes: names the browser tab after the
 // destination, remembers the list a project was opened from (`came-from.ts`), and, when the
 // screen itself changed, moves focus to its heading so a keyboard or screen-reader user starts
-// at the top of the new screen instead of on a link that is no longer there. A change of
+// at the top of the new screen instead of on a link that is no longer there (or to the field a
+// screen marks `data-autofocus`, the one it is there to have typed in). A change of
 // section or filter on the same screen keeps focus where it is. Until the person has pressed a
 // key or a pointer or clicked something (a screen reader's click comes with neither), a change of
 // screen is the app's own (a fresh install's Home sending it on to Welcome) and keeps the
@@ -53,6 +54,12 @@ export function useShellLocation(main: RefObject<HTMLElement | null>): void {
       if (region === null) return;
       // A dialog opened by the new screen keeps its own focus.
       if (document.activeElement?.closest('[role="dialog"]')) return;
+      // A screen whose first thing is typing (Create's topic box) marks that field instead.
+      const field = region.querySelector<HTMLElement>("[data-autofocus]");
+      if (field !== null) {
+        field.focus({ preventScroll: true });
+        return;
+      }
       const heading = region.querySelector<HTMLElement>("h1");
       const target = heading ?? region;
       if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1");

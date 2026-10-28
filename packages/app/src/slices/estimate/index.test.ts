@@ -62,7 +62,7 @@ describe("cost planning", () => {
       },
     } satisfies RunDraft;
     const row = estimateRun(described, {}, 1500, catalogue).rows.find(
-      (one) => one.stage === "Narration descriptions",
+      (one) => one.stage === "Describing tables and figures",
     );
     expect(row?.detail).toContain("3 AI calls");
     expect(
@@ -71,7 +71,7 @@ describe("cost planning", () => {
         {},
         1500,
         catalogue,
-      ).rows.find((one) => one.stage === "Narration descriptions")?.detail,
+      ).rows.find((one) => one.stage === "Describing tables and figures")?.detail,
     ).toContain("2 AI calls");
     const generated = estimateRun(
       { ...described, sources: { ...described.sources, article: "generate" }, articlePrompt: "x" },
@@ -79,11 +79,13 @@ describe("cost planning", () => {
       1500,
       catalogue,
     );
-    expect(generated.rows.find((one) => one.stage === "Narration descriptions")?.low).toBeNull();
+    expect(
+      generated.rows.find((one) => one.stage === "Describing tables and figures")?.low,
+    ).toBeNull();
     const { describeFigures: _off, ...plain } = described.audio;
     expect(
       estimateRun({ ...described, audio: plain }, {}, 1500, catalogue).rows.some(
-        (one) => one.stage === "Narration descriptions",
+        (one) => one.stage === "Describing tables and figures",
       ),
     ).toBe(false);
   });
@@ -105,7 +107,7 @@ describe("cost planning", () => {
     expect(estimate.rows.find((row) => row.stage === "Narration preparation")?.detail).toContain(
       "2 AI calls",
     );
-    expect(estimate.rows.find((row) => row.stage === "Delivery cue overhead")?.low).toBeNull();
+    expect(estimate.rows.find((row) => row.stage === "Delivery cues")?.low).toBeNull();
     expect(
       estimateRun({ ...selected, narrationPrompt: "" }, {}, 1500, catalogue).rows.some(
         (row) => row.stage === "Narration preparation",

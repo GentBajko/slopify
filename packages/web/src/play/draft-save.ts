@@ -1,7 +1,12 @@
 import type { DraftView, PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import { playDraftDocumentSchema } from "@app/slices/play-drafts/schema.js";
 import type { DraftSaveStatus, RevealRequest } from "./draft-context";
-import { freshDraftDocument, serializeDraftDocument, withProviderDefaults } from "./draft-state";
+import {
+  freshDraftDocument,
+  serializeDraftDocument,
+  templateProviderDefaults,
+  withProviderDefaults,
+} from "./draft-state";
 
 export interface SaveClock {
   readonly edited: number;
@@ -55,10 +60,14 @@ export interface DraftSessionState {
   // The draft Create reopened by itself on arrival (the one this browser had open last), with
   // when it was last edited then; gone once another draft, or a new one, is open.
   readonly restored?: { readonly id: string; readonly updatedAt: string } | undefined;
+  // Whether a writer, voice or image service nobody picked yet is filled in when the found
+  // and ready ones arrive: true for the fresh form and for a draft just made from a template,
+  // whatever is typed meanwhile, until the person picks a service in it themselves.
+  readonly fillServices: boolean;
 }
 export function emptySession(): DraftSessionState {
   return {
-    document: withProviderDefaults(freshDraftDocument),
+    document: withProviderDefaults(freshDraftDocument, templateProviderDefaults()),
     view: null,
     clock: { edited: 0, acknowledged: 0, version: 0 },
     id: null,
@@ -67,7 +76,14 @@ export function emptySession(): DraftSessionState {
     status: "unsaved",
     error: null,
     reveal: null,
+    fillServices: true,
   };
+}
+
+// The services a draft calls, to tell a person's own pick from the fills.
+export function servicesOf(document: PlayDraftDocument): string {
+  const { llm, images, audio } = document.form;
+  return JSON.stringify([llm, images, audio.provider, audio.model, audio.voice]);
 }
 
 export function remapForkEdits(

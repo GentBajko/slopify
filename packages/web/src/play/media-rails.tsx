@@ -119,7 +119,6 @@ export function AudioRail({
     <StageRail
       kind="audio"
       name="Narration"
-      dim={form.sources.audio === "off"}
       titled={titled}
       source={<SourceSwitch kind="audio" form={form} update={update} />}
       note={offMakes === undefined ? undefined : `Off makes ${aKind(offMakes)} instead.`}
@@ -144,6 +143,7 @@ export function AudioRail({
                     : `Set Narration to Off (makes ${aKind(offMakes)})`,
                 onLeave: () => update({ sources: { ...form.sources, audio: "off" } }),
               }}
+              fillModel
               onService={(provider) =>
                 update({ audio: { ...form.audio, provider, model: "", voice: "" } })
               }
@@ -296,7 +296,6 @@ export function ImagesRail({
     <StageRail
       kind="images"
       name="Images"
-      dim={form.sources.images === "off"}
       titled={titled}
       source={<SourceSwitch kind="images" form={form} update={update} />}
       note={
@@ -435,13 +434,14 @@ export function ImageProviderControls({
       serviceProblem={problem("images")}
       modelProblem={problem("images.model")}
       leaveOut={leaveOut}
+      fillModel
       onService={(provider) => update({ images: { provider, model: "" } })}
       onModel={(model) => update({ images: { ...form.images, model } })}
     >
       <ThinkingPicker
         field="images.thinking"
         label="Effort"
-        tip="play.images.effort"
+        help="How long the image agent thinks before it draws: higher follows the prompt more closely, and is slower."
         choice={form.images}
         problem={problem("images.thinking")}
         onChange={(images) => update({ images })}

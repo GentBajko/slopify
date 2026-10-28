@@ -18,7 +18,7 @@ import { ambientUploadOn, draftOf, shortsOn, stagedOf } from "@/play/state";
 import { validSubtitleStyle } from "@/subtitles/config";
 import { articleKind } from "./article-kind";
 import { imageServiceUsers, listed } from "./image-needs";
-import { outputKindOf, outputNoun } from "./output-kind";
+import { outputKindOf, topicFix } from "./output-kind";
 import { placedBodies, textEntryRefusals } from "./placed-bodies";
 
 // Live admission. `admit` is the server's own function, imported through `@app/*`: the
@@ -281,7 +281,7 @@ export function readingRank(field: string): number {
 // field can fail two ways the form decides which sentence it is, rather than reading the rule's
 // message back. Undefined for a rule the form has no shorter sentence for.
 export function fixOf(form: PlayFormState, error: FieldError): string | undefined {
-  const about = `Type what the ${outputNoun(outputKindOf(form))} is about`;
+  const about = topicFix(outputKindOf(form));
   if (error.field.startsWith("values.")) {
     const name = error.field.slice("values.".length);
     return topicKeywords(form.title).includes(name) ? about : `Fill in ${name}`;
@@ -313,10 +313,13 @@ export function fixOf(form: PlayFormState, error: FieldError): string | undefine
         ? "Tick an image prompt"
         : `Lower the image counts to ${String(imagesPerRunMax)} in all`;
     case "llm":
-      return "Pick a service and model to write the text";
+      return form.llm.provider === ""
+        ? "Pick a service and model to write the text"
+        : "Pick a model to write the text";
     case "articlePrompt":
       return articleKind(form) === "script" ? "Pick a script prompt" : "Pick an article prompt";
     case "audio":
+      // The service picked, its model is what is missing.
       return form.audio.provider === "" ? "Pick a voice service" : "Pick a voice model";
     case "audio.voice":
       return "Pick a voice";

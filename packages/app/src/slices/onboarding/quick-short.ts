@@ -8,6 +8,7 @@ import { defaultSentencePauseSeconds } from "../narration/pauses-model.js";
 import { type ProviderStatus, systemVoiceProvider, type Voice } from "../settings/model.js";
 import type { FirstRunView, ShortGap } from "./model.js";
 import type { PackPromptKey, StarterPack } from "./packs.js";
+import { preferredModel } from "./preferred-model.js";
 
 // "Make a 60-second short": a topic in, a short-mode project out (`admission/short-mode.ts`),
 // with the providers picked for the user from what this machine has: an installed CLI for the
@@ -37,12 +38,6 @@ export type ModelsFor = (provider: string, family: ProviderFamily) => Promise<re
 const textOrder = ["claude-code", "codex", "gemini", "openrouter"] as const;
 const imageOrder = ["codex-image", "openai-image", "google-image", "fal", "replicate"] as const;
 const keyedVoices = ["openai-tts", "elevenlabs", "cartesia", "inworld"] as const;
-// The first model of these providers is the one a first short uses, unless one of these is
-// listed: a fast, capable default rather than the slowest or the smallest.
-const preferred: Readonly<Record<string, RegExp>> = {
-  "claude-code": /sonnet/i,
-  "openai-tts": /^gpt-4o-mini-tts$/,
-};
 
 function ready(status: ProviderStatus | undefined): boolean {
   return status !== undefined && readinessIsUsable(status.readiness);
@@ -160,11 +155,7 @@ async function firstModel(
   } catch {
     return undefined;
   }
-  const liked = preferred[provider];
-  return (
-    (liked === undefined ? undefined : models.find((model) => liked.test(model.id)))?.id ??
-    models[0]?.id
-  );
+  return preferredModel(provider, models)?.id;
 }
 
 // The first ready provider in `order` that lists a model.

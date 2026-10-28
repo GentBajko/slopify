@@ -283,3 +283,26 @@ it("refuses writes during Start and rolls back document and refs on storage erro
     h.close();
   }
 });
+
+it("lists a draft by its title with the topic typed in", () => {
+  const h = draftFixture();
+  const id = randomUUID();
+  try {
+    const document = {
+      ...h.document,
+      form: { ...h.document.form, title: "Lore: {{Topic}}", values: { Topic: "Cleopatra" } },
+    };
+    must(createDraft(h.deps, { id, document }));
+    expect(listDrafts(h.deps)).toMatchObject([{ id, title: "Lore: Cleopatra" }]);
+    const other = randomUUID();
+    must(
+      createDraft(h.deps, {
+        id: other,
+        document: { ...document, form: { ...document.form, values: { Topic: " " } } },
+      }),
+    );
+    expect(listDrafts(h.deps).find((one) => one.id === other)?.title).toBe("Lore: {{Topic}}");
+  } finally {
+    h.close();
+  }
+});

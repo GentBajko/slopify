@@ -18,11 +18,6 @@ export const projectHelp = {
     body: "Brings every narration piece (each chunk, and each speaker's turn) to one loudness before they are joined, so the voice stops jumping between quiet and loud. Then the video, the shorts and the audio files are each set to a finished loudness. Runs on this computer, no API calls; turning it on makes the levelled narration and the exports again, never the speech. Default: on for new runs.",
     tutorial: { page: "Editing-a-Project", anchor: "pauses-and-volume" },
   },
-  "project.subtitles.font": {
-    title: "Caption font",
-    body: "The typeface of captions shown in the video and of chapter cards. Pick a bundled font or one you uploaded (.ttf or .otf); uploaded fonts stay available to every project. Caption files carry no font, since players style them. Changing it makes only the video again. Default: the bundled font.",
-    tutorial: { page: "Video-Editing", anchor: "captions" },
-  },
   "project.edit.article-text": {
     title: "Article text",
     body: "The script the narrator reads, in Markdown. Your edits are kept when other settings change and are saved as a new version; the narration, images and video made from the old text turn outdated and are made again when you choose. Headings become chapters.",
