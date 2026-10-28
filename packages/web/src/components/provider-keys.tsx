@@ -8,7 +8,15 @@ import type {
   Voice,
 } from "@app/slices/settings/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactElement, type ReactNode, useEffect, useId, useRef, useState } from "react";
+import {
+  type ReactElement,
+  type ReactNode,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { removeProviderKey, saveProviderKey } from "@/api";
 import { useApp } from "@/app-context";
 import { Button, ButtonRow } from "@/components/kit/button";
@@ -25,7 +33,7 @@ import { SavedTick, savedTickMs } from "@/components/saved-tick";
 import { SecretInput } from "@/components/secret-input";
 import { localState, SystemVoiceDetail } from "@/components/system-voices";
 import { cn } from "@/lib/utils";
-import { keys, providersQuery, voicesQuery } from "@/queries";
+import { keys, noticeQuery, providersQuery, voicesQuery } from "@/queries";
 import { BackLink, backPlace, backSearch, type SettingsBack } from "@/routes/settings-back";
 
 // The three kinds of service, in the order Keys & services draws them, by what they do for a
@@ -135,11 +143,13 @@ function windowBottom(): number {
 // Brings a service's setup into the window, above its bottom bars: as little scrolling as
 // shows its heading down to its key box and the buttons under it (the whole setup when it has
 // no key box), and never past its heading. A setup already in view leaves the page where it is,
-// so the page header and its way back stay in view on a wide screen.
-function bringSetupIntoView(setup: HTMLElement, arrival: boolean): void {
+// so the page header and its way back stay in view on a wide screen. `arrival` is a link's
+// arrival, `press` a readiness line's button on the page, `settle` the page moving under an
+// arrival a moment later (`keepSetupInView`).
+function bringSetupIntoView(setup: HTMLElement, how: "arrival" | "press" | "settle"): void {
   // A link's arrival starts from the top, as any new page does (the router leaves this one's
   // scroll to the page: `keysArrival`), so the header stays in view when it can.
-  if (arrival) window.scrollTo({ top: 0, left: 0 });
+  if (how === "arrival") window.scrollTo({ top: 0, left: 0 });
   const margin = 16;
   const visibleBottom = windowBottom();
   const top = setup.getBoundingClientRect().top;
@@ -149,7 +159,29 @@ function bringSetupIntoView(setup: HTMLElement, arrival: boolean): void {
   );
   if (top >= 0 && bottom + margin <= visibleBottom) return;
   const by = Math.min(bottom + margin - visibleBottom, top - margin);
-  window.scrollBy({ top: by, behavior: arrival ? "auto" : "smooth" });
+  window.scrollBy({ top: by, behavior: how === "press" ? "smooth" : "auto" });
+}
+
+// For a moment after an arrival, whatever still lands above the setup (a font, a line that
+// answered late) could push its key box back out of the window: the setup is kept in view as
+// the page settles, until the person scrolls, presses or types. Answers how to stop early.
+const settleMs = 1500;
+function keepSetupInView(setup: HTMLElement): () => void {
+  if (typeof ResizeObserver === "undefined") return () => {};
+  const yours = ["wheel", "touchstart", "pointerdown", "keydown"] as const;
+  const watch = new ResizeObserver(() => {
+    if (setup.isConnected) bringSetupIntoView(setup, "settle");
+    else stop();
+  });
+  const timer = window.setTimeout(() => stop(), settleMs);
+  function stop(): void {
+    watch.disconnect();
+    window.clearTimeout(timer);
+    for (const event of yours) window.removeEventListener(event, stop);
+  }
+  for (const event of yours) window.addEventListener(event, stop, { passive: true });
+  watch.observe(document.body);
+  return stop;
 }
 
 // Two columns where the page's own column has room for a list (400px) and, beside it, a setup
@@ -157,14 +189,16 @@ function bringSetupIntoView(setup: HTMLElement, arrival: boolean): void {
 // beside the Settings list. Narrower (a laptop at 1024px, the Assistant open, a phone) is one
 // column, where the setup opens under its own row and the three lists stay together. The
 // column is measured, not the window; a window of 1024px or more is the first guess, and the
-// only answer where nothing can measure.
+// only answer where nothing can measure. The column is measured before the page is painted,
+// so a setup a link opens is never measured where the guess put it (beside its list) and then
+// moved under its row.
 const twoColumnsPx = 860;
 function useWide(element: HTMLElement | null): boolean {
   const query = "(min-width: 1024px)";
   const [wide, setWide] = useState(
     () => typeof window.matchMedia !== "function" || window.matchMedia(query).matches,
   );
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (element !== null && typeof ResizeObserver !== "undefined") {
       // A column not laid out yet (or never, as in a test's document) keeps the guess.
       const measure = () => {
@@ -207,6 +241,9 @@ export function ProviderKeys({
     { readonly id: ProviderId; readonly arrival: boolean } | undefined
   >(undefined);
   const setupRef = useRef<HTMLDivElement>(null);
+  // Stops keeping an arrival's setup in view (`keepSetupInView`), when the page goes.
+  const settling = useRef<(() => void) | undefined>(undefined);
+  useEffect(() => () => settling.current?.(), []);
 
   const listed = familyOrder.flatMap((family) =>
     (providers.data?.providers ?? []).filter((provider) => provider.family === family),
@@ -245,8 +282,10 @@ export function ProviderKeys({
   // that setup into view. The page is measured only once everything that sets its height has
   // answered: the services and the voices, which the readiness lines above the lists wait for
   // too (`routes/settings-readiness.tsx`). Measured earlier, lines arriving above would push the
-  // setup back out of the window after the scroll.
-  const settled = providers.data !== undefined && !voices.isPending;
+  // setup back out of the window after the scroll. The usage-stats line is waited for too: on
+  // the window's bottom edge until Start counting is pressed, it hides what is under it.
+  const notice = useQuery(noticeQuery(api));
+  const settled = providers.data !== undefined && !voices.isPending && !notice.isPending;
   // biome-ignore lint/correctness/useExhaustiveDependencies: only a new focus, or the page settling, moves the page.
   useEffect(() => {
     if (focus === undefined || !settled) return;
@@ -270,17 +309,22 @@ export function ProviderKeys({
     if (byItself && typeof picked === "string") setBring({ id: picked, arrival: true });
     else window.scrollTo({ top: 0, left: 0 });
   }, [focus, settled, visited, byItself, picked]);
+  // The setup is looked up when it is measured, not before: a change of columns in between draws
+  // it in another place (beside its list, or under its row), and starts the wait again.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a change of columns moves the setup, so it measures again.
   useEffect(() => {
     if (bring === undefined || picked !== bring.id) return;
-    const setup = setupRef.current;
-    if (setup === null) return;
     let live = true;
     let frame = 0;
     // After the fonts, whose metrics set where lines wrap, and after this render is painted.
     void (document.fonts?.ready ?? Promise.resolve()).then(() => {
       if (!live) return;
       frame = requestAnimationFrame(() => {
-        bringSetupIntoView(setup, bring.arrival);
+        const setup = setupRef.current;
+        if (setup === null || !setup.isConnected) return;
+        bringSetupIntoView(setup, bring.arrival ? "arrival" : "press");
+        settling.current?.();
+        settling.current = bring.arrival ? keepSetupInView(setup) : undefined;
         setBring(undefined);
       });
     });
@@ -288,7 +332,7 @@ export function ProviderKeys({
       live = false;
       cancelAnimationFrame(frame);
     };
-  }, [bring, picked]);
+  }, [bring, picked, wide]);
 
   if (providers.error !== null) {
     return (

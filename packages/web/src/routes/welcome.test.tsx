@@ -295,7 +295,7 @@ describe("step 3: make the first short", () => {
     await user.click(screen.getByRole("button", { name: "Make a 60-second short" }));
     expect(
       await screen.findByText(
-        "The short didn't start. Fix the lines below that are not Ready, then press Make a 60-second short again.",
+        "The short didn't start. Fix the lines above that are not Ready, then press Make a 60-second short again.",
       ),
     ).not.toBeNull();
     refuse = false;

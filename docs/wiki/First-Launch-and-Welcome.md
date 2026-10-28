@@ -44,7 +44,7 @@ A topic in, a captioned vertical short out, usually in about five minutes with t
 | --- | --- | --- |
 | **Topic** | What the short is about, in a few words or a question. A specific topic gives a sharper short than a broad one. The line under it says the style and who writes, reads and draws it. | Up to 200 characters |
 
-If something is still missing, the step shows the same lines as step 1 under the topic, and **Make a 60-second short** is not lime until they are ready. Pressed anyway, the status line says "The short didn't start. Fix the lines below that are not Ready, then press Make a 60-second short again."
+If something is still missing, the step shows the same lines as step 1 under the topic, and **Make a 60-second short** is not lime until they are ready. Pressed anyway, the status line says "The short didn't start. Fix the lines above that are not Ready, then press Make a 60-second short again."
 
 Press **Make a 60-second short** in the bar at the bottom. With no topic it puts you in the field and says "Type a topic first." Otherwise the status line says **Starting your short…**, then the step says "Your short is being made." and the bar offers **Watch it being made**, which opens the project's page. The samples are listed below while it runs.
 

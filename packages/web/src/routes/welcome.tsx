@@ -281,12 +281,12 @@ export function WelcomeRoute({
             ? undefined
             : {
                 tone: "error" as const,
-                // The checklist under the topic names each gap with its fix, in its own state
-                // words; a gap it can't see (a service that lists no model) is said here in the
-                // server's words.
+                // The checklist under the topic, above this bar, names each gap with its fix, in
+                // its own state words; a gap it can't see (a service that lists no model) is
+                // said here in the server's words.
                 text:
                   missing.length > 0
-                    ? "The short didn't start. Fix the lines below that are not Ready, then press Make a 60-second short again."
+                    ? "The short didn't start. Fix the lines above that are not Ready, then press Make a 60-second short again."
                     : refused.map((gap) => gap.message).join(" "),
               };
   const at = welcomeSteps.indexOf(step);
