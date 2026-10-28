@@ -197,7 +197,7 @@ async function seedModel(input: ModelInput, seed: string, target: string): Promi
 }
 
 const smaller =
-  " To download less, pick a smaller model in Settings → Production defaults → Subtitle timing model.";
+  " To download less, pick a smaller model in Settings → Production defaults → Caption timing model.";
 function megabytes(bytes: number): string {
   return `${String(Math.round(bytes / 1_000_000))} MB`;
 }

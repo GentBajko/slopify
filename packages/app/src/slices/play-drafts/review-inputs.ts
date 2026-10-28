@@ -201,7 +201,7 @@ export function resolveReviewInputs(
         fields.push({
           field: `checkpoints.${stage}`,
           message:
-            "Checkpoints can only go before a step Slopify generates, or before export. Remove this checkpoint or turn that step on.",
+            "A pause can only go before a step Slopify makes, or before the video. Untick this pause or turn that step on.",
         });
   if (fields.length) return reviewRefusal(view, fields);
   const checkpointSet = reviewCheckpointSet(runs, catalogue, attachmentIdentity, fontHash);

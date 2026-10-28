@@ -42,7 +42,7 @@ export async function decodeAudio(
     child.on("error", reject);
     child.on("close", (code) => {
       signal.removeEventListener("abort", abort);
-      if (signal.aborted) reject(new Error("Subtitle audio preparation was canceled."));
+      if (signal.aborted) reject(new Error("Caption audio preparation was canceled."));
       else if (code !== 0)
         reject(new Error(`Could not prepare the narration for subtitles. ${errorText}`));
       else resolve();

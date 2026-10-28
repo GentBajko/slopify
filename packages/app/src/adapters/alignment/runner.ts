@@ -34,7 +34,7 @@ export async function runAlignmentWorker(
       signal.removeEventListener("abort", abort);
       child.kill("SIGKILL");
     };
-    const abort = (): void => finish(new Error("Subtitle alignment was canceled."));
+    const abort = (): void => finish(new Error("Caption timing was canceled."));
     signal.addEventListener("abort", abort, { once: true });
     child.stderr?.on("data", (data: Buffer) => {
       stderr = (stderr + data.toString("utf8")).slice(-2000);

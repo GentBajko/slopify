@@ -206,7 +206,7 @@ async function openSession(
           ? (nativeError.message.split("\n")[0] ?? "")
           : String(nativeError);
       throw new Error(
-        `Subtitle timing could not start: neither of its speech engines loaded on this computer (${system}): ${reason}. Reinstall Slopify so npm installs the engine for this system, then try again; if it keeps failing, turn subtitles off for this project.`,
+        `Caption timing could not start: neither of its speech engines loaded on this computer (${system}): ${reason}. Reinstall Slopify so npm installs the engine for this system, then try again; if it keeps failing, turn captions off for this project.`,
       );
     }
   }

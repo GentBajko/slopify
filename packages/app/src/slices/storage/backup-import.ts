@@ -567,7 +567,7 @@ function checkScratch(
       if (documentThemeNameProblems(String(row.name)).length > 0) throw new Error("name");
     }
   } catch {
-    throw unreadable("a PDF theme");
+    throw unreadable("a PDF look");
   }
   try {
     for (const row of rowsOf(scratch, "SELECT id FROM channels")) {

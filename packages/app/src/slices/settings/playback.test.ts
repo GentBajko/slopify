@@ -295,7 +295,7 @@ describe("the subtitle timing model", () => {
         {
           field: "subtitleModel",
           message:
-            "Choose Most accurate, Balanced or Smallest in Settings → Production defaults → Subtitle timing model.",
+            "Choose Most accurate, Balanced or Smallest in Settings → Production defaults → Caption timing model.",
         },
       ],
     });
@@ -356,7 +356,7 @@ describe("the render settings", () => {
         {
           field: "renderPriority",
           message:
-            "Choose Normal or Background in Settings → Production defaults → Render priority.",
+            "Choose Normal or Background in Settings → Production defaults → Encoding priority.",
         },
       ],
     });

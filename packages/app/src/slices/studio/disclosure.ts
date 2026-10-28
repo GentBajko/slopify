@@ -92,11 +92,11 @@ export function aiDisclosureOf(input: DisclosureInput): AiDisclosure {
     };
   const footage =
     input.realFootage && input.kind === "video"
-      ? " The uploaded real footage only gets colour, vignette or grain, which YouTube counts as minor edits."
+      ? " The uploaded real footage only gets color, vignette or grain, which YouTube counts as minor edits."
       : "";
   return {
     altered: false,
-    why: `No because none of YouTube's three AI use cases applies: no narrating voice is marked as imitating a real person (Settings → Voices), no real footage is altered, and no AI pictures come from an Image prompt marked photorealistic (Prompts). Stylised AI pictures and an AI narrator that doesn't pose as a real person don't need the label.${footage}`,
+    why: `No because none of YouTube's three AI use cases applies: no narrating voice is marked as imitating a real person (Settings → Voices), no real footage is altered, and no AI pictures come from an Image prompt marked photorealistic (Prompts). Stylized AI pictures and an AI narrator that doesn't pose as a real person don't need the label.${footage}`,
   };
 }
 

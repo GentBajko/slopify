@@ -95,7 +95,7 @@ export function saveSettings(deps: PlaybackDeps, settings: AppSettings): SaveSet
     fields.push({
       field: "subtitleModel",
       message:
-        "Choose Most accurate, Balanced or Smallest in Settings → Production defaults → Subtitle timing model.",
+        "Choose Most accurate, Balanced or Smallest in Settings → Production defaults → Caption timing model.",
     });
   }
   if (!videoEncoderValue.safeParse(settings.videoEncoder).success) {
@@ -114,7 +114,7 @@ export function saveSettings(deps: PlaybackDeps, settings: AppSettings): SaveSet
   if (!renderPriorityValue.safeParse(settings.renderPriority).success) {
     fields.push({
       field: "renderPriority",
-      message: "Choose Normal or Background in Settings → Production defaults → Render priority.",
+      message: "Choose Normal or Background in Settings → Production defaults → Encoding priority.",
     });
   }
   if (fields.length > 0) {
