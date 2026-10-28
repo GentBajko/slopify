@@ -79,7 +79,9 @@ describe("cost planning", () => {
       1500,
       catalogue,
     );
-    expect(generated.rows.find((one) => one.stage === "Describing tables and figures")?.low).toBeNull();
+    expect(
+      generated.rows.find((one) => one.stage === "Describing tables and figures")?.low,
+    ).toBeNull();
     const { describeFigures: _off, ...plain } = described.audio;
     expect(
       estimateRun({ ...described, audio: plain }, {}, 1500, catalogue).rows.some(

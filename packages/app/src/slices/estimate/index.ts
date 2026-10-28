@@ -108,8 +108,7 @@ export function estimateRun(
           model.id === llm.model &&
           model.enabled &&
           !model.deprecated,
-      )?.pricing.note ??
-      "No price is listed for this model; your account may be billed for it.");
+      )?.pricing.note ?? "No price is listed for this model; your account may be billed for it.");
   const imageNote = isLocalCliProvider(image.provider)
     ? "Runs on your Codex subscription at no extra charge."
     : (data.image.find(
