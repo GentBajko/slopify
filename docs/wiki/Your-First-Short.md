@@ -84,7 +84,7 @@ The file is also in the project's folder under your Projects folder (see [Where 
 
 ## If it refuses to start
 
-The status line says "The short didn't start. Fix the lines below that are not Ready, then press Make a 60-second short again." and the lines under the topic say what is missing, each with the button that fixes it. They are the same lines as step 1:
+The status line says "The short didn't start. Fix the lines above that are not Ready, then press Make a 60-second short again." and the lines under the topic say what is missing, each with the button that fixes it. They are the same lines as step 1:
 
 | Line says | Fix |
 | --- | --- |
