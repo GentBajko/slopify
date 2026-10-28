@@ -121,6 +121,26 @@ const mountStarter = (over: Readonly<Record<string, Answer>> = {}) =>
   );
 
 describe("what is missing, said once and the same everywhere", () => {
+  it("asks to add a voice, not to pick one, for a voice service with no voice saved", async () => {
+    await mountPlay(
+      {
+        "GET /api/providers": providers(true),
+        "GET /api/settings/voices": jsonAnswer({ voices: [] }),
+      },
+      {
+        ...generatedRun,
+        form: { ...generatedRun.form, audio: { ...generatedRun.form.audio, voice: "" } },
+      },
+    );
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-setup-row="narration"] [data-row-problem]')?.textContent,
+      ).toBe("Add a voice for ElevenLabs in Settings"),
+    );
+    const start = within(screen.getByRole("region", { name: "Start" }));
+    expect(start.getByRole("button", { name: "Add a voice for ElevenLabs first" })).not.toBeNull();
+  });
+
   it("counts a picked voice service with no key on its row, in the hint and in the summary", async () => {
     await mountPlay({ "GET /api/providers": providers(false) }, generatedRun);
     const row = await waitFor(() => {

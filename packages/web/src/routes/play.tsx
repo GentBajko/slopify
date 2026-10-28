@@ -331,6 +331,22 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     blocker,
     readinessFirst: readinessProblems(form, choices.entries, providerList, llmRow),
     providers: providerList,
+  }).map((one) => {
+    // A voice service with no voice saved here has nothing to pick from: the next thing to do
+    // is to add one (the link under the Voice select), not to pick.
+    const service = providerList.find((provider) => provider.id === form.audio.provider);
+    const none =
+      one.field === "audio.voice" &&
+      service !== undefined &&
+      voices.isSuccess &&
+      !voices.data.voices.some((voice) => voice.provider === service.id);
+    return none
+      ? {
+          ...one,
+          text: `Add a voice for ${service.displayName} in Settings`,
+          hint: `Add a voice for ${service.displayName} first`,
+        }
+      : one;
   });
   const problems = settling ? [] : missing;
   const rowProblem = (row: SetupRowId): SetupProblem | undefined =>
