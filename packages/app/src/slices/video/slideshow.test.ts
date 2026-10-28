@@ -6,6 +6,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  statfsSync,
   statSync,
   writeFileSync,
 } from "node:fs";
@@ -13,13 +14,19 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import ffmpegStatic from "ffmpeg-static";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { EditList } from "./edit-list.js";
 import { createNvencProbe } from "./encoding.js";
 import { resolveFfmpeg } from "./ffmpeg.js";
 import type { PlanInput } from "./plan.js";
 import { planRender } from "./plan.js";
 import { burnParts, renderSlideshow } from "./slideshow.js";
+
+// The disk the clip cache sees, so a test can give it room whatever the machine has left.
+vi.mock("node:fs", async (importOriginal) => {
+  const fs = await importOriginal<typeof import("node:fs")>();
+  return { ...fs, statfsSync: vi.fn(fs.statfsSync) };
+});
 
 // The two things the renderer is given: the edit list and where to write.
 function plan(over: Partial<PlanInput> = {}): { edit: EditList; output: string } {
@@ -212,6 +219,15 @@ describe("renderSlideshow", () => {
         Buffer.concat([Buffer.from("P6\n16 16\n255\n"), Buffer.alloc(16 * 16 * 3, 90)]),
       );
       const cache = join(scratch, ".render-cache", "p1");
+      // The cache gives way on a disk with less than 20 GB free (`clip-cache.ts`): this one has
+      // 2 TB free, so the test does not depend on the space left where it runs.
+      const disk = statfsSync(scratch);
+      vi.mocked(statfsSync).mockReturnValue({
+        ...disk,
+        bsize: 4096,
+        blocks: 2 ** 30,
+        bavail: 2 ** 29,
+      });
       const render = (output: string): Promise<unknown> =>
         renderSlideshow({
           bin: resolveFfmpeg(process.env, ffmpegStatic),
@@ -233,6 +249,7 @@ describe("renderSlideshow", () => {
       );
       expect(statSync(join(scratch, "two.mp4")).size).toBeGreaterThan(0);
     } finally {
+      vi.mocked(statfsSync).mockRestore();
       rmSync(scratch, { recursive: true, force: true });
     }
   }, 30_000);
