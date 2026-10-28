@@ -63,7 +63,7 @@ The Pronunciation Glossary is a section at the end of the article that lists nam
 
 ### Which voices support it
 
-Inworld **TTS-2** and **TTS-2 Flash**. With other services or models the switch is greyed out and says "Only Inworld TTS-2 voices read it; your choice is kept for when you pick one."
+Inworld **TTS-2** and **TTS-2 Flash**. With other services or models the tick is not shown; your choice is kept for when you pick one of those voices.
 
 ### Get a glossary into the article
 
@@ -87,7 +87,7 @@ A table with `Term | IPA` columns works too. If you paste your own article, add 
 ### Turn it on
 
 1. On Create, open **Narration → Change → More narration settings**.
-2. Keep **Use Pronunciation Glossary** on (the default).
+2. Keep **Use the article's pronunciation glossary** on (the default). It shows only while the voice is one that reads it.
 3. Optional: keep **Also use pronunciations from my other projects** on (the default). It adds every term from your other projects' glossaries, copied when this project starts. This project's own glossary wins where they differ. Turn it off to use only this article's glossary.
 
 ### Entries that are skipped

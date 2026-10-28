@@ -32,7 +32,7 @@ With **My own audio file**, the file is used as it is; include any intro and out
 
 ### Hear a sample
 
-**Hear a sample of your text in this voice** folds out a **Passage** box and **Hear the sample**. It reads one passage of up to 300 characters in the picked voice, at the service's price for those characters (free with the system voice). The Pronunciation Glossary and narration preparation are not applied, and the sample is not reused in the run.
+**Sample of your text in this voice** folds out a **Passage** box and **Hear the sample**. It reads one passage of up to 300 characters in the picked voice, at the service's price for those characters (free with the system voice). The article's pronunciation glossary and narration preparation are not applied, and the sample is not reused in the run. Until a voice is picked and a passage typed, the line beside **Hear the sample** says which is missing.
 
 ### Speakers
 
@@ -83,10 +83,10 @@ It needs the Inworld TTS-2 model. With several speakers it works per speaker: ea
 
 | Option | What it does | Default |
 | --- | --- | --- |
-| **Use Pronunciation Glossary** | Reads names with the IPA in the article's Pronunciation Glossary, such as `Arda: /ˈɑɹdə/`, with no extra AI call. Works with Inworld TTS-2 and TTS-2 Flash. The written text stays unchanged. | On |
+| **Use the article's pronunciation glossary** | Shown only for voices that read it. Reads names with the IPA in the article's Pronunciation Glossary, such as `Arda: /ˈɑɹdə/`, with no extra AI call. Works with Inworld TTS-2 and TTS-2 Flash. The written text stays unchanged. | On |
 | **Also use pronunciations from my other projects** | Adds every term from your other projects' glossaries, copied when this project starts. This project's own glossary wins where they differ. Turn it off to use only this article's glossary. | On |
 
-With another service or model, the line under it says "Only Inworld TTS-2 voices read it; your choice is kept for when you pick one."
+With another service or model the tick is not shown; your choice is kept for when you pick an Inworld TTS-2 voice.
 
 To get a glossary, ask for one in your article prompt: a section in slash-delimited standard-English IPA, one `Term: /IPA/` per line, with an English approximation for foreign names. A line with sounds English lacks is read as plain text. The glossary is never narrated itself. See [Narration Aliases and Glossary](Narration-Aliases-and-Glossary).
 
@@ -133,7 +133,7 @@ AI voices come back at a different loudness for every voice and even every reque
 | **Video volume** | How loud the finished video and shorts are. 0 dB is −14 LUFS, what YouTube and Spotify play everything at. Peaks always stay under −1.5 dBTP. | 0 dB; −10 to +4 dB in steps of 0.5 |
 | **Audio files volume** | How loud the sound-only WAV and an audiobook's MP3 and M4B are. 0 dB is −18 LUFS, the level audiobook shops ask for. Peaks always stay under −3 dBTP. | 0 dB; −10 to +4 dB in steps of 0.5 |
 
-Type each volume in **dB** or as a **%** of the recommended level; the other box follows. −6 dB is about 50% and +4 dB about 158%. The line under each field says the LUFS it stands for. LUFS is how loud a file sounds on average, measured the way ears hear it.
+Type each volume in **dB** or as a **%** of the recommended level; the other box follows. −6 dB is about 50% and +4 dB about 158%. The line under each field says what 0 dB is matched to. LUFS is how loud a file sounds on average, measured the way ears hear it.
 
 ## Silence at the edges and between segments
 
