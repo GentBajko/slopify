@@ -66,7 +66,9 @@ export function uploadedAndSettled(db: DatabaseSync, projectId?: string): Readon
 // the cost first. Renaming a project with a PDF is one: its PDF prints the title. A step that
 // never made a file, a failed or canceled step, a step a run admitted (`admittedUnfinished`, as
 // a restart holds it), a pause or a queued run keep it unsettled, so a run a restart stopped
-// still reads Stopped. One project's alone when `projectId` is given.
+// still reads Stopped. So does a version saved to make a section again (Make … again, a review's
+// redo) whose run was refused, say for a missing key: the person asked for that work, and Continue
+// the run starts it. One project's alone when `projectId` is given.
 export function editedAndSettled(db: DatabaseSync, projectId?: string): ReadonlySet<string> {
   const one = oneProject("h", projectId);
   const unfinished = "s.project_id=h.project_id AND s.state NOT IN ('done','provided','skipped')";
@@ -83,6 +85,8 @@ export function editedAndSettled(db: DatabaseSync, projectId?: string): Readonly
            AND NOT EXISTS(SELECT 1 FROM revision_work w WHERE w.project_id=h.project_id
              AND w.state IN ('pending','running')
              AND (w.dispatch_state!='held' OR ${admittedUnfinished("w")}))
+           AND NOT EXISTS(SELECT 1 FROM project_recovery_requests r WHERE r.project_id=h.project_id
+             AND r.intent_revision_id=h.revision_id)
            AND NOT EXISTS(SELECT 1 FROM project_controls c WHERE c.project_id=h.project_id AND c.paused=1)
            AND NOT EXISTS(SELECT 1 FROM project_queue q WHERE q.project_id=h.project_id AND q.state='queued')${one.sql}`,
       )
