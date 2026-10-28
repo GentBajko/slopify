@@ -60,7 +60,7 @@ function prompt(kind: Prompt["kind"], name: string, body: string): Prompt {
   return { id: name, kind, name, body, slots: [], updatedAt: "2026-09-03T00:00:00.000Z" };
 }
 
-const prompts: readonly Prompt[] = [
+export const prompts: readonly Prompt[] = [
   prompt("article", "Dossier", "Write about {{topic}} in {{minWords}} words."),
   prompt("image", "Oils", "An oil painting of {{topic}} in {{style}}."),
   prompt("image", "Maps", "A map of {{era}}."),

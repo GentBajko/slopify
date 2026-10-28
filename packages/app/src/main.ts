@@ -75,7 +75,7 @@ import { createProviderQueue } from "./kernel/runner/queue.js";
 import { type StandaloneDeps, standaloneImage, standaloneLlm } from "./kernel/runner/standalone.js";
 import type { WorkRef } from "./kernel/runner/work.js";
 import { readVersion } from "./kernel/version.js";
-import { modelSources } from "./model-catalog.js";
+import { keptModels, modelSources } from "./model-catalog.js";
 import { cliWatcher, lookAtModels, wireModelChecks } from "./model-checks.js";
 import { projectPaused, projectTrashed } from "./slices/admission/repo.js";
 import { createBackupService } from "./slices/backups/service.js";
@@ -635,7 +635,9 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       uuid: randomUUID,
       resolveFont: (fontId) => resolveFont(paths, fontId),
       providers: rebuild.providers,
-      modelsFor: rebuild.modelsFor,
+      // Create checks the draft after every pause in typing; the model lists it checks against
+      // are read once a minute at most, not each time (`keptModels`).
+      modelsFor: keptModels(rebuild.modelsFor, 60_000),
       emit: (event) => hub.emitGlobal(event),
       recordStarted: (projectIds) => {
         for (const _projectId of projectIds) record(telemetry, "project.created", {});

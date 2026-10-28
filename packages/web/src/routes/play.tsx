@@ -56,7 +56,7 @@ import {
 } from "@/play/setup-rows";
 import { MakeBar, MakeButton, StartRail, useNarrow, usePhone } from "@/play/start-rail";
 import { llmUsesOf, type PlayFormState, type Upload, type UploadSlot } from "@/play/state";
-import { TemplateField, useStarterPick } from "@/play/template-field";
+import { TemplateField, useAddableStarters, useStarterPick } from "@/play/template-field";
 import { templateLibrary } from "@/play/template-library";
 import { MoreVideos, TopicFields } from "@/play/topic-fields";
 import { useFirstRunDefaults } from "@/play/use-draft-session";
@@ -331,12 +331,47 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     blocker,
     readinessFirst: readinessProblems(form, choices.entries, providerList, llmRow),
     providers: providerList,
+  }).map((one) => {
+    // A voice service with no voice saved here has nothing to pick from: the next thing to do
+    // is to add one (the link under the Voice select), not to pick.
+    const service = providerList.find((provider) => provider.id === form.audio.provider);
+    const none =
+      one.field === "audio.voice" &&
+      service !== undefined &&
+      voices.isSuccess &&
+      !voices.data.voices.some((voice) => voice.provider === service.id);
+    return none
+      ? {
+          ...one,
+          text: `Add a voice for ${service.displayName} in Settings`,
+          hint: `Add a voice for ${service.displayName} first`,
+        }
+      : one;
   });
   const problems = settling ? [] : missing;
   const rowProblem = (row: SetupRowId): SetupProblem | undefined =>
     problems.find((one) => one.row === row);
+  // With no article prompt saved at all (the welcome skipped), the next thing to do is not to
+  // write one: a starter template brings its prompts, so the hint under the button sends the
+  // person to Start from, which offers the starters. The Article row still says what it lacks.
+  const addableStarters = useAddableStarters();
+  const writingPrompts = choices.prompts.some(
+    (prompt) => prompt.kind === "article" || prompt.kind === "script",
+  );
+  const next = problems[0];
+  const hintProblems: readonly SetupProblem[] =
+    next?.field === "articlePrompt" && !writingPrompts && addableStarters.length > 0
+      ? [
+          { ...next, field: "template", hint: "Pick a starter template first" },
+          ...problems.slice(1),
+        ]
+      : problems;
   const topicField = topics[0] === undefined ? "title" : `values.${topics[0]}`;
   const onFix = (fix: SetupProblem): void => {
+    if (fix.field === "template") {
+      if (root.current) focusPlayField(root.current, "template");
+      return;
+    }
     revealField(fix.field);
   };
   const isTopic = (field: string): boolean =>
@@ -599,7 +634,10 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   const canStart =
     !session.review.starting &&
     (session.review.uncertain ||
-      (session.review.valid && !session.review.pending && problems.length === 0 && !pendingUpload));
+      (session.review.valid &&
+        !session.review.pending &&
+        hintProblems.length === 0 &&
+        !pendingUpload));
   useCommand({
     id: "play.start",
     title: startLabel(session.review, document),
@@ -608,7 +646,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     keywords: ["start", "queue", "run", "make", "go"],
     run: () => {
       if (canStart) start();
-      else if (problems[0]) onFix(problems[0]);
+      else if (hintProblems[0]) onFix(hintProblems[0]);
     },
   });
   useCommand({
@@ -739,7 +777,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
         className="sl-workspace--play"
         aside={
           <StartRail
-            problems={problems}
+            problems={hintProblems}
             saveProblem={saveProblem}
             onStart={start}
             onFix={onFix}
@@ -806,7 +844,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
           void session.navigate("content" satisfies PlaySection, undefined, { reveal: false });
         }}
         {...(narrow || coversKey
-          ? { footer: <MakeButton problems={problems} onStart={start} onFix={onFix} /> }
+          ? { footer: <MakeButton problems={hintProblems} onStart={start} onFix={onFix} /> }
           : {})}
       >
         <ReviewSection
@@ -817,7 +855,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
           onReveal={revealField}
         />
       </Drawer>
-      {phone ? <MakeBar problems={problems} onStart={start} onFix={onFix} /> : null}
+      {phone ? <MakeBar problems={hintProblems} onStart={start} onFix={onFix} /> : null}
       <SaveTemplateDialog open={saving} onClose={() => setSaving(false)} />
       {visibleRows.map((row) => (
         <RowCommand key={row.id} id={row.id} label={rowLabel(row.id, kind)} onOpen={setRow} />

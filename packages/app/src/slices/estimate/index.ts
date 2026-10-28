@@ -181,7 +181,13 @@ export function estimateRun(
             language: draft.language,
           }),
         );
-    if (blocks === undefined)
+    // On a subscription the count does not change the price.
+    if (blocks === undefined && isLocalCliProvider(llm.provider))
+      local(
+        "Describing tables and figures",
+        "One AI call per table, figure, equation or code block in the article, on your subscription at no extra charge.",
+      );
+    else if (blocks === undefined)
       requests.push({
         kind: "unknown",
         stage: "Describing tables and figures",

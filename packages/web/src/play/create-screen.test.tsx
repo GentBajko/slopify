@@ -121,6 +121,26 @@ const mountStarter = (over: Readonly<Record<string, Answer>> = {}) =>
   );
 
 describe("what is missing, said once and the same everywhere", () => {
+  it("asks to add a voice, not to pick one, for a voice service with no voice saved", async () => {
+    await mountPlay(
+      {
+        "GET /api/providers": providers(true),
+        "GET /api/settings/voices": jsonAnswer({ voices: [] }),
+      },
+      {
+        ...generatedRun,
+        form: { ...generatedRun.form, audio: { ...generatedRun.form.audio, voice: "" } },
+      },
+    );
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-setup-row="narration"] [data-row-problem]')?.textContent,
+      ).toBe("Add a voice for ElevenLabs in Settings"),
+    );
+    const start = within(screen.getByRole("region", { name: "Start" }));
+    expect(start.getByRole("button", { name: "Add a voice for ElevenLabs first" })).not.toBeNull();
+  });
+
   it("counts a picked voice service with no key on its row, in the hint and in the summary", async () => {
     await mountPlay({ "GET /api/providers": providers(false) }, generatedRun);
     const row = await waitFor(() => {
@@ -451,6 +471,8 @@ describe("what Create starts from", () => {
   });
 
   it("picks the writer's model a first short picks, not the first listed, so visits agree", async () => {
+    // Checked or not: the background checks have only reached the first model yet.
+    const checked = { checkedAt: "2026-10-24T07:00:00.000Z", sentence: null, source: "check" };
     const { session } = await mountStarter({
       "GET /api/providers/first-run": jsonAnswer({
         firstRun: false,
@@ -465,6 +487,10 @@ describe("what Create starts from", () => {
           { id: "sonnet", name: "Sonnet 5.5" },
         ],
         allowsCustom: true,
+        standings: {
+          fable: { standing: "works", ...checked },
+          sonnet: { standing: "listed", checkedAt: null, sentence: null, source: null },
+        },
       }),
     });
     await waitFor(() => expect(startFrom().value).toBe(templateId));
@@ -567,6 +593,31 @@ describe("what Create starts from", () => {
     expect(requests.some((one) => one.url.endsWith("/api/onboarding/packs/lore"))).toBe(true);
     await waitFor(() => expect(session().document.form.values.topic).toBe("Cleopatra"));
     await waitFor(() => expect(startFrom().value).toBe(templateId));
+  });
+
+  it("with no article prompt saved, sends the person to a starter template, not to writing one", async () => {
+    const routes = starterRoutes();
+    await mountPlay(
+      {
+        ...routes,
+        "GET /api/prompts": jsonAnswer({ prompts: [] }),
+        "GET /api/project-templates": jsonAnswer({ templates: [] }),
+        "GET /api/onboarding": jsonAnswer({
+          packs: [{ id: "lore", name: "Lore", summary: "", installed: false, templateId: null }],
+        }),
+      },
+      undefined,
+      () => screen.findByRole("option", { name: "Lore starter" }),
+    );
+    await userEvent.type(screen.getByLabelText(topicLabel), "Cleopatra");
+    const start = within(screen.getByRole("region", { name: "Start" }));
+    const hint = await start.findByRole("button", { name: "Pick a starter template first" });
+    // The Article row still says what it lacks.
+    expect(
+      document.querySelector('[data-setup-row="article"] [data-row-problem]')?.textContent,
+    ).toBe("Pick an article prompt");
+    await userEvent.click(hint);
+    expect(document.activeElement).toBe(startFrom());
   });
 
   it("gives a fresh draft the writer and image service the first launch found", async () => {

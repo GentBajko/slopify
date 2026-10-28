@@ -81,4 +81,7 @@ it("counts a service the person picked over Create's fill as changed here", () =
     },
   };
   expect(rowOrigin("narration", picked, template, unusable, fills)).toBe("changed");
+  // No voice saved here to fill it with: the template's stays until the person picks another.
+  expect(rowOrigin("narration", template, template, unusable, {})).toBe("template");
+  expect(rowOrigin("narration", picked, template, unusable, {})).toBe("changed");
 });

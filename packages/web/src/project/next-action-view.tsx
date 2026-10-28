@@ -363,12 +363,19 @@ function ActionButton({
 }
 
 // The project's next action as the title row's one primary button, named for its result.
+// While the run is making things nothing waits on the person: Pause stays in reach, but not in
+// lime, which says what to do next.
 export function NextActionButton({
   state,
 }: {
   readonly state: NextActionState;
 }): ReactElement | null {
-  return <ActionButton state={state} variant="primary" />;
+  return (
+    <ActionButton
+      state={state}
+      variant={state.next?.situation === "running" ? "secondary" : "primary"}
+    />
+  );
 }
 
 // The situations no section callout says and the title row's state word does not cover: the

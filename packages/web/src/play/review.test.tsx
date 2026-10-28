@@ -2,7 +2,8 @@ import type { PlayReview } from "@app/slices/play-drafts/model.js";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { deferred, makeKey, summaryTitle } from "./play-test-fixture";
+import { jsonAnswer } from "@/test-app";
+import { deferred, makeKey, prompts, summaryTitle } from "./play-test-fixture";
 import { sameReviewedGeneration } from "./review-state";
 import { reviewHarness, reviewStorage, suppliedDocument } from "./review-test-harness";
 
@@ -77,14 +78,39 @@ describe("bound review identity", () => {
       ).toBe(false);
     },
   );
-  it("invalidates on focus and requires another bound review", async () => {
-    const harness = reviewHarness();
+  it("keeps the review through a focus that finds the same lists, and drops it when one changed", async () => {
+    // The re-checks after the first are held, so what the button does meanwhile shows.
+    let reviews = 0;
+    let changed = false;
+    const harness = reviewHarness(
+      async (request, response) =>
+        request.url.endsWith("/review") && ++reviews > 1 ? deferred().promise : response,
+      {
+        "GET /api/prompts": (request) =>
+          jsonAnswer({
+            prompts: prompts.map((one, index) =>
+              changed && index === 0 ? { ...one, body: `${one.body} Edited elsewhere.` } : one,
+            ),
+          })(request),
+      },
+    );
     await harness.prepare();
     await waitFor(() => expect(harness.session().review.valid).toBe(true));
-    act(() => window.dispatchEvent(new Event("focus")));
-    expect((screen.getByRole("button", { name: makeKey }) as HTMLButtonElement).disabled).toBe(
-      true,
-    );
+    const make = () => screen.getByRole("button", { name: makeKey }) as HTMLButtonElement;
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await waitFor(() => expect(reviews).toBeGreaterThan(1));
+    expect(harness.session().review.valid).toBe(true);
+    expect(make().disabled).toBe(false);
+    // A prompt edited in another tab: the lists come back different, so the check is redone
+    // before anything starts.
+    changed = true;
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await waitFor(() => expect(harness.session().review.valid).toBe(false));
+    expect(make().disabled).toBe(true);
   });
   it("checks the setup again by itself after an edit, without Check again", async () => {
     const harness = reviewHarness();
