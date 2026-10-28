@@ -47,8 +47,9 @@ export interface ServiceFills {
 
 // A service the template left empty, or picked but can't use here (no key saved), that the
 // draft filled (from the first launch, or a key saved in Settings) is still the template's:
-// the person changed nothing. One the person picked instead of the fill is their change. Its
-// other settings (a voice's glossary switches) still count.
+// the person changed nothing. One the person picked instead of the fill (or, with no fill,
+// instead of the template's) is their change. Its other settings (a voice's glossary switches)
+// still count.
 function serviceOf(
   field: string,
   form: Form,
@@ -63,12 +64,15 @@ function serviceOf(
   if (typeof value !== "object" || value === null) return value;
   const fill = fills[field as keyof ServiceFills];
   const chosen = value as Readonly<Record<string, unknown>>;
+  // With nothing to fill it with (no other voice saved here), the template's unusable service
+  // stays until the person picks another one.
   const own =
-    fill !== undefined &&
     chosen.provider !== "" &&
-    (chosen.provider !== fill.provider ||
-      chosen.model !== fill.model ||
-      ("voice" in fill && chosen.voice !== fill.voice));
+    (fill === undefined
+      ? typeof left === "string" && left !== "" && chosen.provider !== left
+      : chosen.provider !== fill.provider ||
+        chosen.model !== fill.model ||
+        ("voice" in fill && chosen.voice !== fill.voice));
   if (own) return value;
   const {
     provider: _provider,
