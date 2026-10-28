@@ -169,7 +169,7 @@ export function ProductionDefaults(): ReactElement {
         help="Bigger hears the narration more accurately and, on most computers, is also faster. It downloads once, the first time captions are timed."
         error={
           save.error && save.variables?.subtitleModel !== current.subtitleModel
-            ? `The subtitle timing model wasn't saved. ${save.error.message}`
+            ? `The caption timing model wasn't saved. ${save.error.message}`
             : undefined
         }
       >

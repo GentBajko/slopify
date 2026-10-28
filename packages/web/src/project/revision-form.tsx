@@ -640,7 +640,7 @@ export function RevisionForm(
               <Field
                 label="PDF look"
                 id={`${formId}-document-theme`}
-                help="One of the three ready looks, or one of your PDF themes."
+                help="One of the three ready looks, or one of your PDF looks."
               >
                 <DocumentThemePicker
                   id={`${formId}-document-theme`}
