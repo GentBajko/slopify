@@ -17,6 +17,7 @@ import {
   parsePronunciationGlossary,
   pronunciationRulesOf,
 } from "../narration/pronunciation.js";
+import { libraryGlossary } from "../narration/pronunciations-library.js";
 import { withSharedGlossary } from "../narration/shared-glossary.js";
 import { researchDocuments } from "../research/documents.js";
 import { plannerMessages, subAgentMessages } from "../research/planner.js";
@@ -508,11 +509,24 @@ export function narrationGlossary(context: RecipeContext): GlossaryResult | null
   return glossaryOf(context, markdown === null ? null : splitEndMatter(markdown));
 }
 
-// The project's own glossary, then the other projects' pronunciations it copied, when it
-// shares them. Rows the own glossary had to skip are still reported.
+// Your own pronunciation list first, then the project's own glossary, then the other projects'
+// pronunciations it copied, when it shares them. The list wins so a name is said the same way in
+// every video however this article spelled it out. Rows the own glossary had to skip are still
+// reported; rows the list had to skip are named in its editor, where they can be fixed.
 function withShared(own: GlossaryResult, config: RecipeContext["config"]): GlossaryResult {
-  if (!own.ok || config.audio?.shareGlossary !== true) return own;
-  return { ...own, entries: withSharedGlossary(own.entries, config.sharedGlossary) };
+  if (!own.ok) return own;
+  const list = libraryGlossary(
+    config.libraryPronunciations,
+    config.language,
+    pronunciationRulesOf(config),
+  );
+  const shared = config.audio?.shareGlossary === true ? config.sharedGlossary : undefined;
+  if (!list.ok) return list;
+  if (list.entries.length === 0 && shared === undefined) return own;
+  return {
+    ...own,
+    entries: withSharedGlossary(list.entries, withSharedGlossary(own.entries, shared)),
+  };
 }
 
 function withSampleScope(

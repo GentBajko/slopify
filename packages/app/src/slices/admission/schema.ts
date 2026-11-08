@@ -7,6 +7,7 @@ import { documentSettingsSchema } from "../document/theme-schema.js";
 import { keywordFactsSchema } from "../keywords/schema.js";
 import { narrationAliasesSchema } from "../narration/aliases-schema.js";
 import { chunkModes } from "../narration/chunk.js";
+import { libraryPronunciationsMax } from "../narration/pronunciation.js";
 import { reviewModes, reviewStages } from "../reviews/model.js";
 import { socialSettingsSchema } from "../social/schema.js";
 import { subtitleConfigSchema } from "../subtitles/model.js";
@@ -93,6 +94,7 @@ export const runDraftSchema = z.object({
     })
     .optional(),
   narrationAliases: narrationAliasesSchema.optional(),
+  libraryPronunciations: z.string().max(libraryPronunciationsMax).optional(),
   pronunciationRules: z.union([z.literal(1), z.literal(2)]).optional(),
   sharedGlossary: z
     .array(

@@ -9,6 +9,7 @@ import {
   listStaged,
   listVoices,
   readAppSettings,
+  readLibraryPronunciations,
   readNarrationAliases,
   readNotice,
   readProject,
@@ -56,6 +57,7 @@ export const keys = {
   calendar: ["calendar"] as const,
   studioReleases: ["studio", "releases"] as const,
   narrationAliases: ["narration-aliases"] as const,
+  libraryPronunciations: ["library-pronunciations"] as const,
   settings: ["settings"] as const,
   videoEncoders: ["video-encoders"] as const,
   // The project page's hand edits to the YouTube description, and the channel links: the
@@ -135,6 +137,13 @@ export function narrationAliasesQuery(api: Api) {
   return queryOptions({
     queryKey: keys.narrationAliases,
     queryFn: () => readNarrationAliases(api),
+  });
+}
+
+export function libraryPronunciationsQuery(api: Api) {
+  return queryOptions({
+    queryKey: keys.libraryPronunciations,
+    queryFn: () => readLibraryPronunciations(api),
   });
 }
 

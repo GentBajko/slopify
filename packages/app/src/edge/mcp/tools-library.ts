@@ -157,6 +157,20 @@ export const libraryTools: readonly RouteTool[] = [
     description: "The pronunciation glossary shared by every project.",
   },
   {
+    name: "get_library_pronunciations",
+    route: "GET /api/pronunciations/library",
+    title: "Read your pronunciation list",
+    description:
+      "Settings → Voices → Name pronunciations: your own glossary of Term: /ipa/ lines, whose names come before each article's glossary, with the rows narration skips and the version a save must carry.",
+  },
+  {
+    name: "set_library_pronunciations",
+    route: "PUT /api/pronunciations/library",
+    title: "Save your pronunciation list",
+    description:
+      "Saves the whole list, like Save pronunciations. Body: {text} of Term: /ipa/ lines (or a Term | IPA table), and {version} as get_library_pronunciations gave it, so this save replaces nothing written meanwhile. A refusal (409) names what the list is now and hands it back: read its version, fold your change into that text, and send it again. New projects use the list; a project already started keeps its copy until Edit settings → Narration copies it again.",
+  },
+  {
     name: "get_narration_aliases",
     route: "GET /api/pronunciations/aliases",
     title: "Read narration aliases",

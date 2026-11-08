@@ -160,6 +160,12 @@ export interface RunDraft {
   // Library → Aliases as copied when this project started or was last refreshed in Edit
   // project; used only while `audio.useNarrationAliases` is on. Absent when none were copied.
   readonly narrationAliases?: readonly NarrationAlias[] | undefined;
+  // Settings → Voices → Pronunciation's own glossary as copied when this project started or
+  // was last refreshed in Edit project, in the `Term: /ipa/` lines an article's glossary uses.
+  // Its names come before the article's own, so every video says them the same way. Used only
+  // while `audio.usePronunciationGlossary` is on; absent when the list was empty, so a project
+  // saved before it existed narrates exactly as it did.
+  readonly libraryPronunciations?: string | undefined;
   // Which pronunciation glossary rules the narration follows (`narration/pronunciation.ts`).
   // Every new project records the current ones; absent is rules 1, what every project saved
   // before possessives and hyphenated names were supported narrates with, so none is outdated.

@@ -130,7 +130,13 @@ const destinations: readonly Destination[] = [
     to: "/settings",
     label: "Settings",
     icon: <SettingsIcon {...iconProps} />,
-    match: ["/settings", "/usage", "/document-themes", "/narration-aliases"],
+    match: [
+      "/settings",
+      "/usage",
+      "/document-themes",
+      "/narration-aliases",
+      "/name-pronunciations",
+    ],
   },
 ];
 

@@ -30,6 +30,7 @@ import { EntriesRoute } from "@/routes/entries";
 import { EntryEditorRoute } from "@/routes/entry-editor";
 import { HomeRoute } from "@/routes/home";
 import { LibraryLayout } from "@/routes/library";
+import { NamePronunciationsRoute } from "@/routes/name-pronunciations";
 import { NarrationAliasesRoute } from "@/routes/narration-aliases";
 import { NotFoundRoute, RouteError } from "@/routes/not-found";
 import { PlayRoute } from "@/routes/play";
@@ -549,6 +550,12 @@ const narrationAliasesRoute = createRoute({
   component: NarrationAliasesRoute,
 });
 
+const namePronunciationsRoute = createRoute({
+  getParentRoute: () => libraryRoute,
+  path: "name-pronunciations",
+  component: NamePronunciationsRoute,
+});
+
 const abResultsRoute = createRoute({
   getParentRoute: () => libraryRoute,
   path: "ab-results",
@@ -878,6 +885,7 @@ const routeTree = rootRoute.addChildren({
     entriesRoute,
     documentThemesRoute,
     narrationAliasesRoute,
+    namePronunciationsRoute,
     abResultsRoute,
   }),
   templatesRoute,

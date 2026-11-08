@@ -53,6 +53,7 @@ export function titleForPath(pathname: string): string | undefined {
     [/^\/design-templates\/[^/]+/, "Design template"],
     [/^\/document-themes/, "PDF looks"],
     [/^\/narration-aliases/, "Pronunciation"],
+    [/^\/name-pronunciations/, "Name pronunciations"],
     [/^\/ab-results/, "What worked on YouTube"],
     [/^\/settings/, "Settings"],
     [/^\/help/, "Help · Tutorials"],

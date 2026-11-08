@@ -18,7 +18,7 @@ import { TextGenerationIn } from "./text-generation";
 
 afterEach(cleanup);
 
-const glossaryLabel = "Use the article's pronunciation glossary";
+const glossaryLabel = "Use pronunciations";
 
 const providers: readonly ProviderStatus[] = [
   {
@@ -154,7 +154,7 @@ it("uses an explicitly typed native checkbox with an associated label and help",
   const onChange = vi.fn();
   render(<PronunciationGlossary value={undefined} supported onChange={onChange} />);
   const input = screen.getByRole<HTMLInputElement>("checkbox", {
-    name: "Use the article's pronunciation glossary",
+    name: "Use pronunciations",
   });
   expect(input.tagName).toBe("INPUT");
   expect(input.type).toBe("checkbox");
@@ -163,7 +163,7 @@ it("uses an explicitly typed native checkbox with an associated label and help",
   // Its info button says what it reads and what to ask the article prompt for, so the
   // glossary is one narration can use.
   const help = helpEntry("play.pronunciation-glossary").body;
-  expect(screen.getByRole("button", { name: "About Pronunciation glossary" })).not.toBeNull();
+  expect(screen.getByRole("button", { name: "About Pronunciations" })).not.toBeNull();
   expect(help).toContain("Arda: /ˈɑɹdə/");
   expect(help).toContain("slash-delimited standard-English IPA (Term: /IPA/)");
   expect(help).toContain("English approximation for foreign names");
@@ -260,7 +260,7 @@ it("changes pronunciation and narration preparation independently", async () => 
   const user = userEvent.setup();
   renderRouted(<PlaySubject preference={false} preparation="Delivery" />, deps());
   const checkbox = await screen.findByRole<HTMLInputElement>("checkbox", {
-    name: "Use the article's pronunciation glossary",
+    name: "Use pronunciations",
   });
   const preparation = screen.getByRole<HTMLSelectElement>("combobox", {
     name: "Narration preparation",
@@ -281,18 +281,16 @@ it("changes pronunciation and narration preparation independently", async () => 
 it("retains Play's preference when Audio is Off or Provide and restores it on Generate", async () => {
   const user = userEvent.setup();
   renderRouted(<PlaySubject preference={true} />, deps());
-  await screen.findByRole("checkbox", { name: "Use the article's pronunciation glossary" });
+  await screen.findByRole("checkbox", { name: "Use pronunciations" });
   const sources = screen.getByRole("radiogroup", { name: "Narration" });
   for (const source of ["Off", "My own audio file"]) {
     await user.click(within(sources).getByRole("radio", { name: source }));
-    expect(
-      screen.queryByRole("checkbox", { name: "Use the article's pronunciation glossary" }),
-    ).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: "Use pronunciations" })).toBeNull();
     expect(screen.getByLabelText("Saved audio").textContent).toBe(JSON.stringify(audioFor(true)));
     await user.click(within(sources).getByRole("radio", { name: "AI voice (paid per character)" }));
     expect(
       screen.getByRole<HTMLInputElement>("checkbox", {
-        name: "Use the article's pronunciation glossary",
+        name: "Use pronunciations",
       }).checked,
     ).toBe(true);
   }

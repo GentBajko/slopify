@@ -61,6 +61,11 @@ export const libraryHelp = {
     body: "Words the narrator says differently from how they are written, such as Dr. as Doctor. Only what the voice and narration preparation receive changes; the article and captions keep the written words. A project copies this list when it starts and uses it while Use your pronunciation list is on. Up to 1000 aliases, saved as a whole.",
     tutorial: { page: "Narration-Aliases-and-Glossary", anchor: "narration-aliases" },
   },
+  "library.name-pronunciations": {
+    title: "Name pronunciations",
+    body: "The names this channel says the same way in every video, one Term: /IPA/ per line. They come before the glossary each article writes, so a name never drifts. A project copies the list when it starts and uses it while Use pronunciations is on; Inworld TTS-2 voices read IPA. A dash leaves a name read as written.",
+    tutorial: { page: "Narration-Aliases-and-Glossary", anchor: "name-pronunciations" },
+  },
   // ── Designs ──────────────────────────────────────────────────────────────────────────
   "library.design.show": {
     title: "Before and After",

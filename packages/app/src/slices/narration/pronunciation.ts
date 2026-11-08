@@ -4,6 +4,11 @@ import { internalError } from "../../kernel/errors.js";
 import { createRows, editSettings } from "../../kernel/ports/settings-places.js";
 import { remembered } from "../../kernel/remembered.js";
 
+// How long Settings → Voices → Pronunciation's own list may be, and with it the copy a project
+// carries (`slices/narration/pronunciations-library.ts`). Long enough for a channel's whole cast
+// of names.
+export const libraryPronunciationsMax = 100_000;
+
 export interface GlossaryEntry {
   readonly term: string;
   readonly ipa: readonly string[];

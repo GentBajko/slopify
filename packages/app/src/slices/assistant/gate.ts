@@ -164,6 +164,7 @@ export const assistantFreeTools = [
   "create_document_theme",
   "update_document_theme",
   "set_narration_aliases",
+  "set_library_pronunciations",
   "update_settings",
   "set_default_channel_links",
   "add_voice",

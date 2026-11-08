@@ -58,6 +58,7 @@ Full details: [Keys and Services](Providers-and-Keys) and [AI CLIs](AI-CLIs).
 | **Sounds like a real person** | On for a voice cloned from, or made to sound like, someone real. Copy for YouTube Studio then answers Yes to YouTube's question for videos it narrates. | Default: off. |
 | **Listen** | Reads one sentence aloud: free with the system voice, one short paid request with a service that has a key. | |
 | **Remove** | Removes the voice after you confirm. Projects keep the audio they made with it. | |
+| **Name pronunciations** | Opens your own list of names with their IPA, said that way in every video, before any article's own glossary. | |
 | **Pronunciation** | Opens the narration aliases: words the narrator says differently from how they are written. | |
 
 A line above the table says when a voice's service has no key yet, with a button to add it. See [Keys and Services](Providers-and-Keys#add-a-voice) and [Narration Aliases and Glossary](Narration-Aliases-and-Glossary).

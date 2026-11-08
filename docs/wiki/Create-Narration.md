@@ -83,7 +83,7 @@ It needs the Inworld TTS-2 model. With several speakers it works per speaker: ea
 
 | Option | What it does | Default |
 | --- | --- | --- |
-| **Use the article's pronunciation glossary** | Shown only for voices that read it. Reads names with the IPA in the article's Pronunciation Glossary, such as `Arda: /ˈɑɹdə/`, with no extra AI call. Works with Inworld TTS-2 and TTS-2 Flash. The written text stays unchanged. | On |
+| **Use pronunciations** | Shown only for voices that read IPA. Reads names with the IPA they are given, with no extra AI call: your **Name pronunciations** list first, so a listed name sounds the same in every video, then the article's own Pronunciation Glossary, such as `Arda: /ˈɑɹdə/`. Works with Inworld TTS-2 and TTS-2 Flash. The written text stays unchanged. | On |
 | **Also use pronunciations from my other projects** | Adds every term from your other projects' glossaries, copied when this project starts. This project's own glossary wins where they differ. Turn it off to use only this article's glossary. | On |
 
 With another service or model the tick is not shown; your choice is kept for when you pick an Inworld TTS-2 voice.

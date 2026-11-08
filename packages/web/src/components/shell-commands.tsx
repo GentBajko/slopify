@@ -276,6 +276,16 @@ function LibraryPageCommands(): null {
     },
   });
   useCommand({
+    id: "library.open-name-pronunciations",
+    title: "Open Name pronunciations",
+    group: "Go to",
+    searchOnly: true,
+    keywords: ["names", "ipa", "glossary", "say the name", "how to say"],
+    run: () => {
+      void navigate({ to: "/name-pronunciations" });
+    },
+  });
+  useCommand({
     id: "library.open-ab-results",
     title: "Open What worked on YouTube",
     group: "Go to",

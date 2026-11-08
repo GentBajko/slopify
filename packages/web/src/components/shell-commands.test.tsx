@@ -74,6 +74,8 @@ it("finds the pages that left Library from anywhere, by their names and the word
   const first = (typed: string) => matchCommands(registry.list(), typed)[0]?.title;
   expect(first("pronunciation")).toBe("Open Pronunciation");
   expect(first("aliases")).toBe("Open Pronunciation");
+  expect(first("name pronunciations")).toBe("Open Name pronunciations");
+  expect(first("ipa")).toBe("Open Name pronunciations");
   expect(first("what worked")).toBe("Open What worked on YouTube");
   expect(first("a/b")).toBe("Open What worked on YouTube");
   expect(first("intros")).toBe("Open intros and outros");

@@ -55,13 +55,13 @@ export const playHelp = {
     tutorial: { page: "Create-Narration", anchor: "intro-and-outro" },
   },
   "play.pronunciation-glossary": {
-    title: "Pronunciation glossary",
-    body: "Reads names with the IPA in the article's Pronunciation Glossary, such as Arda: /ˈɑɹdə/, with no extra AI call. In your article prompt, ask for a glossary in slash-delimited standard-English IPA (Term: /IPA/), with an English approximation for foreign names; a line with sounds English lacks is read as plain text. Works with Inworld TTS-2 and TTS-2 Flash. The written text stays unchanged. Default: on.",
-    tutorial: { page: "Narration-Aliases-and-Glossary", anchor: "the-pronunciation-glossary" },
+    title: "Pronunciations",
+    body: "Reads names with the IPA they are given, with no extra AI call: your Name pronunciations first, so a listed name sounds the same in every video, then the article's own Pronunciation Glossary, such as Arda: /ˈɑɹdə/. Ask your article prompt for a glossary in slash-delimited standard-English IPA (Term: /IPA/), with an English approximation for foreign names. Inworld TTS-2 and TTS-2 Flash. Default: on.",
+    tutorial: { page: "Narration-Aliases-and-Glossary", anchor: "name-pronunciations" },
   },
   "play.share-glossary": {
     title: "Pronunciations from other projects",
-    body: "Adds every term from your other projects' glossaries, copied when this project starts. This project's own glossary wins where they differ. Turn it off to use only this article's glossary. Default: on.",
+    body: "Adds every term from your other projects' glossaries, copied when this project starts. Your Name pronunciations come first, then this project's own glossary, then these. Turn it off to use only your list and this article's glossary. Default: on.",
     tutorial: { page: "Narration-Aliases-and-Glossary", anchor: "the-pronunciation-glossary" },
   },
   "play.describe-figures": {

@@ -25,6 +25,7 @@ import type {
   PromptKind,
 } from "@app/slices/library/model.js";
 import type { UsedBy } from "@app/slices/library/used-by.js";
+import type { LibraryPronunciations } from "@app/slices/narration/pronunciations-library.js";
 import type { CheckpointHold } from "@app/slices/reviews/holds.js";
 import type { RunCost } from "@app/slices/run-cost/panel.js";
 import type {
@@ -1149,6 +1150,41 @@ export async function saveNarrationAliases(
   aliases: readonly NarrationAlias[],
 ): Promise<SaveResult<{ readonly aliases: readonly NarrationAlias[] }>> {
   return saved(await api.client.pronunciations.aliases.$put({ json: { aliases: [...aliases] } }));
+}
+
+// Settings → Voices → Pronunciation, the list half: one glossary of your own, read and saved
+// whole. The reply says how many names it pronounces and which rows narration has to skip.
+export async function readLibraryPronunciations(api: Api): Promise<LibraryPronunciations> {
+  return read(await api.client.pronunciations.library.$get());
+}
+// The whole list is one value, so a refusal is about the list, not a row. A save carries the
+// version it was made from: when another window or an agent saved meanwhile the server refuses
+// with 409 and the list as it stands, which the editor shows instead of losing either side.
+export type PronunciationsSaved =
+  | { readonly ok: true; readonly list: LibraryPronunciations }
+  | { readonly ok: false; readonly detail: string; readonly current: LibraryPronunciations };
+
+export async function saveLibraryPronunciations(
+  api: Api,
+  text: string,
+  version: string,
+): Promise<PronunciationsSaved> {
+  const response = await api.client.pronunciations.library.$put({ json: { text, version } });
+  if (response.ok) return { ok: true, list: (await response.json()) as LibraryPronunciations };
+  if (response.status === 409) {
+    const problem = (await response.json()) as {
+      readonly detail?: string;
+      readonly current?: LibraryPronunciations;
+    };
+    if (problem.current !== undefined)
+      return {
+        ok: false,
+        detail: problem.detail ?? "The list changed since you opened it.",
+        current: problem.current,
+      };
+    throw new Error(problem.detail ?? "The list changed since you opened it.");
+  }
+  throw await failure(response);
 }
 
 export async function removeEntry(api: Api, id: string): Promise<void> {

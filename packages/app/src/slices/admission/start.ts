@@ -9,6 +9,7 @@ import { keywordFactsFor } from "../keywords/facts.js";
 import { usesFacts } from "../keywords/rules.js";
 import { listNarrationAliases } from "../narration/aliases-library.js";
 import { currentPronunciationRules } from "../narration/pronunciation.js";
+import { readLibraryPronunciations } from "../narration/pronunciations-library.js";
 import { collectSharedGlossary } from "../narration/shared-glossary.js";
 import { admitInitialRevision } from "../rebuild/runtime-admission.js";
 import { adoptBaseline } from "../revisions/adopt.js";
@@ -148,6 +149,11 @@ export function configOf(
     draft.sources.audio === "generate" && draft.audio?.useNarrationAliases === true
       ? listNarrationAliases(deps.db)
       : [];
+  // Settings → Voices → Pronunciation's own glossary as it is now: the names this channel
+  // always says the same way, ahead of whatever this article's glossary spells out.
+  const pronunciations = usesPronunciationGlossary(draft)
+    ? readLibraryPronunciations(deps.db).text
+    : "";
   // The title may name keywords too ("History: {{Topic}}"), filled like a prompt's, so a
   // template or Play keeps the pattern and each project gets its own title.
   const title = render(draft.title, draft.values).trim() || draft.title;
@@ -174,6 +180,7 @@ export function configOf(
     rendered,
     ...(shared.length === 0 ? {} : { sharedGlossary: shared }),
     ...(aliases.length === 0 ? {} : { narrationAliases: aliases }),
+    ...(pronunciations === "" ? {} : { libraryPronunciations: pronunciations }),
     pronunciationRules: currentPronunciationRules,
     ...(earlier === undefined ? {} : { earlierEpisodes: earlier }),
     ...(facts === undefined ? {} : { keywordFacts: facts }),

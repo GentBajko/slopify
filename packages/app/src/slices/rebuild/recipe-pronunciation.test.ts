@@ -372,3 +372,38 @@ it("adds the other projects' pronunciations when sharing, with the project's own
     entries: [{ term: "John", ipa: ["dʒɑn"] }],
   });
 });
+
+it("says a name the way your own list says it, whatever this article's glossary spells out", () => {
+  const base = context("John and Amun Ra read.\n\n## Pronunciation Glossary\nJohn: /dʒɑn/");
+  const listed = {
+    ...base,
+    config: {
+      ...base.config,
+      audio: {
+        provider: "inworld",
+        model: "inworld-tts-2",
+        voice: "voice",
+        usePronunciationGlossary: true,
+        shareGlossary: true,
+      },
+      // The list the project copied from Settings → Voices → Pronunciation: John the way the
+      // channel always says him, and a name this article left out.
+      libraryPronunciations: "John: /ʒɑn/\nAmun Ra: /ɑmʊn rɑː/",
+      sharedGlossary: [{ term: "John", ipa: ["dʒoʊn"] }],
+    },
+  };
+  expect(textRecipes(listed).glossary).toEqual({
+    ok: true,
+    entries: [
+      { term: "John", ipa: ["ʒɑn"] },
+      { term: "Amun Ra", ipa: ["ɑmʊn", "rɑː"] },
+    ],
+  });
+  // A project that copied no list narrates exactly as it did: its own glossary first, and the
+  // shared copy only where its own says nothing.
+  const { libraryPronunciations: _none, ...without } = listed.config;
+  expect(textRecipes({ ...listed, config: without }).glossary).toEqual({
+    ok: true,
+    entries: [{ term: "John", ipa: ["dʒɑn"] }],
+  });
+});

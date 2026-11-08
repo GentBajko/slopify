@@ -14,7 +14,7 @@ import { aKind, imageServiceUsers, kindAfterOff, listed } from "./image-needs";
 import { NarrationAliasesToggle } from "./narration-aliases.js";
 import { NarrationPreparation } from "./narration-preparation";
 import { readiness } from "./problems";
-import { PronunciationGlossary } from "./pronunciation-glossary";
+import { NamePronunciationsNote, PronunciationGlossary } from "./pronunciation-glossary";
 import { ReferenceImage, referenceOff } from "./reference-image";
 import { ServiceGroup } from "./service-group";
 import { SpeechInstall } from "./speech-install";
@@ -216,6 +216,7 @@ export function AudioRail({
               <PronunciationGlossary
                 value={form.audio.usePronunciationGlossary}
                 supported={glossaryReads}
+                list={<NamePronunciationsNote />}
                 onChange={(usePronunciationGlossary) =>
                   update({ audio: { ...form.audio, usePronunciationGlossary } })
                 }

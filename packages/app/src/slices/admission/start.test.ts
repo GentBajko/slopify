@@ -11,6 +11,10 @@ import { ensureDirs, layout } from "../../kernel/paths.js";
 import { defaultDocumentTheme } from "../document/model.js";
 import { saveNarrationAliases } from "../narration/aliases-library.js";
 import { currentPronunciationRules } from "../narration/pronunciation.js";
+import {
+  readLibraryPronunciations,
+  saveLibraryPronunciations,
+} from "../narration/pronunciations-library.js";
 import type { StorageDeps } from "../storage/staging.js";
 import { stageUpload } from "../storage/staging.js";
 import type { RunDraft } from "./model.js";
@@ -549,6 +553,45 @@ describe("startRun with the ambient bed's own file", () => {
     );
     expect(project.config.ambientBed).toEqual({ source: "rain", ...bed });
     expect(existsSync(join(storage.paths.staging, file))).toBe(true);
+  });
+});
+
+describe("name pronunciations", () => {
+  it("copies your list into a project whose voice reads IPA, and never into one that cannot", () => {
+    const storage = deps();
+    const list = "Gygax: /\u02c8\u0261a\u026a\u0261\u00e6ks/";
+    expect(saveLibraryPronunciations(storage, list).ok).toBe(true);
+    const current = readLibraryPronunciations(storage.db);
+    const voiced = (audio: RunDraft["audio"]) =>
+      draft({
+        sources: { ...draft().sources, audio: "generate" },
+        audio,
+        provided: { article: "Gygax wrote." },
+      });
+    const inworld = {
+      provider: "inworld",
+      model: "inworld-tts-2",
+      voice: "v1",
+      usePronunciationGlossary: true,
+    } as const;
+    expect(startRun(storage, voiced(inworld), {}, true).project.config.libraryPronunciations).toBe(
+      list,
+    );
+    // A voice that cannot read IPA, pronunciations switched off, or a draft from before the list
+    // existed: no copy, so nothing about the project's narration changes.
+    for (const audio of [
+      { ...inworld, usePronunciationGlossary: false },
+      { provider: "elevenlabs", model: "eleven_v3", voice: "v1", usePronunciationGlossary: true },
+      { ...inworld, model: "inworld-tts-1" },
+    ])
+      expect(
+        "libraryPronunciations" in startRun(storage, voiced(audio), {}, true).project.config,
+      ).toBe(false);
+    // A later edit of the list leaves a started project's copy alone.
+    expect(saveLibraryPronunciations(storage, "", current.version).ok).toBe(true);
+    const first = storage.db.prepare("SELECT config FROM projects ORDER BY rowid LIMIT 1").get();
+    expect(JSON.parse(String(first?.config)).libraryPronunciations).toBe(list);
+    storage.db.close();
   });
 });
 

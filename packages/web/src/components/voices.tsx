@@ -261,7 +261,9 @@ export function Voices({
           ) : null}
           <p className="m-0 text-small text-ink-2">
             How names and words are said:{" "}
-            <TextLink to="/narration-aliases">Pronunciation ↗</TextLink>
+            <TextLink to="/name-pronunciations">Name pronunciations ↗</TextLink> for the names every
+            video says the same way, <TextLink to="/narration-aliases">Pronunciation ↗</TextLink>{" "}
+            for words said as other words.
           </p>
         </div>
       </div>

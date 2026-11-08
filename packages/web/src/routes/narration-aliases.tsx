@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/kit/empty-state";
 import { Input } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
+import { TextLink } from "@/components/kit/link";
 import { useToast } from "@/components/kit/toast";
 import { counted, useSelection } from "@/components/selection";
 import { LibraryBulkBar, SelectionArea } from "@/library/bulk-bar";
@@ -254,7 +255,9 @@ export function NarrationAliasesRoute(): ReactElement {
       />
       <p className="m-0 mb-4 max-w-[var(--measure)] text-small text-ink-2" {...helpScope}>
         Words the narrator says differently, like Dr. as Doctor. The article, captions and PDF keep
-        the written word. <InfoTip id="library.aliases" className="-my-1 align-middle" />
+        the written word. For a name said the same way in every video, use{" "}
+        <TextLink to="/name-pronunciations">Name pronunciations ↗</TextLink>.{" "}
+        <InfoTip id="library.aliases" className="-my-1 align-middle" />
       </p>
 
       {listing.error === null ? null : (

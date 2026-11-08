@@ -2,12 +2,14 @@ import {
   usesNarrationPreparation,
   usesPronunciationGlossary,
 } from "@app/slices/admission/rules.js";
+import { describeLibraryPronunciations } from "@app/slices/narration/pronunciations-library.js";
 import type { RevisionEdit } from "@app/slices/revisions/model.js";
 import { usesVoices } from "@app/slices/voices/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   type ProviderStatus,
+  readLibraryPronunciations,
   readNarrationAliases,
   readSharedPronunciations,
   type Voice,
@@ -91,6 +93,42 @@ function useSharedGlossary(
   };
 }
 
+// The copy of Settings → Voices → Name pronunciations this project carries, under "Use
+// pronunciations" in Edit settings: the button copies the list again, so an edit there only
+// reaches a project that asks for it (and rebuilds only the narration the changed names touch).
+function useNamePronunciations(edit: RevisionEdit, onChange: (edit: RevisionEdit) => void) {
+  const { api } = useApp();
+  const [state, setState] = useState<{ busy: boolean; error?: string }>({ busy: false });
+  const { config } = edit;
+  const copy = async (): Promise<void> => {
+    setState({ busy: true });
+    try {
+      const list = await readLibraryPronunciations(api);
+      const { libraryPronunciations: _old, ...rest } = config;
+      onChange({
+        ...edit,
+        config: { ...rest, ...(list.text === "" ? {} : { libraryPronunciations: list.text }) },
+      });
+      setState({ busy: false });
+    } catch (error) {
+      setState({ busy: false, error: error instanceof Error ? error.message : String(error) });
+    }
+  };
+  const carried = describeLibraryPronunciations(config.libraryPronunciations ?? "");
+  return (
+    <p className="flex flex-wrap items-center gap-2 text-label text-ink-2">
+      {state.error !== undefined
+        ? `Couldn't read your Name pronunciations: ${state.error} Press Copy the list again.`
+        : carried.terms === 0
+          ? "No names are copied yet. Add some in Settings → Voices → Name pronunciations."
+          : `${String(carried.terms)} ${carried.terms === 1 ? "name" : "names"} copied from Settings → Voices → Name pronunciations, said this way before the article's glossary.`}
+      <Button type="button" variant="quiet" disabled={state.busy} onClick={() => void copy()}>
+        {state.busy ? "Copying…" : "Copy the list again"}
+      </Button>
+    </p>
+  );
+}
+
 // "Use your pronunciation list" in Edit settings: turning it on copies the Pronunciation list (Settings →
 // Voices → Pronunciation) into this project, and the button copies it again, so an edit there
 // only reaches a project that asks for it (and rebuilds only the narration the changed aliases
@@ -168,6 +206,7 @@ export function RevisionProviders({
   const llm = config.llm ?? { provider: "", model: "" };
   const audio = config.audio ?? { provider: "", model: "", voice: "" };
   const shared = useSharedGlossary(projectId, edit, onChange);
+  const names = useNamePronunciations(edit, onChange);
   const aliases = useAliases(edit, onChange);
   const { api } = useApp();
   const cast = useQuery(channelQuery(api, config.channelId ?? defaultChannelId));
@@ -281,6 +320,7 @@ export function RevisionProviders({
           />
           <PronunciationGlossary
             shared={shared}
+            list={names}
             value={audio.usePronunciationGlossary}
             supported={usesPronunciationGlossary({
               sources: config.sources,
