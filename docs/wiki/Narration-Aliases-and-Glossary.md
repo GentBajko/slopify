@@ -151,6 +151,38 @@ An entry narration can't use is skipped and read as ordinary text. It never bloc
 
 To fix skipped entries, edit the Pronunciation Glossary at the end of the article in **Edit settings** → **Article**, then save. See [Editing a project](Editing-a-Project).
 
+## Does this video say the names right?
+
+Two checks on the project page answer that from files the project already has. Neither one blocks the run or the upload, neither costs anything, and neither changes a thing.
+
+### Before the narration is paid for
+
+The **Narration** section says, in one line, which names this article uses that nothing pronounces: not its own Pronunciation Glossary, not your **Name pronunciations** list, not the pooled copy of the other projects' glossaries. **Every mention** opens the table — each name, how often it is said as written and how often as a possessive, proper names first.
+
+This is the cheapest moment to settle a name, because adding it to **Name pronunciations** costs nothing and the voice has not been paid yet.
+
+It also catches the names a glossary looks like it covers and doesn't:
+
+| What the glossary has | What the article says | Why the voice guesses |
+|---|---|---|
+| `Belwar Dissengulp` | "Belwar" on its own | A two-word term never matches one of its words said alone. |
+| `Drizzt` | "Drizzt's" | A project narrated under the old pronunciation rules wrapped no possessive. |
+| `Catti-brie` | "Catti-brie" | The old rules skipped a hyphenated term, so it was read as ordinary text. |
+
+A project is judged by the rules it was voiced under, so a video made before those rules changed is told what actually happened to it, not what would happen today.
+
+### After the render, before the upload
+
+The **YouTube** section carries the same line, saying two things.
+
+**What the voice was sent.** Counted from the voice script itself, which is exactly the text the voice received: a name with no IPA in front of it there was guessed, whatever the glossary says.
+
+**How each name was heard.** Read from the per-word confidence the subtitle timing already wrote when the captions were made: each name's mean, and the spread across its mentions. Nothing is listened to again and nothing is re-aligned.
+
+The spread is the signal, not a low score. A rare name is heard poorly even when it is said perfectly, so only a name whose own mentions disagree with each other is flagged: eight mentions or more, and a spread of 0.30 or more between its 10th and 90th percentile.
+
+A name read as an ordinary English word is left out of both checks: a one-word name that the same text also writes in lower case is a word here and not a name, which is why "Hall" stays quiet in a video that also says "hall".
+
 ## Which one do I use?
 
 | You want | Use |

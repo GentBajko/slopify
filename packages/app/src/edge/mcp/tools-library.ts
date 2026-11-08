@@ -171,6 +171,20 @@ export const libraryTools: readonly RouteTool[] = [
       "Saves the whole list, like Save pronunciations. Body: {text} of Term: /ipa/ lines (or a Term | IPA table), and {version} as get_library_pronunciations gave it, so this save replaces nothing written meanwhile. A refusal (409) names what the list is now and hands it back: read its version, fold your change into that text, and send it again. New projects use the list; a project already started keeps its copy until Edit settings → Narration copies it again.",
   },
   {
+    name: "check_pronunciations",
+    route: "GET /api/projects/:projectId/pronunciations/gaps",
+    title: "Check a project's names before the narration is paid for",
+    description:
+      "The names this article says that nothing pronounces — not its own Pronunciation Glossary, not your Name pronunciations list, not the pooled copy of the other projects' glossaries — so the voice will invent them. Each name with how often it is said plain and as a possessive, proper names first, and `notice` as the one line the project page shows. Read it while the narration is still unmade: adding the names with set_library_pronunciations settles them for every later video too. It changes nothing and costs nothing.",
+  },
+  {
+    name: "check_narration_names",
+    route: "GET /api/projects/:projectId/pronunciations/heard",
+    title: "Check how the finished narration said a project's names",
+    description:
+      "Two answers about a rendered project, from files it already has. `narrated` counts the names that reached the voice as written rather than as IPA, from the voice script itself, so it is what the voice was really sent. `heard` reads the per-word confidence of the subtitle timing: each name's mean and the spread across its mentions, and `uneven` for the names whose mentions disagree with each other, which is the sign a name was not said the same way twice. A rare name scores low even when it is said perfectly, so a low score alone never flags. Nothing is listened to again, re-aligned or changed.",
+  },
+  {
     name: "get_narration_aliases",
     route: "GET /api/pronunciations/aliases",
     title: "Read narration aliases",

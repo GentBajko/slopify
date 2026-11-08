@@ -139,6 +139,17 @@ Preparation, description and TTS parts are revision work pieces moving pending �
 
 Success writes one asset per physical request, joined `audio_body`/`audio_intro`/`audio_outro` with measured durations, an `audio_levelled` copy per segment with a loudness report when levelling is on, and `narration_txt`/`tts_script` downloads when preparation or the glossary applies (`runtime-local.ts:286`–`:322`, `runtime-narration-text.ts:116`). The body's media fingerprint also covers the silence gap and edge silence (`recipe-audio.ts:348`–`:352`). A multi-voice run exposes its script sections as chapters to the MP3/M4B export (`recipe-audio.ts:118`, `:357`, `packages/app/src/slices/rebuild/runtime-voices.ts:25`). Joining clears the live audio previews of the pieces it consumed (`runtime-local.ts:289`). Reading downloads or previews makes no provider request.
 
+## Reading back: does this video say the names right?
+
+Two read-only checks over files the run already wrote, neither of which blocks, changes or costs anything (`packages/app/src/slices/narration/pronunciation-check.ts`, `packages/app/src/edge/http/pronunciation-check.ts`).
+
+The universe of names is the effective glossary assembled the way the recipe assembles it — your Name pronunciations list, then the article's own glossary, then the pooled copy where the project shares it (`recipe-text.ts:514`) — parsed twice: under the project's own `pronunciationRules`, which is what actually guided the voice, and under rules 2, which is the fullest list of names the sources name at all. Each capitalised word of a multi-word term counts as a name of its own, because a two-word term never matches one of its words said alone. A one-word name of four letters or more, written with a capital, that the same text also writes in lower case (allowing a one- or two-letter ending) is an ordinary English word there and is left out.
+
+- `GET /api/projects/:projectId/pronunciations/gaps`, before the narration is paid for: guided mentions are `pronunciationSpans` under the project's rules, so a project narrated without possessives is told about its possessives and a newer one is not.
+- `GET /api/projects/:projectId/pronunciations/heard`, after the render: guided mentions are the literal `/…/` runs of the `tts_script` output, which is exactly the text the voice received, and the heard side reads the `subtitle_words` confidence written when the captions were timed. A name is flagged only with at least 8 mentions and a 10th-to-90th-percentile spread of at least 0.30 — the spread, not a low mean, because a rare name scores low even when said perfectly.
+
+Delivery tags are blanked rather than removed, so every offset still points at the text, and a slash pair with whitespace inside is never read as IPA.
+
 ## Dimensions not in play
 
 No voice cloning in narration; no transcription of supplied audio into text; no translation of the article (the project language only selects IPA rules, list connectives and preparation wording, `pronunciation.ts:135`, `blocks.ts:54`, `preparation.ts:96`). Sentence segmentation is fixed to `Intl.Segmenter("en")` for every language (`chunk.ts:128`). Automatic chunk retry does not cover multi-voice turns (`runtime-subtitles.ts:399`). Service readiness checks only `config.audio`'s saved voice, not each speaker's (`service-readiness.ts:114`).

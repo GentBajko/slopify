@@ -55,6 +55,7 @@ import {
 import { knownVideoLink } from "@/project/on-youtube";
 import { ProjectOutputs } from "@/project/project-outputs";
 import { fileCount } from "@/project/project-outputs-model";
+import { NamesAheadNotice } from "@/project/pronunciation-check";
 import { projectReleasesKey } from "@/project/release-times";
 import {
   EditRequestContext,
@@ -775,6 +776,9 @@ function ProjectWorkspace({
                       active={selected === "narration"}
                       {...sectionProps}
                     >
+                      {/* The cheapest moment to settle a name: the article is written, the
+                      voice has not been paid for yet. */}
+                      <NamesAheadNotice projectId={projectId} />
                       {opens(audio) ? (
                         body(audio)
                       ) : (

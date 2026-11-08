@@ -13,6 +13,8 @@ import {
   readNarrationAliases,
   readNotice,
   readProject,
+  readPronunciationGaps,
+  readPronunciationsHeard,
   readRunCost,
   readUsage,
   readVideoEncoders,
@@ -29,6 +31,9 @@ export const keys = {
   project: (id: string) => ["project", id] as const,
   // Under the project's key, so every event that refetches the project refetches this too.
   runCost: (id: string) => ["project", id, "run-cost"] as const,
+  // The two name checks, under the project's prefix so a new version refreshes them both.
+  pronunciationGaps: (id: string) => ["project", id, "pronunciation-gaps"] as const,
+  pronunciationsHeard: (id: string) => ["project", id, "pronunciations-heard"] as const,
   // The text `article.delta` appends to. It is patched, never fetched.
   article: (id: string, revisionId: string | null = null) =>
     ["project", id, "article", revisionId] as const,
@@ -94,6 +99,20 @@ export function projectQuery(api: Api, id: string) {
       query.state.data !== undefined && active.has(query.state.data.project.status)
         ? whileRunningMs
         : false,
+  });
+}
+
+export function pronunciationGapsQuery(api: Api, id: string) {
+  return queryOptions({
+    queryKey: keys.pronunciationGaps(id),
+    queryFn: () => readPronunciationGaps(api, id),
+  });
+}
+
+export function pronunciationsHeardQuery(api: Api, id: string) {
+  return queryOptions({
+    queryKey: keys.pronunciationsHeard(id),
+    queryFn: () => readPronunciationsHeard(api, id),
   });
 }
 

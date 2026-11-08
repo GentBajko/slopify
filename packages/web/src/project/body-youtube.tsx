@@ -47,6 +47,7 @@ import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { OnYoutube } from "./on-youtube.js";
 import { useOutputText } from "./parts.js";
+import { NamesNarratedNotice } from "./pronunciation-check.js";
 import { ReleaseTimes } from "./release-times.js";
 import { RegenerateNowContext } from "./revision-action-context.js";
 import { YoutubeCopyContext } from "./section-copy.js";
@@ -313,7 +314,10 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
     `None yet. Write the description again to have ${name === "titles" ? "them" : "one"} written, or press Edit ${labels[name].toLowerCase()} to write your own.`;
 
   return (
-    <div className="@container min-w-0">
+    <div className="@container flex min-w-0 flex-col gap-4">
+      {/* Before the upload: the names the voice guessed, and the names it was heard saying more
+      than one way. It never holds the upload up. */}
+      <NamesNarratedNotice projectId={project.id} />
       <div className="grid min-w-0 grid-cols-1 gap-x-8 gap-y-4 @min-[860px]:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-4">
           <section aria-labelledby={`${id}-description`} className="flex min-w-0 flex-col gap-2">

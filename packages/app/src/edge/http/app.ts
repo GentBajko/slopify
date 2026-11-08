@@ -59,6 +59,7 @@ import { problem, problemFromError } from "./problem.js";
 import { projectTemplateRoutes } from "./project-templates.js";
 import { projectRoutes } from "./projects.js";
 import { promptRoutes } from "./prompts.js";
+import { pronunciationCheckRoutes } from "./pronunciation-check.js";
 import { pronunciationRoutes } from "./pronunciations.js";
 import { providerRoutes } from "./providers.js";
 import { remoteAccessRoutes } from "./remote-access.js";
@@ -258,6 +259,7 @@ function apiRoutes(deps: AppDeps, startedAt: number, runAllowed?: RunAllowedCall
       .route("/projects", openFolderRoutes(deps))
       .route("/projects", audioPreviewRoutes(deps))
       .route("/projects", narrationPeakRoutes(deps))
+      .route("/projects", pronunciationCheckRoutes(deps))
       .route("/projects", runCostRoutes(deps))
       .route("/projects", uploadedRoutes(deps))
       .route("/home", homeRoutes(deps))

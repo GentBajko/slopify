@@ -1,4 +1,5 @@
 import type { AppType } from "@app/edge/http/app.js";
+import type { PronunciationGaps, PronunciationHeard } from "@app/edge/http/pronunciation-check.js";
 import type { NarrationAlias } from "@app/kernel/ports/narration-aliases.js";
 import type {
   Project,
@@ -298,6 +299,27 @@ export async function readProject(api: Api, id: string): Promise<ProjectBody> {
 }
 
 // The Run cost tab and the "Waiting for … limits" line (`edge/http/run-cost.ts`).
+// Does this video say the names right? Two read-only answers from files the project already has
+// (`edge/http/pronunciation-check.ts`): the names nothing pronounces, before the narration is
+// paid for, and what the finished narration was sent and heard saying, before the upload.
+export async function readPronunciationGaps(
+  api: Api,
+  projectId: string,
+): Promise<PronunciationGaps> {
+  return read<PronunciationGaps>(
+    await api.client.projects[":projectId"].pronunciations.gaps.$get({ param: { projectId } }),
+  );
+}
+
+export async function readPronunciationsHeard(
+  api: Api,
+  projectId: string,
+): Promise<PronunciationHeard> {
+  return read<PronunciationHeard>(
+    await api.client.projects[":projectId"].pronunciations.heard.$get({ param: { projectId } }),
+  );
+}
+
 export async function readRunCost(api: Api, id: string): Promise<RunCost> {
   return read<RunCost>(await api.client.projects[":id"]["run-cost"].$get({ param: { id } }));
 }
