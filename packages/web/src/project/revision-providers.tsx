@@ -2,7 +2,10 @@ import {
   usesNarrationPreparation,
   usesPronunciationGlossary,
 } from "@app/slices/admission/rules.js";
-import { describeLibraryPronunciations } from "@app/slices/narration/pronunciations-library.js";
+// The parser alone, not `describeLibraryPronunciations`: that one also stamps the list's
+// version, which hashes with `node:crypto` and so cannot run in a browser. The count is all
+// this screen shows.
+import { parsePronunciationGlossary } from "@app/slices/narration/pronunciation.js";
 import type { RevisionEdit } from "@app/slices/revisions/model.js";
 import { usesVoices } from "@app/slices/voices/model.js";
 import { useQuery } from "@tanstack/react-query";
@@ -114,7 +117,8 @@ function useNamePronunciations(edit: RevisionEdit, onChange: (edit: RevisionEdit
       setState({ busy: false, error: error instanceof Error ? error.message : String(error) });
     }
   };
-  const carried = describeLibraryPronunciations(config.libraryPronunciations ?? "");
+  const parsed = parsePronunciationGlossary(config.libraryPronunciations ?? "");
+  const carried = { terms: parsed.ok ? parsed.entries.length : 0 };
   return (
     <p className="flex flex-wrap items-center gap-2 text-label text-ink-2">
       {state.error !== undefined
