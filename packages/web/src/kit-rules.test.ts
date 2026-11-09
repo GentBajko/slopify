@@ -74,7 +74,7 @@ describe("the kit's action rules", () => {
   });
 
   it("builds no raw <button> outside the kit, apart from the shell's own rail and top-bar items", () => {
-    const allowed = new Set(["components/shell.tsx"]);
+    const allowed = new Set(["components/shell.tsx", "updates/widget.tsx"]);
     expect(
       offenders((text) => openingTags(text, "button")).filter(
         (line) => !allowed.has(line.slice(0, line.indexOf(":"))),
@@ -87,6 +87,12 @@ describe("the kit's action rules", () => {
     const items = openingTags(shell, "button");
     expect(items).toHaveLength(3);
     for (const item of items) expect(item).toMatch(/className="sl-(navrail|topbar)__item"/);
+    // The update button is one of those items too, factored out because the rail and the phone's
+    // bar both carry it: it takes the item's class from whichever one placed it.
+    const update = screens.find((one) => one.file === "updates/widget.tsx")?.text ?? "";
+    const buttons = openingTags(update, "button");
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toMatch(/className=\{cn\(className,/);
   });
 
   it("selects a ListRow through onSelect, not a button hand-made into its title", () => {

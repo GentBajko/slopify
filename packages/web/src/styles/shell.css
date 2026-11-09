@@ -647,6 +647,25 @@
   .sl-navrail__item--news {
     color: var(--color-accent-ink);
   }
+  /* The update button carries two more lines than the items beside it, so it keeps its own
+     height and lets the version numbers break where they must. */
+  .sl-navrail__item--update {
+    gap: 2px;
+    min-height: 0;
+    line-height: 14px;
+  }
+  /* The version running now: there to be read, never to be acted on. */
+  .sl-navrail__version {
+    font: 500 11px / 13px var(--font-mono);
+    color: var(--color-ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+  /* The version waiting to be installed, in the accent's ink even where the item is not. */
+  .sl-navrail__next {
+    font: 600 11px / 13px var(--font-mono);
+    color: var(--color-accent-ink);
+    font-variant-numeric: tabular-nums;
+  }
   /* "● 2 running" under the destinations: the lamp and the count over the word. */
   .sl-navrail__running {
     display: flex;

@@ -1,0 +1,7 @@
+# The update has a button of its own
+
+- **It is out of the Help menu and into the rail,** always present, between Assistant and Help, because whether there is a new version is a question about the app and not about its help. The Help menu keeps the tour, the guides, the keys, what's new and the diagnostics file, and loses the update rows it used to end with.
+- **The version running now sits under the word,** and a version ready to install sits under that as `→ 4.3.2` in the accent's ink, with the whole button in it — the colour a waiting update always had, now with the number beside it. Nothing has to be opened to read either.
+- **The arrow turns while it looks or installs.** A check gave nothing back until it had an answer, so the press felt like nothing happened; the button now turns, names itself "Checking for updates…" and refuses a second press until it has one. `motion-reduce` stills it.
+- **The button is named for what pressing it does,** never for the word on it: "Check for updates", "Install update 4.3.2", "Cancel the update", "Updating…". The whole state is its `title` and is announced through the live region that now sits beside both layouts rather than inside either.
+- **On a phone** it is a third item in the top bar, between Search and Help, with the versions left off for room; at 375px the three fit without crowding, and Settings → About still carries the versions in full.

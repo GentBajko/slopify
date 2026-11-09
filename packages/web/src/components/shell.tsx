@@ -64,7 +64,7 @@ import { keys } from "@/queries";
 import { TutorialProvider, useTutorial } from "@/tutorial/context";
 import { TutorialCommands } from "@/tutorials/commands";
 import { type UpdateView, useUpdate } from "@/updates/use-update";
-import { UpdateMenuRows, UpdateWidget, updateWords } from "@/updates/widget";
+import { UpdateButton, UpdateWidget } from "@/updates/widget";
 import { WhatsNewTour } from "@/whats-new/tour";
 
 // The shell (docs/design-system.md, Shell). From 768px up: a --rail-width (76px) rail of icons
@@ -232,16 +232,15 @@ function reloadPage(): void {
   window.location.reload();
 }
 
-// Help: the tour first, then the guides, the keys, the patch notes, Slopify's own update and
-// the diagnostics file a bug report needs (the same one Settings → About saves). On a phone it
-// also holds the Assistant and the support links, so the top bar stays two words.
+// Help: the tour first, then the guides, the keys, the patch notes and the diagnostics file a
+// bug report needs (the same one Settings → About saves). On a phone it also holds the Assistant
+// and the support links, so the top bar stays two words. Slopify's own updates are not here:
+// they have a button of their own, in the rail and in the phone's bar.
 function HelpMenu({
-  update,
   phone,
   onAssistant,
   className,
 }: {
-  readonly update: UpdateView;
   readonly phone: boolean;
   readonly onAssistant: () => void;
   readonly className: string;
@@ -288,7 +287,6 @@ function HelpMenu({
           </MenuItem>
         ) : null}
         <MenuSeparator />
-        <UpdateMenuRows update={update} />
         <MenuItem asChild>
           <a
             href={`${api.origin}/api/diagnostics`}
@@ -398,7 +396,7 @@ function Rail({
       </nav>
       <RunningLink running={running} className="sl-navrail__running" />
       <div className="sl-app__foot">
-        <UpdateWidget update={update} className="sl-navrail__item sl-navrail__item--news" />
+        <UpdateButton update={update} className="sl-navrail__item sl-navrail__item--update" />
         <button
           type="button"
           className="sl-navrail__item"
@@ -417,12 +415,7 @@ function Rail({
           <SparklesIcon {...iconProps} />
           <span>Assistant</span>
         </button>
-        <HelpMenu
-          update={update}
-          phone={false}
-          onAssistant={onAssistant}
-          className="sl-navrail__item"
-        />
+        <HelpMenu phone={false} onAssistant={onAssistant} className="sl-navrail__item" />
         <SupportMenu />
       </div>
     </aside>
@@ -449,19 +442,14 @@ function TopBar({
         <RunningLink running={running} className="sl-topbar__running" />
       </div>
       <div className="flex shrink-0 items-center gap-1">
-        <UpdateWidget update={update} item={false} />
         <button type="button" className="sl-topbar__item" onClick={() => palette.setOpen(true)}>
           <SearchIcon {...iconProps} />
           <span>Search</span>
         </button>
-        {/* An update to install shows in Help's own words, in the accent's ink, rather than as a
-            third button the bar has no room for. */}
-        <HelpMenu
-          update={update}
-          phone
-          onAssistant={onAssistant}
-          className={cn("sl-topbar__item", updateWords(update).news && "sl-topbar__item--news")}
-        />
+        {/* The bar has room for the icon alone, so the versions stay off it; Settings → About
+            carries them in full on a phone. */}
+        <UpdateButton update={update} versions={false} className="sl-topbar__item" />
+        <HelpMenu phone onAssistant={onAssistant} className="sl-topbar__item" />
       </div>
     </header>
   );
@@ -591,6 +579,8 @@ function ShellContent() {
       <PatchNotesCommand />
       <TutorialCommands />
       <ConnectionStatus connection={connection} />
+      {/* Mounted beside both layouts, so a wait or a failure is announced whichever one is up. */}
+      <UpdateWidget update={update} />
       {wide ? (
         <Rail
           running={running}

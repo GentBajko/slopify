@@ -68,10 +68,12 @@ describe("the rail", () => {
     expect(within(rail).queryByRole("combobox")).toBeNull();
     for (const name of ["Search", "Assistant", "Help", "Support Slopify"])
       expect(within(rail).getByRole("button", { name })).not.toBeNull();
-    // No donation rows, slogan, version or bare glyphs before anything is opened.
+    // Updates have a button of their own, which says which version this is.
+    expect(within(rail).getByRole("button", { name: "Check for updates" })).not.toBeNull();
+    await waitFor(() => expect(rail.textContent).toContain("4.0.0"));
+    // No donation rows, slogan or bare glyphs before anything is opened.
     expect(within(rail).queryByRole("link", { name: "GitHub" })).toBeNull();
     expect(rail.textContent).not.toContain("Free. Your keys");
-    expect(rail.textContent).not.toMatch(/v\d/);
     for (const button of within(rail).getAllByRole("button"))
       expect(button.textContent?.trim()).not.toBe("");
   });
@@ -103,7 +105,7 @@ describe("the rail", () => {
     expect(within(nav).getByRole("link", { name: "Home" }).getAttribute("aria-current")).toBeNull();
   });
 
-  it("opens Help on the tour, the guides, the keys, what's new, the update check and the diagnostics", async () => {
+  it("opens Help on the tour, the guides, the keys, what's new and the diagnostics, with updates left out", async () => {
     const user = userEvent.setup();
     mount();
     await user.click(await screen.findByRole("button", { name: "Help" }));
@@ -113,10 +115,10 @@ describe("the rail", () => {
       "Tutorials",
       "Keyboard shortcuts",
       "What's new",
-      "Check for updates",
       "Download diagnostics",
     ]);
-    expect(menu.textContent).toContain("You have Slopify 4.0.0.");
+    // Updates are not Help's business: the rail's own button carries them.
+    expect(menu.textContent).not.toContain("Slopify 4.0.0");
     // The same file Settings → About saves, for a bug report.
     const diagnostics = within(menu).getByRole("menuitem", { name: "Download diagnostics" });
     expect(diagnostics.getAttribute("href")).toBe("http://slopify.test/api/diagnostics");
@@ -163,26 +165,24 @@ describe("the rail", () => {
 describe("an update", () => {
   const ready = { ...upToDate, latestVersion: "4.1.0", available: true, canUpdate: true };
 
-  it("shows in the rail in words only while there is one", async () => {
-    const user = userEvent.setup();
+  it("names the new version on the rail's own button, beside the one running", async () => {
     mount(undefined, undefined, ready);
     const rail = await screen.findByRole("complementary", { name: "App" });
-    await user.click(await within(rail).findByRole("button", { name: "Update ready" }));
-    const menu = await screen.findByRole("menu", { name: "Update ready" });
-    expect(within(menu).getByRole("menuitem", { name: "Install update 4.1.0" })).not.toBeNull();
+    const button = await within(rail).findByRole("button", { name: "Install update 4.1.0" });
+    expect(button.querySelector(".sl-navrail__version")?.textContent).toBe("4.0.0");
+    expect(button.querySelector(".sl-navrail__next")?.textContent).toBe("\u2192 4.1.0");
+    expect(button.className).toContain("sl-navrail__item--news");
   });
 
-  it("stays inside Help on a phone, which says so in the accent's ink", async () => {
+  it("has its own button on a phone too, with the versions left off the bar", async () => {
     phone();
-    const user = userEvent.setup();
     mount(undefined, undefined, ready);
     await screen.findByRole("navigation", { name: "Main navigation (phone)" });
-    const help = screen.getByRole("button", { name: "Help" });
-    await waitFor(() => expect(help.className).toContain("sl-topbar__item--news"));
-    expect(screen.queryByRole("button", { name: "Update ready" })).toBeNull();
-    await user.click(help);
-    const menu = await screen.findByRole("menu", { name: "Help" });
-    expect(within(menu).getByRole("menuitem", { name: "Install update 4.1.0" })).not.toBeNull();
+    const button = await screen.findByRole("button", { name: "Install update 4.1.0" });
+    await waitFor(() => expect(button.className).toContain("sl-navrail__item--news"));
+    expect(button.querySelector(".sl-navrail__version")).toBeNull();
+    // Help is left to Help.
+    expect(screen.getByRole("button", { name: "Help" }).className).not.toContain("--news");
   });
 });
 
@@ -217,7 +217,10 @@ describe("on a phone", () => {
     await screen.findByRole("navigation", { name: "Main navigation (phone)" });
     const top = document.querySelector<HTMLElement>(".sl-topbar");
     if (top === null) throw new Error("No top bar on a phone.");
-    expect(names(within(top).getAllByRole("button"))).toEqual(["Search", "Help"]);
+    // One word each; the update button's own name says what pressing it does.
+    expect(names(within(top).getAllByRole("button"))).toEqual(["Search", "Update", "Help"]);
+    // One word on the bar; its own name says what pressing it does, once the first check is in.
+    expect(await within(top).findByRole("button", { name: "Check for updates" })).not.toBeNull();
     await user.click(within(top).getByRole("button", { name: "Help" }));
     const menu = await screen.findByRole("menu", { name: "Help" });
     expect(names(within(menu).getAllByRole("menuitem"))).toEqual([
@@ -225,7 +228,6 @@ describe("on a phone", () => {
       "Tutorials",
       "What's new",
       "Assistant",
-      "Check for updates",
       "Download diagnostics",
       "GitHub",
       "Patreon",

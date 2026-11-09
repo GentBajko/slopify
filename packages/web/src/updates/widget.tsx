@@ -1,15 +1,16 @@
 import { CircleArrowUpIcon } from "lucide-react";
-import { type ReactElement, useEffect, useId, useRef } from "react";
-import { Menu, MenuContent, MenuItem, MenuLabel, MenuTrigger } from "@/components/kit/menu";
+import { type ReactElement, useEffect, useRef } from "react";
 import { useToast } from "@/components/kit/toast";
+import { cn } from "@/lib/utils";
 import type { UpdateInfo } from "./api.js";
 import type { UpdateView } from "./use-update.js";
 
-// Slopify's own updates, in words. The rail (and the phone's top bar) shows an item only while
-// there is something to see: a version ready to install, an update waiting for running work,
-// one under way, or one that failed. It opens a menu with the state in a sentence and the one
-// thing to do; installing restarts Slopify, so it is never a single unexplained press. The rest
-// of the time the same rows sit at the foot of the Help menu as "Check for updates".
+// Slopify's own updates, in words. The rail and the phone's top bar carry one button of their
+// own for them, always there rather than inside Help, because "is there a new version" is a
+// question people ask of the app itself and not of its help. The button says which version this
+// is, turns while it looks, and names a waiting one in the accent's ink. Installing restarts
+// Slopify, so the press that does it is never unexplained: the state stands in a sentence on the
+// button and in the live region beside it.
 
 export interface UpdateWords {
   // Shown without opening a menu.
@@ -89,45 +90,60 @@ function pressUpdate(update: UpdateView): void {
   else update.refresh();
 }
 
-// The state in a sentence, then the one row that acts on it: the foot of the Help menu, and the
-// whole of the rail item's menu.
-export function UpdateMenuRows({ update }: { readonly update: UpdateView }): ReactElement {
-  const words = updateWords(update);
-  const sentenceId = useId();
-  return (
-    <>
-      {words.sentence === "" ? null : (
-        <MenuLabel
-          id={sentenceId}
-          className="max-w-[280px] font-normal text-small text-ink-2 whitespace-normal"
-        >
-          {words.sentence}
-        </MenuLabel>
-      )}
-      <MenuItem
-        disabled={words.busy}
-        aria-describedby={words.sentence === "" ? undefined : sentenceId}
-        onSelect={() => pressUpdate(update)}
-      >
-        <CircleArrowUpIcon aria-hidden="true" strokeWidth={1.75} className="size-4" />
-        {words.action}
-      </MenuItem>
-    </>
-  );
-}
-
-// The rail item that appears while there is news, with its live region (always mounted, so a
-// failure or a wait is announced wherever the person is). On a phone (`item={false}`) the news
-// stays in the Help menu, and only the live region and the toast are here.
-export function UpdateWidget({
+// The button itself: one press away from checking, from installing a version that is ready, or
+// from calling off one that is waiting — whichever the state makes it. `words.action` names the
+// press, so the accessible name is always what pressing does and never the bare word on it.
+//
+// `versions` is false where there is no room for the lines under it (the phone's top bar), which
+// leaves the icon and the same accessible name.
+export function UpdateButton({
   update,
   className,
-  item = true,
+  versions = true,
 }: {
   readonly update: UpdateView;
   readonly className?: string;
-  readonly item?: boolean;
+  readonly versions?: boolean;
 }): ReactElement {
+  const words = updateWords(update);
+  const info = update.info;
+  const ready = words.news && info?.available === true;
+  return (
+    <button
+      type="button"
+      className={cn(className, words.news && "sl-navrail__item--news")}
+      // The whole state, for a mouse: the live region in `UpdateWidget` says the same thing to a
+      // reader, so the title never has to be found to be understood.
+      title={words.sentence === "" ? undefined : words.sentence}
+      aria-label={words.action}
+      disabled={words.busy}
+      onClick={() => pressUpdate(update)}
+    >
+      <CircleArrowUpIcon
+        aria-hidden="true"
+        strokeWidth={1.75}
+        // Turning while it looks or installs: the press has to show it landed, and this is the
+        // only moving part the rail gets. Stilled where motion is unwelcome.
+        className={cn(words.busy && "animate-spin motion-reduce:animate-none")}
+      />
+      <span>Update</span>
+      {versions && info?.currentVersion !== undefined ? (
+        <span aria-hidden="true" className="sl-navrail__version">
+          {info.currentVersion}
+        </span>
+      ) : null}
+      {versions && ready && info?.latestVersion !== undefined ? (
+        <span aria-hidden="true" className="sl-navrail__next">
+          {`→ ${info.latestVersion}`}
+        </span>
+      ) : null}
+    </button>
+  );
+}
+
+// The live region that goes with the button, always mounted, so a failure or a wait is announced
+// wherever the person is, and the toast that says an update started waiting.
+export function UpdateWidget({ update }: { readonly update: UpdateView }): ReactElement {
   const words = updateWords(update);
   // Said once when the update starts waiting; the item keeps saying it after.
   const notify = useToast();
@@ -141,22 +157,9 @@ export function UpdateWidget({
     }
   }, [waiting, notify]);
   return (
-    <>
-      {item && words.news ? (
-        <Menu modal={false}>
-          <MenuTrigger className={className}>
-            <CircleArrowUpIcon aria-hidden="true" strokeWidth={1.75} />
-            <span>{words.state}</span>
-          </MenuTrigger>
-          <MenuContent side="right" align="end">
-            <UpdateMenuRows update={update} />
-          </MenuContent>
-        </Menu>
-      ) : null}
-      <span className="sr-only" role={update.error === undefined ? "status" : "alert"}>
-        {words.sentence}
-      </span>
-    </>
+    <span className="sr-only" role={update.error === undefined ? "status" : "alert"}>
+      {words.sentence}
+    </span>
   );
 }
 
