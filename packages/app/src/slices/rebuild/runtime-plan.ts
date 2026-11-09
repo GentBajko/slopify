@@ -5,6 +5,7 @@ import type { Catalogue } from "../../catalog/schema.js";
 import { catalogueSchema } from "../../catalog/schema.js";
 import type { ThinkingMode } from "../../kernel/ports/llm.js";
 import type { LlmCall } from "../../kernel/runner/providers.js";
+import { fingerprint } from "../../kernel/runner/work.js";
 import type { RunConfig } from "../admission/model.js";
 import type { ManifestPiece, RevisionDeps, RevisionView } from "../revisions/model.js";
 import { getRevisionView, readyOutput, withEarlierJoins } from "../revisions/view.js";
@@ -81,7 +82,76 @@ export function workLlm(
   });
 }
 
+// Ten places ask for the plan, and each one used to derive it from scratch: the article read
+// back off disk, every recipe rebuilt from the narration up. At twelve images that happened a
+// few dozen times over a run; at 240 it happened tens of thousands of times and the server
+// spent its whole time planning instead of answering.
+//
+// The plan is kept and handed back while nothing in the database has changed, which SQLite
+// counts for us. That is a blunt test on purpose: a write anywhere - another project, another
+// revision - throws the plan away and it is derived again. It can never hand back a plan from
+// after a write it has not seen, which is the only direction that would matter, because a
+// stale plan would start the wrong work.
+// Per database, never shared between them: two of them (the app and a mirror, or two tests)
+// can hold the same project under the same id, and one's plan is not the other's.
+const kept = new WeakMap<
+  DatabaseSync,
+  Map<string, { readonly changes: number; readonly plan: RevisionWorkPlan }>
+>();
+const changeCount = z.object({ changes: z.number() });
+
+function writesSoFar(deps: RevisionDeps): number {
+  return changeCount.parse(deps.db.prepare("SELECT total_changes() AS changes").get()).changes;
+}
+
+// Two catalogues that differ give different plans, so the catalogue belongs in the key. Its
+// date and shape identify it without hashing the whole of it on every call.
+function catalogueMark(catalogue: Catalogue): string {
+  return [
+    catalogue.schemaVersion,
+    catalogue.updatedAt,
+    catalogue.llm.length,
+    catalogue.image?.length ?? 0,
+    Object.keys(catalogue.providers).length,
+  ].join("/");
+}
+
+// What the plan was derived from, beyond the database: whether each output and piece is
+// selected and whether its file is still on disk. A file deleted by hand is no write at all,
+// so `total_changes()` would never notice it, and the plan would go on reusing work whose
+// output is gone. Walking a few hundred rows is nothing beside deriving the plan again.
+function viewMark(view: RevisionView): string {
+  const rows: string[] = [String(view.articleMarkdown?.length ?? -1)];
+  for (const row of view.outputs)
+    rows.push(
+      `o${row.recordId}:${row.selected ? 1 : 0}${row.available ? 1 : 0}:${row.fingerprint}`,
+    );
+  for (const row of view.pieces)
+    rows.push(
+      `p${row.recordId}:${row.selected ? 1 : 0}${row.available ? 1 : 0}:${row.fingerprint}`,
+    );
+  return fingerprint(rows.join("\n"));
+}
+
 export function executionPlan(
+  deps: RevisionDeps,
+  view: RevisionView,
+  catalogue: Catalogue,
+): RevisionWorkPlan {
+  const key = `${view.revision.projectId}/${view.revision.id}/${catalogueMark(catalogue)}/${viewMark(view)}`;
+  const changes = writesSoFar(deps);
+  const forDb = kept.get(deps.db) ?? new Map();
+  kept.set(deps.db, forDb);
+  const held = forDb.get(key);
+  if (held !== undefined && held.changes === changes) return held.plan;
+  const plan = derivePlan(deps, view, catalogue);
+  // A cache, not a store: a handful of revisions is all a run needs at once.
+  if (forDb.size > 8) forDb.clear();
+  forDb.set(key, { changes, plan });
+  return plan;
+}
+
+function derivePlan(
   deps: RevisionDeps,
   view: RevisionView,
   catalogue: Catalogue,
