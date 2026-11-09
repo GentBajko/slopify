@@ -314,3 +314,58 @@ it("keeps drawing from the article the pictures came from after a hand edit", ()
     find(before, "images:scenes").fingerprint,
   );
 });
+
+// A long run writes its scenes a batch at a time (`scenesPerCall`): one answer asked for 240
+// scenes rations them to a clause each, and the pictures lose what they are drawn from.
+const many = Array.from({ length: 40 }, (_one, at) => `img${String(at)}`);
+const longArticle = Array.from({ length: 40 }, (_one, at) => `Paragraph ${String(at)}.`).join(
+  "\n\n",
+);
+const manyScened: RunConfig = {
+  ...scened,
+  imagePrompts: [{ name: "Wide", number: many.length }],
+  provided: { article: longArticle },
+};
+const manyContent: RevisionContent = {
+  ...withScenes,
+  articleMarkdown: longArticle,
+  imageOrder: many,
+  imageDefinitions: Object.fromEntries(
+    many.map((key) => [
+      key,
+      { source: "generate" as const, assetId: null, prompt: null, templateKey: "imagePrompts.0" },
+    ]),
+  ),
+};
+
+it("splits a long run's scenes into batches, each reading its own stretch", () => {
+  const recipes = plan([], longArticle, manyContent, manyScened);
+  const steps = recipes.filter((value) => value.key.startsWith("images:scenes"));
+  expect(steps.map((value) => value.key)).toEqual([
+    "images:scenes",
+    "images:scenes:1",
+    "images:scenes:2",
+  ]);
+  const counts = steps.map((value) =>
+    value.input.kind === "llm"
+      ? Number(/^Pictures: (\d+)$/m.exec(value.input.messages[0]?.content ?? "")?.[1])
+      : 0,
+  );
+  expect(counts).toEqual([16, 16, 8]);
+  // Each batch reads only its own stretch of the article, not the whole of it.
+  const first = steps[0]?.input;
+  if (first?.kind === "llm") {
+    expect(first.messages.at(-1)?.content).toContain("Paragraph 0.");
+    expect(first.messages.at(-1)?.content).not.toContain("Paragraph 39.");
+  }
+});
+
+it("makes each image wait for the batch that writes its own scene", () => {
+  const recipes = plan([], longArticle, manyContent, manyScened);
+  const waitsOn = (key: string) =>
+    find(recipes, `image:${key}`).dependsOn.filter((one) => one.startsWith("images:scenes"));
+  expect(waitsOn("img0")).toEqual(["images:scenes"]);
+  expect(waitsOn("img15")).toEqual(["images:scenes"]);
+  expect(waitsOn("img16")).toEqual(["images:scenes:1"]);
+  expect(waitsOn("img39")).toEqual(["images:scenes:2"]);
+});

@@ -4,7 +4,10 @@ import { subjectOf, thumbnailCountOf } from "../admission/model.js";
 import {
   pictureKind,
   type SceneDetails,
+  sceneArticleSlices,
+  sceneBatches,
   sceneMessages,
+  scenesPerCall,
   usesScene,
   usesSlopifyScene,
   wantsSceneDetails,
@@ -20,7 +23,11 @@ import { llmInput, llmInputFingerprint } from "./recipe-text.js";
 // The step that writes each image's scene while Images → Scenes from the article is on
 // (`images/scenes.ts`), and the scenes it wrote once they answer this plan's request.
 export interface ImageScenes {
-  readonly recipe: ResolvedWorkRecipe;
+  // One scenes step per batch (`scenesPerCall`), in slideshow order. A short run has one, as
+  // it always did; 240 pictures have fifteen, so no single answer has to ration its scenes.
+  readonly recipes: readonly ResolvedWorkRecipe[];
+  // The batch that writes the scene for the image at this place among `keys`.
+  readonly recipeFor: (at: number) => ResolvedWorkRecipe;
   // The images that take a scene, in slideshow order; scene N belongs to image N here.
   readonly keys: readonly string[];
   // Undefined until the step has written them for this request.
@@ -122,35 +129,69 @@ export function imageScenes(
     pictures.push(pictureKind(body, name));
   }
   if (keys.length === 0) return undefined;
-  const messages = withLanguage(
-    sceneMessages({
-      title: subjectOf(config),
-      article: text.pictureText ?? "",
-      pictures,
-      ...(details ? { details } : {}),
-    }),
-    config.language,
+  const batches = sceneBatches(pictures);
+  const slices = sceneArticleSlices(
+    text.pictureText ?? "",
+    batches.map((batch) => batch.length),
   );
-  const value = recipe(
-    context,
-    imageScenesKey,
-    "images",
+  const recipes = batches.map((batch, index) => {
+    const messages = withLanguage(
+      sceneMessages({
+        title: subjectOf(config),
+        article: slices[index] ?? text.pictureText ?? "",
+        pictures: batch,
+        ...(details ? { details } : {}),
+      }),
+      config.language,
+    );
+    // The first batch keeps the bare key, so a run with one batch has the step it always had.
+    const key = index === 0 ? imageScenesKey : `${imageScenesKey}:${String(index)}`;
+    return recipe(
+      context,
+      key,
+      "images",
+      text.pictureText === null
+        ? {
+            kind: "deferred",
+            version: 1,
+            operation: "image-scenes",
+            template: [llmInputFingerprint(context, messages), text.article.fingerprint],
+          }
+        : llmInput(context, messages),
+      [text.article.key],
+    );
+  });
+  // Every batch has to have answered before any image can take its scene: a missing one
+  // leaves the images waiting as deferred requests, exactly as one unanswered call did.
+  const saved =
     text.pictureText === null
-      ? {
-          kind: "deferred",
-          version: 1,
-          operation: "image-scenes",
-          template: [llmInputFingerprint(context, messages), text.article.fingerprint],
-        }
-      : llmInput(context, messages),
-    [text.article.key],
-  );
-  const saved = text.pictureText === null ? undefined : savedScenes(context, value, keys.length);
+      ? undefined
+      : batches.reduce<
+          | { readonly scenes: string[]; readonly details: SceneDetails[]; readonly any: boolean }
+          | undefined
+        >(
+          (carried, batch, index) => {
+            if (carried === undefined) return undefined;
+            const one = savedScenes(context, recipes[index] as ResolvedWorkRecipe, batch.length);
+            if (one === undefined) return undefined;
+            return {
+              scenes: [...carried.scenes, ...one.scenes],
+              details: [
+                ...carried.details,
+                ...(one.details ?? batch.map((): SceneDetails => ({}))),
+              ],
+              any: carried.any || one.details !== undefined,
+            };
+          },
+          { scenes: [], details: [], any: false },
+        );
   return {
-    recipe: value,
+    recipes,
+    recipeFor: (at: number): ResolvedWorkRecipe =>
+      recipes[Math.min(Math.floor(at / scenesPerCall), recipes.length - 1)] as ResolvedWorkRecipe,
     keys,
     scenes: saved?.scenes,
-    ...(saved?.details === undefined ? {} : { details: saved.details }),
+    ...(saved?.any === true ? { details: saved.details } : {}),
     legacy,
   };
 }

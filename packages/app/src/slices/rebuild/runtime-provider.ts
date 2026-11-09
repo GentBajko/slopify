@@ -285,7 +285,7 @@ function checkAnswer(piece: WorkPiece, answer: LlmAnswer): string | undefined {
       : undefined;
   // Scenes from the article: one scene per image, as many as the request lists.
   if (
-    (piece.key === imageScenesKey || piece.key === thumbnailScenesKey) &&
+    (piece.key.startsWith(imageScenesKey) || piece.key === thumbnailScenesKey) &&
     piece.input.kind === "llm"
   ) {
     const checked = checkScenes(answer.text, sceneCountOf(piece.input.messages) ?? 0);
@@ -338,7 +338,7 @@ async function publishText(
   answer: LlmAnswer,
 ): Promise<void> {
   if (
-    (piece.key === imageScenesKey || piece.key === thumbnailScenesKey) &&
+    (piece.key.startsWith(imageScenesKey) || piece.key === thumbnailScenesKey) &&
     piece.input.kind === "llm"
   ) {
     const checked = checkScenes(answer.text, sceneCountOf(piece.input.messages) ?? 0);

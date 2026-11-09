@@ -113,6 +113,48 @@ export function pictureKind(body: string, name: string): string {
 // call runs (`sceneCountOf`), from the saved request alone.
 const countLine = /^Pictures: (\d+)$/m;
 
+// How many scenes one call writes. A model asked for a long list rations its answer: every
+// scene it writes is a clause instead of two sentences, and what it drops first is the
+// material, light and colour an image is drawn from. Twelve scenes came back at about 42
+// words each; 240 in one answer came back at 18, and the pictures went flat. So the scenes
+// are written a batch at a time, each call reading only the stretch of the article its own
+// pictures cover.
+export const scenesPerCall = 16;
+
+// The pictures in batches, in slideshow order: [0..15], [16..31], and so on.
+export function sceneBatches<T>(
+  items: readonly T[],
+  size: number = scenesPerCall,
+): readonly (readonly T[])[] {
+  const batches: T[][] = [];
+  for (let at = 0; at < items.length; at += size) batches.push([...items.slice(at, at + size)]);
+  return batches;
+}
+
+// The stretch of the article each batch reads, split on paragraph breaks and shared out in
+// proportion to how many pictures each batch holds, so batch N covers the part of the article
+// its pictures are shown over. A short article that cannot be split gives every batch the
+// whole of it, which is what a single call always did.
+export function sceneArticleSlices(article: string, counts: readonly number[]): readonly string[] {
+  const total = counts.reduce((sum, count) => sum + count, 0);
+  const paragraphs = article.split(/\n\s*\n/).filter((one) => one.trim() !== "");
+  if (total === 0) return [];
+  if (paragraphs.length < counts.length) return counts.map(() => article);
+  const slices: string[] = [];
+  let taken = 0;
+  let done = 0;
+  for (const [index, count] of counts.entries()) {
+    done += count;
+    const upto =
+      index === counts.length - 1
+        ? paragraphs.length
+        : Math.max(taken + 1, Math.round((done / total) * paragraphs.length));
+    slices.push(paragraphs.slice(taken, upto).join("\n\n"));
+    taken = upto;
+  }
+  return slices;
+}
+
 // The thumbnails' scenes come after the images', one per thumbnail, when the thumbnail
 // prompt asks for one with `{{Scene}}`. They are not tied to a stretch of the article: each is
 // the moment that would make someone click, a different one for each thumbnail.

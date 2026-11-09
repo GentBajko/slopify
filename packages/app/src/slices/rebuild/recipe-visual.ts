@@ -258,7 +258,7 @@ function sceneImage(
           version: 1,
           operation: "image-scene",
           template: [
-            scenes.recipe.fingerprint,
+            scenes.recipeFor(at).fingerprint,
             at,
             config.images?.provider ?? null,
             config.images?.model ?? null,
@@ -279,7 +279,7 @@ function sceneImage(
           ...castField(castFor(config, prompt)),
         },
     [
-      scenes.recipe.key,
+      scenes.recipeFor(at).key,
       ...wait.dependsOn,
       ...(reference === undefined ? [] : [reference.key]),
       ...keyed.dependsOn,

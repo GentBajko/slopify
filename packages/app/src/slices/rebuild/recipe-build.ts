@@ -121,7 +121,7 @@ function buildEach(plain: RecipeContext): readonly ResolvedWorkRecipe[] {
         (text) => fillPrompt(context, text, "image"),
       ),
     ),
-    ...(scenes === undefined ? [] : [scenes.recipe]),
+    ...(scenes === undefined ? [] : scenes.recipes),
     ...(thumbnailScened === undefined ? [] : [thumbnailScened.recipe]),
     ...(appearance === undefined ? [] : [appearance.recipe]),
   ]);
