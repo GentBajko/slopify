@@ -96,7 +96,26 @@ export function executionStages(deps: RevisionDeps, projectId: string): readonly
     });
 }
 
-export function invocationReady(deps: RevisionDeps, work: WorkRef): boolean {
+// The view and the plan a sweep works out once. Reading a revision stats every output and
+// every piece on disk and reads the article back, and planning it derives every recipe from
+// the narration up; at twelve images that was a few dozen times over a run and nobody saw it,
+// at 240 it is tens of thousands and the server stops answering. `pass` is the caller's
+// scratch space for one sweep (`kernel/runner`): within it nothing writes the pieces or
+// outputs these are read from, so the answer cannot have gone stale. Without one, every call
+// works it out afresh, as it always did.
+function passPlan<T>(pass: Map<string, unknown> | undefined, key: string, make: () => T): T {
+  if (pass === undefined) return make();
+  if (pass.has(key)) return pass.get(key) as T;
+  const value = make();
+  pass.set(key, value);
+  return value;
+}
+
+export function invocationReady(
+  deps: RevisionDeps,
+  work: WorkRef,
+  pass?: Map<string, unknown>,
+): boolean {
   const row = deps.db
     .prepare(
       "SELECT recipe_context,retry_at FROM revision_work WHERE id=? AND project_id=? AND revision_id=?",
@@ -105,9 +124,17 @@ export function invocationReady(deps: RevisionDeps, work: WorkRef): boolean {
   if (row?.recipe_context === null || row === undefined) return false;
   // Waiting out a failure time can fix: `dueRetries` clears the wait when it runs out.
   if (row.retry_at !== null) return false;
-  const view = executionView(deps, work.projectId, work.revisionId);
+  const view = passPlan(pass, `view:${work.projectId}:${work.revisionId}`, () =>
+    executionView(deps, work.projectId, work.revisionId),
+  );
   if (view === undefined) return false;
-  const plan = executionPlan(deps, view, savedCatalogue(row.recipe_context));
+  // The catalogue is the work row's own, so it belongs in the key: two steps saved under
+  // different catalogues must not share a plan.
+  const plan = passPlan(
+    pass,
+    `plan:${work.projectId}:${work.revisionId}:${String(row.recipe_context)}`,
+    () => executionPlan(deps, view, savedCatalogue(row.recipe_context)),
+  );
   const pieces = workPieces(deps.db, work.workId);
   return pieces.some((piece) => {
     if (

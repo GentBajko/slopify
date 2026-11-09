@@ -20,7 +20,11 @@ export interface StageStore {
   readonly maySubmit: (work: WorkRef, pieceId?: string) => boolean;
   readonly stagesOf: (projectId: string) => readonly RunnerStage[];
   readonly standingsOf?: (projectId: string) => readonly Pick<RunnerStage, "kind" | "state">[];
-  readonly ready?: (work: WorkRef) => boolean;
+  // `pass` is scratch space the caller keeps for one eligibility sweep, so an answer worked
+  // out for the first stage is not worked out again for the next 254. Nothing in the sweep
+  // writes the pieces or outputs a plan is read from, so what it holds cannot go stale
+  // before the sweep ends; a fresh Map each sweep is what keeps it honest.
+  readonly ready?: (work: WorkRef, pass?: Map<string, unknown>) => boolean;
   // One statement, `pending` → `running`, false if the row moved on. A stage starts once.
   readonly claim: (work: WorkRef) => boolean;
   readonly finish: (
@@ -288,6 +292,8 @@ export function createRunner(deps: RunnerDeps): Runner {
 
   function startEligible(projectId: string): void {
     const stages = deps.stages.stagesOf(projectId);
+    // Worked out once for this sweep and thrown away at the end of it.
+    const pass = new Map<string, unknown>();
     const releasesKind =
       (dependent: StageKind) =>
       (kind: StageKind): boolean => {
@@ -304,7 +310,7 @@ export function createRunner(deps: RunnerDeps): Runner {
       if (
         deps.stages.ready === undefined
           ? !dependencies.every(releasesKind(stage.kind))
-          : !deps.stages.ready(stage.work)
+          : !deps.stages.ready(stage.work, pass)
       ) {
         continue;
       }

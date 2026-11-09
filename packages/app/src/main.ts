@@ -1332,7 +1332,7 @@ export function wireRunner({
         return projectStandings(execution, projectId);
       },
       standingsOf: (projectId) => executionStandings(execution, projectId),
-      ready: (work) => invocationReady(execution, work),
+      ready: (work, pass) => invocationReady(execution, work, pass),
       // A project in the trash (Settings → Trash) holds like a paused one until it is restored.
       paused: (projectId) =>
         projectPaused(db, projectId) ||
